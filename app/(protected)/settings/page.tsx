@@ -34,9 +34,9 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 import { FormSuccess } from "@/components/ui/form-success";
 import { FormError } from "@/components/ui/form-error";
 import { UserRole } from "@prisma/client";
-import { ExtendedUser } from "@/next-auth";
+import { SettingsPageUser } from "@/next-auth";
 
-const SettingsPage = ({ user }: { user: ExtendedUser }) => {
+const SettingsPage = ({ user }: { user: SettingsPageUser }) => {
   const [error, setError] = useState<string | undefined>();
   const [success, setSuccess] = useState<string | undefined>();
 
