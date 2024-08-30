@@ -25,13 +25,8 @@ export function NewVerificationForm() {
 
     newVerification(token)
       .then((data) => {
-        console.log(data);
-        if (data && data.success) {
-          setSuccess(data.success);
-        }
-        if (data && data.error) {
-          setError(data.error);
-        }
+        setSuccess(data.success);
+        setError(data.error);
       })
       .catch(() => {
         setError("Something went wrong!");
