@@ -51,6 +51,7 @@ const SettingsPage = () => {
       email: user?.email || undefined,
       password: undefined,
       newPassword: undefined,
+      confirmNewPassword: undefined,
       role: user?.role || undefined,
       isTwoFactorEnabled: user?.isTwoFactorEnabled || undefined,
     },
@@ -113,7 +114,7 @@ const SettingsPage = () => {
                             type="email"
                             disabled={isPending}
                           />
-                        </FormControl>{" "}
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -131,7 +132,7 @@ const SettingsPage = () => {
                             type="password"
                             disabled={isPending}
                           />
-                        </FormControl>{" "}
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -149,7 +150,25 @@ const SettingsPage = () => {
                             type="password"
                             disabled={isPending}
                           />
-                        </FormControl>{" "}
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="confirmNewPassword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Confirm New Password</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="******"
+                            type="password"
+                            disabled={isPending}
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -175,13 +194,13 @@ const SettingsPage = () => {
                       <SelectContent>
                         <SelectItem value={UserRole.ADMIN}>Admin</SelectItem>
                         <SelectItem value={UserRole.USER}>User</SelectItem>
-                      </SelectContent>{" "}
+                      </SelectContent>
                       <FormMessage />
-                    </Select>{" "}
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
-              />{" "}
+              />
               {user?.isOAuth === false && (
                 <FormField
                   control={form.control}

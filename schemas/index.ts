@@ -9,6 +9,7 @@ export const SettingsSchema = z
     email: z.optional(z.string().email()),
     password: z.optional(z.string().min(6)),
     newPassword: z.optional(z.string().min(6)),
+    confirmNewPassword: z.optional(z.string().min(6)),
   })
   .refine(
     (data) => {
@@ -29,7 +30,11 @@ export const SettingsSchema = z
       return true;
     },
     { message: "Password is required!", path: ["password"] }
-  );
+  )
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: "Passwords do not match!",
+    path: ["confirmNewPassword"],
+  });
 
 export const LoginSchema = z.object({
   email: z.string().email({ message: "Email invalid." }),
