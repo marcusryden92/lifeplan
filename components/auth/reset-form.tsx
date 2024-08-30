@@ -41,6 +41,7 @@ export function ResetForm() {
     setSuccess("");
 
     console.log(values);
+    console.log("HELLO");
 
     startTransition(() => {
       reset(values).then((data: any) => {
