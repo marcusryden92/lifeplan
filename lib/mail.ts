@@ -1,36 +1,101 @@
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-
 const domain = process.env.NEXT_PUBLIC_APP_URL;
 
+// Common HTML template with styling
+const emailHeader = `
+  <html>
+  <head>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Audiowide&display=swap');
+      body { font-family: Arial, sans-serif; color: #333; margin: 0; padding: 0; }
+      .header { text-align: center; padding: 20px; background-color: #f4f4f4; }
+      .header h1 { font-family: 'Audiowide', sans-serif; color: #0044cc; margin: 0; }
+      .content { padding: 20px; }
+      .content a { color: #0044cc; text-decoration: none; }
+      .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; background-color: #f4f4f4; }
+    </style>
+  </head>
+  <body>
+`;
+
+const emailFooter = `
+    <div class="footer">
+      <p>Best regards,<br>The LifePlan Team</p>
+    </div>
+  </body>
+  </html>
+`;
+
 export const sendTwoFactorTokenEmail = async (email: string, token: string) => {
+  const htmlContent = `
+    ${emailHeader}
+    <div class="header">
+      <h1>LIFEPLAN</h1>
+    </div>
+    <div class="content">
+      <p>Hello,</p>
+      <p>Here is your two-factor authentication (2FA) code to complete the login process:</p>
+      <p><strong>${token}</strong></p>
+      <p>If you did not request this code, please ignore this email.</p>
+    </div>
+    ${emailFooter}
+  `;
+
   await resend.emails.send({
-    from: "2f-verification@lifeplan.lat",
+    from: "security@lifeplan.lat",
     to: email,
-    subject: "2FA Code",
-    html: `<p>Your 2FA code: ${token}`,
+    subject: "Your Two-Factor Authentication Code",
+    html: htmlContent,
   });
 };
 
 export const sendVerificationEmail = async (email: string, token: string) => {
   const confirmationLink = `${domain}/auth/new-verification?token=${token}`;
+  const htmlContent = `
+    ${emailHeader}
+    <div class="header">
+      <h1>LIFEPLAN</h1>
+    </div>
+    <div class="content">
+      <p>Hi there,</p>
+      <p>Thank you for signing up with LifePlan!</p>
+      <p>To complete your registration, please verify your email address by clicking the link below:</p>
+      <p><a href="${confirmationLink}">Verify My Email Address</a></p>
+      <p>If you did not create an account, please disregard this email.</p>
+    </div>
+    ${emailFooter}
+  `;
 
   await resend.emails.send({
-    from: "verify-account@lifeplan.lat",
+    from: "support@lifeplan.lat",
     to: email,
-    subject: "Confirm your email",
-    html: `<p>Click <a href=${confirmationLink}>here</a> to confirm email!</p>`,
+    subject: "Please Verify Your Email Address",
+    html: htmlContent,
   });
 };
 
 export const sendPasswordResetEmail = async (email: string, token: string) => {
   const resetLink = `${domain}/auth/new-password?token=${token}`;
+  const htmlContent = `
+    ${emailHeader}
+    <div class="header">
+      <h1>LIFEPLAN</h1>
+    </div>
+    <div class="content">
+      <p>Hello,</p>
+      <p>We received a request to reset your password. You can reset it using the link below:</p>
+      <p><a href="${resetLink}">Reset My Password</a></p>
+      <p>If you did not request a password reset, please ignore this email or contact support.</p>
+    </div>
+    ${emailFooter}
+  `;
 
   await resend.emails.send({
-    from: "reset-password@lifeplan.lat",
+    from: "support@lifeplan.lat",
     to: email,
-    subject: "Reset your password",
-    html: `<p>Click <a href=${resetLink}>here</a> to reset password!</p>`,
+    subject: "Password Reset Request",
+    html: htmlContent,
   });
 };
