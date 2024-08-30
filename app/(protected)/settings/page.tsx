@@ -35,9 +35,7 @@ import { FormSuccess } from "@/components/ui/form-success";
 import { FormError } from "@/components/ui/form-error";
 import { UserRole } from "@prisma/client";
 
-const SettingsPage = () => {
-  const user = useCurrentUser();
-
+const SettingsPage = ({ user }: { user: any }) => {
   const [error, setError] = useState<string | undefined>();
   const [success, setSuccess] = useState<string | undefined>();
 
