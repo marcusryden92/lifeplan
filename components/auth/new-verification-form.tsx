@@ -25,8 +25,12 @@ export function NewVerificationForm() {
 
     newVerification(token)
       .then((data) => {
-        setSuccess(data.success);
-        setError(data.error);
+        if (data.success) {
+          setSuccess(data.success);
+        }
+        if (data.error) {
+          setError(data.error);
+        }
       })
       .catch(() => {
         setError("Something went wrong!");
