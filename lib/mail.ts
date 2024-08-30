@@ -4,7 +4,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const domain = process.env.NEXT_PUBLIC_APP_URL;
 
 // URL to your header image
-const headerImageUrl = `${domain}/path/to/your-header-image.jpg`;
+const headerImageUrl = `${domain}/images/LIFEPLAN.png`;
 
 // Common HTML template with styling
 const emailHeader = `
