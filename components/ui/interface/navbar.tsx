@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation";
 import { PowerIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
-import UserButton from "@/components/auth/user-button";
 import clsx from "clsx";
 import { signOut } from "next-auth/react";
 
