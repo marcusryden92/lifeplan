@@ -40,9 +40,6 @@ export function ResetForm() {
     setError("");
     setSuccess("");
 
-    console.log(values);
-    console.log("HELLO");
-
     startTransition(() => {
       reset(values).then((data: any) => {
         // Check if data is not undefined
