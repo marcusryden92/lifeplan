@@ -25,10 +25,11 @@ export function NewVerificationForm() {
 
     newVerification(token)
       .then((data) => {
-        if (data.success) {
+        console.log(data);
+        if (data && data.success) {
           setSuccess(data.success);
         }
-        if (data.error) {
+        if (data && data.error) {
           setError(data.error);
         }
       })
