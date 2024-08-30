@@ -3,15 +3,17 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 const domain = process.env.NEXT_PUBLIC_APP_URL;
 
+// URL to your header image
+const headerImageUrl = `${domain}/path/to/your-header-image.jpg`;
+
 // Common HTML template with styling
 const emailHeader = `
   <html>
   <head>
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Audiowide&display=swap');
       body { font-family: Arial, sans-serif; color: #333; margin: 0; padding: 0; }
       .header { text-align: center; padding: 20px; background-color: #f4f4f4; }
-      .header h1 { font-family: 'Audiowide', sans-serif; color: #0044cc; margin: 0; }
+      .header img { max-width: 100%; height: auto; }
       .content { padding: 20px; }
       .content a { color: #0044cc; text-decoration: none; }
       .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; background-color: #f4f4f4; }
@@ -32,7 +34,7 @@ export const sendTwoFactorTokenEmail = async (email: string, token: string) => {
   const htmlContent = `
     ${emailHeader}
     <div class="header">
-      <h1>LIFEPLAN</h1>
+      <img src="${headerImageUrl}" alt="LIFEPLAN Header" />
     </div>
     <div class="content">
       <p>Hello,</p>
@@ -56,7 +58,7 @@ export const sendVerificationEmail = async (email: string, token: string) => {
   const htmlContent = `
     ${emailHeader}
     <div class="header">
-      <h1>LIFEPLAN</h1>
+      <img src="${headerImageUrl}" alt="LIFEPLAN Header" />
     </div>
     <div class="content">
       <p>Hi there,</p>
@@ -81,7 +83,7 @@ export const sendPasswordResetEmail = async (email: string, token: string) => {
   const htmlContent = `
     ${emailHeader}
     <div class="header">
-      <h1>LIFEPLAN</h1>
+      <img src="${headerImageUrl}" alt="LIFEPLAN Header" />
     </div>
     <div class="content">
       <p>Hello,</p>
