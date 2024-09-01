@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PowerIcon } from "@heroicons/react/24/outline";
+import { CogIcon } from "@heroicons/react/24/outline";
 
 import { Button } from "@/components/ui/button";
 import clsx from "clsx";
@@ -29,7 +30,7 @@ export const Navbar = () => {
             <Link
               href={link.href}
               className={clsx(
-                "flex h-[48px] items-center gap-2 rounded-xl p-3 text-sm font-medium hover:bg-sky-100 hover:text-blue-600",
+                "flex h-[48px] gap-2 rounded-xl p-3 text-sm font-medium hover:bg-gray-100 hover:text-white",
                 { "bg-gray-800 text-white": pathname === link.href }
               )}
             >
@@ -47,11 +48,11 @@ export const Navbar = () => {
           <Link
             href={"/settings"}
             className={clsx(
-              "flex h-[48px] items-center gap-2 rounded-xl p-3 text-sm font-medium hover:bg-sky-100 hover:text-blue-600",
+              "flex h-[48px] items-center gap-2 rounded-xl text-sm font-medium hover:bg-sky-100 hover:text-blue-600",
               { "bg-gray-800 text-white": pathname === "/settings" }
             )}
           >
-            {"Settings"}
+            <CogIcon className=" w-6" /> {"Settings"}
           </Link>
         </Button>
         <form
@@ -59,7 +60,7 @@ export const Navbar = () => {
             signOut();
           }}
         >
-          <button className="flex h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-gray-50 p-3 text-sm font-medium hover:bg-grey-100 hover:text-red-500">
+          <button className="flex h-[48px] w-full items-center  gap-2 rounded-xl bg-gray-50 p-3 pl-4 text-sm font-medium hover:bg-grey-100 hover:text-red-500">
             <PowerIcon className="w-6" />
             <div className="hidden md:block">Sign Out</div>
           </button>
