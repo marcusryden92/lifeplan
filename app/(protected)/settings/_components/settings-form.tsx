@@ -71,7 +71,10 @@ const SettingsForm = ({ user }: SettingsFormProps) => {
 
   return (
     <Form {...form}>
-      <form className="space-y-6" onSubmit={form.handleSubmit(onSubmit)}>
+      <form
+        className="space-y-6 flex flex-col"
+        onSubmit={form.handleSubmit(onSubmit)}
+      >
         <div className="space-y-4">
           <FormField
             control={form.control}
@@ -216,12 +219,14 @@ const SettingsForm = ({ user }: SettingsFormProps) => {
             />
           )}
         </div>
-        <FormError message={error} />
-        <FormSuccess message={success} />
+        <div className="flex w-full space-x-8 items-center justify-center ">
+          <FormError message={error} />
+          <FormSuccess message={success} />
 
-        <Button type="submit" disabled={isPending}>
-          Save
-        </Button>
+          <Button type="submit" disabled={isPending} className=" self-end ">
+            Save
+          </Button>
+        </div>
       </form>
     </Form>
   );
