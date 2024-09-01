@@ -173,7 +173,7 @@ const SettingsForm = ({ user }: SettingsFormProps) => {
               />
             </>
           )}
-          <FormField
+          {/* <FormField
             control={form.control}
             name="role"
             render={({ field }) => (
@@ -198,7 +198,7 @@ const SettingsForm = ({ user }: SettingsFormProps) => {
                 <FormMessage />
               </FormItem>
             )}
-          />
+          /> */}
           {user?.isOAuth === false && (
             <FormField
               control={form.control}

@@ -7,7 +7,7 @@ const SettingsPage = async () => {
   const user = (await currentUser()) as SettingsPageUser;
 
   return (
-    <Card className="w-[600px]">
+    <Card className="w-[600px] h-full">
       <CardHeader>
         <p className="text-xl font-semibold">Settings</p>
       </CardHeader>
