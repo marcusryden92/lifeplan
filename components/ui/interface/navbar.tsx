@@ -8,11 +8,13 @@ import { CogIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import clsx from "clsx";
 import { signOut } from "next-auth/react";
+import { Audiowide } from "next/font/google";
+
+const font = Audiowide({ subsets: ["latin"], weight: ["400"] });
 
 const links = [
-  { name: "Server", href: "/server" },
-  { name: "Client", href: "/client" },
-  { name: "Admin", href: "/admin" },
+  { name: "Calendar", href: "/calendar" },
+  { name: "Create", href: "/create" },
 ];
 
 export const Navbar = () => {
@@ -20,6 +22,9 @@ export const Navbar = () => {
 
   return (
     <div className="flex w-[250px] h-full flex-col">
+      <div className={`${font.className} text-white text-[2.8rem] mb-5`}>
+        LIFEPLAN
+      </div>
       <div className="flex grow flex-col space-y-2">
         {links.map((link) => (
           <Button
