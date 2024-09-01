@@ -22,7 +22,9 @@ export const Navbar = () => {
 
   return (
     <div className="flex w-[250px] h-full flex-col">
-      <div className={`${font.className} text-white text-[2.8rem] mb-5`}>
+      <div
+        className={`${font.className} text-white text-[2.8rem] mb-5 mt-[-1rem]`}
+      >
         LIFEPLAN
       </div>
       <div className="flex grow flex-col space-y-2">
@@ -35,7 +37,7 @@ export const Navbar = () => {
             <Link
               href={link.href}
               className={clsx(
-                "flex h-[48px] gap-2 rounded-xl p-3 text-sm font-medium hover:bg-gray-100 hover:text-white",
+                "flex h-[48px] gap-2 rounded-xl p-3 text-sm font-medium hover:bg-gray-200 ",
                 { "bg-gray-800 text-white": pathname === link.href }
               )}
             >
@@ -53,8 +55,11 @@ export const Navbar = () => {
           <Link
             href={"/settings"}
             className={clsx(
-              "flex h-[48px] items-center gap-2 rounded-xl text-sm font-medium hover:bg-sky-100 hover:text-blue-600",
-              { "bg-gray-800 text-white": pathname === "/settings" }
+              "flex h-[48px] items-center gap-2 rounded-xl text-sm font-medium hover:bg-gray-200",
+              {
+                "bg-gray-800 text-white hover:bg-gray-700":
+                  pathname === "/settings",
+              }
             )}
           >
             <CogIcon className=" w-6" /> {"Settings"}

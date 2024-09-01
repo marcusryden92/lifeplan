@@ -77,3 +77,16 @@ export const RegisterSchema = z
     message: "Passwords don't match!",
     path: ["passwordConfirmation"], // Show error under password confirmation field
   });
+
+// Schemas for creating tasks:
+
+export const TaskListSchema = z.object({
+  title: z
+    .string()
+    .min(1, {
+      message: "Input required.",
+    })
+    .max(200, {
+      message: "Maximum 200 characters.",
+    }),
+});
