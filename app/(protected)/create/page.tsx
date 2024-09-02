@@ -138,7 +138,7 @@ export default function CapturePage() {
         </Form>
       </CardContent>
       <div
-        className="overflow-x-auto max-h-[68%] flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
+        className="overflow-x-auto  flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
         ref={tasksContainerRef}
       >
         {taskArray.map((task, index) => (
@@ -183,15 +183,21 @@ export default function CapturePage() {
           </div>
         ))}
       </div>
-      <CardFooter className="flex items-center justify-end flex-shrink p-4  border-t">
-        <Link
-          href={"/create/circle-of-influence"}
-          className="flex group items-center gap-4 "
+      <CardFooter className="flex items-center justify-end flex-shrink p-4 border-t">
+        <Button
+          variant={"invisible"}
+          disabled={taskArray.length === 0}
+          className="px-0"
         >
-          {" "}
-          {"Continue"}
-          <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />{" "}
-        </Link>
+          <Link
+            href={"/create/circle-of-influence"}
+            className="flex group items-center gap-4 "
+          >
+            {" "}
+            {"Continue"}
+            <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />{" "}
+          </Link>
+        </Button>
       </CardFooter>
     </div>
   );
