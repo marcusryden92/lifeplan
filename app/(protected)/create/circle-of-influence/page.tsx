@@ -1,6 +1,6 @@
 "use client";
 
-import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { CardHeader, CardContent } from "@/components/ui/card";
 import {
   FormField,
   Form,
@@ -10,9 +10,6 @@ import {
   FormMessage,
   FormDescription,
 } from "@/components/ui/form";
-
-import Link from "next/link";
-
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
@@ -24,9 +21,8 @@ import { useState, useRef, useEffect } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { PencilIcon } from "@heroicons/react/24/outline";
 import { TrashIcon } from "@heroicons/react/24/outline";
-import { CheckCircledIcon } from "@radix-ui/react-icons";
 
-export default function CapturePage() {
+export default function CreatePage() {
   const [taskArray, setTaskArray] = useState<z.infer<typeof TaskListSchema>[]>(
     []
   );
@@ -100,49 +96,13 @@ export default function CapturePage() {
   }, [taskArray]);
 
   return (
-    <div className="flex flex-col w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
+    <div className="w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="border-b px-0 py-6">
-        <p className="text-xl font-semibold">Capture</p>
+        <p className="text-xl font-semibold">Create</p>
       </CardHeader>
-      <CardContent className="px-0 py-6 border-b">
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            className="space-y-8 flex flex-col"
-          >
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <FormDescription>
-                    Write down something on your mind
-                  </FormDescription>
-                  <div className="flex items-center gap-5 justify-between">
-                    <div className="flex flex-1 gap-5 max-w-[350px]">
-                      <FormControl>
-                        <Input {...field} placeholder="Task name" />
-                      </FormControl>
-                      <Button type="submit">Add item</Button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={deleteAll}
-                      className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem] "
-                    >
-                      <TrashIcon className="w-5 h-5 mx-2" />
-                      Delete all
-                    </button>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </form>
-        </Form>
-      </CardContent>
+
       <div
-        className="overflow-x-auto max-h-[68%] flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
+        className="overflow-x-auto max-h-[68%] flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
         ref={tasksContainerRef}
       >
         {/* Adjust the max height based on the height of the header and any additional spacing */}
@@ -189,16 +149,6 @@ export default function CapturePage() {
           </div>
         ))}
       </div>
-      <CardFooter className="flex items-center justify-end flex-shrink p-4  border-t">
-        <Link
-          href={"/create/circle-of-influence"}
-          className="flex group items-center gap-4 "
-        >
-          {" "}
-          {"Continue"}
-          <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />{" "}
-        </Link>
-      </CardFooter>
     </div>
   );
 }
