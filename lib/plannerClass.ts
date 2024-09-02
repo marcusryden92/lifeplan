@@ -5,7 +5,7 @@ export interface PlannerInterface {
   deadline?: Date;
 }
 
-class Planner implements PlannerInterface {
+export class Planner implements PlannerInterface {
   title: string;
   type: "task" | "plan" | "goal" | "inactive" | null; // No need for ?
   duration?: number;

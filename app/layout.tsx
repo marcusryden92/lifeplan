@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import "./globals.css";
+import { DataContextProvider } from "@/context/DataContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,14 +20,16 @@ export default async function RootLayout({
   const session = await auth();
   return (
     <SessionProvider session={session}>
-      <html lang="en">
-        <body
-          className={`${inter.className} bg-cover bg-center bg-no-repeat min-h-screen`}
-          style={{ backgroundImage: "url('/images/california.jpg')" }}
-        >
-          {children}
-        </body>
-      </html>
+      <DataContextProvider>
+        <html lang="en">
+          <body
+            className={`${inter.className} bg-cover bg-center bg-no-repeat min-h-screen`}
+            style={{ backgroundImage: "url('/images/california.jpg')" }}
+          >
+            {children}
+          </body>
+        </html>
+      </DataContextProvider>
     </SessionProvider>
   );
 }

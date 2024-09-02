@@ -1,18 +1,16 @@
 "use client";
 
+import { useDataContext } from "@/context/DataContext";
 import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import {
   FormField,
   Form,
   FormItem,
-  FormLabel,
+  FormDescription,
   FormControl,
   FormMessage,
-  FormDescription,
 } from "@/components/ui/form";
-
 import Link from "next/link";
-
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useForm } from "react-hook-form";
@@ -20,16 +18,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { TaskListSchema } from "@/schemas";
 import { useState, useRef, useEffect } from "react";
-
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { PencilIcon } from "@heroicons/react/24/outline";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
+import { Planner } from "@/lib/plannerClass";
 
 export default function CapturePage() {
-  const [taskArray, setTaskArray] = useState<z.infer<typeof TaskListSchema>[]>(
-    []
-  );
+  const { taskArray, setTaskArray } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
 
@@ -47,15 +43,16 @@ export default function CapturePage() {
     if (editIndex !== null) {
       setTaskArray((prevTasks) =>
         prevTasks.map((task, index) =>
-          index === editIndex ? { ...task, title: values.title } : task
+          index === editIndex ? new Planner(editTitle) : task
         )
       );
       setEditIndex(null);
       setEditTitle("");
     } else {
-      setTaskArray((prevTasks) => [...prevTasks, values]);
+      const newTask = new Planner(values.title);
+      setTaskArray((prevTasks) => [...prevTasks, newTask]);
     }
-    form.reset(); // Reset form after submission
+    form.reset();
   };
 
   const deleteTask = (index: number) => {
@@ -79,7 +76,7 @@ export default function CapturePage() {
     if (editIndex !== null) {
       setTaskArray((prevTasks) =>
         prevTasks.map((task, index) =>
-          index === editIndex ? { ...task, title: editTitle } : task
+          index === editIndex ? new Planner(editTitle) : task
         )
       );
       setEditIndex(null);
@@ -87,7 +84,6 @@ export default function CapturePage() {
     }
   };
 
-  // Scroll to the bottom of the container when a new task is added
   useEffect(() => {
     if (
       tasksContainerRef.current &&
@@ -145,7 +141,6 @@ export default function CapturePage() {
         className="overflow-x-auto max-h-[68%] flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
         ref={tasksContainerRef}
       >
-        {/* Adjust the max height based on the height of the header and any additional spacing */}
         {taskArray.map((task, index) => (
           <div
             key={index}
@@ -169,7 +164,6 @@ export default function CapturePage() {
                 </div>
               )}
             </div>
-
             <div className="flex flex-row space-x-2 items-center opacity-0 group-hover:opacity-100 transition-opacity self-start">
               {editIndex !== index && (
                 <div

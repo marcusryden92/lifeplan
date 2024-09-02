@@ -1,27 +1,24 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import { Planner } from "@/lib/plannerClass";
 
-// Define the type for the context value
 interface DataContextType {
-  // Add properties that your context will manage
-  someValue: string;
-  setSomeValue: (value: string) => void;
+  taskArray: Planner[];
+  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
 }
 
-// Create the context with a default value of `null`
 const DataContext = createContext<DataContextType | null>(null);
 
 export const DataContextProvider = ({ children }: { children: ReactNode }) => {
-  const [someValue, setSomeValue] = useState<string>("Initial Value");
+  const [taskArray, setTaskArray] = useState<Planner[]>([]);
 
-  const value = {
-    someValue,
-    setSomeValue,
+  const value: DataContextType = {
+    taskArray,
+    setTaskArray,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 };
 
-// Custom hook to use the context
 export const useDataContext = () => {
   const context = useContext(DataContext);
   if (!context) {
