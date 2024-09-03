@@ -22,11 +22,11 @@ import {
   PencilIcon,
   TrashIcon,
   ArrowLongLeftIcon,
+  ArrowUturnLeftIcon,
 } from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 import { Planner } from "@/lib/plannerClass";
 import { CheckIcon } from "@heroicons/react/24/outline";
-import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 
 export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();
@@ -120,6 +120,15 @@ export default function CapturePage() {
   };
 
   const handleCancelTask = () => {
+    if (changeToTask !== null) {
+      setTaskArray((prevTasks) =>
+        prevTasks.map((task, index) =>
+          index === changeToTask
+            ? { ...task, type: null, duration: null } // Update task properties
+            : task
+        )
+      );
+    }
     setChangeToTask(null);
     setTaskDuration("");
   };
@@ -179,7 +188,7 @@ export default function CapturePage() {
         </Form>
       </CardContent>
       <div
-        className="overflow-x-auto  flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2 space-y-1"
+        className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2 space-y-1"
         ref={tasksContainerRef}
       >
         {taskArray.map((task, index) => (
@@ -207,10 +216,16 @@ export default function CapturePage() {
                 </div>
               ) : (
                 <div
-                  className="max-w-[250px] break-words overflow-hidden text-ellipsis text-sm"
+                  className="flex max-w-[250px] break-words overflow-hidden text-ellipsis text-sm items-start justify-between" // Ensure items are aligned to the top
                   onClick={() => handleSetToTask(index)} // Simplified
                 >
-                  {task.title}
+                  <div className="max-w-[150px]">{task.title}</div>
+                  {task.type === "task" && changeToTask !== index && (
+                    <div className="text-sm text-white pr-2 flex flex-col justify-start">
+                      {task.duration}
+                      {" min"}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -221,12 +236,10 @@ export default function CapturePage() {
                 <Input
                   value={taskDuration}
                   onChange={(e) => setTaskDuration(e.target.value)}
-                  placeholder={
-                    taskArray[index].duration?.toString() || "minutes"
-                  }
-                  className="w-24 text-sm"
+                  placeholder={taskArray[index].duration?.toString() || "min"}
+                  className="w-14 h-7 text-sm text-white "
                   type="number"
-                  min="1"
+                  pattern="[0-9]*"
                 />
                 <button
                   onClick={handleCancelTask}
@@ -275,10 +288,7 @@ export default function CapturePage() {
       </div>
       <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant={"invisible"} className="px-0">
-          <Link
-            href={"/create/circle-of-influence"}
-            className="flex group items-center gap-4 "
-          >
+          <Link href={"/create/"} className="flex group items-center gap-4 ">
             <ArrowLongLeftIcon className="w-9 h-9 text-gray-400 group-hover:text-gray-800 rounded-full" />{" "}
           </Link>
         </Button>
