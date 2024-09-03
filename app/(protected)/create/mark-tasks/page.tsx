@@ -230,7 +230,7 @@ export default function CapturePage() {
                 key={index}
                 className={`flex flex-col rounded-lg w-[350px] group hover:shadow-md py-1 px-4 space-y-3${
                   task.type === "task" || changeToTask === index
-                    ? " bg-orange-400 text-white"
+                    ? " bg-amber-500 text-white"
                     : "bg-transparent"
                 }`}
               >
@@ -286,8 +286,12 @@ export default function CapturePage() {
                         task.canInfluence ? "text-black" : ""
                       } `}
                     />
-                    <Button size="xs" onClick={handleUpdateClick}>
-                      Edit
+                    <Button
+                      size="xs"
+                      variant={"invisible"}
+                      onClick={handleUpdateClick}
+                    >
+                      <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
                     </Button>
                   </div>
                 ) : (
