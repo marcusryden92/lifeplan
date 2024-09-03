@@ -6,7 +6,6 @@ import {
   FormField,
   Form,
   FormItem,
-  FormDescription,
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
@@ -18,16 +17,24 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { TaskListSchema } from "@/schemas";
 import { useState, useRef, useEffect } from "react";
-import { XMarkIcon } from "@heroicons/react/24/outline";
-import { PencilIcon } from "@heroicons/react/24/outline";
-import { TrashIcon } from "@heroicons/react/24/outline";
+import {
+  XMarkIcon,
+  PencilIcon,
+  TrashIcon,
+  ArrowLongLeftIcon,
+} from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 import { Planner } from "@/lib/plannerClass";
+import { CheckIcon } from "@heroicons/react/24/outline";
+import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 
 export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
+
+  const [changeToTask, setChangeToTask] = useState<number | null>(null);
+  const [taskDuration, setTaskDuration] = useState<string>("");
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
@@ -55,6 +62,15 @@ export default function CapturePage() {
     form.reset();
   };
 
+  const onClick = (index: number) => {
+    setTaskArray((prevTaskArray): Planner[] => {
+      const updatedTaskArray = prevTaskArray.map((task, i) =>
+        i === index ? { ...task, canInfluence: !task.canInfluence } : task
+      );
+      return updatedTaskArray as Planner[];
+    });
+  };
+
   const deleteTask = (index: number) => {
     setTaskArray((prevTasks) => prevTasks.filter((_, i) => i !== index));
     if (editIndex === index) {
@@ -76,12 +92,36 @@ export default function CapturePage() {
     if (editIndex !== null) {
       setTaskArray((prevTasks) =>
         prevTasks.map((task, index) =>
-          index === editIndex ? new Planner(editTitle) : task
+          index === editIndex ? { ...task, title: editTitle } : task
         )
       );
       setEditIndex(null);
       setEditTitle("");
     }
+  };
+
+  const handleSetToTask = (index: number) => {
+    setChangeToTask(index);
+    setTaskDuration(""); // Reset duration on new selection
+  };
+
+  const handleConfirmTask = () => {
+    if (changeToTask !== null && taskDuration) {
+      setTaskArray((prevTasks) =>
+        prevTasks.map((task, index) =>
+          index === changeToTask
+            ? { ...task, type: "task", duration: taskDuration }
+            : task
+        )
+      );
+      setChangeToTask(null);
+      setTaskDuration("");
+    }
+  };
+
+  const handleCancelTask = () => {
+    setChangeToTask(null);
+    setTaskDuration("");
   };
 
   useEffect(() => {
@@ -98,9 +138,10 @@ export default function CapturePage() {
   return (
     <div className="flex flex-col w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
-        <p className="text-xl font-semibold">Capture</p>
+        <p className="text-xl font-semibold">Tasks</p>
         <p className="text-sm text-center">
-          Write down everything that's on your mind.
+          Click to mark all tasks - items without a specific date or time, which
+          only need to happen once.
         </p>
       </CardHeader>
       <CardContent className="px-0 py-6 border-b">
@@ -138,13 +179,17 @@ export default function CapturePage() {
         </Form>
       </CardContent>
       <div
-        className="overflow-x-auto  flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
+        className="overflow-x-auto  flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2 space-y-1"
         ref={tasksContainerRef}
       >
         {taskArray.map((task, index) => (
           <div
             key={index}
-            className="flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 px-4 space-x-3"
+            className={`flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 px-4 space-x-3${
+              task.type === "task" || changeToTask === index
+                ? " bg-orange-400 text-white"
+                : "bg-transparent"
+            }`}
           >
             <div className="flex-1">
               {editIndex === index ? (
@@ -152,45 +197,98 @@ export default function CapturePage() {
                   <Input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="bg-gray-200 border-none m-0 text-sm h-auto"
+                    className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
+                      task.type === "task" ? "text-black" : ""
+                    } `}
                   />
                   <Button size="xs" onClick={handleUpdateClick}>
                     Edit
                   </Button>
                 </div>
               ) : (
-                <div className="max-w-[250px] break-words overflow-hidden text-ellipsis text-sm">
+                <div
+                  className="max-w-[250px] break-words overflow-hidden text-ellipsis text-sm"
+                  onClick={() => handleSetToTask(index)} // Simplified
+                >
                   {task.title}
                 </div>
               )}
             </div>
-            <div className="flex flex-row space-x-2 items-center opacity-0 group-hover:opacity-100 transition-opacity self-start">
-              {editIndex !== index && (
-                <div
-                  onClick={() => handleEditClick(index)}
-                  className="cursor-pointer text-gray-400 hover:text-blue-400"
+
+            {/* Duration Input Section */}
+            {changeToTask === index && (
+              <div className="flex flex-row items-center space-x-2">
+                <Input
+                  value={taskDuration}
+                  onChange={(e) => setTaskDuration(e.target.value)}
+                  placeholder={
+                    taskArray[index].duration?.toString() || "minutes"
+                  }
+                  className="w-24 text-sm"
+                  type="number"
+                  min="1"
+                />
+                <button
+                  onClick={handleCancelTask}
+                  className="text-black hover:text-white"
                 >
-                  <PencilIcon className="w-5 h-5" />
-                </div>
-              )}
-              <div
-                onClick={() => deleteTask(index)}
-                className="cursor-pointer text-gray-400 hover:text-red-400"
-              >
-                <XMarkIcon className="w-7 h-7" />
+                  <ArrowUturnLeftIcon className="w-6 h-6 p-0" />
+                </button>
+                <button
+                  onClick={handleConfirmTask}
+                  disabled={!taskDuration}
+                  className="text-black hover:text-white"
+                >
+                  <CheckIcon className="w-6 h-6 p-0" />
+                </button>
               </div>
+            )}
+
+            <div className="flex flex-row space-x-2 items-center opacity-0 group-hover:opacity-100 transition-opacity self-start">
+              {editIndex !== index && changeToTask !== index && (
+                <>
+                  <div
+                    onClick={() => handleEditClick(index)}
+                    className="cursor-pointer text-gray-400 hover:text-blue-400"
+                  >
+                    <PencilIcon
+                      className={`w-5 h-5 ${
+                        task.type === "task" ? "text-white" : ""
+                      }`}
+                    />
+                  </div>
+                  <div
+                    onClick={() => deleteTask(index)}
+                    className="cursor-pointer text-gray-400 hover:text-red-400"
+                  >
+                    <XMarkIcon
+                      className={`w-7 h-7 ${
+                        task.type === "task" ? "text-white" : ""
+                      }`}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </div>
         ))}
       </div>
-      <CardFooter className="flex items-center justify-end flex-shrink p-4 border-t">
+      <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
+        <Button variant={"invisible"} className="px-0">
+          <Link
+            href={"/create/circle-of-influence"}
+            className="flex group items-center gap-4 "
+          >
+            <ArrowLongLeftIcon className="w-9 h-9 text-gray-400 group-hover:text-gray-800 rounded-full" />{" "}
+          </Link>
+        </Button>
         <Button
           variant={"invisible"}
           disabled={taskArray.length === 0}
           className="px-0"
         >
           <Link
-            href={"/create/circle-of-influence"}
+            href={"/create/mark-tasks"}
             className="flex group items-center gap-4 "
           >
             {" "}

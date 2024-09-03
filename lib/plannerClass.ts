@@ -11,23 +11,19 @@ export class Planner implements PlannerInterface {
   type: "task" | "plan" | "goal" | null;
   canInfluence: boolean;
   duration?: number;
-  deadline?: Date;
+  deadline?: Date | undefined;
 
   constructor(
     title: string,
     type: "task" | "plan" | "goal" | null = null,
     canInfluence: boolean = false,
     duration?: number,
-    deadline?: Date
+    deadline?: Date | undefined
   ) {
     this.title = title;
     this.type = type;
     this.canInfluence = canInfluence; // Set the value here
     this.duration = duration;
     this.deadline = deadline;
-  }
-
-  setDeadline(newDeadline: Date): void {
-    this.deadline = newDeadline;
   }
 }
