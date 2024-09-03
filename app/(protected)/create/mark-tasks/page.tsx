@@ -27,14 +27,7 @@ import {
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 import { Planner } from "@/lib/plannerClass";
 import { CheckIcon } from "@heroicons/react/24/outline";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 import { DateTimePicker } from "@/components/utilities/date-time-picker";
 
 export default function CapturePage() {
