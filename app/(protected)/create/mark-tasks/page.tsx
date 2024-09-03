@@ -249,28 +249,6 @@ export default function CapturePage() {
                         onClick={() => setSelectedDate(undefined)}
                         className="cursor-pointer w-6 h-6 text-destructive mr-2"
                       />
-                      {/* Custom Date Picker Button */}
-                      {/* <Popover>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-10 p-2 justify-center text-left font-normal",
-                              !selectedDate && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="h-5 w-5 text-black" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={setSelectedDate}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover> */}
 
                       <DateTimePicker
                         date={selectedDate}
@@ -305,47 +283,63 @@ export default function CapturePage() {
                     </div>
                   </div>
                 )}
-                <div className="flex flex-row w-full items-start">
-                  {/* Left content */}
-                  <div
-                    className="flex-grow flex justify-between max-w-[250px] break-words overflow-hidden text-ellipsis text-sm"
-                    onClick={() => handleSetToTask(index)}
-                  >
-                    <div className="max-w-[180px]">{task.title}</div>
-                    {task.type === "task" && changeToTask !== index && (
-                      <div className="text-sm text-white pl-2 flex items-start justify-start">
-                        {task.duration} {" min"}
-                      </div>
-                    )}
+
+                {editIndex === index ? (
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
+                        task.canInfluence ? "text-black" : ""
+                      } `}
+                    />
+                    <Button size="xs" onClick={handleUpdateClick}>
+                      Edit
+                    </Button>
                   </div>
-                  {/* Right content */}
-                  <div className="flex flex-row space-x-2 items-center ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                    {editIndex !== index && changeToTask !== index && (
-                      <>
-                        <div
-                          onClick={() => handleEditClick(index)}
-                          className="cursor-pointer text-gray-400 hover:text-blue-400"
-                        >
-                          <PencilIcon
-                            className={`w-5 h-5 ${
-                              task.type === "task" ? "text-white" : ""
-                            }`}
-                          />
+                ) : (
+                  <div className="flex flex-row w-full items-center">
+                    {/* Left content */}
+                    <div
+                      className="flex-grow flex justify-between max-w-[250px] break-words overflow-hidden text-ellipsis text-sm"
+                      onClick={() => handleSetToTask(index)}
+                    >
+                      <div className="max-w-[180px]">{task.title}</div>
+                      {task.type === "task" && changeToTask !== index && (
+                        <div className="text-sm text-white pl-2 flex items-start justify-start">
+                          {task.duration} {" min"}
                         </div>
-                        <div
-                          onClick={() => deleteTask(index)}
-                          className="cursor-pointer text-gray-400 hover:text-red-400"
-                        >
-                          <XMarkIcon
-                            className={`w-7 h-7 ${
-                              task.type === "task" ? "text-white" : ""
-                            }`}
-                          />
-                        </div>
-                      </>
-                    )}
+                      )}
+                    </div>
+                    {/* Right content */}
+                    <div className="flex flex-row space-x-2 items-center ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                      {editIndex !== index && changeToTask !== index && (
+                        <>
+                          <div
+                            onClick={() => handleEditClick(index)}
+                            className="cursor-pointer text-gray-400 hover:text-blue-400"
+                          >
+                            <PencilIcon
+                              className={`w-5 h-5 ${
+                                task.type === "task" ? "text-white" : ""
+                              }`}
+                            />
+                          </div>
+                          <div
+                            onClick={() => deleteTask(index)}
+                            className="cursor-pointer text-gray-400 hover:text-red-400"
+                          >
+                            <XMarkIcon
+                              className={`w-7 h-7 ${
+                                task.type === "task" ? "text-white" : ""
+                              }`}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )
         )}
