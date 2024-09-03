@@ -34,7 +34,9 @@ export default function CapturePage() {
   const [editTitle, setEditTitle] = useState<string>("");
 
   const [changeToTask, setChangeToTask] = useState<number | null>(null);
-  const [taskDuration, setTaskDuration] = useState<string>("");
+  const [taskDuration, setTaskDuration] = useState<number | undefined>(
+    undefined
+  );
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
@@ -45,6 +47,9 @@ export default function CapturePage() {
 
   const tasksContainerRef = useRef<HTMLDivElement>(null);
   const prevTaskLengthRef = useRef(taskArray.length);
+
+  // Create a ref for the duration input field
+  const durationInputRef = useRef<HTMLInputElement>(null);
 
   const onSubmit = (values: z.infer<typeof TaskListSchema>) => {
     if (editIndex !== null) {
@@ -102,11 +107,11 @@ export default function CapturePage() {
 
   const handleSetToTask = (index: number) => {
     setChangeToTask(index);
-    setTaskDuration(""); // Reset duration on new selection
+    setTaskDuration(undefined); // Reset duration on new selection
   };
 
   const handleConfirmTask = () => {
-    if (changeToTask !== null && taskDuration) {
+    if (changeToTask !== null && taskDuration !== undefined) {
       setTaskArray((prevTasks) =>
         prevTasks.map((task, index) =>
           index === changeToTask
@@ -115,7 +120,7 @@ export default function CapturePage() {
         )
       );
       setChangeToTask(null);
-      setTaskDuration("");
+      setTaskDuration(undefined);
     }
   };
 
@@ -124,13 +129,13 @@ export default function CapturePage() {
       setTaskArray((prevTasks) =>
         prevTasks.map((task, index) =>
           index === changeToTask
-            ? { ...task, type: null, duration: null } // Update task properties
+            ? { ...task, type: null, duration: undefined } // Use undefined instead of null
             : task
         )
       );
     }
     setChangeToTask(null);
-    setTaskDuration("");
+    setTaskDuration(undefined);
   };
 
   useEffect(() => {
@@ -144,13 +149,27 @@ export default function CapturePage() {
     prevTaskLengthRef.current = taskArray.length;
   }, [taskArray]);
 
+  useEffect(() => {
+    if (changeToTask !== null) {
+      // Use setTimeout to ensure the input field is rendered
+      const timer = setTimeout(() => {
+        if (durationInputRef.current) {
+          durationInputRef.current.focus();
+        }
+      }, 100); // Adjust the delay if necessary
+
+      // Cleanup the timer if the component unmounts or changeToTask changes
+      return () => clearTimeout(timer);
+    }
+  }, [changeToTask]);
+
   return (
     <div className="flex flex-col w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
         <p className="text-xl font-semibold">Tasks</p>
         <p className="text-sm text-center">
-          Click to mark all tasks - items without a specific date or time, which
-          only need to happen once.
+          Click to mark all <span className="font-bold">TASKS</span> - items
+          without a specific date or time, which only need to happen once.
         </p>
       </CardHeader>
       <CardContent className="px-0 py-6 border-b">
@@ -237,8 +256,11 @@ export default function CapturePage() {
                   <div className="flex flex-row h-full items-start space-x-2">
                     <div className="flex items-center space-x-2 mr-[-1rem]">
                       <Input
-                        value={taskDuration}
-                        onChange={(e) => setTaskDuration(e.target.value)}
+                        ref={durationInputRef} // Attach the ref here
+                        value={taskDuration?.toString() || ""}
+                        onChange={(e) =>
+                          setTaskDuration(Number(e.target.value))
+                        }
                         placeholder={
                           taskArray[index].duration?.toString() || "min"
                         }
@@ -254,7 +276,7 @@ export default function CapturePage() {
                       </button>
                       <button
                         onClick={handleConfirmTask}
-                        disabled={!taskDuration}
+                        disabled={taskDuration === undefined}
                         className="text-gray-800 hover:text-white"
                       >
                         <CheckIcon className="w-6 h-6 p-0" />
