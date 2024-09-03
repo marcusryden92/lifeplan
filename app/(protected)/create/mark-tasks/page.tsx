@@ -228,7 +228,7 @@ export default function CapturePage() {
             task.canInfluence && (
               <div
                 key={index}
-                className={`flex flex-col rounded-lg w-[350px] group hover:shadow-md py-1 px-4 space-y-3${
+                className={`flex flex-col rounded-lg w-[350px] group hover:shadow-md py-1 px-4 ${
                   task.type === "task" || changeToTask === index
                     ? " bg-amber-500 text-white"
                     : "bg-transparent"
@@ -236,7 +236,7 @@ export default function CapturePage() {
               >
                 {/* Duration Input Section */}
                 {changeToTask === index && (
-                  <div className="flex flex-row justify-between items-center space-x-2 mb-2">
+                  <div className="flex flex-row justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1 ">
                     <div className="flex items-center">
                       <XMarkIcon
                         onClick={() => setSelectedDate(undefined)}
@@ -259,7 +259,7 @@ export default function CapturePage() {
                       type="number"
                       pattern="[0-9]*"
                     />
-                    <div>
+                    <div className="flex items-center space-x-2">
                       <button
                         onClick={handleCancelTask}
                         className="text-gray-800 hover:text-white"
@@ -295,10 +295,10 @@ export default function CapturePage() {
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex flex-row w-full items-center">
+                  <div className="flex w-full items-center justify-center">
                     {/* Left content */}
                     <div
-                      className="flex-grow flex justify-between max-w-[250px] break-words overflow-hidden text-ellipsis text-sm"
+                      className="flex-grow flex justify-between max-w-[250px] break-words overflow-hidden text-ellipsis text-sm py-2"
                       onClick={() => handleSetToTask(index)}
                     >
                       <div className="max-w-[180px]">{task.title}</div>

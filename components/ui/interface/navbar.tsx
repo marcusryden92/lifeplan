@@ -22,9 +22,7 @@ export const Navbar = () => {
 
   return (
     <div className="flex w-[250px] h-full flex-col">
-      <div
-        className={`${font.className} text-white text-[2.8rem] mb-5 mt-[-1rem]`}
-      >
+      <div className={`${font.className} text-white text-[2.8rem] mb-5`}>
         LIFEPLAN
       </div>
       <div className="flex grow flex-col space-y-2">
