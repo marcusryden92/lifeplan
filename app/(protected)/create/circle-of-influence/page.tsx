@@ -26,6 +26,8 @@ import { Planner } from "@/lib/plannerClass";
 
 import { ArrowLongLeftIcon } from "@heroicons/react/24/outline";
 
+import { hasInfluence } from "@/utils/plannerUtils";
+
 export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -219,7 +221,9 @@ export default function CapturePage() {
         <Button
           variant={"invisible"}
           disabled={taskArray.length === 0}
-          className="px-0"
+          className={`px-0 ${
+            hasInfluence(taskArray) ? "pointer-events-none opacity-50" : ""
+          }`}
         >
           <Link
             href={"/create/mark-tasks"}
