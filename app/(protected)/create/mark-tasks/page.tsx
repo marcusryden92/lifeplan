@@ -35,6 +35,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import TimePicker from "react-time-picker";
 
 export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();
@@ -50,6 +51,9 @@ export default function CapturePage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     new Date()
   );
+  const [selectedTime, setSelectedTime] = useState<string | undefined>(
+    undefined
+  ); // New state for time
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
@@ -61,7 +65,6 @@ export default function CapturePage() {
   const tasksContainerRef = useRef<HTMLDivElement>(null);
   const prevTaskLengthRef = useRef(taskArray.length);
 
-  // Create a ref for the duration input field
   const durationInputRef = useRef<HTMLInputElement>(null);
 
   const onSubmit = (values: z.infer<typeof TaskListSchema>) => {
@@ -121,6 +124,7 @@ export default function CapturePage() {
   const handleSetToTask = (index: number) => {
     setChangeToTask(index);
     setTaskDuration(undefined); // Reset duration on new selection
+    setSelectedTime(undefined); // Reset time on new selection
   };
 
   const handleConfirmTask = () => {
@@ -133,6 +137,7 @@ export default function CapturePage() {
                 type: "task",
                 duration: taskDuration,
                 deadline: selectedDate || undefined,
+                time: selectedTime || undefined, // Include time here
               }
             : task
         )
@@ -140,6 +145,7 @@ export default function CapturePage() {
       setChangeToTask(null);
       setTaskDuration(undefined);
       setSelectedDate(undefined);
+      setSelectedTime(undefined); // Reset time after confirmation
     }
   };
 
@@ -155,6 +161,7 @@ export default function CapturePage() {
     }
     setChangeToTask(null);
     setTaskDuration(undefined);
+    setSelectedTime(undefined); // Reset time on cancel
   };
 
   useEffect(() => {
@@ -240,7 +247,7 @@ export default function CapturePage() {
                     : "bg-transparent"
                 }`}
               >
-                {/* Duration Input Section */}
+                {/* Duration and Time Input Section */}
                 {changeToTask === index && (
                   <div className="flex flex-row justify-between items-center space-x-2 mb-2">
                     <div className="flex items-center">
@@ -271,6 +278,12 @@ export default function CapturePage() {
                         </PopoverContent>
                       </Popover>
                     </div>
+                    <TimePicker
+                      onChange={setSelectedTime}
+                      value={selectedTime}
+                      className="w-20 h-8 text-sm"
+                      format="HH:mm"
+                    />
                     <Input
                       ref={durationInputRef} // Attach the ref here
                       value={taskDuration?.toString() || ""}
@@ -309,6 +322,18 @@ export default function CapturePage() {
                     {task.type === "task" && changeToTask !== index && (
                       <div className="text-sm text-white pl-2 flex items-start justify-start">
                         {task.duration} {" min"}
+                        {task.deadline && (
+                          <>
+                            {" on "}
+                            {task.deadline.toLocaleDateString()}
+                            {task.time && (
+                              <>
+                                {" at "}
+                                {task.time}
+                              </>
+                            )}
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
