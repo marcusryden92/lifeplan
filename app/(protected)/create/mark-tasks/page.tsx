@@ -28,6 +28,9 @@ import { CheckCircledIcon } from "@radix-ui/react-icons";
 import { Planner } from "@/lib/plannerClass";
 import { CheckIcon } from "@heroicons/react/24/outline";
 
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+
 export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -36,6 +39,11 @@ export default function CapturePage() {
   const [changeToTask, setChangeToTask] = useState<number | null>(null);
   const [taskDuration, setTaskDuration] = useState<number | undefined>(
     undefined
+  );
+
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date()
   );
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
@@ -61,7 +69,7 @@ export default function CapturePage() {
       setEditIndex(null);
       setEditTitle("");
     } else {
-      const newTask = new Planner(values.title);
+      const newTask = new Planner(values.title, null, true);
       setTaskArray((prevTasks) => [...prevTasks, newTask]);
     }
     form.reset();
@@ -115,12 +123,18 @@ export default function CapturePage() {
       setTaskArray((prevTasks) =>
         prevTasks.map((task, index) =>
           index === changeToTask
-            ? { ...task, type: "task", duration: taskDuration }
+            ? {
+                ...task,
+                type: "task",
+                duration: taskDuration,
+                deadline: selectedDate || undefined,
+              }
             : task
         )
       );
       setChangeToTask(null);
       setTaskDuration(undefined);
+      setSelectedDate(undefined);
     }
   };
 
@@ -255,6 +269,12 @@ export default function CapturePage() {
                 {changeToTask === index && (
                   <div className="flex flex-row h-full items-start space-x-2">
                     <div className="flex items-center space-x-2 mr-[-1rem]">
+                      <DatePicker
+                        className="text-sm w-24 text-black"
+                        selected={selectedDate || task.deadline || startDate}
+                        onChange={(date) => setSelectedDate(date || undefined)}
+                      />
+
                       <Input
                         ref={durationInputRef} // Attach the ref here
                         value={taskDuration?.toString() || ""}
