@@ -100,7 +100,7 @@ export default function CapturePage() {
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
         <p className="text-xl font-semibold">Capture</p>
         <p className="text-sm text-center">
-          Write down everything that's on your mind.
+          Write down everything that&apos;s on your mind.
         </p>
       </CardHeader>
       <CardContent className="px-0 py-6 border-b">
