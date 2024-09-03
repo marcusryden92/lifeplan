@@ -33,6 +33,7 @@ export const Navbar = () => {
             key={link.name}
             asChild
             variant={pathname === link.href ? "default" : "outline"}
+            className="justify-start"
           >
             <Link
               href={link.href}
@@ -51,6 +52,7 @@ export const Navbar = () => {
           key={"Setting"}
           asChild
           variant={pathname === "/settings" ? "default" : "outline"}
+          className="justify-start"
         >
           <Link
             href={"/settings"}

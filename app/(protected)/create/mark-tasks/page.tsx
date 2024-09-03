@@ -27,9 +27,14 @@ import {
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 import { Planner } from "@/lib/plannerClass";
 import { CheckIcon } from "@heroicons/react/24/outline";
-
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Calendar as CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();
@@ -243,13 +248,28 @@ export default function CapturePage() {
                         onClick={() => setSelectedDate(undefined)}
                         className="cursor-pointer w-6 h-6 text-destructive"
                       />
-                      <DatePicker
-                        className="text-sm w-24 text-black"
-                        selected={selectedDate || task.deadline || startDate}
-                        onChange={(date) => setSelectedDate(date || undefined)}
-                        showTimeSelect
-                        showIcon
-                      />
+                      {/* Custom Date Picker Button */}
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-10 p-2 justify-center text-left font-normal ",
+                              !selectedDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="h-5 w-5 text-black" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto ">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={setSelectedDate}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <Input
                       ref={durationInputRef} // Attach the ref here
