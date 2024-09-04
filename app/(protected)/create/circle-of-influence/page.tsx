@@ -28,6 +28,8 @@ import { ArrowLongLeftIcon } from "@heroicons/react/24/outline";
 
 import { hasInfluence } from "@/utils/plannerUtils";
 
+import { onSubmit } from "@/utils/creation-pages-functions";
+
 export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -43,20 +45,27 @@ export default function CapturePage() {
   const tasksContainerRef = useRef<HTMLDivElement>(null);
   const prevTaskLengthRef = useRef(taskArray.length);
 
-  const onSubmit = (values: z.infer<typeof TaskListSchema>) => {
-    if (editIndex !== null) {
-      setTaskArray((prevTasks) =>
-        prevTasks.map((task, index) =>
-          index === editIndex ? new Planner(editTitle) : task
-        )
-      );
-      setEditIndex(null);
-      setEditTitle("");
-    } else {
-      const newTask = new Planner(values.title);
-      setTaskArray((prevTasks) => [...prevTasks, newTask]);
-    }
-    form.reset();
+  interface OnSubmitProps {
+    values: z.infer<typeof TaskListSchema>;
+    editIndex: number | null;
+    setEditIndex: (index: number | null) => void;
+    editTitle: string;
+    setEditTitle: (title: string) => void;
+    form: { reset: () => void };
+    setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+    setDefaultInfluence: boolean | undefined;
+  }
+
+  const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
+    onSubmit({
+      values,
+      setTaskArray,
+      editIndex,
+      setEditIndex,
+      editTitle,
+      setEditTitle,
+      form,
+    });
   };
 
   const onClick = (index: number) => {
@@ -122,7 +131,7 @@ export default function CapturePage() {
       <CardContent className="px-0 py-6 border-b">
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={form.handleSubmit(handleFormSubmit)}
             className="space-y-8 flex flex-col"
           >
             <FormField

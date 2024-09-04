@@ -28,7 +28,9 @@ import { CheckCircledIcon } from "@radix-ui/react-icons";
 import { Planner } from "@/lib/plannerClass";
 import { CheckIcon } from "@heroicons/react/24/outline";
 
-import { DateTimePicker } from "@/components/utilities/date-time-picker";
+import { DateTimePicker } from "@/components/utilities/time-picker/date-time-picker";
+
+import { onSubmit } from "@/utils/creation-pages-functions";
 
 export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();
@@ -59,20 +61,17 @@ export default function CapturePage() {
   // Create a ref for the duration input field
   const durationInputRef = useRef<HTMLInputElement>(null);
 
-  const onSubmit = (values: z.infer<typeof TaskListSchema>) => {
-    if (editIndex !== null) {
-      setTaskArray((prevTasks) =>
-        prevTasks.map((task, index) =>
-          index === editIndex ? new Planner(editTitle) : task
-        )
-      );
-      setEditIndex(null);
-      setEditTitle("");
-    } else {
-      const newTask = new Planner(values.title, null, true);
-      setTaskArray((prevTasks) => [...prevTasks, newTask]);
-    }
-    form.reset();
+  const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
+    onSubmit({
+      values,
+      setTaskArray,
+      editIndex,
+      setEditIndex,
+      editTitle,
+      setEditTitle,
+      form,
+      setDefaultInfluence: true,
+    });
   };
 
   const onClick = (index: number) => {
@@ -192,7 +191,7 @@ export default function CapturePage() {
       <CardContent className="px-0 py-6 border-b">
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(onSubmit)}
+            onSubmit={form.handleSubmit(handleFormSubmit)}
             className="space-y-8 flex flex-col"
           >
             <FormField
