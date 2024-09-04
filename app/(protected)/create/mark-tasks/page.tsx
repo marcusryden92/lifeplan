@@ -42,7 +42,8 @@ export default function CapturePage() {
 
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    new Date()
+    // new Date()
+    undefined
   );
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
