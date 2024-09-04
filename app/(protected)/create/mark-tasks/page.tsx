@@ -115,18 +115,24 @@ export default function CapturePage() {
 
   const handleSetToTask = (index: number) => {
     setChangeToTask(index);
-    setTaskDuration(undefined); // Reset duration on new selection
+    setTaskDuration(taskArray[index].duration || undefined); // Initialize with existing duration
   };
 
-  const handleConfirmTask = () => {
-    if (changeToTask !== null && taskDuration !== undefined) {
+  const handleConfirmTask = (
+    index: number,
+    currentDuration: number | undefined
+  ) => {
+    const finalDuration =
+      taskDuration !== undefined ? taskDuration : currentDuration;
+
+    if (changeToTask !== null && finalDuration !== undefined) {
       setTaskArray((prevTasks) =>
         prevTasks.map((task, index) =>
           index === changeToTask
             ? {
                 ...task,
                 type: "task",
-                duration: taskDuration,
+                duration: finalDuration, // Use the final duration
                 deadline: selectedDate || undefined,
               }
             : task
@@ -245,13 +251,13 @@ export default function CapturePage() {
                       />
 
                       <DateTimePicker
-                        date={selectedDate}
+                        date={task.deadline || undefined || selectedDate}
                         setDate={setSelectedDate}
                       />
                     </div>
                     <Input
-                      ref={durationInputRef} // Attach the ref here
-                      value={taskDuration?.toString() || ""}
+                      ref={durationInputRef}
+                      defaultValue={taskArray[index].duration} // Set the default value to the current duration
                       onChange={(e) => setTaskDuration(Number(e.target.value))}
                       placeholder={
                         taskArray[index].duration?.toString() || "min"
@@ -260,6 +266,7 @@ export default function CapturePage() {
                       type="number"
                       pattern="[0-9]*"
                     />
+
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={handleCancelTask}
@@ -268,7 +275,9 @@ export default function CapturePage() {
                         <ArrowUturnLeftIcon className="w-5 h-5 p-0" />
                       </button>
                       <button
-                        onClick={handleConfirmTask}
+                        onClick={() => {
+                          handleConfirmTask(index);
+                        }}
                         disabled={taskDuration === undefined}
                         className="text-gray-800 hover:text-white"
                       >
@@ -303,6 +312,7 @@ export default function CapturePage() {
                       onClick={() => handleSetToTask(index)}
                     >
                       <div className="max-w-[180px]">{task.title}</div>
+                      {task.deadline && task.deadline.toLocaleDateString()}
                       {task.type === "task" && changeToTask !== index && (
                         <div className="text-sm text-white pl-2 flex items-start justify-start">
                           {task.duration} {" min"}
