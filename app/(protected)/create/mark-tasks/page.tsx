@@ -321,7 +321,7 @@ export default function CapturePage() {
                       {editIndex !== index && changeToTask !== index && (
                         <>
                           <div
-                            onClick={() => handleEditClick()}
+                            onClick={() => handleEditClick(index)}
                             className="cursor-pointer text-gray-400 hover:text-blue-400"
                           >
                             <PencilIcon
