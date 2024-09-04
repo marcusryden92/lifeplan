@@ -1,5 +1,22 @@
 "use client";
 
+// Third-party libraries
+import { useState, useRef, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import Link from "next/link";
+import {
+  XMarkIcon,
+  PencilIcon,
+  TrashIcon,
+  ArrowLongLeftIcon,
+  ArrowUturnLeftIcon,
+  CheckIcon,
+} from "@heroicons/react/24/outline";
+import { CheckCircledIcon } from "@radix-ui/react-icons";
+
+// Local components
 import { useDataContext } from "@/context/DataContext";
 import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -9,28 +26,21 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { TaskListSchema } from "@/schemas";
-import { useState, useRef, useEffect } from "react";
-import {
-  XMarkIcon,
-  PencilIcon,
-  TrashIcon,
-  ArrowLongLeftIcon,
-  ArrowUturnLeftIcon,
-} from "@heroicons/react/24/outline";
-import { CheckCircledIcon } from "@radix-ui/react-icons";
-import { Planner } from "@/lib/plannerClass";
-import { CheckIcon } from "@heroicons/react/24/outline";
-
 import { DateTimePicker } from "@/components/utilities/time-picker/date-time-picker";
 
-import { onSubmit } from "@/utils/creation-pages-functions";
+// Schemas
+import { TaskListSchema } from "@/schemas";
+
+// Local utilities
+import {
+  onSubmit,
+  deleteTask,
+  deleteAll,
+  clickEdit,
+  confirmEdit,
+} from "@/utils/creation-pages-functions";
 
 export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();
@@ -42,7 +52,6 @@ export default function CapturePage() {
     undefined
   );
 
-  const [startDate, setStartDate] = useState<Date>(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     // new Date()
     undefined
@@ -74,42 +83,37 @@ export default function CapturePage() {
     });
   };
 
-  const onClick = (index: number) => {
-    setTaskArray((prevTaskArray): Planner[] => {
-      const updatedTaskArray = prevTaskArray.map((task, i) =>
-        i === index ? { ...task, canInfluence: !task.canInfluence } : task
-      );
-      return updatedTaskArray as Planner[];
+  const handleDeleteTask = (index: number) => {
+    deleteTask(index, {
+      setTaskArray,
+      editIndex,
+      setEditIndex,
+      setEditTitle,
     });
   };
 
-  const deleteTask = (index: number) => {
-    setTaskArray((prevTasks) => prevTasks.filter((_, i) => i !== index));
-    if (editIndex === index) {
-      setEditIndex(null);
-      setEditTitle("");
-    }
+  const handleDeleteAll = () => {
+    deleteAll({ setTaskArray });
   };
 
-  const deleteAll = () => {
-    setTaskArray([]);
+  const handleClickEdit = (index: number) => {
+    clickEdit({
+      index,
+      setEditIndex,
+      setEditTitle,
+      taskArray,
+    });
   };
 
-  const handleEditClick = (index: number) => {
-    setEditIndex(index);
-    setEditTitle(taskArray[index].title);
-  };
-
-  const handleUpdateClick = () => {
-    if (editIndex !== null) {
-      setTaskArray((prevTasks) =>
-        prevTasks.map((task, index) =>
-          index === editIndex ? { ...task, title: editTitle } : task
-        )
-      );
-      setEditIndex(null);
-      setEditTitle("");
-    }
+  const handleConfirmEdit = () => {
+    confirmEdit({
+      taskArray,
+      editIndex,
+      editTitle,
+      setTaskArray,
+      setEditIndex,
+      setEditTitle,
+    });
   };
 
   const handleSetToTask = (index: number) => {
@@ -208,7 +212,7 @@ export default function CapturePage() {
                     </div>
                     <button
                       type="button"
-                      onClick={deleteAll}
+                      onClick={handleDeleteAll}
                       className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem] "
                     >
                       <TrashIcon className="w-5 h-5 mx-2" />
@@ -295,7 +299,7 @@ export default function CapturePage() {
                     <Button
                       size="xs"
                       variant={"invisible"}
-                      onClick={handleUpdateClick}
+                      onClick={handleConfirmEdit}
                     >
                       <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
                     </Button>
@@ -320,7 +324,7 @@ export default function CapturePage() {
                       {editIndex !== index && changeToTask !== index && (
                         <>
                           <div
-                            onClick={() => handleEditClick(index)}
+                            onClick={() => handleClickEdit(index)}
                             className="cursor-pointer text-gray-400 hover:text-blue-400"
                           >
                             <PencilIcon
@@ -330,7 +334,7 @@ export default function CapturePage() {
                             />
                           </div>
                           <div
-                            onClick={() => deleteTask(index)}
+                            onClick={() => handleDeleteTask(index)}
                             className="cursor-pointer text-gray-400 hover:text-red-400"
                           >
                             <XMarkIcon

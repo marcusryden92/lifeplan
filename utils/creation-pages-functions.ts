@@ -3,7 +3,7 @@ import { TaskListSchema } from "@/schemas";
 
 import * as z from "zod";
 
-// onSubmit function for creating new Planner instances
+// ONSUBMIT() FUNCTION FOR CREATING PLANNER INSTANCES
 
 interface OnSubmitProps {
   values: z.infer<typeof TaskListSchema>;
@@ -43,4 +43,83 @@ export const onSubmit = ({
     setTaskArray((prevTasks) => [...prevTasks, newTask]);
   }
   form.reset();
+};
+
+// DELETE TASK
+
+interface DeleteTaskProps {
+  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+  editIndex: number | null;
+  setEditIndex: React.Dispatch<React.SetStateAction<number | null>>;
+  setEditTitle: React.Dispatch<React.SetStateAction<string>>;
+}
+
+export const deleteTask = (
+  index: number,
+  { setTaskArray, editIndex, setEditIndex, setEditTitle }: DeleteTaskProps
+) => {
+  setTaskArray((prevTasks) => prevTasks.filter((_, i) => i !== index));
+  if (editIndex === index) {
+    setEditIndex(null);
+    setEditTitle("");
+  }
+};
+
+// DELETE ALL TASKS
+
+interface DeleteAllProps {
+  setTaskArray: React.Dispatch<React.SetStateAction<any[]>>; // Replace `any` with your actual task type if necessary
+}
+
+export const deleteAll = ({ setTaskArray }: DeleteAllProps) => {
+  setTaskArray([]);
+};
+
+// EDIT AND UPDATE
+
+interface ClickEditProps {
+  index: number;
+  setEditIndex: React.Dispatch<React.SetStateAction<number | null>>;
+  setEditTitle: React.Dispatch<React.SetStateAction<string>>;
+  taskArray: Planner[]; // Adjust type according to your task structure
+}
+
+export const clickEdit = ({
+  index,
+  setEditIndex,
+  setEditTitle,
+  taskArray,
+}: ClickEditProps) => {
+  setEditIndex(index);
+  setEditTitle(taskArray[index].title);
+};
+
+//---------------------------------
+
+interface ConfirmEditProps {
+  taskArray: Planner[];
+  editIndex: number | null;
+  editTitle: string;
+  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+  setEditIndex: React.Dispatch<React.SetStateAction<number | null>>;
+  setEditTitle: React.Dispatch<React.SetStateAction<string>>;
+}
+
+export const confirmEdit = ({
+  taskArray,
+  editIndex,
+  editTitle,
+  setTaskArray,
+  setEditIndex,
+  setEditTitle,
+}: ConfirmEditProps) => {
+  if (editIndex !== null) {
+    setTaskArray((prevTasks) =>
+      prevTasks.map((task, index) =>
+        index === editIndex ? new Planner(editTitle) : task
+      )
+    );
+    setEditIndex(null);
+    setEditTitle("");
+  }
 };

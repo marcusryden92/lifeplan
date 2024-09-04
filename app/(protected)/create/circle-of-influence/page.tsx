@@ -1,5 +1,20 @@
 "use client";
 
+// Third-party libraries
+import { useState, useRef, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import Link from "next/link";
+import {
+  XMarkIcon,
+  PencilIcon,
+  TrashIcon,
+  ArrowLongLeftIcon,
+} from "@heroicons/react/24/outline";
+import { CheckCircledIcon } from "@radix-ui/react-icons";
+
+// Local components
 import { useDataContext } from "@/context/DataContext";
 import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -10,25 +25,22 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+
+// Schemas
 import { TaskListSchema } from "@/schemas";
-import { useState, useRef, useEffect } from "react";
-import { XMarkIcon } from "@heroicons/react/24/outline";
-import { PencilIcon } from "@heroicons/react/24/outline";
-import { TrashIcon } from "@heroicons/react/24/outline";
-import { CheckCircledIcon } from "@radix-ui/react-icons";
 import { Planner } from "@/lib/plannerClass";
 
-import { ArrowLongLeftIcon } from "@heroicons/react/24/outline";
-
+// Local utilities
 import { hasInfluence } from "@/utils/plannerUtils";
-
-import { onSubmit } from "@/utils/creation-pages-functions";
+import {
+  onSubmit,
+  deleteTask,
+  deleteAll,
+  clickEdit,
+  confirmEdit,
+} from "@/utils/creation-pages-functions";
 
 export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();
@@ -79,33 +91,37 @@ export default function CapturePage() {
     });
   };
 
-  const deleteTask = (index: number) => {
-    setTaskArray((prevTasks) => prevTasks.filter((_, i) => i !== index));
-    if (editIndex === index) {
-      setEditIndex(null);
-      setEditTitle("");
-    }
+  const handleDeleteTask = (index: number) => {
+    deleteTask(index, {
+      setTaskArray,
+      editIndex,
+      setEditIndex,
+      setEditTitle,
+    });
   };
 
-  const deleteAll = () => {
-    setTaskArray([]);
+  const handleDeleteAll = () => {
+    deleteAll({ setTaskArray });
   };
 
-  const handleEditClick = (index: number) => {
-    setEditIndex(index);
-    setEditTitle(taskArray[index].title);
+  const handleClickEdit = (index: number) => {
+    clickEdit({
+      index,
+      setEditIndex,
+      setEditTitle,
+      taskArray,
+    });
   };
 
-  const handleUpdateClick = () => {
-    if (editIndex !== null) {
-      setTaskArray((prevTasks) =>
-        prevTasks.map((task, index) =>
-          index === editIndex ? { ...task, title: editTitle } : task
-        )
-      );
-      setEditIndex(null);
-      setEditTitle("");
-    }
+  const handleConfirmEdit = () => {
+    confirmEdit({
+      taskArray,
+      editIndex,
+      editTitle,
+      setTaskArray,
+      setEditIndex,
+      setEditTitle,
+    });
   };
 
   useEffect(() => {
@@ -148,7 +164,7 @@ export default function CapturePage() {
                     </div>
                     <button
                       type="button"
-                      onClick={deleteAll}
+                      onClick={handleDeleteAll}
                       className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem] "
                     >
                       <TrashIcon className="w-5 h-5 mx-2" />
@@ -183,7 +199,7 @@ export default function CapturePage() {
                       task.canInfluence ? "text-black" : ""
                     } `}
                   />
-                  <Button size="xs" onClick={handleUpdateClick}>
+                  <Button size="xs" onClick={handleConfirmEdit}>
                     Edit
                   </Button>
                 </div>
@@ -199,7 +215,7 @@ export default function CapturePage() {
             <div className="flex flex-row space-x-2 items-center opacity-0 group-hover:opacity-100 transition-opacity self-start">
               {editIndex !== index && (
                 <div
-                  onClick={() => handleEditClick(index)}
+                  onClick={() => handleClickEdit(index)}
                   className="cursor-pointer text-gray-400 hover:text-blue-400"
                 >
                   <PencilIcon
@@ -210,7 +226,7 @@ export default function CapturePage() {
                 </div>
               )}
               <div
-                onClick={() => deleteTask(index)}
+                onClick={() => handleDeleteTask(index)}
                 className="cursor-pointer text-gray-400 hover:text-red-400"
               >
                 <XMarkIcon
