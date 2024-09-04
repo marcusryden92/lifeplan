@@ -14,25 +14,22 @@ import {
 } from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 
-// Local components
+// Local components and context
 import { useDataContext } from "@/context/DataContext";
 import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import {
   FormField,
   Form,
   FormItem,
-  FormDescription,
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-// Schemas
+// Schemas and utilities
 import { TaskListSchema } from "@/schemas";
 import { Planner } from "@/lib/plannerClass";
-
-// Local utilities
 import { hasInfluence } from "@/utils/plannerUtils";
 import {
   onSubmit,
@@ -57,17 +54,6 @@ export default function CapturePage() {
   const tasksContainerRef = useRef<HTMLDivElement>(null);
   const prevTaskLengthRef = useRef(taskArray.length);
 
-  interface OnSubmitProps {
-    values: z.infer<typeof TaskListSchema>;
-    editIndex: number | null;
-    setEditIndex: (index: number | null) => void;
-    editTitle: string;
-    setEditTitle: (title: string) => void;
-    form: { reset: () => void };
-    setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
-    setDefaultInfluence: boolean | undefined;
-  }
-
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({
       values,
@@ -80,15 +66,12 @@ export default function CapturePage() {
     });
   };
 
-  const onClick = (index: number) => {
-    // Update state correctly without mutation
-
-    setTaskArray((prevTaskArray): Planner[] => {
-      const updatedTaskArray = prevTaskArray.map((task, i) =>
+  const toggleInfluence = (index: number) => {
+    setTaskArray((prevTaskArray) =>
+      prevTaskArray.map((task, i) =>
         i === index ? { ...task, canInfluence: !task.canInfluence } : task
-      );
-      return updatedTaskArray as Planner[];
-    });
+      )
+    );
   };
 
   const handleDeleteTask = (index: number) => {
@@ -165,7 +148,7 @@ export default function CapturePage() {
                     <button
                       type="button"
                       onClick={handleDeleteAll}
-                      className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem] "
+                      className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem]"
                     >
                       <TrashIcon className="w-5 h-5 mx-2" />
                       Delete all
@@ -179,14 +162,14 @@ export default function CapturePage() {
         </Form>
       </CardContent>
       <div
-        className="overflow-x-auto  flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2 space-y-1"
+        className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2 space-y-1"
         ref={tasksContainerRef}
       >
         {taskArray.map((task, index) => (
           <div
             key={index}
-            className={`flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 px-4 space-x-3${
-              task.canInfluence ? " bg-purple-400 text-white" : "bg-transparent"
+            className={`flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 px-4 space-x-3 ${
+              task.canInfluence ? "bg-purple-400 text-white" : "bg-transparent"
             }`}
           >
             <div className="flex-1">
@@ -197,7 +180,7 @@ export default function CapturePage() {
                     onChange={(e) => setEditTitle(e.target.value)}
                     className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
                       task.canInfluence ? "text-black" : ""
-                    } `}
+                    }`}
                   />
                   <Button size="xs" onClick={handleConfirmEdit}>
                     Edit
@@ -206,7 +189,7 @@ export default function CapturePage() {
               ) : (
                 <div
                   className="max-w-[250px] break-words overflow-hidden text-ellipsis text-sm"
-                  onClick={() => onClick(index)} // Simplified
+                  onClick={() => toggleInfluence(index)} // Simplified function name
                 >
                   {task.title}
                 </div>
@@ -238,13 +221,13 @@ export default function CapturePage() {
         ))}
       </div>
       <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
-        <Button variant={"invisible"} className="px-0">
-          <Link href={"/create/"} className="flex group items-center gap-4 ">
-            <ArrowLongLeftIcon className="w-9 h-9 text-gray-400 group-hover:text-gray-800 rounded-full" />{" "}
+        <Button variant="invisible" className="px-0">
+          <Link href={"/create/"} className="flex group items-center gap-4">
+            <ArrowLongLeftIcon className="w-9 h-9 text-gray-400 group-hover:text-gray-800 rounded-full" />
           </Link>
         </Button>
         <Button
-          variant={"invisible"}
+          variant="invisible"
           disabled={taskArray.length === 0}
           className={`px-0 ${
             hasInfluence(taskArray) ? "pointer-events-none opacity-50" : ""
@@ -252,11 +235,10 @@ export default function CapturePage() {
         >
           <Link
             href={"/create/mark-tasks"}
-            className="flex group items-center gap-4 "
+            className="flex group items-center gap-4"
           >
-            {" "}
             {"Continue"}
-            <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />{" "}
+            <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />
           </Link>
         </Button>
       </CardFooter>

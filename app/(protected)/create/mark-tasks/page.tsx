@@ -16,7 +16,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 
-// Local components
+// Local components and context
 import { useDataContext } from "@/context/DataContext";
 import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import {
@@ -46,16 +46,11 @@ export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
-
   const [changeToTask, setChangeToTask] = useState<number | null>(null);
   const [taskDuration, setTaskDuration] = useState<number | undefined>(
     undefined
   );
-
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    // new Date()
-    undefined
-  );
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
@@ -66,8 +61,6 @@ export default function CapturePage() {
 
   const tasksContainerRef = useRef<HTMLDivElement>(null);
   const prevTaskLengthRef = useRef(taskArray.length);
-
-  // Create a ref for the duration input field
   const durationInputRef = useRef<HTMLInputElement>(null);
 
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
@@ -118,7 +111,7 @@ export default function CapturePage() {
 
   const handleSetToTask = (index: number) => {
     setChangeToTask(index);
-    setTaskDuration(taskArray[index].duration || undefined); // Initialize with existing duration
+    setTaskDuration(taskArray[index].duration || undefined);
   };
 
   const handleConfirmTask = (currentDuration: number | undefined) => {
@@ -132,15 +125,13 @@ export default function CapturePage() {
             ? {
                 ...task,
                 type: "task",
-                duration: finalDuration, // Use the final duration
+                duration: finalDuration,
                 deadline: selectedDate || undefined,
               }
             : task
         )
       );
-      setChangeToTask(null);
-      setTaskDuration(undefined);
-      setSelectedDate(undefined);
+      resetTaskState();
     }
   };
 
@@ -149,13 +140,18 @@ export default function CapturePage() {
       setTaskArray((prevTasks) =>
         prevTasks.map((task, index) =>
           index === changeToTask
-            ? { ...task, type: null, duration: undefined } // Use undefined instead of null
+            ? { ...task, type: null, duration: undefined }
             : task
         )
       );
     }
+    resetTaskState();
+  };
+
+  const resetTaskState = () => {
     setChangeToTask(null);
     setTaskDuration(undefined);
+    setSelectedDate(undefined);
   };
 
   useEffect(() => {
@@ -171,14 +167,9 @@ export default function CapturePage() {
 
   useEffect(() => {
     if (changeToTask !== null) {
-      // Use setTimeout to ensure the input field is rendered
       const timer = setTimeout(() => {
-        if (durationInputRef.current) {
-          durationInputRef.current.focus();
-        }
-      }, 100); // Adjust the delay if necessary
-
-      // Cleanup the timer if the component unmounts or changeToTask changes
+        durationInputRef.current?.focus();
+      }, 100);
       return () => clearTimeout(timer);
     }
   }, [changeToTask]);
@@ -213,7 +204,7 @@ export default function CapturePage() {
                     <button
                       type="button"
                       onClick={handleDeleteAll}
-                      className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem] "
+                      className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem]"
                     >
                       <TrashIcon className="w-5 h-5 mx-2" />
                       Delete all
@@ -230,149 +221,139 @@ export default function CapturePage() {
         className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2 space-y-1"
         ref={tasksContainerRef}
       >
-        {taskArray.map(
-          (task, index) =>
-            task.canInfluence && (
-              <div
-                key={index}
-                className={`flex flex-col rounded-lg w-[350px] group hover:shadow-md py-1 px-4 ${
-                  task.type === "task" || changeToTask === index
-                    ? " bg-amber-500 text-white"
-                    : "bg-transparent"
-                }`}
-              >
-                {/* Duration Input Section */}
-                {changeToTask === index && (
-                  <div className="flex flex-row justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1 ">
-                    <div className="flex items-center">
-                      <XMarkIcon
-                        onClick={() => setSelectedDate(undefined)}
-                        className="cursor-pointer w-6 h-6 text-destructive mr-2"
-                      />
-
-                      <DateTimePicker
-                        date={task.deadline || undefined || selectedDate}
-                        setDate={setSelectedDate}
-                      />
-                    </div>
-                    <Input
-                      ref={durationInputRef}
-                      defaultValue={taskArray[index].duration} // Set the default value to the current duration
-                      onChange={(e) => setTaskDuration(Number(e.target.value))}
-                      placeholder={
-                        taskArray[index].duration?.toString() || "min"
-                      }
-                      className="w-14 h-7 text-sm text-white"
-                      type="number"
-                      pattern="[0-9]*"
+        {taskArray.map((task, index) =>
+          task.canInfluence ? (
+            <div
+              key={index}
+              className={`flex flex-col rounded-lg w-[350px] group hover:shadow-md py-1 px-4 ${
+                task.type === "task" || changeToTask === index
+                  ? "bg-amber-500 text-white"
+                  : "bg-transparent"
+              }`}
+            >
+              {/* Duration Input Section */}
+              {changeToTask === index && (
+                <div className="flex flex-row justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
+                  <div className="flex items-center">
+                    <XMarkIcon
+                      onClick={() => setSelectedDate(undefined)}
+                      className="cursor-pointer w-6 h-6 text-destructive mr-2"
                     />
-
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={handleCancelTask}
-                        className="text-gray-800 hover:text-white"
-                      >
-                        <ArrowUturnLeftIcon className="w-5 h-5 p-0" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          handleConfirmTask(index);
-                        }}
-                        disabled={taskDuration === undefined}
-                        className="text-gray-800 hover:text-white"
-                      >
-                        <CheckIcon className="w-6 h-6 p-0" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {editIndex === index ? (
-                  <div className="flex gap-2 items-center">
-                    <Input
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-                        task.canInfluence ? "text-black" : ""
-                      } `}
+                    <DateTimePicker
+                      date={task.deadline || selectedDate}
+                      setDate={setSelectedDate}
                     />
-                    <Button
-                      size="xs"
-                      variant={"invisible"}
-                      onClick={handleConfirmEdit}
-                    >
-                      <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
-                    </Button>
                   </div>
-                ) : (
-                  <div className="flex w-full items-center justify-center">
-                    {/* Left content */}
-                    <div
-                      className="flex-grow flex justify-between max-w-[250px] break-words overflow-hidden text-ellipsis text-sm py-2"
-                      onClick={() => handleSetToTask(index)}
+                  <Input
+                    ref={durationInputRef}
+                    defaultValue={taskArray[index].duration}
+                    onChange={(e) => setTaskDuration(Number(e.target.value))}
+                    placeholder={taskArray[index].duration?.toString() || "min"}
+                    className="w-14 h-7 text-sm text-white"
+                    type="number"
+                    pattern="[0-9]*"
+                  />
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={handleCancelTask}
+                      className="text-gray-800 hover:text-white"
                     >
-                      <div className="max-w-[180px]">{task.title}</div>
-                      {task.deadline && task.deadline.toLocaleDateString()}
-                      {task.type === "task" && changeToTask !== index && (
-                        <div className="text-sm text-white pl-2 flex items-start justify-start">
-                          {task.duration} {" min"}
+                      <ArrowUturnLeftIcon className="w-5 h-5 p-0" />
+                    </button>
+                    <button
+                      onClick={() => handleConfirmTask(index)}
+                      disabled={taskDuration === undefined}
+                      className="text-gray-800 hover:text-white"
+                    >
+                      <CheckIcon className="w-6 h-6 p-0" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {editIndex === index ? (
+                <div className="flex gap-2 items-center">
+                  <Input
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
+                      task.canInfluence ? "text-black" : ""
+                    }`}
+                  />
+                  <Button
+                    size="xs"
+                    variant="invisible"
+                    onClick={handleConfirmEdit}
+                  >
+                    <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex w-full items-center justify-center">
+                  <div
+                    className="flex-grow flex justify-between max-w-[250px] break-words overflow-hidden text-ellipsis text-sm py-2"
+                    onClick={() => handleSetToTask(index)}
+                  >
+                    <div className="max-w-[180px]">{task.title}</div>
+                    {task.deadline && task.deadline.toLocaleDateString()}
+                    {task.type === "task" && changeToTask !== index && (
+                      <div className="text-sm text-white pl-2 flex items-start justify-start">
+                        {task.duration} {" min"}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex flex-row space-x-2 items-center ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                    {editIndex !== index && changeToTask !== index && (
+                      <>
+                        <div
+                          onClick={() => handleClickEdit(index)}
+                          className="cursor-pointer text-gray-400 hover:text-blue-400"
+                        >
+                          <PencilIcon
+                            className={`w-5 h-5 ${
+                              task.type === "task" ? "text-white" : ""
+                            }`}
+                          />
                         </div>
-                      )}
-                    </div>
-                    {/* Right content */}
-                    <div className="flex flex-row space-x-2 items-center ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                      {editIndex !== index && changeToTask !== index && (
-                        <>
-                          <div
-                            onClick={() => handleClickEdit(index)}
-                            className="cursor-pointer text-gray-400 hover:text-blue-400"
-                          >
-                            <PencilIcon
-                              className={`w-5 h-5 ${
-                                task.type === "task" ? "text-white" : ""
-                              }`}
-                            />
-                          </div>
-                          <div
-                            onClick={() => handleDeleteTask(index)}
-                            className="cursor-pointer text-gray-400 hover:text-red-400"
-                          >
-                            <XMarkIcon
-                              className={`w-7 h-7 ${
-                                task.type === "task" ? "text-white" : ""
-                              }`}
-                            />
-                          </div>
-                        </>
-                      )}
-                    </div>
+                        <div
+                          onClick={() => handleDeleteTask(index)}
+                          className="cursor-pointer text-gray-400 hover:text-red-400"
+                        >
+                          <XMarkIcon
+                            className={`w-7 h-7 ${
+                              task.type === "task" ? "text-white" : ""
+                            }`}
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
-                )}
-              </div>
-            )
+                </div>
+              )}
+            </div>
+          ) : null
         )}
       </div>
       <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
-        <Button variant={"invisible"} className="px-0">
+        <Button variant="invisible" className="px-0">
           <Link
             href={"/create/circle-of-influence"}
-            className="flex group items-center gap-4 "
+            className="flex group items-center gap-4"
           >
-            <ArrowLongLeftIcon className="w-9 h-9 text-gray-400 group-hover:text-gray-800 rounded-full" />{" "}
+            <ArrowLongLeftIcon className="w-9 h-9 text-gray-400 group-hover:text-gray-800 rounded-full" />
           </Link>
         </Button>
         <Button
-          variant={"invisible"}
+          variant="invisible"
           disabled={taskArray.length === 0}
           className="px-0"
         >
           <Link
             href={"/create/mark-tasks"}
-            className="flex group items-center gap-4 "
+            className="flex group items-center gap-4"
           >
-            {" "}
             {"Continue"}
-            <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />{" "}
+            <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />
           </Link>
         </Button>
       </CardFooter>

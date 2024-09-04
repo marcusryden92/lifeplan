@@ -74,7 +74,7 @@ export default function CapturePage() {
     deleteAll({ setTaskArray });
   };
 
-  const handleClickEdit = (index: number) => {
+  const handleEditClick = (index: number) => {
     clickEdit({
       index,
       setEditIndex,
@@ -83,7 +83,7 @@ export default function CapturePage() {
     });
   };
 
-  const handleConfirmEdit = () => {
+  const handleEditConfirm = () => {
     confirmEdit({
       taskArray,
       editIndex,
@@ -134,7 +134,7 @@ export default function CapturePage() {
                     <button
                       type="button"
                       onClick={handleDeleteAll}
-                      className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem] "
+                      className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem]"
                     >
                       <TrashIcon className="w-5 h-5 mx-2" />
                       Delete all
@@ -148,7 +148,7 @@ export default function CapturePage() {
         </Form>
       </CardContent>
       <div
-        className="overflow-x-auto  flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
+        className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
         ref={tasksContainerRef}
       >
         {taskArray.map((task, index) => (
@@ -164,7 +164,7 @@ export default function CapturePage() {
                     onChange={(e) => setEditTitle(e.target.value)}
                     className="bg-gray-200 border-none m-0 text-sm h-auto"
                   />
-                  <Button size="xs" onClick={handleConfirmEdit}>
+                  <Button size="xs" onClick={handleEditConfirm}>
                     Edit
                   </Button>
                 </div>
@@ -177,7 +177,7 @@ export default function CapturePage() {
             <div className="flex flex-row space-x-2 items-center opacity-0 group-hover:opacity-100 transition-opacity self-start">
               {editIndex !== index && (
                 <div
-                  onClick={() => handleClickEdit(index)}
+                  onClick={() => handleEditClick(index)}
                   className="cursor-pointer text-gray-400 hover:text-blue-400"
                 >
                   <PencilIcon className="w-5 h-5" />
@@ -195,17 +195,16 @@ export default function CapturePage() {
       </div>
       <CardFooter className="flex items-center justify-end flex-shrink p-4 border-t">
         <Button
-          variant={"invisible"}
+          variant="invisible"
           disabled={taskArray.length === 0}
           className="px-0"
         >
           <Link
             href={"/create/circle-of-influence"}
-            className="flex group items-center gap-4 "
+            className="flex group items-center gap-4"
           >
-            {" "}
             {"Continue"}
-            <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />{" "}
+            <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />
           </Link>
         </Button>
       </CardFooter>
