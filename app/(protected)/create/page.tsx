@@ -74,7 +74,7 @@ export default function CapturePage() {
     deleteAll({ setTaskArray });
   };
 
-  const handleEditClick = (index: number) => {
+  const handleClickEdit = (index: number) => {
     clickEdit({
       index,
       setEditIndex,
@@ -83,7 +83,7 @@ export default function CapturePage() {
     });
   };
 
-  const handleEditConfirm = () => {
+  const handleConfirmEdit = () => {
     confirmEdit({
       taskArray,
       editIndex,
@@ -164,7 +164,7 @@ export default function CapturePage() {
                     onChange={(e) => setEditTitle(e.target.value)}
                     className="bg-gray-200 border-none m-0 text-sm h-auto"
                   />
-                  <Button size="xs" onClick={handleEditConfirm}>
+                  <Button size="xs" onClick={handleConfirmEdit}>
                     Edit
                   </Button>
                 </div>
@@ -177,7 +177,7 @@ export default function CapturePage() {
             <div className="flex flex-row space-x-2 items-center opacity-0 group-hover:opacity-100 transition-opacity self-start">
               {editIndex !== index && (
                 <div
-                  onClick={() => handleEditClick(index)}
+                  onClick={() => handleClickEdit(index)}
                   className="cursor-pointer text-gray-400 hover:text-blue-400"
                 >
                   <PencilIcon className="w-5 h-5" />
