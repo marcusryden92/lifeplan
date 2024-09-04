@@ -118,10 +118,7 @@ export default function CapturePage() {
     setTaskDuration(taskArray[index].duration || undefined); // Initialize with existing duration
   };
 
-  const handleConfirmTask = (
-    index: number,
-    currentDuration: number | undefined
-  ) => {
+  const handleConfirmTask = (currentDuration: number | undefined) => {
     const finalDuration =
       taskDuration !== undefined ? taskDuration : currentDuration;
 
@@ -324,7 +321,7 @@ export default function CapturePage() {
                       {editIndex !== index && changeToTask !== index && (
                         <>
                           <div
-                            onClick={() => handleEditClick(index)}
+                            onClick={() => handleEditClick()}
                             className="cursor-pointer text-gray-400 hover:text-blue-400"
                           >
                             <PencilIcon
