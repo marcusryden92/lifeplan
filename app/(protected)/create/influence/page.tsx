@@ -39,7 +39,7 @@ import {
   confirmEdit,
 } from "@/utils/creation-pages-functions";
 
-export default function CapturePage() {
+export default function InfluencePage() {
   const { taskArray, setTaskArray } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
@@ -232,7 +232,7 @@ export default function CapturePage() {
           }`}
         >
           <Link
-            href={"/create/mark-tasks"}
+            href={"/create/tasks"}
             className="flex group items-center gap-4"
           >
             {"Continue"}

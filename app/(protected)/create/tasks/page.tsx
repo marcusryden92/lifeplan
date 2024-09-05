@@ -42,7 +42,7 @@ import {
   confirmEdit,
 } from "@/utils/creation-pages-functions";
 
-export default function CapturePage() {
+export default function TasksPage() {
   const { taskArray, setTaskArray } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
@@ -111,6 +111,7 @@ export default function CapturePage() {
   const handleSetToTask = (index: number) => {
     setChangeToTask(index);
     setTaskDuration(taskArray[index].duration || undefined);
+    setSelectedDate(taskArray[index].deadline || undefined);
   };
 
   const handleConfirmTask = (currentDuration: number | undefined) => {
@@ -239,7 +240,7 @@ export default function CapturePage() {
                       className="cursor-pointer w-6 h-6 text-destructive mr-2"
                     />
                     <DateTimePicker
-                      date={task.deadline || selectedDate}
+                      date={selectedDate}
                       setDate={setSelectedDate}
                     />
                   </div>
@@ -336,7 +337,7 @@ export default function CapturePage() {
       <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant="invisible" className="px-0">
           <Link
-            href={"/create/circle-of-influence"}
+            href={"/create/influence"}
             className="flex group items-center gap-4"
           >
             <ArrowLongLeftIcon className="w-9 h-9 text-gray-400 group-hover:text-gray-800 rounded-full" />
@@ -348,7 +349,7 @@ export default function CapturePage() {
           className="px-0"
         >
           <Link
-            href={"/create/mark-tasks"}
+            href={"/create/plans"}
             className="flex group items-center gap-4"
           >
             {"Continue"}

@@ -4,6 +4,7 @@ export interface PlannerInterface {
   canInfluence: boolean;
   duration?: number;
   deadline?: Date;
+  starts?: Date;
 }
 
 export class Planner implements PlannerInterface {
@@ -12,6 +13,7 @@ export class Planner implements PlannerInterface {
   canInfluence: boolean;
   duration?: number;
   deadline?: Date | undefined;
+  starts?: Date | undefined;
 
   constructor(
     title: string,

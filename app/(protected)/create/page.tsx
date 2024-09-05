@@ -199,7 +199,7 @@ export default function CapturePage() {
           className="px-0"
         >
           <Link
-            href={"/create/circle-of-influence"}
+            href={"/create/influence"}
             className="flex group items-center gap-4"
           >
             {"Continue"}
