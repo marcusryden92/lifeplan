@@ -297,7 +297,7 @@ export default function TasksPage() {
                   >
                     <div className="truncate max-w-[180px]">{task.title}</div>
 
-                    {task.type === "task  " && changeToTask !== index && (
+                    {task.type === "task" && changeToTask !== index && (
                       <div className="text-sm text-white pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
                         <div>
                           {task.deadline && format(task.deadline, "yyyy-MM-dd")}
