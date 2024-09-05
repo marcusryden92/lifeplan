@@ -181,10 +181,11 @@ export default function TasksPage() {
   return (
     <div className="flex flex-col w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
-        <p className="text-xl font-semibold">Tasks</p>
+        <p className="text-xl font-semibold">PLANS</p>
         <p className="text-sm text-center">
-          Click to mark all <span className="font-bold">TASKS</span> - items
-          without a specific date or time, which only need to happen once.
+          Click to mark all <span className="font-bold">PLANS</span> - items
+          <span className="font-bold"> with</span> a specific date and time, and
+          a set duration, which only need to happen once.
         </p>
       </CardHeader>
       <CardContent className="px-0 py-6 border-b">
@@ -226,7 +227,7 @@ export default function TasksPage() {
         ref={tasksContainerRef}
       >
         {taskArray.map((task, index) =>
-          task.canInfluence ? (
+          task.canInfluence && task.type !== "task" ? (
             <div
               key={index}
               className={`flex flex-col rounded-lg w-[350px] group hover:shadow-md py-1 px-4 ${

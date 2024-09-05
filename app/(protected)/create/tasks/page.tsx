@@ -177,7 +177,7 @@ export default function TasksPage() {
   return (
     <div className="flex flex-col w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
-        <p className="text-xl font-semibold">Tasks</p>
+        <p className="text-xl font-semibold">TASKS</p>
         <p className="text-sm text-center">
           Click to mark all <span className="font-bold">TASKS</span> - items
           without a specific date or time, which only need to happen once.

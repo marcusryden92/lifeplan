@@ -119,7 +119,7 @@ export default function InfluencePage() {
   return (
     <div className="flex flex-col w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
-        <p className="text-xl font-semibold">Circle of Influence</p>
+        <p className="text-xl font-semibold">CIRCLE OF INFLUENCE</p>
         <p className="text-sm text-center">
           Click to mark everything that&apos;s within your circle of influence
           (things you can affect).
