@@ -15,9 +15,10 @@ import { TimePickerDemo } from "./time-picker-demo";
 interface DateTimePickerProps {
   date: Date | undefined;
   setDate: React.Dispatch<React.SetStateAction<Date | undefined>>;
+  color?: string;
 }
 
-export function DateTimePicker({ date, setDate }: DateTimePickerProps) {
+export function DateTimePicker({ date, setDate, color }: DateTimePickerProps) {
   const handleSelect = (newDay: Date | undefined) => {
     if (!newDay) return;
 
@@ -38,7 +39,9 @@ export function DateTimePicker({ date, setDate }: DateTimePickerProps) {
         <Button
           variant={"outline"}
           className={cn(
-            "justify-start text-left font-normal text-gray-300 bg-transparent border-none shadow-none px-0 hover:bg-transparent hover:text-white",
+            `justify-start text-left font-normal text-gray-300 ${
+              color ? `text-${color}` : "text-black"
+            } bg-transparent border-none shadow-none px-0 hover:bg-transparent hover:text-white`,
             !date && "text-muted-foreground"
           )}
         >

@@ -246,6 +246,7 @@ export default function TasksPage() {
                     <DateTimePicker
                       date={selectedDate}
                       setDate={setSelectedDate}
+                      color="gray-300"
                     />
                   </div>
                   <Input
