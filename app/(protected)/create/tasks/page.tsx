@@ -296,10 +296,15 @@ export default function TasksPage() {
                     onClick={() => handleSetToTask(index)}
                   >
                     <div className="max-w-[180px]">{task.title}</div>
-                    {task.deadline && format(task.deadline, "yyyy-MM-dd")}
                     {task.type === "task" && changeToTask !== index && (
-                      <div className="text-sm text-white pl-2 flex items-start justify-start">
-                        {task.duration} {" min"}
+                      <div className="text-sm text-white pl-2 flex items-start justify-start space-x-2">
+                        <div>
+                          {" "}
+                          {task.deadline && format(task.deadline, "yyyy-MM-dd")}
+                        </div>
+                        <div>
+                          {task.duration} {" min"}
+                        </div>
                       </div>
                     )}
                   </div>
