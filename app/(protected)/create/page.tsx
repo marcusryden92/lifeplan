@@ -6,7 +6,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import Link from "next/link";
-import { XMarkIcon, PencilIcon, TrashIcon } from "@heroicons/react/24/outline";
+import {
+  XMarkIcon,
+  PencilIcon,
+  TrashIcon,
+  CheckIcon,
+} from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 
 // Local components and context
@@ -163,8 +168,12 @@ export default function CapturePage() {
                     onChange={(e) => setEditTitle(e.target.value)}
                     className="bg-gray-200 border-none m-0 text-sm h-auto"
                   />
-                  <Button size="xs" onClick={handleConfirmEdit}>
-                    Edit
+                  <Button
+                    variant={"invisible"}
+                    size="xs"
+                    onClick={handleConfirmEdit}
+                  >
+                    <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
                   </Button>
                 </div>
               ) : (

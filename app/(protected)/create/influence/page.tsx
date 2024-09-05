@@ -11,6 +11,7 @@ import {
   PencilIcon,
   TrashIcon,
   ArrowLongLeftIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 
@@ -180,8 +181,12 @@ export default function InfluencePage() {
                       task.canInfluence ? "text-black" : ""
                     }`}
                   />
-                  <Button size="xs" onClick={handleConfirmEdit}>
-                    Edit
+                  <Button
+                    variant="invisible"
+                    size="xs"
+                    onClick={handleConfirmEdit}
+                  >
+                    <CheckIcon className="w-6 h-6 p-0 bg-none text-gray-300 hover:text-white" />
                   </Button>
                 </div>
               ) : (
