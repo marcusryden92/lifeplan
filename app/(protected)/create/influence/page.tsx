@@ -160,13 +160,13 @@ export default function InfluencePage() {
         </Form>
       </CardContent>
       <div
-        className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2 space-y-1"
+        className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
         ref={tasksContainerRef}
       >
         {taskArray.map((task, index) => (
           <div
             key={index}
-            className={`flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 px-4 space-x-3 ${
+            className={`flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 my-1 mx-1 px-4 space-x-3 ${
               task.canInfluence ? "bg-purple-400 text-white" : "bg-transparent"
             }`}
           >

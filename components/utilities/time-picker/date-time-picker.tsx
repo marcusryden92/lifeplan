@@ -50,15 +50,15 @@ export function DateTimePicker({ date, setDate, color }: DateTimePickerProps) {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
+        <div className="p-3 border-b border-border">
+          <TimePickerDemo setDate={setDate} date={date} />
+        </div>
         <Calendar
           mode="single"
           selected={date}
           onSelect={(d) => handleSelect(d)}
           initialFocus
         />
-        <div className="p-3 border-t border-border">
-          <TimePickerDemo setDate={setDate} date={date} />
-        </div>
       </PopoverContent>
     </Popover>
   );

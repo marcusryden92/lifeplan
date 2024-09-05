@@ -224,14 +224,14 @@ export default function TasksPage() {
         </Form>
       </CardContent>
       <div
-        className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2 space-y-1"
+        className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2 "
         ref={tasksContainerRef}
       >
         {taskArray.map((task, index) =>
           task.canInfluence && task.type !== "task" ? (
             <div
               key={index}
-              className={`flex flex-col rounded-lg w-[350px] group hover:shadow-md py-1 px-4 ${
+              className={`flex flex-col rounded-lg w-[350px] group hover:shadow-md py-1 px-4 my-1 mx-1 ${
                 task.type === "plan" || changeToTask === index
                   ? "bg-gray-800 text-white"
                   : "bg-transparent"

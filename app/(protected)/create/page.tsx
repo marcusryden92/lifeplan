@@ -153,7 +153,7 @@ export default function CapturePage() {
         {taskArray.map((task, index) => (
           <div
             key={index}
-            className="flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 px-4 space-x-3"
+            className="flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 px-4 my-1 mx-1 space-x-3"
           >
             <div className="flex-1">
               {editIndex === index ? (
