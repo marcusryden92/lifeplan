@@ -100,7 +100,6 @@ export default function CapturePage() {
 
   const handleConfirmEdit = () => {
     confirmEdit({
-      taskArray,
       editIndex,
       editTitle,
       setTaskArray,
