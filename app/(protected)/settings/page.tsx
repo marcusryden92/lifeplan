@@ -7,14 +7,16 @@ const SettingsPage = async () => {
   const user = (await currentUser()) as SettingsPageUser;
 
   return (
-    <Card className="w-[600px] h-full">
-      <CardHeader>
-        <p className="text-xl font-semibold">Settings</p>
-      </CardHeader>
-      <CardContent>
-        <SettingsForm user={user} />
-      </CardContent>
-    </Card>
+    <div className="flex w-full h-full">
+      <Card className="w-[600px] h-full">
+        <CardHeader>
+          <p className="text-xl font-semibold">Settings</p>
+        </CardHeader>
+        <CardContent>
+          <SettingsForm user={user} />
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

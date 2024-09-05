@@ -225,7 +225,10 @@ export default function InfluencePage() {
       </div>
       <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant="invisible" className="px-0">
-          <Link href={"/create/"} className="flex group items-center gap-4">
+          <Link
+            href={"/create/plans"}
+            className="flex group items-center gap-4"
+          >
             <ArrowLongLeftIcon className="w-9 h-9 text-gray-400 group-hover:text-gray-800 rounded-full" />
           </Link>
         </Button>
