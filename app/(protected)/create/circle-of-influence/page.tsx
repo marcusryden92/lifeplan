@@ -43,6 +43,8 @@ export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
+  const tasksContainerRef = useRef<HTMLDivElement>(null);
+  const prevTaskLengthRef = useRef(taskArray.length);
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
@@ -50,9 +52,6 @@ export default function CapturePage() {
       title: "",
     },
   });
-
-  const tasksContainerRef = useRef<HTMLDivElement>(null);
-  const prevTaskLengthRef = useRef(taskArray.length);
 
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({
@@ -64,14 +63,6 @@ export default function CapturePage() {
       setEditTitle,
       form,
     });
-  };
-
-  const toggleInfluence = (index: number) => {
-    setTaskArray((prevTaskArray) =>
-      prevTaskArray.map((task, i) =>
-        i === index ? { ...task, canInfluence: !task.canInfluence } : task
-      )
-    );
   };
 
   const handleDeleteTask = (index: number) => {
@@ -105,6 +96,14 @@ export default function CapturePage() {
       setEditIndex,
       setEditTitle,
     });
+  };
+
+  const toggleInfluence = (index: number) => {
+    setTaskArray((prevTaskArray) =>
+      prevTaskArray.map((task, i) =>
+        i === index ? { ...task, canInfluence: !task.canInfluence } : task
+      )
+    );
   };
 
   useEffect(() => {

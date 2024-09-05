@@ -52,16 +52,16 @@ export default function CapturePage() {
   );
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
+  const tasksContainerRef = useRef<HTMLDivElement>(null);
+  const prevTaskLengthRef = useRef(taskArray.length);
+  const durationInputRef = useRef<HTMLInputElement>(null);
+
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
     defaultValues: {
       title: "",
     },
   });
-
-  const tasksContainerRef = useRef<HTMLDivElement>(null);
-  const prevTaskLengthRef = useRef(taskArray.length);
-  const durationInputRef = useRef<HTMLInputElement>(null);
 
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({

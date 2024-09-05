@@ -3,7 +3,7 @@ import { TaskListSchema } from "@/schemas";
 
 import * as z from "zod";
 
-// ONSUBMIT() FUNCTION FOR CREATING PLANNER INSTANCES
+// SUBMIT NEW PLANNER INSTANCE TO TASK ARRAY
 
 interface OnSubmitProps {
   values: z.infer<typeof TaskListSchema>;
@@ -75,7 +75,7 @@ export const deleteAll = ({ setTaskArray }: DeleteAllProps) => {
   setTaskArray([]);
 };
 
-// EDIT AND UPDATE
+// CLICK EDIT AND CONFIRM EDIT
 
 interface ClickEditProps {
   index: number;
@@ -94,10 +94,9 @@ export const clickEdit = ({
   setEditTitle(taskArray[index].title);
 };
 
-//---------------------------------
+//
 
 interface ConfirmEditProps {
-  taskArray: Planner[];
   editIndex: number | null;
   editTitle: string;
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
@@ -106,7 +105,6 @@ interface ConfirmEditProps {
 }
 
 export const confirmEdit = ({
-  taskArray,
   editIndex,
   editTitle,
   setTaskArray,
