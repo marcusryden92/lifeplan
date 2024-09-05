@@ -178,7 +178,7 @@ export default function InfluencePage() {
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-                      task.canInfluence ? "text-black" : ""
+                      task.canInfluence ? "text-white" : ""
                     }`}
                   />
                   <Button
@@ -200,25 +200,29 @@ export default function InfluencePage() {
             </div>
             <div className="flex flex-row space-x-2 items-center opacity-0 group-hover:opacity-100 transition-opacity self-start">
               {editIndex !== index && (
-                <div
-                  onClick={() => handleClickEdit(index)}
-                  className="cursor-pointer text-gray-400 hover:text-blue-400"
-                >
-                  <PencilIcon
-                    className={`w-5 h-5 ${
-                      task.canInfluence ? "text-white" : ""
-                    }`}
-                  />
-                </div>
+                <>
+                  <div
+                    onClick={() => handleClickEdit(index)}
+                    className="cursor-pointer text-gray-400 hover:text-blue-400"
+                  >
+                    <PencilIcon
+                      className={`w-5 h-5 ${
+                        task.canInfluence ? "text-white" : ""
+                      }`}
+                    />
+                  </div>
+                  <div
+                    onClick={() => handleDeleteTask(index)}
+                    className="cursor-pointer text-gray-400 hover:text-red-400"
+                  >
+                    <XMarkIcon
+                      className={`w-7 h-7 ${
+                        task.canInfluence ? "text-white" : ""
+                      }`}
+                    />
+                  </div>
+                </>
               )}
-              <div
-                onClick={() => handleDeleteTask(index)}
-                className="cursor-pointer text-gray-400 hover:text-red-400"
-              >
-                <XMarkIcon
-                  className={`w-7 h-7 ${task.canInfluence ? "text-white" : ""}`}
-                />
-              </div>
             </div>
           </div>
         ))}

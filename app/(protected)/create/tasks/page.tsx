@@ -278,7 +278,7 @@ export default function TasksPage() {
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-                      task.canInfluence ? "text-black" : ""
+                      task.canInfluence ? "text-white" : ""
                     }`}
                   />
                   <Button
@@ -286,7 +286,7 @@ export default function TasksPage() {
                     variant="invisible"
                     onClick={handleConfirmEdit}
                   >
-                    <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
+                    <CheckIcon className="w-6 h-6 p-0 bg-none text-white hover:opacity-50" />
                   </Button>
                 </div>
               ) : (
