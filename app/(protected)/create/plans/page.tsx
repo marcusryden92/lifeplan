@@ -298,14 +298,14 @@ export default function TasksPage() {
               ) : (
                 <div className="flex w-full items-center justify-center">
                   <div
-                    className="flex-grow flex justify-between max-w-[250px] break-words overflow-hidden text-ellipsis text-sm py-2"
+                    className="flex-grow flex justify-between items-center max-w-[250px] text-sm py-2"
                     onClick={() => handleSetToPlan(index)}
                   >
-                    <div className="max-w-[180px]">{task.title}</div>
+                    <div className="truncate max-w-[180px]">{task.title}</div>
+
                     {task.type === "plan" && changeToTask !== index && (
-                      <div className="text-sm text-white pl-2 flex items-start justify-start space-x-2">
+                      <div className="text-sm text-white pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
                         <div>
-                          {" "}
                           {task.starts && format(task.starts, "yyyy-MM-dd")}
                         </div>
                         <div>
