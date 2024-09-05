@@ -361,7 +361,7 @@ export default function TasksPage() {
           className="px-0"
         >
           <Link
-            href={"/create/plans"}
+            href={"/create/goals"}
             className="flex group items-center gap-4"
           >
             {"Continue"}
