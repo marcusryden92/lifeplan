@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { format } from "date-fns";
 import Link from "next/link";
 import {
   XMarkIcon,
@@ -301,7 +302,7 @@ export default function TasksPage() {
                     onClick={() => handleSetToPlan(index)}
                   >
                     <div className="max-w-[180px]">{task.title}</div>
-                    {task.starts && task.starts.toLocaleDateString()}
+                    {task.starts && format(task.starts, "yyyy-MM-dd")}
                     {task.type === "plan" && changeToTask !== index && (
                       <div className="text-sm text-white pl-2 flex items-start justify-start">
                         {task.duration} {" min"}
