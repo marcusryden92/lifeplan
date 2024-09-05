@@ -292,21 +292,20 @@ export default function TasksPage() {
               ) : (
                 <div className="flex w-full items-center justify-center">
                   <div
-                    className="flex-grow flex justify-between max-w-[250px] break-words overflow-hidden text-ellipsis text-sm py-2"
+                    className="flex-grow flex flex-col justify-between max-w-[250px] break-words overflow-hidden text-ellipsis text-sm py-2 space-y-2"
                     onClick={() => handleSetToTask(index)}
                   >
-                    <div className="max-w-[180px]">{task.title}</div>
                     {task.type === "task" && changeToTask !== index && (
-                      <div className="text-sm text-white pl-2 flex items-start justify-start space-x-2">
-                        <div>
-                          {" "}
-                          {task.deadline && format(task.deadline, "yyyy-MM-dd")}
+                      <div className="text-sm text-white flex items-start justify-start space-x-2">
+                        <div className="border-r pr-2 border-white border-opacity-50">
+                          {task.duration} {" min"}
                         </div>
                         <div>
-                          {task.duration} {" min"}
+                          {task.deadline && format(task.deadline, "yyyy-MM-dd")}
                         </div>
                       </div>
                     )}
+                    <div className="max-w-[180px]">{task.title}</div>
                   </div>
                   <div className="flex flex-row space-x-2 items-center ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
                     {editIndex !== index && changeToTask !== index && (

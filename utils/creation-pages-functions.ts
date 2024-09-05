@@ -113,9 +113,13 @@ export const confirmEdit = ({
 }: ConfirmEditProps) => {
   if (editIndex !== null) {
     setTaskArray((prevTasks) =>
-      prevTasks.map((task, index) =>
-        index === editIndex ? new Planner(editTitle) : task
-      )
+      prevTasks.map((task, index) => {
+        if (index === editIndex) {
+          // Modify the title of the existing Planner instance
+          return { ...task, title: editTitle };
+        }
+        return task;
+      })
     );
     setEditIndex(null);
     setEditTitle("");
