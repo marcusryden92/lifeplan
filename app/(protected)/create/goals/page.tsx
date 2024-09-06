@@ -63,6 +63,7 @@ export default function InfluencePage() {
       editTitle,
       setEditTitle,
       form,
+      setDefaultInfluence: true,
     });
   };
 
