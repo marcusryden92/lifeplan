@@ -164,64 +164,73 @@ export default function InfluencePage() {
         className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
         ref={tasksContainerRef}
       >
-        {taskArray.map((task, index) => (
-          <div
-            key={index}
-            className={`flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 my-1 mx-1 px-4 space-x-3 ${
-              task.type === "goal" ? "bg-red-700 text-white" : "bg-transparent"
-            }`}
-          >
-            <div className="flex-1">
-              {editIndex === index ? (
-                <div className="flex gap-2 items-center">
-                  <Input
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-                      task.canInfluence ? "text-black" : ""
-                    }`}
-                  />
-                  <Button
-                    variant="invisible"
-                    size="xs"
-                    onClick={handleConfirmEdit}
-                  >
-                    <CheckIcon className="w-6 h-6 p-0 bg-none text-gray-300 hover:text-white" />
-                  </Button>
-                </div>
-              ) : (
-                <div
-                  className="max-w-[250px] break-words overflow-hidden text-ellipsis text-sm"
-                  onClick={() => toggleGoal(index)} // Simplified function name
-                >
-                  {task.title}
-                </div>
-              )}
-            </div>
-            <div className="flex flex-row space-x-2 items-center opacity-0 group-hover:opacity-100 transition-opacity self-start">
-              {editIndex !== index && (
-                <div
-                  onClick={() => handleClickEdit(index)}
-                  className="cursor-pointer text-gray-400 hover:text-blue-400"
-                >
-                  <PencilIcon
-                    className={`w-5 h-5 ${
-                      task.canInfluence ? "text-white" : ""
-                    }`}
-                  />
-                </div>
-              )}
+        {taskArray.map(
+          (task, index) =>
+            task.canInfluence &&
+            task.type !== "task" &&
+            task.type !== "plan" && (
               <div
-                onClick={() => handleDeleteTask(index)}
-                className="cursor-pointer text-gray-400 hover:text-red-400"
+                key={index}
+                className={`flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 my-1 mx-1 px-4 space-x-3 ${
+                  task.type === "goal"
+                    ? "bg-red-700 text-white"
+                    : "bg-transparent"
+                }`}
               >
-                <XMarkIcon
-                  className={`w-7 h-7 ${task.canInfluence ? "text-white" : ""}`}
-                />
+                <div className="flex-1">
+                  {editIndex === index ? (
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
+                          task.canInfluence ? "text-black" : ""
+                        }`}
+                      />
+                      <Button
+                        variant="invisible"
+                        size="xs"
+                        onClick={handleConfirmEdit}
+                      >
+                        <CheckIcon className="w-6 h-6 p-0 bg-none text-gray-300 hover:text-white" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="max-w-[250px] break-words overflow-hidden text-ellipsis text-sm"
+                      onClick={() => toggleGoal(index)} // Simplified function name
+                    >
+                      {task.title}
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-row space-x-2 items-center opacity-0 group-hover:opacity-100 transition-opacity self-start">
+                  {editIndex !== index && (
+                    <div
+                      onClick={() => handleClickEdit(index)}
+                      className="cursor-pointer text-gray-400 hover:text-blue-400"
+                    >
+                      <PencilIcon
+                        className={`w-5 h-5 ${
+                          task.canInfluence ? "text-white" : ""
+                        }`}
+                      />
+                    </div>
+                  )}
+                  <div
+                    onClick={() => handleDeleteTask(index)}
+                    className="cursor-pointer text-gray-400 hover:text-red-400"
+                  >
+                    <XMarkIcon
+                      className={`w-7 h-7 ${
+                        task.canInfluence ? "text-white" : ""
+                      }`}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
+            )
+        )}
       </div>
       <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant="invisible" className="px-0">
@@ -240,7 +249,7 @@ export default function InfluencePage() {
           }`}
         >
           <Link
-            href={"/create/tasks"}
+            href={"/create/clarify-goals"}
             className="flex group items-center gap-4"
           >
             {"Continue"}
