@@ -50,6 +50,7 @@ export default function TasksPage() {
   const [taskDuration, setTaskDuration] = useState<number | undefined>(
     undefined
   );
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
@@ -191,7 +192,7 @@ export default function TasksPage() {
           task.canInfluence && task.type !== "goal" ? (
             <div
               key={index}
-              className={`flex flex-col rounded-lg w-full md:w-1/3 h-full group hover:shadow-md py-1 px-4 my-1 mx-1 bg-red-700 text-white `}
+              className={`flex flex-col rounded-lg w-full md:w-1/2 h-full group hover:shadow-md py-1 px-4 my-1 mx-1 bg-gray-700 text-white `}
             >
               {/* // TITLE AND NAME EDITOR */}
 
@@ -251,24 +252,26 @@ export default function TasksPage() {
 
               {/* // DATE PICKER */}
 
-              <div className="flex flex-row justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
-                <div className="flex items-center">
-                  <span className="mr-10">{"Target date:  "}</span>
-                  <DateTimePicker
-                    date={selectedDate}
-                    setDate={setSelectedDate}
-                    color="gray-300"
-                  />
-                  <XMarkIcon
-                    onClick={() => {
-                      setTaskArray((prevTasks) =>
-                        prevTasks.map((t, i) =>
-                          i === index ? { ...t, deadline: undefined } : t
-                        )
-                      );
-                    }}
-                    className="cursor-pointer w-6 h-6 text-destructive mr-2"
-                  />
+              <div className="flex flex-row  justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
+                <div className="flex w-full justify-between items-center">
+                  <span className="min-w-24">{"Target date:  "}</span>
+                  <div className="flex items-center space-x-2">
+                    <DateTimePicker
+                      date={selectedDate}
+                      setDate={setSelectedDate}
+                      color="gray-300"
+                    />
+                    <XMarkIcon
+                      onClick={() => {
+                        setTaskArray((prevTasks) =>
+                          prevTasks.map((t, i) =>
+                            i === index ? { ...t, deadline: undefined } : t
+                          )
+                        );
+                      }}
+                      className="cursor-pointer w-6 h-6 text-destructive"
+                    />
+                  </div>
                 </div>
               </div>
 
