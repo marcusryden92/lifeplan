@@ -1,7 +1,7 @@
 "use client";
 
 // Third-party libraries
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -12,7 +12,6 @@ import {
   PencilIcon,
   TrashIcon,
   ArrowLongLeftIcon,
-  ArrowUturnLeftIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
@@ -51,11 +50,6 @@ export default function TasksPage() {
   const [taskDuration, setTaskDuration] = useState<number | undefined>(
     undefined
   );
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-
-  const tasksContainerRef = useRef<HTMLDivElement>(null);
-  const prevTaskLengthRef = useRef(taskArray.length);
-  const durationInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
@@ -74,6 +68,7 @@ export default function TasksPage() {
       setEditTitle,
       form,
       setDefaultInfluence: true,
+      type: "goal",
     });
   };
 
@@ -111,25 +106,20 @@ export default function TasksPage() {
 
   const handleSetToGoal = (index: number) => {
     setChangeToTask(index);
-    setSelectedDate(taskArray[index].deadline || undefined);
   };
 
   const handleConfirmGoal = (currentDuration: number | undefined) => {
     const finalDuration =
       taskDuration !== undefined ? taskDuration : currentDuration;
 
-    if (
-      changeToTask !== null &&
-      finalDuration !== undefined &&
-      selectedDate !== undefined
-    ) {
+    if (changeToTask !== null && finalDuration !== undefined) {
       setTaskArray((prevTasks) =>
         prevTasks.map((task, index) =>
           index === changeToTask
             ? {
                 ...task,
                 type: "plan",
-                deadline: selectedDate || undefined,
+                deadline: task.deadline || undefined,
               }
             : task
         )
@@ -154,38 +144,13 @@ export default function TasksPage() {
   const resetTaskState = () => {
     setChangeToTask(null);
     setTaskDuration(undefined);
-    setSelectedDate(undefined);
   };
-
-  useEffect(() => {
-    if (
-      tasksContainerRef.current &&
-      taskArray.length > prevTaskLengthRef.current
-    ) {
-      tasksContainerRef.current.scrollLeft =
-        tasksContainerRef.current.scrollWidth;
-    }
-    prevTaskLengthRef.current = taskArray.length;
-  }, [taskArray]);
-
-  useEffect(() => {
-    if (changeToTask !== null) {
-      const timer = setTimeout(() => {
-        durationInputRef.current?.focus();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [changeToTask]);
 
   return (
     <div className="flex flex-col w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
         <p className="text-xl font-semibold">CLARIFY GOALS</p>
-        <p className="text-sm text-center">
-          Click to mark all <span className="font-bold">PLANS</span> - items
-          <span className="font-bold"> with</span> a specific date and time, and
-          a set duration, which only need to happen once.
-        </p>
+        <p className="text-sm text-center">Clarify your goals.</p>
       </CardHeader>
       <CardContent className="px-0 py-6 border-b">
         <Form {...form}>
@@ -221,16 +186,15 @@ export default function TasksPage() {
           </form>
         </Form>
       </CardContent>
-      <div
-        className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2 "
-        ref={tasksContainerRef}
-      >
+      <div className="overflow-x-auto flex-grow flex items-start justify-center flex-wrap content-start no-scrollbar py-2 ">
         {taskArray.map((task, index) =>
           task.canInfluence && task.type !== "goal" ? (
             <div
               key={index}
-              className={`flex flex-col rounded-lg w-[350px] h-full group hover:shadow-md py-1 px-4 my-1 mx-1 bg-red-700 text-white `}
+              className={`flex flex-col rounded-lg w-full md:w-1/3 h-full group hover:shadow-md py-1 px-4 my-1 mx-1 bg-red-700 text-white `}
             >
+              {/* // TITLE AND NAME EDITOR */}
+
               {editIndex === index ? (
                 <div className="flex gap-2 items-center">
                   <Input
@@ -259,33 +223,34 @@ export default function TasksPage() {
                     </div>
                   </div>
                   <div className="flex flex-row space-x-2 items-center ml-auto transition-opacity">
-                    {editIndex !== index && changeToTask !== index && (
-                      <>
-                        <div
-                          onClick={() => handleClickEdit(index)}
-                          className="cursor-pointer text-gray-400 hover:text-blue-400"
-                        >
-                          <PencilIcon
-                            className={`w-5 h-5 ${
-                              task.type === "plan" ? "text-white" : ""
-                            }`}
-                          />
-                        </div>
-                        <div
-                          onClick={() => handleDeleteTask(index)}
-                          className="cursor-pointer text-gray-400 hover:text-red-400"
-                        >
-                          <XMarkIcon
-                            className={`w-7 h-7 ${
-                              task.type === "plan" ? "text-white" : ""
-                            }`}
-                          />
-                        </div>
-                      </>
-                    )}
+                    <>
+                      <div
+                        onClick={() => handleClickEdit(index)}
+                        className="cursor-pointer text-gray-400 hover:text-blue-400"
+                      >
+                        <PencilIcon
+                          className={`w-5 h-5 ${
+                            task.type === "plan" ? "text-white" : ""
+                          }`}
+                        />
+                      </div>
+                      <div
+                        onClick={() => handleDeleteTask(index)}
+                        className="cursor-pointer text-gray-400 hover:text-red-400"
+                      >
+                        <XMarkIcon
+                          className={`w-7 h-7 ${
+                            task.type === "plan" ? "text-white" : ""
+                          }`}
+                        />
+                      </div>
+                    </>
                   </div>
                 </div>
               )}
+
+              {/* // DATE PICKER */}
+
               <div className="flex flex-row justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
                 <div className="flex items-center">
                   <span className="mr-10">{"Target date:  "}</span>
@@ -295,15 +260,48 @@ export default function TasksPage() {
                     color="gray-300"
                   />
                   <XMarkIcon
-                    onClick={() => setSelectedDate(undefined)}
+                    onClick={() => {
+                      setTaskArray((prevTasks) =>
+                        prevTasks.map((t, i) =>
+                          i === index ? { ...t, deadline: undefined } : t
+                        )
+                      );
+                    }}
                     className="cursor-pointer w-6 h-6 text-destructive mr-2"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-2">
+              {/* // SUBTASKS LIST */}
+
+              <div className="flex flex-grow h-full"></div>
+
+              {/* // ADD SUBTASK */}
+
+              <div className="w-full">
+                <div className="flex gap-2 items-center">
+                  <Input
+                    value={""}
+                    onChange={() => {}}
+                    className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
+                      task.canInfluence ? "text-black" : ""
+                    }`}
+                  />
+                  <Button
+                    size="xs"
+                    variant="invisible"
+                    onClick={handleConfirmEdit}
+                  >
+                    <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* // CONFIRMATION BUTTON */}
+
+              <div className="flex justify-end justify-self-end space-x-2">
                 <button
-                  onClick={() => handleConfirmGoal(index)}
+                  onClick={() => handleConfirmGoal(task.duration)}
                   disabled={taskDuration === undefined}
                   className="text-gray-300 hover:text-white"
                 >

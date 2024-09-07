@@ -14,6 +14,7 @@ interface OnSubmitProps {
   form: { reset: () => void };
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
   setDefaultInfluence?: boolean | undefined;
+  type?: "task" | "plan" | "goal" | null;
 }
 
 export const onSubmit = ({
@@ -25,6 +26,7 @@ export const onSubmit = ({
   setEditTitle,
   form,
   setDefaultInfluence,
+  type,
 }: OnSubmitProps) => {
   if (editIndex !== null) {
     setTaskArray((prevTasks) =>
