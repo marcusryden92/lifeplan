@@ -1,7 +1,7 @@
 "use client";
 
 // Third-party libraries
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -41,16 +41,23 @@ import {
   clickEdit,
   confirmEdit,
 } from "@/utils/creation-pages-functions";
+import { Subtask } from "@/lib/plannerClass";
 
 export default function TasksPage() {
   const { taskArray, setTaskArray } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
   const [changeToTask, setChangeToTask] = useState<number | null>(null);
+
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+
   const [taskDuration, setTaskDuration] = useState<number | undefined>(
     undefined
   );
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [taskTitle, setTaskTitle] = useState<string>("");
+
+  const taskTitleRef = useRef<HTMLInputElement>(null); // Create a ref for the taskTitle input
+  const durationRef = useRef<HTMLInputElement>(null); // Create a ref for the duration input
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
@@ -58,6 +65,23 @@ export default function TasksPage() {
       title: "",
     },
   });
+
+  const totalSubtaskDuration = (index: number) => {
+    const totalMinutes =
+      taskArray[index].subtasks?.reduce(
+        (total, subtask) => total + (subtask.duration || 0),
+        0
+      ) || 0;
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    if (totalMinutes === 0) return "~";
+
+    if (hours < 1) return `${totalMinutes} min`;
+
+    return `${hours} h ${minutes} min`;
+  };
 
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({
@@ -142,9 +166,57 @@ export default function TasksPage() {
     resetTaskState();
   };
 
+  const handleAddSubtask = (index: number) => {
+    if (taskDuration !== undefined && taskTitle) {
+      const newTask = new Subtask(taskTitle, taskDuration);
+
+      setTaskArray((prevTasks) =>
+        prevTasks.map((task, idx) =>
+          idx === index
+            ? {
+                ...task, // Copying the task object
+                subtasks: [...(task.subtasks || []), newTask], // Creating a new subtasks array
+              }
+            : task
+        )
+      );
+
+      resetTaskState();
+    }
+  };
+
+  const handleKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    index: number
+  ) => {
+    if (event.key === "Enter") {
+      event.preventDefault(); // Prevent default Enter key behavior (e.g., form submission)
+      handleAddSubtask(index); // Call handleAddSubtask
+      if (taskTitleRef.current) {
+        taskTitleRef.current.focus(); // Focus on taskTitle input field
+      }
+    }
+  };
+
+  const handleDeleteSubtask = (taskIndex: number, subtaskIndex: number) => {
+    setTaskArray((prevTasks) =>
+      prevTasks.map((task, idx) =>
+        idx === taskIndex
+          ? {
+              ...task,
+              subtasks: task.subtasks?.filter(
+                (_, sIdx) => sIdx !== subtaskIndex
+              ),
+            }
+          : task
+      )
+    );
+  };
+
   const resetTaskState = () => {
     setChangeToTask(null);
     setTaskDuration(undefined);
+    setTaskTitle("");
   };
 
   return (
@@ -192,7 +264,7 @@ export default function TasksPage() {
           task.canInfluence && task.type !== "goal" ? (
             <div
               key={index}
-              className={`flex flex-col rounded-lg w-full md:w-1/2 h-full group hover:shadow-md py-1 px-4 my-1 mx-1 bg-gray-700 text-white `}
+              className={`flex flex-col rounded-lg w-full md:w-1/2 h-full group hover:shadow-md py-1 px-4 mx-1 bg-gray-700 text-white `}
             >
               {/* // TITLE AND NAME EDITOR */}
 
@@ -250,11 +322,19 @@ export default function TasksPage() {
                 </div>
               )}
 
+              <div className="flex flex-row  justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
+                <div className="flex w-full justify-between items-center">
+                  <span className="min-w-24 text-sm">
+                    {"Total duration:  " + totalSubtaskDuration(index)}
+                  </span>
+                </div>
+              </div>
+
               {/* // DATE PICKER */}
 
               <div className="flex flex-row  justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
                 <div className="flex w-full justify-between items-center">
-                  <span className="min-w-24">{"Target date:  "}</span>
+                  <span className="min-w-24 text-sm">{"Target date:  "}</span>
                   <div className="flex items-center space-x-2">
                     <DateTimePicker
                       date={selectedDate}
@@ -277,23 +357,64 @@ export default function TasksPage() {
 
               {/* // SUBTASKS LIST */}
 
-              <div className="flex flex-grow h-full"></div>
+              <div className="flex overflow-y-scroll w-full no-scrollbar flex-grow">
+                <div className="flex flex-col justify-start h-full w-full">
+                  {taskArray[index].subtasks?.map((subtask, subtaskIndex) => (
+                    <div
+                      key={subtaskIndex}
+                      className="flex justify-between items-center w-full text-sm py-2"
+                    >
+                      <div className="truncate max-w-[180px]">
+                        {subtask.title}
+                      </div>
+
+                      <div className="text-sm text-white pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
+                        <div>
+                          {subtask.duration} {" min"}
+                        </div>
+                        <Button
+                          size="xs"
+                          variant="invisible"
+                          onClick={() =>
+                            handleDeleteSubtask(index, subtaskIndex)
+                          }
+                        >
+                          <XMarkIcon className="w-5 h-5 text-red-500 hover:text-red-700" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
               {/* // ADD SUBTASK */}
 
-              <div className="w-full">
+              <div className="w-full my-2 ">
                 <div className="flex gap-2 items-center">
                   <Input
-                    value={""}
-                    onChange={() => {}}
+                    value={taskTitle}
+                    onChange={(e) => setTaskTitle(e.target.value)}
                     className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
                       task.canInfluence ? "text-black" : ""
                     }`}
+                    ref={taskTitleRef} // Attach ref to the taskTitle input
+                  />
+                  <Input
+                    value={taskDuration || ""} // Ensure it's always a string
+                    onChange={(e) => setTaskDuration(Number(e.target.value))}
+                    placeholder={taskArray[index].duration?.toString() || "min"}
+                    className="w-14 h-7 text-sm text-white"
+                    type="number"
+                    pattern="[0-9]*"
+                    ref={durationRef} // Attach ref to the duration input
+                    onKeyDown={(e) => handleKeyDown(e, index)} // Attach key down event
                   />
                   <Button
                     size="xs"
                     variant="invisible"
-                    onClick={handleConfirmEdit}
+                    onClick={() => {
+                      handleAddSubtask(index);
+                    }}
                   >
                     <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
                   </Button>
@@ -302,7 +423,7 @@ export default function TasksPage() {
 
               {/* // CONFIRMATION BUTTON */}
 
-              <div className="flex justify-end justify-self-end space-x-2">
+              {/* <div className="flex justify-end justify-self-end space-x-2">
                 <button
                   onClick={() => handleConfirmGoal(task.duration)}
                   disabled={taskDuration === undefined}
@@ -310,7 +431,7 @@ export default function TasksPage() {
                 >
                   <CheckCircledIcon className="w-9 h-9 hover:bg-sky-400 rounded-full" />
                 </button>
-              </div>
+              </div> */}
             </div>
           ) : null
         )}

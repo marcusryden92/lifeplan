@@ -22,13 +22,15 @@ export class Planner implements PlannerInterface {
     type: "task" | "plan" | "goal" | null = null,
     canInfluence: boolean = false,
     duration?: number,
-    deadline?: Date | undefined
+    deadline?: Date | undefined,
+    subtasks?: Subtask[] | undefined
   ) {
     this.title = title;
     this.type = type;
     this.canInfluence = canInfluence; // Set the value here
     this.duration = duration;
     this.deadline = deadline;
+    this.subtasks = subtasks;
   }
 }
 
