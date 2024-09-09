@@ -1,7 +1,7 @@
 "use client";
 
 // Third-party libraries
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -54,7 +54,7 @@ import {
   clickEdit,
   confirmEdit,
 } from "@/utils/creation-pages-functions";
-import { Subtask } from "@/lib/plannerClass";
+import { Planner, Subtask } from "@/lib/plannerClass";
 
 export default function TasksPage() {
   const { taskArray, setTaskArray } = useDataContext();
@@ -75,6 +75,8 @@ export default function TasksPage() {
   const [carouselIndex, setCarouselIndex] = useState<number | undefined>(
     undefined
   );
+
+  const [goalComplete, setGoalComplete] = useState<boolean>(false);
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
@@ -236,6 +238,44 @@ export default function TasksPage() {
     setTaskTitle("");
   };
 
+  const checkGoalCompletion = (index: number): boolean => {
+    const goalsList: Planner[] = [];
+
+    taskArray.forEach((task) => {
+      if (task.type === "goal") {
+        goalsList.push(task);
+      }
+    });
+
+    const currentTask = goalsList[index];
+
+    setTimeout(() => {
+      console.log("CURRENT TASK: " + JSON.stringify(currentTask));
+    }, 200);
+
+    // Check if currentTask is undefined or null
+    if (
+      // selectedDate != undefined &&
+      currentTask &&
+      currentTask.subtasks &&
+      currentTask.subtasks.length >= 1
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
+  useEffect(() => {
+    if (carouselIndex != undefined) {
+      setGoalComplete(checkGoalCompletion(carouselIndex));
+
+      console.log("Checking goal completion for index:", carouselIndex);
+      console.log("Task array:", taskArray);
+      console.log(goalComplete);
+    }
+  }, [carouselIndex, taskArray]);
+
   return (
     <div className="flex flex-col overflow-hidden w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
@@ -286,11 +326,13 @@ export default function TasksPage() {
         >
           <CarouselContent className="h-full">
             {taskArray.map((task, index) =>
-              task.canInfluence && task.type !== "goal" ? (
+              task.canInfluence && task.type === "goal" ? (
                 <CarouselItem key={index}>
                   <div
                     key={index}
-                    className={`flex flex-col rounded-lg w-full h-full group hover:shadow-md py-1 px-4 bg-gray-700 text-white `}
+                    className={`flex flex-col rounded-lg w-full h-full group hover:shadow-md py-1 px-4  ${
+                      goalComplete ? "bg-emerald-500" : "bg-gray-700"
+                    }  text-white `}
                   >
                     <>
                       {/* // TITLE AND NAME EDITOR */}
@@ -476,7 +518,7 @@ export default function TasksPage() {
             )}
           </CarouselContent>
           <CarouselPrevious />
-          <CarouselNext />
+          <CarouselNext disabled={!goalComplete} />
         </Carousel>
       </div>
 

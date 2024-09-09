@@ -39,7 +39,7 @@ export const onSubmit = ({
   } else {
     const newTask = new Planner(
       values.title,
-      null,
+      type,
       setDefaultInfluence || false
     );
     setTaskArray((prevTasks) => [...prevTasks, newTask]);
