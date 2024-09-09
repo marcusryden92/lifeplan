@@ -26,7 +26,12 @@ import {
 
 // Local components and context
 import { useDataContext } from "@/context/DataContext";
-import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import {
   FormField,
   Form,
@@ -267,171 +272,186 @@ export default function TasksPage() {
           </form>
         </Form>
       </CardContent>
+
       <div className="overflow-x-auto flex-grow flex items-start justify-center flex-wrap content-start no-scrollbar py-2 ">
-        {taskArray.map((task, index) =>
-          task.canInfluence && task.type !== "goal" ? (
-            <div
-              key={index}
-              className={`flex flex-col rounded-lg w-full md:w-1/2 h-full group hover:shadow-md py-1 px-4 mx-1 bg-gray-700 text-white `}
-            >
-              {/* // TITLE AND NAME EDITOR */}
-
-              {editIndex === index ? (
-                <div className="flex gap-2 items-center">
-                  <Input
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-                      task.canInfluence ? "text-black" : ""
-                    }`}
-                  />
-                  <Button
-                    size="xs"
-                    variant="invisible"
-                    onClick={handleConfirmEdit}
-                  >
-                    <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex w-full items-center justify-center border-b border-gray-600 border-opacity-15 pb-1">
+        <Carousel className="w-1/2 h-full">
+          <CarouselContent className="h-full">
+            {taskArray.map((task, index) =>
+              task.canInfluence && task.type !== "goal" ? (
+                <CarouselItem key={index}>
                   <div
-                    className="flex-grow flex justify-between items-center max-w-[250px] py-2"
-                    onClick={() => handleSetToGoal(index)}
+                    key={index}
+                    className={`flex flex-col rounded-lg w-full h-full group hover:shadow-md py-1 px-4 bg-gray-700 text-white `}
                   >
-                    <div className=" max-w-[180px]">
-                      {task.title.toUpperCase()}
-                    </div>
-                  </div>
-                  <div className="flex flex-row space-x-2 items-center ml-auto transition-opacity">
                     <>
-                      <div
-                        onClick={() => handleClickEdit(index)}
-                        className="cursor-pointer text-gray-400 hover:text-blue-400"
-                      >
-                        <PencilIcon
-                          className={`w-5 h-5 ${
-                            task.type === "plan" ? "text-white" : ""
-                          }`}
-                        />
-                      </div>
-                      <div
-                        onClick={() => handleDeleteTask(index)}
-                        className="cursor-pointer text-gray-400 hover:text-red-400"
-                      >
-                        <XMarkIcon
-                          className={`w-7 h-7 ${
-                            task.type === "plan" ? "text-white" : ""
-                          }`}
-                        />
-                      </div>
-                    </>
-                  </div>
-                </div>
-              )}
+                      {/* // TITLE AND NAME EDITOR */}
 
-              <div className="flex flex-row  justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
-                <div className="flex w-full justify-between items-center">
-                  <span className="min-w-24 text-sm">
-                    {"Total duration:  " + totalSubtaskDuration(index)}
-                  </span>
-                </div>
-              </div>
-
-              {/* // DATE PICKER */}
-
-              <div className="flex flex-row  justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
-                <div className="flex w-full justify-between items-center">
-                  <span className="min-w-24 text-sm">{"Target date:  "}</span>
-                  <div className="flex items-center space-x-2">
-                    <DateTimePicker
-                      date={selectedDate}
-                      setDate={setSelectedDate}
-                      color="gray-300"
-                    />
-                    <XMarkIcon
-                      onClick={() => {
-                        setTaskArray((prevTasks) =>
-                          prevTasks.map((t, i) =>
-                            i === index ? { ...t, deadline: undefined } : t
-                          )
-                        );
-                      }}
-                      className="cursor-pointer w-6 h-6 text-destructive"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* // SUBTASKS LIST */}
-
-              <div className="flex overflow-y-scroll w-full no-scrollbar flex-grow">
-                <div className="flex flex-col justify-start h-full w-full">
-                  {taskArray[index].subtasks?.map((subtask, subtaskIndex) => (
-                    <div
-                      key={subtaskIndex}
-                      className="flex justify-between items-center w-full text-sm py-2"
-                    >
-                      <div className="truncate max-w-[180px]">
-                        {subtask.title}
-                      </div>
-
-                      <div className="text-sm text-white pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
-                        <div>
-                          {subtask.duration} {" min"}
+                      {editIndex === index ? (
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
+                              task.canInfluence ? "text-black" : ""
+                            }`}
+                          />
+                          <Button
+                            size="xs"
+                            variant="invisible"
+                            onClick={handleConfirmEdit}
+                          >
+                            <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
+                          </Button>
                         </div>
-                        <Button
-                          size="xs"
-                          variant="invisible"
-                          onClick={() =>
-                            handleDeleteSubtask(index, subtaskIndex)
-                          }
-                        >
-                          <XMarkIcon className="w-5 h-5 text-red-500 hover:text-red-700" />
-                        </Button>
+                      ) : (
+                        <div className="flex w-full items-center justify-center border-b border-gray-600 border-opacity-15 pb-1">
+                          <div
+                            className="flex-grow flex justify-between items-center max-w-[250px] py-2"
+                            onClick={() => handleSetToGoal(index)}
+                          >
+                            <div className=" max-w-[180px]">
+                              {task.title.toUpperCase()}
+                            </div>
+                          </div>
+                          <div className="flex flex-row space-x-2 items-center ml-auto transition-opacity">
+                            <>
+                              <div
+                                onClick={() => handleClickEdit(index)}
+                                className="cursor-pointer text-gray-400 hover:text-blue-400"
+                              >
+                                <PencilIcon
+                                  className={`w-5 h-5 ${
+                                    task.type === "plan" ? "text-white" : ""
+                                  }`}
+                                />
+                              </div>
+                              <div
+                                onClick={() => handleDeleteTask(index)}
+                                className="cursor-pointer text-gray-400 hover:text-red-400"
+                              >
+                                <XMarkIcon
+                                  className={`w-7 h-7 ${
+                                    task.type === "plan" ? "text-white" : ""
+                                  }`}
+                                />
+                              </div>
+                            </>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex flex-row  justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
+                        <div className="flex w-full justify-between items-center">
+                          <span className="min-w-24 text-sm">
+                            {"Total duration:  " + totalSubtaskDuration(index)}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* // ADD SUBTASK */}
+                      {/* // DATE PICKER */}
 
-              <div className="w-full my-2 ">
-                <div className="flex gap-2 items-center">
-                  <Input
-                    value={taskTitle}
-                    onChange={(e) => setTaskTitle(e.target.value)}
-                    className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-                      task.canInfluence ? "text-black" : ""
-                    }`}
-                    ref={taskTitleRef} // Attach ref to the taskTitle input
-                  />
-                  <Input
-                    value={taskDuration || ""} // Ensure it's always a string
-                    onChange={(e) => setTaskDuration(Number(e.target.value))}
-                    placeholder={taskArray[index].duration?.toString() || "min"}
-                    className="w-14 h-7 text-sm text-white"
-                    type="number"
-                    pattern="[0-9]*"
-                    ref={durationRef} // Attach ref to the duration input
-                    onKeyDown={(e) => handleKeyDown(e, index)} // Attach key down event
-                  />
-                  <Button
-                    size="xs"
-                    variant="invisible"
-                    onClick={() => {
-                      handleAddSubtask(index);
-                    }}
-                  >
-                    <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
-                  </Button>
-                </div>
-              </div>
+                      <div className="flex flex-row  justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
+                        <div className="flex w-full justify-between items-center">
+                          <span className="min-w-24 text-sm">
+                            {"Target date:  "}
+                          </span>
+                          <div className="flex items-center space-x-2">
+                            <DateTimePicker
+                              date={selectedDate}
+                              setDate={setSelectedDate}
+                              color="gray-300"
+                            />
+                            <XMarkIcon
+                              onClick={() => {
+                                setTaskArray((prevTasks) =>
+                                  prevTasks.map((t, i) =>
+                                    i === index
+                                      ? { ...t, deadline: undefined }
+                                      : t
+                                  )
+                                );
+                              }}
+                              className="cursor-pointer w-6 h-6 text-destructive"
+                            />
+                          </div>
+                        </div>
+                      </div>
 
-              {/* // CONFIRMATION BUTTON */}
+                      {/* // SUBTASKS LIST */}
 
-              {/* <div className="flex justify-end justify-self-end space-x-2">
+                      <div className="flex overflow-y-scroll w-full no-scrollbar flex-grow">
+                        <div className="flex flex-col justify-start h-full w-full">
+                          {taskArray[index].subtasks?.map(
+                            (subtask, subtaskIndex) => (
+                              <div
+                                key={subtaskIndex}
+                                className="flex justify-between items-center w-full text-sm py-2"
+                              >
+                                <div className="truncate max-w-[180px]">
+                                  {subtask.title}
+                                </div>
+
+                                <div className="text-sm text-white pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
+                                  <div>
+                                    {subtask.duration} {" min"}
+                                  </div>
+                                  <Button
+                                    size="xs"
+                                    variant="invisible"
+                                    onClick={() =>
+                                      handleDeleteSubtask(index, subtaskIndex)
+                                    }
+                                  >
+                                    <XMarkIcon className="w-5 h-5 text-red-500 hover:text-red-700" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )
+                          )}
+                        </div>
+                      </div>
+
+                      {/* // ADD SUBTASK */}
+
+                      <div className="w-full my-2 ">
+                        <div className="flex gap-2 items-center">
+                          <Input
+                            value={taskTitle}
+                            onChange={(e) => setTaskTitle(e.target.value)}
+                            className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
+                              task.canInfluence ? "text-black" : ""
+                            }`}
+                            ref={taskTitleRef} // Attach ref to the taskTitle input
+                          />
+                          <Input
+                            value={taskDuration || ""} // Ensure it's always a string
+                            onChange={(e) =>
+                              setTaskDuration(Number(e.target.value))
+                            }
+                            placeholder={
+                              taskArray[index].duration?.toString() || "min"
+                            }
+                            className="w-14 h-7 text-sm text-white"
+                            type="number"
+                            pattern="[0-9]*"
+                            ref={durationRef} // Attach ref to the duration input
+                            onKeyDown={(e) => handleKeyDown(e, index)} // Attach key down event
+                          />
+                          <Button
+                            size="xs"
+                            variant="invisible"
+                            onClick={() => {
+                              handleAddSubtask(index);
+                            }}
+                          >
+                            <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* // CONFIRMATION BUTTON */}
+
+                      {/* <div className="flex justify-end justify-self-end space-x-2">
                 <button
                   onClick={() => handleConfirmGoal(task.duration)}
                   disabled={taskDuration === undefined}
@@ -440,10 +460,17 @@ export default function TasksPage() {
                   <CheckCircledIcon className="w-9 h-9 hover:bg-sky-400 rounded-full" />
                 </button>
               </div> */}
-            </div>
-          ) : null
-        )}
+                    </>
+                  </div>
+                </CarouselItem>
+              ) : null
+            )}
+          </CarouselContent>
+          <CarouselPrevious />
+          <CarouselNext />
+        </Carousel>
       </div>
+
       <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant="invisible" className="px-0">
           <Link
