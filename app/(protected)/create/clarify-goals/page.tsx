@@ -1,7 +1,7 @@
 "use client";
 
 // Third-party libraries
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, createRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -69,8 +69,16 @@ export default function TasksPage() {
   );
   const [taskTitle, setTaskTitle] = useState<string>("");
 
-  const taskTitleRef = useRef<HTMLInputElement>(null); // Create a ref for the taskTitle input
-  const durationRef = useRef<HTMLInputElement>(null); // Create a ref for the duration input
+  const refs = useRef(new Map<number, React.RefObject<HTMLInputElement>>());
+
+  const getRef = (index: number) => {
+    if (!refs.current.has(index)) {
+      refs.current.set(index, createRef());
+    }
+    return refs.current.get(index);
+  };
+
+  const durationRef = useRef<HTMLInputElement>(null);
 
   const [carouselIndex, setCarouselIndex] = useState<number | undefined>(
     undefined
@@ -211,8 +219,9 @@ export default function TasksPage() {
     if (event.key === "Enter") {
       event.preventDefault(); // Prevent default Enter key behavior (e.g., form submission)
       handleAddSubtask(index); // Call handleAddSubtask
-      if (taskTitleRef.current) {
-        taskTitleRef.current.focus(); // Focus on taskTitle input field
+      const ref = getRef(index);
+      if (ref?.current) {
+        ref.current.focus(); // Focus on the correct taskTitle input field
       }
     }
   };
@@ -258,7 +267,7 @@ export default function TasksPage() {
       // selectedDate != undefined &&
       currentTask &&
       currentTask.subtasks &&
-      currentTask.subtasks.length >= 1
+      currentTask.subtasks.length > 1
     ) {
       return true;
     }
@@ -330,9 +339,11 @@ export default function TasksPage() {
                 <CarouselItem key={index}>
                   <div
                     key={index}
-                    className={`flex flex-col rounded-lg w-full h-full group hover:shadow-md py-1 px-4  ${
-                      goalComplete ? "bg-emerald-500" : "bg-gray-700"
-                    }  text-white `}
+                    className={`flex flex-col rounded-lg w-full h-full group hover:shadow-md py-1 px-4 transition-colors duration-300 ${
+                      checkGoalCompletion(index)
+                        ? "bg-emerald-500"
+                        : "bg-gray-700"
+                    }  text-white`}
                   >
                     <>
                       {/* // TITLE AND NAME EDITOR */}
@@ -372,7 +383,7 @@ export default function TasksPage() {
                               >
                                 <PencilIcon
                                   className={`w-5 h-5 ${
-                                    task.type === "plan" ? "text-white" : ""
+                                    task.type === "goal" ? "text-white" : ""
                                   }`}
                                 />
                               </div>
@@ -382,7 +393,7 @@ export default function TasksPage() {
                               >
                                 <XMarkIcon
                                   className={`w-7 h-7 ${
-                                    task.type === "plan" ? "text-white" : ""
+                                    task.type === "goal" ? "text-white" : ""
                                   }`}
                                 />
                               </div>
@@ -472,7 +483,7 @@ export default function TasksPage() {
                             className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
                               task.canInfluence ? "text-black" : ""
                             }`}
-                            ref={taskTitleRef} // Attach ref to the taskTitle input
+                            ref={getRef(index)} // Attach ref dynamically
                           />
                           <Input
                             value={taskDuration || ""} // Ensure it's always a string
