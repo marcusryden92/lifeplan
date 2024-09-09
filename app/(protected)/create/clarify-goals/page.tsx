@@ -72,6 +72,10 @@ export default function TasksPage() {
   const taskTitleRef = useRef<HTMLInputElement>(null); // Create a ref for the taskTitle input
   const durationRef = useRef<HTMLInputElement>(null); // Create a ref for the duration input
 
+  const [carouselIndex, setCarouselIndex] = useState<number | undefined>(
+    undefined
+  );
+
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
     defaultValues: {
@@ -274,7 +278,12 @@ export default function TasksPage() {
       </CardContent>
 
       <div className="overflow-x-auto flex-grow flex items-start justify-center flex-wrap content-start no-scrollbar py-2 ">
-        <Carousel className="w-1/2 h-full">
+        <Carousel
+          className="w-1/2 h-full"
+          onIndexChange={(currentIndex: number | undefined) => {
+            setCarouselIndex(currentIndex);
+          }}
+        >
           <CarouselContent className="h-full">
             {taskArray.map((task, index) =>
               task.canInfluence && task.type !== "goal" ? (
