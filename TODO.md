@@ -1,19 +1,9 @@
-# CHANGE MARK-TASKS ROUTE TO JUST BE TASKS.
+# Add icons to calendar and create tab.
 
-# REFACTOR AND EXTRACT COMMON PAGE UTILS FROM PAGES THEMSELVES TO SEPARATE FILE
+# Add mark all and unmark all options for tasks/plans/goals.
 
-# ADD ICONS TO CALENDAR AND CREATE TAB
+# Make sure delete all only deletes visible items.
 
-# ADD MARK ALL AND UNMARK ALL OPTIONS FOR TASKS/PLANS/GOALS
+# Apply date to goal when clicking next, and reset or set to already set date.
 
-# MAKE SURE DELETE ALL ONLY DELETES VISIBLE ITEMS
-
----
-
-# DECONSTRUCT THE GOALCOMPLETED CHECKER SO I CAN USE IT SEPARATELY IN INDIVIDUAL
-
-# COMPONENTS FOR BACKGROUND COLOR.
-
-# APPLY DATE TO GOAL WHEN CLICKING NEXT, AND RESET OR SET TO ALREADY SET DATE.
-
-# ENTER BUTTON PREVENTDEFAULT
+# Enter button preventDefault.
