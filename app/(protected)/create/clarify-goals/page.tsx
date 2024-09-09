@@ -528,8 +528,17 @@ export default function TasksPage() {
               ) : null
             )}
           </CarouselContent>
-          <CarouselPrevious />
-          <CarouselNext disabled={!goalComplete} />
+          <CarouselPrevious
+            className={`transition-opacity duration-500   ${
+              taskArray.length === 0 || carouselIndex === 0
+                ? " !opacity-0 "
+                : ""
+            }`}
+          />
+          <CarouselNext
+            className={`${taskArray.length === 0 ? "!opacity-0" : ""}`}
+            disabled={!goalComplete}
+          />
         </Carousel>
       </div>
 
