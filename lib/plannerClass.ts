@@ -1,4 +1,7 @@
+import { v4 as uuidv4 } from "uuid";
+
 export interface PlannerInterface {
+  id: string;
   title: string;
   type?: "task" | "plan" | "goal" | null;
   canInfluence: boolean;
@@ -9,6 +12,7 @@ export interface PlannerInterface {
 }
 
 export class Planner implements PlannerInterface {
+  id: string;
   title: string;
   type: "task" | "plan" | "goal" | null;
   canInfluence: boolean;
@@ -25,6 +29,7 @@ export class Planner implements PlannerInterface {
     deadline?: Date | undefined,
     subtasks?: Subtask[] | undefined
   ) {
+    this.id = uuidv4(); // Generate a UUID for the instance
     this.title = title;
     this.type = type;
     this.canInfluence = canInfluence; // Set the value here

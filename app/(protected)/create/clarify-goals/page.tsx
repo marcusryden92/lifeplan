@@ -236,7 +236,8 @@ export default function TasksPage() {
       // selectedDate != undefined &&
       currentGoal &&
       currentGoal.subtasks &&
-      currentGoal.subtasks.length > 1
+      currentGoal.subtasks.length > 1 &&
+      currentGoal.deadline != undefined
     ) {
       return true;
     }
@@ -244,15 +245,23 @@ export default function TasksPage() {
     return false;
   };
 
-  const handleSetDeadline = (index: number) => {
-    setTaskArray((prevArray) =>
-      prevArray.map((task, j) =>
-        j === index ? { ...task, deadline: selectedDate } : task
-      )
-    );
+  useEffect(() => {
+    if (carouselIndex != undefined) {
+      const currentGoal = getCurrentGoal(carouselIndex);
 
-    console.log("UPDATED GOAL: " + JSON.stringify(taskArray[index]));
-  };
+      const currentId = currentGoal.id;
+
+      setTaskArray((prevArray) =>
+        prevArray.map((task, j) =>
+          task.id === currentId ? { ...task, deadline: selectedDate } : task
+        )
+      );
+
+      setTimeout(() => {
+        console.log(JSON.stringify(getCurrentGoal(carouselIndex).deadline));
+      }, 200);
+    }
+  }, [selectedDate]);
 
   useEffect(() => {
     if (carouselIndex != undefined) {
@@ -409,9 +418,6 @@ export default function TasksPage() {
                               date={selectedDate}
                               setDate={setSelectedDate}
                               color="gray-300"
-                              setDeadline={() => {
-                                handleSetDeadline(index);
-                              }}
                             />
                             <XMarkIcon
                               onClick={() => {
