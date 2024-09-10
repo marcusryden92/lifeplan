@@ -257,6 +257,28 @@ export default function TasksPage() {
     return false;
   };
 
+  const checkTotalCompletion = () => {
+    const goalsList = getGoalsList();
+    let isComplete = true;
+
+    goalsList.forEach((goal) => {
+      if (!goal) {
+        return false;
+      }
+
+      if (
+        // selectedDate != undefined &&
+        !goal.subtasks ||
+        goal.subtasks.length < 2 ||
+        goal.deadline === undefined
+      ) {
+        isComplete = false;
+      }
+    });
+
+    return isComplete;
+  };
+
   useEffect(() => {
     if (carouselIndex != undefined) {
       const currentGoal = getCurrentGoal(carouselIndex);
@@ -576,9 +598,17 @@ export default function TasksPage() {
         </Button>
         <Button
           variant="invisible"
-          disabled={taskArray.length === 0}
+          disabled={taskArray.length === 0 || checkTotalCompletion() === false}
           className="px-0"
-        ></Button>
+        >
+          <Link
+            href={"/create/goals"}
+            className="flex group items-center gap-4"
+          >
+            {"Continue"}
+            <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />
+          </Link>
+        </Button>
       </CardFooter>
     </div>
   );
