@@ -81,7 +81,7 @@ const Carousel = React.forwardRef<
         onIndexChange(index);
       }
 
-      console.log(index), setCanScrollPrev(api.canScrollPrev());
+      setCanScrollPrev(api.canScrollPrev());
       setCanScrollNext(api.canScrollNext());
     }, []);
 

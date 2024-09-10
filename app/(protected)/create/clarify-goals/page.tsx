@@ -251,20 +251,26 @@ export default function TasksPage() {
       )
     );
 
-    setTimeout(() => {
-      console.log("UPDATED GOAL: " + JSON.stringify(taskArray[index]));
-    }, 200);
+    console.log("UPDATED GOAL: " + JSON.stringify(taskArray[index]));
   };
 
   useEffect(() => {
     if (carouselIndex != undefined) {
       setGoalComplete(checkGoalCompletion(carouselIndex));
-
-      console.log("Checking goal completion for index:", carouselIndex);
-      console.log("Task array:", taskArray);
-      console.log(goalComplete);
     }
   }, [carouselIndex, taskArray]);
+
+  useEffect(() => {
+    if (carouselIndex != undefined) {
+      const currentGoal = getCurrentGoal(carouselIndex);
+
+      if (currentGoal && currentGoal.deadline) {
+        setSelectedDate(currentGoal.deadline);
+      } else {
+        setSelectedDate(undefined);
+      }
+    }
+  }, [carouselIndex]);
 
   return (
     <div className="flex flex-col overflow-hidden w-full h-full bg-white rounded-xl bg-opacity-95 px-10">

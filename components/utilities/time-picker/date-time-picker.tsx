@@ -39,6 +39,7 @@ export function DateTimePicker({
     setDate(newDateFull);
 
     if (setDeadline) {
+      // console.log("SETTING DEADLINE.");
       setDeadline();
     }
   };
