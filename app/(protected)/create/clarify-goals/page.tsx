@@ -241,7 +241,11 @@ export default function TasksPage() {
   };
 
   const checkGoalCompletion = (index: number): boolean => {
-    const currentGoal = getCurrentGoal(index);
+    // const currentGoal = getCurrentGoal(index);
+
+    const currentGoal = taskArray[index];
+
+    console.log(currentGoal);
 
     // Check if currentTask is undefined or null
     if (
@@ -283,17 +287,19 @@ export default function TasksPage() {
     if (carouselIndex != undefined) {
       const currentGoal = getCurrentGoal(carouselIndex);
 
-      const currentId = currentGoal.id;
+      if (currentGoal) {
+        const currentId = currentGoal.id;
 
-      setTaskArray((prevArray) =>
-        prevArray.map((task, j) =>
-          task.id === currentId ? { ...task, deadline: selectedDate } : task
-        )
-      );
+        setTaskArray((prevArray) =>
+          prevArray.map((task, j) =>
+            task.id === currentId ? { ...task, deadline: selectedDate } : task
+          )
+        );
 
-      setTimeout(() => {
-        console.log(JSON.stringify(getCurrentGoal(carouselIndex).deadline));
-      }, 200);
+        setTimeout(() => {
+          console.log(JSON.stringify(getCurrentGoal(carouselIndex)));
+        }, 200);
+      }
     }
   }, [selectedDate]);
 
