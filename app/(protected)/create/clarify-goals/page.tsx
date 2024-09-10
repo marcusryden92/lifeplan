@@ -228,6 +228,18 @@ export default function TasksPage() {
     return currentGoal;
   };
 
+  const getGoalsList = () => {
+    const goalsList: Planner[] = [];
+
+    taskArray.forEach((task) => {
+      if (task.type === "goal") {
+        goalsList.push(task);
+      }
+    });
+
+    return goalsList;
+  };
+
   const checkGoalCompletion = (index: number): boolean => {
     const currentGoal = getCurrentGoal(index);
 
@@ -338,7 +350,7 @@ export default function TasksPage() {
                     className={`flex flex-col rounded-lg w-full h-full group hover:shadow-md py-1 px-4 transition-colors duration-300 ${
                       checkGoalCompletion(index)
                         ? "bg-emerald-600"
-                        : "bg-gray-700"
+                        : "bg-gray-600"
                     }  text-white`}
                   >
                     <>
@@ -542,8 +554,13 @@ export default function TasksPage() {
             }`}
           />
           <CarouselNext
-            className={`${taskArray.length === 0 ? "!opacity-0" : ""}`}
-            disabled={!goalComplete}
+            className={`transition-opacity duration-500 ${
+              taskArray.length === 0 ||
+              carouselIndex === getGoalsList().length - 1
+                ? "!opacity-0"
+                : ""
+            }`}
+            // disabled={!goalComplete}
           />
         </Carousel>
       </div>
