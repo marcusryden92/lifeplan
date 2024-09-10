@@ -160,39 +160,6 @@ export default function TasksPage() {
     setChangeToTask(index);
   };
 
-  const handleConfirmGoal = (currentDuration: number | undefined) => {
-    const finalDuration =
-      taskDuration !== undefined ? taskDuration : currentDuration;
-
-    if (changeToTask !== null && finalDuration !== undefined) {
-      setTaskArray((prevTasks) =>
-        prevTasks.map((task, index) =>
-          index === changeToTask
-            ? {
-                ...task,
-                type: "plan",
-                deadline: task.deadline || undefined,
-              }
-            : task
-        )
-      );
-      resetTaskState();
-    }
-  };
-
-  const handleCancelTask = () => {
-    if (changeToTask !== null) {
-      setTaskArray((prevTasks) =>
-        prevTasks.map((task, index) =>
-          index === changeToTask
-            ? { ...task, type: null, duration: undefined }
-            : task
-        )
-      );
-    }
-    resetTaskState();
-  };
-
   const handleAddSubtask = (index: number) => {
     if (taskDuration !== undefined && taskTitle) {
       const newTask = new Subtask(taskTitle, taskDuration);
@@ -247,7 +214,7 @@ export default function TasksPage() {
     setTaskTitle("");
   };
 
-  const checkGoalCompletion = (index: number): boolean => {
+  const getCurrentGoal = (index: number) => {
     const goalsList: Planner[] = [];
 
     taskArray.forEach((task) => {
@@ -256,18 +223,20 @@ export default function TasksPage() {
       }
     });
 
-    const currentTask = goalsList[index];
+    const currentGoal = goalsList[index];
 
-    setTimeout(() => {
-      console.log("CURRENT TASK: " + JSON.stringify(currentTask));
-    }, 200);
+    return currentGoal;
+  };
+
+  const checkGoalCompletion = (index: number): boolean => {
+    const currentGoal = getCurrentGoal(index);
 
     // Check if currentTask is undefined or null
     if (
       // selectedDate != undefined &&
-      currentTask &&
-      currentTask.subtasks &&
-      currentTask.subtasks.length > 1
+      currentGoal &&
+      currentGoal.subtasks &&
+      currentGoal.subtasks.length > 1
     ) {
       return true;
     }
