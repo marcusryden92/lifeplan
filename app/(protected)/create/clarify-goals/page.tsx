@@ -244,6 +244,18 @@ export default function TasksPage() {
     return false;
   };
 
+  const handleSetDeadline = (index: number) => {
+    setTaskArray((prevArray) =>
+      prevArray.map((task, j) =>
+        j === index ? { ...task, deadline: selectedDate } : task
+      )
+    );
+
+    setTimeout(() => {
+      console.log("UPDATED GOAL: " + JSON.stringify(taskArray[index]));
+    }, 200);
+  };
+
   useEffect(() => {
     if (carouselIndex != undefined) {
       setGoalComplete(checkGoalCompletion(carouselIndex));
@@ -391,6 +403,9 @@ export default function TasksPage() {
                               date={selectedDate}
                               setDate={setSelectedDate}
                               color="gray-300"
+                              setDeadline={() => {
+                                handleSetDeadline(index);
+                              }}
                             />
                             <XMarkIcon
                               onClick={() => {
@@ -401,6 +416,8 @@ export default function TasksPage() {
                                       : t
                                   )
                                 );
+
+                                setSelectedDate(undefined);
                               }}
                               className="cursor-pointer w-6 h-6 text-destructive"
                             />

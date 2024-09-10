@@ -16,9 +16,15 @@ interface DateTimePickerProps {
   date: Date | undefined;
   setDate: React.Dispatch<React.SetStateAction<Date | undefined>>;
   color?: string;
+  setDeadline?: () => void;
 }
 
-export function DateTimePicker({ date, setDate, color }: DateTimePickerProps) {
+export function DateTimePicker({
+  date,
+  setDate,
+  color,
+  setDeadline,
+}: DateTimePickerProps) {
   const handleSelect = (newDay: Date | undefined) => {
     if (!newDay) return;
 
@@ -31,6 +37,10 @@ export function DateTimePicker({ date, setDate, color }: DateTimePickerProps) {
     const diffInDays = diff / (1000 * 60 * 60 * 24);
     const newDateFull = add(date, { days: Math.ceil(diffInDays) });
     setDate(newDateFull);
+
+    if (setDeadline) {
+      setDeadline();
+    }
   };
 
   return (
