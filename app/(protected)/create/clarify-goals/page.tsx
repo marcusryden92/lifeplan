@@ -324,7 +324,7 @@ export default function TasksPage() {
 
       <div className="overflow-x-auto flex-grow flex items-start justify-center flex-wrap content-start no-scrollbar py-2 ">
         <Carousel
-          className="w-1/2 h-full"
+          className="w-1/3 h-full"
           onIndexChange={(currentIndex: number | undefined) => {
             setCarouselIndex(currentIndex);
           }}
@@ -337,7 +337,7 @@ export default function TasksPage() {
                     key={index}
                     className={`flex flex-col rounded-lg w-full h-full group hover:shadow-md py-1 px-4 transition-colors duration-300 ${
                       checkGoalCompletion(index)
-                        ? "bg-emerald-500"
+                        ? "bg-emerald-600"
                         : "bg-gray-700"
                     }  text-white`}
                   >
@@ -358,7 +358,9 @@ export default function TasksPage() {
                             variant="invisible"
                             onClick={handleConfirmEdit}
                           >
-                            <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
+                            <CheckIcon
+                              className={`w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50`}
+                            />
                           </Button>
                         </div>
                       ) : (
@@ -504,7 +506,13 @@ export default function TasksPage() {
                               handleAddSubtask(index);
                             }}
                           >
-                            <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
+                            <CheckIcon
+                              className={`w-6 h-6 p-0 bg-none ${
+                                checkGoalCompletion(index)
+                                  ? "text-red-600"
+                                  : "text-sky-500"
+                              } hover:opacity-50"`}
+                            />
                           </Button>
                         </div>
                       </div>
