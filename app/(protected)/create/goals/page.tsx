@@ -102,7 +102,9 @@ export default function InfluencePage() {
   const toggleGoal = (index: number) => {
     setTaskArray((prevTaskArray) =>
       prevTaskArray.map((task, i) =>
-        i === index ? { ...task, type: "goal" } : task
+        i === index
+          ? { ...task, type: task.type !== "goal" ? "goal" : null }
+          : task
       )
     );
   };
