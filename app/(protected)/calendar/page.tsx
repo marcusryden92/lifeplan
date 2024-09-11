@@ -7,7 +7,7 @@ const SettingsPage = async () => {
   const user = (await currentUser()) as SettingsPageUser;
 
   return (
-    <div className="w-full h-full bg-white rounded-xl bg-opacity-95">
+    <div className="w-full h-full bg-white rounded-xl bg-opacity-95 overflow-hidden max-h-[100vh]">
       <CardHeader>
         <p className="text-xl font-semibold">Calendar</p>
       </CardHeader>
