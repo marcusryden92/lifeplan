@@ -133,89 +133,92 @@ export default function TemplateBuilder() {
   };
 
   return (
-    <FullCalendar
-      ref={calendarRef} // Attach the reference to FullCalendar
-      plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} // Add interaction plugin
-      initialView="timeGridWeek"
-      firstDay={1} // Set week to start on Monday
-      height={"100%"} // Set calendar height
-      headerToolbar={{
-        start: "", // Hide previous and next buttons
-        center: "", // Show only title
-        end: "", // Hide today button
-      }}
-      views={{
-        timeGridWeek: {
-          columnHeaderText: (date) => {
-            // Display day names without dates
-            return date.toLocaleDateString("en-US", { weekday: "long" });
-          },
-        },
-      }}
-      slotLabelFormat={{
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false, // 24-hour format for the time slots
-      }}
-      eventTimeFormat={{
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false, // 24-hour format for the events
-      }}
-      editable={true} // Enable event dragging and resizing
-      eventResizableFromStart={true} // Allow resizing from start
-      selectable={true} // Enable selection to create events
-      select={handleSelect} // Callback when a selection is made
-      eventResize={handleEventResize} // Callback when an event is resized
-      eventDrop={handleEventDrop} // Callback when an event is dropped
-      eventContent={({ event }: any) => (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            height: "100%", // Ensure the div takes full height
-          }}
-        >
-          <span className="p-1" style={{ marginBottom: "auto" }}>
-            {event.title}
-          </span>{" "}
-          {/* Title on top */}
+    <>
+      <style>
+        {`
+          .fc-daygrid-day-top {
+            display: none !important;
+          }
+        `}
+      </style>
+      <FullCalendar
+        ref={calendarRef} // Attach the reference to FullCalendar
+        plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} // Add interaction plugin
+        initialView="timeGridWeek"
+        firstDay={1} // Set week to start on Monday
+        height={"100%"} // Set calendar height
+        headerToolbar={{
+          start: "", // Hide previous and next buttons
+          center: "", // Show only title
+          end: "", // Hide today button
+        }}
+        slotLabelFormat={{
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false, // 24-hour format for the time slots
+        }}
+        eventTimeFormat={{
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false, // 24-hour format for the events
+        }}
+        editable={true} // Enable event dragging and resizing
+        eventResizableFromStart={true} // Allow resizing from start
+        selectable={true} // Enable selection to create events
+        select={handleSelect} // Callback when a selection is made
+        eventResize={handleEventResize} // Callback when an event is resized
+        eventDrop={handleEventDrop} // Callback when an event is dropped
+        allDaySlot={false}
+        dayHeaderFormat={{ weekday: "long" }}
+        eventContent={({ event }: any) => (
           <div
-            className="m-1"
-            style={{ display: "flex", justifyContent: "flex-end" }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              height: "100%", // Ensure the div takes full height
+            }}
           >
-            {" "}
-            {/* Buttons container aligned to bottom right */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEventEdit(event.id);
-              }}
-              style={{ marginLeft: "10px" }}
+            <span className="p-1" style={{ marginBottom: "auto" }}>
+              {event.title}
+            </span>{" "}
+            {/* Title on top */}
+            <div
+              className="m-1"
+              style={{ display: "flex", justifyContent: "flex-end" }}
             >
-              <PencilIcon height="1rem" width="1rem" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEventCopy(event);
-              }}
-              style={{ marginLeft: "10px" }}
-            >
-              <DocumentDuplicateIcon height="1rem" width="1rem" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEventDelete(event.id);
-              }}
-              style={{ marginLeft: "10px" }}
-            >
-              <TrashIcon height="1rem" width="1rem" />
-            </button>
+              {" "}
+              {/* Buttons container aligned to bottom right */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEventEdit(event.id);
+                }}
+                style={{ marginLeft: "10px" }}
+              >
+                <PencilIcon height="1rem" width="1rem" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEventCopy(event);
+                }}
+                style={{ marginLeft: "10px" }}
+              >
+                <DocumentDuplicateIcon height="1rem" width="1rem" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEventDelete(event.id);
+                }}
+                style={{ marginLeft: "10px" }}
+              >
+                <TrashIcon height="1rem" width="1rem" />
+              </button>
+            </div>
           </div>
-        </div>
-      )}
-    />
+        )}
+      />
+    </>
   );
 }
