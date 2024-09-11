@@ -26,7 +26,7 @@ export default function TemplateBuilder() {
       const calendarApi = calendarRef.current.getApi();
       const events = calendarApi.getEvents();
       const newEvents = getCalendarToTemplate(events);
-
+      setCurrentTemplate(newEvents);
       console.log(newEvents);
     }
   };
