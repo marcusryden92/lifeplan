@@ -1,6 +1,7 @@
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { currentUser } from "@/lib/auth";
 import { SettingsPageUser } from "@/next-auth";
+import Calendar from "@/components/calendar/calendar";
 
 const SettingsPage = async () => {
   const user = (await currentUser()) as SettingsPageUser;
@@ -10,7 +11,9 @@ const SettingsPage = async () => {
       <CardHeader>
         <p className="text-xl font-semibold">Calendar</p>
       </CardHeader>
-      <CardContent></CardContent>
+      <CardContent className="flex-grow h-full">
+        <Calendar />
+      </CardContent>
     </div>
   );
 };
