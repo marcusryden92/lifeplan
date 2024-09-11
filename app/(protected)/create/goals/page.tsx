@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 
 // Schemas and utilities
 import { TaskListSchema } from "@/schemas";
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@/lib/planner-class";
 import { hasInfluence } from "@/utils/plannerUtils";
 import {
   onSubmit,

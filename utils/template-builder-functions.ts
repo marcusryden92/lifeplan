@@ -1,4 +1,4 @@
-import { EventApi } from "@fullcalendar/core/index.js";
+import { EventApi } from "@fullcalendar/core";
 
 export function getWeekdayName(date: Date | null) {
   if (!date) {

@@ -54,7 +54,7 @@ import {
   clickEdit,
   confirmEdit,
 } from "@/utils/creation-pages-functions";
-import { Planner, Subtask } from "@/lib/plannerClass";
+import { Planner, Subtask } from "@/lib/planner-class";
 
 export default function TasksPage() {
   const { taskArray, setTaskArray } = useDataContext();

@@ -1,4 +1,4 @@
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@/lib/planner-class";
 import { TaskListSchema } from "@/schemas";
 
 import * as z from "zod";
