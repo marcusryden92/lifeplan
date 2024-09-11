@@ -5,6 +5,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction"; // Required for selectable behavior
+import { useDataContext } from "@/context/DataContext";
 
 import {
   TrashIcon,
@@ -12,24 +13,21 @@ import {
   PencilIcon,
 } from "@heroicons/react/24/outline";
 
+import { getCalendarToTemplate } from "@/utils/template-builder-functions";
+
 export default function TemplateBuilder() {
   const calendarRef = useRef<FullCalendar>(null);
   const [events, setEvents] = useState<any[]>([]); // State to manage events
+  const { currentTemplate, setCurrentTemplate } = useDataContext();
 
   // Function to log events
   const logEvents = () => {
     if (calendarRef.current) {
       const calendarApi = calendarRef.current.getApi();
       const events = calendarApi.getEvents();
-      console.log(
-        "Current Events:",
-        events.map((event) => ({
-          id: event.id,
-          title: event.title,
-          start: event.startStr,
-          end: event.endStr,
-        }))
-      ); // Logs events with details
+      const newEvents = getCalendarToTemplate(events);
+
+      console.log(newEvents);
     }
   };
 
