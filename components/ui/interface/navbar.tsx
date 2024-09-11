@@ -15,6 +15,7 @@ const font = Audiowide({ subsets: ["latin"], weight: ["400"] });
 const links = [
   { name: "Calendar", href: "/calendar" },
   { name: "Create", href: "/create" },
+  { name: "Week Template", href: "/template" },
 ];
 
 export const Navbar = () => {

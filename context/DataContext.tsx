@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode } from "react";
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@/lib/planner-class";
 
 import { EventTemplate } from "@/utils/template-builder-functions";
 
