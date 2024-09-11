@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -15,7 +15,28 @@ import {
 export default function TemplateBuilder() {
   const calendarRef = useRef<FullCalendar>(null);
   const [events, setEvents] = useState<any[]>([]); // State to manage events
-  const [copiedEvent, setCopiedEvent] = useState<any>(null); // State to store copied event
+
+  // Function to log events
+  const logEvents = () => {
+    if (calendarRef.current) {
+      const calendarApi = calendarRef.current.getApi();
+      const events = calendarApi.getEvents();
+      console.log(
+        "Current Events:",
+        events.map((event) => ({
+          id: event.id,
+          title: event.title,
+          start: event.startStr,
+          end: event.endStr,
+        }))
+      ); // Logs events with details
+    }
+  };
+
+  // Log events whenever `events` state changes
+  useEffect(() => {
+    logEvents(); // Log events after state changes
+  }, [events]); // Dependency array with `events` state
 
   // Handle the selection of a time range (dragging to create a new event)
   const handleSelect = (selectInfo: any) => {

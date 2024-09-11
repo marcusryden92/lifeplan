@@ -137,6 +137,7 @@ export default function Calendar() {
       ref={calendarRef} // Attach the reference to FullCalendar
       plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} // Add interaction plugin
       initialView="timeGridWeek"
+      allDaySlot={false}
       firstDay={1} // Set week to start on Monday
       height={"85%"} // Set calendar height
       slotLabelFormat={{
