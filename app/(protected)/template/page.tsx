@@ -22,13 +22,14 @@ export default function TasksPage() {
   >([]);
 
   useEffect(() => {
+    console.log("CURRENT TEMPLATE: " + currentTemplate);
     if (currentTemplate && currentTemplate.length > 0) {
       const newCalendar = generateCalendar(currentTemplate);
       setCurrentCalendar(newCalendar);
-
-      console.log(newCalendar);
+      console.log("NEW CALENDAR: " + newCalendar);
     }
   }, []);
+
   return (
     <div className="flex flex-col w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
@@ -39,7 +40,7 @@ export default function TasksPage() {
         </p>
       </CardHeader>
       <CardContent className="flex-grow h-full">
-        <TemplateBuilder />
+        <TemplateBuilder initialEvents={currentCalendar} />
       </CardContent>
       <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant="invisible" className="px-0">

@@ -155,6 +155,7 @@ export default function Calendar({ initialEvents }: CalendarProps) {
     <FullCalendar
       ref={calendarRef}
       plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+      events={events}
       initialView="timeGridWeek"
       allDaySlot={false}
       firstDay={1}
@@ -221,7 +222,6 @@ export default function Calendar({ initialEvents }: CalendarProps) {
           )}
         </div>
       )}
-      events={events}
     />
   );
 }

@@ -21,7 +21,7 @@ const CalendarPage = () => {
       const newCalendar = generateCalendar(currentTemplate);
       setCurrentCalendar(newCalendar);
 
-      console.log(newCalendar);
+      // console.log(newCalendar);
     }
   }, []);
 

@@ -17,12 +17,38 @@ import { getCalendarToTemplate } from "@/utils/template-builder-functions";
 
 import { EventTemplate } from "@/utils/template-builder-functions";
 
-export default function TemplateBuilder() {
+// Define the types for the events
+interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string; // ISO 8601 string format for FullCalendar
+  end: string; // ISO 8601 string format for FullCalendar
+}
+
+// Props interface for the Calendar component
+interface CalendarProps {
+  initialEvents?: CalendarEvent[] | undefined;
+}
+
+export default function TemplateBuilder({ initialEvents }: CalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
-  const [events, setEvents] = useState<any[]>([]); // State to manage events
+  const [events, setEvents] = useState<any[]>(initialEvents || []); // State to manage events
   const { currentTemplate, setCurrentTemplate } = useDataContext();
 
   const [newEvents, setNewEvents] = useState<EventTemplate[]>([]);
+
+  // Sync state with prop changes
+  useEffect(() => {
+    if (initialEvents) {
+      setEvents(initialEvents);
+      console.log("INITIAL EVENTS: " + initialEvents);
+      console.log("SET EVENTS: " + events);
+    }
+  }, [initialEvents]);
+
+  useEffect(() => {
+    console.log("SET EVENTS: " + events);
+  }, [events]);
 
   // Function to log events
   const logEvents = () => {
@@ -37,9 +63,9 @@ export default function TemplateBuilder() {
     setCurrentTemplate(newEvents);
   }, [newEvents]);
 
-  useEffect(() => {
-    console.log(currentTemplate);
-  }, [currentTemplate]);
+  // useEffect(() => {
+  //   console.log(currentTemplate);
+  // }, [currentTemplate]);
 
   // Log events whenever `events` state changes
   useEffect(() => {
@@ -165,6 +191,7 @@ export default function TemplateBuilder() {
     <FullCalendar
       ref={calendarRef} // Attach the reference to FullCalendar
       plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} // Add interaction plugin
+      events={events}
       initialView="timeGridWeek"
       firstDay={1} // Set week to start on Monday
       height={"100%"} // Set calendar height
