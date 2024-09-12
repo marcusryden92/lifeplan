@@ -31,7 +31,6 @@ interface CalendarProps {
 export default function Calendar({ initialEvents }: CalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const [events, setEvents] = useState<CalendarEvent[]>(initialEvents || []); // State to manage events
-  const [copiedEvent, setCopiedEvent] = useState<CalendarEvent | null>(null); // State to store copied event
 
   // Sync state with prop changes
   useEffect(() => {

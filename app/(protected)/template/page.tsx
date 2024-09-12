@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
@@ -8,7 +9,26 @@ import { ArrowLongLeftIcon } from "@heroicons/react/24/outline";
 
 import TemplateBuilder from "@/components/template-builder/template-builder";
 
+import { useDataContext } from "@/context/DataContext";
+import { SimpleEvent } from "@/utils/calendar-generation";
+
+import { generateCalendar } from "@/utils/calendar-generation";
+
 export default function TasksPage() {
+  const { currentTemplate } = useDataContext();
+
+  const [currentCalendar, setCurrentCalendar] = useState<
+    SimpleEvent[] | undefined
+  >([]);
+
+  useEffect(() => {
+    if (currentTemplate && currentTemplate.length > 0) {
+      const newCalendar = generateCalendar(currentTemplate);
+      setCurrentCalendar(newCalendar);
+
+      console.log(newCalendar);
+    }
+  }, []);
   return (
     <div className="flex flex-col w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">

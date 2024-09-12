@@ -83,7 +83,7 @@ export function generateCalendar(
     });
   });
 
-  console.log(eventArray);
+  // console.log(eventArray);
 
   return eventArray;
 }
