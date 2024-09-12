@@ -59,7 +59,6 @@ export default function TemplateBuilder({ initialEvents }: CalendarProps) {
     }
   };
 
-  // Handle the selection of a time range (dragging to create a new event)
   const handleSelect = (selectInfo: any) => {
     const { start, end, allDay } = selectInfo;
 
@@ -67,30 +66,20 @@ export default function TemplateBuilder({ initialEvents }: CalendarProps) {
     const title = prompt("Enter event title:", "New Event");
 
     if (title) {
-      // Check if calendarRef.current is not null
-      if (calendarRef.current) {
-        // Access the calendar's API using the reference
-        const calendarApi = calendarRef.current.getApi();
+      const newEvent = {
+        title,
+        start,
+        end,
+        allDay,
+        id: Date.now().toString(), // Generate a new ID for the event
+      };
 
-        // Create a new event
-        const newEvent = {
-          title,
-          start,
-          end,
-          allDay,
-          id: Date.now().toString(), // Generate a new ID for the event
-        };
+      // Update the calendarEvents state
+      setCalendarEvents((prevEvents) => [...prevEvents, newEvent]);
 
-        console.log("LOG EVENTS: " + calendarEvents.length);
-
-        // Add the new event to the calendar and state
-        calendarApi.addEvent(newEvent);
-        setCalendarEvents((prevEvents) => [...prevEvents, newEvent]);
-
-        setTimeout(() => {
-          console.log("LOG EVENTS 2: " + calendarEvents.length);
-        }, 500);
-      }
+      setTimeout(() => {
+        console.log("LOG EVENTS 2: " + calendarEvents.length);
+      }, 500);
     }
   };
 
