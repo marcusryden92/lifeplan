@@ -19,7 +19,6 @@ const CalendarPage = () => {
   useEffect(() => {
     if (currentTemplate && currentTemplate.length > 0) {
       const newCalendar = generateCalendar(currentTemplate);
-      oca;
       setCurrentCalendar(newCalendar);
 
       console.log(newCalendar);
