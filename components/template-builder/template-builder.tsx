@@ -15,21 +15,31 @@ import {
 
 import { getCalendarToTemplate } from "@/utils/template-builder-functions";
 
+import { EventTemplate } from "@/utils/template-builder-functions";
+
 export default function TemplateBuilder() {
   const calendarRef = useRef<FullCalendar>(null);
   const [events, setEvents] = useState<any[]>([]); // State to manage events
   const { currentTemplate, setCurrentTemplate } = useDataContext();
+
+  const [newEvents, setNewEvents] = useState<EventTemplate[]>([]);
 
   // Function to log events
   const logEvents = () => {
     if (calendarRef.current) {
       const calendarApi = calendarRef.current.getApi();
       const events = calendarApi.getEvents();
-      const newEvents = getCalendarToTemplate(events);
-      setCurrentTemplate(newEvents);
-      console.log(newEvents);
+      setNewEvents(getCalendarToTemplate(events));
     }
   };
+
+  useEffect(() => {
+    setCurrentTemplate(newEvents);
+  }, [newEvents]);
+
+  useEffect(() => {
+    console.log(currentTemplate);
+  }, [currentTemplate]);
 
   // Log events whenever `events` state changes
   useEffect(() => {
@@ -180,7 +190,7 @@ export default function TemplateBuilder() {
       eventResize={handleEventResize} // Callback when an event is resized
       eventDrop={handleEventDrop} // Callback when an event is dropped
       allDaySlot={false}
-      dayHeaderFormat={{ weekday: "long" }}
+      dayHeaderFormat={{ weekday: "short" }}
       eventContent={({ event }: any) => (
         <div
           style={{

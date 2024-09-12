@@ -1,21 +1,5 @@
 import { EventApi } from "@fullcalendar/core";
-
-export function getWeekdayName(date: Date | null) {
-  if (!date) {
-    console.log("getWeekDayName date is null.");
-    return;
-  }
-  const weekdays = [
-    "sunday",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-  ];
-  return weekdays[date.getDay()];
-}
+import { getWeekdayName } from "@/utils/calendar-utils";
 
 function getTimeFromDate(date: Date | null): string | undefined {
   if (!date) {

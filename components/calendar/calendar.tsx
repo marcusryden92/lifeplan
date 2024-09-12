@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -12,10 +12,30 @@ import {
   PencilIcon,
 } from "@heroicons/react/24/outline";
 
-export default function Calendar() {
+// Define the types for the events
+interface CalendarEvent {
+  id: string;
+  title: string;
+  start: string; // ISO 8601 string format for FullCalendar
+  end: string; // ISO 8601 string format for FullCalendar
+}
+
+// Props interface for the Calendar component
+interface CalendarProps {
+  initialEvents?: CalendarEvent[] | undefined;
+}
+
+export default function Calendar({ initialEvents }: CalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
-  const [events, setEvents] = useState<any[]>([]); // State to manage events
-  const [copiedEvent, setCopiedEvent] = useState<any>(null); // State to store copied event
+  const [events, setEvents] = useState<CalendarEvent[]>(initialEvents || []); // State to manage events
+  const [copiedEvent, setCopiedEvent] = useState<CalendarEvent | null>(null); // State to store copied event
+
+  // Sync state with prop changes
+  useEffect(() => {
+    if (initialEvents) {
+      setEvents(initialEvents);
+    }
+  }, [initialEvents]);
 
   // Handle the selection of a time range (dragging to create a new event)
   const handleSelect = (selectInfo: any) => {
@@ -31,11 +51,10 @@ export default function Calendar() {
         const calendarApi = calendarRef.current.getApi();
 
         // Create a new event
-        const newEvent = {
+        const newEvent: CalendarEvent = {
           title,
-          start,
-          end,
-          allDay,
+          start: start.toISOString(),
+          end: end.toISOString(),
           id: Date.now().toString(), // Generate a new ID for the event
         };
 
@@ -53,7 +72,13 @@ export default function Calendar() {
     // Update event in state
     setEvents((prevEvents) =>
       prevEvents.map((ev) =>
-        ev.id === event.id ? { ...ev, start: event.start, end: event.end } : ev
+        ev.id === event.id
+          ? {
+              ...ev,
+              start: event.start.toISOString(),
+              end: event.end.toISOString(),
+            }
+          : ev
       )
     );
   };
@@ -65,19 +90,24 @@ export default function Calendar() {
     // Update event in state
     setEvents((prevEvents) =>
       prevEvents.map((ev) =>
-        ev.id === event.id ? { ...ev, start: event.start, end: event.end } : ev
+        ev.id === event.id
+          ? {
+              ...ev,
+              start: event.start.toISOString(),
+              end: event.end.toISOString(),
+            }
+          : ev
       )
     );
   };
 
   // Handle event copy
-  const handleEventCopy = (event: any) => {
+  const handleEventCopy = (event: CalendarEvent) => {
     // Create a new event with the same details but a new ID
-    const newEvent = {
+    const newEvent: CalendarEvent = {
       title: event.title,
       start: event.start,
       end: event.end,
-      allDay: event.allDay,
       id: Date.now().toString(), // Generate a new ID for the copied event
     };
 
@@ -204,6 +234,7 @@ export default function Calendar() {
           </div>
         </div>
       )}
+      events={events} // Pass the events to FullCalendar
     />
   );
 }
