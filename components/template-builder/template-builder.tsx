@@ -41,14 +41,8 @@ export default function TemplateBuilder({ initialEvents }: CalendarProps) {
   useEffect(() => {
     if (initialEvents) {
       setEvents(initialEvents);
-      console.log("INITIAL EVENTS: " + initialEvents);
-      console.log("SET EVENTS: " + events);
     }
   }, [initialEvents]);
-
-  useEffect(() => {
-    console.log("SET EVENTS: " + events);
-  }, [events]);
 
   // Function to log events
   const logEvents = () => {

@@ -22,11 +22,9 @@ export default function TasksPage() {
   >([]);
 
   useEffect(() => {
-    console.log("CURRENT TEMPLATE: " + currentTemplate);
     if (currentTemplate && currentTemplate.length > 0) {
       const newCalendar = generateCalendar(currentTemplate);
       setCurrentCalendar(newCalendar);
-      console.log("NEW CALENDAR: " + newCalendar);
     }
   }, []);
 

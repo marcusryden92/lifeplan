@@ -20,8 +20,6 @@ const CalendarPage = () => {
     if (currentTemplate && currentTemplate.length > 0) {
       const newCalendar = generateCalendar(currentTemplate);
       setCurrentCalendar(newCalendar);
-
-      // console.log(newCalendar);
     }
   }, []);
 
