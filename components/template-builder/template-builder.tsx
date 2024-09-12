@@ -32,39 +32,32 @@ interface CalendarProps {
 
 export default function TemplateBuilder({ initialEvents }: CalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
-  const [events, setEvents] = useState<any[]>(initialEvents || []); // State to manage events
+  const [calendarEvents, setCalendarEvents] = useState<any[]>(
+    initialEvents || []
+  ); // State to manage events
   const { currentTemplate, setCurrentTemplate } = useDataContext();
 
-  const [newEvents, setNewEvents] = useState<EventTemplate[]>([]);
-
-  // Sync state with prop changes
+  // UPDATE THE CALENDAR WITH THE INITIAL-EVENTS PROP, WHENEVER INITIAL-EVENTS PROP CHANGES
   useEffect(() => {
     if (initialEvents) {
-      setEvents(initialEvents);
+      console.log("EVENTS: " + initialEvents.length);
+      setCalendarEvents(initialEvents);
     }
   }, [initialEvents]);
 
-  // Function to log events
-  const logEvents = () => {
+  //  Update currentTemplate whenever calendar (events) is modified.
+  useEffect(() => {
+    updateTemplate();
+  }, [calendarEvents]);
+
+  const updateTemplate = () => {
     if (calendarRef.current) {
       const calendarApi = calendarRef.current.getApi();
       const events = calendarApi.getEvents();
-      setNewEvents(getCalendarToTemplate(events));
+      const newTemplate = getCalendarToTemplate(events);
+      setCurrentTemplate(newTemplate);
     }
   };
-
-  useEffect(() => {
-    setCurrentTemplate(newEvents);
-  }, [newEvents]);
-
-  // useEffect(() => {
-  //   console.log(currentTemplate);
-  // }, [currentTemplate]);
-
-  // Log events whenever `events` state changes
-  useEffect(() => {
-    logEvents(); // Log events after state changes
-  }, [events]); // Dependency array with `events` state
 
   // Handle the selection of a time range (dragging to create a new event)
   const handleSelect = (selectInfo: any) => {
@@ -88,9 +81,15 @@ export default function TemplateBuilder({ initialEvents }: CalendarProps) {
           id: Date.now().toString(), // Generate a new ID for the event
         };
 
+        console.log("LOG EVENTS: " + calendarEvents.length);
+
         // Add the new event to the calendar and state
         calendarApi.addEvent(newEvent);
-        setEvents((prevEvents) => [...prevEvents, newEvent]);
+        setCalendarEvents((prevEvents) => [...prevEvents, newEvent]);
+
+        setTimeout(() => {
+          console.log("LOG EVENTS 2: " + calendarEvents.length);
+        }, 500);
       }
     }
   };
@@ -100,7 +99,7 @@ export default function TemplateBuilder({ initialEvents }: CalendarProps) {
     const { event } = resizeInfo;
 
     // Update event in state
-    setEvents((prevEvents) =>
+    setCalendarEvents((prevEvents) =>
       prevEvents.map((ev) =>
         ev.id === event.id ? { ...ev, start: event.start, end: event.end } : ev
       )
@@ -112,7 +111,7 @@ export default function TemplateBuilder({ initialEvents }: CalendarProps) {
     const { event } = dropInfo;
 
     // Update event in state
-    setEvents((prevEvents) =>
+    setCalendarEvents((prevEvents) =>
       prevEvents.map((ev) =>
         ev.id === event.id ? { ...ev, start: event.start, end: event.end } : ev
       )
@@ -135,7 +134,7 @@ export default function TemplateBuilder({ initialEvents }: CalendarProps) {
       // Access the calendar's API using the reference
       const calendarApi = calendarRef.current.getApi();
       calendarApi.addEvent(newEvent);
-      setEvents((prevEvents) => [...prevEvents, newEvent]);
+      setCalendarEvents((prevEvents) => [...prevEvents, newEvent]);
     }
   };
 
@@ -149,7 +148,9 @@ export default function TemplateBuilder({ initialEvents }: CalendarProps) {
       if (event) {
         // Remove the event from the calendar and state
         event.remove();
-        setEvents((prevEvents) => prevEvents.filter((ev) => ev.id !== eventId));
+        setCalendarEvents((prevEvents) =>
+          prevEvents.filter((ev) => ev.id !== eventId)
+        );
       }
     }
   };
@@ -157,7 +158,7 @@ export default function TemplateBuilder({ initialEvents }: CalendarProps) {
   // Handle event edit
   const handleEventEdit = (eventId: string) => {
     // Find the event and prompt user to edit the title
-    const event = events.find((ev) => ev.id === eventId);
+    const event = calendarEvents.find((ev) => ev.id === eventId);
     if (event) {
       const newTitle = prompt("Enter new title:", event.title);
       if (newTitle) {
@@ -172,7 +173,7 @@ export default function TemplateBuilder({ initialEvents }: CalendarProps) {
           }
         }
         // Update the state
-        setEvents((prevEvents) =>
+        setCalendarEvents((prevEvents) =>
           prevEvents.map((ev) =>
             ev.id === eventId ? { ...ev, title: newTitle } : ev
           )
@@ -185,7 +186,7 @@ export default function TemplateBuilder({ initialEvents }: CalendarProps) {
     <FullCalendar
       ref={calendarRef} // Attach the reference to FullCalendar
       plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} // Add interaction plugin
-      events={events}
+      events={calendarEvents}
       initialView="timeGridWeek"
       firstDay={1} // Set week to start on Monday
       height={"100%"} // Set calendar height
