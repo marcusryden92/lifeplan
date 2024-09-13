@@ -9,25 +9,7 @@ import { ArrowLongLeftIcon } from "@heroicons/react/24/outline";
 
 import TemplateBuilder from "@/components/template-builder/template-builder";
 
-import { useDataContext } from "@/context/DataContext";
-import { SimpleEvent } from "@/utils/calendar-generation";
-
-import { generateCalendar } from "@/utils/calendar-generation";
-
 export default function TasksPage() {
-  const { currentTemplate } = useDataContext();
-
-  const [currentCalendar, setCurrentCalendar] = useState<
-    SimpleEvent[] | undefined
-  >([]);
-
-  useEffect(() => {
-    if (currentTemplate && currentTemplate.length > 0) {
-      const newCalendar = generateCalendar(currentTemplate);
-      setCurrentCalendar(newCalendar);
-    }
-  }, []);
-
   return (
     <div className="flex flex-col w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
@@ -38,7 +20,7 @@ export default function TasksPage() {
         </p>
       </CardHeader>
       <CardContent className="flex-grow h-full">
-        <TemplateBuilder initialEvents={currentCalendar} />
+        <TemplateBuilder />
       </CardContent>
       <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant="invisible" className="px-0">

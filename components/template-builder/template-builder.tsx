@@ -14,8 +14,10 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { getCalendarToTemplate } from "@/utils/template-builder-functions";
+import { generateCalendar } from "@/utils/calendar-generation";
 
 import { EventTemplate } from "@/utils/template-builder-functions";
+import { SimpleEvent } from "@/utils/calendar-generation";
 
 // Define the types for the events
 interface CalendarEvent {
@@ -32,54 +34,24 @@ interface CalendarProps {
 
 export default function TemplateBuilder({ initialEvents }: CalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
-  const [calendarEvents, setCalendarEvents] = useState<any[]>(
-    initialEvents || []
-  ); // State to manage events
+  const [calendarEvents, setCalendarEvents] = useState<SimpleEvent[]>([]); // State to manage events
   const { currentTemplate, setCurrentTemplate } = useDataContext();
 
-  // UPDATE THE CALENDAR WITH THE INITIAL-EVENTS PROP, WHENEVER INITIAL-EVENTS PROP CHANGES
-  useEffect(() => {
-    if (initialEvents) {
-      console.log("EVENTS: " + initialEvents.length);
-      setCalendarEvents(initialEvents);
-    }
-  }, [initialEvents]);
-
-  //  Update currentTemplate whenever calendar (events) is modified.
-  useEffect(() => {
-    updateTemplate();
-  }, [calendarEvents]);
-
-  const updateTemplate = () => {
-    if (calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      const events = calendarApi.getEvents();
-      const newTemplate = getCalendarToTemplate(events);
-      setCurrentTemplate(newTemplate);
-    }
-  };
-
-  const handleSelect = (selectInfo: any) => {
+  const handleSelect = async (selectInfo: any) => {
     const { start, end, allDay } = selectInfo;
 
-    // Prompt user for event title
     const title = prompt("Enter event title:", "New Event");
 
     if (title) {
       const newEvent = {
+        id: Date.now().toString(), // Generate a unique ID
         title,
         start,
         end,
         allDay,
-        id: Date.now().toString(), // Generate a new ID for the event
       };
-
-      // Update the calendarEvents state
+      // Update the calendarEvents state to keep it in sync
       setCalendarEvents((prevEvents) => [...prevEvents, newEvent]);
-
-      setTimeout(() => {
-        console.log("LOG EVENTS 2: " + calendarEvents.length);
-      }, 500);
     }
   };
 
