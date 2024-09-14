@@ -9,21 +9,24 @@ import { ArrowLongLeftIcon, TrashIcon } from "@heroicons/react/24/outline";
 
 import TemplateBuilder from "@/components/template-builder/template-builder";
 import { useDataContext } from "@/context/DataContext";
+import { SimpleEvent } from "@/utils/calendar-generation";
 
 export default function TasksPage() {
-  /*  const { setCurrentTemplate, setTemplateEvents } = useDataContext();
+  const [templateEvents, setTemplateEvents] = useState<SimpleEvent[]>([]); // State to manage events
+
+  const { currentTemplate, setCurrentTemplate } = useDataContext();
 
   const handleDeleteAll = () => {
     setCurrentTemplate([]);
-    // setTemplateEvents([]);
-  }; */
+    setTemplateEvents([]);
+  };
   return (
     <div className="flex flex-col w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center justify-between">
         <p className="text-xl font-semibold">WEEK TEMPLATE</p>
         <button
           type="button"
-          // onClick={handleDeleteAll}
+          onClick={handleDeleteAll}
           className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem]"
         >
           <TrashIcon className="w-5 h-5 mx-2" />
@@ -31,7 +34,10 @@ export default function TasksPage() {
         </button>
       </CardHeader>
       <CardContent className="flex-grow h-full">
-        <TemplateBuilder />
+        <TemplateBuilder
+          templateEvents={templateEvents}
+          setTemplateEvents={setTemplateEvents}
+        />
       </CardContent>
       <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant="invisible" className="px-0">

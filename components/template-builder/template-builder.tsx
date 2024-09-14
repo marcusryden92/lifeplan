@@ -27,20 +27,28 @@ interface CalendarEvent {
   end: string; // ISO 8601 string format for FullCalendar
 }
 
-export default function TemplateBuilder() {
+interface TemplateBuilderProps {
+  templateEvents: SimpleEvent[];
+  setTemplateEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
+}
+
+export default function TemplateBuilder({
+  templateEvents,
+  setTemplateEvents,
+}: TemplateBuilderProps) {
   const calendarRef = useRef<FullCalendar>(null);
-
-  const [hasRunOnce, setHasRunOnce] = useState<boolean>(false);
-
-  const [templateEvents, setTemplateEvents] = useState<SimpleEvent[]>([]); // State to manage events
 
   const { currentTemplate, setCurrentTemplate } = useDataContext();
 
   useEffect(() => {
-    if (currentTemplate && currentTemplate.length > 0 && !hasRunOnce) {
-      setHasRunOnce(true);
+    if (currentTemplate && currentTemplate.length > 0 && calendarRef.current) {
+      const calendarApi = calendarRef.current.getApi();
+
+      const events = calendarApi.getEvents();
       const newCalendar = generateCalendar(currentTemplate);
-      setTemplateEvents(newCalendar);
+
+      if (JSON.stringify(events) != JSON.stringify(newCalendar))
+        setTemplateEvents(newCalendar);
     }
   }, [currentTemplate]);
 
