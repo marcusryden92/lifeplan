@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useContext } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -27,14 +27,32 @@ interface CalendarEvent {
   end: string; // ISO 8601 string format for FullCalendar
 }
 
-// Props interface for the Calendar component
-interface CalendarProps {
-  initialEvents?: CalendarEvent[] | undefined;
-}
-
-export default function TemplateBuilder({ initialEvents }: CalendarProps) {
+export default function TemplateBuilder() {
   const calendarRef = useRef<FullCalendar>(null);
-  const [templateEvents, setTemplateEvents] = useState<SimpleEvent[]>([]); // State to manage events
+
+  const {
+    currentTemplate,
+    setCurrentTemplate,
+    templateEvents,
+    setTemplateEvents,
+  } = useDataContext();
+
+  useEffect(() => {
+    updateTemplate();
+  }, [templateEvents]);
+
+  const updateTemplate = () => {
+    if (calendarRef.current) {
+      const calendarApi = calendarRef.current.getApi();
+      const events = calendarApi.getEvents();
+      const newTemplate = getCalendarToTemplate(events);
+
+      // Only update if template has actually changed
+      if (JSON.stringify(currentTemplate) !== JSON.stringify(newTemplate)) {
+        setCurrentTemplate(newTemplate);
+      }
+    }
+  };
 
   const handleSelect = async (selectInfo: any) => {
     const { start, end, allDay } = selectInfo;
@@ -118,26 +136,29 @@ export default function TemplateBuilder({ initialEvents }: CalendarProps) {
   // Handle event edit
   const handleEventEdit = (eventId: string) => {
     // Find the event and prompt user to edit the title
-    const event = templateEvents.find((ev) => ev.id === eventId);
-    if (event) {
-      const newTitle = prompt("Enter new title:", event.title);
-      if (newTitle) {
-        // Update the event
-        if (calendarRef.current) {
-          const calendarApi = calendarRef.current.getApi();
-          const fullCalendarEvent = calendarApi
-            .getEvents()
-            .find((ev) => ev.id === eventId);
-          if (fullCalendarEvent) {
-            fullCalendarEvent.setProp("title", newTitle);
+    if (templateEvents) {
+      const event = templateEvents.find((ev) => ev.id === eventId);
+
+      if (event) {
+        const newTitle = prompt("Enter new title:", event.title);
+        if (newTitle) {
+          // Update the event
+          if (calendarRef.current) {
+            const calendarApi = calendarRef.current.getApi();
+            const fullCalendarEvent = calendarApi
+              .getEvents()
+              .find((ev) => ev.id === eventId);
+            if (fullCalendarEvent) {
+              fullCalendarEvent.setProp("title", newTitle);
+            }
           }
+          // Update the state
+          setTemplateEvents((prevEvents) =>
+            prevEvents.map((ev) =>
+              ev.id === eventId ? { ...ev, title: newTitle } : ev
+            )
+          );
         }
-        // Update the state
-        setTemplateEvents((prevEvents) =>
-          prevEvents.map((ev) =>
-            ev.id === eventId ? { ...ev, title: newTitle } : ev
-          )
-        );
       }
     }
   };
