@@ -15,6 +15,7 @@ function getTimeFromDate(date: Date | null): string | undefined {
 // Define the EventTemplate interface
 export interface EventTemplate {
   title: string;
+  id: string;
   start: {
     day: string | undefined;
     time: string | undefined;
@@ -26,12 +27,13 @@ export interface EventTemplate {
 }
 
 // Your original function
-export function getCalendarToTemplate(calendar: EventApi[]): EventTemplate[] {
+export function getTemplateFromCalendar(calendar: EventApi[]): EventTemplate[] {
   let template: EventTemplate[] = [];
 
   calendar.forEach((task, index) => {
     const newEvent: EventTemplate = {
       title: task.title,
+      id: task.id,
       start: {
         day: getWeekdayName(task.start), // Assuming task.start is a Date or similar object
         time: getTimeFromDate(task.start), // Assuming task.start is a Date or similar object

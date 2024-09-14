@@ -1,5 +1,6 @@
 export const templateSeed = [
   {
+    id: "1",
     title: "1",
     start: {
       day: "monday",
@@ -11,6 +12,7 @@ export const templateSeed = [
     },
   },
   {
+    id: "2",
     title: "2",
     start: {
       day: "monday",
@@ -22,6 +24,7 @@ export const templateSeed = [
     },
   },
   {
+    id: "3",
     title: "3",
     start: {
       day: "tuesday",
@@ -33,6 +36,7 @@ export const templateSeed = [
     },
   },
   {
+    id: "4",
     title: "4",
     start: {
       day: "wednesday",
@@ -44,6 +48,7 @@ export const templateSeed = [
     },
   },
   {
+    id: "5",
     title: "5",
     start: {
       day: "thursday",
@@ -55,6 +60,7 @@ export const templateSeed = [
     },
   },
   {
+    id: "6",
     title: "6",
     start: {
       day: "friday",
@@ -66,6 +72,7 @@ export const templateSeed = [
     },
   },
   {
+    id: "7",
     title: "7",
     start: {
       day: "saturday",
@@ -77,6 +84,7 @@ export const templateSeed = [
     },
   },
   {
+    id: "8",
     title: "8",
     start: {
       day: "sunday",

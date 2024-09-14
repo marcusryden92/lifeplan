@@ -13,7 +13,7 @@ import {
   PencilIcon,
 } from "@heroicons/react/24/outline";
 
-import { getCalendarToTemplate } from "@/utils/template-builder-functions";
+import { getTemplateFromCalendar } from "@/utils/template-builder-functions";
 import { generateCalendar } from "@/utils/calendar-generation";
 
 import { EventTemplate } from "@/utils/template-builder-functions";
@@ -30,19 +30,19 @@ interface CalendarEvent {
 export default function TemplateBuilder() {
   const calendarRef = useRef<FullCalendar>(null);
 
-  const {
-    currentTemplate,
-    setCurrentTemplate,
-    templateEvents,
-    setTemplateEvents,
-  } = useDataContext();
+  const [hasRunOnce, setHasRunOnce] = useState<boolean>(false);
+
+  const [templateEvents, setTemplateEvents] = useState<SimpleEvent[]>([]); // State to manage events
+
+  const { currentTemplate, setCurrentTemplate } = useDataContext();
 
   useEffect(() => {
-    if (calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      calendarApi.refetchEvents();
+    if (currentTemplate && currentTemplate.length > 0 && !hasRunOnce) {
+      setHasRunOnce(true);
+      const newCalendar = generateCalendar(currentTemplate);
+      setTemplateEvents(newCalendar);
     }
-  }, [templateEvents]);
+  }, [currentTemplate]);
 
   useEffect(() => {
     updateTemplate();
@@ -52,7 +52,7 @@ export default function TemplateBuilder() {
     if (calendarRef.current) {
       const calendarApi = calendarRef.current.getApi();
       const events = calendarApi.getEvents();
-      const newTemplate = getCalendarToTemplate(events);
+      const newTemplate = getTemplateFromCalendar(events);
 
       // Only update if template has actually changed
       if (JSON.stringify(currentTemplate) !== JSON.stringify(newTemplate)) {

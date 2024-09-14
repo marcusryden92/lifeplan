@@ -11,19 +11,19 @@ import TemplateBuilder from "@/components/template-builder/template-builder";
 import { useDataContext } from "@/context/DataContext";
 
 export default function TasksPage() {
-  const { setCurrentTemplate, setTemplateEvents } = useDataContext();
+  /*  const { setCurrentTemplate, setTemplateEvents } = useDataContext();
 
   const handleDeleteAll = () => {
     setCurrentTemplate([]);
     // setTemplateEvents([]);
-  };
+  }; */
   return (
     <div className="flex flex-col w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center justify-between">
         <p className="text-xl font-semibold">WEEK TEMPLATE</p>
         <button
           type="button"
-          onClick={handleDeleteAll}
+          // onClick={handleDeleteAll}
           className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem]"
         >
           <TrashIcon className="w-5 h-5 mx-2" />

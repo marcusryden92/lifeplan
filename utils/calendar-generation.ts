@@ -76,7 +76,7 @@ export function generateCalendar(
     }
 
     eventArray.push({
-      id: Date.now().toString(), // Generate a unique ID for the event
+      id: event.id, // Generate a unique ID for the event
       title: event.title,
       start: newStartDate.toISOString(), // Convert Date to ISO string
       end: newEndDate.toISOString(), // Convert Date to ISO string
