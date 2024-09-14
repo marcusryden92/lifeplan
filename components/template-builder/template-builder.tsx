@@ -38,6 +38,13 @@ export default function TemplateBuilder() {
   } = useDataContext();
 
   useEffect(() => {
+    if (calendarRef.current) {
+      const calendarApi = calendarRef.current.getApi();
+      calendarApi.refetchEvents();
+    }
+  }, [templateEvents]);
+
+  useEffect(() => {
     updateTemplate();
   }, [templateEvents]);
 
