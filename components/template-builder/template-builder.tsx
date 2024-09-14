@@ -186,6 +186,7 @@ export default function TemplateBuilder({
       initialView="timeGridWeek"
       firstDay={1} // Set week to start on Monday
       height={"100%"} // Set calendar height
+      eventColor="royalblue"
       headerToolbar={{
         start: "", // Hide previous and next buttons
         center: "", // Show only title
