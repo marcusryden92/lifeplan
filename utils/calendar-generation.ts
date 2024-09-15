@@ -18,10 +18,33 @@ export function generateCalendar(
   weekStartDay: WeekDayIntegers,
   template: EventTemplate[]
 ): SimpleEvent[] {
-  let eventArray: SimpleEvent[] = [];
-
   const todaysDate = new Date();
 
+  let eventArray: SimpleEvent[] = [];
+
+  eventArray = populateWeekWithTemplate(
+    weekStartDay,
+    todaysDate,
+    template,
+    eventArray
+  );
+
+  eventArray = populateWeekWithTemplate(
+    weekStartDay,
+    shiftDate(todaysDate, 7),
+    template,
+    eventArray
+  );
+
+  return eventArray;
+}
+
+export function populateWeekWithTemplate(
+  weekStartDay: WeekDayIntegers,
+  fromDate: Date,
+  template: EventTemplate[],
+  eventArray: SimpleEvent[]
+): SimpleEvent[] {
   // Days of the week starting from Sunday (index 0)
   const daysFromSunday = [
     "sunday", // index 0
@@ -36,7 +59,7 @@ export function generateCalendar(
   // Get the first date of the week based on the weekStartDay
   let thisWeeksFirstDate: Date | undefined = getWeekFirstDate(
     weekStartDay,
-    todaysDate
+    fromDate
   );
 
   if (!thisWeeksFirstDate) {
