@@ -10,7 +10,7 @@ import { SimpleEvent } from "@/utils/calendar-generation";
 import { generateCalendar } from "@/utils/calendar-generation";
 
 const CalendarPage = () => {
-  const { currentTemplate } = useDataContext();
+  const { currentTemplate, weekStartDay } = useDataContext();
 
   const [currentCalendar, setCurrentCalendar] = useState<
     SimpleEvent[] | undefined
@@ -18,7 +18,7 @@ const CalendarPage = () => {
 
   useEffect(() => {
     if (currentTemplate && currentTemplate.length > 0) {
-      const newCalendar = generateCalendar(currentTemplate);
+      const newCalendar = generateCalendar(weekStartDay, currentTemplate);
       setCurrentCalendar(newCalendar);
     }
   }, []);

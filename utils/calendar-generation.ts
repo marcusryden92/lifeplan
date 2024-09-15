@@ -4,6 +4,7 @@ import { shiftDate, setTimeOnDate } from "@/utils/calendar-utils";
 import { getDateOfThisWeeksMonday } from "@/utils/calendar-utils";
 
 import { getWeekFirstDate } from "@/utils/calendar-utils";
+import { WeekDayIntegers } from "@/types/calendar-types";
 
 // Define the SimpleEvent interface
 export interface SimpleEvent {
@@ -13,28 +14,34 @@ export interface SimpleEvent {
   end: string; // ISO 8601 string format for FullCalendar
 }
 
-export function generateCalendar(template: EventTemplate[]): SimpleEvent[] {
+export function generateCalendar(
+  weekStartDay: WeekDayIntegers,
+  template: EventTemplate[]
+): SimpleEvent[] {
   let eventArray: SimpleEvent[] = [];
 
   const todaysDate = new Date();
 
-  // Days of the week starting from Monday (index 0)
-  const daysFromMonday = [
-    "monday", // index 0
-    "tuesday", // index 1
-    "wednesday", // index 2
-    "thursday", // index 3
-    "friday", // index 4
-    "saturday", // index 5
-    "sunday", // index 6
+  // Days of the week starting from Sunday (index 0)
+  const daysFromSunday = [
+    "sunday", // index 0
+    "monday", // index 1
+    "tuesday", // index 2
+    "wednesday", // index 3
+    "thursday", // index 4
+    "friday", // index 5
+    "saturday", // index 6
   ];
 
-  // Get the first date of the week based on Monday
-  let thisWeeksMonday: Date | undefined = getWeekFirstDate(0, todaysDate); // Assuming Monday as the start of the week
+  // Get the first date of the week based on the weekStartDay
+  let thisWeeksFirstDate: Date | undefined = getWeekFirstDate(
+    weekStartDay,
+    todaysDate
+  );
 
-  if (thisWeeksMonday === undefined) {
-    console.error("Had issues getting thisWeeksMonday");
-    return [];
+  if (!thisWeeksFirstDate) {
+    console.error("Failed to calculate the start date of the week.");
+    return eventArray;
   }
 
   template.forEach((event) => {
@@ -45,15 +52,15 @@ export function generateCalendar(template: EventTemplate[]): SimpleEvent[] {
 
     let newStartDate: Date;
     if (event.start.day) {
-      const startDayIndex = daysFromMonday.indexOf(event.start.day);
+      const startDayIndex = daysFromSunday.indexOf(event.start.day);
       if (startDayIndex === -1) {
         console.error("Invalid start day provided.", event.start.day);
         return;
       }
 
-      // Calculate the offset from Monday
-      const startDayOffset = (startDayIndex - 0 + 7) % 7; // Monday as index 0
-      newStartDate = shiftDate(thisWeeksMonday, startDayOffset);
+      // Calculate the offset from the weekStartDay
+      const startDayOffset = (startDayIndex - weekStartDay + 7) % 7;
+      newStartDate = shiftDate(thisWeeksFirstDate, startDayOffset);
 
       if (event.start.time) {
         newStartDate = setTimeOnDate(newStartDate, event.start.time);
