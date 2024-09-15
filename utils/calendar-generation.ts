@@ -6,6 +6,8 @@ import { getDateOfThisWeeksMonday } from "@/utils/calendar-utils";
 import { getWeekFirstDate } from "@/utils/calendar-utils";
 import { WeekDayIntegers } from "@/types/calendar-types";
 
+import { Planner } from "@/lib/planner-class";
+
 // Define the SimpleEvent interface
 export interface SimpleEvent {
   id: string;
@@ -16,7 +18,8 @@ export interface SimpleEvent {
 
 export function generateCalendar(
   weekStartDay: WeekDayIntegers,
-  template: EventTemplate[]
+  template: EventTemplate[],
+  taskArray: Planner[]
 ): SimpleEvent[] {
   const todaysDate = new Date();
 
@@ -29,17 +32,60 @@ export function generateCalendar(
     eventArray
   );
 
-  eventArray = populateWeekWithTemplate(
-    weekStartDay,
-    shiftDate(todaysDate, 7),
-    template,
-    eventArray
-  );
+  console.log(taskArray);
+
+  // Add date items to the task array:
+  const newArray = addDateItemsToArray(taskArray, eventArray);
+
+  if (newArray && newArray.length !== 0) {
+    eventArray = newArray;
+  }
 
   return eventArray;
 }
 
-export function populateWeekWithTemplate(
+function addDateItemsToArray(taskArray: Planner[], eventArray: SimpleEvent[]) {
+  let dateItems: Planner[] = [];
+  let newArray: SimpleEvent[] = [];
+
+  if (!taskArray || !eventArray) {
+    return undefined;
+  }
+
+  // Filter out tasks that are of type "plan"
+  taskArray.forEach((task) => {
+    if (task.type === "plan") {
+      dateItems.push(task);
+    }
+  });
+
+  if (dateItems.length === 0) {
+    return undefined;
+  }
+
+  // Process each date item and calculate the end date based on duration (in minutes)
+  dateItems.forEach((date) => {
+    if (date.starts && date.duration) {
+      // Calculate the end time by adding duration (in minutes) to the start time
+      const end = new Date(date.starts.getTime() + date.duration * 60000); // 60000 ms = 1 minute
+
+      const newDate: SimpleEvent = {
+        title: date.title,
+        id: JSON.stringify(new Date()),
+        start: date.starts.toISOString(),
+        end: end.toISOString(), // Add the calculated end time here
+      };
+
+      newArray.push(newDate);
+    }
+  });
+
+  eventArray.push(...newArray); // Add the new dates to eventArray
+
+  return eventArray;
+}
+
+function populateWeekWithTemplate(
   weekStartDay: WeekDayIntegers,
   fromDate: Date,
   template: EventTemplate[],

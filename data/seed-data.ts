@@ -1,3 +1,5 @@
+import { Planner } from "@/lib/planner-class";
+
 export const templateSeed = [
   {
     id: "1",
@@ -187,5 +189,18 @@ export const templateSeed = [
       time: "12:00",
     },
     duration: 60, // 1 hour
+  },
+];
+
+export const taskArraySeed: Planner[] = [
+  {
+    title: "Dejt med mamma.",
+    id: "123",
+    type: "plan",
+    canInfluence: true,
+    duration: 50,
+    deadline: undefined,
+    starts: new Date(),
+    subtasks: undefined,
   },
 ];

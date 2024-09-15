@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, ReactNode } from "react";
 import { Planner } from "@/lib/planner-class";
 import { EventTemplate } from "@/utils/template-builder-utils";
 import { generateCalendar, SimpleEvent } from "@/utils/calendar-generation";
-import { templateSeed } from "@/data/template-seed";
+import { templateSeed, taskArraySeed } from "@/data/seed-data";
 import { WeekDayIntegers } from "@/types/calendar-types";
 
 interface DataContextType {
@@ -26,7 +26,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     weekStartDay: 1,
   };
 
-  const [taskArray, setTaskArray] = useState<Planner[]>([]);
+  const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
   const [currentTemplate, setCurrentTemplate] = useState<
     EventTemplate[] | undefined
   >(templateSeed);
