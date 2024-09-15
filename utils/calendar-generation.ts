@@ -7,6 +7,8 @@ import {
   setTimeOnDate,
 } from "@/utils/calendar-utils";
 
+import { getDateOfThisWeeksMonday } from "@/utils/calendar-utils";
+
 // Define the SimpleEvent interface
 export interface SimpleEvent {
   id: string;
@@ -34,16 +36,11 @@ export function generateCalendar(
     "sunday", // index 6
   ];
 
-  let thisWeeksMonday: Date;
+  let thisWeeksMonday: Date | undefined = getDateOfThisWeeksMonday(todaysDate);
 
-  if (currentDay) {
-    thisWeeksMonday = shiftDate(
-      todaysDate,
-      -daysFromMonday.indexOf(currentDay)
-    );
-  } else {
-    console.log("currentDay undefined in generateCalendar.");
-    return eventArray;
+  if (thisWeeksMonday === undefined) {
+    console.error("Had issues getting thisWeeksMonday");
+    return [];
   }
 
   template.forEach((event) => {

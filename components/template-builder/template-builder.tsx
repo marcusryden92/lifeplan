@@ -14,7 +14,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { getTemplateFromCalendar } from "@/utils/template-builder-functions";
-import { generateCalendar } from "@/utils/calendar-generation";
+import { populateTemplateCalendar } from "@/utils/template-builder-functions";
 
 import { EventTemplate } from "@/utils/template-builder-functions";
 import { SimpleEvent } from "@/utils/calendar-generation";
@@ -45,7 +45,7 @@ export default function TemplateBuilder({
       const calendarApi = calendarRef.current.getApi();
 
       const events = calendarApi.getEvents();
-      const newCalendar = generateCalendar(currentTemplate);
+      const newCalendar = populateTemplateCalendar(currentTemplate);
 
       if (JSON.stringify(events) != JSON.stringify(newCalendar))
         setTemplateEvents(newCalendar);
