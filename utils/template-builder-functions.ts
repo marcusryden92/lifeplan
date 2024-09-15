@@ -1,5 +1,5 @@
 import { EventApi } from "@fullcalendar/core";
-import { getWeekdayName } from "@/utils/calendar-utils";
+import { getWeekdayFromDate } from "@/utils/calendar-utils";
 
 function getTimeFromDate(date: Date | null): string | undefined {
   if (!date) {
@@ -35,11 +35,11 @@ export function getTemplateFromCalendar(calendar: EventApi[]): EventTemplate[] {
       title: task.title,
       id: task.id,
       start: {
-        day: getWeekdayName(task.start), // Assuming task.start is a Date or similar object
+        day: getWeekdayFromDate(task.start), // Assuming task.start is a Date or similar object
         time: getTimeFromDate(task.start), // Assuming task.start is a Date or similar object
       },
       end: {
-        day: getWeekdayName(task.end), // Assuming task.end is a Date or similar object
+        day: getWeekdayFromDate(task.end), // Assuming task.end is a Date or similar object
         time: getTimeFromDate(task.end), // Assuming task.end is a Date or similar object
       },
     };

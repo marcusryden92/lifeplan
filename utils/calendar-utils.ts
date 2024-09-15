@@ -1,4 +1,4 @@
-export function getWeekdayName(date: Date | null) {
+export function getWeekdayFromDate(date: Date | null) {
   if (!date) {
     console.log("getWeekDayName date is null.");
     return;

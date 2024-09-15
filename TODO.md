@@ -8,6 +8,4 @@
 
 # Enter button preventDefault.
 
-# Change generateCalendar to calculate duration from template so it doesn't
-
-# fuck with late sunday events (where sunday end-times end up on monday before).
+# Change generateCalendar to calculate duration from template so it doesn't fuck with late sunday events (where sunday end-times end up on monday before).
