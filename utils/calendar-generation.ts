@@ -3,6 +3,8 @@ import { shiftDate, setTimeOnDate } from "@/utils/calendar-utils";
 
 import { getDateOfThisWeeksMonday } from "@/utils/calendar-utils";
 
+import { getWeekFirstDate } from "@/utils/calendar-utils";
+
 // Define the SimpleEvent interface
 export interface SimpleEvent {
   id: string;
@@ -11,14 +13,12 @@ export interface SimpleEvent {
   end: string; // ISO 8601 string format for FullCalendar
 }
 
-export function generateCalendar(
-  //   taskArray: Planner[],
-  template: EventTemplate[]
-): SimpleEvent[] {
+export function generateCalendar(template: EventTemplate[]): SimpleEvent[] {
   let eventArray: SimpleEvent[] = [];
 
   const todaysDate = new Date();
 
+  // Days of the week starting from Monday (index 0)
   const daysFromMonday = [
     "monday", // index 0
     "tuesday", // index 1
@@ -29,7 +29,8 @@ export function generateCalendar(
     "sunday", // index 6
   ];
 
-  let thisWeeksMonday: Date | undefined = getDateOfThisWeeksMonday(todaysDate);
+  // Get the first date of the week based on Monday
+  let thisWeeksMonday: Date | undefined = getWeekFirstDate(0, todaysDate); // Assuming Monday as the start of the week
 
   if (thisWeeksMonday === undefined) {
     console.error("Had issues getting thisWeeksMonday");
@@ -37,33 +38,34 @@ export function generateCalendar(
   }
 
   template.forEach((event) => {
+    if (!event || !event.start || event.duration === undefined) {
+      console.error("Event details are incomplete.", event);
+      return;
+    }
+
     let newStartDate: Date;
-    if (event && event.start.day) {
-      newStartDate = shiftDate(
-        thisWeeksMonday,
-        daysFromMonday.indexOf(event.start.day)
-      );
+    if (event.start.day) {
+      const startDayIndex = daysFromMonday.indexOf(event.start.day);
+      if (startDayIndex === -1) {
+        console.error("Invalid start day provided.", event.start.day);
+        return;
+      }
+
+      // Calculate the offset from Monday
+      const startDayOffset = (startDayIndex - 0 + 7) % 7; // Monday as index 0
+      newStartDate = shiftDate(thisWeeksMonday, startDayOffset);
+
       if (event.start.time) {
         newStartDate = setTimeOnDate(newStartDate, event.start.time);
       }
     } else {
-      console.log("Event start details are missing.");
+      console.error("Event start details are missing.", event);
       return;
     }
 
-    let newEndDate: Date;
-    if (event && event.end.day) {
-      newEndDate = shiftDate(
-        thisWeeksMonday,
-        daysFromMonday.indexOf(event.end.day)
-      );
-      if (event.end.time) {
-        newEndDate = setTimeOnDate(newEndDate, event.end.time);
-      }
-    } else {
-      console.log("Event end details are missing.");
-      return;
-    }
+    // Calculate end date based on duration
+    let newEndDate = new Date(newStartDate);
+    newEndDate.setMinutes(newEndDate.getMinutes() + event.duration);
 
     eventArray.push({
       id: event.id, // Generate a unique ID for the event
@@ -72,8 +74,6 @@ export function generateCalendar(
       end: newEndDate.toISOString(), // Convert Date to ISO string
     });
   });
-
-  // console.log(eventArray);
 
   return eventArray;
 }

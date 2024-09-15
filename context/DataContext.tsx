@@ -23,7 +23,7 @@ const DataContext = createContext<DataContextType | null>(null);
 export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   // Database substitute:
   const userSettings: { weekStartDay: WeekDayIntegers } = {
-    weekStartDay: 0,
+    weekStartDay: 1,
   };
 
   const [taskArray, setTaskArray] = useState<Planner[]>([]);

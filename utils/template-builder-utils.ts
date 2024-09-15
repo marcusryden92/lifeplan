@@ -8,18 +8,15 @@ import { WeekDayIntegers } from "@/types/calendar-types";
 
 import { getWeekFirstDate } from "@/utils/calendar-utils";
 
-// Define the EventTemplate interface
+// Define the updated EventTemplate interface
 export interface EventTemplate {
   title: string;
   id: string;
   start: {
-    day: string | undefined;
-    time: string | undefined;
+    day: string | undefined; // Weekday name
+    time: string | undefined; // Time in "HH:mm" format
   };
-  end: {
-    day: string | undefined;
-    time: string | undefined;
-  };
+  duration: number; // Duration in minutes
 }
 
 function getTimeFromDate(date: Date | null): string | undefined {
@@ -33,22 +30,33 @@ function getTimeFromDate(date: Date | null): string | undefined {
   return `${hours}:${minutes}`;
 }
 
-// Your original function
 export function getTemplateFromCalendar(calendar: EventApi[]): EventTemplate[] {
   let template: EventTemplate[] = [];
 
-  calendar.forEach((task, index) => {
+  calendar.forEach((task) => {
+    if (!task.start || !task.end) {
+      console.error("Task start or end details are missing.", task);
+      return;
+    }
+
+    // Extract start and end times
+    const startDate = new Date(task.start);
+    const endDate = new Date(task.end);
+
+    // Calculate duration in minutes
+    const durationMinutes = Math.round(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60)
+    );
+
+    // Create new EventTemplate object
     const newEvent: EventTemplate = {
       title: task.title,
       id: task.id,
       start: {
-        day: getWeekdayFromDate(task.start), // Assuming task.start is a Date or similar object
-        time: getTimeFromDate(task.start), // Assuming task.start is a Date or similar object
+        day: getWeekdayFromDate(startDate), // Assuming startDate is a Date object
+        time: getTimeFromDate(startDate), // Assuming startDate is a Date object
       },
-      end: {
-        day: getWeekdayFromDate(task.end), // Assuming task.end is a Date or similar object
-        time: getTimeFromDate(task.end), // Assuming task.end is a Date or similar object
-      },
+      duration: durationMinutes, // Add duration in minutes
     };
 
     template.push(newEvent);
@@ -88,7 +96,7 @@ export function populateTemplateCalendar(
   }
 
   template.forEach((event) => {
-    if (!event || !event.start || !event.end) {
+    if (!event || !event.start || event.duration === undefined) {
       console.error("Event details are incomplete.", event);
       return;
     }
@@ -113,25 +121,9 @@ export function populateTemplateCalendar(
       return;
     }
 
-    let newEndDate: Date;
-    if (event.end.day) {
-      const endDayIndex = daysFromSunday.indexOf(event.end.day);
-      if (endDayIndex === -1) {
-        console.error("Invalid end day provided.", event.end.day);
-        return;
-      }
-
-      // Calculate the offset from the weekStartDay
-      const endDayOffset = (endDayIndex - weekStartDay + 7) % 7;
-      newEndDate = shiftDate(thisWeeksFirstDate, endDayOffset);
-
-      if (event.end.time) {
-        newEndDate = setTimeOnDate(newEndDate, event.end.time);
-      }
-    } else {
-      console.error("Event end details are missing.", event);
-      return;
-    }
+    // Calculate end date based on duration
+    let newEndDate = new Date(newStartDate);
+    newEndDate.setMinutes(newEndDate.getMinutes() + event.duration);
 
     eventArray.push({
       id: event.id, // Generate a unique ID for the event
