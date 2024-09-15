@@ -38,14 +38,18 @@ export default function TemplateBuilder({
 }: TemplateBuilderProps) {
   const calendarRef = useRef<FullCalendar>(null);
 
-  const { currentTemplate, setCurrentTemplate } = useDataContext();
+  const { currentTemplate, setCurrentTemplate, weekStartDay } =
+    useDataContext();
 
   useEffect(() => {
     if (currentTemplate && currentTemplate.length > 0 && calendarRef.current) {
       const calendarApi = calendarRef.current.getApi();
 
       const events = calendarApi.getEvents();
-      const newCalendar = populateTemplateCalendar(currentTemplate);
+      const newCalendar = populateTemplateCalendar(
+        weekStartDay,
+        currentTemplate
+      );
 
       if (JSON.stringify(events) != JSON.stringify(newCalendar))
         setTemplateEvents(newCalendar);
