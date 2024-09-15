@@ -188,7 +188,7 @@ export default function TemplateBuilder({
       plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]} // Add interaction plugin
       events={templateEvents}
       initialView="timeGridWeek"
-      firstDay={1} // Set week to start on Monday
+      firstDay={weekStartDay} // Set week to start on Monday
       height={"100%"} // Set calendar height
       eventColor="royalblue"
       headerToolbar={{

@@ -6,6 +6,8 @@ import { shiftDate } from "@/utils/calendar-utils";
 import { setTimeOnDate } from "@/utils/calendar-utils";
 import { WeekDayIntegers } from "@/types/calendar-types";
 
+import { getWeekFirstDate } from "@/utils/calendar-utils";
+
 // Define the EventTemplate interface
 export interface EventTemplate {
   title: string;
@@ -62,51 +64,72 @@ export function populateTemplateCalendar(
   let eventArray: SimpleEvent[] = [];
 
   const todaysDate = new Date();
-  const currentDay = getWeekdayFromDate(todaysDate);
 
-  const daysFromMonday = [
-    "monday", // index 0
-    "tuesday", // index 1
-    "wednesday", // index 2
-    "thursday", // index 3
-    "friday", // index 4
-    "saturday", // index 5
-    "sunday", // index 6
+  // Days of the week starting from Sunday (index 0)
+  const daysFromSunday = [
+    "sunday", // index 0
+    "monday", // index 1
+    "tuesday", // index 2
+    "wednesday", // index 3
+    "thursday", // index 4
+    "friday", // index 5
+    "saturday", // index 6
   ];
 
-  let thisWeeksMonday: Date | undefined = getDateOfThisWeeksMonday(todaysDate);
+  // Get the first date of the week based on the weekStartDay
+  let thisWeeksFirstDate: Date | undefined = getWeekFirstDate(
+    weekStartDay,
+    todaysDate
+  );
 
-  if (thisWeeksMonday === undefined) {
-    console.error("Had issues getting thisWeeksMonday, returned empty array.");
-    return [];
+  if (!thisWeeksFirstDate) {
+    console.error("Failed to calculate the start date of the week.");
+    return eventArray;
   }
 
   template.forEach((event) => {
+    if (!event || !event.start || !event.end) {
+      console.error("Event details are incomplete.", event);
+      return;
+    }
+
     let newStartDate: Date;
-    if (event && event.start.day) {
-      newStartDate = shiftDate(
-        thisWeeksMonday,
-        daysFromMonday.indexOf(event.start.day)
-      );
+    if (event.start.day) {
+      const startDayIndex = daysFromSunday.indexOf(event.start.day);
+      if (startDayIndex === -1) {
+        console.error("Invalid start day provided.", event.start.day);
+        return;
+      }
+
+      // Calculate the offset from the weekStartDay
+      const startDayOffset = (startDayIndex - weekStartDay + 7) % 7;
+      newStartDate = shiftDate(thisWeeksFirstDate, startDayOffset);
+
       if (event.start.time) {
         newStartDate = setTimeOnDate(newStartDate, event.start.time);
       }
     } else {
-      console.log("Event start details are missing.");
+      console.error("Event start details are missing.", event);
       return;
     }
 
     let newEndDate: Date;
-    if (event && event.end.day) {
-      newEndDate = shiftDate(
-        thisWeeksMonday,
-        daysFromMonday.indexOf(event.end.day)
-      );
+    if (event.end.day) {
+      const endDayIndex = daysFromSunday.indexOf(event.end.day);
+      if (endDayIndex === -1) {
+        console.error("Invalid end day provided.", event.end.day);
+        return;
+      }
+
+      // Calculate the offset from the weekStartDay
+      const endDayOffset = (endDayIndex - weekStartDay + 7) % 7;
+      newEndDate = shiftDate(thisWeeksFirstDate, endDayOffset);
+
       if (event.end.time) {
         newEndDate = setTimeOnDate(newEndDate, event.end.time);
       }
     } else {
-      console.log("Event end details are missing.");
+      console.error("Event end details are missing.", event);
       return;
     }
 
@@ -117,8 +140,6 @@ export function populateTemplateCalendar(
       end: newEndDate.toISOString(), // Convert Date to ISO string
     });
   });
-
-  // console.log(eventArray);
 
   return eventArray;
 }
