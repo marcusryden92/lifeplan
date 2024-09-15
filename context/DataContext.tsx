@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { Planner } from "@/lib/planner-class";
 
-import { EventTemplate } from "@/utils/template-builder-functions";
+import { EventTemplate } from "@/utils/template-builder-utils";
 import { generateCalendar, SimpleEvent } from "@/utils/calendar-generation";
 import { templateSeed } from "@/data/template-seed";
 

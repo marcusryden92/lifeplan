@@ -13,10 +13,10 @@ import {
   PencilIcon,
 } from "@heroicons/react/24/outline";
 
-import { getTemplateFromCalendar } from "@/utils/template-builder-functions";
-import { populateTemplateCalendar } from "@/utils/template-builder-functions";
+import { getTemplateFromCalendar } from "@/utils/template-builder-utils";
+import { populateTemplateCalendar } from "@/utils/template-builder-utils";
 
-import { EventTemplate } from "@/utils/template-builder-functions";
+import { EventTemplate } from "@/utils/template-builder-utils";
 import { SimpleEvent } from "@/utils/calendar-generation";
 
 // Define the types for the events

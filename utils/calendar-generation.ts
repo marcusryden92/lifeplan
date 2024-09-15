@@ -1,5 +1,5 @@
 import { Planner } from "@/lib/planner-class";
-import { EventTemplate } from "@/utils/template-builder-functions";
+import { EventTemplate } from "@/utils/template-builder-utils";
 import { EventApi } from "@fullcalendar/core/index.js";
 import {
   getWeekdayFromDate,
