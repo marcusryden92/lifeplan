@@ -4,6 +4,7 @@ import { SimpleEvent } from "@/utils/calendar-generation";
 import { getDateOfThisWeeksMonday } from "@/utils/calendar-utils";
 import { shiftDate } from "@/utils/calendar-utils";
 import { setTimeOnDate } from "@/utils/calendar-utils";
+import { WeekDayIntegers } from "@/types/calendar-types";
 
 // Define the EventTemplate interface
 export interface EventTemplate {
@@ -55,7 +56,7 @@ export function getTemplateFromCalendar(calendar: EventApi[]): EventTemplate[] {
 }
 
 export function populateTemplateCalendar(
-  //   taskArray: Planner[],
+  weekStartDay: WeekDayIntegers,
   template: EventTemplate[]
 ): SimpleEvent[] {
   let eventArray: SimpleEvent[] = [];

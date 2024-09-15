@@ -3,7 +3,7 @@ import { Planner } from "@/lib/planner-class";
 import { EventTemplate } from "@/utils/template-builder-utils";
 import { generateCalendar, SimpleEvent } from "@/utils/calendar-generation";
 import { templateSeed } from "@/data/template-seed";
-import { WeekStartDay } from "@/types/calendar-types";
+import { WeekDayIntegers } from "@/types/calendar-types";
 
 interface DataContextType {
   taskArray: Planner[];
@@ -12,15 +12,15 @@ interface DataContextType {
   setCurrentTemplate: React.Dispatch<
     React.SetStateAction<EventTemplate[] | undefined>
   >;
-  weekStartDay: WeekStartDay;
-  setWeekStartDay: React.Dispatch<React.SetStateAction<WeekStartDay>>;
+  weekStartDay: WeekDayIntegers;
+  setWeekDayIntegers: React.Dispatch<React.SetStateAction<WeekDayIntegers>>;
 }
 
 const DataContext = createContext<DataContextType | null>(null);
 
 export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   // Database substitute:
-  const userSettings: { weekStartDay: WeekStartDay } = {
+  const userSettings: { weekStartDay: WeekDayIntegers } = {
     weekStartDay: 0,
   };
 
@@ -28,7 +28,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const [currentTemplate, setCurrentTemplate] = useState<
     EventTemplate[] | undefined
   >(templateSeed);
-  const [weekStartDay, setWeekStartDay] = useState<WeekStartDay>(
+  const [weekStartDay, setWeekDayIntegers] = useState<WeekDayIntegers>(
     userSettings.weekStartDay
   );
 
@@ -38,7 +38,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     currentTemplate,
     setCurrentTemplate,
     weekStartDay,
-    setWeekStartDay,
+    setWeekDayIntegers,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
