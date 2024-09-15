@@ -31,7 +31,7 @@ import { Button } from "@/components/ui/button";
 // Schemas and utilities
 import { TaskListSchema } from "@/schemas";
 import { Planner } from "@/lib/planner-class";
-import { hasInfluence } from "@/utils/plannerUtils";
+import { hasInfluence } from "@/utils/planner-utils";
 import {
   onSubmit,
   deleteTask,
