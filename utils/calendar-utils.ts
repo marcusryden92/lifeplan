@@ -1,3 +1,5 @@
+import { WeekDayIntegers } from "@/types/calendar-types";
+
 export function getWeekdayFromDate(date: Date | null) {
   if (!date) {
     console.log("getWeekDayName date is null.");
@@ -48,4 +50,22 @@ export function getDateOfThisWeeksMonday(todaysDate: Date): Date | undefined {
     console.log("todaysDate undefined in getDateOfThisWeeksMonday.");
     return undefined;
   }
+}
+
+export function getWeekFirstDate(
+  weekStartDay: WeekDayIntegers,
+  todaysDate: Date
+): Date | undefined {
+  if (todaysDate === undefined || weekStartDay === undefined) {
+    return undefined;
+  }
+
+  // Get the current day of the week (0 for Sunday, 1 for Monday, ..., 6 for Saturday)
+  const todaysWeekday = todaysDate.getDay();
+
+  // Calculate the difference in days to get to the desired start day of the week
+  const daysDifference = (todaysWeekday - weekStartDay + 7) % 7;
+
+  // Use shiftDate to get the date of the first day of the week
+  return shiftDate(todaysDate, -daysDifference);
 }
