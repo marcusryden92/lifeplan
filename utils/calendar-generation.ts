@@ -1,11 +1,5 @@
-import { Planner } from "@/lib/planner-class";
 import { EventTemplate } from "@/utils/template-builder-utils";
-import { EventApi } from "@fullcalendar/core/index.js";
-import {
-  getWeekdayFromDate,
-  shiftDate,
-  setTimeOnDate,
-} from "@/utils/calendar-utils";
+import { shiftDate, setTimeOnDate } from "@/utils/calendar-utils";
 
 import { getDateOfThisWeeksMonday } from "@/utils/calendar-utils";
 
@@ -24,7 +18,6 @@ export function generateCalendar(
   let eventArray: SimpleEvent[] = [];
 
   const todaysDate = new Date();
-  const currentDay = getWeekdayFromDate(todaysDate);
 
   const daysFromMonday = [
     "monday", // index 0
