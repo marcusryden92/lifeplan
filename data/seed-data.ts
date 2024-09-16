@@ -198,7 +198,7 @@ export const taskArraySeed: Planner[] = [
     id: "123",
     type: "plan",
     canInfluence: true,
-    duration: 50,
+    duration: 120,
     deadline: undefined,
     starts: new Date(),
     subtasks: undefined,

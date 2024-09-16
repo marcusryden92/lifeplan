@@ -27,6 +27,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
+
   const [currentTemplate, setCurrentTemplate] = useState<
     EventTemplate[] | undefined
   >(templateSeed);

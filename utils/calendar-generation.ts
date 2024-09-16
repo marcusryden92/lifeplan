@@ -14,6 +14,8 @@ export interface SimpleEvent {
   title: string;
   start: string; // ISO 8601 string format for FullCalendar
   end: string; // ISO 8601 string format for FullCalendar
+  backgroundColor?: string;
+  borderColor?: string;
 }
 
 export function generateCalendar(
@@ -31,8 +33,6 @@ export function generateCalendar(
     template,
     eventArray
   );
-
-  console.log(taskArray);
 
   // Add date items to the task array:
   const newArray = addDateItemsToArray(taskArray, eventArray);
@@ -74,6 +74,8 @@ function addDateItemsToArray(taskArray: Planner[], eventArray: SimpleEvent[]) {
         id: JSON.stringify(new Date()),
         start: date.starts.toISOString(),
         end: end.toISOString(), // Add the calculated end time here
+        backgroundColor: "black",
+        borderColor: "black",
       };
 
       newArray.push(newDate);
