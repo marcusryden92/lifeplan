@@ -30,7 +30,7 @@ const CalendarPage = () => {
   }, [taskArray]);
 
   return (
-    <div className="w-full h-full bg-white rounded-xl bg-opacity-95 overflow-hidden max-h-[100vh] p-10">
+    <div className="w-full h-full bg-white rounded-xl bg-opacity-95 lg:overflow-hidden max-h-[100vh] p-2 lg:p-10">
       {/* <CardHeader className="px-0">
         <p className="text-xl font-semibold">Calendar</p>
       </CardHeader> */}
