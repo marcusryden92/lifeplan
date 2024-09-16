@@ -8,7 +8,7 @@ const SettingsPage = async () => {
 
   return (
     <div className="flex w-full h-full">
-      <Card className="w-[600px] h-full">
+      <Card className="w-[600px] h-full rounded-none border-none shadow-none">
         <CardHeader>
           <p className="text-xl font-semibold">Settings</p>
         </CardHeader>

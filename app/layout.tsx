@@ -23,8 +23,10 @@ export default async function RootLayout({
       <DataContextProvider>
         <html lang="en">
           <body
-            className={`${inter.className} bg-cover bg-center bg-no-repeat min-h-screen`}
-            style={{ backgroundImage: "url('/images/california.jpg')" }}
+            className={`${inter.className} bg-gray-200 min-h-screen`}
+
+            // className={`${inter.className} bg-cover bg-center bg-no-repeat min-h-screen`}
+            // style={{ backgroundImage: "url('/images/california.jpg')" }}
           >
             {children}
           </body>

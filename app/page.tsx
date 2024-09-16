@@ -12,9 +12,15 @@ const font = Audiowide({
 
 // bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-200 to-orange-500
 
+// className={`${inter.className} bg-cover bg-center bg-no-repeat min-h-screen`}
+// style={{ backgroundImage: "url('/images/california.jpg')" }}
+
 export default function Home() {
   return (
-    <main className="flex h-full flex-col items-center justify-center ">
+    <main
+      className="flex h-full flex-col items-center justify-center bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/images/california.jpg')" }}
+    >
       <div className="space-y-6 text-center">
         <h1
           className={`${font.className} flex text-9xl font-semibold text-white drop-shadow-md`}

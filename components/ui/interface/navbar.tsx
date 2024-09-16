@@ -26,8 +26,8 @@ export const Navbar = () => {
   const pathname = usePathname();
 
   return (
-    <div className="flex lg:w-[250px] lg:h-full flex-col">
-      <div className={`${font.className} text-white text-[2.8rem] mb-5`}>
+    <div className="flex lg:w-[280px] lg:h-full w-full flex-col p-2 lg:p-5">
+      <div className={`${font.className} text-gray-900 text-[2.2rem] mb-5`}>
         LIFEPLAN
       </div>
       <div className="flex lg:h-full lg:flex-col lg:space-y-2 justify-between gap-2">
@@ -106,17 +106,24 @@ export const Navbar = () => {
               <span className="hidden lg:block">Settings</span>
             </Link>
           </Button>
-          <form
-            className="mt-0"
-            action={() => {
-              signOut();
-            }}
+          <Button
+            key={"SignOut"}
+            asChild
+            variant={pathname === "/settings" ? "default" : "outline"}
+            className="justify-start rounded-xl h-[48px] "
           >
-            <button className="flex h-[48px] w-full items-center  gap-2 rounded-xl bg-gray-50 p-3 pl-4 text-sm font-medium hover:bg-grey-100 hover:text-red-500">
-              <FaPowerOff className="h-5 w-5" />
-              <span className="hidden lg:block">Sign Out</span>
-            </button>
-          </form>
+            <form
+              className="mt-0"
+              action={() => {
+                signOut();
+              }}
+            >
+              <button className="flex w-full  gap-2 rounded-xl text-sm font-medium hover:bg-grey-100 hover:text-red-500">
+                <FaPowerOff className="h-5 w-5" />
+                <span className="hidden lg:block">Sign Out</span>
+              </button>
+            </form>
+          </Button>
         </div>
       </div>
     </div>

@@ -322,7 +322,7 @@ export default function TasksPage() {
   }, [carouselIndex]);
 
   return (
-    <div className="flex flex-col lg:overflow-hidden w-full h-full bg-white rounded-xl bg-opacity-95 px-10">
+    <div className="flex flex-col lg:overflow-hidden w-full h-full bg-white  bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
         <p className="text-xl font-semibold">CLARIFY GOALS</p>
         <p className="text-sm text-center">Clarify your goals.</p>
@@ -362,7 +362,7 @@ export default function TasksPage() {
         </Form>
       </CardContent>
 
-      <div className="overflow-x-auto flex-grow flex items-start justify-center flex-wrap content-start no-scrollbar py-2 ">
+      <div className="overflow-x-auto py-5 flex-grow flex items-start justify-center flex-wrap content-start no-scrollbar ">
         <Carousel
           className="w-1/3 h-full"
           onIndexChange={(currentIndex: number | undefined) => {
@@ -375,11 +375,9 @@ export default function TasksPage() {
                 <CarouselItem key={index}>
                   <div
                     key={index}
-                    className={`flex flex-col rounded-lg w-full h-full group hover:shadow-md py-1 px-4 transition-colors duration-300 ${
-                      checkGoalCompletion(index)
-                        ? "bg-emerald-600"
-                        : "bg-gray-600"
-                    }  text-white`}
+                    className={`flex flex-col border-x border-gray-200  w-full h-full group hover:shadow-md px-8 py-4  transition-colors duration-300 ${
+                      checkGoalCompletion(index) ? "bg-emerald-500" : ""
+                    }  text-black`}
                   >
                     <>
                       {/* // TITLE AND NAME EDITOR */}
@@ -406,7 +404,7 @@ export default function TasksPage() {
                       ) : (
                         <div className="flex w-full items-center justify-center border-b border-gray-600 border-opacity-15 pb-1">
                           <div
-                            className="flex-grow flex justify-between items-center max-w-[250px] py-2"
+                            className="flex-grow flex justify-between items-center max-w-[250px]"
                             onClick={() => handleSetToGoal(index)}
                           >
                             <div className=" max-w-[180px]">
@@ -421,7 +419,7 @@ export default function TasksPage() {
                               >
                                 <PencilIcon
                                   className={`w-5 h-5 ${
-                                    task.type === "goal" ? "text-white" : ""
+                                    task.type === "goal" ? "text-black" : ""
                                   }`}
                                 />
                               </div>
@@ -431,7 +429,7 @@ export default function TasksPage() {
                               >
                                 <XMarkIcon
                                   className={`w-7 h-7 ${
-                                    task.type === "goal" ? "text-white" : ""
+                                    task.type === "goal" ? "text-black" : ""
                                   }`}
                                 />
                               </div>
@@ -482,7 +480,7 @@ export default function TasksPage() {
                       {/* // SUBTASKS LIST */}
 
                       <div className="flex overflow-y-scroll w-full no-scrollbar flex-grow">
-                        <div className="flex flex-col justify-start h-full w-full">
+                        <div className="flex flex-col justify-start flex-grow w-full">
                           {taskArray[index].subtasks?.map(
                             (subtask, subtaskIndex) => (
                               <div
@@ -493,7 +491,7 @@ export default function TasksPage() {
                                   {subtask.title}
                                 </div>
 
-                                <div className="text-sm text-white pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
+                                <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
                                   <div>
                                     {subtask.duration} {" min"}
                                   </div>
@@ -533,7 +531,7 @@ export default function TasksPage() {
                             placeholder={
                               taskArray[index].duration?.toString() || "min"
                             }
-                            className="w-14 h-7 text-sm text-white"
+                            className="w-14 h-7 text-sm text-black"
                             type="number"
                             pattern="[0-9]*"
                             ref={durationRef} // Attach ref to the duration input
@@ -563,7 +561,7 @@ export default function TasksPage() {
                 <button
                   onClick={() => handleConfirmGoal(task.duration)}
                   disabled={taskDuration === undefined}
-                  className="text-gray-300 hover:text-white"
+                  className="text-gray-300 hover:text-black"
                 >
                   <CheckCircledIcon className="w-9 h-9 hover:bg-sky-400 rounded-full" />
                 </button>
