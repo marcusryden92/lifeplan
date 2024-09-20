@@ -41,7 +41,7 @@ export const Navbar = () => {
             <Link
               href="/calendar"
               className={clsx(
-                "flex h-[48px] gap-2 rounded-xl p-3 text-sm font-medium hover:bg-gray-200 ",
+                "flex h-[48px] gap-2 rounded-xl p-3 text-sm font-medium hover:bg-amber-400 ",
                 { "bg-gray-800 text-white": pathname === "/calendar" }
               )}
             >
@@ -58,7 +58,7 @@ export const Navbar = () => {
             <Link
               href="/create"
               className={clsx(
-                "flex h-[48px] gap-2 rounded-xl p-3 text-sm font-medium hover:bg-gray-200 ",
+                "flex h-[48px] gap-2 rounded-xl p-3 text-sm font-medium hover:bg-amber-400 ",
                 { "bg-gray-800 text-white": pathname === "/create" }
               )}
             >
@@ -75,7 +75,7 @@ export const Navbar = () => {
             <Link
               href="/template"
               className={clsx(
-                "flex h-[48px] gap-2 rounded-xl p-3 text-sm font-medium hover:bg-gray-200 ",
+                "flex h-[48px] gap-2 rounded-xl p-3 text-sm font-medium hover:bg-amber-400 ",
                 { "bg-gray-800 text-white": pathname === "/template" }
               )}
             >
@@ -95,7 +95,7 @@ export const Navbar = () => {
             <Link
               href={"/settings"}
               className={clsx(
-                "flex h-[48px] items-center gap-2 rounded-xl text-sm font-medium hover:bg-gray-200",
+                "flex h-[48px] items-center gap-2 rounded-xl text-sm font-medium hover:bg-amber-400",
                 {
                   "bg-gray-800 text-white hover:bg-gray-700":
                     pathname === "/settings",
