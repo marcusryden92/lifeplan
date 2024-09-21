@@ -55,11 +55,7 @@ export function getDateOfThisWeeksMonday(todaysDate: Date): Date | undefined {
 export function getWeekFirstDate(
   weekStartDay: WeekDayIntegers,
   todaysDate: Date
-): Date | undefined {
-  if (todaysDate === undefined || weekStartDay === undefined) {
-    return undefined;
-  }
-
+): Date {
   // Get the current day of the week (0 for Sunday, 1 for Monday, ..., 6 for Saturday)
   const todaysWeekday = todaysDate.getDay();
 

@@ -1,4 +1,4 @@
-import { EventTemplate } from "@/utils/template-builder-utils";
+import { EventTemplate, findLargestGap } from "@/utils/template-builder-utils";
 import { shiftDate, setTimeOnDate } from "@/utils/calendar-utils";
 
 import { getDateOfThisWeeksMonday } from "@/utils/calendar-utils";
@@ -7,6 +7,8 @@ import { getWeekFirstDate } from "@/utils/calendar-utils";
 import { WeekDayIntegers } from "@/types/calendar-types";
 
 import { Planner } from "@/lib/planner-class";
+
+import cuid from "cuid";
 
 // Define the SimpleEvent interface
 export interface SimpleEvent {
@@ -23,66 +25,20 @@ export function generateCalendar(
   template: EventTemplate[],
   taskArray: Planner[]
 ): SimpleEvent[] {
-  const todaysDate = new Date();
-
   let eventArray: SimpleEvent[] = [];
 
-  eventArray = populateWeekWithTemplate(
-    weekStartDay,
-    todaysDate,
-    template,
-    eventArray
-  );
-
   // Add date items to the task array:
-  const newArray = addDateItemsToArray(taskArray, eventArray);
+  let newArray = addDateItemsToArray(taskArray, eventArray);
 
   if (newArray && newArray.length !== 0) {
     eventArray = newArray;
   }
 
-  return eventArray;
-}
+  // Add tasks and goals to calendar:
 
-function addDateItemsToArray(taskArray: Planner[], eventArray: SimpleEvent[]) {
-  let dateItems: Planner[] = [];
-  let newArray: SimpleEvent[] = [];
+  newArray = addEventsToCalendar(weekStartDay, template, taskArray, eventArray);
 
-  if (!taskArray || !eventArray) {
-    return undefined;
-  }
-
-  // Filter out tasks that are of type "plan"
-  taskArray.forEach((task) => {
-    if (task.type === "plan") {
-      dateItems.push(task);
-    }
-  });
-
-  if (dateItems.length === 0) {
-    return undefined;
-  }
-
-  // Process each date item and calculate the end date based on duration (in minutes)
-  dateItems.forEach((date) => {
-    if (date.starts && date.duration) {
-      // Calculate the end time by adding duration (in minutes) to the start time
-      const end = new Date(date.starts.getTime() + date.duration * 60000); // 60000 ms = 1 minute
-
-      const newDate: SimpleEvent = {
-        title: date.title,
-        id: JSON.stringify(new Date()),
-        start: date.starts.toISOString(),
-        end: end.toISOString(), // Add the calculated end time here
-        backgroundColor: "black",
-        borderColor: "black",
-      };
-
-      newArray.push(newDate);
-    }
-  });
-
-  eventArray.push(...newArray); // Add the new dates to eventArray
+  eventArray = newArray;
 
   return eventArray;
 }
@@ -154,4 +110,261 @@ function populateWeekWithTemplate(
   });
 
   return eventArray;
+}
+
+function addDateItemsToArray(taskArray: Planner[], eventArray: SimpleEvent[]) {
+  let dateItems: Planner[] = [];
+  let newArray: SimpleEvent[] = [];
+
+  if (!taskArray || !eventArray) {
+    return [];
+  }
+
+  // Filter out tasks that are of type "plan"
+  taskArray.forEach((task) => {
+    if (task.type === "plan") {
+      dateItems.push(task);
+    }
+  });
+
+  if (dateItems.length === 0) {
+    return [];
+  }
+
+  // Process each date item and calculate the end date based on duration (in minutes)
+  dateItems.forEach((date) => {
+    if (date.starts && date.duration) {
+      // Calculate the end time by adding duration (in minutes) to the start time
+      const end = new Date(date.starts.getTime() + date.duration * 60000); // 60000 ms = 1 minute
+
+      const newDate: SimpleEvent = {
+        title: date.title,
+        id: JSON.stringify(new Date()),
+        start: date.starts.toISOString(),
+        end: end.toISOString(), // Add the calculated end time here
+        backgroundColor: "black",
+        borderColor: "black",
+      };
+
+      newArray.push(newDate);
+    }
+  });
+
+  eventArray.push(...newArray); // Add the new dates to eventArray
+
+  return eventArray;
+}
+
+function addEventsToCalendar(
+  weekStartDay: WeekDayIntegers,
+  template: EventTemplate[],
+  taskArray: Planner[],
+  eventArray: SimpleEvent[]
+): SimpleEvent[] {
+  const todaysDate = new Date();
+
+  // First get all the goals and task events from taskArray:
+
+  let goalsAndTasks: Planner[] = [];
+
+  taskArray.forEach((task) => {
+    if (task.type === "goal" || task.type === "task") {
+      goalsAndTasks.push(task);
+    }
+  });
+
+  if (!goalsAndTasks) return eventArray;
+
+  // Then sort the array by due dates (items with no due date end up last):
+
+  const newArray = sortPlannersByDeadline(goalsAndTasks);
+  goalsAndTasks = newArray;
+
+  // Create array to hold the first date of all the weeks to which a template has been added (so multiple instances of the template aren't added to the same week):
+
+  let templatedWeeks: Date[] = [];
+
+  // Initialize the first week:
+
+  const weekFirstDate = getWeekFirstDate(weekStartDay, todaysDate);
+  templatedWeeks.push(weekFirstDate);
+  eventArray = populateWeekWithTemplate(
+    weekStartDay,
+    todaysDate,
+    template,
+    eventArray
+  );
+
+  // Find the largest gap in the template to make sure that a given task fits at all within the week template.
+
+  const largestTemplateGap = findLargestGap(template);
+
+  goalsAndTasks.forEach((item) => {
+    // If item is a task:
+    if (item.type === "task") {
+      if (!item.duration) {
+        console.log(`Task ${item.title} duration unfined.`);
+        return;
+      }
+      // Check that the item fits within the week template:
+      if (item.duration > largestTemplateGap) {
+        console.log(`Task ${item.title} is too large for the week template!`);
+        return;
+      }
+
+      // These are the markers that run along the calendar to check for available slots. The minute marker is the main marker, and when minute marker finds a free minute, duration marker continues along to check if the free space is as long as the task duration:
+      let minuteMarker = new Date();
+      let durationMarker = minuteMarker;
+
+      // These markers are here to see if we've changed weeks:
+      let weekMarker = getWeekFirstDate(weekStartDay, minuteMarker);
+
+      // We add the current dates events to an array:
+      let todaysEvents: SimpleEvent[] = [];
+
+      eventArray.forEach((event) => {
+        const eventStartDate = new Date(event.start).toDateString();
+        const eventEndDate = new Date(event.end).toDateString();
+        const targetDate = minuteMarker.toDateString();
+
+        if (eventStartDate === targetDate || eventEndDate === targetDate)
+          todaysEvents.push(event);
+      });
+
+      // Let's make a while loop to iterate through the calendar and check if there are any free slots:
+
+      while (true) {
+        // Let's first see if we've changed weeks from the last loop and add a template to the new week if necessary:
+        if (getDayDifference(weekMarker, minuteMarker) > 7) {
+          if (!hasDateInArray(templatedWeeks, minuteMarker)) {
+            eventArray = populateWeekWithTemplate(
+              weekStartDay,
+              minuteMarker,
+              template,
+              eventArray
+            );
+            weekMarker = minuteMarker;
+          }
+        }
+
+        // Let's check if today has any events:
+        if (todaysEvents) {
+          // Let's check if the durationMarker is inside an event:
+          let eventEndTime = checkCurrentDateInEvents(
+            todaysEvents,
+            durationMarker
+          );
+
+          // If the durationMarker is inside an event, set the duration and minuteMarker to the end-time of that event:
+          if (eventEndTime) {
+            minuteMarker = eventEndTime;
+            durationMarker = eventEndTime;
+
+            // Add one minute to durationMarker to keep it from getting stuck in the same event:
+            durationMarker.setMinutes(durationMarker.getMinutes() + 1);
+
+            continue;
+          }
+
+          if (
+            !eventEndTime &&
+            getMinuteDifference(minuteMarker, durationMarker) >= item.duration
+          ) {
+            const newEvent = {
+              id: cuid(),
+              title: item.title,
+              start: minuteMarker.toISOString(), // ISO 8601 string format for FullCalendar
+              end: durationMarker.toISOString(), // ISO 8601 string format for FullCalendar
+            };
+
+            eventArray.push(newEvent);
+            break;
+          } else {
+            durationMarker.setMinutes(durationMarker.getMinutes() + 1);
+            continue;
+          }
+        }
+      }
+    }
+  });
+
+  return eventArray;
+}
+
+function sortPlannersByDeadline(planners: Planner[]): Planner[] {
+  return planners.sort((a, b) => {
+    if (a.deadline && b.deadline) {
+      // Both objects have deadlines, so compare them
+      return a.deadline.getTime() - b.deadline.getTime();
+    } else if (a.deadline) {
+      // a has a deadline, b does not, so a comes first
+      return -1;
+    } else if (b.deadline) {
+      // b has a deadline, a does not, so b comes first
+      return 1;
+    } else {
+      // Neither has a deadline, they are considered equal in terms of sorting
+      return 0;
+    }
+  });
+}
+
+// Function to check if the current date is within any events and return the end time as a Date
+function checkCurrentDateInEvents(
+  events: SimpleEvent[],
+  currentDate: Date
+): Date | null {
+  const currentTime = currentDate.getTime(); // Get current time in milliseconds
+
+  for (const event of events) {
+    const eventStartTime = new Date(event.start).getTime();
+    const eventEndTime = new Date(event.end).getTime();
+
+    // Check if current time is within the event time range
+    if (currentTime >= eventStartTime && currentTime <= eventEndTime) {
+      return new Date(event.end); // Return the end time as a Date object
+    }
+  }
+
+  return null; // Return null if no event matches the current date
+}
+
+// Minutes between dates:
+function getMinuteDifference(date1: Date, date2: Date): number {
+  // Get the time in milliseconds
+  const time1 = date1.getTime();
+  const time2 = date2.getTime();
+
+  // Calculate the difference in milliseconds
+  const differenceInMilliseconds = Math.abs(time2 - time1);
+
+  // Convert milliseconds to minutes
+  const differenceInMinutes = Math.floor(
+    differenceInMilliseconds / (1000 * 60)
+  );
+
+  return differenceInMinutes;
+}
+
+function getDayDifference(date1: Date, date2: Date): number {
+  // Get the time in milliseconds
+  const time1 = date1.getTime();
+  const time2 = date2.getTime();
+
+  // Calculate the difference in milliseconds
+  const differenceInMilliseconds = time2 - time1;
+
+  // Convert milliseconds to days and return the result
+  return Math.floor(differenceInMilliseconds / (1000 * 60 * 60 * 24));
+}
+
+function hasDateInArray(dates: Date[], dateToCheck: Date): boolean {
+  return dates.some((date): date is Date => {
+    if (date === undefined) return false;
+    return (
+      date.getFullYear() === dateToCheck.getFullYear() &&
+      date.getMonth() === dateToCheck.getMonth() &&
+      date.getDate() === dateToCheck.getDate()
+    );
+  });
 }

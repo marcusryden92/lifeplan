@@ -135,3 +135,74 @@ export function populateTemplateCalendar(
 
   return eventArray;
 }
+
+// Functionality to calculate largest gap in the week template:
+
+const daysOfWeek = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+// Helper function to convert day and time to minutes from the start of the week
+function convertToMinutesFromWeekStart(
+  day: string | undefined,
+  time: string | undefined
+): number | null {
+  if (!day || !time) {
+    // Return null if day or time is undefined
+    return null;
+  }
+
+  const [hours, minutes] = time.split(":").map(Number);
+  const dayIndex = daysOfWeek.indexOf(day.toLowerCase());
+
+  if (dayIndex === -1) {
+    // Handle the case where the day is not valid
+    return null;
+  }
+
+  return dayIndex * 24 * 60 + hours * 60 + minutes;
+}
+
+// Function to find the largest gap between events
+export function findLargestGap(events: EventTemplate[]): number {
+  // Convert each event's start time to minutes from the week start and calculate the end time
+  const eventTimes = events
+    .map((event) => ({
+      start: convertToMinutesFromWeekStart(event.start.day, event.start.time),
+      end: convertToMinutesFromWeekStart(event.start.day, event.start.time)
+        ? convertToMinutesFromWeekStart(event.start.day, event.start.time)! +
+          event.duration
+        : null,
+    }))
+    .filter((event) => event.start !== null && event.end !== null); // Filter out invalid events
+
+  // Sort events by their start time
+  eventTimes.sort((a, b) => a.start! - b.start!);
+
+  // Initialize the largest gap, starting from the gap before the first event
+  let largestGap = eventTimes[0].start!; // Gap from 00:00 on Monday to the first event
+
+  // Calculate the gaps between consecutive events
+  for (let i = 1; i < eventTimes.length; i++) {
+    const gap = eventTimes[i].start! - eventTimes[i - 1].end!;
+    if (gap > largestGap) {
+      largestGap = gap;
+    }
+  }
+
+  // Calculate the gap after the last event until the end of the week (24:00 on Sunday)
+  const minutesInWeek = 7 * 24 * 60; // Total minutes in a week
+  const lastEventEnd = eventTimes[eventTimes.length - 1].end!;
+  const gapAfterLastEvent = minutesInWeek - lastEventEnd;
+  if (gapAfterLastEvent > largestGap) {
+    largestGap = gapAfterLastEvent;
+  }
+
+  return largestGap;
+}

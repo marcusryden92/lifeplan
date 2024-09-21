@@ -25,60 +25,57 @@ FUNCTION ADD EVENT (CALENDAR ARRAY, TASK ARRAY)
 GET ALL GOALS AND TASKS FROM TASK ARRAY
 SORT BY DUE DATE, NO DUE DATE LAST
 
-    CREATE TEMPLATED WEEKS ARRAY
+        CREATE TEMPLATED WEEKS ARRAY
 
-    GET WEEK LARGEST TIME SLOT
+        GET WEEK LARGEST TIME SLOT
 
-    FOR EACH EVENT
-        DEFINE A MINUTE MARKER VARIABLE
-        MINUTE MARKER = NEW DATE (CURRENT TIME)
+        FOR EACH EVENT
+            DEFINE A MINUTE MARKER VARIABLE
+            MINUTE MARKER = NEW DATE (CURRENT TIME)
 
-        GET WEEK START DATE
+            GET WEEK START DATE
 
-        IF WEEK START DATE NOT IN TEMPLATED WEEKS ARRAY
-            PUSH WEEK TEMPLATE TO CALENDAR AT WEEK START DATE
-            PUSH WEEK START DATE TO TEMPLATED WEEKS ARRAY
+            IF WEEK START DATE NOT IN TEMPLATED WEEKS ARRAY
+                PUSH WEEK TEMPLATE TO CALENDAR AT WEEK START DATE
+                PUSH WEEK START DATE TO TEMPLATED WEEKS ARRAY
 
-        CHECK IF EVENT IS TASK OR GOAL
+            CHECK IF EVENT IS TASK OR GOAL
 
-            TASK:
+                TASK:
 
-                GET TASK DURATION
-                CHECK IF TASK DURATON < WEEK LARGEST TIME SLOT
-                    IF NOT
-                        CONSOLE.LOG(TASK "TASK" TOO LARGE FOR WEEK TEMPLATE)
-                        RETURN
-
-
-                CREATE ARRAY TODAYS EVENTS
-
-                    IF !TODAYS EVENTS
-
-                        NEW VARIABLE CALLED DURATION-MARKER = MINUTE MARKER
-                        NEW VARIABLE CALLED RUN
-
-                        WHILE (RUN = TRUE)
-
-                            CHECK IF ITS THE SAME DAY
-
-                                IF IT IS && DURATION MARKER - MINUTE MARKER = TASK DURATION
-                                    SET RUN = FALSE
-                                    PUSH TASK TO CALENDAR AT THIS TIME + DURATION
-
-                                IF IT IS && DURATION MARKER - MINUTE MARKER < TASK DURATION
-                                    CHECK IF DURATION MARKER IS INSIDE AN EVENT
-                                    IF IT IS, SET MINUTE MARKER & DURATION MARKER TO EVENT END TIME
-
-                                    IF NOT ADD 1 TO THE DURATION MARKER
+                    GET TASK DURATION
+                    CHECK IF TASK DURATON < WEEK LARGEST TIME SLOT
+                        IF NOT
+                            CONSOLE.LOG(TASK "TASK" TOO LARGE FOR WEEK TEMPLATE)
+                            RETURN
 
 
+                    CREATE ARRAY TODAYS EVENTS
 
-                                IF NOT
-                                    SAME WEEK? IF NOT PUSH WEEK TEMPLATE TO CALENDAR & ADD DAY TO TEMPLATED WEEKS
+                        IF !TODAYS EVENTS
 
-                                     CHECK IF THERE ARE ANY EVENTS THAT DAY, SORTED BY START TIME
-                                     IF THERE ARE
-                                        PUSH EVENTS TO TODAYS EVENTS ARRAY
+                            NEW VARIABLE CALLED DURATION-MARKER = MINUTE MARKER
+                            NEW VARIABLE CALLED RUN
+
+                            WHILE (RUN = TRUE)
+
+                                CHECK IF ITS THE SAME DAY
+
+                                    IF IT IS && DURATION MARKER - MINUTE MARKER = TASK DURATION
+                                        SET RUN = FALSE
+                                        PUSH TASK TO CALENDAR AT THIS TIME + DURATION
+
+                                    IF IT IS && DURATION MARKER - MINUTE MARKER < TASK DURATION
+                                        CHECK IF DURATION MARKER IS INSIDE AN EVENT
+                                        IF IT IS, SET MINUTE MARKER & DURATION MARKER TO EVENT END TIME
+
+                                        IF NOT ADD 1 TO THE DURATION MARKER
 
 
 
+                                    IF NOT
+                                        SAME WEEK? IF NOT PUSH WEEK TEMPLATE TO CALENDAR & ADD DAY TO TEMPLATED WEEKS
+
+                                        CHECK IF THERE ARE ANY EVENTS THAT DAY, SORTED BY START TIME
+                                        IF THERE ARE
+                                            PUSH EVENTS TO TODAYS EVENTS ARRAY
