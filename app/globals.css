@@ -18,6 +18,10 @@ body,
   border-radius: 0;
 }
 
+:root .fc-scroller {
+  overflow: auto !important;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
