@@ -250,9 +250,9 @@ function addEventsToCalendar(
         }
 
         // Let's see if we've moved to another day, and in that case update the todaysEvents array:
-        if (getDayDifference(dayMarker, minuteMarker) >= 1) {
-          todaysEvents = getTodaysEvents(minuteMarker, eventArray);
-          dayMarker = new Date(minuteMarker);
+        if (getDayDifference(dayMarker, durationMarker) >= 1) {
+          todaysEvents = getTodaysEvents(durationMarker, eventArray);
+          dayMarker = new Date(durationMarker);
         }
 
         let eventEndTime;
@@ -270,6 +270,7 @@ function addEventsToCalendar(
 
           // Add one minute to durationMarker to keep it from getting stuck in the same event:
           durationMarker.setMinutes(durationMarker.getMinutes() + 1);
+          iterationCount++;
 
           continue;
         }
@@ -357,12 +358,12 @@ function getMinuteDifference(date1: Date, date2: Date): number {
 }
 
 function getDayDifference(date1: Date, date2: Date): number {
-  // Get the time in milliseconds
-  const time1 = date1.getTime();
-  const time2 = date2.getTime();
+  // Reset the time part to 00:00:00 for both dates to only compare the calendar day
+  const day1 = new Date(date1.getFullYear(), date1.getMonth(), date1.getDate());
+  const day2 = new Date(date2.getFullYear(), date2.getMonth(), date2.getDate());
 
-  // Calculate the difference in milliseconds
-  const differenceInMilliseconds = time2 - time1;
+  // Calculate the difference in milliseconds between the two days
+  const differenceInMilliseconds = day2.getTime() - day1.getTime();
 
   // Convert milliseconds to days and return the result
   return Math.floor(differenceInMilliseconds / (1000 * 60 * 60 * 24));

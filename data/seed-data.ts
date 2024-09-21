@@ -150,9 +150,9 @@ export const templateSeed = [
     title: "Sleep",
     start: {
       day: "saturday",
-      time: "21:00",
+      time: "19:00",
     },
-    duration: 180, // 3 hours (21:00 to 00:00 next day)
+    duration: 300, // 3 hours (21:00 to 00:00 next day)
   },
   {
     id: "lunch-6",
@@ -170,9 +170,9 @@ export const templateSeed = [
       day: "sunday",
       time: "00:00",
     },
-    duration: 360, // 6 hours
+    duration: 1440, // 6 hours
   },
-  {
+  /* {
     id: "sleep-end-7",
     title: "Sleep",
     start: {
@@ -189,7 +189,7 @@ export const templateSeed = [
       time: "12:00",
     },
     duration: 60, // 1 hour
-  },
+  }, */
 ];
 
 export const taskArraySeed: Planner[] = [
@@ -198,28 +198,8 @@ export const taskArraySeed: Planner[] = [
     id: "123",
     type: "task",
     canInfluence: true,
-    duration: 40,
+    duration: 4,
     deadline: undefined,
-    starts: undefined,
-    subtasks: undefined,
-  },
-  {
-    title: "Handla-2",
-    id: "123",
-    type: "task",
-    canInfluence: true,
-    duration: 40,
-    deadline: undefined,
-    starts: undefined,
-    subtasks: undefined,
-  },
-  {
-    title: "Handla-3",
-    id: "123",
-    type: "task",
-    canInfluence: true,
-    duration: 210,
-    deadline: new Date(),
     starts: undefined,
     subtasks: undefined,
   },
