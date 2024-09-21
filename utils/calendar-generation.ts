@@ -237,7 +237,7 @@ function addEventsToCalendar(
         }
 
         // Let's first see if we've changed weeks from the last loop and add a template to the new week if necessary:
-        if (getDayDifference(weekMarker, minuteMarker) > 7) {
+        if (getDayDifference(weekMarker, minuteMarker) > 6) {
           if (!hasDateInArray(templatedWeeks, minuteMarker)) {
             eventArray = populateWeekWithTemplate(
               weekStartDay,
