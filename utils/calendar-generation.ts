@@ -187,7 +187,7 @@ function addEventsToCalendar(
   // Initialize the first week:
 
   const weekFirstDate = getWeekFirstDate(weekStartDay, todaysDate);
-  templatedWeeks.push(weekFirstDate);
+  templatedWeeks.push(new Date(weekFirstDate));
   eventArray = populateWeekWithTemplate(
     weekStartDay,
     todaysDate,
@@ -236,7 +236,7 @@ function addEventsToCalendar(
           break;
         }
 
-        // Let's first see if we've changed weeks from the last loop and add a template to the new week if necessary:
+        // Check if we've changed weeks and add a template to the new week if necessary
         if (getDayDifference(weekMarker, minuteMarker) > 6) {
           if (!hasDateInArray(templatedWeeks, minuteMarker)) {
             eventArray = populateWeekWithTemplate(
@@ -246,6 +246,9 @@ function addEventsToCalendar(
               eventArray
             );
             weekMarker = new Date(getWeekFirstDate(weekStartDay, minuteMarker));
+
+            // Add the minuteMarker to templatedWeeks after adding the template
+            templatedWeeks.push(new Date(minuteMarker));
           }
         }
 

@@ -8,8 +8,14 @@ body,
   height: 100%;
 }
 
+/* FullCalendar styling: */
+
 :root .fc-scrollgrid {
   border: none;
+}
+
+:root .fc-timegrid-event {
+  border-radius: 0;
 }
 
 @layer base {
