@@ -216,20 +216,12 @@ function addEventsToCalendar(
       let minuteMarker = new Date();
       let durationMarker = minuteMarker;
 
-      // These markers are here to see if we've changed weeks:
+      // These markers are here to see if we've changed days or weeks:
+      let dayMarker = minuteMarker;
       let weekMarker = getWeekFirstDate(weekStartDay, minuteMarker);
 
       // We add the current dates events to an array:
-      let todaysEvents: SimpleEvent[] = [];
-
-      eventArray.forEach((event) => {
-        const eventStartDate = new Date(event.start).toDateString();
-        const eventEndDate = new Date(event.end).toDateString();
-        const targetDate = minuteMarker.toDateString();
-
-        if (eventStartDate === targetDate || eventEndDate === targetDate)
-          todaysEvents.push(event);
-      });
+      let todaysEvents: SimpleEvent[] = getTodaysEvents(todaysDate, eventArray);
 
       // Let's make a while loop to iterate through the calendar and check if there are any free slots:
 
@@ -243,46 +235,51 @@ function addEventsToCalendar(
               template,
               eventArray
             );
-            weekMarker = minuteMarker;
+            weekMarker = getWeekFirstDate(weekStartDay, minuteMarker);
           }
         }
 
+        // Let's see if we've moved to another day, and in that case update the todaysEvents array:
+        if (getDayDifference(dayMarker, minuteMarker) >= 1) {
+          todaysEvents = getTodaysEvents(minuteMarker, eventArray);
+          dayMarker = minuteMarker;
+        }
+
+        let eventEndTime;
+
         // Let's check if today has any events:
         if (todaysEvents) {
-          // Let's check if the durationMarker is inside an event:
-          let eventEndTime = checkCurrentDateInEvents(
-            todaysEvents,
-            durationMarker
-          );
+          // Let's check if the durationMarker is inside an event, and if so, get the end time of that event:
+          eventEndTime = checkCurrentDateInEvents(todaysEvents, durationMarker);
+        }
 
-          // If the durationMarker is inside an event, set the duration and minuteMarker to the end-time of that event:
-          if (eventEndTime) {
-            minuteMarker = eventEndTime;
-            durationMarker = eventEndTime;
+        // If the durationMarker is inside an event, set the duration and minuteMarker to the end-time of that event:
+        if (eventEndTime) {
+          minuteMarker = eventEndTime;
+          durationMarker = eventEndTime;
 
-            // Add one minute to durationMarker to keep it from getting stuck in the same event:
-            durationMarker.setMinutes(durationMarker.getMinutes() + 1);
+          // Add one minute to durationMarker to keep it from getting stuck in the same event:
+          durationMarker.setMinutes(durationMarker.getMinutes() + 1);
 
-            continue;
-          }
+          continue;
+        }
 
-          if (
-            !eventEndTime &&
-            getMinuteDifference(minuteMarker, durationMarker) >= item.duration
-          ) {
-            const newEvent = {
-              id: cuid(),
-              title: item.title,
-              start: minuteMarker.toISOString(), // ISO 8601 string format for FullCalendar
-              end: durationMarker.toISOString(), // ISO 8601 string format for FullCalendar
-            };
+        if (
+          !eventEndTime &&
+          getMinuteDifference(minuteMarker, durationMarker) >= item.duration
+        ) {
+          const newEvent = {
+            id: cuid(),
+            title: item.title,
+            start: minuteMarker.toISOString(), // ISO 8601 string format for FullCalendar
+            end: durationMarker.toISOString(), // ISO 8601 string format for FullCalendar
+          };
 
-            eventArray.push(newEvent);
-            break;
-          } else {
-            durationMarker.setMinutes(durationMarker.getMinutes() + 1);
-            continue;
-          }
+          eventArray.push(newEvent);
+          break;
+        } else {
+          durationMarker.setMinutes(durationMarker.getMinutes() + 1);
+          continue;
         }
       }
     }
@@ -367,4 +364,28 @@ function hasDateInArray(dates: Date[], dateToCheck: Date): boolean {
       date.getDate() === dateToCheck.getDate()
     );
   });
+}
+
+function getTodaysEvents(today: Date, eventArray: SimpleEvent[]) {
+  let todaysEvents: SimpleEvent[] = [];
+
+  const startOfDay = new Date(today);
+  startOfDay.setHours(0, 0, 0, 0); // Set time to 00:00 of the given day
+  const endOfDay = new Date(today);
+  endOfDay.setHours(23, 59, 59, 999); // Set time to 23:59 of the given day
+
+  eventArray.forEach((event) => {
+    const eventStartDate = new Date(event.start);
+    const eventEndDate = new Date(event.end);
+
+    // Check if the event overlaps with any part of the day
+    if (
+      eventStartDate <= endOfDay &&
+      eventEndDate >= startOfDay // Event starts before or during today and ends after or during today
+    ) {
+      todaysEvents.push(event);
+    }
+  });
+
+  return todaysEvents;
 }
