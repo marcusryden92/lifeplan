@@ -28,7 +28,7 @@ export const Navbar = () => {
   return (
     <div className="flex lg:w-[280px] lg:h-full w-full flex-col p-2 lg:p-5">
       <div
-        className={`hidden sm:block ${font.className} text-gray-900 text-[2.2rem] mb-5`}
+        className={`hidden md:block ${font.className} text-gray-900 text-[2.2rem] mb-5`}
       >
         LIFEPLAN
       </div>

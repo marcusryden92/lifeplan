@@ -21,7 +21,7 @@ export default function TasksPage() {
     setTemplateEvents([]);
   };
   return (
-    <div className="flex flex-col w-full h-full bg-white  bg-opacity-95 px-10">
+    <div className="flex flex-col w-full h-full bg-white  bg-opacity-95 p-10 pt-2">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center justify-between">
         <p className="text-xl font-semibold">WEEK TEMPLATE</p>
         <button
@@ -37,7 +37,7 @@ export default function TasksPage() {
         templateEvents={templateEvents}
         setTemplateEvents={setTemplateEvents}
       />
-      <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
+      {/*  <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant="invisible" className="px-0">
           <Link
             href={"/create/influence"}
@@ -55,7 +55,7 @@ export default function TasksPage() {
             <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />
           </Link>
         </Button>
-      </CardFooter>
+      </CardFooter> */}
     </div>
   );
 }
