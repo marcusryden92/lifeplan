@@ -8,6 +8,10 @@ body,
   height: 100%;
 }
 
+:root .fc-scrollgrid {
+  border: none;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

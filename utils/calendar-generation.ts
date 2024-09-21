@@ -228,8 +228,6 @@ function addEventsToCalendar(
       let iterationCount = 0;
 
       while (true) {
-        iterationCount++;
-
         // Break the loop if it has run 500 times
         if (iterationCount > 500) {
           console.error(
@@ -267,8 +265,8 @@ function addEventsToCalendar(
 
         // If the durationMarker is inside an event, set the duration and minuteMarker to the end-time of that event:
         if (eventEndTime) {
-          minuteMarker = eventEndTime;
-          durationMarker = eventEndTime;
+          minuteMarker = new Date(eventEndTime);
+          durationMarker = new Date(eventEndTime);
 
           // Add one minute to durationMarker to keep it from getting stuck in the same event:
           durationMarker.setMinutes(durationMarker.getMinutes() + 1);
@@ -294,6 +292,8 @@ function addEventsToCalendar(
         }
 
         durationMarker.setMinutes(durationMarker.getMinutes() + 1);
+
+        iterationCount++;
       }
     }
   });

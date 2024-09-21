@@ -31,12 +31,7 @@ const CalendarPage = () => {
 
   return (
     <div className="w-full h-full bg-white  bg-opacity-95 lg:overflow-hidden max-h-[100vh] p-2 lg:p-10">
-      {/* <CardHeader className="px-0">
-        <p className="text-xl font-semibold">Calendar</p>
-      </CardHeader> */}
-      <CardContent className="flex-grow h-full px-0">
-        <Calendar initialEvents={currentCalendar} />
-      </CardContent>
+      <Calendar initialEvents={currentCalendar} />
     </div>
   );
 };

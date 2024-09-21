@@ -33,12 +33,10 @@ export default function TasksPage() {
           Delete all
         </button>
       </CardHeader>
-      <CardContent className="flex-grow h-full">
-        <TemplateBuilder
-          templateEvents={templateEvents}
-          setTemplateEvents={setTemplateEvents}
-        />
-      </CardContent>
+      <TemplateBuilder
+        templateEvents={templateEvents}
+        setTemplateEvents={setTemplateEvents}
+      />
       <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant="invisible" className="px-0">
           <Link
