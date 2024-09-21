@@ -214,10 +214,10 @@ function addEventsToCalendar(
 
       // These are the markers that run along the calendar to check for available slots. The minute marker is the main marker, and when minute marker finds a free minute, duration marker continues along to check if the free space is as long as the task duration:
       let minuteMarker = new Date();
-      let durationMarker = minuteMarker;
+      let durationMarker = new Date(minuteMarker);
 
       // These markers are here to see if we've changed days or weeks:
-      let dayMarker = minuteMarker;
+      let dayMarker = new Date(minuteMarker);
       let weekMarker = getWeekFirstDate(weekStartDay, minuteMarker);
 
       // We add the current dates events to an array:
@@ -225,7 +225,19 @@ function addEventsToCalendar(
 
       // Let's make a while loop to iterate through the calendar and check if there are any free slots:
 
+      let iterationCount = 0;
+
       while (true) {
+        iterationCount++;
+
+        // Break the loop if it has run 500 times
+        if (iterationCount > 500) {
+          console.error(
+            "Loop exceeded maximum iteration count of 500. Breaking the loop to avoid infinite loop."
+          );
+          break;
+        }
+
         // Let's first see if we've changed weeks from the last loop and add a template to the new week if necessary:
         if (getDayDifference(weekMarker, minuteMarker) > 7) {
           if (!hasDateInArray(templatedWeeks, minuteMarker)) {
@@ -235,14 +247,14 @@ function addEventsToCalendar(
               template,
               eventArray
             );
-            weekMarker = getWeekFirstDate(weekStartDay, minuteMarker);
+            weekMarker = new Date(getWeekFirstDate(weekStartDay, minuteMarker));
           }
         }
 
         // Let's see if we've moved to another day, and in that case update the todaysEvents array:
         if (getDayDifference(dayMarker, minuteMarker) >= 1) {
           todaysEvents = getTodaysEvents(minuteMarker, eventArray);
-          dayMarker = minuteMarker;
+          dayMarker = new Date(minuteMarker);
         }
 
         let eventEndTime;
@@ -273,14 +285,15 @@ function addEventsToCalendar(
             title: item.title,
             start: minuteMarker.toISOString(), // ISO 8601 string format for FullCalendar
             end: durationMarker.toISOString(), // ISO 8601 string format for FullCalendar
+            backgroundColor: "#f59e0b",
+            borderColor: "#f59e0b",
           };
 
           eventArray.push(newEvent);
           break;
-        } else {
-          durationMarker.setMinutes(durationMarker.getMinutes() + 1);
-          continue;
         }
+
+        durationMarker.setMinutes(durationMarker.getMinutes() + 1);
       }
     }
   });

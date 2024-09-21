@@ -159,6 +159,7 @@ export default function Calendar({ initialEvents }: CalendarProps) {
       initialView="timeGridWeek"
       allDaySlot={false}
       firstDay={1}
+      nowIndicator={true}
       height={"100%"}
       slotLabelFormat={{
         hour: "2-digit",

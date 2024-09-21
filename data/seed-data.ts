@@ -194,13 +194,13 @@ export const templateSeed = [
 
 export const taskArraySeed: Planner[] = [
   {
-    title: "Dejt med mamma.",
+    title: "Handla",
     id: "123",
-    type: "plan",
+    type: "task",
     canInfluence: true,
-    duration: 120,
+    duration: 45,
     deadline: undefined,
-    starts: new Date(),
+    starts: undefined,
     subtasks: undefined,
   },
 ];
