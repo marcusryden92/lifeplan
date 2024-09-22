@@ -1,20 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { CheckCircledIcon } from "@radix-ui/react-icons";
-import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { ArrowLongLeftIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { useState } from "react";
+import { CardHeader } from "@/components/ui/card";
+import { TrashIcon } from "@heroicons/react/24/outline";
 
-import TemplateBuilder from "@/components/template-builder/template-builder";
+import TemplateBuilder from "./components/template-builder";
 import { useDataContext } from "@/context/DataContext";
 import { SimpleEvent } from "@/utils/calendar-generation";
 
 export default function TasksPage() {
   const [templateEvents, setTemplateEvents] = useState<SimpleEvent[]>([]); // State to manage events
 
-  const { currentTemplate, setCurrentTemplate } = useDataContext();
+  const { setCurrentTemplate } = useDataContext();
 
   const handleDeleteAll = () => {
     setCurrentTemplate([]);
@@ -37,25 +34,6 @@ export default function TasksPage() {
         templateEvents={templateEvents}
         setTemplateEvents={setTemplateEvents}
       />
-      {/*  <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
-        <Button variant="invisible" className="px-0">
-          <Link
-            href={"/create/influence"}
-            className="flex group items-center gap-4"
-          >
-            <ArrowLongLeftIcon className="w-9 h-9 text-gray-400 group-hover:text-gray-800 rounded-full" />
-          </Link>
-        </Button>
-        <Button variant="invisible" className="px-0">
-          <Link
-            href={"/create/plans"}
-            className="flex group items-center gap-4"
-          >
-            {"Continue"}
-            <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />
-          </Link>
-        </Button>
-      </CardFooter> */}
     </div>
   );
 }

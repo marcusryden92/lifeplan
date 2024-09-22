@@ -1,7 +1,6 @@
 import { EventApi } from "@fullcalendar/core";
 import { getWeekdayFromDate } from "@/utils/calendar-utils";
 import { SimpleEvent } from "@/utils/calendar-generation";
-import { getDateOfThisWeeksMonday } from "@/utils/calendar-utils";
 import { shiftDate } from "@/utils/calendar-utils";
 import { setTimeOnDate } from "@/utils/calendar-utils";
 import { WeekDayIntegers } from "@/types/calendar-types";

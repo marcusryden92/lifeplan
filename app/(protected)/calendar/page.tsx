@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
 
-import Calendar from "@/components/calendar/calendar";
+import Calendar from "./components/calendar";
 import { useDataContext } from "@/context/DataContext";
 import { SimpleEvent } from "@/utils/calendar-generation";
 
