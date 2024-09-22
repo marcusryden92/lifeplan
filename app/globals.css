@@ -27,6 +27,12 @@ body,
   transition: all 0.15s;
 }
 
+:root .fc-event:hover {
+  border-color: #f1f1f1 !important;
+  border-style: solid !important;
+  border-width: 0.5px !important;
+}
+
 :root .fc-timegrid-event-harness {
   /* border-radius: 0; */
   border: 0 !important;
@@ -34,7 +40,7 @@ body,
 }
 
 :root .fc-timegrid-event:hover {
-  transform: translate(-0.1rem, -0.3rem);
+  transform: translate(-0.1rem, -0.2rem);
 }
 
 :root .fc-scroller {

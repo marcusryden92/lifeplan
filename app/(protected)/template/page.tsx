@@ -18,7 +18,7 @@ export default function TasksPage() {
     setTemplateEvents([]);
   };
   return (
-    <div className="flex flex-col w-full h-full bg-white  bg-opacity-95 p-10 pt-2">
+    <div className="flex flex-col w-full h-full bg-opacity-95 p-10 pt-2">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center justify-between">
         <p className="text-xl font-semibold">WEEK TEMPLATE</p>
         <button
