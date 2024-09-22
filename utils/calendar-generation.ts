@@ -43,6 +43,157 @@ export function generateCalendar(
   return eventArray;
 }
 
+function addEventsToCalendar(
+  weekStartDay: WeekDayIntegers,
+  template: EventTemplate[],
+  taskArray: Planner[],
+  eventArray: SimpleEvent[]
+): SimpleEvent[] {
+  const todaysDate = new Date();
+
+  // First get all the goals and task events from taskArray:
+
+  let goalsAndTasks: Planner[] = [];
+
+  taskArray.forEach((task) => {
+    if (task.type === "goal" || task.type === "task") {
+      goalsAndTasks.push(task);
+    }
+  });
+
+  if (!goalsAndTasks) return eventArray;
+
+  // Then sort the array by due dates (items with no due date end up last):
+
+  const newArray = sortPlannersByDeadline(goalsAndTasks);
+  goalsAndTasks = newArray;
+
+  // Create array to hold the first date of all the weeks to which a template has been added (so multiple instances of the template aren't added to the same week):
+
+  let templatedWeeks: Date[] = [];
+
+  // Initialize the first week:
+
+  const weekFirstDate = getWeekFirstDate(weekStartDay, todaysDate);
+  templatedWeeks.push(new Date(weekFirstDate));
+  eventArray = populateWeekWithTemplate(
+    weekStartDay,
+    todaysDate,
+    template,
+    eventArray
+  );
+
+  // Find the largest gap in the template to make sure that a given task fits at all within the week template.
+
+  const largestTemplateGap = findLargestGap(template);
+
+  goalsAndTasks.forEach((item) => {
+    // If item is a task:
+    if (item.type === "task") {
+      if (!item.duration) {
+        console.log(`Task ${item.title} duration unfined.`);
+        return;
+      }
+      // Check that the item fits within the week template:
+      if (item.duration > largestTemplateGap) {
+        console.log(`Task ${item.title} is too large for the week template!`);
+        return;
+      }
+
+      // These are the markers that run along the calendar to check for available slots. The minute marker is the main marker, and when minute marker finds a free minute, duration marker continues along to check if the free space is as long as the task duration:
+      let minuteMarker = new Date();
+      let durationMarker = new Date(minuteMarker);
+
+      // These markers are here to see if we've changed days or weeks:
+      let dayMarker = new Date(minuteMarker);
+      let weekMarker = getWeekFirstDate(weekStartDay, minuteMarker);
+
+      // We add the current dates events to an array:
+      let todaysEvents: SimpleEvent[] = getTodaysEvents(todaysDate, eventArray);
+
+      // Let's make a while loop to iterate through the calendar and check if there are any free slots:
+
+      let iterationCount = 0;
+
+      while (true) {
+        // Break the loop if it has run 500 times
+
+        /* if (iterationCount > 500) {
+          console.error(
+            "Loop exceeded maximum iteration count of 500. Breaking the loop to avoid infinite loop."
+          );
+          break;
+        } */
+
+        // Check if we've changed weeks and add a template to the new week if necessary
+        if (getDayDifference(weekMarker, minuteMarker) > 6) {
+          if (!hasDateInArray(templatedWeeks, minuteMarker)) {
+            eventArray = populateWeekWithTemplate(
+              weekStartDay,
+              minuteMarker,
+              template,
+              eventArray
+            );
+            weekMarker = new Date(getWeekFirstDate(weekStartDay, minuteMarker));
+
+            // Add the minuteMarker to templatedWeeks after adding the template
+            templatedWeeks.push(new Date(minuteMarker));
+          }
+        }
+
+        // Let's see if we've moved to another day, and in that case update the todaysEvents array:
+        if (getDayDifference(dayMarker, durationMarker) >= 1) {
+          todaysEvents = getTodaysEvents(durationMarker, eventArray);
+          dayMarker = new Date(durationMarker);
+        }
+
+        let eventEndTime;
+
+        // Let's check if today has any events:
+        if (todaysEvents) {
+          // Let's check if the durationMarker is inside an event, and if so, get the end time of that event:
+          eventEndTime = checkCurrentDateInEvents(todaysEvents, durationMarker);
+        }
+
+        // If the durationMarker is inside an event, set the duration and minuteMarker to the end-time of that event:
+        if (eventEndTime) {
+          minuteMarker = new Date(eventEndTime);
+          durationMarker = new Date(eventEndTime);
+
+          // Add one minute to durationMarker to keep it from getting stuck in the same event:
+          durationMarker.setMinutes(durationMarker.getMinutes() + 1);
+          iterationCount++;
+
+          continue;
+        }
+
+        if (
+          !eventEndTime &&
+          getMinuteDifference(minuteMarker, durationMarker) >= item.duration
+        ) {
+          const newEvent = {
+            id: cuid(),
+            title: item.title,
+            start: minuteMarker.toISOString(), // ISO 8601 string format for FullCalendar
+            end: durationMarker.toISOString(), // ISO 8601 string format for FullCalendar
+            backgroundColor: "#f59e0b",
+            borderColor: "#f59e0b",
+          };
+
+          eventArray.push(newEvent);
+          break;
+        }
+
+        durationMarker.setMinutes(durationMarker.getMinutes() + 1);
+
+        iterationCount++;
+      }
+    }
+  });
+
+  return eventArray;
+}
+
 function populateWeekWithTemplate(
   weekStartDay: WeekDayIntegers,
   fromDate: Date,
@@ -151,156 +302,6 @@ function addDateItemsToArray(taskArray: Planner[], eventArray: SimpleEvent[]) {
   });
 
   eventArray.push(...newArray); // Add the new dates to eventArray
-
-  return eventArray;
-}
-
-function addEventsToCalendar(
-  weekStartDay: WeekDayIntegers,
-  template: EventTemplate[],
-  taskArray: Planner[],
-  eventArray: SimpleEvent[]
-): SimpleEvent[] {
-  const todaysDate = new Date();
-
-  // First get all the goals and task events from taskArray:
-
-  let goalsAndTasks: Planner[] = [];
-
-  taskArray.forEach((task) => {
-    if (task.type === "goal" || task.type === "task") {
-      goalsAndTasks.push(task);
-    }
-  });
-
-  if (!goalsAndTasks) return eventArray;
-
-  // Then sort the array by due dates (items with no due date end up last):
-
-  const newArray = sortPlannersByDeadline(goalsAndTasks);
-  goalsAndTasks = newArray;
-
-  // Create array to hold the first date of all the weeks to which a template has been added (so multiple instances of the template aren't added to the same week):
-
-  let templatedWeeks: Date[] = [];
-
-  // Initialize the first week:
-
-  const weekFirstDate = getWeekFirstDate(weekStartDay, todaysDate);
-  templatedWeeks.push(new Date(weekFirstDate));
-  eventArray = populateWeekWithTemplate(
-    weekStartDay,
-    todaysDate,
-    template,
-    eventArray
-  );
-
-  // Find the largest gap in the template to make sure that a given task fits at all within the week template.
-
-  const largestTemplateGap = findLargestGap(template);
-
-  goalsAndTasks.forEach((item) => {
-    // If item is a task:
-    if (item.type === "task") {
-      if (!item.duration) {
-        console.log(`Task ${item.title} duration unfined.`);
-        return;
-      }
-      // Check that the item fits within the week template:
-      if (item.duration > largestTemplateGap) {
-        console.log(`Task ${item.title} is too large for the week template!`);
-        return;
-      }
-
-      // These are the markers that run along the calendar to check for available slots. The minute marker is the main marker, and when minute marker finds a free minute, duration marker continues along to check if the free space is as long as the task duration:
-      let minuteMarker = new Date();
-      let durationMarker = new Date(minuteMarker);
-
-      // These markers are here to see if we've changed days or weeks:
-      let dayMarker = new Date(minuteMarker);
-      let weekMarker = getWeekFirstDate(weekStartDay, minuteMarker);
-
-      // We add the current dates events to an array:
-      let todaysEvents: SimpleEvent[] = getTodaysEvents(todaysDate, eventArray);
-
-      // Let's make a while loop to iterate through the calendar and check if there are any free slots:
-
-      let iterationCount = 0;
-
-      while (true) {
-        // Break the loop if it has run 500 times
-        if (iterationCount > 500) {
-          console.error(
-            "Loop exceeded maximum iteration count of 500. Breaking the loop to avoid infinite loop."
-          );
-          break;
-        }
-
-        // Check if we've changed weeks and add a template to the new week if necessary
-        if (getDayDifference(weekMarker, minuteMarker) > 6) {
-          if (!hasDateInArray(templatedWeeks, minuteMarker)) {
-            eventArray = populateWeekWithTemplate(
-              weekStartDay,
-              minuteMarker,
-              template,
-              eventArray
-            );
-            weekMarker = new Date(getWeekFirstDate(weekStartDay, minuteMarker));
-
-            // Add the minuteMarker to templatedWeeks after adding the template
-            templatedWeeks.push(new Date(minuteMarker));
-          }
-        }
-
-        // Let's see if we've moved to another day, and in that case update the todaysEvents array:
-        if (getDayDifference(dayMarker, durationMarker) >= 1) {
-          todaysEvents = getTodaysEvents(durationMarker, eventArray);
-          dayMarker = new Date(durationMarker);
-        }
-
-        let eventEndTime;
-
-        // Let's check if today has any events:
-        if (todaysEvents) {
-          // Let's check if the durationMarker is inside an event, and if so, get the end time of that event:
-          eventEndTime = checkCurrentDateInEvents(todaysEvents, durationMarker);
-        }
-
-        // If the durationMarker is inside an event, set the duration and minuteMarker to the end-time of that event:
-        if (eventEndTime) {
-          minuteMarker = new Date(eventEndTime);
-          durationMarker = new Date(eventEndTime);
-
-          // Add one minute to durationMarker to keep it from getting stuck in the same event:
-          durationMarker.setMinutes(durationMarker.getMinutes() + 1);
-          iterationCount++;
-
-          continue;
-        }
-
-        if (
-          !eventEndTime &&
-          getMinuteDifference(minuteMarker, durationMarker) >= item.duration
-        ) {
-          const newEvent = {
-            id: cuid(),
-            title: item.title,
-            start: minuteMarker.toISOString(), // ISO 8601 string format for FullCalendar
-            end: durationMarker.toISOString(), // ISO 8601 string format for FullCalendar
-            backgroundColor: "#f59e0b",
-            borderColor: "#f59e0b",
-          };
-
-          eventArray.push(newEvent);
-          break;
-        }
-
-        durationMarker.setMinutes(durationMarker.getMinutes() + 1);
-
-        iterationCount++;
-      }
-    }
-  });
 
   return eventArray;
 }
