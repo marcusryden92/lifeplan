@@ -29,7 +29,7 @@ const CalendarPage = () => {
   }, [taskArray]);
 
   return (
-    <div className="w-full h-full bg-white  bg-opacity-95 lg:overflow-hidden max-h-[100vh] p-2 lg:p-10">
+    <div className="w-full h-full  bg-opacity-95 lg:overflow-hidden max-h-[100vh] p-2 lg:p-10">
       <Calendar initialEvents={currentCalendar} />
     </div>
   );

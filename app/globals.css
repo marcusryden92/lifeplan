@@ -14,8 +14,27 @@ body,
   border: none;
 }
 
-:root .fc-timegrid-event {
-  border-radius: 0;
+:root .fc td,
+.fc th,
+.fc-event-main {
+  /* border-style: none !important; */
+  border-color: rgba(128, 128, 128, 0.3);
+}
+
+:root .fc-event {
+  border: none !important; /* Removes the border */
+  box-shadow: none !important; /* Removes any potential outline/shadow */
+  transition: all 0.15s;
+}
+
+:root .fc-timegrid-event-harness {
+  /* border-radius: 0; */
+  border: 0 !important;
+  transform: translate(0, 0);
+}
+
+:root .fc-timegrid-event:hover {
+  transform: translate(-0.1rem, -0.3rem);
 }
 
 :root .fc-scroller {

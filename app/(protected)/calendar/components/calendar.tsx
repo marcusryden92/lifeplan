@@ -36,7 +36,6 @@ export default function Calendar({ initialEvents }: CalendarProps) {
 
   return (
     <FullCalendar
-      ref={calendarRef}
       plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
       events={events}
       initialView="timeGridWeek"
