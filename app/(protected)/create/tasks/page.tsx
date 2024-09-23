@@ -223,7 +223,7 @@ export default function TasksPage() {
         ref={tasksContainerRef}
       >
         {taskArray.map((task, index) =>
-          task.canInfluence ? (
+          task.canInfluence && !task.parentId ? (
             <div
               key={index}
               className={`flex flex-col rounded-lg w-[350px] group hover:shadow-md py-1 px-4 my-1 mx-1 ${

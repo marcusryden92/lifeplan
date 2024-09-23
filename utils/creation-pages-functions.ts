@@ -39,6 +39,7 @@ export const onSubmit = ({
   } else {
     const newTask = new Planner(
       values.title,
+      undefined,
       type,
       setDefaultInfluence || false
     );

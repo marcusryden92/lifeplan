@@ -155,51 +155,55 @@ export default function CapturePage() {
         className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
         ref={tasksContainerRef}
       >
-        {taskArray.map((task, index) => (
-          <div
-            key={index}
-            className="flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 px-4 my-1 mx-1 space-x-3"
-          >
-            <div className="flex-1">
-              {editIndex === index ? (
-                <div className="flex gap-2 items-center">
-                  <Input
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className="bg-gray-200 border-none m-0 text-sm h-auto"
-                  />
-                  <Button
-                    variant={"invisible"}
-                    size="xs"
-                    onClick={handleConfirmEdit}
+        {taskArray.map((task, index) =>
+          !task.parentId ? (
+            <div
+              key={index}
+              className="flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 px-4 my-1 mx-1 space-x-3"
+            >
+              <div className="flex-1">
+                {editIndex === index ? (
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className="bg-gray-200 border-none m-0 text-sm h-auto"
+                    />
+                    <Button
+                      variant={"invisible"}
+                      size="xs"
+                      onClick={handleConfirmEdit}
+                    >
+                      <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="max-w-[250px] break-words overflow-hidden text-ellipsis text-sm">
+                    {task.title}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-row space-x-2 items-center opacity-0 group-hover:opacity-100 transition-opacity self-start">
+                {editIndex !== index && (
+                  <div
+                    onClick={() => handleClickEdit(index)}
+                    className="cursor-pointer text-gray-400 hover:text-blue-400"
                   >
-                    <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
-                  </Button>
-                </div>
-              ) : (
-                <div className="max-w-[250px] break-words overflow-hidden text-ellipsis text-sm">
-                  {task.title}
-                </div>
-              )}
-            </div>
-            <div className="flex flex-row space-x-2 items-center opacity-0 group-hover:opacity-100 transition-opacity self-start">
-              {editIndex !== index && (
+                    <PencilIcon className="w-5 h-5" />
+                  </div>
+                )}
                 <div
-                  onClick={() => handleClickEdit(index)}
-                  className="cursor-pointer text-gray-400 hover:text-blue-400"
+                  onClick={() => handleDeleteTask(index)}
+                  className="cursor-pointer text-gray-400 hover:text-red-400"
                 >
-                  <PencilIcon className="w-5 h-5" />
+                  <XMarkIcon className="w-7 h-7" />
                 </div>
-              )}
-              <div
-                onClick={() => handleDeleteTask(index)}
-                className="cursor-pointer text-gray-400 hover:text-red-400"
-              >
-                <XMarkIcon className="w-7 h-7" />
               </div>
             </div>
-          </div>
-        ))}
+          ) : (
+            ""
+          )
+        )}
       </div>
       <CardFooter className="flex items-center justify-end flex-shrink p-4 border-t">
         <Button

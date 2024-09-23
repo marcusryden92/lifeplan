@@ -171,7 +171,8 @@ export default function InfluencePage() {
           (task, index) =>
             task.canInfluence &&
             task.type !== "task" &&
-            task.type !== "plan" && (
+            task.type !== "plan" &&
+            !task.parentId && (
               <div
                 key={index}
                 className={`flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 my-1 mx-1 px-4 space-x-3 ${
