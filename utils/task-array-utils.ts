@@ -27,3 +27,36 @@ export const handleDeleteTaskById = (
     (prevTasks) => prevTasks.filter((task) => task.id !== taskId) // Filter out the task with the matching id
   );
 };
+
+export const totalSubtaskDuration = (
+  id: string,
+  taskArray: Planner[]
+): number => {
+  const subtasks = taskArray.filter((task) => task.parentId === id);
+
+  let totalMinutes = subtasks.reduce((total, subtask) => {
+    return total + totalSubtaskDuration(subtask.id, taskArray);
+  }, 0);
+
+  totalMinutes += subtasks.reduce(
+    (total, subtask) => total + (subtask.duration || 0),
+    0
+  );
+
+  return totalMinutes; // Return total minutes as a number
+};
+
+export const formatMinutesToHours = (totalMinutes: number): string => {
+  if (totalMinutes < 60) {
+    return `${totalMinutes} min`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (minutes === 0) {
+    return `${hours} h`;
+  }
+
+  return `${hours} h ${minutes} min`;
+};
