@@ -54,7 +54,7 @@ import {
   clickEdit,
   confirmEdit,
 } from "@/utils/creation-pages-functions";
-import { Planner, Subtask } from "@/lib/planner-class";
+import { Planner } from "@/lib/planner-class";
 
 export default function TasksPage() {
   const { taskArray, setTaskArray } = useDataContext();
@@ -94,8 +94,9 @@ export default function TasksPage() {
   });
 
   const totalSubtaskDuration = (index: number) => {
+    const subtasks = getSubtasksFromId(taskArray[index].id);
     const totalMinutes =
-      taskArray[index].subtasks?.reduce(
+      subtasks?.reduce(
         (total, subtask) => total + (subtask.duration || 0),
         0
       ) || 0;
@@ -162,18 +163,15 @@ export default function TasksPage() {
 
   const handleAddSubtask = (index: number) => {
     if (taskDuration !== undefined && taskTitle) {
-      const newTask = new Subtask(taskTitle, taskDuration);
-
-      setTaskArray((prevTasks) =>
-        prevTasks.map((task, idx) =>
-          idx === index
-            ? {
-                ...task, // Copying the task object
-                subtasks: [...(task.subtasks || []), newTask], // Creating a new subtasks array
-              }
-            : task
-        )
+      const newTask = new Planner(
+        taskTitle,
+        taskArray[index].id,
+        "goal",
+        true,
+        taskDuration
       );
+
+      setTaskArray((prevTasks) => [...prevTasks, newTask]); // Spread prevTasks and add newTask
 
       resetTaskState();
     }
@@ -193,18 +191,9 @@ export default function TasksPage() {
     }
   };
 
-  const handleDeleteSubtask = (taskIndex: number, subtaskIndex: number) => {
-    setTaskArray((prevTasks) =>
-      prevTasks.map((task, idx) =>
-        idx === taskIndex
-          ? {
-              ...task,
-              subtasks: task.subtasks?.filter(
-                (_, sIdx) => sIdx !== subtaskIndex
-              ),
-            }
-          : task
-      )
+  const handleDeleteTaskById = (taskId: string) => {
+    setTaskArray(
+      (prevTasks) => prevTasks.filter((task) => task.id !== taskId) // Filter out the task with the matching id
     );
   };
 
@@ -232,7 +221,7 @@ export default function TasksPage() {
     const goalsList: Planner[] = [];
 
     taskArray.forEach((task) => {
-      if (task.type === "goal") {
+      if (task.type === "goal" && !task.parentId) {
         goalsList.push(task);
       }
     });
@@ -247,12 +236,14 @@ export default function TasksPage() {
 
     console.log(currentGoal);
 
+    const subtasks = getSubtasksFromId(taskArray[index].id);
+
     // Check if currentTask is undefined or null
     if (
       // selectedDate != undefined &&
       currentGoal &&
-      currentGoal.subtasks &&
-      currentGoal.subtasks.length > 1 &&
+      subtasks &&
+      subtasks.length > 1 &&
       currentGoal.deadline != undefined
     ) {
       return true;
@@ -270,10 +261,12 @@ export default function TasksPage() {
         return false;
       }
 
+      const subtasks = getSubtasksFromId(goal.id);
+
       if (
         // selectedDate != undefined &&
-        !goal.subtasks ||
-        goal.subtasks.length < 2 ||
+        !subtasks ||
+        subtasks.length < 2 ||
         goal.deadline === undefined
       ) {
         isComplete = false;
@@ -320,6 +313,18 @@ export default function TasksPage() {
       }
     }
   }, [carouselIndex]);
+
+  function getSubtasksFromId(id: string) {
+    let subtasksArray: Planner[] = [];
+
+    taskArray.forEach((task) => {
+      if (task.parentId === id) {
+        subtasksArray.push(task);
+      }
+    });
+
+    return subtasksArray;
+  }
 
   return (
     <div className="flex flex-col lg:overflow-hidden w-full h-full bg-white  bg-opacity-95 px-10">
@@ -371,7 +376,7 @@ export default function TasksPage() {
         >
           <CarouselContent className="h-full">
             {taskArray.map((task, index) =>
-              task.canInfluence && task.type === "goal" ? (
+              task.canInfluence && task.type === "goal" && !task.parentId ? (
                 <CarouselItem key={index}>
                   <div
                     key={index}
@@ -481,7 +486,7 @@ export default function TasksPage() {
 
                       <div className="flex overflow-y-scroll w-full no-scrollbar flex-grow">
                         <div className="flex flex-col justify-start flex-grow w-full">
-                          {taskArray[index].subtasks?.map(
+                          {getSubtasksFromId(taskArray[index].id).map(
                             (subtask, subtaskIndex) => (
                               <div
                                 key={subtaskIndex}
@@ -499,7 +504,7 @@ export default function TasksPage() {
                                     size="xs"
                                     variant="invisible"
                                     onClick={() =>
-                                      handleDeleteSubtask(index, subtaskIndex)
+                                      handleDeleteTaskById(subtask.id)
                                     }
                                   >
                                     <XMarkIcon className="w-5 h-5 text-red-500 hover:text-red-700" />
