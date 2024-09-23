@@ -227,7 +227,7 @@ export const taskArraySeed: Planner[] = [
     id: "004",
     type: "goal",
     canInfluence: true,
-    duration: 120,
+    duration: 0,
     deadline: new Date(),
     starts: undefined,
   },
@@ -237,7 +237,7 @@ export const taskArraySeed: Planner[] = [
     parentId: "004", // Child of "Complete Spring Cleaning"
     type: "goal",
     canInfluence: true,
-    duration: 120,
+    duration: 0,
     deadline: new Date(),
     starts: undefined,
   },
@@ -247,7 +247,7 @@ export const taskArraySeed: Planner[] = [
     parentId: "005", // Child of "Organize Storage Room"
     type: "goal",
     canInfluence: true,
-    duration: 13,
+    duration: 0,
     deadline: new Date(),
     starts: undefined,
   },
@@ -257,7 +257,7 @@ export const taskArraySeed: Planner[] = [
     parentId: "006", // Child of "Sort Old Boxes"
     type: "goal",
     canInfluence: true,
-    duration: 10,
+    duration: 0,
     deadline: new Date(),
     starts: undefined,
   },
@@ -268,6 +268,16 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     duration: 12,
+    deadline: new Date(),
+    starts: undefined,
+  },
+  {
+    title: "Write Labels",
+    id: "009", // Unique id for TaskA
+    parentId: "007", // Child of "Sort Old Boxes"
+    type: "goal",
+    canInfluence: true,
+    duration: 10,
     deadline: new Date(),
     starts: undefined,
   },

@@ -221,8 +221,6 @@ export default function TasksPage() {
 
     const currentGoal = taskArray[index];
 
-    console.log(currentGoal);
-
     const subtasks = getSubtasksFromId(taskArray[index].id);
 
     // Check if currentTask is undefined or null
@@ -275,10 +273,6 @@ export default function TasksPage() {
             task.id === currentId ? { ...task, deadline: selectedDate } : task
           )
         );
-
-        setTimeout(() => {
-          console.log(JSON.stringify(getCurrentGoal(carouselIndex)));
-        }, 200);
       }
     }
   }, [selectedDate]);
