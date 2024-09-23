@@ -28,9 +28,9 @@ body,
 }
 
 :root .fc-event:hover {
-  border-color: #f1f1f1 !important;
-  border-style: solid !important;
-  border-width: 0.5px !important;
+  outline-color: #f1f1f1 !important;
+  outline-style: solid !important;
+  outline-width: 0.5px !important;
 }
 
 :root .fc-timegrid-event-harness {
@@ -39,9 +39,9 @@ body,
   transform: translate(0, 0);
 }
 
-:root .fc-timegrid-event:hover {
+/* :root .fc-timegrid-event:hover {
   transform: translate(-0.1rem, -0.2rem);
-}
+} */
 
 :root .fc-scroller {
   overflow: auto !important;

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useDataContext } from "@/context/DataContext";
 import { Planner } from "@/lib/planner-class";
 import { Button } from "@/components/ui/button";
@@ -19,17 +20,22 @@ interface TaskItemProps {
 }
 
 const TaskItem = ({ task, subtasks, onDelete }: TaskItemProps) => {
+  const [totalTaskDuration, setTotalTaskDuration] = useState(
+    totalSubtaskDuration(task.id, subtasks)
+  );
   return (
     <div>
       <div className="flex justify-between items-center w-full text-sm py-2">
-        <div className="truncate max-w-[180px]">{task.title}</div>
+        <div
+          className={`truncate max-w-[180px] ${
+            subtasks.length !== 0 && "opacity-50"
+          }`}
+        >
+          {task.title}
+        </div>
 
         <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
-          <div>
-            {subtasks.length > 0
-              ? formatMinutesToHours(totalSubtaskDuration(task.id, subtasks))
-              : task.duration && formatMinutesToHours(task.duration)}
-          </div>
+          <div>{totalTaskDuration}</div>
           <Button
             size="xs"
             variant="invisible"

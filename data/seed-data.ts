@@ -281,4 +281,14 @@ export const taskArraySeed: Planner[] = [
     deadline: new Date(),
     starts: undefined,
   },
+  {
+    title: "Glue Labels",
+    id: "010", // Unique id for TaskA
+    parentId: "007", // Child of "Sort Old Boxes"
+    type: "goal",
+    canInfluence: true,
+    duration: 10,
+    deadline: new Date(),
+    starts: undefined,
+  },
 ];
