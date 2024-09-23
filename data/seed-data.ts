@@ -1,5 +1,7 @@
 import { Planner } from "@/lib/planner-class";
 
+import uuidv4 from "uuid";
+
 export const templateSeed = [
   {
     id: "1",
@@ -194,33 +196,79 @@ export const templateSeed = [
 
 export const taskArraySeed: Planner[] = [
   {
-    title: "Handla",
-    id: "123",
+    title: "Grocery Shopping",
+    id: "001",
     type: "task",
     canInfluence: true,
     duration: 40,
     deadline: undefined,
     starts: undefined,
-    subtasks: undefined,
   },
   {
-    title: "Handla 2",
-    id: "123",
+    title: "Meal Prep",
+    id: "002",
     type: "task",
     canInfluence: true,
     duration: 40,
     deadline: undefined,
     starts: undefined,
-    subtasks: undefined,
   },
   {
-    title: "Handla 3",
-    id: "123",
+    title: "House Cleaning",
+    id: "003",
     type: "task",
     canInfluence: true,
     duration: 120,
     deadline: new Date(),
     starts: undefined,
-    subtasks: undefined,
+  },
+  {
+    title: "Complete Spring Cleaning",
+    id: "004",
+    type: "goal",
+    canInfluence: true,
+    duration: 120,
+    deadline: new Date(),
+    starts: undefined,
+  },
+  {
+    title: "Organize Storage Room",
+    id: "005",
+    parentId: "004", // Child of "Complete Spring Cleaning"
+    type: "goal",
+    canInfluence: true,
+    duration: 120,
+    deadline: new Date(),
+    starts: undefined,
+  },
+  {
+    title: "Sort Old Boxes",
+    id: "006",
+    parentId: "005", // Child of "Organize Storage Room"
+    type: "goal",
+    canInfluence: true,
+    duration: 13,
+    deadline: new Date(),
+    starts: undefined,
+  },
+  {
+    title: "Label Boxes",
+    id: "007", // Unique id for TaskA
+    parentId: "006", // Child of "Sort Old Boxes"
+    type: "goal",
+    canInfluence: true,
+    duration: 10,
+    deadline: new Date(),
+    starts: undefined,
+  },
+  {
+    title: "Move Boxes to Basement",
+    id: "008", // Unique id for TaskB
+    parentId: "006", // Child of "Sort Old Boxes"
+    type: "goal",
+    canInfluence: true,
+    duration: 12,
+    deadline: new Date(),
+    starts: undefined,
   },
 ];

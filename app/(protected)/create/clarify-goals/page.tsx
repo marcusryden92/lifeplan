@@ -23,7 +23,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-
+import TaskList from "./components/task-list";
 // Local components and context
 import { useDataContext } from "@/context/DataContext";
 import {
@@ -55,6 +55,11 @@ import {
   confirmEdit,
 } from "@/utils/creation-pages-functions";
 import { Planner } from "@/lib/planner-class";
+
+import {
+  totalSubtaskDuration,
+  formatMinutesToHours,
+} from "@/utils/task-array-utils";
 
 export default function TasksPage() {
   const { taskArray, setTaskArray } = useDataContext();
@@ -92,24 +97,6 @@ export default function TasksPage() {
       title: "",
     },
   });
-
-  const totalSubtaskDuration = (index: number) => {
-    const subtasks = getSubtasksFromId(taskArray[index].id);
-    const totalMinutes =
-      subtasks?.reduce(
-        (total, subtask) => total + (subtask.duration || 0),
-        0
-      ) || 0;
-
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    if (totalMinutes === 0) return "~";
-
-    if (hours < 1) return `${totalMinutes} min`;
-
-    return `${hours} h ${minutes} min`;
-  };
 
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({
@@ -327,7 +314,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="flex flex-col lg:overflow-hidden w-full h-full bg-white  bg-opacity-95 px-10">
+    <div className="flex flex-col lg:overflow-hidden w-full h-full text-white  bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
         <p className="text-xl font-semibold">CLARIFY GOALS</p>
         <p className="text-sm text-center">Clarify your goals.</p>
@@ -369,7 +356,7 @@ export default function TasksPage() {
 
       <div className="overflow-x-auto py-5 flex-grow flex items-start justify-center flex-wrap content-start no-scrollbar ">
         <Carousel
-          className="w-1/3 h-full"
+          className="w-1/2 h-full"
           onIndexChange={(currentIndex: number | undefined) => {
             setCarouselIndex(currentIndex);
           }}
@@ -380,7 +367,7 @@ export default function TasksPage() {
                 <CarouselItem key={index}>
                   <div
                     key={index}
-                    className={`flex flex-col border-x border-gray-200  w-full h-full group hover:shadow-md px-8 py-4  transition-colors duration-300 ${
+                    className={`flex flex-col border-x border-gray-200 text-white  w-full h-full group hover:shadow-md px-8 py-4  transition-colors duration-300 ${
                       checkGoalCompletion(index) ? "bg-emerald-500" : ""
                     }  text-black`}
                   >
@@ -446,7 +433,10 @@ export default function TasksPage() {
                       <div className="flex flex-row  justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
                         <div className="flex w-full justify-between items-center">
                           <span className="min-w-24 text-sm">
-                            {"Total duration:  " + totalSubtaskDuration(index)}
+                            {"Total duration:  " +
+                              formatMinutesToHours(
+                                totalSubtaskDuration(task.id, taskArray)
+                              )}
                           </span>
                         </div>
                       </div>
@@ -485,35 +475,7 @@ export default function TasksPage() {
                       {/* // SUBTASKS LIST */}
 
                       <div className="flex overflow-y-scroll w-full no-scrollbar flex-grow">
-                        <div className="flex flex-col justify-start flex-grow w-full">
-                          {getSubtasksFromId(taskArray[index].id).map(
-                            (subtask, subtaskIndex) => (
-                              <div
-                                key={subtaskIndex}
-                                className="flex justify-between items-center w-full text-sm py-2"
-                              >
-                                <div className="truncate max-w-[180px]">
-                                  {subtask.title}
-                                </div>
-
-                                <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
-                                  <div>
-                                    {subtask.duration} {" min"}
-                                  </div>
-                                  <Button
-                                    size="xs"
-                                    variant="invisible"
-                                    onClick={() =>
-                                      handleDeleteTaskById(subtask.id)
-                                    }
-                                  >
-                                    <XMarkIcon className="w-5 h-5 text-red-500 hover:text-red-700" />
-                                  </Button>
-                                </div>
-                              </div>
-                            )
-                          )}
-                        </div>
+                        <TaskList id={task.id} />
                       </div>
 
                       {/* // ADD SUBTASK */}

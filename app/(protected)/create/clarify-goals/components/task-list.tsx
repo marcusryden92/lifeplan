@@ -18,38 +18,45 @@ const TaskList = ({ id }: { id: string }) => {
   const { taskArray, setTaskArray } = useDataContext();
 
   const thisTask = getTaskById(taskArray, id);
+
   const subtasks = getSubtasksFromId(taskArray, id);
 
   return (
     <div className="flex flex-col justify-start flex-grow w-full">
-      {subtasks
+      {subtasks.length > 0
         ? subtasks.map(
             (subtask) =>
-              thisTask && (
+              subtask && (
                 <div>
-                  <div className="flex justify-between items-center w-full text-sm py-2">
-                    <div className="truncate max-w-[180px]">
-                      {thisTask.title}
-                    </div>
-
-                    <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
-                      <div>
-                        {formatMinutesToHours(
-                          totalSubtaskDuration(thisTask.id, taskArray)
-                        )}
+                  {subtask.parentId && (
+                    <div className="flex justify-between items-center w-full text-sm py-2">
+                      <div className="truncate max-w-[180px]">
+                        {subtask.title}
                       </div>
-                      <Button
-                        size="xs"
-                        variant="invisible"
-                        onClick={() =>
-                          handleDeleteTaskById(setTaskArray, thisTask.id)
-                        }
-                      >
-                        <XMarkIcon className="w-5 h-5 text-red-500 hover:text-red-700" />
-                      </Button>
+
+                      <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
+                        <div>
+                          {thisTask &&
+                            formatMinutesToHours(
+                              totalSubtaskDuration(thisTask.id, taskArray)
+                            )}
+                        </div>
+                        <Button
+                          size="xs"
+                          variant="invisible"
+                          onClick={() =>
+                            handleDeleteTaskById(setTaskArray, subtask.id)
+                          }
+                        >
+                          <XMarkIcon className="w-5 h-5 text-red-500 hover:text-red-700" />
+                        </Button>
+                      </div>
                     </div>
+                  )}
+
+                  <div className="pl-5 border-white border-l">
+                    <TaskList id={subtask.id} />
                   </div>
-                  <TaskList id={subtask.id} />
                 </div>
               )
           )
@@ -58,9 +65,7 @@ const TaskList = ({ id }: { id: string }) => {
               <div className="truncate max-w-[180px]">{thisTask.title}</div>
 
               <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
-                <div>
-                  {thisTask.duration && formatMinutesToHours(thisTask.duration)}
-                </div>
+                <div>{thisTask.duration}</div>
                 <Button
                   size="xs"
                   variant="invisible"

@@ -34,6 +34,13 @@ export const totalSubtaskDuration = (
 ): number => {
   const subtasks = taskArray.filter((task) => task.parentId === id);
 
+  if (!subtasks) {
+    const task = getTaskById(taskArray, id);
+    if (!task) return 0;
+
+    return task.duration || 0;
+  }
+
   let totalMinutes = subtasks.reduce((total, subtask) => {
     return total + totalSubtaskDuration(subtask.id, taskArray);
   }, 0);
