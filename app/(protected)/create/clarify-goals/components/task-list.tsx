@@ -25,6 +25,10 @@ const TaskItem = ({ taskArray, task, subtasks, onDelete }: TaskItemProps) => {
     totalSubtaskDuration(task.id, taskArray)
   );
 
+  useEffect(() => {
+    setTotalTaskDuration(totalSubtaskDuration(task.id, taskArray));
+  }, [taskArray]);
+
   return (
     <div>
       <div className="flex justify-between items-center w-full text-sm py-2">
@@ -37,7 +41,7 @@ const TaskItem = ({ taskArray, task, subtasks, onDelete }: TaskItemProps) => {
         </div>
 
         <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
-          <div>{totalTaskDuration}</div>
+          <div>{subtasks.length === 0 ? task.duration : totalTaskDuration}</div>
           <Button
             size="xs"
             variant="invisible"
