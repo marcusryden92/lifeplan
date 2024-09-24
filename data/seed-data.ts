@@ -152,9 +152,9 @@ export const templateSeed = [
     title: "Sleep",
     start: {
       day: "saturday",
-      time: "19:00",
+      time: "21:00",
     },
-    duration: 300, // 3 hours (21:00 to 00:00 next day)
+    duration: 180, // 3 hours (21:00 to 00:00 next day)
   },
   {
     id: "lunch-6",
@@ -172,9 +172,9 @@ export const templateSeed = [
       day: "sunday",
       time: "00:00",
     },
-    duration: 1440, // 6 hours
+    duration: 360, // 6 hours
   },
-  /* {
+  {
     id: "sleep-end-7",
     title: "Sleep",
     start: {
@@ -191,7 +191,7 @@ export const templateSeed = [
       time: "12:00",
     },
     duration: 60, // 1 hour
-  }, */
+  },
 ];
 
 export const taskArraySeed: Planner[] = [

@@ -43,7 +43,10 @@ const TaskItem = ({ taskArray, task, subtasks, onDelete }: TaskItemProps) => {
 
           <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
             <div>
-              {subtasks.length === 0 ? task.duration : totalTaskDuration}
+              {formatMinutesToHours(
+                subtasks.length === 0 ? task.duration || 0 : totalTaskDuration
+              )}
+              {}
             </div>
             <Button
               size="xs"
