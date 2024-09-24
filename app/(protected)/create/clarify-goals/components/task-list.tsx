@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDataContext } from "@/context/DataContext";
 import { Planner } from "@/lib/planner-class";
 import { Button } from "@/components/ui/button";
@@ -14,15 +14,17 @@ import {
 } from "@/utils/task-array-utils";
 
 interface TaskItemProps {
+  taskArray: Planner[];
   task: Planner;
   subtasks: Planner[];
   onDelete: (id: string) => void;
 }
 
-const TaskItem = ({ task, subtasks, onDelete }: TaskItemProps) => {
+const TaskItem = ({ taskArray, task, subtasks, onDelete }: TaskItemProps) => {
   const [totalTaskDuration, setTotalTaskDuration] = useState(
-    totalSubtaskDuration(task.id, subtasks)
+    totalSubtaskDuration(task.id, taskArray)
   );
+
   return (
     <div>
       <div className="flex justify-between items-center w-full text-sm py-2">
@@ -70,7 +72,12 @@ const TaskList = ({ id }: { id: string }) => {
 
   return (
     <div className="flex flex-col justify-start flex-grow w-full">
-      <TaskItem task={thisTask} subtasks={subtasks} onDelete={handleDelete} />
+      <TaskItem
+        taskArray={taskArray}
+        task={thisTask}
+        subtasks={subtasks}
+        onDelete={handleDelete}
+      />
     </div>
   );
 };
