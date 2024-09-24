@@ -31,28 +31,33 @@ const TaskItem = ({ taskArray, task, subtasks, onDelete }: TaskItemProps) => {
 
   return (
     <div>
-      <div className="flex justify-between items-center w-full text-sm py-2">
-        <div
-          className={`truncate max-w-[180px] ${
-            subtasks.length !== 0 && "opacity-50"
-          }`}
-        >
-          {task.title}
-        </div>
-
-        <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
-          <div>{subtasks.length === 0 ? task.duration : totalTaskDuration}</div>
-          <Button
-            size="xs"
-            variant="invisible"
-            onClick={() => onDelete(task.id)}
+      {task.parentId && (
+        <div className="flex justify-between items-center w-full text-sm py-2">
+          <div
+            className={`truncate max-w-[180px] ${
+              subtasks.length !== 0 && "opacity-50"
+            }`}
           >
-            <XMarkIcon className="w-5 h-5 text-red-500 hover:text-red-700" />
-          </Button>
+            {task.title}
+          </div>
+
+          <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
+            <div>
+              {subtasks.length === 0 ? task.duration : totalTaskDuration}
+            </div>
+            <Button
+              size="xs"
+              variant="invisible"
+              onClick={() => onDelete(task.id)}
+            >
+              <XMarkIcon className="w-5 h-5 text-red-500 hover:text-red-700" />
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
+
       {subtasks.length > 0 && (
-        <div className="pl-5 border-white border-l">
+        <div className={task.parentId ? "pl-5 border-white border-l" : ""}>
           {subtasks.map((subtask) => (
             <TaskList key={subtask.id} id={subtask.id} />
           ))}
