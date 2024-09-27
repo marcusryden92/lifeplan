@@ -308,7 +308,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="flex flex-col lg:overflow-hidden w-full h-full text-white  bg-opacity-95 px-10">
+    <div className="flex flex-col lg:overflow-hidden w-full h-full   bg-opacity-95 px-10">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
         <p className="text-xl font-semibold">CLARIFY GOALS</p>
         <p className="text-sm text-center">Clarify your goals.</p>
@@ -361,7 +361,7 @@ export default function TasksPage() {
                 <CarouselItem key={index}>
                   <div
                     key={index}
-                    className={`flex flex-col border-x border-gray-200 text-white  w-full h-full group hover:shadow-md px-8 py-4  transition-colors duration-300 ${
+                    className={`flex flex-col border-x border-gray-200   w-full h-full group hover:shadow-md px-8 py-4  transition-colors duration-300 ${
                       checkGoalCompletion(index) ? "bg-emerald-500" : ""
                     }  text-black`}
                   >
