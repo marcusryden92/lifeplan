@@ -1,11 +1,35 @@
-# Add icons to calendar and create tab.
+# CREATION PAGES
 
-# Add mark all and unmark all options for tasks/plans/goals.
+- Make sure delete all only deletes items that are visible on the current page.
+- Add mark all and unmark all options for task/plans/goals.
+- Display breadcrumbs to all pages for easy nagivation.
 
-# Make sure delete all only deletes visible items.
+# CALENDAR GENERATION FUNCTIONALITY
 
-# Apply date to goal when clicking next, and reset or set to already set date.
+- Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).
+- Completion of events so that they don't keep rendering when they are done.
+- Add dependency to goal subtasks so that they render in order.
+- Add category function, so that a segment of time can be demarcated and relevant events only render within the confines of that time slot.
 
-# Enter button preventDefault.
+- Add pop-up window that allows users to directly modify objects in the calendar.
 
-# Change generateCalendar to calculate duration from template so it doesn't fuck with late sunday events (where sunday end-times end up on monday before).
+- Add minimum buffer option between events.
+- Add individual buffer option to events.
+
+# SERVER SETUP
+
+- Server actions to upload and save events and calendars to server.
+- Option to create several life plans.
+- Option to connect to Google Calendar and iCalendar.
+
+# USER EXPERIENCE
+
+- Add page to display all planner objects at once, to easily swap and sort between them.
+
+  - Add dragging function to this page to easily move objects from standalone to be nested (in goal tasks for example).
+
+- Generally improve UX and user flow/process.
+
+- Make a nice landing page.
+
+- Mobile app.
