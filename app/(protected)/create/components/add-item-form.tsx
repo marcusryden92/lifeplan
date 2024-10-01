@@ -6,10 +6,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-
-import { FaPlus } from "react-icons/fa";
+import { Input } from "@/components/ui/input";..
+import { HiOutlinePlus } from "react-icons/hi";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -60,12 +58,12 @@ const AddItemForm = () => {
           render={({ field }) => (
             <FormItem>
               <div className="flex items-center gap-5 justify-between">
-                <div className="flex flex-1 gap-5 max-w-[350px]">
+                <div className="flex flex-1 gap-2 max-w-[350px]">
                   <FormControl>
                     <Input {...field} placeholder="Task name" />
                   </FormControl>
                   <button type="submit">
-                    <FaPlus className="w-6 h-6 text-gray-500 hover:text-gray-300" />
+                    <HiOutlinePlus className="w-8 h-8 text-gray-400 hover:text-gray-300" />
                   </button>
                 </div>
               </div>
