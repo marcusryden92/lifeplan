@@ -2,10 +2,7 @@
 
 // Third-party libraries
 import { useState, useRef, useEffect, createRef } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { format } from "date-fns";
+
 import Link from "next/link";
 import {
   XMarkIcon,
@@ -26,29 +23,15 @@ import {
 import TaskList from "./components/task-list";
 // Local components and context
 import { useDataContext } from "@/context/DataContext";
-import {
-  Card,
-  CardHeader,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import {
-  FormField,
-  Form,
-  FormItem,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
+import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/utilities/time-picker/date-time-picker";
-
-// Schemas
-import { TaskListSchema } from "@/schemas";
+import AddItemForm from "../components/add-item-form";
 
 // Local utilities
 import {
-  onSubmit,
   deleteTask,
   deleteAll,
   clickEdit,
@@ -65,7 +48,7 @@ export default function TasksPage() {
   const { taskArray, setTaskArray } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
-  const [changeToTask, setChangeToTask] = useState<number | null>(null);
+  const [changeTask, setChangeToTask] = useState<number | null>(null);
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
@@ -90,27 +73,6 @@ export default function TasksPage() {
   );
 
   const [goalComplete, setGoalComplete] = useState<boolean>(false);
-
-  const form = useForm<z.infer<typeof TaskListSchema>>({
-    resolver: zodResolver(TaskListSchema),
-    defaultValues: {
-      title: "",
-    },
-  });
-
-  const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
-    onSubmit({
-      values,
-      setTaskArray,
-      editIndex,
-      setEditIndex,
-      editTitle,
-      setEditTitle,
-      form,
-      setDefaultInfluence: true,
-      type: "goal",
-    });
-  };
 
   const handleDeleteTask = (index: number) => {
     deleteTask(index, {
@@ -317,39 +279,16 @@ export default function TasksPage() {
         <p className="text-xl font-semibold">CLARIFY GOALS</p>
         <p className="text-sm text-center">Clarify your goals.</p>
       </CardHeader>
-      <CardContent className="px-0 py-6 border-b">
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleFormSubmit)}
-            className="space-y-8 flex flex-col"
-          >
-            <FormField
-              control={form.control}
-              name="title"
-              render={({ field }) => (
-                <FormItem>
-                  <div className="flex items-center gap-5 justify-between">
-                    <div className="flex flex-1 gap-5 max-w-[350px]">
-                      <FormControl>
-                        <Input {...field} placeholder="Task name" />
-                      </FormControl>
-                      <Button type="submit">Add item</Button>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleDeleteAll}
-                      className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem]"
-                    >
-                      <TrashIcon className="w-5 h-5 mx-2" />
-                      Delete all
-                    </button>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </form>
-        </Form>
+      <CardContent className="px-0 py-6 border-b flex items-center justify-between">
+        <AddItemForm />
+        <button
+          type="button"
+          onClick={handleDeleteAll}
+          className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem]"
+        >
+          <TrashIcon className="w-5 h-5 mx-2" />
+          Delete all
+        </button>
       </CardContent>
 
       <div className="overflow-x-auto py-5 flex-grow flex items-start justify-center flex-wrap content-start no-scrollbar ">
