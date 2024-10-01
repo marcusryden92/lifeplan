@@ -30,6 +30,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/utilities/time-picker/date-time-picker";
+import { Planner } from "@/lib/planner-class";
 
 // Schemas
 import { TaskListSchema } from "@/schemas";
@@ -87,7 +88,11 @@ export default function TasksPage() {
   };
 
   const handleDeleteAll = () => {
-    deleteAll({ setTaskArray });
+    const filterArray: Planner[] = taskArray.filter(
+      (task) => task.canInfluence && task.type !== "task" && !task.parentId
+    );
+
+    deleteAll({ setTaskArray, filter: filterArray });
   };
 
   const handleClickEdit = (index: number) => {

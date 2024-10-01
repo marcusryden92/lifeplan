@@ -77,7 +77,14 @@ export default function InfluencePage() {
   };
 
   const handleDeleteAll = () => {
-    deleteAll({ setTaskArray });
+    const filterArray: Planner[] = taskArray.filter(
+      (task) => task.canInfluence &&
+      task.type !== "task" &&
+      task.type !== "plan" &&
+      !task.parentId
+    );
+
+    deleteAll({ setTaskArray, filter: filterArray });
   };
 
   const handleClickEdit = (index: number) => {

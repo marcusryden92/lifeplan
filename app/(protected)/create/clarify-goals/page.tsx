@@ -122,7 +122,11 @@ export default function TasksPage() {
   };
 
   const handleDeleteAll = () => {
-    deleteAll({ setTaskArray });
+    const filterArray: Planner[] = taskArray.filter(
+      (task) => task.canInfluence && task.type === "goal" && !task.parentId
+    );
+
+    deleteAll({ setTaskArray, filter: filterArray });
   };
 
   const handleClickEdit = (index: number) => {

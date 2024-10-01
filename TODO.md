@@ -11,6 +11,8 @@
 - Add dependency to goal subtasks so that they render in order.
 - Add category function, so that a segment of time can be demarcated and relevant events only render within the confines of that time slot.
 
+- Create a recursive function that deletes all the subtasks when a goal is deleted.
+
 - Add pop-up window that allows users to directly modify objects in the calendar.
 
 - Add minimum buffer option between events.

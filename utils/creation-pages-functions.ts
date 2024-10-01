@@ -71,11 +71,23 @@ export const deleteTask = (
 // DELETE ALL TASKS
 
 interface DeleteAllProps {
-  setTaskArray: React.Dispatch<React.SetStateAction<any[]>>; // Replace `any` with your actual task type if necessary
+  setTaskArray: React.Dispatch<React.SetStateAction<any[]>>;
+  filter?: Planner[]; // Replace `any` with your actual task type if necessary
 }
 
-export const deleteAll = ({ setTaskArray }: DeleteAllProps) => {
-  setTaskArray([]);
+export const deleteAll = ({ setTaskArray, filter }: DeleteAllProps) => {
+  // If filter is not provided or is an empty array, clear the entire taskArray
+  if (!filter || filter.length === 0) {
+    setTaskArray([]);
+    return;
+  }
+
+  // Otherwise, filter out tasks that match the filter array
+  setTaskArray((prevTaskArray) =>
+    prevTaskArray.filter(
+      (task) => !filter.some((filteredTask) => filteredTask.id === task.id)
+    )
+  );
 };
 
 // CLICK EDIT AND CONFIRM EDIT

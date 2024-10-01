@@ -17,6 +17,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 
+import { Planner } from "@/lib/planner-class";
+
 // Local components and context
 import { useDataContext } from "@/context/DataContext";
 import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
@@ -87,7 +89,11 @@ export default function TasksPage() {
   };
 
   const handleDeleteAll = () => {
-    deleteAll({ setTaskArray });
+    const filterArray: Planner[] = taskArray.filter(
+      (task) => task.canInfluence && !task.parentId
+    );
+
+    deleteAll({ setTaskArray, filter: filterArray });
   };
 
   const handleClickEdit = (index: number) => {
