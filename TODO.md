@@ -1,6 +1,5 @@
 # CREATION PAGES
 
-- Make sure delete all only deletes items that are visible on the current page.
 - Add mark all and unmark all options for task/plans/goals.
 - Display breadcrumbs to all pages for easy nagivation.
 
