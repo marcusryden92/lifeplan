@@ -28,7 +28,9 @@ import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/utilities/time-picker/date-time-picker";
+
 import AddItemForm from "../components/add-item-form";
+import AddSubtask from "./components/add-subtask";
 
 // Local utilities
 import {
@@ -36,6 +38,7 @@ import {
   deleteAll,
   clickEdit,
   confirmEdit,
+  getSubtasksFromId,
 } from "@/utils/creation-pages-functions";
 import { Planner } from "@/lib/planner-class";
 
@@ -48,25 +51,10 @@ export default function TasksPage() {
   const { taskArray, setTaskArray } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
-  const [changeTask, setChangeToTask] = useState<number | null>(null);
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-  const [taskDuration, setTaskDuration] = useState<number | undefined>(
-    undefined
-  );
-  const [taskTitle, setTaskTitle] = useState<string>("");
-
-  const refs = useRef(new Map<number, React.RefObject<HTMLInputElement>>());
-
-  const getRef = (index: number) => {
-    if (!refs.current.has(index)) {
-      refs.current.set(index, createRef());
-    }
-    return refs.current.get(index);
-  };
-
-  const durationRef = useRef<HTMLInputElement>(null);
+  const [changeTask, setChangeToTask] = useState<number | null>(null);
 
   const [carouselIndex, setCarouselIndex] = useState<number | undefined>(
     undefined
@@ -114,46 +102,10 @@ export default function TasksPage() {
     setChangeToTask(index);
   };
 
-  const handleAddSubtask = (index: number) => {
-    if (taskDuration !== undefined && taskTitle) {
-      const newTask = new Planner(
-        taskTitle,
-        taskArray[index].id,
-        "goal",
-        true,
-        taskDuration
-      );
-
-      setTaskArray((prevTasks) => [...prevTasks, newTask]); // Spread prevTasks and add newTask
-
-      resetTaskState();
-    }
-  };
-
-  const handleKeyDown = (
-    event: React.KeyboardEvent<HTMLInputElement>,
-    index: number
-  ) => {
-    if (event.key === "Enter") {
-      event.preventDefault(); // Prevent default Enter key behavior (e.g., form submission)
-      handleAddSubtask(index); // Call handleAddSubtask
-      const ref = getRef(index);
-      if (ref?.current) {
-        ref.current.focus(); // Focus on the correct taskTitle input field
-      }
-    }
-  };
-
   const handleDeleteTaskById = (taskId: string) => {
     setTaskArray(
       (prevTasks) => prevTasks.filter((task) => task.id !== taskId) // Filter out the task with the matching id
     );
-  };
-
-  const resetTaskState = () => {
-    setChangeToTask(null);
-    setTaskDuration(undefined);
-    setTaskTitle("");
   };
 
   const getCurrentGoal = (index: number) => {
@@ -187,7 +139,7 @@ export default function TasksPage() {
 
     const currentGoal = taskArray[index];
 
-    const subtasks = getSubtasksFromId(taskArray[index].id);
+    const subtasks = getSubtasksFromId(taskArray, taskArray[index].id);
 
     // Check if currentTask is undefined or null
     if (
@@ -212,7 +164,7 @@ export default function TasksPage() {
         return false;
       }
 
-      const subtasks = getSubtasksFromId(goal.id);
+      const subtasks = getSubtasksFromId(taskArray, goal.id);
 
       if (
         // selectedDate != undefined &&
@@ -260,18 +212,6 @@ export default function TasksPage() {
       }
     }
   }, [carouselIndex]);
-
-  function getSubtasksFromId(id: string) {
-    let subtasksArray: Planner[] = [];
-
-    taskArray.forEach((task) => {
-      if (task.parentId === id) {
-        subtasksArray.push(task);
-      }
-    });
-
-    return subtasksArray;
-  }
 
   return (
     <div className="flex flex-col lg:overflow-hidden w-full h-full   bg-opacity-95 px-10">
@@ -415,61 +355,7 @@ export default function TasksPage() {
                         <TaskList id={task.id} />
                       </div>
 
-                      {/* // ADD SUBTASK */}
-
-                      <div className="w-full my-2 ">
-                        <div className="flex gap-2 items-center">
-                          <Input
-                            value={taskTitle}
-                            onChange={(e) => setTaskTitle(e.target.value)}
-                            className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-                              task.canInfluence ? "text-black" : ""
-                            }`}
-                            ref={getRef(index)} // Attach ref dynamically
-                          />
-                          <Input
-                            value={taskDuration || ""} // Ensure it's always a string
-                            onChange={(e) =>
-                              setTaskDuration(Number(e.target.value))
-                            }
-                            placeholder={
-                              taskArray[index].duration?.toString() || "min"
-                            }
-                            className="w-14 h-7 text-sm text-black"
-                            type="number"
-                            pattern="[0-9]*"
-                            ref={durationRef} // Attach ref to the duration input
-                            onKeyDown={(e) => handleKeyDown(e, index)} // Attach key down event
-                          />
-                          <Button
-                            size="xs"
-                            variant="invisible"
-                            onClick={() => {
-                              handleAddSubtask(index);
-                            }}
-                          >
-                            <CheckIcon
-                              className={`w-6 h-6 p-0 bg-none ${
-                                checkGoalCompletion(index)
-                                  ? "text-red-600"
-                                  : "text-sky-500"
-                              } hover:opacity-50"`}
-                            />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* // CONFIRMATION BUTTON */}
-
-                      {/* <div className="flex justify-end justify-self-end space-x-2">
-                <button
-                  onClick={() => handleConfirmGoal(task.duration)}
-                  disabled={taskDuration === undefined}
-                  className="text-gray-300 hover:text-black"
-                >
-                  <CheckCircledIcon className="w-9 h-9 hover:bg-sky-400 rounded-full" />
-                </button>
-              </div> */}
+                      <AddSubtask task={task} parentId={task.id} />
                     </>
                   </div>
                 </CarouselItem>

@@ -6,7 +6,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 
-import { Input } from "@/components/ui/input";..
+import { Input } from "@/components/ui/input";
 import { HiOutlinePlus } from "react-icons/hi";
 
 import { useForm } from "react-hook-form";

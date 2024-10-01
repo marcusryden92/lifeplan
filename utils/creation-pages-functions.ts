@@ -140,3 +140,17 @@ export const confirmEdit = ({
     setEditTitle("");
   }
 };
+
+// Get goal subtasks from goalId:
+
+export function getSubtasksFromId(taskArray: Planner[], id: string) {
+  let subtasksArray: Planner[] = [];
+
+  taskArray.forEach((task) => {
+    if (task.parentId === id) {
+      subtasksArray.push(task);
+    }
+  });
+
+  return subtasksArray;
+}

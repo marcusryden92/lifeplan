@@ -13,6 +13,8 @@ import {
   formatMinutesToHours,
 } from "@/utils/task-array-utils";
 
+import AddSubtask from "./add-subtask";
+
 interface TaskItemProps {
   taskArray: Planner[];
   task: Planner;
@@ -25,16 +27,23 @@ const TaskItem = ({ taskArray, task, subtasks, onDelete }: TaskItemProps) => {
     totalSubtaskDuration(task.id, taskArray)
   );
 
+  const [itemFocused, setItemFocused] = useState<boolean>(false);
+
   useEffect(() => {
     setTotalTaskDuration(totalSubtaskDuration(task.id, taskArray));
   }, [taskArray]);
 
   return (
-    <div>
+    <div className={`${itemFocused && "bg-blue-400"}`}>
       {task.parentId && (
-        <div className="flex justify-between items-center w-full text-sm py-2">
+        <div
+          className={`flex justify-between  items-center w-full text-sm py-2`}
+        >
           <div
-            className={`truncate max-w-[180px] ${
+            onClick={() => {
+              setItemFocused((prev) => !prev);
+            }}
+            className={`truncate flex-grow ${
               subtasks.length !== 0 && "opacity-50"
             }`}
           >
@@ -57,8 +66,8 @@ const TaskItem = ({ taskArray, task, subtasks, onDelete }: TaskItemProps) => {
             </Button>
           </div>
         </div>
-      )}
-
+      )}{" "}
+      {itemFocused && <AddSubtask task={task} parentId={task.id} />}
       {subtasks.length > 0 && (
         <div className={task.parentId ? "pl-5 border-white border-l" : ""}>
           {subtasks.map((subtask) => (
