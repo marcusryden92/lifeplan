@@ -1,13 +1,15 @@
-# CREATION PAGES
+# CLARIFY GOALS PAGE
 
-- Add mark all and unmark all options for task/plans/goals.
-- Display breadcrumbs to all pages for easy nagivation.
+- Add subtasks.
 
 # CALENDAR GENERATION FUNCTIONALITY
 
 - Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).
-- Completion of events so that they don't keep rendering when they are done.
+
+- Add function to generate goals to calendar
 - Add dependency to goal subtasks so that they render in order.
+
+- Completion of events so that they don't keep rendering when they are done.
 - Add category function, so that a segment of time can be demarcated and relevant events only render within the confines of that time slot.
 
 - Create a recursive function that deletes all the subtasks when a goal is deleted.
@@ -16,6 +18,11 @@
 
 - Add minimum buffer option between events.
 - Add individual buffer option to events.
+
+# CREATION PAGES
+
+- Add mark all and unmark all options for task/plans/goals.
+- Display breadcrumbs to all pages for easy nagivation.
 
 # SERVER SETUP
 
