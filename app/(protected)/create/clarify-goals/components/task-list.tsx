@@ -36,7 +36,7 @@ const TaskItem = ({ taskArray, task, subtasks, onDelete }: TaskItemProps) => {
   return (
     <div
       className={`${
-        itemFocused && "ring-2 ring-blue-400"
+        itemFocused && "ring-2 ring-blue-400 bg-sky-50"
       } rounded-xl px-2 pb-1`}
     >
       {task.parentId && (

@@ -89,7 +89,7 @@ const AddSubtask = ({
   return (
     <div
       className={` mx-1 ${
-        isMainParent && "pt-3 border-t border-neutral-500 border-opacity-30 "
+        isMainParent && "pt-4 border-t border-neutral-400 border-opacity-30 "
       }`}
     >
       <div className="flex gap-2 items-center justify-end flex-shrink">
