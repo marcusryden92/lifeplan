@@ -213,6 +213,8 @@ export default function TasksPage() {
     }
   }, [carouselIndex]);
 
+  const [focusedTask, setFocusedTask] = useState<string | null>(null);
+
   return (
     <div className="flex flex-col lg:overflow-hidden w-full h-full   bg-opacity-95 px-10">
       {/* <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
@@ -244,8 +246,10 @@ export default function TasksPage() {
                 <CarouselItem key={index}>
                   <div
                     key={index}
-                    className={`flex flex-col border-x border-gray-200   w-full h-full group hover:shadow-md px-8 py-4  transition-colors duration-300 ${
-                      checkGoalCompletion(index) ? "bg-emerald-500" : ""
+                    className={`flex flex-col border-x border-gray-200 rounded-[2rem]   w-full h-full group hover:shadow-md px-8 py-4  transition-colors duration-300 ${
+                      checkGoalCompletion(index)
+                        ? "border-y-2 border-x-2 border-emerald-500 border-opacity-70"
+                        : ""
                     }  text-black`}
                   >
                     <>
@@ -276,7 +280,7 @@ export default function TasksPage() {
                             className="flex-grow flex justify-between items-center max-w-[250px]"
                             onClick={() => handleSetToGoal(index)}
                           >
-                            <div className=" max-w-[180px]">
+                            <div className="truncate">
                               {task.title.toUpperCase()}
                             </div>
                           </div>
@@ -307,21 +311,10 @@ export default function TasksPage() {
                         </div>
                       )}
 
-                      <div className="flex flex-row  justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
-                        <div className="flex w-full justify-between items-center">
-                          <span className="min-w-24 text-sm">
-                            {"Total duration:  " +
-                              formatMinutesToHours(
-                                totalSubtaskDuration(task.id, taskArray)
-                              )}
-                          </span>
-                        </div>
-                      </div>
-
                       {/* // DATE PICKER */}
 
-                      <div className="flex flex-row  justify-between items-center space-x-2 border-b border-gray-600 border-opacity-15 pb-1">
-                        <div className="flex w-full justify-between items-center">
+                      <div className="flex flex-row  justify-between items-center border-b border-gray-600 border-opacity-15 py-1">
+                        <div className="flex items-center">
                           <span className="min-w-24 text-sm">
                             {"Target date:  "}
                           </span>
@@ -347,12 +340,26 @@ export default function TasksPage() {
                             />
                           </div>
                         </div>
+                        <div className="flex flex-row  justify-between items-center space-x-2 border-opacity-15 py-2 ">
+                          <div className="flex w-full justify-between items-center">
+                            <span className="min-w-24 text-sm">
+                              {"Total duration:  " +
+                                formatMinutesToHours(
+                                  totalSubtaskDuration(task.id, taskArray)
+                                )}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
                       {/* // SUBTASKS LIST */}
 
                       <div className="flex py-2 overflow-y-scroll w-full no-scrollbar flex-grow">
-                        <TaskList id={task.id} />
+                        <TaskList
+                          id={task.id}
+                          focusedTask={focusedTask}
+                          setFocusedTask={setFocusedTask}
+                        />
                       </div>
 
                       <AddSubtask task={task} parentId={task.id} isMainParent />
