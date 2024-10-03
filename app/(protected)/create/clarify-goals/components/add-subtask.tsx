@@ -10,9 +10,11 @@ import { getSubtasksFromId } from "@/utils/task-array-utils";
 const AddSubtask = ({
   task,
   parentId,
+  isMainParent,
 }: {
   task: Planner;
   parentId: string;
+  isMainParent?: boolean;
 }) => {
   const [taskDuration, setTaskDuration] = useState<number | undefined>(
     undefined
@@ -85,39 +87,42 @@ const AddSubtask = ({
   };
 
   return (
-    <div className="w-full my-2 mx-1 ">
-      <div className="flex gap-2 items-center">
+    <div
+      className={` mx-1 ${
+        isMainParent && "pt-3 border-t border-neutral-500 border-opacity-30 "
+      }`}
+    >
+      <div className="flex gap-2 items-center justify-end flex-shrink">
         <Input
           value={taskTitle}
           onChange={(e) => setTaskTitle(e.target.value)}
-          className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
+          className={`bg-gray-20 bg-opacity-25 ${
+            !isMainParent && "max-w-[10rem]"
+          } border-gray-400 m-0 text-sm h-6 ${
             task.canInfluence ? "text-black" : ""
           }`}
           ref={getRef(parentId)} // Attach ref dynamically using parentId
+          placeholder="New subtask name"
         />
         <Input
           value={taskDuration || ""} // Ensure it's always a string
           onChange={(e) => setTaskDuration(Number(e.target.value))}
           placeholder={"min"}
-          className="w-14 h-7 text-sm text-black"
+          className="w-14 h-6 text-sm py-0 text-black border-gray-400"
           type="number"
           pattern="[0-9]*"
           ref={durationRef} // Attach ref to the duration input
           onKeyDown={(e) => handleKeyDown(e, parentId)} // Attach key down event with parentId
         />
-        <Button
-          size="xs"
-          variant="invisible"
+        <button
           onClick={() => {
             handleAddSubtask(parentId);
           }}
         >
           <HiOutlinePlus
-            className={`w-6 h-6 p-0 bg-none ${
-              checkGoalCompletion(parentId) ? "text-red-600" : "text-sky-500"
-            } hover:opacity-50`}
+            className={`w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50`}
           />
-        </Button>
+        </button>
       </div>
     </div>
   );

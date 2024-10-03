@@ -34,20 +34,30 @@ const TaskItem = ({ taskArray, task, subtasks, onDelete }: TaskItemProps) => {
   }, [taskArray]);
 
   return (
-    <div className={`${itemFocused && "bg-blue-400"}`}>
+    <div
+      className={`${
+        itemFocused && "ring-2 ring-blue-400"
+      } rounded-xl px-2 pb-1`}
+    >
       {task.parentId && (
         <div
           className={`flex justify-between  items-center w-full text-sm py-2`}
         >
           <div
-            onClick={() => {
-              setItemFocused((prev) => !prev);
-            }}
-            className={`truncate flex-grow ${
+            className={`flex items-center justify-between flex-grow ${
               subtasks.length !== 0 && "opacity-50"
             }`}
           >
-            {task.title}
+            <span
+              onClick={() => {
+                setItemFocused((prev) => !prev);
+              }}
+              className="truncate"
+            >
+              {" "}
+              {task.title}{" "}
+            </span>
+            {itemFocused && <AddSubtask task={task} parentId={task.id} />}
           </div>
 
           <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
@@ -67,9 +77,12 @@ const TaskItem = ({ taskArray, task, subtasks, onDelete }: TaskItemProps) => {
           </div>
         </div>
       )}{" "}
-      {itemFocused && <AddSubtask task={task} parentId={task.id} />}
       {subtasks.length > 0 && (
-        <div className={task.parentId ? "pl-5 border-white border-l" : ""}>
+        <div
+          className={
+            task.parentId ? "pl-5 space-y-2 border-white border-l" : ""
+          }
+        >
           {subtasks.map((subtask) => (
             <TaskList key={subtask.id} id={subtask.id} />
           ))}

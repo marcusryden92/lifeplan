@@ -215,10 +215,10 @@ export default function TasksPage() {
 
   return (
     <div className="flex flex-col lg:overflow-hidden w-full h-full   bg-opacity-95 px-10">
-      <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
+      {/* <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
         <p className="text-xl font-semibold">CLARIFY GOALS</p>
         <p className="text-sm text-center">Clarify your goals.</p>
-      </CardHeader>
+      </CardHeader> */}
       <CardContent className="px-0 py-6 border-b flex items-center justify-between">
         <AddItemForm />
         <button
@@ -233,7 +233,7 @@ export default function TasksPage() {
 
       <div className="overflow-x-auto py-5 flex-grow flex items-start justify-center flex-wrap content-start no-scrollbar ">
         <Carousel
-          className="w-1/2 h-full"
+          className="w-[70%] h-full"
           onIndexChange={(currentIndex: number | undefined) => {
             setCarouselIndex(currentIndex);
           }}
@@ -351,11 +351,11 @@ export default function TasksPage() {
 
                       {/* // SUBTASKS LIST */}
 
-                      <div className="flex overflow-y-scroll w-full no-scrollbar flex-grow">
+                      <div className="flex py-2 overflow-y-scroll w-full no-scrollbar flex-grow">
                         <TaskList id={task.id} />
                       </div>
 
-                      <AddSubtask task={task} parentId={task.id} />
+                      <AddSubtask task={task} parentId={task.id} isMainParent />
                     </>
                   </div>
                 </CarouselItem>
