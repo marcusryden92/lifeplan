@@ -1,6 +1,5 @@
 import { HiOutlinePlus } from "react-icons/hi";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 
 import { useState, useRef, createRef } from "react";
 import { Planner } from "@/lib/planner-class";

@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useDataContext } from "@/context/DataContext";
 import { Planner } from "@/lib/planner-class";
 import { Button } from "@/components/ui/button";
-import { XMarkIcon } from "@heroicons/react/16/solid";
 import {
   getTaskById,
   getSubtasksFromId,
@@ -59,6 +58,29 @@ const TaskItem = ({
     task.duration
   );
 
+  const headerRef = useRef<HTMLDivElement | null>(null);
+
+  // Handle outside click to unfocus the item
+  useEffect(() => {
+    if (itemFocused) {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (
+          headerRef.current &&
+          !headerRef.current.contains(event.target as Node)
+        ) {
+          setItemFocused(false); // Set itemFocused to false when clicking outside
+        }
+      };
+
+      document.addEventListener("mousedown", handleClickOutside);
+
+      // Cleanup function to remove listener when `itemFocused` is false
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [itemFocused, setFocusedTask]);
+
   useEffect(() => {
     if (!itemFocused) {
       setDisplayEdit(false);
@@ -94,9 +116,15 @@ const TaskItem = ({
   }, [taskArray]);
 
   return (
-    <div className={` ${subtasks.length !== 0 && "pb-1"} pl-2`}>
+    <div
+      className={` ${subtasks.length !== 0 && "pb-1"} ${
+        task.parentId && "pl-2"
+      }`}
+    >
       {task.parentId && (
+        // Header div
         <div
+          ref={headerRef}
           className={`flex justify-between  items-center w-full text-sm py-2 group`}
         >
           <div
@@ -221,8 +249,8 @@ const TaskItem = ({
               ))}
           </div>
 
-          <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
-            <div>
+          <div className="flex text-sm text-black pl-2  flex-shrink-0 items-start justify-end space-x-2">
+            <div className={`${itemFocused && "text-sky-500"}`}>
               {formatMinutesToHours(
                 subtasks.length === 0 ? task.duration || 0 : totalTaskDuration
               )}

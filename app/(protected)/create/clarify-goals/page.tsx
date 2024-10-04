@@ -239,6 +239,7 @@ export default function TasksPage() {
           onIndexChange={(currentIndex: number | undefined) => {
             setCarouselIndex(currentIndex);
           }}
+          opts={{ watchDrag: false }}
         >
           <CarouselContent className="h-full">
             {taskArray.map((task, index) =>
@@ -246,7 +247,7 @@ export default function TasksPage() {
                 <CarouselItem key={index}>
                   <div
                     key={index}
-                    className={`flex flex-col border-x border-gray-200 rounded-[2rem]   w-full h-full group hover:shadow-md px-8 py-4  transition-colors duration-300 ${
+                    className={`flex flex-col border-x border-gray-200   w-full h-full group hover:shadow-md px-12 py-4  transition-colors duration-300 ${
                       checkGoalCompletion(index)
                         ? "border-y-2 border-x-2 border-emerald-500 border-opacity-70"
                         : ""
