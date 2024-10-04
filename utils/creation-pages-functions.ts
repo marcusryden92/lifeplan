@@ -141,6 +141,28 @@ export const confirmEdit = ({
   }
 };
 
+interface editByIdProps {
+  editTitle: string;
+  editId: string;
+  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+}
+
+export const editById = ({
+  editTitle,
+  editId,
+  setTaskArray,
+}: editByIdProps) => {
+  setTaskArray((prevTasks) =>
+    prevTasks.map((task) => {
+      if (task.id === editId) {
+        // Modify the title of the existing Planner instance
+        return { ...task, title: editTitle };
+      }
+      return task;
+    })
+  );
+};
+
 // Get goal subtasks from goalId:
 
 export function getSubtasksFromId(taskArray: Planner[], id: string) {
