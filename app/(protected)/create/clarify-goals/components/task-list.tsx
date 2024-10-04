@@ -19,6 +19,8 @@ import {
   CheckIcon,
 } from "@heroicons/react/24/outline";
 
+import { HiOutlinePlus } from "react-icons/hi";
+
 import { Input } from "@/components/ui/input";
 
 import AddSubtask from "./add-subtask";
@@ -50,8 +52,18 @@ const TaskItem = ({
 
   const [itemFocused, setItemFocused] = useState<boolean>(false);
   const [displayEdit, setDisplayEdit] = useState<boolean>(false);
+  const [displayAddSubtask, setDisplayAddSubtask] = useState<boolean>(false);
 
   const [editTitle, setEditTitle] = useState<string>(task.title);
+  const [editDuration, setEditDuration] = useState<number | undefined>(
+    task.duration
+  );
+
+  useEffect(() => {
+    if (!itemFocused) {
+      setDisplayEdit(false);
+    }
+  });
 
   const handleSetFocusedTask = () => {
     if (focusedTask === task.id) {
@@ -62,6 +74,7 @@ const TaskItem = ({
   const handleConfirmEdit = () => {
     editById({
       editTitle,
+      editDuration,
       editId: task.id,
       setTaskArray,
     });
@@ -104,7 +117,10 @@ const TaskItem = ({
                   disabled={!itemFocused}
                   size="xs"
                   variant="invisible"
-                  onClick={() => setDisplayEdit(true)}
+                  onClick={() => {
+                    setDisplayEdit(true);
+                    setDisplayAddSubtask(false);
+                  }}
                   className="px-0"
                 >
                   <PencilIcon
@@ -129,7 +145,7 @@ const TaskItem = ({
               </div>
             ) : (
               <>
-                <div className="flex">
+                <div className="flex items-center space-x-2">
                   <Input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
@@ -137,6 +153,17 @@ const TaskItem = ({
                       task.canInfluence ? "text-black" : ""
                     }`}
                   />
+                  {subtasks.length === 0 && (
+                    <Input
+                      defaultValue={task.duration}
+                      onChange={(e) => setEditDuration(Number(e.target.value))}
+                      placeholder={task.duration?.toString() || "min"}
+                      className="w-14 h-7 text-sm"
+                      type="number"
+                      pattern="[0-9]*"
+                    />
+                  )}
+
                   <Button
                     size="xs"
                     variant="invisible"
@@ -164,7 +191,34 @@ const TaskItem = ({
               </>
             )}
 
-            {itemFocused && <AddSubtask task={task} parentId={task.id} />}
+            {itemFocused &&
+              !displayEdit &&
+              (displayAddSubtask ? (
+                <div className="flex items-center">
+                  <AddSubtask task={task} parentId={task.id} />
+                  <button
+                    onClick={() => {
+                      setDisplayAddSubtask(false);
+                    }}
+                  >
+                    <ArrowUturnLeftIcon
+                      className={`w-5 h-5 text-gray-300  ${
+                        itemFocused ? "text-opacity-100" : "text-opacity-0"
+                      } hover:text-gray-500`}
+                    />{" "}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  className="flex items-center text-gray-300 hover:text-gray-500"
+                  onClick={() => {
+                    setDisplayAddSubtask(true);
+                  }}
+                >
+                  Add subtask
+                  <HiOutlinePlus className={`w-6 h-6 mr-5 ml-2 bg-none `} />
+                </button>
+              ))}
           </div>
 
           <div className="text-sm text-black pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">

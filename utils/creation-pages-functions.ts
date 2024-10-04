@@ -143,20 +143,25 @@ export const confirmEdit = ({
 
 interface editByIdProps {
   editTitle: string;
+  editDuration?: number;
   editId: string;
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
 }
 
 export const editById = ({
   editTitle,
+  editDuration,
   editId,
   setTaskArray,
 }: editByIdProps) => {
   setTaskArray((prevTasks) =>
     prevTasks.map((task) => {
       if (task.id === editId) {
-        // Modify the title of the existing Planner instance
-        return { ...task, title: editTitle };
+        return {
+          ...task,
+          title: editTitle,
+          ...(editDuration !== undefined && { duration: editDuration }),
+        };
       }
       return task;
     })
