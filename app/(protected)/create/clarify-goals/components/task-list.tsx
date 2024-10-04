@@ -132,130 +132,137 @@ const TaskItem = ({
               subtasks.length !== 0 && !itemFocused && "opacity-50"
             }`}
           >
-            {!displayEdit ? (
-              <div className="flex space-x-2">
-                <span
-                  onClick={handleSetFocusedTask}
-                  className={`truncate ${itemFocused && " text-sky-400 "}`}
-                >
-                  {" "}
-                  {task.title}{" "}
-                </span>
-                <Button
-                  disabled={!itemFocused}
-                  size="xs"
-                  variant="invisible"
-                  onClick={() => {
-                    setDisplayEdit(true);
-                    setDisplayAddSubtask(false);
-                  }}
-                  className="px-0"
-                >
-                  <PencilIcon
-                    className={`w-5 h-5 text-gray-300  ${
-                      itemFocused ? "text-opacity-100" : "text-opacity-0"
-                    } hover:text-gray-500`}
-                  />
-                </Button>
-                <Button
-                  disabled={!itemFocused}
-                  size="xs"
-                  variant="invisible"
-                  onClick={() => onDelete(task.id)}
-                  className="px-0"
-                >
-                  <TrashIcon
-                    className={`w-5 h-5 text-gray-300  ${
-                      itemFocused ? "text-opacity-100" : "text-opacity-0"
-                    } hover:text-gray-500`}
-                  />
-                </Button>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center space-x-2">
-                  <Input
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-                      task.canInfluence ? "text-black" : ""
-                    }`}
-                  />
-                  {subtasks.length === 0 && (
-                    <Input
-                      defaultValue={task.duration}
-                      onChange={(e) => setEditDuration(Number(e.target.value))}
-                      placeholder={task.duration?.toString() || "min"}
-                      className="w-14 h-7 text-sm"
-                      type="number"
-                      pattern="[0-9]*"
-                    />
-                  )}
-
-                  <Button
-                    size="xs"
-                    variant="invisible"
-                    onClick={handleConfirmEdit}
+            <div className="flex items-center space-x-5">
+              {!displayEdit ? (
+                <div className="flex space-x-2">
+                  <span
+                    onClick={handleSetFocusedTask}
+                    className={`truncate ${itemFocused && " text-sky-400 "}`}
                   >
-                    <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
-                  </Button>
+                    {" "}
+                    {task.title}{" "}
+                  </span>
                   <Button
                     disabled={!itemFocused}
                     size="xs"
                     variant="invisible"
                     onClick={() => {
-                      setDisplayEdit(false);
-                      setEditTitle(task.title);
+                      setDisplayEdit(true);
+                      setDisplayAddSubtask(false);
                     }}
                     className="px-0"
                   >
-                    <ArrowUturnLeftIcon
+                    <PencilIcon
+                      className={`w-5 h-5 text-gray-300  ${
+                        itemFocused ? "text-opacity-100" : "text-opacity-0"
+                      } hover:text-gray-500`}
+                    />
+                  </Button>
+                  <Button
+                    disabled={!itemFocused}
+                    size="xs"
+                    variant="invisible"
+                    onClick={() => onDelete(task.id)}
+                    className="px-0"
+                  >
+                    <TrashIcon
                       className={`w-5 h-5 text-gray-300  ${
                         itemFocused ? "text-opacity-100" : "text-opacity-0"
                       } hover:text-gray-500`}
                     />
                   </Button>
                 </div>
-              </>
-            )}
+              ) : (
+                <>
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
+                        task.canInfluence ? "text-black" : ""
+                      }`}
+                    />
+                    {subtasks.length === 0 && (
+                      <Input
+                        defaultValue={task.duration}
+                        onChange={(e) =>
+                          setEditDuration(Number(e.target.value))
+                        }
+                        placeholder={task.duration?.toString() || "min"}
+                        className="w-14 h-7 text-sm"
+                        type="number"
+                        pattern="[0-9]*"
+                      />
+                    )}
 
-            {itemFocused &&
-              !displayEdit &&
-              (displayAddSubtask ? (
-                <div className="flex items-center">
-                  <AddSubtask task={task} parentId={task.id} />
+                    <Button
+                      size="xs"
+                      variant="invisible"
+                      onClick={handleConfirmEdit}
+                    >
+                      <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
+                    </Button>
+                    <Button
+                      disabled={!itemFocused}
+                      size="xs"
+                      variant="invisible"
+                      onClick={() => {
+                        setDisplayEdit(false);
+                        setEditTitle(task.title);
+                      }}
+                      className="px-0"
+                    >
+                      <ArrowUturnLeftIcon
+                        className={`w-5 h-5 text-gray-300  ${
+                          itemFocused ? "text-opacity-100" : "text-opacity-0"
+                        } hover:text-gray-500`}
+                      />
+                    </Button>
+                  </div>
+                </>
+              )}
+
+              {itemFocused &&
+                !displayEdit &&
+                (displayAddSubtask ? (
+                  <div className="flex items-center">
+                    <AddSubtask task={task} parentId={task.id} />
+                    <button
+                      onClick={() => {
+                        setDisplayAddSubtask(false);
+                      }}
+                    >
+                      <ArrowUturnLeftIcon
+                        className={`w-5 h-5 text-gray-300  ${
+                          itemFocused ? "text-opacity-100" : "text-opacity-0"
+                        } hover:text-gray-500`}
+                      />{" "}
+                    </button>
+                  </div>
+                ) : (
                   <button
+                    className="flex items-center text-gray-300 hover:text-gray-500"
                     onClick={() => {
-                      setDisplayAddSubtask(false);
+                      setDisplayAddSubtask(true);
                     }}
                   >
-                    <ArrowUturnLeftIcon
-                      className={`w-5 h-5 text-gray-300  ${
-                        itemFocused ? "text-opacity-100" : "text-opacity-0"
-                      } hover:text-gray-500`}
-                    />{" "}
+                    Add subtask
+                    <HiOutlinePlus className={`w-6 h-6 mr-5 ml-2 bg-none `} />
                   </button>
-                </div>
-              ) : (
-                <button
-                  className="flex items-center text-gray-300 hover:text-gray-500"
-                  onClick={() => {
-                    setDisplayAddSubtask(true);
-                  }}
-                >
-                  Add subtask
-                  <HiOutlinePlus className={`w-6 h-6 mr-5 ml-2 bg-none `} />
-                </button>
-              ))}
-          </div>
-
-          <div className="flex text-sm text-black pl-2  flex-shrink-0 items-start justify-end space-x-2">
-            <div className={`${itemFocused && "text-sky-500"}`}>
-              {formatMinutesToHours(
-                subtasks.length === 0 ? task.duration || 0 : totalTaskDuration
-              )}
-              {}
+                ))}
             </div>
+            {!displayEdit && (
+              <div className="flex text-sm text-black pl-2  flex-shrink-0 items-start justify-end space-x-2">
+                <div className={`${itemFocused && "text-sky-500"}`}>
+                  {formatMinutesToHours(
+                    subtasks.length === 0
+                      ? task.duration || 0
+                      : totalTaskDuration
+                  )}
+                  {}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}{" "}
