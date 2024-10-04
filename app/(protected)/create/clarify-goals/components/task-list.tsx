@@ -12,7 +12,7 @@ import {
   totalSubtaskDuration,
   formatMinutesToHours,
 } from "@/utils/task-array-utils";
-import { TrashIcon } from "@heroicons/react/24/outline";
+import { TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
 
 import AddSubtask from "./add-subtask";
 
@@ -68,13 +68,41 @@ const TaskItem = ({
               subtasks.length !== 0 && !itemFocused && "opacity-50"
             }`}
           >
-            <span
-              onClick={handleSetFocusedTask}
-              className={`truncate ${itemFocused && " text-sky-400 "}`}
-            >
-              {" "}
-              {task.title}{" "}
-            </span>
+            <div className="flex space-x-2">
+              <span
+                onClick={handleSetFocusedTask}
+                className={`truncate ${itemFocused && " text-sky-400 "}`}
+              >
+                {" "}
+                {task.title}{" "}
+              </span>
+              <Button
+                disabled={!itemFocused}
+                size="xs"
+                variant="invisible"
+                onClick={() => onDelete(task.id)}
+                className="px-0"
+              >
+                <PencilIcon
+                  className={`w-5 h-5 text-gray-300  ${
+                    itemFocused ? "text-opacity-100" : "text-opacity-0"
+                  } hover:text-gray-500`}
+                />
+              </Button>
+              <Button
+                disabled={!itemFocused}
+                size="xs"
+                variant="invisible"
+                onClick={() => onDelete(task.id)}
+                className="px-0"
+              >
+                <TrashIcon
+                  className={`w-5 h-5 text-gray-300  ${
+                    itemFocused ? "text-opacity-100" : "text-opacity-0"
+                  } hover:text-gray-500`}
+                />
+              </Button>
+            </div>
             {itemFocused && <AddSubtask task={task} parentId={task.id} />}
           </div>
 
@@ -85,18 +113,6 @@ const TaskItem = ({
               )}
               {}
             </div>
-            <Button
-              disabled={!itemFocused}
-              size="xs"
-              variant="invisible"
-              onClick={() => onDelete(task.id)}
-            >
-              <TrashIcon
-                className={`w-5 h-5 text-gray-300  ${
-                  itemFocused ? "text-opacity-100" : "text-opacity-0"
-                } hover:text-gray-500`}
-              />
-            </Button>
           </div>
         </div>
       )}{" "}

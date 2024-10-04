@@ -300,8 +300,8 @@ export default function TasksPage() {
                                 onClick={() => handleDeleteTask(index)}
                                 className="cursor-pointer text-gray-400 hover:text-red-400"
                               >
-                                <XMarkIcon
-                                  className={`w-7 h-7 ${
+                                <TrashIcon
+                                  className={`w-5 h-5 ${
                                     task.type === "goal" ? "text-black" : ""
                                   }`}
                                 />
