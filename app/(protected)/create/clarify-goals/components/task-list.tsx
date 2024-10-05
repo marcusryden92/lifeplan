@@ -63,13 +63,17 @@ const TaskItem = ({
 
   const headerRef = useRef<HTMLDivElement | null>(null);
 
-  const sortedTasks = sortTasksByDependencies(subtasks);
-  const lastTaskId: string | undefined =
-    sortedTasks.length !== 0
-      ? sortedTasks[sortedTasks.length - 1].id
-      : undefined;
+  let sortedTasks: Planner[] = [];
+  let lastTaskId: string | undefined;
 
-  // Handle outside click to unfocus the item
+  if (subtasks.length !== 0) {
+    sortedTasks = sortTasksByDependencies(subtasks);
+    lastTaskId =
+      sortedTasks.length !== 0
+        ? sortedTasks[sortedTasks.length - 1].id
+        : undefined;
+  }
+
   useEffect(() => {
     if (itemFocused) {
       const handleClickOutside = (event: MouseEvent) => {
@@ -292,7 +296,7 @@ const TaskItem = ({
               : ""
           }
         >
-          {subtasks.map((subtask) => (
+          {sortedTasks.map((subtask) => (
             <TaskList
               key={subtask.id}
               id={subtask.id}

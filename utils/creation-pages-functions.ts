@@ -199,7 +199,7 @@ export function sortTasksByDependencies(tasks: Planner[]) {
 
   // Get independent tasks from the tasks array
   tasks.forEach((task) => {
-    if (task.dependencies?.length === 0) {
+    if (!task.dependencies || task.dependencies?.length === 0) {
       independentTasks.push(task);
     }
   });
@@ -223,9 +223,9 @@ export function sortTasksByDependencies(tasks: Planner[]) {
     sortedArray.push(task);
 
     // Find tasks that depend on this task (children)
-    const dependentTasks = tasks.filter((otherTask) => {
-      otherTask.dependencies?.includes(task.id);
-    });
+    const dependentTasks = tasks.filter((otherTask) =>
+      otherTask.dependencies?.includes(task.id)
+    );
 
     // Recursively push each dependent task
     dependentTasks.forEach((dependentTask) => {
@@ -242,6 +242,8 @@ export function sortTasksByDependencies(tasks: Planner[]) {
   standAloneTasks.forEach((task) => {
     sortedArray.push(task);
   });
+
+  console.log(sortedArray);
 
   return sortedArray;
 }

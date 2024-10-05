@@ -50,7 +50,7 @@ export function totalSubtaskDuration(id: string, taskArray: Planner[]): number {
     totalDuration += subtaskDuration; // Add the duration of each subtask
   }
 
-  console.log(`Total duration for task ID ${id}:`, totalDuration); // Log total duration
+  // console.log(`Total duration for task ID ${id}:`, totalDuration); // Log total duration
   return totalDuration; // Return the accumulated total duration
 }
 
