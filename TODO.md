@@ -1,13 +1,10 @@
-# CLARIFY GOALS PAGE
-
-- Add subtasks.
-- Add 'goal ready'
-
 # CALENDAR GENERATION FUNCTIONALITY
+
+- Add dependency to goal subtasks so that they render in order.
+- Add 'goal ready'
 
 - Add function to generate goals to calendar
 
-- Add dependency to goal subtasks so that they render in order.
 - Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).
 - Create a recursive function that deletes all the subtasks when a goal is deleted.
 
