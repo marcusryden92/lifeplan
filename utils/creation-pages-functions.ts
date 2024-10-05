@@ -243,7 +243,5 @@ export function sortTasksByDependencies(tasks: Planner[]) {
     sortedArray.push(task);
   });
 
-  console.log(sortedArray);
-
   return sortedArray;
 }
