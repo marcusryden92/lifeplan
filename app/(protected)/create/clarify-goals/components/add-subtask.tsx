@@ -10,10 +10,13 @@ const AddSubtask = ({
   task,
   parentId,
   isMainParent,
+  lastTaskId,
 }: {
   task: Planner;
   parentId: string;
   isMainParent?: boolean;
+  subtasksLength?: number;
+  lastTaskId?: string;
 }) => {
   const [taskDuration, setTaskDuration] = useState<number | undefined>(
     undefined
@@ -35,13 +38,17 @@ const AddSubtask = ({
   const durationRef = useRef<HTMLInputElement>(null);
 
   const handleAddSubtask = (parentId: string) => {
+    const dependency: string[] = lastTaskId ? [lastTaskId] : [];
+
     if (taskDuration !== undefined && taskTitle) {
       const newTask = new Planner(
         taskTitle,
         parentId, // Using parentId here
         "goal",
         true,
-        taskDuration
+        taskDuration,
+        undefined,
+        dependency
       );
 
       setTaskArray((prevTasks) => [...prevTasks, newTask]); // Spread prevTasks and add newTask

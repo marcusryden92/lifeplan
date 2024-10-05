@@ -24,7 +24,10 @@ import { Input } from "@/components/ui/input";
 
 import AddSubtask from "./add-subtask";
 
-import { editById } from "@/utils/creation-pages-functions";
+import {
+  editById,
+  sortTasksByDependencies,
+} from "@/utils/creation-pages-functions";
 
 interface TaskItemProps {
   taskArray: Planner[];
@@ -59,6 +62,12 @@ const TaskItem = ({
   );
 
   const headerRef = useRef<HTMLDivElement | null>(null);
+
+  const sortedTasks = sortTasksByDependencies(subtasks);
+  const lastTaskId: string | undefined =
+    sortedTasks.length !== 0
+      ? sortedTasks[sortedTasks.length - 1].id
+      : undefined;
 
   // Handle outside click to unfocus the item
   useEffect(() => {
@@ -226,7 +235,12 @@ const TaskItem = ({
                 !displayEdit &&
                 (displayAddSubtask ? (
                   <div className="flex items-center">
-                    <AddSubtask task={task} parentId={task.id} />
+                    <AddSubtask
+                      task={task}
+                      parentId={task.id}
+                      subtasksLength={subtasks.length}
+                      lastTaskId={lastTaskId}
+                    />
                     <button
                       onClick={() => {
                         setDisplayAddSubtask(false);
