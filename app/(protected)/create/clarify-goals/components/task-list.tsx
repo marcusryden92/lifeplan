@@ -154,7 +154,9 @@ const TaskItem = ({
                 <div className="flex space-x-2">
                   {subtasks.length !== 0 && (
                     <button
-                      className="translate-x-[-40%]"
+                      className={`translate-x-[-40%] ${
+                        itemFocused && "text-sky-500"
+                      }`}
                       onClick={() => {
                         setSubtasksMinimized((prev) => !prev);
                       }}
