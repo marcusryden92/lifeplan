@@ -4,8 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useState, useRef, createRef } from "react";
 import { Planner } from "@/lib/planner-class";
 import { useDataContext } from "@/context/DataContext";
-import { getSubtasksFromId } from "@/utils/task-array-utils";
-
+import { getSubtasksFromId } from "@/utils/goal-page-handlers";
 const AddSubtask = ({
   task,
   parentId,

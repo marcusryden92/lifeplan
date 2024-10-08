@@ -1,16 +1,11 @@
 import { Planner } from "@/lib/planner-class";
+import { getSubtasksFromId } from "./goal-page-handlers";
 
 export function getTaskById(
   taskArray: Planner[],
   id: string
 ): Planner | undefined {
   return taskArray.find((task) => task.id === id); // Find and return the task with the matching id
-}
-
-export function getSubtasksFromId(taskArray: Planner[], id: string): Planner[] {
-  const subtasks = taskArray.filter((task) => task.parentId === id); // Adjust this line based on your structure
-  // console.log(`Subtasks for ID ${id}:`, subtasks);
-  return subtasks;
 }
 
 export const handleDeleteTaskById = (

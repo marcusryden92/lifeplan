@@ -6,11 +6,13 @@ import { Planner } from "@/lib/planner-class";
 import { Button } from "@/components/ui/button";
 import {
   getTaskById,
-  getSubtasksFromId,
   handleDeleteTaskById,
   totalSubtaskDuration,
   formatMinutesToHours,
 } from "@/utils/task-array-utils";
+
+import { getSubtasksFromId } from "@/utils/goal-page-handlers";
+
 import {
   TrashIcon,
   PencilIcon,
@@ -26,10 +28,9 @@ import { Input } from "@/components/ui/input";
 
 import AddSubtask from "./add-subtask";
 
-import {
-  editById,
-  sortTasksByDependencies,
-} from "@/utils/creation-pages-functions";
+import { editById } from "@/utils/creation-pages-functions";
+
+import { sortTasksByDependencies } from "@/utils/goal-page-handlers";
 
 interface TaskItemProps {
   taskArray: Planner[];

@@ -38,9 +38,10 @@ import {
   deleteAll,
   clickEdit,
   confirmEdit,
-  getSubtasksFromId,
 } from "@/utils/creation-pages-functions";
 import { Planner } from "@/lib/planner-class";
+
+import { getSubtasksFromId } from "@/utils/goal-page-handlers";
 
 import {
   totalSubtaskDuration,
