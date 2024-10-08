@@ -72,17 +72,29 @@ export function getTreeBottomLayer(
 // Get the correct dependency when creating a new subtask in a goal
 export function getDependency(
   taskArray: Planner[],
-  parentId: string | undefined
+  parentId: string,
+  lastId?: string
 ): string | undefined {
   // Return undefined if no parent ID is provided
-  if (!parentId) return undefined;
+
+  const parentTask = taskArray.find((task) => task.id === parentId);
+
+  if (parentTask && !parentTask.parentId) return undefined;
 
   // Get the bottom layer of tasks for the given parent ID
   const bottomLayer = getTreeBottomLayer(taskArray, parentId);
 
-  // If the bottom layer is found and contains tasks, return the ID of the last one
-  if (bottomLayer && bottomLayer.length > 0) {
+  // If the bottom layer is found and contains tasks, and the first (only) ID isn't the same as we just came from, return the ID of the last item in the array
+  if (bottomLayer && bottomLayer.length > 0 && bottomLayer[0].id !== lastId) {
     const sortedArray = sortTasksByDependencies(bottomLayer);
+
+    // If there are more than one items in the array and we just came from the last one, return the next to last one
+    if (
+      sortedArray.length > 1 &&
+      sortedArray[sortedArray.length - 1].id === lastId
+    )
+      return sortedArray[sortedArray.length - 2]?.id;
+
     return sortedArray[sortedArray.length - 1]?.id; // Use optional chaining for safety
   }
 
@@ -90,8 +102,8 @@ export function getDependency(
   const task = taskArray.find((task) => task.id === parentId);
 
   // If the parent task exists, recursively get its dependency
-  if (task) {
-    return getDependency(taskArray, task.parentId); // Recursively call with the parent's ID
+  if (task && task.parentId) {
+    return getDependency(taskArray, task.parentId, task.id); // Recursively call with the parent's ID
   }
 
   return undefined; // Return undefined if no valid dependency is found
