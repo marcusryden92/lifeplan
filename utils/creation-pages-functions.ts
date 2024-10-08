@@ -245,3 +245,16 @@ export function sortTasksByDependencies(tasks: Planner[]) {
 
   return sortedArray;
 }
+
+export function getTreeBottomLayer(
+  taskArray: Planner[],
+  id: string
+): Planner[] {
+  const subtasks: Planner[] = taskArray.filter((task) => task.parentId === id);
+
+  if (subtasks.length === 0) return taskArray.filter((task) => task.id === id);
+
+  return subtasks.reduce((bottomLayer: Planner[], task: Planner) => {
+    return [...bottomLayer, ...getTreeBottomLayer(taskArray, task.id)];
+  }, []);
+}

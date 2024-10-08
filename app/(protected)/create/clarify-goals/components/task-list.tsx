@@ -176,7 +176,19 @@ const TaskItem = ({
                   >
                     {task.title}
                   </span>
-                  {/* EDIT AND DELETE BUTTONS */}
+
+                  <span>
+                    <span className="font-bold">ID: </span>
+                    {task.id.substring(0, 4)}
+                  </span>
+                  {task.dependencies && task.dependencies[0] && (
+                    <span>
+                      <span className="font-bold">DEP: </span>
+                      {task.dependencies[0].substring(0, 4)}
+                    </span>
+                  )}
+
+                  {/* EDIT- AND DELETE-BUTTONS */}
 
                   {/* EDIT */}
                   <Button
