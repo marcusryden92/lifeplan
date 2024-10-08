@@ -18,6 +18,8 @@ import {
   CheckIcon,
 } from "@heroicons/react/24/outline";
 
+import { IoIosArrowForward, IoIosArrowDown } from "react-icons/io";
+
 import { HiOutlinePlus } from "react-icons/hi";
 
 import { Input } from "@/components/ui/input";
@@ -55,6 +57,8 @@ const TaskItem = ({
   const [itemFocused, setItemFocused] = useState<boolean>(false);
   const [displayEdit, setDisplayEdit] = useState<boolean>(false);
   const [displayAddSubtask, setDisplayAddSubtask] = useState<boolean>(false);
+
+  const [subtasksMinimized, setSubtasksMinimized] = useState<boolean>(false);
 
   const [editTitle, setEditTitle] = useState<string>(task.title);
   const [editDuration, setEditDuration] = useState<number | undefined>(
@@ -148,6 +152,20 @@ const TaskItem = ({
             <div className="flex items-center space-x-5">
               {!displayEdit ? (
                 <div className="flex space-x-2">
+                  {subtasks.length !== 0 && (
+                    <button
+                      className="translate-x-[-40%]"
+                      onClick={() => {
+                        setSubtasksMinimized((prev) => !prev);
+                      }}
+                    >
+                      {subtasksMinimized ? (
+                        <IoIosArrowForward />
+                      ) : (
+                        <IoIosArrowDown />
+                      )}
+                    </button>
+                  )}
                   <span
                     onClick={handleSetFocusedTask}
                     className={`truncate ${itemFocused && " text-sky-400 "}`}
@@ -286,15 +304,19 @@ const TaskItem = ({
       )}{" "}
       {subtasks.length > 0 && (
         <div
-          className={
+          style={{
+            height: subtasksMinimized ? "0px" : "auto",
+            transition: "height ease 1000ms",
+          }}
+          className={`overflow-hidden ${
             task.parentId
-              ? `pl-5 space-y-2 ${
+              ? `pl-5 ${
                   itemFocused
                     ? "border-l-2 border-sky-400 "
                     : "border-l-2 border-gray-200"
                 }`
               : ""
-          }
+          }`}
         >
           {sortedTasks.map((subtask) => (
             <TaskList
