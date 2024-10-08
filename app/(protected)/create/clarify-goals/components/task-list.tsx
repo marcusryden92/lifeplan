@@ -139,7 +139,7 @@ const TaskItem = ({
       }`}
     >
       {task.parentId && (
-        // Header div
+        // MAIN HEADER DIV
         <div
           ref={headerRef}
           className={`flex justify-between  items-center w-full text-sm py-2 group`}
@@ -153,6 +153,7 @@ const TaskItem = ({
               {!displayEdit ? (
                 <div className="flex space-x-2">
                   {subtasks.length !== 0 && (
+                    // BUTTON TO MINIMIZE OR DISPLAY SUBTASKS LIST
                     <button
                       className={`translate-x-[-40%] ${
                         itemFocused && "text-sky-500"
@@ -168,13 +169,16 @@ const TaskItem = ({
                       )}
                     </button>
                   )}
+                  {/* TASK TITLE */}
                   <span
                     onClick={handleSetFocusedTask}
                     className={`truncate ${itemFocused && " text-sky-400 "}`}
                   >
-                    {" "}
-                    {task.title}{" "}
+                    {task.title}
                   </span>
+                  {/* EDIT AND DELETE BUTTONS */}
+
+                  {/* EDIT */}
                   <Button
                     disabled={!itemFocused}
                     size="xs"
@@ -191,6 +195,8 @@ const TaskItem = ({
                       } hover:text-gray-500`}
                     />
                   </Button>
+
+                  {/* DELETE */}
                   <Button
                     disabled={!itemFocused}
                     size="xs"
@@ -207,7 +213,9 @@ const TaskItem = ({
                 </div>
               ) : (
                 <>
+                  {/* FORM FOR EDITING TASK TITLE AND DURATION */}
                   <div className="flex items-center space-x-2">
+                    {/* TITLE */}
                     <Input
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
@@ -216,6 +224,7 @@ const TaskItem = ({
                       }`}
                     />
                     {subtasks.length === 0 && (
+                      /* DURATION */
                       <Input
                         defaultValue={task.duration}
                         onChange={(e) =>
@@ -227,7 +236,7 @@ const TaskItem = ({
                         pattern="[0-9]*"
                       />
                     )}
-
+                    {/* CONFIRM */}
                     <Button
                       size="xs"
                       variant="invisible"
@@ -235,6 +244,8 @@ const TaskItem = ({
                     >
                       <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
                     </Button>
+
+                    {/* CANCEL */}
                     <Button
                       disabled={!itemFocused}
                       size="xs"
@@ -258,6 +269,8 @@ const TaskItem = ({
               {itemFocused &&
                 !displayEdit &&
                 (displayAddSubtask ? (
+                  /* "ADD SUBTASK" FORM */
+
                   <div className="flex items-center">
                     <AddSubtask
                       task={task}
@@ -274,10 +287,12 @@ const TaskItem = ({
                         className={`w-5 h-5 text-gray-300  ${
                           itemFocused ? "text-opacity-100" : "text-opacity-0"
                         } hover:text-gray-500`}
-                      />{" "}
+                      />
                     </button>
                   </div>
                 ) : (
+                  /* BUTTON TO TOGGLE "ADD SUBTASK" FORM */
+
                   <button
                     className="flex items-center text-gray-300 hover:text-gray-500"
                     onClick={() => {
@@ -289,6 +304,8 @@ const TaskItem = ({
                   </button>
                 ))}
             </div>
+
+            {/* DURATION DISPLAY */}
             {!displayEdit && (
               <div className="flex text-sm text-black pl-2  flex-shrink-0 items-start justify-end space-x-2">
                 <div className={`${itemFocused && "text-sky-500"}`}>
@@ -303,7 +320,9 @@ const TaskItem = ({
             )}
           </div>
         </div>
-      )}{" "}
+      )}
+
+      {/*RENDER SUBTASKS IF THERE ARE ANY */}
       {subtasks.length > 0 && (
         <div
           style={{
