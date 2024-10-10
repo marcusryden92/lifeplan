@@ -77,7 +77,6 @@ const TaskItem = ({
       sortedTasks.length !== 0
         ? sortedTasks[sortedTasks.length - 1].id
         : undefined;
-    console.log(sortedTasks);
   }
 
   useEffect(() => {

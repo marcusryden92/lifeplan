@@ -75,16 +75,43 @@ export function getDependency(
   parentId: string,
   lastId?: string
 ): string | undefined {
-  // Return undefined if no parent ID is provided
+  // Get potential siblings
+  const siblings: Planner[] = taskArray.filter(
+    (task) => task.parentId === parentId
+  );
 
-  const parentTask = taskArray.find((task) => task.id === parentId);
+  // Check if the task is the first task of the first layer (the next one after root later), and if so return undefined
+  const checkIfFirstTask = () => {
+    const parentTask = taskArray.find((task) => task.id === parentId);
 
-  if (parentTask && !parentTask.parentId) return undefined;
+    if (parentTask && !parentTask.parentId && siblings.length === 0)
+      return undefined;
+  };
 
-  // Get the bottom layer of tasks for the given parent ID
+  checkIfFirstTask();
+
+  // Get the ID of the root task/goal
+  const rootParentId = getRootParent(taskArray, parentId);
+
+  if (!rootParentId) {
+    return undefined;
+  }
+
+  // Get the whole bottom layer (actionable items) from this goal
+  const bottomLayer = getTreeBottomLayer(taskArray, rootParentId);
+
+  // Check if task has siblings
+
+  // Order them according to dependencies
+  // Get last sibling in array
+  // Set new task in last sibling dependency array
+  // If last sibling is in dependency array of other task, swap that ID to the new task ID
+
+  /* 
+   // Get the bottom layer of tasks for the given parent ID
   const bottomLayer = getTreeBottomLayer(taskArray, parentId);
 
-  // If the bottom layer is found and contains tasks, and the first (only) ID isn't the same as we just came from, return the ID of the last item in the array
+   // If the bottom layer is found and contains tasks, and the first (only) ID isn't the same as we just came from, return the ID of the last item in the array
   if (bottomLayer && bottomLayer.length > 0 && bottomLayer[0].id !== lastId) {
     const sortedArray = sortTasksByDependencies(bottomLayer);
 
@@ -105,6 +132,61 @@ export function getDependency(
   if (task && task.parentId) {
     return getDependency(taskArray, task.parentId, task.id); // Recursively call with the parent's ID
   }
-
+*/
   return undefined; // Return undefined if no valid dependency is found
+}
+
+function getRootParent(taskArray: Planner[], id: string): string | undefined {
+  // Find the task by its id
+  const task = taskArray.find((task) => task.id === id);
+
+  if (!task) {
+    return undefined;
+  }
+
+  // If task is not found or it has no parentId, return the task itself (root task)
+  if (!task.parentId) {
+    return task.id;
+  }
+
+  // Recursively find the root parent by looking at the parentId
+  return getRootParent(taskArray, task.parentId);
+}
+
+interface AddSubtaskInterface {
+  taskArray: Planner[];
+  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+  parentId: string;
+  taskDuration: number;
+  taskTitle: string;
+  resetTaskState: () => void;
+}
+
+export function addSubtask({
+  taskArray,
+  setTaskArray,
+  parentId,
+  taskDuration,
+  taskTitle,
+  resetTaskState,
+}: AddSubtaskInterface) {
+  const dependencyId = getDependency(taskArray, parentId);
+
+  const dependency: string[] = dependencyId ? [dependencyId] : [];
+
+  if (taskDuration !== undefined && taskTitle) {
+    const newTask = new Planner(
+      taskTitle,
+      parentId, // Using parentId here
+      "goal",
+      true,
+      taskDuration,
+      undefined,
+      dependency
+    );
+
+    setTaskArray((prevTasks) => [...prevTasks, newTask]); // Spread prevTasks and add newTask
+
+    resetTaskState();
+  }
 }

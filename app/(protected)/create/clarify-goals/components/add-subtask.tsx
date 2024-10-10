@@ -4,7 +4,11 @@ import { Input } from "@/components/ui/input";
 import { useState, useRef, createRef } from "react";
 import { Planner } from "@/lib/planner-class";
 import { useDataContext } from "@/context/DataContext";
-import { getSubtasksFromId, getDependency } from "@/utils/goal-page-handlers";
+import {
+  getSubtasksFromId,
+  getDependency,
+  addSubtask,
+} from "@/utils/goal-page-handlers";
 
 const AddSubtask = ({
   task,
@@ -38,28 +42,14 @@ const AddSubtask = ({
   const durationRef = useRef<HTMLInputElement>(null);
 
   const handleAddSubtask = (parentId: string) => {
-    const dependencyId = getDependency(taskArray, parentId);
-
-    console.log(dependencyId);
-    const dependency: string[] = dependencyId ? [dependencyId] : [];
-
-    // const dependency = lastTaskId ? [lastTaskId] : [];
-
-    if (taskDuration !== undefined && taskTitle) {
-      const newTask = new Planner(
-        taskTitle,
-        parentId, // Using parentId here
-        "goal",
-        true,
-        taskDuration,
-        undefined,
-        dependency
-      );
-
-      setTaskArray((prevTasks) => [...prevTasks, newTask]); // Spread prevTasks and add newTask
-
-      resetTaskState();
-    }
+    addSubtask({
+      taskArray,
+      setTaskArray,
+      parentId,
+      taskDuration: taskDuration || 0,
+      taskTitle,
+      resetTaskState,
+    });
   };
 
   const resetTaskState = () => {
