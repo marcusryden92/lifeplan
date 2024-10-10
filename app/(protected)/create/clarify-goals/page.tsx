@@ -123,6 +123,10 @@ export default function TasksPage() {
     return currentGoal;
   };
 
+  useEffect(() => {
+    console.log(taskArray);
+  }, [taskArray]);
+
   const getGoalsList = () => {
     const goalsList: Planner[] = [];
 
@@ -140,17 +144,19 @@ export default function TasksPage() {
 
     const currentGoal = taskArray[index];
 
-    const subtasks = getSubtasksFromId(taskArray, taskArray[index].id);
+    if (taskArray && taskArray.length > 0) {
+      const subtasks = getSubtasksFromId(taskArray, taskArray[index].id);
 
-    // Check if currentTask is undefined or null
-    if (
-      // selectedDate != undefined &&
-      currentGoal &&
-      subtasks &&
-      subtasks.length > 1 &&
-      currentGoal.deadline != undefined
-    ) {
-      return true;
+      // Check if currentTask is undefined or null
+      if (
+        // selectedDate != undefined &&
+        currentGoal &&
+        subtasks &&
+        subtasks.length > 1 &&
+        currentGoal.deadline != undefined
+      ) {
+        return true;
+      }
     }
 
     return false;

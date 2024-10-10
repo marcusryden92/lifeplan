@@ -31,7 +31,7 @@ export const onSubmit = ({
   if (editIndex !== null) {
     setTaskArray((prevTasks) =>
       prevTasks.map((task, index) =>
-        index === editIndex ? new Planner(editTitle) : task
+        index === editIndex ? new Planner(editTitle, undefined) : task
       )
     );
     setEditIndex(null);
@@ -39,6 +39,7 @@ export const onSubmit = ({
   } else {
     const newTask = new Planner(
       values.title,
+      undefined,
       undefined,
       type,
       setDefaultInfluence || false

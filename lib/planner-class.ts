@@ -25,6 +25,7 @@ export class Planner implements PlannerInterface {
 
   constructor(
     title: string,
+    id?: string, // Optional id
     parentId?: string,
     type: "task" | "plan" | "goal" | null = null,
     canInfluence: boolean = false,
@@ -33,7 +34,7 @@ export class Planner implements PlannerInterface {
     dependencies?: string[]
   ) {
     this.title = title;
-    this.id = uuidv4(); // Generate a UUID for the instance
+    this.id = id || uuidv4(); // Generate a UUID if no id is passed
     this.parentId = parentId;
     this.type = type;
     this.canInfluence = canInfluence;

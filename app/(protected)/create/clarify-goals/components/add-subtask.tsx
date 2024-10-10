@@ -4,11 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useState, useRef, createRef } from "react";
 import { Planner } from "@/lib/planner-class";
 import { useDataContext } from "@/context/DataContext";
-import {
-  getSubtasksFromId,
-  getDependency,
-  addSubtask,
-} from "@/utils/goal-page-handlers";
+import { getSubtasksFromId, addSubtask } from "@/utils/goal-page-handlers";
 
 const AddSubtask = ({
   task,
@@ -55,22 +51,6 @@ const AddSubtask = ({
   const resetTaskState = () => {
     setTaskDuration(undefined);
     setTaskTitle("");
-  };
-
-  const checkGoalCompletion = (parentId: string): boolean => {
-    const currentGoal = taskArray.find((t) => t.id === parentId); // Find current goal using parentId
-    const subtasks = getSubtasksFromId(taskArray, parentId); // Get subtasks from the current goal's ID
-
-    if (
-      currentGoal &&
-      subtasks &&
-      subtasks.length > 1 &&
-      currentGoal.deadline !== undefined
-    ) {
-      return true;
-    }
-
-    return false;
   };
 
   const handleKeyDown = (
