@@ -20,6 +20,8 @@ import {
   CheckIcon,
 } from "@heroicons/react/24/outline";
 
+import { RxDotFilled } from "react-icons/rx";
+
 import { IoIosArrowForward, IoIosArrowDown } from "react-icons/io";
 
 import { HiOutlinePlus } from "react-icons/hi";
@@ -153,23 +155,24 @@ const TaskItem = ({
             <div className="flex items-center space-x-5">
               {!displayEdit ? (
                 <div className="flex space-x-2">
-                  {subtasks.length !== 0 && (
-                    // BUTTON TO MINIMIZE OR DISPLAY SUBTASKS LIST
-                    <button
-                      className={`translate-x-[-40%] ${
-                        itemFocused && "text-sky-500"
-                      }`}
-                      onClick={() => {
-                        setSubtasksMinimized((prev) => !prev);
-                      }}
-                    >
-                      {subtasksMinimized ? (
-                        <IoIosArrowForward />
-                      ) : (
-                        <IoIosArrowDown />
-                      )}
-                    </button>
-                  )}
+                  {/* BUTTON TO MINIMIZE OR DISPLAY SUBTASKS LIST */}
+                  <button
+                    disabled={subtasks.length === 0}
+                    className={`translate-x-[-40%] ${
+                      itemFocused && "text-sky-500"
+                    } `}
+                    onClick={() => {
+                      setSubtasksMinimized((prev) => !prev);
+                    }}
+                  >
+                    {subtasks.length === 0 ? (
+                      <RxDotFilled />
+                    ) : subtasksMinimized ? (
+                      <IoIosArrowForward />
+                    ) : (
+                      <IoIosArrowDown />
+                    )}
+                  </button>
                   {/* TASK TITLE */}
                   <span
                     onClick={handleSetFocusedTask}
