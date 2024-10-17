@@ -190,53 +190,23 @@ export function sortTasksByDependencies(
   taskArray: Planner[]
 ): Planner[] {
   // Arrays to hold different categories of tasks
-  const independentTasks: Planner[] = [];
   const rootTasks: Planner[] = [];
   const standAloneTasks: Planner[] = [];
+
   const sortedArray: Planner[] = [];
-  const dependencyNotInArray: Planner[] = [];
 
-  // FUNCTION TO CHECK IF NONE OF A TASK'S DEPENDENCIES ARE PRESENT IN THE TASKS ARRAY
-  function hasNoMatchingDependencies(task: Planner): boolean {
-    // If the task has no dependencies, return false (since there is nothing to check)
-    if (!task.dependencies || task.dependencies.length === 0) {
-      return false;
-    }
-
-    // Create a set of task ids for faster lookup
-    const taskIds = new Set(tasks.map((t) => t.id));
-
-    // Check if none of the task's dependencies are present in the tasks array
-    return task.dependencies.every(
-      (dependencyId) => !taskIds.has(dependencyId)
-    );
-  }
-
-  // Find independent tasks
+  // Find root tasks (no dependencies, but has dependents), stand-alone tasks (no dependencies or dependents)
   tasks.forEach((task) => {
     if (!task.dependencies || task.dependencies.length === 0) {
-      independentTasks.push(task);
-    }
+      const hasDependents = tasks.some((otherTask) =>
+        otherTask.dependencies?.includes(task.id)
+      );
 
-    if (
-      task.dependencies &&
-      task.dependencies.length > 0 &&
-      hasNoMatchingDependencies(task)
-    ) {
-      dependencyNotInArray.push(task);
-    }
-  });
-
-  // Sort independent tasks into root and stand-alone tasks
-  independentTasks.forEach((task) => {
-    const hasDependents = tasks.some((otherTask) =>
-      otherTask.dependencies?.includes(task.id)
-    );
-
-    if (hasDependents) {
-      rootTasks.push(task);
-    } else {
-      standAloneTasks.push(task);
+      if (hasDependents) {
+        rootTasks.push(task);
+      } else {
+        standAloneTasks.push(task);
+      }
     }
   });
 
@@ -264,8 +234,6 @@ export function sortTasksByDependencies(
 
   // Add stand-alone tasks to the sorted array
   sortedArray.push(...standAloneTasks);
-
-  // sortedArray.push(...dependencyNotInArray);
 
   return sortedArray;
 }
