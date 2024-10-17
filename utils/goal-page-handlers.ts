@@ -66,7 +66,7 @@ export function setNewDependencies(
 
   if (siblings && siblings.length > 0) {
     // Order siblings
-    const sortedSiblings = sortTasksByDependencies(siblings);
+    const sortedSiblings = sortTasksByDependencies(siblings, taskArray);
 
     // Get last item in array
     const lastSiblingItem = sortedSiblings[sortedSiblings.length - 1];
@@ -103,6 +103,10 @@ export function setNewDependencies(
 
   if (!siblings || siblings.length === 0) {
     // Check if the parentId is dependent on anything
+
+    const parentTask = taskArray.find((task) => task.id === parentId);
+    const parentDependencies = parentTask?.dependencies;
+
     setTaskArray((prev) =>
       prev.map((task) => {
         if (
@@ -110,11 +114,11 @@ export function setNewDependencies(
           task.dependencies &&
           task.dependencies?.length > 0
         ) {
-          // Remove dependency from parent and assign it to newId
-          const newDependencies = task.dependencies.filter(
-            (dep) => dep !== parentId
-          );
-          return { ...task, dependencies: newDependencies };
+          return { ...task, dependencies: [] };
+        }
+
+        if (task.id === newId) {
+          return { ...task, dependencies: parentDependencies };
         }
         return task;
       })
@@ -183,7 +187,7 @@ function getRootParent(taskArray: Planner[], id: string): string | undefined {
 // SORT TASKS BY DEPENDENCIES
 export function sortTasksByDependencies(
   tasks: Planner[],
-  taskArray?: Planner[]
+  taskArray: Planner[]
 ): Planner[] {
   // Arrays to hold different categories of tasks
   const independentTasks: Planner[] = [];
@@ -208,7 +212,7 @@ export function sortTasksByDependencies(
     );
   }
 
-  // Categorize tasks into independent, root, and stand-alone tasks
+  // Find independent tasks
   tasks.forEach((task) => {
     if (!task.dependencies || task.dependencies.length === 0) {
       independentTasks.push(task);
@@ -223,6 +227,7 @@ export function sortTasksByDependencies(
     }
   });
 
+  // Sort independent tasks into root and stand-alone tasks
   independentTasks.forEach((task) => {
     const hasDependents = tasks.some((otherTask) =>
       otherTask.dependencies?.includes(task.id)
@@ -241,20 +246,12 @@ export function sortTasksByDependencies(
 
     let dependentTask;
 
-    if (taskArray && taskArray.length > 0) {
-      tasks.forEach((t) => {
-        const bottomLayer = getTreeBottomLayer(taskArray, t.id);
-        if (bottomLayer.some((b) => b.dependencies?.includes(task.id))) {
-          dependentTask = t;
-        }
-      });
-    }
-    // Find and add dependent tasks
-    else {
-      dependentTask = tasks.find((otherTask) =>
-        otherTask.dependencies?.includes(task.id)
-      );
-    }
+    tasks.forEach((t) => {
+      const bottomLayer = getTreeBottomLayer(taskArray, t.id);
+      if (bottomLayer.some((b) => b.dependencies?.includes(task.id))) {
+        dependentTask = t;
+      }
+    });
 
     // Recursively add each dependent
     if (dependentTask) {
@@ -268,7 +265,7 @@ export function sortTasksByDependencies(
   // Add stand-alone tasks to the sorted array
   sortedArray.push(...standAloneTasks);
 
-  sortedArray.push(...dependencyNotInArray);
+  // sortedArray.push(...dependencyNotInArray);
 
   return sortedArray;
 }

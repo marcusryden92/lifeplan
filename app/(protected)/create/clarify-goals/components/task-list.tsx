@@ -74,7 +74,7 @@ const TaskItem = ({
   let lastTaskId: string | undefined;
 
   if (subtasks.length !== 0) {
-    sortedTasks = sortTasksByDependencies(subtasks);
+    sortedTasks = sortTasksByDependencies(subtasks, taskArray);
     lastTaskId =
       sortedTasks.length !== 0
         ? sortedTasks[sortedTasks.length - 1].id
