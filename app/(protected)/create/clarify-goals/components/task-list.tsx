@@ -71,14 +71,9 @@ const TaskItem = ({
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   let sortedTasks: Planner[] = [];
-  let lastTaskId: string | undefined;
 
   if (subtasks.length !== 0) {
     sortedTasks = sortTasksByDependencies(subtasks, taskArray);
-    lastTaskId =
-      sortedTasks.length !== 0
-        ? sortedTasks[sortedTasks.length - 1].id
-        : undefined;
   }
 
   useEffect(() => {
@@ -302,7 +297,6 @@ const TaskItem = ({
                       task={task}
                       parentId={task.id}
                       subtasksLength={subtasks.length}
-                      lastTaskId={lastTaskId}
                     />
                     <button
                       onClick={() => {
