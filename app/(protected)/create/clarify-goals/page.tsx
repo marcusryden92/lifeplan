@@ -139,7 +139,7 @@ export default function TasksPage() {
     return goalsList;
   };
 
-  const checkGoalCompletion = (index: number): boolean => {
+  const checkGoalForCompletion = (index: number): boolean => {
     // const currentGoal = getCurrentGoal(index);
 
     const currentGoal = taskArray[index];
@@ -204,7 +204,7 @@ export default function TasksPage() {
 
   useEffect(() => {
     if (carouselIndex != undefined) {
-      setGoalComplete(checkGoalCompletion(carouselIndex));
+      setGoalComplete(checkGoalForCompletion(carouselIndex));
     }
   }, [carouselIndex, taskArray]);
 
@@ -255,7 +255,7 @@ export default function TasksPage() {
                   <div
                     key={index}
                     className={`flex flex-col border-x border-gray-200   w-full h-full group hover:shadow-md px-12 py-4  transition-colors duration-300 ${
-                      checkGoalCompletion(index)
+                      checkGoalForCompletion(index)
                         ? "border-y-2 border-x-2 border-emerald-500 border-opacity-70"
                         : ""
                     }  text-black`}

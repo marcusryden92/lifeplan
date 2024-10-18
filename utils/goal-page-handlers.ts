@@ -36,16 +36,15 @@ export function addSubtask({
     resetTaskState();
   }
 
-  setNewDependencies(taskArray, setTaskArray, parentId, newId);
+  updateDependenciesOnCreate(taskArray, setTaskArray, parentId, newId);
 }
 
 // Get the correct dependency when creating a new subtask in a goal
-export function setNewDependencies(
+export function updateDependenciesOnCreate(
   taskArray: Planner[],
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   parentId: string,
-  newId: string,
-  lastId?: string
+  newId: string
 ) {
   // Get potential siblings
   const siblings: Planner[] = taskArray.filter(
@@ -134,7 +133,7 @@ export function setNewDependencies(
 }
 
 // CHECK IF GOAL IS READY
-const checkGoalCompletion = (
+const checkGoalForCompletion = (
   taskArray: Planner[],
   parentId: string
 ): boolean => {
