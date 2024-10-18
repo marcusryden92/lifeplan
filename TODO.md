@@ -1,12 +1,14 @@
 # CALENDAR GENERATION FUNCTIONALITY
 
-- Add dependency to goal subtasks so that they render in order.
+- Update dependencies on remove task.
+- Create a recursive function that deletes all the subtasks when a goal is deleted.
+- Move subtasks + update dependencies on move.
+
 - Add 'goal ready'
 
 - Add function to generate goals to calendar
 
 - Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).
-- Create a recursive function that deletes all the subtasks when a goal is deleted.
 
 - Completion of events so that they don't keep rendering when they are done.
 - Add category function, so that a segment of time can be demarcated and relevant events only render within the confines of that time slot.
