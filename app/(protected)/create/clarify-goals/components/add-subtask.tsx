@@ -4,19 +4,17 @@ import { Input } from "@/components/ui/input";
 import { useState, useRef, createRef } from "react";
 import { Planner } from "@/lib/planner-class";
 import { useDataContext } from "@/context/DataContext";
-import { getSubtasksFromId, addSubtask } from "@/utils/goal-page-handlers";
+import { addSubtask } from "@/utils/goal-page-handlers";
 
 const AddSubtask = ({
   task,
   parentId,
   isMainParent,
-  lastTaskId,
 }: {
   task: Planner;
   parentId: string;
   isMainParent?: boolean;
   subtasksLength?: number;
-  lastTaskId?: string;
 }) => {
   const [taskDuration, setTaskDuration] = useState<number | undefined>(
     undefined
