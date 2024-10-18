@@ -242,7 +242,7 @@ export default function TasksPage() {
 
       <div className="overflow-x-auto py-5 flex-grow flex items-start justify-center flex-wrap content-start no-scrollbar ">
         <Carousel
-          className="w-full h-full"
+          className="w-[90%] h-full"
           onIndexChange={(currentIndex: number | undefined) => {
             setCarouselIndex(currentIndex);
           }}
