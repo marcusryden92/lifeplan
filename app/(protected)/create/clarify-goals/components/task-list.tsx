@@ -82,6 +82,16 @@ const TaskItem = ({
   }
 
   useEffect(() => {
+    console.log("SORTED: ");
+    sortedTasks.forEach((task) => {
+      console.log("Title: " + task.title);
+      console.log("ID: " + task.id);
+      console.log("DEP: " + task.dependency);
+      console.log("");
+    });
+  }, [sortedTasks]);
+
+  useEffect(() => {
     if (itemFocused) {
       const handleClickOutside = (event: MouseEvent) => {
         if (
@@ -185,10 +195,10 @@ const TaskItem = ({
                     <span className="font-bold">ID: </span>
                     {task.id.substring(0, 4)}
                   </span>
-                  {task.dependencies && task.dependencies[0] && (
+                  {task.dependency && (
                     <span>
-                      <span className="font-bold">DEP: </span>
-                      {task.dependencies[0].substring(0, 4)}
+                      <span className="font-bold">DE: </span>
+                      {task.dependency.substring(0, 4)}
                     </span>
                   )}
 

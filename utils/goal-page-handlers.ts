@@ -79,12 +79,9 @@ export function setNewDependencies(
     // If a task exists in the bottom layer, which carries the ID of lastSiblingItem as its dependency, swap it for newId
     setTaskArray((prev) =>
       prev.map((task) => {
-        if (task.dependencies?.some((dep) => dep === lastBottomLayerItem.id)) {
-          // Replace lastSiblingItem.id with newId in dependencies
-          const updatedDependencies = task.dependencies.map((dep) =>
-            dep === lastBottomLayerItem.id ? newId : dep
-          );
-          return { ...task, dependencies: updatedDependencies };
+        if (task.dependency === lastBottomLayerItem.id) {
+          // Replace lastSiblingItem.id with newId in dependenciesS
+          return { ...task, dependency: newId };
         }
         return task; // Return the unchanged task if no dependency matches
       })
@@ -94,7 +91,7 @@ export function setNewDependencies(
     setTaskArray((prev) =>
       prev.map((task) => {
         if (task.id === newId) {
-          return { ...task, dependencies: [lastBottomLayerItem.id] }; // Add lastItem.id as a dependency for the new task
+          return { ...task, dependency: lastBottomLayerItem.id }; // Add lastItem.id as a dependency for the new task
         }
         return task;
       })
@@ -105,20 +102,20 @@ export function setNewDependencies(
     // Check if the parentId is dependent on anything
 
     const parentTask = taskArray.find((task) => task.id === parentId);
-    const parentDependencies = parentTask?.dependencies;
+    const parentDependency = parentTask?.dependency;
 
     setTaskArray((prev) =>
       prev.map((task) => {
         if (
           task.id === parentId &&
-          task.dependencies &&
-          task.dependencies?.length > 0
+          task.dependency &&
+          task.dependency?.length > 0
         ) {
-          return { ...task, dependencies: [] };
+          return { ...task, dependency: undefined };
         }
 
         if (task.id === newId) {
-          return { ...task, dependencies: parentDependencies };
+          return { ...task, dependency: parentDependency };
         }
         return task;
       })
@@ -127,12 +124,8 @@ export function setNewDependencies(
     // If any task in the bottomLayer is dependent on the parentId, update it to be dependent on the newId
     setTaskArray((prev) =>
       prev.map((task) => {
-        if (task.dependencies?.some((dep) => dep === parentId)) {
-          // Replace parentId with newId in dependencies
-          const updatedDependencies = task.dependencies.map((dep) =>
-            dep === parentId ? newId : dep
-          );
-          return { ...task, dependencies: updatedDependencies };
+        if (task.dependency === parentId) {
+          return { ...task, dependency: newId };
         }
         return task; // Return the unchanged task if no dependency matches
       })
@@ -195,11 +188,14 @@ export function sortTasksByDependencies(
 
   const sortedArray: Planner[] = [];
 
-  // Find root tasks (no dependencies, but has dependents), stand-alone tasks (no dependencies or dependents)
+  // Find root tasks (no dependencies, but has dependents), and stand-alone tasks (no dependencies or dependents)
   tasks.forEach((task) => {
-    if (!task.dependencies || task.dependencies.length === 0) {
-      const hasDependents = tasks.some((otherTask) =>
-        otherTask.dependencies?.includes(task.id)
+    if (
+      !task.dependency ||
+      !tasks.some((otherTask) => otherTask.id === task.dependency)
+    ) {
+      const hasDependents = tasks.some(
+        (otherTask) => otherTask.dependency === task.id
       );
 
       if (hasDependents) {
@@ -210,22 +206,32 @@ export function sortTasksByDependencies(
     }
   });
 
-  // Function to recursively add a task and its dependents to the sorted array
+  // Function to add a task and its dependents to the sorted array
   const addTaskWithDependents = (task: Planner) => {
-    sortedArray.push(task); // Add the parent task
+    let isLooping = true;
+    let currentTask = task;
+    let currentId = task.id;
 
-    let dependentTask;
+    while (isLooping) {
+      sortedArray.push(currentTask);
 
-    tasks.forEach((t) => {
-      const bottomLayer = getTreeBottomLayer(taskArray, t.id);
-      if (bottomLayer.some((b) => b.dependencies?.includes(task.id))) {
-        dependentTask = t;
-      }
-    });
+      const nextTask = tasks.find((t) => {
+        const bottomLayer = getTreeBottomLayer(taskArray, t.id);
 
-    // Recursively add each dependent
-    if (dependentTask) {
-      addTaskWithDependents(dependentTask);
+        if (bottomLayer && bottomLayer.length > 0) {
+          const item = bottomLayer.find((item) =>
+            item.dependency?.includes(currentId)
+          );
+
+          if (item) {
+            currentId = item.id;
+            return t;
+          }
+        }
+      });
+
+      if (nextTask) currentTask = nextTask;
+      else isLooping = false;
     }
   };
 

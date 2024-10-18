@@ -9,7 +9,7 @@ export interface PlannerInterface {
   duration?: number;
   deadline?: Date;
   starts?: Date;
-  dependencies?: string[];
+  dependency?: string;
 }
 
 export class Planner implements PlannerInterface {
@@ -21,7 +21,7 @@ export class Planner implements PlannerInterface {
   duration?: number;
   deadline?: Date;
   starts?: Date;
-  dependencies?: string[];
+  dependency?: string;
 
   constructor(
     title: string,
@@ -31,7 +31,7 @@ export class Planner implements PlannerInterface {
     canInfluence: boolean = false,
     duration?: number,
     deadline?: Date,
-    dependencies?: string[]
+    dependency?: string
   ) {
     this.title = title;
     this.id = id || uuidv4(); // Generate a UUID if no id is passed
@@ -40,6 +40,6 @@ export class Planner implements PlannerInterface {
     this.canInfluence = canInfluence;
     this.duration = duration;
     this.deadline = deadline;
-    this.dependencies = dependencies;
+    this.dependency = dependency;
   }
 }
