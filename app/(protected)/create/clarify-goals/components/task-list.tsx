@@ -32,7 +32,10 @@ import AddSubtask from "./add-subtask";
 
 import { editById } from "@/utils/creation-pages-functions";
 
-import { sortTasksByDependencies } from "@/utils/goal-page-handlers";
+import {
+  sortTasksByDependencies,
+  deleteGoal,
+} from "@/utils/goal-page-handlers";
 
 interface TaskItemProps {
   taskArray: Planner[];
@@ -73,7 +76,7 @@ const TaskItem = ({
   let sortedTasks: Planner[] = [];
 
   if (subtasks.length !== 0) {
-    sortedTasks = sortTasksByDependencies(subtasks, taskArray);
+    sortedTasks = sortTasksByDependencies(taskArray, subtasks);
   }
 
   useEffect(() => {
@@ -390,7 +393,7 @@ const TaskList = ({
   if (!thisTask) return null; // Avoid rendering if the task doesn't exist.
 
   const handleDelete = (taskId: string) => {
-    handleDeleteTaskById(setTaskArray, taskId);
+    deleteGoal({ taskArray, setTaskArray, taskId });
   };
 
   return (

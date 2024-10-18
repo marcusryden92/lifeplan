@@ -1,4 +1,5 @@
 import { Planner } from "@/lib/planner-class";
+import React from "react";
 import { v4 as uuidv4 } from "uuid";
 
 interface AddSubtaskInterface {
@@ -39,6 +40,62 @@ export function addSubtask({
   updateDependenciesOnCreate(taskArray, setTaskArray, parentId, newId);
 }
 
+interface DeleteGoalInterface {
+  taskArray: Planner[];
+  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+  taskId: string;
+}
+
+export function deleteGoal({
+  taskArray,
+  setTaskArray,
+  taskId,
+}: DeleteGoalInterface) {
+  // Update dependencies if there are any
+  updateDependenciesOnDelete({ taskArray, setTaskArray, taskId });
+
+  // Get goal-tree (all IDs under the goal to be deleted)
+  const treeIds: string[] = getTreeIds(taskArray, taskId);
+
+  // Recursively delete the entire goal-tree
+  setTaskArray((prev) => prev.filter((t) => !treeIds.includes(t.id)));
+}
+
+interface UpdateDependenciesOnDeleteInterface {
+  taskArray: Planner[];
+  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+  taskId: string;
+}
+
+export function updateDependenciesOnDelete({
+  taskArray,
+  setTaskArray,
+  taskId,
+}: UpdateDependenciesOnDeleteInterface) {
+  const bottomLayer: Planner[] = getTreeBottomLayer(taskArray, taskId);
+  const sortedLayer: Planner[] = sortTasksByDependencies(
+    taskArray,
+    bottomLayer
+  );
+
+  const firstItem = sortedLayer[0];
+  const lastItem = sortedLayer[sortedLayer.length - 1];
+
+  const itemBeforeFirst = taskArray.find((t) => t.id === firstItem.dependency);
+  const itemAfterLast = taskArray.find((t) => t.dependency === lastItem.id);
+
+  if (itemAfterLast && itemBeforeFirst) {
+    setTaskArray((prev) =>
+      prev.map((t) => {
+        if (t.id === itemAfterLast.id) {
+          return { ...t, dependency: itemBeforeFirst.id };
+        }
+        return t;
+      })
+    );
+  }
+}
+
 // Get the correct dependency when creating a new subtask in a goal
 export function updateDependenciesOnCreate(
   taskArray: Planner[],
@@ -65,7 +122,7 @@ export function updateDependenciesOnCreate(
 
   if (siblings && siblings.length > 0) {
     // Order siblings
-    const sortedSiblings = sortTasksByDependencies(siblings, taskArray);
+    const sortedSiblings = sortTasksByDependencies(taskArray, siblings);
 
     // Get last item in array
     const lastSiblingItem = sortedSiblings[sortedSiblings.length - 1];
@@ -178,8 +235,8 @@ function getRootParent(taskArray: Planner[], id: string): string | undefined {
 
 // SORT TASKS BY DEPENDENCIES
 export function sortTasksByDependencies(
-  tasks: Planner[],
-  taskArray: Planner[]
+  taskArray: Planner[],
+  tasks: Planner[]
 ): Planner[] {
   // Arrays to hold different categories of tasks
   const rootTasks: Planner[] = [];
@@ -255,4 +312,18 @@ export function getTreeBottomLayer(
   return subtasks.reduce((bottomLayer: Planner[], task: Planner) => {
     return [...bottomLayer, ...getTreeBottomLayer(taskArray, task.id)];
   }, []);
+}
+
+// GET ALL IDs IN THE TREE
+export function getTreeIds(taskArray: Planner[], id: string): string[] {
+  // Get the current task's subtasks
+  const subtasks: Planner[] = taskArray.filter((task) => task.parentId === id);
+
+  // Collect the current task's ID and all its subtasks' IDs
+  return subtasks.reduce(
+    (allIds: string[], task: Planner) => {
+      return [...allIds, ...getTreeIds(taskArray, task.id)];
+    },
+    [id]
+  ); // Include the current task's id in the result
 }
