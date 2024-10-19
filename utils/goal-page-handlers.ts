@@ -239,8 +239,7 @@ export function sortTasksByDependencies(
   tasks: Planner[]
 ): Planner[] {
   // Arrays to hold different categories of tasks
-  const rootTasks: Planner[] = [];
-  const standAloneTasks: Planner[] = [];
+  let rootTask: Planner | undefined = undefined;
 
   const sortedArray: Planner[] = [];
 
@@ -257,14 +256,16 @@ export function sortTasksByDependencies(
           )
         ))
     ) {
-      const hasDependents = tasks.some(
-        (otherTask) => otherTask.dependency === task.id
+      const hasSiblingDependents = tasks.some((t) =>
+        dependencyExistsInBottomLayerOf(taskArray, t.id, task.id)
       );
 
-      if (hasDependents) {
-        rootTasks.push(task);
-      } else {
-        standAloneTasks.push(task);
+      const siblings = task.parentId
+        ? getSubtasksFromId(taskArray, task.parentId)
+        : undefined;
+
+      if (hasSiblingDependents || !siblings || siblings.length === 1) {
+        rootTask = task;
       }
     }
   });
@@ -274,9 +275,14 @@ export function sortTasksByDependencies(
     let isLooping = true;
     let currentTask = task;
     let currentId = task.id;
+    const visited = new Set();
 
     while (isLooping) {
-      sortedArray.push(currentTask);
+      // If the task hasn't been processed yet, add it to the sorted array
+      if (!visited.has(currentTask.id)) {
+        sortedArray.push(currentTask);
+        visited.add(currentTask.id); // Mark task as visited to prevent a parent task to be added multiple times
+      }
 
       const nextTask = tasks.find((t) => {
         const bottomLayer = getTreeBottomLayer(taskArray, t.id);
@@ -286,23 +292,23 @@ export function sortTasksByDependencies(
             item.dependency?.includes(currentId)
           );
 
-          if (item) {
+          if (item && !visited.has(item.id)) {
             currentId = item.id;
             return t;
           }
         }
       });
 
-      if (nextTask) currentTask = nextTask;
-      else isLooping = false;
+      if (nextTask) {
+        currentTask = nextTask;
+      } else {
+        isLooping = false;
+      }
     }
   };
 
   // Add all root tasks and their dependents to the sorted array
-  rootTasks.forEach(addTaskWithDependents);
-
-  // Add stand-alone tasks to the sorted array
-  sortedArray.push(...standAloneTasks);
+  if (rootTask) addTaskWithDependents(rootTask);
 
   return sortedArray;
 }
@@ -337,14 +343,14 @@ export function getTreeIds(taskArray: Planner[], id: string): string[] {
 
 export function dependencyExistsInBottomLayerOf(
   taskArray: Planner[],
-  taskId: string,
+  taskId: string | undefined,
   dependency: string | undefined
 ): boolean {
-  if (!dependency) return false;
+  if (!dependency || !taskId) return false;
 
   const bottomLayer = getTreeBottomLayer(taskArray, taskId);
 
-  if (bottomLayer.some((t) => t.dependency?.includes(dependency))) return true;
+  if (bottomLayer.some((t) => t.id?.includes(dependency))) return true;
 
   return false;
 }
