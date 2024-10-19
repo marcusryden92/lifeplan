@@ -63,6 +63,8 @@ export default function TasksPage() {
 
   const [goalComplete, setGoalComplete] = useState<boolean>(false);
 
+  const devMode = false;
+
   const handleDeleteTask = (index: number) => {
     deleteTask(index, {
       setTaskArray,
@@ -291,10 +293,13 @@ export default function TasksPage() {
                             <div className="truncate">
                               {task.title.toUpperCase()}
                             </div>
-                            <span>
-                              <span className="font-bold">ID: </span>
-                              {task.id.substring(0, 4)}
-                            </span>
+
+                            {devMode && (
+                              <span>
+                                <span className="font-bold">ID: </span>
+                                {task.id.substring(0, 4)}
+                              </span>
+                            )}
                           </div>
                           <div className="flex flex-row space-x-2 items-center ml-auto transition-opacity">
                             <>

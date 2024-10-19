@@ -20,7 +20,7 @@ import {
   CheckIcon,
 } from "@heroicons/react/24/outline";
 
-import { RxDotFilled } from "react-icons/rx";
+import { RxDot } from "react-icons/rx";
 
 import { IoIosArrowForward, IoIosArrowDown } from "react-icons/io";
 
@@ -74,6 +74,8 @@ const TaskItem = ({
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   let sortedTasks: Planner[] = [];
+
+  const devMode = false;
 
   if (subtasks.length !== 0) {
     sortedTasks = sortTasksByDependencies(taskArray, subtasks);
@@ -174,7 +176,7 @@ const TaskItem = ({
                     }}
                   >
                     {subtasks.length === 0 ? (
-                      <RxDotFilled />
+                      <RxDot />
                     ) : subtasksMinimized ? (
                       <IoIosArrowForward />
                     ) : (
@@ -189,15 +191,19 @@ const TaskItem = ({
                     {task.title}
                   </span>
 
-                  <span>
-                    <span className="font-bold">ID: </span>
-                    {task.id.substring(0, 4)}
-                  </span>
-                  {task.dependency && (
-                    <span>
-                      <span className="font-bold">DE: </span>
-                      {task.dependency.substring(0, 4)}
-                    </span>
+                  {devMode && (
+                    <>
+                      <span>
+                        <span className="font-bold">ID: </span>
+                        {task.id.substring(0, 4)}
+                      </span>
+                      {task.dependency && (
+                        <span>
+                          <span className="font-bold">DE: </span>
+                          {task.dependency.substring(0, 4)}
+                        </span>
+                      )}
+                    </>
                   )}
 
                   {/* EDIT- AND DELETE-BUTTONS */}
