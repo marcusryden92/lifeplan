@@ -42,7 +42,7 @@ interface TaskItemProps {
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
   task: Planner;
   subtasks: Planner[];
-  onDelete: (id: string) => void;
+  onDelete: (id: string, parentId: string | undefined) => void;
   focusedTask: string | null;
   setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
 }
@@ -225,7 +225,7 @@ const TaskItem = ({
                     disabled={!itemFocused}
                     size="xs"
                     variant="invisible"
-                    onClick={() => onDelete(task.id)}
+                    onClick={() => onDelete(task.id, task.parentId)}
                     className="px-0"
                   >
                     <TrashIcon
@@ -392,8 +392,8 @@ const TaskList = ({
 
   if (!thisTask) return null; // Avoid rendering if the task doesn't exist.
 
-  const handleDelete = (taskId: string) => {
-    deleteGoal({ taskArray, setTaskArray, taskId });
+  const handleDelete = (taskId: string, parentId: string | undefined) => {
+    deleteGoal({ taskArray, setTaskArray, taskId, parentId });
   };
 
   return (

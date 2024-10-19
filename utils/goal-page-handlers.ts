@@ -44,15 +44,17 @@ interface DeleteGoalInterface {
   taskArray: Planner[];
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
   taskId: string;
+  parentId: string | undefined;
 }
 
 export function deleteGoal({
   taskArray,
   setTaskArray,
   taskId,
+  parentId,
 }: DeleteGoalInterface) {
   // Update dependencies if there are any
-  updateDependenciesOnDelete({ taskArray, setTaskArray, taskId });
+  updateDependenciesOnDelete({ taskArray, setTaskArray, taskId, parentId });
 
   // Get goal-tree (all IDs under the goal to be deleted)
   const treeIds: string[] = getTreeIds(taskArray, taskId);
@@ -65,12 +67,14 @@ interface UpdateDependenciesOnDeleteInterface {
   taskArray: Planner[];
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
   taskId: string;
+  parentId: string | undefined;
 }
 
 export function updateDependenciesOnDelete({
   taskArray,
   setTaskArray,
   taskId,
+  parentId,
 }: UpdateDependenciesOnDeleteInterface) {
   const bottomLayer: Planner[] = getTreeBottomLayer(taskArray, taskId);
   const sortedLayer: Planner[] = sortTasksByDependencies(
@@ -84,15 +88,38 @@ export function updateDependenciesOnDelete({
   const itemBeforeFirst = taskArray.find((t) => t.id === firstItem.dependency);
   const itemAfterLast = taskArray.find((t) => t.dependency === lastItem.id);
 
+  const hasSiblings = parentId
+    ? getSubtasksFromId(taskArray, parentId).length > 1
+    : undefined;
+
   if (itemAfterLast && itemBeforeFirst) {
-    setTaskArray((prev) =>
-      prev.map((t) => {
-        if (t.id === itemAfterLast.id) {
-          return { ...t, dependency: itemBeforeFirst.id };
-        }
-        return t;
-      })
-    );
+    if (hasSiblings) {
+      setTaskArray((prev) =>
+        prev.map((t) => {
+          if (t.id === itemAfterLast.id) {
+            return {
+              ...t,
+              dependency: itemBeforeFirst.id,
+            };
+          }
+          return t;
+        })
+      );
+    } else {
+      setTaskArray((prev) =>
+        prev.map((t) => {
+          if (t.id === itemAfterLast.id) {
+            return {
+              ...t,
+              dependency: parentId,
+            };
+          } else if (t.id === parentId) {
+            return { ...t, dependency: itemBeforeFirst.id };
+          }
+          return t;
+        })
+      );
+    }
   }
 }
 
