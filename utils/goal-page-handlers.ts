@@ -190,7 +190,7 @@ export function updateDependenciesOnCreate(
 }
 
 // CHECK IF GOAL IS READY
-const checkGoalForCompletion = (
+export const checkGoalForCompletion = (
   taskArray: Planner[],
   parentId: string
 ): boolean => {
@@ -248,7 +248,14 @@ export function sortTasksByDependencies(
   tasks.forEach((task) => {
     if (
       !task.dependency ||
-      !tasks.some((otherTask) => otherTask.id === task.dependency)
+      (task.dependency &&
+        !tasks.some((otherTask) =>
+          dependencyExistsInBottomLayerOf(
+            taskArray,
+            otherTask.id,
+            task.dependency
+          )
+        ))
     ) {
       const hasDependents = tasks.some(
         (otherTask) => otherTask.dependency === task.id
@@ -326,4 +333,18 @@ export function getTreeIds(taskArray: Planner[], id: string): string[] {
     },
     [id]
   ); // Include the current task's id in the result
+}
+
+export function dependencyExistsInBottomLayerOf(
+  taskArray: Planner[],
+  taskId: string,
+  dependency: string | undefined
+): boolean {
+  if (!dependency) return false;
+
+  const bottomLayer = getTreeBottomLayer(taskArray, taskId);
+
+  if (bottomLayer.some((t) => t.dependency?.includes(dependency))) return true;
+
+  return false;
 }
