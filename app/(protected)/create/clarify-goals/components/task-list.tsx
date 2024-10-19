@@ -79,7 +79,7 @@ const TaskItem = ({
     sortedTasks = sortTasksByDependencies(taskArray, subtasks);
   }
 
-  useEffect(() => {
+  /* useEffect(() => {
     console.log("SORTED: ");
     sortedTasks.forEach((task) => {
       console.log("Title: " + task.title);
@@ -87,7 +87,7 @@ const TaskItem = ({
       console.log("DEP: " + task.dependency);
       console.log("");
     });
-  }, [sortedTasks]);
+  }, [sortedTasks]); */
 
   useEffect(() => {
     if (itemFocused) {
