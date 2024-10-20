@@ -176,7 +176,7 @@ const TaskItem = ({
                     }}
                   >
                     {subtasks.length === 0 ? (
-                      <RxDot />
+                      <RxDot className="opacity-0" />
                     ) : subtasksMinimized ? (
                       <IoIosArrowForward />
                     ) : (

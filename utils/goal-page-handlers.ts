@@ -276,15 +276,11 @@ export function sortTasksByDependencies(
       !task.dependency ||
       (task.dependency &&
         !tasks.some((otherTask) =>
-          dependencyExistsInBottomLayerOf(
-            taskArray,
-            otherTask.id,
-            task.dependency
-          )
+          areIdsInDependenciesOf(taskArray, task.dependency, otherTask.id)
         ))
     ) {
       const hasSiblingDependents = tasks.some((t) =>
-        dependencyExistsInBottomLayerOf(taskArray, t.id, task.id)
+        areIdsInDependenciesOf(taskArray, task.id, t.id)
       );
 
       const siblings = task.parentId
@@ -316,7 +312,7 @@ export function sortTasksByDependencies(
 
         if (bottomLayer && bottomLayer.length > 0) {
           const item = bottomLayer.find((item) =>
-            item.dependency?.includes(currentId)
+            areIdsInDependenciesOf(taskArray, currentId, item.id)
           );
 
           if (item && !visited.has(item.id)) {
@@ -368,16 +364,25 @@ export function getTreeIds(taskArray: Planner[], id: string): string[] {
   ); // Include the current task's id in the result
 }
 
-export function dependencyExistsInBottomLayerOf(
+export function areIdsInDependenciesOf(
   taskArray: Planner[],
-  taskId: string | undefined,
-  dependency: string | undefined
+  id: string | undefined,
+  dependencyToCheck: string | undefined
 ): boolean {
-  if (!dependency || !taskId) return false;
+  if (!id || !dependencyToCheck) return false;
 
-  const bottomLayer = getTreeBottomLayer(taskArray, taskId);
+  const dependenciesLayer = getTreeBottomLayer(taskArray, dependencyToCheck);
 
-  if (bottomLayer.some((t) => t.id?.includes(dependency))) return true;
+  const idsBottomLayer = getTreeBottomLayer(taskArray, id);
+
+  const ids = idsBottomLayer.map((item) => item.id);
+
+  if (
+    dependenciesLayer.some((t) =>
+      ids.some((dep) => t.dependency?.includes(dep))
+    )
+  )
+    return true;
 
   return false;
 }
