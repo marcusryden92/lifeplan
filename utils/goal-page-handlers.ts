@@ -53,8 +53,10 @@ export function deleteGoal({
   taskId,
   parentId,
 }: DeleteGoalInterface) {
-  // Update dependencies if there are any
-  updateDependenciesOnDelete({ taskArray, setTaskArray, taskId, parentId });
+  if (parentId) {
+    // Update dependencies if there are any
+    updateDependenciesOnDelete({ taskArray, setTaskArray, taskId, parentId });
+  }
 
   // Get goal-tree (all IDs under the goal to be deleted)
   const treeIds: string[] = getTreeIds(taskArray, taskId);

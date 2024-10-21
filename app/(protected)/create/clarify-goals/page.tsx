@@ -41,7 +41,7 @@ import {
 } from "@/utils/creation-pages-functions";
 import { Planner } from "@/lib/planner-class";
 
-import { getSubtasksFromId } from "@/utils/goal-page-handlers";
+import { getSubtasksFromId, deleteGoal } from "@/utils/goal-page-handlers";
 
 import {
   totalSubtaskDuration,
@@ -65,21 +65,22 @@ export default function TasksPage() {
 
   const devMode = false;
 
-  const handleDeleteTask = (index: number) => {
-    deleteTask(index, {
-      setTaskArray,
-      editIndex,
-      setEditIndex,
-      setEditTitle,
-    });
+  const handleDeleteTask = (index: number, taskId: string) => {
+    deleteGoal({ taskArray, setTaskArray, taskId });
+    if (editIndex === index) {
+      setEditIndex(null);
+      setEditTitle("");
+    }
   };
 
   const handleDeleteAll = () => {
-    const filterArray: Planner[] = taskArray.filter(
+    const filteredArray: Planner[] = taskArray.filter(
       (task) => task.canInfluence && task.type === "goal" && !task.parentId
     );
 
-    deleteAll({ setTaskArray, filter: filterArray });
+    filteredArray.forEach((item) =>
+      deleteGoal({ taskArray, setTaskArray, taskId: item.id })
+    );
   };
 
   const handleClickEdit = (index: number) => {
@@ -314,7 +315,7 @@ export default function TasksPage() {
                                 />
                               </div>
                               <div
-                                onClick={() => handleDeleteTask(index)}
+                                onClick={() => handleDeleteTask(index, task.id)}
                                 className="cursor-pointer text-gray-400 hover:text-red-400"
                               >
                                 <TrashIcon
