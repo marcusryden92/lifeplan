@@ -1,7 +1,5 @@
 # CALENDAR GENERATION FUNCTIONALITY
 
-- Update dependencies on remove task.
-- Create a recursive function that deletes all the subtasks when a goal is deleted.
 - Move subtasks + update dependencies on move.
 
 - Add 'goal ready'
