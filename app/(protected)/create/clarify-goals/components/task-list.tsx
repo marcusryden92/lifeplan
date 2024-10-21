@@ -75,7 +75,7 @@ const TaskItem = ({
 
   let sortedTasks: Planner[] = [];
 
-  const devMode = false;
+  const devMode = true;
 
   if (subtasks.length !== 0) {
     sortedTasks = sortTasksByDependencies(taskArray, subtasks);
