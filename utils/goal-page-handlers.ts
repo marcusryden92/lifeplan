@@ -277,11 +277,7 @@ export function sortTasksByDependencies(
       // Or if task has a dependency, but the dependency ID can't be found among the siblings or their children
       (task.dependency &&
         !tasks.some((otherTask) =>
-          dependencyExistsInBottomLayerOf(
-            taskArray,
-            otherTask.id,
-            task.dependency
-          )
+          idsExistsInDependenciesOf(taskArray, otherTask.id, task.dependency)
         ))
     ) {
       // Get all the items from the tasks array that are not the one we're working with
@@ -291,13 +287,13 @@ export function sortTasksByDependencies(
 
       // Check if either of the siblings (or their descendants) are dependent on the current task
       const hasSiblingDependents = siblings.some((t) =>
-        dependenciesExistsInBottomLayerOf(taskArray, task.id, t.id)
+        idsExistsInDependenciesOf(taskArray, task.id, t.id)
       );
 
       /* Check if the current task (or it its descendants) are dependent on any of the siblings
        * (shouldn't be the case for a root task, or parent of root task) */
       const isDependentOnSiblings = siblings.some((t) =>
-        dependenciesExistsInBottomLayerOf(taskArray, t.id, task.id)
+        idsExistsInDependenciesOf(taskArray, t.id, task.id)
       );
 
       if (hasSiblingDependents && !isDependentOnSiblings) {
@@ -327,7 +323,9 @@ export function sortTasksByDependencies(
       // If the task hasn't been processed yet, add it to the sorted array
       if (!visited.has(currentTask.id)) {
         sortedArray.push(currentTask);
-        visited.add(currentTask.id); // Mark task as visited to prevent a parent task to be added multiple times
+
+        // Mark task as visited to prevent a parent task to be added multiple times, in case of multiple children
+        visited.add(currentTask.id);
       }
 
       // For every task in tasks
@@ -339,13 +337,18 @@ export function sortTasksByDependencies(
           // Find the item where the dependency matches the currentId
           const item = bottomLayer.find(
             (item) =>
+              // Check if this item's dependency matches the current ID
               item.dependency?.includes(currentId) ||
+              // Or any of the descendants of the current ID
               (item.dependency &&
                 currentTaskBottomLayerIds.includes(item.dependency))
           );
 
+          // If an item is found, and it hasn't yet been visited
           if (item && !visited.has(item.id)) {
+            // Set the current ID to that of the item
             currentId = item.id;
+            // And set the new bottom layer ID's to be those of the current item
             setBottomIds(item.id);
             return t;
           }
@@ -394,36 +397,36 @@ export function getTreeIds(taskArray: Planner[], id: string): string[] {
   ); // Include the current task's id in the result
 }
 
-export function dependencyExistsInBottomLayerOf(
-  taskArray: Planner[],
-  taskId: string | undefined,
-  dependency: string | undefined
-): boolean {
-  if (!dependency || !taskId) return false;
-
-  const bottomLayer = getTreeBottomLayer(taskArray, taskId);
-
-  if (bottomLayer.some((t) => t.id?.includes(dependency))) return true;
-
-  return false;
-}
-
-export function dependenciesExistsInBottomLayerOf(
+// Check if any ID's in the main tree matches any of the dependencies in the tree to check
+export function idsExistsInDependenciesOf(
   taskArray: Planner[],
   mainTaskId: string | undefined,
-  taskToCheckId: string | undefined
+  dependenciesToCheckId: string | undefined
 ): boolean {
-  if (!taskArray || taskArray.length === 0 || !mainTaskId || !taskToCheckId)
+  // Make sure the function can run
+  if (
+    !taskArray ||
+    taskArray.length === 0 ||
+    !mainTaskId ||
+    !dependenciesToCheckId
+  )
     return false;
 
+  // Get all the id's from the main tree
   const mainTaskBottomLayer = getTreeBottomLayer(taskArray, mainTaskId);
   const mainTaskBottomLayerIds = mainTaskBottomLayer.map((t) => t.id);
 
-  const taskToCheckBottomLayer = getTreeBottomLayer(taskArray, taskToCheckId);
+  // Get all the dependencies from the tree to check
+  const taskToCheckBottomLayer = getTreeBottomLayer(
+    taskArray,
+    dependenciesToCheckId
+  );
+
   const taskToCheckDependencies = taskToCheckBottomLayer.map(
     (t) => t.dependency
   );
 
+  // Check the arrays against eachother to see if any id matches
   if (
     mainTaskBottomLayerIds.some((id) =>
       taskToCheckDependencies.some((dep) => id === dep)
@@ -432,27 +435,4 @@ export function dependenciesExistsInBottomLayerOf(
     return true;
 
   return false;
-}
-
-export function checkIfBottomLayerContainsRoot(
-  taskArray: Planner[],
-  siblings: Planner[],
-  mainTaskId: string
-) {
-  const mainTaskBottomLayer = getTreeBottomLayer(taskArray, mainTaskId);
-
-  // If any task in the main bottom layer lacks a dependency, return true
-  if (mainTaskBottomLayer.some((t) => !t.dependency)) return true;
-
-  const mainTaskDependencies = mainTaskBottomLayer.map((t) => t.dependency);
-
-  const comparisonIds = siblings
-    .map((t) => getTreeBottomLayer(taskArray, t.id).map((b) => b.id))
-    .flat();
-
-  const matchingIds = comparisonIds.some((id) =>
-    mainTaskDependencies.some((t) => t === id)
-  );
-
-  if (matchingIds) return true;
 }
