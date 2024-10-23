@@ -75,21 +75,11 @@ const TaskItem = ({
 
   let sortedTasks: Planner[] = [];
 
-  const devMode = false;
+  const devMode = true;
 
   if (subtasks.length !== 0) {
     sortedTasks = sortTasksByDependencies(taskArray, subtasks);
   }
-
-  /* useEffect(() => {
-    console.log("SORTED: ");
-    sortedTasks.forEach((task) => {
-      console.log("Title: " + task.title);
-      console.log("ID: " + task.id);
-      console.log("DEP: " + task.dependency);
-      console.log("");
-    });
-  }, [sortedTasks]); */
 
   useEffect(() => {
     if (itemFocused) {
