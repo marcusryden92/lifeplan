@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/utilities/time-picker/date-time-picker";
 
 import AddItemForm from "../components/add-item-form";
-import AddSubtask from "./components/AddSubtask";
+import AddSubtask from "./components/task-item-subcomponents/AddSubtask";
 
 // Local utilities
 import { clickEdit, confirmEdit } from "@/utils/creation-pages-functions";

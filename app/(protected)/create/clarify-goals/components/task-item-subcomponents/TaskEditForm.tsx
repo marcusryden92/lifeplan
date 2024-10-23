@@ -6,24 +6,17 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+// Definitions
+import { TaskEditFormProps } from "@/lib/task-item";
+
 // Icons
 import { ArrowUturnLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
 
 // Utils
 import { editById } from "@/utils/creation-pages-functions";
 
-// Planner class
-import { Planner } from "@/lib/planner-class";
-
 // Data context
 import { useDataContext } from "@/context/DataContext";
-
-interface TaskEditFormProps {
-  task: Planner;
-  subtasks: Planner[];
-  setDisplayEdit: React.Dispatch<React.SetStateAction<boolean>>;
-  itemFocused: boolean;
-}
 
 const TaskEditForm: React.FC<TaskEditFormProps> = ({
   task,

@@ -4,32 +4,16 @@ import { useState, useEffect } from "react";
 
 // Components
 import TaskDisplay from "./TaskDisplay";
-import AddSubtask from "../AddSubtask";
 
-// Planner class
-import { Planner } from "@/lib/planner-class";
+// Definitions
+import { TaskHeaderProps } from "@/lib/task-item";
 
 // Utils
 import { formatMinutesToHours } from "@/utils/task-array-utils";
 
 // Icons
-import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
-import { HiOutlinePlus } from "react-icons/hi";
 import TaskEditForm from "./TaskEditForm";
-
-interface TaskHeaderProps {
-  task: Planner;
-  headerRef: React.RefObject<HTMLDivElement>; // Reference to the header div
-  subtasks: Planner[]; // Array of subtasks of type Planner
-  itemFocused: boolean; // Boolean indicating if the item is focused
-  displayAddSubtask: boolean; // Boolean indicating if add subtask form is displayed
-  setDisplayAddSubtask: React.Dispatch<React.SetStateAction<boolean>>; // Function to set displayAddSubtask
-  subtasksMinimized: boolean; // Boolean indicating if subtasks are minimized
-  setSubtasksMinimized: React.Dispatch<React.SetStateAction<boolean>>; // Function to set subtasksMinimized
-  handleSetFocusedTask: () => void; // Function to handle setting the focused task
-  totalTaskDuration: number; // Total duration of the task
-  devMode: boolean; // Boolean indicating if dev mode is active
-}
+import AddSubtaskWrapper from "./AddSubtaskWrapper";
 
 // TaskHeader component definition
 export const TaskHeader: React.FC<TaskHeaderProps> = ({
@@ -37,8 +21,6 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({
   headerRef,
   subtasks,
   itemFocused,
-  displayAddSubtask,
-  setDisplayAddSubtask,
   subtasksMinimized,
   setSubtasksMinimized,
   handleSetFocusedTask,
@@ -46,6 +28,7 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({
   devMode,
 }) => {
   const [displayEdit, setDisplayEdit] = useState<boolean>(false);
+  const [displayAddSubtask, setDisplayAddSubtask] = useState<boolean>(false);
 
   useEffect(() => {
     if (!itemFocused) {
@@ -86,42 +69,15 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({
             />
           )}
 
-          {itemFocused &&
-            !displayEdit &&
-            (displayAddSubtask ? (
-              /* "ADD SUBTASK" FORM */
-
-              <div className="flex items-center">
-                <AddSubtask
-                  task={task}
-                  parentId={task.id}
-                  subtasksLength={subtasks.length}
-                />
-                <button
-                  onClick={() => {
-                    setDisplayAddSubtask(false);
-                  }}
-                >
-                  <ArrowUturnLeftIcon
-                    className={`w-5 h-5 text-gray-300  ${
-                      itemFocused ? "text-opacity-100" : "text-opacity-0"
-                    } hover:text-gray-500`}
-                  />
-                </button>
-              </div>
-            ) : (
-              /* BUTTON TO TOGGLE "ADD SUBTASK" FORM */
-
-              <button
-                className="flex items-center text-gray-300 hover:text-gray-500"
-                onClick={() => {
-                  setDisplayAddSubtask(true);
-                }}
-              >
-                Add subtask
-                <HiOutlinePlus className={`w-6 h-6 mr-5 ml-2 bg-none `} />
-              </button>
-            ))}
+          {itemFocused && !displayEdit && (
+            <AddSubtaskWrapper
+              task={task}
+              subtasks={subtasks}
+              displayAddSubtask={displayAddSubtask}
+              setDisplayAddSubtask={setDisplayAddSubtask}
+              itemFocused={itemFocused}
+            />
+          )}
         </div>
 
         {/* DURATION DISPLAY */}

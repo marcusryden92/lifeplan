@@ -1,5 +1,5 @@
-// Planner class
-import { Planner } from "@/lib/planner-class";
+// Definitions
+import { TaskDisplayProps } from "@/lib/task-item";
 
 // Components
 import DebugInfo from "./DebugInfo";
@@ -7,19 +7,6 @@ import TaskEditDeleteButtons from "./TaskEditDeleteButtons";
 
 import { RxDot } from "react-icons/rx";
 import { IoIosArrowForward, IoIosArrowDown } from "react-icons/io";
-
-interface TaskDisplayProps {
-  task: Planner;
-  subtasks: Planner[]; // Array of subtasks of type Planner
-  itemFocused: boolean; // Boolean indicating if the item is focused
-  setDisplayEdit: React.Dispatch<React.SetStateAction<boolean>>; // Function to set displayEdit
-
-  setDisplayAddSubtask: React.Dispatch<React.SetStateAction<boolean>>; // Function to set displayAddSubtask
-  subtasksMinimized: boolean; // Boolean indicating if subtasks are minimized
-  setSubtasksMinimized: React.Dispatch<React.SetStateAction<boolean>>; // Function to set subtasksMinimized
-  handleSetFocusedTask: () => void; // Function to handle setting the focused task
-  devMode: boolean; // Boolean indicating if dev mode is active
-}
 
 export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   task,

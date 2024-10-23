@@ -5,21 +5,14 @@ import { Button } from "@/components/ui/button";
 import { TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
 import React from "react";
 
-// Planner class
-import { Planner } from "@/lib/planner-class";
-
 // Data context
 import { useDataContext } from "@/context/DataContext";
 
 // Utils
 import { deleteGoal } from "@/utils/goal-page-handlers";
 
-interface TaskEditDeleteButtonsProps {
-  task: Planner;
-  itemFocused: boolean;
-  setDisplayEdit: React.Dispatch<React.SetStateAction<boolean>>;
-  setDisplayAddSubtask: React.Dispatch<React.SetStateAction<boolean>>;
-}
+// Definitions
+import { TaskEditDeleteButtonsProps } from "@/lib/task-item";
 
 const TaskEditDeleteButtons: React.FC<TaskEditDeleteButtonsProps> = ({
   task,

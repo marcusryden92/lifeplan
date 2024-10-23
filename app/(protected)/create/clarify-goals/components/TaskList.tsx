@@ -5,8 +5,8 @@ import { useDataContext } from "@/context/DataContext";
 // Components
 import { TaskItem } from "./TaskItem";
 
-// Planner class
-import { Planner } from "@/lib/planner-class";
+// Props
+import { TaskListProps } from "@/lib/task-item";
 
 // Utils
 import { getTaskById } from "@/utils/task-array-utils";
@@ -15,18 +15,13 @@ import {
   sortTasksByDependencies,
 } from "@/utils/goal-page-handlers";
 
-const TaskList = ({
+const TaskList: React.FC<TaskListProps> = ({
   id,
   subtasks,
   focusedTask,
   setFocusedTask,
-}: {
-  id: string;
-  subtasks?: Planner[];
-  focusedTask: string | null;
-  setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
 }) => {
-  const { taskArray, setTaskArray } = useDataContext();
+  const { taskArray } = useDataContext();
 
   // Get subtasks from the context if not provided
   const subtasksToUse = subtasks || getSubtasksFromId(taskArray, id);
@@ -43,7 +38,6 @@ const TaskList = ({
         <TaskItem
           key={task.id}
           taskArray={taskArray}
-          setTaskArray={setTaskArray}
           task={task}
           focusedTask={focusedTask}
           setFocusedTask={setFocusedTask}
