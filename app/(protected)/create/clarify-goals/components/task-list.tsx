@@ -2,40 +2,38 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useDataContext } from "@/context/DataContext";
+
+// Planner class
 import { Planner } from "@/lib/planner-class";
+
+// Components
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import AddSubtask from "./add-subtask";
+
+// Utils
 import {
   getTaskById,
-  handleDeleteTaskById,
   totalSubtaskDuration,
   formatMinutesToHours,
 } from "@/utils/task-array-utils";
+import {
+  getSubtasksFromId,
+  sortTasksByDependencies,
+  deleteGoal,
+} from "@/utils/goal-page-handlers";
+import { editById } from "@/utils/creation-pages-functions";
 
-import { getSubtasksFromId } from "@/utils/goal-page-handlers";
-
+// Icons
 import {
   TrashIcon,
   PencilIcon,
   ArrowUturnLeftIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
-
 import { RxDot } from "react-icons/rx";
-
 import { IoIosArrowForward, IoIosArrowDown } from "react-icons/io";
-
 import { HiOutlinePlus } from "react-icons/hi";
-
-import { Input } from "@/components/ui/input";
-
-import AddSubtask from "./add-subtask";
-
-import { editById } from "@/utils/creation-pages-functions";
-
-import {
-  sortTasksByDependencies,
-  deleteGoal,
-} from "@/utils/goal-page-handlers";
 
 interface TaskItemProps {
   taskArray: Planner[];
