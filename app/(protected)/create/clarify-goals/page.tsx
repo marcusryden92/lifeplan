@@ -1,7 +1,7 @@
 "use client";
 
 // Third-party libraries
-import { useState, useRef, useEffect, createRef } from "react";
+import { useState, useEffect } from "react";
 
 import Link from "next/link";
 import {
@@ -20,25 +20,20 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import TaskList from "./components/task-list";
+import TaskList from "./components/TaskList";
 // Local components and context
 import { useDataContext } from "@/context/DataContext";
-import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { CardContent, CardFooter } from "@/components/ui/card";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DateTimePicker } from "@/components/utilities/time-picker/date-time-picker";
 
 import AddItemForm from "../components/add-item-form";
-import AddSubtask from "./components/add-subtask";
+import AddSubtask from "./components/AddSubtask";
 
 // Local utilities
-import {
-  deleteTask,
-  deleteAll,
-  clickEdit,
-  confirmEdit,
-} from "@/utils/creation-pages-functions";
+import { clickEdit, confirmEdit } from "@/utils/creation-pages-functions";
 import { Planner } from "@/lib/planner-class";
 
 import { getSubtasksFromId, deleteGoal } from "@/utils/goal-page-handlers";

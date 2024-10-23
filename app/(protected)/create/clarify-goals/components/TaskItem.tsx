@@ -1,27 +1,22 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useDataContext } from "@/context/DataContext";
 
 // Planner class
 import { Planner } from "@/lib/planner-class";
 
 // Components
+import TaskList from "./TaskList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import AddSubtask from "./add-subtask";
+import AddSubtask from "./AddSubtask";
 
 // Utils
 import {
-  getTaskById,
   totalSubtaskDuration,
   formatMinutesToHours,
 } from "@/utils/task-array-utils";
-import {
-  getSubtasksFromId,
-  sortTasksByDependencies,
-  deleteGoal,
-} from "@/utils/goal-page-handlers";
+import { getSubtasksFromId, deleteGoal } from "@/utils/goal-page-handlers";
 import { editById } from "@/utils/creation-pages-functions";
 
 // Icons
@@ -39,18 +34,14 @@ interface TaskItemProps {
   taskArray: Planner[];
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
   task: Planner;
-  subtasks: Planner[];
-  onDelete: (id: string, parentId: string | undefined) => void;
   focusedTask: string | null;
   setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
-const TaskItem = ({
+export const TaskItem = ({
   taskArray,
   setTaskArray,
   task,
-  subtasks,
-  onDelete,
   focusedTask,
   setFocusedTask,
 }: TaskItemProps) => {
@@ -62,6 +53,8 @@ const TaskItem = ({
   const [displayEdit, setDisplayEdit] = useState<boolean>(false);
   const [displayAddSubtask, setDisplayAddSubtask] = useState<boolean>(false);
 
+  const subtasks = getSubtasksFromId(taskArray, task.id);
+
   const [subtasksMinimized, setSubtasksMinimized] = useState<boolean>(false);
 
   const [editTitle, setEditTitle] = useState<string>(task.title);
@@ -71,13 +64,7 @@ const TaskItem = ({
 
   const headerRef = useRef<HTMLDivElement | null>(null);
 
-  let sortedTasks: Planner[] = [];
-
   const devMode = true;
-
-  if (subtasks.length !== 0) {
-    sortedTasks = sortTasksByDependencies(taskArray, subtasks);
-  }
 
   useEffect(() => {
     if (itemFocused) {
@@ -119,6 +106,10 @@ const TaskItem = ({
       setTaskArray,
     });
     setDisplayEdit(false);
+  };
+
+  const handleDelete = (taskId: string, parentId: string | undefined) => {
+    deleteGoal({ taskArray, setTaskArray, taskId, parentId });
   };
 
   useEffect(() => {
@@ -219,7 +210,7 @@ const TaskItem = ({
                     disabled={!itemFocused}
                     size="xs"
                     variant="invisible"
-                    onClick={() => onDelete(task.id, task.parentId)}
+                    onClick={() => handleDelete(task.id, task.parentId)}
                     className="px-0"
                   >
                     <TrashIcon
@@ -356,53 +347,14 @@ const TaskItem = ({
               : ""
           }`}
         >
-          {sortedTasks.map((subtask) => (
-            <TaskList
-              key={subtask.id}
-              id={subtask.id}
-              focusedTask={focusedTask}
-              setFocusedTask={setFocusedTask}
-            />
-          ))}
+          <TaskList
+            id={task.id}
+            subtasks={subtasks}
+            focusedTask={focusedTask}
+            setFocusedTask={setFocusedTask}
+          />
         </div>
       )}
     </div>
   );
 };
-
-const TaskList = ({
-  id,
-  focusedTask,
-  setFocusedTask,
-}: {
-  id: string;
-  focusedTask: string | null;
-  setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
-}) => {
-  const { taskArray, setTaskArray } = useDataContext();
-
-  const thisTask = getTaskById(taskArray, id);
-  const subtasks = getSubtasksFromId(taskArray, id);
-
-  if (!thisTask) return null; // Avoid rendering if the task doesn't exist.
-
-  const handleDelete = (taskId: string, parentId: string | undefined) => {
-    deleteGoal({ taskArray, setTaskArray, taskId, parentId });
-  };
-
-  return (
-    <div className="flex flex-col justify-start flex-grow w-full">
-      <TaskItem
-        taskArray={taskArray}
-        setTaskArray={setTaskArray}
-        task={thisTask}
-        subtasks={subtasks}
-        onDelete={handleDelete}
-        focusedTask={focusedTask}
-        setFocusedTask={setFocusedTask}
-      />
-    </div>
-  );
-};
-
-export default TaskList;
