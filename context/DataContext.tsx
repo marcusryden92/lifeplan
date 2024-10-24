@@ -10,10 +10,8 @@ import { WeekDayIntegers } from "@/types/calendar-types";
 interface DataContextType {
   taskArray: Planner[];
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
-  currentTemplate: EventTemplate[] | undefined;
-  setCurrentTemplate: React.Dispatch<
-    React.SetStateAction<EventTemplate[] | undefined>
-  >;
+  currentTemplate: EventTemplate[];
+  setCurrentTemplate: React.Dispatch<React.SetStateAction<EventTemplate[]>>;
   weekStartDay: WeekDayIntegers;
   setWeekDayIntegers: React.Dispatch<React.SetStateAction<WeekDayIntegers>>;
 }
@@ -29,9 +27,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
   const [taskArray, setTaskArray] = useState<Planner[]>([]);
 
-  const [currentTemplate, setCurrentTemplate] = useState<
-    EventTemplate[] | undefined
-  >(templateSeed);
+  const [currentTemplate, setCurrentTemplate] = useState<EventTemplate[]>([]);
   const [weekStartDay, setWeekDayIntegers] = useState<WeekDayIntegers>(
     userSettings.weekStartDay
   );
