@@ -5,7 +5,7 @@ import { shiftDate } from "@/utils/calendar-utils";
 import { setTimeOnDate } from "@/utils/calendar-utils";
 import { WeekDayIntegers } from "@/types/calendar-types";
 
-import { getWeekFirstDate } from "@/utils/calendar-utils";
+import { getWeekFirstDate, calculateEndDate } from "@/utils/calendar-utils";
 
 // Define the updated EventTemplate interface
 export interface EventTemplate {
@@ -41,6 +41,10 @@ export function getTemplateFromCalendar(calendar: EventApi[]): EventTemplate[] {
     // Extract start and end times
     const startDate = new Date(task.start);
     const endDate = new Date(task.end);
+
+    console.log(
+      "TIME:" + (endDate.getTime() - startDate.getTime()) / (1000 * 60)
+    );
 
     // Calculate duration in minutes
     const durationMinutes = Math.round(
@@ -121,8 +125,7 @@ export function populateTemplateCalendar(
     }
 
     // Calculate end date based on duration
-    let newEndDate = new Date(newStartDate);
-    newEndDate.setMinutes(newEndDate.getMinutes() + event.duration);
+    let newEndDate = calculateEndDate(new Date(newStartDate), event.duration);
 
     eventArray.push({
       id: event.id, // Generate a unique ID for the event

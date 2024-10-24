@@ -27,7 +27,8 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
   const [taskArray, setTaskArray] = useState<Planner[]>([]);
 
-  const [currentTemplate, setCurrentTemplate] = useState<EventTemplate[]>([]);
+  const [currentTemplate, setCurrentTemplate] =
+    useState<EventTemplate[]>(templateSeed);
   const [weekStartDay, setWeekDayIntegers] = useState<WeekDayIntegers>(
     userSettings.weekStartDay
   );

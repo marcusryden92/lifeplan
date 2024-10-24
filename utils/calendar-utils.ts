@@ -14,7 +14,11 @@ export function getWeekdayFromDate(date: Date | null) {
     "friday",
     "saturday",
   ];
-  return weekdays[date.getDay()];
+
+  const weekDay = weekdays[date.getDay()];
+
+  console.log("WEEKDAY: " + weekDay);
+  return weekDay;
 }
 
 export function shiftDate(date: Date, days: number): Date {
@@ -64,4 +68,25 @@ export function getWeekFirstDate(
 
   // Use shiftDate to get the date of the first day of the week
   return shiftDate(todaysDate, -daysDifference);
+}
+
+export function calculateEndDate(newStartDate: Date, duration: number) {
+  // Get the current timezone offset in minutes for the start date
+  const initialOffset = newStartDate.getTimezoneOffset();
+
+  // Calculate the tentative end date based on the duration
+  let newEndDate = new Date(newStartDate);
+  newEndDate.setMinutes(newEndDate.getMinutes() + duration);
+
+  // Get the timezone offset after calculating the end date
+  const finalOffset = newEndDate.getTimezoneOffset();
+
+  // Adjust for any change in timezone offset (e.g., daylight savings shift)
+  const offsetDifference = initialOffset - finalOffset;
+  if (offsetDifference !== 0) {
+    // Adjust end date by the difference in offset
+    newEndDate.setMinutes(newEndDate.getMinutes() + offsetDifference);
+  }
+
+  return newEndDate;
 }
