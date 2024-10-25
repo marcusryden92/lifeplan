@@ -7,6 +7,14 @@ export interface TaskListProps {
   setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
+export interface TaskListWrapperProps {
+  subtasksLength: number;
+  parentId?: string;
+  subtasksMinimized: boolean;
+  itemFocused: boolean;
+  children?: React.ReactNode;
+}
+
 export interface TaskItemProps {
   taskArray: Planner[];
   task: Planner;

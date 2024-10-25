@@ -7,6 +7,7 @@ import { TaskItemProps } from "@/lib/task-item";
 
 // Components
 import TaskList from "./TaskList";
+import TaskListWrapper from "./task-item-subcomponents/TaskListWrapper";
 import TaskHeader from "./task-item-subcomponents/TaskHeader";
 
 // Utils
@@ -79,30 +80,19 @@ export const TaskItem: React.FC<TaskItemProps> = ({
       />
 
       {/* Render subtasks if there are any */}
-      {subtasks.length > 0 && (
-        <div
-          style={{
-            height: subtasksMinimized ? "0px" : "auto",
-            transition: "height ease 1000ms",
-          }}
-          className={`overflow-hidden ${
-            task.parentId
-              ? `pl-5 ${
-                  itemFocused
-                    ? "border-l-2 border-sky-400"
-                    : "border-l-2 border-gray-200"
-                }`
-              : ""
-          }`}
-        >
-          <TaskList
-            id={task.id}
-            subtasks={subtasks}
-            focusedTask={focusedTask}
-            setFocusedTask={setFocusedTask}
-          />
-        </div>
-      )}
+      <TaskListWrapper
+        subtasksLength={subtasks.length}
+        parentId={task.parentId}
+        subtasksMinimized={subtasksMinimized}
+        itemFocused={itemFocused}
+      >
+        <TaskList
+          id={task.id}
+          subtasks={subtasks}
+          focusedTask={focusedTask}
+          setFocusedTask={setFocusedTask}
+        />
+      </TaskListWrapper>
     </div>
   );
 };
