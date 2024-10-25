@@ -16,7 +16,7 @@ import { TaskEditDeleteButtonsProps } from "@/lib/task-item";
 
 const TaskEditDeleteButtons: React.FC<TaskEditDeleteButtonsProps> = ({
   task,
-  itemFocused,
+  itemIsFocused,
   setDisplayEdit,
   setDisplayAddSubtask,
 }) => {
@@ -34,7 +34,7 @@ const TaskEditDeleteButtons: React.FC<TaskEditDeleteButtonsProps> = ({
     <div className="flex items-center space-x-2">
       {/* Toggle edit field */}
       <Button
-        disabled={!itemFocused}
+        disabled={!itemIsFocused}
         size="xs"
         variant="invisible"
         onClick={() => {
@@ -45,13 +45,13 @@ const TaskEditDeleteButtons: React.FC<TaskEditDeleteButtonsProps> = ({
       >
         <PencilIcon
           className={`w-5 h-5 text-gray-300  ${
-            itemFocused ? "text-opacity-100" : "text-opacity-0"
+            itemIsFocused ? "text-opacity-100" : "text-opacity-0"
           } hover:text-gray-500`}
         />
       </Button>
       {/* Delete task */}
       <Button
-        disabled={!itemFocused}
+        disabled={!itemIsFocused}
         size="xs"
         variant="invisible"
         onClick={handleDelete}
@@ -59,7 +59,7 @@ const TaskEditDeleteButtons: React.FC<TaskEditDeleteButtonsProps> = ({
       >
         <TrashIcon
           className={`w-5 h-5 text-gray-300  ${
-            itemFocused ? "text-opacity-100" : "text-opacity-0"
+            itemIsFocused ? "text-opacity-100" : "text-opacity-0"
           } hover:text-gray-500`}
         />
       </Button>

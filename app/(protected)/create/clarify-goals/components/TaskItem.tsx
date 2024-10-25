@@ -20,46 +20,11 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   focusedTask,
   setFocusedTask,
 }) => {
-  const [totalTaskDuration, setTotalTaskDuration] = useState(
-    totalSubtaskDuration(task.id, taskArray)
-  );
-  const [itemFocused, setItemFocused] = useState<boolean>(false);
+  const [itemIsFocused, setItemIsFocused] = useState<boolean>(false);
   const [subtasksMinimized, setSubtasksMinimized] = useState<boolean>(false);
 
   const subtasks = getSubtasksFromId(taskArray, task.id);
-  const headerRef = useRef<HTMLDivElement | null>(null);
   const devMode = false;
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        headerRef.current &&
-        !headerRef.current.contains(event.target as Node)
-      ) {
-        setItemFocused(false);
-      }
-    };
-
-    if (itemFocused) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [itemFocused]);
-
-  const handleSetFocusedTask = () => {
-    setFocusedTask(focusedTask === task.id ? null : task.id);
-  };
-
-  useEffect(() => {
-    setItemFocused(task.id === focusedTask);
-  }, [focusedTask, task.id]);
-
-  useEffect(() => {
-    setTotalTaskDuration(totalSubtaskDuration(task.id, taskArray));
-  }, [taskArray, task.id]);
 
   return (
     <div
@@ -69,13 +34,13 @@ export const TaskItem: React.FC<TaskItemProps> = ({
     >
       <TaskHeader
         task={task}
-        headerRef={headerRef}
         subtasks={subtasks}
-        itemFocused={itemFocused}
+        itemIsFocused={itemIsFocused}
+        setItemIsFocused={setItemIsFocused}
         subtasksMinimized={subtasksMinimized}
         setSubtasksMinimized={setSubtasksMinimized}
-        handleSetFocusedTask={handleSetFocusedTask}
-        totalTaskDuration={totalTaskDuration}
+        focusedTask={focusedTask}
+        setFocusedTask={setFocusedTask}
         devMode={devMode}
       />
 
@@ -84,7 +49,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
         subtasksLength={subtasks.length}
         parentId={task.parentId}
         subtasksMinimized={subtasksMinimized}
-        itemFocused={itemFocused}
+        itemIsFocused={itemIsFocused}
       >
         <TaskList
           id={task.id}

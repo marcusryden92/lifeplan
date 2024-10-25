@@ -11,7 +11,7 @@ export interface TaskListWrapperProps {
   subtasksLength: number;
   parentId?: string;
   subtasksMinimized: boolean;
-  itemFocused: boolean;
+  itemIsFocused: boolean;
   children?: React.ReactNode;
 }
 
@@ -24,20 +24,20 @@ export interface TaskItemProps {
 
 export interface TaskHeaderProps {
   task: Planner;
-  headerRef: React.RefObject<HTMLDivElement>; // Reference to the header div
   subtasks: Planner[]; // Array of subtasks of type Planner
-  itemFocused: boolean; // Boolean indicating if the item is focused
+  itemIsFocused: boolean; // Boolean indicating if the item is focused
+  setItemIsFocused: React.Dispatch<React.SetStateAction<boolean>>;
   subtasksMinimized: boolean; // Boolean indicating if subtasks are minimized
   setSubtasksMinimized: React.Dispatch<React.SetStateAction<boolean>>; // Function to set subtasksMinimized
-  handleSetFocusedTask: () => void; // Function to handle setting the focused task
-  totalTaskDuration: number; // Total duration of the task
+  focusedTask: string | null;
+  setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
   devMode: boolean; // Boolean indicating if dev mode is active
 }
 
 export interface TaskDisplayProps {
   task: Planner;
   subtasks: Planner[]; // Array of subtasks of type Planner
-  itemFocused: boolean; // Boolean indicating if the item is focused
+  itemIsFocused: boolean; // Boolean indicating if the item is focused
   setDisplayEdit: React.Dispatch<React.SetStateAction<boolean>>; // Function to set displayEdit
   setDisplayAddSubtask: React.Dispatch<React.SetStateAction<boolean>>; // Function to set displayAddSubtask
   subtasksMinimized: boolean; // Boolean indicating if subtasks are minimized
@@ -50,7 +50,7 @@ export interface TaskEditFormProps {
   task: Planner;
   subtasks: Planner[];
   setDisplayEdit: React.Dispatch<React.SetStateAction<boolean>>;
-  itemFocused: boolean;
+  itemIsFocused: boolean;
 }
 
 export interface AddSubtaskWrapperProps {
@@ -58,7 +58,8 @@ export interface AddSubtaskWrapperProps {
   subtasks: Planner[];
   displayAddSubtask: boolean;
   setDisplayAddSubtask: React.Dispatch<React.SetStateAction<boolean>>;
-  itemFocused: boolean;
+  itemIsFocused: boolean;
+  displayEdit: boolean;
 }
 
 export interface AddSubtaskProps {
@@ -70,7 +71,14 @@ export interface AddSubtaskProps {
 
 export interface TaskEditDeleteButtonsProps {
   task: Planner;
-  itemFocused: boolean;
+  itemIsFocused: boolean;
   setDisplayEdit: React.Dispatch<React.SetStateAction<boolean>>;
   setDisplayAddSubtask: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+export interface DurationDisplayProps {
+  task: Planner;
+  itemIsFocused: boolean;
+  subtasksLength: number;
+  displayEdit: boolean;
 }

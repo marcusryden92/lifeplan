@@ -22,7 +22,7 @@ const TaskEditForm: React.FC<TaskEditFormProps> = ({
   task,
   subtasks,
   setDisplayEdit,
-  itemFocused,
+  itemIsFocused,
 }) => {
   const { setTaskArray } = useDataContext();
 
@@ -68,7 +68,7 @@ const TaskEditForm: React.FC<TaskEditFormProps> = ({
 
       {/* Cancel edit */}
       <Button
-        disabled={!itemFocused}
+        disabled={!itemIsFocused}
         size="xs"
         variant="invisible"
         onClick={() => {
@@ -79,7 +79,7 @@ const TaskEditForm: React.FC<TaskEditFormProps> = ({
       >
         <ArrowUturnLeftIcon
           className={`w-5 h-5 text-gray-300  ${
-            itemFocused ? "text-opacity-100" : "text-opacity-0"
+            itemIsFocused ? "text-opacity-100" : "text-opacity-0"
           } hover:text-gray-500`}
         />
       </Button>

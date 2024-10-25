@@ -11,7 +11,7 @@ import { IoIosArrowForward, IoIosArrowDown } from "react-icons/io";
 export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   task,
   subtasks,
-  itemFocused,
+  itemIsFocused,
   setDisplayEdit,
   setDisplayAddSubtask,
   subtasksMinimized,
@@ -24,7 +24,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
       {/* Button to minimize or display subtasks list */}
       <button
         disabled={subtasks.length === 0}
-        className={`translate-x-[-40%] ${itemFocused && "text-sky-500"} `}
+        className={`translate-x-[-40%] ${itemIsFocused && "text-sky-500"} `}
         onClick={() => {
           setSubtasksMinimized((prev) => !prev);
         }}
@@ -41,7 +41,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
       {/* Task title */}
       <span
         onClick={handleSetFocusedTask}
-        className={`truncate ${itemFocused && " text-sky-400 "}`}
+        className={`truncate ${itemIsFocused && " text-sky-400 "}`}
       >
         {task.title}
       </span>
@@ -52,7 +52,7 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
       {/* Buttons to toggle edit display, or delete task */}
       <TaskEditDeleteButtons
         task={task}
-        itemFocused={itemFocused}
+        itemIsFocused={itemIsFocused}
         setDisplayEdit={setDisplayEdit}
         setDisplayAddSubtask={setDisplayAddSubtask}
       />

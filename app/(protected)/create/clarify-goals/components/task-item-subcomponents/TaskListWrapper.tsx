@@ -8,7 +8,7 @@ const TaskListWrapper: React.FC<TaskListWrapperProps> = ({
   subtasksLength,
   parentId,
   subtasksMinimized,
-  itemFocused,
+  itemIsFocused,
   children,
 }) => {
   if (subtasksLength === 0) return null;
@@ -22,7 +22,7 @@ const TaskListWrapper: React.FC<TaskListWrapperProps> = ({
       className={`overflow-hidden ${
         parentId
           ? `pl-5 ${
-              itemFocused
+              itemIsFocused
                 ? "border-l-2 border-sky-400"
                 : "border-l-2 border-gray-200"
             }`
