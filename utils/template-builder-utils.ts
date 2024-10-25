@@ -70,7 +70,7 @@ export function populateTemplateCalendar(
 ): SimpleEvent[] {
   let eventArray: SimpleEvent[] = [];
 
-  const todaysDate = new Date();
+  const todaysDate = new Date(2024, 0, 1);
 
   // Days of the week starting from Sunday (index 0)
   const daysFromSunday = [

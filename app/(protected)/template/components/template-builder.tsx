@@ -68,6 +68,7 @@ export default function TemplateBuilder({
 
   return (
     <FullCalendar
+      initialDate={new Date(2024, 0, 1)}
       ref={calendarRef}
       plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
       events={templateEvents}
