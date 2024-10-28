@@ -53,10 +53,8 @@ export const TaskHeader = ({
   };
 
   useEffect(() => {
-    if (setItemIsFocused) {
-      setItemIsFocused(task.id === focusedTask);
-    }
-  }, [focusedTask, task.id, setItemIsFocused]);
+    setItemIsFocused(task.id === focusedTask);
+  }, [focusedTask, task.id]);
 
   useEffect(() => {
     if (!itemIsFocused) {
