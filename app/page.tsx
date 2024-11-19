@@ -1,11 +1,6 @@
 import { LoginButton } from "@/components/auth/login-button";
 import { Button } from "@/components/ui/button";
 
-// bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-200 to-orange-500
-
-// className={`${inter.className} bg-cover bg-center bg-no-repeat min-h-screen`}
-// style={{ backgroundImage: "url('/images/california.jpg')" }}
-
 export default function Home() {
   return (
     <main
