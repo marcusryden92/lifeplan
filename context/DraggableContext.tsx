@@ -10,8 +10,10 @@ import React, {
 } from "react";
 
 interface DraggableContextType {
-  currentlyHovered: string;
-  setCurrentlyHovered: React.Dispatch<SetStateAction<string>>;
+  currentlyHoveredItem: string;
+  setCurrentlyHoveredItem: React.Dispatch<SetStateAction<string>>;
+  currentlyClickedItem: string;
+  setCurrentlyClickedItem: React.Dispatch<SetStateAction<string>>;
 }
 
 const DraggableContext = createContext<DraggableContextType | null>(null);
@@ -21,15 +23,18 @@ export const DraggableContextProvider = ({
 }: {
   children: ReactNode;
 }) => {
-  const [currentlyHovered, setCurrentlyHovered] = useState<string>("");
+  const [currentlyHoveredItem, setCurrentlyHoveredItem] = useState<string>("");
+  const [currentlyClickedItem, setCurrentlyClickedItem] = useState<string>("");
 
   useEffect(() => {
-    console.log(currentlyHovered);
-  }, [currentlyHovered]);
+    console.log(currentlyHoveredItem);
+  }, [currentlyHoveredItem]);
 
   const value: DraggableContextType = {
-    currentlyHovered,
-    setCurrentlyHovered,
+    currentlyHoveredItem,
+    setCurrentlyHoveredItem,
+    currentlyClickedItem,
+    setCurrentlyClickedItem,
   };
 
   return (

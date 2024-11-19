@@ -8,16 +8,35 @@ export default function DraggableItem({
   children: React.ReactNode;
   taskId: string;
 }) {
-  const { setCurrentlyHovered } = useDraggableContext();
+  const { setCurrentlyHoveredItem, setCurrentlyClickedItem } =
+    useDraggableContext();
+
+  function handleMouseEnter() {
+    setTimeout(() => {
+      setCurrentlyHoveredItem(taskId);
+    }, 20);
+  }
+
+  function handleMouseLeave() {
+    setCurrentlyHoveredItem("");
+  }
+
+  function handleMouseDown() {
+    setTimeout(() => {
+      setCurrentlyClickedItem(taskId);
+    }, 20);
+  }
+
+  function handleMouseUp() {
+    setCurrentlyClickedItem("");
+  }
 
   return (
     <div
-      onTouchStart={() => {
-        setCurrentlyHovered(taskId);
-      }}
-      onTouchEnd={() => {
-        setCurrentlyHovered("");
-      }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
     >
       {children}
     </div>
