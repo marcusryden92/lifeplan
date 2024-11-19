@@ -247,7 +247,7 @@ export default function TasksPage() {
           }}
           opts={{ watchDrag: false }}
         >
-          <CarouselContent className="h-full">
+          <CarouselContent className="h-full select-none">
             {taskArray.map((task, index) =>
               task.canInfluence && task.type === "goal" && !task.parentId ? (
                 <CarouselItem key={index}>
