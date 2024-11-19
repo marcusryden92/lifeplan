@@ -109,8 +109,8 @@ export const Navbar = () => {
           <Button
             key={"SignOut"}
             asChild
-            variant={pathname === "/settings" ? "default" : "outline"}
-            className="justify-start rounded-xl h-[48px] "
+            variant="outline"
+            className="justify-start rounded-xl h-[48px] hover:text-red-500 hover:border-red-500 hover:border-2 cursor-pointer"
           >
             <form
               className="mt-0"
@@ -118,7 +118,7 @@ export const Navbar = () => {
                 signOut();
               }}
             >
-              <button className="flex w-full  gap-2 rounded-xl text-sm font-medium hover:bg-grey-100 hover:text-red-500">
+              <button className="flex w-full  gap-2 rounded-xl text-sm font-medium hover:bg-grey-100 ">
                 <FaPowerOff className="h-5 w-5" />
                 <span className="hidden lg:block">Sign Out</span>
               </button>
