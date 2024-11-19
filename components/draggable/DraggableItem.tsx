@@ -14,7 +14,7 @@ export default function DraggableItem({
   function handleMouseEnter() {
     setTimeout(() => {
       setCurrentlyHoveredItem(taskId);
-    }, 20);
+    }, 10);
   }
 
   function handleMouseLeave() {
@@ -24,11 +24,7 @@ export default function DraggableItem({
   function handleMouseDown() {
     setTimeout(() => {
       setCurrentlyClickedItem(taskId);
-    }, 20);
-  }
-
-  function handleMouseUp() {
-    setCurrentlyClickedItem("");
+    }, 10);
   }
 
   return (
@@ -36,7 +32,6 @@ export default function DraggableItem({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
     >
       {children}
     </div>

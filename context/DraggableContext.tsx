@@ -9,6 +9,7 @@ import React, {
   SetStateAction,
 } from "react";
 
+// Define the type for the context state
 interface DraggableContextType {
   currentlyHoveredItem: string;
   setCurrentlyHoveredItem: React.Dispatch<SetStateAction<string>>;
@@ -23,13 +24,33 @@ export const DraggableContextProvider = ({
 }: {
   children: ReactNode;
 }) => {
+  // States to track hovered and clicked items
   const [currentlyHoveredItem, setCurrentlyHoveredItem] = useState<string>("");
   const [currentlyClickedItem, setCurrentlyClickedItem] = useState<string>("");
 
+  // Update `currentlyClickedItem` when mouse is released
   useEffect(() => {
-    console.log(currentlyHoveredItem);
-  }, [currentlyHoveredItem]);
+    const handleMouseUp = () => {
+      if (currentlyClickedItem.length > 0) {
+        setCurrentlyClickedItem("");
+      }
+    };
 
+    // Attach global mouseup listener to the document
+    document.addEventListener("mouseup", handleMouseUp);
+
+    // Cleanup listener on component unmount
+    return () => {
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [currentlyClickedItem]);
+
+  // Update `currentlyClickedItem` when mouse is pressed down
+  useEffect(() => {
+    console.log(currentlyClickedItem); // Debugging currently clicked item
+  }, [currentlyClickedItem]);
+
+  // Context value with hover and click state setters
   const value: DraggableContextType = {
     currentlyHoveredItem,
     setCurrentlyHoveredItem,
@@ -44,6 +65,7 @@ export const DraggableContextProvider = ({
   );
 };
 
+// Hook to use the context in other components
 export const useDraggableContext = () => {
   const context = useContext(DraggableContext);
   if (!context) {
