@@ -9,9 +9,9 @@ import { TaskItemProps } from "@/lib/task-item";
 import TaskList from "./TaskList";
 import TaskListWrapper from "./task-item-subcomponents/TaskListWrapper";
 import TaskHeader from "./task-item-subcomponents/TaskHeader";
+import DraggableItem from "@/components/draggable/DraggableItem";
 
 // Utils
-import { totalSubtaskDuration } from "@/utils/task-array-utils";
 import { getSubtasksFromId } from "@/utils/goal-page-handlers";
 
 export const TaskItem: React.FC<TaskItemProps> = ({
@@ -32,17 +32,19 @@ export const TaskItem: React.FC<TaskItemProps> = ({
         task.parentId ? "pl-2" : ""
       }`}
     >
-      <TaskHeader
-        task={task}
-        subtasks={subtasks}
-        itemIsFocused={itemIsFocused}
-        setItemIsFocused={setItemIsFocused}
-        subtasksMinimized={subtasksMinimized}
-        setSubtasksMinimized={setSubtasksMinimized}
-        focusedTask={focusedTask}
-        setFocusedTask={setFocusedTask}
-        devMode={devMode}
-      />
+      <DraggableItem taskId={task.id}>
+        <TaskHeader
+          task={task}
+          subtasks={subtasks}
+          itemIsFocused={itemIsFocused}
+          setItemIsFocused={setItemIsFocused}
+          subtasksMinimized={subtasksMinimized}
+          setSubtasksMinimized={setSubtasksMinimized}
+          focusedTask={focusedTask}
+          setFocusedTask={setFocusedTask}
+          devMode={devMode}
+        />
+      </DraggableItem>
 
       {/* Render subtasks if there are any */}
       <TaskListWrapper
