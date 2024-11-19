@@ -1,14 +1,5 @@
 import { LoginButton } from "@/components/auth/login-button";
 import { Button } from "@/components/ui/button";
-import { KeyIcon } from "@heroicons/react/16/solid";
-
-import { cn } from "@/lib/utils";
-import { Audiowide } from "next/font/google";
-
-const font = Audiowide({
-  subsets: ["latin"],
-  weight: ["400"],
-});
 
 // bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-200 to-orange-500
 
@@ -23,7 +14,7 @@ export default function Home() {
     >
       <div className="space-y-6 text-center">
         <h1
-          className={`${font.className} flex text-9xl font-semibold text-white drop-shadow-md`}
+          className={`font-audiowide flex text-9xl font-semibold text-white drop-shadow-md`}
         >
           LIFEPLAN
         </h1>
