@@ -14,8 +14,6 @@ import clsx from "clsx";
 import { signOut } from "next-auth/react";
 import { Audiowide } from "next/font/google";
 
-const font = Audiowide({ subsets: ["latin"], weight: ["400"] });
-
 const links = [
   { name: "Calendar", href: "/calendar" },
   { name: "Create", href: "/create" },
@@ -28,7 +26,7 @@ export const Navbar = () => {
   return (
     <div className="flex lg:w-[280px] lg:h-full w-full flex-col p-2 lg:p-5">
       <div
-        className={`hidden md:block ${font.className} text-gray-900 text-[2.2rem] mb-5`}
+        className={`hidden md:block font-audiowide text-gray-900 text-[2.2rem] mb-5`}
       >
         LIFEPLAN
       </div>

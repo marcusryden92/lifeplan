@@ -18,6 +18,9 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        audiowide: ['"Audiowide"', "sans-serif"], // Added Audiowide font
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
