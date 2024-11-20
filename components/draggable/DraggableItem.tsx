@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useDraggableContext } from "@/context/DraggableContext";
 
 export default function DraggableItem({
@@ -10,10 +10,12 @@ export default function DraggableItem({
   taskId: string;
   taskTitle: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const dragTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [isTopHalf, setIsTopHalf] = useState(false);
-  const [isItemDragging, setIsItemDragging] = useState(false);
+  //
+  const [mouseInhabitsTopHalf, setMouseInhabitsTopHalf] = useState<
+    boolean | null
+  >(null);
+  const [displayDragBox, setDisplayDragBox] = useState<boolean>(false);
+  const ref = useRef<HTMLDivElement | null>(null);
 
   const {
     currentlyHoveredItem,
@@ -23,73 +25,85 @@ export default function DraggableItem({
     mousePosition,
   } = useDraggableContext();
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (ref.current) {
-        const rect = ref.current.getBoundingClientRect();
-        const middleY = rect.top + rect.height / 2;
-        setIsTopHalf(e.clientY < middleY);
+  // Functions to set hovered item to this item when hovering it, and clearing when leaving
+  function handleMouseEnter() {
+    setTimeout(() => {
+      setCurrentlyHoveredItem(taskId);
+    }, 10);
+  }
 
-        setCurrentlyClickedItem(taskId);
+  function handleMouseLeave() {
+    setCurrentlyHoveredItem("");
+  }
 
-        // Clear any existing timer
-        if (dragTimerRef.current) {
-          clearTimeout(dragTimerRef.current);
-        }
+  // Function to set clicked item to this item. Clearing happens in DraggablContext
+  function handleMouseDown() {
+    setTimeout(() => {
+      setCurrentlyClickedItem(taskId);
+    }, 10);
+  }
 
-        // Set a delay before marking as dragging
-        dragTimerRef.current = setTimeout(() => {
-          setIsItemDragging(true);
-        }, 200); // 200ms delay
-      }
-    },
-    [taskId, setCurrentlyClickedItem]
-  );
+  // Check if the mouse is on the bottom or top part of the div
 
-  const handleMouseUp = useCallback(() => {
-    // Clear the timer if mouse up happens before drag starts
-    if (dragTimerRef.current) {
-      clearTimeout(dragTimerRef.current);
-    }
-    setIsItemDragging(false);
-    setCurrentlyClickedItem("");
-  }, [setCurrentlyClickedItem]);
-
-  // Cleanup timer on unmount
   useEffect(() => {
+    document.addEventListener("mousemove", updateMousePosition);
     return () => {
-      if (dragTimerRef.current) {
-        clearTimeout(dragTimerRef.current);
-      }
+      document.removeEventListener("mousemove", updateMousePosition);
     };
   }, []);
 
-  const handleMouseEnter = useCallback(() => {
-    setCurrentlyHoveredItem(taskId);
-  }, [taskId, setCurrentlyHoveredItem]);
+  function updateMousePosition() {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const middleY = rect.top + rect.height / 2;
+      setMouseInhabitsTopHalf(mousePosition.clientY < middleY);
+    }
+  }
 
-  const handleMouseLeave = useCallback(() => {
-    setCurrentlyHoveredItem("");
-  }, [setCurrentlyHoveredItem]);
+  // Enable the dragbox when clicking the div
+  useEffect(() => {
+    function setDragBox() {
+      setTimeout(() => {
+        if (
+          currentlyClickedItem.length > 0 &&
+          currentlyClickedItem === taskId
+        ) {
+          setDisplayDragBox(true);
+        }
+      }, 200);
+    }
+
+    function clearDragBox() {
+      setDisplayDragBox(false);
+    }
+    document.addEventListener("mousedown", setDragBox);
+    document.addEventListener("mouseup", clearDragBox);
+
+    return () => {
+      document.removeEventListener("mousedown", setDragBox);
+      document.removeEventListener("mouseup", clearDragBox);
+    };
+  }, []);
 
   const borderClass =
     currentlyHoveredItem === taskId &&
     currentlyClickedItem !== taskId &&
     currentlyClickedItem.length > 0
-      ? isTopHalf
+      ? mouseInhabitsTopHalf
         ? "border-t-4 border-sky-400"
         : "border-b-4 border-sky-400"
       : "";
 
   return (
     <>
-      {isItemDragging && (
+      {displayDragBox && (
         <div
-          className="fixed px-5 py-2 bg-sky-500 rounded-lg text-white opacity-60 pointer-events-none"
           style={{
+            position: "fixed",
             top: mousePosition.clientY,
             left: mousePosition.clientX,
           }}
+          className="px-5 py-2 bg-sky-500 rounded-lg text-white opacity-60"
         >
           {taskTitle}
         </div>
@@ -101,7 +115,6 @@ export default function DraggableItem({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
       >
         {children}
       </div>
