@@ -8,8 +8,13 @@ export default function DraggableItem({
   children: React.ReactNode;
   taskId: string;
 }) {
-  const { setCurrentlyHoveredItem, setCurrentlyClickedItem } =
-    useDraggableContext();
+  const {
+    currentlyHoveredItem,
+    setCurrentlyHoveredItem,
+    currentlyClickedItem,
+    setCurrentlyClickedItem,
+    isInTop,
+  } = useDraggableContext();
 
   function handleMouseEnter() {
     setTimeout(() => {
@@ -29,6 +34,12 @@ export default function DraggableItem({
 
   return (
     <div
+      id={taskId}
+      className={`${
+        currentlyHoveredItem === taskId && currentlyClickedItem !== taskId
+          ? isInTop && "border-t-4 border-sky-400"
+          : ""
+      }`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseDown={handleMouseDown}

@@ -122,10 +122,6 @@ export default function TasksPage() {
     return currentGoal;
   };
 
-  useEffect(() => {
-    console.log(taskArray);
-  }, [taskArray]);
-
   const getGoalsList = () => {
     const goalsList: Planner[] = [];
 
