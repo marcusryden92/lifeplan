@@ -38,7 +38,7 @@ export default function DraggableItem({
       className={`${
         currentlyHoveredItem === taskId && currentlyClickedItem !== taskId
           ? isInTop && "border-t-4 border-sky-400"
-          : ""
+          : "border-b-4 border-sky-400"
       }`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

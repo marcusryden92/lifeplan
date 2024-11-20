@@ -15,7 +15,10 @@ interface DraggableContextType {
   setCurrentlyHoveredItem: React.Dispatch<SetStateAction<string>>;
   currentlyClickedItem: string;
   setCurrentlyClickedItem: React.Dispatch<SetStateAction<string>>;
-  isInTop: boolean;
+  mousePosition: {
+    clientX: number;
+    clientY: number;
+  };
 }
 
 const DraggableContext = createContext<DraggableContextType | null>(null);
@@ -28,16 +31,19 @@ export const DraggableContextProvider = ({
   // States to track hovered and clicked items
   const [currentlyHoveredItem, setCurrentlyHoveredItem] = useState<string>("");
   const [currentlyClickedItem, setCurrentlyClickedItem] = useState<string>("");
-  const [isInTop, setIsInTop] = useState<boolean>(false);
 
-  const [mousePosition, setMousePosition] = useState<{ clientY: number }>({
+  const [mousePosition, setMousePosition] = useState<{
+    clientX: number;
+    clientY: number;
+  }>({
+    clientX: 0,
     clientY: 0,
   });
 
   // Track mouse position
   useEffect(() => {
     const updateMousePosition = (e: MouseEvent) => {
-      setMousePosition({ clientY: e.clientY });
+      setMousePosition({ clientX: e.clientX, clientY: e.clientY });
     };
 
     // Listen to mouse move events
@@ -63,33 +69,13 @@ export const DraggableContextProvider = ({
     };
   }, [currentlyClickedItem]);
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (currentlyHoveredItem.length > 0) {
-        const element = document.getElementById(currentlyHoveredItem); // Access the element by id
-
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          const isInTop = mousePosition.clientY < rect.top + rect.height / 2;
-          setIsInTop(isInTop);
-        }
-      }
-    }, 10);
-
-    return () => clearInterval(intervalId); // Cleanup on unmount
-  }, []);
-
-  useEffect(() => {
-    console.log(currentlyHoveredItem);
-  }, [currentlyHoveredItem]);
-
   // Context value with hover and click state setters
   const value: DraggableContextType = {
     currentlyHoveredItem,
     setCurrentlyHoveredItem,
     currentlyClickedItem,
     setCurrentlyClickedItem,
-    isInTop,
+    mousePosition,
   };
 
   return (
