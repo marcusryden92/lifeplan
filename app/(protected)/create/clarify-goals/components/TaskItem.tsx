@@ -27,12 +27,12 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   const devMode = false;
 
   return (
-    <div
-      className={`${subtasks.length ? "pb-1" : ""} ${
-        task.parentId ? "pl-2" : ""
-      }`}
-    >
-      <DraggableItem taskId={task.id}>
+    <DraggableItem taskId={task.id} taskTitle={task.title}>
+      <div
+        className={`${subtasks.length ? "pb-1" : ""} ${
+          task.parentId ? "pl-2" : ""
+        }`}
+      >
         <TaskHeader
           task={task}
           subtasks={subtasks}
@@ -44,22 +44,22 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           setFocusedTask={setFocusedTask}
           devMode={devMode}
         />
-      </DraggableItem>
 
-      {/* Render subtasks if there are any */}
-      <TaskListWrapper
-        subtasksLength={subtasks.length}
-        parentId={task.parentId}
-        subtasksMinimized={subtasksMinimized}
-        itemIsFocused={itemIsFocused}
-      >
-        <TaskList
-          id={task.id}
-          subtasks={subtasks}
-          focusedTask={focusedTask}
-          setFocusedTask={setFocusedTask}
-        />
-      </TaskListWrapper>
-    </div>
+        {/* Render subtasks if there are any */}
+        <TaskListWrapper
+          subtasksLength={subtasks.length}
+          parentId={task.parentId}
+          subtasksMinimized={subtasksMinimized}
+          itemIsFocused={itemIsFocused}
+        >
+          <TaskList
+            id={task.id}
+            subtasks={subtasks}
+            focusedTask={focusedTask}
+            setFocusedTask={setFocusedTask}
+          />
+        </TaskListWrapper>
+      </div>
+    </DraggableItem>
   );
 };
