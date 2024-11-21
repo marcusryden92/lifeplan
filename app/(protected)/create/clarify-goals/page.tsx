@@ -24,6 +24,7 @@ import TaskList from "./components/TaskList";
 // Local components and context
 import { useDataContext } from "@/context/DataContext";
 import { DraggableContextProvider } from "@/context/DraggableContext";
+import DragBox from "@/components/draggable/DragBox";
 import { CardContent, CardFooter } from "@/components/ui/card";
 
 import { Input } from "@/components/ui/input";
@@ -366,6 +367,7 @@ export default function TasksPage() {
 
                       <div className="flex py-2 overflow-y-scroll w-full no-scrollbar flex-grow">
                         <DraggableContextProvider>
+                          <DragBox />
                           <TaskList
                             id={task.id}
                             focusedTask={focusedTask}

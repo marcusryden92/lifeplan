@@ -9,12 +9,14 @@ import React, {
   SetStateAction,
 } from "react";
 
+type ClickedItem = { taskId: string; taskTitle: string } | undefined;
+
 // Define the type for the context state
 interface DraggableContextType {
   currentlyHoveredItem: string;
   setCurrentlyHoveredItem: React.Dispatch<SetStateAction<string>>;
-  currentlyClickedItem: string;
-  setCurrentlyClickedItem: React.Dispatch<SetStateAction<string>>;
+  currentlyClickedItem: ClickedItem;
+  setCurrentlyClickedItem: React.Dispatch<SetStateAction<ClickedItem>>;
   mousePosition: {
     clientX: number;
     clientY: number;
@@ -30,7 +32,8 @@ export const DraggableContextProvider = ({
 }) => {
   // States to track hovered and clicked items
   const [currentlyHoveredItem, setCurrentlyHoveredItem] = useState<string>("");
-  const [currentlyClickedItem, setCurrentlyClickedItem] = useState<string>("");
+  const [currentlyClickedItem, setCurrentlyClickedItem] =
+    useState<ClickedItem>(undefined);
 
   const [mousePosition, setMousePosition] = useState<{
     clientX: number;
@@ -57,8 +60,8 @@ export const DraggableContextProvider = ({
   // Update `currentlyClickedItem` when mouse is released
   useEffect(() => {
     const handleMouseUp = () => {
-      if (currentlyClickedItem.length > 0) {
-        setCurrentlyClickedItem("");
+      if (currentlyClickedItem) {
+        setCurrentlyClickedItem(undefined);
       }
     };
 

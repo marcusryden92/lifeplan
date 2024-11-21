@@ -33,7 +33,11 @@ const TaskList: React.FC<TaskListProps> = ({
   const sortedTasks = sortTasksByDependencies(taskArray, subtasksToUse);
 
   return (
-    <div className="flex flex-col justify-start flex-grow w-full">
+    <div
+      className={`flex flex-col justify-start flex-grow w-full ${
+        subtasks && subtasks.length > 0 && "mb-4"
+      }`}
+    >
       {sortedTasks.map((task) => (
         <TaskItem
           key={task.id}
