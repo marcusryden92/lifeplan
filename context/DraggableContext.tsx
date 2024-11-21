@@ -43,17 +43,34 @@ export const DraggableContextProvider = ({
     clientY: 0,
   });
 
+  useEffect(() => {
+    console.log(mousePosition);
+  }, [mousePosition]);
+
   // Track mouse position
   useEffect(() => {
+    let animationFrameId: number;
+    let lastKnownMousePosition = { clientX: 0, clientY: 0 };
+
     const updateMousePosition = (e: MouseEvent) => {
-      setMousePosition({ clientX: e.clientX, clientY: e.clientY });
+      lastKnownMousePosition = { clientX: e.clientX, clientY: e.clientY };
+    };
+
+    const trackMouse = () => {
+      setMousePosition(lastKnownMousePosition);
+      animationFrameId = requestAnimationFrame(trackMouse);
     };
 
     // Listen to mouse move events
     document.addEventListener("mousemove", updateMousePosition);
 
+    // Start tracking on mount
+    animationFrameId = requestAnimationFrame(trackMouse);
+
     return () => {
+      // Clean up
       document.removeEventListener("mousemove", updateMousePosition);
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 

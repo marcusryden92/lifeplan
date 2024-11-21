@@ -7,8 +7,10 @@ export default function DragBox() {
   const isMouseDown = useRef(false); // Track mouse state
   const dragBoxRef = useRef<HTMLDivElement | null>(null); // Reference to the drag box
 
+  // Set displayDragBox to true or false when changing currentlyClickedItem
   useEffect(() => {
     if (currentlyClickedItem) {
+      // Delay for better UX
       setTimeout(() => {
         if (isMouseDown) setDisplayDragBox(true);
       }, 200);
@@ -26,12 +28,10 @@ export default function DragBox() {
     }
 
     document.addEventListener("mousedown", setMouseDownTrue);
-
     document.addEventListener("mouseup", setMouseDownFalse);
 
     return () => {
       document.removeEventListener("mousedown", setMouseDownTrue);
-
       document.removeEventListener("mouseup", setMouseDownFalse);
     };
   }, []);
@@ -58,8 +58,8 @@ export default function DragBox() {
           ref={dragBoxRef}
           style={{
             position: "fixed",
-            top: getAdjustedPosition().top,
-            left: getAdjustedPosition().left,
+            top: `${mousePosition.clientY}px`,
+            left: `${mousePosition.clientX}px`,
           }}
           className="px-5 py-2 bg-sky-500 rounded-lg text-white opacity-60"
         >

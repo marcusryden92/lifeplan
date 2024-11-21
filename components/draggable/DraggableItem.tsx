@@ -68,16 +68,28 @@ export default function DraggableItem({
 
   // Use clsx to simplify the border logic
   const borderClasses = clsx({
-    "border-t-4 border-t-sky-400":
+    "cursor-grab": !currentlyClickedItem, // Use cursor-grab when not clicked
+    "cursor-grabbing": currentlyClickedItem, // Use cursor-grabbing when clicked
+
+    // Apply styles when item is clicked but not currently clicked, hovered and mouse in top half
+    "bg-sky-100 border-t-4 border-sky-400":
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId &&
       mouseInhabitsTopHalf,
-    "border-b-4 border-b-sky-400":
+
+    // Apply styles when item is clicked but not currently clicked, hovered and mouse in bottom half
+    "bg-sky-100 border-b-4 border-sky-400":
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId &&
       !mouseInhabitsTopHalf,
+
+    // Apply styles when item is both clicked and hovered
+    "bg-red-100":
+      currentlyClickedItem &&
+      currentlyClickedItem?.taskId === taskId &&
+      currentlyHoveredItem === taskId,
   });
 
   return (

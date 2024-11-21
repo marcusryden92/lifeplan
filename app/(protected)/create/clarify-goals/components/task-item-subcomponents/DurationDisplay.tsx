@@ -24,7 +24,7 @@ const DurationDisplay: React.FC<DurationDisplayProps> = ({
   }, [taskArray, task.id]);
 
   return (
-    <div className="flex text-sm text-black pl-2  flex-shrink-0 items-start justify-end space-x-2">
+    <div className="flex text-sm text-black pl-2 pr-4  flex-shrink-0 items-start justify-end space-x-2">
       <div className={`${itemIsFocused && "text-sky-500"}`}>
         {formatMinutesToHours(
           subtasksLength === 0 ? task.duration || 0 : totalTaskDuration
