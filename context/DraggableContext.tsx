@@ -43,10 +43,6 @@ export const DraggableContextProvider = ({
     clientY: 0,
   });
 
-  useEffect(() => {
-    console.log(mousePosition);
-  }, [mousePosition]);
-
   // Track mouse position
   useEffect(() => {
     let animationFrameId: number;
