@@ -72,14 +72,14 @@ export default function DraggableItem({
     "cursor-grabbing": currentlyClickedItem, // Use cursor-grabbing when clicked
 
     // Apply styles when item is clicked but not currently clicked, hovered and mouse in top half
-    "bg-sky-100 border-t-4 border-sky-400":
+    "border-t-4 border-sky-400":
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId &&
       mouseInhabitsTopHalf,
 
     // Apply styles when item is clicked but not currently clicked, hovered and mouse in bottom half
-    "bg-sky-100 border-b-4 border-sky-400":
+    "border-b-4 border-sky-400":
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId &&

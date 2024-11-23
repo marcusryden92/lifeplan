@@ -1,4 +1,7 @@
+"use client";
+
 import { Navbar } from "@/components/interface/navbar";
+import { DraggableContextProvider } from "@/context/DraggableContext";
 
 interface ProtectedLayoutProps {
   children: React.ReactNode;
@@ -7,8 +10,12 @@ interface ProtectedLayoutProps {
 const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
   return (
     <div className="h-full w-full flex flex-col lg:flex-row lg:items-center bg-white">
-      <Navbar />
-      <div className="h-full w-full border-l border-gray-200">{children}</div>
+      <DraggableContextProvider>
+        <Navbar />
+        <div className="h-full w-full border-l border-gray-200">
+          {children}
+        </div>{" "}
+      </DraggableContextProvider>
     </div>
   );
 };

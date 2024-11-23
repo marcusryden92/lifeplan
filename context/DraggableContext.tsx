@@ -9,6 +9,8 @@ import React, {
   SetStateAction,
 } from "react";
 
+import DragBox from "@/components/draggable/DragBox";
+
 type ClickedItem = { taskId: string; taskTitle: string } | undefined;
 
 // Define the type for the context state
@@ -96,6 +98,8 @@ export const DraggableContextProvider = ({
 
   return (
     <DraggableContext.Provider value={value}>
+      <DragBox />
+
       {children}
     </DraggableContext.Provider>
   );

@@ -46,7 +46,7 @@ export default function DragBox() {
 
     // Adjust the position to center the box over the cursor
     return {
-      top: mousePosition.clientY - boxHeight / 2,
+      top: mousePosition.clientY - boxHeight * 0.7,
       left: mousePosition.clientX - boxWidth / 2,
     };
   };
@@ -58,10 +58,10 @@ export default function DragBox() {
           ref={dragBoxRef}
           style={{
             position: "fixed",
-            top: `${mousePosition.clientY}px`,
-            left: `${mousePosition.clientX}px`,
+            top: `${getAdjustedPosition().top}px`,
+            left: `${getAdjustedPosition().left}px`,
           }}
-          className="px-5 py-2 bg-sky-500 rounded-lg text-white opacity-60"
+          className="px-5 py-2 bg-sky-500 rounded-lg text-white opacity-60 z-50 pointer-events-none"
         >
           {currentlyClickedItem.taskTitle}
         </div>
