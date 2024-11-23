@@ -37,6 +37,10 @@ export const DraggableContextProvider = ({
   const [currentlyClickedItem, setCurrentlyClickedItem] =
     useState<ClickedItem>(undefined);
 
+  useEffect(() => {
+    console.log(currentlyHoveredItem);
+  }, [currentlyHoveredItem]);
+
   const [mousePosition, setMousePosition] = useState<{
     clientX: number;
     clientY: number;

@@ -27,7 +27,11 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   const devMode = false;
 
   return (
-    <DraggableItem taskId={task.id} taskTitle={task.title}>
+    <DraggableItem
+      taskId={task.id}
+      taskTitle={task.title}
+      parentId={task.parentId}
+    >
       <div
         className={`${subtasks.length ? "pb-1" : ""} ${
           task.parentId ? "pl-2" : ""

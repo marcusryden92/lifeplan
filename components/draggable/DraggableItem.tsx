@@ -6,10 +6,12 @@ export default function DraggableItem({
   children,
   taskId,
   taskTitle,
+  parentId,
 }: {
   children: React.ReactNode;
   taskId: string;
   taskTitle: string;
+  parentId?: string;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [mouseInhabitsTopHalf, setMouseInhabitsTopHalf] = useState(false);
