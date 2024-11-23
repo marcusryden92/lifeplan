@@ -7,15 +7,18 @@ export default function DraggableItem({
   taskId,
   taskTitle,
   parentId,
+  taskTreeIds,
 }: {
   children: React.ReactNode;
   taskId: string;
   taskTitle: string;
   parentId?: string;
+  taskTreeIds?: string[];
 }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [mouseInhabitsTopHalf, setMouseInhabitsTopHalf] = useState(false);
-  const debounceTimer = useRef<NodeJS.Timeout>();
+  const ref = useRef<HTMLDivElement | null>(null); // Reference to the DOM element
+  const [mouseInhabitsTopHalf, setMouseInhabitsTopHalf] = useState(false); // Tracks if the mouse is in the top half of the element
+  const lastUpdateTime = useRef<number>(0); // Keeps track of the last time mouse position was updated
+  const RAF_THRESHOLD = 1000 / 60; // Threshold for updates (~16.67ms for 60fps)
 
   const {
     currentlyHoveredItem,
@@ -23,86 +26,130 @@ export default function DraggableItem({
     currentlyClickedItem,
     setCurrentlyClickedItem,
     mousePosition,
-  } = useDraggableContext();
+  } = useDraggableContext(); // Context for draggable state and actions
 
-  // Mouse position check, with debounce for performance
+  // Update mouse position relative to the element to determine if it's in the top or bottom half
   const updateMousePosition = useCallback(() => {
     if (
       ref.current &&
       currentlyClickedItem &&
-      currentlyClickedItem.taskId !== taskId
+      currentlyClickedItem.taskId !== taskId &&
+      currentlyHoveredItem === taskId
     ) {
-      const rect = ref.current.getBoundingClientRect();
-      const middleY = rect.top + rect.height / 2;
-      setMouseInhabitsTopHalf(mousePosition.clientY < middleY);
-    }
-  }, [mousePosition, currentlyClickedItem, taskId]);
+      const now = performance.now();
+      if (now - lastUpdateTime.current < RAF_THRESHOLD) {
+        return; // Skip update if within threshold
+      }
 
+      const rect = ref.current.getBoundingClientRect(); // Get element dimensions and position
+      const mouseY = mousePosition.clientY; // Current Y-coordinate of the mouse
+
+      const bufferSize = 5; // Small buffer zone around the middle
+      const middleY = rect.top + rect.height / 2;
+      const upperBound = middleY + bufferSize;
+      const lowerBound = middleY - bufferSize;
+
+      // Update only if the mouse is clearly in the top or bottom half
+      if (mouseY < lowerBound || mouseY > upperBound) {
+        setMouseInhabitsTopHalf(mouseY < middleY); // Set state based on position
+        lastUpdateTime.current = now; // Update the timestamp
+      }
+    }
+  }, [mousePosition, currentlyClickedItem, taskId, currentlyHoveredItem]);
+
+  // Continuously track mouse position using requestAnimationFrame
   useEffect(() => {
-    clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(updateMousePosition, 16); // ~60fps
+    let rafId: number;
+
+    const scheduleUpdate = () => {
+      rafId = requestAnimationFrame(() => {
+        updateMousePosition(); // Check mouse position
+        scheduleUpdate(); // Schedule the next update
+      });
+    };
+
+    if (currentlyClickedItem && currentlyHoveredItem === taskId) {
+      scheduleUpdate(); // Start updates if the item is currently hovered
+    }
 
     return () => {
-      clearTimeout(debounceTimer.current);
+      if (rafId) {
+        cancelAnimationFrame(rafId); // Cleanup on unmount or dependency change
+      }
     };
-  }, [mousePosition, updateMousePosition]);
+  }, [updateMousePosition, currentlyClickedItem, currentlyHoveredItem, taskId]);
 
-  // Sets currently hovered item
-  const handleMouseEnter = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    // Timeout to prevent interference from clearing of previous item
-    setTimeout(() => {
-      setCurrentlyHoveredItem(taskId);
-    });
-  };
+  // Handles mouse entering the element
+  const handleMouseEnter = useCallback(
+    (event: React.MouseEvent) => {
+      event.stopPropagation(); // Prevent bubbling to parent elements
+      const rect = ref.current?.getBoundingClientRect();
+      if (rect) {
+        const middleY = rect.top + rect.height / 2;
+        setMouseInhabitsTopHalf(event.clientY < middleY); // Determine if mouse is in top half
+      }
+      setCurrentlyHoveredItem(taskId); // Mark this item as hovered
+    },
+    [taskId, setCurrentlyHoveredItem]
+  );
 
-  // Clears currently hovered item
-  const handleMouseLeave = () => {
-    setCurrentlyHoveredItem("");
-  };
+  // Handles mouse leaving the element
+  const handleMouseLeave = useCallback(() => {
+    if (parentId) {
+      const parentElement = document.getElementById(`draggable-${parentId}`);
+      if (parentElement?.matches(":hover")) {
+        setCurrentlyHoveredItem(parentId); // Set hover state to parent if still hovered
+        return;
+      }
+    }
+    setCurrentlyHoveredItem(""); // Clear hover state if no parent or no hover
+  }, [parentId, setCurrentlyHoveredItem]);
 
-  // Update currently clicked item ID & title
-  // (state is cleared on mouseUp in DraggableContext)
-  const handleMouseDown = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    setCurrentlyClickedItem({ taskId, taskTitle });
-  };
-
-  // Use clsx to simplify the border logic
+  // Define dynamic border classes based on the drag state
   const borderClasses = clsx({
-    "cursor-grab": !currentlyClickedItem, // Use cursor-grab when not clicked
-    "cursor-grabbing": currentlyClickedItem, // Use cursor-grabbing when clicked
-
-    // Apply styles when item is clicked but not currently clicked, hovered and mouse in top half
+    "cursor-grab": !currentlyClickedItem, // Default grab cursor
+    "cursor-grabbing": currentlyClickedItem, // Grabbing cursor when item is clicked
+    // Highlight top border when mouse is in top half
     "border-t-4 border-sky-400":
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId &&
       mouseInhabitsTopHalf,
-
-    // Apply styles when item is clicked but not currently clicked, hovered and mouse in bottom half
+    // Highlight bottom border when mouse is in bottom half
     "border-b-4 border-sky-400":
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId &&
       !mouseInhabitsTopHalf,
-
-    // Apply styles when item is both clicked and hovered
-    "bg-red-100":
+    // Highlight background for the currently clicked item
+    "bg-neutral-100":
       currentlyClickedItem &&
       currentlyClickedItem?.taskId === taskId &&
-      currentlyHoveredItem === taskId,
+      (currentlyHoveredItem === taskId ||
+        taskTreeIds?.includes(currentlyHoveredItem)),
   });
 
   return (
     <div
       ref={ref}
+      id={`draggable-${taskId}`}
       className={borderClasses}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onMouseDown={handleMouseDown}
+      onMouseDown={(e) => {
+        e.stopPropagation(); // Prevent bubbling
+        setCurrentlyClickedItem({ taskId, taskTitle }); // Set clicked state
+      }}
     >
-      {children}
+      <div
+        className={`${
+          currentlyClickedItem?.taskId === taskId &&
+          taskTreeIds?.includes(currentlyHoveredItem) &&
+          "pointer-events-none" // Disable pointer events for descendants if necessary
+        }`}
+      >
+        {children} {/* Render children */}
+      </div>
     </div>
   );
 }

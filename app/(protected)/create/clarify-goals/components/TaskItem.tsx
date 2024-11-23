@@ -13,6 +13,7 @@ import DraggableItem from "@/components/draggable/DraggableItem";
 
 // Utils
 import { getSubtasksFromId } from "@/utils/goal-page-handlers";
+import { getTaskIdTree } from "@/utils/goal-page-handlers";
 
 export const TaskItem: React.FC<TaskItemProps> = ({
   taskArray,
@@ -26,11 +27,14 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   const subtasks = getSubtasksFromId(taskArray, task.id);
   const devMode = false;
 
+  const [taskTreeIds] = useState<string[]>(getTaskIdTree(taskArray, task.id));
+
   return (
     <DraggableItem
       taskId={task.id}
       taskTitle={task.title}
       parentId={task.parentId}
+      taskTreeIds={taskTreeIds}
     >
       <div
         className={`${subtasks.length ? "pb-1" : ""} ${

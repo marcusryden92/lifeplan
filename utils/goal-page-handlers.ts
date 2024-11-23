@@ -371,6 +371,22 @@ export function sortTasksByDependencies(
   return sortedArray;
 }
 
+export function getTaskIdTree(taskArray: Planner[], id: string): string[] {
+  const subtasks: Planner[] = taskArray.filter((task) => task.parentId === id);
+
+  return subtasks.reduce(
+    (allIds: string[], task: Planner) => {
+      // Accumulate the current task's ID and its descendants' IDs
+      return [
+        ...allIds,
+        task.id, // Include the current task's ID
+        ...getTaskIdTree(taskArray, task.id), // Include the IDs of the entire tree under the current task
+      ];
+    },
+    [id]
+  ); // Start with the root ID itself
+}
+
 // GET BOTTOM (ACTIONABLE) LAYER OF GOAL
 export function getTreeBottomLayer(
   taskArray: Planner[],
