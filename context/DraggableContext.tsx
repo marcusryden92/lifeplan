@@ -41,8 +41,8 @@ export const DraggableContextProvider = ({
   const [displayDragBox, setDisplayDragBox] = useState<boolean>(false);
 
   useEffect(() => {
-    console.log(currentlyHoveredItem);
-  }, [currentlyHoveredItem]);
+    console.log(currentlyClickedItem);
+  }, [currentlyClickedItem]);
 
   const [mousePosition, setMousePosition] = useState<{
     clientX: number;
@@ -83,6 +83,13 @@ export const DraggableContextProvider = ({
   useEffect(() => {
     const handleMouseUp = () => {
       if (currentlyClickedItem) {
+        /*Input task-list sorting functionality here*
+         *
+         *
+         *
+         *
+         *
+         */
         setCurrentlyClickedItem(undefined);
       }
     };

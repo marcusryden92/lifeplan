@@ -14,6 +14,7 @@ import DraggableItem from "@/components/draggable/DraggableItem";
 // Utils
 import { getSubtasksFromId } from "@/utils/goal-page-handlers";
 import { getTaskIdTree } from "@/utils/goal-page-handlers";
+import DragDisableListWrapper from "@/components/draggable/DragDisableListWrapper";
 
 export const TaskItem: React.FC<TaskItemProps> = ({
   taskArray,
@@ -30,16 +31,16 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   const [taskTreeIds] = useState<string[]>(getTaskIdTree(taskArray, task.id));
 
   return (
-    <DraggableItem
-      taskId={task.id}
-      taskTitle={task.title}
-      parentId={task.parentId}
-      taskTreeIds={taskTreeIds}
+    <div
+      className={`${subtasks.length ? "pb-1" : ""} ${
+        task.parentId ? "pl-2" : ""
+      }`}
     >
-      <div
-        className={`${subtasks.length ? "pb-1" : ""} ${
-          task.parentId ? "pl-2" : ""
-        }`}
+      <DraggableItem
+        taskId={task.id}
+        taskTitle={task.title}
+        parentId={task.parentId}
+        taskTreeIds={taskTreeIds}
       >
         <TaskHeader
           task={task}
@@ -52,7 +53,10 @@ export const TaskItem: React.FC<TaskItemProps> = ({
           setFocusedTask={setFocusedTask}
           devMode={devMode}
         />
+      </DraggableItem>
 
+      {/* Disables task list if parent is being dragged */}
+      <DragDisableListWrapper taskId={task.id}>
         {/* Render subtasks if there are any */}
         <TaskListWrapper
           subtasksLength={subtasks.length}
@@ -67,7 +71,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
             setFocusedTask={setFocusedTask}
           />
         </TaskListWrapper>
-      </div>
-    </DraggableItem>
+      </DragDisableListWrapper>
+    </div>
   );
 };

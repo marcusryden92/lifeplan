@@ -1,0 +1,9 @@
+.striated-background {
+  background: repeating-linear-gradient(
+    45deg,
+    /* Angle of the stripes */ rgba(243, 244, 246, 1),
+    /* bg-neutral-100 */ rgba(243, 244, 246, 1) 7px,
+    /* End of stripe 1 */ rgba(243, 244, 246, 0) 7px,
+    /* Transparent start */ rgba(243, 244, 246, 0) 14px /* Transparent end */
+  );
+}

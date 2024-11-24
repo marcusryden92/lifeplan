@@ -122,13 +122,6 @@ export default function DraggableItem({
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId &&
       !mouseInhabitsTopHalf,
-    // Highlight background for the currently clicked item
-    "bg-neutral-100":
-      currentlyClickedItem &&
-      currentlyClickedItem?.taskId === taskId &&
-      displayDragBox &&
-      (currentlyHoveredItem === taskId ||
-        taskTreeIds?.includes(currentlyHoveredItem)),
   });
 
   return (
@@ -143,16 +136,7 @@ export default function DraggableItem({
         setCurrentlyClickedItem({ taskId, taskTitle }); // Set clicked state
       }}
     >
-      <div
-        className={`${
-          currentlyClickedItem?.taskId === taskId &&
-          taskTreeIds?.includes(currentlyHoveredItem) &&
-          displayDragBox &&
-          "pointer-events-none" // Disable pointer events for descendants if necessary
-        }`}
-      >
-        {children} {/* Render children */}
-      </div>
+      {children} {/* Render children */}
     </div>
   );
 }
