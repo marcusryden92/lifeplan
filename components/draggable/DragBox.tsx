@@ -2,19 +2,25 @@ import React, { useState, useRef, useEffect } from "react";
 import { useDraggableContext } from "@/context/DraggableContext";
 
 export default function DragBox() {
-  const { currentlyClickedItem, mousePosition } = useDraggableContext();
-  const [displayDragBox, setDisplayDragBox] = useState<boolean>(false);
+  const {
+    currentlyClickedItem,
+    currentlyHoveredItem,
+    mousePosition,
+    displayDragBox,
+    setDisplayDragBox,
+  } = useDraggableContext();
   const isMouseDown = useRef(false); // Track mouse state
   const dragBoxRef = useRef<HTMLDivElement | null>(null); // Reference to the drag box
 
   // Set displayDragBox to true or false when changing currentlyClickedItem
   useEffect(() => {
+    setDisplayDragBox(false);
     if (currentlyClickedItem) {
       // Delay for better UX
       setTimeout(() => {
         if (isMouseDown) setDisplayDragBox(true);
       }, 200);
-    } else setDisplayDragBox(false);
+    }
   }, [currentlyClickedItem]);
 
   // Enable the dragbox when clicking the div

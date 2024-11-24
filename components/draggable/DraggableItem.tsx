@@ -26,6 +26,7 @@ export default function DraggableItem({
     currentlyClickedItem,
     setCurrentlyClickedItem,
     mousePosition,
+    displayDragBox,
   } = useDraggableContext(); // Context for draggable state and actions
 
   // Update mouse position relative to the element to determine if it's in the top or bottom half
@@ -125,6 +126,7 @@ export default function DraggableItem({
     "bg-neutral-100":
       currentlyClickedItem &&
       currentlyClickedItem?.taskId === taskId &&
+      displayDragBox &&
       (currentlyHoveredItem === taskId ||
         taskTreeIds?.includes(currentlyHoveredItem)),
   });
@@ -145,6 +147,7 @@ export default function DraggableItem({
         className={`${
           currentlyClickedItem?.taskId === taskId &&
           taskTreeIds?.includes(currentlyHoveredItem) &&
+          displayDragBox &&
           "pointer-events-none" // Disable pointer events for descendants if necessary
         }`}
       >

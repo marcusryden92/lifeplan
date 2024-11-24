@@ -23,6 +23,8 @@ interface DraggableContextType {
     clientX: number;
     clientY: number;
   };
+  displayDragBox: boolean;
+  setDisplayDragBox: React.Dispatch<SetStateAction<boolean>>;
 }
 
 const DraggableContext = createContext<DraggableContextType | null>(null);
@@ -36,6 +38,7 @@ export const DraggableContextProvider = ({
   const [currentlyHoveredItem, setCurrentlyHoveredItem] = useState<string>("");
   const [currentlyClickedItem, setCurrentlyClickedItem] =
     useState<ClickedItem>(undefined);
+  const [displayDragBox, setDisplayDragBox] = useState<boolean>(false);
 
   useEffect(() => {
     console.log(currentlyHoveredItem);
@@ -98,6 +101,8 @@ export const DraggableContextProvider = ({
     currentlyClickedItem,
     setCurrentlyClickedItem,
     mousePosition,
+    displayDragBox,
+    setDisplayDragBox,
   };
 
   return (
