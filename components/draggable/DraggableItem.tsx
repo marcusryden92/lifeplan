@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useDraggableContext } from "@/context/DraggableContext";
 import clsx from "clsx";
+import styles from "./DraggableItem.module.css";
+import styles2 from "./DragDisableListWrapper.module.css";
 
 export default function DraggableItem({
   children,
@@ -16,7 +18,9 @@ export default function DraggableItem({
   taskTreeIds?: string[];
 }) {
   const ref = useRef<HTMLDivElement | null>(null); // Reference to the DOM element
-  const [mouseInhabitsTopHalf, setMouseInhabitsTopHalf] = useState(false); // Tracks if the mouse is in the top half of the element
+  const [mouseLocationInItem, setMouseLocationInItem] = useState<
+    "top" | "middle" | "bottom" | null
+  >(null); // Tracks if the mouse is in the top half of the element
   const lastUpdateTime = useRef<number>(0); // Keeps track of the last time mouse position was updated
   const RAF_THRESHOLD = 1000 / 60; // Threshold for updates (~16.67ms for 60fps)
 
@@ -46,17 +50,46 @@ export default function DraggableItem({
       const mouseY = mousePosition.clientY; // Current Y-coordinate of the mouse
 
       const bufferSize = 5; // Small buffer zone around the middle
-      const middleY = rect.top + rect.height / 2;
-      const upperBound = middleY + bufferSize;
-      const lowerBound = middleY - bufferSize;
+      const top25Height = rect.height * 0.25;
+      const bottom25Height = rect.height * 0.25;
+      const middle50Height = rect.height * 0.5;
 
-      // Update only if the mouse is clearly in the top or bottom half
-      if (mouseY < lowerBound || mouseY > upperBound) {
-        setMouseInhabitsTopHalf(mouseY < middleY); // Set state based on position
-        lastUpdateTime.current = now; // Update the timestamp
+      // Calculate the boundaries for the top, middle, and bottom sections
+      const topBoundary = rect.top + top25Height + bufferSize;
+      const bottomBoundary =
+        rect.top + rect.height - bottom25Height - bufferSize;
+      const middleTopBoundary = rect.top + top25Height + bufferSize;
+      const middleBottomBoundary =
+        rect.top + rect.height - bottom25Height - bufferSize;
+
+      // Determine if mouse is in top, middle, or bottom section
+      let mouseLocation = null;
+
+      if (mouseY < topBoundary) {
+        mouseLocation = "top";
+      } else if (
+        mouseY >= middleTopBoundary &&
+        mouseY <= middleBottomBoundary
+      ) {
+        mouseLocation = "middle";
+      } else if (mouseY > bottomBoundary) {
+        mouseLocation = "bottom";
       }
+
+      // Update state only if there's a change
+      if (mouseLocation && mouseLocation !== mouseLocationInItem) {
+        setMouseLocationInItem(mouseLocation as "top" | "middle" | "bottom");
+      }
+
+      lastUpdateTime.current = now; // Update the timestamp
     }
-  }, [mousePosition, currentlyClickedItem, taskId, currentlyHoveredItem]);
+  }, [
+    mousePosition,
+    currentlyClickedItem,
+    taskId,
+    currentlyHoveredItem,
+    mouseLocationInItem,
+  ]);
 
   // Continuously track mouse position using requestAnimationFrame
   useEffect(() => {
@@ -84,11 +117,7 @@ export default function DraggableItem({
   const handleMouseEnter = useCallback(
     (event: React.MouseEvent) => {
       event.stopPropagation(); // Prevent bubbling to parent elements
-      const rect = ref.current?.getBoundingClientRect();
-      if (rect) {
-        const middleY = rect.top + rect.height / 2;
-        setMouseInhabitsTopHalf(event.clientY < middleY); // Determine if mouse is in top half
-      }
+
       setCurrentlyHoveredItem(taskId); // Mark this item as hovered
     },
     [taskId, setCurrentlyHoveredItem]
@@ -105,23 +134,24 @@ export default function DraggableItem({
     }
     setCurrentlyHoveredItem(""); // Clear hover state if no parent or no hover
   }, [parentId, setCurrentlyHoveredItem]);
-
-  // Define dynamic border classes based on the drag state
-  const borderClasses = clsx({
-    "cursor-grab": !currentlyClickedItem, // Default grab cursor
-    "cursor-grabbing": currentlyClickedItem, // Grabbing cursor when item is clicked
-    // Highlight top border when mouse is in top half
-    "border-t-4 border-sky-400":
+  const borderClasses = clsx(styles.item, {
+    [styles.grabbing]: !currentlyClickedItem, // Default grab cursor if no item is clicked
+    [styles.highlightTop]:
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId &&
-      mouseInhabitsTopHalf,
-    // Highlight bottom border when mouse is in bottom half
-    "border-b-4 border-sky-400":
+      mouseLocationInItem === "top", // Highlight top border
+    [styles.highlightMiddle]:
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId &&
-      !mouseInhabitsTopHalf,
+      mouseLocationInItem === "middle", // Highlight middle section
+    [styles.highlightBottom]:
+      currentlyClickedItem &&
+      currentlyClickedItem?.taskId !== taskId &&
+      currentlyHoveredItem === taskId &&
+      mouseLocationInItem === "bottom", // Highlight bottom border
+    ["bg-[#f3f4f6]"]: currentlyClickedItem?.taskId === taskId && displayDragBox,
   });
 
   return (
