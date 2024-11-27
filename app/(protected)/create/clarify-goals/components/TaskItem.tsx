@@ -21,6 +21,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   task,
   focusedTask,
   setFocusedTask,
+  bufferIds,
 }) => {
   const [itemIsFocused, setItemIsFocused] = useState<boolean>(false);
   const [subtasksMinimized, setSubtasksMinimized] = useState<boolean>(false);
@@ -41,6 +42,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
         taskTitle={task.title}
         parentId={task.parentId}
         taskTreeIds={taskTreeIds}
+        bufferIds={bufferIds}
       >
         <TaskHeader
           task={task}

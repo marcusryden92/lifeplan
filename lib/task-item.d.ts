@@ -20,6 +20,7 @@ export interface TaskItemProps {
   task: Planner;
   focusedTask: string | null;
   setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
+  bufferIds: { previous: string; next: string };
 }
 
 export interface TaskHeaderProps {

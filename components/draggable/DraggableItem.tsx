@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useDraggableContext } from "@/context/DraggableContext";
 import clsx from "clsx";
 import styles from "./DraggableItem.module.css";
-import styles2 from "./DragDisableListWrapper.module.css";
 
 export default function DraggableItem({
   children,
@@ -16,6 +15,7 @@ export default function DraggableItem({
   taskTitle: string;
   parentId?: string;
   taskTreeIds?: string[];
+  bufferIds: { previous: string; next: string };
 }) {
   const ref = useRef<HTMLDivElement | null>(null); // Reference to the DOM element
   const [mouseLocationInItem, setMouseLocationInItem] = useState<
@@ -136,21 +136,11 @@ export default function DraggableItem({
   }, [parentId, setCurrentlyHoveredItem]);
   const borderClasses = clsx(styles.item, {
     [styles.grabbing]: !currentlyClickedItem, // Default grab cursor if no item is clicked
-    [styles.highlightTop]:
-      currentlyClickedItem &&
-      currentlyClickedItem?.taskId !== taskId &&
-      currentlyHoveredItem === taskId &&
-      mouseLocationInItem === "top", // Highlight top border
     [styles.highlightMiddle]:
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId &&
       mouseLocationInItem === "middle", // Highlight middle section
-    [styles.highlightBottom]:
-      currentlyClickedItem &&
-      currentlyClickedItem?.taskId !== taskId &&
-      currentlyHoveredItem === taskId &&
-      mouseLocationInItem === "bottom", // Highlight bottom border
     ["bg-[#f3f4f6]"]: currentlyClickedItem?.taskId === taskId && displayDragBox,
   });
 
