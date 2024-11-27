@@ -1,6 +1,7 @@
 "use client";
 
 import { useDataContext } from "@/context/DataContext";
+import { useState, useEffect } from "react";
 
 // Components
 import { TaskItem } from "./TaskItem";
@@ -15,7 +16,6 @@ import {
   sortTasksByDependencies,
 } from "@/utils/goal-page-handlers";
 import { v4 as uuidv4 } from "uuid";
-import next from "next";
 
 const TaskList: React.FC<TaskListProps> = ({
   id,
@@ -34,31 +34,38 @@ const TaskList: React.FC<TaskListProps> = ({
 
   const sortedTasks = sortTasksByDependencies(taskArray, subtasksToUse);
 
-  const listBufferUuidList: string[] = [];
-  for (let i = 0; i < sortedTasks.length + 1; i++) {
-    listBufferUuidList.push(uuidv4());
-  }
+  const [bufferIdList, setBufferIdList] = useState<string[]>([]);
+
+  useEffect(() => {
+    const ids = Array.from({ length: sortedTasks.length + 1 }, () => uuidv4());
+    setBufferIdList(ids);
+  }, []);
 
   const taskElements = [];
-  for (let i = 0; i <= sortedTasks.length * 2 + 1; i++) {
+  for (let i = 0; i <= sortedTasks.length * 2; i++) {
     if (i % 2 === 0) {
       taskElements.push(
         <div
-          id={listBufferUuidList[i / 2]}
-          className="w-full h-4 bg-sky-500"
+          key={bufferIdList[i / 2]}
+          id={bufferIdList[i / 2]}
+          className="w-full h-2 bg-sky-500"
         ></div>
       );
     } else {
-      const task = sortedTasks[(i - 1) / 2];
+      const taskIndex = (i - 1) / 2;
+      const task = sortedTasks[taskIndex];
+      if (!task) continue; // Skip if no task is found at this index
+
       taskElements.push(
         <TaskItem
+          key={task.id}
           taskArray={taskArray}
           task={task}
           focusedTask={focusedTask}
           setFocusedTask={setFocusedTask}
           bufferIds={{
-            previous: listBufferUuidList[(i - 1) / 2],
-            next: listBufferUuidList[(i - 1) / 2],
+            previous: bufferIdList[taskIndex],
+            next: bufferIdList[taskIndex + 1],
           }}
         />
       );
