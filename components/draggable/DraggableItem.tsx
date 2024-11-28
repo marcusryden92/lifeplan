@@ -8,14 +8,13 @@ export default function DraggableItem({
   taskId,
   taskTitle,
   parentId,
-  taskTreeIds,
+  bufferIds,
 }: {
   children: React.ReactNode;
   taskId: string;
   taskTitle: string;
   parentId?: string;
-  taskTreeIds?: string[];
-  bufferIds: { previous: string; next: string };
+  bufferIds: { upper: string; lower: string };
 }) {
   const ref = useRef<HTMLDivElement | null>(null); // Reference to the DOM element
   const [mouseLocationInItem, setMouseLocationInItem] = useState<
@@ -23,6 +22,9 @@ export default function DraggableItem({
   >(null); // Tracks if the mouse is in the top half of the element
   const lastUpdateTime = useRef<number>(0); // Keeps track of the last time mouse position was updated
   const RAF_THRESHOLD = 1000 / 60; // Threshold for updates (~16.67ms for 60fps)
+
+  const upperBuffer = document.getElementById(bufferIds.upper);
+  const lowerBuffer = document.getElementById(bufferIds.lower);
 
   const {
     currentlyHoveredItem,
@@ -52,7 +54,6 @@ export default function DraggableItem({
       const bufferSize = 5; // Small buffer zone around the middle
       const top25Height = rect.height * 0.25;
       const bottom25Height = rect.height * 0.25;
-      const middle50Height = rect.height * 0.5;
 
       // Calculate the boundaries for the top, middle, and bottom sections
       const topBoundary = rect.top + top25Height + bufferSize;
@@ -134,8 +135,9 @@ export default function DraggableItem({
     }
     setCurrentlyHoveredItem(""); // Clear hover state if no parent or no hover
   }, [parentId, setCurrentlyHoveredItem]);
+
   const borderClasses = clsx(styles.item, {
-    [styles.grabbing]: !currentlyClickedItem, // Default grab cursor if no item is clicked
+    [styles.grabbing]: currentlyClickedItem, // Default grab cursor if no item is clicked
     [styles.highlightMiddle]:
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
@@ -143,6 +145,31 @@ export default function DraggableItem({
       mouseLocationInItem === "middle", // Highlight middle section
     ["bg-[#f3f4f6]"]: currentlyClickedItem?.taskId === taskId && displayDragBox,
   });
+
+  useEffect(() => {
+    const handleBufferHighlight = () => {
+      // Only perform highlighting when dragging
+      if (!currentlyClickedItem) return;
+
+      // Get buffer elements safely
+      const upperBuffer = document.getElementById(bufferIds.upper);
+      const lowerBuffer = document.getElementById(bufferIds.lower);
+
+      // Add or remove 'active' class based on mouse location
+      if (upperBuffer) {
+        upperBuffer.classList.toggle("active", mouseLocationInItem === "top");
+      }
+
+      if (lowerBuffer) {
+        lowerBuffer.classList.toggle(
+          "active",
+          mouseLocationInItem === "bottom"
+        );
+      }
+    };
+
+    handleBufferHighlight();
+  }, [mouseLocationInItem, currentlyClickedItem, bufferIds]);
 
   return (
     <div

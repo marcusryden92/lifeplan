@@ -13,7 +13,6 @@ import DraggableItem from "@/components/draggable/DraggableItem";
 
 // Utils
 import { getSubtasksFromId } from "@/utils/goal-page-handlers";
-import { getTaskIdTree } from "@/utils/goal-page-handlers";
 import DragDisableListWrapper from "@/components/draggable/DragDisableListWrapper";
 
 export const TaskItem: React.FC<TaskItemProps> = ({
@@ -29,8 +28,6 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   const subtasks = getSubtasksFromId(taskArray, task.id);
   const devMode = false;
 
-  const [taskTreeIds] = useState<string[]>(getTaskIdTree(taskArray, task.id));
-
   return (
     <div
       className={`${subtasks.length ? "pb-1" : ""} ${
@@ -41,7 +38,6 @@ export const TaskItem: React.FC<TaskItemProps> = ({
         taskId={task.id}
         taskTitle={task.title}
         parentId={task.parentId}
-        taskTreeIds={taskTreeIds}
         bufferIds={bufferIds}
       >
         <TaskHeader
