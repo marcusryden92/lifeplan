@@ -125,6 +125,66 @@ export function updateDependenciesOnDelete({
   }
 }
 
+interface UpdateDependenciesOnMoveInterface {
+  taskArray: Planner[];
+  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+  currentlyClickedItem: { taskId: string; taskTitle: string };
+  currentlyHoveredItem: string;
+  mouseLocationInItem: "top" | "middle" | "bottom" | null;
+}
+
+export function updateDependenciesOnMove({
+  taskArray,
+  setTaskArray,
+  currentlyClickedItem,
+  currentlyHoveredItem,
+  mouseLocationInItem,
+}: UpdateDependenciesOnMoveInterface) {
+  // Check that arguments are defined
+  if (
+    !taskArray ||
+    !currentlyClickedItem ||
+    !currentlyHoveredItem ||
+    !mouseLocationInItem
+  )
+    return;
+  // Return if you're dropping the item unto itself
+  if (currentlyClickedItem.taskId === currentlyHoveredItem) return;
+
+  // The task we're moving
+  const task = taskArray.find(
+    (task) => task.id === currentlyClickedItem.taskId
+  );
+
+  // The target
+  const target = taskArray.find((task) => task.id === currentlyHoveredItem);
+
+  if (mouseLocationInItem === "middle") {
+    const targetSubtasks = getSubtasksFromId(taskArray, currentlyHoveredItem);
+    const sortedSubtasks = sortTasksByDependencies(taskArray, targetSubtasks);
+
+    const lastItem = sortedSubtasks[sortedSubtasks.length - 1];
+
+    const lastItemDependent = taskArray.find(
+      (task) => task.dependency === lastItem.id
+    );
+
+    setTaskArray((prev) =>
+      prev.map((t) => {
+        if (lastItemDependent && t.id === lastItemDependent.id) {
+          return { ...t, dependency: currentlyClickedItem.taskId };
+        }
+
+        if (t.id === currentlyClickedItem.taskId) {
+          return { ...t, dependency: lastItem.id };
+        }
+
+        return t;
+      })
+    );
+  }
+}
+
 // Get the correct dependency when creating a new subtask in a goal
 export function updateDependenciesOnCreate(
   taskArray: Planner[],

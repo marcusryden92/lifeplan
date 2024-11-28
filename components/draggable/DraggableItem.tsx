@@ -2,20 +2,20 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import clsx from "clsx";
 import styles from "./DraggableItem.module.css";
-import styles2 from "./DragDisableListWrapper.module.css";
+
+import { useDataContext } from "@/context/DataContext";
+import { updateDependenciesOnMove } from "@/utils/goal-page-handlers";
 
 export default function DraggableItem({
   children,
   taskId,
   taskTitle,
   parentId,
-  taskTreeIds,
 }: {
   children: React.ReactNode;
   taskId: string;
   taskTitle: string;
   parentId?: string;
-  taskTreeIds?: string[];
 }) {
   const ref = useRef<HTMLDivElement | null>(null); // Reference to the DOM element
   const [mouseLocationInItem, setMouseLocationInItem] = useState<
@@ -23,6 +23,13 @@ export default function DraggableItem({
   >(null); // Tracks if the mouse is in the top half of the element
   const lastUpdateTime = useRef<number>(0); // Keeps track of the last time mouse position was updated
   const RAF_THRESHOLD = 1000 / 60; // Threshold for updates (~16.67ms for 60fps)
+
+  const [previouslyClickedItem, setPreviouslyClickedItem] = useState<{
+    taskId: string;
+    taskTitle: string;
+  }>({ taskId: "", taskTitle: "" });
+
+  const { taskArray, setTaskArray } = useDataContext();
 
   const {
     currentlyHoveredItem,
@@ -52,7 +59,6 @@ export default function DraggableItem({
       const bufferSize = 5; // Small buffer zone around the middle
       const top25Height = rect.height * 0.25;
       const bottom25Height = rect.height * 0.25;
-      const middle50Height = rect.height * 0.5;
 
       // Calculate the boundaries for the top, middle, and bottom sections
       const topBoundary = rect.top + top25Height + bufferSize;
@@ -113,6 +119,39 @@ export default function DraggableItem({
     };
   }, [updateMousePosition, currentlyClickedItem, currentlyHoveredItem, taskId]);
 
+  // Handle mouse up for updating task dependencies on move
+  useEffect(() => {
+    // Keeps track of currently clicked item even if it changes before being needed
+    if (currentlyClickedItem && currentlyClickedItem.taskId.length !== 0)
+      setPreviouslyClickedItem(currentlyClickedItem);
+  }, [currentlyClickedItem]);
+
+  // Functionality to update task dependencies when moving an object
+  useEffect(() => {
+    function updateDependencies() {
+      console.log("Run");
+      if (
+        !taskArray ||
+        !setTaskArray ||
+        !currentlyHoveredItem ||
+        !previouslyClickedItem ||
+        !mouseLocationInItem
+      ) {
+        return;
+      }
+
+      updateDependenciesOnMove({
+        taskArray,
+        setTaskArray,
+        currentlyClickedItem: previouslyClickedItem,
+        currentlyHoveredItem,
+        mouseLocationInItem,
+      });
+    }
+
+    updateDependencies();
+  }, [currentlyClickedItem]);
+
   // Handles mouse entering the element
   const handleMouseEnter = useCallback(
     (event: React.MouseEvent) => {
@@ -134,6 +173,7 @@ export default function DraggableItem({
     }
     setCurrentlyHoveredItem(""); // Clear hover state if no parent or no hover
   }, [parentId, setCurrentlyHoveredItem]);
+
   const borderClasses = clsx(styles.item, {
     [styles.grabbing]: !currentlyClickedItem, // Default grab cursor if no item is clicked
     [styles.highlightTop]:
