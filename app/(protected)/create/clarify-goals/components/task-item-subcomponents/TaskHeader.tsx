@@ -66,7 +66,7 @@ export const TaskHeader = ({
   return (
     <div
       ref={headerRef}
-      className={`flex justify-between  items-center w-full text-sm py-2 group`}
+      className={`flex justify-between  items-center w-full text-sm py-1 group`}
     >
       <div
         className={`flex items-center justify-between flex-grow ${
