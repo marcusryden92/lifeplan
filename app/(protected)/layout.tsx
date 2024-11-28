@@ -9,7 +9,7 @@ interface ProtectedLayoutProps {
 
 const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
   return (
-    <div className="h-full w-full flex flex-col lg:flex-row lg:items-center bg-white">
+    <div className="lg:h-full w-full flex flex-col lg:flex-row lg:items-center bg-white">
       <DraggableContextProvider>
         <Navbar />
         <div className="h-full w-full border-l border-gray-200">
