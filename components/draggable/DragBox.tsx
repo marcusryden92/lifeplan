@@ -14,12 +14,11 @@ export default function DragBox() {
 
   // Set displayDragBox to true or false when changing currentlyClickedItem
   useEffect(() => {
-    setDisplayDragBox(false);
     if (currentlyClickedItem) {
       // Delay for better UX
       setTimeout(() => {
         if (isMouseDown) setDisplayDragBox(true);
-      }, 200);
+      }, 400);
     }
   }, [currentlyClickedItem]);
 
