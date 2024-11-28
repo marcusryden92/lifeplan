@@ -1,5 +1,5 @@
 import React from "react";
-import { useDraggableContext } from "@/context/DraggableContext";
+import { useDraggableContext } from "@/components/draggable/DraggableContext";
 
 import styles from "./DragDisableListWrapper.module.css";
 

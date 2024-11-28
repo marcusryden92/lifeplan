@@ -1,7 +1,7 @@
 "use client";
 
 import { Navbar } from "@/components/interface/navbar";
-import { DraggableContextProvider } from "@/context/DraggableContext";
+import { DraggableContextProvider } from "@/components/draggable/DraggableContext";
 
 interface ProtectedLayoutProps {
   children: React.ReactNode;

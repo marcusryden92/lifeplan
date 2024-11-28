@@ -40,10 +40,6 @@ export const DraggableContextProvider = ({
     useState<ClickedItem>(undefined);
   const [displayDragBox, setDisplayDragBox] = useState<boolean>(false);
 
-  useEffect(() => {
-    console.log(currentlyClickedItem);
-  }, [currentlyClickedItem]);
-
   const [mousePosition, setMousePosition] = useState<{
     clientX: number;
     clientY: number;

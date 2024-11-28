@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useDraggableContext } from "@/context/DraggableContext";
+import { useDraggableContext } from "@/components/draggable/DraggableContext";
 
 export default function DragBox() {
   const {
