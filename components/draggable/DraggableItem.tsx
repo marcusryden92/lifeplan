@@ -119,12 +119,12 @@ export default function DraggableItem({
     };
   }, [updateMousePosition, currentlyClickedItem, currentlyHoveredItem, taskId]);
 
-  // Handle mouse up for updating task dependencies on move
+  /*   // Handle mouse up for updating task dependencies on move
   useEffect(() => {
     // Keeps track of currently clicked item even if it changes before being needed
     if (currentlyClickedItem && currentlyClickedItem.taskId.length !== 0)
       setPreviouslyClickedItem(currentlyClickedItem);
-  }, [currentlyClickedItem]);
+  }, [currentlyClickedItem]); */
 
   // Functionality to update task dependencies when moving an object
   useEffect(() => {
@@ -175,7 +175,7 @@ export default function DraggableItem({
   }, [parentId, setCurrentlyHoveredItem]);
 
   const borderClasses = clsx(styles.item, {
-    [styles.grabbing]: !currentlyClickedItem, // Default grab cursor if no item is clicked
+    [styles.grabbing]: currentlyClickedItem, // Default grab cursor if no item is clicked
     [styles.highlightTop]:
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&

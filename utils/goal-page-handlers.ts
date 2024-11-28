@@ -165,6 +165,8 @@ export function updateDependenciesOnMove({
 
     const lastItem = sortedSubtasks[sortedSubtasks.length - 1];
 
+    if (!lastItem) return;
+
     const lastItemDependent = taskArray.find(
       (task) => task.dependency === lastItem.id
     );
