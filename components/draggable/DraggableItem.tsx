@@ -119,12 +119,12 @@ export default function DraggableItem({
     };
   }, [updateMousePosition, currentlyClickedItem, currentlyHoveredItem, taskId]);
 
-  /*   // Handle mouse up for updating task dependencies on move
+  // Handle mouse up for updating task dependencies on move
   useEffect(() => {
+    if (currentlyClickedItem === previouslyClickedItem) return;
     // Keeps track of currently clicked item even if it changes before being needed
-    if (currentlyClickedItem && currentlyClickedItem.taskId.length !== 0)
-      setPreviouslyClickedItem(currentlyClickedItem);
-  }, [currentlyClickedItem]); */
+    if (currentlyClickedItem) setPreviouslyClickedItem(currentlyClickedItem);
+  }, [currentlyClickedItem]);
 
   // Functionality to update task dependencies when moving an object
   useEffect(() => {
