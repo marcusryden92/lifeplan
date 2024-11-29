@@ -183,19 +183,27 @@ export function updateDependenciesOnMove({
 
     // Get the bottom layer of that last item
     const targetLastItem = sortedSubtasks[sortedSubtasks.length - 1];
-    const targetLastItemBottomLayer = sortTasksByDependencies(
-      taskArray,
-      getTreeBottomLayer(taskArray, targetLastItem.id)
-    );
+    let targetLastItemBottomLayer: Planner[] = [];
+    if (targetLastItem) {
+      targetLastItemBottomLayer = sortTasksByDependencies(
+        taskArray,
+        getTreeBottomLayer(taskArray, targetLastItem.id)
+      );
+    }
 
     // Get last task of last item bottom layer
-    const targetLastBottomLayerItem =
-      targetLastItemBottomLayer[targetLastItemBottomLayer.length - 1];
-
+    let targetLastBottomLayerItem: Planner | undefined;
+    if (targetLastItemBottomLayer.length !== 0) {
+      targetLastBottomLayerItem =
+        targetLastItemBottomLayer[targetLastItemBottomLayer.length - 1];
+    }
     // Get whatever item is dependent on targetLastBottomLayerItem
-    const lastItemDependent = taskArray.find(
-      (task) => task.dependency === targetLastBottomLayerItem.id
-    );
+    let lastItemDependent: Planner | undefined;
+    if (targetLastBottomLayerItem) {
+      lastItemDependent = taskArray.find(
+        (task) => task.dependency === targetLastBottomLayerItem.id
+      );
+    }
 
     setTaskArray((prev) =>
       prev.map((t) => {
@@ -213,7 +221,9 @@ export function updateDependenciesOnMove({
         ) {
           return {
             ...t,
-            dependency: targetLastBottomLayerItem.id,
+            dependency: targetLastBottomLayerItem
+              ? targetLastBottomLayerItem.id
+              : undefined,
             parentId: target.id,
           };
 
@@ -222,7 +232,12 @@ export function updateDependenciesOnMove({
           // chain of the item that will now come before currentlyClickedItem
         } else if (!(firstBottomLayerItem.id === lastBottomLayerItem.id)) {
           if (t.id === firstBottomLayerItem.id) {
-            return { ...t, dependency: targetLastBottomLayerItem.id };
+            return {
+              ...t,
+              dependency: targetLastBottomLayerItem
+                ? targetLastBottomLayerItem.id
+                : undefined,
+            };
           }
         }
 
