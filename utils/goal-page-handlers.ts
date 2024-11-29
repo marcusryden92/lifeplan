@@ -207,25 +207,25 @@ function getRootParent(taskArray: Planner[], id: string): string | undefined {
 // SORT TASKS BY DEPENDENCIES
 export function sortTasksByDependencies(
   taskArray: Planner[],
-  tasks: Planner[]
+  tasksToSort: Planner[]
 ): Planner[] {
   // Arrays to hold different categories of tasks
 
   const sortedArray: Planner[] = [];
 
   // Find root tasks (no dependencies, but has dependents, or children has dependents)
-  const rootTask: Planner | undefined = tasks.find((task) => {
+  const rootTask: Planner | undefined = tasksToSort.find((task) => {
     if (
       // If task doesn't have a dependency
       !task.dependency ||
       // Or if task has a dependency, but the dependency ID can't be found among the siblings or their children
       (task.dependency &&
-        !tasks.some((otherTask) =>
+        !tasksToSort.some((otherTask) =>
           idsExistsInDependenciesOf(taskArray, otherTask.id, task.dependency)
         ))
     ) {
-      // Get all the items from the tasks array that are not the one we're working with
-      const siblings = tasks.filter((t) => t.id !== task.id);
+      // Get all the items from the tasksToSort array that are not the one we're working with
+      const siblings = tasksToSort.filter((t) => t.id !== task.id);
 
       if (!siblings || siblings.length === 0) return true;
 
@@ -273,7 +273,7 @@ export function sortTasksByDependencies(
       }
 
       // For every task in tasks
-      const nextTask = tasks.find((t) => {
+      const nextTask = tasksToSort.find((t) => {
         // Get the bottom layer
         const bottomLayer = getTreeBottomLayer(taskArray, t.id);
 

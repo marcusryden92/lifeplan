@@ -1,7 +1,5 @@
 import { Planner } from "@/lib/planner-class";
 
-import uuidv4 from "uuid";
-
 export const templateSeed = [
   {
     id: "1",
@@ -218,6 +216,49 @@ export const taskArraySeed: Planner[] = [
     duration: 2,
   },
   {
+    title: "task2a",
+    id: "de322ee3-a0d1-4cc7-bd81-6ac16fabe101",
+    parentId: "da382215-6e65-40df-b63a-cfcd4ff7ea68",
+    type: "goal",
+    canInfluence: true,
+    duration: 1,
+    dependency: "23a404a8-8daa-47fa-a243-388ca4a8f175",
+  },
+  {
+    title: "task2b",
+    id: "52db8862-0fe6-4971-9615-4ef84eb47700",
+    parentId: "da382215-6e65-40df-b63a-cfcd4ff7ea68",
+    type: "goal",
+    canInfluence: true,
+    duration: 0,
+    dependency: "de322ee3-a0d1-4cc7-bd81-6ac16fabe101",
+  },
+];
+
+/* export const taskArraySeed: Planner[] = [
+  {
+    title: "root",
+    id: "5b5753b6-9f43-4b73-8cc7-17f5b3232b3a",
+    type: "goal",
+    canInfluence: true,
+  },
+  {
+    title: "task1",
+    id: "23a404a8-8daa-47fa-a243-388ca4a8f175",
+    parentId: "5b5753b6-9f43-4b73-8cc7-17f5b3232b3a",
+    type: "goal",
+    canInfluence: true,
+    duration: 1,
+  },
+  {
+    title: "task2",
+    id: "da382215-6e65-40df-b63a-cfcd4ff7ea68",
+    parentId: "5b5753b6-9f43-4b73-8cc7-17f5b3232b3a",
+    type: "goal",
+    canInfluence: true,
+    duration: 2,
+  },
+  {
     title: "task3",
     id: "81eeba6d-38bb-4bc4-b2b6-e91816348bbc",
     parentId: "5b5753b6-9f43-4b73-8cc7-17f5b3232b3a",
@@ -288,4 +329,4 @@ export const taskArraySeed: Planner[] = [
     duration: 0,
     dependency: "ca5ce814-4169-4e38-99ef-3a23cb8867d8",
   },
-];
+]; */

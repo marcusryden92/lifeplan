@@ -4,7 +4,7 @@ import clsx from "clsx";
 import styles from "./DraggableItem.module.css";
 
 import { useDataContext } from "@/context/DataContext";
-import { updateDependenciesOnMove } from "@/utils/goal-page-handlers";
+import { updateDependenciesOnMove } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move";
 
 export default function DraggableItem({
   children,
@@ -129,7 +129,6 @@ export default function DraggableItem({
   // Functionality to update task dependencies when moving an object
   useEffect(() => {
     function updateDependencies() {
-      console.log("Run");
       if (
         !taskArray ||
         !setTaskArray ||
@@ -145,7 +144,7 @@ export default function DraggableItem({
         setTaskArray,
         currentlyClickedItem: previouslyClickedItem,
         currentlyHoveredItem,
-        mouseLocationInItem,
+        mouseLocationInTarget: mouseLocationInItem,
       });
     }
 

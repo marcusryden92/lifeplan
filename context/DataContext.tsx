@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from "react";
 import { Planner } from "@/lib/planner-class";
 import { EventTemplate } from "@/utils/template-builder-utils";
 import { generateCalendar, SimpleEvent } from "@/utils/calendar-generation";
@@ -28,6 +34,10 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
 
   const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
   // const [taskArray, setTaskArray] = useState<Planner[]>([]);
+
+  useEffect(() => {
+    console.log(taskArray);
+  }, [taskArray]);
 
   const [currentTemplate, setCurrentTemplate] = useState<
     EventTemplate[] | undefined
