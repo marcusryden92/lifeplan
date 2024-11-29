@@ -14,7 +14,7 @@ interface UpdateDependenciesOnMoveInterface {
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
   currentlyClickedItem: { taskId: string; taskTitle: string };
   currentlyHoveredItem: string;
-  mouseLocationInItem: "top" | "middle" | "bottom" | null;
+  mouseLocationInTarget: "top" | "middle" | "bottom" | null;
 }
 
 export function updateDependenciesOnMove({
@@ -22,62 +22,54 @@ export function updateDependenciesOnMove({
   setTaskArray,
   currentlyClickedItem,
   currentlyHoveredItem,
-  mouseLocationInItem,
+  mouseLocationInTarget,
 }: UpdateDependenciesOnMoveInterface) {
   // Check that arguments are defined
   if (
     !taskArray ||
     !currentlyClickedItem ||
     !currentlyHoveredItem ||
-    !mouseLocationInItem
+    !mouseLocationInTarget
   )
     return;
   // Return if you're dropping the item unto itself
   if (currentlyClickedItem.taskId === currentlyHoveredItem) return;
 
   // The task we're moving
-  const task = taskArray.find((t) => t.id === currentlyClickedItem.taskId);
+  const movedTask: Planner | undefined = taskArray.find(
+    (t) => t.id === currentlyClickedItem.taskId
+  );
 
-  if (!task) {
-    throw new Error("Couldn't find task in updateDependenciesOnMove.");
+  if (!movedTask) {
+    throw new Error("Couldn't find movedTask in updateDependenciesOnMove.");
   }
 
   // The target
-  const target = taskArray.find((t) => t.id === currentlyHoveredItem);
+  const targetTask: Planner | undefined = taskArray.find(
+    (t) => t.id === currentlyHoveredItem
+  );
 
-  if (!target) {
+  if (!targetTask) {
     throw new Error("Couldn't find target in updateDependenciesOnMove.");
   }
 
   // Get the tree bottom layer for task, in order to properly update dependencies
-  const treeBottomLayer = getTreeBottomLayer(
-    taskArray,
-    currentlyClickedItem.taskId
-  );
+  const treeBottomLayer = getTreeBottomLayer(taskArray, movedTask.id);
   const sortedBottomLayer = sortTasksByDependencies(taskArray, treeBottomLayer);
 
-  // Get first and last task of the bottom layer, for setting correct dependencies
-  const firstBottomLayerItem = sortedBottomLayer[0];
-  const lastBottomLayerItem = sortedBottomLayer[sortedBottomLayer.length - 1];
+  // Get the first and last Bottom Layer Item (BLI) of the moved task,
+  // for setting correct dependencies
+  const movedTaskFirstBLI = sortedBottomLayer[0];
+  const movedTaskLastBLI = sortedBottomLayer[sortedBottomLayer.length - 1];
 
-  // We can use this function to stitch together the hole that currentlyClickedItem
-  // leaves behind
-  updateDependenciesOnDelete({
-    taskArray,
-    setTaskArray,
-    taskId: task.id,
-    parentId: task.parentId,
-  });
-
-  if (mouseLocationInItem === "middle") {
+  if (mouseLocationInTarget === "middle") {
     moveToMiddle({
       taskArray,
       setTaskArray,
-      currentlyClickedItem,
-      currentlyHoveredItem,
-      firstBottomLayerItem,
-      lastBottomLayerItem,
-      target,
+      movedTask,
+      targetTask,
+      movedTaskFirstBLI,
+      movedTaskLastBLI,
     });
   }
 }
@@ -85,33 +77,65 @@ export function updateDependenciesOnMove({
 interface MoveToMiddleInterface {
   taskArray: Planner[];
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
-  currentlyClickedItem: { taskId: string; taskTitle: string };
-  currentlyHoveredItem: string;
-  firstBottomLayerItem: Planner;
-  lastBottomLayerItem: Planner;
-  target: Planner;
+  movedTask: Planner;
+  targetTask: Planner;
+  movedTaskFirstBLI: Planner;
+  movedTaskLastBLI: Planner;
 }
 
+// Function for moving an item to the middle (or into), the target item
 function moveToMiddle({
   taskArray,
   setTaskArray,
-  currentlyClickedItem,
-  currentlyHoveredItem,
-  firstBottomLayerItem,
-  lastBottomLayerItem,
-  target,
+  movedTask,
+  targetTask,
+  movedTaskFirstBLI,
+  movedTaskLastBLI,
 }: MoveToMiddleInterface) {
   // Get the last item in the child layer of the target item
-  const targetSubtasks = getSubtasksFromId(taskArray, currentlyHoveredItem);
+  const targetSubtasks = getSubtasksFromId(taskArray, targetTask.id);
   const sortedSubtasks = sortTasksByDependencies(taskArray, targetSubtasks);
+  const targetLastBLI = sortedSubtasks[sortedSubtasks.length - 1];
+
+  // If the targetLastItem lacks a dependency, i.e if it's the first item in the chain,
+  // simply clear dependency of the movedTaskFirstBLI, and change the
+  // moved item's parent ID to the target ID.
+
+  if (!targetLastBLI.dependency) {
+    setTaskArray((prev) =>
+      prev.map((t) => {
+        // Update the dependency in the item that now will come after the moved task, to be the moved task
+        // (or whatever comes last in moved task's dependency chain)
+        if (t.id === movedTaskFirstBLI.id) {
+          return { ...t, dependency: undefined };
+        }
+
+        if (t.id === movedTask.id) {
+          return { ...t, parentId: targetTask.id };
+        }
+
+        return t;
+      })
+    );
+
+    return;
+  }
+
+  // We can use this function to stitch together the hole that currentlyClickedItem
+  // leaves behind
+  updateDependenciesOnDelete({
+    taskArray,
+    setTaskArray,
+    taskId: movedTask.id,
+    parentId: movedTask.parentId,
+  });
 
   // Get the bottom layer of that last item
-  const targetLastItem = sortedSubtasks[sortedSubtasks.length - 1];
   let targetLastItemBottomLayer: Planner[] = [];
-  if (targetLastItem) {
+  if (targetLastBLI) {
     targetLastItemBottomLayer = sortTasksByDependencies(
       taskArray,
-      getTreeBottomLayer(taskArray, targetLastItem.id)
+      getTreeBottomLayer(taskArray, targetLastBLI.id)
     );
   }
 
@@ -134,28 +158,28 @@ function moveToMiddle({
       // Update the dependency in the item that now will come after the moved task, to be the moved task
       // (or whatever comes last in moved task's dependency chain)
       if (lastItemDependent && t.id === lastItemDependent.id) {
-        return { ...t, dependency: lastBottomLayerItem.id };
+        return { ...t, dependency: movedTaskLastBLI.id };
       }
 
-      // We're checking of firstBottomLayerItem and lastBottomLayerItem are the same,
+      // We're checking of movedTaskFirstBLI and movedTaskLastBLI are the same,
       // i.e if currentlyClickedItem lacks any children and is the item that should be modified
       if (
-        t.id === currentlyClickedItem.taskId &&
-        firstBottomLayerItem.id === lastBottomLayerItem.id
+        t.id === movedTask.id &&
+        movedTaskFirstBLI.id === movedTaskLastBLI.id
       ) {
         return {
           ...t,
           dependency: targetLastBottomLayerItem
             ? targetLastBottomLayerItem.id
             : undefined,
-          parentId: target.id,
+          parentId: targetTask.id,
         };
 
         // If that isn't the case, we find the first item in currentlyClickedItem's
         // dependency chain, and sets it's dependency to whatever is last in the dependency
         // chain of the item that will now come before currentlyClickedItem
-      } else if (!(firstBottomLayerItem.id === lastBottomLayerItem.id)) {
-        if (t.id === firstBottomLayerItem.id) {
+      } else if (!(movedTaskFirstBLI.id === movedTaskLastBLI.id)) {
+        if (t.id === movedTaskFirstBLI.id) {
           return {
             ...t,
             dependency: targetLastBottomLayerItem
