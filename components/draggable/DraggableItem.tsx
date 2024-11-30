@@ -27,7 +27,7 @@ export default function DraggableItem({
   const [previouslyClickedItem, setPreviouslyClickedItem] = useState<{
     taskId: string;
     taskTitle: string;
-  }>({ taskId: "", taskTitle: "" });
+  } | null>(null);
 
   const { taskArray, setTaskArray } = useDataContext();
 
@@ -146,6 +146,11 @@ export default function DraggableItem({
         currentlyHoveredItem,
         mouseLocationInTarget: mouseLocationInItem,
       });
+
+      // Clear all the states after successfully moving a task
+      setCurrentlyClickedItem(null);
+      setCurrentlyHoveredItem(null);
+      setPreviouslyClickedItem(null);
     }
 
     updateDependencies();
