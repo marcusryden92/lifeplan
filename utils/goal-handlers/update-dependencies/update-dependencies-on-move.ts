@@ -27,6 +27,16 @@ interface MoveToMiddleInterface {
   movedTaskLastBLI: Planner;
 }
 
+interface PlaceTaskIntoTargetInterface {
+  taskArray: Planner[];
+  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+  movedTask: Planner;
+  targetTask: Planner;
+  movedTaskFirstBLI: Planner;
+  movedTaskLastBLI: Planner;
+  targetLastBLI: Planner;
+}
+
 export function updateDependenciesOnMove({
   taskArray,
   setTaskArray,
@@ -105,7 +115,7 @@ function moveToMiddle({
   const sortedSubtasks = sortTasksByDependencies(taskArray, targetSubtasks);
   const targetLastBLI = sortedSubtasks[sortedSubtasks.length - 1];
 
-  // CASE 1: TARGET is first in dependency chain, or has only one child, which is.
+  // CASE 1:  TARGET is first in dependency chain, or has only one child, which is.
 
   // If the targetLastBLI lacks a dependency, i.e if it's the first item in the chain,
   // simply clear dependency of the movedTaskFirstBLI, and change the
@@ -139,9 +149,10 @@ function moveToMiddle({
     return;
   }
 
-  // CASE 2: MOVED TASK or movedTaskFirstBLI is the first item in the dependency chain.
+  // CASE 2:  MOVED TASK or movedTaskFirstBLI is the first item in the dependency chain,
+  //          and is a child of root parent task.
 
-  // If the movedTaskFirstBLI lacks a dependency, it means that we're moving the first item of the
+  // If the movedTaskFirstBLI lacks a dependency and has root parent as parent, it means that we're moving the first and top item of the
   // dependency chain, and we need to clear the dependency of whichever item has movedTaskLastBLI as
   // its dependency, in order to make that item the new root task.
   if (!movedTaskFirstBLI.dependency && movedTask.parentId === goalRootParent) {
@@ -155,15 +166,25 @@ function moveToMiddle({
     );
   }
 
-  // We can use this function to stitch together the hole that currentlyClickedItem
+  /* // We can use this function to stitch together the hole that currentlyClickedItem
   // leaves behind
   updateDependenciesOnDelete({
     taskArray,
     setTaskArray,
     taskId: movedTask.id,
     parentId: movedTask.parentId,
-  });
+  }); */
+}
 
+function placeTaskIntoTarget({
+  taskArray,
+  setTaskArray,
+  movedTask,
+  targetTask,
+  movedTaskFirstBLI,
+  movedTaskLastBLI,
+  targetLastBLI,
+}: PlaceTaskIntoTargetInterface) {
   // Get the bottom layer of that last item
   let targetLastItemBottomLayer: Planner[] = [];
   if (targetLastBLI) {
@@ -179,6 +200,7 @@ function moveToMiddle({
     targetLastBottomLayerItem =
       targetLastItemBottomLayer[targetLastItemBottomLayer.length - 1];
   }
+
   // Get whatever item is dependent on targetLastBottomLayerItem
   let lastItemDependent: Planner | undefined;
   if (targetLastBottomLayerItem) {
@@ -196,7 +218,7 @@ function moveToMiddle({
       }
 
       // We're checking of movedTaskFirstBLI and movedTaskLastBLI are the same,
-      // i.e if currentlyClickedItem lacks any children and is the item that should be modified
+      // i.e if movedTask lacks any children and is the item that should be modified
       if (
         t.id === movedTask.id &&
         movedTaskFirstBLI.id === movedTaskLastBLI.id
@@ -211,7 +233,7 @@ function moveToMiddle({
 
         // If that isn't the case, we find the first item in currentlyClickedItem's
         // dependency chain, and sets it's dependency to whatever is last in the dependency
-        // chain of the item that will now come before currentlyClickedItem
+        // chain of the item that will now come before movedTask
       } else if (!(movedTaskFirstBLI.id === movedTaskLastBLI.id)) {
         if (t.id === movedTaskFirstBLI.id) {
           return {
