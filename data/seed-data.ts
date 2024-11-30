@@ -192,7 +192,7 @@ export const templateSeed = [
   },
 ];
 
-export const taskArraySeed: Planner[] = [
+/* export const taskArraySeed: Planner[] = [
   {
     title: "root",
     id: "5b5753b6-9f43-4b73-8cc7-17f5b3232b3a",
@@ -233,9 +233,9 @@ export const taskArraySeed: Planner[] = [
     duration: 0,
     dependency: "de322ee3-a0d1-4cc7-bd81-6ac16fabe101",
   },
-];
+]; */
 
-/* export const taskArraySeed: Planner[] = [
+export const taskArraySeed: Planner[] = [
   {
     title: "root",
     id: "5b5753b6-9f43-4b73-8cc7-17f5b3232b3a",
@@ -329,4 +329,4 @@ export const taskArraySeed: Planner[] = [
     duration: 0,
     dependency: "ca5ce814-4169-4e38-99ef-3a23cb8867d8",
   },
-]; */
+];

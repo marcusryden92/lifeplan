@@ -216,14 +216,24 @@ function moveToMiddle({
     return;
   }
 
-  /* // We can use this function to stitch together the hole that currentlyClickedItem
+  placeTaskIntoTarget({
+    taskArray,
+    setTaskArray,
+    movedTask,
+    targetTask,
+    movedTaskFirstBLI,
+    movedTaskLastBLI,
+    targetLastBLI,
+  });
+
+  // We can use this function to stitch together the hole that currentlyClickedItem
   // leaves behind
   updateDependenciesOnDelete({
     taskArray,
     setTaskArray,
     taskId: movedTask.id,
     parentId: movedTask.parentId,
-  }); */
+  });
 }
 
 function placeTaskIntoTarget({
