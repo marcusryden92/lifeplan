@@ -178,6 +178,44 @@ function moveToMiddle({
     return;
   }
 
+  // CASE 3: MOVED TASK or movedTaskFirstBLI is the first item in the dependency chain,
+  // but is NOT a child of root parent task.
+
+  // The item next in the dependency chain after movedTaskLastBLI, has its dependency set to the parentId of movedTask.
+  // Parent task becomes the new first item in the dependency chain
+
+  if (!movedTaskFirstBLI.dependency) {
+    const movedTaskLastBLIDependent = taskArray.find(
+      (t) => t.dependency === movedTaskLastBLI.id
+    );
+
+    assert(
+      movedTaskLastBLIDependent,
+      "Couldn't find movedTaskLastBLIDependent at updateDependenciesOnMove / moveToMiddle!"
+    );
+
+    setTaskArray((prev) =>
+      prev.map((t) => {
+        if (t.id === movedTaskLastBLIDependent.id) {
+          return { ...t, dependency: movedTask.parentId };
+        }
+        return t;
+      })
+    );
+
+    placeTaskIntoTarget({
+      taskArray,
+      setTaskArray,
+      movedTask,
+      targetTask,
+      movedTaskFirstBLI,
+      movedTaskLastBLI,
+      targetLastBLI,
+    });
+
+    return;
+  }
+
   /* // We can use this function to stitch together the hole that currentlyClickedItem
   // leaves behind
   updateDependenciesOnDelete({
@@ -197,7 +235,7 @@ function placeTaskIntoTarget({
   movedTaskLastBLI,
   targetLastBLI,
 }: PlaceTaskIntoTargetInterface) {
-  // Get the bottom layer of that last item
+  // Get the bottom layer of the last item of the target task
   let targetLastItemBottomLayer: Planner[] = [];
   if (targetLastBLI) {
     targetLastItemBottomLayer = sortTasksByDependencies(
@@ -229,7 +267,7 @@ function placeTaskIntoTarget({
         return { ...t, dependency: movedTaskLastBLI.id };
       }
 
-      // We're checking of movedTaskFirstBLI and movedTaskLastBLI are the same,
+      // We're checking if movedTaskFirstBLI and movedTaskLastBLI are the same,
       // i.e if movedTask lacks any children and is the item that should be modified
       if (
         t.id === movedTask.id &&
@@ -243,7 +281,7 @@ function placeTaskIntoTarget({
           parentId: targetTask.id,
         };
 
-        // If that isn't the case, we find the first item in currentlyClickedItem's
+        // If that isn't the case, we find the first item in movedTask's
         // dependency chain, and sets it's dependency to whatever is last in the dependency
         // chain of the item that will now come before movedTask
       } else if (!(movedTaskFirstBLI.id === movedTaskLastBLI.id)) {
@@ -254,6 +292,8 @@ function placeTaskIntoTarget({
               ? targetLastBottomLayerItem.id
               : undefined,
           };
+        } else if (t.id === movedTask.id) {
+          return { ...t, parentId: targetTask.id };
         }
       }
 
