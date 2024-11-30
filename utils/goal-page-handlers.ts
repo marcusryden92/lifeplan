@@ -187,7 +187,10 @@ export function getSubtasksFromId(taskArray: Planner[], id: string): Planner[] {
 }
 
 // GET GOAL ROOT PARENT
-function getRootParent(taskArray: Planner[], id: string): string | undefined {
+export function getRootParent(
+  taskArray: Planner[],
+  id: string
+): string | undefined {
   // Find the task by its id
   const task = taskArray.find((task) => task.id === id);
 

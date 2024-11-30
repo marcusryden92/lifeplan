@@ -27,7 +27,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "prisma/**/*",
-    "utils/goal-handlers"
+    "utils/goal-handlers",
+    "utils/assert/assert.js"
   ],
   "exclude": ["node_modules"]
 }
