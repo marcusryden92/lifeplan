@@ -130,6 +130,7 @@ export default function DraggableItem({
   useEffect(() => {
     function updateDependencies() {
       if (
+        currentlyClickedItem ||
         !taskArray ||
         !setTaskArray ||
         !currentlyHoveredItem ||
@@ -147,7 +148,7 @@ export default function DraggableItem({
         mouseLocationInTarget: mouseLocationInItem,
       });
 
-      // Clear all the states after successfully moving a task
+      // Clear all the states after successfully moving a task, just in case
       setCurrentlyClickedItem(null);
       setCurrentlyHoveredItem(null);
       setPreviouslyClickedItem(null);
