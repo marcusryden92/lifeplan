@@ -216,30 +216,31 @@ export function sortTasksByDependencies(
   // Find root tasks (no dependencies, but has dependents, or children has dependents)
   const rootTask: Planner | undefined = tasksToSort.find((task) => {
     if (
-      // If task doesn't have a dependency
+      // 1. If task doesn't have a dependency
       !task.dependency ||
-      // Or if task has a dependency, but the dependency ID can't be found among the siblings or their children
+      // 2. Or if task has a dependency, but the dependency ID can't be found among the siblings or their children
       (task.dependency &&
         !tasksToSort.some((otherTask) =>
           idsExistsInDependenciesOf(taskArray, otherTask.id, task.dependency)
         ))
     ) {
-      // Get all the items from the tasksToSort array that are not the one we're working with
+      // 3. Get all the items from the tasksToSort array that are NOT the one we're working with
       const siblings = tasksToSort.filter((t) => t.id !== task.id);
 
-      if (!siblings || siblings.length === 0) return true;
+      if (!siblings || siblings.length === 0) return true; // If it has no siblings, return true by default.
 
-      // Check if either of the siblings (or their descendants) are dependent on the current task
+      // 4. Check if either of the siblings (or their descendants) are dependent on the current task
       const hasSiblingDependents = siblings.some((t) =>
         idsExistsInDependenciesOf(taskArray, task.id, t.id)
       );
 
-      /* Check if the current task (or it its descendants) are dependent on any of the siblings
-       * (shouldn't be the case for a root task, or parent of root task) */
+      // 5. Check if the current task (or it its descendants) are dependent on any of the siblings
+      //    (shouldn't be the case for a root task, or parent of root task)
       const isDependentOnSiblings = siblings.some((t) =>
         idsExistsInDependenciesOf(taskArray, t.id, task.id)
       );
 
+      // 6. If the task has siblings, and is not dependent on any of them, return true!
       if (hasSiblingDependents && !isDependentOnSiblings) {
         return true;
       }

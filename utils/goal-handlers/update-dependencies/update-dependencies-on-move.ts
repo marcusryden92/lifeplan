@@ -107,8 +107,11 @@ function moveToMiddle({
         // Update the dependency in the item that now will come after the moved task, to be the moved task
         // (or whatever comes last in moved task's dependency chain)
 
-        if (t.id === movedTaskFirstBLI.id && t.id === movedTask.id) {
-          return { ...t, parentId: targetTask.id, dependency: undefined };
+        if (
+          t.id === movedTaskFirstBLI.id &&
+          movedTaskFirstBLI.id === movedTask.id
+        ) {
+          return { ...t, parentId: targetTask.id, dependency: "" };
         }
 
         if (t.id === movedTaskFirstBLI.id) {
