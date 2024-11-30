@@ -8,6 +8,7 @@ import {
 import React from "react";
 
 import { updateDependenciesOnDelete } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-delete";
+import { assert } from "@/utils/assert/assert";
 
 interface UpdateDependenciesOnMoveInterface {
   taskArray: Planner[];
@@ -49,18 +50,14 @@ export function updateDependenciesOnMove({
     (t) => t.id === currentlyClickedItem.taskId
   );
 
-  if (!movedTask) {
-    throw new Error("Couldn't find movedTask in updateDependenciesOnMove.");
-  }
+  assert(movedTask, "Couldn't find movedTask in updateDependenciesOnMove.");
 
   // The target
   const targetTask: Planner | undefined = taskArray.find(
     (t) => t.id === currentlyHoveredItem
   );
 
-  if (!targetTask) {
-    throw new Error("Couldn't find target in updateDependenciesOnMove.");
-  }
+  assert(targetTask, "Couldn't find target in updateDependenciesOnMove.");
 
   // Get the tree bottom layer for task, in order to properly update dependencies
   const treeBottomLayer = getTreeBottomLayer(taskArray, movedTask.id);
@@ -98,11 +95,10 @@ function moveToMiddle({
     movedTask.id
   );
 
-  if (!goalRootParent) {
-    throw new Error(
-      "Couldn't find goalRootParent in updateDependenciesOnMove / moveToMiddle"
-    );
-  }
+  assert(
+    goalRootParent,
+    "Couldn't find goalRootParent in updateDependenciesOnMove / moveToMiddle"
+  );
 
   // Get the last item in the child layer of the target item
   const targetSubtasks = getTreeBottomLayer(taskArray, targetTask.id);
