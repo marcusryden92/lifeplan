@@ -11,14 +11,14 @@ import React, {
 
 import DragBox from "@/components/draggable/DragBox";
 
-type ClickedItem = { taskId: string; taskTitle: string } | undefined;
+type ClickedItem = { taskId: string; taskTitle: string } | null;
 
 // Define the type for the context state
 interface DraggableContextType {
-  currentlyHoveredItem: string;
-  setCurrentlyHoveredItem: React.Dispatch<SetStateAction<string>>;
-  currentlyClickedItem: ClickedItem;
-  setCurrentlyClickedItem: React.Dispatch<SetStateAction<ClickedItem>>;
+  currentlyHoveredItem: string | null;
+  setCurrentlyHoveredItem: React.Dispatch<SetStateAction<string | null>>;
+  currentlyClickedItem: ClickedItem | null;
+  setCurrentlyClickedItem: React.Dispatch<SetStateAction<ClickedItem | null>>;
   mousePosition: {
     clientX: number;
     clientY: number;
@@ -35,9 +35,11 @@ export const DraggableContextProvider = ({
   children: ReactNode;
 }) => {
   // States to track hovered and clicked items
-  const [currentlyHoveredItem, setCurrentlyHoveredItem] = useState<string>("");
+  const [currentlyHoveredItem, setCurrentlyHoveredItem] = useState<
+    string | null
+  >(null);
   const [currentlyClickedItem, setCurrentlyClickedItem] =
-    useState<ClickedItem>(undefined);
+    useState<ClickedItem>(null);
   const [displayDragBox, setDisplayDragBox] = useState<boolean>(false);
 
   const [mousePosition, setMousePosition] = useState<{
@@ -86,7 +88,7 @@ export const DraggableContextProvider = ({
          *
          *
          */
-        setCurrentlyClickedItem(undefined);
+        setCurrentlyClickedItem(null);
       }
     };
 
