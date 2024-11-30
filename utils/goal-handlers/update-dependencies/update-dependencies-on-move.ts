@@ -1,7 +1,6 @@
 import { Planner } from "@/lib/planner-class";
 
 import {
-  getSubtasksFromId,
   sortTasksByDependencies,
   getTreeBottomLayer,
 } from "@/utils/goal-page-handlers";
@@ -15,6 +14,15 @@ interface UpdateDependenciesOnMoveInterface {
   currentlyClickedItem: { taskId: string; taskTitle: string };
   currentlyHoveredItem: string;
   mouseLocationInTarget: "top" | "middle" | "bottom" | null;
+}
+
+interface MoveToMiddleInterface {
+  taskArray: Planner[];
+  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+  movedTask: Planner;
+  targetTask: Planner;
+  movedTaskFirstBLI: Planner;
+  movedTaskLastBLI: Planner;
 }
 
 export function updateDependenciesOnMove({
@@ -74,15 +82,6 @@ export function updateDependenciesOnMove({
   }
 }
 
-interface MoveToMiddleInterface {
-  taskArray: Planner[];
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
-  movedTask: Planner;
-  targetTask: Planner;
-  movedTaskFirstBLI: Planner;
-  movedTaskLastBLI: Planner;
-}
-
 // Function for moving an item to the middle (or into), the target item
 function moveToMiddle({
   taskArray,
@@ -100,13 +99,41 @@ function moveToMiddle({
   // If the targetLastItem lacks a dependency, i.e if it's the first item in the chain,
   // simply clear dependency of the movedTaskFirstBLI, and change the
   // moved item's parent ID to the target ID.
-
   if (!targetLastBLI.dependency) {
     setTaskArray((prev) =>
       prev.map((t) => {
-        // Update the dependency in the item that now will come after the moved task, to be the moved task
-        // (or whatever comes last in moved task's dependency chain)
+        // movedTaskFirstBLI.id === movedTask.id means that movedTask has NO CHILDREN,
+        // in which case we need to change both the parentId and dependency of the movedTask
+        if (
+          t.id === movedTaskFirstBLI.id &&
+          movedTaskFirstBLI.id === movedTask.id
+        ) {
+          return { ...t, parentId: targetTask.id, dependency: undefined };
+        }
 
+        // Otherwise (if movedTask HAS CHILDREN), clear the dependency of the movedTaskFirstBLI
+        if (t.id === movedTaskFirstBLI.id) {
+          return { ...t, dependency: undefined };
+        }
+
+        // And change the parentId of movedTask to targetTask.id
+        if (t.id === movedTask.id) {
+          return { ...t, parentId: targetTask.id };
+        }
+
+        return t;
+      })
+    );
+
+    return;
+  }
+
+  // If the movedTaskFirstBLI lacks a dependency, it means that we're moving the first item of the
+  // dependency chain, and we need to clear the dependency of whichever item has movedTaskLastBLI as
+  // its dependency, in order to make that item the new root task.
+  if (!movedTaskFirstBLI.dependency) {
+    setTaskArray((prev) =>
+      prev.map((t) => {
         if (
           t.id === movedTaskFirstBLI.id &&
           movedTaskFirstBLI.id === movedTask.id
@@ -125,8 +152,6 @@ function moveToMiddle({
         return t;
       })
     );
-
-    return;
   }
 
   // We can use this function to stitch together the hole that currentlyClickedItem
