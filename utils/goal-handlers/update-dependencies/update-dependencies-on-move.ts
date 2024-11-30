@@ -150,7 +150,7 @@ function moveToMiddle({
   }
 
   // CASE 2:  MOVED TASK or movedTaskFirstBLI is the first item in the dependency chain,
-  //          and is a child of root parent task.
+  // and is a child of root parent task.
 
   // If the movedTaskFirstBLI lacks a dependency and has root parent as parent, it means that we're moving the first and top item of the
   // dependency chain, and we need to clear the dependency of whichever item has movedTaskLastBLI as
@@ -164,6 +164,18 @@ function moveToMiddle({
         return t;
       })
     );
+
+    placeTaskIntoTarget({
+      taskArray,
+      setTaskArray,
+      movedTask,
+      targetTask,
+      movedTaskFirstBLI,
+      movedTaskLastBLI,
+      targetLastBLI,
+    });
+
+    return;
   }
 
   /* // We can use this function to stitch together the hole that currentlyClickedItem
