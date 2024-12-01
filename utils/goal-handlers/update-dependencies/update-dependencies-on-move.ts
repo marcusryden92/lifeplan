@@ -175,7 +175,7 @@ function moveToMiddle({
   3. Move movedTask to the target location using placeTaskIntoTarget().
   */
 
-  /*   if (!movedTaskFirstBLI.dependency && movedTask.parentId === goalRootParent) {
+  if (!movedTaskFirstBLI.dependency && movedTask.parentId === goalRootParent) {
     setTaskArray((prev) =>
       prev.map((t) => {
         if (t.dependency === movedTaskLastBLI.id) {
@@ -196,7 +196,7 @@ function moveToMiddle({
     });
 
     return;
-  } */
+  }
 
   /* 
   CASE 3: MOVED TASK IS FIRST IN THE DEPENDENCY CHAIN BUT NOT A CHILD OF THE ROOT PARENT TASK
