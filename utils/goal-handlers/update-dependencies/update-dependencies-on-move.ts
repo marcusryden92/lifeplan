@@ -115,12 +115,22 @@ function moveToMiddle({
   const sortedSubtasks = sortTasksByDependencies(taskArray, targetSubtasks);
   const targetLastBLI = sortedSubtasks[sortedSubtasks.length - 1];
 
-  // CASE 1:  TARGET is first in dependency chain, or has only one child, which is.
+  /* 
 
-  // If the targetLastBLI lacks a dependency, i.e if it's the first item in the chain,
-  // simply clear dependency of the movedTaskFirstBLI, and change the
-  // moved item's parent ID to the target ID.
+  CASE 1: TARGET TASK IS FIRST IN THE DEPENDENCY CHAIN OR HAS ONLY ONE CHILD, WHICH IS
+
+  Action:
+  1. Confirm that targetLastBLI has no dependency, meaning it is the first item in the chain.
+  2. Clear the dependency of movedTaskFirstBLI.
+  3. Update the moved item's parent ID to the target ID.
+  
+  */
+
   if (!targetLastBLI.dependency) {
+    // Check if targetLastBLI has a dependent
+    const targetLastBLIDependent = taskArray.find(
+      (t) => t.dependency === targetLastBLI.id
+    );
     setTaskArray((prev) =>
       prev.map((t) => {
         // movedTaskFirstBLI.id === movedTask.id means that movedTask has NO CHILDREN,
@@ -142,6 +152,11 @@ function moveToMiddle({
           return { ...t, parentId: targetTask.id };
         }
 
+        // Set the updated targetLastBLIDependent dependency
+        if (targetLastBLIDependent && t.id === targetLastBLIDependent.id) {
+          return { ...t, dependency: movedTask.id };
+        }
+
         return t;
       })
     );
@@ -149,13 +164,18 @@ function moveToMiddle({
     return;
   }
 
-  // CASE 2:  MOVED TASK or movedTaskFirstBLI is the first item in the dependency chain,
-  // and is a child of root parent task.
+  /* 
+  CASE 2: MOVED TASK IS FIRST IN THE DEPENDENCY CHAIN AND A CHILD OF THE ROOT PARENT TASK
 
-  // If the movedTaskFirstBLI lacks a dependency and has root parent as parent, it means that we're moving the first and top item of the
-  // dependency chain, and we need to clear the dependency of whichever item has movedTaskLastBLI as
-  // its dependency, in order to make that item the new root task.
-  if (!movedTaskFirstBLI.dependency && movedTask.parentId === goalRootParent) {
+  Action:
+  1. Identify movedTaskFirstBLI, which has no dependency and the root parent as its parent, 
+     making it the first and top item of the dependency chain.
+  2. Clear the dependency of the item that depends on movedTaskLastBLI 
+     to designate that item as the new root task.
+  3. Move movedTask to the target location using placeTaskIntoTarget().
+  */
+
+  /*   if (!movedTaskFirstBLI.dependency && movedTask.parentId === goalRootParent) {
     setTaskArray((prev) =>
       prev.map((t) => {
         if (t.dependency === movedTaskLastBLI.id) {
@@ -176,13 +196,16 @@ function moveToMiddle({
     });
 
     return;
-  }
+  } */
 
-  // CASE 3: MOVED TASK or movedTaskFirstBLI is the first item in the dependency chain,
-  // but is NOT a child of root parent task.
+  /* 
+  CASE 3: MOVED TASK IS FIRST IN THE DEPENDENCY CHAIN BUT NOT A CHILD OF THE ROOT PARENT TASK
 
-  // The item next in the dependency chain after movedTaskLastBLI, has its dependency set to the parentId of movedTask.
-  // Parent task becomes the new first item in the dependency chain
+  Action:
+  1. The item next in the dependency chain after movedTaskLastBLI will have its dependency set 
+     to the parentId of movedTask.
+  2. The parent task becomes the new first item in the dependency chain.
+  */
 
   if (!movedTaskFirstBLI.dependency) {
     const movedTaskLastBLIDependent = taskArray.find(
@@ -246,28 +269,23 @@ function placeTaskIntoTarget({
   targetLastBLI,
 }: PlaceTaskIntoTargetInterface) {
   // Get the bottom layer of the last item of the target task
-  let targetLastItemBottomLayer: Planner[] = [];
-  if (targetLastBLI) {
-    targetLastItemBottomLayer = sortTasksByDependencies(
-      taskArray,
-      getTreeBottomLayer(taskArray, targetLastBLI.id)
-    );
-  }
+  const targetLastItemBottomLayer: Planner[] = sortTasksByDependencies(
+    taskArray,
+    getTreeBottomLayer(taskArray, targetLastBLI.id)
+  );
 
   // Get last task of last item bottom layer
-  let targetLastBottomLayerItem: Planner | undefined;
-  if (targetLastItemBottomLayer.length !== 0) {
-    targetLastBottomLayerItem =
-      targetLastItemBottomLayer[targetLastItemBottomLayer.length - 1];
-  }
+  const targetLastBottomLayerItem: Planner =
+    targetLastItemBottomLayer[targetLastItemBottomLayer.length - 1];
 
   // Get whatever item is dependent on targetLastBottomLayerItem
-  let lastItemDependent: Planner | undefined;
-  if (targetLastBottomLayerItem) {
-    lastItemDependent = taskArray.find(
-      (task) => task.dependency === targetLastBottomLayerItem.id
-    );
-  }
+  const lastItemDependent: Planner | undefined = taskArray.find(
+    (task) => task.dependency === targetLastBottomLayerItem.id
+  );
+
+  // Check if targetTask has children
+  const targetHasChildren =
+    taskArray.filter((t) => t.parentId === targetTask.id).length > 0;
 
   setTaskArray((prev) =>
     prev.map((t) => {
@@ -277,33 +295,79 @@ function placeTaskIntoTarget({
         return { ...t, dependency: movedTaskLastBLI.id };
       }
 
-      // We're checking if movedTaskFirstBLI and movedTaskLastBLI are the same,
-      // i.e if movedTask lacks any children and is the item that should be modified
-      if (
-        t.id === movedTask.id &&
-        movedTaskFirstBLI.id === movedTaskLastBLI.id
-      ) {
-        return {
-          ...t,
-          dependency: targetLastBottomLayerItem
-            ? targetLastBottomLayerItem.id
-            : undefined,
-          parentId: targetTask.id,
-        };
-
-        // If that isn't the case, we find the first item in movedTask's
-        // dependency chain, and sets it's dependency to whatever is last in the dependency
-        // chain of the item that will now come before movedTask
-      } else if (!(movedTaskFirstBLI.id === movedTaskLastBLI.id)) {
-        if (t.id === movedTaskFirstBLI.id) {
+      // CASE 1: If target HAS children
+      if (targetHasChildren) {
+        // Case 1a: movedTask LACKS any children and is the only item that should be modified
+        if (
+          t.id === movedTask.id &&
+          movedTaskFirstBLI.id === movedTask.id &&
+          movedTaskFirstBLI.id === movedTaskLastBLI.id
+        ) {
           return {
             ...t,
             dependency: targetLastBottomLayerItem
               ? targetLastBottomLayerItem.id
               : undefined,
+            parentId: targetTask.id,
           };
-        } else if (t.id === movedTask.id) {
-          return { ...t, parentId: targetTask.id };
+        } else if (!(movedTaskFirstBLI.id === movedTaskLastBLI.id)) {
+          /* 
+          Case 1b: movedTask HAS children:
+          Find the first item in movedTask's dependency chain,
+          and sets it's dependency to whatever is last in the dependency
+          chain of the item that will now come before movedTask 
+          */
+          if (t.id === movedTaskFirstBLI.id) {
+            return {
+              ...t,
+              dependency: targetLastBottomLayerItem
+                ? targetLastBottomLayerItem.id
+                : undefined,
+            };
+          } else if (t.id === movedTask.id) {
+            return { ...t, parentId: targetTask.id };
+          }
+        }
+      }
+
+      // CASE 2: Target DOESN'T have children
+      else {
+        // Case 2a: Checking if movedTask lacks any children and is the only item that should be modified
+        if (
+          movedTaskFirstBLI.id === movedTask.id &&
+          movedTaskFirstBLI.id === movedTaskLastBLI.id
+        ) {
+          // Change the movedTask parent to targetTask and move targetTask's dependency
+          // to sit on movedTask instead
+          if (t.id === movedTask.id) {
+            return {
+              ...t,
+              dependency: targetTask.dependency
+                ? targetTask.dependency
+                : undefined,
+              parentId: targetTask.id,
+            };
+          }
+
+          // And clear the dependency of targetTask
+          else if (t.id === targetTask.id) {
+            return { ...t, dependency: undefined };
+          }
+        }
+
+        // Case 2b: If movedTask HAS children
+        else {
+          // Move the dependency from targetTask to movedTaskFirstBLI
+          if (t.id === movedTaskFirstBLI.id) {
+            return {
+              ...t,
+              dependency: targetTask.dependency,
+            };
+          }
+          // And clear the dependency of targetTask
+          else if (t.id === targetTask.id) {
+            return { ...t, dependency: undefined };
+          }
         }
       }
 

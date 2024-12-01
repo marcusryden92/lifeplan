@@ -267,7 +267,12 @@ export function sortTasksByDependencies(
       );
     }
 
+    let infiniteLoop = 0;
+
     while (isLooping) {
+      infiniteLoop++;
+      if (infiniteLoop > 1000)
+        throw new Error("sortTasksByDependencies exceeded 1000 loops.");
       // If the task hasn't been processed yet, add it to the sorted array
       if (!visited.has(currentTask.id)) {
         sortedArray.push(currentTask);
