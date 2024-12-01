@@ -340,6 +340,15 @@ function placeTaskIntoTarget({
           // Change the movedTask parent to targetTask and move targetTask's dependency
           // to sit on movedTask instead
           if (t.id === movedTask.id) {
+            // If moving movedTask into its dependent, just update movedTask parentId and keep the dependency
+            if (targetTask.dependency === movedTask.id) {
+              return {
+                ...t,
+                parentId: targetTask.id,
+              };
+            }
+
+            // Otherwise set the movedTask dependency to whatever was the dependency of the targetTask
             return {
               ...t,
               dependency: targetTask.dependency
@@ -350,7 +359,7 @@ function placeTaskIntoTarget({
           }
 
           // And clear the dependency of targetTask
-          else if (t.id === targetTask.id) {
+          if (t.id === targetTask.id) {
             return { ...t, dependency: undefined };
           }
         }
@@ -374,4 +383,7 @@ function placeTaskIntoTarget({
       return t;
     })
   );
+
+  console.log("moveToMiddle:");
+  console.log(taskArray);
 }
