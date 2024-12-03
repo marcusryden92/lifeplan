@@ -4,7 +4,7 @@ import clsx from "clsx";
 import styles from "./DraggableItem.module.css";
 
 import { useDataContext } from "@/context/DataContext";
-import { updateDependenciesOnMove } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move";
+import { updateDependenciesOnMove } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/update-dependencies-on-move";
 
 export default function DraggableItem({
   children,
