@@ -110,6 +110,29 @@ function moveToMiddle({
     "Couldn't find goalRootParent in updateDependenciesOnMove / moveToMiddle"
   );
 
+  /* 
+  Cases:
+
+  movedTask has no children.
+  movedTask has children.
+
+  movedTask has no siblings.
+  movedTask has siblings.
+
+  targetTask has children.
+  targetTask has no children.
+
+  movedTaskFirstBLI is dependency root.
+  movedTaskFirstBLI is not dependency root.
+
+  
+  targetTask is movedTask's nextDependent.
+  targetTask is not movedTask's nextDependent.
+
+
+  
+  */
+
   // Get the last item in the child layer of the target item
   const targetSubtasks = getTreeBottomLayer(taskArray, targetTask.id);
   const sortedSubtasks = sortTasksByDependencies(taskArray, targetSubtasks);
