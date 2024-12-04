@@ -86,7 +86,8 @@ import {
 import { getSubtasksFromId } from "@/utils/goal-page-handlers";
 import {
   updateTaskArray,
-  transferDependencyLocation,
+  transferDependencyOwnership,
+  InstructionsType,
 } from "../update-dependencies-utils";
 import { assert } from "@/utils/assert/assert";
 
@@ -159,30 +160,80 @@ function moveToMiddle({
       if (!targetHasChildren) {
         // 4. movedTaskFirstBLI is not dependency root
         if (!movedTaskIsDependencyRoot) {
-          // 5. targetTask is not movedTask's nextDependent
+          // 5. targetTask is not movedTask's nextDependent --
           if (!targetIsNextDependent) {
             // - Move movedTasks current dependency and dependent to its parent assuming it has one (!movedTaskHasSiblings)
-            // - Move targetTasks dependency to movedTask and dependent to targetNextTask  (!targetHasChildren)
+            if (movedTaskParent) {
+              transferDependencyOwnership(
+                taskArray,
+                setTaskArray,
+                movedTask,
+                movedTaskParent
+              );
+            }
+
+            // - Move targetTasks dependencies to movedTask  (!targetHasChildren)
+            transferDependencyOwnership(
+              taskArray,
+              setTaskArray,
+              targetTask,
+              movedTask
+            );
+
             // - Change movedTask parentId (!movedTaskIsDependencyRoot)
-
-            const instructions = [
+            const instructions: InstructionsType[] = [
               {
-                conditional: movedTaskParent
-                  ? `t.id === ${movedTaskParent.id}`
-                  : "false",
+                conditional: `t.id === ${movedTask.id}`,
                 updates: {
-                  dependency: movedTask.dependency,
+                  parentId: targetTask.id,
                 },
               },
+            ];
+
+            updateTaskArray(setTaskArray, instructions);
+          }
+
+          // 5. targetTask is movedTask's nextDependent --
+          else {
+            // Set movedTask.dependency = movedTaskParent.id & movedTask.parentId = targetTask.id
+
+            const instructions: InstructionsType[] = [
               {
-                conditional: movedTaskLastBLIDependent
-                  ? `t.id === ${movedTaskLastBLIDependent.id}`
-                  : "false",
+                conditional: `t.id === ${movedTask.id}`,
                 updates: {
-                  dependency: movedTaskParent?.id,
+                  dependency: movedTask.parentId,
+                  parentId: targetTask.id,
                 },
               },
+            ];
 
+            updateTaskArray(setTaskArray, instructions);
+          }
+        }
+        // 4. movedTaskFirstBLI is dependency root
+        else {
+          // 5. targetTask is not movedTask's nextDependent
+          if (targetIsNextDependent) {
+            // movedTask's dependencies to parent
+            if (movedTaskParent) {
+              transferDependencyOwnership(
+                taskArray,
+                setTaskArray,
+                movedTask,
+                movedTaskParent
+              );
+            }
+
+            // targetTask's dependencies to movedTask
+            transferDependencyOwnership(
+              taskArray,
+              setTaskArray,
+              targetTask,
+              movedTask
+            );
+
+            // Update movedTask parentId && dependency
+            const instructions: InstructionsType[] = [
               {
                 conditional: `t.id === ${movedTask.id}`,
                 updates: {
@@ -191,16 +242,15 @@ function moveToMiddle({
                 },
               },
               {
-                conditional: targetNextDependent
-                  ? `t.id === ${targetNextDependent.id}`
-                  : "false",
+                conditional: `t.id === ${targetTask.id}`,
                 updates: {
-                  dependency: movedTask.id,
+                  dependency: undefined,
                 },
               },
+              // Remove dependency from nextDependent, if it exists
               {
-                conditional: targetNextDependent
-                  ? `t.id === ${targetTask.id}`
+                conditional: movedTaskLastBLIDependent
+                  ? `t.id === ${movedTaskLastBLIDependent.id}`
                   : "false",
                 updates: {
                   dependency: undefined,
@@ -212,11 +262,30 @@ function moveToMiddle({
           }
 
           // 5. targetTask is movedTask's nextDependent
-        }
-        // 4. movedTaskFirstBLI is dependency root
-        else {
-          // 5. targetTask is not movedTask's nextDependent
-          // 5. targetTask is movedTask's nextDependent
+          else {
+            // Set movedTask dependency to parent and new parent to targetTask
+            // Set targetTask dependent to movedTask
+
+            const instructions: InstructionsType[] = [
+                {
+                  conditional: `t.id === ${movedTask.id}`,
+                  updates: {
+                    dependency: movedTaskParent?.id,
+                    parentId: targetTask.id,
+                  },
+                },
+                {
+                    conditional: targetNextDependent ? `t.id === ${targetNextDependent.id}`: "false",
+                    updates: {
+                      dependency: movedTask.id
+                    },
+                  },
+              ];
+              
+              
+              updateTaskArray(setTaskArray, instructions);
+            };
+          }
         }
       }
       // 3. targetTask has children
@@ -245,9 +314,7 @@ function moveToMiddle({
       // 5. targetTask is movedTask's nextDependent
       // 5. targetTask is not movedTask's nextDependent
     }
-  }
-  // 1. movedTask has children
-  else {
+  }  else {
     // 2. movedTask has no siblings
     // 3. targetTask has children
     // 4. movedTaskFirstBLI is dependency root

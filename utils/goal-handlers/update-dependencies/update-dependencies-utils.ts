@@ -4,17 +4,19 @@ import { object } from "zod";
 
 // Sets the value of the object's dependency to the value of the subject's dependency,
 // and sets the value of the subject's dependent's dependency to the id of the object
-export function transferDependencyLocation(
+export function transferDependencyOwnership(
   taskArray: Planner[],
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   subject: Planner,
-  object: Planner
+  object: Planner,
+  clearSubject: boolean = true
 ) {
   const nextDependent = taskArray.find((t) => t.dependency === subject.id);
   const nextDependentId = nextDependent ? nextDependent.id : null;
 
   setTaskArray((prev) =>
     prev.map((t) => {
+      // Move ownership from subject to object
       if (nextDependentId && t.id === nextDependentId) {
         return { ...t, dependency: object.id };
       }
@@ -22,12 +24,17 @@ export function transferDependencyLocation(
       if (subject.dependency && t.id === object.id) {
         return { ...t, dependency: subject.dependency };
       }
+
+      // and clear subject
+      if (clearSubject && t.id === subject.id) {
+        return { ...t, dependency: subject.dependency };
+      }
       return t;
     })
   );
 }
 
-interface InstructionsType {
+export interface UpdatesType {
   title?: string;
   id?: string;
   parentId?: string;
@@ -39,11 +46,16 @@ interface InstructionsType {
   dependency?: string;
 }
 
+export interface InstructionsType {
+  conditional: string;
+  updates: UpdatesType;
+}
+
 export function updateTaskArray(
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   instructions: {
     conditional: string; // Simplified conditional logic
-    updates: InstructionsType;
+    updates: UpdatesType;
   }[]
 ) {
   setTaskArray((prev) =>
