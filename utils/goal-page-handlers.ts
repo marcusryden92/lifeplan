@@ -186,6 +186,13 @@ export function getSubtasksFromId(taskArray: Planner[], id: string): Planner[] {
   return subtasks;
 }
 
+export function getSortedSubtasks(taskArray: Planner[], id: string): Planner[] {
+  const subtasks = getTreeBottomLayer(taskArray, id);
+  const sortedSubtasks = sortTasksByDependencies(taskArray, subtasks);
+
+  return sortedSubtasks;
+}
+
 // GET GOAL ROOT PARENT
 export function getRootParent(
   taskArray: Planner[],
