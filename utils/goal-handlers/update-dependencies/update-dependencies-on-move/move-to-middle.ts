@@ -9,7 +9,7 @@ import { getSubtasksFromId } from "@/utils/goal-page-handlers";
 import {
   updateTaskArray,
   transferDependencyOwnership,
-  InstructionsType,
+  InstructionType,
 } from "../update-dependencies-utils";
 import { assert } from "@/utils/assert/assert";
 import { updateDependenciesOnDelete } from "../update-dependencies-on-delete";
@@ -64,7 +64,8 @@ export function moveToMiddle({
     ? getSubtasksFromId(taskArray, movedTask.parentId).length === 0
     : false;
   const movedTaskIsDependencyRoot = !movedTaskFirstBLI.dependency;
-  const targetIsNextDependent = targetTask.dependency === movedTaskLastBLI.id;
+  const targetIsNextDependent =
+    targetTaskFirstBLI.dependency === movedTaskLastBLI.id;
 
   /*   
   movedTask has no siblings / has siblings
@@ -77,6 +78,7 @@ export function moveToMiddle({
   if (targetIsNextDependent) {
     handleTargetIsNextDependent(
       setTaskArray,
+      goalRootParent,
       movedTask,
       targetTask,
       movedTaskParent
@@ -103,6 +105,7 @@ export function moveToMiddle({
 
 function handleTargetIsNextDependent(
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  goalRootParent: string,
   movedTask: Planner,
   targetTask: Planner,
   movedTaskParent?: Planner
@@ -110,15 +113,16 @@ function handleTargetIsNextDependent(
   // If target is movedTasks next dependent, only update movedTask.parentId to targetTask,
   // and change movedTaskParent's dependency to movedTask, if there is a parent
 
-  const instructions: InstructionsType[] = [
+  const instructions: InstructionType[] = [
     {
-      conditional: `t.id === ${movedTask.id}`,
+      conditional: (t) => t.id === movedTask.id,
       updates: {
         parentId: targetTask.id,
       },
     },
     {
-      conditional: movedTaskParent ? `t.id === ${movedTaskParent.id}` : "false",
+      conditional: (t) =>
+        t.id === movedTask.parentId && movedTask.parentId !== goalRootParent,
       updates: {
         dependency: movedTask.id,
       },
@@ -165,18 +169,19 @@ function updateMovedTask(
   targetTaskFirstBLI: Planner,
   targettaskLastBLIDependent: Planner | undefined
 ) {
-  const instructions: InstructionsType[] = [
+  const instructions: InstructionType[] = [
     {
-      conditional: `t.id === ${movedTask.id}`,
+      conditional: (t) => t.id === movedTask.id,
       updates: {
         parentId: targetTask.id,
         dependency: targetTaskFirstBLI.dependency,
       },
     },
     {
-      conditional: targettaskLastBLIDependent
-        ? `t.id === ${targettaskLastBLIDependent.id}`
-        : "false",
+      conditional: (t) =>
+        targettaskLastBLIDependent
+          ? t.id === targettaskLastBLIDependent.id
+          : false,
       updates: {
         dependency: movedTask.id,
       },

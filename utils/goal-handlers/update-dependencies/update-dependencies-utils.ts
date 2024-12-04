@@ -34,49 +34,36 @@ export function transferDependencyOwnership(
   );
 }
 
-export interface UpdatesType {
-  title?: string;
-  id?: string;
-  parentId?: string;
-  type?: "task" | "plan" | "goal" | null;
-  canInfluence?: boolean;
-  duration?: number;
-  deadline?: Date;
-  starts?: Date;
-  dependency?: string;
-}
+type UpdatesType = Partial<Planner>;
 
-export interface InstructionsType {
-  conditional: string;
+export interface InstructionType {
+  conditional: (task: Planner) => boolean;
   updates: UpdatesType;
 }
 
 export function updateTaskArray(
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
-  instructions: {
-    conditional: string; // Simplified conditional logic
-    updates: UpdatesType;
-  }[]
+  instructions: InstructionType[]
 ) {
   setTaskArray((prev) =>
-    prev.map((t) => {
-      // Loop through instructions and check conditions
-      for (const s of instructions) {
-        // Evaluate the conditional string securely (e.g., you can use Function or a custom parser here)
-        // Be cautious with eval(). This example assumes the condition is a boolean expression on task properties.
+    prev.map((task) => {
+      // Track whether any updates were applied
+      let updatedTask = { ...task };
+      let updateApplied = false;
+
+      // Apply all matching instructions
+      for (const instruction of instructions) {
         try {
-          const conditionResult = new Function(
-            "task",
-            `return ${s.conditional}`
-          ).call(null, t);
-          if (conditionResult) {
-            return { ...t, ...s.updates }; // Apply the instructions if the condition is true
+          if (instruction.conditional(task)) {
+            updatedTask = { ...updatedTask, ...instruction.updates };
+            updateApplied = true;
           }
         } catch (error) {
           console.error("Error evaluating condition:", error);
         }
       }
-      return t; // Return the task unchanged if no conditions matched
+
+      return updatedTask;
     })
   );
 }
