@@ -1,5 +1,5 @@
 import { Planner } from "@/lib/planner-class";
-import { getSubtasksFromId } from "./goal-page-handlers";
+import { getSubtasksById } from "./goal-page-handlers";
 
 export function getTaskById(
   taskArray: Planner[],
@@ -27,7 +27,7 @@ export function totalSubtaskDuration(id: string, taskArray: Planner[]): number {
     return 0; // Task not found
   }
 
-  const subtasks = getSubtasksFromId(taskArray, id); // Returns an array of Planner objects
+  const subtasks = getSubtasksById(taskArray, id); // Returns an array of Planner objects
   // console.log(`Subtasks found for ID ${id}:`, subtasks);
 
   // If the task has no subtasks, return its duration if it's a goal

@@ -1,7 +1,7 @@
 import { Planner } from "@/lib/planner-class";
 
 import {
-  getSubtasksFromId,
+  getSubtasksById,
   sortTasksByDependencies,
   getTreeBottomLayer,
 } from "@/utils/goal-page-handlers";
@@ -33,7 +33,7 @@ export function updateDependenciesOnDelete({
   const itemAfterLast = taskArray.find((t) => t.dependency === lastItem.id);
 
   const hasSiblings = parentId
-    ? getSubtasksFromId(taskArray, parentId).length > 1
+    ? getSubtasksById(taskArray, parentId).length > 1
     : undefined;
 
   if (itemAfterLast && itemBeforeFirst) {

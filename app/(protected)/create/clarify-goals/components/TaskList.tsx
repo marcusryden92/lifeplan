@@ -11,7 +11,7 @@ import { TaskListProps } from "@/lib/task-item";
 // Utils
 import { getTaskById } from "@/utils/task-array-utils";
 import {
-  getSubtasksFromId,
+  getSubtasksById,
   sortTasksByDependencies,
 } from "@/utils/goal-page-handlers";
 
@@ -24,7 +24,7 @@ const TaskList: React.FC<TaskListProps> = ({
   const { taskArray } = useDataContext();
 
   // Get subtasks from the context if not provided
-  const subtasksToUse = subtasks || getSubtasksFromId(taskArray, id);
+  const subtasksToUse = subtasks || getSubtasksById(taskArray, id);
   if (!subtasksToUse.length) return null; // Return early if no subtasks.
 
   const thisTask = getTaskById(taskArray, id);

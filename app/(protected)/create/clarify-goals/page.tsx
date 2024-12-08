@@ -37,7 +37,7 @@ import AddSubtask from "./components/task-item-subcomponents/AddSubtask";
 import { clickEdit, confirmEdit } from "@/utils/creation-pages-functions";
 import { Planner } from "@/lib/planner-class";
 
-import { getSubtasksFromId, deleteGoal } from "@/utils/goal-page-handlers";
+import { getSubtasksById, deleteGoal } from "@/utils/goal-page-handlers";
 
 import {
   totalSubtaskDuration,
@@ -59,7 +59,7 @@ export default function TasksPage() {
 
   const [goalComplete, setGoalComplete] = useState<boolean>(false);
 
-  const devMode = false;
+  const devMode = true;
 
   const handleDeleteTask = (index: number, taskId: string) => {
     deleteGoal({ taskArray, setTaskArray, taskId });
@@ -140,7 +140,7 @@ export default function TasksPage() {
     const currentGoal = taskArray[index];
 
     if (taskArray && taskArray.length > 0) {
-      const subtasks = getSubtasksFromId(taskArray, taskArray[index].id);
+      const subtasks = getSubtasksById(taskArray, taskArray[index].id);
 
       // Check if currentTask is undefined or null
       if (
@@ -166,7 +166,7 @@ export default function TasksPage() {
         return false;
       }
 
-      const subtasks = getSubtasksFromId(taskArray, goal.id);
+      const subtasks = getSubtasksById(taskArray, goal.id);
 
       if (
         // selectedDate != undefined &&

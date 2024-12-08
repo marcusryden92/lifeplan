@@ -166,7 +166,7 @@ export const checkGoalForCompletion = (
   parentId: string
 ): boolean => {
   const currentGoal = taskArray.find((t) => t.id === parentId); // Find current goal using parentId
-  const subtasks = getSubtasksFromId(taskArray, parentId); // Get subtasks from the current goal's ID
+  const subtasks = getSubtasksById(taskArray, parentId); // Get subtasks from the current goal's ID
 
   if (
     currentGoal &&
@@ -181,12 +181,15 @@ export const checkGoalForCompletion = (
 };
 
 // GET GOAL SUBTASKS FROM GOAL ID
-export function getSubtasksFromId(taskArray: Planner[], id: string): Planner[] {
+export function getSubtasksById(taskArray: Planner[], id: string): Planner[] {
   const subtasks = taskArray.filter((task) => task.parentId === id);
   return subtasks;
 }
 
-export function getSortedSubtasks(taskArray: Planner[], id: string): Planner[] {
+export function getSortedTreeBottomLayer(
+  taskArray: Planner[],
+  id: string
+): Planner[] {
   const subtasks = getTreeBottomLayer(taskArray, id);
   const sortedSubtasks = sortTasksByDependencies(taskArray, subtasks);
 

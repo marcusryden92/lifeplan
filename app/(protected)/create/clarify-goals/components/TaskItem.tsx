@@ -12,7 +12,7 @@ import TaskHeader from "./task-item-subcomponents/TaskHeader";
 import DraggableItem from "@/components/draggable/DraggableItem";
 
 // Utils
-import { getSubtasksFromId } from "@/utils/goal-page-handlers";
+import { getSubtasksById } from "@/utils/goal-page-handlers";
 import DragDisableListWrapper from "@/components/draggable/DragDisableListWrapper";
 
 export const TaskItem: React.FC<TaskItemProps> = ({
@@ -24,8 +24,8 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   const [itemIsFocused, setItemIsFocused] = useState<boolean>(false);
   const [subtasksMinimized, setSubtasksMinimized] = useState<boolean>(false);
 
-  const subtasks = getSubtasksFromId(taskArray, task.id);
-  const devMode = false;
+  const subtasks = getSubtasksById(taskArray, task.id);
+  const devMode = true;
 
   return (
     <div
