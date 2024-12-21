@@ -9,11 +9,7 @@ import {
   getSortedTreeBottomLayer,
 } from "@/utils/goal-page-handlers";
 import { getSubtasksById } from "@/utils/goal-page-handlers";
-import {
-  updateTaskArray,
-  transferDependencyOwnership,
-  InstructionType,
-} from "../update-dependencies-utils";
+import { updateTaskArray, InstructionType } from "../update-dependencies-utils";
 import { assert } from "@/utils/assert/assert";
 import { updateDependenciesOnDelete } from "../update-dependencies-on-delete";
 
@@ -37,6 +33,8 @@ export function moveToMiddle({
   movedTaskLastBLI,
   movedTaskLastBLIDependent,
 }: MoveToMiddleInterface) {
+  if (movedTask.parentId === targetTask.id) return;
+
   // Root parent of the goal
   const goalRootParent: string | undefined = getRootParent(
     taskArray,
@@ -47,9 +45,6 @@ export function moveToMiddle({
     goalRootParent,
     "Couldn't find goalRootParent in updateDependenciesOnMove / moveToMiddle"
   );
-
-  // movedTask's parent
-  const movedTaskParent = taskArray.find((t) => t.id === movedTask.parentId);
 
   // Get the last item in the child layer of the target item
   const targetSortedBottomLayer = getSortedTreeBottomLayer(
