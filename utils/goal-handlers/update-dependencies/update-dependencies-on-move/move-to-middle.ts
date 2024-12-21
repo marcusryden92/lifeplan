@@ -24,7 +24,7 @@ interface MoveToMiddleInterface {
   targetTask: Planner;
   movedTaskFirstBLI: Planner;
   movedTaskLastBLI: Planner;
-  movedTaskLastBLIDependent?: Planner;
+  movedTaskLastBLIDependent: Planner;
 }
 
 // Function for moving an item to the middle (or into), the target item
@@ -67,6 +67,15 @@ export function moveToMiddle({
   const targetChildren = getSubtasksById(taskArray, targetTask.id);
 
   // Conditions
+  /*   
+  movedTask has no siblings / has siblings
+  targetTask has children / no children
+  movedTask has no children / has children
+  movedTaskFirstBLI is dependency root / not dependency root
+  targetTask is movedTask's nextDependent / not nextDependent 
+  targetTask is previousDependent
+  */
+
   const movedTaskHasChildren =
     getSubtasksById(taskArray, movedTask.id).length === 0;
   const movedTaskHasSiblings = movedTask.parentId
@@ -79,14 +88,6 @@ export function moveToMiddle({
 
   const targetIsPreviousDependent =
     movedTaskFirstBLI.dependency === targetTaskLastBLI.id;
-  /*   
-  movedTask has no siblings / has siblings
-  targetTask has children / no children
-  movedTask has no children / has children
-  movedTaskFirstBLI is dependency root / not dependency root
-  targetTask is movedTask's nextDependent / not nextDependent 
-  targetTask is previousDependent
-  */
   if (targetIsPreviousDependent && !targetHasChildren) {
     handleTargetIsPreviousDependent(
       goalRootParent,
@@ -114,7 +115,14 @@ export function moveToMiddle({
     return;
   } else {
     // Actions for stitching the hole movedTask leaves behind
-    handleVacancy(taskArray, setTaskArray, movedTask, movedTaskHasSiblings);
+    handleVacancy(
+      taskArray,
+      setTaskArray,
+      movedTask,
+      movedTaskFirstBLI,
+      movedTaskLastBLIDependent,
+      movedTaskHasSiblings
+    );
 
     // Actions for updating movedTask to the new position
     updateMovedTask(
@@ -269,8 +277,21 @@ function handleVacancy(
   taskArray: Planner[],
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   movedTask: Planner,
+  movedTaskFirstBLI: Planner,
+  movedTaskLastBLIDependent: Planner,
   hasSiblings: boolean
 ) {
+  if (movedTaskFirstBLI.dependency === undefined) {
+    const instructions: InstructionType[] = [];
+
+    instructions.push({
+      conditional: (t) => t.id === movedTaskLastBLIDependent.id,
+      updates: {
+        dependency: undefined,
+      },
+    });
+  }
+
   // If movedTask has siblings, stitch the vacancy as if it was deleted
   if (hasSiblings) {
     updateDependenciesOnDelete({

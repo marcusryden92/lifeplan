@@ -49,7 +49,7 @@ export function updateDependenciesOnDelete({
           return t;
         })
       );
-    } else {
+    } else if (!hasSiblings) {
       setTaskArray((prev) =>
         prev.map((t) => {
           if (t.id === itemAfterLast.id) {

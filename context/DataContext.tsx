@@ -35,7 +35,10 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
   // const [taskArray, setTaskArray] = useState<Planner[]>([]);
 
-  /*  useEffect(() => {
+  useEffect(() => {
+    console.log("TASKARRAY:");
+    console.log("____________________________________________");
+
     taskArray.forEach((t) => {
       console.log(`Title: ${t.title}`);
       console.log(`DEP: ${t.dependency}`);
@@ -43,7 +46,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
       console.log("");
     });
   }, [taskArray]);
- */
+
   const [currentTemplate, setCurrentTemplate] = useState<
     EventTemplate[] | undefined
   >(templateSeed);
