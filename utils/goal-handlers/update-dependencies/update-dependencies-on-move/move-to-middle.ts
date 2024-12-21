@@ -368,16 +368,6 @@ function handleVacancy(
     });
 
     updateTaskArray(setTaskArray, instructions);
-
-    /* const movedTaskParent = taskArray.find((t) => t.id === movedTask.parentId);
-    if (movedTaskParent) {
-      transferDependencyOwnership(
-        taskArray,
-        setTaskArray,
-        movedTask,
-        movedTaskParent
-      );
-    } */
   }
 }
 
