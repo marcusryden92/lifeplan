@@ -9,8 +9,7 @@ import React, {
 } from "react";
 import { Planner } from "@/lib/planner-class";
 import { EventTemplate } from "@/utils/template-builder-utils";
-import { generateCalendar, SimpleEvent } from "@/utils/calendar-generation";
-import { templateSeed, taskArraySeed } from "@/data/seed-data";
+import { templateSeed, taskArraySeed, taskArraySeed2 } from "@/data/seed-data";
 import { WeekDayIntegers } from "@/types/calendar-types";
 
 interface DataContextType {
@@ -32,7 +31,9 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     weekStartDay: 1,
   };
 
-  const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
+  // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
+  const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed2);
+
   // const [taskArray, setTaskArray] = useState<Planner[]>([]);
 
   useEffect(() => {
