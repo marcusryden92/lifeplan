@@ -79,7 +79,7 @@ export function moveToMiddle({
   const movedTaskHasChildren =
     getSubtasksById(taskArray, movedTask.id).length === 0;
   const movedTaskHasSiblings = movedTask.parentId
-    ? getSubtasksById(taskArray, movedTask.parentId).length === 0
+    ? getSubtasksById(taskArray, movedTask.parentId).length > 1
     : false;
 
   const targetHasChildren = targetChildren.length > 0;
@@ -118,8 +118,8 @@ export function moveToMiddle({
     handleVacancy(
       taskArray,
       setTaskArray,
+      goalRootParent,
       movedTask,
-      movedTaskFirstBLI,
       movedTaskLastBLIDependent,
       movedTaskHasSiblings
     );
@@ -276,22 +276,11 @@ function handleTargetIsPreviousDependent(
 function handleVacancy(
   taskArray: Planner[],
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  goalRootParent: string,
   movedTask: Planner,
-  movedTaskFirstBLI: Planner,
   movedTaskLastBLIDependent: Planner,
   hasSiblings: boolean
 ) {
-  if (movedTaskFirstBLI.dependency === undefined) {
-    const instructions: InstructionType[] = [];
-
-    instructions.push({
-      conditional: (t) => t.id === movedTaskLastBLIDependent.id,
-      updates: {
-        dependency: undefined,
-      },
-    });
-  }
-
   // If movedTask has siblings, stitch the vacancy as if it was deleted
   if (hasSiblings) {
     updateDependenciesOnDelete({
@@ -303,8 +292,53 @@ function handleVacancy(
   }
 
   // If if no siblings, transfer ownership of dependencies to parent
-  else {
-    const movedTaskParent = taskArray.find((t) => t.id === movedTask.parentId);
+  else if (!hasSiblings) {
+    const instructions: InstructionType[] = [];
+
+    if (movedTaskLastBLIDependent) {
+      if (!movedTask.dependency) {
+        instructions.push({
+          conditional: (t) => t.id === movedTaskLastBLIDependent.id,
+          updates: {
+            dependency:
+              movedTask.parentId !== goalRootParent
+                ? movedTask.parentId
+                : undefined,
+          },
+        });
+      } else {
+        instructions.push({
+          conditional: (t) => t.id === movedTaskLastBLIDependent.id,
+          updates: {
+            dependency:
+              movedTask.parentId !== goalRootParent
+                ? movedTask.dependency
+                : undefined,
+          },
+        });
+      }
+    }
+
+    if (movedTask.dependency) {
+      instructions.push({
+        conditional: (t) =>
+          t.id === movedTask.parentId && movedTask.parentId !== goalRootParent,
+        updates: {
+          dependency: movedTask.dependency,
+        },
+      });
+    }
+
+    instructions.push({
+      conditional: (t) => t.id === movedTask.id,
+      updates: {
+        dependency: undefined,
+      },
+    });
+
+    updateTaskArray(setTaskArray, instructions);
+
+    /* const movedTaskParent = taskArray.find((t) => t.id === movedTask.parentId);
     if (movedTaskParent) {
       transferDependencyOwnership(
         taskArray,
@@ -312,7 +346,7 @@ function handleVacancy(
         movedTask,
         movedTaskParent
       );
-    }
+    } */
   }
 }
 

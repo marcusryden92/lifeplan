@@ -1,6 +1,6 @@
 import React from "react";
 import { Planner } from "@/lib/planner-class";
-import { object } from "zod";
+import { getRootParent } from "@/utils/goal-page-handlers";
 
 // Sets the value of the object's dependency to the value of the subject's dependency,
 // and sets the value of the subject's dependent's dependency to the id of the object
@@ -27,7 +27,7 @@ export function transferDependencyOwnership(
 
       // and clear subject
       if (clearSubject && t.id === subject.id) {
-        return { ...t, dependency: subject.dependency };
+        return { ...t, dependency: undefined };
       }
       return t;
     })
