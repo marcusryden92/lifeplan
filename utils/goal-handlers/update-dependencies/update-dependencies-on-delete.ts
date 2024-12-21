@@ -91,6 +91,7 @@ export function updateDependenciesOnDelete({
     }
   }
 
+  // If ItemAfterLast is defined but not ItemBeforeFirst
   if (!itemBeforeFirst && itemAfterLast) {
     // If HAS siblings
     if (hasSiblings) {
@@ -105,10 +106,9 @@ export function updateDependenciesOnDelete({
     // If NO siblings
     if (!hasSiblings) {
       instructions.push({
-        conditional: (t) =>
-          t.id === itemAfterLast.id && parentId !== rootParentId,
+        conditional: (t) => t.id === itemAfterLast.id,
         updates: {
-          dependency: parentId,
+          dependency: parentId === rootParentId ? undefined : parentId,
         },
       });
     }

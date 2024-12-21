@@ -31,8 +31,8 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     weekStartDay: 1,
   };
 
-  // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
-  const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed2);
+  const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
+  // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed2);
 
   // const [taskArray, setTaskArray] = useState<Planner[]>([]);
 
