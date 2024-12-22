@@ -79,6 +79,9 @@ export function updateDependenciesOnMove({
   // for setting correct dependencies
   const movedTaskFirstBLI = sortedBottomLayer[0];
   const movedTaskLastBLI = sortedBottomLayer[sortedBottomLayer.length - 1];
+  const movedTaskLastBLIDependent = taskArray.find(
+    (t) => t.dependency === movedTaskLastBLI.id
+  );
 
   if (mouseLocationInTarget === "middle") {
     moveToMiddle({
@@ -88,6 +91,7 @@ export function updateDependenciesOnMove({
       targetTask,
       movedTaskFirstBLI,
       movedTaskLastBLI,
+      movedTaskLastBLIDependent,
     });
   }
 }

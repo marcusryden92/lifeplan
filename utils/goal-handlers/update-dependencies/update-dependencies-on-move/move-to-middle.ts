@@ -20,7 +20,7 @@ interface MoveToMiddleInterface {
   targetTask: Planner;
   movedTaskFirstBLI: Planner;
   movedTaskLastBLI: Planner;
-  movedTaskLastBLIDependent: Planner;
+  movedTaskLastBLIDependent: Planner | undefined;
 }
 
 // Function for moving an item to the middle (or into), the target item
@@ -309,7 +309,7 @@ function handleVacancy(
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   goalRootParent: string,
   movedTask: Planner,
-  movedTaskLastBLIDependent: Planner,
+  movedTaskLastBLIDependent: Planner | undefined,
   hasSiblings: boolean
 ) {
   // If movedTask has siblings, stitch the vacancy as if it was deleted

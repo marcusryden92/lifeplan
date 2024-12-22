@@ -9,7 +9,12 @@ import React, {
 } from "react";
 import { Planner } from "@/lib/planner-class";
 import { EventTemplate } from "@/utils/template-builder-utils";
-import { templateSeed, taskArraySeed, taskArraySeed2 } from "@/data/seed-data";
+import {
+  templateSeed,
+  taskArraySeed,
+  taskArraySeed2,
+  taskArraySeed3,
+} from "@/data/seed-data";
 import { WeekDayIntegers } from "@/types/calendar-types";
 
 interface DataContextType {
@@ -31,8 +36,9 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     weekStartDay: 1,
   };
 
-  const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
+  // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
   // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed2);
+  const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed3);
 
   // const [taskArray, setTaskArray] = useState<Planner[]>([]);
 
@@ -49,6 +55,8 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
         console.log(`ID: ${t.id}`);
         console.log("");
       });
+
+      // console.log(JSON.stringify(taskArray));
     }
 
     if (logEvent > 0) logTaskArray();
