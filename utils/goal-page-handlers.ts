@@ -2,7 +2,10 @@ import { Planner } from "@/lib/planner-class";
 import React from "react";
 import { v4 as uuidv4 } from "uuid";
 
-import { updateDependenciesOnDelete } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-delete";
+import {
+  updateDependenciesOnDelete,
+  updateDependenciesOnDelete_ReturnArray,
+} from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-delete";
 
 interface AddSubtaskInterface {
   taskArray: Planner[];
@@ -65,6 +68,29 @@ export function deleteGoal({
 
   // Recursively delete the entire goal-tree
   setTaskArray((prev) => prev.filter((t) => !treeIds.includes(t.id)));
+}
+
+export function deleteGoal_ReturnArray({
+  taskArray,
+  setTaskArray,
+  taskId,
+  parentId,
+}: DeleteGoalInterface): Planner[] {
+  let newArray: Planner[] = taskArray;
+
+  // Corrected type
+  if (parentId) {
+    newArray = updateDependenciesOnDelete_ReturnArray({
+      taskArray,
+      setTaskArray,
+      taskId,
+      parentId,
+    });
+  }
+
+  const treeIds: string[] = getTreeIds(taskArray, taskId);
+
+  return (newArray = newArray.filter((t) => !treeIds.includes(t.id)));
 }
 
 // Get the correct dependency when creating a new subtask in a goal
@@ -374,6 +400,20 @@ export function getTreeIds(taskArray: Planner[], id: string): string[] {
     },
     [id]
   ); // Include the current task's id in the result
+}
+
+// GET ALL TASKS IN THE TREE
+export function getGoalTree(taskArray: Planner[], id: string): Planner[] {
+  // Get the current task's subtasks
+  const subtasks: Planner[] = taskArray.filter((task) => task.parentId === id);
+
+  // Collect the current task's object and all its subtasks' objects
+  return subtasks.reduce(
+    (allTasks: Planner[], task: Planner) => {
+      return [...allTasks, ...getGoalTree(taskArray, task.id)];
+    },
+    [taskArray.find((task) => task.id === id)!] // Include the current task's object in the result
+  );
 }
 
 // Check if any ID's in the main tree matches any of the dependencies in the tree to check

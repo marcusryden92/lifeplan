@@ -63,8 +63,8 @@ export async function updateTaskArray(
         return updatedTask;
       });
 
-      console.log("Updated array:", newArray);
-      resolve();
+      // Defer resolving to ensure React state updates complete
+      setTimeout(resolve, 0);
       return newArray;
     });
   });

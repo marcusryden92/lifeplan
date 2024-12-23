@@ -7,11 +7,12 @@ import { Planner } from "@/lib/planner-class";
 import {
   getRootParent,
   getSortedTreeBottomLayer,
+  getGoalTree,
+  deleteGoal_ReturnArray,
 } from "@/utils/goal-page-handlers";
 import { getSubtasksById } from "@/utils/goal-page-handlers";
 import { updateTaskArray, InstructionType } from "../update-dependencies-utils";
 import { assert } from "@/utils/assert/assert";
-import { updateDependenciesOnDelete } from "../update-dependencies-on-delete";
 
 interface MoveToMiddleInterface {
   taskArray: Planner[];
@@ -116,16 +117,6 @@ export function moveToMiddle({
   } else {
     // Actions for stitching the hole movedTask leaves behind
     handleVacancy(
-      taskArray,
-      setTaskArray,
-      goalRootParent,
-      movedTask,
-      movedTaskLastBLIDependent,
-      movedTaskHasSiblings
-    );
-
-    // Actions for updating movedTask to the new position
-    updateMovedTask(
       taskArray,
       setTaskArray,
       movedTask,
@@ -306,75 +297,6 @@ function handleTargetIsNextDependent(
 async function handleVacancy(
   taskArray: Planner[],
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
-  goalRootParent: string,
-  movedTask: Planner,
-  movedTaskLastBLIDependent: Planner | undefined,
-  hasSiblings: boolean
-) {
-  // If movedTask has siblings, stitch the vacancy as if it was deleted
-  if (hasSiblings) {
-    updateDependenciesOnDelete({
-      taskArray,
-      setTaskArray,
-      taskId: movedTask.id,
-      parentId: movedTask.parentId,
-    });
-  }
-
-  // If if no siblings, transfer ownership of dependencies to parent
-  else if (!hasSiblings) {
-    const instructions: InstructionType[] = [];
-
-    if (movedTaskLastBLIDependent) {
-      if (!movedTask.dependency) {
-        instructions.push({
-          conditional: (t) => t.id === movedTaskLastBLIDependent.id,
-          updates: {
-            dependency:
-              movedTask.parentId !== goalRootParent
-                ? movedTask.parentId
-                : undefined,
-          },
-        });
-      } else {
-        instructions.push({
-          conditional: (t) => t.id === movedTaskLastBLIDependent.id,
-          updates: {
-            dependency:
-              movedTask.parentId !== goalRootParent
-                ? movedTask.dependency
-                : undefined,
-          },
-        });
-      }
-    }
-
-    if (movedTask.dependency) {
-      instructions.push({
-        conditional: (t) =>
-          t.id === movedTask.parentId && movedTask.parentId !== goalRootParent,
-        updates: {
-          dependency: movedTask.dependency,
-        },
-      });
-    }
-
-    instructions.push({
-      conditional: (t) => t.id === movedTask.id,
-      updates: {
-        dependency: undefined,
-      },
-    });
-
-    await updateTaskArray(setTaskArray, instructions);
-
-    console.log(taskArray);
-  }
-}
-
-function updateMovedTask(
-  taskArray: Planner[],
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   movedTask: Planner,
   movedTaskFirstBLI: Planner,
   movedTaskLastBLI: Planner,
@@ -382,14 +304,50 @@ function updateMovedTask(
   targetTask: Planner,
   targetHasChildren: boolean
 ) {
+  const movedTaskTree = getGoalTree(taskArray, movedTask.id);
+
+  const updatedArray: Planner[] = deleteGoal_ReturnArray({
+    taskArray,
+    setTaskArray,
+    taskId: movedTask.id,
+    parentId: movedTask.parentId,
+  });
+
+  console.log("2: ", taskArray);
+
+  // Actions for updating movedTask to the new position
+  updateMovedTask(
+    updatedArray,
+    setTaskArray,
+    movedTask,
+    movedTaskFirstBLI,
+    movedTaskLastBLI,
+    movedTaskHasChildren,
+    movedTaskTree,
+    targetTask,
+    targetHasChildren
+  );
+}
+
+async function updateMovedTask(
+  updatedArray: Planner[],
+  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  movedTask: Planner,
+  movedTaskFirstBLI: Planner,
+  movedTaskLastBLI: Planner,
+  movedTaskHasChildren: boolean,
+  movedTaskTree: Planner[],
+  targetTask: Planner,
+  targetHasChildren: boolean
+) {
   // Get these items again, as they've changed since they were defined in the parent function
   const targetSortedBottomLayer = getSortedTreeBottomLayer(
-    taskArray,
+    updatedArray,
     targetTask.id
   );
 
   const targetTaskFirstBLI = targetSortedBottomLayer[0];
-  const targetTaskLastBLIDependent = taskArray.find(
+  const targetTaskLastBLIDependent = updatedArray.find(
     (t) => t.dependency === targetTask.id
   );
 
@@ -399,65 +357,67 @@ function updateMovedTask(
   // If movedTask HAS children
   // -- Set movedTask parent to targetTask
   // -- Set movedTaskFirstBLI dependency to that of targetTaskFirstBLI.dependency
-  if (movedTaskHasChildren)
-    instructions.push(
-      {
-        conditional: (t) => t.id === movedTask.id,
-        updates: {
-          parentId: targetTask.id,
-        },
-      },
-      {
-        conditional: (t) => t.id === movedTaskFirstBLI.id,
-        updates: {
+  if (movedTaskHasChildren) {
+    movedTaskTree = movedTaskTree.map((t) => {
+      if (t.id === movedTask.id) {
+        return { ...t, parentId: targetTask.id };
+      } else if (t.id === movedTaskFirstBLI.id)
+        return {
+          ...t,
           dependency: targetTaskFirstBLI.dependency,
-        },
-      }
-    );
+        };
+
+      return t;
+    });
+  }
   // If movedTask has NO children
   // -- Set movedTask parent to targetTask
   // -- Set movedTask dependency to that of targetTaskFirstBLI.dependency
   else
-    instructions.push({
-      conditional: (t) => t.id === movedTask.id,
-      updates: {
-        parentId: targetTask.id,
-        dependency: targetTaskFirstBLI.dependency,
-      },
+    movedTaskTree = movedTaskTree.map((t) => {
+      if (t.id === movedTask.id) {
+        return {
+          ...t,
+          parentId: targetTask.id,
+          dependency: targetTaskFirstBLI.dependency,
+        };
+      }
+
+      return t;
     });
 
   if (targetHasChildren) {
     // If targetTask HAS children
     // -- Set targetTaskFirstBLI.dependency to movedTaskLastBLI
-    instructions.push({
-      conditional: (t) => t.id === targetTaskFirstBLI.id,
-      updates: {
-        dependency: movedTaskLastBLI.id,
-      },
+
+    updatedArray = updatedArray.map((t) => {
+      if (t.id === targetTaskFirstBLI.id) {
+        return { ...t, dependency: movedTaskLastBLI.id };
+      }
+      return t;
     });
   }
 
   // If targetTask HAS NO children
   // -- Set the targetTaskLastBLIDependent dependency to movedTaskLastBLI
   else
-    instructions.push(
-      {
-        conditional: (t) =>
-          targetTaskLastBLIDependent
-            ? t.id === targetTaskLastBLIDependent.id
-            : false,
-        updates: {
-          dependency: movedTaskLastBLI.id,
-        },
-      },
-      // And clear targetTask's dependency
-      {
-        conditional: (t) => t.id === targetTask.id,
-        updates: {
-          dependency: undefined,
-        },
+    updatedArray = updatedArray.map((t) => {
+      if (
+        targetTaskLastBLIDependent
+          ? t.id === targetTaskLastBLIDependent.id
+          : false
+      ) {
+        return { ...t, dependency: movedTaskLastBLI.id };
       }
-    );
 
-  updateTaskArray(setTaskArray, instructions);
+      if (t.id === targetTask.id) return { ...t, dependency: undefined };
+
+      return t;
+    });
+
+  movedTaskTree.forEach((t) => {
+    updatedArray.push(t);
+  });
+
+  setTaskArray(updatedArray);
 }

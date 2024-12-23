@@ -47,64 +47,38 @@ export function updateDependenciesOnDelete({
 
   const instructions: InstructionType[] = [];
 
-  // If ItemBeforeFirst and ItemAfterLast are both defined
   if (itemBeforeFirst && itemAfterLast) {
-    // If HAS siblings
-    if (hasSiblings)
+    if (hasSiblings) {
       instructions.push({
-        // Set itemAfterLast dependency to itemBeforeFirst ID
         conditional: (t) => t.id === itemAfterLast.id,
         updates: { dependency: itemBeforeFirst.id },
       });
-
-    // If NO siblings
-    if (!hasSiblings)
+    } else {
       instructions.push(
         {
-          // Set itemAfterLast dependency to parentId
           conditional: (t) => t.id === itemAfterLast.id,
           updates: { dependency: parentId },
         },
         {
-          // Set parent task dependency to itemBeforeFirst ID (assuming not root parent)
           conditional: (t) => t.id === parentId && t.id !== rootParentId,
           updates: { dependency: itemBeforeFirst.id },
         }
       );
-  }
-
-  // If ItemBeforeFirst is defined but not ItemAfterLast
-  if (itemBeforeFirst && !itemAfterLast) {
-    // If HAS siblings
-    if (hasSiblings) {
-      // No action necessary
     }
-
-    // If NO siblings
+  } else if (itemBeforeFirst && !itemAfterLast) {
     if (!hasSiblings) {
       instructions.push({
         conditional: (t) => t.id === parentId && parentId !== rootParentId,
-        updates: {
-          dependency: itemBeforeFirst.id,
-        },
+        updates: { dependency: itemBeforeFirst.id },
       });
     }
-  }
-
-  // If ItemAfterLast is defined but not ItemBeforeFirst
-  if (!itemBeforeFirst && itemAfterLast) {
-    // If HAS siblings
+  } else if (!itemBeforeFirst && itemAfterLast) {
     if (hasSiblings) {
       instructions.push({
         conditional: (t) => t.id === itemAfterLast.id,
-        updates: {
-          dependency: undefined,
-        },
+        updates: { dependency: undefined },
       });
-    }
-
-    // If NO siblings
-    if (!hasSiblings) {
+    } else {
       instructions.push({
         conditional: (t) => t.id === itemAfterLast.id,
         updates: {
@@ -114,7 +88,88 @@ export function updateDependenciesOnDelete({
     }
   }
 
-  updateTaskArray(setTaskArray, instructions);
+  // Ensure all instructions are applied before moving forward
+  return new Promise<void>((resolve) => {
+    updateTaskArray(setTaskArray, instructions);
+    setTimeout(resolve, 0);
+  });
+}
 
-  return;
+export function updateDependenciesOnDelete_ReturnArray({
+  taskArray,
+  taskId,
+  parentId,
+}: UpdateDependenciesOnDeleteInterface) {
+  const bottomLayer: Planner[] = getTreeBottomLayer(taskArray, taskId);
+  const sortedLayer: Planner[] = sortTasksByDependencies(
+    taskArray,
+    bottomLayer
+  );
+
+  let updatedArray: Planner[] = [...taskArray];
+
+  //
+
+  const rootParentId = getRootParent(taskArray, taskId);
+
+  const firstItem = sortedLayer[0];
+  const lastItem = sortedLayer[sortedLayer.length - 1];
+
+  const itemBeforeFirst = taskArray.find((t) => t.id === firstItem.dependency);
+  const itemAfterLast = taskArray.find((t) => t.dependency === lastItem.id);
+
+  const hasSiblings = parentId
+    ? getSubtasksById(taskArray, parentId).length > 1
+    : undefined;
+
+  const instructions: InstructionType[] = [];
+
+  if (itemBeforeFirst && itemAfterLast) {
+    if (hasSiblings) {
+      updatedArray = updatedArray.map((t) => {
+        if (t.id === itemAfterLast.id)
+          return { ...t, dependency: itemBeforeFirst.id };
+
+        return t;
+      });
+    } else {
+      updatedArray = updatedArray.map((t) => {
+        if (t.id === itemAfterLast.id) return { ...t, dependency: parentId };
+        else if (t.id === parentId && t.id !== rootParentId)
+          return { ...t, dependency: itemBeforeFirst.id };
+
+        return t;
+      });
+    }
+  } else if (itemBeforeFirst && !itemAfterLast) {
+    if (!hasSiblings) {
+      updatedArray = updatedArray.map((t) => {
+        if (t.id === parentId && parentId !== rootParentId)
+          return { ...t, dependency: itemBeforeFirst.id };
+
+        return t;
+      });
+    }
+  } else if (!itemBeforeFirst && itemAfterLast) {
+    if (hasSiblings) {
+      updatedArray = updatedArray.map((t) => {
+        if (t.id === itemAfterLast.id) return { ...t, dependency: undefined };
+
+        return t;
+      });
+    } else {
+      updatedArray = updatedArray.map((t) => {
+        if (t.id === itemAfterLast.id)
+          return {
+            ...t,
+            dependency: parentId === rootParentId ? undefined : parentId,
+          };
+
+        return t;
+      });
+    }
+  }
+
+  // Ensure all instructions are applied before moving forward
+  return updatedArray as Planner[];
 }
