@@ -41,29 +41,31 @@ export interface InstructionType {
   updates: UpdatesType;
 }
 
-export function updateTaskArray(
+export async function updateTaskArray(
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   instructions: InstructionType[]
 ) {
-  setTaskArray((prev) =>
-    prev.map((task) => {
-      // Track whether any updates were applied
-      let updatedTask = { ...task };
-      let updateApplied = false;
+  return new Promise<void>((resolve) => {
+    setTaskArray((prev) => {
+      const newArray = prev.map((task) => {
+        let updatedTask = { ...task };
 
-      // Apply all matching instructions
-      for (const instruction of instructions) {
-        try {
-          if (instruction.conditional(task)) {
-            updatedTask = { ...updatedTask, ...instruction.updates };
-            updateApplied = true;
+        for (const instruction of instructions) {
+          try {
+            if (instruction.conditional(task)) {
+              updatedTask = { ...updatedTask, ...instruction.updates };
+            }
+          } catch (error) {
+            console.error("Error evaluating condition:", error);
           }
-        } catch (error) {
-          console.error("Error evaluating condition:", error);
         }
-      }
 
-      return updatedTask;
-    })
-  );
+        return updatedTask;
+      });
+
+      console.log("Updated array:", newArray);
+      resolve();
+      return newArray;
+    });
+  });
 }

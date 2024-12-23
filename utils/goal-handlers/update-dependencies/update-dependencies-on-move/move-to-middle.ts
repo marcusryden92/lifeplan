@@ -126,14 +126,13 @@ export function moveToMiddle({
 
     // Actions for updating movedTask to the new position
     updateMovedTask(
+      taskArray,
       setTaskArray,
       movedTask,
       movedTaskFirstBLI,
       movedTaskLastBLI,
       movedTaskHasChildren,
       targetTask,
-      targetTaskFirstBLI,
-      targetTaskLastBLIDependent,
       targetHasChildren
     );
   }
@@ -304,7 +303,7 @@ function handleTargetIsNextDependent(
   updateTaskArray(setTaskArray, instructions);
 }
 
-function handleVacancy(
+async function handleVacancy(
   taskArray: Planner[],
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   goalRootParent: string,
@@ -367,21 +366,33 @@ function handleVacancy(
       },
     });
 
-    updateTaskArray(setTaskArray, instructions);
+    await updateTaskArray(setTaskArray, instructions);
+
+    console.log(taskArray);
   }
 }
 
 function updateMovedTask(
+  taskArray: Planner[],
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   movedTask: Planner,
   movedTaskFirstBLI: Planner,
   movedTaskLastBLI: Planner,
   movedTaskHasChildren: boolean,
   targetTask: Planner,
-  targetTaskFirstBLI: Planner,
-  targetTaskLastBLIDependent: Planner | undefined,
   targetHasChildren: boolean
 ) {
+  // Get these items again, as they've changed since they were defined in the parent function
+  const targetSortedBottomLayer = getSortedTreeBottomLayer(
+    taskArray,
+    targetTask.id
+  );
+
+  const targetTaskFirstBLI = targetSortedBottomLayer[0];
+  const targetTaskLastBLIDependent = taskArray.find(
+    (t) => t.dependency === targetTask.id
+  );
+
   // Initiate empty instructions array
   const instructions: InstructionType[] = [];
 
