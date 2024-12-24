@@ -35,7 +35,7 @@ const TaskList: React.FC<TaskListProps> = ({
   return (
     <div
       className={`flex flex-col justify-start flex-grow w-full ${
-        subtasks && subtasks.length > 0 && "mb-4"
+        subtasks && subtasks.length > 0 && "mb-2"
       }`}
     >
       {sortedTasks.map((task) => (
