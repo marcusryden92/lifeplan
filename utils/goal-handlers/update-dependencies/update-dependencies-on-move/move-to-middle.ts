@@ -36,6 +36,8 @@ export function moveToMiddle({
 }: MoveToMiddleInterface) {
   if (movedTask.parentId === targetTask.id) return;
 
+  console.log(taskArray);
+
   // Root parent of the goal
   const goalRootParent: string | undefined = getRootParent(
     taskArray,
@@ -268,7 +270,7 @@ function handleTargetIsNextDependent(
     );
   }
 
-  console.log(`TARGET: ${targetTask.title}` + targetHasChildren);
+  console.log(`TARGET: ${targetTask.title}` + " " + targetHasChildren);
   // If targetTask has NO children
   if (!targetHasChildren) console.log("RUN");
   instructions.push(
@@ -312,8 +314,6 @@ async function handleVacancy(
     taskId: movedTask.id,
     parentId: movedTask.parentId,
   });
-
-  console.log("2: ", taskArray);
 
   // Actions for updating movedTask to the new position
   updateMovedTask(
