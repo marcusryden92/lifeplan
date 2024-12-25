@@ -108,8 +108,10 @@ export function moveToMiddle({
       setTaskArray,
       goalRootParent,
       movedTask,
+      movedTaskFirstBLI,
       movedTaskLastBLI,
       targetTask,
+      targetTaskFirstBLI,
       targetTaskLastBLIDependent,
       movedTaskHasSiblings,
       targetHasChildren
@@ -229,8 +231,10 @@ function handleTargetIsNextDependent(
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   goalRootParent: string,
   movedTask: Planner,
+  movedTaskFirstBLI: Planner,
   movedTaskLastBLI: Planner,
   targetTask: Planner,
+  targetTaskFirstBLI: Planner,
   targetTaskLastBLIDependent: Planner | undefined,
   movedTaskHasSiblings: boolean,
   targetHasChildren: boolean
@@ -254,7 +258,8 @@ function handleTargetIsNextDependent(
       // Set movedTask's new dependency to be its old parent
       {
         conditional: (t) =>
-          t.id === movedTask.id && movedTask.parentId !== goalRootParent,
+          t.id === movedTaskFirstBLI.id &&
+          movedTask.parentId !== goalRootParent,
         updates: {
           dependency: movedTask.parentId,
         },
@@ -271,27 +276,36 @@ function handleTargetIsNextDependent(
   }
 
   console.log(`TARGET: ${targetTask.title}` + " " + targetHasChildren);
-  // If targetTask has NO children
-  if (!targetHasChildren) console.log("RUN");
-  instructions.push(
-    // Clear target's dependency
-    {
-      conditional: (t) => t.id === targetTask.id,
-      updates: {
-        dependency: undefined,
-      },
-    },
-    // Set targetLastBLIDependent's dependency to be movedTask's last BLI
-    {
-      conditional: (t) =>
-        targetTaskLastBLIDependent
-          ? t.id === targetTaskLastBLIDependent.id
-          : false,
+
+  if (targetHasChildren) {
+    instructions.push({
+      conditional: (t) => t.id === targetTaskFirstBLI.id,
       updates: {
         dependency: movedTaskLastBLI.id,
       },
-    }
-  );
+    });
+  }
+  // If targetTask has NO children
+  else if (!targetHasChildren)
+    instructions.push(
+      // Clear target's dependency
+      {
+        conditional: (t) => t.id === targetTask.id,
+        updates: {
+          dependency: undefined,
+        },
+      },
+      // Set targetLastBLIDependent's dependency to be movedTask's last BLI
+      {
+        conditional: (t) =>
+          targetTaskLastBLIDependent
+            ? t.id === targetTaskLastBLIDependent.id
+            : false,
+        updates: {
+          dependency: movedTaskLastBLI.id,
+        },
+      }
+    );
 
   updateTaskArray(setTaskArray, instructions);
 }
