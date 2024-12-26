@@ -45,16 +45,16 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
 
   const [debugArray, setDebugArray] = useState<Planner[]>([]);
 
-  /* useEffect(() => {
+  useEffect(() => {
     console.log(debugArray);
     setDebugArray(taskArray);
-  }, [taskArray]); */
+  }, [taskArray]);
 
   const [logEvent, setLogEvent] = useState<number>(0);
 
   useEffect(() => {
     function logTaskArray() {
-      console.log("TASKARRAY:");
+      /*  console.log("TASKARRAY:");
       console.log("____________________________________________");
 
       taskArray.forEach((t) => {
@@ -64,7 +64,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
         console.log(`%cPARENT: ${t.parentId}`, "color: skyblue");
 
         console.log("");
-      });
+      }); */
       // console.log(JSON.stringify(taskArray));
     }
 

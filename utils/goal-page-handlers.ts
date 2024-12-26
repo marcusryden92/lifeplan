@@ -33,7 +33,7 @@ export function addSubtask({
       parentId, // Using parentId here
       "goal",
       true,
-      taskDuration,
+      taskDuration < 5 ? 5 : taskDuration,
       undefined
     );
 
