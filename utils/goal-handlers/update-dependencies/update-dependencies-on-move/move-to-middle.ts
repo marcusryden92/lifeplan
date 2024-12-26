@@ -210,7 +210,7 @@ function handleTargetIsPreviousDependent(
           t.id === movedTask.parentId && movedTask.parentId !== goalRootParent,
 
         updates: {
-          dependency: movedTask.id,
+          dependency: movedTaskLastBLI.id,
         },
       },
       {
@@ -274,8 +274,6 @@ function handleTargetIsNextDependent(
       }
     );
   }
-
-  console.log(`TARGET: ${targetTask.title}` + " " + targetHasChildren);
 
   if (targetHasChildren) {
     instructions.push({
