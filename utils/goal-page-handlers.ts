@@ -125,7 +125,7 @@ export function updateDependenciesOnCreate(
     const lastSiblingItem = sortedSiblings[sortedSiblings.length - 1];
 
     // Get the whole bottom layer (actionable items) from this item
-    const bottomLayer = getTreeBottomLayer(taskArray, lastSiblingItem.id);
+    const bottomLayer = getSortedTreeBottomLayer(taskArray, lastSiblingItem.id);
 
     const lastBottomLayerItem = bottomLayer[bottomLayer.length - 1];
 

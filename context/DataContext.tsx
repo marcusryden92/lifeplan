@@ -37,26 +37,34 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     weekStartDay: 1,
   };
 
+  // const [taskArray, setTaskArray] = useState<Planner[]>([]);
   // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
   // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed2);
   // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed3);
   const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed4);
 
-  // const [taskArray, setTaskArray] = useState<Planner[]>([]);
+  const [debugArray, setDebugArray] = useState<Planner[]>([]);
+
+  /* useEffect(() => {
+    console.log(debugArray);
+    setDebugArray(taskArray);
+  }, [taskArray]); */
 
   const [logEvent, setLogEvent] = useState<number>(0);
 
   useEffect(() => {
     function logTaskArray() {
-      /*  console.log("TASKARRAY:");
+      console.log("TASKARRAY:");
       console.log("____________________________________________");
 
       taskArray.forEach((t) => {
         console.log(`Title: ${t.title}`);
         console.log(`DEP: ${t.dependency}`);
         console.log(`ID: ${t.id}`);
+        console.log(`%cPARENT: ${t.parentId}`, "color: skyblue");
+
         console.log("");
-      }); */
+      });
       // console.log(JSON.stringify(taskArray));
     }
 

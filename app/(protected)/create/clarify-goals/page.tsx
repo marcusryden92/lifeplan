@@ -398,7 +398,7 @@ export default function TasksPage() {
         </Carousel>
       </div>
 
-      <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
+      {/* <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant="invisible" className="px-0">
           <Link
             href={"/create/goals"}
@@ -420,7 +420,7 @@ export default function TasksPage() {
             <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />
           </Link>
         </Button>
-      </CardFooter>
+      </CardFooter> */}
     </div>
   );
 }
