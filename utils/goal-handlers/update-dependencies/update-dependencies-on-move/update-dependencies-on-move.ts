@@ -5,11 +5,10 @@ import { Planner } from "@/lib/planner-class";
 import {
   sortTasksByDependencies,
   getTreeBottomLayer,
-  getRootParent,
 } from "@/utils/goal-page-handlers";
 
-import { updateDependenciesOnDelete } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-delete";
 import { moveToMiddle } from "./move-to-middle";
+import { moveToEdge } from "./move-to-edge";
 import { assert } from "@/utils/assert/assert";
 
 interface UpdateDependenciesOnMoveInterface {
@@ -18,25 +17,6 @@ interface UpdateDependenciesOnMoveInterface {
   currentlyClickedItem: { taskId: string; taskTitle: string };
   currentlyHoveredItem: string;
   mouseLocationInTarget: "top" | "middle" | "bottom" | null;
-}
-
-interface MoveToMiddleInterface {
-  taskArray: Planner[];
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
-  movedTask: Planner;
-  targetTask: Planner;
-  movedTaskFirstBLI: Planner;
-  movedTaskLastBLI: Planner;
-}
-
-interface PlaceTaskIntoTargetInterface {
-  taskArray: Planner[];
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
-  movedTask: Planner;
-  targetTask: Planner;
-  movedTaskFirstBLI: Planner;
-  movedTaskLastBLI: Planner;
-  targetLastBLI: Planner;
 }
 
 export function updateDependenciesOnMove({
@@ -77,8 +57,9 @@ export function updateDependenciesOnMove({
 
   // Get the first and last Bottom Layer Item (BLI) of the moved task,
   // for setting correct dependencies
-  const movedTaskFirstBLI = sortedBottomLayer[0];
-  const movedTaskLastBLI = sortedBottomLayer[sortedBottomLayer.length - 1];
+  const movedTaskFirstBLI: Planner = sortedBottomLayer[0];
+  const movedTaskLastBLI: Planner =
+    sortedBottomLayer[sortedBottomLayer.length - 1];
   const movedTaskLastBLIDependent = taskArray.find(
     (t) => t.dependency === movedTaskLastBLI.id
   );
@@ -92,6 +73,19 @@ export function updateDependenciesOnMove({
       movedTaskFirstBLI,
       movedTaskLastBLI,
       movedTaskLastBLIDependent,
+    });
+  } else if (
+    mouseLocationInTarget === "top" ||
+    mouseLocationInTarget === "bottom"
+  ) {
+    moveToEdge({
+      taskArray,
+      setTaskArray,
+      movedTask,
+      movedTaskFirstBLI,
+      movedTaskLastBLI,
+      targetTask,
+      mouseLocationInTarget,
     });
   }
 }

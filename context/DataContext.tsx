@@ -38,17 +38,17 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // const [taskArray, setTaskArray] = useState<Planner[]>([]);
-  // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
+  const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
   // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed2);
   // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed3);
-  const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed4);
+  // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed4);
 
   const [debugArray, setDebugArray] = useState<Planner[]>([]);
 
-  useEffect(() => {
+  /* useEffect(() => {
     console.log(debugArray);
     setDebugArray(taskArray);
-  }, [taskArray]);
+  }, [taskArray]); */
 
   const [logEvent, setLogEvent] = useState<number>(0);
 
@@ -65,7 +65,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
 
         console.log("");
       }); */
-      // console.log(JSON.stringify(taskArray));
+      console.log(taskArray);
     }
 
     if (logEvent > 0) logTaskArray();
