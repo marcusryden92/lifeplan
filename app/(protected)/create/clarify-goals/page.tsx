@@ -45,7 +45,8 @@ import {
 } from "@/utils/task-array-utils";
 
 export default function TasksPage() {
-  const { taskArray, setTaskArray } = useDataContext();
+  const { taskArray, setTaskArray, focusedTask, setFocusedTask } =
+    useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
 
@@ -59,7 +60,7 @@ export default function TasksPage() {
 
   const [goalComplete, setGoalComplete] = useState<boolean>(false);
 
-  const devMode = true;
+  const devMode = false;
 
   const handleDeleteTask = (index: number, taskId: string) => {
     deleteGoal({ taskArray, setTaskArray, taskId });
@@ -214,8 +215,6 @@ export default function TasksPage() {
       }
     }
   }, [carouselIndex]);
-
-  const [focusedTask, setFocusedTask] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col lg:overflow-hidden w-full h-full   bg-opacity-95 px-10">

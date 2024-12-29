@@ -27,6 +27,8 @@ interface DataContextType {
   >;
   weekStartDay: WeekDayIntegers;
   setWeekDayIntegers: React.Dispatch<React.SetStateAction<WeekDayIntegers>>;
+  focusedTask: string | null;
+  setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -36,6 +38,8 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const userSettings: { weekStartDay: WeekDayIntegers } = {
     weekStartDay: 1,
   };
+
+  const [focusedTask, setFocusedTask] = useState<string | null>(null);
 
   // const [taskArray, setTaskArray] = useState<Planner[]>([]);
   // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
@@ -88,6 +92,8 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     setCurrentTemplate,
     weekStartDay,
     setWeekDayIntegers,
+    focusedTask,
+    setFocusedTask,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
