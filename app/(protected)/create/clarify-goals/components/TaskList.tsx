@@ -1,14 +1,9 @@
 "use client";
 
 import { useDataContext } from "@/context/DataContext";
-
-// Components
 import { TaskItem } from "./TaskItem";
-
-// Props
+import TaskDivider from "./TaskDivider";
 import { TaskListProps } from "@/lib/task-item";
-
-// Utils
 import { getTaskById } from "@/utils/task-array-utils";
 import {
   getSubtasksById,
@@ -21,7 +16,7 @@ const TaskList: React.FC<TaskListProps> = ({
   focusedTask,
   setFocusedTask,
 }) => {
-  const { taskArray } = useDataContext();
+  const { taskArray, setTaskArray } = useDataContext();
 
   // Get subtasks from the context if not provided
   const subtasksToUse = subtasks || getSubtasksById(taskArray, id);
@@ -38,15 +33,29 @@ const TaskList: React.FC<TaskListProps> = ({
         subtasks && subtasks.length > 0 && "mb-2"
       }`}
     >
-      {sortedTasks.map((task) => (
-        <TaskItem
-          key={task.id}
-          taskArray={taskArray}
-          task={task}
-          focusedTask={focusedTask}
-          setFocusedTask={setFocusedTask}
-        />
+      {sortedTasks.map((task, index) => (
+        <div key={task.id}>
+          <TaskDivider
+            taskArray={taskArray}
+            setTaskArray={setTaskArray}
+            targetId={task.id}
+            mouseLocationInItem="top"
+          />
+          <TaskItem
+            taskArray={taskArray}
+            task={task}
+            focusedTask={focusedTask}
+            setFocusedTask={setFocusedTask}
+          />
+        </div>
       ))}
+
+      <TaskDivider
+        taskArray={taskArray}
+        setTaskArray={setTaskArray}
+        targetId={sortedTasks[sortedTasks.length - 1].id}
+        mouseLocationInItem="bottom"
+      />
     </div>
   );
 };

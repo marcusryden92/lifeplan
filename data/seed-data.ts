@@ -208,7 +208,7 @@ export const taskArraySeed: Planner[] = [
     duration: 1,
   },
   {
-    title: "task1a",
+    title: "1",
     id: "36dbb5d6-b7e1-4e77-a68a-d441c8c10871",
     parentId: "23a404a8-8daa-47fa-a243-388ca4a8f175",
     type: "goal",
@@ -216,7 +216,7 @@ export const taskArraySeed: Planner[] = [
     duration: 5,
   },
   {
-    title: "task1b",
+    title: "2",
     id: "721ec7c4-8815-4caf-a902-52ce61aa2d9c",
     parentId: "23a404a8-8daa-47fa-a243-388ca4a8f175",
     type: "goal",
@@ -225,7 +225,7 @@ export const taskArraySeed: Planner[] = [
     dependency: "36dbb5d6-b7e1-4e77-a68a-d441c8c10871",
   },
   {
-    title: "task1c",
+    title: "3",
     id: "511ccb3d-5b56-4b71-829c-bffed3fe1ede",
     parentId: "23a404a8-8daa-47fa-a243-388ca4a8f175",
     type: "goal",

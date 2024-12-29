@@ -1,7 +1,5 @@
 /* Default state */
 .item {
-  border-top-width: 6px;
-  border-bottom-width: 6px;
   border-left-width: 0; /* assuming no left border */
   border-right-width: 0; /* assuming no right border */
   border-color: rgba(56, 189, 248, 0); /* Sky 400 with 0 opacity */
@@ -12,14 +10,6 @@
   cursor: grabbing;
 }
 
-.item.highlightTop {
-  border-top-color: rgba(56, 189, 248, 1); /* Sky 400 with 100% opacity */
-}
-
 .item.highlightMiddle {
   background-color: #e0f7fa; /* Sky 100 */
-}
-
-.item.highlightBottom {
-  border-bottom-color: rgba(56, 189, 248, 1); /* Sky 400 with 100% opacity */
 }

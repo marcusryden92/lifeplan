@@ -14,29 +14,55 @@ import { getSubtasksById } from "@/utils/goal-page-handlers";
 import { updateTaskArray, InstructionType } from "../update-dependencies-utils";
 import { assert } from "@/utils/assert/assert";
 
+import { ClickedItem } from "@/lib/task-item";
+
 interface MoveToMiddleInterface {
   taskArray: Planner[];
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
-  movedTask: Planner;
-  targetTask: Planner;
-  movedTaskFirstBLI: Planner;
-  movedTaskLastBLI: Planner;
-  movedTaskLastBLIDependent: Planner | undefined;
+  currentlyClickedItem: ClickedItem;
+  currentlyHoveredItem: string;
 }
 
 // Function for moving an item to the middle (or into), the target item
 export function moveToMiddle({
   taskArray,
   setTaskArray,
-  movedTask,
-  targetTask,
-  movedTaskFirstBLI,
-  movedTaskLastBLI,
-  movedTaskLastBLIDependent,
+  currentlyClickedItem,
+  currentlyHoveredItem,
 }: MoveToMiddleInterface) {
+  // Check that arguments are defined
+  if (!taskArray || !currentlyClickedItem || !currentlyHoveredItem) return;
+
+  // Return if you're dropping the item unto itself
+  if (currentlyClickedItem.taskId === currentlyHoveredItem) return;
+
+  // The task we're moving
+  const movedTask: Planner | undefined = taskArray.find(
+    (t) => t.id === currentlyClickedItem.taskId
+  );
+
+  assert(movedTask, "Couldn't find movedTask in moveToMiddle.");
+
+  // The target
+  const targetTask: Planner | undefined = taskArray.find(
+    (t) => t.id === currentlyHoveredItem
+  );
+
+  assert(targetTask, "Couldn't find targetTask in moveToMiddle.");
+
   if (movedTask.parentId === targetTask.id) return;
 
-  console.log(taskArray);
+  // Get the tree bottom layer for task, in order to properly update dependencies
+  const sortedBottomLayer = getSortedTreeBottomLayer(taskArray, movedTask.id);
+
+  // Get the first and last Bottom Layer Item (BLI) of the moved task,
+  // for setting correct dependencies
+  const movedTaskFirstBLI: Planner = sortedBottomLayer[0];
+  const movedTaskLastBLI: Planner =
+    sortedBottomLayer[sortedBottomLayer.length - 1];
+  const movedTaskLastBLIDependent = taskArray.find(
+    (t) => t.dependency === movedTaskLastBLI.id
+  );
 
   // Root parent of the goal
   const goalRootParent: string | undefined = getRootParent(

@@ -4,7 +4,7 @@ import clsx from "clsx";
 import styles from "./DraggableItem.module.css";
 
 import { useDataContext } from "@/context/DataContext";
-import { updateDependenciesOnMove } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/update-dependencies-on-move";
+import { moveToMiddle } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/move-to-middle";
 
 export default function DraggableItem({
   children,
@@ -18,11 +18,6 @@ export default function DraggableItem({
   parentId?: string;
 }) {
   const ref = useRef<HTMLDivElement | null>(null); // Reference to the DOM element
-  const [mouseLocationInItem, setMouseLocationInItem] = useState<
-    "top" | "middle" | "bottom" | null
-  >(null); // Tracks if the mouse is in the top half of the element
-  const lastUpdateTime = useRef<number>(0); // Keeps track of the last time mouse position was updated
-  const RAF_THRESHOLD = 1000 / 60; // Threshold for updates (~16.67ms for 60fps)
 
   const [previouslyClickedItem, setPreviouslyClickedItem] = useState<{
     taskId: string;
@@ -36,88 +31,8 @@ export default function DraggableItem({
     setCurrentlyHoveredItem,
     currentlyClickedItem,
     setCurrentlyClickedItem,
-    mousePosition,
     displayDragBox,
   } = useDraggableContext(); // Context for draggable state and actions
-
-  // Update mouse position relative to the element to determine if it's in the top or bottom half
-  const updateMousePosition = useCallback(() => {
-    if (
-      ref.current &&
-      currentlyClickedItem &&
-      currentlyClickedItem.taskId !== taskId &&
-      currentlyHoveredItem === taskId
-    ) {
-      const now = performance.now();
-      if (now - lastUpdateTime.current < RAF_THRESHOLD) {
-        return; // Skip update if within threshold
-      }
-
-      const rect = ref.current.getBoundingClientRect(); // Get element dimensions and position
-      const mouseY = mousePosition.clientY; // Current Y-coordinate of the mouse
-
-      const bufferSize = 5; // Small buffer zone around the middle
-      const top25Height = rect.height * 0.25;
-      const bottom25Height = rect.height * 0.25;
-
-      // Calculate the boundaries for the top, middle, and bottom sections
-      const topBoundary = rect.top + top25Height + bufferSize;
-      const bottomBoundary =
-        rect.top + rect.height - bottom25Height - bufferSize;
-      const middleTopBoundary = rect.top + top25Height + bufferSize;
-      const middleBottomBoundary =
-        rect.top + rect.height - bottom25Height - bufferSize;
-
-      // Determine if mouse is in top, middle, or bottom section
-      let mouseLocation = null;
-
-      if (mouseY < topBoundary) {
-        mouseLocation = "top";
-      } else if (
-        mouseY >= middleTopBoundary &&
-        mouseY <= middleBottomBoundary
-      ) {
-        mouseLocation = "middle";
-      } else if (mouseY > bottomBoundary) {
-        mouseLocation = "bottom";
-      }
-
-      // Update state only if there's a change
-      if (mouseLocation && mouseLocation !== mouseLocationInItem) {
-        setMouseLocationInItem(mouseLocation as "top" | "middle" | "bottom");
-      }
-
-      lastUpdateTime.current = now; // Update the timestamp
-    }
-  }, [
-    mousePosition,
-    currentlyClickedItem,
-    taskId,
-    currentlyHoveredItem,
-    mouseLocationInItem,
-  ]);
-
-  // Continuously track mouse position using requestAnimationFrame
-  useEffect(() => {
-    let rafId: number;
-
-    const scheduleUpdate = () => {
-      rafId = requestAnimationFrame(() => {
-        updateMousePosition(); // Check mouse position
-        scheduleUpdate(); // Schedule the next update
-      });
-    };
-
-    if (currentlyClickedItem && currentlyHoveredItem === taskId) {
-      scheduleUpdate(); // Start updates if the item is currently hovered
-    }
-
-    return () => {
-      if (rafId) {
-        cancelAnimationFrame(rafId); // Cleanup on unmount or dependency change
-      }
-    };
-  }, [updateMousePosition, currentlyClickedItem, currentlyHoveredItem, taskId]);
 
   // Handle mouse up for updating task dependencies on move
   useEffect(() => {
@@ -134,18 +49,16 @@ export default function DraggableItem({
         !taskArray ||
         !setTaskArray ||
         !currentlyHoveredItem ||
-        !previouslyClickedItem ||
-        !mouseLocationInItem
+        !previouslyClickedItem
       ) {
         return;
       }
 
-      updateDependenciesOnMove({
+      moveToMiddle({
         taskArray,
         setTaskArray,
         currentlyClickedItem: previouslyClickedItem,
         currentlyHoveredItem,
-        mouseLocationInTarget: mouseLocationInItem,
       });
 
       // Clear all the states after successfully moving a task, just in case
@@ -181,21 +94,11 @@ export default function DraggableItem({
 
   const borderClasses = clsx(styles.item, {
     [styles.grabbing]: currentlyClickedItem, // Default grab cursor if no item is clicked
-    [styles.highlightTop]:
-      currentlyClickedItem &&
-      currentlyClickedItem?.taskId !== taskId &&
-      currentlyHoveredItem === taskId &&
-      mouseLocationInItem === "top", // Highlight top border
     [styles.highlightMiddle]:
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
-      currentlyHoveredItem === taskId &&
-      mouseLocationInItem === "middle", // Highlight middle section
-    [styles.highlightBottom]:
-      currentlyClickedItem &&
-      currentlyClickedItem?.taskId !== taskId &&
-      currentlyHoveredItem === taskId &&
-      mouseLocationInItem === "bottom", // Highlight bottom border
+      currentlyHoveredItem === taskId, // Highlight middle section
+
     ["bg-[#f3f4f6]"]: currentlyClickedItem?.taskId === taskId && displayDragBox,
   });
 

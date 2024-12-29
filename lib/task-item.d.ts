@@ -82,3 +82,5 @@ export interface DurationDisplayProps {
   subtasksLength: number;
   displayEdit: boolean;
 }
+
+export type ClickedItem = { taskId: string; taskTitle: string } | null;
