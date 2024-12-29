@@ -22,71 +22,36 @@ const TaskDivider: React.FC<TaskDividerProps> = ({
   const { currentlyClickedItem, setCurrentlyClickedItem } =
     useDraggableContext();
   const [isHovered, setIsHovered] = useState<boolean>(false);
-
-  const [previouslyClickedItem, setPreviouslyClickedItem] = useState<{
-    taskId: string;
-    taskTitle: string;
-  } | null>(null);
-
   const [isHighlighted, setIsHighlighted] = useState<boolean>(false);
 
-  // Handle mouse up for updating task dependencies on move
+  // Keep only the highlight effect useEffect
   useEffect(() => {
-    if (currentlyClickedItem === previouslyClickedItem) return;
-    // Keeps track of currently clicked item even if it changes before being needed
-    if (currentlyClickedItem) setPreviouslyClickedItem(currentlyClickedItem);
-  }, [currentlyClickedItem]);
+    setIsHighlighted(isHovered && currentlyClickedItem != null);
+  }, [isHovered, currentlyClickedItem]);
 
-  useEffect(() => {
-    if (isHovered && currentlyClickedItem) {
-      setIsHighlighted(true);
-    } else setIsHighlighted(false);
-  }, [isHovered]);
+  const handleDragEnd = () => {
+    if (!currentlyClickedItem || !isHovered) return;
 
-  // Functionality to update task dependencies when moving an object
-  useEffect(() => {
-    function updateDependencies() {
-      if (
-        currentlyClickedItem ||
-        !taskArray ||
-        !setTaskArray ||
-        !targetId ||
-        !previouslyClickedItem ||
-        !mouseLocationInItem
-      ) {
-        return;
-      }
+    moveToEdge({
+      taskArray,
+      setTaskArray,
+      currentlyClickedItem,
+      targetId,
+      mouseLocationInItem,
+    });
 
-      if (isHovered) {
-        moveToEdge({
-          taskArray,
-          setTaskArray,
-          currentlyClickedItem: previouslyClickedItem,
-          targetId,
-          mouseLocationInItem,
-        });
-      }
-
-      // Clear all the states after successfully moving a task, just in case
-      setCurrentlyClickedItem(null);
-      setPreviouslyClickedItem(null);
-      setIsHighlighted(false);
-    }
-
-    updateDependencies();
-  }, [currentlyClickedItem]);
+    setCurrentlyClickedItem(null);
+    setIsHighlighted(false);
+  };
 
   return (
     <div
-      onMouseEnter={() => {
-        setIsHovered(true);
-      }}
-      onMouseLeave={() => {
-        setIsHovered(false);
-      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onMouseUp={handleDragEnd}
       className={`w-full h-2 ${
         isHighlighted ? "bg-sky-400" : ""
-      } duration-200 ease-out  `}
+      } duration-200 ease-out`}
     ></div>
   );
 };

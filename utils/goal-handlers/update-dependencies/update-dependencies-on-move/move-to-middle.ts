@@ -47,6 +47,9 @@ export function moveToMiddle({
   const targetTask: Planner | undefined = taskArray.find(
     (t) => t.id === currentlyHoveredItem
   );
+  console.log(`moveToMiddle`);
+  console.log("Moved: " + currentlyClickedItem?.taskTitle);
+  console.log("Target: " + targetTask?.title);
 
   assert(targetTask, "Couldn't find targetTask in moveToMiddle.");
 

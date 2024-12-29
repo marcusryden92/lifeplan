@@ -43,6 +43,10 @@ export function moveToEdge({
     (t) => t.id === targetId
   );
 
+  console.log(`moveToEdge-${mouseLocationInItem}`);
+  console.log(currentlyClickedItem?.taskTitle);
+  console.log(targetTask?.title);
+
   assert(targetTask, "Couldn't find targetTask in moveToMiddle.");
 
   // Get the tree bottom layer for task, in order to properly update dependencies

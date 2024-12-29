@@ -1,8 +1,7 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useRef, useCallback } from "react";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import clsx from "clsx";
 import styles from "./DraggableItem.module.css";
-
 import { useDataContext } from "@/context/DataContext";
 import { moveToMiddle } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/move-to-middle";
 
@@ -17,13 +16,7 @@ export default function DraggableItem({
   taskTitle: string;
   parentId?: string;
 }) {
-  const ref = useRef<HTMLDivElement | null>(null); // Reference to the DOM element
-
-  const [previouslyClickedItem, setPreviouslyClickedItem] = useState<{
-    taskId: string;
-    taskTitle: string;
-  } | null>(null);
-
+  const ref = useRef<HTMLDivElement | null>(null);
   const { taskArray, setTaskArray } = useDataContext();
 
   const {
@@ -32,50 +25,13 @@ export default function DraggableItem({
     currentlyClickedItem,
     setCurrentlyClickedItem,
     displayDragBox,
-  } = useDraggableContext(); // Context for draggable state and actions
-
-  // Handle mouse up for updating task dependencies on move
-  useEffect(() => {
-    if (currentlyClickedItem === previouslyClickedItem) return;
-    // Keeps track of currently clicked item even if it changes before being needed
-    if (currentlyClickedItem) setPreviouslyClickedItem(currentlyClickedItem);
-  }, [currentlyClickedItem]);
-
-  // Functionality to update task dependencies when moving an object
-  useEffect(() => {
-    function updateDependencies() {
-      if (
-        currentlyClickedItem ||
-        !taskArray ||
-        !setTaskArray ||
-        !currentlyHoveredItem ||
-        !previouslyClickedItem
-      ) {
-        return;
-      }
-
-      moveToMiddle({
-        taskArray,
-        setTaskArray,
-        currentlyClickedItem: previouslyClickedItem,
-        currentlyHoveredItem,
-      });
-
-      // Clear all the states after successfully moving a task, just in case
-      setCurrentlyClickedItem(null);
-      setCurrentlyHoveredItem(null);
-      setPreviouslyClickedItem(null);
-    }
-
-    updateDependencies();
-  }, [currentlyClickedItem]);
+  } = useDraggableContext();
 
   // Handles mouse entering the element
   const handleMouseEnter = useCallback(
     (event: React.MouseEvent) => {
-      event.stopPropagation(); // Prevent bubbling to parent elements
-
-      setCurrentlyHoveredItem(taskId); // Mark this item as hovered
+      event.stopPropagation();
+      setCurrentlyHoveredItem(taskId);
     },
     [taskId, setCurrentlyHoveredItem]
   );
@@ -85,20 +41,42 @@ export default function DraggableItem({
     if (parentId) {
       const parentElement = document.getElementById(`draggable-${parentId}`);
       if (parentElement?.matches(":hover")) {
-        setCurrentlyHoveredItem(parentId); // Set hover state to parent if still hovered
+        setCurrentlyHoveredItem(parentId);
         return;
       }
     }
-    setCurrentlyHoveredItem(""); // Clear hover state if no parent or no hover
+    setCurrentlyHoveredItem("");
   }, [parentId, setCurrentlyHoveredItem]);
 
+  // Handle mouse up / drag end
+  const handleMouseUp = useCallback(() => {
+    if (!currentlyClickedItem || !currentlyHoveredItem || !taskArray) return;
+
+    moveToMiddle({
+      taskArray,
+      setTaskArray,
+      currentlyClickedItem,
+      currentlyHoveredItem,
+    });
+
+    // Clear all states after moving
+    setCurrentlyClickedItem(null);
+    setCurrentlyHoveredItem(null);
+  }, [
+    currentlyClickedItem,
+    currentlyHoveredItem,
+    taskArray,
+    setTaskArray,
+    setCurrentlyClickedItem,
+    setCurrentlyHoveredItem,
+  ]);
+
   const borderClasses = clsx(styles.item, {
-    [styles.grabbing]: currentlyClickedItem, // Default grab cursor if no item is clicked
+    [styles.grabbing]: currentlyClickedItem,
     [styles.highlightMiddle]:
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
-      currentlyHoveredItem === taskId, // Highlight middle section
-
+      currentlyHoveredItem === taskId,
     ["bg-[#f3f4f6]"]: currentlyClickedItem?.taskId === taskId && displayDragBox,
   });
 
@@ -110,11 +88,12 @@ export default function DraggableItem({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseDown={(e) => {
-        e.stopPropagation(); // Prevent bubbling
-        setCurrentlyClickedItem({ taskId, taskTitle }); // Set clicked state
+        e.stopPropagation();
+        setCurrentlyClickedItem({ taskId, taskTitle });
       }}
+      onMouseUp={handleMouseUp}
     >
-      {children} {/* Render children */}
+      {children}
     </div>
   );
 }
