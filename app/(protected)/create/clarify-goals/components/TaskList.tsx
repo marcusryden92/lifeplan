@@ -1,13 +1,14 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useDataContext } from "@/context/DataContext";
 import { TaskItem } from "./TaskItem";
-import TaskDivider from "./TaskDivider";
+import TaskDivider from "@/components/draggable/TaskDivider";
 import { TaskListProps } from "@/lib/task-item";
 import { getTaskById } from "@/utils/task-array-utils";
 import {
   getSubtasksById,
-  sortTasksByDependencies,
+  sortTasksByDependenciesAsync,
 } from "@/utils/goal-page-handlers";
 
 const TaskList: React.FC<TaskListProps> = ({
@@ -18,14 +19,42 @@ const TaskList: React.FC<TaskListProps> = ({
 }) => {
   const { taskArray, setTaskArray } = useDataContext();
 
-  // Get subtasks from the context if not provided
-  const subtasksToUse = subtasks || getSubtasksById(taskArray, id);
-  if (!subtasksToUse.length) return null; // Return early if no subtasks.
+  // State to handle sorted tasks
+  const [sortedTasks, setSortedTasks] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const thisTask = getTaskById(taskArray, id);
-  if (!thisTask) return null; // Avoid rendering if task doesn't exist.
+  useEffect(() => {
+    const fetchData = async () => {
+      const subtasksToUse = subtasks || getSubtasksById(taskArray, id);
+      if (!subtasksToUse.length) {
+        setLoading(false);
+        return;
+      }
 
-  const sortedTasks = sortTasksByDependencies(taskArray, subtasksToUse);
+      const thisTask = getTaskById(taskArray, id);
+      if (!thisTask) {
+        setLoading(false);
+        return;
+      }
+
+      const sorted = await sortTasksByDependenciesAsync(
+        taskArray,
+        subtasksToUse
+      );
+      setSortedTasks(sorted);
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [id, subtasks, taskArray]);
+
+  if (loading) {
+    return <div>Loading...</div>; // Optional: show loading state while waiting for async operation
+  }
+
+  if (!sortedTasks.length) {
+    return null; // Return early if no sorted tasks
+  }
 
   return (
     <div
@@ -33,7 +62,7 @@ const TaskList: React.FC<TaskListProps> = ({
         subtasks && subtasks.length > 0 && "mb-2"
       }`}
     >
-      {sortedTasks.map((task, index) => (
+      {sortedTasks.map((task) => (
         <div key={task.id}>
           <TaskDivider
             taskArray={taskArray}

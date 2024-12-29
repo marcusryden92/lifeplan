@@ -1,0 +1,9 @@
+.hoverEffect {
+  background-color: transparent;
+  transition: background-color 300ms ease-out;
+}
+
+.hoverEffect:hover {
+  background-color: #67caf5; /* Tailwind's sky-400 */
+  transition: background-color 0ms; /* Instant change on hover */
+}

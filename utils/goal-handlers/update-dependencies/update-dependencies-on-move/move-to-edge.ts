@@ -43,6 +43,7 @@ export function moveToEdge({
     (t) => t.id === targetId
   );
 
+  console.log("___________________________________");
   console.log(`moveToEdge-${mouseLocationInItem}`);
   console.log(currentlyClickedItem?.taskTitle);
   console.log(targetTask?.title);
