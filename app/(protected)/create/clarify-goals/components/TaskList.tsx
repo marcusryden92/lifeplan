@@ -49,7 +49,7 @@ const TaskList: React.FC<TaskListProps> = ({
   }, [id, subtasks, taskArray]);
 
   if (loading) {
-    return <div>Loading...</div>; // Optional: show loading state while waiting for async operation
+    return <div className="p-4 text-neutral-300 italic ">Loading...</div>; // Optional: show loading state while waiting for async operation
   }
 
   if (!sortedTasks.length) {

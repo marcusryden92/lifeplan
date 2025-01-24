@@ -15,6 +15,7 @@ import {
   taskArraySeed2,
   taskArraySeed3,
   taskArraySeed4,
+  taskArraySeed5,
 } from "@/data/seed-data";
 import { WeekDayIntegers } from "@/types/calendar-types";
 
@@ -46,15 +47,16 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed2);
   // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed3);
   const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed4);
+  // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed5);
 
   const [debugArray, setDebugArray] = useState<Planner[]>([]);
 
-  useEffect(() => {
+  /*   useEffect(() => {
     console.log("Previous:");
     console.log(debugArray);
     setDebugArray(taskArray);
   }, [taskArray]);
-
+ */
   const [logEvent, setLogEvent] = useState<number>(0);
 
   useEffect(() => {
@@ -70,7 +72,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
 
         console.log("");
       }); */
-      // console.log(taskArray);
+      console.log(taskArray);
     }
 
     if (logEvent > 0) logTaskArray();

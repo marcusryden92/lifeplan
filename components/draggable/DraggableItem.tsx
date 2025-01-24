@@ -17,7 +17,8 @@ export default function DraggableItem({
   parentId?: string;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const { taskArray, setTaskArray } = useDataContext();
+  const { taskArray, setTaskArray, focusedTask, setFocusedTask } =
+    useDataContext();
 
   const {
     currentlyHoveredItem,
@@ -58,6 +59,8 @@ export default function DraggableItem({
       currentlyClickedItem,
       currentlyHoveredItem,
     });
+
+    setFocusedTask(currentlyClickedItem.taskId);
 
     // Clear all states after moving
     setCurrentlyClickedItem(null);
