@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 
 // Components
 import TaskDisplay from "./TaskDisplay";
+import { RxDot } from "react-icons/rx";
+import { IoIosArrowForward, IoIosArrowDown } from "react-icons/io";
 
 // Definitions
 import { TaskHeaderProps } from "@/lib/task-item";
@@ -49,7 +51,7 @@ export const TaskHeader = ({
   }, [itemIsFocused]);
 
   const handleSetFocusedTask = () => {
-    setFocusedTask(focusedTask === task.id ? null : task.id);
+    if (focusedTask === task.id) setFocusedTask(task.id);
   };
 
   useEffect(() => {
@@ -68,6 +70,24 @@ export const TaskHeader = ({
       ref={headerRef}
       className={`flex justify-between  items-center w-full text-sm py-1 group`}
     >
+      {/* Button to minimize or display subtasks list */}
+      <button
+        disabled={subtasks.length === 0}
+        className={`translate-x-[-40%] ${
+          itemIsFocused ? "text-sky-500" : "opacity-50"
+        } `}
+        onClick={() => {
+          setSubtasksMinimized((prev) => !prev);
+        }}
+      >
+        {subtasks.length === 0 ? (
+          <RxDot />
+        ) : subtasksMinimized ? (
+          <IoIosArrowForward />
+        ) : (
+          <IoIosArrowDown />
+        )}
+      </button>
       <div
         className={`flex items-center justify-between flex-grow ${
           subtasks.length !== 0 && !itemIsFocused && "opacity-50"
@@ -77,12 +97,9 @@ export const TaskHeader = ({
           {!displayEdit ? (
             <TaskDisplay
               task={task}
-              subtasks={subtasks}
               itemIsFocused={itemIsFocused}
               setDisplayEdit={setDisplayEdit}
               setDisplayAddSubtask={setDisplayAddSubtask}
-              subtasksMinimized={subtasksMinimized}
-              setSubtasksMinimized={setSubtasksMinimized}
               handleSetFocusedTask={handleSetFocusedTask}
               devMode={devMode}
             />

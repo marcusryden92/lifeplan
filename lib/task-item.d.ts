@@ -36,12 +36,9 @@ export interface TaskHeaderProps {
 
 export interface TaskDisplayProps {
   task: Planner;
-  subtasks: Planner[]; // Array of subtasks of type Planner
   itemIsFocused: boolean; // Boolean indicating if the item is focused
   setDisplayEdit: React.Dispatch<React.SetStateAction<boolean>>; // Function to set displayEdit
   setDisplayAddSubtask: React.Dispatch<React.SetStateAction<boolean>>; // Function to set displayAddSubtask
-  subtasksMinimized: boolean; // Boolean indicating if subtasks are minimized
-  setSubtasksMinimized: React.Dispatch<React.SetStateAction<boolean>>; // Function to set subtasksMinimized
   handleSetFocusedTask: () => void; // Function to handle setting the focused task
   devMode: boolean; // Boolean indicating if dev mode is active
 }
