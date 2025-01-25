@@ -25,7 +25,6 @@ export default function DraggableItem({
     setCurrentlyHoveredItem,
     currentlyClickedItem,
     setCurrentlyClickedItem,
-    displayDragBox,
   } = useDraggableContext();
 
   // Handles mouse entering the element
@@ -80,7 +79,6 @@ export default function DraggableItem({
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId,
-    // ["bg-[#f3f4f6]"]: currentlyClickedItem?.taskId === taskId && displayDragBox,
   });
 
   return (
