@@ -80,7 +80,7 @@ export default function DraggableItem({
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId,
-    ["bg-[#f3f4f6]"]: currentlyClickedItem?.taskId === taskId && displayDragBox,
+    // ["bg-[#f3f4f6]"]: currentlyClickedItem?.taskId === taskId && displayDragBox,
   });
 
   return (
