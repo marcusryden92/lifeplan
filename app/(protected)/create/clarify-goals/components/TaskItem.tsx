@@ -31,32 +31,32 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   const [taskTreeIds] = useState<string[]>(getTaskIdTree(taskArray, task.id));
 
   return (
-    <div
-      className={`${subtasks.length ? "pb-1" : ""} ${
-        task.parentId ? "pl-2" : ""
-      }`}
-    >
-      <DraggableItem
-        taskId={task.id}
-        taskTitle={task.title}
-        parentId={task.parentId}
-        taskTreeIds={taskTreeIds}
+    <DragDisableListWrapper taskId={task.id}>
+      <div
+        className={`${subtasks.length ? "pb-1" : ""} ${
+          task.parentId ? "pl-2" : ""
+        }`}
       >
-        <TaskHeader
-          task={task}
-          subtasks={subtasks}
-          itemIsFocused={itemIsFocused}
-          setItemIsFocused={setItemIsFocused}
-          subtasksMinimized={subtasksMinimized}
-          setSubtasksMinimized={setSubtasksMinimized}
-          focusedTask={focusedTask}
-          setFocusedTask={setFocusedTask}
-          devMode={devMode}
-        />
-      </DraggableItem>
+        <DraggableItem
+          taskId={task.id}
+          taskTitle={task.title}
+          parentId={task.parentId}
+          taskTreeIds={taskTreeIds}
+        >
+          <TaskHeader
+            task={task}
+            subtasks={subtasks}
+            itemIsFocused={itemIsFocused}
+            setItemIsFocused={setItemIsFocused}
+            subtasksMinimized={subtasksMinimized}
+            setSubtasksMinimized={setSubtasksMinimized}
+            focusedTask={focusedTask}
+            setFocusedTask={setFocusedTask}
+            devMode={devMode}
+          />
+        </DraggableItem>
 
-      {/* Disables task list if parent is being dragged */}
-      <DragDisableListWrapper taskId={task.id}>
+        {/* Disables task list if parent is being dragged */}
         {/* Render subtasks if there are any */}
         <TaskListWrapper
           subtasksLength={subtasks.length}
@@ -71,7 +71,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
             setFocusedTask={setFocusedTask}
           />
         </TaskListWrapper>
-      </DragDisableListWrapper>
-    </div>
+      </div>
+    </DragDisableListWrapper>
   );
 };

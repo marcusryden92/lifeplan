@@ -11,11 +11,11 @@ export default function DragDisableListWrapper({
   children: React.ReactNode;
   taskId: string;
 }) {
-  const { currentlyClickedItem } = useDraggableContext();
+  const { currentlyClickedItem, displayDragBox } = useDraggableContext();
   return (
     <div
       className={
-        taskId === currentlyClickedItem?.taskId
+        taskId === currentlyClickedItem?.taskId && displayDragBox
           ? `pointer-events-none ${styles["striated-background"]}`
           : ""
       }

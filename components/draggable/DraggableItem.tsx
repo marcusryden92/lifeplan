@@ -151,7 +151,7 @@ export default function DraggableItem({
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId &&
       mouseLocationInItem === "bottom", // Highlight bottom border
-    ["bg-[#f3f4f6]"]: currentlyClickedItem?.taskId === taskId && displayDragBox,
+    // ["bg-[#f3f4f6]"]: currentlyClickedItem?.taskId === taskId && displayDragBox,
   });
 
   return (
