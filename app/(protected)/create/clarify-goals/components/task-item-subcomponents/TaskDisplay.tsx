@@ -15,7 +15,6 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   handleSetFocusedTask,
   devMode,
 }) => {
-  const { displayDragBox } = useDraggableContext();
   return (
     <div className="flex space-x-2 items-center">
       {/* Task title */}
