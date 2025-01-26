@@ -19,8 +19,6 @@ export const TaskHeader = ({
   subtasks,
   itemIsFocused,
   setItemIsFocused,
-  subtasksMinimized,
-  setSubtasksMinimized,
   focusedTask,
   setFocusedTask,
   devMode,
@@ -49,7 +47,7 @@ export const TaskHeader = ({
   }, [itemIsFocused]);
 
   const handleSetFocusedTask = () => {
-    if (focusedTask === task.id) setFocusedTask(task.id);
+    if (!(focusedTask === task.id)) setFocusedTask(task.id);
   };
 
   useEffect(() => {

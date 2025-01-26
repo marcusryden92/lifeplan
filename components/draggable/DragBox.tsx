@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useRef, useEffect } from "react";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 
 export default function DragBox() {
@@ -51,7 +51,7 @@ export default function DragBox() {
         if (isMouseDown.current) {
           setDisplayDragBox(true);
         }
-      }, 100);
+      }, 200);
 
       return () => clearTimeout(timeoutId);
     } else {

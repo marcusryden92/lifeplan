@@ -19,8 +19,7 @@ export default function DraggableItem({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const { taskArray, setTaskArray, focusedTask, setFocusedTask } =
-    useDataContext();
+  const { taskArray, setTaskArray, setFocusedTask } = useDataContext();
 
   const {
     currentlyHoveredItem,
@@ -53,7 +52,13 @@ export default function DraggableItem({
 
   // Handle mouse up / drag end
   const handleMouseUp = useCallback(() => {
-    if (!currentlyClickedItem || !currentlyHoveredItem || !taskArray) return;
+    if (
+      !currentlyClickedItem ||
+      !currentlyHoveredItem ||
+      !taskArray ||
+      !displayDragBox
+    )
+      return;
 
     moveToMiddle({
       taskArray,

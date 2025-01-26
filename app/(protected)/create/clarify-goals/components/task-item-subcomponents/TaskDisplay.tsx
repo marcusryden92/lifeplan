@@ -22,9 +22,9 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
 
       <span
         onClick={handleSetFocusedTask}
-        className={`min-w-10 truncate ${itemIsFocused && " text-sky-400 "} ${
-          !itemIsFocused && !displayDragBox && "hover:cursor-pointer"
-        }`}
+        className={`min-w-10 truncate ${
+          itemIsFocused && " text-sky-400 "
+        } cursor-pointer`}
       >
         {task.title}
       </span>

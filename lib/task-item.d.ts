@@ -27,8 +27,6 @@ export interface TaskHeaderProps {
   subtasks: Planner[]; // Array of subtasks of type Planner
   itemIsFocused: boolean; // Boolean indicating if the item is focused
   setItemIsFocused: React.Dispatch<React.SetStateAction<boolean>>;
-  subtasksMinimized: boolean; // Boolean indicating if subtasks are minimized
-  setSubtasksMinimized: React.Dispatch<React.SetStateAction<boolean>>; // Function to set subtasksMinimized
   focusedTask: string | null;
   setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
   devMode: boolean; // Boolean indicating if dev mode is active

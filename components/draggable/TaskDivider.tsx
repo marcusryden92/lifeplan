@@ -22,13 +22,13 @@ const TaskDivider: React.FC<TaskDividerProps> = ({
   targetId,
   mouseLocationInItem,
 }) => {
-  const { currentlyClickedItem, setCurrentlyClickedItem } =
+  const { currentlyClickedItem, setCurrentlyClickedItem, displayDragBox } =
     useDraggableContext();
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const { setFocusedTask } = useDataContext();
 
   const handleDragEnd = () => {
-    if (!currentlyClickedItem || !isHovered) return;
+    if (!currentlyClickedItem || !isHovered || !displayDragBox) return;
 
     moveToEdge({
       taskArray,
