@@ -5,6 +5,8 @@ import { TaskDisplayProps } from "@/lib/task-item";
 import DebugInfo from "./DebugInfo";
 import TaskEditDeleteButtons from "./TaskEditDeleteButtons";
 
+import { useDraggableContext } from "@/components/draggable/DraggableContext";
+
 export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   task,
   itemIsFocused,
@@ -13,13 +15,16 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   handleSetFocusedTask,
   devMode,
 }) => {
+  const { displayDragBox } = useDraggableContext();
   return (
     <div className="flex space-x-2 items-center">
       {/* Task title */}
 
       <span
         onClick={handleSetFocusedTask}
-        className={`min-w-5 truncate ${itemIsFocused && " text-sky-400 "}`}
+        className={`min-w-10 truncate ${itemIsFocused && " text-sky-400 "} ${
+          !itemIsFocused && !displayDragBox && "hover:cursor-pointer"
+        }`}
       >
         {task.title}
       </span>
