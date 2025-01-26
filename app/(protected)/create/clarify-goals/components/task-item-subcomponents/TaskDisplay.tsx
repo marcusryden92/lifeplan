@@ -16,9 +16,10 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   return (
     <div className="flex space-x-2 items-center">
       {/* Task title */}
+
       <span
         onClick={handleSetFocusedTask}
-        className={`truncate ${itemIsFocused && " text-sky-400 "}`}
+        className={`min-w-5 truncate ${itemIsFocused && " text-sky-400 "}`}
       >
         {task.title}
       </span>

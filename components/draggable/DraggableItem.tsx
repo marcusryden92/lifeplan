@@ -10,11 +10,13 @@ export default function DraggableItem({
   taskId,
   taskTitle,
   parentId,
+  className,
 }: {
   children: React.ReactNode;
   taskId: string;
   taskTitle: string;
   parentId?: string;
+  className?: string;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const { taskArray, setTaskArray, focusedTask, setFocusedTask } =
@@ -25,6 +27,7 @@ export default function DraggableItem({
     setCurrentlyHoveredItem,
     currentlyClickedItem,
     setCurrentlyClickedItem,
+    displayDragBox,
   } = useDraggableContext();
 
   // Handles mouse entering the element
@@ -74,7 +77,7 @@ export default function DraggableItem({
   ]);
 
   const borderClasses = clsx(styles.item, {
-    [styles.grabbing]: currentlyClickedItem,
+    [styles.grabbing]: currentlyClickedItem && displayDragBox,
     [styles.highlightMiddle]:
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
@@ -85,7 +88,7 @@ export default function DraggableItem({
     <div
       ref={ref}
       id={`draggable-${taskId}`}
-      className={borderClasses}
+      className={borderClasses + ` ${className} flex-1`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseDown={(e) => {

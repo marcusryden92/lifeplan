@@ -3,7 +3,6 @@
   border-left-width: 0; /* assuming no left border */
   border-right-width: 0; /* assuming no right border */
   border-color: rgba(56, 189, 248, 0); /* Sky 400 with 0 opacity */
-  cursor: grab;
 }
 
 .item.grabbing {
