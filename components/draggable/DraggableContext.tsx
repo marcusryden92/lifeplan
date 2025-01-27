@@ -11,7 +11,11 @@ import React, {
 
 import DragBox from "@/components/draggable/DragBox";
 
-type ClickedItem = { taskId: string; taskTitle: string } | null;
+type ClickedItem = {
+  taskId: string;
+  taskTitle: string;
+  parentId: string;
+} | null;
 
 // Define the type for the context state
 interface DraggableContextType {

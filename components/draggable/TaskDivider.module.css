@@ -1,6 +1,6 @@
 .hoverEffect {
   background-color: transparent;
-  transition: background-color 150ms ease-out;
+  transition: background-color 0ms ease-out;
 }
 
 .hoverEffect:hover {

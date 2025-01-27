@@ -52,9 +52,9 @@ const TaskList: React.FC<TaskListProps> = ({
     return <div className="p-4 text-neutral-300 italic ">Loading...</div>; // Optional: show loading state while waiting for async operation
   }
 
-  if (!sortedTasks.length) {
+  /* if (!sortedTasks.length) {
     return null; // Return early if no sorted tasks
-  }
+  } */
 
   return (
     <div
@@ -62,29 +62,33 @@ const TaskList: React.FC<TaskListProps> = ({
         subtasks && subtasks.length > 0 && "mb-2"
       }`}
     >
-      {sortedTasks.map((task) => (
-        <div key={task.id}>
+      {sortedTasks.length > 0 && (
+        <>
+          {sortedTasks.map((task) => (
+            <div key={task.id}>
+              <TaskDivider
+                taskArray={taskArray}
+                setTaskArray={setTaskArray}
+                targetId={task.id}
+                mouseLocationInItem="top"
+              />
+              <TaskItem
+                taskArray={taskArray}
+                task={task}
+                focusedTask={focusedTask}
+                setFocusedTask={setFocusedTask}
+              />
+            </div>
+          ))}
+
           <TaskDivider
             taskArray={taskArray}
             setTaskArray={setTaskArray}
-            targetId={task.id}
-            mouseLocationInItem="top"
+            targetId={sortedTasks[sortedTasks.length - 1].id}
+            mouseLocationInItem="bottom"
           />
-          <TaskItem
-            taskArray={taskArray}
-            task={task}
-            focusedTask={focusedTask}
-            setFocusedTask={setFocusedTask}
-          />
-        </div>
-      ))}
-
-      <TaskDivider
-        taskArray={taskArray}
-        setTaskArray={setTaskArray}
-        targetId={sortedTasks[sortedTasks.length - 1].id}
-        mouseLocationInItem="bottom"
-      />
+        </>
+      )}
     </div>
   );
 };

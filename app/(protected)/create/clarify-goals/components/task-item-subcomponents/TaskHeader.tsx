@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 
+import styles from "./TaskHeader.module.css";
+
 // Components
 import TaskDisplay from "./TaskDisplay";
 
@@ -12,6 +14,8 @@ import { TaskHeaderProps } from "@/lib/task-item";
 import TaskEditForm from "./TaskEditForm";
 import AddSubtaskWrapper from "./AddSubtaskWrapper";
 import DurationDisplay from "./DurationDisplay";
+
+import { useDraggableContext } from "@/components/draggable/DraggableContext";
 
 // TaskHeader component definition
 export const TaskHeader = ({
@@ -26,6 +30,8 @@ export const TaskHeader = ({
   const [displayEdit, setDisplayEdit] = useState<boolean>(false);
   const [displayAddSubtask, setDisplayAddSubtask] = useState<boolean>(false);
   const headerRef = useRef<HTMLDivElement | null>(null);
+
+  const { currentlyClickedItem, displayDragBox } = useDraggableContext();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -65,7 +71,11 @@ export const TaskHeader = ({
   return (
     <div
       ref={headerRef}
-      className={` flex justify-between  items-center w-full flex-1 text-sm py-1 group`}
+      className={` flex justify-between   items-center w-full flex-1 text-sm py-1 group ${
+        displayDragBox &&
+        currentlyClickedItem?.parentId === task.id &&
+        styles.striatedBackground
+      }`}
     >
       <div
         className={`flex items-center justify-between flex-grow ${

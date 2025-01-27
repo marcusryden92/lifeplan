@@ -51,7 +51,7 @@ export default function DragBox() {
         if (isMouseDown.current) {
           setDisplayDragBox(true);
         }
-      }, 200);
+      }, 150);
 
       return () => clearTimeout(timeoutId);
     } else {

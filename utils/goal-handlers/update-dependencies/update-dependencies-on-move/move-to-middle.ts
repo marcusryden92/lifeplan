@@ -117,7 +117,7 @@ export function moveToMiddle({
   const targetIsPreviousDependent =
     movedTaskFirstBLI.dependency === targetTaskLastBLI.id;
 
-  if (targetIsPreviousDependent && !targetHasChildren) {
+  if (targetIsPreviousDependent) {
     handleTargetIsPreviousDependent(
       goalRootParent,
       setTaskArray,

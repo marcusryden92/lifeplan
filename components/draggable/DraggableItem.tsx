@@ -86,19 +86,29 @@ export default function DraggableItem({
     [styles.highlightMiddle]:
       currentlyClickedItem &&
       currentlyClickedItem?.taskId !== taskId &&
-      currentlyHoveredItem === taskId,
+      currentlyHoveredItem === taskId &&
+      currentlyClickedItem.parentId !== taskId,
   });
 
   return (
     <div
       ref={ref}
       id={`draggable-${taskId}`}
-      className={borderClasses + ` ${className} flex-1`}
+      className={
+        borderClasses +
+        ` ${className} flex-1 cursor-pointer ${
+          currentlyClickedItem?.parentId !== taskId && `hover:bg-gray-50`
+        }`
+      }
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseDown={(e) => {
         e.stopPropagation();
-        setCurrentlyClickedItem({ taskId, taskTitle });
+        setCurrentlyClickedItem({
+          taskId,
+          taskTitle,
+          parentId: parentId || "",
+        });
       }}
       onMouseUp={handleMouseUp}
     >
