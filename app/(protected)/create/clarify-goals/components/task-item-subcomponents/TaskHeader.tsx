@@ -99,7 +99,6 @@ export const TaskHeader = ({
               itemIsFocused={itemIsFocused}
               setDisplayEdit={setDisplayEdit}
               setDisplayAddSubtask={setDisplayAddSubtask}
-              handleSetFocusedTask={handleSetFocusedTask}
               devMode={devMode}
             />
           )}
