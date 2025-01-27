@@ -23,22 +23,22 @@ const AddSubtaskWrapper: React.FC<AddSubtaskWrapperProps> = ({
   return displayAddSubtask ? (
     // Add subtask form
     <div className="flex items-center">
-      <AddSubtask
-        task={task}
-        parentId={task.id}
-        subtasksLength={subtasks.length}
-      />
       <button
         onClick={() => {
           setDisplayAddSubtask(false);
         }}
       >
         <ArrowUturnLeftIcon
-          className={`w-5 h-5 text-gray-300  ${
+          className={`w-5 h-5 mr-2 text-gray-300  ${
             itemIsFocused ? "text-opacity-100" : "text-opacity-0"
           } hover:text-gray-500`}
         />
       </button>
+      <AddSubtask
+        task={task}
+        parentId={task.id}
+        subtasksLength={subtasks.length}
+      />
     </div>
   ) : (
     // Toggle buttom for displaying form

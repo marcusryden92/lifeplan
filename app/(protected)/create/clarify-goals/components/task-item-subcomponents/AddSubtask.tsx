@@ -95,10 +95,14 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
         />
         <button
           disabled={!taskTitle}
-          className={`${!taskTitle ? "opacity-50 pointer-events-none" : ""}`}
+          className={`${!taskTitle ? "opacity-30 pointer-events-none" : ""}`}
           onClick={() => handleAddSubtask(parentId)}
         >
-          <HiOutlinePlus className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
+          <HiOutlinePlus
+            className={`w-6 h-6 p-0 bg-none hover:opacity-50 ${
+              taskTitle ? "text-sky-500" : "text-gray-400"
+            }`}
+          />
         </button>
       </div>
     </div>
