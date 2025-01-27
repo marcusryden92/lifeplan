@@ -20,7 +20,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import TaskList from "./components/TaskList";
 // Local components and context
 import { useDataContext } from "@/context/DataContext";
 
@@ -32,6 +31,8 @@ import { DateTimePicker } from "@/components/utilities/time-picker/date-time-pic
 
 import AddItemForm from "../components/add-item-form";
 import AddSubtask from "./components/task-item-subcomponents/AddSubtask";
+import TaskList from "./components/TaskList";
+import RootTaskListWrapper from "./components/task-item-subcomponents/RootTaskListWrapper";
 
 // Local utilities
 import { clickEdit, confirmEdit } from "@/utils/creation-pages-functions";
@@ -243,8 +244,12 @@ export default function TasksPage() {
           opts={{ watchDrag: false }}
         >
           <CarouselContent className="h-full select-none">
-            {taskArray.map((task, index) =>
-              task.canInfluence && task.type === "goal" && !task.parentId ? (
+            {taskArray.map((task, index) => {
+              const subtasks = getSubtasksById(taskArray, task.id);
+
+              return task.canInfluence &&
+                task.type === "goal" &&
+                !task.parentId ? (
                 <CarouselItem key={index}>
                   <div
                     key={index}
@@ -364,19 +369,21 @@ export default function TasksPage() {
                       {/* // SUBTASKS LIST */}
 
                       <div className="flex py-2 overflow-y-scroll w-full no-scrollbar flex-grow">
-                        <TaskList
-                          id={task.id}
-                          focusedTask={focusedTask}
-                          setFocusedTask={setFocusedTask}
-                        />
+                        <RootTaskListWrapper subtasksLength={subtasks.length}>
+                          <TaskList
+                            id={task.id}
+                            focusedTask={focusedTask}
+                            setFocusedTask={setFocusedTask}
+                          />
+                        </RootTaskListWrapper>
                       </div>
 
                       <AddSubtask task={task} parentId={task.id} isMainParent />
                     </>
                   </div>
                 </CarouselItem>
-              ) : null
-            )}
+              ) : null;
+            })}
           </CarouselContent>
           <CarouselPrevious
             className={`transition-opacity duration-500   ${
