@@ -34,6 +34,7 @@ export const TaskHeader = ({
         !headerRef.current.contains(event.target as Node)
       ) {
         setItemIsFocused(false);
+        setFocusedTask(null);
       }
     };
 
