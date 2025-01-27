@@ -16,7 +16,7 @@ export default function DragDisableListWrapper({
     <div
       className={
         taskId === currentlyClickedItem?.taskId && displayDragBox
-          ? `flex-grow pointer-events-none ${styles["striated-background"]}`
+          ? `flex-grow pointer-events-none bg-gray-200 opacity-40`
           : "flex-grow "
       }
     >
