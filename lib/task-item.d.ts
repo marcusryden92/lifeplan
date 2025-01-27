@@ -75,7 +75,6 @@ export interface DurationDisplayProps {
   task: Planner;
   itemIsFocused: boolean;
   subtasksLength: number;
-  displayEdit: boolean;
 }
 
 export type ClickedItem = { taskId: string; taskTitle: string } | null;

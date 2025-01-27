@@ -11,9 +11,7 @@ const DurationDisplay: React.FC<DurationDisplayProps> = ({
   task,
   itemIsFocused,
   subtasksLength,
-  displayEdit,
 }) => {
-  if (displayEdit) return null;
   const { taskArray } = useDataContext();
   const [totalTaskDuration, setTotalTaskDuration] = useState(
     totalSubtaskDuration(task.id, taskArray)

@@ -83,7 +83,14 @@ export const TaskHeader = ({
         }`}
       >
         <div className="flex items-center space-x-5">
-          {!displayEdit ? (
+          {displayEdit ? (
+            <TaskEditForm
+              task={task}
+              subtasks={subtasks}
+              setDisplayEdit={setDisplayEdit}
+              itemIsFocused={itemIsFocused}
+            />
+          ) : (
             <TaskDisplay
               task={task}
               itemIsFocused={itemIsFocused}
@@ -91,13 +98,6 @@ export const TaskHeader = ({
               setDisplayAddSubtask={setDisplayAddSubtask}
               handleSetFocusedTask={handleSetFocusedTask}
               devMode={devMode}
-            />
-          ) : (
-            <TaskEditForm
-              task={task}
-              subtasks={subtasks}
-              setDisplayEdit={setDisplayEdit}
-              itemIsFocused={itemIsFocused}
             />
           )}
 
@@ -112,12 +112,14 @@ export const TaskHeader = ({
         </div>
 
         {/* DURATION DISPLAY */}
-        <DurationDisplay
-          task={task}
-          itemIsFocused={itemIsFocused}
-          subtasksLength={subtasks.length}
-          displayEdit={displayEdit}
-        />
+
+        {!displayEdit && (
+          <DurationDisplay
+            task={task}
+            itemIsFocused={itemIsFocused}
+            subtasksLength={subtasks.length}
+          />
+        )}
       </div>
     </div>
   );
