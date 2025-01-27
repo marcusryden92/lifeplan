@@ -42,14 +42,15 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
   };
 
   const handleAddSubtask = (parentId: string) => {
-    addSubtask({
-      taskArray,
-      setTaskArray,
-      parentId,
-      taskDuration: taskDuration || 0,
-      taskTitle,
-      resetTaskState,
-    });
+    if (taskTitle)
+      addSubtask({
+        taskArray,
+        setTaskArray,
+        parentId,
+        taskDuration: taskDuration || 0,
+        taskTitle,
+        resetTaskState,
+      });
   };
 
   const handleKeyDown = (
@@ -92,7 +93,11 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
           ref={durationRef}
           onKeyDown={(e) => handleKeyDown(e, parentId)}
         />
-        <button onClick={() => handleAddSubtask(parentId)}>
+        <button
+          disabled={!taskTitle}
+          className={`${!taskTitle ? "opacity-50 pointer-events-none" : ""}`}
+          onClick={() => handleAddSubtask(parentId)}
+        >
           <HiOutlinePlus className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
         </button>
       </div>
