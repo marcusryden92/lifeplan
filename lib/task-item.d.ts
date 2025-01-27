@@ -37,7 +37,6 @@ export interface TaskDisplayProps {
   itemIsFocused: boolean; // Boolean indicating if the item is focused
   setDisplayEdit: React.Dispatch<React.SetStateAction<boolean>>; // Function to set displayEdit
   setDisplayAddSubtask: React.Dispatch<React.SetStateAction<boolean>>; // Function to set displayAddSubtask
-  handleSetFocusedTask: () => void; // Function to handle setting the focused task
   devMode: boolean; // Boolean indicating if dev mode is active
 }
 

@@ -10,7 +10,6 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   itemIsFocused,
   setDisplayEdit,
   setDisplayAddSubtask,
-  handleSetFocusedTask,
   devMode,
 }) => {
   return (
@@ -18,7 +17,6 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
       {/* Task title */}
 
       <span
-        onClick={handleSetFocusedTask}
         className={`min-w-10 truncate ${itemIsFocused && " text-sky-400 "}`}
       >
         {task.title}

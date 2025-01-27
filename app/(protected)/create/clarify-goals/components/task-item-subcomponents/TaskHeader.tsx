@@ -76,6 +76,9 @@ export const TaskHeader = ({
         currentlyClickedItem?.parentId === task.id &&
         styles.striatedBackground
       }`}
+      onClick={() => {
+        handleSetFocusedTask();
+      }}
     >
       <div
         className={`flex items-center justify-between flex-grow ${
