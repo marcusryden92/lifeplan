@@ -9,14 +9,7 @@ import React, {
 } from "react";
 import { Planner } from "@/lib/planner-class";
 import { EventTemplate } from "@/utils/template-builder-utils";
-import {
-  templateSeed,
-  taskArraySeed,
-  taskArraySeed2,
-  taskArraySeed3,
-  taskArraySeed4,
-  taskArraySeed5,
-} from "@/data/seed-data";
+import { templateSeed, taskArraySeed, taskArraySeed2 } from "@/data/seed-data";
 import { WeekDayIntegers } from "@/types/calendar-types";
 
 interface DataContextType {
