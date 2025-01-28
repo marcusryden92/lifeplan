@@ -235,7 +235,7 @@ export default function TasksPage() {
         </button>
       </CardContent>
 
-      <div className="overflow-x-auto py-5 flex-grow flex items-start justify-center flex-wrap content-start no-scrollbar ">
+      <div className="overflow-x-auto py-5 flex-grow-0 flex items-start justify-center flex-wrap content-start no-scrollbar ">
         <Carousel
           className="w-[90%] h-full"
           onIndexChange={(currentIndex: number | undefined) => {
