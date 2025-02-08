@@ -323,7 +323,7 @@ function handleTargetIsNextDependent(
         conditional: (t) =>
           t.id === movedTask.parentId && movedTask.parentId !== goalRootParent,
         updates: {
-          dependency: movedTask.dependency,
+          dependency: movedTaskFirstBLI.dependency,
         },
       }
     );
