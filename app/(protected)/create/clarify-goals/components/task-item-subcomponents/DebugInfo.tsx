@@ -10,7 +10,7 @@ const DebugInfo: React.FC<{ task: Planner; devMode: boolean }> = ({
     <span className="flex space-x-2 items-center">
       {task.dependency && (
         <span>
-          <span className="font-bold">DE: </span>
+          <span className="italic">DE: </span>
           {task.dependency.substring(0, 4)}
         </span>
       )}

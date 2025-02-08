@@ -9,7 +9,7 @@ import React, {
 } from "react";
 import { Planner } from "@/lib/planner-class";
 import { EventTemplate } from "@/utils/template-builder-utils";
-import { templateSeed, taskArraySeed, taskArraySeed2 } from "@/data/seed-data";
+import { templateSeed, taskArraySeed } from "@/data/seed-data";
 import { WeekDayIntegers } from "@/types/calendar-types";
 
 interface DataContextType {
@@ -37,7 +37,6 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
 
   // const [taskArray, setTaskArray] = useState<Planner[]>([]);
   const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
-  // const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed2);
 
   const [debugArray, setDebugArray] = useState<Planner[]>([]);
 
@@ -62,7 +61,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
 
         console.log("");
       }); */
-      console.log("Current:");
+      console.log("New Array:");
       console.log(taskArray);
     }
 
