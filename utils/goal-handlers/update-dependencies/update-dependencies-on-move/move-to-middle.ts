@@ -204,6 +204,29 @@ function handleTargetIsPreviousDependent(
           },
         }
       );
+    } else {
+      instructions.push(
+        {
+          conditional: (t) => t.id === movedTask.id,
+          updates: {
+            parentId: targetTask.id,
+            dependency: targetTaskFirstBLI.dependency,
+          },
+        },
+        {
+          conditional: (t) => t.id === targetTaskFirstBLI.id,
+          updates: {
+            dependency: movedTask.id,
+          },
+        },
+        {
+          conditional: (t) =>
+            movedTaskLastBLIDependent
+              ? t.id === movedTaskLastBLIDependent.id
+              : false,
+          updates: { dependency: movedTask.dependency },
+        }
+      );
     }
   } else {
     // -- Set movedTask parent to targetTask
