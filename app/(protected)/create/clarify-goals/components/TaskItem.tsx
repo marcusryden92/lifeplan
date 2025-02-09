@@ -28,7 +28,7 @@ export const TaskItem: React.FC<TaskItemProps> = ({
   const [subtasksMinimized, setSubtasksMinimized] = useState<boolean>(false);
 
   const subtasks = getSubtasksById(taskArray, task.id);
-  const devMode = true;
+  const devMode = false;
 
   return (
     <div
