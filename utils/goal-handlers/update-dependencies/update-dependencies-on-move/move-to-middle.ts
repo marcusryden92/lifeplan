@@ -281,15 +281,17 @@ function handleTargetIsPreviousDependent(
       }
     );
   } else if (movedTaskHasSiblings) {
-    instructions.push({
-      conditional: (t) =>
-        movedTaskLastBLIDependent
-          ? t.id === movedTaskLastBLIDependent.id
-          : false,
-      updates: {
-        dependency: targetTaskLastBLI.id,
-      },
-    });
+    if (targetHasChildren) {
+      instructions.push({
+        conditional: (t) =>
+          movedTaskLastBLIDependent
+            ? t.id === movedTaskLastBLIDependent.id
+            : false,
+        updates: {
+          dependency: targetTaskLastBLI.id,
+        },
+      });
+    }
   }
   updateTaskArray(setTaskArray, instructions);
 }
