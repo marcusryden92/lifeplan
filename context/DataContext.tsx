@@ -10,7 +10,7 @@ import React, {
 import { Planner } from "@/lib/planner-class";
 import { EventTemplate } from "@/utils/template-builder-utils";
 import { templateSeed, taskArraySeed } from "@/data/seed-data";
-import { planner1 } from "@/data/problemdata";
+import { planner1, planner4 } from "@/data/problemdata";
 import { WeekDayIntegers } from "@/types/calendar-types";
 
 interface DataContextType {
@@ -37,7 +37,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const [focusedTask, setFocusedTask] = useState<string | null>(null);
 
   // const [taskArray, setTaskArray] = useState<Planner[]>([]);
-  const [taskArray, setTaskArray] = useState<Planner[]>(planner1);
+  const [taskArray, setTaskArray] = useState<Planner[]>(planner4);
 
   const [debugArray, setDebugArray] = useState<Planner[]>([]);
 

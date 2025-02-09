@@ -129,6 +129,7 @@ export function moveToMiddle({
       movedTaskLastBLIDependent,
       targetTask,
       targetTaskFirstBLI,
+      targetTaskLastBLI,
       movedTaskHasSiblings,
       targetHasChildren,
       movedTaskHasChildren
@@ -174,6 +175,7 @@ function handleTargetIsPreviousDependent(
   movedTaskLastBLIDependent: Planner | undefined,
   targetTask: Planner,
   targetTaskFirstBLI: Planner,
+  targetTaskLastBLI: Planner,
   movedTaskHasSiblings: boolean,
   targetHasChildren: boolean,
   movedTaskHasChildren: boolean
@@ -205,7 +207,7 @@ function handleTargetIsPreviousDependent(
           },
         }
       );
-    } else {
+    } else if (!movedTaskHasChildren) {
       instructions.push(
         {
           conditional: (t) => t.id === movedTask.id,
@@ -229,7 +231,7 @@ function handleTargetIsPreviousDependent(
         }
       );
     }
-  } else {
+  } else if (!targetHasChildren) {
     // -- Set movedTask parent to targetTask
     // -- Set movedTaskFirstBLI.dependency to targetTask.dependency
     // -- Clear targetTask dependency
@@ -278,6 +280,16 @@ function handleTargetIsPreviousDependent(
         },
       }
     );
+  } else if (movedTaskHasSiblings) {
+    instructions.push({
+      conditional: (t) =>
+        movedTaskLastBLIDependent
+          ? t.id === movedTaskLastBLIDependent.id
+          : false,
+      updates: {
+        dependency: targetTaskLastBLI.id,
+      },
+    });
   }
   updateTaskArray(setTaskArray, instructions);
 }
