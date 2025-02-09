@@ -43,10 +43,11 @@ export function moveToEdge({
     (t) => t.id === targetId
   );
 
-  console.log("___________________________________");
+  console.log("_______________");
   console.log(`moveToEdge-${mouseLocationInItem}`);
   console.log(currentlyClickedItem?.taskTitle);
   console.log(targetTask?.title);
+  console.log("_______________");
 
   assert(targetTask, "Couldn't find targetTask in moveToMiddle.");
 
