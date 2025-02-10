@@ -11,6 +11,7 @@ import {
   FaClipboardList,
   FaFlag,
   FaBullseye,
+  FaClock,
 } from "react-icons/fa";
 import { MdViewWeek } from "react-icons/md";
 
@@ -37,7 +38,7 @@ const createLinks = [
   {
     name: "Plans",
     href: "/create/plans",
-    icon: <MdViewWeek className="h-5 w-5" />,
+    icon: <FaClock className="h-5 w-5" />,
   },
   {
     name: "Goals",
