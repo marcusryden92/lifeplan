@@ -5,7 +5,7 @@ import {
   PencilIcon,
 } from "@heroicons/react/24/outline";
 
-import { SimpleEvent } from "@/utils/calendar-generation";
+import { SimpleEvent } from "@/utils/calendar-generation/calendar-generation";
 
 interface EventContentProps {
   event: SimpleEvent;

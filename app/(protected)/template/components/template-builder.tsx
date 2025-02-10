@@ -11,7 +11,7 @@ import {
   getTemplateFromCalendar,
   populateTemplateCalendar,
 } from "@/utils/template-builder-utils";
-import { SimpleEvent } from "@/utils/calendar-generation";
+import { SimpleEvent } from "@/utils/calendar-generation/calendar-generation";
 import {
   handleSelect,
   handleEventResize,
