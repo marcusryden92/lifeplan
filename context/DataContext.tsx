@@ -37,7 +37,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const [focusedTask, setFocusedTask] = useState<string | null>(null);
 
   // const [taskArray, setTaskArray] = useState<Planner[]>([]);
-  const [taskArray, setTaskArray] = useState<Planner[]>(planner2);
+  const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
 
   const [debugArray, setDebugArray] = useState<Planner[]>([]);
 

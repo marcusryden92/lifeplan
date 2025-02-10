@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 
 import Calendar from "./components/calendar";
 import { useDataContext } from "@/context/DataContext";
-import { SimpleEvent } from "@/utils/calendar-generation";
+import { SimpleEvent } from "@/utils/calendar-generation/calendar-generation";
 
-import { generateCalendar } from "@/utils/calendar-generation";
+import { generateCalendar } from "@/utils/calendar-generation/calendar-generation";
 
 const CalendarPage = () => {
   const { currentTemplate, weekStartDay, taskArray } = useDataContext();

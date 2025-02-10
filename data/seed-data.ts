@@ -205,7 +205,7 @@ export const taskArraySeed: Planner[] = [
     parentId: "5b5753b6-9f43-4b73-8cc7-17f5b3232b3a",
     type: "goal",
     canInfluence: true,
-    duration: 1,
+    duration: 40,
   },
   {
     title: "task2",
@@ -213,16 +213,15 @@ export const taskArraySeed: Planner[] = [
     parentId: "5b5753b6-9f43-4b73-8cc7-17f5b3232b3a",
     type: "goal",
     canInfluence: true,
-    duration: 2,
+    duration: 20,
   },
-
   {
     title: "task2a",
     id: "de322ee3-a0d1-4cc7-bd81-6ac16fabe101",
     parentId: "da382215-6e65-40df-b63a-cfcd4ff7ea68",
     type: "goal",
     canInfluence: true,
-    duration: 1,
+    duration: 45,
     dependency: "23a404a8-8daa-47fa-a243-388ca4a8f175",
   },
   {
@@ -231,7 +230,7 @@ export const taskArraySeed: Planner[] = [
     parentId: "da382215-6e65-40df-b63a-cfcd4ff7ea68",
     type: "goal",
     canInfluence: true,
-    duration: 1,
+    duration: 40,
   },
   {
     title: "task2c",
@@ -239,7 +238,7 @@ export const taskArraySeed: Planner[] = [
     parentId: "da382215-6e65-40df-b63a-cfcd4ff7ea68",
     type: "goal",
     canInfluence: true,
-    duration: 0,
+    duration: 50,
     dependency: "d807bd1f-098b-4638-b31f-8380963dc787",
   },
   {
@@ -248,7 +247,7 @@ export const taskArraySeed: Planner[] = [
     parentId: "a899e467-f590-4e60-9592-98e6ccb7446e",
     type: "goal",
     canInfluence: true,
-    duration: 0,
+    duration: 50,
     dependency: "de322ee3-a0d1-4cc7-bd81-6ac16fabe101",
   },
   {
@@ -257,7 +256,7 @@ export const taskArraySeed: Planner[] = [
     parentId: "a899e467-f590-4e60-9592-98e6ccb7446e",
     type: "goal",
     canInfluence: true,
-    duration: 0,
+    duration: 60,
     dependency: "3d211c37-3cda-4986-a95a-ac49247aa5b4",
   },
   {
@@ -266,8 +265,16 @@ export const taskArraySeed: Planner[] = [
     parentId: "a899e467-f590-4e60-9592-98e6ccb7446e",
     type: "goal",
     canInfluence: true,
-    duration: 0,
+    duration: 30,
     dependency: "ca5ce814-4169-4e38-99ef-3a23cb8867d8",
+  },
+  {
+    title: "Plan",
+    id: "e2975812-bd9d-4a46-b995-f261d8634aa5",
+    type: "plan",
+    canInfluence: true,
+    duration: 40,
+    starts: new Date("2025-02-10T08:00:00.000Z"),
   },
 ];
 
