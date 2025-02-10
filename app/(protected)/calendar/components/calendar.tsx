@@ -8,7 +8,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 
 import EventContent from "@/components/events/event-content";
 
-import { SimpleEvent } from "@/utils/calendar-generation";
+import { SimpleEvent } from "@/utils/calendar-generation/calendar-generation";
 import {
   handleSelect,
   handleEventResize,
