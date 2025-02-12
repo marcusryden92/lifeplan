@@ -4,8 +4,8 @@ import { useState } from "react";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import { useDataContext } from "@/context/DataContext";
 
-import { moveToEdge } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/move-to-edge";
-import { Planner } from "@/lib/planner-class";
+import { moveToEdge } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/moveToEdge";
+import { Planner } from "@/lib/plannerClass";
 
 import styles from "./TaskDivider.module.css";
 

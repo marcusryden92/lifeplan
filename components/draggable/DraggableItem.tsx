@@ -3,7 +3,7 @@ import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import clsx from "clsx";
 import styles from "./DraggableItem.module.css";
 import { useDataContext } from "@/context/DataContext";
-import { moveToMiddle } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/move-to-middle";
+import { moveToMiddle } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/moveToMiddle";
 
 export default function DraggableItem({
   children,

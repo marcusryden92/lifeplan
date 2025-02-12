@@ -17,7 +17,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 
-import { Planner } from "@/lib/planner-class";
+import { Planner } from "@/lib/plannerClass";
 
 // Local components and context
 import { useDataContext } from "@/context/DataContext";
@@ -30,8 +30,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { DateTimePicker } from "@/components/utilities/time-picker/date-time-picker";
+import { Button } from "@/components/ui/Button";
+import { DateTimePicker } from "@/components/utilities/time-picker/DateTimePicker";
 
 // Schemas
 import { TaskListSchema } from "@/schemas";
@@ -43,7 +43,7 @@ import {
   deleteAll,
   clickEdit,
   confirmEdit,
-} from "@/utils/creation-pages-functions";
+} from "@/utils/creationPagesFunctions";
 
 export default function TasksPage() {
   const { taskArray, setTaskArray } = useDataContext();

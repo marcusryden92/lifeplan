@@ -3,12 +3,10 @@
 // Third-party libraries
 import { useState, useEffect } from "react";
 
-import Link from "next/link";
 import {
   XMarkIcon,
   PencilIcon,
   TrashIcon,
-  ArrowLongLeftIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
@@ -23,27 +21,27 @@ import {
 // Local components and context
 import { useDataContext } from "@/context/DataContext";
 
-import { CardContent, CardFooter } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { DateTimePicker } from "@/components/utilities/time-picker/date-time-picker";
+import { Button } from "@/components/ui/Button";
+import { DateTimePicker } from "@/components/utilities/time-picker/DateTimePicker";
 
-import AddItemForm from "../components/add-item-form";
-import AddSubtask from "./components/task-item-subcomponents/AddSubtask";
-import TaskList from "./components/TaskList";
-import RootTaskListWrapper from "./components/task-item-subcomponents/RootTaskListWrapper";
+import AddItemForm from "./_components/AddItemForm";
+import AddSubtask from "./_components/task-item-subcomponents/AddSubtask";
+import TaskList from "./_components/TaskList";
+import RootTaskListWrapper from "./_components/task-item-subcomponents/RootTaskListWrapper";
 
 // Local utilities
-import { clickEdit, confirmEdit } from "@/utils/creation-pages-functions";
-import { Planner } from "@/lib/planner-class";
+import { clickEdit, confirmEdit } from "@/utils/creationPagesFunctions";
+import { Planner } from "@/lib/plannerClass";
 
-import { getSubtasksById, deleteGoal } from "@/utils/goal-page-handlers";
+import { getSubtasksById, deleteGoal } from "@/utils/goalPageHandlers";
 
 import {
   totalSubtaskDuration,
   formatMinutesToHours,
-} from "@/utils/task-array-utils";
+} from "@/utils/taskArrayUtils";
 
 export default function TasksPage() {
   const { taskArray, setTaskArray, focusedTask, setFocusedTask } =

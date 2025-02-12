@@ -7,7 +7,7 @@ import { signIn } from "@/auth";
 import { LoginSchema } from "@/schemas";
 import { DEFAULT_LOGIN_REDIRECT } from "@/routes";
 import { getUserByEmail } from "@/data/user";
-import { getTwoFactorTokenByEmail } from "@/data/two-factor-token";
+import { getTwoFactorTokenByEmail } from "@/data/twoFactorToken";
 import { sendVerificationEmail, sendTwoFactorTokenEmail } from "@/lib/mail";
 import {
   generateTwoFactorToken,
@@ -15,7 +15,7 @@ import {
 } from "@/lib/tokens";
 
 import { db } from "@/lib/db";
-import { getTwoFactorConfirmationByUserId } from "@/data/two-factor-confirmation";
+import { getTwoFactorConfirmationByUserId } from "@/data/twoFactorConfirmation";
 
 export const login = async (
   values: z.infer<typeof LoginSchema>,

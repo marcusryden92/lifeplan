@@ -1,4 +1,4 @@
-import { Planner } from "@/lib/planner-class";
+import { Planner } from "@/lib/plannerClass";
 
 export const planner1: Planner[] = [
   {

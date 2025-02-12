@@ -25,7 +25,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 
 // Schemas
 import { TaskListSchema } from "@/schemas";
@@ -37,7 +37,7 @@ import {
   deleteAll,
   clickEdit,
   confirmEdit,
-} from "@/utils/creation-pages-functions";
+} from "@/utils/creationPagesFunctions";
 
 export default function CapturePage() {
   const { taskArray, setTaskArray } = useDataContext();

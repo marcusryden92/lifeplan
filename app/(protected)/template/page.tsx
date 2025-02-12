@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { CardHeader } from "@/components/ui/card";
+import { CardHeader } from "@/components/ui/Card";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
-import TemplateBuilder from "./components/template-builder";
+import TemplateBuilder from "./_components/TemplateBuilder";
 import { useDataContext } from "@/context/DataContext";
-import { SimpleEvent } from "@/utils/calendar-generation/calendar-generation";
+import { SimpleEvent } from "@/utils/calendar-generation/calendarGeneration";
 
 export default function TasksPage() {
   const [templateEvents, setTemplateEvents] = useState<SimpleEvent[]>([]); // State to manage events

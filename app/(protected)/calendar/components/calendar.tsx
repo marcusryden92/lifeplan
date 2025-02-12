@@ -6,9 +6,9 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 
-import EventContent from "@/components/events/event-content";
+import EventContent from "@/components/events/EventContent";
 
-import { SimpleEvent } from "@/utils/calendar-generation/calendar-generation";
+import { SimpleEvent } from "@/utils/calendar-generation/calendarGeneration";
 import {
   handleSelect,
   handleEventResize,
@@ -16,7 +16,7 @@ import {
   handleEventCopy,
   handleEventDelete,
   handleEventEdit,
-} from "@/utils/calendar-event-handlers";
+} from "@/utils/calendarEventHandlers";
 
 const EVENT_INTERACTION_ENABLED = false; // Constant to enable/disable event interaction
 

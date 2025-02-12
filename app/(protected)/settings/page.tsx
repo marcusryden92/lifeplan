@@ -1,6 +1,6 @@
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { currentUser } from "@/lib/auth";
-import SettingsForm from "./_components/settings-form";
+import SettingsForm from "./_components/SettingsForm";
 import { SettingsPageUser } from "@/next-auth";
 
 const SettingsPage = async () => {

@@ -26,19 +26,19 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 
 // Schemas and utilities
 import { TaskListSchema } from "@/schemas";
-import { Planner } from "@/lib/planner-class";
-import { hasInfluence } from "@/utils/planner-utils";
+import { Planner } from "@/lib/plannerClass";
+import { hasInfluence } from "@/utils/plannerUtils";
 import {
   onSubmit,
   deleteTask,
   deleteAll,
   clickEdit,
   confirmEdit,
-} from "@/utils/creation-pages-functions";
+} from "@/utils/creationPagesFunctions";
 
 export default function InfluencePage() {
   const { taskArray, setTaskArray } = useDataContext();
@@ -78,10 +78,11 @@ export default function InfluencePage() {
 
   const handleDeleteAll = () => {
     const filterArray: Planner[] = taskArray.filter(
-      (task) => task.canInfluence &&
-      task.type !== "task" &&
-      task.type !== "plan" &&
-      !task.parentId
+      (task) =>
+        task.canInfluence &&
+        task.type !== "task" &&
+        task.type !== "plan" &&
+        !task.parentId
     );
 
     deleteAll({ setTaskArray, filter: filterArray });

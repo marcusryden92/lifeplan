@@ -7,11 +7,11 @@ import React, {
   ReactNode,
   useEffect,
 } from "react";
-import { Planner } from "@/lib/planner-class";
-import { EventTemplate } from "@/utils/template-builder-utils";
-import { templateSeed, taskArraySeed } from "@/data/seed-data";
-import { planner1, planner2, planner3 } from "@/data/problemdata";
-import { WeekDayIntegers } from "@/types/calendar-types";
+import { Planner } from "@/lib/plannerClass";
+import { EventTemplate } from "@/utils/templateBuilderUtils";
+import { templateSeed, taskArraySeed } from "@/data/seedData";
+// import { planner1, planner2, planner3 } from "@/data/problemdata";
+import { WeekDayIntegers } from "@/types/calendarTypes";
 
 interface DataContextType {
   taskArray: Planner[];

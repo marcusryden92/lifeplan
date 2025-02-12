@@ -1,7 +1,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import clsx from "clsx";
 import {
   FaPlus,
