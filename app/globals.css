@@ -9,6 +9,20 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter/Inter.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* @font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter/Inter-Italic.ttf") format("truetype");
+  font-weight: normal;
+  font-style: italic;
+} */
+
 html,
 body,
 :root {
@@ -30,8 +44,37 @@ body,
 
 :root .fc-event {
   border: none !important; /* Removes the border */
+  border-radius: 0;
   box-shadow: none !important; /* Removes any potential outline/shadow */
   transition: all 0.15s;
+}
+
+:root .fc-header-toolbar {
+  padding: 1rem 3rem;
+  padding-top: 1.5rem;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.3) !important;
+  margin-bottom: 0px !important;
+  font-family: "Inter", Helvetica, sans-serif !important;
+}
+
+:root .fc-button-primary,
+.fc-today-button {
+  background-color: transparent;
+  color: black !important;
+  border: none !important;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+:root .fc-theme-standard {
+  font-family: "Inter", Helvetica, sans-serif !important;
+}
+
+:root .fc-button-primary:hover,
+.fc-today-button:hover {
+  background-color: black;
+  color: white !important;
+  border: 2px solid black !important;
 }
 
 :root .fc-event:hover {
@@ -44,6 +87,11 @@ body,
   /* border-radius: 0; */
   border: 0 !important;
   transform: translate(0, 0);
+}
+
+:root .fc-timegrid-slot {
+  font-size: 0.75rem;
+  height: 1.75rem !important;
 }
 
 /* :root .fc-timegrid-event:hover {

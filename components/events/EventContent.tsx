@@ -33,7 +33,14 @@ const EventContent: React.FC<EventContentProps> = ({
   const endTime = new Date(event.end);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        padding: "0px",
+      }}
+    >
       <span className="flex gap-2 p-1 justify-between">
         <span style={{ marginBottom: "auto" }}>{event.title}</span>
         <span className="flex gap-2">

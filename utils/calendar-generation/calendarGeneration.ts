@@ -249,7 +249,7 @@ function addTaskToCalendar(
         start: startTime.toISOString(), // ISO 8601 string format for FullCalendar
         end: endTime.toISOString(), // ISO 8601 string format for FullCalendar
         backgroundColor: "#f59e0b",
-        borderColor: "#f59e0b",
+        borderColor: "transparent",
       };
 
       eventArray.push(newEvent);

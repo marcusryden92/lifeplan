@@ -1,10 +1,6 @@
 # CALENDAR GENERATION FUNCTIONALITY
 
-- Move subtasks + update dependencies on move.
-
 - Add 'goal ready'
-
-- Add function to generate goals to calendar
 
 - Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).
 

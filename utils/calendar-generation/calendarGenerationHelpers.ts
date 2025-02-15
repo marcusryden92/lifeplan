@@ -71,6 +71,8 @@ export function populateWeekWithTemplate(
       title: event.title,
       start: newStartDate.toISOString(), // Convert Date to ISO string
       end: newEndDate.toISOString(), // Convert Date to ISO string
+      backgroundColor: "#1242B2",
+      borderColor: "transparent",
     });
   });
 
