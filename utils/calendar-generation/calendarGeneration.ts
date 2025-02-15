@@ -174,33 +174,11 @@ function addTaskToCalendar(
     return;
   }
 
-  // We add the current dates events to an array:
-  let todaysEvents: SimpleEvent[] = [];
-
-  // Function for getting yesterdays, todays and tomorrows events
-  // The reason we need events for all these days is to account for time-zones
-  const getEventsForYesterdayTodayTomorrow = (date: Date) => {
-    const yesterday = new Date(date);
-    yesterday.setDate(date.getDate() - 1); // Subtract 1 day
-
-    const today = date;
-
-    const tomorrow = new Date(date);
-    tomorrow.setDate(date.getDate() + 1); // Add 1 day
-
-    const dateArray = [yesterday, today, tomorrow];
-
-    todaysEvents = getEventsForDates(dateArray, eventArray);
-  };
-
-  getEventsForYesterdayTodayTomorrow(todaysDate);
-
   // These are the markers that run along the calendar to check for available slots. The static marker is the main marker, and when static marker finds a free minute, moving marker continues along to check if the free space is as long as the task duration:
   let staticMarker = startTime || new Date();
   let movingMarker = new Date(staticMarker);
 
   // These markers are here to see if we've changed days or weeks:
-  let dayMarker = new Date(staticMarker);
   let weekMarker = getWeekFirstDate(weekStartDay, staticMarker);
 
   // Let's make a while loop to iterate through the calendar and check if there are any free slots:
@@ -233,18 +211,12 @@ function addTaskToCalendar(
       }
     }
 
-    // Let's see if we've moved to another day, and in that case update the todaysEvents array:
-    if (getDayDifference(dayMarker, movingMarker) >= 1) {
-      getEventsForYesterdayTodayTomorrow(movingMarker);
-      dayMarker = new Date(movingMarker);
-    }
-
     let eventEndTime;
 
     // Let's check if today has any events:
-    if (todaysEvents) {
+    if (eventArray) {
       // Let's check if the movingMarker is inside an event, and if so, get the end time of that event:
-      eventEndTime = checkCurrentDateInEvents(todaysEvents, movingMarker);
+      eventEndTime = checkCurrentDateInEvents(eventArray, movingMarker);
     }
 
     // If the movingMarker is inside an event, set the duration and staticMarker to the end-time of that event:
