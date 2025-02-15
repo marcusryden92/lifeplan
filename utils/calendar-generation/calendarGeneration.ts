@@ -6,7 +6,7 @@ import {
   addDateItemsToArray,
   sortPlannersByDeadline,
   populateWeekWithTemplate,
-  getTodaysEvents,
+  getEventsForDates,
   getDayDifference,
   checkCurrentDateInEvents,
   hasDateInArray,
@@ -174,6 +174,27 @@ function addTaskToCalendar(
     return;
   }
 
+  // We add the current dates events to an array:
+  let todaysEvents: SimpleEvent[] = [];
+
+  // Function for getting yesterdays, todays and tomorrows events
+  // The reason we need events for all these days is to account for time-zones
+  const getEventsForYesterdayTodayTomorrow = (date: Date) => {
+    const yesterday = new Date(date);
+    yesterday.setDate(date.getDate() - 1); // Subtract 1 day
+
+    const today = date;
+
+    const tomorrow = new Date(date);
+    tomorrow.setDate(date.getDate() + 1); // Add 1 day
+
+    const dateArray = [yesterday, today, tomorrow];
+
+    todaysEvents = getEventsForDates(dateArray, eventArray);
+  };
+
+  getEventsForYesterdayTodayTomorrow(todaysDate);
+
   // These are the markers that run along the calendar to check for available slots. The static marker is the main marker, and when static marker finds a free minute, moving marker continues along to check if the free space is as long as the task duration:
   let staticMarker = startTime || new Date();
   let movingMarker = new Date(staticMarker);
@@ -181,9 +202,6 @@ function addTaskToCalendar(
   // These markers are here to see if we've changed days or weeks:
   let dayMarker = new Date(staticMarker);
   let weekMarker = getWeekFirstDate(weekStartDay, staticMarker);
-
-  // We add the current dates events to an array:
-  let todaysEvents: SimpleEvent[] = getTodaysEvents(todaysDate, eventArray);
 
   // Let's make a while loop to iterate through the calendar and check if there are any free slots:
 
@@ -217,7 +235,7 @@ function addTaskToCalendar(
 
     // Let's see if we've moved to another day, and in that case update the todaysEvents array:
     if (getDayDifference(dayMarker, movingMarker) >= 1) {
-      todaysEvents = getTodaysEvents(movingMarker, eventArray);
+      getEventsForYesterdayTodayTomorrow(movingMarker);
       dayMarker = new Date(movingMarker);
     }
 
@@ -245,17 +263,25 @@ function addTaskToCalendar(
       !eventEndTime &&
       getMinuteDifference(staticMarker, movingMarker) >= item.duration
     ) {
+      // Correct for pushing the marker forwards one minute
+      const startTime = new Date(
+        staticMarker.setMinutes(movingMarker.getMinutes())
+      );
+      const endTime = new Date(
+        movingMarker.setMinutes(movingMarker.getMinutes())
+      );
+
       const newEvent = {
         id: cuid(),
         title: item.title,
-        start: staticMarker.toISOString(), // ISO 8601 string format for FullCalendar
-        end: movingMarker.toISOString(), // ISO 8601 string format for FullCalendar
+        start: startTime.toISOString(), // ISO 8601 string format for FullCalendar
+        end: endTime.toISOString(), // ISO 8601 string format for FullCalendar
         backgroundColor: "#f59e0b",
         borderColor: "#f59e0b",
       };
 
       eventArray.push(newEvent);
-      movingMarker.setMinutes(movingMarker.getMinutes() + 1);
+      movingMarker.setMinutes(movingMarker.getMinutes());
       return movingMarker;
     }
 

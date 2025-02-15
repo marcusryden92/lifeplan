@@ -153,7 +153,7 @@ export function checkCurrentDateInEvents(
     const eventEndTime = new Date(event.end).getTime();
 
     // Check if current time is within the event time range
-    if (currentTime >= eventStartTime && currentTime <= eventEndTime) {
+    if (currentTime > eventStartTime && currentTime < eventEndTime) {
       return new Date(event.end); // Return the end time as a Date object
     }
   }
@@ -201,7 +201,10 @@ export function hasDateInArray(dates: Date[], dateToCheck: Date): boolean {
   });
 }
 
-export function getTodaysEvents(today: Date, eventArray: SimpleEvent[]) {
+export function getTodaysEvents(
+  today: Date,
+  eventArray: SimpleEvent[]
+): SimpleEvent[] {
   let todaysEvents: SimpleEvent[] = [];
 
   const startOfDay = new Date(today);
@@ -223,6 +226,16 @@ export function getTodaysEvents(today: Date, eventArray: SimpleEvent[]) {
   });
 
   return todaysEvents;
+}
+
+export function getEventsForDates(dates: Date[], eventArray: SimpleEvent[]) {
+  const events: SimpleEvent[] = [];
+
+  for (const date of dates) {
+    events.push(...getTodaysEvents(date, eventArray));
+  }
+
+  return events;
 }
 
 export function sortByDeadline(newArray: Planner[]): Planner[] {
