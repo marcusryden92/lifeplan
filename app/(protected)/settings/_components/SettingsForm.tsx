@@ -4,7 +4,7 @@ import * as z from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState, useTransition } from "react";
-import { Switch } from "@/components/ui/switch";
+import { Switch } from "@/components/ui/Switch";
 
 import { Button } from "@/components/ui/Button";
 import {
