@@ -53,7 +53,7 @@ export function DateTimePicker({ date, setDate, color }: DateTimePickerProps) {
         <div className="p-3 border-b border-border">
           <TimePickerDemo setDate={setDate} date={date} />
         </div>
-        <Calendar
+        <TimePicker
           mode="single"
           selected={date}
           onSelect={(d) => handleSelect(d)}
