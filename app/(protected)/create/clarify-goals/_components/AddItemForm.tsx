@@ -4,9 +4,9 @@ import {
   FormItem,
   FormControl,
   FormMessage,
-} from "@/components/ui/form";
+} from "@/components/ui/Form";
 
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/Input";
 import { HiOutlinePlus } from "react-icons/hi";
 
 import { useForm } from "react-hook-form";

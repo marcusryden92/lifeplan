@@ -15,8 +15,8 @@ import {
   FormLabel,
   FormMessage,
   FormDescription,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+} from "@/components/ui/Form";
+import { Input } from "@/components/ui/Input";
 import { FormSuccess } from "@/components/ui/FormSuccess";
 import { FormError } from "@/components/ui/FormError";
 import { UserRole } from "@prisma/client";

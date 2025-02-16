@@ -4,7 +4,7 @@ import React, { useState } from "react";
 
 // Components
 import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/Input";
 
 // Definitions
 import { TaskEditFormProps } from "@/lib/taskItem";

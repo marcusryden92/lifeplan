@@ -3,7 +3,7 @@ import { useState, useRef, createRef } from "react";
 
 // Icons and components
 import { HiOutlinePlus } from "react-icons/hi";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/Input";
 
 // Definitions
 import { AddSubtaskProps } from "@/lib/taskItem";

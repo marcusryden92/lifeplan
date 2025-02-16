@@ -9,7 +9,6 @@ import {
   TrashIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
-import { CheckCircledIcon } from "@radix-ui/react-icons";
 
 import {
   Carousel,
@@ -17,13 +16,13 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from "@/components/ui/carousel";
+} from "@/components/ui/Carousel";
 // Local components and context
 import { useDataContext } from "@/context/DataContext";
 
-import { CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/Card";
 
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { DateTimePicker } from "@/components/utilities/time-picker/DateTimePicker";
 
