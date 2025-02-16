@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardContent } from "@/components/ui/Card";
 import { currentUser } from "@/lib/auth";
 import SettingsForm from "./_components/SettingsForm";
 import { SettingsPageUser } from "@/next-auth";

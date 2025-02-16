@@ -17,7 +17,7 @@ import { CheckCircledIcon } from "@radix-ui/react-icons";
 
 // Local components and context
 import { useDataContext } from "@/context/DataContext";
-import { CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { CardHeader, CardContent, CardFooter } from "@/components/ui/Card";
 import {
   FormField,
   Form,
