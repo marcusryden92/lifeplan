@@ -2,6 +2,8 @@
 
 - Add 'goal ready'
 
+- Have template items be generated 'on demand'
+
 - Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).
 
 - Completion of events so that they don't keep rendering when they are done.
