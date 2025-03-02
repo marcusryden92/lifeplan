@@ -198,6 +198,7 @@ export const taskArraySeed: Planner[] = [
     id: "35c0e455-316a-4028-83ba-a45837a22617",
     type: "goal",
     canInfluence: true,
+    isReady: true,
   },
   {
     title: "A",

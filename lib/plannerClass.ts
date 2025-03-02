@@ -6,6 +6,7 @@ export interface PlannerInterface {
   parentId?: string;
   type?: "task" | "plan" | "goal" | null;
   canInfluence: boolean;
+  isReady?: boolean;
   duration?: number;
   deadline?: Date;
   starts?: Date;
@@ -18,6 +19,7 @@ export class Planner implements PlannerInterface {
   parentId?: string;
   type: "task" | "plan" | "goal" | null;
   canInfluence: boolean;
+  isReady?: boolean;
   duration?: number;
   deadline?: Date;
   starts?: Date;
@@ -29,6 +31,7 @@ export class Planner implements PlannerInterface {
     parentId?: string,
     type: "task" | "plan" | "goal" | null = null,
     canInfluence: boolean = false,
+    isReady?: boolean,
     duration?: number,
     deadline?: Date,
     dependency?: string
@@ -38,6 +41,7 @@ export class Planner implements PlannerInterface {
     this.parentId = parentId;
     this.type = type;
     this.canInfluence = canInfluence;
+    this.isReady = isReady;
     this.duration = duration;
     this.deadline = deadline;
     this.dependency = dependency;

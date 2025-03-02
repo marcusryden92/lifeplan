@@ -9,6 +9,7 @@ import {
   TrashIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
+import { CheckCircledIcon } from "@radix-ui/react-icons";
 
 import {
   Carousel,
@@ -34,6 +35,10 @@ import RootTaskListWrapper from "./_components/task-item-subcomponents/RootTaskL
 // Local utilities
 import { clickEdit, confirmEdit } from "@/utils/creationPagesFunctions";
 import { Planner } from "@/lib/plannerClass";
+import {
+  setGoalIsReady,
+  toggleGoalIsReady,
+} from "@/utils/goal-handlers/toggleGoalIsReady";
 
 import { getSubtasksById, deleteGoal } from "@/utils/goalPageHandlers";
 
@@ -284,8 +289,25 @@ export default function TasksPage() {
                             className="flex-grow flex justify-between items-center max-w-[250px]"
                             onClick={() => handleSetToGoal(index)}
                           >
-                            <div className="truncate">
-                              {task.title.toUpperCase()}
+                            <div className="flex items-center gap-2">
+                              <div className="truncate">
+                                {task.title.toUpperCase()}
+                              </div>
+                              <button
+                                disabled={subtasks.length === 0}
+                                className={`${
+                                  subtasks.length === 0 && "opacity-40"
+                                }`}
+                                onClick={() => {
+                                  toggleGoalIsReady(setTaskArray, task.id);
+                                }}
+                              >
+                                <CheckCircledIcon
+                                  className={`h-8 w-8 rounded-full ${
+                                    task.isReady && "bg-emerald-400"
+                                  }`}
+                                />
+                              </button>
                             </div>
 
                             {devMode && (

@@ -95,11 +95,17 @@ export function updateDependenciesOnDelete({
   });
 }
 
+interface UpdateDependenciesOnDeleteInterface_ReturnArray {
+  taskArray: Planner[];
+  taskId: string;
+  parentId: string | undefined;
+}
+
 export function updateDependenciesOnDelete_ReturnArray({
   taskArray,
   taskId,
   parentId,
-}: UpdateDependenciesOnDeleteInterface) {
+}: UpdateDependenciesOnDeleteInterface_ReturnArray) {
   const bottomLayer: Planner[] = getTreeBottomLayer(taskArray, taskId);
   const sortedLayer: Planner[] = sortTasksByDependencies(
     taskArray,
@@ -107,8 +113,6 @@ export function updateDependenciesOnDelete_ReturnArray({
   );
 
   let updatedArray: Planner[] = [...taskArray];
-
-  //
 
   const rootParentId = getRootParent(taskArray, taskId);
 
@@ -121,8 +125,6 @@ export function updateDependenciesOnDelete_ReturnArray({
   const hasSiblings = parentId
     ? getSubtasksById(taskArray, parentId).length > 1
     : undefined;
-
-  const instructions: InstructionType[] = [];
 
   if (itemBeforeFirst && itemAfterLast) {
     if (hasSiblings) {

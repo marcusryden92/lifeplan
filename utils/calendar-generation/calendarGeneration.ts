@@ -6,7 +6,6 @@ import {
   addDateItemsToArray,
   sortPlannersByDeadline,
   populateWeekWithTemplate,
-  getEventsForDates,
   getDayDifference,
   checkCurrentDateInEvents,
   hasDateInArray,
@@ -66,7 +65,10 @@ function addEventsToCalendar(
   let goalsAndTasks: Planner[] = [];
 
   taskArray.forEach((task) => {
-    if ((task.type === "goal" && !task.parentId) || task.type === "task") {
+    if (
+      (task.type === "goal" && !task.parentId && task.isReady) ||
+      task.type === "task"
+    ) {
       goalsAndTasks.push(task);
     }
   });
