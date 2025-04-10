@@ -31,75 +31,141 @@ body,
 
 /* FullCalendar styling: */
 
+/* General Grid Cleanup */
 :root .fc-scrollgrid {
   border: none;
+  background-color: white;
 }
 
 :root .fc td,
-.fc th,
-.fc-event-main {
-  /* border-style: none !important; */
-  border-color: rgba(128, 128, 128, 0.3);
+:root .fc th,
+:root .fc-event-main {
+  border-color: rgba(0, 0, 0, 0.075);
 }
 
+/* Event appearance */
 :root .fc-event {
-  border: none !important; /* Removes the border */
-  border-radius: 0;
-  box-shadow: none !important; /* Removes any potential outline/shadow */
-  transition: all 0.15s;
-}
-
-:root .fc-header-toolbar {
-  padding: 1rem 3rem;
-  padding-top: 1.5rem;
-  border-bottom: 1px solid rgba(128, 128, 128, 0.3) !important;
-  margin-bottom: 0px !important;
-  font-family: "Inter", Helvetica, sans-serif !important;
-}
-
-:root .fc-button-primary,
-.fc-today-button {
-  background-color: transparent;
-  color: black !important;
+  color: white !important; /* Ensures text contrast */
   border: none !important;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-:root .fc-theme-standard {
-  font-family: "Inter", Helvetica, sans-serif !important;
-}
-
-:root .fc-button-primary:hover,
-.fc-today-button:hover {
-  background-color: black;
-  color: white !important;
-  border: 2px solid black !important;
+  font-size: 0.75rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: all 0.15s;
+  padding: 2px 6px;
 }
 
 :root .fc-event:hover {
-  outline-color: #f1f1f1 !important;
-  outline-style: solid !important;
-  outline-width: 0.5px !important;
+  transform: scale(1.01);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-:root .fc-timegrid-event-harness {
-  /* border-radius: 0; */
-  border: 0 !important;
-  transform: translate(0, 0);
+/* Header toolbar */
+:root .fc-header-toolbar {
+  padding: 1rem 3rem;
+  padding-top: 1.5rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  margin-bottom: 0px !important;
+  font-family: "Inter", Helvetica, sans-serif !important;
+  background-color: white;
 }
 
+/* Button base */
+:root .fc-button {
+  background-color: transparent !important;
+  color: #111 !important;
+  border: none !important;
+  font-weight: 500;
+  font-family: "Inter", Helvetica, sans-serif !important;
+  cursor: pointer;
+  padding: 0.5rem 1rem !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s ease;
+  box-shadow: none !important;
+  text-transform: none !important;
+  font-size: 0.875rem;
+}
+
+/* Today button specific */
+:root .fc-today-button {
+  background-color: #f3f3f3 !important;
+  color: #111 !important;
+  border: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+:root .fc-today-button:hover {
+  background-color: black !important;
+  color: white !important;
+  border: 1px solid black !important;
+}
+
+/* Active button (e.g., current view) */
+:root .fc-button-primary:not(:disabled).fc-button-active {
+  background-color: #111 !important;
+  color: white !important;
+}
+
+/* Time slots */
 :root .fc-timegrid-slot {
   font-size: 0.75rem;
   height: 1.75rem !important;
 }
 
-/* :root .fc-timegrid-event:hover {
-  transform: translate(-0.1rem, -0.2rem);
-} */
+/* Time grid events */
+:root .fc-timegrid-event-harness {
+  border: 0 !important;
+  transform: translate(0, 0);
+}
 
+/* Time grid coloums */
+:root .fc-timegrid-col {
+  background-color: white;
+}
+
+:root .fc-day-today {
+  background-color: #f8f8f8 !important;
+}
+
+/* Table header */
+:root .fc-col-header-cell-cushion {
+  font-weight: 500 !important;
+}
+
+/* Scrolling behavior */
 :root .fc-scroller {
   overflow: auto !important;
+}
+
+/* Font across the board */
+:root .fc-theme-standard {
+  font-family: "Inter", Helvetica, sans-serif !important;
+}
+
+/* General button style override */
+:root .fc-button {
+  background-color: transparent !important;
+  color: black !important;
+  border: none !important;
+  font-weight: bold;
+  font-family: "Inter", Helvetica, sans-serif !important;
+  cursor: pointer;
+  padding: 0.5rem 1rem !important;
+  border-radius: 0.5rem !important;
+  transition: all 0.2s ease;
+}
+
+/* Active buttons more defined */
+:root .fc-button-primary:not(:disabled).fc-button-active {
+  background-color: black !important;
+  color: white !important;
+}
+
+/* Remove button shadows */
+:root .fc-button {
+  box-shadow: none !important;
+}
+
+/* Remove default uppercase */
+:root .fc-button {
+  text-transform: none !important;
 }
 
 @layer base {

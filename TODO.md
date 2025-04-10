@@ -1,7 +1,5 @@
 # CALENDAR GENERATION FUNCTIONALITY
 
-- Add 'goal ready'
-
 - Have template items be generated 'on demand'
 
 - Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).

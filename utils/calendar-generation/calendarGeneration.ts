@@ -75,12 +75,16 @@ function addEventsToCalendar(
 
   if (!goalsAndTasks) return eventArray;
 
-  // Then sort the array by due dates (items with no due date end up last):
+  // Then sort the array by due dates
+  // (items with no due date end up last):
 
   const newArray = sortPlannersByDeadline(goalsAndTasks);
   goalsAndTasks = newArray;
 
-  // Create array to hold the first date of all the weeks to which a template has been added (so multiple instances of the template aren't added to the same week):
+  // Create array to hold the first date of all
+  // the weeks to which a template has been added
+  // (so multiple instances of the template aren't
+  // added to the same week):
 
   let templatedWeeks: Date[] = [];
 
@@ -88,14 +92,10 @@ function addEventsToCalendar(
 
   const weekFirstDate = getWeekFirstDate(weekStartDay, todaysDate);
   templatedWeeks.push(new Date(weekFirstDate));
-  eventArray = populateWeekWithTemplate(
-    weekStartDay,
-    todaysDate,
-    template,
-    eventArray
-  );
 
-  // Find the largest gap in the template to make sure that a given task fits at all within the week template.
+  // Find the largest gap in the template
+  // to make sure that a given task fits at all
+  // within the week template.
 
   const largestTemplateGap = findLargestGap(template);
 
@@ -176,14 +176,17 @@ function addTaskToCalendar(
     return;
   }
 
-  // These are the markers that run along the calendar to check for available slots. The static marker is the main marker, and when static marker finds a free minute, moving marker continues along to check if the free space is as long as the task duration:
+  // These are the markers that run along the calendar
+  // to check for available slots. The static marker is
+  // the main marker, and when static marker finds a free minute,
+  // moving marker continues along to check if the free space
+  // is as long as the task duration:
+
   let staticMarker = startTime || new Date();
   let movingMarker = new Date(staticMarker);
 
-  // These markers are here to see if we've changed days or weeks:
-  let weekMarker = getWeekFirstDate(weekStartDay, staticMarker);
-
-  // Let's make a while loop to iterate through the calendar and check if there are any free slots:
+  // Let's make a while loop to iterate through
+  // the calendar and check if there are any free slots:
 
   let iterationCount = 0;
 
@@ -197,36 +200,24 @@ function addTaskToCalendar(
       break;
     } */
 
-    // Check if we've changed weeks and add a template to the new week if necessary
-    if (getDayDifference(weekMarker, staticMarker) > 6) {
-      if (!hasDateInArray(templatedWeeks, staticMarker)) {
-        eventArray = populateWeekWithTemplate(
-          weekStartDay,
-          staticMarker,
-          template,
-          eventArray
-        );
-        weekMarker = new Date(getWeekFirstDate(weekStartDay, staticMarker));
-
-        // Add the staticMarker to templatedWeeks after adding the template
-        templatedWeeks.push(new Date(staticMarker));
-      }
-    }
-
     let eventEndTime;
 
     // Let's check if today has any events:
     if (eventArray) {
-      // Let's check if the movingMarker is inside an event, and if so, get the end time of that event:
+      // Let's check if the movingMarker is inside an event,
+      // and if so, get the end time of that event:
       eventEndTime = checkCurrentDateInEvents(eventArray, movingMarker);
     }
 
-    // If the movingMarker is inside an event, set the duration and staticMarker to the end-time of that event:
+    // If the movingMarker is inside an event,
+    // set the duration and staticMarker to the
+    // end-time of that event:
     if (eventEndTime) {
       staticMarker = new Date(eventEndTime);
       movingMarker = new Date(eventEndTime);
 
-      // Add one minute to movingMarker to keep it from getting stuck in the same event:
+      // Add one minute to movingMarker to keep it
+      // from getting stuck in the same event:
       movingMarker.setMinutes(movingMarker.getMinutes() + 1);
       iterationCount++;
 
