@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import Calendar from "./components/Calendar";
 import { useDataContext } from "@/context/DataContext";
-import { SimpleEvent } from "@/utils/calendar-generation/calendarGeneration";
+import { SimpleEvent } from "@/types/calendarTypes";
 
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 
@@ -16,7 +16,7 @@ const CalendarPage = () => {
   >([]);
 
   useEffect(() => {
-    if (currentTemplate && currentTemplate.length > 0 && taskArray) {
+    if (currentTemplate && taskArray) {
       const newCalendar = generateCalendar(
         weekStartDay,
         currentTemplate,

@@ -1,11 +1,15 @@
-import { WeekDayIntegers } from "@/types/calendarTypes";
+import {
+  WeekDayIntegers,
+  WeekDayType,
+  RRuleWeekDayType,
+} from "@/types/calendarTypes";
 
-export function getWeekdayFromDate(date: Date | null) {
+export function getWeekdayFromDate(date: Date | null): WeekDayType | undefined {
   if (!date) {
     console.log("getWeekDayName date is null.");
     return;
   }
-  const weekdays = [
+  const weekdays: WeekDayType[] = [
     "sunday",
     "monday",
     "tuesday",
@@ -14,6 +18,7 @@ export function getWeekdayFromDate(date: Date | null) {
     "friday",
     "saturday",
   ];
+
   return weekdays[date.getDay()];
 }
 
@@ -63,5 +68,24 @@ export function getWeekFirstDate(
   const daysDifference = (todaysWeekday - weekStartDay + 7) % 7;
 
   // Use shiftDate to get the date of the first day of the week
-  return shiftDate(todaysDate, -daysDifference);
+  const shiftedDate = new Date(shiftDate(todaysDate, -daysDifference));
+
+  // Set the time to 00:00:00.000 and return the updated Date object
+  shiftedDate.setHours(0, 0, 0, 0);
+
+  return shiftedDate;
+}
+
+export function getRRuleDayTypeFromIndex(day: number): RRuleWeekDayType {
+  const rruleWeekdayArray: RRuleWeekDayType[] = [
+    "SU", // Sunday
+    "MO", // Monday
+    "TU", // Tuesday
+    "WE", // Wednesday
+    "TH", // Thursday
+    "FR", // Friday
+    "SA", // Saturday
+  ];
+
+  return rruleWeekdayArray[day];
 }

@@ -5,27 +5,16 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import {
   addDateItemsToArray,
   sortPlannersByDeadline,
-  populateWeekWithTemplate,
-  getDayDifference,
   checkCurrentDateInEvents,
-  hasDateInArray,
   getMinuteDifference,
 } from "./calendarGenerationHelpers";
+import { addWeekTemplateToCalendar } from "./weekTemplateGeneration";
+import { SimpleEvent } from "@/types/calendarTypes";
 
 import { Planner } from "@/lib/plannerClass";
 
 import cuid from "cuid";
 import { getSortedTreeBottomLayer } from "../goalPageHandlers";
-
-// Define the SimpleEvent interface
-export interface SimpleEvent {
-  id: string;
-  title: string;
-  start: string; // ISO 8601 string format for FullCalendar
-  end: string; // ISO 8601 string format for FullCalendar
-  backgroundColor?: string;
-  borderColor?: string;
-}
 
 export function generateCalendar(
   weekStartDay: WeekDayIntegers,
@@ -34,20 +23,28 @@ export function generateCalendar(
 ): SimpleEvent[] {
   let eventArray: SimpleEvent[] = [];
 
-  // Add date items to the task array:
-  let newArray = addDateItemsToArray(taskArray, eventArray);
+  let currentDate = new Date();
 
-  console.log([...eventArray]);
+  // Add date items to the event array:
+  eventArray = addDateItemsToArray(taskArray, eventArray);
 
-  if (newArray && newArray.length !== 0) {
-    eventArray = newArray;
+  // Add template items to the event array
+  if (template.length > 0) {
+    eventArray = addWeekTemplateToCalendar(
+      weekStartDay,
+      currentDate,
+      template,
+      eventArray
+    );
   }
 
-  // Add tasks and goals to calendar:
-
-  newArray = addEventsToCalendar(weekStartDay, template, taskArray, eventArray);
-
-  eventArray = newArray;
+  // Add tasks and goals to the event array:
+  eventArray = addEventsToCalendar(
+    weekStartDay,
+    template,
+    taskArray,
+    eventArray
+  );
 
   return eventArray;
 }
@@ -96,7 +93,6 @@ function addEventsToCalendar(
   // Find the largest gap in the template
   // to make sure that a given task fits at all
   // within the week template.
-
   const largestTemplateGap = findLargestGap(template);
 
   goalsAndTasks.forEach((item) => {
@@ -130,15 +126,15 @@ function addEventsToCalendar(
 
 function addGoalToCalendar(
   taskArray: Planner[],
-  item: Planner,
-  largestTemplateGap: number,
+  rootItem: Planner,
+  largestTemplateGap: number | undefined,
   weekStartDay: WeekDayIntegers,
   todaysDate: Date,
   eventArray: SimpleEvent[],
   templatedWeeks: Date[],
   template: EventTemplate[]
 ) {
-  const goalBottomLayer = getSortedTreeBottomLayer(taskArray, item.id);
+  const goalBottomLayer = getSortedTreeBottomLayer(taskArray, rootItem.id);
 
   let startTime: Date | undefined = undefined;
 
@@ -158,7 +154,7 @@ function addGoalToCalendar(
 
 function addTaskToCalendar(
   item: Planner,
-  largestTemplateGap: number,
+  largestTemplateGap: number | undefined,
   weekStartDay: WeekDayIntegers,
   todaysDate: Date,
   eventArray: SimpleEvent[],
@@ -167,11 +163,12 @@ function addTaskToCalendar(
   startTime?: Date
 ) {
   if (!item.duration) {
-    console.log(`Task ${item.title} duration unfined.`);
+    console.log(`Task ${item.title} duration undefined.`);
     return;
   }
+
   // Check that the item fits within the week template:
-  if (item.duration > largestTemplateGap) {
+  if (largestTemplateGap && item.duration > largestTemplateGap) {
     console.log(`Task ${item.title} is too large for the week template!`);
     return;
   }

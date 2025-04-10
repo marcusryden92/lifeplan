@@ -1,9 +1,9 @@
 import { EventApi } from "@fullcalendar/core";
 import { getWeekdayFromDate } from "@/utils/calendarUtils";
-import { SimpleEvent } from "@/utils/calendar-generation/calendarGeneration";
+import { SimpleEvent } from "@/types/calendarTypes";
 import { shiftDate } from "@/utils/calendarUtils";
 import { setTimeOnDate } from "@/utils/calendarUtils";
-import { WeekDayIntegers } from "@/types/calendarTypes";
+import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 
@@ -12,7 +12,7 @@ export interface EventTemplate {
   title: string;
   id: string;
   start: {
-    day: string | undefined; // Weekday name
+    day: WeekDayType | undefined; // Weekday name
     time: string | undefined; // Time in "HH:mm" format
   };
   duration: number; // Duration in minutes
@@ -171,7 +171,13 @@ function convertToMinutesFromWeekStart(
 }
 
 // Function to find the largest gap between events
-export function findLargestGap(events: EventTemplate[]): number {
+export function findLargestGap(events: EventTemplate[]): number | undefined {
+  if (!events || events.length === 0) return undefined;
+
+  const minutesInWeek = 7 * 24 * 60; // Total minutes in a week
+
+  if (events.length === 1) return minutesInWeek - events[0].duration;
+
   // Convert each event's start time to minutes from the week start and calculate the end time
   const eventTimes = events
     .map((event) => ({
@@ -198,7 +204,6 @@ export function findLargestGap(events: EventTemplate[]): number {
   }
 
   // Calculate the gap after the last event until the end of the week (24:00 on Sunday)
-  const minutesInWeek = 7 * 24 * 60; // Total minutes in a week
   const lastEventEnd = eventTimes[eventTimes.length - 1].end!;
   const gapAfterLastEvent = minutesInWeek - lastEventEnd;
   if (gapAfterLastEvent > largestGap) {
