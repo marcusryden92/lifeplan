@@ -11,9 +11,10 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.4.2",
-    "@fullcalendar/core": "^6.1.15",
+    "@fullcalendar/core": "^6.1.17",
     "@fullcalendar/daygrid": "^6.1.15",
     "@fullcalendar/interaction": "^6.1.15",
+    "@fullcalendar/luxon": "^6.1.17",
     "@fullcalendar/react": "^6.1.15",
     "@fullcalendar/rrule": "^6.1.15",
     "@fullcalendar/timegrid": "^6.1.15",
@@ -49,6 +50,7 @@
     "react-spinners": "^0.14.1",
     "react-time-picker": "^7.0.0",
     "resend": "^4.0.0",
+    "rrule": "^2.8.1",
     "shadcn-ui": "^0.8.0",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
@@ -58,6 +60,7 @@
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/jest": "^29.5.12",
+    "@types/luxon": "^3.6.2",
     "@types/node": "^20.16.1",
     "@types/react": "^18",
     "@types/react-dom": "^18",

@@ -12,23 +12,26 @@ importers:
         specifier: ^2.4.2
         version: 2.4.2(@prisma/client@5.18.0(prisma@5.18.0))
       '@fullcalendar/core':
-        specifier: ^6.1.15
-        version: 6.1.15
+        specifier: ^6.1.17
+        version: 6.1.17
       '@fullcalendar/daygrid':
         specifier: ^6.1.15
-        version: 6.1.15(@fullcalendar/core@6.1.15)
+        version: 6.1.15(@fullcalendar/core@6.1.17)
       '@fullcalendar/interaction':
         specifier: ^6.1.15
-        version: 6.1.15(@fullcalendar/core@6.1.15)
+        version: 6.1.15(@fullcalendar/core@6.1.17)
+      '@fullcalendar/luxon':
+        specifier: ^6.1.17
+        version: 6.1.17(@fullcalendar/core@6.1.17)(luxon@2.5.2)
       '@fullcalendar/react':
         specifier: ^6.1.15
-        version: 6.1.15(@fullcalendar/core@6.1.15)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 6.1.15(@fullcalendar/core@6.1.17)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@fullcalendar/rrule':
         specifier: ^6.1.15
-        version: 6.1.15(@fullcalendar/core@6.1.15)(rrule@2.8.1)
+        version: 6.1.15(@fullcalendar/core@6.1.17)(rrule@2.8.1)
       '@fullcalendar/timegrid':
         specifier: ^6.1.15
-        version: 6.1.15(@fullcalendar/core@6.1.15)
+        version: 6.1.15(@fullcalendar/core@6.1.17)
       '@heroicons/react':
         specifier: ^2.1.5
         version: 2.1.5(react@18.3.1)
@@ -125,6 +128,9 @@ importers:
       resend:
         specifier: ^4.0.0
         version: 4.0.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      rrule:
+        specifier: ^2.8.1
+        version: 2.8.1
       shadcn-ui:
         specifier: ^0.8.0
         version: 0.8.0(typescript@5.5.4)
@@ -147,6 +153,9 @@ importers:
       '@types/jest':
         specifier: ^29.5.12
         version: 29.5.12
+      '@types/luxon':
+        specifier: ^3.6.2
+        version: 3.6.2
       '@types/node':
         specifier: ^20.16.1
         version: 20.16.1
@@ -365,8 +374,8 @@ packages:
   '@floating-ui/utils@0.2.7':
     resolution: {integrity: sha512-X8R8Oj771YRl/w+c1HqAC1szL8zWQRwFvgDwT129k9ACdBoud/+/rX9V0qiMl6LWUdP9voC2nDVZYPMQQsb6eA==}
 
-  '@fullcalendar/core@6.1.15':
-    resolution: {integrity: sha512-BuX7o6ALpLb84cMw1FCB9/cSgF4JbVO894cjJZ6kP74jzbUZNjtwffwRdA+Id8rrLjT30d/7TrkW90k4zbXB5Q==}
+  '@fullcalendar/core@6.1.17':
+    resolution: {integrity: sha512-0W7lnIrv18ruJ5zeWBeNZXO8qCWlzxDdp9COFEsZnyNjiEhUVnrW/dPbjRKYpL0edGG0/Lhs0ghp1z/5ekt8ZA==}
 
   '@fullcalendar/daygrid@6.1.15':
     resolution: {integrity: sha512-j8tL0HhfiVsdtOCLfzK2J0RtSkiad3BYYemwQKq512cx6btz6ZZ2RNc/hVnIxluuWFyvx5sXZwoeTJsFSFTEFA==}
@@ -377,6 +386,12 @@ packages:
     resolution: {integrity: sha512-DOTSkofizM7QItjgu7W68TvKKvN9PSEEvDJceyMbQDvlXHa7pm/WAVtAc6xSDZ9xmB1QramYoWGLHkCYbTW1rQ==}
     peerDependencies:
       '@fullcalendar/core': ~6.1.15
+
+  '@fullcalendar/luxon@6.1.17':
+    resolution: {integrity: sha512-sbQ+HBC6Jbcta0kSzbrY8+KMjich9N+hITcviEFgSVBq5PAAqHXsAfW70Dvt/zxOP/5kvEHwwELEFsWTO/mrTQ==}
+    peerDependencies:
+      '@fullcalendar/core': ~6.1.17
+      luxon: ^1.12.1
 
   '@fullcalendar/react@6.1.15':
     resolution: {integrity: sha512-L0b9hybS2J4e7lq6G2CD4nqriyLEqOH1tE8iI6JQjAMTVh5JicOo5Mqw+fhU5bJ7hLfMw2K3fksxX3Ul1ssw5w==}
@@ -976,6 +991,9 @@ packages:
 
   '@types/json5@0.0.29':
     resolution: {integrity: sha512-dRLjCWHYg4oaA77cxO64oO+7JwCwnIzkZPdrrC71jQmQtlhM556pwKo5bUzqvZndkVbeFLIIi+9TC40JNF5hNQ==}
+
+  '@types/luxon@3.6.2':
+    resolution: {integrity: sha512-R/BdP7OxEMc44l2Ex5lSXHoIXTB2JLNa3y2QISIbr58U/YcsffyQrYW//hZSdrfxrjRZj3GcUoxMPGdO8gSYuw==}
 
   '@types/node@20.16.1':
     resolution: {integrity: sha512-zJDo7wEadFtSyNz5QITDfRcrhqDvQI1xQNQ0VoizPjM/dVAODqqIUWbJPkvsxmTI0MYRGRikcdjMPhOssnPejQ==}
@@ -2139,6 +2157,10 @@ packages:
     resolution: {integrity: sha512-uq6yCB+IzVfgIPMK8ibkecXSWTTSOMs9UjUgZigfrDCVqgdwkpIgYg1fSYnf0XXF2AoSyCJZhoZXQwzoai7VGw==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc
+
+  luxon@2.5.2:
+    resolution: {integrity: sha512-Yg7/RDp4nedqmLgyH0LwgGRvMEKVzKbUdkBYyCosbHgJ+kaOUx0qzSiSatVc3DFygnirTPYnMM2P5dg2uH1WvA==}
+    engines: {node: '>=12'}
 
   make-event-props@1.6.2:
     resolution: {integrity: sha512-iDwf7mA03WPiR8QxvcVHmVWEPfMY1RZXerDVNCRYW7dUr2ppH3J58Rwb39/WG39yTZdRSxr3x+2v22tvI0VEvA==}
@@ -3309,33 +3331,38 @@ snapshots:
 
   '@floating-ui/utils@0.2.7': {}
 
-  '@fullcalendar/core@6.1.15':
+  '@fullcalendar/core@6.1.17':
     dependencies:
       preact: 10.12.1
 
-  '@fullcalendar/daygrid@6.1.15(@fullcalendar/core@6.1.15)':
+  '@fullcalendar/daygrid@6.1.15(@fullcalendar/core@6.1.17)':
     dependencies:
-      '@fullcalendar/core': 6.1.15
+      '@fullcalendar/core': 6.1.17
 
-  '@fullcalendar/interaction@6.1.15(@fullcalendar/core@6.1.15)':
+  '@fullcalendar/interaction@6.1.15(@fullcalendar/core@6.1.17)':
     dependencies:
-      '@fullcalendar/core': 6.1.15
+      '@fullcalendar/core': 6.1.17
 
-  '@fullcalendar/react@6.1.15(@fullcalendar/core@6.1.15)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@fullcalendar/luxon@6.1.17(@fullcalendar/core@6.1.17)(luxon@2.5.2)':
     dependencies:
-      '@fullcalendar/core': 6.1.15
+      '@fullcalendar/core': 6.1.17
+      luxon: 2.5.2
+
+  '@fullcalendar/react@6.1.15(@fullcalendar/core@6.1.17)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@fullcalendar/core': 6.1.17
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  '@fullcalendar/rrule@6.1.15(@fullcalendar/core@6.1.15)(rrule@2.8.1)':
+  '@fullcalendar/rrule@6.1.15(@fullcalendar/core@6.1.17)(rrule@2.8.1)':
     dependencies:
-      '@fullcalendar/core': 6.1.15
+      '@fullcalendar/core': 6.1.17
       rrule: 2.8.1
 
-  '@fullcalendar/timegrid@6.1.15(@fullcalendar/core@6.1.15)':
+  '@fullcalendar/timegrid@6.1.15(@fullcalendar/core@6.1.17)':
     dependencies:
-      '@fullcalendar/core': 6.1.15
-      '@fullcalendar/daygrid': 6.1.15(@fullcalendar/core@6.1.15)
+      '@fullcalendar/core': 6.1.17
+      '@fullcalendar/daygrid': 6.1.15(@fullcalendar/core@6.1.17)
 
   '@heroicons/react@2.1.5(react@18.3.1)':
     dependencies:
@@ -3906,6 +3933,8 @@ snapshots:
       pretty-format: 29.7.0
 
   '@types/json5@0.0.29': {}
+
+  '@types/luxon@3.6.2': {}
 
   '@types/node@20.16.1':
     dependencies:
@@ -5277,6 +5306,8 @@ snapshots:
   lucide-react@0.438.0(react@18.3.1):
     dependencies:
       react: 18.3.1
+
+  luxon@2.5.2: {}
 
   make-event-props@1.6.2: {}
 

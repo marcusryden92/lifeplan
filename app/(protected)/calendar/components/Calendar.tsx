@@ -6,9 +6,12 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 
+import RRulePlugin from "@fullcalendar/rrule";
+import luxonPlugin from "@fullcalendar/luxon";
+
 import EventContent from "@/components/events/EventContent";
 
-import { SimpleEvent } from "@/utils/calendar-generation/calendarGeneration";
+import { SimpleEvent } from "@/types/calendarTypes";
 import {
   handleSelect,
   handleEventResize,
@@ -34,9 +37,18 @@ export default function Calendar({ initialEvents }: CalendarProps) {
     }
   }, [initialEvents]);
 
+  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
   return (
     <FullCalendar
-      plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+      plugins={[
+        dayGridPlugin,
+        timeGridPlugin,
+        interactionPlugin,
+        RRulePlugin,
+        luxonPlugin,
+      ]}
+      timeZone={"local"}
       events={events}
       initialView="timeGridWeek"
       allDaySlot={false}
