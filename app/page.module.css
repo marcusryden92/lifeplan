@@ -1,0 +1,16 @@
+.main {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background-image: linear-gradient(
+    to top right,
+    #ff7f50,
+    #1e90ff
+  ); /* Gradient from coral to dodgerblue */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}

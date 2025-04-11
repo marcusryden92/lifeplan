@@ -1,15 +1,14 @@
 import { LoginButton } from "@/components/auth/LoginButton";
 import { Button } from "@/components/ui/Button";
 
+import styles from "./page.module.css";
+
 export default function Home() {
   return (
-    <main
-      className="flex h-[100vh] w-[100vw] flex-col items-center justify-center bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('/images/california.jpg')" }}
-    >
+    <main className={styles.main}>
       <div className="space-y-6 text-center">
         <h1
-          className={`font-audiowide flex text-9xl font-semibold text-white drop-shadow-md`}
+          className={`font-audiowide flex text-9xl text-white drop-shadow-md`}
         >
           LIFEPLAN
         </h1>
