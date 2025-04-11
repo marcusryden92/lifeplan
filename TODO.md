@@ -1,10 +1,10 @@
 # CALENDAR GENERATION FUNCTIONALITY
 
-- Have template items be generated 'on demand'
-
 - Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).
 
 - Completion of events so that they don't keep rendering when they are done.
+
+- Add exceptions to template
 - Add category function, so that a segment of time can be demarcated and relevant events only render within the confines of that time slot.
 
 - Add pop-up window that allows users to directly modify objects in the calendar.
