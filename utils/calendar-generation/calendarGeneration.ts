@@ -202,14 +202,6 @@ function addTaskToCalendar(
   let iterationCount = 0;
 
   while (true) {
-    if (
-      movingMarker.getHours() === 11 &&
-      movingMarker.getMinutes() === 59 &&
-      movingMarker.getDay() === 1
-    ) {
-      debugger;
-    }
-
     // Break the loop if it has run 500 times
     if (iterationCount > 1000) {
       console.error(

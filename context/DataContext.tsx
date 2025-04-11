@@ -63,7 +63,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
         console.log("");
       }); 
       console.log("New Array:");*/
-      console.log(taskArray);
+      // console.log(taskArray);
     }
 
     if (logEvent > 0) logTaskArray();
