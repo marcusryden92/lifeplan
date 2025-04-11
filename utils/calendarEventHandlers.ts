@@ -1,7 +1,7 @@
 // calendarEventHandlers.ts
 
 import FullCalendar from "@fullcalendar/react";
-import { SimpleEvent } from "./calendar-generation/calendarGeneration";
+import { SimpleEvent } from "@/types/calendarTypes";
 
 export const handleSelect = (
   calendarRef: React.RefObject<FullCalendar>,

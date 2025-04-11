@@ -5,7 +5,7 @@ import {
   PencilIcon,
 } from "@heroicons/react/24/outline";
 
-import { SimpleEvent } from "@/utils/calendar-generation/calendarGeneration";
+import { SimpleEvent } from "@/types/calendarTypes";
 
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date

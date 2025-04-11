@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useDataContext } from "@/context/DataContext";
-import { TaskItem } from "./TaskItem";
+import TaskItem from "./TaskItem";
 import TaskDivider from "@/components/draggable/TaskDivider";
 import { TaskListProps } from "@/lib/taskItem";
 import { getTaskById } from "@/utils/taskArrayUtils";
@@ -89,5 +89,7 @@ const TaskList: React.FC<TaskListProps> = React.memo(
     );
   }
 );
+
+TaskList.displayName = "TaskList";
 
 export default TaskList;

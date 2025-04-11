@@ -18,7 +18,7 @@ import { IoIosArrowForward, IoIosArrowDown } from "react-icons/io";
 import { getSubtasksById } from "@/utils/goalPageHandlers";
 import DragDisableListWrapper from "@/components/draggable/DragDisableListWrapper";
 
-export const TaskItem: React.FC<TaskItemProps> = React.memo(
+const TaskItem: React.FC<TaskItemProps> = React.memo(
   ({ taskArray, task, focusedTask, setFocusedTask }) => {
     const [itemIsFocused, setItemIsFocused] = useState<boolean>(false);
     const [subtasksMinimized, setSubtasksMinimized] = useState<boolean>(false);
@@ -88,3 +88,7 @@ export const TaskItem: React.FC<TaskItemProps> = React.memo(
     );
   }
 );
+
+TaskItem.displayName = "TaskItem";
+
+export default TaskItem;

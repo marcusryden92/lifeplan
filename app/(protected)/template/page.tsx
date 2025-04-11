@@ -6,7 +6,7 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 
 import TemplateBuilder from "./_components/TemplateBuilder";
 import { useDataContext } from "@/context/DataContext";
-import { SimpleEvent } from "@/utils/calendar-generation/calendarGeneration";
+import { SimpleEvent } from "@/types/calendarTypes";
 
 export default function TasksPage() {
   const [templateEvents, setTemplateEvents] = useState<SimpleEvent[]>([]); // State to manage events
