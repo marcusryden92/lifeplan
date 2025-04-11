@@ -1,5 +1,6 @@
 import { SimpleEvent } from "@/types/calendarTypes";
 import { Planner } from "@/lib/plannerClass";
+import { EventTemplate } from "../templateBuilderUtils";
 
 export function addDateItemsToArray(
   taskArray: Planner[],
@@ -68,9 +69,18 @@ export function sortPlannersByDeadline(planners: Planner[]): Planner[] {
 // Function to check if the current date is within any events and return the end time as a Date
 export function checkCurrentDateInEvents(
   events: SimpleEvent[],
+  weekTemplate: SimpleEvent[],
   currentDate: Date
 ): Date | null {
   const currentTime = currentDate.getTime(); // Get current time in milliseconds
+
+  for (const template of weekTemplate) {
+    const endTime = new Date();
+    endTime.setTime(Number(time));
+
+    if (currentTime) {
+    }
+  }
 
   for (const event of events) {
     const eventStartTime = new Date(event.start).getTime();

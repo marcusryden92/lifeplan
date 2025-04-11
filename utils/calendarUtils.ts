@@ -4,11 +4,7 @@ import {
   RRuleWeekDayType,
 } from "@/types/calendarTypes";
 
-export function getWeekdayFromDate(date: Date | null): WeekDayType | undefined {
-  if (!date) {
-    console.log("getWeekDayName date is null.");
-    return;
-  }
+export function getWeekdayFromDate(date: Date): WeekDayType {
   const weekdays: WeekDayType[] = [
     "sunday",
     "monday",

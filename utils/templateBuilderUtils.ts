@@ -12,18 +12,13 @@ export interface EventTemplate {
   title: string;
   id: string;
   start: {
-    day: WeekDayType | undefined; // Weekday name
-    time: string | undefined; // Time in "HH:mm" format
+    day: WeekDayType; // Weekday name
+    time: string; // Time in "HH:mm" format
   };
   duration: number; // Duration in minutes
 }
 
-function getTimeFromDate(date: Date | null): string | undefined {
-  if (!date) {
-    console.log("getTimeFromDate date is null.");
-    return;
-  }
-
+function getTimeFromDate(date: Date): string {
   const hours = date.getHours().toString().padStart(2, "0");
   const minutes = date.getMinutes().toString().padStart(2, "0");
   return `${hours}:${minutes}`;

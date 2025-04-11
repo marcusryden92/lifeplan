@@ -38,10 +38,19 @@ export function generateCalendar(
     );
   }
 
+  // Find the largest gap in the template
+  // to make sure that a given task fits at all
+  // within the week template.
+  const largestTemplateGap = findLargestGap(template);
+
+  // Get the calculated week template for later
+  const weekTemplate = eventArray.length < 0 ? eventArray : [];
+
   // Add tasks and goals to the event array:
   eventArray = addEventsToCalendar(
     weekStartDay,
-    template,
+    weekTemplate,
+    largestTemplateGap,
     taskArray,
     eventArray
   );
@@ -51,14 +60,14 @@ export function generateCalendar(
 
 function addEventsToCalendar(
   weekStartDay: WeekDayIntegers,
-  template: EventTemplate[],
+  weekTemplate: SimpleEvent[],
+  largestTemplateGap: number | undefined,
   taskArray: Planner[],
   eventArray: SimpleEvent[]
 ): SimpleEvent[] {
   const todaysDate = new Date();
 
   // First get all the goals and task events from taskArray:
-
   let goalsAndTasks: Planner[] = [];
 
   taskArray.forEach((task) => {
@@ -74,26 +83,8 @@ function addEventsToCalendar(
 
   // Then sort the array by due dates
   // (items with no due date end up last):
-
   const newArray = sortPlannersByDeadline(goalsAndTasks);
   goalsAndTasks = newArray;
-
-  // Create array to hold the first date of all
-  // the weeks to which a template has been added
-  // (so multiple instances of the template aren't
-  // added to the same week):
-
-  let templatedWeeks: Date[] = [];
-
-  // Initialize the first week:
-
-  const weekFirstDate = getWeekFirstDate(weekStartDay, todaysDate);
-  templatedWeeks.push(new Date(weekFirstDate));
-
-  // Find the largest gap in the template
-  // to make sure that a given task fits at all
-  // within the week template.
-  const largestTemplateGap = findLargestGap(template);
 
   goalsAndTasks.forEach((item) => {
     // If item is a task:
@@ -104,10 +95,11 @@ function addEventsToCalendar(
         weekStartDay,
         todaysDate,
         eventArray,
-        templatedWeeks,
-        template
+        weekTemplate
       );
-    } else if (item.type === "goal") {
+    }
+    // If Item is a goal:
+    else if (item.type === "goal") {
       addGoalToCalendar(
         taskArray,
         item,
@@ -115,8 +107,7 @@ function addEventsToCalendar(
         weekStartDay,
         todaysDate,
         eventArray,
-        templatedWeeks,
-        template
+        weekTemplate
       );
     }
   });
@@ -131,8 +122,7 @@ function addGoalToCalendar(
   weekStartDay: WeekDayIntegers,
   todaysDate: Date,
   eventArray: SimpleEvent[],
-  templatedWeeks: Date[],
-  template: EventTemplate[]
+  weekTemplate: SimpleEvent[]
 ) {
   const goalBottomLayer = getSortedTreeBottomLayer(taskArray, rootItem.id);
 
@@ -145,8 +135,7 @@ function addGoalToCalendar(
       weekStartDay,
       todaysDate,
       eventArray,
-      templatedWeeks,
-      template,
+      weekTemplate,
       startTime
     );
   });
@@ -158,8 +147,7 @@ function addTaskToCalendar(
   weekStartDay: WeekDayIntegers,
   todaysDate: Date,
   eventArray: SimpleEvent[],
-  templatedWeeks: Date[],
-  template: EventTemplate[],
+  weekTemplate: SimpleEvent[],
   startTime?: Date
 ) {
   if (!item.duration) {
@@ -203,7 +191,11 @@ function addTaskToCalendar(
     if (eventArray) {
       // Let's check if the movingMarker is inside an event,
       // and if so, get the end time of that event:
-      eventEndTime = checkCurrentDateInEvents(eventArray, movingMarker);
+      eventEndTime = checkCurrentDateInEvents(
+        eventArray,
+        weekTemplate,
+        movingMarker
+      );
     }
 
     // If the movingMarker is inside an event,
