@@ -66,12 +66,10 @@ export default function DragBox() {
       mousePositionRef.current = { x: e.clientX, y: e.clientY };
     }
 
-    if (displayDragBox) {
-      // Start the animation loop
-      animationFrameId.current = requestAnimationFrame(updateElementPosition);
-      // Just track mouse position on move event
-      document.addEventListener("mousemove", handleMouseMove);
-    }
+    // Start the animation loop
+    animationFrameId.current = requestAnimationFrame(updateElementPosition);
+    // Just track mouse position on move event
+    document.addEventListener("mousemove", handleMouseMove);
 
     return () => {
       if (animationFrameId.current !== null) {
@@ -79,7 +77,7 @@ export default function DragBox() {
       }
       document.removeEventListener("mousemove", handleMouseMove);
     };
-  }, [displayDragBox]);
+  }, []);
 
   return (
     <div
