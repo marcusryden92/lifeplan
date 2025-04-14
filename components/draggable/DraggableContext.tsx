@@ -23,10 +23,7 @@ interface DraggableContextType {
   setCurrentlyHoveredItem: React.Dispatch<SetStateAction<string | null>>;
   currentlyClickedItem: ClickedItem | null;
   setCurrentlyClickedItem: React.Dispatch<SetStateAction<ClickedItem | null>>;
-  mousePosition: {
-    clientX: number;
-    clientY: number;
-  };
+
   displayDragBox: boolean;
   setDisplayDragBox: React.Dispatch<SetStateAction<boolean>>;
 }
@@ -45,41 +42,6 @@ export const DraggableContextProvider = ({
   const [currentlyClickedItem, setCurrentlyClickedItem] =
     useState<ClickedItem>(null);
   const [displayDragBox, setDisplayDragBox] = useState<boolean>(false);
-
-  const [mousePosition, setMousePosition] = useState<{
-    clientX: number;
-    clientY: number;
-  }>({
-    clientX: 0,
-    clientY: 0,
-  });
-
-  // Track mouse position
-  useEffect(() => {
-    let animationFrameId: number;
-    let lastKnownMousePosition = { clientX: 0, clientY: 0 };
-
-    const updateMousePosition = (e: MouseEvent) => {
-      lastKnownMousePosition = { clientX: e.clientX, clientY: e.clientY };
-    };
-
-    const trackMouse = () => {
-      setMousePosition(lastKnownMousePosition);
-      animationFrameId = requestAnimationFrame(trackMouse);
-    };
-
-    // Listen to mouse move events
-    document.addEventListener("mousemove", updateMousePosition);
-
-    // Start tracking on mount
-    animationFrameId = requestAnimationFrame(trackMouse);
-
-    return () => {
-      // Clean up
-      document.removeEventListener("mousemove", updateMousePosition);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
 
   // Update `currentlyClickedItem` when mouse is released
   useEffect(() => {
@@ -109,7 +71,6 @@ export const DraggableContextProvider = ({
     setCurrentlyHoveredItem,
     currentlyClickedItem,
     setCurrentlyClickedItem,
-    mousePosition,
     displayDragBox,
     setDisplayDragBox,
   };

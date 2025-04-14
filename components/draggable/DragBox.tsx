@@ -2,14 +2,12 @@ import React, { useRef, useEffect } from "react";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 
 export default function DragBox() {
-  const {
-    currentlyClickedItem,
-    mousePosition,
-    displayDragBox,
-    setDisplayDragBox,
-  } = useDraggableContext();
+  const { currentlyClickedItem, displayDragBox, setDisplayDragBox } =
+    useDraggableContext();
   const isMouseDown = useRef(false);
   const dragBoxRef = useRef<HTMLDivElement | null>(null);
+  const mousePositionRef = useRef({ x: 0, y: 0 });
+  const animationFrameId = useRef<number | null>(null);
 
   // Track mouse down/up states
   useEffect(() => {
@@ -30,20 +28,6 @@ export default function DragBox() {
     };
   }, []);
 
-  // Adjust position after rendering the drag box
-  const getAdjustedPosition = () => {
-    if (!dragBoxRef.current || !mousePosition) return { top: 0, left: 0 };
-
-    const boxWidth = dragBoxRef.current.offsetWidth;
-    const boxHeight = dragBoxRef.current.offsetHeight;
-
-    // Adjust the position to center the box over the cursor
-    return {
-      top: mousePosition.clientY - boxHeight * 0.7,
-      left: mousePosition.clientX - boxWidth / 2,
-    };
-  };
-
   // Manage drag box display
   useEffect(() => {
     if (currentlyClickedItem) {
@@ -57,22 +41,58 @@ export default function DragBox() {
     } else {
       setDisplayDragBox(false);
     }
-  }, [currentlyClickedItem]);
+  }, [currentlyClickedItem, setDisplayDragBox]);
 
-  // Only render if we have an item and should display
-  if (!displayDragBox || !currentlyClickedItem) return null;
+  // Animation loop for updating position
+  useEffect(() => {
+    function updateElementPosition() {
+      if (dragBoxRef.current) {
+        const boxWidth = dragBoxRef.current.offsetWidth;
+        const boxHeight = dragBoxRef.current.offsetHeight;
+
+        dragBoxRef.current.style.top = `${
+          mousePositionRef.current.y - boxHeight * 0.7
+        }px`;
+        dragBoxRef.current.style.left = `${
+          mousePositionRef.current.x - boxWidth / 2
+        }px`;
+      }
+
+      animationFrameId.current = requestAnimationFrame(updateElementPosition);
+    }
+
+    function handleMouseMove(e: MouseEvent) {
+      // Only track the mouse position, don't update DOM here
+      mousePositionRef.current = { x: e.clientX, y: e.clientY };
+    }
+
+    if (displayDragBox) {
+      // Start the animation loop
+      animationFrameId.current = requestAnimationFrame(updateElementPosition);
+      // Just track mouse position on move event
+      document.addEventListener("mousemove", handleMouseMove);
+    }
+
+    return () => {
+      if (animationFrameId.current !== null) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+      document.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [displayDragBox]);
 
   return (
     <div
       ref={dragBoxRef}
       style={{
         position: "fixed",
-        top: `${getAdjustedPosition().top}px`,
-        left: `${getAdjustedPosition().left}px`,
+        top: "0px", // Initial position
+        left: "0px", // Initial position
+        opacity: displayDragBox ? "100%" : "0%",
       }}
       className="px-5 py-2 bg-sky-500 rounded-lg text-white opacity-60 z-50 pointer-events-none"
     >
-      {currentlyClickedItem.taskTitle}
+      {currentlyClickedItem?.taskTitle}
     </div>
   );
 }
