@@ -43,27 +43,21 @@ export const DraggableContextProvider = ({
     useState<ClickedItem>(null);
   const [displayDragBox, setDisplayDragBox] = useState<boolean>(false);
 
-  // Update `currentlyClickedItem` when mouse is released
   useEffect(() => {
-    const handleMouseUp = () => {
-      if (currentlyClickedItem) {
-        /*Input task-list sorting functionality here*
-         *
-         *
-         *
-         *
-         *
-         */
-        setCurrentlyClickedItem(null);
-      }
-    };
+    console.log(displayDragBox);
+  }, [displayDragBox]);
 
-    document.addEventListener("mouseup", handleMouseUp);
+  useEffect(() => {
+    function resetDisplayDragBox() {
+      setDisplayDragBox(false);
+    }
+
+    document.addEventListener("mouseup", resetDisplayDragBox);
 
     return () => {
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mouseup", resetDisplayDragBox);
     };
-  }, [currentlyClickedItem]);
+  }, []);
 
   // Context value with hover and click state setters
   const value: DraggableContextType = {
@@ -78,7 +72,6 @@ export const DraggableContextProvider = ({
   return (
     <DraggableContext.Provider value={value}>
       <DragBox />
-
       {children}
     </DraggableContext.Provider>
   );

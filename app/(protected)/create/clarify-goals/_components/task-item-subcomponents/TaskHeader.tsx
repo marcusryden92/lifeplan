@@ -69,7 +69,7 @@ export const TaskHeader = ({
   return (
     <div
       ref={headerRef}
-      className={` flex justify-between items-center w-full flex-1 text-sm py-1 group ${
+      className={` flex justify-between rounded-sm items-center w-full flex-1 text-sm py-1 group ${
         displayDragBox &&
         currentlyClickedItem?.parentId === task.id &&
         "bg-gray-200 opacity-40"

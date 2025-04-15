@@ -96,7 +96,7 @@ export default function DraggableItem({
       id={`draggable-${taskId}`}
       className={
         borderClasses +
-        ` ${className} flex-1 cursor-pointer ${
+        ` ${className} rounded-sm flex-1 cursor-pointer ${
           currentlyClickedItem?.parentId !== taskId && `hover:bg-gray-50`
         }`
       }

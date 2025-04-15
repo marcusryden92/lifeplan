@@ -48,11 +48,11 @@ export function moveToMiddle({
     (t) => t.id === currentlyHoveredItem
   );
 
-  console.log("_______________");
+  /*  console.log("_______________");
   console.log(`moveToMiddle`);
   console.log("Moved: " + currentlyClickedItem?.taskTitle);
   console.log("Target: " + targetTask?.title);
-  console.log("_______________");
+  console.log("_______________"); */
 
   assert(targetTask, "Couldn't find targetTask in moveToMiddle.");
 

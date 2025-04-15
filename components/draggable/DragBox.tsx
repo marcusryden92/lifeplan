@@ -9,24 +9,9 @@ export default function DragBox() {
   const mousePositionRef = useRef({ x: 0, y: 0 });
   const animationFrameId = useRef<number | null>(null);
 
-  // Track mouse down/up states
-  useEffect(() => {
-    function setMouseDownTrue() {
-      isMouseDown.current = true;
-    }
+  const taskTitle = useRef<string>("");
 
-    function setMouseDownFalse() {
-      isMouseDown.current = false;
-    }
-
-    document.addEventListener("mousedown", setMouseDownTrue);
-    document.addEventListener("mouseup", setMouseDownFalse);
-
-    return () => {
-      document.removeEventListener("mousedown", setMouseDownTrue);
-      document.removeEventListener("mouseup", setMouseDownFalse);
-    };
-  }, []);
+  if (currentlyClickedItem) taskTitle.current = currentlyClickedItem.taskTitle;
 
   // Manage drag box display
   useEffect(() => {
@@ -41,41 +26,56 @@ export default function DragBox() {
     } else {
       setDisplayDragBox(false);
     }
-  }, [currentlyClickedItem, setDisplayDragBox]);
+  }, [currentlyClickedItem, displayDragBox]);
 
   // Animation loop for updating position
   useEffect(() => {
-    function updateElementPosition() {
+    // Mouse tracking
+    function handleMouseMove(e: MouseEvent) {
+      mousePositionRef.current = { x: e.clientX, y: e.clientY };
+    }
+
+    function setMouseDownTrue() {
+      isMouseDown.current = true;
+    }
+
+    function setMouseDownFalse() {
+      isMouseDown.current = false;
+    }
+
+    document.addEventListener("mousedown", setMouseDownTrue);
+    document.addEventListener("mouseup", setMouseDownFalse);
+    document.addEventListener("mousemove", handleMouseMove);
+
+    // Set animation frame for position and opacity
+    function animationFrame() {
       if (dragBoxRef.current) {
         const boxWidth = dragBoxRef.current.offsetWidth;
         const boxHeight = dragBoxRef.current.offsetHeight;
 
-        dragBoxRef.current.style.top = `${
-          mousePositionRef.current.y - boxHeight * 0.7
-        }px`;
-        dragBoxRef.current.style.left = `${
-          mousePositionRef.current.x - boxWidth / 2
-        }px`;
+        const top = `${mousePositionRef.current.y - boxHeight * 0.7}px`;
+        const left = `${mousePositionRef.current.x - boxWidth / 2}px`;
+
+        const style = dragBoxRef.current.style;
+
+        style.top = top;
+        style.left = left;
       }
 
-      animationFrameId.current = requestAnimationFrame(updateElementPosition);
-    }
-
-    function handleMouseMove(e: MouseEvent) {
-      // Only track the mouse position, don't update DOM here
-      mousePositionRef.current = { x: e.clientX, y: e.clientY };
+      // Request the next animation frame
+      animationFrameId.current = requestAnimationFrame(animationFrame);
     }
 
     // Start the animation loop
-    animationFrameId.current = requestAnimationFrame(updateElementPosition);
-    // Just track mouse position on move event
-    document.addEventListener("mousemove", handleMouseMove);
+    animationFrameId.current = requestAnimationFrame(animationFrame);
 
     return () => {
       if (animationFrameId.current !== null) {
         cancelAnimationFrame(animationFrameId.current);
       }
       document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mousedown", setMouseDownTrue);
+      document.removeEventListener("mouseup", setMouseDownFalse);
     };
   }, []);
 
@@ -84,13 +84,13 @@ export default function DragBox() {
       ref={dragBoxRef}
       style={{
         position: "fixed",
+        opacity: displayDragBox ? "1" : "0",
         top: "0px", // Initial position
         left: "0px", // Initial position
-        opacity: displayDragBox ? "100%" : "0%",
       }}
-      className="px-5 py-2 bg-sky-500 rounded-lg text-white opacity-60 z-50 pointer-events-none"
+      className="px-5 py-2 bg-sky-500 rounded-lg text-white z-50 pointer-events-none"
     >
-      {currentlyClickedItem?.taskTitle}
+      {taskTitle.current}
     </div>
   );
 }
