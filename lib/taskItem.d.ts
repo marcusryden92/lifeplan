@@ -8,6 +8,7 @@ export interface TaskListProps {
 }
 
 export interface TaskListWrapperProps {
+  taskId: string;
   subtasksLength: number;
   parentId?: string;
   subtasksMinimized: boolean;

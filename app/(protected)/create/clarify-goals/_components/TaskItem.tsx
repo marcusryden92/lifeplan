@@ -71,6 +71,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(
           {/* Disables task list if parent is being dragged */}
           {/* Render subtasks if there are any */}
           <TaskListWrapper
+            taskId={task.id}
             subtasksLength={subtasks.length}
             parentId={task.parentId}
             subtasksMinimized={subtasksMinimized}

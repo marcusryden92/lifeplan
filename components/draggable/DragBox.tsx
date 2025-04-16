@@ -20,7 +20,7 @@ export default function DragBox() {
         if (isMouseDown.current) {
           setDisplayDragBox(true);
         }
-      }, 150);
+      }, 100);
 
       return () => clearTimeout(timeoutId);
     } else {
@@ -84,7 +84,7 @@ export default function DragBox() {
       ref={dragBoxRef}
       style={{
         position: "fixed",
-        opacity: displayDragBox ? "1" : "0",
+        opacity: displayDragBox ? "0.7" : "0",
         top: "0px", // Initial position
         left: "0px", // Initial position
       }}
