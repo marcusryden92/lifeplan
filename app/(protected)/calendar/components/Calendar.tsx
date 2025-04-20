@@ -37,8 +37,6 @@ export default function Calendar({ initialEvents }: CalendarProps) {
     }
   }, [initialEvents]);
 
-  const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
   return (
     <FullCalendar
       plugins={[

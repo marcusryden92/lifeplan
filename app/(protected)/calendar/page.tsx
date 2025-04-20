@@ -1,35 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
 import Calendar from "./components/Calendar";
 import { useDataContext } from "@/context/DataContext";
-import { SimpleEvent } from "@/types/calendarTypes";
-
-import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
+import { Button } from "@/components/ui/Button";
 
 const CalendarPage = () => {
-  const { currentTemplate, weekStartDay, taskArray } = useDataContext();
-
-  const [currentCalendar, setCurrentCalendar] = useState<
-    SimpleEvent[] | undefined
-  >([]);
-
-  useEffect(() => {
-    if (currentTemplate && taskArray) {
-      const newCalendar = generateCalendar(
-        weekStartDay,
-        currentTemplate,
-        taskArray
-      );
-      setCurrentCalendar(newCalendar);
-    } else {
-      console.log("Trouble fetching");
-    }
-  }, [taskArray]);
+  const { currentCalendar, updateCalendar } = useDataContext();
 
   return (
-    <div className=" h-full  bg-opacity-95 lg:overflow-hidden max-h-[100vh] lg:mr-5 lg:border-r-[1px]  lg:border-[rgba(128, 128, 128, 0.3)]">
+    <div className="flex flex-col h-full w-full bg-opacity-95 lg:overflow-hidden max-h-[100vh] lg:mr-5 lg:border-r-[1px]  lg:border-[rgba(128, 128, 128, 0.3)]">
+      <Button
+        onClick={updateCalendar}
+        size="xl"
+        className=" m-5 ml-auto bg-sky-600"
+      >
+        Update
+      </Button>
       <Calendar initialEvents={currentCalendar} />
     </div>
   );

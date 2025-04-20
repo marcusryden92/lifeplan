@@ -208,7 +208,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
   },
   {
     title: "b",
@@ -217,7 +217,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "153a2e33-9448-4ff2-80bf-6268d53c978a",
   },
   {
@@ -227,7 +227,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "686ee99d-6ef1-413c-baca-ef18289272e8",
   },
   {
@@ -237,7 +237,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "ccbd65fc-eb32-4ee3-ad43-9d3abe4eb882",
   },
   {
@@ -247,7 +247,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "cd2a2066-c55c-419c-869a-a0105643231e",
   },
   {
@@ -257,7 +257,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "773ae3c8-1cc9-4e75-be5d-9bb4391dba00",
   },
   {
@@ -267,7 +267,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "cd1a0c16-26bd-4f75-93d8-e35d91656d89",
   },
   {
@@ -277,7 +277,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "a82cf595-3677-43df-9f11-348e4693f879",
   },
   {
@@ -287,7 +287,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "44c581f7-bf95-45ba-a226-fc409b2666c2",
   },
   {
@@ -297,7 +297,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "b296a10b-cf0c-433f-8944-472f670528d3",
   },
   {
@@ -307,7 +307,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "4e3a0785-f77c-4fa1-893b-9d802de497a4",
   },
   {
@@ -317,7 +317,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "32f8ac4c-8cb8-4e51-8a39-cb7027c96ed8",
   },
   {
@@ -327,7 +327,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "19cce9a6-7b3a-4d8c-954d-44207d0d50bd",
   },
   {
@@ -337,7 +337,7 @@ export const taskArraySeed: Planner[] = [
     type: "goal",
     canInfluence: true,
     isReady: false,
-    duration: 300,
+    duration: 45,
     dependency: "c486c7ed-943f-4bdc-bcb7-56a7ce769ab0",
   },
 ];
