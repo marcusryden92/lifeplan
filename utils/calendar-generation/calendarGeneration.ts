@@ -7,6 +7,7 @@ import {
   sortPlannersByDeadline,
   checkCurrentDateInEvents,
   getMinuteDifference,
+  addCompletedItemsToArray,
 } from "./calendarGenerationHelpers";
 import {
   addWeekTemplateToCalendar,
@@ -18,8 +19,8 @@ import { getDayDifference, hasDateInArray } from "./calendarGenerationHelpers";
 
 import { Planner } from "@/lib/plannerClass";
 
-import cuid from "cuid";
 import { getSortedTreeBottomLayer } from "../goalPageHandlers";
+import { taskIsCompleted } from "../taskHelpers";
 
 export function generateCalendar(
   weekStartDay: WeekDayIntegers,
@@ -32,6 +33,9 @@ export function generateCalendar(
 
   // Add date items to the event array:
   eventArray = addDateItemsToArray(taskArray, eventArray);
+
+  // Add completed items to the event array:
+  eventArray = addCompletedItemsToArray(taskArray, eventArray);
 
   // Add template items to the event array
   if (template.length > 0) {
@@ -148,10 +152,13 @@ function addGoalToCalendar(
   templatedWeeks: Date[]
 ) {
   const goalBottomLayer = getSortedTreeBottomLayer(taskArray, rootItem.id);
+  const uncompletedTasks = goalBottomLayer.filter(
+    (task) => !taskIsCompleted(task)
+  );
 
   let startTime: Date | undefined = undefined;
 
-  goalBottomLayer.forEach((item) => {
+  uncompletedTasks.forEach((item) => {
     startTime = addTaskToCalendar(
       item,
       largestTemplateGap,
@@ -257,7 +264,7 @@ function addTaskToCalendar(
       const endTime = new Date(movingMarker);
 
       const newEvent = {
-        id: cuid(),
+        id: item.id,
         title: item.title,
         start: startTime.toISOString(), // ISO 8601 string format for FullCalendar
         end: endTime.toISOString(), // ISO 8601 string format for FullCalendar

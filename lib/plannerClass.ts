@@ -11,6 +11,10 @@ export interface PlannerInterface {
   deadline?: Date;
   starts?: Date;
   dependency?: string;
+  completed?: {
+    startTime: Date | string;
+    endTime: Date | string;
+  };
 }
 
 export class Planner implements PlannerInterface {
@@ -24,6 +28,10 @@ export class Planner implements PlannerInterface {
   deadline?: Date;
   starts?: Date;
   dependency?: string;
+  completed?: {
+    startTime: string;
+    endTime: string;
+  };
 
   constructor(
     title: string,

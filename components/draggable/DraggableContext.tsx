@@ -44,10 +44,6 @@ export const DraggableContextProvider = ({
   const [displayDragBox, setDisplayDragBox] = useState<boolean>(false);
 
   useEffect(() => {
-    console.log(displayDragBox);
-  }, [displayDragBox]);
-
-  useEffect(() => {
     function resetDisplayDragBox() {
       setDisplayDragBox(false);
     }

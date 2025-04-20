@@ -63,7 +63,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   }, [currentTemplate, weekStartDay, taskArray]);
 
   // Initialize calendar on first render if we have the necessary data
-  /*  useEffect(() => {
+  useEffect(() => {
     if (
       currentTemplate &&
       taskArray &&
@@ -71,7 +71,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     ) {
       updateCalendar();
     }
-  }, [currentTemplate, taskArray, currentCalendar, updateCalendar]); */
+  }, [currentTemplate, taskArray, currentCalendar, updateCalendar]);
 
   const value: DataContextType = {
     taskArray,

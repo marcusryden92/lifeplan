@@ -6,6 +6,8 @@ import {
 } from "@heroicons/react/24/outline";
 
 import { SimpleEvent } from "@/types/calendarTypes";
+import { useDataContext } from "@/context/DataContext";
+import { taskIsCompleted, toggletaskIsCompleted } from "@/utils/taskHelpers";
 
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date
@@ -29,8 +31,22 @@ const EventContent: React.FC<EventContentProps> = ({
   onDelete,
   showButtons,
 }) => {
+  const { taskArray, setTaskArray, updateCalendar } = useDataContext();
+
+  const task = taskArray.find((task) => task.id === event.id);
+
+  const currentTime = new Date();
+
   const startTime = new Date(event.start);
   const endTime = new Date(event.end);
+
+  const isCompleted = task ? taskIsCompleted(task) : undefined;
+
+  const displayComplete = currentTime > startTime;
+
+  const handleClickCompleteTask = () => {
+    toggletaskIsCompleted(setTaskArray, event);
+  };
 
   return (
     <div
@@ -41,7 +57,7 @@ const EventContent: React.FC<EventContentProps> = ({
         padding: "0px",
       }}
     >
-      <span className="flex gap-2 p-1 justify-between">
+      <span className="flex gap-2 justify-between">
         <span style={{ marginBottom: "auto" }}>{event.title}</span>
         <span className="flex gap-2">
           <span>{formatTime(startTime)}</span>
@@ -65,6 +81,10 @@ const EventContent: React.FC<EventContentProps> = ({
           </button>
         </div>
       )}
+
+      <button onClick={handleClickCompleteTask}>
+        {isCompleted ? "Incomplete" : "Complete"}
+      </button>
     </div>
   );
 };

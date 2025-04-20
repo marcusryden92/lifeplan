@@ -1,6 +1,6 @@
 import { SimpleEvent } from "@/types/calendarTypes";
 import { Planner } from "@/lib/plannerClass";
-import { EventTemplate } from "../templateBuilderUtils";
+import { taskIsCompleted } from "../taskHelpers";
 
 export function addDateItemsToArray(
   taskArray: Planner[],
@@ -37,6 +37,51 @@ export function addDateItemsToArray(
         end: end.toISOString(), // Add the calculated end time here
         backgroundColor: "black",
         borderColor: "black",
+      };
+
+      newArray.push(newDate);
+    }
+  });
+
+  eventArray.push(...newArray); // Add the new dates to eventArray
+
+  return eventArray;
+}
+
+export function addCompletedItemsToArray(
+  taskArray: Planner[],
+  eventArray: SimpleEvent[]
+) {
+  let completedItems: Planner[] = [];
+  let newArray: SimpleEvent[] = [];
+
+  if (!taskArray || !eventArray) {
+    return [];
+  }
+
+  // Filter out tasks that  not completed
+  taskArray.forEach((task) => {
+    if (taskIsCompleted(task)) {
+      completedItems.push(task);
+    }
+  });
+
+  if (completedItems.length === 0) {
+    return [];
+  }
+
+  // Process each date item and calculate the end date based on duration (in minutes)
+  completedItems.forEach((item) => {
+    if (item.completed?.startTime && item.completed.endTime) {
+      // Calculate the end time by adding duration (in minutes) to the start time
+
+      const newDate: SimpleEvent = {
+        title: item.title,
+        id: JSON.stringify(new Date()),
+        start: item.completed.startTime,
+        end: item.completed.endTime, // Add the calculated end time here
+        backgroundColor: "#0ebf7e",
+        borderColor: "transparent",
       };
 
       newArray.push(newDate);
