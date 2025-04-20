@@ -253,12 +253,8 @@ function addTaskToCalendar(
       !eventEndTime &&
       getMinuteDifference(staticMarker, movingMarker) >= item.duration
     ) {
-      const startTime = new Date(
-        staticMarker.setMinutes(movingMarker.getMinutes())
-      );
-      const endTime = new Date(
-        movingMarker.setMinutes(movingMarker.getMinutes())
-      );
+      const startTime = new Date(staticMarker);
+      const endTime = new Date(movingMarker);
 
       const newEvent = {
         id: cuid(),
