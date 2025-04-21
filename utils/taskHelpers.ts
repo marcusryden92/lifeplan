@@ -2,6 +2,7 @@ import React from "react";
 import { Planner } from "@/lib/plannerClass";
 import { SimpleEvent } from "@/types/calendarTypes";
 import { getMinuteDifference } from "./calendar-generation/calendarGenerationHelpers";
+import { floorMinutes } from "./calendarUtils";
 
 export function toggletaskIsCompleted(
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
@@ -14,8 +15,6 @@ export function toggletaskIsCompleted(
 
   setTaskArray((prev) =>
     prev.map((task) => {
-      if (task.title === "a") debugger;
-
       if (task.id === event.id) {
         // If completed is defined, set to undefined
         if (taskIsCompleted(task)) {
@@ -23,20 +22,33 @@ export function toggletaskIsCompleted(
         }
 
         // If inside the event, set end-time to right now
-        if (currentlyInEvent(event)) {
+        else if (currentlyInEvent(event)) {
           const minuteDifference = getMinuteDifference(
             eventStartDate,
             currentTime
           );
 
-          const startTime = new Date(event.start).toISOString();
-
           // If the event started less than 5 minutes ago,
-          // set the end to at least 5 minutes from start.
-          const endTime =
-            minuteDifference < 5
-              ? new Date(eventStartDate.getTime() + 5 * 60 * 1000).toISOString()
+          // push the start time back to make the event at least 5 minutes long.
+          const startTime =
+            minuteDifference < 20
+              ? new Date(currentTime.getTime() - 20 * 60 * 1000).toISOString()
               : eventStartDate.toISOString();
+
+          const endTime = currentTime.toISOString();
+
+          const completed = {
+            startTime: startTime,
+            endTime: endTime,
+          };
+
+          return { ...task, completed };
+        } else if (floorMinutes(currentTime) < floorMinutes(event.start)) {
+          const startTime = new Date(
+            currentTime.getTime() - 20 * 60 * 1000
+          ).toISOString();
+
+          const endTime = currentTime.toISOString();
 
           const completed = {
             startTime: startTime,

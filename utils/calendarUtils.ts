@@ -85,3 +85,12 @@ export function getRRuleDayTypeFromIndex(day: number): RRuleWeekDayType {
 
   return rruleWeekdayArray[day];
 }
+
+export function floorMinutes(date: Date | string) {
+  let newDate;
+
+  if (typeof date === "string") newDate = new Date(date);
+  else newDate = date;
+
+  return Math.floor(newDate.getTime() / 1000);
+}

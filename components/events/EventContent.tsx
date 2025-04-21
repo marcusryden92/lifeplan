@@ -31,7 +31,7 @@ const EventContent: React.FC<EventContentProps> = ({
   onDelete,
   showButtons,
 }) => {
-  const { taskArray, setTaskArray, updateCalendar } = useDataContext();
+  const { taskArray, setTaskArray } = useDataContext();
 
   const task = taskArray.find((task) => task.id === event.id);
 
@@ -46,6 +46,7 @@ const EventContent: React.FC<EventContentProps> = ({
 
   const handleClickCompleteTask = () => {
     toggletaskIsCompleted(setTaskArray, event);
+    console.log("clicked");
   };
 
   return (
@@ -56,6 +57,7 @@ const EventContent: React.FC<EventContentProps> = ({
         height: "100%",
         padding: "0px",
       }}
+      onClick={handleClickCompleteTask}
     >
       <span className="flex gap-2 justify-between">
         <span style={{ marginBottom: "auto" }}>{event.title}</span>
@@ -82,9 +84,7 @@ const EventContent: React.FC<EventContentProps> = ({
         </div>
       )}
 
-      <button onClick={handleClickCompleteTask}>
-        {isCompleted ? "Incomplete" : "Complete"}
-      </button>
+      {isCompleted && "Completed"}
     </div>
   );
 };

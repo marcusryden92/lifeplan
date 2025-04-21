@@ -77,11 +77,11 @@ export function addCompletedItemsToArray(
 
       const newDate: SimpleEvent = {
         title: item.title,
-        id: JSON.stringify(new Date()),
+        id: item.id,
         start: item.completed.startTime,
         end: item.completed.endTime, // Add the calculated end time here
         backgroundColor: "#0ebf7e",
-        borderColor: "transparent",
+        borderColor: "#0ca66e",
       };
 
       newArray.push(newDate);
@@ -116,11 +116,11 @@ export function checkCurrentDateInEvents(
   events: SimpleEvent[],
   currentDate: Date
 ): Date | null {
-  const currentTime = currentDate.getTime(); // Get current time in milliseconds
+  const currentTime = Math.floor(currentDate.getTime() / 1000); // Get current time in milliseconds
 
   for (const event of events) {
-    const eventStartTime = new Date(event.start).getTime();
-    const eventEndTime = new Date(event.end).getTime();
+    const eventStartTime = Math.floor(new Date(event.start).getTime() / 1000);
+    const eventEndTime = Math.floor(new Date(event.end).getTime() / 1000);
 
     // Check if current time is within the event time range
     if (currentTime > eventStartTime && currentTime < eventEndTime) {
