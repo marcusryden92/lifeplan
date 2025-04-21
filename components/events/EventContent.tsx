@@ -5,6 +5,8 @@ import {
   PencilIcon,
 } from "@heroicons/react/24/outline";
 
+import { useRef } from "react";
+
 import { SimpleEvent } from "@/types/calendarTypes";
 import { useDataContext } from "@/context/DataContext";
 import { taskIsCompleted, toggletaskIsCompleted } from "@/utils/taskHelpers";
@@ -31,26 +33,36 @@ const EventContent: React.FC<EventContentProps> = ({
   onDelete,
   showButtons,
 }) => {
-  const { taskArray, setTaskArray } = useDataContext();
-
+  const { taskArray, setTaskArray, setCurrentCalendar } = useDataContext();
+  const elementRef = useRef<HTMLDivElement>(null);
   const task = taskArray.find((task) => task.id === event.id);
-
-  const currentTime = new Date();
 
   const startTime = new Date(event.start);
   const endTime = new Date(event.end);
 
   const isCompleted = task ? taskIsCompleted(task) : undefined;
 
-  const displayComplete = currentTime > startTime;
+  const green = "#0ebf7e";
+  const orange = "#f59e0b";
 
   const handleClickCompleteTask = () => {
-    toggletaskIsCompleted(setTaskArray, event);
-    console.log("clicked");
+    const color = !isCompleted ? green : orange;
+
+    // Find the DOM element for this event and change color directly
+    const el = elementRef.current?.closest(".fc-event") as HTMLElement;
+    if (el) {
+      el.style.backgroundColor = color;
+      el.style.border = `solid 2px ${color}`;
+    }
+
+    setTimeout(() => {
+      toggletaskIsCompleted(setTaskArray, event);
+    }, 500);
   };
 
   return (
     <div
+      ref={elementRef}
       style={{
         display: "flex",
         flexDirection: "column",
@@ -83,8 +95,6 @@ const EventContent: React.FC<EventContentProps> = ({
           </button>
         </div>
       )}
-
-      {isCompleted && "Completed"}
     </div>
   );
 };

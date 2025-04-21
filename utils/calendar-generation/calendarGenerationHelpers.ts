@@ -44,8 +44,6 @@ export function addDateItemsToArray(
   });
 
   eventArray.push(...newArray); // Add the new dates to eventArray
-
-  return eventArray;
 }
 
 export function addCompletedItemsToArray(
@@ -82,6 +80,7 @@ export function addCompletedItemsToArray(
         end: item.completed.endTime, // Add the calculated end time here
         backgroundColor: "#0ebf7e",
         borderColor: "#0ca66e",
+        overdueUnresolved: false,
       };
 
       newArray.push(newDate);
@@ -89,8 +88,6 @@ export function addCompletedItemsToArray(
   });
 
   eventArray.push(...newArray); // Add the new dates to eventArray
-
-  return eventArray;
 }
 
 export function sortPlannersByDeadline(planners: Planner[]): Planner[] {

@@ -46,4 +46,5 @@ export type SimpleEvent = {
   borderColor?: string;
   rrule?: RRule;
   duration?: number;
+  overdueUnresolved?: boolean;
 };

@@ -11,7 +11,11 @@ import React, {
 import { Planner } from "@/lib/plannerClass";
 import { SimpleEvent, WeekDayIntegers } from "@/types/calendarTypes";
 import { EventTemplate } from "@/utils/templateBuilderUtils";
-import { templateSeed, taskArraySeed } from "@/data/seedData";
+import {
+  templateSeed,
+  taskArraySeed,
+  previousCalendarSeed,
+} from "@/data/seedData";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 
 interface DataContextType {
@@ -26,6 +30,9 @@ interface DataContextType {
   focusedTask: string | null;
   setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
   currentCalendar: SimpleEvent[] | undefined;
+  setCurrentCalendar: React.Dispatch<
+    React.SetStateAction<SimpleEvent[] | undefined>
+  >;
   updateCalendar: () => void;
 }
 
@@ -48,30 +55,30 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   );
   const [currentCalendar, setCurrentCalendar] = useState<
     SimpleEvent[] | undefined
-  >([]);
+  >(previousCalendarSeed);
 
   // Calendar generation function
   const updateCalendar = useCallback(() => {
     if (currentTemplate && taskArray) {
-      const newCalendar = generateCalendar(
-        weekStartDay,
-        currentTemplate,
-        taskArray
-      );
-      setCurrentCalendar(newCalendar);
+      setCurrentCalendar((prevCalendar) => {
+        return generateCalendar(
+          weekStartDay,
+          currentTemplate,
+          taskArray,
+          prevCalendar || []
+        );
+      });
     }
   }, [currentTemplate, weekStartDay, taskArray]);
 
-  // Initialize calendar on first render if we have the necessary data
+  // Update calendar when taskArray changes
   useEffect(() => {
-    if (
-      currentTemplate &&
-      taskArray &&
-      (!currentCalendar || currentCalendar.length === 0)
-    ) {
-      updateCalendar();
-    }
-  }, [currentTemplate, taskArray, currentCalendar, updateCalendar]);
+    updateCalendar();
+  }, [taskArray, updateCalendar]);
+
+  useEffect(() => {
+    console.log(currentCalendar);
+  }, [currentCalendar]);
 
   const value: DataContextType = {
     taskArray,
@@ -83,6 +90,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     focusedTask,
     setFocusedTask,
     currentCalendar,
+    setCurrentCalendar,
     updateCalendar,
   };
 

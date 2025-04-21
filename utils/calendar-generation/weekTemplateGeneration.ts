@@ -26,7 +26,7 @@ export function addWeekTemplateToCalendar(
   fromDate: Date,
   template: EventTemplate[],
   eventArray: SimpleEvent[]
-): SimpleEvent[] {
+) {
   // Get the first date of the week based on the weekStartDay
   let thisWeeksFirstDate: Date | undefined = getWeekFirstDate(
     weekStartDay,
@@ -41,8 +41,6 @@ export function addWeekTemplateToCalendar(
   template.forEach((event) => {
     addTemplateEvent(event, weekStartDay, thisWeeksFirstDate, eventArray);
   });
-
-  return eventArray;
 }
 
 function addTemplateEvent(

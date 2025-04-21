@@ -44,8 +44,12 @@ export function toggletaskIsCompleted(
 
           return { ...task, completed };
         } else if (floorMinutes(currentTime) < floorMinutes(event.start)) {
+          const duration =
+            task.duration ||
+            getMinuteDifference(new Date(event.start), new Date(event.end));
+
           const startTime = new Date(
-            currentTime.getTime() - 20 * 60 * 1000
+            currentTime.getTime() - duration * 60 * 1000
           ).toISOString();
 
           const endTime = currentTime.toISOString();

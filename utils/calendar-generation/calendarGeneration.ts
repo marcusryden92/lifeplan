@@ -25,26 +25,39 @@ import { taskIsCompleted } from "../taskHelpers";
 export function generateCalendar(
   weekStartDay: WeekDayIntegers,
   template: EventTemplate[],
-  taskArray: Planner[]
+  taskArray: Planner[],
+  prevCalendar: SimpleEvent[]
 ): SimpleEvent[] {
   let eventArray: SimpleEvent[] = [];
-
   let currentDate = new Date();
 
+  debugger;
+
+  const unfinishedEventIds: string[] = [];
+
+  // Add unfinished events from previous calendar to new calendar
+  if (prevCalendar.length > 0) {
+    const unfinishedEvents = prevCalendar.filter(
+      (e) => currentDate > new Date(e.start) && e.overdueUnresolved === true
+    );
+
+    // Push ID's to array for making sure they aren't added twice
+    unfinishedEvents.forEach((e) => {
+      unfinishedEventIds.push(e.id);
+    });
+
+    eventArray.push(...unfinishedEvents);
+  }
+
   // Add date items to the event array:
-  eventArray = addDateItemsToArray(taskArray, eventArray);
+  addDateItemsToArray(taskArray, eventArray);
 
   // Add completed items to the event array:
-  eventArray = addCompletedItemsToArray(taskArray, eventArray);
+  addCompletedItemsToArray(taskArray, eventArray);
 
   // Add template items to the event array
   if (template.length > 0) {
-    eventArray = addWeekTemplateToCalendar(
-      weekStartDay,
-      currentDate,
-      template,
-      eventArray
-    );
+    addWeekTemplateToCalendar(weekStartDay, currentDate, template, eventArray);
   }
 
   // Create array to hold the first date of all the weeks
@@ -76,7 +89,8 @@ export function generateCalendar(
     templatedWeeks,
     largestTemplateGap,
     taskArray,
-    eventArray
+    eventArray,
+    unfinishedEventIds
   );
 
   return eventArray;
@@ -89,7 +103,8 @@ function addEventsToCalendar(
   templatedWeeks: Date[],
   largestTemplateGap: number | undefined,
   taskArray: Planner[],
-  eventArray: SimpleEvent[]
+  eventArray: SimpleEvent[],
+  unfinishedEventIds: string[]
 ): SimpleEvent[] {
   // First get all the goals and task events from taskArray:
   let goalsAndTasks: Planner[] = [];
@@ -112,7 +127,7 @@ function addEventsToCalendar(
 
   goalsAndTasks.forEach((item) => {
     // If item is a task:
-    if (item.type === "task") {
+    if (item.type === "task" && !unfinishedEventIds.includes(item.id)) {
       addTaskToCalendar(
         item,
         largestTemplateGap,
@@ -133,7 +148,8 @@ function addEventsToCalendar(
         eventArray,
         template,
         templateEventsArray,
-        templatedWeeks
+        templatedWeeks,
+        unfinishedEventIds
       );
     }
   });
@@ -149,16 +165,17 @@ function addGoalToCalendar(
   eventArray: SimpleEvent[],
   template: EventTemplate[],
   templateEventsArray: SimpleEvent[],
-  templatedWeeks: Date[]
+  templatedWeeks: Date[],
+  unfinishedEventIds: string[]
 ) {
   const goalBottomLayer = getSortedTreeBottomLayer(taskArray, rootItem.id);
-  const uncompletedTasks = goalBottomLayer.filter(
-    (task) => !taskIsCompleted(task)
+  const filteredTasks = goalBottomLayer.filter(
+    (task) => !taskIsCompleted(task) && !unfinishedEventIds.includes(task.id)
   );
 
   let startTime: Date | undefined = undefined;
 
-  uncompletedTasks.forEach((item) => {
+  filteredTasks.forEach((item) => {
     startTime = addTaskToCalendar(
       item,
       largestTemplateGap,
@@ -263,13 +280,14 @@ function addTaskToCalendar(
       const startTime = new Date(staticMarker);
       const endTime = new Date(movingMarker);
 
-      const newEvent = {
+      const newEvent: SimpleEvent = {
         id: item.id,
         title: item.title,
         start: startTime.toISOString(), // ISO 8601 string format for FullCalendar
         end: endTime.toISOString(), // ISO 8601 string format for FullCalendar
         backgroundColor: "#f59e0b",
         borderColor: "transparent",
+        overdueUnresolved: true,
       };
 
       eventArray.push(newEvent);
