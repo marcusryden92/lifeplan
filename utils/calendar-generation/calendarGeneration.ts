@@ -31,8 +31,6 @@ export function generateCalendar(
   let eventArray: SimpleEvent[] = [];
   let currentDate = new Date();
 
-  debugger;
-
   const unfinishedEventIds: string[] = [];
 
   // Add unfinished events from previous calendar to new calendar

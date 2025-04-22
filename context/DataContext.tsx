@@ -33,7 +33,7 @@ interface DataContextType {
   setCurrentCalendar: React.Dispatch<
     React.SetStateAction<SimpleEvent[] | undefined>
   >;
-  updateCalendar: () => void;
+  updateCalendar: (manuallyUpdatedCalendar?: SimpleEvent[]) => void;
 }
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -49,7 +49,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
   const [currentTemplate, setCurrentTemplate] = useState<
     EventTemplate[] | undefined
-  >([]);
+  >(templateSeed);
   const [weekStartDay, setWeekDayIntegers] = useState<WeekDayIntegers>(
     userSettings.weekStartDay
   );
@@ -58,18 +58,21 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   >(previousCalendarSeed);
 
   // Calendar generation function
-  const updateCalendar = useCallback(() => {
-    if (currentTemplate && taskArray) {
-      setCurrentCalendar((prevCalendar) => {
-        return generateCalendar(
-          weekStartDay,
-          currentTemplate,
-          taskArray,
-          prevCalendar || []
-        );
-      });
-    }
-  }, [currentTemplate, weekStartDay, taskArray]);
+  const updateCalendar = useCallback(
+    (manuallyUpdatedCalendar?: SimpleEvent[]) => {
+      if (currentTemplate && taskArray) {
+        setCurrentCalendar((prevCalendar) => {
+          return generateCalendar(
+            weekStartDay,
+            currentTemplate,
+            taskArray,
+            manuallyUpdatedCalendar || prevCalendar || []
+          );
+        });
+      }
+    },
+    [currentTemplate, weekStartDay, taskArray]
+  );
 
   // Update calendar when taskArray changes
   useEffect(() => {

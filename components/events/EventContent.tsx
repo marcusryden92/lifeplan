@@ -3,9 +3,12 @@ import {
   TrashIcon,
   DocumentDuplicateIcon,
   PencilIcon,
+  CheckIcon,
+  ArrowRightCircleIcon,
+  XCircleIcon,
 } from "@heroicons/react/24/outline";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { SimpleEvent } from "@/types/calendarTypes";
 import { useDataContext } from "@/context/DataContext";
@@ -33,19 +36,27 @@ const EventContent: React.FC<EventContentProps> = ({
   onDelete,
   showButtons,
 }) => {
-  const { taskArray, setTaskArray, setCurrentCalendar } = useDataContext();
+  const { taskArray, setTaskArray, updateCalendar, currentCalendar } =
+    useDataContext();
   const elementRef = useRef<HTMLDivElement>(null);
   const task = taskArray.find((task) => task.id === event.id);
 
+  const currentTime = new Date();
   const startTime = new Date(event.start);
   const endTime = new Date(event.end);
 
-  const isCompleted = task ? taskIsCompleted(task) : undefined;
+  const [isCompleted, setIsCompleted] = useState(
+    task ? taskIsCompleted(task) : false
+  );
+
+  const displayPostponeButton =
+    !isCompleted && !event.overdueUnresolved && currentTime > startTime;
 
   const green = "#0ebf7e";
   const orange = "#f59e0b";
 
   const handleClickCompleteTask = () => {
+    setIsCompleted(!isCompleted);
     const color = !isCompleted ? green : orange;
 
     // Find the DOM element for this event and change color directly
@@ -60,6 +71,17 @@ const EventContent: React.FC<EventContentProps> = ({
     }, 500);
   };
 
+  const handlePostponetask = () => {
+    const manuallyUpdatedCalendar: SimpleEvent[] | undefined =
+      currentCalendar?.map((e) =>
+        e.id === event.id
+          ? { ...e, overdueUnresolved: false, backgroundColor: "pink" }
+          : e
+      );
+
+    if (manuallyUpdatedCalendar) updateCalendar(manuallyUpdatedCalendar);
+  };
+
   return (
     <div
       ref={elementRef}
@@ -69,7 +91,6 @@ const EventContent: React.FC<EventContentProps> = ({
         height: "100%",
         padding: "0px",
       }}
-      onClick={handleClickCompleteTask}
     >
       <span className="flex gap-2 justify-between">
         <span style={{ marginBottom: "auto" }}>{event.title}</span>
@@ -95,6 +116,32 @@ const EventContent: React.FC<EventContentProps> = ({
           </button>
         </div>
       )}
+
+      {task?.type === "task" ||
+        (task?.type === "goal" && (
+          <div
+            className="m-1"
+            style={{ display: "flex", justifyContent: "flex-end" }}
+          >
+            <button
+              onClick={handleClickCompleteTask}
+              style={{ marginLeft: "10px" }}
+            >
+              <CheckIcon height="1rem" width="1rem" />
+            </button>
+            {displayPostponeButton && (
+              <button
+                onClick={handlePostponetask}
+                style={{ marginLeft: "10px" }}
+              >
+                <ArrowRightCircleIcon height="1rem" width="1rem" />
+              </button>
+            )}
+            <button onClick={onDelete} style={{ marginLeft: "10px" }}>
+              <XCircleIcon height="1rem" width="1rem" />
+            </button>
+          </div>
+        ))}
     </div>
   );
 };
