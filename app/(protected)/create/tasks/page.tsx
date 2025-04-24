@@ -46,7 +46,7 @@ import {
 } from "@/utils/creationPagesFunctions";
 
 export default function TasksPage() {
-  const { taskArray, setTaskArray } = useDataContext();
+  const { mainPlanner, setMainPlanner } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
   const [changeToTask, setChangeToTask] = useState<number | null>(null);
@@ -56,7 +56,7 @@ export default function TasksPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const tasksContainerRef = useRef<HTMLDivElement>(null);
-  const prevTaskLengthRef = useRef(taskArray.length);
+  const prevTaskLengthRef = useRef(mainPlanner.length);
   const durationInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
@@ -69,7 +69,7 @@ export default function TasksPage() {
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({
       values,
-      setTaskArray,
+      setMainPlanner,
       editIndex,
       setEditIndex,
       editTitle,
@@ -81,7 +81,7 @@ export default function TasksPage() {
 
   const handleDeleteTask = (index: number) => {
     deleteTask(index, {
-      setTaskArray,
+      setMainPlanner,
       editIndex,
       setEditIndex,
       setEditTitle,
@@ -89,11 +89,11 @@ export default function TasksPage() {
   };
 
   const handleDeleteAll = () => {
-    const filterArray: Planner[] = taskArray.filter(
+    const filterArray: Planner[] = mainPlanner.filter(
       (task) => task.canInfluence && !task.parentId
     );
 
-    deleteAll({ setTaskArray, filter: filterArray });
+    deleteAll({ setMainPlanner, filter: filterArray });
   };
 
   const handleClickEdit = (index: number) => {
@@ -101,7 +101,7 @@ export default function TasksPage() {
       index,
       setEditIndex,
       setEditTitle,
-      taskArray,
+      mainPlanner,
     });
   };
 
@@ -109,7 +109,7 @@ export default function TasksPage() {
     confirmEdit({
       editIndex,
       editTitle,
-      setTaskArray,
+      setMainPlanner,
       setEditIndex,
       setEditTitle,
     });
@@ -117,8 +117,8 @@ export default function TasksPage() {
 
   const handleSetToTask = (index: number) => {
     setChangeToTask(index);
-    setTaskDuration(taskArray[index].duration || undefined);
-    setSelectedDate(taskArray[index].deadline || undefined);
+    setTaskDuration(mainPlanner[index].duration || undefined);
+    setSelectedDate(mainPlanner[index].deadline || undefined);
   };
 
   const handleConfirmTask = (currentDuration: number | undefined) => {
@@ -126,7 +126,7 @@ export default function TasksPage() {
       taskDuration !== undefined ? taskDuration : currentDuration;
 
     if (changeToTask !== null && finalDuration !== undefined) {
-      setTaskArray((prevTasks) =>
+      setMainPlanner((prevTasks) =>
         prevTasks.map((task, index) =>
           index === changeToTask
             ? {
@@ -144,7 +144,7 @@ export default function TasksPage() {
 
   const handleCancelTask = () => {
     if (changeToTask !== null) {
-      setTaskArray((prevTasks) =>
+      setMainPlanner((prevTasks) =>
         prevTasks.map((task, index) =>
           index === changeToTask
             ? { ...task, type: null, duration: undefined }
@@ -164,13 +164,13 @@ export default function TasksPage() {
   useEffect(() => {
     if (
       tasksContainerRef.current &&
-      taskArray.length > prevTaskLengthRef.current
+      mainPlanner.length > prevTaskLengthRef.current
     ) {
       tasksContainerRef.current.scrollLeft =
         tasksContainerRef.current.scrollWidth;
     }
-    prevTaskLengthRef.current = taskArray.length;
-  }, [taskArray]);
+    prevTaskLengthRef.current = mainPlanner.length;
+  }, [mainPlanner]);
 
   useEffect(() => {
     if (changeToTask !== null) {
@@ -228,7 +228,7 @@ export default function TasksPage() {
         className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
         ref={tasksContainerRef}
       >
-        {taskArray.map((task, index) =>
+        {mainPlanner.map((task, index) =>
           task.canInfluence && !task.parentId ? (
             <div
               key={index}
@@ -253,9 +253,11 @@ export default function TasksPage() {
                   </div>
                   <Input
                     ref={durationInputRef}
-                    defaultValue={taskArray[index].duration}
+                    defaultValue={mainPlanner[index].duration}
                     onChange={(e) => setTaskDuration(Number(e.target.value))}
-                    placeholder={taskArray[index].duration?.toString() || "min"}
+                    placeholder={
+                      mainPlanner[index].duration?.toString() || "min"
+                    }
                     className="w-14 h-7 text-sm text-white"
                     type="number"
                     pattern="[0-9]*"
@@ -357,7 +359,7 @@ export default function TasksPage() {
         </Button>
         <Button
           variant="invisible"
-          disabled={taskArray.length === 0}
+          disabled={mainPlanner.length === 0}
           className="px-0"
         >
           <Link

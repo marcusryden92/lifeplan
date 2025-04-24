@@ -3,19 +3,19 @@ import { Planner } from "@/lib/plannerClass";
 import { taskIsCompleted } from "../taskHelpers";
 
 export function addDateItemsToArray(
-  taskArray: Planner[],
+  mainPlanner: Planner[],
   eventArray: SimpleEvent[],
   memoizedEventIds: string[]
 ) {
   let dateItems: Planner[] = [];
   let newArray: SimpleEvent[] = [];
 
-  if (!taskArray || !eventArray) {
+  if (!mainPlanner || !eventArray) {
     return [];
   }
 
   // Filter out tasks that are of type "plan"
-  taskArray.forEach((task) => {
+  mainPlanner.forEach((task) => {
     if (task.type === "plan" && !memoizedEventIds.includes(task.id)) {
       dateItems.push(task);
     }
@@ -49,18 +49,18 @@ export function addDateItemsToArray(
 }
 
 export function addCompletedItemsToArray(
-  taskArray: Planner[],
+  mainPlanner: Planner[],
   eventArray: SimpleEvent[]
 ) {
   let completedItems: Planner[] = [];
   let newArray: SimpleEvent[] = [];
 
-  if (!taskArray || !eventArray) {
+  if (!mainPlanner || !eventArray) {
     return [];
   }
 
   // Filter out tasks that  not completed
-  taskArray.forEach((task) => {
+  mainPlanner.forEach((task) => {
     if (taskIsCompleted(task)) {
       completedItems.push(task);
     }

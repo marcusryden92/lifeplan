@@ -22,7 +22,7 @@ import { useState } from "react";
 import * as z from "zod";
 
 const AddItemForm = () => {
-  const { setTaskArray } = useDataContext();
+  const { setMainPlanner } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
 
@@ -36,7 +36,7 @@ const AddItemForm = () => {
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({
       values,
-      setTaskArray,
+      setMainPlanner,
       editIndex,
       setEditIndex,
       editTitle,

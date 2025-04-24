@@ -5,7 +5,12 @@ import { getMinuteDifference } from "./calendar-generation/calendarGenerationHel
 import { floorMinutes } from "./calendarUtils";
 
 export function setTaskAsCompleted(
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
+  updateCalendar: (
+    manuallyUpdatedTaskArray?: Planner[],
+    manuallyUpdatedCalendar?: SimpleEvent[]
+  ) => Planner[] | undefined,
+  currentCalendar: SimpleEvent[] = [],
   event: SimpleEvent
 ) {
   const currentTime = new Date();
@@ -13,8 +18,12 @@ export function setTaskAsCompleted(
 
   // if (currentTime < eventStartDate) return;
 
-  setTaskArray((prev) =>
-    prev.map((task) => {
+  setMainPlanner((prev) => {
+    // Remove the event from currentCalendar
+    const manuallyUpdatedCalendar: SimpleEvent[] | undefined =
+      currentCalendar?.filter((e) => !(e.id === event.id));
+
+    const manuallyUpdatedTaskArray = prev.map((task) => {
       if (task.id === event.id) {
         // If completed is defined, set to undefined
         if (taskIsCompleted(task)) {
@@ -68,8 +77,12 @@ export function setTaskAsCompleted(
       }
 
       return task;
-    })
-  );
+    });
+
+    return (
+      updateCalendar(manuallyUpdatedTaskArray, manuallyUpdatedCalendar) || prev
+    );
+  });
 }
 
 export function currentlyInEvent(event: SimpleEvent) {

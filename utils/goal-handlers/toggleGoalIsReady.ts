@@ -2,10 +2,10 @@ import { Planner } from "@/lib/plannerClass";
 import React from "react";
 
 export function toggleGoalIsReady(
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
   taskId: string
 ) {
-  setTaskArray((prev) =>
+  setMainPlanner((prev) =>
     prev.map((task) => {
       if (task.id !== taskId) return task;
       return {
@@ -17,11 +17,11 @@ export function toggleGoalIsReady(
 }
 
 export function setGoalIsReady(
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
   taskId: string,
   isReady: boolean | undefined
 ) {
-  setTaskArray((prev) =>
+  setMainPlanner((prev) =>
     prev.map((task) => {
       if (task.id !== taskId) return task;
       return {

@@ -2,32 +2,35 @@ import { Planner } from "@/lib/plannerClass";
 import { getSubtasksById } from "./goalPageHandlers";
 
 export function getTaskById(
-  taskArray: Planner[],
+  mainPlanner: Planner[],
   id: string
 ): Planner | undefined {
-  return taskArray.find((task) => task.id === id); // Find and return the task with the matching id
+  return mainPlanner.find((task) => task.id === id); // Find and return the task with the matching id
 }
 
 export const handleDeleteTaskById = (
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
   taskId: string
 ) => {
-  setTaskArray(
+  setMainPlanner(
     (prevTasks) => prevTasks.filter((task) => task.id !== taskId) // Filter out the task with the matching id
   );
 };
 
-export function totalSubtaskDuration(id: string, taskArray: Planner[]): number {
+export function totalSubtaskDuration(
+  id: string,
+  mainPlanner: Planner[]
+): number {
   // console.log(`Calculating duration for task ID: ${id}`);
 
-  const task = taskArray.find((t) => t.id === id);
+  const task = mainPlanner.find((t) => t.id === id);
 
   if (!task) {
     // console.log(`Task not found for ID: ${id}`);
     return 0; // Task not found
   }
 
-  const subtasks = getSubtasksById(taskArray, id); // Returns an array of Planner objects
+  const subtasks = getSubtasksById(mainPlanner, id); // Returns an array of Planner objects
   // console.log(`Subtasks found for ID ${id}:`, subtasks);
 
   // If the task has no subtasks, return its duration if it's a goal
@@ -40,7 +43,7 @@ export function totalSubtaskDuration(id: string, taskArray: Planner[]): number {
 
   // Loop through each subtask and accumulate their durations
   for (const subtask of subtasks) {
-    const subtaskDuration = totalSubtaskDuration(subtask.id, taskArray); // Get the duration of each subtask
+    const subtaskDuration = totalSubtaskDuration(subtask.id, mainPlanner); // Get the duration of each subtask
     // console.log(`Subtask ID: ${subtask.id} has duration: ${subtaskDuration}`);
     totalDuration += subtaskDuration; // Add the duration of each subtask
   }

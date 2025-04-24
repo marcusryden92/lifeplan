@@ -19,11 +19,11 @@ import { getSubtasksById } from "@/utils/goalPageHandlers";
 import DragDisableListWrapper from "@/components/draggable/DragDisableListWrapper";
 
 const TaskItem: React.FC<TaskItemProps> = React.memo(
-  ({ taskArray, task, focusedTask, setFocusedTask }) => {
+  ({ mainPlanner, task, focusedTask, setFocusedTask }) => {
     const [itemIsFocused, setItemIsFocused] = useState<boolean>(false);
     const [subtasksMinimized, setSubtasksMinimized] = useState<boolean>(false);
 
-    const subtasks = getSubtasksById(taskArray, task.id);
+    const subtasks = getSubtasksById(mainPlanner, task.id);
     const devMode = false;
 
     return (

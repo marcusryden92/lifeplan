@@ -38,15 +38,10 @@ const EventContent: React.FC<EventContentProps> = ({
   onDelete,
   showButtons,
 }) => {
-  const {
-    taskArray,
-    setTaskArray,
-    updateCalendar,
-    currentCalendar,
-    setCurrentCalendar,
-  } = useDataContext();
+  const { mainPlanner, setMainPlanner, updateCalendar, currentCalendar } =
+    useDataContext();
   const elementRef = useRef<HTMLDivElement>(null);
-  const task = taskArray.find((task) => task.id === event.id);
+  const task = mainPlanner.find((task) => task.id === event.id);
 
   const currentTime = new Date();
   const startTime = new Date(event.start);
@@ -79,25 +74,26 @@ const EventContent: React.FC<EventContentProps> = ({
       const manuallyUpdatedCalendar: SimpleEvent[] | undefined =
         currentCalendar?.filter((e) => !(e.id === event.id));
 
-      // Create a new taskArray instance where item.completed is undefined
-      const manuallyUpdatedTaskArray: Planner[] | undefined = taskArray.map(
+      // Create a new mainPlanner instance where item.completed is undefined
+      const manuallyUpdatedTaskArray: Planner[] | undefined = mainPlanner.map(
         (item: Planner) =>
           item.id === event.id ? { ...item, completed: undefined } : item
       );
 
       if (manuallyUpdatedCalendar)
-        // Update taskArray with the new information while also updating
+        // Update mainPlanner with the new information while also updating
         // the calendar with the new custom data
-        setTaskArray(
-          (prev) =>
-            updateCalendar(manuallyUpdatedCalendar, manuallyUpdatedTaskArray) ||
-            prev
-        );
+        setMainPlanner(manuallyUpdatedTaskArray, manuallyUpdatedCalendar);
     } else {
       setIsCompleted(!isCompleted);
 
       setTimeout(() => {
-        setTaskAsCompleted(setTaskArray, event);
+        setTaskAsCompleted(
+          setMainPlanner,
+          updateCalendar,
+          currentCalendar,
+          event
+        );
       }, 500);
     }
   };
@@ -106,7 +102,8 @@ const EventContent: React.FC<EventContentProps> = ({
     const manuallyUpdatedCalendar: SimpleEvent[] | undefined =
       currentCalendar?.filter((e) => !(e.id === event.id));
 
-    if (manuallyUpdatedCalendar) updateCalendar(manuallyUpdatedCalendar);
+    if (manuallyUpdatedCalendar)
+      updateCalendar(undefined, manuallyUpdatedCalendar);
   };
 
   return (

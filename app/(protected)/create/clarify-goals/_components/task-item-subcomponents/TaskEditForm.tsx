@@ -24,7 +24,7 @@ const TaskEditForm: React.FC<TaskEditFormProps> = ({
   setDisplayEdit,
   itemIsFocused,
 }) => {
-  const { setTaskArray } = useDataContext();
+  const { setMainPlanner } = useDataContext();
 
   const [editTitle, setEditTitle] = useState<string>(task.title);
   const [editDuration, setEditDuration] = useState<number | undefined>(
@@ -36,7 +36,7 @@ const TaskEditForm: React.FC<TaskEditFormProps> = ({
       editTitle,
       editDuration,
       editId: task.id,
-      setTaskArray,
+      setMainPlanner,
     });
     setDisplayEdit(false);
   };

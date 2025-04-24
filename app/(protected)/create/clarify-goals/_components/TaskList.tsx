@@ -5,7 +5,7 @@ import { useDataContext } from "@/context/DataContext";
 import TaskItem from "./TaskItem";
 import TaskDivider from "@/components/draggable/TaskDivider";
 import { TaskListProps } from "@/lib/taskItem";
-import { getTaskById } from "@/utils/taskArrayUtils";
+import { getTaskById } from "@/utils/mainPlannerUtils";
 import {
   getSubtasksById,
   sortTasksByDependenciesAsync,
@@ -13,7 +13,7 @@ import {
 
 const TaskList: React.FC<TaskListProps> = React.memo(
   ({ id, subtasks, focusedTask, setFocusedTask }) => {
-    const { taskArray, setTaskArray } = useDataContext();
+    const { mainPlanner, setMainPlanner } = useDataContext();
 
     // State to handle sorted tasks
     const [sortedTasks, setSortedTasks] = useState<any[]>([]);
@@ -21,20 +21,20 @@ const TaskList: React.FC<TaskListProps> = React.memo(
 
     useEffect(() => {
       const fetchData = async () => {
-        const subtasksToUse = subtasks || getSubtasksById(taskArray, id);
+        const subtasksToUse = subtasks || getSubtasksById(mainPlanner, id);
         if (!subtasksToUse.length) {
           setLoading(false);
           return;
         }
 
-        const thisTask = getTaskById(taskArray, id);
+        const thisTask = getTaskById(mainPlanner, id);
         if (!thisTask) {
           setLoading(false);
           return;
         }
 
         const sorted = await sortTasksByDependenciesAsync(
-          taskArray,
+          mainPlanner,
           subtasksToUse
         );
         setSortedTasks(sorted);
@@ -42,7 +42,7 @@ const TaskList: React.FC<TaskListProps> = React.memo(
       };
 
       fetchData();
-    }, [id, subtasks, taskArray]);
+    }, [id, subtasks, mainPlanner]);
 
     if (loading) {
       return <div className="p-4 text-neutral-300 italic ">Loading...</div>; // Optional: show loading state while waiting for async operation
@@ -63,13 +63,13 @@ const TaskList: React.FC<TaskListProps> = React.memo(
             {sortedTasks.map((task) => (
               <div key={task.id}>
                 <TaskDivider
-                  taskArray={taskArray}
-                  setTaskArray={setTaskArray}
+                  mainPlanner={mainPlanner}
+                  setMainPlanner={setMainPlanner}
                   targetId={task.id}
                   mouseLocationInItem="top"
                 />
                 <TaskItem
-                  taskArray={taskArray}
+                  mainPlanner={mainPlanner}
                   task={task}
                   focusedTask={focusedTask}
                   setFocusedTask={setFocusedTask}
@@ -78,8 +78,8 @@ const TaskList: React.FC<TaskListProps> = React.memo(
             ))}
 
             <TaskDivider
-              taskArray={taskArray}
-              setTaskArray={setTaskArray}
+              mainPlanner={mainPlanner}
+              setMainPlanner={setMainPlanner}
               targetId={sortedTasks[sortedTasks.length - 1].id}
               mouseLocationInItem="bottom"
             />

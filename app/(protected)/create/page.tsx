@@ -40,7 +40,7 @@ import {
 } from "@/utils/creationPagesFunctions";
 
 export default function CapturePage() {
-  const { taskArray, setTaskArray } = useDataContext();
+  const { mainPlanner, setMainPlanner } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
 
@@ -52,12 +52,12 @@ export default function CapturePage() {
   });
 
   const tasksContainerRef = useRef<HTMLDivElement>(null);
-  const prevTaskLengthRef = useRef(taskArray.length);
+  const prevTaskLengthRef = useRef(mainPlanner.length);
 
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({
       values,
-      setTaskArray,
+      setMainPlanner,
       editIndex,
       setEditIndex,
       editTitle,
@@ -68,7 +68,7 @@ export default function CapturePage() {
 
   const handleDeleteTask = (index: number) => {
     deleteTask(index, {
-      setTaskArray,
+      setMainPlanner,
       editIndex,
       setEditIndex,
       setEditTitle,
@@ -76,7 +76,7 @@ export default function CapturePage() {
   };
 
   const handleDeleteAll = () => {
-    deleteAll({ setTaskArray });
+    deleteAll({ setMainPlanner });
   };
 
   const handleClickEdit = (index: number) => {
@@ -84,7 +84,7 @@ export default function CapturePage() {
       index,
       setEditIndex,
       setEditTitle,
-      taskArray,
+      mainPlanner,
     });
   };
 
@@ -92,7 +92,7 @@ export default function CapturePage() {
     confirmEdit({
       editIndex,
       editTitle,
-      setTaskArray,
+      setMainPlanner,
       setEditIndex,
       setEditTitle,
     });
@@ -101,13 +101,13 @@ export default function CapturePage() {
   useEffect(() => {
     if (
       tasksContainerRef.current &&
-      taskArray.length > prevTaskLengthRef.current
+      mainPlanner.length > prevTaskLengthRef.current
     ) {
       tasksContainerRef.current.scrollLeft =
         tasksContainerRef.current.scrollWidth;
     }
-    prevTaskLengthRef.current = taskArray.length;
-  }, [taskArray]);
+    prevTaskLengthRef.current = mainPlanner.length;
+  }, [mainPlanner]);
 
   return (
     <div className="flex flex-col w-full h-full bg-white bg-opacity-95 px-10">
@@ -155,7 +155,7 @@ export default function CapturePage() {
         className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
         ref={tasksContainerRef}
       >
-        {taskArray.map((task, index) =>
+        {mainPlanner.map((task, index) =>
           !task.parentId ? (
             <div
               key={index}
@@ -208,7 +208,7 @@ export default function CapturePage() {
       <CardFooter className="flex items-center justify-end flex-shrink p-4 border-t">
         <Button
           variant="invisible"
-          disabled={taskArray.length === 0}
+          disabled={mainPlanner.length === 0}
           className="px-0"
         >
           <Link

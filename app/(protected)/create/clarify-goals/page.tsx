@@ -45,10 +45,10 @@ import { getSubtasksById, deleteGoal } from "@/utils/goalPageHandlers";
 import {
   totalSubtaskDuration,
   formatMinutesToHours,
-} from "@/utils/taskArrayUtils";
+} from "@/utils/mainPlannerUtils";
 
 export default function TasksPage() {
-  const { taskArray, setTaskArray, focusedTask, setFocusedTask } =
+  const { mainPlanner, setMainPlanner, focusedTask, setFocusedTask } =
     useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
@@ -66,7 +66,7 @@ export default function TasksPage() {
   const devMode = false;
 
   const handleDeleteTask = (index: number, taskId: string) => {
-    deleteGoal({ taskArray, setTaskArray, taskId });
+    deleteGoal({ mainPlanner, setMainPlanner, taskId });
     if (editIndex === index) {
       setEditIndex(null);
       setEditTitle("");
@@ -74,12 +74,12 @@ export default function TasksPage() {
   };
 
   const handleDeleteAll = () => {
-    const filteredArray: Planner[] = taskArray.filter(
+    const filteredArray: Planner[] = mainPlanner.filter(
       (task) => task.canInfluence && task.type === "goal" && !task.parentId
     );
 
     filteredArray.forEach((item) =>
-      deleteGoal({ taskArray, setTaskArray, taskId: item.id })
+      deleteGoal({ mainPlanner, setMainPlanner, taskId: item.id })
     );
   };
 
@@ -88,7 +88,7 @@ export default function TasksPage() {
       index,
       setEditIndex,
       setEditTitle,
-      taskArray,
+      mainPlanner,
     });
   };
 
@@ -96,7 +96,7 @@ export default function TasksPage() {
     confirmEdit({
       editIndex,
       editTitle,
-      setTaskArray,
+      setMainPlanner,
       setEditIndex,
       setEditTitle,
     });
@@ -107,7 +107,7 @@ export default function TasksPage() {
   };
 
   const handleDeleteTaskById = (taskId: string) => {
-    setTaskArray(
+    setMainPlanner(
       (prevTasks) => prevTasks.filter((task) => task.id !== taskId) // Filter out the task with the matching id
     );
   };
@@ -115,7 +115,7 @@ export default function TasksPage() {
   const getCurrentGoal = (index: number) => {
     const goalsList: Planner[] = [];
 
-    taskArray.forEach((task) => {
+    mainPlanner.forEach((task) => {
       if (task.type === "goal") {
         goalsList.push(task);
       }
@@ -129,7 +129,7 @@ export default function TasksPage() {
   const getGoalsList = () => {
     const goalsList: Planner[] = [];
 
-    taskArray.forEach((task) => {
+    mainPlanner.forEach((task) => {
       if (task.type === "goal" && !task.parentId) {
         goalsList.push(task);
       }
@@ -141,10 +141,10 @@ export default function TasksPage() {
   const checkGoalForCompletion = (index: number): boolean => {
     // const currentGoal = getCurrentGoal(index);
 
-    const currentGoal = taskArray[index];
+    const currentGoal = mainPlanner[index];
 
-    if (taskArray && taskArray.length > 0) {
-      const subtasks = getSubtasksById(taskArray, taskArray[index].id);
+    if (mainPlanner && mainPlanner.length > 0) {
+      const subtasks = getSubtasksById(mainPlanner, mainPlanner[index].id);
 
       // Check if currentTask is undefined or null
       if (
@@ -170,7 +170,7 @@ export default function TasksPage() {
         return false;
       }
 
-      const subtasks = getSubtasksById(taskArray, goal.id);
+      const subtasks = getSubtasksById(mainPlanner, goal.id);
 
       if (
         // selectedDate != undefined &&
@@ -192,7 +192,7 @@ export default function TasksPage() {
       if (currentGoal) {
         const currentId = currentGoal.id;
 
-        setTaskArray((prevArray) =>
+        setMainPlanner((prevArray) =>
           prevArray.map((task, j) =>
             task.id === currentId ? { ...task, deadline: selectedDate } : task
           )
@@ -205,7 +205,7 @@ export default function TasksPage() {
     if (carouselIndex != undefined) {
       setGoalComplete(checkGoalForCompletion(carouselIndex));
     }
-  }, [carouselIndex, taskArray]);
+  }, [carouselIndex, mainPlanner]);
 
   useEffect(() => {
     if (carouselIndex != undefined) {
@@ -246,8 +246,8 @@ export default function TasksPage() {
           opts={{ watchDrag: false }}
         >
           <CarouselContent className="h-full select-none">
-            {taskArray.map((task, index) => {
-              const subtasks = getSubtasksById(taskArray, task.id);
+            {mainPlanner.map((task, index) => {
+              const subtasks = getSubtasksById(mainPlanner, task.id);
 
               return task.canInfluence &&
                 task.type === "goal" &&
@@ -299,7 +299,7 @@ export default function TasksPage() {
                                   subtasks.length === 0 && "opacity-40"
                                 }`}
                                 onClick={() => {
-                                  toggleGoalIsReady(setTaskArray, task.id);
+                                  toggleGoalIsReady(setMainPlanner, task.id);
                                 }}
                               >
                                 <CheckCircledIcon
@@ -359,7 +359,7 @@ export default function TasksPage() {
                             />
                             <XMarkIcon
                               onClick={() => {
-                                setTaskArray((prevTasks) =>
+                                setMainPlanner((prevTasks) =>
                                   prevTasks.map((t, i) =>
                                     i === index
                                       ? { ...t, deadline: undefined }
@@ -378,7 +378,7 @@ export default function TasksPage() {
                             <span className="min-w-24 text-sm">
                               {"Total duration:  " +
                                 formatMinutesToHours(
-                                  totalSubtaskDuration(task.id, taskArray)
+                                  totalSubtaskDuration(task.id, mainPlanner)
                                 )}
                             </span>
                           </div>
@@ -406,14 +406,14 @@ export default function TasksPage() {
           </CarouselContent>
           <CarouselPrevious
             className={`transition-opacity duration-500   ${
-              taskArray.length === 0 || carouselIndex === 0
+              mainPlanner.length === 0 || carouselIndex === 0
                 ? " !opacity-0 "
                 : ""
             }`}
           />
           <CarouselNext
             className={`transition-opacity duration-500 ${
-              taskArray.length === 0 ||
+              mainPlanner.length === 0 ||
               carouselIndex === getGoalsList().length - 1
                 ? "!opacity-0"
                 : ""
@@ -434,7 +434,7 @@ export default function TasksPage() {
         </Button>
         <Button
           variant="invisible"
-          disabled={taskArray.length === 0 || checkTotalCompletion() === false}
+          disabled={mainPlanner.length === 0 || checkTotalCompletion() === false}
           className="px-0"
         >
           <Link

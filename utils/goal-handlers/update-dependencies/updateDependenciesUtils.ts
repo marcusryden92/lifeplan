@@ -4,16 +4,16 @@ import { Planner } from "@/lib/plannerClass";
 // Sets the value of the object's dependency to the value of the subject's dependency,
 // and sets the value of the subject's dependent's dependency to the id of the object
 export function transferDependencyOwnership(
-  taskArray: Planner[],
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  mainPlanner: Planner[],
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
   subject: Planner,
   object: Planner,
   clearSubject: boolean = true
 ) {
-  const nextDependent = taskArray.find((t) => t.dependency === subject.id);
+  const nextDependent = mainPlanner.find((t) => t.dependency === subject.id);
   const nextDependentId = nextDependent ? nextDependent.id : null;
 
-  setTaskArray((prev) =>
+  setMainPlanner((prev) =>
     prev.map((t) => {
       // Move ownership from subject to object
       if (nextDependentId && t.id === nextDependentId) {
@@ -41,11 +41,11 @@ export interface InstructionType {
 }
 
 export async function updateTaskArray(
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
   instructions: InstructionType[]
 ) {
   return new Promise<void>((resolve) => {
-    setTaskArray((prev) => {
+    setMainPlanner((prev) => {
       const newArray = prev.map((task) => {
         let updatedTask = { ...task };
 

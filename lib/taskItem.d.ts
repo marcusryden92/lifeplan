@@ -17,7 +17,7 @@ export interface TaskListWrapperProps {
 }
 
 export interface TaskItemProps {
-  taskArray: Planner[];
+  mainPlanner: Planner[];
   task: Planner;
   focusedTask: string | null;
   setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;

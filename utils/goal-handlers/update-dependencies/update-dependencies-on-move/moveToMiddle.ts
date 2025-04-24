@@ -17,34 +17,34 @@ import { assert } from "@/utils/assert/assert";
 import { ClickedItem } from "@/lib/taskItem";
 
 interface MoveToMiddleInterface {
-  taskArray: Planner[];
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+  mainPlanner: Planner[];
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
   currentlyClickedItem: ClickedItem;
   currentlyHoveredItem: string;
 }
 
 // Function for moving an item to the middle (or into), the target item
 export function moveToMiddle({
-  taskArray,
-  setTaskArray,
+  mainPlanner,
+  setMainPlanner,
   currentlyClickedItem,
   currentlyHoveredItem,
 }: MoveToMiddleInterface) {
   // Check that arguments are defined
-  if (!taskArray || !currentlyClickedItem || !currentlyHoveredItem) return;
+  if (!mainPlanner || !currentlyClickedItem || !currentlyHoveredItem) return;
 
   // Return if you're dropping the item unto itself
   if (currentlyClickedItem.taskId === currentlyHoveredItem) return;
 
   // The task we're moving
-  const movedTask: Planner | undefined = taskArray.find(
+  const movedTask: Planner | undefined = mainPlanner.find(
     (t) => t.id === currentlyClickedItem.taskId
   );
 
   assert(movedTask, "Couldn't find movedTask in moveToMiddle.");
 
   // The target
-  const targetTask: Planner | undefined = taskArray.find(
+  const targetTask: Planner | undefined = mainPlanner.find(
     (t) => t.id === currentlyHoveredItem
   );
 
@@ -59,20 +59,20 @@ export function moveToMiddle({
   if (movedTask.parentId === targetTask.id) return;
 
   // Get the tree bottom layer for task, in order to properly update dependencies
-  const sortedBottomLayer = getSortedTreeBottomLayer(taskArray, movedTask.id);
+  const sortedBottomLayer = getSortedTreeBottomLayer(mainPlanner, movedTask.id);
 
   // Get the first and last Bottom Layer Item (BLI) of the moved task,
   // for setting correct dependencies
   const movedTaskFirstBLI: Planner = sortedBottomLayer[0];
   const movedTaskLastBLI: Planner =
     sortedBottomLayer[sortedBottomLayer.length - 1];
-  const movedTaskLastBLIDependent = taskArray.find(
+  const movedTaskLastBLIDependent = mainPlanner.find(
     (t) => t.dependency === movedTaskLastBLI.id
   );
 
   // Root parent of the goal
   const goalRootParent: string | undefined = getRootParent(
-    taskArray,
+    mainPlanner,
     movedTask.id
   );
 
@@ -83,18 +83,18 @@ export function moveToMiddle({
 
   // Get the last item in the child layer of the target item
   const targetSortedBottomLayer = getSortedTreeBottomLayer(
-    taskArray,
+    mainPlanner,
     targetTask.id
   );
 
   const targetTaskFirstBLI = targetSortedBottomLayer[0];
   const targetTaskLastBLI =
     targetSortedBottomLayer[targetSortedBottomLayer.length - 1];
-  const targetTaskLastBLIDependent = taskArray.find(
+  const targetTaskLastBLIDependent = mainPlanner.find(
     (t) => t.dependency === targetTask.id
   );
 
-  const targetChildren = getSubtasksById(taskArray, targetTask.id);
+  const targetChildren = getSubtasksById(mainPlanner, targetTask.id);
 
   // Conditions
   /*   
@@ -107,9 +107,9 @@ export function moveToMiddle({
   */
 
   const movedTaskHasChildren =
-    getSubtasksById(taskArray, movedTask.id).length > 0;
+    getSubtasksById(mainPlanner, movedTask.id).length > 0;
   const movedTaskHasSiblings = movedTask.parentId
-    ? getSubtasksById(taskArray, movedTask.parentId).length > 1
+    ? getSubtasksById(mainPlanner, movedTask.parentId).length > 1
     : false;
 
   const targetHasChildren = targetChildren.length > 0;
@@ -122,7 +122,7 @@ export function moveToMiddle({
   if (targetIsPreviousDependent) {
     handleTargetIsPreviousDependent(
       goalRootParent,
-      setTaskArray,
+      setMainPlanner,
       movedTask,
       movedTaskFirstBLI,
       movedTaskLastBLI,
@@ -138,7 +138,7 @@ export function moveToMiddle({
     return;
   } else if (targetIsNextDependent) {
     handleTargetIsNextDependent(
-      setTaskArray,
+      setMainPlanner,
       goalRootParent,
       movedTask,
       movedTaskFirstBLI,
@@ -154,8 +154,8 @@ export function moveToMiddle({
   } else {
     // Actions for stitching the hole movedTask leaves behind
     handleVacancy(
-      taskArray,
-      setTaskArray,
+      mainPlanner,
+      setMainPlanner,
       movedTask,
       movedTaskFirstBLI,
       movedTaskLastBLI,
@@ -168,7 +168,7 @@ export function moveToMiddle({
 
 function handleTargetIsPreviousDependent(
   goalRootParent: string,
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
   movedTask: Planner,
   movedTaskFirstBLI: Planner,
   movedTaskLastBLI: Planner,
@@ -293,11 +293,11 @@ function handleTargetIsPreviousDependent(
       });
     }
   }
-  updateTaskArray(setTaskArray, instructions);
+  updateTaskArray(setMainPlanner, instructions);
 }
 
 function handleTargetIsNextDependent(
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
   goalRootParent: string,
   movedTask: Planner,
   movedTaskFirstBLI: Planner,
@@ -374,12 +374,12 @@ function handleTargetIsNextDependent(
       }
     );
 
-  updateTaskArray(setTaskArray, instructions);
+  updateTaskArray(setMainPlanner, instructions);
 }
 
 async function handleVacancy(
-  taskArray: Planner[],
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  mainPlanner: Planner[],
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
   movedTask: Planner,
   movedTaskFirstBLI: Planner,
   movedTaskLastBLI: Planner,
@@ -387,11 +387,11 @@ async function handleVacancy(
   targetTask: Planner,
   targetHasChildren: boolean
 ) {
-  const movedTaskTree = getGoalTree(taskArray, movedTask.id);
+  const movedTaskTree = getGoalTree(mainPlanner, movedTask.id);
 
   const updatedArray: Planner[] = deleteGoal_ReturnArray({
-    taskArray,
-    setTaskArray,
+    mainPlanner,
+    setMainPlanner,
     taskId: movedTask.id,
     parentId: movedTask.parentId,
   });
@@ -399,7 +399,7 @@ async function handleVacancy(
   // Actions for updating movedTask to the new position
   updateMovedTask(
     updatedArray,
-    setTaskArray,
+    setMainPlanner,
     movedTask,
     movedTaskFirstBLI,
     movedTaskLastBLI,
@@ -412,7 +412,7 @@ async function handleVacancy(
 
 async function updateMovedTask(
   updatedArray: Planner[],
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
   movedTask: Planner,
   movedTaskFirstBLI: Planner,
   movedTaskLastBLI: Planner,
@@ -500,5 +500,5 @@ async function updateMovedTask(
     updatedArray.push(t);
   });
 
-  setTaskArray(updatedArray);
+  setMainPlanner(updatedArray);
 }

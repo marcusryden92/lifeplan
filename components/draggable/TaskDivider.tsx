@@ -10,15 +10,15 @@ import { Planner } from "@/lib/plannerClass";
 import styles from "./TaskDivider.module.css";
 
 interface TaskDividerProps {
-  taskArray: Planner[];
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+  mainPlanner: Planner[];
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
   targetId: string;
   mouseLocationInItem: "top" | "bottom";
 }
 
 const TaskDivider: React.FC<TaskDividerProps> = ({
-  taskArray,
-  setTaskArray,
+  mainPlanner,
+  setMainPlanner,
   targetId,
   mouseLocationInItem,
 }) => {
@@ -31,8 +31,8 @@ const TaskDivider: React.FC<TaskDividerProps> = ({
     if (!currentlyClickedItem || !isHovered || !displayDragBox) return;
 
     moveToEdge({
-      taskArray,
-      setTaskArray,
+      mainPlanner,
+      setMainPlanner,
       currentlyClickedItem,
       targetId,
       mouseLocationInItem,

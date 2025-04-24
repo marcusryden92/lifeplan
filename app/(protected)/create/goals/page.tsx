@@ -41,11 +41,11 @@ import {
 } from "@/utils/creationPagesFunctions";
 
 export default function InfluencePage() {
-  const { taskArray, setTaskArray } = useDataContext();
+  const { mainPlanner, setMainPlanner } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
   const tasksContainerRef = useRef<HTMLDivElement>(null);
-  const prevTaskLengthRef = useRef(taskArray.length);
+  const prevTaskLengthRef = useRef(mainPlanner.length);
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
@@ -57,7 +57,7 @@ export default function InfluencePage() {
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({
       values,
-      setTaskArray,
+      setMainPlanner,
       editIndex,
       setEditIndex,
       editTitle,
@@ -69,7 +69,7 @@ export default function InfluencePage() {
 
   const handleDeleteTask = (index: number) => {
     deleteTask(index, {
-      setTaskArray,
+      setMainPlanner,
       editIndex,
       setEditIndex,
       setEditTitle,
@@ -77,7 +77,7 @@ export default function InfluencePage() {
   };
 
   const handleDeleteAll = () => {
-    const filterArray: Planner[] = taskArray.filter(
+    const filterArray: Planner[] = mainPlanner.filter(
       (task) =>
         task.canInfluence &&
         task.type !== "task" &&
@@ -85,7 +85,7 @@ export default function InfluencePage() {
         !task.parentId
     );
 
-    deleteAll({ setTaskArray, filter: filterArray });
+    deleteAll({ setMainPlanner, filter: filterArray });
   };
 
   const handleClickEdit = (index: number) => {
@@ -93,7 +93,7 @@ export default function InfluencePage() {
       index,
       setEditIndex,
       setEditTitle,
-      taskArray,
+      mainPlanner,
     });
   };
 
@@ -101,14 +101,14 @@ export default function InfluencePage() {
     confirmEdit({
       editIndex,
       editTitle,
-      setTaskArray,
+      setMainPlanner,
       setEditIndex,
       setEditTitle,
     });
   };
 
   const toggleGoal = (index: number) => {
-    setTaskArray((prevTaskArray) =>
+    setMainPlanner((prevTaskArray) =>
       prevTaskArray.map((task, i) =>
         i === index
           ? { ...task, type: task.type !== "goal" ? "goal" : null }
@@ -120,13 +120,13 @@ export default function InfluencePage() {
   useEffect(() => {
     if (
       tasksContainerRef.current &&
-      taskArray.length > prevTaskLengthRef.current
+      mainPlanner.length > prevTaskLengthRef.current
     ) {
       tasksContainerRef.current.scrollLeft =
         tasksContainerRef.current.scrollWidth;
     }
-    prevTaskLengthRef.current = taskArray.length;
-  }, [taskArray]);
+    prevTaskLengthRef.current = mainPlanner.length;
+  }, [mainPlanner]);
 
   return (
     <div className="flex flex-col w-full h-full bg-white  bg-opacity-95 px-10">
@@ -175,7 +175,7 @@ export default function InfluencePage() {
         className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
         ref={tasksContainerRef}
       >
-        {taskArray.map(
+        {mainPlanner.map(
           (task, index) =>
             task.canInfluence &&
             task.type !== "task" &&
@@ -255,9 +255,9 @@ export default function InfluencePage() {
         </Button>
         <Button
           variant="invisible"
-          disabled={taskArray.length === 0}
+          disabled={mainPlanner.length === 0}
           className={`px-0 ${
-            hasInfluence(taskArray) ? "pointer-events-none opacity-50" : ""
+            hasInfluence(mainPlanner) ? "pointer-events-none opacity-50" : ""
           }`}
         >
           <Link

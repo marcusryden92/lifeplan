@@ -194,7 +194,7 @@ export const templateSeed: EventTemplate[] = [
   },
 ];
 
-export const taskArraySeed: Planner[] = [
+export const mainPlannerSeed: Planner[] = [
   {
     title: "Goal2",
     id: "5ade23ea-1381-4895-8ee3-26aa1713bd8e",

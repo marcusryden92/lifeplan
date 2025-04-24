@@ -13,14 +13,17 @@ import { SimpleEvent, WeekDayIntegers } from "@/types/calendarTypes";
 import { EventTemplate } from "@/utils/templateBuilderUtils";
 import {
   templateSeed,
-  taskArraySeed,
+  mainPlannerSeed,
   previousCalendarSeed,
 } from "@/data/seedData";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
+import { taskIsCompleted } from "@/utils/taskHelpers";
+import { floorMinutes } from "@/utils/calendarUtils";
 
 interface DataContextType {
-  taskArray: Planner[];
-  setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+  mainPlanner: Planner[];
+  mainPlannerDispatch: React.Dispatch<React.SetStateAction<Planner[]>>;
+  setMainPlanner: (arg: any, manuallyUpdatedCalendar?: SimpleEvent[]) => void;
   currentTemplate: EventTemplate[] | undefined;
   setCurrentTemplate: React.Dispatch<
     React.SetStateAction<EventTemplate[] | undefined>
@@ -34,9 +37,10 @@ interface DataContextType {
     React.SetStateAction<SimpleEvent[] | undefined>
   >;
   updateCalendar: (
-    manuallyUpdatedCalendar?: SimpleEvent[],
-    manuallyUpdatedTaskArray?: Planner[]
+    manuallyUpdatedTaskArray?: Planner[],
+    manuallyUpdatedCalendar?: SimpleEvent[]
   ) => Planner[] | undefined;
+  updateAndRenderCalendar: () => void;
 }
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -49,7 +53,8 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
 
   // State definitions
   const [focusedTask, setFocusedTask] = useState<string | null>(null);
-  const [taskArray, setTaskArray] = useState<Planner[]>(taskArraySeed);
+  const [mainPlanner, mainPlannerDispatch] =
+    useState<Planner[]>(mainPlannerSeed);
   const [currentTemplate, setCurrentTemplate] = useState<
     EventTemplate[] | undefined
   >([]);
@@ -60,43 +65,76 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     SimpleEvent[] | undefined
   >(previousCalendarSeed);
 
+  // Function for both changing the mainPlanner
+  // and updating the calendar at the same time
+  const setMainPlanner = (
+    mainPlannerArg: Planner[] | ((prev: Planner[]) => Planner[]),
+    manuallyUpdatedCalendar?: SimpleEvent[]
+  ) => {
+    mainPlannerDispatch((prev) => {
+      return typeof mainPlannerArg === "function"
+        ? updateCalendar(mainPlannerArg(prev), manuallyUpdatedCalendar) || prev
+        : updateCalendar(mainPlannerArg, manuallyUpdatedCalendar) || prev;
+    });
+  };
+
+  const updateAndRenderCalendar = () => {
+    const now = floorMinutes(new Date());
+    if (currentTemplate && mainPlanner) {
+      setCurrentCalendar((prevCalendar) => {
+        const overdueIds = new Set(
+          mainPlanner.filter((e) => !taskIsCompleted(e)).map((e) => e.id)
+        );
+
+        const filteredCalendar =
+          prevCalendar?.filter(
+            (e) =>
+              !overdueIds.has(e.id) && floorMinutes(new Date(e.start)) < now
+          ) || [];
+
+        return generateCalendar(
+          weekStartDay,
+          currentTemplate,
+          mainPlanner,
+          filteredCalendar
+        );
+      });
+    }
+  };
+
   // Calendar generation function
   const updateCalendar = useCallback(
     (
-      manuallyUpdatedCalendar?: SimpleEvent[],
-      manuallyUpdatedTaskArray?: Planner[]
+      manuallyUpdatedTaskArray?: Planner[],
+      manuallyUpdatedCalendar?: SimpleEvent[]
     ) => {
-      if (currentTemplate && taskArray) {
+      if (currentTemplate && mainPlanner) {
         setCurrentCalendar((prevCalendar) => {
           return generateCalendar(
             weekStartDay,
             currentTemplate,
-            manuallyUpdatedTaskArray || taskArray,
+            manuallyUpdatedTaskArray || mainPlanner,
             manuallyUpdatedCalendar || prevCalendar || []
           );
         });
       }
 
-      // If we need to update the calendar with a custom taskArray
-      // and setTaskArray at the same time (i.e run updateCalendar inside
-      // setTaskArray)
+      // If we need to update the calendar with a custom mainPlanner
+      // and setMainPlanner at the same time (i.e run updateCalendar inside
+      // setMainPlanner)
       return manuallyUpdatedTaskArray;
     },
-    [currentTemplate, weekStartDay, taskArray]
+    [currentTemplate, weekStartDay, mainPlanner]
   );
-
-  // Update calendar when taskArray changes
-  useEffect(() => {
-    updateCalendar();
-  }, [taskArray, updateCalendar]);
 
   useEffect(() => {
     console.log(currentCalendar);
   }, [currentCalendar]);
 
   const value: DataContextType = {
-    taskArray,
-    setTaskArray,
+    mainPlanner,
+    mainPlannerDispatch,
+    setMainPlanner,
     currentTemplate,
     setCurrentTemplate,
     weekStartDay,
@@ -106,6 +144,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     currentCalendar,
     setCurrentCalendar,
     updateCalendar,
+    updateAndRenderCalendar,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
