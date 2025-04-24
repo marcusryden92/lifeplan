@@ -31,24 +31,23 @@ export function generateCalendar(
   let eventArray: SimpleEvent[] = [];
   let currentDate = new Date();
 
-  const unfinishedEventIds: string[] = [];
-
+  const memoizedEventIds: string[] = [];
   // Add unfinished events from previous calendar to new calendar
   if (prevCalendar.length > 0) {
-    const unfinishedEvents = prevCalendar.filter(
-      (e) => currentDate > new Date(e.start) && e.overdueUnresolved === true
+    const memoizedEvents = prevCalendar.filter(
+      (e) => currentDate > new Date(e.start) && !e.isTemplateItem
     );
 
     // Push ID's to array for making sure they aren't added twice
-    unfinishedEvents.forEach((e) => {
-      unfinishedEventIds.push(e.id);
+    memoizedEvents.forEach((e) => {
+      memoizedEventIds.push(e.id);
     });
 
-    eventArray.push(...unfinishedEvents);
+    eventArray.push(...memoizedEvents);
   }
 
   // Add date items to the event array:
-  addDateItemsToArray(taskArray, eventArray);
+  addDateItemsToArray(taskArray, eventArray, memoizedEventIds);
 
   // Add completed items to the event array:
   addCompletedItemsToArray(taskArray, eventArray);
@@ -88,7 +87,7 @@ export function generateCalendar(
     largestTemplateGap,
     taskArray,
     eventArray,
-    unfinishedEventIds
+    memoizedEventIds
   );
 
   return eventArray;
@@ -102,7 +101,7 @@ function addEventsToCalendar(
   largestTemplateGap: number | undefined,
   taskArray: Planner[],
   eventArray: SimpleEvent[],
-  unfinishedEventIds: string[]
+  memoizedEventIds: string[]
 ): SimpleEvent[] {
   // First get all the goals and task events from taskArray:
   let goalsAndTasks: Planner[] = [];
@@ -125,7 +124,7 @@ function addEventsToCalendar(
 
   goalsAndTasks.forEach((item) => {
     // If item is a task:
-    if (item.type === "task" && !unfinishedEventIds.includes(item.id)) {
+    if (item.type === "task" && !memoizedEventIds.includes(item.id)) {
       addTaskToCalendar(
         item,
         largestTemplateGap,
@@ -147,7 +146,7 @@ function addEventsToCalendar(
         template,
         templateEventsArray,
         templatedWeeks,
-        unfinishedEventIds
+        memoizedEventIds
       );
     }
   });
@@ -164,11 +163,11 @@ function addGoalToCalendar(
   template: EventTemplate[],
   templateEventsArray: SimpleEvent[],
   templatedWeeks: Date[],
-  unfinishedEventIds: string[]
+  memoizedEventIds: string[]
 ) {
   const goalBottomLayer = getSortedTreeBottomLayer(taskArray, rootItem.id);
   const filteredTasks = goalBottomLayer.filter(
-    (task) => !taskIsCompleted(task) && !unfinishedEventIds.includes(task.id)
+    (task) => !taskIsCompleted(task) && !memoizedEventIds.includes(task.id)
   );
 
   let startTime: Date | undefined = undefined;
@@ -285,7 +284,7 @@ function addTaskToCalendar(
         end: endTime.toISOString(), // ISO 8601 string format for FullCalendar
         backgroundColor: "#f59e0b",
         borderColor: "transparent",
-        overdueUnresolved: true,
+        isTemplateItem: false,
       };
 
       eventArray.push(newEvent);

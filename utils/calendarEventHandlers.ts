@@ -8,7 +8,7 @@ export const handleSelect = (
   setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
   selectInfo: any
 ) => {
-  const { start, end } = selectInfo;
+  const { start, end, event } = selectInfo;
   const title = prompt("Enter event title:", "New Event");
 
   if (title && calendarRef.current) {
@@ -18,6 +18,7 @@ export const handleSelect = (
       start: start.toISOString(),
       end: end.toISOString(),
       id: Date.now().toString(),
+      isTemplateItem: event.isTemplateItem,
     };
     calendarApi.addEvent(newEvent);
     setEvents((prevEvents) => [...prevEvents, newEvent]);
@@ -70,6 +71,7 @@ export const handleEventCopy = (
     start: event.start,
     end: event.end,
     id: Date.now().toString(),
+    isTemplateItem: event.isTemplateItem,
   };
 
   if (calendarRef.current) {

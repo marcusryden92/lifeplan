@@ -10,9 +10,11 @@ import {
 
 import { useRef, useState } from "react";
 
+import { Planner } from "@/lib/plannerClass";
 import { SimpleEvent } from "@/types/calendarTypes";
 import { useDataContext } from "@/context/DataContext";
-import { taskIsCompleted, toggletaskIsCompleted } from "@/utils/taskHelpers";
+import { taskIsCompleted, setTaskAsCompleted } from "@/utils/taskHelpers";
+import { floorMinutes } from "@/utils/calendarUtils";
 
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date
@@ -36,8 +38,13 @@ const EventContent: React.FC<EventContentProps> = ({
   onDelete,
   showButtons,
 }) => {
-  const { taskArray, setTaskArray, updateCalendar, currentCalendar } =
-    useDataContext();
+  const {
+    taskArray,
+    setTaskArray,
+    updateCalendar,
+    currentCalendar,
+    setCurrentCalendar,
+  } = useDataContext();
   const elementRef = useRef<HTMLDivElement>(null);
   const task = taskArray.find((task) => task.id === event.id);
 
@@ -50,13 +57,12 @@ const EventContent: React.FC<EventContentProps> = ({
   );
 
   const displayPostponeButton =
-    !isCompleted && !event.overdueUnresolved && currentTime > startTime;
+    !isCompleted && floorMinutes(currentTime) > floorMinutes(startTime);
 
   const green = "#0ebf7e";
   const orange = "#f59e0b";
 
   const handleClickCompleteTask = () => {
-    setIsCompleted(!isCompleted);
     const color = !isCompleted ? green : orange;
 
     // Find the DOM element for this event and change color directly
@@ -66,18 +72,39 @@ const EventContent: React.FC<EventContentProps> = ({
       el.style.border = `solid 2px ${color}`;
     }
 
-    setTimeout(() => {
-      toggletaskIsCompleted(setTaskArray, event);
-    }, 500);
+    if (isCompleted) {
+      setIsCompleted(!isCompleted);
+
+      // Remove the event from currentCalendar
+      const manuallyUpdatedCalendar: SimpleEvent[] | undefined =
+        currentCalendar?.filter((e) => !(e.id === event.id));
+
+      // Create a new taskArray instance where item.completed is undefined
+      const manuallyUpdatedTaskArray: Planner[] | undefined = taskArray.map(
+        (item: Planner) =>
+          item.id === event.id ? { ...item, completed: undefined } : item
+      );
+
+      if (manuallyUpdatedCalendar)
+        // Update taskArray with the new information while also updating
+        // the calendar with the new custom data
+        setTaskArray(
+          (prev) =>
+            updateCalendar(manuallyUpdatedCalendar, manuallyUpdatedTaskArray) ||
+            prev
+        );
+    } else {
+      setIsCompleted(!isCompleted);
+
+      setTimeout(() => {
+        setTaskAsCompleted(setTaskArray, event);
+      }, 500);
+    }
   };
 
   const handlePostponetask = () => {
     const manuallyUpdatedCalendar: SimpleEvent[] | undefined =
-      currentCalendar?.map((e) =>
-        e.id === event.id
-          ? { ...e, overdueUnresolved: false, backgroundColor: "pink" }
-          : e
-      );
+      currentCalendar?.filter((e) => !(e.id === event.id));
 
     if (manuallyUpdatedCalendar) updateCalendar(manuallyUpdatedCalendar);
   };

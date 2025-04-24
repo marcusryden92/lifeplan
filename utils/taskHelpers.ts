@@ -4,7 +4,7 @@ import { SimpleEvent } from "@/types/calendarTypes";
 import { getMinuteDifference } from "./calendar-generation/calendarGenerationHelpers";
 import { floorMinutes } from "./calendarUtils";
 
-export function toggletaskIsCompleted(
+export function setTaskAsCompleted(
   setTaskArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   event: SimpleEvent
 ) {

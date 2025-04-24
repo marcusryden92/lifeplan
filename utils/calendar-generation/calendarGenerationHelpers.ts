@@ -4,7 +4,8 @@ import { taskIsCompleted } from "../taskHelpers";
 
 export function addDateItemsToArray(
   taskArray: Planner[],
-  eventArray: SimpleEvent[]
+  eventArray: SimpleEvent[],
+  memoizedEventIds: string[]
 ) {
   let dateItems: Planner[] = [];
   let newArray: SimpleEvent[] = [];
@@ -15,7 +16,7 @@ export function addDateItemsToArray(
 
   // Filter out tasks that are of type "plan"
   taskArray.forEach((task) => {
-    if (task.type === "plan") {
+    if (task.type === "plan" && !memoizedEventIds.includes(task.id)) {
       dateItems.push(task);
     }
   });
@@ -37,6 +38,7 @@ export function addDateItemsToArray(
         end: end.toISOString(), // Add the calculated end time here
         backgroundColor: "black",
         borderColor: "black",
+        isTemplateItem: false,
       };
 
       newArray.push(newDate);
@@ -80,7 +82,7 @@ export function addCompletedItemsToArray(
         end: item.completed.endTime, // Add the calculated end time here
         backgroundColor: "#0ebf7e",
         borderColor: "#0ca66e",
-        overdueUnresolved: false,
+        isTemplateItem: false,
       };
 
       newArray.push(newDate);
