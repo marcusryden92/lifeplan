@@ -1,4 +1,5 @@
 # Fixes
+
 - Install ESLint with Airbnb style
 - Refactor clarify goals page
 - Restructure creation pages folder/url structure
