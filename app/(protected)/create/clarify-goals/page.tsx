@@ -45,7 +45,7 @@ import { getSubtasksById, deleteGoal } from "@/utils/goalPageHandlers";
 import {
   totalSubtaskDuration,
   formatMinutesToHours,
-} from "@/utils/mainPlannerUtils";
+} from "@/utils/taskArrayUtils";
 
 export default function TasksPage() {
   const { mainPlanner, setMainPlanner, focusedTask, setFocusedTask } =
@@ -66,7 +66,7 @@ export default function TasksPage() {
   const devMode = false;
 
   const handleDeleteTask = (index: number, taskId: string) => {
-    deleteGoal({ mainPlanner, setMainPlanner, taskId });
+    deleteGoal({ setMainPlanner, taskId });
     if (editIndex === index) {
       setEditIndex(null);
       setEditTitle("");
@@ -79,7 +79,7 @@ export default function TasksPage() {
     );
 
     filteredArray.forEach((item) =>
-      deleteGoal({ mainPlanner, setMainPlanner, taskId: item.id })
+      deleteGoal({ setMainPlanner, taskId: item.id })
     );
   };
 
@@ -108,7 +108,7 @@ export default function TasksPage() {
 
   const handleDeleteTaskById = (taskId: string) => {
     setMainPlanner(
-      (prevTasks) => prevTasks.filter((task) => task.id !== taskId) // Filter out the task with the matching id
+      (prevTasks: Planner[]) => prevTasks.filter((task) => task.id !== taskId) // Filter out the task with the matching id
     );
   };
 
@@ -192,8 +192,8 @@ export default function TasksPage() {
       if (currentGoal) {
         const currentId = currentGoal.id;
 
-        setMainPlanner((prevArray) =>
-          prevArray.map((task, j) =>
+        setMainPlanner((prevArray: Planner[]) =>
+          prevArray.map((task) =>
             task.id === currentId ? { ...task, deadline: selectedDate } : task
           )
         );
@@ -359,7 +359,7 @@ export default function TasksPage() {
                             />
                             <XMarkIcon
                               onClick={() => {
-                                setMainPlanner((prevTasks) =>
+                                setMainPlanner((prevTasks: Planner[]) =>
                                   prevTasks.map((t, i) =>
                                     i === index
                                       ? { ...t, deadline: undefined }

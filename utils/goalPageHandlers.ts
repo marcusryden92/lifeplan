@@ -3,6 +3,7 @@ import React from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { updateDependenciesOnDelete_ReturnArray } from "@/utils/goal-handlers/update-dependencies/updateDependenciesOnDelete";
+import { SimpleEvent } from "@/types/calendarTypes";
 
 interface AddSubtaskInterface {
   mainPlanner: Planner[];
@@ -44,59 +45,67 @@ export function addSubtask({
 }
 
 interface DeleteGoalInterface {
+  setMainPlanner: (arg: any, manuallyUpdatedCalendar?: SimpleEvent[]) => void;
+  taskId: string;
+  parentId?: string | undefined;
+  manuallyUpdatedCalendar?: SimpleEvent[];
+}
+
+export function deleteGoal({
+  setMainPlanner,
+  taskId,
+  parentId,
+  manuallyUpdatedCalendar,
+}: DeleteGoalInterface) {
+  setMainPlanner((mainPlanner: Planner[]) => {
+    // Create a working copy of the state
+    let newTaskArray = [...mainPlanner];
+
+    if (parentId) {
+      // Use your existing function that returns an updated array
+      newTaskArray = updateDependenciesOnDelete_ReturnArray({
+        mainPlanner: newTaskArray,
+        taskId,
+        parentId,
+      });
+    }
+
+    // Get goal-tree (all IDs under the goal to be deleted)
+    const treeIds: string[] = getTreeIds(newTaskArray, taskId);
+
+    // Find the root parent
+    const rootParent = getRootParent(newTaskArray, taskId);
+
+    // Filter out the tasks to be deleted
+    newTaskArray = newTaskArray.filter((t) => !treeIds.includes(t.id));
+
+    // Check if root becomes empty
+    if (rootParent && rootParent !== taskId) {
+      const rootSubtasks = getSubtasksById(newTaskArray, rootParent);
+      if (rootSubtasks.length === 0) {
+        // Update the root parent's isReady property
+        newTaskArray = newTaskArray.map((t) =>
+          t.id === rootParent ? { ...t, isReady: false } : t
+        );
+      }
+    }
+
+    return newTaskArray;
+  }, manuallyUpdatedCalendar);
+}
+
+interface DeleteGoalReturnArrayInterface {
   mainPlanner: Planner[];
   setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
   taskId: string;
   parentId?: string | undefined;
 }
 
-export function deleteGoal({
-  mainPlanner,
-  setMainPlanner,
-  taskId,
-  parentId,
-}: DeleteGoalInterface) {
-  // Create a working copy of the state
-  let newTaskArray = [...mainPlanner];
-
-  if (parentId) {
-    // Use your existing function that returns an updated array
-    newTaskArray = updateDependenciesOnDelete_ReturnArray({
-      mainPlanner: newTaskArray,
-      taskId,
-      parentId,
-    });
-  }
-
-  // Get goal-tree (all IDs under the goal to be deleted)
-  const treeIds: string[] = getTreeIds(newTaskArray, taskId);
-
-  // Find the root parent
-  const rootParent = getRootParent(newTaskArray, taskId);
-
-  // Filter out the tasks to be deleted
-  newTaskArray = newTaskArray.filter((t) => !treeIds.includes(t.id));
-
-  // Check if root becomes empty
-  if (rootParent && rootParent !== taskId) {
-    const rootSubtasks = getSubtasksById(newTaskArray, rootParent);
-    if (rootSubtasks.length === 0) {
-      // Update the root parent's isReady property
-      newTaskArray = newTaskArray.map((t) =>
-        t.id === rootParent ? { ...t, isReady: false } : t
-      );
-    }
-  }
-
-  // Single state update at the end
-  setMainPlanner(newTaskArray);
-}
-
 export function deleteGoal_ReturnArray({
   mainPlanner,
   taskId,
   parentId,
-}: DeleteGoalInterface): Planner[] {
+}: DeleteGoalReturnArrayInterface): Planner[] {
   let newArray: Planner[] = mainPlanner;
 
   // Corrected type

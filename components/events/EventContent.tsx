@@ -16,8 +16,12 @@ import { useDataContext } from "@/context/DataContext";
 import { taskIsCompleted, setTaskAsCompleted } from "@/utils/taskHelpers";
 import { floorMinutes } from "@/utils/calendarUtils";
 
+import { deleteGoal } from "@/utils/goalPageHandlers";
+import { deletePlanner } from "@/utils/plannerUtils";
+
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date
+
     .getMinutes()
     .toString()
     .padStart(2, "0")}`;
@@ -42,6 +46,7 @@ const EventContent: React.FC<EventContentProps> = ({
     useDataContext();
   const elementRef = useRef<HTMLDivElement>(null);
   const task = mainPlanner.find((task) => task.id === event.id);
+  const [onHover, setOnHover] = useState<boolean>(false);
 
   const currentTime = new Date();
   const startTime = new Date(event.start);
@@ -56,6 +61,7 @@ const EventContent: React.FC<EventContentProps> = ({
 
   const green = "#0ebf7e";
   const orange = "#f59e0b";
+  const red = "#ef4444";
 
   const handleClickCompleteTask = () => {
     const color = !isCompleted ? green : orange;
@@ -99,6 +105,31 @@ const EventContent: React.FC<EventContentProps> = ({
       updateCalendar(undefined, manuallyUpdatedCalendar);
   };
 
+  const handleClickDelete = () => {
+    // Find the DOM element for this event and change color directly
+    const el = elementRef.current?.closest(".fc-event") as HTMLElement;
+    if (el) {
+      el.style.backgroundColor = red;
+      el.style.border = `solid 2px ${red}`;
+    }
+
+    const manuallyUpdatedCalendar: SimpleEvent[] | undefined =
+      currentCalendar?.filter((e) => !(e.id === task?.id));
+
+    setTimeout(() => {
+      if (task?.type === "goal") {
+        deleteGoal({
+          setMainPlanner,
+          taskId: task.id,
+          parentId: task.parentId,
+          manuallyUpdatedCalendar,
+        });
+      } else if (task?.type === "task" || task?.type === "plan") {
+        deletePlanner(setMainPlanner, task.id, manuallyUpdatedCalendar);
+      }
+    }, 500);
+  };
+
   return (
     <div
       ref={elementRef}
@@ -107,6 +138,12 @@ const EventContent: React.FC<EventContentProps> = ({
         flexDirection: "column",
         height: "100%",
         padding: "0px",
+      }}
+      onMouseEnter={() => {
+        setOnHover(true);
+      }}
+      onMouseLeave={() => {
+        setOnHover(false);
       }}
     >
       <span className="flex gap-2 justify-between">
@@ -134,8 +171,8 @@ const EventContent: React.FC<EventContentProps> = ({
         </div>
       )}
 
-      {task?.type === "task" ||
-        (task?.type === "goal" && (
+      {(onHover && task?.type === "task") ||
+        (onHover && task?.type === "goal" && (
           <div
             className="m-1"
             style={{ display: "flex", justifyContent: "flex-end" }}
@@ -154,7 +191,7 @@ const EventContent: React.FC<EventContentProps> = ({
                 <ArrowRightCircleIcon height="1rem" width="1rem" />
               </button>
             )}
-            <button onClick={onDelete} style={{ marginLeft: "10px" }}>
+            <button onClick={handleClickDelete} style={{ marginLeft: "10px" }}>
               <XCircleIcon height="1rem" width="1rem" />
             </button>
           </div>
