@@ -40,6 +40,7 @@ interface DataContextType {
     manuallyUpdatedTaskArray?: Planner[],
     manuallyUpdatedCalendar?: SimpleEvent[]
   ) => Planner[] | undefined;
+
   manuallyUpdateCalendar: () => void;
 }
 

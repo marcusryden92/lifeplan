@@ -129,7 +129,7 @@ export default function TasksPage() {
       finalDuration !== undefined &&
       selectedDate !== undefined
     ) {
-      setMainPlanner((prevTasks) =>
+      setMainPlanner((prevTasks: Planner[]) =>
         prevTasks.map((task, index) =>
           index === changeToTask
             ? {
@@ -147,7 +147,7 @@ export default function TasksPage() {
 
   const handleCancelTask = () => {
     if (changeToTask !== null) {
-      setMainPlanner((prevTasks) =>
+      setMainPlanner((prevTasks: Planner[]) =>
         prevTasks.map((task, index) =>
           index === changeToTask
             ? { ...task, type: null, duration: undefined }

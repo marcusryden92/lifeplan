@@ -24,7 +24,7 @@ const TaskEditDeleteButtons: React.FC<TaskEditDeleteButtonsProps> = ({
   setDisplayEdit,
   setDisplayAddSubtask,
 }) => {
-  const { mainPlanner, setMainPlanner } = useDataContext();
+  const { setMainPlanner } = useDataContext();
   const handleDelete = () => {
     deleteGoal({
       setMainPlanner,

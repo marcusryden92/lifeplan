@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatMinutesToHours } from "@/utils/mainPlannerUtils";
+import { formatMinutesToHours } from "@/utils/taskArrayUtils";
 import { useDataContext } from "@/context/DataContext";
-import { totalSubtaskDuration } from "@/utils/mainPlannerUtils";
+import { totalSubtaskDuration } from "@/utils/taskArrayUtils";
 
 import { DurationDisplayProps } from "@/lib/taskItem";
 

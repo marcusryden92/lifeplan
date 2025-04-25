@@ -5,7 +5,7 @@ import { useDataContext } from "@/context/DataContext";
 import TaskItem from "./TaskItem";
 import TaskDivider from "@/components/draggable/TaskDivider";
 import { TaskListProps } from "@/lib/taskItem";
-import { getTaskById } from "@/utils/mainPlannerUtils";
+import { getTaskById } from "@/utils/taskArrayUtils";
 import {
   getSubtasksById,
   sortTasksByDependenciesAsync,

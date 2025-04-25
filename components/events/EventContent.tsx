@@ -4,7 +4,7 @@ import {
   DocumentDuplicateIcon,
   PencilIcon,
   CheckIcon,
-  ArrowRightCircleIcon,
+  ArrowRightIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
 
@@ -136,6 +136,7 @@ const EventContent: React.FC<EventContentProps> = ({
       style={{
         display: "flex",
         flexDirection: "column",
+        justifyContent: "space-between",
         height: "100%",
         padding: "0px",
       }}
@@ -154,48 +155,58 @@ const EventContent: React.FC<EventContentProps> = ({
         </span>
       </span>
 
-      {showButtons && (
-        <div
-          className="m-1"
-          style={{ display: "flex", justifyContent: "flex-end" }}
-        >
-          <button onClick={onEdit} style={{ marginLeft: "10px" }}>
+      <div
+        style={{
+          display: "flex",
+          width: "100%",
+          justifyContent: "space-between",
+        }}
+      >
+        {onHover && (
+          <>
+            <div
+              className="m-1 ml-0"
+              style={{ display: "flex", justifyContent: "flex-end" }}
+            >
+              <button onClick={handleClickDelete}>
+                <TrashIcon height="1rem" width="1rem" />
+              </button>
+              {/* <button onClick={onEdit}>
             <PencilIcon height="1rem" width="1rem" />
           </button>
-          <button onClick={onCopy} style={{ marginLeft: "10px" }}>
+          <button onClick={onCopy}>
             <DocumentDuplicateIcon height="1rem" width="1rem" />
-          </button>
-          <button onClick={onDelete} style={{ marginLeft: "10px" }}>
-            <TrashIcon height="1rem" width="1rem" />
-          </button>
-        </div>
-      )}
+          </button> */}
+            </div>
 
-      {(onHover && task?.type === "task") ||
-        (onHover && task?.type === "goal" && (
-          <div
-            className="m-1"
-            style={{ display: "flex", justifyContent: "flex-end" }}
-          >
-            <button
-              onClick={handleClickCompleteTask}
-              style={{ marginLeft: "10px" }}
+            <div
+              className="m-1"
+              style={{ display: "flex", justifyContent: "flex-end" }}
             >
-              <CheckIcon height="1rem" width="1rem" />
-            </button>
-            {displayPostponeButton && (
+              {!event.isTemplateItem &&
+                (task?.type === "goal" || task?.type === "task") && (
+                  <button
+                    onClick={handleClickCompleteTask}
+                    style={{ marginLeft: "10px" }}
+                  >
+                    <CheckIcon height="1rem" width="1rem" />
+                  </button>
+                )}
+
               <button
+                disabled={!displayPostponeButton}
                 onClick={handlePostponetask}
-                style={{ marginLeft: "10px" }}
+                style={{
+                  marginLeft: "10px",
+                  opacity: displayPostponeButton ? "100%" : "50%",
+                }}
               >
-                <ArrowRightCircleIcon height="1rem" width="1rem" />
+                <ArrowRightIcon height="1rem" width="1rem" />
               </button>
-            )}
-            <button onClick={handleClickDelete} style={{ marginLeft: "10px" }}>
-              <XCircleIcon height="1rem" width="1rem" />
-            </button>
-          </div>
-        ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };

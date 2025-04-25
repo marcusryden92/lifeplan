@@ -31,16 +31,17 @@ export function generateCalendar(
   let eventArray: SimpleEvent[] = [];
   let currentDate = new Date();
 
-  const memoizedEventIds: string[] = [];
+  const memoizedEventIds = new Set<string>();
+
   // Add unfinished events from previous calendar to new calendar
   if (prevCalendar.length > 0) {
     const memoizedEvents = prevCalendar.filter(
       (e) => currentDate > new Date(e.start) && !e.isTemplateItem
     );
 
-    // Push ID's to array for making sure they aren't added twice
+    // Add IDs to the set
     memoizedEvents.forEach((e) => {
-      memoizedEventIds.push(e.id);
+      memoizedEventIds.add(e.id);
     });
 
     eventArray.push(...memoizedEvents);
@@ -50,7 +51,7 @@ export function generateCalendar(
   addDateItemsToArray(mainPlanner, eventArray, memoizedEventIds);
 
   // Add completed items to the event array:
-  addCompletedItemsToArray(mainPlanner, eventArray);
+  addCompletedItemsToArray(mainPlanner, eventArray, memoizedEventIds);
 
   // Add template items to the event array
   if (template.length > 0) {
@@ -101,7 +102,7 @@ function addEventsToCalendar(
   largestTemplateGap: number | undefined,
   mainPlanner: Planner[],
   eventArray: SimpleEvent[],
-  memoizedEventIds: string[]
+  memoizedEventIds: Set<string>
 ): SimpleEvent[] {
   // First get all the goals and task events from mainPlanner:
   let goalsAndTasks: Planner[] = [];
@@ -124,7 +125,7 @@ function addEventsToCalendar(
 
   goalsAndTasks.forEach((item) => {
     // If item is a task:
-    if (item.type === "task" && !memoizedEventIds.includes(item.id)) {
+    if (item.type === "task" && !memoizedEventIds.has(item.id)) {
       addTaskToCalendar(
         item,
         largestTemplateGap,
@@ -163,11 +164,11 @@ function addGoalToCalendar(
   template: EventTemplate[],
   templateEventsArray: SimpleEvent[],
   templatedWeeks: Date[],
-  memoizedEventIds: string[]
+  memoizedEventIds: Set<string>
 ) {
   const goalBottomLayer = getSortedTreeBottomLayer(mainPlanner, rootItem.id);
   const filteredTasks = goalBottomLayer.filter(
-    (task) => !taskIsCompleted(task) && !memoizedEventIds.includes(task.id)
+    (task) => !taskIsCompleted(task) && !memoizedEventIds.has(task.id)
   );
 
   let startTime: Date | undefined = undefined;
