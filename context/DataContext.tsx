@@ -40,7 +40,7 @@ interface DataContextType {
     manuallyUpdatedTaskArray?: Planner[],
     manuallyUpdatedCalendar?: SimpleEvent[]
   ) => Planner[] | undefined;
-  updateAndRenderCalendar: () => void;
+  manuallyUpdateCalendar: () => void;
 }
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -78,30 +78,6 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const updateAndRenderCalendar = () => {
-    const now = floorMinutes(new Date());
-    if (currentTemplate && mainPlanner) {
-      setCurrentCalendar((prevCalendar) => {
-        const overdueIds = new Set(
-          mainPlanner.filter((e) => !taskIsCompleted(e)).map((e) => e.id)
-        );
-
-        const filteredCalendar =
-          prevCalendar?.filter(
-            (e) =>
-              !overdueIds.has(e.id) && floorMinutes(new Date(e.start)) < now
-          ) || [];
-
-        return generateCalendar(
-          weekStartDay,
-          currentTemplate,
-          mainPlanner,
-          filteredCalendar
-        );
-      });
-    }
-  };
-
   // Calendar generation function
   const updateCalendar = useCallback(
     (
@@ -127,6 +103,30 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     [currentTemplate, weekStartDay, mainPlanner]
   );
 
+  const manuallyUpdateCalendar = useCallback(() => {
+    const now = floorMinutes(new Date());
+    if (currentTemplate && mainPlanner) {
+      setCurrentCalendar((prevCalendar) => {
+        const overdueIds = new Set(
+          mainPlanner.filter((e) => !taskIsCompleted(e)).map((e) => e.id)
+        );
+
+        const filteredCalendar =
+          prevCalendar?.filter(
+            (e) =>
+              !overdueIds.has(e.id) && floorMinutes(new Date(e.start)) < now
+          ) || [];
+
+        return generateCalendar(
+          weekStartDay,
+          currentTemplate,
+          mainPlanner,
+          filteredCalendar
+        );
+      });
+    }
+  }, [setCurrentCalendar, currentTemplate, mainPlanner, weekStartDay]);
+
   useEffect(() => {
     console.log(currentCalendar);
   }, [currentCalendar]);
@@ -144,7 +144,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     currentCalendar,
     setCurrentCalendar,
     updateCalendar,
-    updateAndRenderCalendar,
+    manuallyUpdateCalendar,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

@@ -70,20 +70,13 @@ const EventContent: React.FC<EventContentProps> = ({
     if (isCompleted) {
       setIsCompleted(!isCompleted);
 
-      // Remove the event from currentCalendar
-      const manuallyUpdatedCalendar: SimpleEvent[] | undefined =
-        currentCalendar?.filter((e) => !(e.id === event.id));
-
       // Create a new mainPlanner instance where item.completed is undefined
       const manuallyUpdatedTaskArray: Planner[] | undefined = mainPlanner.map(
         (item: Planner) =>
           item.id === event.id ? { ...item, completed: undefined } : item
       );
 
-      if (manuallyUpdatedCalendar)
-        // Update mainPlanner with the new information while also updating
-        // the calendar with the new custom data
-        setMainPlanner(manuallyUpdatedTaskArray, manuallyUpdatedCalendar);
+      setMainPlanner(manuallyUpdatedTaskArray);
     } else {
       setIsCompleted(!isCompleted);
 
