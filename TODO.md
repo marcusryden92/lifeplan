@@ -1,3 +1,10 @@
+# Fixes
+- Install ESLint with Airbnb style
+- Refactor clarify goals page
+- Restructure creation pages folder/url structure
+- Draggable spacers lighting up even when not dragging
+- Change date picker
+
 # CALENDAR GENERATION FUNCTIONALITY
 
 - Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).
