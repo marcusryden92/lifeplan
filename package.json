@@ -6,8 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint && eslint . --ext .ts,.tsx,.js,.jsx",
-    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix --ignore-pattern .next/",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -21,7 +21,7 @@
     "@fullcalendar/timegrid": "^6.1.15",
     "@heroicons/react": "^2.1.5",
     "@hookform/resolvers": "^3.9.0",
-    "@prisma/client": "^5.18.0",
+    "@prisma/client": "^6.6.0",
     "@radix-ui/react-avatar": "^1.1.0",
     "@radix-ui/react-dialog": "^1.1.1",
     "@radix-ui/react-dropdown-menu": "^2.1.1",
@@ -77,7 +77,7 @@
     "eslint-plugin-react": "^7.37.5",
     "globals": "^16.0.0",
     "postcss": "^8",
-    "prisma": "^5.18.0",
+    "prisma": "^6.6.0",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.5.4",
     "typescript-eslint": "^8.31.0"

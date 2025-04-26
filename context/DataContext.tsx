@@ -61,7 +61,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     useState<Planner[]>(mainPlannerSeed);
   const [currentTemplate, setCurrentTemplate] = useState<
     EventTemplate[] | undefined
-  >([]);
+  >(templateSeed);
   const [weekStartDay, setWeekDayIntegers] = useState<WeekDayIntegers>(
     userSettings.weekStartDay
   );

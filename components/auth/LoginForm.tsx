@@ -25,6 +25,12 @@ import { CardWrapper } from "./CardWrapper";
 import { Button } from "@/components/ui/Button";
 import { login } from "@/actions/login";
 
+interface LoginResponse {
+  error?: string;
+  success?: string;
+  twoFactor?: boolean;
+}
+
 export const LoginForm = () => {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl");
@@ -52,7 +58,7 @@ export const LoginForm = () => {
     setSuccess("");
     startTransition(() => {
       login(values, callbackUrl)
-        .then((data: any) => {
+        .then((data: LoginResponse) => {
           if (data?.error) {
             form.reset();
             setError(data.error);

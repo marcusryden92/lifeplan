@@ -5,6 +5,13 @@
 - Restructure creation pages folder/url structure
 - Draggable spacers lighting up even when not dragging
 - Change date picker
+- Duplicate plans
+- Duplicate templates in template builder
+
+# Calendar
+
+- Fix header in Calendar
+- Allow moving/pinning of objects
 
 # CALENDAR GENERATION FUNCTIONALITY
 

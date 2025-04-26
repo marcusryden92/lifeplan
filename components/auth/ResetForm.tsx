@@ -23,6 +23,11 @@ import { CardWrapper } from "./CardWrapper";
 import { Button } from "@/components/ui/Button";
 import { reset } from "@/actions/reset";
 
+interface ResetResponse {
+  error?: string;
+  success?: string;
+}
+
 export function ResetForm() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>("");
@@ -40,7 +45,7 @@ export function ResetForm() {
     setSuccess("");
 
     startTransition(() => {
-      reset(values).then((data: any) => {
+      reset(values).then((data: ResetResponse) => {
         // Check if data is not undefined
         setError(data?.error);
         setSuccess(data?.success);

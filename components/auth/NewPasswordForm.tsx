@@ -24,6 +24,11 @@ import { CardWrapper } from "./CardWrapper";
 import { Button } from "@/components/ui/Button";
 import { newPassword } from "@/actions/newPassword";
 
+interface NewPasswordResponse {
+  error?: string;
+  success?: string;
+}
+
 export function NewPasswordForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
@@ -45,7 +50,7 @@ export function NewPasswordForm() {
     setSuccess("");
 
     startTransition(() => {
-      newPassword(values, token).then((data: any) => {
+      newPassword(values, token).then((data: NewPasswordResponse) => {
         // Check if data is not undefined
         setError(data?.error);
         setSuccess(data?.success);

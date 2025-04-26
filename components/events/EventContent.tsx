@@ -224,51 +224,54 @@ const EventContent: React.FC<EventContentProps> = ({
           <span>{formatTime(endTime)}</span>
         </span>
       </span>
-      {onHover && elementHeight > 40 && elementWidth > 70 && (
-        <div
-          style={{
-            display: "flex",
-            width: "100%",
-            justifyContent: "space-between",
-          }}
-        >
-          <>
-            <div
-              className="m-1 ml-0"
-              style={{ display: "flex", justifyContent: "flex-end" }}
-            >
-              <button onClick={handleClickDelete}>
-                <XMarkIcon height="1rem" width="1rem" />
-              </button>
-            </div>
+      {onHover &&
+        elementHeight > 40 &&
+        elementWidth > 70 &&
+        !event.extendedProps.isTemplateItem && (
+          <div
+            style={{
+              display: "flex",
+              width: "100%",
+              justifyContent: "space-between",
+            }}
+          >
+            <>
+              <div
+                className="m-1 ml-0"
+                style={{ display: "flex", justifyContent: "flex-end" }}
+              >
+                <button onClick={handleClickDelete}>
+                  <XMarkIcon height="1rem" width="1rem" />
+                </button>
+              </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              {!event.extendedProps?.isTemplateItem &&
-                (task?.type === "goal" || task?.type === "task") && (
-                  <>
-                    <button
-                      onClick={handleClickCompleteTask}
-                      style={{ marginLeft: "10px" }}
-                    >
-                      <CheckIcon height="1rem" width="1rem" />
-                    </button>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                {!event.extendedProps?.isTemplateItem &&
+                  (task?.type === "goal" || task?.type === "task") && (
+                    <>
+                      <button
+                        onClick={handleClickCompleteTask}
+                        style={{ marginLeft: "10px" }}
+                      >
+                        <CheckIcon height="1rem" width="1rem" />
+                      </button>
 
-                    <button
-                      disabled={!displayPostponeButton}
-                      onClick={handlePostponeTask}
-                      style={{
-                        marginLeft: "10px",
-                        opacity: displayPostponeButton ? "100%" : "50%",
-                      }}
-                    >
-                      <ArrowRightIcon height="1rem" width="1rem" />
-                    </button>
-                  </>
-                )}
-            </div>
-          </>
-        </div>
-      )}
+                      <button
+                        disabled={!displayPostponeButton}
+                        onClick={handlePostponeTask}
+                        style={{
+                          marginLeft: "10px",
+                          opacity: displayPostponeButton ? "100%" : "50%",
+                        }}
+                      >
+                        <ArrowRightIcon height="1rem" width="1rem" />
+                      </button>
+                    </>
+                  )}
+              </div>
+            </>
+          </div>
+        )}
 
       {/* Render popover as a portal with its own positioning logic */}
       {showPopover && eventRect && (

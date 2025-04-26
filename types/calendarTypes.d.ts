@@ -1,3 +1,6 @@
+import { EventContentArg } from "@fullcalendar/core/index.js";
+import { EventImpl } from "@fullcalendar/core/internal";
+
 export type WeekDayIntegers = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export type WeekDayType =
@@ -48,3 +51,17 @@ export type SimpleEvent = {
   duration?: number;
   extendedProps: { isTemplateItem: boolean };
 };
+
+export interface ExtendedEventContentArg extends EventContentArg {
+  event: EventContentArg["event"] & {
+    externalProps: {
+      isTemplate: boolean;
+    };
+  };
+}
+
+export interface ExtendedEventImpl extends EventImpl {
+  externalProps: {
+    isTemplate: boolean;
+  };
+}

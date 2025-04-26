@@ -126,7 +126,7 @@ export function populateTemplateCalendar(
       end: newEndDate.toISOString(), // Convert Date to ISO string
       backgroundColor: "#1242B2",
       borderColor: "transparent",
-      isTemplateItem: true,
+      extendedProps: { isTemplateItem: true },
     });
   });
 

@@ -103,6 +103,7 @@ function addTemplateEvent(
       dtstart: startISO,
     },
     duration: event.duration * 60 * 1000, // Convert duration to milliseconds
+    extendedProps: { isTemplateItem: true },
   });
 }
 
@@ -173,6 +174,7 @@ export function populateWeekWithTemplate(
       end: newEndDate.toISOString(), // Convert Date to ISO string
       backgroundColor: "#1242B2",
       borderColor: "transparent",
+      extendedProps: { isTemplateItem: true },
     });
   });
 

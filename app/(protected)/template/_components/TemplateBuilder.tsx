@@ -22,7 +22,7 @@ import {
 } from "@/utils/calendarEventHandlers";
 import { convertEventImplToSimpleEvent } from "@/utils/eventUtils";
 import EventContent from "@/components/events/EventContent";
-import { EventContentArg } from "@fullcalendar/core/index.js";
+import { ExtendedEventContentArg } from "@/types/calendarTypes";
 
 interface TemplateBuilderProps {
   templateEvents: SimpleEvent[];
@@ -105,8 +105,11 @@ export default function TemplateBuilder({
       eventDrop={(dropInfo) => handleEventDrop(setTemplateEvents, dropInfo)}
       allDaySlot={false}
       dayHeaderFormat={{ weekday: "short" }}
-      eventContent={({ event }: EventContentArg) => {
-        const simpleEvent = convertEventImplToSimpleEvent(event, true);
+      eventContent={({ event }: ExtendedEventContentArg) => {
+        const simpleEvent = convertEventImplToSimpleEvent(
+          event,
+          event.extendedProps.isTemplateItem
+        );
         return (
           <EventContent
             event={simpleEvent}

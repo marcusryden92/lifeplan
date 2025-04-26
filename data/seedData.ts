@@ -351,7 +351,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-23T20:45:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "686ee99d-6ef1-413c-baca-ef18289272e8",
@@ -360,7 +360,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-23T21:30:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "ccbd65fc-eb32-4ee3-ad43-9d3abe4eb882",
@@ -369,7 +369,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-23T22:15:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "cd2a2066-c55c-419c-869a-a0105643231e",
@@ -378,7 +378,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-23T23:00:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "773ae3c8-1cc9-4e75-be5d-9bb4391dba00",
@@ -387,7 +387,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-23T23:45:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "cd1a0c16-26bd-4f75-93d8-e35d91656d89",
@@ -396,7 +396,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-24T00:30:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "a82cf595-3677-43df-9f11-348e4693f879",
@@ -405,7 +405,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-24T01:15:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "44c581f7-bf95-45ba-a226-fc409b2666c2",
@@ -414,7 +414,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-24T02:00:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "b296a10b-cf0c-433f-8944-472f670528d3",
@@ -423,7 +423,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-24T02:45:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "4e3a0785-f77c-4fa1-893b-9d802de497a4",
@@ -432,7 +432,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-24T03:30:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "32f8ac4c-8cb8-4e51-8a39-cb7027c96ed8",
@@ -441,7 +441,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-24T04:15:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "19cce9a6-7b3a-4d8c-954d-44207d0d50bd",
@@ -450,7 +450,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-24T05:00:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "c486c7ed-943f-4bdc-bcb7-56a7ce769ab0",
@@ -459,7 +459,7 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-24T05:45:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
   {
     id: "09420953-37c0-4755-9efc-e0d285bcff1b",
@@ -468,6 +468,6 @@ export const previousCalendarSeed: SimpleEvent[] = [
     end: "2025-04-24T06:30:00.000Z",
     backgroundColor: "#f59e0b",
     borderColor: "transparent",
-    isTemplateItem: false,
+    extendedProps: { isTemplateItem: false },
   },
 ];

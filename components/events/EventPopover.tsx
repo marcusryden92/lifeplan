@@ -58,6 +58,8 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   onPostpone,
   onUpdateTitle,
 }) => {
+  if (!task) return;
+
   const popoverRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [position, setPosition] = useState<Position>({ top: 0, left: 0 });
