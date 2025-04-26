@@ -43,6 +43,10 @@ body,
   border-color: rgba(0, 0, 0, 0.075);
 }
 
+:root .fc-event-main {
+  padding: 0;
+}
+
 /* Event appearance */
 :root .fc-event {
   overflow: hidden;

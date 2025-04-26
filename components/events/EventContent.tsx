@@ -1,27 +1,23 @@
 // EventContent.tsx
 import {
   TrashIcon,
-  DocumentDuplicateIcon,
-  PencilIcon,
   CheckIcon,
   ArrowRightIcon,
-  XCircleIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
-import { Planner } from "@/lib/plannerClass";
 import { SimpleEvent } from "@/types/calendarTypes";
 import { useDataContext } from "@/context/DataContext";
 import { taskIsCompleted, setTaskAsCompleted } from "@/utils/taskHelpers";
 import { floorMinutes } from "@/utils/calendarUtils";
-
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { deletePlanner } from "@/utils/plannerUtils";
+import EventPopover from "./EventPopover";
 
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date
-
     .getMinutes()
     .toString()
     .padStart(2, "0")}`;
@@ -39,12 +35,42 @@ const EventContent: React.FC<EventContentProps> = ({
   event,
   onEdit,
   onCopy,
-  onDelete,
-  showButtons,
 }) => {
   const { mainPlanner, setMainPlanner, updateCalendar, currentCalendar } =
     useDataContext();
+
   const elementRef = useRef<HTMLDivElement>(null);
+  const [elementHeight, setElementHeight] = useState<number>(0);
+  const [elementWidth, setElementWidth] = useState<number>(0);
+  const [showPopover, setShowPopover] = useState<boolean>(false);
+  const [eventRect, setEventRect] = useState<DOMRect | null>(null);
+  const [updatedTitle, setUpdatedTitle] = useState<string>(event.title);
+
+  useEffect(() => {
+    const parentElement = elementRef.current?.closest(
+      ".fc-event"
+    ) as HTMLElement;
+    if (parentElement) {
+      setElementHeight(parentElement.offsetHeight);
+      setElementWidth(parentElement.offsetWidth);
+
+      // Apply sky-500 border when popover is open
+      if (showPopover) {
+        parentElement.style.outline = "1px solid #0ea5e9"; // sky-500
+        parentElement.style.outlineOffset = "0px";
+        parentElement.style.zIndex = "30"; // Ensure event is above others
+      } else {
+        parentElement.style.outline = "none";
+        parentElement.style.outlineOffset = "0";
+        parentElement.style.zIndex = ""; // Reset to default
+      }
+    }
+
+    if (elementHeight < 20 && parentElement) {
+      parentElement.style.padding = "0px";
+    }
+  }, [elementHeight, showPopover]);
+
   const task = mainPlanner.find((task) => task.id === event.id);
   const [onHover, setOnHover] = useState<boolean>(false);
 
@@ -64,28 +90,24 @@ const EventContent: React.FC<EventContentProps> = ({
   const red = "#ef4444";
 
   const handleClickCompleteTask = () => {
+    const parentElement = elementRef.current?.closest(
+      ".fc-event"
+    ) as HTMLElement;
     const color = !isCompleted ? green : orange;
 
-    // Find the DOM element for this event and change color directly
-    const el = elementRef.current?.closest(".fc-event") as HTMLElement;
-    if (el) {
-      el.style.backgroundColor = color;
-      el.style.border = `solid 2px ${color}`;
+    if (parentElement) {
+      parentElement.style.backgroundColor = color;
+      parentElement.style.border = `solid 2px ${color}`;
     }
 
     if (isCompleted) {
-      setIsCompleted(!isCompleted);
-
-      // Create a new mainPlanner instance where item.completed is undefined
-      const manuallyUpdatedTaskArray: Planner[] | undefined = mainPlanner.map(
-        (item: Planner) =>
-          item.id === event.id ? { ...item, completed: undefined } : item
+      setIsCompleted(false);
+      const updated = mainPlanner.map((item) =>
+        item.id === event.id ? { ...item, completed: undefined } : item
       );
-
-      setMainPlanner(manuallyUpdatedTaskArray);
+      setMainPlanner(updated);
     } else {
-      setIsCompleted(!isCompleted);
-
+      setIsCompleted(true);
       setTimeout(() => {
         setTaskAsCompleted(
           setMainPlanner,
@@ -95,26 +117,31 @@ const EventContent: React.FC<EventContentProps> = ({
         );
       }, 500);
     }
+
+    setShowPopover(false);
   };
 
-  const handlePostponetask = () => {
-    const manuallyUpdatedCalendar: SimpleEvent[] | undefined =
-      currentCalendar?.filter((e) => !(e.id === event.id));
+  const handlePostponeTask = () => {
+    const updatedCalendar = currentCalendar?.filter(
+      (e) => !(e.id === event.id)
+    );
+    if (updatedCalendar) updateCalendar(undefined, updatedCalendar);
 
-    if (manuallyUpdatedCalendar)
-      updateCalendar(undefined, manuallyUpdatedCalendar);
+    setShowPopover(false);
   };
 
   const handleClickDelete = () => {
-    // Find the DOM element for this event and change color directly
-    const el = elementRef.current?.closest(".fc-event") as HTMLElement;
-    if (el) {
-      el.style.backgroundColor = red;
-      el.style.border = `solid 2px ${red}`;
+    const parentElement = elementRef.current?.closest(
+      ".fc-event"
+    ) as HTMLElement;
+    if (parentElement) {
+      parentElement.style.backgroundColor = red;
+      parentElement.style.border = `solid 2px ${red}`;
     }
 
-    const manuallyUpdatedCalendar: SimpleEvent[] | undefined =
-      currentCalendar?.filter((e) => !(e.id === task?.id));
+    const updatedCalendar = currentCalendar?.filter(
+      (e) => !(e.id === task?.id)
+    );
 
     setTimeout(() => {
       if (task?.type === "goal") {
@@ -122,12 +149,47 @@ const EventContent: React.FC<EventContentProps> = ({
           setMainPlanner,
           taskId: task.id,
           parentId: task.parentId,
-          manuallyUpdatedCalendar,
+          manuallyUpdatedCalendar: updatedCalendar,
         });
-      } else if (task?.type === "task" || task?.type === "plan") {
-        deletePlanner(setMainPlanner, task.id, manuallyUpdatedCalendar);
+      } else if (task) {
+        deletePlanner(setMainPlanner, task.id, updatedCalendar);
       }
     }, 500);
+
+    setShowPopover(false);
+  };
+
+  const handleUpdateTitle = (newTitle: string) => {
+    // Update the title in the calendar event
+    const updatedEvents = currentCalendar?.map((calEvent) => {
+      if (calEvent.id === event.id) {
+        return { ...calEvent, title: newTitle };
+      }
+      return calEvent;
+    });
+
+    if (updatedEvents) updateCalendar(undefined, updatedEvents);
+
+    // Update the title in the planner
+    const updatedPlanner = mainPlanner.map((item) => {
+      if (item.id === event.id) {
+        return { ...item, title: newTitle };
+      }
+      return item;
+    });
+
+    setMainPlanner(updatedPlanner);
+    setUpdatedTitle(newTitle);
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event from bubbling up
+
+    // Get and store the element rect for popover positioning
+    if (elementRef.current) {
+      setEventRect(elementRef.current.getBoundingClientRect());
+      setShowPopover(true);
+    }
   };
 
   return (
@@ -140,73 +202,100 @@ const EventContent: React.FC<EventContentProps> = ({
         height: "100%",
         padding: "0px",
       }}
-      onMouseEnter={() => {
-        setOnHover(true);
-      }}
-      onMouseLeave={() => {
-        setOnHover(false);
-      }}
+      onMouseEnter={() => setOnHover(true)}
+      onMouseLeave={() => setOnHover(false)}
+      onDoubleClick={handleDoubleClick}
     >
       <span className="flex gap-2 justify-between">
-        <span style={{ marginBottom: "auto" }}>{event.title}</span>
-        <span className="flex gap-2">
+        <span
+          style={{
+            marginBottom: "auto",
+            fontSize: elementHeight > 20 ? "0.8rem" : "0.5rem",
+          }}
+        >
+          {updatedTitle}
+        </span>
+        <span
+          className="flex gap-2"
+          style={{
+            fontSize: elementHeight > 20 ? "0.8rem" : "0.5rem",
+          }}
+        >
           <span>{formatTime(startTime)}</span>
           <span>{formatTime(endTime)}</span>
         </span>
       </span>
-
-      <div
-        style={{
-          display: "flex",
-          width: "100%",
-          justifyContent: "space-between",
-        }}
-      >
-        {onHover && (
+      {onHover && elementHeight > 40 && elementWidth > 70 && (
+        <div
+          style={{
+            display: "flex",
+            width: "100%",
+            justifyContent: "space-between",
+          }}
+        >
           <>
             <div
               className="m-1 ml-0"
               style={{ display: "flex", justifyContent: "flex-end" }}
             >
               <button onClick={handleClickDelete}>
-                <TrashIcon height="1rem" width="1rem" />
+                <XMarkIcon height="1rem" width="1rem" />
               </button>
-              {/* <button onClick={onEdit}>
-            <PencilIcon height="1rem" width="1rem" />
-          </button>
-          <button onClick={onCopy}>
-            <DocumentDuplicateIcon height="1rem" width="1rem" />
-          </button> */}
             </div>
 
-            <div
-              className="m-1"
-              style={{ display: "flex", justifyContent: "flex-end" }}
-            >
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
               {!event.isTemplateItem &&
                 (task?.type === "goal" || task?.type === "task") && (
-                  <button
-                    onClick={handleClickCompleteTask}
-                    style={{ marginLeft: "10px" }}
-                  >
-                    <CheckIcon height="1rem" width="1rem" />
-                  </button>
-                )}
+                  <>
+                    <button
+                      onClick={handleClickCompleteTask}
+                      style={{ marginLeft: "10px" }}
+                    >
+                      <CheckIcon height="1rem" width="1rem" />
+                    </button>
 
-              <button
-                disabled={!displayPostponeButton}
-                onClick={handlePostponetask}
-                style={{
-                  marginLeft: "10px",
-                  opacity: displayPostponeButton ? "100%" : "50%",
-                }}
-              >
-                <ArrowRightIcon height="1rem" width="1rem" />
-              </button>
+                    <button
+                      disabled={!displayPostponeButton}
+                      onClick={handlePostponeTask}
+                      style={{
+                        marginLeft: "10px",
+                        opacity: displayPostponeButton ? "100%" : "50%",
+                      }}
+                    >
+                      <ArrowRightIcon height="1rem" width="1rem" />
+                    </button>
+                  </>
+                )}
             </div>
           </>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Render popover as a portal with its own positioning logic */}
+      {showPopover && eventRect && (
+        <EventPopover
+          event={{ ...event, title: updatedTitle }}
+          task={task}
+          eventRect={eventRect}
+          startTime={startTime}
+          endTime={endTime}
+          isCompleted={isCompleted}
+          displayPostponeButton={displayPostponeButton}
+          onClose={() => setShowPopover(false)}
+          onEdit={() => {
+            setShowPopover(false);
+            onEdit();
+          }}
+          onCopy={() => {
+            setShowPopover(false);
+            onCopy();
+          }}
+          onDelete={handleClickDelete}
+          onComplete={handleClickCompleteTask}
+          onPostpone={handlePostponeTask}
+          onUpdateTitle={handleUpdateTitle}
+        />
+      )}
     </div>
   );
 };
