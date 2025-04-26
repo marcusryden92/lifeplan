@@ -3,6 +3,7 @@ import globals from "globals";
 import tseslint from "@typescript-eslint/eslint-plugin";
 import reactPlugin from "eslint-plugin-react";
 import tsParser from "@typescript-eslint/parser";
+import pluginNext from "@next/eslint-plugin-next";
 
 export default [
   {
@@ -39,11 +40,14 @@ export default [
     plugins: {
       "@typescript-eslint": tseslint,
       react: reactPlugin,
+      "@next/next": pluginNext,
     },
     rules: {
       ...js.configs.recommended.rules,
       ...tseslint.configs.recommended.rules,
       ...reactPlugin.configs.recommended.rules,
+      ...pluginNext.configs.recommended.rules,
+      ...pluginNext.configs["core-web-vitals"].rules,
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "no-undef": "error",
