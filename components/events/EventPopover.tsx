@@ -351,7 +351,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
           </div>
 
           {/* Status buttons - Only show if applicable */}
-          {!event.isTemplateItem &&
+          {!event.extendedProps.isTemplateItem &&
             (task?.type === "goal" || task?.type === "task") && (
               <div className="pt-2 border-t border-gray-100">
                 <div className="flex flex-wrap gap-2">

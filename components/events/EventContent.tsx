@@ -244,7 +244,7 @@ const EventContent: React.FC<EventContentProps> = ({
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              {!event.isTemplateItem &&
+              {!event.extendedProps?.isTemplateItem &&
                 (task?.type === "goal" || task?.type === "task") && (
                   <>
                     <button

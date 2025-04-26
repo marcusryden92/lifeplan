@@ -46,5 +46,5 @@ export type SimpleEvent = {
   borderColor?: string;
   rrule?: RRule;
   duration?: number;
-  isTemplateItem: boolean;
+  extendedProps: { isTemplateItem: boolean };
 };

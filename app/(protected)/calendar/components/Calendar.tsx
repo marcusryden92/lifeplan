@@ -66,7 +66,9 @@ export default function Calendar({ initialEvents }: CalendarProps) {
       editable={EVENT_INTERACTION_ENABLED}
       eventResizableFromStart={EVENT_INTERACTION_ENABLED}
       selectable={EVENT_INTERACTION_ENABLED}
-      select={(selectInfo) => handleSelect(calendarRef, setEvents, selectInfo)}
+      select={(selectInfo) =>
+        handleSelect(calendarRef, setEvents, selectInfo, false)
+      }
       eventResize={(resizeInfo) => handleEventResize(setEvents, resizeInfo)}
       eventDrop={(dropInfo) => handleEventDrop(setEvents, dropInfo)}
       eventContent={({ event }: any) => (

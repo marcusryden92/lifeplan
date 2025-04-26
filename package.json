@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "next lint && eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -65,8 +66,11 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.31.0",
+    "@typescript-eslint/parser": "^8.31.0",
     "eslint": "^8",
     "eslint-config-next": "14.2.6",
+    "eslint-plugin-react": "^7.37.5",
     "postcss": "^8",
     "prisma": "^5.18.0",
     "tailwindcss": "^3.4.1",

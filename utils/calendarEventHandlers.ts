@@ -2,13 +2,15 @@
 
 import FullCalendar from "@fullcalendar/react";
 import { SimpleEvent } from "@/types/calendarTypes";
+import { DateSelectArg } from "@fullcalendar/core/index.js";
 
 export const handleSelect = (
   calendarRef: React.RefObject<FullCalendar>,
   setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
-  selectInfo: any
+  selectInfo: DateSelectArg,
+  isTemplateItem: boolean
 ) => {
-  const { start, end, event } = selectInfo;
+  const { start, end } = selectInfo;
   const title = prompt("Enter event title:", "New Event");
 
   if (title && calendarRef.current) {
@@ -18,7 +20,7 @@ export const handleSelect = (
       start: start.toISOString(),
       end: end.toISOString(),
       id: Date.now().toString(),
-      isTemplateItem: event.isTemplateItem,
+      extendedProps: { isTemplateItem },
     };
     calendarApi.addEvent(newEvent);
     setEvents((prevEvents) => [...prevEvents, newEvent]);
@@ -71,7 +73,7 @@ export const handleEventCopy = (
     start: event.start,
     end: event.end,
     id: Date.now().toString(),
-    isTemplateItem: event.isTemplateItem,
+    extendedProps: { isTemplateItem: event.extendedProps.isTemplateItem },
   };
 
   if (calendarRef.current) {
