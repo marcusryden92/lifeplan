@@ -38,7 +38,7 @@ export function addDateItemsToArray(
         end: end.toISOString(), // Add the calculated end time here
         backgroundColor: "black",
         borderColor: "black",
-        isTemplateItem: false,
+        extendedProps: { isTemplateItem: false },
       };
 
       newArray.push(newDate);
@@ -83,7 +83,7 @@ export function addCompletedItemsToArray(
         end: item.completed.endTime, // Add the calculated end time here
         backgroundColor: "#0ebf7e",
         borderColor: "#0ca66e",
-        isTemplateItem: false,
+        extendedProps: { isTemplateItem: false },
       };
 
       newArray.push(newDate);

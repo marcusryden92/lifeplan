@@ -432,9 +432,6 @@ async function updateMovedTask(
     (t) => t.dependency === targetTask.id
   );
 
-  // Initiate empty instructions array
-  const instructions: InstructionType[] = [];
-
   // If movedTask HAS children
   // -- Set movedTask parent to targetTask
   // -- Set movedTaskFirstBLI dependency to that of targetTaskFirstBLI.dependency

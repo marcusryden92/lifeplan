@@ -45,7 +45,10 @@ export function addSubtask({
 }
 
 interface DeleteGoalInterface {
-  setMainPlanner: (arg: any, manuallyUpdatedCalendar?: SimpleEvent[]) => void;
+  setMainPlanner: (
+    arg: Planner[] | ((prev: Planner[]) => Planner[]),
+    manuallyUpdatedCalendar?: SimpleEvent[]
+  ) => void;
   taskId: string;
   parentId?: string | undefined;
   manuallyUpdatedCalendar?: SimpleEvent[];

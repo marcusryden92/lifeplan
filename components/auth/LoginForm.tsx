@@ -69,7 +69,7 @@ export const LoginForm = () => {
         })
         .catch((err) => {
           // Handle any errors that occur during the login process
-          setError("An unexpected error occurred.");
+          setError("An unexpected error occurred: " + err);
         });
     });
   };

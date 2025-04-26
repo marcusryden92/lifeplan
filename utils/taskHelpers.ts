@@ -13,6 +13,7 @@ export function setTaskAsCompleted(
   currentCalendar: SimpleEvent[] = [],
   event: SimpleEvent
 ) {
+  if (!event.start || !event.end) return;
   const currentTime = new Date();
   const eventStartDate = new Date(event.start);
 

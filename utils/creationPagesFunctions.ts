@@ -72,7 +72,7 @@ export const deleteTask = (
 // DELETE ALL TASKS
 
 interface DeleteAllProps {
-  setMainPlanner: React.Dispatch<React.SetStateAction<any[]>>;
+  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
   filter?: Planner[]; // Replace `any` with your actual task type if necessary
 }
 

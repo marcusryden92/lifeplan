@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-
 // Components
 import { Button } from "@/components/ui/Button";
 
@@ -12,8 +10,6 @@ import { useDataContext } from "@/context/DataContext";
 
 // Utils
 import { deleteGoal } from "@/utils/goalPageHandlers";
-import { getRootParent, getSubtasksById } from "@/utils/goalPageHandlers";
-import { setGoalIsReady } from "@/utils/goal-handlers/toggleGoalIsReady";
 
 // Definitions
 import { TaskEditDeleteButtonsProps } from "@/lib/taskItem";

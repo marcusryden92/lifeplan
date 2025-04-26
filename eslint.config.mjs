@@ -52,6 +52,7 @@ export default defineConfig({
     ...tseslint.configs.recommended.rules,
     ...reactPlugin.configs.recommended.rules,
     "react/react-in-jsx-scope": "off",
+    "react/prop-types": "off",
     "no-undef": "error",
   },
   settings: {

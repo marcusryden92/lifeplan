@@ -20,7 +20,9 @@ import {
   handleEventDelete,
   handleEventEdit,
 } from "@/utils/calendarEventHandlers";
+import { convertEventImplToSimpleEvent } from "@/utils/eventUtils";
 import EventContent from "@/components/events/EventContent";
+import { EventContentArg } from "@fullcalendar/core/index.js";
 
 interface TemplateBuilderProps {
   templateEvents: SimpleEvent[];
@@ -103,24 +105,29 @@ export default function TemplateBuilder({
       eventDrop={(dropInfo) => handleEventDrop(setTemplateEvents, dropInfo)}
       allDaySlot={false}
       dayHeaderFormat={{ weekday: "short" }}
-      eventContent={({ event }: any) => (
-        <EventContent
-          event={event}
-          onEdit={() =>
-            handleEventEdit(
-              calendarRef,
-              setTemplateEvents,
-              templateEvents,
-              event.id
-            )
-          }
-          onCopy={() => handleEventCopy(calendarRef, setTemplateEvents, event)}
-          onDelete={() =>
-            handleEventDelete(calendarRef, setTemplateEvents, event.id)
-          }
-          showButtons={true} // Adjust based on your needs
-        />
-      )}
+      eventContent={({ event }: EventContentArg) => {
+        const simpleEvent = convertEventImplToSimpleEvent(event, true);
+        return (
+          <EventContent
+            event={simpleEvent}
+            onEdit={() =>
+              handleEventEdit(
+                calendarRef,
+                setTemplateEvents,
+                templateEvents,
+                event.id
+              )
+            }
+            onCopy={() =>
+              handleEventCopy(calendarRef, setTemplateEvents, simpleEvent)
+            }
+            onDelete={() =>
+              handleEventDelete(calendarRef, setTemplateEvents, event.id)
+            }
+            showButtons={true} // Adjust based on your needs
+          />
+        );
+      }}
     />
   );
 }

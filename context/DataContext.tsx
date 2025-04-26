@@ -23,7 +23,10 @@ import { floorMinutes } from "@/utils/calendarUtils";
 interface DataContextType {
   mainPlanner: Planner[];
   mainPlannerDispatch: React.Dispatch<React.SetStateAction<Planner[]>>;
-  setMainPlanner: (arg: any, manuallyUpdatedCalendar?: SimpleEvent[]) => void;
+  setMainPlanner: (
+    arg: Planner[] | ((prev: Planner[]) => Planner[]),
+    manuallyUpdatedCalendar?: SimpleEvent[]
+  ) => void;
   currentTemplate: EventTemplate[] | undefined;
   setCurrentTemplate: React.Dispatch<
     React.SetStateAction<EventTemplate[] | undefined>

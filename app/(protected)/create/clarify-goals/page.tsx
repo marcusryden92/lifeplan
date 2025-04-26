@@ -35,10 +35,7 @@ import RootTaskListWrapper from "./_components/task-item-subcomponents/RootTaskL
 // Local utilities
 import { clickEdit, confirmEdit } from "@/utils/creationPagesFunctions";
 import { Planner } from "@/lib/plannerClass";
-import {
-  setGoalIsReady,
-  toggleGoalIsReady,
-} from "@/utils/goal-handlers/toggleGoalIsReady";
+import { toggleGoalIsReady } from "@/utils/goal-handlers/toggleGoalIsReady";
 
 import { getSubtasksById, deleteGoal } from "@/utils/goalPageHandlers";
 
@@ -55,13 +52,9 @@ export default function TasksPage() {
 
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
-  const [changeTask, setChangeToTask] = useState<number | null>(null);
-
   const [carouselIndex, setCarouselIndex] = useState<number | undefined>(
     undefined
   );
-
-  const [goalComplete, setGoalComplete] = useState<boolean>(false);
 
   const devMode = false;
 
@@ -100,16 +93,6 @@ export default function TasksPage() {
       setEditIndex,
       setEditTitle,
     });
-  };
-
-  const handleSetToGoal = (index: number) => {
-    setChangeToTask(index);
-  };
-
-  const handleDeleteTaskById = (taskId: string) => {
-    setMainPlanner(
-      (prevTasks: Planner[]) => prevTasks.filter((task) => task.id !== taskId) // Filter out the task with the matching id
-    );
   };
 
   const getCurrentGoal = (index: number) => {
@@ -161,30 +144,6 @@ export default function TasksPage() {
     return false;
   };
 
-  const checkTotalCompletion = () => {
-    const goalsList = getGoalsList();
-    let isComplete = true;
-
-    goalsList.forEach((goal) => {
-      if (!goal) {
-        return false;
-      }
-
-      const subtasks = getSubtasksById(mainPlanner, goal.id);
-
-      if (
-        // selectedDate != undefined &&
-        !subtasks ||
-        subtasks.length < 2 ||
-        goal.deadline === undefined
-      ) {
-        isComplete = false;
-      }
-    });
-
-    return isComplete;
-  };
-
   useEffect(() => {
     if (carouselIndex != undefined) {
       const currentGoal = getCurrentGoal(carouselIndex);
@@ -200,12 +159,6 @@ export default function TasksPage() {
       }
     }
   }, [selectedDate]);
-
-  useEffect(() => {
-    if (carouselIndex != undefined) {
-      setGoalComplete(checkGoalForCompletion(carouselIndex));
-    }
-  }, [carouselIndex, mainPlanner]);
 
   useEffect(() => {
     if (carouselIndex != undefined) {
@@ -285,10 +238,7 @@ export default function TasksPage() {
                         </div>
                       ) : (
                         <div className="flex w-full items-center justify-center border-b border-gray-600 border-opacity-15 pb-1">
-                          <div
-                            className="flex-grow flex justify-between items-center max-w-[250px]"
-                            onClick={() => handleSetToGoal(index)}
-                          >
+                          <div className="flex-grow flex justify-between items-center max-w-[250px]">
                             <div className="flex items-center gap-2">
                               <div className="truncate">
                                 {task.title.toUpperCase()}

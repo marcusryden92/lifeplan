@@ -1,13 +1,15 @@
 import { Planner } from "@/lib/plannerClass";
 import { SimpleEvent } from "@/types/calendarTypes";
-import { EventTemplate } from "./templateBuilderUtils";
 
 export const hasInfluence = (mainPlanner: Planner[]): boolean => {
   return !mainPlanner.some((task) => task.canInfluence === true);
 };
 
 export const deletePlanner = (
-  setMainPlanner: (arg: any, manuallyUpdatedCalendar?: SimpleEvent[]) => void,
+  setMainPlanner: (
+    arg: Planner[] | ((prev: Planner[]) => Planner[]),
+    manuallyUpdatedCalendar?: SimpleEvent[]
+  ) => void,
   taskId: string,
   currentCalendar?: SimpleEvent[]
 ) => {

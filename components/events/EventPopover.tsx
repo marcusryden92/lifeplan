@@ -21,7 +21,7 @@ const formatTime = (date: Date) => {
 
 interface EventPopoverProps {
   event: SimpleEvent;
-  task: Planner; // Replace with your actual task type
+  task?: Planner; // Replace with your actual task type
   eventRect: DOMRect;
   startTime: Date;
   endTime: Date;

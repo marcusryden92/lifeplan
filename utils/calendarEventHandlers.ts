@@ -2,7 +2,8 @@
 
 import FullCalendar from "@fullcalendar/react";
 import { SimpleEvent } from "@/types/calendarTypes";
-import { DateSelectArg } from "@fullcalendar/core/index.js";
+import { DateSelectArg, EventDropArg } from "@fullcalendar/core/index.js";
+import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 
 export const handleSelect = (
   calendarRef: React.RefObject<FullCalendar>,
@@ -29,7 +30,7 @@ export const handleSelect = (
 
 export const handleEventResize = (
   setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
-  resizeInfo: any
+  resizeInfo: EventResizeStartArg
 ) => {
   const { event } = resizeInfo;
   setEvents((prevEvents) =>
@@ -37,8 +38,8 @@ export const handleEventResize = (
       ev.id === event.id
         ? {
             ...ev,
-            start: event.start.toISOString(),
-            end: event.end.toISOString(),
+            start: event.start ? event.start.toISOString() : ev.start,
+            end: event.end ? event.end.toISOString() : ev.end,
           }
         : ev
     )
@@ -47,16 +48,17 @@ export const handleEventResize = (
 
 export const handleEventDrop = (
   setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
-  dropInfo: any
+  dropInfo: EventDropArg
 ) => {
   const { event } = dropInfo;
+
   setEvents((prevEvents) =>
     prevEvents.map((ev) =>
       ev.id === event.id
         ? {
             ...ev,
-            start: event.start.toISOString(),
-            end: event.end.toISOString(),
+            start: event.start ? event.start.toISOString() : ev.start,
+            end: event.end ? event.end.toISOString() : ev.end,
           }
         : ev
     )

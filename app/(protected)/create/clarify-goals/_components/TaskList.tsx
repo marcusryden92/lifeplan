@@ -10,13 +10,14 @@ import {
   getSubtasksById,
   sortTasksByDependenciesAsync,
 } from "@/utils/goalPageHandlers";
+import { Planner } from "@/lib/plannerClass";
 
 const TaskList: React.FC<TaskListProps> = React.memo(
   ({ id, subtasks, focusedTask, setFocusedTask }) => {
     const { mainPlanner, setMainPlanner } = useDataContext();
 
     // State to handle sorted tasks
-    const [sortedTasks, setSortedTasks] = useState<any[]>([]);
+    const [sortedTasks, setSortedTasks] = useState<Planner[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
