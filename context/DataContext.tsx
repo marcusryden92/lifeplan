@@ -55,6 +55,11 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     weekStartDay: 1,
   };
 
+  // Flags
+  const LOG_MAINPLANNER = false;
+  const LOG_CALENDAR = false;
+  const LOG_TEMPLATE = false;
+
   // State definitions
   const [focusedTask, setFocusedTask] = useState<string | null>(null);
   const [mainPlanner, mainPlannerDispatch] =
@@ -132,8 +137,19 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   }, [setCurrentCalendar, currentTemplate, mainPlanner, weekStartDay]);
 
   useEffect(() => {
-    console.log(currentTemplate);
-  }, [currentTemplate]);
+    if (LOG_MAINPLANNER) {
+      console.log("mainPlanner:");
+      console.log(mainPlanner);
+    }
+    if (LOG_CALENDAR) {
+      console.log("currentCalendar:");
+      console.log(currentCalendar);
+    }
+    if (LOG_TEMPLATE) {
+      console.log("currentTemplate:");
+      console.log(currentTemplate);
+    }
+  }, [currentCalendar, mainPlanner, currentTemplate]);
 
   const value: DataContextType = {
     mainPlanner,
