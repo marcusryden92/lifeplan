@@ -1,6 +1,5 @@
 // EventContent.tsx
 import {
-  TrashIcon,
   CheckIcon,
   ArrowRightIcon,
   XMarkIcon,
@@ -8,13 +7,13 @@ import {
 
 import { useRef, useState, useEffect } from "react";
 
-import { SimpleEvent } from "@/types/calendarTypes";
 import { useDataContext } from "@/context/DataContext";
 import { taskIsCompleted, setTaskAsCompleted } from "@/utils/taskHelpers";
 import { floorMinutes } from "@/utils/calendarUtils";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { deletePlanner } from "@/utils/plannerUtils";
 import EventPopover from "./EventPopover";
+import { EventContentArg } from "@fullcalendar/core/index.js";
 
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date
@@ -24,7 +23,7 @@ const formatTime = (date: Date) => {
 };
 
 interface EventContentProps {
-  event: SimpleEvent;
+  event: EventContentArg;
   onEdit: () => void;
   onCopy: () => void;
   onDelete: () => void;

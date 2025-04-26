@@ -7,8 +7,8 @@ export function addDateItemsToArray(
   eventArray: SimpleEvent[],
   memoizedEventIds: Set<string>
 ) {
-  let dateItems: Planner[] = [];
-  let newArray: SimpleEvent[] = [];
+  const dateItems: Planner[] = [];
+  const newArray: SimpleEvent[] = [];
 
   if (!mainPlanner || !eventArray) {
     return [];
@@ -53,8 +53,8 @@ export function addCompletedItemsToArray(
   eventArray: SimpleEvent[],
   memoizedEventIds: Set<string>
 ) {
-  let completedItems: Planner[] = [];
-  let newArray: SimpleEvent[] = [];
+  const completedItems: Planner[] = [];
+  const newArray: SimpleEvent[] = [];
 
   if (!mainPlanner || !eventArray) {
     return [];
@@ -175,7 +175,7 @@ export function getTodaysEvents(
   today: Date,
   eventArray: SimpleEvent[]
 ): SimpleEvent[] {
-  let todaysEvents: SimpleEvent[] = [];
+  const todaysEvents: SimpleEvent[] = [];
 
   const startOfDay = new Date(today);
   startOfDay.setHours(0, 0, 0, 0); // Set time to 00:00 of the given day

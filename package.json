@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint && eslint . --ext .ts,.tsx,.js,.jsx",
-    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix --ignore-pattern .next/",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -39,6 +39,8 @@
     "cuid": "^3.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.2.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^5.2.0",
     "lucide-react": "^0.438.0",
     "next": "14.2.6",
     "next-auth": "5.0.0-beta.20",
@@ -59,6 +61,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@eslint/js": "^9.25.1",
     "@types/bcrypt": "^5.0.2",
     "@types/jest": "^29.5.12",
     "@types/luxon": "^3.6.2",
@@ -68,13 +71,16 @@
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.31.0",
     "@typescript-eslint/parser": "^8.31.0",
-    "eslint": "^8",
-    "eslint-config-next": "14.2.6",
+    "eslint": "^9.25.1",
+    "eslint-config-next": "15.3.1",
+    "eslint-define-config": "^2.1.0",
     "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.0.0",
     "postcss": "^8",
     "prisma": "^5.18.0",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "typescript-eslint": "^8.31.0"
   },
   "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0"
 }

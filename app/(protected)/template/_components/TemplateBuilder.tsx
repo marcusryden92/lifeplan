@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useRef, useEffect } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -48,9 +48,13 @@ export default function TemplateBuilder({
         setTemplateEvents(newCalendar);
       }
     }
-  }, [currentTemplate, setTemplateEvents, weekStartDay]);
+  }, [currentTemplate]);
 
-  const updateTemplate = useCallback(() => {
+  useEffect(() => {
+    updateTemplate();
+  }, [templateEvents]);
+
+  const updateTemplate = () => {
     if (calendarRef.current) {
       const calendarApi = calendarRef.current.getApi();
       const events = calendarApi.getEvents();
@@ -60,11 +64,7 @@ export default function TemplateBuilder({
         setCurrentTemplate(newTemplate);
       }
     }
-  }, [currentTemplate, setCurrentTemplate]);
-
-  useEffect(() => {
-    updateTemplate();
-  }, [templateEvents, updateTemplate]);
+  };
 
   return (
     <FullCalendar

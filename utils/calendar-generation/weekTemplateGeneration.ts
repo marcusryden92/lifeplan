@@ -28,7 +28,7 @@ export function addWeekTemplateToCalendar(
   eventArray: SimpleEvent[]
 ) {
   // Get the first date of the week based on the weekStartDay
-  let thisWeeksFirstDate: Date | undefined = getWeekFirstDate(
+  const thisWeeksFirstDate: Date | undefined = getWeekFirstDate(
     weekStartDay,
     fromDate
   );
@@ -77,11 +77,11 @@ function addTemplateEvent(
   }
 
   // Calculate end date based on duration
-  let newEndDate = new Date(newStartDate);
+  const newEndDate = new Date(newStartDate);
   newEndDate.setMinutes(newEndDate.getMinutes() + event.duration);
 
   // Get RRule day (convert from JS day index to proper RRule day type)
-  let utcDate = new Date(newStartDate.toUTCString()); // Converts to UTC
+  const utcDate = new Date(newStartDate.toUTCString()); // Converts to UTC
   const rruleDay = getRRuleDayTypeFromIndex(utcDate.getUTCDay());
 
   const startISO = newStartDate.toISOString();
@@ -124,7 +124,7 @@ export function populateWeekWithTemplate(
   ];
 
   // Get the first date of the week based on the weekStartDay
-  let thisWeeksFirstDate: Date | undefined = getWeekFirstDate(
+  const thisWeeksFirstDate: Date | undefined = getWeekFirstDate(
     weekStartDay,
     fromDate
   );
@@ -163,7 +163,7 @@ export function populateWeekWithTemplate(
     }
 
     // Calculate end date based on duration
-    let newEndDate = new Date(newStartDate);
+    const newEndDate = new Date(newStartDate);
     newEndDate.setMinutes(newEndDate.getMinutes() + event.duration);
 
     templateEventArray.push({

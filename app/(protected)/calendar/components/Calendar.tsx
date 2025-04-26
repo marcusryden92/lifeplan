@@ -20,6 +20,7 @@ import {
   handleEventDelete,
   handleEventEdit,
 } from "@/utils/calendarEventHandlers";
+import { EventContentArg } from "@fullcalendar/core/index.js";
 
 const EVENT_INTERACTION_ENABLED = false; // Constant to enable/disable event interaction
 
@@ -71,7 +72,7 @@ export default function Calendar({ initialEvents }: CalendarProps) {
       }
       eventResize={(resizeInfo) => handleEventResize(setEvents, resizeInfo)}
       eventDrop={(dropInfo) => handleEventDrop(setEvents, dropInfo)}
-      eventContent={({ event }: any) => (
+      eventContent={({ event }: { event: EventContentArg }) => (
         <EventContent
           event={event}
           onEdit={() =>

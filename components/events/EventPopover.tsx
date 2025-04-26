@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { createPortal } from "react-dom";
 import { SimpleEvent } from "@/types/calendarTypes";
+import { Planner } from "@/lib/plannerClass";
 
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date
@@ -20,7 +21,7 @@ const formatTime = (date: Date) => {
 
 interface EventPopoverProps {
   event: SimpleEvent;
-  task: any; // Replace with your actual task type
+  task: Planner; // Replace with your actual task type
   eventRect: DOMRect;
   startTime: Date;
   endTime: Date;
@@ -51,7 +52,6 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   isCompleted,
   displayPostponeButton,
   onClose,
-  onEdit,
   onCopy,
   onDelete,
   onComplete,
@@ -323,12 +323,12 @@ const EventPopover: React.FC<EventPopoverProps> = ({
           </span>
         </div>
 
-        {task?.description && (
+        {/*  {task?.description && (
           <div className="text-sm text-gray-600 mb-4 px-0.5">
             {task.description}
           </div>
         )}
-
+ */}
         {/* Actions - Notion-style minimal buttons */}
         <div className="space-y-2">
           {/* Main action buttons */}

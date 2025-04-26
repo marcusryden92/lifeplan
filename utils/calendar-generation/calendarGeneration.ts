@@ -29,7 +29,7 @@ export function generateCalendar(
   prevCalendar: SimpleEvent[]
 ): SimpleEvent[] {
   let eventArray: SimpleEvent[] = [];
-  let currentDate = new Date();
+  const currentDate = new Date();
 
   const memoizedEventIds = new Set<string>();
 
@@ -61,8 +61,8 @@ export function generateCalendar(
   // Create array to hold the first date of all the weeks
   // to which a template has been added
   // (so multiple instances of the template aren't added to the same week):
-  let templateEventsArray: SimpleEvent[] = [];
-  let templatedWeeks: Date[] = [];
+  const templateEventsArray: SimpleEvent[] = [];
+  const templatedWeeks: Date[] = [];
 
   // Initialize the first week:
   const weekFirstDate = getWeekFirstDate(weekStartDay, currentDate);

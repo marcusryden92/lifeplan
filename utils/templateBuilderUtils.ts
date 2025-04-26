@@ -25,7 +25,7 @@ function getTimeFromDate(date: Date): string {
 }
 
 export function getTemplateFromCalendar(calendar: EventApi[]): EventTemplate[] {
-  let template: EventTemplate[] = [];
+  const template: EventTemplate[] = [];
 
   calendar.forEach((task) => {
     if (!task.start || !task.end) {
@@ -63,7 +63,7 @@ export function populateTemplateCalendar(
   weekStartDay: WeekDayIntegers,
   template: EventTemplate[]
 ): SimpleEvent[] {
-  let eventArray: SimpleEvent[] = [];
+  const eventArray: SimpleEvent[] = [];
 
   const todaysDate = new Date(2024, 0, 1);
 
@@ -79,7 +79,7 @@ export function populateTemplateCalendar(
   ];
 
   // Get the first date of the week based on the weekStartDay
-  let thisWeeksFirstDate: Date | undefined = getWeekFirstDate(
+  const thisWeeksFirstDate: Date | undefined = getWeekFirstDate(
     weekStartDay,
     todaysDate
   );
@@ -116,7 +116,7 @@ export function populateTemplateCalendar(
     }
 
     // Calculate end date based on duration
-    let newEndDate = new Date(newStartDate);
+    const newEndDate = new Date(newStartDate);
     newEndDate.setMinutes(newEndDate.getMinutes() + event.duration);
 
     eventArray.push({

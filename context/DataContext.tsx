@@ -129,8 +129,8 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   }, [setCurrentCalendar, currentTemplate, mainPlanner, weekStartDay]);
 
   useEffect(() => {
-    console.log(currentCalendar);
-  }, [currentCalendar]);
+    console.log(currentTemplate);
+  }, [currentTemplate]);
 
   const value: DataContextType = {
     mainPlanner,
