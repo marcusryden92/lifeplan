@@ -5,6 +5,8 @@ import { ChevronRightIcon, ChevronLeftIcon } from "lucide-react";
 
 import { getCalendarHeaderDateString } from "@/utils/calendarUtils";
 
+import styles from "./CalendarHeader.module.css";
+
 const CalendarHeader = ({
   initialDate,
   setInitialDate,
@@ -52,12 +54,10 @@ const CalendarHeader = ({
   };
 
   return (
-    <header className="flex w-full h-20 p-8 items-center justify-between bg-white rounded-lg  border-t border-gray-300">
-      {/* Left-aligned Date */}
+    <header className={styles.headerContainer}>
       <span className="flex-1 text-lg font-medium text-gray-700">
-        {dateString}
+        Calendar: {dateString}
       </span>
-
       {/* Centered Refresh Button */}
       <div className="flex-1 flex justify-center">
         <Button
@@ -70,7 +70,6 @@ const CalendarHeader = ({
           Refresh Calendar
         </Button>
       </div>
-
       {/* Right-aligned Navigation */}
       <span className="flex-1 flex justify-end space-x-2">
         <Button

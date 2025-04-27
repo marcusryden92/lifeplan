@@ -15,6 +15,8 @@ import {
 } from "react-icons/fa";
 import { MdViewWeek } from "react-icons/md";
 
+import styles from "./Navbar.module.css";
+
 const links = [
   {
     name: "Calendar",
@@ -56,13 +58,39 @@ export const Navbar = () => {
   const pathname = usePathname();
 
   return (
-    <nav className="flex bg-white lg:w-[12vw] lg:h-full w-full flex-col p-2 lg:px-5 lg:pb-5 shadow-md rounded-lg border-b border-t border-r border-gray-300 border-r-gray-200">
-      <h1 className="hidden md:block font-futura text-gray-800 border-b border-gray-300 text-[2.2rem] mb-4">
-        Lifeplan.
-      </h1>
-      <div className="flex lg:h-full lg:flex-col lg:space-y-2 justify-between gap-2">
+    <nav className={styles.navbar}>
+      <section className={styles.titleContainer}>
+        <h1>Lifeplan.</h1>
+      </section>
+      <div className="mb-4" />
+      <div className="flex lg:h-full lg:flex-col  justify-between gap-2">
         <div className="flex lg:flex-col gap-2">
-          {[...links, ...createLinks].map(({ name, href, icon }) => (
+          {[...links].map(({ name, href, icon }) => (
+            <Button
+              key={href}
+              asChild
+              variant={pathname === href ? "default" : "outline"}
+              size="sm"
+              className="justify-start"
+            >
+              <Link
+                href={href}
+                className={clsx(
+                  "flex h-[38px] gap-2 rounded-xl p-3 text-sm font-medium",
+                  pathname === href
+                    ? "bg-gray-800 text-white"
+                    : "hover:bg-gray-100"
+                )}
+              >
+                {icon} <span className="hidden lg:block">{name}</span>
+              </Link>
+            </Button>
+          ))}
+        </div>
+        <div className="mt-2 mb-2 border-b " />
+
+        <div className="flex lg:flex-col gap-2">
+          {[...createLinks].map(({ name, href, icon }) => (
             <Button
               key={href}
               asChild

@@ -24,6 +24,8 @@ import { convertEventImplToSimpleEvent } from "@/utils/eventUtils";
 import EventContent from "@/components/events/EventContent";
 import { ExtendedEventContentArg } from "@/types/calendarTypes";
 
+import { headerContainer } from "../../calendar/components/CalendarHeader.module.css";
+
 interface TemplateBuilderProps {
   templateEvents: SimpleEvent[];
   setTemplateEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
