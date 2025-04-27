@@ -56,10 +56,10 @@ export const Navbar = () => {
   const pathname = usePathname();
 
   return (
-    <div className="flex lg:w-[12vw] lg:h-full w-full flex-col p-2 lg:px-5 lg:pb-5 shadow-md rounded-lg border-b border-t-2 border-r border-gray-300 border-r-gray-200">
-      <div className="hidden md:block font-futura text-gray-800 text-[2.2rem] mb-4">
+    <nav className="flex bg-white lg:w-[12vw] lg:h-full w-full flex-col p-2 lg:px-5 lg:pb-5 shadow-md rounded-lg border-b border-t border-r border-gray-300 border-r-gray-200">
+      <h1 className="hidden md:block font-futura text-gray-800 border-b border-gray-300 text-[2.2rem] mb-4">
         Lifeplan.
-      </div>
+      </h1>
       <div className="flex lg:h-full lg:flex-col lg:space-y-2 justify-between gap-2">
         <div className="flex lg:flex-col gap-2">
           {[...links, ...createLinks].map(({ name, href, icon }) => (
@@ -120,6 +120,6 @@ export const Navbar = () => {
           </Button>
         </div>
       </div>
-    </div>
+    </nav>
   );
 };

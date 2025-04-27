@@ -18,7 +18,7 @@ export default function TasksPage() {
   };
   return (
     <div className="flex flex-col w-full h-full bg-opacity-95">
-      <header className="flex w-full h-20 p-8 items-center justify-between bg-white shadow-md rounded-lg border-t-2 border-gray-300">
+      <header className="flex w-full h-20 p-8 items-center justify-between bg-white shadow-md rounded-lg border-t border-gray-300">
         <span className="flex-1 text-lg font-medium text-gray-700">
           Week Template
         </span>
