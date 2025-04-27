@@ -16,6 +16,13 @@
   font-style: normal;
 }
 
+@font-face {
+  font-family: "Futura";
+  src: url("/fonts/Futura/Futura%20Heavy%20font.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
 /* @font-face {
   font-family: "Inter";
   src: url("/fonts/Inter/Inter-Italic.ttf") format("truetype");

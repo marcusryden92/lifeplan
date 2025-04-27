@@ -5,12 +5,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-image: linear-gradient(
-    to top right,
-    #ff7f50,
-    #1e90ff
-  ); /* Gradient from coral to dodgerblue */
+  background-image: linear-gradient(to top right, #f7f7f7, #dedede);
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+  color: #333;
 }
