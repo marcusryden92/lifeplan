@@ -1,17 +1,17 @@
 # Fixes
 
-- Install ESLint with Airbnb style
 - Refactor clarify goals page
 - Restructure creation pages folder/url structure
 - Draggable spacers lighting up even when not dragging
 - Change date picker
-- Duplicate plans
-- Duplicate templates in template builder
 
 # Calendar
 
 - Fix header in Calendar
 - Allow moving/pinning of objects
+
+- Duplicate plans
+- Duplicate templates in template builder
 
 # CALENDAR GENERATION FUNCTIONALITY
 
@@ -21,8 +21,6 @@
 
 - Add exceptions to template
 - Add category function, so that a segment of time can be demarcated and relevant events only render within the confines of that time slot.
-
-- Add pop-up window that allows users to directly modify objects in the calendar.
 
 - Add minimum buffer option between events.
 - Add individual buffer option to events.

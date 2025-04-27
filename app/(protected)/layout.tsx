@@ -12,7 +12,7 @@ const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
     <div className="flex flex-col overflow-x-hidden overflow-y-auto h-auto lg:h-[100vh] flex-1 lg:flex-row lg:items-center bg-white">
       <DraggableContextProvider>
         <Navbar />
-        <div className="h-full max-w-[100vw] flex-1 lg:max-h-[100vh] border-l border-gray-200">
+        <div className="h-full max-w-[100vw] flex-1 lg:max-h-[100vh]">
           {children}
         </div>
       </DraggableContextProvider>

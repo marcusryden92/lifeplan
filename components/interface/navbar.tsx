@@ -21,7 +21,6 @@ const links = [
     href: "/calendar",
     icon: <FaCalendar className="h-5 w-5" />,
   },
-  { name: "Create", href: "/create", icon: <FaPlus className="h-5 w-5" /> },
   {
     name: "Week Template",
     href: "/template",
@@ -30,6 +29,7 @@ const links = [
 ];
 
 const createLinks = [
+  { name: "Create", href: "/create", icon: <FaPlus className="h-5 w-5" /> },
   {
     name: "Tasks",
     href: "/create/tasks",
@@ -56,7 +56,7 @@ export const Navbar = () => {
   const pathname = usePathname();
 
   return (
-    <div className="flex lg:w-[280px] lg:h-full w-full flex-col p-2 lg:p-5">
+    <div className="flex lg:w-[15vw] lg:h-full w-full flex-col p-2 lg:p-5 shadow-md rounded-lg border-b border-t-2 border-r border-gray-300 border-r-gray-200">
       <div className="hidden md:block font-audiowide text-gray-900 text-[2.2rem] mb-5">
         LIFEPLAN
       </div>
@@ -67,13 +67,16 @@ export const Navbar = () => {
               key={href}
               asChild
               variant={pathname === href ? "default" : "outline"}
+              size="sm"
               className="justify-start"
             >
               <Link
                 href={href}
                 className={clsx(
-                  "flex h-[48px] gap-2 rounded-xl p-3 text-sm font-medium hover:bg-amber-400",
-                  { "bg-gray-800 text-white": pathname === href }
+                  "flex h-[38px] gap-2 rounded-xl p-3 text-sm font-medium",
+                  pathname === href
+                    ? "bg-gray-800 text-white"
+                    : "hover:bg-gray-100"
                 )}
               >
                 {icon} <span className="hidden lg:block">{name}</span>
@@ -87,32 +90,33 @@ export const Navbar = () => {
             asChild
             variant={pathname === "/settings" ? "default" : "outline"}
             className="justify-start"
+            size="sm"
           >
             <Link
               href="/settings"
               className={clsx(
-                "flex h-[48px] items-center gap-2 rounded-xl text-sm font-medium hover:bg-amber-400",
-                {
-                  "bg-gray-800 text-white hover:bg-gray-700":
-                    pathname === "/settings",
-                }
+                "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium",
+                pathname === "/settings"
+                  ? "bg-gray-800 text-white"
+                  : "hover:bg-gray-100"
               )}
             >
               <FaCog className="h-5 w-5" />{" "}
               <span className="hidden lg:block">Settings</span>
             </Link>
           </Button>
-          <Button
-            asChild
-            variant="outline"
-            className="justify-start rounded-xl h-[48px] hover:text-red-500 hover:border-red-500 hover:border-2 cursor-pointer"
-          >
-            <form className="mt-0" action={() => signOut()}>
-              <button className="flex w-full gap-2 rounded-xl text-sm font-medium hover:bg-grey-100">
-                <FaPowerOff className="h-5 w-5" />{" "}
-                <span className="hidden lg:block">Sign Out</span>
-              </button>
-            </form>
+
+          <Button asChild variant="outline" size="sm" className="justify-start">
+            <div
+              className={clsx(
+                "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium cursor-pointer",
+                "hover:text-red-500 hover:border-red-500 hover:border-2 hover:bg-transparent"
+              )}
+              onClick={() => signOut()}
+            >
+              <FaPowerOff className="h-5 w-5" />
+              <span className="hidden lg:block">Sign Out</span>
+            </div>
           </Button>
         </div>
       </div>

@@ -47,6 +47,13 @@ body,
   padding: 0;
 }
 
+:root .fc-media-screen {
+  border-top: 1px solid #d1d5db !important; /* border-t-2 border-gray-300 */
+  border-bottom: 1px solid #d1d5db !important; /* border-b */
+  border-radius: 0.5rem !important; /* rounded-lg */
+  overflow: hidden;
+}
+
 /* Event appearance */
 :root .fc-event {
   overflow: hidden;

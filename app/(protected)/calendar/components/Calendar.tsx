@@ -28,9 +28,13 @@ const EVENT_INTERACTION_ENABLED = false; // Constant to enable/disable event int
 
 interface CalendarProps {
   initialEvents?: SimpleEvent[] | undefined;
+  initialDate: Date;
 }
 
-export default function Calendar({ initialEvents }: CalendarProps) {
+export default function Calendar({
+  initialEvents,
+  initialDate,
+}: CalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const [events, setEvents] = useState<SimpleEvent[]>(initialEvents || []);
 
@@ -49,9 +53,12 @@ export default function Calendar({ initialEvents }: CalendarProps) {
         RRulePlugin,
         luxonPlugin,
       ]}
+      key={initialDate.getTime()}
+      initialDate={initialDate}
       timeZone={"local"}
       events={events}
       initialView="timeGridWeek"
+      scrollTime={"05:00:00"}
       allDaySlot={false}
       firstDay={1}
       nowIndicator={true}
@@ -72,6 +79,7 @@ export default function Calendar({ initialEvents }: CalendarProps) {
       select={(selectInfo) =>
         handleSelect(calendarRef, setEvents, selectInfo, false)
       }
+      headerToolbar={false}
       eventResize={(resizeInfo) => handleEventResize(setEvents, resizeInfo)}
       eventDrop={(dropInfo) => handleEventDrop(setEvents, dropInfo)}
       eventContent={({ event }: EventContentArg) => {

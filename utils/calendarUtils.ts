@@ -84,3 +84,45 @@ export function floorMinutes(date: Date | string) {
 
   return Math.floor(newDate.getTime() / 1000);
 }
+
+// Function to generate the date string
+export const getCalendarHeaderDateString = (
+  initialDate: Date,
+  finalDate: Date,
+  monthArray: string[]
+) => {
+  // Extract date details for initial and final dates
+  const initialDateNumber = initialDate.getDate();
+  const finalDateNumber = finalDate.getDate();
+
+  const initialDateMonth = initialDate.getMonth();
+  const finalDateMonth = finalDate.getMonth();
+
+  const initialDateYear = initialDate.getFullYear();
+  const finalDateYear = finalDate.getFullYear();
+
+  // Get the month names
+  const initialMonthName = monthArray[initialDateMonth];
+  const finalMonthName = monthArray[finalDateMonth];
+
+  // Determine if the months or years are different
+  const isDifferentMonth = initialDateMonth !== finalDateMonth;
+  const isDifferentYear = initialDateYear !== finalDateYear;
+
+  // Construct the date string
+  let dateString = `${initialMonthName} ${initialDateNumber}`;
+
+  if (isDifferentMonth) {
+    dateString += ` - ${finalMonthName} ${finalDateNumber}`;
+  } else {
+    dateString += ` - ${finalDateNumber}`;
+  }
+
+  dateString += `, ${initialDateYear}`;
+
+  if (isDifferentYear) {
+    dateString += ` - ${finalDateYear}`;
+  }
+
+  return dateString;
+};
