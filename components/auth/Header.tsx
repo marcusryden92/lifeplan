@@ -1,7 +1,4 @@
-import { Audiowide } from "next/font/google";
 import { cn } from "@/lib/utils";
-
-const font = Audiowide({ subsets: ["latin"], weight: ["400"] });
 
 interface HeaderProps {
   label: string;
