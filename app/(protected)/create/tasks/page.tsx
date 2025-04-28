@@ -182,7 +182,7 @@ export default function TasksPage() {
   }, [changeToTask]);
 
   return (
-    <div className="flex flex-col w-full h-full bg-white  bg-opacity-95 px-10">
+    <div className="pageContainer">
       <CardHeader className="flex flex-row border-b px-0 py-6 space-x-10 items-center">
         <p className="text-xl font-semibold">TASKS</p>
         <p className="text-sm text-center">

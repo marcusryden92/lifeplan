@@ -1,6 +1,4 @@
 .main {
-  --square-size: 7px; /* 👈 control the pattern size here! */
-
   display: flex;
   height: 100vh;
   width: 100vw;
@@ -8,20 +6,10 @@
   align-items: center;
   justify-content: center;
 
-  background-color: #f7f7f7;
-  background-image:
-    linear-gradient(45deg, #e5e5e5 25%, transparent 25%),
-    linear-gradient(-45deg, #e5e5e5 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #e5e5e5 75%),
-    linear-gradient(-45deg, transparent 75%, #e5e5e5 75%);
-  background-size: var(--square-size) var(--square-size);
-  background-position:
-    0 0,
-    0 calc(var(--square-size) / 2),
-    calc(var(--square-size) / 2) calc(var(--square-size) / -2),
-    calc(var(--square-size) / -2) 0;
-
-  color: #333;
+  background-image: url("/images/california.jpg"); /* fixed path */
+  background-size: cover; /* makes the image cover the container */
+  background-position: center; /* keeps the image centered */
+  background-repeat: no-repeat; /* prevents the image from repeating */
 }
 
 /* New styles moved from JSX */
@@ -32,10 +20,8 @@
   margin: 1.25rem auto; /* m-5 */
   padding: 3.5rem 2rem; /* py-14 px-8 */
   border-radius: 0.75rem; /* rounded-xl */
-  backdrop-filter: blur(4px);
-  background-color: rgba(255, 255, 255, 0.7); /* bg-white/70 */
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* shadow-lg */
   text-align: center;
+  background-color: #ffffff;
 }
 
 .title {
@@ -44,8 +30,9 @@
   font-weight: 800;
   color: #2d3748; /* gray-800 */
   padding-bottom: 1.5rem; /* pb-6 */
-  border-bottom: 2px solid #d1d5db; /* border-b-2 border-gray-300 */
   position: relative;
+  border-bottom: 2px solid #c5c5c5;
+  margin: 0 50px;
 }
 
 .titleDotContainer {
@@ -66,7 +53,7 @@
   margin-top: 1.5rem; /* mt-6 */
   font-family: "Inter", sans-serif;
   font-size: 1.5rem; /* text-2xl */
-  color: #718096; /* gray-600 */
+  color: #2d3748; /* gray-600 */
 }
 
 .loginButton {

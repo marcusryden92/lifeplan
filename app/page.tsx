@@ -31,7 +31,7 @@ const Home = () => {
       <div className={styles.container}>
         <h1 className={styles.title}>
           <span className={styles.titleDotContainer}>
-            Lifeplan<span className="text-gray-900">.</span>
+            Lifeplan.
             <div className={styles.titleDot}></div>
           </span>
         </h1>

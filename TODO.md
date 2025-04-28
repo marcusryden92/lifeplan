@@ -7,28 +7,28 @@
 
 # Calendar
 
-- Fix header in Calendar
 - Allow moving/pinning of objects
 
-- Duplicate plans
-- Duplicate templates in template builder
+- Feature for duplicate plans
+- Feature for duplicating templates in template builder
 
 # CALENDAR GENERATION FUNCTIONALITY
 
 - Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).
+- Give notice when an item is too large to fit within the template
 
-- Completion of events so that they don't keep rendering when they are done.
-
-- Add exceptions to template
-- Add category function, so that a segment of time can be demarcated and relevant events only render within the confines of that time slot.
+- Add exceptions to template (like skip a day or move a particular repeating instance)
+- Add category function, so that a segment of time can be demarcated and relevant events
+  only render within the confines of that time slot ('Work' for instance).
 
 - Add minimum buffer option between events.
 - Add individual buffer option to events.
 
+- Add habits (repeating events with min/max size rendering within a given time frame)
+
 # CREATION PAGES
 
 - Add mark all and unmark all options for task/plans/goals.
-- Display breadcrumbs to all pages for easy nagivation.
 
 # SERVER SETUP
 
@@ -37,6 +37,8 @@
 - Option to connect to Google Calendar and iCalendar.
 
 # USER EXPERIENCE
+
+- Undo/redo function (might be smart to implement before optimistic updates to database on item updates)
 
 - Add page to display all planner objects at once, to easily swap and sort between them.
 

@@ -116,8 +116,6 @@ const EventContent: React.FC<EventContentProps> = ({
         );
       }, 500);
     }
-
-    setShowPopover(false);
   };
 
   const handlePostponeTask = () => {
@@ -125,8 +123,6 @@ const EventContent: React.FC<EventContentProps> = ({
       (e) => !(e.id === event.id)
     );
     if (updatedCalendar) updateCalendar(undefined, updatedCalendar);
-
-    setShowPopover(false);
   };
 
   const handleClickDelete = () => {
