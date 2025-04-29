@@ -2,7 +2,6 @@
 
 - Refactor clarify goals page
 - Restructure creation pages folder/url structure
-- Draggable spacers lighting up even when not dragging
 - Change date picker
 
 # Calendar
