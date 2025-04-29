@@ -211,10 +211,7 @@ export default function CapturePage() {
           disabled={mainPlanner.length === 0}
           className="px-0"
         >
-          <Link
-            href={"/create/influence"}
-            className="flex group items-center gap-4"
-          >
+          <Link href={"/influence"} className="flex group items-center gap-4">
             {"Continue"}
             <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />
           </Link>

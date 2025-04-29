@@ -355,10 +355,7 @@ export default function TasksPage() {
       </div>
       <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant="invisible" className="px-0">
-          <Link
-            href={"/create/tasks"}
-            className="flex group items-center gap-4"
-          >
+          <Link href={"/tasks"} className="flex group items-center gap-4">
             <ArrowLongLeftIcon className="w-9 h-9 text-gray-400 group-hover:text-gray-800 rounded-full" />
           </Link>
         </Button>
@@ -367,10 +364,7 @@ export default function TasksPage() {
           disabled={mainPlanner.length === 0}
           className="px-0"
         >
-          <Link
-            href={"/create/goals"}
-            className="flex group items-center gap-4"
-          >
+          <Link href={"/goals"} className="flex group items-center gap-4">
             {"Continue"}
             <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />
           </Link>

@@ -44,7 +44,7 @@ import {
   formatMinutesToHours,
 } from "@/utils/taskArrayUtils";
 
-export default function TasksPage() {
+export default function RefineGoalsPage() {
   const { mainPlanner, setMainPlanner, focusedTask, setFocusedTask } =
     useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -376,7 +376,7 @@ export default function TasksPage() {
       {/* <CardFooter className="flex items-center justify-between flex-shrink p-4 border-t">
         <Button variant="invisible" className="px-0">
           <Link
-            href={"/create/goals"}
+            href={"/goals"}
             className="flex group items-center gap-4"
           >
             <ArrowLongLeftIcon className="w-9 h-9 text-gray-400 group-hover:text-gray-800 rounded-full" />
@@ -388,7 +388,7 @@ export default function TasksPage() {
           className="px-0"
         >
           <Link
-            href={"/create/goals"}
+            href={"/goals"}
             className="flex group items-center gap-4"
           >
             {"Continue"}

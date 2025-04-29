@@ -34,22 +34,22 @@ const createLinks = [
   { name: "Create", href: "/create", icon: <FaPlus className="h-5 w-5" /> },
   {
     name: "Tasks",
-    href: "/create/tasks",
+    href: "/tasks",
     icon: <FaClipboardList className="h-5 w-5" />,
   },
   {
     name: "Plans",
-    href: "/create/plans",
+    href: "/plans",
     icon: <FaClock className="h-5 w-5" />,
   },
   {
     name: "Goals",
-    href: "/create/goals",
+    href: "/goals",
     icon: <FaFlag className="h-5 w-5" />,
   },
   {
-    name: "Clarify Goals",
-    href: "/create/clarify-goals",
+    name: "Refine Goals",
+    href: "/refine-goals",
     icon: <FaBullseye className="h-5 w-5" />,
   },
 ];
