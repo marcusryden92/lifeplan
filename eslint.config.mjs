@@ -4,6 +4,7 @@ import tseslint from "@typescript-eslint/eslint-plugin";
 import reactPlugin from "eslint-plugin-react";
 import tsParser from "@typescript-eslint/parser";
 import pluginNext from "@next/eslint-plugin-next";
+import jestPlugin from "eslint-plugin-jest";
 
 export default [
   {
@@ -56,6 +57,21 @@ export default [
       react: {
         version: "detect",
       },
+    },
+  },
+  {
+    files: ["**/__tests__/**/*.[jt]s?(x)", "**/?(*.)+(spec|test).[jt]s?(x)"],
+    languageOptions: {
+      globals: {
+        ...globals.jest,
+      },
+    },
+    plugins: {
+      jest: jestPlugin,
+    },
+    rules: {
+      "jest/no-disabled-tests": "warn",
+      "jest/valid-expect": "error",
     },
   },
 ];
