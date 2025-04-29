@@ -19,6 +19,7 @@ export default [
       "*.config.{ts,mjs}",
       ".idea/",
       ".vscode/",
+      "coverage/",
     ],
   },
   {
