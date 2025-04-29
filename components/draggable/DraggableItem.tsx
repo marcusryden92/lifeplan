@@ -85,6 +85,7 @@ export default function DraggableItem({
     [styles.grabbing]: currentlyClickedItem && displayDragBox,
     [styles.highlightMiddle]:
       currentlyClickedItem &&
+      displayDragBox &&
       currentlyClickedItem?.taskId !== taskId &&
       currentlyHoveredItem === taskId &&
       currentlyClickedItem.parentId !== taskId,

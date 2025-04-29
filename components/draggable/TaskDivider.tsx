@@ -47,7 +47,7 @@ const TaskDivider: React.FC<TaskDividerProps> = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onMouseUp={handleDragEnd}
-      className={`w-full h-2 ${currentlyClickedItem && styles.hoverEffect}`}
+      className={`w-full h-2 ${currentlyClickedItem && displayDragBox && styles.hoverEffect}`}
     ></div>
   );
 };
