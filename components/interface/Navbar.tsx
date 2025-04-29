@@ -49,7 +49,7 @@ const createLinks = [
   },
   {
     name: "Refine Goals",
-    href: "/refine-goals",
+    href: "/refine",
     icon: <FaBullseye className="h-5 w-5" />,
   },
 ];

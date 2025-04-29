@@ -257,10 +257,7 @@ export default function InfluencePage() {
             hasInfluence(mainPlanner) ? "pointer-events-none opacity-50" : ""
           }`}
         >
-          <Link
-            href={"/refine-goals"}
-            className="flex group items-center gap-4"
-          >
+          <Link href={"/refine"} className="flex group items-center gap-4">
             {"Continue"}
             <CheckCircledIcon className="w-9 h-9 group-hover:bg-emerald-400 rounded-full" />
           </Link>
