@@ -1,6 +1,6 @@
 "use client";
 
-import { Navbar } from "@/components/interface/Navbar2";
+import { Navbar } from "@/components/interface/Navbar";
 import { DraggableContextProvider } from "@/components/draggable/DraggableContext";
 
 interface ProtectedLayoutProps {
