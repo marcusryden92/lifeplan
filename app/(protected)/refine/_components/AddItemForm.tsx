@@ -21,7 +21,13 @@ import { useState } from "react";
 
 import * as z from "zod";
 
-const AddItemForm = () => {
+const AddItemForm = ({
+  placeholder,
+  className,
+}: {
+  placeholder?: string;
+  className?: string;
+}) => {
   const { setMainPlanner } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
@@ -50,7 +56,7 @@ const AddItemForm = () => {
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(handleFormSubmit)}
-        className="space-y-8 flex flex-col"
+        className={`space-y-8 flex flex-col ${className && className}`}
       >
         <FormField
           control={form.control}
@@ -60,7 +66,10 @@ const AddItemForm = () => {
               <div className="flex items-center gap-5 justify-between">
                 <div className="flex flex-1 gap-2 max-w-[350px]">
                   <FormControl>
-                    <Input {...field} placeholder="Task name" />
+                    <Input
+                      {...field}
+                      placeholder={placeholder ? placeholder : "Task name"}
+                    />
                   </FormControl>
                   <button type="submit">
                     <HiOutlinePlus className="w-8 h-8 text-gray-400 hover:text-gray-300" />

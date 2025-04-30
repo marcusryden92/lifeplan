@@ -1,7 +1,7 @@
 .navbar {
   display: flex;
   background-color: white;
-  min-width: 180px;
+  max-width: 230px;
   width: 100%;
   flex-direction: column;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* You can adjust this for your desired shadow effect */
@@ -13,11 +13,10 @@
 
 @media (min-width: 1024px) {
   .navbar {
-    width: 12vw;
     height: 100%;
     padding-top: 0;
-    padding-left: 1.25rem;
-    padding-right: 1.25rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
     padding-bottom: 1.25rem;
   }
 }
