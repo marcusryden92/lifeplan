@@ -1,14 +1,16 @@
 // prisma/schema.prisma
+
+// --- Datasource and Generator Configuration ---
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  // uncomment next line if you use Prisma <5.10
-  // directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 generator client {
   provider = "prisma-client-js"
 }
+
+// --- Authentication Models ---
 
 enum UserRole {
   ADMIN
@@ -26,6 +28,10 @@ model User {
   accounts              Account[]
   isTwoFactorEnabled    Boolean                @default(false)
   twoFactorConfirmation TwoFactorConfirmation?
+
+  events         CalendarEvent[]
+  eventTemplates EventTemplate[]
+  planners       Planner[]
 
   @@map("users")
 }
@@ -79,9 +85,93 @@ model TwoFactorToken {
 
 model TwoFactorConfirmation {
   id     String @id @default(cuid())
-  userId String // Fixed typo here
+  userId String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId])
+}
+
+// --- Calendar Models ---
+
+// Enums related to Calendar and RRule
+enum RRuleFrequency {
+  daily
+  weekly
+  monthly
+  yearly
+}
+
+enum RRuleWeekDayType {
+  MO
+  TU
+  WE
+  TH
+  FR
+  SA
+  SU
+}
+
+enum WeekDayType {
+  sunday // index 0
+  monday // index 1
+  tuesday // index 2
+  wednesday // index 3
+  thursday // index 4
+  friday // index 5
+  saturday // index 6
+}
+
+// CalendarEvent model with relation to User and embedded RRule
+model CalendarEvent {
+  id     String   @id @default(cuid())
+  title  String
+  start  DateTime
+  end    DateTime
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // RRule: recurrence rule for this event (if applicable)
+  rrule Json? // Store the recurrence rule as a JSON field
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("calendar_events")
+}
+
+// Planner model for tracking tasks, plans, and goals
+model Planner {
+  id           String    @id @default(cuid())
+  title        String
+  parentId     String?
+  type         String? // task, plan, goal, etc.
+  canInfluence Boolean
+  isReady      Boolean?
+  duration     Int?
+  deadline     DateTime?
+  starts       DateTime?
+  dependency   String?
+  completed    Json?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@map("planners")
+}
+
+// --- EventTemplate Model ---
+model EventTemplate {
+  id        String      @id @default(cuid())
+  title     String
+  startDay  WeekDayType // Weekday name
+  startTime String // Time in "HH:mm" format
+  duration  Int // Duration in minutes
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("event_templates")
 }
