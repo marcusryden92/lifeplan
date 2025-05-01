@@ -12,10 +12,8 @@
     "type-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch",
-    "migrate:dev:create": "dotenv -e .env.local -e .env.development cross-env pnpx prisma migrate dev",
-    "migrate:dev:deploy": "dotenv -e .env.local -e .env.development cross-env pnpx prisma migrate deploy",
-    "migrate:prod:create": "dotenv -e .env.local -e .env.production cross-env pnpx prisma migrate dev",
-    "migrate:prod:deploy": "dotenv -e .env.local -e .env.production cross-env pnpx prisma migrate deploy"
+    "prisma:dev": "dotenv -e .env.development prisma",
+    "prisma:prod": "dotenv -e .env.production.local prisma"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.4.2",

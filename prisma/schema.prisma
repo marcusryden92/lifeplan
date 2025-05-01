@@ -28,10 +28,9 @@ model User {
   accounts              Account[]
   isTwoFactorEnabled    Boolean                @default(false)
   twoFactorConfirmation TwoFactorConfirmation?
-
-  events         CalendarEvent[]
-  eventTemplates EventTemplate[]
-  planners       Planner[]
+  CalendarEvent         CalendarEvent[]
+  Planner               Planner[]
+  EventTemplate         EventTemplate[]
 
   @@map("users")
 }
@@ -85,7 +84,7 @@ model TwoFactorToken {
 
 model TwoFactorConfirmation {
   id     String @id @default(cuid())
-  userId String
+  userId String // Fixed typo here
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
