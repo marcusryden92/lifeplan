@@ -1,7 +1,5 @@
 # Fixes
 
-- Refactor clarify goals page
-- Restructure creation pages folder/url structure
 - Change date picker
 
 # Calendar
@@ -31,7 +29,6 @@
 
 # SERVER SETUP
 
-- Server actions to upload and save events and calendars to server.
 - Option to create several life plans.
 - Option to connect to Google Calendar and iCalendar.
 
