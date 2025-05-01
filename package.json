@@ -11,7 +11,11 @@
     "postinstall": "prisma generate",
     "type-check": "tsc --noEmit",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "migrate:dev:create": "dotenv -e .env.local -e .env.development cross-env pnpx prisma migrate dev",
+    "migrate:dev:deploy": "dotenv -e .env.local -e .env.development cross-env pnpx prisma migrate deploy",
+    "migrate:prod:create": "dotenv -e .env.local -e .env.production cross-env pnpx prisma migrate dev",
+    "migrate:prod:deploy": "dotenv -e .env.local -e .env.production cross-env pnpx prisma migrate deploy"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.4.2",
@@ -39,8 +43,10 @@
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
+    "cross-env": "^7.0.3",
     "cuid": "^3.0.0",
     "date-fns": "^3.6.0",
+    "dotenv-cli": "^8.0.0",
     "embla-carousel-react": "^8.2.1",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^5.2.0",
