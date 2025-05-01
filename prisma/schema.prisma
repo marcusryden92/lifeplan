@@ -94,24 +94,6 @@ model TwoFactorConfirmation {
 
 // --- Calendar Models ---
 
-// Enums related to Calendar and RRule
-enum RRuleFrequency {
-  daily
-  weekly
-  monthly
-  yearly
-}
-
-enum RRuleWeekDayType {
-  MO
-  TU
-  WE
-  TH
-  FR
-  SA
-  SU
-}
-
 enum WeekDayType {
   sunday // index 0
   monday // index 1
