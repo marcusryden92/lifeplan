@@ -2,7 +2,6 @@
 
 // Third-party libraries
 import { useState, useMemo, useCallback } from "react";
-import { TrashIcon } from "@heroicons/react/24/outline";
 import {
   Carousel,
   CarouselContent,
@@ -12,13 +11,10 @@ import {
   CarouselApi,
 } from "@/components/ui/Carousel";
 
-import { Button } from "@/components/ui/Button";
-
 // Local components and context
 import { useDataContext } from "@/context/DataContext";
-import { CardContent } from "@/components/ui/Card";
 import Goal from "./_components/Goal";
-import AddItemForm from "./_components/AddItemForm";
+import GoalsSidebar from "./_components/GoalsSidebar";
 
 // Local utilities
 import { Planner } from "@/lib/plannerClass";
@@ -45,16 +41,6 @@ export default function RefineGoalsPage() {
     },
     [setMainPlanner]
   );
-
-  const handleDeleteAll = useCallback(() => {
-    const filteredArray = mainPlanner.filter(
-      (task) => task.canInfluence && task.type === "goal" && !task.parentId
-    );
-
-    filteredArray.forEach((item) =>
-      deleteGoal({ setMainPlanner, taskId: item.id })
-    );
-  }, [mainPlanner, setMainPlanner]);
 
   const handleConfirmEdit = useCallback(
     (taskId: string, newTitle: string) => {
@@ -94,48 +80,23 @@ export default function RefineGoalsPage() {
 
   return (
     <div className={styles.refinePageContainer}>
-      <CardContent className="max-w-[220px] pl-0 pr-[2.5rem] mb-8 flex flex-col items-center justify-between">
-        <AddItemForm
-          placeholder="Add goal"
-          className="h-[80px] border-b border-b-[#d1d5db] pb-[1rem] justify-end"
-        />
-
-        <section className="flex flex-col w-full h-full flex-1 gap-2 my-5">
-          {goalsList.map((item, index) => (
-            <Button
-              variant="outline"
-              size="sm"
-              key={`goalsList-${item.id}`}
-              onClick={() => {
-                setCarouselIndex(index);
-                carouselApi?.scrollTo(index);
-              }}
-              className={`text-left justify-start px-3 py-2 rounded-lg ${index === carouselIndex && "bg-slate-300 text-white hover:text-white"}`}
-            >
-              {item.title}
-            </Button>
-          ))}
-        </section>
-
-        <button
-          type="button"
-          onClick={handleDeleteAll}
-          className="flex bg-none text-gray-400 hover:text-red-500 text-[0.9rem] mr-10"
-          aria-label="Delete all goals"
-        >
-          <TrashIcon className="w-5 h-5 mx-2" />
-          Delete all
-        </button>
-      </CardContent>
+      <GoalsSidebar
+        goalsList={goalsList}
+        mainPlanner={mainPlanner}
+        setMainPlanner={setMainPlanner}
+        carouselIndex={carouselIndex}
+        setCarouselIndex={setCarouselIndex}
+        carouselApi={[carouselApi, setCarouselApi]}
+      />
 
       <div className="flex flex-1 lg:overflow-y-auto my-8 border-l items-start justify-center flex-wrap content-start no-scrollbar">
         <Carousel
-          className="w-[90%] max-w-[700px] h-full"
+          className="w-[90%] max-w-[700px] h-full border-x"
           onIndexChange={setCarouselIndex}
           setApi={setCarouselApi}
           opts={{ watchDrag: false }}
         >
-          <CarouselContent className="h-full select-none">
+          <CarouselContent className="h-full select-none ">
             {goalsList.map((task) => (
               <CarouselItem key={task.id}>
                 <Goal
