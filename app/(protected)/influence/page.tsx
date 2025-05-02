@@ -97,14 +97,6 @@ export default function InfluencePage() {
     });
   };
 
-  const toggleInfluence = (index: number) => {
-    setMainPlanner((prevTaskArray) =>
-      prevTaskArray.map((task, i) =>
-        i === index ? { ...task, canInfluence: !task.canInfluence } : task
-      )
-    );
-  };
-
   useEffect(() => {
     if (
       tasksContainerRef.current &&
@@ -167,11 +159,7 @@ export default function InfluencePage() {
           !task.parentId ? (
             <div
               key={index}
-              className={`flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 my-1 mx-1 px-4 space-x-3 ${
-                task.canInfluence
-                  ? "bg-purple-400 text-white"
-                  : "bg-transparent"
-              }`}
+              className={`flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 my-1 mx-1 px-4 space-x-3`}
             >
               <div className="flex-1">
                 {editIndex === index ? (
@@ -179,9 +167,7 @@ export default function InfluencePage() {
                     <Input
                       value={editTitle}
                       onChange={(e) => setEditTitle(e.target.value)}
-                      className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-                        task.canInfluence ? "text-white" : ""
-                      }`}
+                      className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto `}
                     />
                     <Button
                       variant="invisible"
@@ -192,10 +178,7 @@ export default function InfluencePage() {
                     </Button>
                   </div>
                 ) : (
-                  <div
-                    className="max-w-[250px] break-words overflow-hidden text-ellipsis text-sm"
-                    onClick={() => toggleInfluence(index)} // Simplified function name
-                  >
+                  <div className="max-w-[250px] break-words overflow-hidden text-ellipsis text-sm">
                     {task.title}
                   </div>
                 )}
@@ -207,21 +190,13 @@ export default function InfluencePage() {
                       onClick={() => handleClickEdit(index)}
                       className="cursor-pointer text-gray-400 hover:text-blue-400"
                     >
-                      <PencilIcon
-                        className={`w-5 h-5 ${
-                          task.canInfluence ? "text-white" : ""
-                        }`}
-                      />
+                      <PencilIcon className={`w-5 h-5 `} />
                     </div>
                     <div
                       onClick={() => handleDeleteTask(index)}
                       className="cursor-pointer text-gray-400 hover:text-red-400"
                     >
-                      <XMarkIcon
-                        className={`w-7 h-7 ${
-                          task.canInfluence ? "text-white" : ""
-                        }`}
-                      />
+                      <XMarkIcon className={`w-7 h-7 `} />
                     </div>
                   </>
                 )}
