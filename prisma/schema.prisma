@@ -8,6 +8,7 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
+  output   = "./node_modules/.prisma/client"
 }
 
 // --- Authentication Models ---
@@ -123,17 +124,16 @@ model CalendarEvent {
 
 // Planner model for tracking tasks, plans, and goals
 model Planner {
-  id           String    @id @default(cuid())
-  title        String
-  parentId     String?
-  type         String? // task, plan, goal, etc.
-  canInfluence Boolean
-  isReady      Boolean?
-  duration     Int?
-  deadline     DateTime?
-  starts       DateTime?
-  dependency   String?
-  completed    Json?
+  id         String    @id @default(cuid())
+  title      String
+  parentId   String?
+  type       String?
+  isReady    Boolean?
+  duration   Int?
+  deadline   DateTime?
+  starts     DateTime?
+  dependency String?
+  completed  Json?
 
   userId String
   user   User   @relation(fields: [userId], references: [id])

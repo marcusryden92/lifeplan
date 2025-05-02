@@ -5,7 +5,6 @@ export interface PlannerInterface {
   id: string;
   parentId?: string;
   type?: "task" | "plan" | "goal" | null;
-  canInfluence: boolean;
   isReady?: boolean;
   duration?: number;
   deadline?: Date;
@@ -22,7 +21,6 @@ export class Planner implements PlannerInterface {
   id: string;
   parentId?: string;
   type: "task" | "plan" | "goal" | null;
-  canInfluence: boolean;
   isReady?: boolean;
   duration?: number;
   deadline?: Date;
@@ -38,7 +36,6 @@ export class Planner implements PlannerInterface {
     id?: string, // Optional id
     parentId?: string,
     type: "task" | "plan" | "goal" | null = null,
-    canInfluence: boolean = false,
     isReady?: boolean,
     duration?: number,
     deadline?: Date,
@@ -48,7 +45,6 @@ export class Planner implements PlannerInterface {
     this.id = id || uuidv4(); // Generate a UUID if no id is passed
     this.parentId = parentId;
     this.type = type;
-    this.canInfluence = canInfluence;
     this.isReady = isReady;
     this.duration = duration;
     this.deadline = deadline;
