@@ -1,72 +1,10 @@
+"use server";
 import { Planner } from "@/lib/plannerClass";
-import { SimpleEvent } from "../eventUtils";
-import { objectsAreEqual } from "../generalUtils";
-
+import { SimpleEvent } from "@/types/calendarTypes";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 
-export async function compareUpsertPlannerTable(
-  userId: string,
-  mainPlanner: Planner[],
-  previousPlanner: { current: Planner[] },
-  currentCalendar: SimpleEvent[],
-  previousCalendar: { current: SimpleEvent[] }
-) {
-  // Check planner changes
-  const prevPlan: Planner[] = [...previousPlanner.current];
-  const plannerMap = new Map(
-    mainPlanner.map((planner) => [planner.id, planner])
-  );
-  const prevPlanMap = new Map(prevPlan.map((planner) => [planner.id, planner]));
-
-  const create: Planner[] = [];
-  const update: Planner[] = [];
-  const destroy: Planner[] = [];
-
-  plannerMap.forEach((item) => {
-    if (!prevPlanMap.has(item.id)) create.push(item);
-  });
-
-  plannerMap.forEach((item) => {
-    const prevItem = prevPlanMap.get(item.id);
-    if (prevItem && !objectsAreEqual(prevItem, item)) {
-      update.push(item);
-    } else if (!prevItem) destroy.push(item);
-  });
-
-  // Check calendar changes
-  const prevCal: SimpleEvent[] = [...previousCalendar.current];
-  const calendarMap = new Map(
-    currentCalendar.map((event) => [event.id, event])
-  );
-  const prevCalMap = new Map(prevCal.map((event) => [event.id, event]));
-
-  const createEvent: SimpleEvent[] = [];
-  const updateEvent: SimpleEvent[] = [];
-  const destroyEvent: SimpleEvent[] = [];
-
-  calendarMap.forEach((event) => {
-    if (!prevCalMap.has(event.id)) createEvent.push(event);
-  });
-
-  calendarMap.forEach((event) => {
-    const prevEvent = prevCalMap.get(event.id);
-    if (prevEvent && !objectsAreEqual(prevEvent, event)) {
-      updateEvent.push(event);
-    } else if (!prevEvent) destroyEvent.push(event);
-  });
-
-  uploadPlanners(
-    userId,
-    create,
-    update,
-    destroy,
-    createEvent,
-    updateEvent,
-    destroyEvent
-  );
-}
-
-async function uploadPlanners(
+export async function syncCalendarData(
   userId: string,
   create: Planner[],
   update: Planner[],
@@ -90,7 +28,8 @@ async function uploadPlanners(
         deadline: planner.deadline ?? null,
         starts: planner.starts ?? null,
         dependency: planner.dependency ?? null,
-        completed: planner.completed ?? null,
+        // Fix: Convert null to Prisma.JsonNull for JSON fields
+        completed: planner.completed ?? Prisma.JsonNull,
         userId,
       }));
 
@@ -116,7 +55,8 @@ async function uploadPlanners(
             deadline: planner.deadline ?? null,
             starts: planner.starts ?? null,
             dependency: planner.dependency ?? null,
-            completed: planner.completed ?? null,
+            // Fix: Convert null to Prisma.JsonNull for JSON fields
+            completed: planner.completed ?? Prisma.JsonNull,
             userId,
           },
         })
@@ -139,8 +79,9 @@ async function uploadPlanners(
         title: event.title,
         start: event.start,
         end: event.end,
-        rrule: event.rrule ?? null,
-        userId, // Injected
+        // Fix: Convert null to Prisma.JsonNull for JSON fields
+        rrule: event.rrule ?? Prisma.JsonNull,
+        userId,
       }));
 
       operations.push(
@@ -160,8 +101,9 @@ async function uploadPlanners(
             title: event.title,
             start: event.start,
             end: event.end,
-            rrule: event.rrule ?? null,
-            userId, // If userId is editable
+            // Fix: Convert null to Prisma.JsonNull for JSON fields
+            rrule: event.rrule ?? Prisma.JsonNull,
+            userId,
           },
         })
       );
@@ -179,11 +121,9 @@ async function uploadPlanners(
     // === Execute transaction ===
     const response = await db.$transaction(operations);
 
-    console.log(response);
-
-    return response;
+    return { success: true, data: response };
   } catch (error) {
     console.error("Failed to sync planner and calendar data:", error);
-    throw error;
+    return { success: false, error: error };
   }
 }

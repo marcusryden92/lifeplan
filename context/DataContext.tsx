@@ -20,8 +20,7 @@ import {
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 import { taskIsCompleted } from "@/utils/taskHelpers";
 import { floorMinutes } from "@/utils/calendarUtils";
-import { compareUpsertPlannerTable } from "@/utils/server-handlers/compareUpsertPlanners";
-
+import { handleServerTransaction } from "@/utils/server-handlers/compareCalendarData";
 import { useSession } from "next-auth/react";
 
 interface DataContextType {
@@ -43,10 +42,6 @@ interface DataContextType {
   setCurrentCalendar: React.Dispatch<
     React.SetStateAction<SimpleEvent[] | undefined>
   >;
-  updateCalendar: (
-    manuallyUpdatedTaskArray?: Planner[],
-    manuallyUpdatedCalendar?: SimpleEvent[]
-  ) => Planner[] | undefined;
 
   manuallyUpdateCalendar: () => void;
 }
@@ -60,6 +55,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const user = useSession().data?.user;
+  const userId = user?.id;
 
   // Flags
   const LOG_MAIN_PLANNER = false;
@@ -80,89 +76,79 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     SimpleEvent[] | undefined
   >(previousCalendarSeed);
 
-  const previousPlanner = useRef([]);
-  const previousCalendar = useRef([]);
+  const previousPlanner = useRef<Planner[]>([]);
+  const previousCalendar = useRef<SimpleEvent[]>([]);
 
-  useEffect(() => {
-    const handleUpdate = async () => {
-      if (
-        user?.id &&
-        previousCalendar.current &&
-        previousPlanner.current &&
-        currentCalendar
-      ) {
-        await compareUpsertPlannerTable(
-          user.id,
-          mainPlanner,
-          { current: previousPlanner.current! },
-          currentCalendar,
-          { current: previousCalendar.current! }
-        );
-      }
-    };
-
-    handleUpdate();
-  }, [mainPlanner]);
-
-  // Function for both changing the mainPlanner
-  // and updating the calendar at the same time
-  const setMainPlanner = (
+  // Function changing the mainPlanner, updating the calendar
+  // and pushing the changes to the database
+  const setMainPlanner = async (
     mainPlannerArg: Planner[] | ((prev: Planner[]) => Planner[]),
     manuallyUpdatedCalendar?: SimpleEvent[]
   ) => {
-    mainPlannerDispatch((prev) => {
-      return typeof mainPlannerArg === "function"
-        ? updateCalendar(mainPlannerArg(prev), manuallyUpdatedCalendar) || prev
-        : updateCalendar(mainPlannerArg, manuallyUpdatedCalendar) || prev;
-    });
+    const newPlanner =
+      typeof mainPlannerArg === "function"
+        ? mainPlannerArg(mainPlanner)
+        : mainPlannerArg;
+
+    const newCalendar = generateCalendar(
+      weekStartDay,
+      currentTemplate || [],
+      newPlanner,
+      manuallyUpdatedCalendar || []
+    );
+
+    mainPlannerDispatch(newPlanner);
+    setCurrentCalendar(newCalendar);
+
+    if (
+      userId &&
+      newPlanner &&
+      previousPlanner &&
+      newCalendar &&
+      previousCalendar
+    ) {
+      const response = await handleServerTransaction(
+        userId,
+        newPlanner,
+        previousPlanner,
+        newCalendar,
+        previousCalendar
+      );
+
+      if (response.success) {
+        console.log("Server success!");
+        previousCalendar.current = newCalendar;
+        previousPlanner.current = newPlanner;
+      } else {
+        mainPlannerDispatch(previousPlanner.current);
+        setCurrentCalendar(previousCalendar.current);
+        console.log("Server failure!");
+      }
+    }
   };
 
-  // Calendar generation function
-  const updateCalendar = useCallback(
-    (
-      manuallyUpdatedTaskArray?: Planner[],
-      manuallyUpdatedCalendar?: SimpleEvent[]
-    ) => {
-      if (currentTemplate && mainPlanner) {
-        setCurrentCalendar((prevCalendar) => {
-          return generateCalendar(
-            weekStartDay,
-            currentTemplate,
-            manuallyUpdatedTaskArray || mainPlanner,
-            manuallyUpdatedCalendar || prevCalendar || []
-          );
-        });
-      }
-
-      // If we need to update the calendar with a custom mainPlanner
-      // and setMainPlanner at the same time (i.e run updateCalendar inside
-      // setMainPlanner)
-      return manuallyUpdatedTaskArray;
-    },
-    [currentTemplate, weekStartDay, mainPlanner]
-  );
-
+  // Manually update the calendar, for instance with the
+  // 'Refresh Calendar' button
   const manuallyUpdateCalendar = useCallback(() => {
     const now = floorMinutes(new Date());
-    if (currentTemplate && mainPlanner) {
-      setCurrentCalendar((prevCalendar) => {
-        const overdueIds = new Set(
-          mainPlanner.filter((e) => !taskIsCompleted(e)).map((e) => e.id)
-        );
+    if (currentTemplate && mainPlanner && currentCalendar) {
+      const overdueIds = new Set(
+        mainPlanner.filter((e) => !taskIsCompleted(e)).map((e) => e.id)
+      );
 
-        const filteredCalendar =
-          prevCalendar?.filter(
-            (e) =>
-              !overdueIds.has(e.id) && floorMinutes(new Date(e.start)) < now
-          ) || [];
+      const filteredCalendar =
+        currentCalendar?.filter(
+          (e) => !overdueIds.has(e.id) && floorMinutes(new Date(e.start)) < now
+        ) || [];
 
-        return generateCalendar(
-          weekStartDay,
-          currentTemplate,
-          mainPlanner,
-          filteredCalendar
-        );
-      });
+      const newCalendar = generateCalendar(
+        weekStartDay,
+        currentTemplate,
+        mainPlanner,
+        filteredCalendar
+      );
+
+      setMainPlanner((prev) => prev, newCalendar);
     }
   }, [setCurrentCalendar, currentTemplate, mainPlanner, weekStartDay]);
 
@@ -193,7 +179,6 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     setFocusedTask,
     currentCalendar,
     setCurrentCalendar,
-    updateCalendar,
     manuallyUpdateCalendar,
   };
 
