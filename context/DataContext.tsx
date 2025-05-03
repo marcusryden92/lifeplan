@@ -4,6 +4,7 @@ import React, {
   createContext,
   useContext,
   useState,
+  useRef,
   ReactNode,
   useEffect,
   useCallback,
@@ -19,6 +20,9 @@ import {
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 import { taskIsCompleted } from "@/utils/taskHelpers";
 import { floorMinutes } from "@/utils/calendarUtils";
+import { compareUpsertPlannerTable } from "@/utils/server-handlers/compareUpsertPlanners";
+
+import { useSession } from "next-auth/react";
 
 interface DataContextType {
   mainPlanner: Planner[];
@@ -55,8 +59,10 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     weekStartDay: 1,
   };
 
+  const user = useSession().data?.user;
+
   // Flags
-  const LOG_MAINPLANNER = false;
+  const LOG_MAIN_PLANNER = false;
   const LOG_CALENDAR = false;
   const LOG_TEMPLATE = false;
 
@@ -73,6 +79,30 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const [currentCalendar, setCurrentCalendar] = useState<
     SimpleEvent[] | undefined
   >(previousCalendarSeed);
+
+  const previousPlanner = useRef(null);
+  const previousCalendar = useRef(null);
+
+  useEffect(() => {
+    const handleUpdate = async () => {
+      if (
+        user?.id &&
+        previousCalendar.current &&
+        previousPlanner.current &&
+        currentCalendar
+      ) {
+        await compareUpsertPlannerTable(
+          user.id,
+          mainPlanner,
+          { current: previousPlanner.current! },
+          currentCalendar,
+          { current: previousCalendar.current! }
+        );
+      }
+    };
+
+    handleUpdate();
+  }, [mainPlanner]);
 
   // Function for both changing the mainPlanner
   // and updating the calendar at the same time
@@ -137,7 +167,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   }, [setCurrentCalendar, currentTemplate, mainPlanner, weekStartDay]);
 
   useEffect(() => {
-    if (LOG_MAINPLANNER) {
+    if (LOG_MAIN_PLANNER) {
       console.log("mainPlanner:");
       console.log(mainPlanner);
     }
