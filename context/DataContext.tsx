@@ -80,8 +80,8 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     SimpleEvent[] | undefined
   >(previousCalendarSeed);
 
-  const previousPlanner = useRef(null);
-  const previousCalendar = useRef(null);
+  const previousPlanner = useRef([]);
+  const previousCalendar = useRef([]);
 
   useEffect(() => {
     const handleUpdate = async () => {
