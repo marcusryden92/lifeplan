@@ -9,7 +9,10 @@ import { useRef, useState, useEffect } from "react";
 
 import { SimpleEvent } from "@/types/calendarTypes";
 import { useDataContext } from "@/context/DataContext";
-import { taskIsCompleted, setTaskAsCompleted } from "@/utils/taskHelpers";
+import {
+  taskIsCompleted,
+  getPlannerAndCalendarForCompetedTask,
+} from "@/utils/taskHelpers";
 import { floorMinutes } from "@/utils/calendarUtils";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { deletePlanner } from "@/utils/plannerUtils";
@@ -35,8 +38,7 @@ const EventContent: React.FC<EventContentProps> = ({
   onEdit,
   onCopy,
 }) => {
-  const { mainPlanner, setMainPlanner, updateCalendar, currentCalendar } =
-    useDataContext();
+  const { mainPlanner, setMainPlanner, currentCalendar } = useDataContext();
 
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
@@ -89,6 +91,7 @@ const EventContent: React.FC<EventContentProps> = ({
   const red = "#ef4444";
 
   const handleClickCompleteTask = () => {
+    // Set the element to green for a second, before rerendering
     const parentElement = elementRef.current?.closest(
       ".fc-event"
     ) as HTMLElement;
@@ -99,21 +102,34 @@ const EventContent: React.FC<EventContentProps> = ({
       parentElement.style.border = `solid 2px ${color}`;
     }
 
+    // If already completed, set completed to undefined
     if (isCompleted) {
       setIsCompleted(false);
-      const updated = mainPlanner.map((item) =>
+      const updatedPlanner = mainPlanner.map((item) =>
         item.id === event.id ? { ...item, completed: undefined } : item
       );
-      setMainPlanner(updated);
-    } else {
+      setMainPlanner(updatedPlanner);
+    }
+
+    // If not completed, update the mainPlanner with the
+    // new values, and calculate a new calendar from that
+    else {
       setIsCompleted(true);
       setTimeout(() => {
-        setTaskAsCompleted(
-          setMainPlanner,
-          updateCalendar,
+        const result = getPlannerAndCalendarForCompetedTask(
+          mainPlanner,
           currentCalendar,
           event
         );
+
+        if (result) {
+          const { manuallyUpdatedTaskArray, manuallyUpdatedCalendar } = result;
+
+          setMainPlanner(
+            (prev) => manuallyUpdatedTaskArray || prev,
+            manuallyUpdatedCalendar
+          );
+        }
       }, 500);
     }
   };
@@ -122,7 +138,7 @@ const EventContent: React.FC<EventContentProps> = ({
     const updatedCalendar = currentCalendar?.filter(
       (e) => !(e.id === event.id)
     );
-    if (updatedCalendar) updateCalendar(undefined, updatedCalendar);
+    if (updatedCalendar) setMainPlanner((prev) => prev, updatedCalendar);
   };
 
   const handleClickDelete = () => {
@@ -163,7 +179,7 @@ const EventContent: React.FC<EventContentProps> = ({
       return calEvent;
     });
 
-    if (updatedEvents) updateCalendar(undefined, updatedEvents);
+    if (updatedEvents) setMainPlanner((prev) => prev, updatedEvents);
 
     // Update the title in the planner
     const updatedPlanner = mainPlanner.map((item) => {
