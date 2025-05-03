@@ -1,5 +1,3 @@
-"use server";
-
 import { Planner } from "@/lib/plannerClass";
 import { SimpleEvent } from "../eventUtils";
 import { objectsAreEqual } from "../generalUtils";
@@ -183,7 +181,7 @@ async function uploadPlanners(
 
     console.log(response);
 
-    return response.success;
+    return response;
   } catch (error) {
     console.error("Failed to sync planner and calendar data:", error);
     throw error;
