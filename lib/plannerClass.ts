@@ -11,8 +11,8 @@ export interface PlannerInterface {
   starts?: Date;
   dependency?: string;
   completed?: {
-    startTime: Date | string;
-    endTime: Date | string;
+    startTime: string;
+    endTime: string;
   };
 }
 
@@ -20,7 +20,7 @@ export class Planner implements PlannerInterface {
   title: string;
   id: string;
   parentId?: string;
-  type: "task" | "plan" | "goal" | null;
+  type?: "task" | "plan" | "goal" | null;
   isReady?: boolean;
   duration?: number;
   deadline?: Date;

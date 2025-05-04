@@ -106,15 +106,16 @@ enum WeekDayType {
 
 // CalendarEvent model with relation to User and embedded RRule
 model CalendarEvent {
-  id     String   @id @default(cuid())
-  title  String
-  start  DateTime
-  end    DateTime
-  userId String
-  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id       String @id @default(cuid())
+  title    String
+  start    String
+  end      String
+  duration Int?
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // RRule: recurrence rule for this event (if applicable)
-  rrule Json? // Store the recurrence rule as a JSON field
+  rrule         String?
+  extendedProps String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -122,18 +123,25 @@ model CalendarEvent {
   @@map("calendar_events")
 }
 
+enum PlanType {
+  task
+  plan
+  goal
+}
+
 // Planner model for tracking tasks, plans, and goals
 model Planner {
-  id         String    @id @default(cuid())
-  title      String
-  parentId   String?
-  type       String?
-  isReady    Boolean?
-  duration   Int?
-  deadline   DateTime?
-  starts     DateTime?
-  dependency String?
-  completed  Json?
+  id                 String    @id @default(cuid())
+  title              String
+  parentId           String?
+  type               PlanType?
+  isReady            Boolean?
+  duration           Int?
+  deadline           String?
+  starts             String?
+  dependency         String?
+  completedStartTime String?
+  completedEndTime   String?
 
   userId String
   user   User   @relation(fields: [userId], references: [id])

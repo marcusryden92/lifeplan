@@ -2,21 +2,35 @@ import { Planner } from "@/lib/plannerClass";
 import { SimpleEvent } from "../eventUtils";
 import { objectsAreEqual } from "../generalUtils";
 import { syncCalendarData } from "@/actions/calendar-actions/syncCalendarData";
+import { EventTemplate } from "@/utils/templateBuilderUtils";
 
 export async function handleServerTransaction(
   userId: string,
   mainPlanner: Planner[],
   previousPlanner: { current: Planner[] },
   currentCalendar: SimpleEvent[],
-  previousCalendar: { current: SimpleEvent[] }
+  previousCalendar: { current: SimpleEvent[] },
+  currentTemplate?: EventTemplate[],
+  previousTemplate?: { current: EventTemplate[] }
 ) {
-  const { create, update, destroy, createEvent, updateEvent, destroyEvent } =
-    compareCalendarData(
-      mainPlanner,
-      previousPlanner,
-      currentCalendar,
-      previousCalendar
-    );
+  const {
+    create,
+    update,
+    destroy,
+    createEvent,
+    updateEvent,
+    destroyEvent,
+    createTemplate,
+    updateTemplate,
+    destroyTemplate,
+  } = compareCalendarData(
+    mainPlanner,
+    previousPlanner,
+    currentCalendar,
+    previousCalendar,
+    currentTemplate,
+    previousTemplate
+  );
 
   const response = syncCalendarData(
     userId,
@@ -25,7 +39,10 @@ export async function handleServerTransaction(
     destroy,
     createEvent,
     updateEvent,
-    destroyEvent
+    destroyEvent,
+    createTemplate,
+    updateTemplate,
+    destroyTemplate
   );
 
   return response;
@@ -35,7 +52,9 @@ export function compareCalendarData(
   mainPlanner: Planner[],
   previousPlanner: { current: Planner[] },
   currentCalendar: SimpleEvent[],
-  previousCalendar: { current: SimpleEvent[] }
+  previousCalendar: { current: SimpleEvent[] },
+  currentTemplate?: EventTemplate[],
+  previousTemplate?: { current: EventTemplate[] }
 ) {
   // Check planner changes
   const prevPlan: Planner[] = [...previousPlanner.current];
@@ -93,6 +112,38 @@ export function compareCalendarData(
     }
   });
 
+  // Check template changes
+  const createTemplate: EventTemplate[] = [];
+  const updateTemplate: EventTemplate[] = [];
+  const destroyTemplate: EventTemplate[] = [];
+
+  if (currentTemplate && previousTemplate) {
+    const prevTemp: EventTemplate[] = [...previousTemplate.current];
+    const templateMap = new Map(
+      currentTemplate.map((template) => [template.id, template])
+    );
+    const prevTempMap = new Map(
+      prevTemp.map((template) => [template.id, template])
+    );
+
+    // Find templates to create or update
+    templateMap.forEach((template) => {
+      const prevTemplate = prevTempMap.get(template.id);
+      if (!prevTemplate) {
+        createTemplate.push(template);
+      } else if (!objectsAreEqual(prevTemplate, template)) {
+        updateTemplate.push(template);
+      }
+    });
+
+    // Find templates to delete (templates in previous but not in current)
+    prevTempMap.forEach((template) => {
+      if (!templateMap.has(template.id)) {
+        destroyTemplate.push(template);
+      }
+    });
+  }
+
   return {
     create,
     update,
@@ -100,5 +151,8 @@ export function compareCalendarData(
     createEvent,
     updateEvent,
     destroyEvent,
+    createTemplate,
+    updateTemplate,
+    destroyTemplate,
   };
 }

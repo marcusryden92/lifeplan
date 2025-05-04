@@ -1,7 +1,7 @@
 "use server";
 import { Planner } from "@/lib/plannerClass";
 import { SimpleEvent } from "@/types/calendarTypes";
-import { Prisma } from "@prisma/client";
+import { EventTemplate } from "@/utils/templateBuilderUtils";
 import { db } from "@/lib/db";
 
 export async function syncCalendarData(
@@ -11,7 +11,10 @@ export async function syncCalendarData(
   destroy: Planner[],
   createEvent: SimpleEvent[],
   updateEvent: SimpleEvent[],
-  destroyEvent: SimpleEvent[]
+  destroyEvent: SimpleEvent[],
+  createTemplate?: EventTemplate[],
+  updateTemplate?: EventTemplate[],
+  destroyTemplate?: EventTemplate[]
 ) {
   try {
     const operations = [];
@@ -19,18 +22,18 @@ export async function syncCalendarData(
     // === Planner: CREATE ===
     if (create.length) {
       const plannerCreateData = create.map((planner) => ({
+        userId,
         id: planner.id,
         title: planner.title,
         parentId: planner.parentId ?? null,
         type: planner.type ?? null,
         isReady: planner.isReady ?? false,
         duration: planner.duration ?? null,
-        deadline: planner.deadline ?? null,
-        starts: planner.starts ?? null,
+        deadline: planner.deadline?.toISOString() ?? null,
+        starts: planner.starts?.toISOString() ?? null,
         dependency: planner.dependency ?? null,
-        // Fix: Convert null to Prisma.JsonNull for JSON fields
-        completed: planner.completed ?? Prisma.JsonNull,
-        userId,
+        completedStartTime: planner.completed?.startTime ?? null,
+        completedEndTime: planner.completed?.endTime ?? null,
       }));
 
       operations.push(
@@ -47,17 +50,17 @@ export async function syncCalendarData(
         db.planner.update({
           where: { id: planner.id },
           data: {
+            userId,
             title: planner.title,
             parentId: planner.parentId ?? null,
             type: planner.type ?? null,
             isReady: planner.isReady ?? false,
             duration: planner.duration ?? null,
-            deadline: planner.deadline ?? null,
-            starts: planner.starts ?? null,
+            deadline: planner.deadline?.toISOString() ?? null,
+            starts: planner.starts?.toISOString() ?? null,
             dependency: planner.dependency ?? null,
-            // Fix: Convert null to Prisma.JsonNull for JSON fields
-            completed: planner.completed ?? Prisma.JsonNull,
-            userId,
+            completedStartTime: planner.completed?.startTime ?? null,
+            completedEndTime: planner.completed?.endTime ?? null,
           },
         })
       );
@@ -75,13 +78,13 @@ export async function syncCalendarData(
     // === CalendarEvent: CREATE ===
     if (createEvent.length) {
       const calendarCreateData = createEvent.map((event) => ({
+        userId,
         id: event.id,
         title: event.title,
         start: event.start,
         end: event.end,
-        // Fix: Convert null to Prisma.JsonNull for JSON fields
-        rrule: event.rrule ?? Prisma.JsonNull,
-        userId,
+        rrule: JSON.stringify(event.rrule),
+        extendedProps: JSON.stringify(event.extendedProps),
       }));
 
       operations.push(
@@ -98,12 +101,12 @@ export async function syncCalendarData(
         db.calendarEvent.update({
           where: { id: event.id },
           data: {
+            userId,
             title: event.title,
             start: event.start,
             end: event.end,
-            // Fix: Convert null to Prisma.JsonNull for JSON fields
-            rrule: event.rrule ?? Prisma.JsonNull,
-            userId,
+            rrule: JSON.stringify(event.rrule),
+            extendedProps: JSON.stringify(event.extendedProps),
           },
         })
       );
@@ -114,6 +117,52 @@ export async function syncCalendarData(
       operations.push(
         db.calendarEvent.deleteMany({
           where: { id: { in: destroyEvent.map((e) => e.id) } },
+        })
+      );
+    }
+
+    // === EventTemplate: CREATE ===
+    if (createTemplate?.length) {
+      const templateCreateData = createTemplate.map((template) => ({
+        userId,
+        id: template.id,
+        title: template.title,
+        startDay: template.start.day,
+        startTime: template.start.time,
+        duration: template.duration,
+      }));
+
+      operations.push(
+        db.eventTemplate.createMany({
+          data: templateCreateData,
+          skipDuplicates: true,
+        })
+      );
+    }
+
+    // === EventTemplate: UPDATE ===
+    if (updateTemplate?.length) {
+      for (const template of updateTemplate) {
+        operations.push(
+          db.eventTemplate.update({
+            where: { id: template.id },
+            data: {
+              title: template.title,
+              startDay: template.start.day,
+              startTime: template.start.time,
+              duration: template.duration,
+              userId,
+            },
+          })
+        );
+      }
+    }
+
+    // === EventTemplate: DELETE ===
+    if (destroyTemplate?.length) {
+      operations.push(
+        db.eventTemplate.deleteMany({
+          where: { id: { in: destroyTemplate.map((t) => t.id) } },
         })
       );
     }
