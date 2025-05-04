@@ -34,8 +34,7 @@ export default function TemplateBuilder({
   setTemplateEvents,
 }: TemplateBuilderProps) {
   const calendarRef = useRef<FullCalendar>(null);
-  const { currentTemplate, setCurrentTemplate, weekStartDay } =
-    useDataContext();
+  const { currentTemplate, setMainPlanner, weekStartDay } = useDataContext();
 
   useEffect(() => {
     if (currentTemplate && currentTemplate.length > 0 && calendarRef.current) {
@@ -63,7 +62,7 @@ export default function TemplateBuilder({
       const newTemplate = getTemplateFromCalendar(events);
 
       if (JSON.stringify(currentTemplate) !== JSON.stringify(newTemplate)) {
-        setCurrentTemplate(newTemplate);
+        setMainPlanner(undefined, undefined, newTemplate);
       }
     }
   };
