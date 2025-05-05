@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Planner } from "@/lib/plannerClass";
-import { SimpleEvent } from "@/utils/eventUtils";
+import { SimpleEvent } from "@/types/calendarTypes";
 import { EventTemplate } from "@/utils/templateBuilderUtils";
 import { transformFetchedData } from "@/utils/server-handlers/fetchAndTransformData";
 
@@ -10,7 +10,7 @@ interface TransformedData {
   template: EventTemplate[];
 }
 
-export function useFetchCalendarData(userId: string | null) {
+export function useFetchCalendarData(userId: string | undefined) {
   const [data, setData] = useState<TransformedData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);

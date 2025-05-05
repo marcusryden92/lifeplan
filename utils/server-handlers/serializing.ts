@@ -1,5 +1,5 @@
 import { Planner } from "@/lib/plannerClass";
-import { SimpleEvent } from "@/utils/eventUtils";
+import { SimpleEvent } from "@/types/calendarTypes";
 import { EventTemplate } from "@/utils/templateBuilderUtils";
 import { WeekDayType } from "@/types/calendarTypes";
 
@@ -24,8 +24,6 @@ export type SerializedSimpleEvent = {
   title: string;
   start: string;
   end: string;
-  backgroundColor: string | null;
-  borderColor: string | null;
   rrule: string | null;
   duration: number | null;
   extendedProps: string; // JSON stringified object
@@ -69,8 +67,6 @@ export function serializeSimpleEvent(
     title: event.title,
     start: event.start,
     end: event.end,
-    backgroundColor: event.backgroundColor ?? null,
-    borderColor: event.borderColor ?? null,
     rrule: event.rrule ? JSON.stringify(event.rrule) : null,
     duration: event.duration ?? null,
     extendedProps: JSON.stringify(event.extendedProps),

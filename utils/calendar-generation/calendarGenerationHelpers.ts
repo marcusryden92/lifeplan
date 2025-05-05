@@ -36,9 +36,11 @@ export function addDateItemsToArray(
         id: JSON.stringify(new Date()),
         start: date.starts.toISOString(),
         end: end.toISOString(), // Add the calculated end time here
-        backgroundColor: "black",
-        borderColor: "black",
-        extendedProps: { isTemplateItem: false },
+        extendedProps: {
+          isTemplateItem: false,
+          backgroundColor: "black",
+          borderColor: "black",
+        },
       };
 
       newArray.push(newDate);
@@ -81,9 +83,12 @@ export function addCompletedItemsToArray(
         id: item.id,
         start: item.completed.startTime,
         end: item.completed.endTime, // Add the calculated end time here
-        backgroundColor: "#0ebf7e",
-        borderColor: "#0ca66e",
-        extendedProps: { isTemplateItem: false },
+
+        extendedProps: {
+          isTemplateItem: false,
+          backgroundColor: "#0ebf7e",
+          borderColor: "#0ca66e",
+        },
       };
 
       newArray.push(newDate);

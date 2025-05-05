@@ -1,7 +1,7 @@
 "use client";
 
 import { Planner } from "@/lib/plannerClass";
-import { SimpleEvent } from "../eventUtils";
+import { SimpleEvent } from "@/types/calendarTypes";
 import { objectsAreEqual } from "../generalUtils";
 import { syncCalendarData } from "@/actions/calendar-actions/syncCalendarData";
 import { EventTemplate } from "@/utils/templateBuilderUtils";

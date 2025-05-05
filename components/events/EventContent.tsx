@@ -212,6 +212,8 @@ const EventContent: React.FC<EventContentProps> = ({
         justifyContent: "space-between",
         height: "100%",
         padding: "0px",
+        backgroundColor: event.extendedProps.backgroundColor,
+        borderColor: event.extendedProps.borderColor,
       }}
       onMouseEnter={() => setOnHover(true)}
       onMouseLeave={() => setOnHover(false)}

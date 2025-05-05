@@ -93,9 +93,6 @@ function addTemplateEvent(
     title: event.title,
     start: startISO,
     end: endISO,
-    backgroundColor: "#1242B2",
-    borderColor: "transparent",
-
     rrule: {
       freq: "weekly",
       interval: 1,
@@ -103,7 +100,11 @@ function addTemplateEvent(
       dtstart: startISO,
     },
     duration: event.duration * 60 * 1000, // Convert duration to milliseconds
-    extendedProps: { isTemplateItem: true },
+    extendedProps: {
+      isTemplateItem: true,
+      backgroundColor: "#1242B2",
+      borderColor: "transparent",
+    },
   });
 }
 
@@ -172,9 +173,11 @@ export function populateWeekWithTemplate(
       title: event.title,
       start: newStartDate.toISOString(), // Convert Date to ISO string
       end: newEndDate.toISOString(), // Convert Date to ISO string
-      backgroundColor: "#1242B2",
-      borderColor: "transparent",
-      extendedProps: { isTemplateItem: true },
+      extendedProps: {
+        isTemplateItem: true,
+        backgroundColor: "#1242B2",
+        borderColor: "transparent",
+      },
     });
   });
 
