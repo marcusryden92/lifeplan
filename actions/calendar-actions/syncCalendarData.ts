@@ -88,6 +88,7 @@ export async function syncCalendarData(
         end: event.end,
         rrule: JSON.stringify(event.rrule),
         extendedProps: event.extendedProps ?? null,
+        duration: event.duration ?? null,
       }));
 
       operations.push(

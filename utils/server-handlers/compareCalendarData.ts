@@ -102,6 +102,9 @@ export function compareAndSerializeCalendarData(
   );
   const prevCalMap = new Map(prevCal.map((event) => [event.id, event]));
 
+  console.log("currentCalendar");
+  console.log(currentCalendar);
+
   const createEvent: SerializedSimpleEvent[] = [];
   const updateEvent: SerializedSimpleEvent[] = [];
   const destroyEvent: SerializedSimpleEvent[] = [];
