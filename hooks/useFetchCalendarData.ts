@@ -10,7 +10,7 @@ interface TransformedData {
   template: EventTemplate[];
 }
 
-export function useFetchCalendarData(userId: string | undefined) {
+export function useFetchCalendarData(userId: string | null) {
   const [data, setData] = useState<TransformedData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);

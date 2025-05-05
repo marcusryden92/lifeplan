@@ -24,24 +24,26 @@ export function addSubtask({
 }: AddSubtaskInterface) {
   const newId = uuidv4();
 
-  if (taskDuration !== undefined && taskTitle) {
+  if (taskDuration && taskTitle) {
     const newTask = new Planner(
       taskTitle,
       newId,
-      parentId, // Using parentId here
+      parentId,
       "goal",
       true,
-      false,
-      taskDuration < 5 ? 5 : taskDuration,
-      undefined
+      taskDuration < 5 ? 5 : taskDuration
     );
 
-    setMainPlanner((prevTasks) => [...prevTasks, newTask]); // Spread prevTasks and add newTask
+    const newPlanner = [...mainPlanner, newTask];
+    const updatedPlanner = updateDependenciesOnCreate(
+      newPlanner,
+      parentId,
+      newId
+    );
 
+    setMainPlanner(updatedPlanner);
     resetTaskState();
   }
-
-  updateDependenciesOnCreate(mainPlanner, setMainPlanner, parentId, newId);
 }
 
 interface DeleteGoalInterface {
@@ -127,98 +129,95 @@ export function deleteGoal_ReturnArray({
 
 // Get the correct dependency when creating a new subtask in a goal
 export function updateDependenciesOnCreate(
-  mainPlanner: Planner[],
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
+  newPlanner: Planner[],
   parentId: string,
   newId: string
-) {
+): Planner[] {
+  // Create a copy of the planner to avoid direct mutation
+  let updatedPlanner = [...newPlanner];
+
   // Get potential siblings
-  const siblings: Planner[] = mainPlanner.filter(
-    (task) => task.parentId === parentId
+  const siblings: Planner[] = updatedPlanner.filter(
+    (task) => task.parentId === parentId && task.id !== newId
   );
 
-  // Check if the task is the first task of the first layer (the next one after root later), and if so return undefined
-  const parentTask = mainPlanner.find((task) => task.id === parentId);
+  // Check if the task is the first task of the first layer (the next one after root later), and if so return the unchanged planner
+  const parentTask = updatedPlanner.find((task) => task.id === parentId);
 
-  if (parentTask && !parentTask.parentId && siblings.length === 0) return;
+  if (parentTask && !parentTask.parentId && siblings.length === 0)
+    return updatedPlanner;
 
   // Get the ID of the root task/goal
-  const rootParentId = getRootParent(mainPlanner, parentId);
+  const rootParentId = getRootParent(updatedPlanner, parentId);
 
   if (!rootParentId) {
-    return;
+    return updatedPlanner;
   }
 
   if (siblings && siblings.length > 0) {
     // Order siblings
-    const sortedSiblings = sortTasksByDependencies(mainPlanner, siblings);
+    const sortedSiblings = sortTasksByDependencies(updatedPlanner, siblings);
 
     // Get last item in array
     const lastSiblingItem = sortedSiblings[sortedSiblings.length - 1];
 
     // Get the whole bottom layer (actionable items) from this item
     const bottomLayer = getSortedTreeBottomLayer(
-      mainPlanner,
+      updatedPlanner,
       lastSiblingItem.id
     );
 
     const lastBottomLayerItem = bottomLayer[bottomLayer.length - 1];
 
     // If a task exists in the bottom layer, which carries the ID of lastSiblingItem as its dependency, swap it for newId
-    setMainPlanner((prev) =>
-      prev.map((task) => {
-        if (task.dependency === lastBottomLayerItem.id) {
-          // Replace lastSiblingItem.id with newId in dependenciesS
-          return { ...task, dependency: newId };
-        }
-        return task; // Return the unchanged task if no dependency matches
-      })
-    );
+    updatedPlanner = updatedPlanner.map((task) => {
+      if (task.dependency === lastBottomLayerItem.id) {
+        // Replace lastSiblingItem.id with newId in dependencies
+        return { ...task, dependency: newId };
+      }
+      return task; // Return the unchanged task if no dependency matches
+    });
 
     // Set the last item ID in the dependency array of the new task (with newId)
-    setMainPlanner((prev) =>
-      prev.map((task) => {
-        if (task.id === newId) {
-          return { ...task, dependency: lastBottomLayerItem.id }; // Add lastItem.id as a dependency for the new task
-        }
-        return task;
-      })
-    );
+    updatedPlanner = updatedPlanner.map((task) => {
+      if (task.id === newId) {
+        return { ...task, dependency: lastBottomLayerItem.id }; // Add lastItem.id as a dependency for the new task
+      }
+      return task;
+    });
   }
 
   if (!siblings || siblings.length === 0) {
     // Check if the parentId is dependent on anything
-
-    const parentTask = mainPlanner.find((task) => task.id === parentId);
+    const parentTask = updatedPlanner.find((task) => task.id === parentId);
     const parentDependency = parentTask?.dependency;
 
-    setMainPlanner((prev) =>
-      prev.map((task) => {
-        if (
-          task.id === parentId &&
-          task.dependency &&
-          task.dependency?.length > 0
-        ) {
-          return { ...task, dependency: undefined };
-        }
+    updatedPlanner = updatedPlanner.map((task) => {
+      if (
+        task.id === parentId &&
+        task.dependency &&
+        task.dependency?.length > 0
+      ) {
+        return { ...task, dependency: undefined };
+      }
 
-        if (task.id === newId) {
-          return { ...task, dependency: parentDependency };
-        }
-        return task;
-      })
-    );
+      if (task.id === newId) {
+        return { ...task, dependency: parentDependency };
+      }
+      return task;
+    });
 
     // If any task in the bottomLayer is dependent on the parentId, update it to be dependent on the newId
-    setMainPlanner((prev) =>
-      prev.map((task) => {
-        if (task.dependency === parentId) {
-          return { ...task, dependency: newId };
-        }
-        return task; // Return the unchanged task if no dependency matches
-      })
-    );
+    updatedPlanner = updatedPlanner.map((task) => {
+      if (task.dependency === parentId) {
+        return { ...task, dependency: newId };
+      }
+      return task; // Return the unchanged task if no dependency matches
+    });
   }
+
+  // Return the modified planner array
+  return updatedPlanner;
 }
 
 // CHECK IF GOAL IS READY
