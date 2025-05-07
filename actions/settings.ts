@@ -31,7 +31,11 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
     values.isTwoFactorEnabled = undefined;
   }
 
-  if (values.email && values.email !== user.email) {
+  if (
+    values.email &&
+    typeof values.email === "string" &&
+    values.email !== user.email
+  ) {
     const existingUser = await getUserByEmail(values.email);
 
     if (existingUser && existingUser.id !== user.id) {
