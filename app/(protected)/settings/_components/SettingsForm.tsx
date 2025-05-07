@@ -19,16 +19,14 @@ import {
 import { Input } from "@/components/ui/Input";
 import { FormSuccess } from "@/components/ui/FormSuccess";
 import { FormError } from "@/components/ui/FormError";
-import { UserRole } from "@prisma/client";
 import { SettingsSchema } from "@/schemas";
 import { settings } from "@/actions/settings";
 import { useSession } from "next-auth/react";
 
 type SettingsFormProps = {
   user: {
-    name?: string;
-    email?: string;
-    role?: UserRole;
+    name: string;
+    email: string;
     isTwoFactorEnabled?: boolean;
     isOAuth?: boolean;
   };
@@ -43,12 +41,11 @@ const SettingsForm = ({ user }: SettingsFormProps) => {
   const form = useForm<z.infer<typeof SettingsSchema>>({
     resolver: zodResolver(SettingsSchema),
     defaultValues: {
-      name: user?.name || undefined,
-      email: user?.email || undefined,
+      name: user.name || undefined,
+      email: user.email || undefined,
       password: undefined,
       newPassword: undefined,
       confirmNewPassword: undefined,
-      role: user?.role || undefined,
       isTwoFactorEnabled: user?.isTwoFactorEnabled || undefined,
     },
   });
@@ -169,32 +166,7 @@ const SettingsForm = ({ user }: SettingsFormProps) => {
               />
             </>
           )}
-          {/* <FormField
-            control={form.control}
-            name="role"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Role</FormLabel>
-                <Select
-                  disabled={isPending}
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a role" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value={UserRole.ADMIN}>Admin</SelectItem>
-                    <SelectItem value={UserRole.USER}>User</SelectItem>
-                  </SelectContent>
-                  <FormMessage />
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          /> */}
+
           {user?.isOAuth === false && (
             <FormField
               control={form.control}
