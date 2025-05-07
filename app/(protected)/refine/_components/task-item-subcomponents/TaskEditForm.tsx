@@ -46,9 +46,7 @@ const TaskEditForm: React.FC<TaskEditFormProps> = ({
       <Input
         value={editTitle}
         onChange={(e) => setEditTitle(e.target.value)}
-        className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-          task.canInfluence ? "text-black" : ""
-        }`}
+        className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto`}
       />
       {subtasks.length === 0 && (
         /* Edit duration */
