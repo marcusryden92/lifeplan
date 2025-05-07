@@ -55,6 +55,7 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
   if (
     values.password &&
     typeof values.password === "string" &&
+    typeof values.newPassword === "string" &&
     values.newPassword &&
     dbUser.password
   ) {
