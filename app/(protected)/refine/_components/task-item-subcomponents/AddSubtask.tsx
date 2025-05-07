@@ -14,11 +14,7 @@ import { useDataContext } from "@/context/DataContext";
 // Utility Functions
 import { addSubtask } from "@/utils/goalPageHandlers";
 
-const AddSubtask: React.FC<AddSubtaskProps> = ({
-  task,
-  parentId,
-  isMainParent,
-}) => {
+const AddSubtask: React.FC<AddSubtaskProps> = ({ parentId, isMainParent }) => {
   const [taskDuration, setTaskDuration] = useState<number | undefined>(
     undefined
   );
@@ -77,9 +73,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
           onChange={(e) => setTaskTitle(e.target.value)}
           className={`bg-gray-20 bg-opacity-25 ${
             !isMainParent ? "max-w-[10rem]" : ""
-          } border-gray-400 m-0 text-sm h-6 ${
-            task.canInfluence ? "text-black" : ""
-          }`}
+          } border-gray-400 m-0 text-sm h-6 `}
           ref={getRef(parentId)}
           placeholder="New subtask name"
         />

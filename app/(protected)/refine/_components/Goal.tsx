@@ -105,9 +105,7 @@ const Goal = ({
             <Input
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-                task.canInfluence ? "text-black" : ""
-              }`}
+              className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto `}
               aria-label="Edit goal title"
             />
             <Button
