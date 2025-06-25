@@ -54,6 +54,11 @@ export default [
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off",
       "no-undef": "error",
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        { checksVoidReturn: false },
+      ],
+      "@typescript-eslint/no-floating-promises": "off",
     },
     settings: {
       react: {

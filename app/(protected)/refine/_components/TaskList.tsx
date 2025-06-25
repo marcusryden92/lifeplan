@@ -8,7 +8,7 @@ import { TaskListProps } from "@/lib/taskItem";
 import { getTaskById } from "@/utils/taskArrayUtils";
 import {
   getSubtasksById,
-  sortTasksByDependenciesAsync,
+  sortTasksByDependencies,
 } from "@/utils/goalPageHandlers";
 import { Planner } from "@/lib/plannerClass";
 
@@ -21,7 +21,7 @@ const TaskList: React.FC<TaskListProps> = React.memo(
     const [loading, setLoading] = useState<boolean>(true);
 
     useEffect(() => {
-      const fetchData = async () => {
+      const fetchData = () => {
         const subtasksToUse = subtasks || getSubtasksById(mainPlanner, id);
         if (!subtasksToUse.length) {
           setLoading(false);
@@ -34,10 +34,7 @@ const TaskList: React.FC<TaskListProps> = React.memo(
           return;
         }
 
-        const sorted = await sortTasksByDependenciesAsync(
-          mainPlanner,
-          subtasksToUse
-        );
+        const sorted = sortTasksByDependencies(mainPlanner, subtasksToUse);
         setSortedTasks(sorted);
         setLoading(false);
       };
