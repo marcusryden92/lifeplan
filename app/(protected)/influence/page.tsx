@@ -30,7 +30,6 @@ import { Button } from "@/components/ui/Button";
 
 // Schemas and utilities
 import { TaskListSchema } from "@/schemas";
-import { hasInfluence } from "@/utils/plannerUtils";
 import {
   onSubmit,
   deleteTask,
@@ -216,9 +215,7 @@ export default function InfluencePage() {
         <Button
           variant="invisible"
           disabled={mainPlanner.length === 0}
-          className={`px-0 ${
-            hasInfluence(mainPlanner) ? "pointer-events-none opacity-50" : ""
-          }`}
+          className={`px-0 `}
         >
           <Link href={"/tasks"} className="flex group items-center gap-4">
             {"Continue"}
