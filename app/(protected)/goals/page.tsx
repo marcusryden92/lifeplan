@@ -31,7 +31,6 @@ import { Button } from "@/components/ui/Button";
 // Schemas and utilities
 import { TaskListSchema } from "@/schemas";
 import { Planner } from "@/lib/plannerClass";
-import { hasInfluence } from "@/utils/plannerUtils";
 import {
   onSubmit,
   deleteTask,
@@ -78,11 +77,7 @@ export default function InfluencePage() {
 
   const handleDeleteAll = () => {
     const filterArray: Planner[] = mainPlanner.filter(
-      (task) =>
-        task.canInfluence &&
-        task.type !== "task" &&
-        task.type !== "plan" &&
-        !task.parentId
+      (task) => task.type !== "task" && task.type !== "plan" && !task.parentId
     );
 
     deleteAll({ setMainPlanner, filter: filterArray });
@@ -177,7 +172,6 @@ export default function InfluencePage() {
       >
         {mainPlanner.map(
           (task, index) =>
-            task.canInfluence &&
             task.type !== "task" &&
             task.type !== "plan" &&
             !task.parentId && (
@@ -195,9 +189,7 @@ export default function InfluencePage() {
                       <Input
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
-                        className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-                          task.canInfluence ? "text-black" : ""
-                        }`}
+                        className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto `}
                       />
                       <Button
                         variant="invisible"
@@ -222,22 +214,14 @@ export default function InfluencePage() {
                       onClick={() => handleClickEdit(index)}
                       className="cursor-pointer text-gray-400 hover:text-blue-400"
                     >
-                      <PencilIcon
-                        className={`w-5 h-5 ${
-                          task.canInfluence ? "text-white" : ""
-                        }`}
-                      />
+                      <PencilIcon className={`w-5 h-5 `} />
                     </div>
                   )}
                   <div
                     onClick={() => handleDeleteTask(index)}
                     className="cursor-pointer text-gray-400 hover:text-red-400"
                   >
-                    <XMarkIcon
-                      className={`w-7 h-7 ${
-                        task.canInfluence ? "text-white" : ""
-                      }`}
-                    />
+                    <XMarkIcon className={`w-7 h-7 `} />
                   </div>
                 </div>
               </div>
@@ -253,9 +237,7 @@ export default function InfluencePage() {
         <Button
           variant="invisible"
           disabled={mainPlanner.length === 0}
-          className={`px-0 ${
-            hasInfluence(mainPlanner) ? "pointer-events-none opacity-50" : ""
-          }`}
+          className={`px-0`}
         >
           <Link href={"/refine"} className="flex group items-center gap-4">
             {"Continue"}

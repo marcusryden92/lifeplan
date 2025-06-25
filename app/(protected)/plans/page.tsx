@@ -89,7 +89,7 @@ export default function TasksPage() {
 
   const handleDeleteAll = () => {
     const filterArray: Planner[] = mainPlanner.filter(
-      (task) => task.canInfluence && task.type !== "task" && !task.parentId
+      (task) => task.type !== "task" && !task.parentId
     );
 
     deleteAll({ setMainPlanner, filter: filterArray });
@@ -233,7 +233,7 @@ export default function TasksPage() {
         ref={tasksContainerRef}
       >
         {mainPlanner.map((task, index) =>
-          task.canInfluence && task.type !== "task" && !task.parentId ? (
+          task.type !== "task" && !task.parentId ? (
             <div
               key={index}
               className={`flex flex-col rounded-lg w-[350px] group hover:shadow-md py-1 px-4 my-1 mx-1 ${
@@ -290,9 +290,7 @@ export default function TasksPage() {
                   <Input
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto ${
-                      task.canInfluence ? "text-black" : ""
-                    }`}
+                    className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto `}
                   />
                   <Button
                     size="xs"

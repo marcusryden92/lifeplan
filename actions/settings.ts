@@ -31,7 +31,11 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
     values.isTwoFactorEnabled = undefined;
   }
 
-  if (values.email && values.email !== user.email) {
+  if (
+    values.email &&
+    typeof values.email === "string" &&
+    values.email !== user.email
+  ) {
     const existingUser = await getUserByEmail(values.email);
 
     if (existingUser && existingUser.id !== user.id) {
@@ -48,7 +52,13 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
     return { success: "Verification email sent!" };
   }
 
-  if (values.password && values.newPassword && dbUser.password) {
+  if (
+    values.password &&
+    typeof values.password === "string" &&
+    typeof values.newPassword === "string" &&
+    values.newPassword &&
+    dbUser.password
+  ) {
     const passwordsMatch = await bcrypt.compare(
       values.password,
       dbUser.password
