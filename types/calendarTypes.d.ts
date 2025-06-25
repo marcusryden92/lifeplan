@@ -40,15 +40,17 @@ export type RRule = {
   exdate?: string[]; // Exclude specific dates - ISO strings
 };
 
-export type ExtendedPropsType = { isTemplateItem: boolean };
+export type ExtendedPropsType = {
+  isTemplateItem: boolean;
+  backgroundColor: string;
+  borderColor: string;
+};
 
 export type SimpleEvent = {
   id: string;
   title: string;
   start: string;
   end: string;
-  backgroundColor?: string;
-  borderColor?: string;
   rrule?: RRule;
   duration?: number;
   extendedProps: ExtendedPropsType;

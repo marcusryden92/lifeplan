@@ -115,11 +115,11 @@ model CalendarEvent {
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   rrule         String?
-  extendedProps String?
+  extendedProps String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
+ 
   @@map("calendar_events")
 }
 

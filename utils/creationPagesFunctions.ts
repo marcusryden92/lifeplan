@@ -25,7 +25,6 @@ export const onSubmit = ({
   editTitle,
   setEditTitle,
   form,
-  setDefaultInfluence,
   type,
 }: OnSubmitProps) => {
   if (editIndex !== null) {
@@ -37,13 +36,7 @@ export const onSubmit = ({
     setEditIndex(null);
     setEditTitle("");
   } else {
-    const newTask = new Planner(
-      values.title,
-      undefined,
-      undefined,
-      type,
-      setDefaultInfluence || false
-    );
+    const newTask = new Planner(values.title, undefined, undefined, type);
     setMainPlanner((prevTasks) => [...prevTasks, newTask]);
   }
   form.reset();

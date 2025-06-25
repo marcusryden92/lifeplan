@@ -104,8 +104,7 @@ export default function TemplateBuilder({
       allDaySlot={false}
       dayHeaderFormat={{ weekday: "short" }}
       eventContent={({ event }: ExtendedEventContentArg) => {
-        const simpleEvent = templateEvents?.find((e) => e.id === event.id);
-
+        const simpleEvent = templateEvents.find((t) => t.id === event.id);
         return (
           simpleEvent && (
             <EventContent

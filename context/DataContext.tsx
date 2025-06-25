@@ -12,17 +12,12 @@ import React, {
 import { Planner } from "@/lib/plannerClass";
 import { SimpleEvent, WeekDayIntegers } from "@/types/calendarTypes";
 import { EventTemplate } from "@/utils/templateBuilderUtils";
-/* import {
-  templateSeed,
-  mainPlannerSeed,
-  previousCalendarSeed,
-} from "@/data/seedData"; */
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 import { taskIsCompleted } from "@/utils/taskHelpers";
 import { floorMinutes } from "@/utils/calendarUtils";
-import { handleServerTransaction } from "@/utils/server-handlers/compareCalendarData";
 import { useSession } from "next-auth/react";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
+import { useServerSyncQueue } from "@/hooks/useServerSyncQueue";
 
 interface DataContextType {
   mainPlanner: Planner[];
@@ -33,7 +28,7 @@ interface DataContextType {
     updatedTemplate?:
       | EventTemplate[]
       | ((prev: EventTemplate[]) => EventTemplate[])
-  ) => void;
+  ) => Promise<void>; // Changed to return Promise<void>
   currentTemplate: EventTemplate[];
   setCurrentTemplate: React.Dispatch<React.SetStateAction<EventTemplate[]>>;
   weekStartDay: WeekDayIntegers;
@@ -72,9 +67,9 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const [currentCalendar, setCurrentCalendar] = useState<SimpleEvent[]>([]);
   const [currentTemplate, setCurrentTemplate] = useState<EventTemplate[]>([]);
 
-  const previousPlanner = useRef<Planner[]>([]);
-  const previousCalendar = useRef<SimpleEvent[]>([]);
-  const previousTemplate = useRef<EventTemplate[]>([]);
+  // Import our server sync queue hook
+  const { processInput, queueServerSync, initializeState } =
+    useServerSyncQueue(userId);
 
   const { data /* loading, error */ } = useFetchCalendarData(userId);
 
@@ -84,84 +79,58 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
       setCurrentCalendar(data.calendar);
       setCurrentTemplate(data.template);
 
-      // Set "previous" refs to initial state
-      previousPlanner.current = data.planner;
-      previousCalendar.current = data.calendar;
-      previousTemplate.current = data.template;
+      // Initialize the "previous" state in our queue hook
+      initializeState(data.planner, data.calendar, data.template);
     }
-  }, [data]);
+  }, [data, initializeState]);
 
-  // Function changing the mainPlanner, updating the calendar
-  // and template, and pushing the changes to the database
-  const setMainPlanner = async (
-    updatedPlanner?: Planner[] | ((prev: Planner[]) => Planner[]),
-    updatedCalendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
-    updatedTemplate?:
-      | EventTemplate[]
-      | ((prev: EventTemplate[]) => EventTemplate[])
-  ) => {
-    // Helper function that processes optional update parameters:
-    // - Returns the current value if update is undefined
-    // - Applies the update function if update is a function
-    // - Returns the update value directly if it's a new value
-    const processInput = <T,>(
-      update: T | ((prev: T) => T) | undefined,
-      currentValue: T
-    ): T => {
-      if (update === undefined) return currentValue;
-      return typeof update === "function"
-        ? (update as (prev: T) => T)(currentValue)
-        : update;
-    };
+  // Updated setMainPlanner function that applies optimistic updates immediately but queues server sync
+  const setMainPlanner = useCallback(
+    (
+      updatedPlanner?: Planner[] | ((prev: Planner[]) => Planner[]),
+      updatedCalendar?:
+        | SimpleEvent[]
+        | ((prev: SimpleEvent[]) => SimpleEvent[]),
+      updatedTemplate?:
+        | EventTemplate[]
+        | ((prev: EventTemplate[]) => EventTemplate[])
+    ): Promise<void> => {
+      // Immediately apply optimistic updates
+      const newPlanner = processInput(updatedPlanner, mainPlanner);
+      const newTemplate = processInput(updatedTemplate, currentTemplate);
+      const processedCalendar = processInput(updatedCalendar, currentCalendar);
 
-    // Apply the pattern to each input
-    const newPlanner = processInput(updatedPlanner, mainPlanner);
-    const newTemplate = processInput(updatedTemplate, currentTemplate);
-    const processedCalendar = processInput(updatedCalendar, currentCalendar);
-
-    const newCalendar = generateCalendar(
-      weekStartDay,
-      newTemplate,
-      newPlanner,
-      processedCalendar
-    );
-
-    mainPlannerDispatch(newPlanner);
-    setCurrentCalendar(newCalendar);
-    setCurrentTemplate(newTemplate);
-
-    if (
-      userId &&
-      newPlanner &&
-      previousPlanner &&
-      newCalendar &&
-      previousCalendar &&
-      newTemplate &&
-      previousTemplate
-    ) {
-      const response = await handleServerTransaction(
-        userId,
-        newPlanner,
-        previousPlanner,
-        newCalendar,
-        previousCalendar,
+      const newCalendar = generateCalendar(
+        weekStartDay,
         newTemplate,
-        previousTemplate
+        newPlanner,
+        processedCalendar
       );
 
-      if (response.success) {
-        console.log("Server success!");
-        previousCalendar.current = newCalendar;
-        previousPlanner.current = newPlanner;
-        previousTemplate.current = newTemplate;
-      } else {
-        mainPlannerDispatch(previousPlanner.current);
-        setCurrentCalendar(previousCalendar.current);
-        setCurrentTemplate(previousTemplate.current);
-        console.log("Server failure!");
-      }
-    }
-  };
+      // Apply optimistic updates immediately
+      mainPlannerDispatch(newPlanner);
+      setCurrentCalendar(newCalendar);
+      setCurrentTemplate(newTemplate);
+
+      // Queue the server sync operation
+      return queueServerSync(
+        newPlanner,
+        newCalendar,
+        newTemplate,
+        mainPlannerDispatch,
+        setCurrentCalendar,
+        setCurrentTemplate
+      );
+    },
+    [
+      weekStartDay,
+      mainPlanner,
+      currentCalendar,
+      currentTemplate,
+      processInput,
+      queueServerSync,
+    ]
+  );
 
   // Manually update the calendar, for instance with the
   // 'Refresh Calendar' button
@@ -184,9 +153,15 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
         filteredCalendar
       );
 
-      setMainPlanner((prev) => prev, newCalendar);
+      setMainPlanner(undefined, newCalendar);
     }
-  }, [setCurrentCalendar, currentTemplate, mainPlanner, weekStartDay]);
+  }, [
+    setMainPlanner,
+    currentTemplate,
+    mainPlanner,
+    weekStartDay,
+    currentCalendar,
+  ]);
 
   useEffect(() => {
     if (LOG_MAIN_PLANNER) {

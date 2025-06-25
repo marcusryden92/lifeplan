@@ -2,10 +2,11 @@ import { Planner } from "@/lib/plannerClass";
 import { ExtendedPropsType, RRule } from "@/types/calendarTypes";
 
 import { Planner as PlannerModel, WeekDayType } from "@prisma/client";
-import { SimpleEvent } from "@/utils/eventUtils";
+import { SimpleEvent } from "@/types/calendarTypes";
 import { EventTemplate } from "@/utils/templateBuilderUtils";
 
 import { fetchCalendarData } from "@/actions/calendar-actions/fetchCalendarData";
+import { safeParse } from "@/utils/generalUtils";
 
 export interface TransformedCalendarEvent {
   id: string;
@@ -14,7 +15,7 @@ export interface TransformedCalendarEvent {
   end: string;
   rrule: string | null;
   duration?: number | null;
-  extendedProps: string | null;
+  extendedProps: string;
 }
 
 export interface TransformedEventTemplate {
@@ -56,14 +57,9 @@ export function transformCalendarEvents(
     title: event.title,
     start: event.start,
     end: event.end,
-    rrule:
-      typeof event.rrule === "string"
-        ? (JSON.parse(event.rrule) as RRule)
-        : undefined,
+    rrule: safeParse<RRule>(event.rrule),
     duration: event.duration ?? undefined,
-    extendedProps: JSON.parse(
-      JSON.stringify(event.extendedProps)
-    ) as ExtendedPropsType,
+    extendedProps: safeParse<ExtendedPropsType>(event.extendedProps),
   }));
 }
 

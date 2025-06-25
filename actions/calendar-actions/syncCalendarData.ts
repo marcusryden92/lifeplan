@@ -1,25 +1,28 @@
 "use server";
-import { Planner } from "@/lib/plannerClass";
-import { SimpleEvent } from "@/types/calendarTypes";
-import { EventTemplate } from "@/utils/templateBuilderUtils";
+
+import {
+  SerializedPlanner,
+  SerializedSimpleEvent,
+  SerializedEventTemplate,
+} from "@/utils/server-handlers/serializing";
 import { db } from "@/lib/db";
 
 export async function syncCalendarData(
   userId: string,
-  create: Planner[],
-  update: Planner[],
-  destroy: Planner[],
-  createEvent: SimpleEvent[],
-  updateEvent: SimpleEvent[],
-  destroyEvent: SimpleEvent[],
-  createTemplate?: EventTemplate[],
-  updateTemplate?: EventTemplate[],
-  destroyTemplate?: EventTemplate[]
+  create: SerializedPlanner[],
+  update: SerializedPlanner[],
+  destroy: SerializedPlanner[],
+  createEvent: SerializedSimpleEvent[],
+  updateEvent: SerializedSimpleEvent[],
+  destroyEvent: SerializedSimpleEvent[],
+  createTemplate?: SerializedEventTemplate[],
+  updateTemplate?: SerializedEventTemplate[],
+  destroyTemplate?: SerializedEventTemplate[]
 ) {
   try {
     const operations = [];
 
-    // === Planner: CREATE ===
+    // === SerializedPlanner: CREATE ===
     if (create.length) {
       const plannerCreateData = create.map((planner) => ({
         userId,
@@ -29,8 +32,8 @@ export async function syncCalendarData(
         type: planner.type ?? null,
         isReady: planner.isReady ?? false,
         duration: planner.duration ?? null,
-        deadline: planner.deadline?.toISOString() ?? null,
-        starts: planner.starts?.toISOString() ?? null,
+        deadline: planner.deadline ?? null,
+        starts: planner.starts ?? null,
         dependency: planner.dependency ?? null,
         completedStartTime: planner.completed?.startTime ?? null,
         completedEndTime: planner.completed?.endTime ?? null,
@@ -44,7 +47,7 @@ export async function syncCalendarData(
       );
     }
 
-    // === Planner: UPDATE ===
+    // === SerializedPlanner: UPDATE ===
     for (const planner of update) {
       operations.push(
         db.planner.update({
@@ -56,8 +59,8 @@ export async function syncCalendarData(
             type: planner.type ?? null,
             isReady: planner.isReady ?? false,
             duration: planner.duration ?? null,
-            deadline: planner.deadline?.toISOString() ?? null,
-            starts: planner.starts?.toISOString() ?? null,
+            deadline: planner.deadline ?? null,
+            starts: planner.starts ?? null,
             dependency: planner.dependency ?? null,
             completedStartTime: planner.completed?.startTime ?? null,
             completedEndTime: planner.completed?.endTime ?? null,
@@ -66,7 +69,7 @@ export async function syncCalendarData(
       );
     }
 
-    // === Planner: DELETE ===
+    // === SerializedPlanner: DELETE ===
     if (destroy.length) {
       operations.push(
         db.planner.deleteMany({
@@ -84,7 +87,8 @@ export async function syncCalendarData(
         start: event.start,
         end: event.end,
         rrule: JSON.stringify(event.rrule),
-        extendedProps: JSON.stringify(event.extendedProps),
+        extendedProps: event.extendedProps ?? null,
+        duration: event.duration ?? null,
       }));
 
       operations.push(
@@ -121,14 +125,14 @@ export async function syncCalendarData(
       );
     }
 
-    // === EventTemplate: CREATE ===
+    // === SerializedEventTemplate: CREATE ===
     if (createTemplate?.length) {
       const templateCreateData = createTemplate.map((template) => ({
         userId,
         id: template.id,
         title: template.title,
-        startDay: template.start.day,
-        startTime: template.start.time,
+        startDay: template.startDay,
+        startTime: template.startTime,
         duration: template.duration,
       }));
 
@@ -140,7 +144,7 @@ export async function syncCalendarData(
       );
     }
 
-    // === EventTemplate: UPDATE ===
+    // === SerializedEventTemplate: UPDATE ===
     if (updateTemplate?.length) {
       for (const template of updateTemplate) {
         operations.push(
@@ -148,8 +152,8 @@ export async function syncCalendarData(
             where: { id: template.id },
             data: {
               title: template.title,
-              startDay: template.start.day,
-              startTime: template.start.time,
+              startDay: template.startDay,
+              startTime: template.startTime,
               duration: template.duration,
               userId,
             },
@@ -158,7 +162,7 @@ export async function syncCalendarData(
       }
     }
 
-    // === EventTemplate: DELETE ===
+    // === SerializedEventTemplate: DELETE ===
     if (destroyTemplate?.length) {
       operations.push(
         db.eventTemplate.deleteMany({
@@ -168,11 +172,11 @@ export async function syncCalendarData(
     }
 
     // === Execute transaction ===
-    const response = await db.$transaction(operations);
+    await db.$transaction(operations);
 
-    return { success: true, data: response };
+    return { success: true };
   } catch (error) {
     console.error("Failed to sync planner and calendar data:", error);
-    return { success: false, error: error };
+    return { success: false };
   }
 }

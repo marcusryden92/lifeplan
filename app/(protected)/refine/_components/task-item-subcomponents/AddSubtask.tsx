@@ -43,7 +43,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({ parentId, isMainParent }) => {
         mainPlanner,
         setMainPlanner,
         parentId,
-        taskDuration: taskDuration || 0,
+        taskDuration: taskDuration || 5,
         taskTitle,
         resetTaskState,
       });

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Planner } from "@/lib/plannerClass";
-import { SimpleEvent } from "@/utils/eventUtils";
+import { SimpleEvent } from "@/types/calendarTypes";
 import { EventTemplate } from "@/utils/templateBuilderUtils";
 import { transformFetchedData } from "@/utils/server-handlers/fetchAndTransformData";
 
