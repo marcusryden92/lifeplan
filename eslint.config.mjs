@@ -1,8 +1,8 @@
 import js from "@eslint/js";
 import globals from "globals";
-import tseslint from "@typescript-eslint/eslint-plugin";
+import tseslintParser from "@typescript-eslint/parser";
+import tseslintPlugin from "@typescript-eslint/eslint-plugin";
 import reactPlugin from "eslint-plugin-react";
-import tsParser from "@typescript-eslint/parser";
 import pluginNext from "@next/eslint-plugin-next";
 import jestPlugin from "eslint-plugin-jest";
 
@@ -27,7 +27,7 @@ export default [
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      parser: tsParser,
+      parser: tseslintParser,
       parserOptions: {
         ecmaFeatures: { jsx: true },
         project: "./tsconfig.json",
@@ -40,13 +40,14 @@ export default [
       },
     },
     plugins: {
-      "@typescript-eslint": tseslint,
+      "@typescript-eslint": tseslintPlugin,
       react: reactPlugin,
       "@next/next": pluginNext,
     },
     rules: {
       ...js.configs.recommended.rules,
-      ...tseslint.configs.recommended.rules,
+      ...tseslintPlugin.configs.recommended.rules,
+      ...tseslintPlugin.configs["recommended-type-checked"].rules,
       ...reactPlugin.configs.recommended.rules,
       ...pluginNext.configs.recommended.rules,
       ...pluginNext.configs["core-web-vitals"].rules,

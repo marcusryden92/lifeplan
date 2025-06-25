@@ -22,8 +22,6 @@ import {
 } from "@/utils/calendarEventHandlers";
 import { EventContentArg } from "@fullcalendar/core/index.js";
 
-import { convertEventImplToSimpleEvent } from "@/utils/eventUtils";
-
 const EVENT_INTERACTION_ENABLED = false; // Constant to enable/disable event interaction
 
 interface CalendarProps {
@@ -83,23 +81,24 @@ export default function Calendar({
       eventResize={(resizeInfo) => handleEventResize(setEvents, resizeInfo)}
       eventDrop={(dropInfo) => handleEventDrop(setEvents, dropInfo)}
       eventContent={({ event }: EventContentArg) => {
-        const simpleEvent = convertEventImplToSimpleEvent(
-          event,
-          event.extendedProps.isTemplateItem
-        );
+        const simpleEvent = initialEvents?.find((e) => e.id === event.id);
 
         return (
-          <EventContent
-            event={simpleEvent}
-            onEdit={() =>
-              handleEventEdit(calendarRef, setEvents, events, simpleEvent.id)
-            }
-            onCopy={() => handleEventCopy(calendarRef, setEvents, simpleEvent)}
-            onDelete={() =>
-              handleEventDelete(calendarRef, setEvents, simpleEvent.id)
-            }
-            showButtons={EVENT_INTERACTION_ENABLED}
-          />
+          simpleEvent && (
+            <EventContent
+              event={simpleEvent}
+              onEdit={() =>
+                handleEventEdit(calendarRef, setEvents, events, simpleEvent.id)
+              }
+              onCopy={() =>
+                handleEventCopy(calendarRef, setEvents, simpleEvent)
+              }
+              onDelete={() =>
+                handleEventDelete(calendarRef, setEvents, simpleEvent.id)
+              }
+              showButtons={EVENT_INTERACTION_ENABLED}
+            />
+          )
         );
       }}
     />
