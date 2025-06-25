@@ -377,7 +377,7 @@ function handleTargetIsNextDependent(
   updateTaskArray(setMainPlanner, instructions);
 }
 
-async function handleVacancy(
+function handleVacancy(
   mainPlanner: Planner[],
   setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
   movedTask: Planner,
@@ -410,7 +410,7 @@ async function handleVacancy(
   );
 }
 
-async function updateMovedTask(
+function updateMovedTask(
   updatedArray: Planner[],
   setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
   movedTask: Planner,

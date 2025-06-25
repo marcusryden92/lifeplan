@@ -177,5 +177,5 @@ export function updateDependenciesOnDelete_ReturnArray({
   }
 
   // Ensure all instructions are applied before moving forward
-  return updatedArray as Planner[];
+  return updatedArray;
 }

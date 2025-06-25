@@ -20,7 +20,6 @@ import {
   handleEventDelete,
   handleEventEdit,
 } from "@/utils/calendarEventHandlers";
-import { convertEventImplToSimpleEvent } from "@/utils/eventUtils";
 import EventContent from "@/components/events/EventContent";
 import { ExtendedEventContentArg } from "@/types/calendarTypes";
 
@@ -105,29 +104,29 @@ export default function TemplateBuilder({
       allDaySlot={false}
       dayHeaderFormat={{ weekday: "short" }}
       eventContent={({ event }: ExtendedEventContentArg) => {
-        const simpleEvent = convertEventImplToSimpleEvent(
-          event,
-          event.extendedProps.isTemplateItem
-        );
+        const simpleEvent = templateEvents?.find((e) => e.id === event.id);
+
         return (
-          <EventContent
-            event={simpleEvent}
-            onEdit={() =>
-              handleEventEdit(
-                calendarRef,
-                setTemplateEvents,
-                templateEvents,
-                event.id
-              )
-            }
-            onCopy={() =>
-              handleEventCopy(calendarRef, setTemplateEvents, simpleEvent)
-            }
-            onDelete={() =>
-              handleEventDelete(calendarRef, setTemplateEvents, event.id)
-            }
-            showButtons={true} // Adjust based on your needs
-          />
+          simpleEvent && (
+            <EventContent
+              event={simpleEvent}
+              onEdit={() =>
+                handleEventEdit(
+                  calendarRef,
+                  setTemplateEvents,
+                  templateEvents,
+                  event.id
+                )
+              }
+              onCopy={() =>
+                handleEventCopy(calendarRef, setTemplateEvents, simpleEvent)
+              }
+              onDelete={() =>
+                handleEventDelete(calendarRef, setTemplateEvents, event.id)
+              }
+              showButtons={true} // Adjust based on your needs
+            />
+          )
         );
       }}
     />
