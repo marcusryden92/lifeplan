@@ -1,6 +1,5 @@
-import { Planner } from "@/lib/plannerClass";
-import { SimpleEvent } from "@/types/calendarTypes";
-
+import { Planner } from "@prisma/client";
+import { SimpleEvent } from "@prisma/client";
 export const deletePlanner = (
   setMainPlanner: (
     arg: Planner[] | ((prev: Planner[]) => Planner[]),

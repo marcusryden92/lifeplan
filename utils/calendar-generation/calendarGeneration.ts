@@ -13,11 +13,10 @@ import {
   addWeekTemplateToCalendar,
   populateWeekWithTemplate,
 } from "./weekTemplateGeneration";
-import { SimpleEvent } from "@/types/calendarTypes";
-
+import { SimpleEvent } from "@prisma/client";
 import { getDayDifference, hasDateInArray } from "./calendarGenerationHelpers";
 
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@prisma/client";
 
 import { getSortedTreeBottomLayer } from "../goalPageHandlers";
 import { taskIsCompleted } from "../taskHelpers";

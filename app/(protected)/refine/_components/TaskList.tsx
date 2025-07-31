@@ -10,7 +10,7 @@ import {
   getSubtasksById,
   sortTasksByDependencies,
 } from "@/utils/goalPageHandlers";
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@prisma/client";
 
 const TaskList: React.FC<TaskListProps> = React.memo(
   ({ id, subtasks, focusedTask, setFocusedTask }) => {

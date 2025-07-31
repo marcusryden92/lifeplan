@@ -1,7 +1,6 @@
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { EventTemplate } from "../templateBuilderUtils";
-import { SimpleEvent } from "@/types/calendarTypes";
-
+import { SimpleEvent } from "@prisma/client";
 import {
   shiftDate,
   setTimeOnDate,

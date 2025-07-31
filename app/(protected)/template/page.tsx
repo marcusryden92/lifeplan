@@ -5,8 +5,7 @@ import { TrashIcon } from "@heroicons/react/24/outline";
 
 import TemplateBuilder from "./_components/TemplateBuilder";
 import { useDataContext } from "@/context/DataContext";
-import { SimpleEvent } from "@/types/calendarTypes";
-
+import { SimpleEvent } from "@prisma/client";
 import headerStyles from "../calendar/components/CalendarHeader.module.css";
 
 export default function TasksPage() {

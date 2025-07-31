@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
-import { Planner } from "@/lib/plannerClass";
-import { SimpleEvent } from "@/types/calendarTypes";
+import { Planner } from "@prisma/client";
+import { SimpleEvent } from "@prisma/client";
 import { EventTemplate } from "@/utils/templateBuilderUtils";
-import { transformFetchedData } from "@/utils/server-handlers/fetchAndTransformData";
+import { fetchCalendarData } from "@/actions/calendar-actions/fetchCalendarData";
 
-interface TransformedData {
+interface Data {
   planner: Planner[];
   calendar: SimpleEvent[];
   template: EventTemplate[];
 }
 
 export function useFetchCalendarData(userId: string | undefined) {
-  const [data, setData] = useState<TransformedData | null>(null);
+  const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -23,8 +23,12 @@ export function useFetchCalendarData(userId: string | undefined) {
       setError(null);
 
       try {
-        const transformedData = await transformFetchedData(userId);
-        setData(transformedData);
+        const response = await fetchCalendarData(userId);
+
+        if (!response.data) return null;
+
+        const { planner, calendar, template } = response.data;
+        setData({ planner, calendar, template });
       } catch (err) {
         setError(err as Error);
       } finally {

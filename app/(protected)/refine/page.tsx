@@ -17,7 +17,7 @@ import Goal from "./_components/Goal";
 import GoalsSidebar from "./_components/GoalsSidebar";
 
 // Local utilities
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@prisma/client";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { toggleGoalIsReady } from "@/utils/goal-handlers/toggleGoalIsReady";
 
@@ -60,7 +60,7 @@ export default function RefineGoalsPage() {
   );
 
   const handleUpdateDeadline = useCallback(
-    (taskId: string, deadline: Date | undefined) => {
+    (taskId: string, deadline: Date | null) => {
       setMainPlanner((prevArray: Planner[]) =>
         prevArray.map((t) => (t.id === taskId ? { ...t, deadline } : t))
       );

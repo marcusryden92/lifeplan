@@ -17,7 +17,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@prisma/client";
 
 // Local components and context
 import { useDataContext } from "@/context/DataContext";

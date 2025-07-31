@@ -1,5 +1,5 @@
-import { Planner } from "@/lib/plannerClass";
-import { SimpleEvent } from "@/types/calendarTypes";
+import { Planner } from "@prisma/client";
+import { SimpleEvent } from "@prisma/client";
 import { getMinuteDifference } from "./calendar-generation/calendarGenerationHelpers";
 import { floorMinutes } from "./calendarUtils";
 

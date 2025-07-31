@@ -1,4 +1,4 @@
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@prisma/client";
 
 export const planner1: Planner[] = [
   {

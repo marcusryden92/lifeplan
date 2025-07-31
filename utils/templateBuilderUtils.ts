@@ -1,6 +1,6 @@
 import { EventApi } from "@fullcalendar/core";
 import { getWeekdayFromDate } from "@/utils/calendarUtils";
-import { SimpleEvent } from "@/types/calendarTypes";
+import { SimpleEvent } from "@prisma/client";
 import { shiftDate } from "@/utils/calendarUtils";
 import { setTimeOnDate } from "@/utils/calendarUtils";
 import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";

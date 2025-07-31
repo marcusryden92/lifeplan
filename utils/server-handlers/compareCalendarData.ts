@@ -1,7 +1,7 @@
 "use client";
 
-import { Planner } from "@/lib/plannerClass";
-import { SimpleEvent } from "@/types/calendarTypes";
+import { Planner } from "@prisma/client";
+import { SimpleEvent } from "@prisma/client";
 import { objectsAreEqual } from "../generalUtils";
 import { syncCalendarData } from "@/actions/calendar-actions/syncCalendarData";
 import { EventTemplate } from "@/utils/templateBuilderUtils";

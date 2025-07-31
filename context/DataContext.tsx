@@ -8,7 +8,6 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { Planner } from "@/lib/plannerClass";
 import { SimpleEvent, WeekDayIntegers } from "@/types/calendarTypes";
 import { EventTemplate } from "@/utils/templateBuilderUtils";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
@@ -17,6 +16,8 @@ import { floorMinutes } from "@/utils/calendarUtils";
 import { useSession } from "next-auth/react";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
 import { useServerSyncQueue } from "@/hooks/useServerSyncQueue";
+
+import { Planner } from "@prisma/client";
 
 interface DataContextType {
   mainPlanner: Planner[];

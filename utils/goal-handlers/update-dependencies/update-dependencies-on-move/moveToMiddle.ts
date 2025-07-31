@@ -1,7 +1,7 @@
 import React from "react";
 
 // Types
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@prisma/client";
 
 // Utils
 import {

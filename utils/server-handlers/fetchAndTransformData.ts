@@ -1,8 +1,7 @@
-import { Planner } from "@/lib/plannerClass";
 import { ExtendedPropsType, RRule } from "@/types/calendarTypes";
 
-import { Planner as PlannerModel, WeekDayType } from "@prisma/client";
-import { SimpleEvent } from "@/types/calendarTypes";
+import { Planner, WeekDayType } from "@prisma/client";
+import { SimpleEvent } from "@prisma/client";
 import { EventTemplate } from "@/utils/templateBuilderUtils";
 
 import { fetchCalendarData } from "@/actions/calendar-actions/fetchCalendarData";
@@ -27,7 +26,7 @@ export interface TransformedEventTemplate {
 }
 
 // Transform planner items
-export function transformPlannerItems(mainPlanner: PlannerModel[]): Planner[] {
+export function transformPlannerItems(mainPlanner: Planner[]): Planner[] {
   return mainPlanner.map((item) => ({
     id: item.id,
     title: item.title,

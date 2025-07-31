@@ -1,4 +1,4 @@
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@prisma/client";
 
 const DebugInfo: React.FC<{ task: Planner; devMode: boolean }> = ({
   task,

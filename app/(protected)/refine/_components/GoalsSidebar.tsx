@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { CardContent } from "@/components/ui/Card";
 import AddItemForm from "./AddItemForm";
 import { deleteGoal } from "@/utils/goalPageHandlers";
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@prisma/client";
 
 import { CarouselApi } from "@/components/ui/Carousel";
 

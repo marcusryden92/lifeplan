@@ -19,8 +19,8 @@ import TaskList from "./TaskList";
 import RootTaskListWrapper from "./task-item-subcomponents/RootTaskListWrapper";
 
 // Local utilities
-import { Planner } from "@/lib/plannerClass";
-import { SimpleEvent } from "@/types/calendarTypes";
+import { Planner } from "@prisma/client";
+import { SimpleEvent } from "@prisma/client";
 import { getSubtasksById } from "@/utils/goalPageHandlers";
 
 import {
@@ -57,9 +57,7 @@ const Goal = ({
 }: GoalProps) => {
   const [displayEdit, setDisplayEdit] = useState<boolean>(false);
   const [editTitle, setEditTitle] = useState<string>(task.title);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    task.deadline
-  );
+  const [selectedDate, setSelectedDate] = useState<Date | null>(task.deadline);
 
   // Get subtasks
   const subtasks = useMemo(

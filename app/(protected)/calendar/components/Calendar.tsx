@@ -11,7 +11,7 @@ import luxonPlugin from "@fullcalendar/luxon";
 
 import EventContent from "@/components/events/EventContent";
 
-import { SimpleEvent } from "@/types/calendarTypes";
+import { SimpleEvent } from "@prisma/client";
 import {
   handleSelect,
   handleEventResize,

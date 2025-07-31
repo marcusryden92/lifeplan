@@ -1,10 +1,9 @@
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@prisma/client";
 import React from "react";
 import { v4 as uuidv4 } from "uuid";
 
 import { updateDependenciesOnDelete_ReturnArray } from "@/utils/goal-handlers/update-dependencies/updateDependenciesOnDelete";
-import { SimpleEvent } from "@/types/calendarTypes";
-
+import { SimpleEvent } from "@prisma/client";
 interface AddSubtaskInterface {
   mainPlanner: Planner[];
   setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;

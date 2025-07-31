@@ -1,4 +1,4 @@
-import { Planner } from "@/lib/plannerClass";
+import { Planner } from "@prisma/client";
 import { TaskListSchema } from "@/schemas";
 
 import * as z from "zod";
