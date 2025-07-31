@@ -27,6 +27,7 @@ import {
   totalSubtaskDuration,
   formatMinutesToHours,
 } from "@/utils/taskArrayUtils";
+import EventColorPicker from "@/components/events/EventColorPicker/EventColorPicker";
 
 type GoalProps = {
   mainPlanner: Planner[];
@@ -145,6 +146,7 @@ const Goal = ({
             </div>
             <div className="flex flex-row space-x-2 items-center ml-auto transition-opacity">
               <>
+                <EventColorPicker taskId={task.id} />
                 <button
                   onClick={toggleEditMode}
                   className="cursor-pointer text-gray-400 hover:text-blue-400"

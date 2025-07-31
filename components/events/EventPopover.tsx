@@ -11,6 +11,7 @@ import {
 import { createPortal } from "react-dom";
 import { SimpleEvent } from "@/types/calendarTypes";
 import { Planner } from "@/lib/plannerClass";
+import EventColorPicker from "./EventColorPicker/EventColorPicker";
 
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date
@@ -259,6 +260,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
         border: "1px solid #EAEAEA",
         maxWidth: "calc(100vw - 20px)",
         maxHeight: "calc(100vh - 20px)",
+        height: "300px",
         overflowY: "auto",
         visibility: isPositioned ? "visible" : "hidden",
         cursor: isDragging ? "grabbing" : "auto",
@@ -334,6 +336,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
         {/* Actions - Notion-style minimal buttons */}
         <div className="space-y-2">
           {/* Main action buttons */}
+          <EventColorPicker taskId={task.id} />
           <div className="flex flex-wrap gap-2">
             <button
               onClick={onCopy}

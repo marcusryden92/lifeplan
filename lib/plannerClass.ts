@@ -1,4 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
+import type { CalendarColor } from "@/data/calendarColors";
+import { calendarColors } from "@/data/calendarColors";
 
 export interface PlannerInterface {
   title: string;
@@ -14,6 +16,7 @@ export interface PlannerInterface {
     startTime: string;
     endTime: string;
   };
+  color: CalendarColor;
 }
 
 export class Planner implements PlannerInterface {
@@ -30,6 +33,7 @@ export class Planner implements PlannerInterface {
     startTime: string;
     endTime: string;
   };
+  color: CalendarColor;
 
   constructor(
     title: string,
@@ -49,5 +53,6 @@ export class Planner implements PlannerInterface {
     this.duration = duration;
     this.deadline = deadline;
     this.dependency = dependency;
+    this.color = calendarColors[0];
   }
 }

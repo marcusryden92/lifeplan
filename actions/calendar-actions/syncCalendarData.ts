@@ -37,6 +37,7 @@ export async function syncCalendarData(
         dependency: planner.dependency ?? null,
         completedStartTime: planner.completed?.startTime ?? null,
         completedEndTime: planner.completed?.endTime ?? null,
+        color: planner.color,
       }));
 
       operations.push(

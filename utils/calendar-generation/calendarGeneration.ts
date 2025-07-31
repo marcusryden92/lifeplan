@@ -285,7 +285,7 @@ function addTaskToCalendar(
         end: endTime.toISOString(), // ISO 8601 string format for FullCalendar
         extendedProps: {
           isTemplateItem: false,
-          backgroundColor: "#f59e0b",
+          backgroundColor: item.color.hex,
           borderColor: "transparent",
         },
       };

@@ -1,5 +1,6 @@
 import { Planner } from "@/lib/plannerClass";
 import { ExtendedPropsType, RRule } from "@/types/calendarTypes";
+import { CalendarColor } from "@/data/calendarColors";
 
 import { Planner as PlannerModel, WeekDayType } from "@prisma/client";
 import { SimpleEvent } from "@/types/calendarTypes";
@@ -45,6 +46,7 @@ export function transformPlannerItems(mainPlanner: PlannerModel[]): Planner[] {
             endTime: item.completedEndTime,
           }
         : undefined,
+    color: safeParse<CalendarColor>(item.color),
   }));
 }
 

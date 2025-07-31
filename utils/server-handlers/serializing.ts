@@ -17,6 +17,7 @@ export type SerializedPlanner = {
     startTime: string;
     endTime: string;
   } | null;
+  color: string;
 };
 
 export type SerializedSimpleEvent = {

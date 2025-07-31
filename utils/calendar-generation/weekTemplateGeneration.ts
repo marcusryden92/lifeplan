@@ -9,6 +9,7 @@ import {
 } from "@/utils/calendarUtils";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
+import { calendarColors } from "@/data/calendarColors";
 
 // Days of the week starting from Sunday (index 0)
 const daysFromSunday = [
@@ -102,7 +103,7 @@ function addTemplateEvent(
     duration: event.duration * 60 * 1000, // Convert duration to milliseconds
     extendedProps: {
       isTemplateItem: true,
-      backgroundColor: "#1242B2",
+      backgroundColor: calendarColors[0].hex,
       borderColor: "transparent",
     },
   });
@@ -175,7 +176,7 @@ export function populateWeekWithTemplate(
       end: newEndDate.toISOString(), // Convert Date to ISO string
       extendedProps: {
         isTemplateItem: true,
-        backgroundColor: "#1242B2",
+        backgroundColor: calendarColors[0].hex,
         borderColor: "transparent",
       },
     });

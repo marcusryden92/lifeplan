@@ -6,6 +6,7 @@ import { setTimeOnDate } from "@/utils/calendarUtils";
 import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
+import { calendarColors } from "@/data/calendarColors";
 
 // Define the updated EventTemplate interface
 export interface EventTemplate {
@@ -126,7 +127,7 @@ export function populateTemplateCalendar(
       end: newEndDate.toISOString(), // Convert Date to ISO string
       extendedProps: {
         isTemplateItem: true,
-        backgroundColor: "#1242B2",
+        backgroundColor: calendarColors[0].hex,
         borderColor: "transparent",
       },
     });
