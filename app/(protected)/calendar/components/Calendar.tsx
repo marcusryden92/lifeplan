@@ -12,6 +12,9 @@ import luxonPlugin from "@fullcalendar/luxon";
 import EventContent from "@/components/events/EventContent";
 
 import { SimpleEvent } from "@prisma/client";
+
+import { useDataContext } from "@/context/DataContext";
+
 import {
   handleSelect,
   handleEventResize,
@@ -20,6 +23,7 @@ import {
   handleEventDelete,
   handleEventEdit,
 } from "@/utils/calendarEventHandlers";
+import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
 import { EventContentArg } from "@fullcalendar/core/index.js";
 
 const EVENT_INTERACTION_ENABLED = false; // Constant to enable/disable event interaction
@@ -35,6 +39,7 @@ export default function Calendar({
 }: CalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const [events, setEvents] = useState<SimpleEvent[]>(initialEvents || []);
+  const { userId } = useDataContext();
 
   useEffect(() => {
     if (initialEvents) {
@@ -44,6 +49,8 @@ export default function Calendar({
       console.log(initialEvents);
     }
   }, [initialEvents]);
+
+  const fullcalendarEvents = transformEventsForFullCalendar(events);
 
   return (
     <>
@@ -59,7 +66,7 @@ export default function Calendar({
           key={initialDate.getTime()}
           initialDate={initialDate}
           timeZone={"local"}
-          events={events}
+          events={fullcalendarEvents}
           initialView="timeGridWeek"
           scrollTime={"05:00:00"}
           allDaySlot={false}
@@ -80,7 +87,7 @@ export default function Calendar({
           eventResizableFromStart={EVENT_INTERACTION_ENABLED}
           selectable={EVENT_INTERACTION_ENABLED}
           select={(selectInfo) =>
-            handleSelect(calendarRef, setEvents, selectInfo, false)
+            handleSelect(userId, calendarRef, setEvents, selectInfo, false)
           }
           headerToolbar={false}
           eventResize={(resizeInfo) => handleEventResize(setEvents, resizeInfo)}

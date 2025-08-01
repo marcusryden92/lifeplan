@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { updateDependenciesOnDelete_ReturnArray } from "@/utils/goal-handlers/update-dependencies/updateDependenciesOnDelete";
 import { SimpleEvent } from "@prisma/client";
 interface AddSubtaskInterface {
+  userId?: string;
   mainPlanner: Planner[];
   setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
   parentId: string;
@@ -14,6 +15,7 @@ interface AddSubtaskInterface {
 }
 
 export function addSubtask({
+  userId,
   mainPlanner,
   setMainPlanner,
   parentId,
@@ -23,15 +25,21 @@ export function addSubtask({
 }: AddSubtaskInterface) {
   const newId = uuidv4();
 
-  if (taskDuration && taskTitle) {
-    const newTask = new Planner(
-      taskTitle,
-      newId,
-      parentId,
-      "goal",
-      true,
-      taskDuration < 5 ? 5 : taskDuration
-    );
+  if (userId && taskDuration && taskTitle) {
+    const newTask: Planner = {
+      title: taskTitle,
+      id: newId,
+      parentId: parentId || null,
+      type: "goal",
+      isReady: true,
+      duration: taskDuration < 5 ? 5 : taskDuration,
+      deadline: null,
+      starts: null,
+      dependency: null,
+      completedStartTime: null,
+      completedEndTime: null,
+      userId,
+    };
 
     const newPlanner = [...mainPlanner, newTask];
     const updatedPlanner = updateDependenciesOnCreate(
@@ -51,7 +59,7 @@ interface DeleteGoalInterface {
     manuallyUpdatedCalendar?: SimpleEvent[]
   ) => void;
   taskId: string;
-  parentId?: string | undefined;
+  parentId: string | null;
   manuallyUpdatedCalendar?: SimpleEvent[];
 }
 
@@ -189,7 +197,7 @@ export function updateDependenciesOnCreate(
   if (!siblings || siblings.length === 0) {
     // Check if the parentId is dependent on anything
     const parentTask = updatedPlanner.find((task) => task.id === parentId);
-    const parentDependency = parentTask?.dependency;
+    const parentDependency = parentTask?.dependency || null;
 
     updatedPlanner = updatedPlanner.map((task) => {
       if (
@@ -197,7 +205,7 @@ export function updateDependenciesOnCreate(
         task.dependency &&
         task.dependency?.length > 0
       ) {
-        return { ...task, dependency: undefined };
+        return { ...task, dependency: null };
       }
 
       if (task.id === newId) {
@@ -461,8 +469,8 @@ export function getGoalTree(mainPlanner: Planner[], id: string): Planner[] {
 // Check if any ID's in the main tree matches any of the dependencies in the tree to check
 export function idsExistsInDependenciesOf(
   mainPlanner: Planner[],
-  mainTaskId: string | undefined,
-  dependenciesToCheckId: string | undefined
+  mainTaskId: string | null,
+  dependenciesToCheckId: string | null
 ): boolean {
   // Make sure the function can run
   if (

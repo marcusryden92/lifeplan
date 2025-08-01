@@ -8,7 +8,7 @@ import React, {
   useEffect,
   useCallback,
 } from "react";
-import { SimpleEvent, WeekDayIntegers } from "@/types/calendarTypes";
+import { WeekDayIntegers } from "@/types/calendarTypes";
 import { EventTemplate } from "@/utils/templateBuilderUtils";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 import { taskIsCompleted } from "@/utils/taskHelpers";
@@ -17,9 +17,10 @@ import { useSession } from "next-auth/react";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
 import { useServerSyncQueue } from "@/hooks/useServerSyncQueue";
 
-import { Planner } from "@prisma/client";
+import { Planner, SimpleEvent } from "@prisma/client";
 
 interface DataContextType {
+  userId?: string;
   mainPlanner: Planner[];
   mainPlannerDispatch: React.Dispatch<React.SetStateAction<Planner[]>>;
   setMainPlanner: (
@@ -98,7 +99,10 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
       // Immediately apply optimistic updates
       const newPlanner = processInput(updatedPlanner, mainPlanner);
       const newTemplate = processInput(updatedTemplate, currentTemplate);
-      const processedCalendar = processInput(updatedCalendar, currentCalendar);
+      const processedCalendar: SimpleEvent[] = processInput(
+        updatedCalendar,
+        currentCalendar
+      );
 
       const newCalendar = generateCalendar(
         weekStartDay,
@@ -137,13 +141,14 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const manuallyUpdateCalendar = useCallback(() => {
     const now = floorMinutes(new Date());
     if (currentTemplate && mainPlanner && currentCalendar) {
-      const overdueIds = new Set(
+      const overdueIds = new Set<string>(
         mainPlanner.filter((e) => !taskIsCompleted(e)).map((e) => e.id)
       );
 
-      const filteredCalendar =
+      const filteredCalendar: SimpleEvent[] =
         currentCalendar?.filter(
-          (e) => !overdueIds.has(e.id) && floorMinutes(new Date(e.start)) < now
+          (e: SimpleEvent) =>
+            !overdueIds.has(e.id) && floorMinutes(new Date(e.start)) < now
         ) || [];
 
       const newCalendar = generateCalendar(
@@ -179,6 +184,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   }, [currentCalendar, mainPlanner, currentTemplate]);
 
   const value: DataContextType = {
+    userId,
     mainPlanner,
     mainPlannerDispatch,
     setMainPlanner,

@@ -22,9 +22,11 @@ import { useState } from "react";
 import * as z from "zod";
 
 const AddItemForm = ({
+  userId,
   placeholder,
   className,
 }: {
+  userId: string | undefined;
   placeholder?: string;
   className?: string;
 }) => {
@@ -41,6 +43,7 @@ const AddItemForm = ({
 
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({
+      userId,
       values,
       setMainPlanner,
       editIndex,
@@ -52,6 +55,7 @@ const AddItemForm = ({
       type: "goal",
     });
   };
+
   return (
     <Form {...form}>
       <form

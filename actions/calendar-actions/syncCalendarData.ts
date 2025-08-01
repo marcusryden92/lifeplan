@@ -1,75 +1,50 @@
 "use server";
 
-import {
-  SerializedPlanner,
-  SerializedSimpleEvent,
-  SerializedEventTemplate,
-} from "@/utils/server-handlers/serializing";
 import { db } from "@/lib/db";
+import { SimpleEvent, Planner, EventTemplate } from "@prisma/client";
 
 export async function syncCalendarData(
   userId: string,
-  create: SerializedPlanner[],
-  update: SerializedPlanner[],
-  destroy: SerializedPlanner[],
-  createEvent: SerializedSimpleEvent[],
-  updateEvent: SerializedSimpleEvent[],
-  destroyEvent: SerializedSimpleEvent[],
-  createTemplate?: SerializedEventTemplate[],
-  updateTemplate?: SerializedEventTemplate[],
-  destroyTemplate?: SerializedEventTemplate[]
+  create: Planner[],
+  update: Planner[],
+  destroy: Planner[],
+  createEvent: SimpleEvent[],
+  updateEvent: SimpleEvent[],
+  destroyEvent: SimpleEvent[],
+  createTemplate?: EventTemplate[],
+  updateTemplate?: EventTemplate[],
+  destroyTemplate?: EventTemplate[]
 ) {
   try {
     const operations = [];
 
-    // === SerializedPlanner: CREATE ===
+    // === Planner: CREATE ===
     if (create.length) {
-      const plannerCreateData = create.map((planner) => ({
-        userId,
-        id: planner.id,
-        title: planner.title,
-        parentId: planner.parentId ?? null,
-        type: planner.type ?? null,
-        isReady: planner.isReady ?? false,
-        duration: planner.duration ?? null,
-        deadline: planner.deadline ?? null,
-        starts: planner.starts ?? null,
-        dependency: planner.dependency ?? null,
-        completedStartTime: planner.completed?.startTime ?? null,
-        completedEndTime: planner.completed?.endTime ?? null,
-      }));
-
       operations.push(
         db.planner.createMany({
-          data: plannerCreateData,
+          data: create.map((planner) => ({
+            ...planner,
+            userId,
+          })),
           skipDuplicates: true,
         })
       );
     }
 
-    // === SerializedPlanner: UPDATE ===
-    for (const planner of update) {
+    // === Planner: UPDATE ===
+    for (const plannerUpdate of update) {
       operations.push(
         db.planner.update({
-          where: { id: planner.id },
+          where: { id: plannerUpdate.id },
           data: {
+            ...plannerUpdate,
             userId,
-            title: planner.title,
-            parentId: planner.parentId ?? null,
-            type: planner.type ?? null,
-            isReady: planner.isReady ?? false,
-            duration: planner.duration ?? null,
-            deadline: planner.deadline ?? null,
-            starts: planner.starts ?? null,
-            dependency: planner.dependency ?? null,
-            completedStartTime: planner.completed?.startTime ?? null,
-            completedEndTime: planner.completed?.endTime ?? null,
           },
         })
       );
     }
 
-    // === SerializedPlanner: DELETE ===
+    // === Planner: DELETE ===
     if (destroy.length) {
       operations.push(
         db.planner.deleteMany({
@@ -80,20 +55,12 @@ export async function syncCalendarData(
 
     // === CalendarEvent: CREATE ===
     if (createEvent.length) {
-      const calendarCreateData = createEvent.map((event) => ({
-        userId,
-        id: event.id,
-        title: event.title,
-        start: event.start,
-        end: event.end,
-        rrule: JSON.stringify(event.rrule),
-        extendedProps: event.extendedProps ?? null,
-        duration: event.duration ?? null,
-      }));
-
       operations.push(
-        db.calendarEvent.createMany({
-          data: calendarCreateData,
+        db.simpleEvent.createMany({
+          data: createEvent.map((event) => ({
+            ...event,
+            userId,
+          })),
           skipDuplicates: true,
         })
       );
@@ -102,15 +69,11 @@ export async function syncCalendarData(
     // === CalendarEvent: UPDATE ===
     for (const event of updateEvent) {
       operations.push(
-        db.calendarEvent.update({
+        db.simpleEvent.update({
           where: { id: event.id },
           data: {
+            ...event,
             userId,
-            title: event.title,
-            start: event.start,
-            end: event.end,
-            rrule: JSON.stringify(event.rrule),
-            extendedProps: JSON.stringify(event.extendedProps),
           },
         })
       );
@@ -119,42 +82,33 @@ export async function syncCalendarData(
     // === CalendarEvent: DELETE ===
     if (destroyEvent.length) {
       operations.push(
-        db.calendarEvent.deleteMany({
+        db.simpleEvent.deleteMany({
           where: { id: { in: destroyEvent.map((e) => e.id) } },
         })
       );
     }
 
-    // === SerializedEventTemplate: CREATE ===
+    // === EventTemplate: CREATE ===
     if (createTemplate?.length) {
-      const templateCreateData = createTemplate.map((template) => ({
-        userId,
-        id: template.id,
-        title: template.title,
-        startDay: template.startDay,
-        startTime: template.startTime,
-        duration: template.duration,
-      }));
-
       operations.push(
         db.eventTemplate.createMany({
-          data: templateCreateData,
+          data: createTemplate.map((template) => ({
+            ...template,
+            userId,
+          })),
           skipDuplicates: true,
         })
       );
     }
 
-    // === SerializedEventTemplate: UPDATE ===
+    // === EventTemplate: UPDATE ===
     if (updateTemplate?.length) {
       for (const template of updateTemplate) {
         operations.push(
           db.eventTemplate.update({
             where: { id: template.id },
             data: {
-              title: template.title,
-              startDay: template.startDay,
-              startTime: template.startTime,
-              duration: template.duration,
+              ...template,
               userId,
             },
           })
@@ -162,7 +116,7 @@ export async function syncCalendarData(
       }
     }
 
-    // === SerializedEventTemplate: DELETE ===
+    // === EventTemplate: DELETE ===
     if (destroyTemplate?.length) {
       operations.push(
         db.eventTemplate.deleteMany({

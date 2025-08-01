@@ -11,6 +11,7 @@ import { Planner } from "@prisma/client";
 import { CarouselApi } from "@/components/ui/Carousel";
 
 interface GoalsSidebarProps {
+  userId: string | undefined;
   goalsList: Planner[];
   mainPlanner: Planner[];
   setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
@@ -23,6 +24,7 @@ interface GoalsSidebarProps {
 }
 
 export default function GoalsSidebar({
+  userId,
   goalsList,
   mainPlanner,
   setMainPlanner,
@@ -37,13 +39,18 @@ export default function GoalsSidebar({
     );
 
     filteredArray.forEach((item) =>
-      deleteGoal({ setMainPlanner, taskId: item.id })
+      deleteGoal({
+        setMainPlanner,
+        taskId: item.id,
+        parentId: item.parentId,
+      })
     );
   }, [mainPlanner, setMainPlanner]);
 
   return (
     <CardContent className="max-w-[220px] pl-0 pr-[2.5rem] mb-8 flex flex-col items-center justify-between">
       <AddItemForm
+        userId={userId}
         placeholder="Add goal"
         className="h-[80px] border-b border-b-[#d1d5db] pb-[1rem] justify-end"
       />

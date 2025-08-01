@@ -1,19 +1,8 @@
 "use client";
 
-import { Planner } from "@prisma/client";
-import { SimpleEvent } from "@prisma/client";
+import { Planner, SimpleEvent, EventTemplate } from "@prisma/client";
 import { objectsAreEqual } from "../generalUtils";
 import { syncCalendarData } from "@/actions/calendar-actions/syncCalendarData";
-import { EventTemplate } from "@/utils/templateBuilderUtils";
-
-import {
-  serializePlanner,
-  serializeSimpleEvent,
-  serializeEventTemplate,
-  SerializedPlanner,
-  SerializedSimpleEvent,
-  SerializedEventTemplate,
-} from "@/utils/server-handlers/serializing";
 
 export async function handleServerTransaction(
   userId: string,
@@ -34,7 +23,7 @@ export async function handleServerTransaction(
     createTemplate,
     updateTemplate,
     destroyTemplate,
-  } = compareAndSerializeCalendarData(
+  } = compareData(
     mainPlanner,
     previousPlanner,
     currentCalendar,
@@ -59,7 +48,7 @@ export async function handleServerTransaction(
   return response;
 }
 
-export function compareAndSerializeCalendarData(
+export function compareData(
   mainPlanner: Planner[],
   previousPlanner: { current: Planner[] },
   currentCalendar: SimpleEvent[],
@@ -74,24 +63,24 @@ export function compareAndSerializeCalendarData(
   );
   const prevPlanMap = new Map(prevPlan.map((planner) => [planner.id, planner]));
 
-  const create: SerializedPlanner[] = [];
-  const update: SerializedPlanner[] = [];
-  const destroy: SerializedPlanner[] = [];
+  const create: Planner[] = [];
+  const update: Planner[] = [];
+  const destroy: Planner[] = [];
 
   // Find items to create or update
   plannerMap.forEach((item) => {
     const prevItem = prevPlanMap.get(item.id);
     if (!prevItem) {
-      create.push(serializePlanner(item));
+      create.push(item);
     } else if (!objectsAreEqual(prevItem, item)) {
-      update.push(serializePlanner(item));
+      update.push(item);
     }
   });
 
   // Find items to delete (items in previous but not in current)
   prevPlanMap.forEach((item) => {
     if (!plannerMap.has(item.id)) {
-      destroy.push(serializePlanner(item));
+      destroy.push(item);
     }
   });
 
@@ -105,31 +94,31 @@ export function compareAndSerializeCalendarData(
   console.log("currentCalendar");
   console.log(currentCalendar);
 
-  const createEvent: SerializedSimpleEvent[] = [];
-  const updateEvent: SerializedSimpleEvent[] = [];
-  const destroyEvent: SerializedSimpleEvent[] = [];
+  const createEvent: SimpleEvent[] = [];
+  const updateEvent: SimpleEvent[] = [];
+  const destroyEvent: SimpleEvent[] = [];
 
   // Find events to create or update
   calendarMap.forEach((event) => {
     const prevEvent = prevCalMap.get(event.id);
     if (!prevEvent) {
-      createEvent.push(serializeSimpleEvent(event));
+      createEvent.push(event);
     } else if (!objectsAreEqual(prevEvent, event)) {
-      updateEvent.push(serializeSimpleEvent(event));
+      updateEvent.push(event);
     }
   });
 
   // Find events to delete (events in previous but not in current)
   prevCalMap.forEach((event) => {
     if (!calendarMap.has(event.id)) {
-      destroyEvent.push(serializeSimpleEvent(event));
+      destroyEvent.push(event);
     }
   });
 
   // Check template changes
-  const createTemplate: SerializedEventTemplate[] = [];
-  const updateTemplate: SerializedEventTemplate[] = [];
-  const destroyTemplate: SerializedEventTemplate[] = [];
+  const createTemplate: EventTemplate[] = [];
+  const updateTemplate: EventTemplate[] = [];
+  const destroyTemplate: EventTemplate[] = [];
 
   if (currentTemplate && previousTemplate) {
     const prevTemp: EventTemplate[] = [...previousTemplate.current];
@@ -144,16 +133,16 @@ export function compareAndSerializeCalendarData(
     templateMap.forEach((template) => {
       const prevTemplate = prevTempMap.get(template.id);
       if (!prevTemplate) {
-        createTemplate.push(serializeEventTemplate(template));
+        createTemplate.push(template);
       } else if (!objectsAreEqual(prevTemplate, template)) {
-        updateTemplate.push(serializeEventTemplate(template));
+        updateTemplate.push(template);
       }
     });
 
     // Find templates to delete (templates in previous but not in current)
     prevTempMap.forEach((template) => {
       if (!templateMap.has(template.id)) {
-        destroyTemplate.push(serializeEventTemplate(template));
+        destroyTemplate.push(template);
       }
     });
   }

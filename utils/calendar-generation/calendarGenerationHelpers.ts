@@ -34,13 +34,11 @@ export function addDateItemsToArray(
       const newDate: SimpleEvent = {
         title: date.title,
         id: JSON.stringify(new Date()),
-        start: date.starts.toISOString(),
-        end: end.toISOString(), // Add the calculated end time here
-        extendedProps: {
-          isTemplateItem: false,
-          backgroundColor: "black",
-          borderColor: "black",
-        },
+        start: date.starts,
+        end: end, // Add the calculated end time here
+        isTemplateItem: false,
+        backgroundColor: "black",
+        borderColor: "black",
       };
 
       newArray.push(newDate);
@@ -75,20 +73,17 @@ export function addCompletedItemsToArray(
 
   // Process each date item and calculate the end date based on duration (in minutes)
   completedItems.forEach((item) => {
-    if (item.completed?.startTime && item.completed.endTime) {
+    if (item.completedStartTime && item.completedEndTime) {
       // Calculate the end time by adding duration (in minutes) to the start time
 
       const newDate: SimpleEvent = {
         title: item.title,
         id: item.id,
-        start: item.completed.startTime,
-        end: item.completed.endTime, // Add the calculated end time here
-
-        extendedProps: {
-          isTemplateItem: false,
-          backgroundColor: "#0ebf7e",
-          borderColor: "#0ca66e",
-        },
+        start: item.completedStartTime,
+        end: item.completedEndTime, // Add the calculated end time here
+        isTemplateItem: false,
+        backgroundColor: "#0ebf7e",
+        borderColor: "#0ca66e",
       };
 
       newArray.push(newDate);

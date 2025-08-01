@@ -29,7 +29,7 @@ model User {
   accounts              Account[]
   isTwoFactorEnabled    Boolean                @default(false)
   twoFactorConfirmation TwoFactorConfirmation?
-  CalendarEvent         CalendarEvent[]
+  SimpleEvent           SimpleEvent[]
   Planner               Planner[]
   EventTemplate         EventTemplate[]
 
@@ -105,17 +105,20 @@ enum WeekDayType {
 }
 
 // CalendarEvent model with relation to User and embedded RRule
-model CalendarEvent {
+model SimpleEvent {
   id       String @id @default(cuid())
   title    String
-  start    String
-  end      String
+  start    DateTime
+  end      DateTime
   duration Int?
   userId   String
   user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   rrule         String?
-  extendedProps String
+
+  isTemplateItem Boolean
+  backgroundColor String
+  borderColor String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -131,17 +134,17 @@ enum PlanType {
 
 // Planner model for tracking tasks, plans, and goals
 model Planner {
-  id                 String    @id @default(cuid())
+  id                 String    @id @default(uuid())
   title              String
   parentId           String?
   type               PlanType?
   isReady            Boolean?
   duration           Int?
-  deadline           String?
-  starts             String?
+  deadline           DateTime?
+  starts             DateTime?
   dependency         String?
-  completedStartTime String?
-  completedEndTime   String?
+  completedStartTime DateTime?
+  completedEndTime   DateTime?
 
   userId String
   user   User   @relation(fields: [userId], references: [id])

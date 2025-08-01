@@ -1,6 +1,6 @@
 "use server";
 import { db } from "@/lib/db";
-import { CalendarEvent, EventTemplate, Planner } from "@prisma/client";
+import { SimpleEvent, EventTemplate, Planner } from "@prisma/client";
 
 // Fetches the raw data from the database
 export async function fetchCalendarData(userId: string) {
@@ -13,7 +13,7 @@ export async function fetchCalendarData(userId: string) {
     });
 
     // Fetch all calendar events for the user
-    const calendarEvents: CalendarEvent[] = await db.calendarEvent.findMany({
+    const calendarEvents: SimpleEvent[] = await db.simpleEvent.findMany({
       where: {
         userId: userId,
       },

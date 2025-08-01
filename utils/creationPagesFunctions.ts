@@ -1,11 +1,14 @@
 import { Planner } from "@prisma/client";
 import { TaskListSchema } from "@/schemas";
 
+import { v4 as uuidv4 } from "uuid";
+
 import * as z from "zod";
 
 // SUBMIT NEW PLANNER INSTANCE TO TASK ARRAY
 
 interface OnSubmitProps {
+  userId: string | undefined;
   values: z.infer<typeof TaskListSchema>;
   editIndex: number | null;
   setEditIndex: (index: number | null) => void;
@@ -18,6 +21,7 @@ interface OnSubmitProps {
 }
 
 export const onSubmit = ({
+  userId,
   values,
   setMainPlanner,
   editIndex,
@@ -27,16 +31,31 @@ export const onSubmit = ({
   form,
   type,
 }: OnSubmitProps) => {
+  if (!userId) return;
+
   if (editIndex !== null) {
     setMainPlanner((prevTasks) =>
       prevTasks.map((task, index) =>
-        index === editIndex ? new Planner(editTitle, undefined) : task
+        index === editIndex ? { ...task, title: editTitle } : task
       )
     );
     setEditIndex(null);
     setEditTitle("");
   } else {
-    const newTask = new Planner(values.title, undefined, undefined, type);
+    const newTask: Planner = {
+      userId,
+      title: values.title,
+      id: uuidv4(),
+      parentId: null,
+      type: type || "goal",
+      isReady: true,
+      duration: null,
+      deadline: null,
+      starts: null,
+      dependency: null,
+      completedStartTime: null,
+      completedEndTime: null,
+    };
     setMainPlanner((prevTasks) => [...prevTasks, newTask]);
   }
   form.reset();

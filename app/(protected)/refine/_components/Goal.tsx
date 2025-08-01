@@ -40,7 +40,7 @@ type GoalProps = {
   handleDeleteTask: (taskId: string) => void;
   handleConfirmEdit: (taskId: string, newTitle: string) => void;
   handleToggleReady: (taskId: string) => void;
-  handleUpdateDeadline: (taskId: string, deadline: Date | undefined) => void;
+  handleUpdateDeadline: (taskId: string, deadline: Date | null) => void;
   devMode: boolean;
 };
 
@@ -57,7 +57,9 @@ const Goal = ({
 }: GoalProps) => {
   const [displayEdit, setDisplayEdit] = useState<boolean>(false);
   const [editTitle, setEditTitle] = useState<string>(task.title);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(task.deadline);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    task.deadline ?? undefined
+  );
 
   // Get subtasks
   const subtasks = useMemo(
@@ -74,7 +76,7 @@ const Goal = ({
   // Update parent component when selectedDate changes
   useEffect(() => {
     if (selectedDate !== task.deadline) {
-      handleUpdateDeadline(task.id, selectedDate);
+      handleUpdateDeadline(task.id, selectedDate ?? null);
     }
   }, [selectedDate, task.id, task.deadline, handleUpdateDeadline]);
 
@@ -90,7 +92,7 @@ const Goal = ({
   }, [task.id, editTitle, handleConfirmEdit]);
 
   const handleResetDate = useCallback(() => {
-    handleUpdateDeadline(task.id, undefined);
+    handleUpdateDeadline(task.id, null);
     setSelectedDate(undefined);
   }, [task.id, handleUpdateDeadline]);
 
@@ -176,8 +178,8 @@ const Goal = ({
             <span className="min-w-24 text-sm">{"Target date:  "}</span>
             <div className="flex items-center space-x-2">
               <DateTimePicker
-                date={selectedDate}
-                setDate={setSelectedDate}
+                date={selectedDate ?? undefined}
+                setDate={setSelectedDate ?? undefined}
                 color="gray-300"
               />
               <button

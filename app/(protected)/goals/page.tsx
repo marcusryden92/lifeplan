@@ -40,7 +40,7 @@ import {
 } from "@/utils/creationPagesFunctions";
 
 export default function InfluencePage() {
-  const { mainPlanner, setMainPlanner } = useDataContext();
+  const { userId, mainPlanner, setMainPlanner } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
   const tasksContainerRef = useRef<HTMLDivElement>(null);
@@ -55,6 +55,7 @@ export default function InfluencePage() {
 
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({
+      userId,
       values,
       setMainPlanner,
       editIndex,

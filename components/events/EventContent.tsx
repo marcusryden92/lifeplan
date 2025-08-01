@@ -159,7 +159,7 @@ const EventContent: React.FC<EventContentProps> = ({
         deleteGoal({
           setMainPlanner,
           taskId: task.id,
-          parentId: task.parentId,
+          parentId: task.parentId || null,
           manuallyUpdatedCalendar: updatedCalendar,
         });
       } else if (task) {
@@ -212,8 +212,8 @@ const EventContent: React.FC<EventContentProps> = ({
         justifyContent: "space-between",
         height: "100%",
         padding: "0px",
-        backgroundColor: event.extendedProps.backgroundColor,
-        borderColor: event.extendedProps.borderColor,
+        backgroundColor: event.backgroundColor,
+        borderColor: event.borderColor,
       }}
       onMouseEnter={() => setOnHover(true)}
       onMouseLeave={() => setOnHover(false)}
@@ -241,7 +241,7 @@ const EventContent: React.FC<EventContentProps> = ({
       {onHover &&
         elementHeight > 40 &&
         elementWidth > 70 &&
-        !event.extendedProps.isTemplateItem && (
+        !event.isTemplateItem && (
           <div
             style={{
               display: "flex",
@@ -260,7 +260,7 @@ const EventContent: React.FC<EventContentProps> = ({
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                {!event.extendedProps?.isTemplateItem &&
+                {!event.isTemplateItem &&
                   (task?.type === "goal" || task?.type === "task") && (
                     <>
                       <button

@@ -34,8 +34,8 @@ export function generateCalendar(
 
   // Add unfinished events from previous calendar to new calendar
   if (prevCalendar.length > 0) {
-    const memoizedEvents = prevCalendar.filter(
-      (e) => currentDate > new Date(e.start) && !e.extendedProps.isTemplateItem
+    const memoizedEvents: SimpleEvent[] = prevCalendar.filter(
+      (e) => currentDate > new Date(e.start) && !e.isTemplateItem
     );
 
     // Add IDs to the set

@@ -2,10 +2,15 @@
 
 import FullCalendar from "@fullcalendar/react";
 import { SimpleEvent } from "@prisma/client";
-import { DateSelectArg, EventDropArg } from "@fullcalendar/core/index.js";
+import {
+  DateSelectArg,
+  EventDropArg,
+  EventInput,
+} from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 
 export const handleSelect = (
+  userId: string | undefined,
   calendarRef: React.RefObject<FullCalendar>,
   setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
   selectInfo: DateSelectArg,
@@ -14,16 +19,24 @@ export const handleSelect = (
   const { start, end } = selectInfo;
   const title = prompt("Enter event title:", "New Event");
 
-  if (title && calendarRef.current) {
+  if (userId && title && calendarRef.current) {
     const calendarApi = calendarRef.current.getApi();
     const newEvent: SimpleEvent = {
+      userId,
       title,
-      start: start.toISOString(),
-      end: end.toISOString(),
+      start: start,
+      end: end,
       id: Date.now().toString(),
-      extendedProps: { isTemplateItem },
+      isTemplateItem: isTemplateItem,
+      rrule: null,
+      backgroundColor: "#007BFF",
+      borderColor: "#000000",
+      duration: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
-    calendarApi.addEvent(newEvent);
+
+    calendarApi.addEvent(newEvent as EventInput);
     setEvents((prevEvents) => [...prevEvents, newEvent]);
   }
 };
@@ -38,8 +51,8 @@ export const handleEventResize = (
       ev.id === event.id
         ? {
             ...ev,
-            start: event.start ? event.start.toISOString() : ev.start,
-            end: event.end ? event.end.toISOString() : ev.end,
+            start: event.start ? event.start : ev.start,
+            end: event.end ? event.end : ev.end,
           }
         : ev
     )
@@ -57,8 +70,8 @@ export const handleEventDrop = (
       ev.id === event.id
         ? {
             ...ev,
-            start: event.start ? event.start.toISOString() : ev.start,
-            end: event.end ? event.end.toISOString() : ev.end,
+            start: event.start ? event.start : ev.start,
+            end: event.end ? event.end : ev.end,
           }
         : ev
     )
@@ -68,19 +81,27 @@ export const handleEventDrop = (
 export const handleEventCopy = (
   calendarRef: React.RefObject<FullCalendar>,
   setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
-  event: SimpleEvent
+  event: SimpleEvent,
+  userId?: string
 ) => {
-  const newEvent: SimpleEvent = {
-    title: event.title,
-    start: event.start,
-    end: event.end,
-    id: Date.now().toString(),
-    extendedProps: { isTemplateItem: event.extendedProps.isTemplateItem },
-  };
+  if (userId && calendarRef.current) {
+    const newEvent: SimpleEvent = {
+      userId,
+      title: event.title,
+      start: event.start,
+      end: event.end,
+      id: Date.now().toString(),
+      isTemplateItem: event.isTemplateItem,
+      rrule: null,
+      backgroundColor: "#007BFF",
+      borderColor: "#000000",
+      duration: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
 
-  if (calendarRef.current) {
     const calendarApi = calendarRef.current.getApi();
-    calendarApi.addEvent(newEvent);
+    calendarApi.addEvent(newEvent as EventInput);
     setEvents((prevEvents) => [...prevEvents, newEvent]);
   }
 };

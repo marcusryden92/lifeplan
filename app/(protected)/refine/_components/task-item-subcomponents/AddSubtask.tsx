@@ -20,7 +20,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({ parentId, isMainParent }) => {
   );
   const [taskTitle, setTaskTitle] = useState<string>("");
 
-  const { mainPlanner, setMainPlanner } = useDataContext();
+  const { mainPlanner, setMainPlanner, userId } = useDataContext();
   const refs = useRef(new Map<string, React.RefObject<HTMLInputElement>>());
 
   const getRef = (parentId: string) => {
@@ -40,6 +40,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({ parentId, isMainParent }) => {
   const handleAddSubtask = (parentId: string) => {
     if (taskTitle)
       addSubtask({
+        userId,
         mainPlanner,
         setMainPlanner,
         parentId,
