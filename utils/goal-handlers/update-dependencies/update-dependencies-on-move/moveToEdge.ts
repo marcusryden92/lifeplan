@@ -66,7 +66,7 @@ export function moveToEdge({
     mainPlanner,
     setMainPlanner,
     taskId: movedTask.id,
-    parentId: movedTask.parentId,
+    parentId: movedTask.parentId ?? undefined,
   });
 
   // Get the last item in the child layer of the target item

@@ -1,6 +1,5 @@
 import { WeekDayIntegers } from "@/types/calendarTypes";
-import { EventTemplate } from "../templateBuilderUtils";
-import { SimpleEvent } from "@prisma/client";
+import { SimpleEvent, EventTemplate } from "@prisma/client";
 import {
   shiftDate,
   setTimeOnDate,
@@ -8,6 +7,10 @@ import {
 } from "@/utils/calendarUtils";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
+import { useDataContext } from "@/context/DataContext";
+import { assert } from "../assert/assert";
+
+import { RRule } from "rrule";
 
 // Days of the week starting from Sunday (index 0)
 const daysFromSunday = [
@@ -48,7 +51,15 @@ function addTemplateEvent(
   thisWeeksFirstDate: Date,
   eventArray: SimpleEvent[]
 ) {
-  if (!event || !event.start || event.duration === undefined) {
+  const { userId } = useDataContext();
+  assert(userId, "No userId");
+
+  if (
+    !event ||
+    !event.startDay ||
+    !event.startTime ||
+    event.duration === undefined
+  ) {
     console.error("Event details are incomplete.", event);
     return;
   }
@@ -56,19 +67,19 @@ function addTemplateEvent(
   // The new calculated start date/time for the event
   let newStartDate: Date;
 
-  if (event.start.day) {
+  if (event.startDay) {
     // Calculate the offset from the weekStartDay
-    const startDayIndex = daysFromSunday.indexOf(event.start.day);
+    const startDayIndex = daysFromSunday.indexOf(event.startDay);
     if (startDayIndex === -1) {
-      console.error("Invalid start day provided.", event.start.day);
+      console.error("Invalid start day provided.", event.startDay);
       return;
     }
     const startDayOffset = (startDayIndex - weekStartDay + 7) % 7;
     newStartDate = shiftDate(thisWeeksFirstDate, startDayOffset);
 
     // Set time on the date
-    if (event.start.time) {
-      newStartDate = setTimeOnDate(newStartDate, event.start.time);
+    if (event.startTime) {
+      newStartDate = setTimeOnDate(newStartDate, event.startTime);
     }
   } else {
     console.error("Event start details are missing.", event);
@@ -84,26 +95,30 @@ function addTemplateEvent(
   const rruleDay = getRRuleDayTypeFromIndex(utcDate.getUTCDay());
 
   const startISO = newStartDate.toISOString();
-  const endISO = newEndDate.toISOString();
+
+  const rule = new RRule({
+    freq: RRule.WEEKLY,
+    interval: 1,
+    byweekday: [rruleDay], // e.g., RRule.MO
+    dtstart: new Date(startISO),
+  });
+
+  const rruleString = rule.toString();
 
   // Set up the RRule object with the correct timezone and recurrence rule
   eventArray.push({
+    userId,
     id: event.id,
     title: event.title,
-    start: startISO,
-    end: endISO,
-    rrule: {
-      freq: "weekly",
-      interval: 1,
-      byweekday: [rruleDay],
-      dtstart: startISO,
-    },
+    start: newStartDate,
+    end: newEndDate,
+    rrule: rruleString,
     duration: event.duration * 60 * 1000, // Convert duration to milliseconds
-    extendedProps: {
-      isTemplateItem: true,
-      backgroundColor: "#1242B2",
-      borderColor: "transparent",
-    },
+    isTemplateItem: true,
+    backgroundColor: "#1242B2",
+    borderColor: "transparent",
+    createdAt: new Date(),
+    updatedAt: new Date(),
   });
 }
 
@@ -113,6 +128,9 @@ export function populateWeekWithTemplate(
   template: EventTemplate[],
   templateEventArray: SimpleEvent[]
 ) {
+  const { userId } = useDataContext();
+  assert(userId, "No userId");
+
   // Days of the week starting from Sunday (index 0)
   const daysFromSunday = [
     "sunday", // index 0
@@ -138,16 +156,21 @@ export function populateWeekWithTemplate(
   // const updatedTemplateArray: SimpleEvent[] = [...templateEventArray];
 
   template.forEach((event) => {
-    if (!event || !event.start || event.duration === undefined) {
+    if (
+      !event ||
+      !event.startDay ||
+      !event.startTime ||
+      event.duration === undefined
+    ) {
       console.error("Event details are incomplete.", event);
       return;
     }
 
     let newStartDate: Date;
-    if (event.start.day) {
-      const startDayIndex = daysFromSunday.indexOf(event.start.day);
+    if (event.startDay) {
+      const startDayIndex = daysFromSunday.indexOf(event.startDay);
       if (startDayIndex === -1) {
-        console.error("Invalid start day provided.", event.start.day);
+        console.error("Invalid start day provided.", event.startDay);
         return;
       }
 
@@ -155,8 +178,8 @@ export function populateWeekWithTemplate(
       const startDayOffset = (startDayIndex - weekStartDay + 7) % 7;
       newStartDate = shiftDate(thisWeeksFirstDate, startDayOffset);
 
-      if (event.start.time) {
-        newStartDate = setTimeOnDate(newStartDate, event.start.time);
+      if (event.startTime) {
+        newStartDate = setTimeOnDate(newStartDate, event.startTime);
       }
     } else {
       console.error("Event start details are missing.", event);
@@ -168,15 +191,18 @@ export function populateWeekWithTemplate(
     newEndDate.setMinutes(newEndDate.getMinutes() + event.duration);
 
     templateEventArray.push({
+      userId,
       id: event.id, // Generate a unique ID for the event
       title: event.title,
-      start: newStartDate.toISOString(), // Convert Date to ISO string
-      end: newEndDate.toISOString(), // Convert Date to ISO string
-      extendedProps: {
-        isTemplateItem: true,
-        backgroundColor: "#1242B2",
-        borderColor: "transparent",
-      },
+      start: newStartDate, // Convert Date to ISO string
+      end: newEndDate, // Convert Date to ISO string
+      isTemplateItem: true,
+      backgroundColor: "#1242B2",
+      borderColor: "transparent",
+      duration: null,
+      rrule: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
   });
 

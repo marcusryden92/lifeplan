@@ -2,7 +2,7 @@
 import { useRef, useCallback } from "react";
 import { Planner } from "@prisma/client";
 import { SimpleEvent } from "@prisma/client";
-import { EventTemplate } from "@/utils/templateBuilderUtils";
+import { EventTemplate } from "@prisma/client";
 import { handleServerTransaction } from "@/utils/server-handlers/compareCalendarData";
 
 // Define UpdateOperation type for our queue

@@ -2,11 +2,17 @@ import { SimpleEvent } from "@prisma/client";
 import { Planner } from "@prisma/client";
 import { taskIsCompleted } from "../taskHelpers";
 
+import { assert } from "@/utils/assert/assert";
+import { useDataContext } from "@/context/DataContext";
+
 export function addDateItemsToArray(
   mainPlanner: Planner[],
   eventArray: SimpleEvent[],
   memoizedEventIds: Set<string>
 ) {
+  const { userId } = useDataContext();
+  assert(userId, "No userId");
+
   const dateItems: Planner[] = [];
   const newArray: SimpleEvent[] = [];
 
@@ -32,6 +38,7 @@ export function addDateItemsToArray(
       const end = new Date(date.starts.getTime() + date.duration * 60000); // 60000 ms = 1 minute
 
       const newDate: SimpleEvent = {
+        userId,
         title: date.title,
         id: JSON.stringify(new Date()),
         start: date.starts,
@@ -39,6 +46,10 @@ export function addDateItemsToArray(
         isTemplateItem: false,
         backgroundColor: "black",
         borderColor: "black",
+        duration: null,
+        rrule: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       newArray.push(newDate);
@@ -53,6 +64,9 @@ export function addCompletedItemsToArray(
   eventArray: SimpleEvent[],
   memoizedEventIds: Set<string>
 ) {
+  const { userId } = useDataContext();
+  assert(userId, "No userId");
+
   const completedItems: Planner[] = [];
   const newArray: SimpleEvent[] = [];
 
@@ -77,6 +91,7 @@ export function addCompletedItemsToArray(
       // Calculate the end time by adding duration (in minutes) to the start time
 
       const newDate: SimpleEvent = {
+        userId,
         title: item.title,
         id: item.id,
         start: item.completedStartTime,
@@ -84,6 +99,10 @@ export function addCompletedItemsToArray(
         isTemplateItem: false,
         backgroundColor: "#0ebf7e",
         borderColor: "#0ca66e",
+        duration: null,
+        rrule: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       newArray.push(newDate);

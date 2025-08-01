@@ -93,7 +93,7 @@ export function currentlyInEvent(event: SimpleEvent) {
 }
 
 export function taskIsCompleted(task: Planner) {
-  if (task.completed?.startTime && task.completed.endTime) return true;
+  if (task.completedStartTime && task.completedEndTime) return true;
 
   return false;
 }

@@ -19,7 +19,7 @@ export function toggleGoalIsReady(
 export function setGoalIsReady(
   setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
   taskId: string,
-  isReady: boolean | undefined
+  isReady: boolean | null
 ) {
   setMainPlanner((prev) =>
     prev.map((task) => {

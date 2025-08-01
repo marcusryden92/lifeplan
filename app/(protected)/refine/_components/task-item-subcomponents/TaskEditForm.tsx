@@ -27,7 +27,7 @@ const TaskEditForm: React.FC<TaskEditFormProps> = ({
   const { setMainPlanner } = useDataContext();
 
   const [editTitle, setEditTitle] = useState<string>(task.title);
-  const [editDuration, setEditDuration] = useState<number | undefined>(
+  const [editDuration, setEditDuration] = useState<number | null>(
     task.duration
   );
 
@@ -51,7 +51,7 @@ const TaskEditForm: React.FC<TaskEditFormProps> = ({
       {subtasks.length === 0 && (
         /* Edit duration */
         <Input
-          defaultValue={task.duration}
+          defaultValue={task.duration ?? undefined}
           onChange={(e) => setEditDuration(Number(e.target.value))}
           placeholder={task.duration?.toString() || "min"}
           className="w-14 h-7 text-sm"

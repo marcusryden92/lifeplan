@@ -45,7 +45,7 @@ import {
 } from "@/utils/creationPagesFunctions";
 
 export default function TasksPage() {
-  const { mainPlanner, setMainPlanner } = useDataContext();
+  const { userId, mainPlanner, setMainPlanner } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
   const [changeToTask, setChangeToTask] = useState<number | null>(null);
@@ -67,6 +67,7 @@ export default function TasksPage() {
 
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({
+      userId,
       values,
       setMainPlanner,
       editIndex,
@@ -150,7 +151,7 @@ export default function TasksPage() {
       setMainPlanner((prevTasks: Planner[]) =>
         prevTasks.map((task, index) =>
           index === changeToTask
-            ? { ...task, type: null, duration: undefined }
+            ? { ...task, type: null, duration: null }
             : task
         )
       );
@@ -258,7 +259,7 @@ export default function TasksPage() {
                   </div>
                   <Input
                     ref={durationInputRef}
-                    defaultValue={mainPlanner[index].duration}
+                    defaultValue={mainPlanner[index].duration ?? undefined}
                     onChange={(e) => setTaskDuration(Number(e.target.value))}
                     placeholder={
                       mainPlanner[index].duration?.toString() || "min"

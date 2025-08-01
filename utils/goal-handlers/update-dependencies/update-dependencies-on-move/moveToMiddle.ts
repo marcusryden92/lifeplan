@@ -393,7 +393,7 @@ function handleVacancy(
     mainPlanner,
     setMainPlanner,
     taskId: movedTask.id,
-    parentId: movedTask.parentId,
+    parentId: movedTask.parentId ?? undefined,
   });
 
   // Actions for updating movedTask to the new position
@@ -488,7 +488,7 @@ function updateMovedTask(
         return { ...t, dependency: movedTaskLastBLI.id };
       }
 
-      if (t.id === targetTask.id) return { ...t, dependency: undefined };
+      if (t.id === targetTask.id) return { ...t, dependency: null };
 
       return t;
     });

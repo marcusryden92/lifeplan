@@ -156,7 +156,7 @@ export const confirmEdit = ({
 
 interface editByIdProps {
   editTitle: string;
-  editDuration?: number;
+  editDuration: number | null;
   editId: string;
   setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
 }

@@ -40,7 +40,7 @@ import {
 } from "@/utils/creationPagesFunctions";
 
 export default function CapturePage() {
-  const { mainPlanner, setMainPlanner } = useDataContext();
+  const { userId, mainPlanner, setMainPlanner } = useDataContext();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
 
@@ -56,6 +56,7 @@ export default function CapturePage() {
 
   const handleFormSubmit = (values: z.infer<typeof TaskListSchema>) => {
     onSubmit({
+      userId,
       values,
       setMainPlanner,
       editIndex,

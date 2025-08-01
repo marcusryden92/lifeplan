@@ -1,4 +1,4 @@
-import { EventTemplate, findLargestGap } from "@/utils/templateBuilderUtils";
+import { findLargestGap } from "@/utils/templateBuilderUtils";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 import { WeekDayIntegers } from "@/types/calendarTypes";
@@ -16,10 +16,13 @@ import {
 import { SimpleEvent } from "@prisma/client";
 import { getDayDifference, hasDateInArray } from "./calendarGenerationHelpers";
 
-import { Planner } from "@prisma/client";
+import { Planner, EventTemplate } from "@prisma/client";
 
 import { getSortedTreeBottomLayer } from "../goalPageHandlers";
 import { taskIsCompleted } from "../taskHelpers";
+import { useDataContext } from "@/context/DataContext";
+
+import { assert } from "@/utils/assert/assert";
 
 export function generateCalendar(
   weekStartDay: WeekDayIntegers,
@@ -196,6 +199,9 @@ function addTaskToCalendar(
   templatedWeeks: Date[],
   startTime?: Date
 ) {
+  const { userId } = useDataContext();
+  assert(userId, "No userId");
+
   if (!item.duration) {
     console.log(`Task ${item.title} duration undefined.`);
     return;
@@ -278,15 +284,18 @@ function addTaskToCalendar(
       const endTime = new Date(movingMarker);
 
       const newEvent: SimpleEvent = {
+        userId,
         id: item.id,
         title: item.title,
-        start: startTime.toISOString(), // ISO 8601 string format for FullCalendar
-        end: endTime.toISOString(), // ISO 8601 string format for FullCalendar
-        extendedProps: {
-          isTemplateItem: false,
-          backgroundColor: "#f59e0b",
-          borderColor: "transparent",
-        },
+        start: startTime, // ISO 8601 string format for FullCalendar
+        end: endTime, // ISO 8601 string format for FullCalendar
+        isTemplateItem: false,
+        backgroundColor: "#f59e0b",
+        borderColor: "transparent",
+        duration: null,
+        rrule: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       eventArray.push(newEvent);

@@ -26,7 +26,7 @@ export function transferDependencyOwnership(
 
       // and clear subject
       if (clearSubject && t.id === subject.id) {
-        return { ...t, dependency: undefined };
+        return { ...t, dependency: null };
       }
       return t;
     })

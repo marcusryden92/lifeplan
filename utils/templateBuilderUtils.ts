@@ -3,20 +3,13 @@ import { getWeekdayFromDate } from "@/utils/calendarUtils";
 import { SimpleEvent } from "@prisma/client";
 import { shiftDate } from "@/utils/calendarUtils";
 import { setTimeOnDate } from "@/utils/calendarUtils";
-import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";
+import { WeekDayIntegers } from "@/types/calendarTypes";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 
-// Define the updated EventTemplate interface
-export interface EventTemplate {
-  title: string;
-  id: string;
-  start: {
-    day: WeekDayType; // Weekday name
-    time: string; // Time in "HH:mm" format
-  };
-  duration: number; // Duration in minutes
-}
+import { EventTemplate } from "@prisma/client";
+
+import { useDataContext } from "@/context/DataContext";
 
 function getTimeFromDate(date: Date): string {
   const hours = date.getHours().toString().padStart(2, "0");
@@ -26,6 +19,10 @@ function getTimeFromDate(date: Date): string {
 
 export function getTemplateFromCalendar(calendar: EventApi[]): EventTemplate[] {
   const template: EventTemplate[] = [];
+
+  const { userId } = useDataContext();
+
+  if (!userId) throw new Error("Missing userId in getTemplateFromCalendar");
 
   calendar.forEach((task) => {
     if (!task.start || !task.end) {
@@ -44,13 +41,14 @@ export function getTemplateFromCalendar(calendar: EventApi[]): EventTemplate[] {
 
     // Create new EventTemplate object
     const newEvent: EventTemplate = {
+      userId: userId,
       title: task.title,
       id: task.id,
-      start: {
-        day: getWeekdayFromDate(startDate), // Assuming startDate is a Date object
-        time: getTimeFromDate(startDate), // Assuming startDate is a Date object
-      },
+      startDay: getWeekdayFromDate(startDate), // Assuming startDate is a Date object
+      startTime: getTimeFromDate(startDate), // Assuming startDate is a Date object
       duration: durationMinutes, // Add duration in minutes
+      updatedAt: new Date(),
+      createdAt: new Date(),
     };
 
     template.push(newEvent);
@@ -64,6 +62,10 @@ export function populateTemplateCalendar(
   template: EventTemplate[]
 ): SimpleEvent[] {
   const eventArray: SimpleEvent[] = [];
+
+  const { userId } = useDataContext();
+
+  if (!userId) throw new Error("Missing userId in populateTemplateCalendar");
 
   const todaysDate = new Date(2024, 0, 1);
 
@@ -90,16 +92,21 @@ export function populateTemplateCalendar(
   }
 
   template.forEach((event) => {
-    if (!event || !event.start || event.duration === undefined) {
+    if (
+      !event ||
+      !event.startDay ||
+      !event.startTime ||
+      event.duration === undefined
+    ) {
       console.error("Event details are incomplete.", event);
       return;
     }
 
     let newStartDate: Date;
-    if (event.start.day) {
-      const startDayIndex = daysFromSunday.indexOf(event.start.day);
+    if (event.startDay) {
+      const startDayIndex = daysFromSunday.indexOf(event.startDay);
       if (startDayIndex === -1) {
-        console.error("Invalid start day provided.", event.start.day);
+        console.error("Invalid start day provided.", event.startDay);
         return;
       }
 
@@ -107,8 +114,8 @@ export function populateTemplateCalendar(
       const startDayOffset = (startDayIndex - weekStartDay + 7) % 7;
       newStartDate = shiftDate(thisWeeksFirstDate, startDayOffset);
 
-      if (event.start.time) {
-        newStartDate = setTimeOnDate(newStartDate, event.start.time);
+      if (event.startTime) {
+        newStartDate = setTimeOnDate(newStartDate, event.startTime);
       }
     } else {
       console.error("Event start details are missing.", event);
@@ -120,15 +127,18 @@ export function populateTemplateCalendar(
     newEndDate.setMinutes(newEndDate.getMinutes() + event.duration);
 
     eventArray.push({
+      userId,
       id: event.id, // Generate a unique ID for the event
       title: event.title,
-      start: newStartDate.toISOString(), // Convert Date to ISO string
-      end: newEndDate.toISOString(), // Convert Date to ISO string
-      extendedProps: {
-        isTemplateItem: true,
-        backgroundColor: "#1242B2",
-        borderColor: "transparent",
-      },
+      start: newStartDate, // Convert Date to ISO string
+      end: newEndDate, // Convert Date to ISO string
+      isTemplateItem: true,
+      backgroundColor: "#1242B2",
+      borderColor: "transparent",
+      duration: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      rrule: null,
     });
   });
 
@@ -179,9 +189,9 @@ export function findLargestGap(events: EventTemplate[]): number | undefined {
   // Convert each event's start time to minutes from the week start and calculate the end time
   const eventTimes = events
     .map((event) => ({
-      start: convertToMinutesFromWeekStart(event.start.day, event.start.time),
-      end: convertToMinutesFromWeekStart(event.start.day, event.start.time)
-        ? convertToMinutesFromWeekStart(event.start.day, event.start.time)! +
+      start: convertToMinutesFromWeekStart(event.startDay, event.startTime),
+      end: convertToMinutesFromWeekStart(event.startDay, event.startTime)
+        ? convertToMinutesFromWeekStart(event.startDay, event.startTime)! +
           event.duration
         : null,
     }))

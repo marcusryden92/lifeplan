@@ -85,7 +85,7 @@ export const transformEventsForFullCalendar = (
     // Safely parse RRule JSON string
     if (event.rrule) {
       try {
-        parsedRRule = JSON.parse(event.rrule) as RRule;
+        parsedRRule = event.rrule as RRule;
       } catch (error) {
         console.error(`Failed to parse RRule for event ${event.id}:`, error);
         // Continue without RRule rather than breaking the entire event

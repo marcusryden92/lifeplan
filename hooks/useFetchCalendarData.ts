@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Planner } from "@prisma/client";
 import { SimpleEvent } from "@prisma/client";
-import { EventTemplate } from "@/utils/templateBuilderUtils";
+import { EventTemplate } from "@prisma/client";
 import { fetchCalendarData } from "@/actions/calendar-actions/fetchCalendarData";
 
 interface Data {

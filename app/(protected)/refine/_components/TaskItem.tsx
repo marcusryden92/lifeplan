@@ -54,7 +54,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(
           <DraggableItem
             taskId={task.id}
             taskTitle={task.title}
-            parentId={task.parentId}
+            parentId={task.parentId ?? undefined}
             className="ml-5"
           >
             <TaskHeader
@@ -73,7 +73,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(
           <TaskListWrapper
             taskId={task.id}
             subtasksLength={subtasks.length}
-            parentId={task.parentId}
+            parentId={task.parentId ?? undefined}
             subtasksMinimized={subtasksMinimized}
             itemIsFocused={itemIsFocused}
           >

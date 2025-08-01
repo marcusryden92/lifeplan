@@ -22,6 +22,7 @@ import {
 } from "@/utils/calendarEventHandlers";
 import EventContent from "@/components/events/EventContent";
 import { ExtendedEventContentArg } from "@/types/calendarTypes";
+import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
 
 interface TemplateBuilderProps {
   templateEvents: SimpleEvent[];
@@ -33,7 +34,8 @@ export default function TemplateBuilder({
   setTemplateEvents,
 }: TemplateBuilderProps) {
   const calendarRef = useRef<FullCalendar>(null);
-  const { currentTemplate, setMainPlanner, weekStartDay } = useDataContext();
+  const { userId, currentTemplate, setMainPlanner, weekStartDay } =
+    useDataContext();
 
   useEffect(() => {
     if (currentTemplate && currentTemplate.length > 0 && calendarRef.current) {
@@ -66,12 +68,14 @@ export default function TemplateBuilder({
     }
   };
 
+  const fullcalendarEvents = transformEventsForFullCalendar(templateEvents);
+
   return (
     <FullCalendar
       initialDate={new Date(2024, 0, 1)}
       ref={calendarRef}
       plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-      events={templateEvents}
+      events={fullcalendarEvents}
       initialView="timeGridWeek"
       firstDay={weekStartDay}
       height={"100%"}
@@ -95,7 +99,7 @@ export default function TemplateBuilder({
       eventResizableFromStart={true}
       selectable={true}
       select={(selectInfo) =>
-        handleSelect(calendarRef, setTemplateEvents, selectInfo, true)
+        handleSelect(userId, calendarRef, setTemplateEvents, selectInfo, true)
       }
       eventResize={(resizeInfo) =>
         handleEventResize(setTemplateEvents, resizeInfo)

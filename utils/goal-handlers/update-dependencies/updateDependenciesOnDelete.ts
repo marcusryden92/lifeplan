@@ -100,7 +100,7 @@ export function updateDependenciesOnDelete({
 interface UpdateDependenciesOnDeleteInterface_ReturnArray {
   mainPlanner: Planner[];
   taskId: string;
-  parentId: string | undefined;
+  parentId: string | null;
 }
 
 export function updateDependenciesOnDelete_ReturnArray({
@@ -140,9 +140,10 @@ export function updateDependenciesOnDelete_ReturnArray({
       });
     } else {
       updatedArray = updatedArray.map((t) => {
-        if (t.id === itemAfterLast.id) return { ...t, dependency: parentId };
+        if (t.id === itemAfterLast.id)
+          return { ...t, dependency: parentId ?? null };
         else if (t.id === parentId && t.id !== rootParentId)
-          return { ...t, dependency: itemBeforeFirst.id };
+          return { ...t, dependency: itemBeforeFirst.id ?? null };
 
         return t;
       });
@@ -159,7 +160,7 @@ export function updateDependenciesOnDelete_ReturnArray({
   } else if (!itemBeforeFirst && itemAfterLast) {
     if (hasSiblings) {
       updatedArray = updatedArray.map((t) => {
-        if (t.id === itemAfterLast.id) return { ...t, dependency: undefined };
+        if (t.id === itemAfterLast.id) return { ...t, dependency: null };
 
         return t;
       });
@@ -168,7 +169,7 @@ export function updateDependenciesOnDelete_ReturnArray({
         if (t.id === itemAfterLast.id)
           return {
             ...t,
-            dependency: parentId === rootParentId ? undefined : parentId,
+            dependency: parentId === rootParentId ? null : parentId,
           };
 
         return t;

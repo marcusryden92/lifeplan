@@ -9,7 +9,6 @@ import React, {
   useCallback,
 } from "react";
 import { WeekDayIntegers } from "@/types/calendarTypes";
-import { EventTemplate } from "@/utils/templateBuilderUtils";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 import { taskIsCompleted } from "@/utils/taskHelpers";
 import { floorMinutes } from "@/utils/calendarUtils";
@@ -17,7 +16,7 @@ import { useSession } from "next-auth/react";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
 import { useServerSyncQueue } from "@/hooks/useServerSyncQueue";
 
-import { Planner, SimpleEvent } from "@prisma/client";
+import { Planner, SimpleEvent, EventTemplate } from "@prisma/client";
 
 interface DataContextType {
   userId?: string;
