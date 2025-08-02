@@ -25,8 +25,8 @@ import { useSession } from "next-auth/react";
 
 type SettingsFormProps = {
   user: {
-    name: string;
-    email: string;
+    name?: string;
+    email?: string;
     isTwoFactorEnabled?: boolean;
     isOAuth?: boolean;
   };
