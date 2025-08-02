@@ -19,7 +19,7 @@ import { useServerSyncQueue } from "@/hooks/useServerSyncQueue";
 import { Planner, SimpleEvent, EventTemplate } from "@prisma/client";
 
 interface DataContextType {
-  userId?: string;
+  userId: string;
   mainPlanner: Planner[];
   mainPlannerDispatch: React.Dispatch<React.SetStateAction<Planner[]>>;
   setMainPlanner: (
@@ -44,13 +44,15 @@ interface DataContextType {
 const DataContext = createContext<DataContextType | null>(null);
 
 export const DataContextProvider = ({ children }: { children: ReactNode }) => {
+  const user = useSession().data?.user;
+  const userId = user?.id;
+
+  if (!userId) return null;
+
   // User settings with default values
   const userSettings: { weekStartDay: WeekDayIntegers } = {
     weekStartDay: 1,
   };
-
-  const user = useSession().data?.user;
-  const userId = user?.id;
 
   // Flags
   const LOG_MAIN_PLANNER = false;
@@ -104,6 +106,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
       );
 
       const newCalendar = generateCalendar(
+        userId,
         weekStartDay,
         newTemplate,
         newPlanner,
@@ -151,6 +154,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
         ) || [];
 
       const newCalendar = generateCalendar(
+        userId,
         weekStartDay,
         currentTemplate,
         mainPlanner,

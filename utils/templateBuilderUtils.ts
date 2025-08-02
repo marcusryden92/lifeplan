@@ -9,20 +9,17 @@ import { getWeekFirstDate } from "@/utils/calendarUtils";
 
 import { EventTemplate } from "@prisma/client";
 
-import { useDataContext } from "@/context/DataContext";
-
 function getTimeFromDate(date: Date): string {
   const hours = date.getHours().toString().padStart(2, "0");
   const minutes = date.getMinutes().toString().padStart(2, "0");
   return `${hours}:${minutes}`;
 }
 
-export function getTemplateFromCalendar(calendar: EventApi[]): EventTemplate[] {
+export function getTemplateFromCalendar(
+  userId: string,
+  calendar: EventApi[]
+): EventTemplate[] {
   const template: EventTemplate[] = [];
-
-  const { userId } = useDataContext();
-
-  if (!userId) throw new Error("Missing userId in getTemplateFromCalendar");
 
   calendar.forEach((task) => {
     if (!task.start || !task.end) {
@@ -47,8 +44,8 @@ export function getTemplateFromCalendar(calendar: EventApi[]): EventTemplate[] {
       startDay: getWeekdayFromDate(startDate), // Assuming startDate is a Date object
       startTime: getTimeFromDate(startDate), // Assuming startDate is a Date object
       duration: durationMinutes, // Add duration in minutes
-      updatedAt: new Date(),
-      createdAt: new Date(),
+      updatedAt: null,
+      createdAt: null,
     };
 
     template.push(newEvent);
@@ -58,15 +55,11 @@ export function getTemplateFromCalendar(calendar: EventApi[]): EventTemplate[] {
 }
 
 export function populateTemplateCalendar(
+  userId: string,
   weekStartDay: WeekDayIntegers,
   template: EventTemplate[]
 ): SimpleEvent[] {
   const eventArray: SimpleEvent[] = [];
-
-  const { userId } = useDataContext();
-
-  if (!userId) throw new Error("Missing userId in populateTemplateCalendar");
-
   const todaysDate = new Date(2024, 0, 1);
 
   // Days of the week starting from Sunday (index 0)
@@ -136,8 +129,8 @@ export function populateTemplateCalendar(
       backgroundColor: "#1242B2",
       borderColor: "transparent",
       duration: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: null,
+      updatedAt: null,
       rrule: null,
     });
   });

@@ -2,17 +2,12 @@ import { SimpleEvent } from "@prisma/client";
 import { Planner } from "@prisma/client";
 import { taskIsCompleted } from "../taskHelpers";
 
-import { assert } from "@/utils/assert/assert";
-import { useDataContext } from "@/context/DataContext";
-
 export function addDateItemsToArray(
+  userId: string,
   mainPlanner: Planner[],
   eventArray: SimpleEvent[],
   memoizedEventIds: Set<string>
 ) {
-  const { userId } = useDataContext();
-  assert(userId, "No userId");
-
   const dateItems: Planner[] = [];
   const newArray: SimpleEvent[] = [];
 
@@ -48,8 +43,8 @@ export function addDateItemsToArray(
         borderColor: "black",
         duration: null,
         rrule: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: null,
+        updatedAt: null,
       };
 
       newArray.push(newDate);
@@ -60,13 +55,11 @@ export function addDateItemsToArray(
 }
 
 export function addCompletedItemsToArray(
+  userId: string,
   mainPlanner: Planner[],
   eventArray: SimpleEvent[],
   memoizedEventIds: Set<string>
 ) {
-  const { userId } = useDataContext();
-  assert(userId, "No userId");
-
   const completedItems: Planner[] = [];
   const newArray: SimpleEvent[] = [];
 
@@ -101,8 +94,8 @@ export function addCompletedItemsToArray(
         borderColor: "#0ca66e",
         duration: null,
         rrule: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: null,
+        updatedAt: null,
       };
 
       newArray.push(newDate);

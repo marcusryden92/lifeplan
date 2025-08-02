@@ -7,8 +7,6 @@ import {
 } from "@/utils/calendarUtils";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
-import { useDataContext } from "@/context/DataContext";
-import { assert } from "../assert/assert";
 
 import { RRule } from "rrule";
 
@@ -24,6 +22,7 @@ const daysFromSunday = [
 ];
 
 export function addWeekTemplateToCalendar(
+  userId: string,
   weekStartDay: WeekDayIntegers,
   fromDate: Date,
   template: EventTemplate[],
@@ -41,19 +40,23 @@ export function addWeekTemplateToCalendar(
   }
 
   template.forEach((event) => {
-    addTemplateEvent(event, weekStartDay, thisWeeksFirstDate, eventArray);
+    addTemplateEvent(
+      userId,
+      event,
+      weekStartDay,
+      thisWeeksFirstDate,
+      eventArray
+    );
   });
 }
 
 function addTemplateEvent(
+  userId: string,
   event: EventTemplate,
   weekStartDay: WeekDayIntegers,
   thisWeeksFirstDate: Date,
   eventArray: SimpleEvent[]
 ) {
-  const { userId } = useDataContext();
-  assert(userId, "No userId");
-
   if (
     !event ||
     !event.startDay ||
@@ -117,20 +120,18 @@ function addTemplateEvent(
     isTemplateItem: true,
     backgroundColor: "#1242B2",
     borderColor: "transparent",
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: null,
+    updatedAt: null,
   });
 }
 
 export function populateWeekWithTemplate(
+  userId: string,
   weekStartDay: WeekDayIntegers,
   fromDate: Date,
   template: EventTemplate[],
   templateEventArray: SimpleEvent[]
 ) {
-  const { userId } = useDataContext();
-  assert(userId, "No userId");
-
   // Days of the week starting from Sunday (index 0)
   const daysFromSunday = [
     "sunday", // index 0
@@ -201,8 +202,8 @@ export function populateWeekWithTemplate(
       borderColor: "transparent",
       duration: null,
       rrule: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: null,
+      updatedAt: null,
     });
   });
 

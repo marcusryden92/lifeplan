@@ -20,11 +20,9 @@ import { Planner, EventTemplate } from "@prisma/client";
 
 import { getSortedTreeBottomLayer } from "../goalPageHandlers";
 import { taskIsCompleted } from "../taskHelpers";
-import { useDataContext } from "@/context/DataContext";
-
-import { assert } from "@/utils/assert/assert";
 
 export function generateCalendar(
+  userId: string,
   weekStartDay: WeekDayIntegers,
   template: EventTemplate[],
   mainPlanner: Planner[],
@@ -50,14 +48,20 @@ export function generateCalendar(
   }
 
   // Add date items to the event array:
-  addDateItemsToArray(mainPlanner, eventArray, memoizedEventIds);
+  addDateItemsToArray(userId, mainPlanner, eventArray, memoizedEventIds);
 
   // Add completed items to the event array:
-  addCompletedItemsToArray(mainPlanner, eventArray, memoizedEventIds);
+  addCompletedItemsToArray(userId, mainPlanner, eventArray, memoizedEventIds);
 
   // Add template items to the event array
   if (template.length > 0) {
-    addWeekTemplateToCalendar(weekStartDay, currentDate, template, eventArray);
+    addWeekTemplateToCalendar(
+      userId,
+      weekStartDay,
+      currentDate,
+      template,
+      eventArray
+    );
   }
 
   // Create array to hold the first date of all the weeks
@@ -70,6 +74,7 @@ export function generateCalendar(
   const weekFirstDate = getWeekFirstDate(weekStartDay, currentDate);
   templatedWeeks.push(new Date(weekFirstDate));
   populateWeekWithTemplate(
+    userId,
     weekStartDay,
     currentDate,
     template,
@@ -83,6 +88,7 @@ export function generateCalendar(
 
   // Add tasks and goals to the event array:
   eventArray = addEventsToCalendar(
+    userId,
     weekStartDay,
     template,
     templateEventsArray,
@@ -97,6 +103,7 @@ export function generateCalendar(
 }
 
 function addEventsToCalendar(
+  userId: string,
   weekStartDay: WeekDayIntegers,
   template: EventTemplate[],
   templateEventsArray: SimpleEvent[],
@@ -129,6 +136,7 @@ function addEventsToCalendar(
     // If item is a task:
     if (item.type === "task" && !memoizedEventIds.has(item.id)) {
       addTaskToCalendar(
+        userId,
         item,
         largestTemplateGap,
         weekStartDay,
@@ -141,6 +149,7 @@ function addEventsToCalendar(
     // If Item is a goal:
     else if (item.type === "goal") {
       addGoalToCalendar(
+        userId,
         mainPlanner,
         item,
         largestTemplateGap,
@@ -158,6 +167,7 @@ function addEventsToCalendar(
 }
 
 function addGoalToCalendar(
+  userId: string,
   mainPlanner: Planner[],
   rootItem: Planner,
   largestTemplateGap: number | undefined,
@@ -177,6 +187,7 @@ function addGoalToCalendar(
 
   filteredTasks.forEach((item) => {
     startTime = addTaskToCalendar(
+      userId,
       item,
       largestTemplateGap,
       weekStartDay,
@@ -190,6 +201,7 @@ function addGoalToCalendar(
 }
 
 function addTaskToCalendar(
+  userId: string,
   item: Planner,
   largestTemplateGap: number | undefined,
   weekStartDay: WeekDayIntegers,
@@ -199,9 +211,6 @@ function addTaskToCalendar(
   templatedWeeks: Date[],
   startTime?: Date
 ) {
-  const { userId } = useDataContext();
-  assert(userId, "No userId");
-
   if (!item.duration) {
     console.log(`Task ${item.title} duration undefined.`);
     return;
@@ -241,6 +250,7 @@ function addTaskToCalendar(
     if (getDayDifference(weekMarker, staticMarker) > 6) {
       if (!hasDateInArray(templatedWeeks, staticMarker)) {
         populateWeekWithTemplate(
+          userId,
           weekStartDay,
           staticMarker,
           template,
@@ -294,8 +304,8 @@ function addTaskToCalendar(
         borderColor: "transparent",
         duration: null,
         rrule: null,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: null,
+        updatedAt: null,
       };
 
       eventArray.push(newEvent);

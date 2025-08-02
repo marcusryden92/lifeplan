@@ -1,12 +1,11 @@
-import {
-  WeekDayIntegers,
-  WeekDayType,
-  RRuleWeekDayType,
-} from "@/types/calendarTypes";
+import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";
 
 import { SimpleEvent } from "@prisma/client";
 import { EventInput } from "@fullcalendar/core/index.js";
-import type { RRule } from "@/types/calendarTypes";
+import type { RRule as RRuleType } from "@/types/calendarTypes";
+import { RRule, Weekday } from "rrule";
+
+import { parseICalToRRule } from "./rrule-handlers";
 
 // Get weekday string from a Date object
 export function getWeekdayFromDate(date: Date): WeekDayType {
@@ -61,16 +60,15 @@ export function getWeekFirstDate(
   return firstDate;
 }
 
-// Convert day index (0-6) to RRule weekday string
-export function getRRuleDayTypeFromIndex(day: number): RRuleWeekDayType {
-  const rruleWeekdays: RRuleWeekDayType[] = [
-    "SU",
-    "MO",
-    "TU",
-    "WE",
-    "TH",
-    "FR",
-    "SA",
+export function getRRuleDayTypeFromIndex(day: number): Weekday {
+  const rruleWeekdays = [
+    RRule.SU,
+    RRule.MO,
+    RRule.TU,
+    RRule.WE,
+    RRule.TH,
+    RRule.FR,
+    RRule.SA,
   ];
   return rruleWeekdays[day];
 }
@@ -80,17 +78,12 @@ export const transformEventsForFullCalendar = (
   events: SimpleEvent[]
 ): EventInput[] => {
   return events.map((event) => {
-    let parsedRRule: RRule | undefined = undefined;
-
+    let parsedRRule: RRuleType | undefined = undefined;
     // Safely parse RRule JSON string
     if (event.rrule) {
-      try {
-        parsedRRule = event.rrule as RRule;
-      } catch (error) {
-        console.error(`Failed to parse RRule for event ${event.id}:`, error);
-        // Continue without RRule rather than breaking the entire event
-        parsedRRule = undefined;
-      }
+      parsedRRule = parseICalToRRule(event.rrule);
+    } else {
+      parsedRRule = undefined;
     }
 
     return {

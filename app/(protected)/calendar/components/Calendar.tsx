@@ -44,9 +44,6 @@ export default function Calendar({
   useEffect(() => {
     if (initialEvents) {
       setEvents(initialEvents);
-
-      console.log("initialEvents");
-      console.log(initialEvents);
     }
   }, [initialEvents]);
 

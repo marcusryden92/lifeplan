@@ -32,8 +32,8 @@ export const handleSelect = (
       backgroundColor: "#007BFF",
       borderColor: "#000000",
       duration: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: null,
+      updatedAt: null,
     };
 
     calendarApi.addEvent(newEvent as EventInput);
@@ -96,8 +96,8 @@ export const handleEventCopy = (
       backgroundColor: "#007BFF",
       borderColor: "#000000",
       duration: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: null,
+      updatedAt: null,
     };
 
     const calendarApi = calendarRef.current.getApi();

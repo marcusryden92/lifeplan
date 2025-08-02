@@ -91,9 +91,6 @@ export function compareData(
   );
   const prevCalMap = new Map(prevCal.map((event) => [event.id, event]));
 
-  console.log("currentCalendar");
-  console.log(currentCalendar);
-
   const createEvent: SimpleEvent[] = [];
   const updateEvent: SimpleEvent[] = [];
   const destroyEvent: SimpleEvent[] = [];

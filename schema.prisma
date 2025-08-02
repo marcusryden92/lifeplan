@@ -120,10 +120,10 @@ model SimpleEvent {
   backgroundColor String
   borderColor String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
  
-  @@map("calendar_events")
+  @@map("SimpleEvents")
 }
 
 enum PlanType {
@@ -149,7 +149,7 @@ model Planner {
   userId String
   user   User   @relation(fields: [userId], references: [id])
 
-  @@map("planners")
+  @@map("Planners")
 }
 
 // --- EventTemplate Model ---
@@ -159,11 +159,11 @@ model EventTemplate {
   startDay  WeekDayType // Weekday name
   startTime String // Time in "HH:mm" format
   duration  Int // Duration in minutes
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  createdAt DateTime?    @default(now())
+  updatedAt DateTime?    @updatedAt
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("event_templates")
+  @@map("EventTemplates")
 }

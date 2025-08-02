@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -24,6 +24,8 @@ import EventContent from "@/components/events/EventContent";
 import { ExtendedEventContentArg } from "@/types/calendarTypes";
 import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
 
+import { arraysAreEqual } from "@/utils/generalUtils";
+
 interface TemplateBuilderProps {
   templateEvents: SimpleEvent[];
   setTemplateEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
@@ -37,38 +39,48 @@ export default function TemplateBuilder({
   const { userId, currentTemplate, setMainPlanner, weekStartDay } =
     useDataContext();
 
+  // Handle currentTemplate changes
   useEffect(() => {
     if (currentTemplate && currentTemplate.length > 0 && calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      const events = calendarApi.getEvents();
       const newCalendar = populateTemplateCalendar(
+        userId,
         weekStartDay,
         currentTemplate
       );
 
-      if (JSON.stringify(events) !== JSON.stringify(newCalendar)) {
+      // Only update if the events are actually different
+      if (JSON.stringify(templateEvents) !== JSON.stringify(newCalendar)) {
         setTemplateEvents(newCalendar);
       }
+    } else if (currentTemplate && currentTemplate.length === 0) {
+      // Handle empty template case
+      setTemplateEvents([]);
     }
-  }, [currentTemplate]);
+  }, [currentTemplate, userId, weekStartDay]); // Removed templateEvents from dependencies
 
+  // Handle templateEvents changes and update the template
   useEffect(() => {
-    updateTemplate();
-  }, [templateEvents]);
+    if (!calendarRef.current) return;
 
-  const updateTemplate = () => {
-    if (calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      const events = calendarApi.getEvents();
-      const newTemplate = getTemplateFromCalendar(events);
+    const calendarApi = calendarRef.current.getApi();
+    const events = calendarApi.getEvents();
+    const newTemplate = getTemplateFromCalendar(userId, events);
 
-      if (JSON.stringify(currentTemplate) !== JSON.stringify(newTemplate)) {
-        setMainPlanner(undefined, undefined, newTemplate);
-      }
+    console.log("currentTemplate:");
+    console.log(JSON.stringify(currentTemplate));
+
+    console.log("newTemplate:");
+    console.log(JSON.stringify(newTemplate));
+
+    // Only update if the template is actually different
+    if (!arraysAreEqual(currentTemplate, newTemplate)) {
+      setMainPlanner(undefined, undefined, newTemplate);
     }
-  };
+  }, [templateEvents, userId]); // Removed currentTemplate from dependencies
 
-  const fullcalendarEvents = transformEventsForFullCalendar(templateEvents);
+  const fullcalendarEvents = useMemo(() => {
+    return transformEventsForFullCalendar(templateEvents);
+  }, [templateEvents]);
 
   return (
     <FullCalendar
@@ -127,7 +139,7 @@ export default function TemplateBuilder({
               onDelete={() =>
                 handleEventDelete(calendarRef, setTemplateEvents, event.id)
               }
-              showButtons={true} // Adjust based on your needs
+              showButtons={true}
             />
           )
         );
