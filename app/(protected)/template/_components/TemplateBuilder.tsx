@@ -24,8 +24,6 @@ import EventContent from "@/components/events/EventContent";
 import { ExtendedEventContentArg } from "@/types/calendarTypes";
 import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
 
-import { arraysAreEqual } from "@/utils/generalUtils";
-
 interface TemplateBuilderProps {
   templateEvents: SimpleEvent[];
   setTemplateEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
@@ -53,7 +51,7 @@ export default function TemplateBuilder({
         currentTemplate
       );
 
-      if (!arraysAreEqual(events, newCalendar)) {
+      if (JSON.stringify(events) !== JSON.stringify(newCalendar)) {
         setTemplateEvents(newCalendar);
       }
     }
@@ -69,7 +67,7 @@ export default function TemplateBuilder({
       const events = calendarApi.getEvents();
       const newTemplate = getTemplateFromCalendar(userId, events);
 
-      if (!arraysAreEqual(currentTemplate, newTemplate)) {
+      if (JSON.stringify(currentTemplate) !== JSON.stringify(newTemplate)) {
         setMainPlanner(undefined, undefined, newTemplate);
       }
     }
