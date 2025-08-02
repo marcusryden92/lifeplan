@@ -7,6 +7,7 @@ import React, {
   ReactNode,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
@@ -15,6 +16,9 @@ import { floorMinutes } from "@/utils/calendarUtils";
 import { useSession } from "next-auth/react";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
 import { useServerSyncQueue } from "@/hooks/useServerSyncQueue";
+import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
+
+import type { EventInput } from "@fullcalendar/core/index.js";
 
 import { Planner, SimpleEvent, EventTemplate } from "@prisma/client";
 
@@ -37,6 +41,7 @@ interface DataContextType {
   setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
   currentCalendar: SimpleEvent[] | undefined;
   setCurrentCalendar: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
+  fullCalendarEvents: EventInput[] | undefined;
 
   manuallyUpdateCalendar: () => void;
 }
@@ -68,6 +73,11 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const [mainPlanner, mainPlannerDispatch] = useState<Planner[]>([]);
   const [currentCalendar, setCurrentCalendar] = useState<SimpleEvent[]>([]);
   const [currentTemplate, setCurrentTemplate] = useState<EventTemplate[]>([]);
+
+  const fullCalendarEvents = useMemo(
+    () => transformEventsForFullCalendar(currentCalendar || []),
+    [currentCalendar]
+  );
 
   // Import our server sync queue hook
   const { processInput, queueServerSync, initializeState } =
@@ -199,6 +209,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     setFocusedTask,
     currentCalendar,
     setCurrentCalendar,
+    fullCalendarEvents,
     manuallyUpdateCalendar,
   };
 

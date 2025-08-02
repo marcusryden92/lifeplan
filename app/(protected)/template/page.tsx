@@ -17,6 +17,7 @@ export default function TasksPage() {
     setCurrentTemplate([]);
     setTemplateEvents([]);
   };
+
   return (
     <div className="flex flex-col w-full h-full bg-opacity-95">
       <header className={headerStyles.headerContainer}>

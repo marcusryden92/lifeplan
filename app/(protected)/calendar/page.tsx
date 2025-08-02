@@ -6,8 +6,12 @@ import { useDataContext } from "@/context/DataContext";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 const CalendarPage = () => {
-  const { currentCalendar, weekStartDay, manuallyUpdateCalendar } =
-    useDataContext();
+  const {
+    currentCalendar,
+    fullCalendarEvents,
+    weekStartDay,
+    manuallyUpdateCalendar,
+  } = useDataContext();
 
   const today = new Date();
   const [initialDate, setInitialDate] = useState<Date>(
@@ -27,7 +31,11 @@ const CalendarPage = () => {
         manuallyUpdateCalendar={manuallyUpdateCalendar}
       />
 
-      <Calendar initialEvents={currentCalendar} initialDate={initialDate} />
+      <Calendar
+        initialEvents={currentCalendar}
+        fullCalendarEvents={fullCalendarEvents}
+        initialDate={initialDate}
+      />
     </div>
   );
 };

@@ -49,7 +49,7 @@ export const onSubmit = ({
       parentId: null,
       type: type || "goal",
       isReady: true,
-      duration: null,
+      duration: 5,
       deadline: null,
       starts: null,
       dependency: null,

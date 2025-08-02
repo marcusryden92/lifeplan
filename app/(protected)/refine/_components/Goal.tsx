@@ -75,8 +75,8 @@ const Goal = ({
 
   // Update parent component when selectedDate changes
   useEffect(() => {
-    if (selectedDate !== task.deadline) {
-      handleUpdateDeadline(task.id, selectedDate ?? null);
+    if (selectedDate && selectedDate !== task.deadline) {
+      handleUpdateDeadline(task.id, selectedDate);
     }
   }, [selectedDate, task.id, task.deadline, handleUpdateDeadline]);
 

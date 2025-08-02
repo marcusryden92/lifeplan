@@ -86,11 +86,13 @@ export const transformEventsForFullCalendar = (
       parsedRRule = undefined;
     }
 
-    return {
+    const item = {
       ...event,
       rrule: parsedRRule,
       duration: event.duration ?? undefined,
     };
+
+    return item;
   });
 };
 
