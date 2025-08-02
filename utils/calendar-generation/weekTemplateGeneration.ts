@@ -8,8 +8,6 @@ import {
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 
-import { RRule } from "rrule";
-
 // Days of the week starting from Sunday (index 0)
 const daysFromSunday = [
   "sunday", // index 0
@@ -99,14 +97,12 @@ function addTemplateEvent(
 
   const startISO = newStartDate.toISOString();
 
-  const rule = new RRule({
-    freq: RRule.WEEKLY,
+  const rule = {
+    freq: "weekly",
     interval: 1,
-    byweekday: [rruleDay], // e.g., RRule.MO
-    dtstart: new Date(startISO),
-  });
-
-  const rruleString = rule.toString();
+    byweekday: [rruleDay], // e.g., 'MO', 'SA', etc.
+    dtstart: startISO, // this should be an ISO string
+  };
 
   // Set up the RRule object with the correct timezone and recurrence rule
   eventArray.push({
@@ -115,7 +111,7 @@ function addTemplateEvent(
     title: event.title,
     start: newStartDate,
     end: newEndDate,
-    rrule: rruleString,
+    rrule: JSON.stringify(rule),
     duration: event.duration * 60 * 1000, // Convert duration to milliseconds
     isTemplateItem: true,
     backgroundColor: "#1242B2",

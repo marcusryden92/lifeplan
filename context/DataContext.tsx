@@ -74,10 +74,13 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const [currentCalendar, setCurrentCalendar] = useState<SimpleEvent[]>([]);
   const [currentTemplate, setCurrentTemplate] = useState<EventTemplate[]>([]);
 
-  const fullCalendarEvents = useMemo(
-    () => transformEventsForFullCalendar(currentCalendar || []),
-    [currentCalendar]
-  );
+  const fullCalendarEvents = useMemo(() => {
+    const newCal = currentCalendar
+      ? transformEventsForFullCalendar(currentCalendar)
+      : [];
+    console.log(newCal);
+    return newCal;
+  }, [currentCalendar]);
 
   // Import our server sync queue hook
   const { processInput, queueServerSync, initializeState } =

@@ -2,10 +2,7 @@ import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";
 
 import { SimpleEvent } from "@prisma/client";
 import { EventInput } from "@fullcalendar/core/index.js";
-import type { RRule as RRuleType } from "@/types/calendarTypes";
 import { RRule, Weekday } from "rrule";
-
-import { parseICalToRRule } from "./rrule-handlers";
 
 // Get weekday string from a Date object
 export function getWeekdayFromDate(date: Date): WeekDayType {
@@ -78,10 +75,10 @@ export const transformEventsForFullCalendar = (
   events: SimpleEvent[]
 ): EventInput[] => {
   return events.map((event) => {
-    let parsedRRule: RRuleType | undefined = undefined;
+    let parsedRRule: Record<string, unknown> | undefined = undefined;
     // Safely parse RRule JSON string
     if (event.rrule) {
-      parsedRRule = parseICalToRRule(event.rrule);
+      parsedRRule = JSON.parse(event.rrule) as Record<string, unknown>;
     } else {
       parsedRRule = undefined;
     }
