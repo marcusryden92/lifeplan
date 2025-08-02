@@ -21,6 +21,8 @@ import { Planner, EventTemplate } from "@prisma/client";
 import { getSortedTreeBottomLayer } from "../goalPageHandlers";
 import { taskIsCompleted } from "../taskHelpers";
 
+import { calendarColors } from "@/data/calendarColors";
+
 export function generateCalendar(
   userId: string,
   weekStartDay: WeekDayIntegers,
@@ -300,7 +302,7 @@ function addTaskToCalendar(
         start: startTime, // ISO 8601 string format for FullCalendar
         end: endTime, // ISO 8601 string format for FullCalendar
         isTemplateItem: false,
-        backgroundColor: "#f59e0b",
+        backgroundColor: (item.color as string) || calendarColors[0],
         borderColor: "transparent",
         duration: null,
         rrule: null,

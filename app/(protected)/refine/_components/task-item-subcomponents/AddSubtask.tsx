@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/Input";
 
 // Definitions
 import { AddSubtaskProps } from "@/lib/taskItem";
+import type { Planner } from "@prisma/client";
 
 // Context
 import { useDataContext } from "@/context/DataContext";
@@ -14,7 +15,11 @@ import { useDataContext } from "@/context/DataContext";
 // Utility Functions
 import { addSubtask } from "@/utils/goalPageHandlers";
 
-const AddSubtask: React.FC<AddSubtaskProps> = ({ parentId, isMainParent }) => {
+const AddSubtask: React.FC<AddSubtaskProps> = ({
+  task,
+  parentId,
+  isMainParent,
+}) => {
   const [taskDuration, setTaskDuration] = useState<number | undefined>(
     undefined
   );
@@ -37,13 +42,13 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({ parentId, isMainParent }) => {
     setTaskTitle("");
   };
 
-  const handleAddSubtask = (parentId: string) => {
+  const handleAddSubtask = (task: Planner) => {
     if (taskTitle)
       addSubtask({
         userId,
         mainPlanner,
         setMainPlanner,
-        parentId,
+        task,
         taskDuration: taskDuration || 5,
         taskTitle,
         resetTaskState,
@@ -52,11 +57,11 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({ parentId, isMainParent }) => {
 
   const handleKeyDown = (
     event: React.KeyboardEvent<HTMLInputElement>,
-    parentId: string
+    task: Planner
   ) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      handleAddSubtask(parentId);
+      handleAddSubtask(task);
       const ref = getRef(parentId);
       ref?.current?.focus();
     }
@@ -86,12 +91,12 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({ parentId, isMainParent }) => {
           type="number"
           pattern="[0-9]*"
           ref={durationRef}
-          onKeyDown={(e) => handleKeyDown(e, parentId)}
+          onKeyDown={(e) => handleKeyDown(e, task)}
         />
         <button
           disabled={!taskTitle}
           className={`${!taskTitle ? "opacity-50 pointer-events-none" : ""}`}
-          onClick={() => handleAddSubtask(parentId)}
+          onClick={() => handleAddSubtask(task)}
         >
           <HiOutlinePlus className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
         </button>

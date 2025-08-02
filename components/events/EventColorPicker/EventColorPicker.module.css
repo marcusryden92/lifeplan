@@ -23,12 +23,13 @@
   position: absolute;
   background-color: white;
   border: 1px solid #eeeeee;
+  border-radius: 12px;
   display: grid;
   top: 34px;
   left: 0;
   grid-template-columns: repeat(6, 1fr);
   grid-template-rows: repeat(2, 1fr);
   gap: 4px;
-  padding: 6px;
+  padding: 8px;
   z-index: 25;
 }

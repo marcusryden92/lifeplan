@@ -39,7 +39,7 @@ interface DataContextType {
   setWeekDayIntegers: React.Dispatch<React.SetStateAction<WeekDayIntegers>>;
   focusedTask: string | null;
   setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
-  currentCalendar: SimpleEvent[] | undefined;
+  currentCalendar: SimpleEvent[];
   setCurrentCalendar: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
   fullCalendarEvents: EventInput[] | undefined;
 
@@ -79,7 +79,6 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     const newCal = currentCalendar
       ? transformEventsForFullCalendar(currentCalendar)
       : [];
-    console.log(newCal);
     return newCal;
   }, [currentCalendar]);
 

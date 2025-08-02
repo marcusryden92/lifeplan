@@ -1,11 +1,11 @@
 import styles from "./EventColorPicker.module.css";
 import { useDataContext } from "@/context/DataContext";
-import type { CalendarColor } from "@/data/calendarColors";
 import { calendarColors } from "@/data/calendarColors";
+import { getCompleteTaskTreeIds } from "@/utils/goalPageHandlers";
 import { useMemo, useState, useEffect, useRef } from "react";
 
 const EventColorPicker = ({ taskId }: { taskId: string }) => {
-  const { setMainPlanner, mainPlanner } = useDataContext();
+  const { setMainPlanner, mainPlanner, currentCalendar } = useDataContext();
   const [paletteIsOpen, setPaletteIsOpen] = useState(false);
 
   const ref = useRef<HTMLDivElement>(null);
@@ -23,27 +23,36 @@ const EventColorPicker = ({ taskId }: { taskId: string }) => {
     };
   }, []);
 
+  const currentTaskTree = useMemo(() => {
+    return getCompleteTaskTreeIds(mainPlanner, taskId);
+  }, [mainPlanner]);
+
   const currentColor = useMemo(() => {
     const thisTask = mainPlanner.find((item) => item.id === taskId);
 
-    return thisTask?.color || calendarColors[0];
+    return (thisTask?.color as string) || calendarColors[0];
   }, [mainPlanner, taskId]);
 
-  const handleClickColor = (color: CalendarColor) => {
+  const handleClickColor = (color: string) => {
     const newPlanner = mainPlanner.map((item) =>
-      item.id === taskId || item.parentId === taskId
-        ? { ...item, color: color }
+      currentTaskTree.includes(item.id) ? { ...item, color: color } : item
+    );
+
+    const newCalendar = currentCalendar.map((item) =>
+      currentTaskTree.includes(item.id)
+        ? { ...item, backgroundColor: color }
         : item
     );
 
-    setMainPlanner(newPlanner);
+    setMainPlanner(newPlanner, newCalendar);
+    setPaletteIsOpen(false);
   };
 
   return (
     <div className={styles.container}>
       <div
         style={{
-          backgroundColor: currentColor.hex,
+          backgroundColor: currentColor,
         }}
         className={styles.currentColorSquare}
         onClick={() => {
@@ -54,11 +63,11 @@ const EventColorPicker = ({ taskId }: { taskId: string }) => {
         <div ref={ref} className={styles.palette}>
           {calendarColors.map((color) => (
             <div
-              key={color.hex}
+              key={color}
               onClick={() => {
                 handleClickColor(color);
               }}
-              style={{ backgroundColor: color.hex }}
+              style={{ backgroundColor: color }}
               className={styles.colorSquare}
             ></div>
           ))}

@@ -7,7 +7,6 @@ import {
 } from "@/utils/calendarUtils";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
-import { calendarColors } from "@/data/calendarColors";
 
 // Days of the week starting from Sunday (index 0)
 const daysFromSunday = [

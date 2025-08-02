@@ -5,7 +5,7 @@ import { Planner } from "@prisma/client";
 
 // Utils
 import {
-  getRootParent,
+  getRootParentId,
   getSortedTreeBottomLayer,
   getGoalTree,
   deleteGoal_ReturnArray,
@@ -71,7 +71,7 @@ export function moveToMiddle({
   );
 
   // Root parent of the goal
-  const goalRootParent: string | undefined = getRootParent(
+  const goalRootParent: string | undefined = getRootParentId(
     mainPlanner,
     movedTask.id
   );

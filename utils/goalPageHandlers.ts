@@ -1,6 +1,7 @@
 import { Planner } from "@prisma/client";
 import React from "react";
 import { v4 as uuidv4 } from "uuid";
+import { calendarColors } from "@/data/calendarColors";
 
 import { updateDependenciesOnDelete_ReturnArray } from "@/utils/goal-handlers/update-dependencies/updateDependenciesOnDelete";
 import { SimpleEvent } from "@prisma/client";
@@ -8,7 +9,7 @@ interface AddSubtaskInterface {
   userId?: string;
   mainPlanner: Planner[];
   setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
-  parentId: string;
+  task: Planner;
   taskDuration: number;
   taskTitle: string;
   resetTaskState: () => void;
@@ -18,7 +19,7 @@ export function addSubtask({
   userId,
   mainPlanner,
   setMainPlanner,
-  parentId,
+  task,
   taskDuration,
   taskTitle,
   resetTaskState,
@@ -29,7 +30,7 @@ export function addSubtask({
     const newTask: Planner = {
       title: taskTitle,
       id: newId,
-      parentId: parentId || null,
+      parentId: task.id || null,
       type: "goal",
       isReady: true,
       duration: taskDuration < 5 ? 5 : taskDuration,
@@ -38,13 +39,14 @@ export function addSubtask({
       dependency: null,
       completedStartTime: null,
       completedEndTime: null,
+      color: (task?.color as string) || calendarColors[0],
       userId,
     };
 
     const newPlanner = [...mainPlanner, newTask];
     const updatedPlanner = updateDependenciesOnCreate(
       newPlanner,
-      parentId,
+      task.id,
       newId
     );
 
@@ -83,10 +85,10 @@ export function deleteGoal({
     }
 
     // Get goal-tree (all IDs under the goal to be deleted)
-    const treeIds: string[] = getTreeIds(newTaskArray, taskId);
+    const treeIds: string[] = getTaskTreeIds(newTaskArray, taskId);
 
     // Find the root parent
-    const rootParent = getRootParent(newTaskArray, taskId);
+    const rootParent = getRootParentId(newTaskArray, taskId);
 
     // Filter out the tasks to be deleted
     newTaskArray = newTaskArray.filter((t) => !treeIds.includes(t.id));
@@ -129,7 +131,7 @@ export function deleteGoal_ReturnArray({
     });
   }
 
-  const treeIds: string[] = getTreeIds(mainPlanner, taskId);
+  const treeIds: string[] = getTaskTreeIds(mainPlanner, taskId);
 
   return (newArray = newArray.filter((t) => !treeIds.includes(t.id)));
 }
@@ -155,7 +157,7 @@ export function updateDependenciesOnCreate(
     return updatedPlanner;
 
   // Get the ID of the root task/goal
-  const rootParentId = getRootParent(updatedPlanner, parentId);
+  const rootParentId = getRootParentId(updatedPlanner, parentId);
 
   if (!rootParentId) {
     return updatedPlanner;
@@ -264,7 +266,7 @@ export function getSortedTreeBottomLayer(
 }
 
 // GET GOAL ROOT PARENT
-export function getRootParent(
+export function getRootParentId(
   mainPlanner: Planner[],
   id: string
 ): string | undefined {
@@ -281,7 +283,7 @@ export function getRootParent(
   }
 
   // Recursively find the root parent by looking at the parentId
-  return getRootParent(mainPlanner, task.parentId);
+  return getRootParentId(mainPlanner, task.parentId);
 }
 
 // SORT TASKS BY DEPENDENCIES
@@ -399,24 +401,6 @@ export function sortTasksByDependencies(
   return sortedArray;
 }
 
-export function getTaskIdTree(mainPlanner: Planner[], id: string): string[] {
-  const subtasks: Planner[] = mainPlanner.filter(
-    (task) => task.parentId === id
-  );
-
-  return subtasks.reduce(
-    (allIds: string[], task: Planner) => {
-      // Accumulate the current task's ID and its descendants' IDs
-      return [
-        ...allIds,
-        task.id, // Include the current task's ID
-        ...getTaskIdTree(mainPlanner, task.id), // Include the IDs of the entire tree under the current task
-      ];
-    },
-    [id]
-  ); // Start with the root ID itself
-}
-
 // GET BOTTOM (ACTIONABLE) LAYER OF GOAL
 export function getTreeBottomLayer(
   mainPlanner: Planner[],
@@ -435,7 +419,7 @@ export function getTreeBottomLayer(
 }
 
 // GET ALL IDs IN THE TREE
-export function getTreeIds(mainPlanner: Planner[], id: string): string[] {
+export function getTaskTreeIds(mainPlanner: Planner[], id: string): string[] {
   // Get the current task's subtasks
   const subtasks: Planner[] = mainPlanner.filter(
     (task) => task.parentId === id
@@ -444,10 +428,24 @@ export function getTreeIds(mainPlanner: Planner[], id: string): string[] {
   // Collect the current task's ID and all its subtasks' IDs
   return subtasks.reduce(
     (allIds: string[], task: Planner) => {
-      return [...allIds, ...getTreeIds(mainPlanner, task.id)];
+      return [...allIds, ...getTaskTreeIds(mainPlanner, task.id)];
     },
     [id]
   ); // Include the current task's id in the result
+}
+
+export function getCompleteTaskTreeIds(
+  mainPlanner: Planner[],
+  id: string
+): string[] {
+  const task = mainPlanner.find((task) => task.id === id);
+
+  if (!task?.parentId) {
+    return getTaskTreeIds(mainPlanner, id);
+  } else {
+    const rootParent = getRootParentId(mainPlanner, id);
+    return rootParent ? getTaskTreeIds(mainPlanner, rootParent) : [];
+  }
 }
 
 // GET ALL TASKS IN THE TREE

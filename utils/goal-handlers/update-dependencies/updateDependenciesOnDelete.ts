@@ -10,7 +10,7 @@ import { updateTaskArray } from "@/utils/goal-handlers/update-dependencies/updat
 
 import { InstructionType } from "@/utils/goal-handlers/update-dependencies/updateDependenciesUtils";
 
-import { getRootParent } from "@/utils/goalPageHandlers";
+import { getRootParentId } from "@/utils/goalPageHandlers";
 
 import React from "react";
 
@@ -33,7 +33,7 @@ export function updateDependenciesOnDelete({
     bottomLayer
   );
 
-  const rootParentId = getRootParent(mainPlanner, taskId);
+  const rootParentId = getRootParentId(mainPlanner, taskId);
 
   const firstItem = sortedLayer[0];
   const lastItem = sortedLayer[sortedLayer.length - 1];
@@ -116,7 +116,7 @@ export function updateDependenciesOnDelete_ReturnArray({
 
   let updatedArray: Planner[] = [...mainPlanner];
 
-  const rootParentId = getRootParent(mainPlanner, taskId);
+  const rootParentId = getRootParentId(mainPlanner, taskId);
 
   const firstItem = sortedLayer[0];
   const lastItem = sortedLayer[sortedLayer.length - 1];
