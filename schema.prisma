@@ -145,6 +145,7 @@ model Planner {
   dependency         String?
   completedStartTime DateTime?
   completedEndTime   DateTime?
+  color              String?
 
   userId String
   user   User   @relation(fields: [userId], references: [id])

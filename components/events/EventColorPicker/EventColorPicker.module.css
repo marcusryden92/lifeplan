@@ -1,0 +1,34 @@
+.container {
+  position: relative;
+  width: fit-content;
+  background-color: white;
+  cursor: pointer;
+}
+
+.currentColorSquare {
+  height: 24px;
+  width: 24px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.colorSquare {
+  height: 24px;
+  width: 24px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.palette {
+  position: absolute;
+  background-color: white;
+  border: 1px solid #eeeeee;
+  display: grid;
+  top: 34px;
+  left: 0;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 4px;
+  padding: 6px;
+  z-index: 25;
+}

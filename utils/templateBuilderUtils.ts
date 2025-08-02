@@ -6,6 +6,7 @@ import { setTimeOnDate } from "@/utils/calendarUtils";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
+import { calendarColors } from "@/data/calendarColors";
 
 import { EventTemplate } from "@prisma/client";
 
