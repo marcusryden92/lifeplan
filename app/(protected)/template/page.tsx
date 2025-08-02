@@ -11,10 +11,10 @@ import headerStyles from "../calendar/components/CalendarHeader.module.css";
 export default function TasksPage() {
   const [templateEvents, setTemplateEvents] = useState<SimpleEvent[]>([]); // State to manage events
 
-  const { setCurrentTemplate } = useDataContext();
+  const { setMainPlanner } = useDataContext();
 
   const handleDeleteAll = () => {
-    setCurrentTemplate([]);
+    setMainPlanner(undefined, undefined, []);
     setTemplateEvents([]);
   };
 
