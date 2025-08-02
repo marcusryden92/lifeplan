@@ -148,6 +148,7 @@ export const Navbar = () => {
           </Button>
         </div>
       </div>
+      <div className="mb-4" />
     </nav>
   );
 };
