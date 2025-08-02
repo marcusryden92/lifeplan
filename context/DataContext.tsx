@@ -63,6 +63,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const LOG_MAIN_PLANNER = false;
   const LOG_CALENDAR = false;
   const LOG_TEMPLATE = false;
+  const ENABLE_SERVER_SYNC = true;
 
   // State definitions
   const [focusedTask, setFocusedTask] = useState<string | null>(null);
@@ -132,14 +133,16 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
       setCurrentTemplate(newTemplate);
 
       // Queue the server sync operation
-      return queueServerSync(
-        newPlanner,
-        newCalendar,
-        newTemplate,
-        mainPlannerDispatch,
-        setCurrentCalendar,
-        setCurrentTemplate
-      );
+      if (ENABLE_SERVER_SYNC) {
+        return queueServerSync(
+          newPlanner,
+          newCalendar,
+          newTemplate,
+          mainPlannerDispatch,
+          setCurrentCalendar,
+          setCurrentTemplate
+        );
+      } else return Promise.resolve();
     },
     [
       weekStartDay,
