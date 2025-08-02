@@ -59,6 +59,13 @@ export default [
         { checksVoidReturn: false },
       ],
       "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          varsIgnorePattern: "^_",
+          argsIgnorePattern: "^_",
+        },
+      ],
     },
     settings: {
       react: {

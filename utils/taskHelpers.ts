@@ -3,7 +3,7 @@ import { SimpleEvent } from "@prisma/client";
 import { getMinuteDifference } from "./calendar-generation/calendarGenerationHelpers";
 import { floorMinutes } from "./calendarUtils";
 
-export function getPlannerAndCalendarForCompetedTask(
+export function getPlannerAndCalendarForCompletedTask(
   mainPlanner: Planner[],
   currentCalendar: SimpleEvent[] = [],
   event: SimpleEvent
@@ -22,9 +22,9 @@ export function getPlannerAndCalendarForCompetedTask(
 
   const manuallyUpdatedTaskArray = mainPlanner.map((task) => {
     if (task.id === event.id) {
-      // If completed is defined, set to undefined
+      // If completed is defined, set to null
       if (taskIsCompleted(task)) {
-        return { ...task, completed: undefined };
+        return { ...task, completedStartTime: null, completedEndTime: null };
       }
 
       // If inside the event, set end-time to right now
@@ -38,17 +38,16 @@ export function getPlannerAndCalendarForCompetedTask(
         // push the start time back to make the event at least 5 minutes long.
         const startTime =
           minuteDifference < 20
-            ? new Date(currentTime.getTime() - 20 * 60 * 1000).toISOString()
-            : eventStartDate.toISOString();
+            ? new Date(currentTime.getTime() - 20 * 60 * 1000)
+            : eventStartDate;
 
-        const endTime = currentTime.toISOString();
+        const endTime = currentTime;
 
-        const completed = {
-          startTime: startTime,
-          endTime: endTime,
+        return {
+          ...task,
+          completedStartTime: startTime,
+          completedEndTime: endTime,
         };
-
-        return { ...task, completed };
       } else if (floorMinutes(currentTime) < floorMinutes(event.start)) {
         const duration =
           task.duration ||
@@ -56,21 +55,23 @@ export function getPlannerAndCalendarForCompetedTask(
 
         const startTime = new Date(
           currentTime.getTime() - duration * 60 * 1000
-        ).toISOString();
+        );
 
-        const endTime = currentTime.toISOString();
+        const endTime = currentTime;
 
-        const completed = {
-          startTime: startTime,
-          endTime: endTime,
+        return {
+          ...task,
+          completedStartTime: startTime,
+          completedEndTime: endTime,
         };
-
-        return { ...task, completed };
       }
 
       // Else, set end-time to event endtime
-      const completed = { startTime: event.start, endTime: event.end };
-      return { ...task, completed };
+      return {
+        ...task,
+        completedStartTime: event.start,
+        completedEndTime: event.end,
+      };
     }
 
     return task;

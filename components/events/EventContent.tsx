@@ -11,7 +11,7 @@ import { SimpleEvent } from "@prisma/client";
 import { useDataContext } from "@/context/DataContext";
 import {
   taskIsCompleted,
-  getPlannerAndCalendarForCompetedTask,
+  getPlannerAndCalendarForCompletedTask,
 } from "@/utils/taskHelpers";
 import { floorMinutes } from "@/utils/calendarUtils";
 import { deleteGoal } from "@/utils/goalPageHandlers";
@@ -106,7 +106,9 @@ const EventContent: React.FC<EventContentProps> = ({
     if (isCompleted) {
       setIsCompleted(false);
       const updatedPlanner = mainPlanner.map((item) =>
-        item.id === event.id ? { ...item, completed: undefined } : item
+        item.id === event.id
+          ? { ...item, completedStartTime: null, completedEndTime: null }
+          : item
       );
       setMainPlanner(updatedPlanner);
     }
@@ -116,7 +118,7 @@ const EventContent: React.FC<EventContentProps> = ({
     else {
       setIsCompleted(true);
       setTimeout(() => {
-        const result = getPlannerAndCalendarForCompetedTask(
+        const result = getPlannerAndCalendarForCompletedTask(
           mainPlanner,
           currentCalendar,
           event

@@ -33,12 +33,13 @@ export async function syncCalendarData(
 
     // === Planner: UPDATE ===
     for (const plannerUpdate of update) {
+      const { userId: _userId, ...rest } = plannerUpdate;
+
       operations.push(
         db.planner.update({
           where: { id: plannerUpdate.id },
           data: {
-            ...plannerUpdate,
-            userId,
+            ...rest,
           },
         })
       );
