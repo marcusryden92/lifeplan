@@ -11,7 +11,7 @@ import luxonPlugin from "@fullcalendar/luxon";
 
 import EventContent from "@/components/events/EventContent";
 
-import { SimpleEvent } from "@prisma/client";
+import { SimpleEvent } from "@/prisma/generated/client";
 import type { EventInput } from "@fullcalendar/core/index.js";
 import { useDataContext } from "@/context/DataContext";
 

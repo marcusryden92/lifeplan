@@ -1,5 +1,5 @@
-import { SimpleEvent } from "@prisma/client";
-import { Planner } from "@prisma/client";
+import { SimpleEvent } from "@/prisma/generated/client";
+import { Planner } from "@/prisma/generated/client";
 import { taskIsCompleted } from "../taskHelpers";
 
 export function addDateItemsToArray(

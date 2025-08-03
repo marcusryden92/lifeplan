@@ -8,7 +8,7 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
-  output   = "./node_modules/.prisma/client"
+  output   = "./generated/client"
 }
 
 // --- Authentication Models ---
@@ -106,23 +106,23 @@ enum WeekDayType {
 
 // CalendarEvent model with relation to User and embedded RRule
 model SimpleEvent {
-  id       String @id @default(cuid())
+  id       String   @id @default(cuid())
   title    String
   start    DateTime
   end      DateTime
   duration Int?
   userId   String
-  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  rrule         String?
+  rrule String?
 
-  isTemplateItem Boolean
+  isTemplateItem  Boolean
   backgroundColor String
-  borderColor String
+  borderColor     String
 
   createdAt DateTime? @default(now())
   updatedAt DateTime? @updatedAt
- 
+
   @@map("SimpleEvents")
 }
 
@@ -160,8 +160,8 @@ model EventTemplate {
   startDay  WeekDayType // Weekday name
   startTime String // Time in "HH:mm" format
   duration  Int // Duration in minutes
-  createdAt DateTime?    @default(now())
-  updatedAt DateTime?    @updatedAt
+  createdAt DateTime?   @default(now())
+  updatedAt DateTime?   @updatedAt
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

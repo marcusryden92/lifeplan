@@ -1,6 +1,6 @@
 import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";
 
-import { SimpleEvent } from "@prisma/client";
+import { SimpleEvent } from "@/prisma/generated/client";
 import { EventInput } from "@fullcalendar/core/index.js";
 import { RRule, Weekday } from "rrule";
 

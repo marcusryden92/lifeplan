@@ -1,7 +1,7 @@
 // calendarEventHandlers.ts
 
 import FullCalendar from "@fullcalendar/react";
-import { SimpleEvent } from "@prisma/client";
+import { SimpleEvent } from "@/prisma/generated/client";
 import {
   DateSelectArg,
   EventDropArg,

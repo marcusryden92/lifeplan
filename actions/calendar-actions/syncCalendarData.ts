@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { SimpleEvent, Planner, EventTemplate } from "@prisma/client";
+import { SimpleEvent, Planner, EventTemplate } from "@/prisma/generated/client";
 
 export async function syncCalendarData(
   userId: string,

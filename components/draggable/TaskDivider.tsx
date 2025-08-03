@@ -5,7 +5,7 @@ import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import { useDataContext } from "@/context/DataContext";
 
 import { moveToEdge } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/moveToEdge";
-import { Planner } from "@prisma/client";
+import { Planner } from "@/prisma/generated/client";
 
 import styles from "./TaskDivider.module.css";
 

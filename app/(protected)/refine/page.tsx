@@ -17,7 +17,7 @@ import Goal from "./_components/Goal";
 import GoalsSidebar from "./_components/GoalsSidebar";
 
 // Local utilities
-import { Planner } from "@prisma/client";
+import { Planner } from "@/prisma/generated/client";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { toggleGoalIsReady } from "@/utils/goal-handlers/toggleGoalIsReady";
 

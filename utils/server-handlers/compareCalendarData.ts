@@ -1,6 +1,6 @@
 "use client";
 
-import { Planner, SimpleEvent, EventTemplate } from "@prisma/client";
+import { Planner, SimpleEvent, EventTemplate } from "@/prisma/generated/client";
 import { objectsAreEqual } from "../generalUtils";
 import { syncCalendarData } from "@/actions/calendar-actions/syncCalendarData";
 

@@ -19,8 +19,8 @@ import TaskList from "./TaskList";
 import RootTaskListWrapper from "./task-item-subcomponents/RootTaskListWrapper";
 
 // Local utilities
-import { Planner } from "@prisma/client";
-import { SimpleEvent } from "@prisma/client";
+import { Planner } from "@/prisma/generated/client";
+import { SimpleEvent } from "@/prisma/generated/client";
 import { getSubtasksById } from "@/utils/goalPageHandlers";
 
 import {

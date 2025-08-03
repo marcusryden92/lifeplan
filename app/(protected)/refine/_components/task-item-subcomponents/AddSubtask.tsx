@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 
 // Definitions
 import { AddSubtaskProps } from "@/lib/taskItem";
-import type { Planner } from "@prisma/client";
+import type { Planner } from "@/prisma/generated/client";
 
 // Context
 import { useDataContext } from "@/context/DataContext";

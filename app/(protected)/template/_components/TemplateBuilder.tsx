@@ -11,7 +11,7 @@ import {
   getTemplateFromCalendar,
   populateTemplateCalendar,
 } from "@/utils/templateBuilderUtils";
-import { SimpleEvent } from "@prisma/client";
+import { SimpleEvent } from "@/prisma/generated/client";
 import {
   handleSelect,
   handleEventResize,

@@ -1,4 +1,4 @@
-import { Planner } from "@prisma/client";
+import { Planner } from "@/prisma/generated/client";
 
 import {
   getSubtasksById,

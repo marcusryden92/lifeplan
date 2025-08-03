@@ -1,5 +1,5 @@
 import React from "react";
-import { Planner } from "@prisma/client";
+import { Planner } from "@/prisma/generated/client";
 
 // Sets the value of the object's dependency to the value of the subject's dependency,
 // and sets the value of the subject's dependent's dependency to the id of the object

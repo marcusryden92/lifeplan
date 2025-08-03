@@ -20,7 +20,7 @@ import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
 
 import type { EventInput } from "@fullcalendar/core/index.js";
 
-import { Planner, SimpleEvent, EventTemplate } from "@prisma/client";
+import { Planner, SimpleEvent, EventTemplate } from "@/prisma/generated/client";
 
 interface DataContextType {
   userId: string;

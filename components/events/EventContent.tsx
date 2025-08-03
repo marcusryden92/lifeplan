@@ -7,7 +7,7 @@ import {
 
 import { useRef, useState, useEffect } from "react";
 
-import { SimpleEvent } from "@prisma/client";
+import { SimpleEvent } from "@/prisma/generated/client";
 import { useDataContext } from "@/context/DataContext";
 import {
   taskIsCompleted,

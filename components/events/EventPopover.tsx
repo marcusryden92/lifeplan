@@ -9,8 +9,8 @@ import {
   ClockIcon,
 } from "@heroicons/react/24/outline";
 import { createPortal } from "react-dom";
-import { SimpleEvent } from "@prisma/client";
-import { Planner } from "@prisma/client";
+import { SimpleEvent } from "@/prisma/generated/client";
+import { Planner } from "@/prisma/generated/client";
 import EventColorPicker from "./EventColorPicker/EventColorPicker";
 
 const formatTime = (date: Date) => {

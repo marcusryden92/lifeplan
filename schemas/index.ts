@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { UserRole } from "@prisma/client";
+import { UserRole } from "@/prisma/generated/client";
 
 export const SettingsSchema = z
   .object({

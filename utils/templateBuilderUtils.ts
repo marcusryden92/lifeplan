@@ -1,13 +1,13 @@
 import { EventApi } from "@fullcalendar/core";
 import { getWeekdayFromDate } from "@/utils/calendarUtils";
-import { SimpleEvent } from "@prisma/client";
+import { SimpleEvent } from "@/prisma/generated/client";
 import { shiftDate } from "@/utils/calendarUtils";
 import { setTimeOnDate } from "@/utils/calendarUtils";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 
-import { EventTemplate } from "@prisma/client";
+import { EventTemplate } from "@/prisma/generated/client";
 
 function getTimeFromDate(date: Date): string {
   const hours = date.getHours().toString().padStart(2, "0");
