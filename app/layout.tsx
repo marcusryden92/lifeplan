@@ -4,6 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import "./globals.css";
 import { DataContextProvider } from "@/context/DataContext";
+import StoreProvider from "@/context/StoreProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +21,7 @@ export default async function RootLayout({
   const session = await auth();
   return (
     <SessionProvider session={session}>
-      <DataContextProvider>
+      <StoreProvider>
         <html lang="en">
           <body
             className={`flex ${inter.className} bg-gray-200 h-auto min-h-[100vh] w-[100vw] overflow-x-hidden`}
@@ -31,7 +32,7 @@ export default async function RootLayout({
             {children}
           </body>
         </html>
-      </DataContextProvider>
+      </StoreProvider>
     </SessionProvider>
   );
 }

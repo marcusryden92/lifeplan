@@ -22,6 +22,7 @@
 - Add priority
 - Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).
 - Give notice when an item is too large to fit within the template
+- Maximum time of a goal per day
 
 - Add exceptions to template (like skip a day or move a particular repeating instance)
 - Add category function, so that a segment of time can be demarcated and relevant events

@@ -52,6 +52,10 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
   const user = useSession().data?.user;
   const userId = user?.id;
 
+  useEffect(() => {
+    console.log(user);
+  }, [user]);
+
   if (!userId) return null;
 
   // User settings with default values
