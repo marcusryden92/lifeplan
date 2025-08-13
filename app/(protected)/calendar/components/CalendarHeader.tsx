@@ -11,12 +11,12 @@ const CalendarHeader = ({
   initialDate,
   setInitialDate,
   resetCalendar,
-  manuallyUpdateCalendar,
+  manuallyRefreshCalendar,
 }: {
   initialDate: Date;
   setInitialDate: React.Dispatch<React.SetStateAction<Date>>;
   resetCalendar: () => void;
-  manuallyUpdateCalendar: () => void;
+  manuallyRefreshCalendar: () => void;
 }) => {
   const monthArray = useMemo(
     () => [
@@ -63,7 +63,7 @@ const CalendarHeader = ({
         <Button
           variant={"outline"}
           onClick={() => {
-            manuallyUpdateCalendar();
+            manuallyRefreshCalendar();
           }}
           className="rounded-lg text-gray-600 hover:bg-gray-100 transition-colors duration-200"
         >

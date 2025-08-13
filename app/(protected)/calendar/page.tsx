@@ -10,7 +10,7 @@ const CalendarPage = () => {
     currentCalendar,
     fullCalendarEvents,
     weekStartDay,
-    manuallyUpdateCalendar,
+    manuallyRefreshCalendar,
   } = useDataContext();
 
   const today = new Date();
@@ -28,7 +28,7 @@ const CalendarPage = () => {
         initialDate={initialDate}
         setInitialDate={setInitialDate}
         resetCalendar={resetCalendar}
-        manuallyUpdateCalendar={manuallyUpdateCalendar}
+        manuallyRefreshCalendar={manuallyRefreshCalendar}
       />
 
       <Calendar

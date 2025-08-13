@@ -43,7 +43,7 @@ interface DataContextType {
   setCurrentCalendar: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
   fullCalendarEvents: EventInput[] | undefined;
 
-  manuallyUpdateCalendar: () => void;
+  manuallyRefreshCalendar: () => void;
 }
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -159,7 +159,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
 
   // Manually update the calendar, for instance with the
   // 'Refresh Calendar' button
-  const manuallyUpdateCalendar = useCallback(() => {
+  const manuallyRefreshCalendar = useCallback(() => {
     const now = floorMinutes(new Date());
     if (currentTemplate && mainPlanner && currentCalendar) {
       const overdueIds = new Set<string>(
@@ -219,7 +219,7 @@ export const DataContextProvider = ({ children }: { children: ReactNode }) => {
     currentCalendar,
     setCurrentCalendar,
     fullCalendarEvents,
-    manuallyUpdateCalendar,
+    manuallyRefreshCalendar,
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
