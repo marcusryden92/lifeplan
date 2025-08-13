@@ -1,3 +1,5 @@
+"use client";
+
 import { useRef, useEffect, useCallback, useState } from "react";
 import { RootState } from "@/redux/store";
 import { Planner, SimpleEvent, EventTemplate } from "@/prisma/generated/client";

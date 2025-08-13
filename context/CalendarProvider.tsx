@@ -1,3 +1,5 @@
+"use client";
+
 import React, { createContext, useContext, ReactNode, useMemo } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
@@ -42,13 +44,12 @@ export default function CalendarProvider({
   const dispatch = useDispatch<AppDispatch>();
   const state = useSelector((state: RootState) => state);
 
+  const userId = state.user.user?.id;
+
   const { planner, calendar, template } = useMemo(
     () => state.calendar,
     [state.calendar]
   );
-
-  const userId = state.user.user?.id;
-  if (!userId) return;
 
   const weekStartDay: WeekDayIntegers = 1;
 
@@ -76,6 +77,8 @@ export default function CalendarProvider({
       : [];
     return newCal;
   }, [calendar]);
+
+  if (!userId) return;
 
   const value = {
     userId,
