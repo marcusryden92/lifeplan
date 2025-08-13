@@ -60,7 +60,7 @@ export default function RefineGoalsPage() {
   );
 
   const handleUpdateDeadline = useCallback(
-    (taskId: string, deadline: Date | null) => {
+    (taskId: string, deadline: string | null) => {
       updatePlannerArray((prevArray: Planner[]) =>
         prevArray.map((t) => (t.id === taskId ? { ...t, deadline } : t))
       );

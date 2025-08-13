@@ -21,23 +21,18 @@ export default async function RootLayout({
 }>) {
   const session = await auth();
   return (
-    <SessionProvider session={session}>
-      <StoreProvider>
-        <UserProvider>
-          <CalendarProvider>
-            <html lang="en">
-              <body
-                className={`flex ${inter.className} bg-gray-200 h-auto min-h-[100vh] w-[100vw] overflow-x-hidden`}
-
-                // className={`${inter.className} bg-cover bg-center bg-no-repeat min-h-screen`}
-                // style={{ backgroundImage: "url('/images/california.jpg')" }}
-              >
-                {children}
-              </body>
-            </html>
-          </CalendarProvider>
-        </UserProvider>
-      </StoreProvider>
-    </SessionProvider>
+    <html lang="en">
+      <body
+        className={`flex ${inter.className} bg-gray-200 h-auto min-h-[100vh] w-[100vw] overflow-x-hidden`}
+      >
+        <SessionProvider session={session}>
+          <StoreProvider>
+            <UserProvider>
+              <CalendarProvider>{children}</CalendarProvider>
+            </UserProvider>
+          </StoreProvider>
+        </SessionProvider>
+      </body>
+    </html>
   );
 }

@@ -1,10 +1,3 @@
-// --- Authentication Models ---
-
-enum UserRole {
-  ADMIN
-  USER
-}
-
 model User {
   id                    String                 @id @default(cuid())
   name                  String?
@@ -13,12 +6,12 @@ model User {
   image                 String?
   password              String?
   role                  UserRole               @default(USER)
-  accounts              Account[]
   isTwoFactorEnabled    Boolean                @default(false)
-  twoFactorConfirmation TwoFactorConfirmation?
-  SimpleEvent           SimpleEvent[]
-  Planner               Planner[]
   EventTemplate         EventTemplate[]
+  Planner               Planner[]
+  SimpleEvent           SimpleEvent[]
+  twoFactorConfirmation TwoFactorConfirmation?
+  accounts              Account[]
 
   @@map("users")
 }
@@ -29,15 +22,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String  @map("provider_account_id")
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
@@ -72,9 +64,11 @@ model TwoFactorToken {
 
 model TwoFactorConfirmation {
   id     String @id @default(cuid())
-  userId String // Fixed typo here
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId])
+enum UserRole {
+  ADMIN
+  USER
 }

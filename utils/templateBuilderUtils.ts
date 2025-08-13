@@ -36,6 +36,8 @@ export function getTemplateFromCalendar(
       (endDate.getTime() - startDate.getTime()) / (1000 * 60)
     );
 
+    const now = new Date();
+
     // Create new EventTemplate object
     const newEvent: EventTemplate = {
       userId: userId,
@@ -44,8 +46,8 @@ export function getTemplateFromCalendar(
       startDay: getWeekdayFromDate(startDate), // Assuming startDate is a Date object
       startTime: getTimeFromDate(startDate), // Assuming startDate is a Date object
       duration: durationMinutes, // Add duration in minutes
-      updatedAt: null,
-      createdAt: null,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
     };
 
     template.push(newEvent);
@@ -119,18 +121,20 @@ export function populateTemplateCalendar(
     const newEndDate = new Date(newStartDate);
     newEndDate.setMinutes(newEndDate.getMinutes() + event.duration);
 
+    const now = new Date();
+
     eventArray.push({
       userId,
       id: event.id, // Generate a unique ID for the event
       title: event.title,
-      start: newStartDate, // Convert Date to ISO string
-      end: newEndDate, // Convert Date to ISO string
+      start: newStartDate.toISOString(), // Convert Date to ISO string
+      end: newEndDate.toISOString(), // Convert Date to ISO string
       isTemplateItem: true,
       backgroundColor: "#1242B2",
       borderColor: "transparent",
       duration: null,
-      createdAt: null,
-      updatedAt: null,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
       rrule: null,
     });
   });

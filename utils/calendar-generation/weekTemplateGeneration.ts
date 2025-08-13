@@ -104,20 +104,22 @@ function addTemplateEvent(
     dtstart: startISO, // this should be an ISO string
   };
 
+  const now = new Date();
+
   // Set up the RRule object with the correct timezone and recurrence rule
   eventArray.push({
     userId,
     id: event.id,
     title: event.title,
-    start: newStartDate,
-    end: newEndDate,
+    start: newStartDate.toISOString(),
+    end: newEndDate.toISOString(),
     rrule: JSON.stringify(rule),
     duration: event.duration * 60 * 1000, // Convert duration to milliseconds
     isTemplateItem: true,
     backgroundColor: "#1242B2",
     borderColor: "transparent",
-    createdAt: null,
-    updatedAt: null,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
   });
 }
 
@@ -187,19 +189,21 @@ export function populateWeekWithTemplate(
     const newEndDate = new Date(newStartDate);
     newEndDate.setMinutes(newEndDate.getMinutes() + event.duration);
 
+    const now = new Date();
+
     templateEventArray.push({
       userId,
       id: event.id, // Generate a unique ID for the event
       title: event.title,
-      start: newStartDate, // Convert Date to ISO string
-      end: newEndDate, // Convert Date to ISO string
+      start: newStartDate.toISOString(), // Convert Date to ISO string
+      end: newEndDate.toISOString(), // Convert Date to ISO string
       isTemplateItem: true,
       backgroundColor: "#1242B2",
       borderColor: "transparent",
       duration: null,
       rrule: null,
-      createdAt: null,
-      updatedAt: null,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
     });
   });
 

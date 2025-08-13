@@ -46,8 +46,8 @@ export function getPlannerAndCalendarForCompletedTask(
 
         return {
           ...task,
-          completedStartTime: startTime,
-          completedEndTime: endTime,
+          completedStartTime: startTime.toISOString(),
+          completedEndTime: endTime.toISOString(),
         };
       } else if (floorMinutes(currentTime) < floorMinutes(event.start)) {
         const duration =
@@ -62,8 +62,8 @@ export function getPlannerAndCalendarForCompletedTask(
 
         return {
           ...task,
-          completedStartTime: startTime,
-          completedEndTime: endTime,
+          completedStartTime: startTime.toISOString(),
+          completedEndTime: endTime.toISOString(),
         };
       }
 

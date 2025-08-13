@@ -44,6 +44,8 @@ export const onSubmit = ({
     setEditIndex(null);
     setEditTitle("");
   } else {
+    const now = new Date();
+
     const newTask: Planner = {
       userId,
       title: values.title,
@@ -58,6 +60,8 @@ export const onSubmit = ({
       completedStartTime: null,
       completedEndTime: null,
       color: calendarColors[0],
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
     };
     updatePlannerArray((prevTasks) => [...prevTasks, newTask]);
   }

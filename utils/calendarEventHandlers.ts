@@ -19,21 +19,23 @@ export const handleSelect = (
   const { start, end } = selectInfo;
   const title = prompt("Enter event title:", "New Event");
 
+  const now = new Date();
+
   if (userId && title && calendarRef.current) {
     const calendarApi = calendarRef.current.getApi();
     const newEvent: SimpleEvent = {
       userId,
       title,
-      start: start,
-      end: end,
+      start: start.toISOString(),
+      end: end.toISOString(),
       id: Date.now().toString(),
       isTemplateItem: isTemplateItem,
       rrule: null,
       backgroundColor: "#007BFF",
       borderColor: "#000000",
       duration: null,
-      createdAt: null,
-      updatedAt: null,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
     };
 
     calendarApi.addEvent(newEvent as EventInput);
@@ -51,8 +53,8 @@ export const handleEventResize = (
       ev.id === event.id
         ? {
             ...ev,
-            start: event.start ? event.start : ev.start,
-            end: event.end ? event.end : ev.end,
+            start: event.start ? event.start.toISOString() : ev.start,
+            end: event.end ? event.end.toISOString() : ev.end,
           }
         : ev
     )
@@ -70,8 +72,8 @@ export const handleEventDrop = (
       ev.id === event.id
         ? {
             ...ev,
-            start: event.start ? event.start : ev.start,
-            end: event.end ? event.end : ev.end,
+            start: event.start ? event.start.toISOString() : ev.start,
+            end: event.end ? event.end.toISOString() : ev.end,
           }
         : ev
     )
@@ -85,6 +87,8 @@ export const handleEventCopy = (
   userId?: string
 ) => {
   if (userId && calendarRef.current) {
+    const now = new Date();
+
     const newEvent: SimpleEvent = {
       userId,
       title: event.title,
@@ -96,8 +100,8 @@ export const handleEventCopy = (
       backgroundColor: "#007BFF",
       borderColor: "#000000",
       duration: null,
-      createdAt: null,
-      updatedAt: null,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
     };
 
     const calendarApi = calendarRef.current.getApi();

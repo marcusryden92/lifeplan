@@ -26,6 +26,7 @@ export function addSubtask({
   resetTaskState,
 }: AddSubtaskInterface) {
   const newId = uuidv4();
+  const now = new Date();
 
   if (userId && taskDuration && taskTitle) {
     const newTask: Planner = {
@@ -42,6 +43,8 @@ export function addSubtask({
       completedEndTime: null,
       color: (task?.color as string) || calendarColors[0],
       userId,
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
     };
 
     const newPlanner = [...planner, newTask];

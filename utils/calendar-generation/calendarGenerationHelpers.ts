@@ -30,21 +30,25 @@ export function addDateItemsToArray(
   dateItems.forEach((date) => {
     if (date.starts && date.duration) {
       // Calculate the end time by adding duration (in minutes) to the start time
-      const end = new Date(date.starts.getTime() + date.duration * 60000); // 60000 ms = 1 minute
+      const end = new Date(
+        new Date(date.starts).getTime() + date.duration * 60000
+      ); // 60000 ms = 1 minute
+
+      const now = new Date();
 
       const newDate: SimpleEvent = {
         userId,
         title: date.title,
         id: JSON.stringify(new Date()),
         start: date.starts,
-        end: end, // Add the calculated end time here
+        end: end.toISOString(), // Add the calculated end time here
         isTemplateItem: false,
         backgroundColor: "black",
         borderColor: "black",
         duration: null,
         rrule: null,
-        createdAt: null,
-        updatedAt: null,
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
       };
 
       newArray.push(newDate);
@@ -83,6 +87,8 @@ export function addCompletedItemsToArray(
     if (item.completedStartTime && item.completedEndTime) {
       // Calculate the end time by adding duration (in minutes) to the start time
 
+      const now = new Date();
+
       const newDate: SimpleEvent = {
         userId,
         title: item.title,
@@ -94,8 +100,8 @@ export function addCompletedItemsToArray(
         borderColor: "#0ca66e",
         duration: null,
         rrule: null,
-        createdAt: null,
-        updatedAt: null,
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
       };
 
       newArray.push(newDate);
@@ -109,7 +115,7 @@ export function sortPlannersByDeadline(planners: Planner[]): Planner[] {
   return planners.sort((a, b) => {
     if (a.deadline && b.deadline) {
       // Both objects have deadlines, so compare them
-      return a.deadline.getTime() - b.deadline.getTime();
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
     } else if (a.deadline) {
       // a has a deadline, b does not, so a comes first
       return -1;

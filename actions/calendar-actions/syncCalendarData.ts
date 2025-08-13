@@ -18,6 +18,9 @@ export async function syncCalendarData(
   try {
     const operations = [];
 
+    const now = new Date();
+    const updatedAt = now.toISOString();
+
     // === Planner: CREATE ===
     if (create.length) {
       operations.push(
@@ -40,6 +43,7 @@ export async function syncCalendarData(
           where: { id: plannerUpdate.id },
           data: {
             ...rest,
+            updatedAt,
           },
         })
       );
@@ -75,6 +79,7 @@ export async function syncCalendarData(
           data: {
             ...event,
             userId,
+            updatedAt,
           },
         })
       );
@@ -111,6 +116,7 @@ export async function syncCalendarData(
             data: {
               ...template,
               userId,
+              updatedAt,
             },
           })
         );

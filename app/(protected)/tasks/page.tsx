@@ -117,7 +117,9 @@ export default function TasksPage() {
   const handleSetToTask = (index: number) => {
     setChangeToTask(index);
     setTaskDuration(planner[index].duration || undefined);
-    setSelectedDate(planner[index].deadline || undefined);
+    setSelectedDate(
+      planner[index].deadline ? new Date(planner[index].deadline) : undefined
+    );
   };
 
   const handleConfirmTask = (currentDuration: number | undefined) => {
@@ -132,7 +134,7 @@ export default function TasksPage() {
                 ...task,
                 type: "task",
                 duration: finalDuration,
-                deadline: selectedDate || null,
+                deadline: selectedDate?.toISOString() || null,
               }
             : task
         )

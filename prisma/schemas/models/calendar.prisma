@@ -1,44 +1,21 @@
-// --- Calendar Models ---
-
-enum WeekDayType {
-  sunday // index 0
-  monday // index 1
-  tuesday // index 2
-  wednesday // index 3
-  thursday // index 4
-  friday // index 5
-  saturday // index 6
-}
-
-// CalendarEvent model with relation to User and embedded RRule
 model SimpleEvent {
-  id       String   @id @default(cuid())
-  title    String
-  start    DateTime
-  end      DateTime
-  duration Int?
-  userId   String
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  rrule String?
-
+  id              String    @id @default(cuid())
+  title           String
+  start           DateTime
+  end             DateTime
+  duration        Int?
+  userId          String
+  rrule           String?
   isTemplateItem  Boolean
   backgroundColor String
   borderColor     String
-
-  createdAt DateTime? @default(now())
-  updatedAt DateTime? @updatedAt
+  createdAt       DateTime? @default(now())
+  updatedAt       DateTime?
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("SimpleEvents")
 }
 
-enum PlanType {
-  task
-  plan
-  goal
-}
-
-// Planner model for tracking tasks, plans, and goals
 model Planner {
   id                 String    @id @default(uuid())
   title              String
@@ -51,26 +28,39 @@ model Planner {
   dependency         String?
   completedStartTime DateTime?
   completedEndTime   DateTime?
+  userId             String
   color              String?
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user               User      @relation(fields: [userId], references: [id])
 
   @@map("Planners")
 }
 
-// --- EventTemplate Model ---
 model EventTemplate {
   id        String      @id @default(cuid())
   title     String
-  startDay  WeekDayType // Weekday name
-  startTime String // Time in "HH:mm" format
-  duration  Int // Duration in minutes
+  startDay  WeekDayType
+  startTime String
+  duration  Int
   createdAt DateTime?   @default(now())
-  updatedAt DateTime?   @updatedAt
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime?
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("EventTemplates")
+}
+
+enum WeekDayType {
+  sunday
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+  saturday
+}
+
+enum PlanType {
+  task
+  plan
+  goal
 }

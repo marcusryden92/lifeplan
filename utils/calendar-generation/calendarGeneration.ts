@@ -295,19 +295,21 @@ function addTaskToCalendar(
       const startTime = new Date(staticMarker);
       const endTime = new Date(movingMarker);
 
+      const now = new Date();
+
       const newEvent: SimpleEvent = {
         userId,
         id: item.id,
         title: item.title,
-        start: startTime, // ISO 8601 string format for FullCalendar
-        end: endTime, // ISO 8601 string format for FullCalendar
+        start: startTime.toISOString(), // ISO 8601 string format for FullCalendar
+        end: endTime.toISOString(), // ISO 8601 string format for FullCalendar
         isTemplateItem: false,
         backgroundColor: (item.color as string) || calendarColors[0],
         borderColor: "transparent",
         duration: null,
         rrule: null,
-        createdAt: null,
-        updatedAt: null,
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
       };
 
       eventArray.push(newEvent);

@@ -39,7 +39,7 @@ type GoalProps = {
   handleDeleteTask: (taskId: string) => void;
   handleConfirmEdit: (taskId: string, newTitle: string) => void;
   handleToggleReady: (taskId: string) => void;
-  handleUpdateDeadline: (taskId: string, deadline: Date | null) => void;
+  handleUpdateDeadline: (taskId: string, deadline: string | null) => void;
   devMode: boolean;
 };
 
@@ -55,7 +55,7 @@ const Goal = ({
   const [displayEdit, setDisplayEdit] = useState<boolean>(false);
   const [editTitle, setEditTitle] = useState<string>(task.title);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    task.deadline ?? undefined
+    task.deadline ? new Date(task.deadline) : undefined
   );
 
   // Get subtasks
@@ -72,8 +72,8 @@ const Goal = ({
 
   // Update parent component when selectedDate changes
   useEffect(() => {
-    if (selectedDate && selectedDate !== task.deadline) {
-      handleUpdateDeadline(task.id, selectedDate);
+    if (selectedDate && selectedDate.toISOString() !== task.deadline) {
+      handleUpdateDeadline(task.id, selectedDate.toISOString());
     }
   }, [selectedDate, task.id, task.deadline, handleUpdateDeadline]);
 

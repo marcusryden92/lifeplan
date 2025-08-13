@@ -42,13 +42,14 @@ export default function CalendarProvider({
   children: ReactNode;
 }) {
   const dispatch = useDispatch<AppDispatch>();
-  const state = useSelector((state: RootState) => state);
+  const userState = useSelector((state: RootState) => state.user);
+  const calendarState = useSelector((state: RootState) => state.calendar);
 
-  const userId = state.user.user?.id;
+  const userId = userState.user?.id;
 
   const { planner, calendar, template } = useMemo(
-    () => state.calendar,
-    [state.calendar]
+    () => calendarState,
+    [calendarState]
   );
 
   const weekStartDay: WeekDayIntegers = 1;
@@ -61,12 +62,13 @@ export default function CalendarProvider({
   } = useCalendarStateActions(dispatch);
 
   const manuallyRefreshCalendar = useManuallyRefreshCalendar(
-    state,
+    userId,
+    calendarState,
     weekStartDay,
     updateCalendarArray
   );
 
-  const initializeState = useCalendarServerSync(state);
+  const initializeState = useCalendarServerSync(userId, calendarState);
 
   useFetchCalendarData(userId, initializeState);
 

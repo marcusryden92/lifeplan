@@ -118,7 +118,9 @@ export default function TasksPage() {
   const handleSetToPlan = (index: number) => {
     setChangeToTask(index);
     setTaskDuration(planner[index].duration || undefined);
-    setSelectedDate(planner[index].starts || undefined);
+    setSelectedDate(
+      planner[index].starts ? new Date(planner[index].starts) : undefined
+    );
   };
 
   const handleConfirmPlan = (currentDuration: number | undefined) => {
@@ -137,7 +139,7 @@ export default function TasksPage() {
                 ...task,
                 type: "plan",
                 duration: finalDuration,
-                starts: selectedDate || undefined,
+                starts: selectedDate.toISOString() || null,
               }
             : task
         )

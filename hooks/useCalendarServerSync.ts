@@ -1,11 +1,17 @@
 "use client";
 
 import { useRef, useEffect, useCallback, useState } from "react";
-import { RootState } from "@/redux/store";
 import { Planner, SimpleEvent, EventTemplate } from "@/prisma/generated/client";
 import { handleServerTransaction } from "@/utils/server-handlers/compareCalendarData";
 
-const useCalendarServerSync = (state: RootState) => {
+const useCalendarServerSync = (
+  userId: string | undefined,
+  calendarState: {
+    planner: Planner[];
+    calendar: SimpleEvent[];
+    template: EventTemplate[];
+  }
+) => {
   // Previous state refs to track what the server has
   const previousPlanner = useRef<Planner[]>([]);
   const previousCalendar = useRef<SimpleEvent[]>([]);
@@ -13,8 +19,7 @@ const useCalendarServerSync = (state: RootState) => {
 
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const { planner, calendar, template } = state.calendar;
-  const id = state.user.user?.id;
+  const { planner, calendar, template } = calendarState;
 
   const initializeState = useCallback(
     (
@@ -32,11 +37,11 @@ const useCalendarServerSync = (state: RootState) => {
 
   useEffect(() => {
     const processServerSync = async () => {
-      if (!id) throw new Error("Id missing in processServerSync");
+      if (!userId) throw new Error("Id missing in processServerSync");
 
       try {
         const response = await handleServerTransaction(
-          id,
+          userId,
           planner,
           previousPlanner,
           calendar,
@@ -64,7 +69,7 @@ const useCalendarServerSync = (state: RootState) => {
     return () => {
       clearTimeout(timeout);
     };
-  }, [state.calendar]);
+  }, [calendarState]);
 
   return initializeState;
 };
