@@ -12,7 +12,7 @@ import { SimpleEvent } from "@/prisma/generated/client";
 const useManuallyRefreshCalendar = (
   state: RootState,
   weekStartDay: WeekDayIntegers,
-  setCalendar: (calendar: SimpleEvent[]) => void
+  updateCalendarArray: (calendar: SimpleEvent[]) => void
 ) => {
   const { planner, calendar, template } = state.calendar;
   const { user } = state.user;
@@ -39,7 +39,7 @@ const useManuallyRefreshCalendar = (
         filteredCalendar
       );
 
-      setCalendar(newCalendar);
+      updateCalendarArray(newCalendar);
     }
   }, []);
 

@@ -1,5 +1,4 @@
 import { Planner } from "@/prisma/generated/client";
-import React from "react";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
 
@@ -7,8 +6,10 @@ import { updateDependenciesOnDelete_ReturnArray } from "@/utils/goal-handlers/up
 import { SimpleEvent } from "@/prisma/generated/client";
 interface AddSubtaskInterface {
   userId?: string;
-  mainPlanner: Planner[];
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
+  planner: Planner[];
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[])
+  ) => void;
   task: Planner;
   taskDuration: number;
   taskTitle: string;
@@ -17,8 +18,8 @@ interface AddSubtaskInterface {
 
 export function addSubtask({
   userId,
-  mainPlanner,
-  setMainPlanner,
+  planner,
+  updatePlannerArray,
   task,
   taskDuration,
   taskTitle,
@@ -43,20 +44,20 @@ export function addSubtask({
       userId,
     };
 
-    const newPlanner = [...mainPlanner, newTask];
+    const newPlanner = [...planner, newTask];
     const updatedPlanner = updateDependenciesOnCreate(
       newPlanner,
       task.id,
       newId
     );
 
-    setMainPlanner(updatedPlanner);
+    updatePlannerArray(updatedPlanner);
     resetTaskState();
   }
 }
 
 interface DeleteGoalInterface {
-  setMainPlanner: (
+  updatePlannerArray: (
     arg: Planner[] | ((prev: Planner[]) => Planner[]),
     manuallyUpdatedCalendar?: SimpleEvent[]
   ) => void;
@@ -66,19 +67,19 @@ interface DeleteGoalInterface {
 }
 
 export function deleteGoal({
-  setMainPlanner,
+  updatePlannerArray,
   taskId,
   parentId,
   manuallyUpdatedCalendar,
 }: DeleteGoalInterface) {
-  setMainPlanner((mainPlanner: Planner[]) => {
+  updatePlannerArray((planner: Planner[]) => {
     // Create a working copy of the state
-    let newTaskArray = [...mainPlanner];
+    let newTaskArray = [...planner];
 
     if (parentId) {
       // Use your existing function that returns an updated array
       newTaskArray = updateDependenciesOnDelete_ReturnArray({
-        mainPlanner: newTaskArray,
+        planner: newTaskArray,
         taskId,
         parentId,
       });
@@ -109,29 +110,31 @@ export function deleteGoal({
 }
 
 interface DeleteGoalReturnArrayInterface {
-  mainPlanner: Planner[];
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
+  planner: Planner[];
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[])
+  ) => void;
   taskId: string;
   parentId?: string | undefined;
 }
 
 export function deleteGoal_ReturnArray({
-  mainPlanner,
+  planner,
   taskId,
   parentId,
 }: DeleteGoalReturnArrayInterface): Planner[] {
-  let newArray: Planner[] = mainPlanner;
+  let newArray: Planner[] = planner;
 
   // Corrected type
   if (parentId) {
     newArray = updateDependenciesOnDelete_ReturnArray({
-      mainPlanner,
+      planner,
       taskId,
       parentId,
     });
   }
 
-  const treeIds: string[] = getTaskTreeIds(mainPlanner, taskId);
+  const treeIds: string[] = getTaskTreeIds(planner, taskId);
 
   return (newArray = newArray.filter((t) => !treeIds.includes(t.id)));
 }
@@ -231,11 +234,11 @@ export function updateDependenciesOnCreate(
 
 // CHECK IF GOAL IS READY
 export const checkGoalForCompletion = (
-  mainPlanner: Planner[],
+  planner: Planner[],
   parentId: string
 ): boolean => {
-  const currentGoal = mainPlanner.find((t) => t.id === parentId); // Find current goal using parentId
-  const subtasks = getSubtasksById(mainPlanner, parentId); // Get subtasks from the current goal's ID
+  const currentGoal = planner.find((t) => t.id === parentId); // Find current goal using parentId
+  const subtasks = getSubtasksById(planner, parentId); // Get subtasks from the current goal's ID
 
   if (
     currentGoal &&
@@ -250,28 +253,28 @@ export const checkGoalForCompletion = (
 };
 
 // GET GOAL SUBTASKS FROM GOAL ID
-export function getSubtasksById(mainPlanner: Planner[], id: string): Planner[] {
-  const subtasks = mainPlanner.filter((task) => task.parentId === id);
+export function getSubtasksById(planner: Planner[], id: string): Planner[] {
+  const subtasks = planner.filter((task) => task.parentId === id);
   return subtasks;
 }
 
 export function getSortedTreeBottomLayer(
-  mainPlanner: Planner[],
+  planner: Planner[],
   id: string
 ): Planner[] {
-  const subtasks = getTreeBottomLayer(mainPlanner, id);
-  const sortedSubtasks = sortTasksByDependencies(mainPlanner, subtasks);
+  const subtasks = getTreeBottomLayer(planner, id);
+  const sortedSubtasks = sortTasksByDependencies(planner, subtasks);
 
   return sortedSubtasks;
 }
 
 // GET GOAL ROOT PARENT
 export function getRootParentId(
-  mainPlanner: Planner[],
+  planner: Planner[],
   id: string
 ): string | undefined {
   // Find the task by its id
-  const task = mainPlanner.find((task) => task.id === id);
+  const task = planner.find((task) => task.id === id);
 
   if (!task) {
     return undefined;
@@ -283,12 +286,12 @@ export function getRootParentId(
   }
 
   // Recursively find the root parent by looking at the parentId
-  return getRootParentId(mainPlanner, task.parentId);
+  return getRootParentId(planner, task.parentId);
 }
 
 // SORT TASKS BY DEPENDENCIES
 export function sortTasksByDependencies(
-  mainPlanner: Planner[],
+  planner: Planner[],
   tasksToSort: Planner[]
 ): Planner[] {
   // Arrays to hold different categories of tasks
@@ -303,7 +306,7 @@ export function sortTasksByDependencies(
       // 2. Or if task has a dependency, but the dependency ID can't be found among the siblings or their children
       (task.dependency &&
         !tasksToSort.some((otherTask) =>
-          idsExistsInDependenciesOf(mainPlanner, otherTask.id, task.dependency)
+          idsExistsInDependenciesOf(planner, otherTask.id, task.dependency)
         ))
     ) {
       // 3. Get all the items from the tasksToSort array that are NOT the one we're working with
@@ -313,13 +316,13 @@ export function sortTasksByDependencies(
 
       // 4. Check if either of the siblings (or their descendants) are dependent on the current task
       const hasSiblingDependents = siblings.some((t) =>
-        idsExistsInDependenciesOf(mainPlanner, task.id, t.id)
+        idsExistsInDependenciesOf(planner, task.id, t.id)
       );
 
       // 5. Check if the current task (or it its descendants) are dependent on any of the siblings
       //    (shouldn't be the case for a root task, or parent of root task)
       const isDependentOnSiblings = siblings.some((t) =>
-        idsExistsInDependenciesOf(mainPlanner, t.id, task.id)
+        idsExistsInDependenciesOf(planner, t.id, task.id)
       );
 
       // 6. If the task has siblings, and is not dependent on any of them, return true!
@@ -341,7 +344,7 @@ export function sortTasksByDependencies(
     const visited = new Set();
 
     function setBottomIds(id: string) {
-      currentTaskBottomLayerIds = getTreeBottomLayer(mainPlanner, id).map(
+      currentTaskBottomLayerIds = getTreeBottomLayer(planner, id).map(
         (task) => task.id
       );
     }
@@ -363,7 +366,7 @@ export function sortTasksByDependencies(
       // For every task in tasks
       const nextTask = tasksToSort.find((t) => {
         // Get the bottom layer
-        const bottomLayer = getTreeBottomLayer(mainPlanner, t.id);
+        const bottomLayer = getTreeBottomLayer(planner, t.id);
 
         if (bottomLayer && bottomLayer.length > 0) {
           // Find the item where the dependency matches the currentId
@@ -402,90 +405,75 @@ export function sortTasksByDependencies(
 }
 
 // GET BOTTOM (ACTIONABLE) LAYER OF GOAL
-export function getTreeBottomLayer(
-  mainPlanner: Planner[],
-  id: string
-): Planner[] {
-  const subtasks: Planner[] = mainPlanner.filter(
-    (task) => task.parentId === id
-  );
+export function getTreeBottomLayer(planner: Planner[], id: string): Planner[] {
+  const subtasks: Planner[] = planner.filter((task) => task.parentId === id);
 
-  if (subtasks.length === 0)
-    return mainPlanner.filter((task) => task.id === id);
+  if (subtasks.length === 0) return planner.filter((task) => task.id === id);
 
   return subtasks.reduce((bottomLayer: Planner[], task: Planner) => {
-    return [...bottomLayer, ...getTreeBottomLayer(mainPlanner, task.id)];
+    return [...bottomLayer, ...getTreeBottomLayer(planner, task.id)];
   }, []);
 }
 
 // GET ALL IDs IN THE TREE
-export function getTaskTreeIds(mainPlanner: Planner[], id: string): string[] {
+export function getTaskTreeIds(planner: Planner[], id: string): string[] {
   // Get the current task's subtasks
-  const subtasks: Planner[] = mainPlanner.filter(
-    (task) => task.parentId === id
-  );
+  const subtasks: Planner[] = planner.filter((task) => task.parentId === id);
 
   // Collect the current task's ID and all its subtasks' IDs
   return subtasks.reduce(
     (allIds: string[], task: Planner) => {
-      return [...allIds, ...getTaskTreeIds(mainPlanner, task.id)];
+      return [...allIds, ...getTaskTreeIds(planner, task.id)];
     },
     [id]
   ); // Include the current task's id in the result
 }
 
 export function getCompleteTaskTreeIds(
-  mainPlanner: Planner[],
+  planner: Planner[],
   id: string
 ): string[] {
-  const task = mainPlanner.find((task) => task.id === id);
+  const task = planner.find((task) => task.id === id);
 
   if (!task?.parentId) {
-    return getTaskTreeIds(mainPlanner, id);
+    return getTaskTreeIds(planner, id);
   } else {
-    const rootParent = getRootParentId(mainPlanner, id);
-    return rootParent ? getTaskTreeIds(mainPlanner, rootParent) : [];
+    const rootParent = getRootParentId(planner, id);
+    return rootParent ? getTaskTreeIds(planner, rootParent) : [];
   }
 }
 
 // GET ALL TASKS IN THE TREE
-export function getGoalTree(mainPlanner: Planner[], id: string): Planner[] {
+export function getGoalTree(planner: Planner[], id: string): Planner[] {
   // Get the current task's subtasks
-  const subtasks: Planner[] = mainPlanner.filter(
-    (task) => task.parentId === id
-  );
+  const subtasks: Planner[] = planner.filter((task) => task.parentId === id);
 
   // Collect the current task's object and all its subtasks' objects
   return subtasks.reduce(
     (allTasks: Planner[], task: Planner) => {
-      return [...allTasks, ...getGoalTree(mainPlanner, task.id)];
+      return [...allTasks, ...getGoalTree(planner, task.id)];
     },
-    [mainPlanner.find((task) => task.id === id)!] // Include the current task's object in the result
+    [planner.find((task) => task.id === id)!] // Include the current task's object in the result
   );
 }
 
 // Check if any ID's in the main tree matches any of the dependencies in the tree to check
 export function idsExistsInDependenciesOf(
-  mainPlanner: Planner[],
+  planner: Planner[],
   mainTaskId: string | null,
   dependenciesToCheckId: string | null
 ): boolean {
   // Make sure the function can run
-  if (
-    !mainPlanner ||
-    mainPlanner.length === 0 ||
-    !mainTaskId ||
-    !dependenciesToCheckId
-  )
+  if (!planner || planner.length === 0 || !mainTaskId || !dependenciesToCheckId)
     return false;
 
   // Get all the id's from the main tree
-  const mainTaskBottomLayer = getTreeBottomLayer(mainPlanner, mainTaskId);
+  const mainTaskBottomLayer = getTreeBottomLayer(planner, mainTaskId);
   const mainTaskBottomLayerIds = mainTaskBottomLayer.map((t) => t.id);
 
   // Get all the dependencies from the tree to check
   const taskToCheckBottomLayer = getTreeBottomLayer(
-    mainPlanner,
+    planner,
     dependenciesToCheckId
   );
 

@@ -1,11 +1,11 @@
 import styles from "./EventColorPicker.module.css";
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 import { calendarColors } from "@/data/calendarColors";
 import { getCompleteTaskTreeIds } from "@/utils/goalPageHandlers";
 import { useMemo, useState, useEffect, useRef } from "react";
 
 const EventColorPicker = ({ taskId }: { taskId: string }) => {
-  const { setMainPlanner, mainPlanner, currentCalendar } = useDataContext();
+  const { updateAll, planner, calendar } = useCalendarProvider();
   const [paletteIsOpen, setPaletteIsOpen] = useState(false);
 
   const ref = useRef<HTMLDivElement>(null);
@@ -24,27 +24,27 @@ const EventColorPicker = ({ taskId }: { taskId: string }) => {
   }, []);
 
   const currentTaskTree = useMemo(() => {
-    return getCompleteTaskTreeIds(mainPlanner, taskId);
-  }, [mainPlanner]);
+    return getCompleteTaskTreeIds(planner, taskId);
+  }, [planner]);
 
   const currentColor = useMemo(() => {
-    const thisTask = mainPlanner.find((item) => item.id === taskId);
+    const thisTask = planner.find((item) => item.id === taskId);
 
     return (thisTask?.color as string) || calendarColors[0];
-  }, [mainPlanner, taskId]);
+  }, [planner, taskId]);
 
   const handleClickColor = (color: string) => {
-    const newPlanner = mainPlanner.map((item) =>
+    const newPlanner = planner.map((item) =>
       currentTaskTree.includes(item.id) ? { ...item, color: color } : item
     );
 
-    const newCalendar = currentCalendar.map((item) =>
+    const newCalendar = calendar.map((item) =>
       currentTaskTree.includes(item.id)
         ? { ...item, backgroundColor: color }
         : item
     );
 
-    setMainPlanner(newPlanner, newCalendar);
+    updateAll(newPlanner, newCalendar);
     setPaletteIsOpen(false);
   };
 

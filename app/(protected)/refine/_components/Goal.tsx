@@ -30,14 +30,12 @@ import {
 import EventColorPicker from "@/components/events/EventColorPicker/EventColorPicker";
 
 type GoalProps = {
-  mainPlanner: Planner[];
+  planner: Planner[];
   task: Planner;
-  focusedTask: string | null;
-  setMainPlanner: (
+  updatePlannerArray: (
     arg: Planner[] | ((prev: Planner[]) => Planner[]),
     manuallyUpdatedCalendar?: SimpleEvent[]
   ) => void;
-  setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
   handleDeleteTask: (taskId: string) => void;
   handleConfirmEdit: (taskId: string, newTitle: string) => void;
   handleToggleReady: (taskId: string) => void;
@@ -46,10 +44,8 @@ type GoalProps = {
 };
 
 const Goal = ({
-  mainPlanner,
+  planner,
   task,
-  focusedTask,
-  setFocusedTask,
   handleDeleteTask,
   handleConfirmEdit,
   handleToggleReady,
@@ -64,14 +60,14 @@ const Goal = ({
 
   // Get subtasks
   const subtasks = useMemo(
-    () => getSubtasksById(mainPlanner, task.id),
-    [mainPlanner, task.id]
+    () => getSubtasksById(planner, task.id),
+    [planner, task.id]
   );
 
   // Calculate total duration with memoization
   const totalDuration = useMemo(
-    () => totalSubtaskDuration(task.id, mainPlanner),
-    [task.id, mainPlanner]
+    () => totalSubtaskDuration(task.id, planner),
+    [task.id, planner]
   );
 
   // Update parent component when selectedDate changes
@@ -204,11 +200,7 @@ const Goal = ({
         {/* SUBTASKS LIST */}
         <div className="flex py-2 overflow-y-scroll w-full no-scrollbar flex-grow">
           <RootTaskListWrapper subtasksLength={subtasks.length}>
-            <TaskList
-              id={task.id}
-              focusedTask={focusedTask}
-              setFocusedTask={setFocusedTask}
-            />
+            <TaskList id={task.id} />
           </RootTaskListWrapper>
         </div>
 

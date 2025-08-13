@@ -13,8 +13,10 @@ import { CarouselApi } from "@/components/ui/Carousel";
 interface GoalsSidebarProps {
   userId: string | undefined;
   goalsList: Planner[];
-  mainPlanner: Planner[];
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
+  planner: Planner[];
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[])
+  ) => void;
   carouselIndex: number | undefined;
   setCarouselIndex: React.Dispatch<React.SetStateAction<number | undefined>>;
   carouselApi: [
@@ -26,26 +28,26 @@ interface GoalsSidebarProps {
 export default function GoalsSidebar({
   userId,
   goalsList,
-  mainPlanner,
-  setMainPlanner,
+  planner,
+  updatePlannerArray,
   carouselIndex,
   setCarouselIndex,
   carouselApi,
 }: GoalsSidebarProps) {
   const [api] = carouselApi;
   const handleDeleteAll = useCallback(() => {
-    const filteredArray = mainPlanner.filter(
+    const filteredArray = planner.filter(
       (task) => task.type === "goal" && !task.parentId
     );
 
     filteredArray.forEach((item) =>
       deleteGoal({
-        setMainPlanner,
+        updatePlannerArray,
         taskId: item.id,
         parentId: item.parentId,
       })
     );
-  }, [mainPlanner, setMainPlanner]);
+  }, [planner, updatePlannerArray]);
 
   return (
     <CardContent className="max-w-[220px] pl-0 pr-[2.5rem] mb-8 flex flex-col items-center justify-between">

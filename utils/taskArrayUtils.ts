@@ -2,35 +2,32 @@ import { Planner } from "@/prisma/generated/client";
 import { getSubtasksById } from "./goalPageHandlers";
 
 export function getTaskById(
-  mainPlanner: Planner[],
+  planner: Planner[],
   id: string
 ): Planner | undefined {
-  return mainPlanner.find((task) => task.id === id); // Find and return the task with the matching id
+  return planner.find((task) => task.id === id); // Find and return the task with the matching id
 }
 
 export const handleDeleteTaskById = (
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
+  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   taskId: string
 ) => {
-  setMainPlanner(
+  updatePlannerArray(
     (prevTasks) => prevTasks.filter((task) => task.id !== taskId) // Filter out the task with the matching id
   );
 };
 
-export function totalSubtaskDuration(
-  id: string,
-  mainPlanner: Planner[]
-): number {
+export function totalSubtaskDuration(id: string, planner: Planner[]): number {
   // console.log(`Calculating duration for task ID: ${id}`);
 
-  const task = mainPlanner.find((t) => t.id === id);
+  const task = planner.find((t) => t.id === id);
 
   if (!task) {
     // console.log(`Task not found for ID: ${id}`);
     return 0; // Task not found
   }
 
-  const subtasks = getSubtasksById(mainPlanner, id); // Returns an array of Planner objects
+  const subtasks = getSubtasksById(planner, id); // Returns an array of Planner objects
   // console.log(`Subtasks found for ID ${id}:`, subtasks);
 
   // If the task has no subtasks, return its duration if it's a goal
@@ -43,7 +40,7 @@ export function totalSubtaskDuration(
 
   // Loop through each subtask and accumulate their durations
   for (const subtask of subtasks) {
-    const subtaskDuration = totalSubtaskDuration(subtask.id, mainPlanner); // Get the duration of each subtask
+    const subtaskDuration = totalSubtaskDuration(subtask.id, planner); // Get the duration of each subtask
     // console.log(`Subtask ID: ${subtask.id} has duration: ${subtaskDuration}`);
     totalDuration += subtaskDuration; // Add the duration of each subtask
   }

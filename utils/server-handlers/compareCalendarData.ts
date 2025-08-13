@@ -6,11 +6,11 @@ import { syncCalendarData } from "@/actions/calendar-actions/syncCalendarData";
 
 export async function handleServerTransaction(
   userId: string,
-  mainPlanner: Planner[],
+  planner: Planner[],
   previousPlanner: { current: Planner[] },
-  currentCalendar: SimpleEvent[],
+  calendar: SimpleEvent[],
   previousCalendar: { current: SimpleEvent[] },
-  currentTemplate?: EventTemplate[],
+  template?: EventTemplate[],
   previousTemplate?: { current: EventTemplate[] }
 ) {
   const {
@@ -24,11 +24,11 @@ export async function handleServerTransaction(
     updateTemplate,
     destroyTemplate,
   } = compareData(
-    mainPlanner,
+    planner,
     previousPlanner,
-    currentCalendar,
+    calendar,
     previousCalendar,
-    currentTemplate,
+    template,
     previousTemplate
   );
 
@@ -49,18 +49,16 @@ export async function handleServerTransaction(
 }
 
 export function compareData(
-  mainPlanner: Planner[],
+  planner: Planner[],
   previousPlanner: { current: Planner[] },
-  currentCalendar: SimpleEvent[],
+  calendar: SimpleEvent[],
   previousCalendar: { current: SimpleEvent[] },
-  currentTemplate?: EventTemplate[],
+  template?: EventTemplate[],
   previousTemplate?: { current: EventTemplate[] }
 ) {
   // Check planner changes
   const prevPlan: Planner[] = [...previousPlanner.current];
-  const plannerMap = new Map(
-    mainPlanner.map((planner) => [planner.id, planner])
-  );
+  const plannerMap = new Map(planner.map((planner) => [planner.id, planner]));
   const prevPlanMap = new Map(prevPlan.map((planner) => [planner.id, planner]));
 
   const create: Planner[] = [];
@@ -86,9 +84,7 @@ export function compareData(
 
   // Check calendar changes
   const prevCal: SimpleEvent[] = [...previousCalendar.current];
-  const calendarMap = new Map(
-    currentCalendar.map((event) => [event.id, event])
-  );
+  const calendarMap = new Map(calendar.map((event) => [event.id, event]));
   const prevCalMap = new Map(prevCal.map((event) => [event.id, event]));
 
   const createEvent: SimpleEvent[] = [];
@@ -117,10 +113,10 @@ export function compareData(
   const updateTemplate: EventTemplate[] = [];
   const destroyTemplate: EventTemplate[] = [];
 
-  if (currentTemplate && previousTemplate) {
+  if (template && previousTemplate) {
     const prevTemp: EventTemplate[] = [...previousTemplate.current];
     const templateMap = new Map(
-      currentTemplate.map((template) => [template.id, template])
+      template.map((template) => [template.id, template])
     );
     const prevTempMap = new Map(
       prevTemp.map((template) => [template.id, template])

@@ -2,10 +2,10 @@ import { Planner } from "@/prisma/generated/client";
 import React from "react";
 
 export function toggleGoalIsReady(
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
+  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   taskId: string
 ) {
-  setMainPlanner((prev) =>
+  updatePlannerArray((prev) =>
     prev.map((task) => {
       if (task.id !== taskId) return task;
       return {
@@ -17,11 +17,11 @@ export function toggleGoalIsReady(
 }
 
 export function setGoalIsReady(
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
+  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   taskId: string,
   isReady: boolean | null
 ) {
-  setMainPlanner((prev) =>
+  updatePlannerArray((prev) =>
     prev.map((task) => {
       if (task.id !== taskId) return task;
       return {

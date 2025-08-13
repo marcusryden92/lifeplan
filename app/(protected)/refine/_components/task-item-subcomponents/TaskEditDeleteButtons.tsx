@@ -6,7 +6,7 @@ import { TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
 import React from "react";
 
 // Data context
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 
 // Utils
 import { deleteGoal } from "@/utils/goalPageHandlers";
@@ -20,10 +20,10 @@ const TaskEditDeleteButtons: React.FC<TaskEditDeleteButtonsProps> = ({
   setDisplayEdit,
   setDisplayAddSubtask,
 }) => {
-  const { setMainPlanner } = useDataContext();
+  const { updatePlannerArray } = useCalendarProvider();
   const handleDelete = () => {
     deleteGoal({
-      setMainPlanner,
+      updatePlannerArray,
       taskId: task.id,
       parentId: task.parentId,
     });

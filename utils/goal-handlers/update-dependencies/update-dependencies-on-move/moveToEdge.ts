@@ -1,5 +1,4 @@
 import { Planner } from "@/prisma/generated/client";
-import React from "react";
 
 import {
   getGoalTree,
@@ -12,34 +11,36 @@ import { assert } from "@/utils/assert/assert";
 import { ClickedItem } from "@/lib/taskItem";
 
 type MoveToEdgeProps = {
-  mainPlanner: Planner[];
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
+  planner: Planner[];
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[])
+  ) => void;
   currentlyClickedItem: ClickedItem;
   targetId: string;
   mouseLocationInItem: "top" | "bottom";
 };
 
 export function moveToEdge({
-  mainPlanner,
-  setMainPlanner,
+  planner,
+  updatePlannerArray,
   currentlyClickedItem,
   targetId,
   mouseLocationInItem,
 }: MoveToEdgeProps) {
   // Check that arguments are defined
-  if (!mainPlanner || !currentlyClickedItem || !targetId) return;
+  if (!planner || !currentlyClickedItem || !targetId) return;
 
   if (targetId === currentlyClickedItem.taskId) return;
 
   // The task we're moving
-  const movedTask: Planner | undefined = mainPlanner.find(
+  const movedTask: Planner | undefined = planner.find(
     (t) => t.id === currentlyClickedItem.taskId
   );
 
   assert(movedTask, "Couldn't find movedTask in moveToMiddle.");
 
   // The target
-  const targetTask: Planner | undefined = mainPlanner.find(
+  const targetTask: Planner | undefined = planner.find(
     (t) => t.id === targetId
   );
 
@@ -52,7 +53,7 @@ export function moveToEdge({
   assert(targetTask, "Couldn't find targetTask in moveToMiddle.");
 
   // Get the tree bottom layer for task, in order to properly update dependencies
-  const sortedBottomLayer = getSortedTreeBottomLayer(mainPlanner, movedTask.id);
+  const sortedBottomLayer = getSortedTreeBottomLayer(planner, movedTask.id);
 
   // Get the first and last Bottom Layer Item (BLI) of the moved task,
   // for setting correct dependencies
@@ -60,11 +61,11 @@ export function moveToEdge({
   const movedTaskLastBLI: Planner =
     sortedBottomLayer[sortedBottomLayer.length - 1];
 
-  let movedTaskTree = getGoalTree(mainPlanner, movedTask.id);
+  let movedTaskTree = getGoalTree(planner, movedTask.id);
 
   let updatedArray: Planner[] = deleteGoal_ReturnArray({
-    mainPlanner,
-    setMainPlanner,
+    planner,
+    updatePlannerArray,
     taskId: movedTask.id,
     parentId: movedTask.parentId ?? undefined,
   });
@@ -141,5 +142,5 @@ export function moveToEdge({
 
   updatedArray.push(...movedTaskTree);
 
-  setMainPlanner(updatedArray);
+  updatePlannerArray(updatedArray);
 }

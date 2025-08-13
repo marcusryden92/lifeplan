@@ -23,9 +23,10 @@ interface DraggableContextType {
   setCurrentlyHoveredItem: React.Dispatch<SetStateAction<string | null>>;
   currentlyClickedItem: ClickedItem | null;
   setCurrentlyClickedItem: React.Dispatch<SetStateAction<ClickedItem | null>>;
-
   displayDragBox: boolean;
   setDisplayDragBox: React.Dispatch<SetStateAction<boolean>>;
+  focusedTask: string | null;
+  setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 const DraggableContext = createContext<DraggableContextType | null>(null);
@@ -42,6 +43,7 @@ export const DraggableContextProvider = ({
   const [currentlyClickedItem, setCurrentlyClickedItem] =
     useState<ClickedItem>(null);
   const [displayDragBox, setDisplayDragBox] = useState<boolean>(false);
+  const [focusedTask, setFocusedTask] = useState<string | null>(null);
 
   useEffect(() => {
     function resetDisplayDragBox() {
@@ -63,6 +65,8 @@ export const DraggableContextProvider = ({
     setCurrentlyClickedItem,
     displayDragBox,
     setDisplayDragBox,
+    focusedTask,
+    setFocusedTask,
   };
 
   return (

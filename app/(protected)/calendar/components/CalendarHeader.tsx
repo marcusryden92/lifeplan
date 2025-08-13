@@ -10,12 +10,12 @@ import styles from "./CalendarHeader.module.css";
 const CalendarHeader = ({
   initialDate,
   setInitialDate,
-  resetCalendar,
+  reupdateCalendarArray,
   manuallyRefreshCalendar,
 }: {
   initialDate: Date;
   setInitialDate: React.Dispatch<React.SetStateAction<Date>>;
-  resetCalendar: () => void;
+  reupdateCalendarArray: () => void;
   manuallyRefreshCalendar: () => void;
 }) => {
   const monthArray = useMemo(
@@ -74,7 +74,7 @@ const CalendarHeader = ({
       <span className="flex-1 flex justify-end space-x-2">
         <Button
           variant={"outline"}
-          onClick={resetCalendar}
+          onClick={reupdateCalendarArray}
           className="mr-3 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors duration-200"
         >
           Today

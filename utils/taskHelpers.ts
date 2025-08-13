@@ -4,8 +4,8 @@ import { getMinuteDifference } from "./calendar-generation/calendarGenerationHel
 import { floorMinutes } from "./calendarUtils";
 
 export function getPlannerAndCalendarForCompletedTask(
-  mainPlanner: Planner[],
-  currentCalendar: SimpleEvent[] = [],
+  planner: Planner[],
+  calendar: SimpleEvent[] = [],
   event: SimpleEvent
 ):
   | {
@@ -17,10 +17,11 @@ export function getPlannerAndCalendarForCompletedTask(
   const currentTime = new Date();
   const eventStartDate = new Date(event.start);
 
-  const manuallyUpdatedCalendar: SimpleEvent[] | undefined =
-    currentCalendar?.filter((e) => !(e.id === event.id));
+  const manuallyUpdatedCalendar: SimpleEvent[] | undefined = calendar?.filter(
+    (e) => !(e.id === event.id)
+  );
 
-  const manuallyUpdatedTaskArray = mainPlanner.map((task) => {
+  const manuallyUpdatedTaskArray = planner.map((task) => {
     if (task.id === event.id) {
       // If completed is defined, set to null
       if (taskIsCompleted(task)) {

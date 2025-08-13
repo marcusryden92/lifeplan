@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 import TaskItem from "./TaskItem";
 import TaskDivider from "@/components/draggable/TaskDivider";
 import { TaskListProps } from "@/lib/taskItem";
@@ -12,81 +12,74 @@ import {
 } from "@/utils/goalPageHandlers";
 import { Planner } from "@/prisma/generated/client";
 
-const TaskList: React.FC<TaskListProps> = React.memo(
-  ({ id, subtasks, focusedTask, setFocusedTask }) => {
-    const { mainPlanner, setMainPlanner } = useDataContext();
+const TaskList: React.FC<TaskListProps> = React.memo(({ id, subtasks }) => {
+  const { planner, updatePlannerArray } = useCalendarProvider();
 
-    // State to handle sorted tasks
-    const [sortedTasks, setSortedTasks] = useState<Planner[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
+  // State to handle sorted tasks
+  const [sortedTasks, setSortedTasks] = useState<Planner[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-    useEffect(() => {
-      const fetchData = () => {
-        const subtasksToUse = subtasks || getSubtasksById(mainPlanner, id);
-        if (!subtasksToUse.length) {
-          setLoading(false);
-          return;
-        }
-
-        const thisTask = getTaskById(mainPlanner, id);
-        if (!thisTask) {
-          setLoading(false);
-          return;
-        }
-
-        const sorted = sortTasksByDependencies(mainPlanner, subtasksToUse);
-        setSortedTasks(sorted);
+  useEffect(() => {
+    const fetchData = () => {
+      const subtasksToUse = subtasks || getSubtasksById(planner, id);
+      if (!subtasksToUse.length) {
         setLoading(false);
-      };
+        return;
+      }
 
-      fetchData();
-    }, [id, subtasks, mainPlanner]);
+      const thisTask = getTaskById(planner, id);
+      if (!thisTask) {
+        setLoading(false);
+        return;
+      }
 
-    if (loading) {
-      return <div className="p-4 text-neutral-300 italic ">Loading...</div>; // Optional: show loading state while waiting for async operation
-    }
+      const sorted = sortTasksByDependencies(planner, subtasksToUse);
+      setSortedTasks(sorted);
+      setLoading(false);
+    };
 
-    /* if (!sortedTasks.length) {
+    fetchData();
+  }, [id, subtasks, planner]);
+
+  if (loading) {
+    return <div className="p-4 text-neutral-300 italic ">Loading...</div>; // Optional: show loading state while waiting for async operation
+  }
+
+  /* if (!sortedTasks.length) {
     return null; // Return early if no sorted tasks
   } */
 
-    return (
-      <div
-        className={`flex flex-col justify-start flex-grow w-full ${
-          subtasks && subtasks.length > 0 && "mb-2"
-        }`}
-      >
-        {sortedTasks.length > 0 && (
-          <>
-            {sortedTasks.map((task) => (
-              <div key={task.id}>
-                <TaskDivider
-                  mainPlanner={mainPlanner}
-                  setMainPlanner={setMainPlanner}
-                  targetId={task.id}
-                  mouseLocationInItem="top"
-                />
-                <TaskItem
-                  mainPlanner={mainPlanner}
-                  task={task}
-                  focusedTask={focusedTask}
-                  setFocusedTask={setFocusedTask}
-                />
-              </div>
-            ))}
+  return (
+    <div
+      className={`flex flex-col justify-start flex-grow w-full ${
+        subtasks && subtasks.length > 0 && "mb-2"
+      }`}
+    >
+      {sortedTasks.length > 0 && (
+        <>
+          {sortedTasks.map((task) => (
+            <div key={task.id}>
+              <TaskDivider
+                planner={planner}
+                updatePlannerArray={updatePlannerArray}
+                targetId={task.id}
+                mouseLocationInItem="top"
+              />
+              <TaskItem planner={planner} task={task} />
+            </div>
+          ))}
 
-            <TaskDivider
-              mainPlanner={mainPlanner}
-              setMainPlanner={setMainPlanner}
-              targetId={sortedTasks[sortedTasks.length - 1].id}
-              mouseLocationInItem="bottom"
-            />
-          </>
-        )}
-      </div>
-    );
-  }
-);
+          <TaskDivider
+            planner={planner}
+            updatePlannerArray={updatePlannerArray}
+            targetId={sortedTasks[sortedTasks.length - 1].id}
+            mouseLocationInItem="bottom"
+          />
+        </>
+      )}
+    </div>
+  );
+});
 
 TaskList.displayName = "TaskList";
 

@@ -49,7 +49,7 @@ export function useFetchCalendarData(
           template: newData.template,
         };
 
-        dispatch(calendarSlice.actions.setCalendarData(calendarData));
+        dispatch(calendarSlice.actions.updateCalendarArrayData(calendarData));
         initializeState(newData.planner, newData.calendar, newData.template);
       } catch (err) {
         setError(err as Error);

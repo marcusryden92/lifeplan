@@ -2,23 +2,23 @@
 import { useState } from "react";
 import Calendar from "./components/Calendar";
 import CalendarHeader from "./components/CalendarHeader";
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 const CalendarPage = () => {
   const {
-    currentCalendar,
+    calendar,
     fullCalendarEvents,
     weekStartDay,
     manuallyRefreshCalendar,
-  } = useDataContext();
+  } = useCalendarProvider();
 
   const today = new Date();
   const [initialDate, setInitialDate] = useState<Date>(
     getWeekFirstDate(weekStartDay, today)
   );
 
-  const resetCalendar = () => {
+  const reupdateCalendarArray = () => {
     setInitialDate(getWeekFirstDate(weekStartDay, today));
   };
 
@@ -27,12 +27,12 @@ const CalendarPage = () => {
       <CalendarHeader
         initialDate={initialDate}
         setInitialDate={setInitialDate}
-        resetCalendar={resetCalendar}
+        reupdateCalendarArray={reupdateCalendarArray}
         manuallyRefreshCalendar={manuallyRefreshCalendar}
       />
 
       <Calendar
-        initialEvents={currentCalendar}
+        initialEvents={calendar}
         fullCalendarEvents={fullCalendarEvents}
         initialDate={initialDate}
       />

@@ -8,7 +8,7 @@ import {
 import { useRef, useState, useEffect } from "react";
 
 import { SimpleEvent } from "@/prisma/generated/client";
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   taskIsCompleted,
   getPlannerAndCalendarForCompletedTask,
@@ -38,7 +38,8 @@ const EventContent: React.FC<EventContentProps> = ({
   onEdit,
   onCopy,
 }) => {
-  const { mainPlanner, setMainPlanner, currentCalendar } = useDataContext();
+  const { planner, updatePlannerArray, updateAll, calendar } =
+    useCalendarProvider();
 
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
@@ -72,7 +73,7 @@ const EventContent: React.FC<EventContentProps> = ({
     }
   }, [elementHeight, showPopover]);
 
-  const task = mainPlanner.find((task) => task.id === event.id);
+  const task = planner.find((task) => task.id === event.id);
   const [onHover, setOnHover] = useState<boolean>(false);
 
   const currentTime = new Date();
@@ -105,29 +106,29 @@ const EventContent: React.FC<EventContentProps> = ({
     // If already completed, set completed to undefined
     if (isCompleted) {
       setIsCompleted(false);
-      const updatedPlanner = mainPlanner.map((item) =>
+      const updatedPlanner = planner.map((item) =>
         item.id === event.id
           ? { ...item, completedStartTime: null, completedEndTime: null }
           : item
       );
-      setMainPlanner(updatedPlanner);
+      updatePlannerArray(updatedPlanner);
     }
 
-    // If not completed, update the mainPlanner with the
+    // If not completed, update the planner with the
     // new values, and calculate a new calendar from that
     else {
       setIsCompleted(true);
       setTimeout(() => {
         const result = getPlannerAndCalendarForCompletedTask(
-          mainPlanner,
-          currentCalendar,
+          planner,
+          calendar,
           event
         );
 
         if (result) {
           const { manuallyUpdatedTaskArray, manuallyUpdatedCalendar } = result;
 
-          setMainPlanner(
+          updateAll(
             (prev) => manuallyUpdatedTaskArray || prev,
             manuallyUpdatedCalendar
           );
@@ -137,10 +138,8 @@ const EventContent: React.FC<EventContentProps> = ({
   };
 
   const handlePostponeTask = () => {
-    const updatedCalendar = currentCalendar?.filter(
-      (e) => !(e.id === event.id)
-    );
-    if (updatedCalendar) setMainPlanner((prev) => prev, updatedCalendar);
+    const updatedCalendar = calendar?.filter((e) => !(e.id === event.id));
+    if (updatedCalendar) updateAll((prev) => prev, updatedCalendar);
   };
 
   const handleClickDelete = () => {
@@ -152,20 +151,18 @@ const EventContent: React.FC<EventContentProps> = ({
       parentElement.style.border = `solid 2px ${red}`;
     }
 
-    const updatedCalendar = currentCalendar?.filter(
-      (e) => !(e.id === task?.id)
-    );
+    const updatedCalendar = calendar?.filter((e) => !(e.id === task?.id));
 
     setTimeout(() => {
       if (task?.type === "goal") {
         deleteGoal({
-          setMainPlanner,
+          updatePlannerArray,
           taskId: task.id,
           parentId: task.parentId || null,
           manuallyUpdatedCalendar: updatedCalendar,
         });
       } else if (task) {
-        deletePlanner(setMainPlanner, task.id, updatedCalendar);
+        deletePlanner(updatePlannerArray, task.id, updatedCalendar);
       }
     }, 500);
 
@@ -174,24 +171,24 @@ const EventContent: React.FC<EventContentProps> = ({
 
   const handleUpdateTitle = (newTitle: string) => {
     // Update the title in the calendar event
-    const updatedEvents = currentCalendar?.map((calEvent) => {
+    const updatedEvents = calendar?.map((calEvent) => {
       if (calEvent.id === event.id) {
         return { ...calEvent, title: newTitle };
       }
       return calEvent;
     });
 
-    if (updatedEvents) setMainPlanner((prev) => prev, updatedEvents);
+    if (updatedEvents) updateAll((prev) => prev, updatedEvents);
 
     // Update the title in the planner
-    const updatedPlanner = mainPlanner.map((item) => {
+    const updatedPlanner = planner.map((item) => {
       if (item.id === event.id) {
         return { ...item, title: newTitle };
       }
       return item;
     });
 
-    setMainPlanner(updatedPlanner);
+    updatePlannerArray(updatedPlanner);
     setUpdatedTitle(newTitle);
   };
 

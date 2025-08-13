@@ -12,39 +12,34 @@ import { InstructionType } from "@/utils/goal-handlers/update-dependencies/updat
 
 import { getRootParentId } from "@/utils/goalPageHandlers";
 
-import React from "react";
-
 interface UpdateDependenciesOnDeleteInterface {
-  mainPlanner: Planner[];
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
+  planner: Planner[];
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[])
+  ) => void;
   taskId: string;
   parentId: string | undefined;
 }
 
 export function updateDependenciesOnDelete({
-  mainPlanner,
-  setMainPlanner,
+  planner,
+  updatePlannerArray,
   taskId,
   parentId,
 }: UpdateDependenciesOnDeleteInterface) {
-  const bottomLayer: Planner[] = getTreeBottomLayer(mainPlanner, taskId);
-  const sortedLayer: Planner[] = sortTasksByDependencies(
-    mainPlanner,
-    bottomLayer
-  );
+  const bottomLayer: Planner[] = getTreeBottomLayer(planner, taskId);
+  const sortedLayer: Planner[] = sortTasksByDependencies(planner, bottomLayer);
 
-  const rootParentId = getRootParentId(mainPlanner, taskId);
+  const rootParentId = getRootParentId(planner, taskId);
 
   const firstItem = sortedLayer[0];
   const lastItem = sortedLayer[sortedLayer.length - 1];
 
-  const itemBeforeFirst = mainPlanner.find(
-    (t) => t.id === firstItem.dependency
-  );
-  const itemAfterLast = mainPlanner.find((t) => t.dependency === lastItem.id);
+  const itemBeforeFirst = planner.find((t) => t.id === firstItem.dependency);
+  const itemAfterLast = planner.find((t) => t.dependency === lastItem.id);
 
   const hasSiblings = parentId
-    ? getSubtasksById(mainPlanner, parentId).length > 1
+    ? getSubtasksById(planner, parentId).length > 1
     : undefined;
 
   const instructions: InstructionType[] = [];
@@ -92,42 +87,37 @@ export function updateDependenciesOnDelete({
 
   // Ensure all instructions are applied before moving forward
   return new Promise<void>((resolve) => {
-    updateTaskArray(setMainPlanner, instructions);
+    updateTaskArray(updatePlannerArray, instructions);
     setTimeout(resolve, 0);
   });
 }
 
 interface UpdateDependenciesOnDeleteInterface_ReturnArray {
-  mainPlanner: Planner[];
+  planner: Planner[];
   taskId: string;
   parentId: string | null;
 }
 
 export function updateDependenciesOnDelete_ReturnArray({
-  mainPlanner,
+  planner,
   taskId,
   parentId,
 }: UpdateDependenciesOnDeleteInterface_ReturnArray) {
-  const bottomLayer: Planner[] = getTreeBottomLayer(mainPlanner, taskId);
-  const sortedLayer: Planner[] = sortTasksByDependencies(
-    mainPlanner,
-    bottomLayer
-  );
+  const bottomLayer: Planner[] = getTreeBottomLayer(planner, taskId);
+  const sortedLayer: Planner[] = sortTasksByDependencies(planner, bottomLayer);
 
-  let updatedArray: Planner[] = [...mainPlanner];
+  let updatedArray: Planner[] = [...planner];
 
-  const rootParentId = getRootParentId(mainPlanner, taskId);
+  const rootParentId = getRootParentId(planner, taskId);
 
   const firstItem = sortedLayer[0];
   const lastItem = sortedLayer[sortedLayer.length - 1];
 
-  const itemBeforeFirst = mainPlanner.find(
-    (t) => t.id === firstItem.dependency
-  );
-  const itemAfterLast = mainPlanner.find((t) => t.dependency === lastItem.id);
+  const itemBeforeFirst = planner.find((t) => t.id === firstItem.dependency);
+  const itemAfterLast = planner.find((t) => t.dependency === lastItem.id);
 
   const hasSiblings = parentId
-    ? getSubtasksById(mainPlanner, parentId).length > 1
+    ? getSubtasksById(planner, parentId).length > 1
     : undefined;
 
   if (itemBeforeFirst && itemAfterLast) {

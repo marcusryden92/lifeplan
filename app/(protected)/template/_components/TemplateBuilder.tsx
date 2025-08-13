@@ -5,7 +5,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 
 import {
   getTemplateFromCalendar,
@@ -26,36 +26,38 @@ import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
 
 interface TemplateBuilderProps {
   templateEvents: SimpleEvent[];
-  setTemplateEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
+  updateTemplateArrayEvents: React.Dispatch<
+    React.SetStateAction<SimpleEvent[]>
+  >;
 }
 
 export default function TemplateBuilder({
   templateEvents,
-  setTemplateEvents,
+  updateTemplateArrayEvents,
 }: TemplateBuilderProps) {
   const calendarRef = useRef<FullCalendar>(null);
-  const { userId, currentTemplate, setMainPlanner, weekStartDay } =
-    useDataContext();
+  const { userId, template, updateTemplateArray, weekStartDay } =
+    useCalendarProvider();
 
   const fullcalendarEvents = useMemo(() => {
     return transformEventsForFullCalendar(templateEvents);
   }, [templateEvents]);
 
   useEffect(() => {
-    if (currentTemplate && currentTemplate.length > 0 && calendarRef.current) {
+    if (template && template.length > 0 && calendarRef.current) {
       const calendarApi = calendarRef.current.getApi();
       const events = calendarApi.getEvents().map((e) => e.toPlainObject());
       const newCalendar = populateTemplateCalendar(
         userId,
         weekStartDay,
-        currentTemplate
+        template
       );
 
       if (JSON.stringify(events) !== JSON.stringify(newCalendar)) {
-        setTemplateEvents(newCalendar);
+        updateTemplateArrayEvents(newCalendar);
       }
     }
-  }, [currentTemplate]);
+  }, [template]);
 
   useEffect(() => {
     updateTemplate();
@@ -67,8 +69,8 @@ export default function TemplateBuilder({
       const events = calendarApi.getEvents();
       const newTemplate = getTemplateFromCalendar(userId, events);
 
-      if (JSON.stringify(currentTemplate) !== JSON.stringify(newTemplate)) {
-        setMainPlanner(undefined, undefined, newTemplate);
+      if (JSON.stringify(template) !== JSON.stringify(newTemplate)) {
+        updateTemplateArray(newTemplate);
       }
     }
   };
@@ -102,12 +104,20 @@ export default function TemplateBuilder({
       eventResizableFromStart={true}
       selectable={true}
       select={(selectInfo) =>
-        handleSelect(userId, calendarRef, setTemplateEvents, selectInfo, true)
+        handleSelect(
+          userId,
+          calendarRef,
+          updateTemplateArrayEvents,
+          selectInfo,
+          true
+        )
       }
       eventResize={(resizeInfo) =>
-        handleEventResize(setTemplateEvents, resizeInfo)
+        handleEventResize(updateTemplateArrayEvents, resizeInfo)
       }
-      eventDrop={(dropInfo) => handleEventDrop(setTemplateEvents, dropInfo)}
+      eventDrop={(dropInfo) =>
+        handleEventDrop(updateTemplateArrayEvents, dropInfo)
+      }
       allDaySlot={false}
       dayHeaderFormat={{ weekday: "short" }}
       eventContent={({ event }: ExtendedEventContentArg) => {
@@ -119,16 +129,24 @@ export default function TemplateBuilder({
               onEdit={() =>
                 handleEventEdit(
                   calendarRef,
-                  setTemplateEvents,
+                  updateTemplateArrayEvents,
                   templateEvents,
                   event.id
                 )
               }
               onCopy={() =>
-                handleEventCopy(calendarRef, setTemplateEvents, simpleEvent)
+                handleEventCopy(
+                  calendarRef,
+                  updateTemplateArrayEvents,
+                  simpleEvent
+                )
               }
               onDelete={() =>
-                handleEventDelete(calendarRef, setTemplateEvents, event.id)
+                handleEventDelete(
+                  calendarRef,
+                  updateTemplateArrayEvents,
+                  event.id
+                )
               }
               showButtons={true}
             />

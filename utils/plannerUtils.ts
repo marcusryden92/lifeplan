@@ -1,21 +1,19 @@
 import { Planner } from "@/prisma/generated/client";
 import { SimpleEvent } from "@/prisma/generated/client";
 export const deletePlanner = (
-  setMainPlanner: (
+  updatePlannerArray: (
     arg: Planner[] | ((prev: Planner[]) => Planner[]),
     manuallyUpdatedCalendar?: SimpleEvent[]
   ) => void,
   taskId: string,
-  currentCalendar?: SimpleEvent[]
+  calendar?: SimpleEvent[]
 ) => {
   let manuallyUpdatedCalendar: SimpleEvent[] = [];
 
-  if (currentCalendar && currentCalendar.length > 0)
-    manuallyUpdatedCalendar = currentCalendar?.filter(
-      (e) => !(e.id === taskId)
-    );
+  if (calendar && calendar.length > 0)
+    manuallyUpdatedCalendar = calendar?.filter((e) => !(e.id === taskId));
 
-  setMainPlanner(
+  updatePlannerArray(
     (prev: Planner[]) => prev.filter((planner) => !(planner.id === taskId)),
     manuallyUpdatedCalendar
   );

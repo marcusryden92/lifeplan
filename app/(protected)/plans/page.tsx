@@ -18,7 +18,7 @@ import {
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 
 // Local components and context
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 import { CardHeader, CardContent, CardFooter } from "@/components/ui/Card";
 import {
   FormField,
@@ -45,7 +45,7 @@ import {
 } from "@/utils/creationPagesFunctions";
 
 export default function TasksPage() {
-  const { userId, mainPlanner, setMainPlanner } = useDataContext();
+  const { userId, planner, updatePlannerArray } = useCalendarProvider();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
   const [changeToTask, setChangeToTask] = useState<number | null>(null);
@@ -55,7 +55,7 @@ export default function TasksPage() {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
   const tasksContainerRef = useRef<HTMLDivElement>(null);
-  const prevTaskLengthRef = useRef(mainPlanner.length);
+  const prevTaskLengthRef = useRef(planner.length);
   const durationInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
@@ -69,7 +69,7 @@ export default function TasksPage() {
     onSubmit({
       userId,
       values,
-      setMainPlanner,
+      updatePlannerArray,
       editIndex,
       setEditIndex,
       editTitle,
@@ -81,7 +81,7 @@ export default function TasksPage() {
 
   const handleDeleteTask = (index: number) => {
     deleteTask(index, {
-      setMainPlanner,
+      updatePlannerArray,
       editIndex,
       setEditIndex,
       setEditTitle,
@@ -89,11 +89,11 @@ export default function TasksPage() {
   };
 
   const handleDeleteAll = () => {
-    const filterArray: Planner[] = mainPlanner.filter(
+    const filterArray: Planner[] = planner.filter(
       (task) => task.type !== "task" && !task.parentId
     );
 
-    deleteAll({ setMainPlanner, filter: filterArray });
+    deleteAll({ updatePlannerArray, filter: filterArray });
   };
 
   const handleClickEdit = (index: number) => {
@@ -101,7 +101,7 @@ export default function TasksPage() {
       index,
       setEditIndex,
       setEditTitle,
-      mainPlanner,
+      planner,
     });
   };
 
@@ -109,7 +109,7 @@ export default function TasksPage() {
     confirmEdit({
       editIndex,
       editTitle,
-      setMainPlanner,
+      updatePlannerArray,
       setEditIndex,
       setEditTitle,
     });
@@ -117,8 +117,8 @@ export default function TasksPage() {
 
   const handleSetToPlan = (index: number) => {
     setChangeToTask(index);
-    setTaskDuration(mainPlanner[index].duration || undefined);
-    setSelectedDate(mainPlanner[index].starts || undefined);
+    setTaskDuration(planner[index].duration || undefined);
+    setSelectedDate(planner[index].starts || undefined);
   };
 
   const handleConfirmPlan = (currentDuration: number | undefined) => {
@@ -130,7 +130,7 @@ export default function TasksPage() {
       finalDuration !== undefined &&
       selectedDate !== undefined
     ) {
-      setMainPlanner((prevTasks: Planner[]) =>
+      updatePlannerArray((prevTasks: Planner[]) =>
         prevTasks.map((task, index) =>
           index === changeToTask
             ? {
@@ -148,7 +148,7 @@ export default function TasksPage() {
 
   const handleCancelTask = () => {
     if (changeToTask !== null) {
-      setMainPlanner((prevTasks: Planner[]) =>
+      updatePlannerArray((prevTasks: Planner[]) =>
         prevTasks.map((task, index) =>
           index === changeToTask
             ? { ...task, type: null, duration: null }
@@ -168,13 +168,13 @@ export default function TasksPage() {
   useEffect(() => {
     if (
       tasksContainerRef.current &&
-      mainPlanner.length > prevTaskLengthRef.current
+      planner.length > prevTaskLengthRef.current
     ) {
       tasksContainerRef.current.scrollLeft =
         tasksContainerRef.current.scrollWidth;
     }
-    prevTaskLengthRef.current = mainPlanner.length;
-  }, [mainPlanner]);
+    prevTaskLengthRef.current = planner.length;
+  }, [planner]);
 
   useEffect(() => {
     if (changeToTask !== null) {
@@ -233,7 +233,7 @@ export default function TasksPage() {
         className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2 "
         ref={tasksContainerRef}
       >
-        {mainPlanner.map((task, index) =>
+        {planner.map((task, index) =>
           task.type !== "task" && !task.parentId ? (
             <div
               key={index}
@@ -259,11 +259,9 @@ export default function TasksPage() {
                   </div>
                   <Input
                     ref={durationInputRef}
-                    defaultValue={mainPlanner[index].duration ?? undefined}
+                    defaultValue={planner[index].duration ?? undefined}
                     onChange={(e) => setTaskDuration(Number(e.target.value))}
-                    placeholder={
-                      mainPlanner[index].duration?.toString() || "min"
-                    }
+                    placeholder={planner[index].duration?.toString() || "min"}
                     className="w-14 h-7 text-sm text-white"
                     type="number"
                     pattern="[0-9]*"
@@ -360,7 +358,7 @@ export default function TasksPage() {
         </Button>
         <Button
           variant="invisible"
-          disabled={mainPlanner.length === 0}
+          disabled={planner.length === 0}
           className="px-0"
         >
           <Link href={"/goals"} className="flex group items-center gap-4">

@@ -2,7 +2,7 @@ import React, { useRef, useCallback } from "react";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import clsx from "clsx";
 import styles from "./DraggableItem.module.css";
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 import { moveToMiddle } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/moveToMiddle";
 
 export default function DraggableItem({
@@ -19,7 +19,8 @@ export default function DraggableItem({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
-  const { mainPlanner, setMainPlanner, setFocusedTask } = useDataContext();
+  const { planner, updatePlannerArray } = useCalendarProvider();
+  const { setFocusedTask } = useDraggableContext();
 
   const {
     currentlyHoveredItem,
@@ -55,14 +56,14 @@ export default function DraggableItem({
     if (
       !currentlyClickedItem ||
       !currentlyHoveredItem ||
-      !mainPlanner ||
+      !planner ||
       !displayDragBox
     )
       return;
 
     moveToMiddle({
-      mainPlanner,
-      setMainPlanner,
+      planner,
+      updatePlannerArray,
       currentlyClickedItem,
       currentlyHoveredItem,
     });
@@ -75,8 +76,8 @@ export default function DraggableItem({
   }, [
     currentlyClickedItem,
     currentlyHoveredItem,
-    mainPlanner,
-    setMainPlanner,
+    planner,
+    updatePlannerArray,
     setCurrentlyClickedItem,
     setCurrentlyHoveredItem,
   ]);

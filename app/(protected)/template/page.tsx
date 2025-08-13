@@ -4,18 +4,20 @@ import { useState } from "react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
 import TemplateBuilder from "./_components/TemplateBuilder";
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 import { SimpleEvent } from "@/prisma/generated/client";
 import headerStyles from "../calendar/components/CalendarHeader.module.css";
 
 export default function TasksPage() {
-  const [templateEvents, setTemplateEvents] = useState<SimpleEvent[]>([]); // State to manage events
+  const [templateEvents, updateTemplateArrayEvents] = useState<SimpleEvent[]>(
+    []
+  ); // State to manage events
 
-  const { setMainPlanner } = useDataContext();
+  const { updateTemplateArray } = useCalendarProvider();
 
   const handleDeleteAll = () => {
-    setMainPlanner(undefined, undefined, []);
-    setTemplateEvents([]);
+    updateTemplateArray([]);
+    updateTemplateArrayEvents([]);
   };
 
   return (
@@ -37,7 +39,7 @@ export default function TasksPage() {
 
       <TemplateBuilder
         templateEvents={templateEvents}
-        setTemplateEvents={setTemplateEvents}
+        updateTemplateArrayEvents={updateTemplateArrayEvents}
       />
     </div>
   );

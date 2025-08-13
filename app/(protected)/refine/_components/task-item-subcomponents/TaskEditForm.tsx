@@ -16,7 +16,7 @@ import { ArrowUturnLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { editById } from "@/utils/creationPagesFunctions";
 
 // Data context
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 
 const TaskEditForm: React.FC<TaskEditFormProps> = ({
   task,
@@ -24,7 +24,7 @@ const TaskEditForm: React.FC<TaskEditFormProps> = ({
   setDisplayEdit,
   itemIsFocused,
 }) => {
-  const { setMainPlanner } = useDataContext();
+  const { updatePlannerArray } = useCalendarProvider();
 
   const [editTitle, setEditTitle] = useState<string>(task.title);
   const [editDuration, setEditDuration] = useState<number | null>(
@@ -36,7 +36,7 @@ const TaskEditForm: React.FC<TaskEditFormProps> = ({
       editTitle,
       editDuration,
       editId: task.id,
-      setMainPlanner,
+      updatePlannerArray,
     });
     setDisplayEdit(false);
   };

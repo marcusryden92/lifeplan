@@ -17,7 +17,7 @@ const calendarSlice = createSlice({
   name: "calendar",
   initialState,
   reducers: {
-    setCalendarData: (
+    updateCalendarArrayData: (
       state,
       action: PayloadAction<{
         planner: Planner[];
@@ -32,5 +32,5 @@ const calendarSlice = createSlice({
   },
 });
 
-export const { setCalendarData } = calendarSlice.actions;
+export const { updateCalendarArrayData } = calendarSlice.actions;
 export default calendarSlice;

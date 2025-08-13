@@ -17,78 +17,73 @@ import { IoIosArrowForward, IoIosArrowDown } from "react-icons/io";
 // Utils
 import { getSubtasksById } from "@/utils/goalPageHandlers";
 import DragDisableListWrapper from "@/components/draggable/DragDisableListWrapper";
+import { useDraggableContext } from "@/components/draggable/DraggableContext";
 
-const TaskItem: React.FC<TaskItemProps> = React.memo(
-  ({ mainPlanner, task, focusedTask, setFocusedTask }) => {
-    const [itemIsFocused, setItemIsFocused] = useState<boolean>(false);
-    const [subtasksMinimized, setSubtasksMinimized] = useState<boolean>(false);
+const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
+  const [itemIsFocused, setItemIsFocused] = useState<boolean>(false);
+  const [subtasksMinimized, setSubtasksMinimized] = useState<boolean>(false);
+  const { focusedTask, setFocusedTask } = useDraggableContext();
 
-    const subtasks = getSubtasksById(mainPlanner, task.id);
-    const devMode = false;
+  const subtasks = getSubtasksById(planner, task.id);
+  const devMode = false;
 
-    return (
-      <div
-        className={`flex items-start w-full flex-1 ${
-          subtasks.length ? "pb-1" : ""
-        } ${task.parentId ? "" : ""}`}
+  return (
+    <div
+      className={`flex items-start w-full flex-1 ${
+        subtasks.length ? "pb-1" : ""
+      } ${task.parentId ? "" : ""}`}
+    >
+      {/* Button to minimize or display subtasks list */}
+      <button
+        disabled={subtasks.length === 0}
+        className={` h-[2rem] translate-x-[50%] ${
+          itemIsFocused ? "text-sky-500" : "opacity-50"
+        } `}
+        onClick={() => {
+          setSubtasksMinimized((prev) => !prev);
+        }}
       >
-        {/* Button to minimize or display subtasks list */}
-        <button
-          disabled={subtasks.length === 0}
-          className={` h-[2rem] translate-x-[50%] ${
-            itemIsFocused ? "text-sky-500" : "opacity-50"
-          } `}
-          onClick={() => {
-            setSubtasksMinimized((prev) => !prev);
-          }}
+        {subtasks.length === 0 ? (
+          <RxDot />
+        ) : subtasksMinimized ? (
+          <IoIosArrowForward />
+        ) : (
+          <IoIosArrowDown />
+        )}
+      </button>
+      <DragDisableListWrapper taskId={task.id}>
+        <DraggableItem
+          taskId={task.id}
+          taskTitle={task.title}
+          parentId={task.parentId ?? undefined}
+          className="ml-5"
         >
-          {subtasks.length === 0 ? (
-            <RxDot />
-          ) : subtasksMinimized ? (
-            <IoIosArrowForward />
-          ) : (
-            <IoIosArrowDown />
-          )}
-        </button>
-        <DragDisableListWrapper taskId={task.id}>
-          <DraggableItem
-            taskId={task.id}
-            taskTitle={task.title}
-            parentId={task.parentId ?? undefined}
-            className="ml-5"
-          >
-            <TaskHeader
-              task={task}
-              subtasks={subtasks}
-              itemIsFocused={itemIsFocused}
-              setItemIsFocused={setItemIsFocused}
-              focusedTask={focusedTask}
-              setFocusedTask={setFocusedTask}
-              devMode={devMode}
-            />
-          </DraggableItem>
-
-          {/* Disables task list if parent is being dragged */}
-          {/* Render subtasks if there are any */}
-          <TaskListWrapper
-            taskId={task.id}
-            subtasksLength={subtasks.length}
-            parentId={task.parentId ?? undefined}
-            subtasksMinimized={subtasksMinimized}
+          <TaskHeader
+            task={task}
+            subtasks={subtasks}
             itemIsFocused={itemIsFocused}
-          >
-            <TaskList
-              id={task.id}
-              subtasks={subtasks}
-              focusedTask={focusedTask}
-              setFocusedTask={setFocusedTask}
-            />
-          </TaskListWrapper>
-        </DragDisableListWrapper>
-      </div>
-    );
-  }
-);
+            setItemIsFocused={setItemIsFocused}
+            focusedTask={focusedTask}
+            setFocusedTask={setFocusedTask}
+            devMode={devMode}
+          />
+        </DraggableItem>
+
+        {/* Disables task list if parent is being dragged */}
+        {/* Render subtasks if there are any */}
+        <TaskListWrapper
+          taskId={task.id}
+          subtasksLength={subtasks.length}
+          parentId={task.parentId ?? undefined}
+          subtasksMinimized={subtasksMinimized}
+          itemIsFocused={itemIsFocused}
+        >
+          <TaskList id={task.id} subtasks={subtasks} />
+        </TaskListWrapper>
+      </DragDisableListWrapper>
+    </div>
+  );
+});
 
 TaskItem.displayName = "TaskItem";
 

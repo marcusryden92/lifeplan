@@ -16,7 +16,7 @@ import {
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 
 // Local components and context
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 import { CardHeader, CardContent, CardFooter } from "@/components/ui/Card";
 import {
   FormField,
@@ -40,11 +40,11 @@ import {
 } from "@/utils/creationPagesFunctions";
 
 export default function InfluencePage() {
-  const { userId, mainPlanner, setMainPlanner } = useDataContext();
+  const { userId, planner, updatePlannerArray } = useCalendarProvider();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
   const tasksContainerRef = useRef<HTMLDivElement>(null);
-  const prevTaskLengthRef = useRef(mainPlanner.length);
+  const prevTaskLengthRef = useRef(planner.length);
 
   const form = useForm<z.infer<typeof TaskListSchema>>({
     resolver: zodResolver(TaskListSchema),
@@ -57,7 +57,7 @@ export default function InfluencePage() {
     onSubmit({
       userId,
       values,
-      setMainPlanner,
+      updatePlannerArray,
       editIndex,
       setEditIndex,
       editTitle,
@@ -69,7 +69,7 @@ export default function InfluencePage() {
 
   const handleDeleteTask = (index: number) => {
     deleteTask(index, {
-      setMainPlanner,
+      updatePlannerArray,
       editIndex,
       setEditIndex,
       setEditTitle,
@@ -77,11 +77,11 @@ export default function InfluencePage() {
   };
 
   const handleDeleteAll = () => {
-    const filterArray: Planner[] = mainPlanner.filter(
+    const filterArray: Planner[] = planner.filter(
       (task) => task.type !== "task" && task.type !== "plan" && !task.parentId
     );
 
-    deleteAll({ setMainPlanner, filter: filterArray });
+    deleteAll({ updatePlannerArray, filter: filterArray });
   };
 
   const handleClickEdit = (index: number) => {
@@ -89,7 +89,7 @@ export default function InfluencePage() {
       index,
       setEditIndex,
       setEditTitle,
-      mainPlanner,
+      planner,
     });
   };
 
@@ -97,14 +97,14 @@ export default function InfluencePage() {
     confirmEdit({
       editIndex,
       editTitle,
-      setMainPlanner,
+      updatePlannerArray,
       setEditIndex,
       setEditTitle,
     });
   };
 
   const toggleGoal = (index: number) => {
-    setMainPlanner((prevTaskArray) =>
+    updatePlannerArray((prevTaskArray) =>
       prevTaskArray.map((task, i) =>
         i === index
           ? { ...task, type: task.type !== "goal" ? "goal" : null }
@@ -116,13 +116,13 @@ export default function InfluencePage() {
   useEffect(() => {
     if (
       tasksContainerRef.current &&
-      mainPlanner.length > prevTaskLengthRef.current
+      planner.length > prevTaskLengthRef.current
     ) {
       tasksContainerRef.current.scrollLeft =
         tasksContainerRef.current.scrollWidth;
     }
-    prevTaskLengthRef.current = mainPlanner.length;
-  }, [mainPlanner]);
+    prevTaskLengthRef.current = planner.length;
+  }, [planner]);
 
   return (
     <div className="pageContainer">
@@ -171,7 +171,7 @@ export default function InfluencePage() {
         className="overflow-x-auto flex-grow flex flex-col items-start justify-start flex-wrap content-start no-scrollbar py-2"
         ref={tasksContainerRef}
       >
-        {mainPlanner.map(
+        {planner.map(
           (task, index) =>
             task.type !== "task" &&
             task.type !== "plan" &&
@@ -237,7 +237,7 @@ export default function InfluencePage() {
         </Button>
         <Button
           variant="invisible"
-          disabled={mainPlanner.length === 0}
+          disabled={planner.length === 0}
           className={`px-0`}
         >
           <Link href={"/refine"} className="flex group items-center gap-4">

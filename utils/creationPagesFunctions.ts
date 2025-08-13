@@ -15,7 +15,9 @@ interface OnSubmitProps {
   editTitle: string;
   setEditTitle: (title: string) => void;
   form: { reset: () => void };
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[])
+  ) => void;
   setDefaultInfluence?: boolean | undefined;
   type?: "task" | "plan" | "goal" | null;
 }
@@ -23,7 +25,7 @@ interface OnSubmitProps {
 export const onSubmit = ({
   userId,
   values,
-  setMainPlanner,
+  updatePlannerArray,
   editIndex,
   setEditIndex,
   editTitle,
@@ -34,7 +36,7 @@ export const onSubmit = ({
   if (!userId) return;
 
   if (editIndex !== null) {
-    setMainPlanner((prevTasks) =>
+    updatePlannerArray((prevTasks) =>
       prevTasks.map((task, index) =>
         index === editIndex ? { ...task, title: editTitle } : task
       )
@@ -57,7 +59,7 @@ export const onSubmit = ({
       completedEndTime: null,
       color: calendarColors[0],
     };
-    setMainPlanner((prevTasks) => [...prevTasks, newTask]);
+    updatePlannerArray((prevTasks) => [...prevTasks, newTask]);
   }
   form.reset();
 };
@@ -65,7 +67,9 @@ export const onSubmit = ({
 // DELETE TASK
 
 interface DeleteTaskProps {
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[])
+  ) => void;
   editIndex: number | null;
   setEditIndex: React.Dispatch<React.SetStateAction<number | null>>;
   setEditTitle: React.Dispatch<React.SetStateAction<string>>;
@@ -73,9 +77,9 @@ interface DeleteTaskProps {
 
 export const deleteTask = (
   index: number,
-  { setMainPlanner, editIndex, setEditIndex, setEditTitle }: DeleteTaskProps
+  { updatePlannerArray, editIndex, setEditIndex, setEditTitle }: DeleteTaskProps
 ) => {
-  setMainPlanner((prevTasks) => prevTasks.filter((_, i) => i !== index));
+  updatePlannerArray((prevTasks) => prevTasks.filter((_, i) => i !== index));
   if (editIndex === index) {
     setEditIndex(null);
     setEditTitle("");
@@ -85,19 +89,21 @@ export const deleteTask = (
 // DELETE ALL TASKS
 
 interface DeleteAllProps {
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[])
+  ) => void;
   filter?: Planner[]; // Replace `any` with your actual task type if necessary
 }
 
-export const deleteAll = ({ setMainPlanner, filter }: DeleteAllProps) => {
-  // If filter is not provided or is an empty array, clear the entire mainPlanner
+export const deleteAll = ({ updatePlannerArray, filter }: DeleteAllProps) => {
+  // If filter is not provided or is an empty array, clear the entire planner
   if (!filter || filter.length === 0) {
-    setMainPlanner([]);
+    updatePlannerArray([]);
     return;
   }
 
   // Otherwise, filter out tasks that match the filter array
-  setMainPlanner((prevTaskArray) =>
+  updatePlannerArray((prevTaskArray) =>
     prevTaskArray.filter(
       (task) => !filter.some((filteredTask) => filteredTask.id === task.id)
     )
@@ -110,17 +116,17 @@ interface ClickEditProps {
   index: number;
   setEditIndex: React.Dispatch<React.SetStateAction<number | null>>;
   setEditTitle: React.Dispatch<React.SetStateAction<string>>;
-  mainPlanner: Planner[]; // Adjust type according to your task structure
+  planner: Planner[]; // Adjust type according to your task structure
 }
 
 export const clickEdit = ({
   index,
   setEditIndex,
   setEditTitle,
-  mainPlanner,
+  planner,
 }: ClickEditProps) => {
   setEditIndex(index);
-  setEditTitle(mainPlanner[index].title);
+  setEditTitle(planner[index].title);
 };
 
 //
@@ -128,7 +134,9 @@ export const clickEdit = ({
 interface ConfirmEditProps {
   editIndex: number | null;
   editTitle: string;
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[])
+  ) => void;
   setEditIndex: React.Dispatch<React.SetStateAction<number | null>>;
   setEditTitle: React.Dispatch<React.SetStateAction<string>>;
 }
@@ -136,12 +144,12 @@ interface ConfirmEditProps {
 export const confirmEdit = ({
   editIndex,
   editTitle,
-  setMainPlanner,
+  updatePlannerArray,
   setEditIndex,
   setEditTitle,
 }: ConfirmEditProps) => {
   if (editIndex !== null) {
-    setMainPlanner((prevTasks) =>
+    updatePlannerArray((prevTasks) =>
       prevTasks.map((task, index) => {
         if (index === editIndex) {
           // Modify the title of the existing Planner instance
@@ -159,16 +167,18 @@ interface editByIdProps {
   editTitle: string;
   editDuration: number | null;
   editId: string;
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[])
+  ) => void;
 }
 
 export const editById = ({
   editTitle,
   editDuration,
   editId,
-  setMainPlanner,
+  updatePlannerArray,
 }: editByIdProps) => {
-  setMainPlanner((prevTasks) =>
+  updatePlannerArray((prevTasks) =>
     prevTasks.map((task) => {
       if (task.id === editId) {
         return {

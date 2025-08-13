@@ -2,7 +2,6 @@ import React from "react";
 
 import { useState } from "react";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
-import { useDataContext } from "@/context/DataContext";
 
 import { moveToEdge } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/moveToEdge";
 import { Planner } from "@/prisma/generated/client";
@@ -10,29 +9,29 @@ import { Planner } from "@/prisma/generated/client";
 import styles from "./TaskDivider.module.css";
 
 interface TaskDividerProps {
-  mainPlanner: Planner[];
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>;
+  planner: Planner[];
+  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>;
   targetId: string;
   mouseLocationInItem: "top" | "bottom";
 }
 
 const TaskDivider: React.FC<TaskDividerProps> = ({
-  mainPlanner,
-  setMainPlanner,
+  planner,
+  updatePlannerArray,
   targetId,
   mouseLocationInItem,
 }) => {
   const { currentlyClickedItem, setCurrentlyClickedItem, displayDragBox } =
     useDraggableContext();
   const [isHovered, setIsHovered] = useState<boolean>(false);
-  const { setFocusedTask } = useDataContext();
+  const { setFocusedTask } = useDraggableContext();
 
   const handleDragEnd = () => {
     if (!currentlyClickedItem || !isHovered || !displayDragBox) return;
 
     moveToEdge({
-      mainPlanner,
-      setMainPlanner,
+      planner,
+      updatePlannerArray,
       currentlyClickedItem,
       targetId,
       mouseLocationInItem,

@@ -3,8 +3,6 @@ import { Planner } from "@/prisma/generated/client";
 export interface TaskListProps {
   id: string;
   subtasks?: Planner[];
-  focusedTask: string | null;
-  setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 export interface TaskListWrapperProps {
@@ -17,10 +15,8 @@ export interface TaskListWrapperProps {
 }
 
 export interface TaskItemProps {
-  mainPlanner: Planner[];
+  planner: Planner[];
   task: Planner;
-  focusedTask: string | null;
-  setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
 }
 
 export interface TaskHeaderProps {

@@ -27,7 +27,7 @@ export function generateCalendar(
   userId: string,
   weekStartDay: WeekDayIntegers,
   template: EventTemplate[],
-  mainPlanner: Planner[],
+  planner: Planner[],
   prevCalendar: SimpleEvent[]
 ): SimpleEvent[] {
   let eventArray: SimpleEvent[] = [];
@@ -50,10 +50,10 @@ export function generateCalendar(
   }
 
   // Add date items to the event array:
-  addDateItemsToArray(userId, mainPlanner, eventArray, memoizedEventIds);
+  addDateItemsToArray(userId, planner, eventArray, memoizedEventIds);
 
   // Add completed items to the event array:
-  addCompletedItemsToArray(userId, mainPlanner, eventArray, memoizedEventIds);
+  addCompletedItemsToArray(userId, planner, eventArray, memoizedEventIds);
 
   // Add template items to the event array
   if (template.length > 0) {
@@ -96,7 +96,7 @@ export function generateCalendar(
     templateEventsArray,
     templatedWeeks,
     largestTemplateGap,
-    mainPlanner,
+    planner,
     eventArray,
     memoizedEventIds
   );
@@ -111,14 +111,14 @@ function addEventsToCalendar(
   templateEventsArray: SimpleEvent[],
   templatedWeeks: Date[],
   largestTemplateGap: number | undefined,
-  mainPlanner: Planner[],
+  planner: Planner[],
   eventArray: SimpleEvent[],
   memoizedEventIds: Set<string>
 ): SimpleEvent[] {
-  // First get all the goals and task events from mainPlanner:
+  // First get all the goals and task events from planner:
   let goalsAndTasks: Planner[] = [];
 
-  mainPlanner.forEach((task) => {
+  planner.forEach((task) => {
     if (
       (task.type === "goal" && !task.parentId && task.isReady) ||
       task.type === "task"
@@ -152,7 +152,7 @@ function addEventsToCalendar(
     else if (item.type === "goal") {
       addGoalToCalendar(
         userId,
-        mainPlanner,
+        planner,
         item,
         largestTemplateGap,
         weekStartDay,
@@ -170,7 +170,7 @@ function addEventsToCalendar(
 
 function addGoalToCalendar(
   userId: string,
-  mainPlanner: Planner[],
+  planner: Planner[],
   rootItem: Planner,
   largestTemplateGap: number | undefined,
   weekStartDay: WeekDayIntegers,
@@ -180,7 +180,7 @@ function addGoalToCalendar(
   templatedWeeks: Date[],
   memoizedEventIds: Set<string>
 ) {
-  const goalBottomLayer = getSortedTreeBottomLayer(mainPlanner, rootItem.id);
+  const goalBottomLayer = getSortedTreeBottomLayer(planner, rootItem.id);
   const filteredTasks = goalBottomLayer.filter(
     (task) => !taskIsCompleted(task) && !memoizedEventIds.has(task.id)
   );

@@ -35,18 +35,18 @@ export const updateAllCalendarStates =
     }
 
     const currentPlanner: Planner[] = state.calendar.planner;
-    const currentCalendar: SimpleEvent[] = state.calendar.calendar;
-    const currentTemplate: EventTemplate[] = state.calendar.template;
+    const calendar: SimpleEvent[] = state.calendar.calendar;
+    const template: EventTemplate[] = state.calendar.template;
 
     const newPlanner = updates.planner
       ? processInput(updates.planner, currentPlanner)
       : currentPlanner;
     const newCalendarInput = updates.calendar
-      ? processInput(updates.calendar, currentCalendar)
-      : currentCalendar;
+      ? processInput(updates.calendar, calendar)
+      : calendar;
     const newTemplate = updates.template
-      ? processInput(updates.template, currentTemplate)
-      : currentTemplate;
+      ? processInput(updates.template, template)
+      : template;
 
     const newCalendar = generateCalendar(
       userId,
@@ -62,5 +62,5 @@ export const updateAllCalendarStates =
       template: newTemplate,
     };
 
-    dispatch(calendarSlice.actions.setCalendarData(calendarData));
+    dispatch(calendarSlice.actions.updateCalendarArrayData(calendarData));
   };

@@ -10,7 +10,7 @@ import { AddSubtaskProps } from "@/lib/taskItem";
 import type { Planner } from "@/prisma/generated/client";
 
 // Context
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 
 // Utility Functions
 import { addSubtask } from "@/utils/goalPageHandlers";
@@ -25,7 +25,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
   );
   const [taskTitle, setTaskTitle] = useState<string>("");
 
-  const { mainPlanner, setMainPlanner, userId } = useDataContext();
+  const { planner, updatePlannerArray, userId } = useCalendarProvider();
   const refs = useRef(new Map<string, React.RefObject<HTMLInputElement>>());
 
   const getRef = (parentId: string) => {
@@ -46,8 +46,8 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
     if (taskTitle)
       addSubtask({
         userId,
-        mainPlanner,
-        setMainPlanner,
+        planner,
+        updatePlannerArray,
         task,
         taskDuration: taskDuration || 5,
         taskTitle,

@@ -5,7 +5,7 @@ import { Planner, SimpleEvent, EventTemplate } from "@/prisma/generated/client";
 import { updateAllCalendarStates } from "@/redux/thunks/calendarThunks";
 
 export default function useCalendarStateActions(dispatch: AppDispatch) {
-  const setMainPlanner = useCallback(
+  const updatePlannerArray = useCallback(
     (planner: Planner[] | ((prev: Planner[]) => Planner[])) => {
       dispatch(
         updateAllCalendarStates({
@@ -16,7 +16,7 @@ export default function useCalendarStateActions(dispatch: AppDispatch) {
     []
   );
 
-  const setCalendar = useCallback(
+  const updateCalendarArray = useCallback(
     (calendar: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[])) => {
       dispatch(
         updateAllCalendarStates({
@@ -27,7 +27,7 @@ export default function useCalendarStateActions(dispatch: AppDispatch) {
     []
   );
 
-  const setTemplate = useCallback(
+  const updateTemplateArray = useCallback(
     (
       template: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
     ) => {
@@ -40,5 +40,27 @@ export default function useCalendarStateActions(dispatch: AppDispatch) {
     []
   );
 
-  return { setMainPlanner, setCalendar, setTemplate };
+  const updateAll = useCallback(
+    (
+      planner?: Planner[] | ((prev: Planner[]) => Planner[]),
+      calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
+      template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
+    ) => {
+      dispatch(
+        updateAllCalendarStates({
+          planner,
+          calendar,
+          template,
+        })
+      );
+    },
+    []
+  );
+
+  return {
+    updatePlannerArray,
+    updateCalendarArray,
+    updateTemplateArray,
+    updateAll,
+  };
 }

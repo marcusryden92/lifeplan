@@ -6,7 +6,7 @@ import { SimpleEvent, EventTemplate, Planner } from "@/prisma/generated/client";
 export async function fetchCalendarData(userId: string) {
   try {
     // Fetch all planner items for the user
-    const mainPlanner: Planner[] = await db.planner.findMany({
+    const planner: Planner[] = await db.planner.findMany({
       where: {
         userId: userId,
       },
@@ -28,7 +28,7 @@ export async function fetchCalendarData(userId: string) {
     return {
       success: true,
       data: {
-        planner: mainPlanner,
+        planner: planner,
         calendar: calendarEvents,
         template: templatesItems,
       },

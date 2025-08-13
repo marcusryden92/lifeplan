@@ -4,16 +4,16 @@ import { Planner } from "@/prisma/generated/client";
 // Sets the value of the object's dependency to the value of the subject's dependency,
 // and sets the value of the subject's dependent's dependency to the id of the object
 export function transferDependencyOwnership(
-  mainPlanner: Planner[],
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
+  planner: Planner[],
+  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   subject: Planner,
   object: Planner,
   clearSubject: boolean = true
 ) {
-  const nextDependent = mainPlanner.find((t) => t.dependency === subject.id);
+  const nextDependent = planner.find((t) => t.dependency === subject.id);
   const nextDependentId = nextDependent ? nextDependent.id : null;
 
-  setMainPlanner((prev) =>
+  updatePlannerArray((prev) =>
     prev.map((t) => {
       // Move ownership from subject to object
       if (nextDependentId && t.id === nextDependentId) {
@@ -41,11 +41,11 @@ export interface InstructionType {
 }
 
 export async function updateTaskArray(
-  setMainPlanner: React.Dispatch<React.SetStateAction<Planner[]>>,
+  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   instructions: InstructionType[]
 ) {
   return new Promise<void>((resolve) => {
-    setMainPlanner((prev) => {
+    updatePlannerArray((prev) => {
       const newArray = prev.map((task) => {
         let updatedTask = { ...task };
 

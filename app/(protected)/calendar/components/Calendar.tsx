@@ -13,7 +13,7 @@ import EventContent from "@/components/events/EventContent";
 
 import { SimpleEvent } from "@/prisma/generated/client";
 import type { EventInput } from "@fullcalendar/core/index.js";
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 
 import {
   handleSelect,
@@ -40,7 +40,7 @@ export default function Calendar({
 }: CalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const [events, setEvents] = useState<SimpleEvent[]>(initialEvents || []);
-  const { userId } = useDataContext();
+  const { userId } = useCalendarProvider();
 
   return (
     <>

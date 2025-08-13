@@ -16,7 +16,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { TaskListSchema } from "@/schemas";
 
 import { onSubmit } from "@/utils/creationPagesFunctions";
-import { useDataContext } from "@/context/DataContext";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useState } from "react";
 
 import * as z from "zod";
@@ -30,7 +30,7 @@ const AddItemForm = ({
   placeholder?: string;
   className?: string;
 }) => {
-  const { setMainPlanner } = useDataContext();
+  const { updatePlannerArray } = useCalendarProvider();
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
 
@@ -45,7 +45,7 @@ const AddItemForm = ({
     onSubmit({
       userId,
       values,
-      setMainPlanner,
+      updatePlannerArray,
       editIndex,
       setEditIndex,
       editTitle,
