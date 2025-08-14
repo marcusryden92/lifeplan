@@ -46,7 +46,7 @@ const useManuallyRefreshCalendar = (
 
       updateCalendarArray(newCalendar);
     }
-  }, []);
+  }, [userId, planner, calendar, template, weekStartDay, updateCalendarArray]);
 
   return manuallyRefreshCalendar;
 };

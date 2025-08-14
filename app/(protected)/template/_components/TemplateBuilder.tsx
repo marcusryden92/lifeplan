@@ -1,79 +1,33 @@
 "use client";
 
-import { useRef, useEffect, useMemo } from "react";
+import { useRef, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 
-import {
-  getTemplateFromCalendar,
-  populateTemplateCalendar,
-} from "@/utils/templateBuilderUtils";
-import { SimpleEvent } from "@/prisma/generated/client";
-import {
-  handleSelect,
-  handleEventResize,
-  handleEventDrop,
-  handleEventCopy,
-  handleEventDelete,
-  handleEventEdit,
-} from "@/utils/calendarEventHandlers";
-import EventContent from "@/components/events/EventContent";
-import { ExtendedEventContentArg } from "@/types/calendarTypes";
-import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
+import { populateTemplateCalendar } from "@/utils/templateBuilderUtils";
 
-interface TemplateBuilderProps {
-  templateEvents: SimpleEvent[];
-  updateTemplateArrayEvents: React.Dispatch<
-    React.SetStateAction<SimpleEvent[]>
-  >;
-}
+import {
+  handleTemplateSelect,
+  handleTemplateEventResize,
+  handleTemplateEventDrop,
+  handleTemplateEventCopy,
+  handleTemplateEventDelete,
+  handleTemplateEventEdit,
+} from "@/utils/template-handlers/templateEventHandlers";
+import TemplateEventContent from "@/components/events/TemplateEventContent";
+import { EventImpl } from "@fullcalendar/core/internal";
 
-export default function TemplateBuilder({
-  templateEvents,
-  updateTemplateArrayEvents,
-}: TemplateBuilderProps) {
+export default function TemplateBuilder() {
   const calendarRef = useRef<FullCalendar>(null);
   const { userId, template, updateTemplateArray, weekStartDay } =
     useCalendarProvider();
 
   const fullcalendarEvents = useMemo(() => {
-    return transformEventsForFullCalendar(templateEvents);
-  }, [templateEvents]);
-
-  useEffect(() => {
-    if (template && template.length > 0 && calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      const events = calendarApi.getEvents().map((e) => e.toPlainObject());
-      const newCalendar = populateTemplateCalendar(
-        userId,
-        weekStartDay,
-        template
-      );
-
-      if (JSON.stringify(events) !== JSON.stringify(newCalendar)) {
-        updateTemplateArrayEvents(newCalendar);
-      }
-    }
+    return populateTemplateCalendar(userId, weekStartDay, template);
   }, [template]);
-
-  useEffect(() => {
-    updateTemplate();
-  }, [fullcalendarEvents]);
-
-  const updateTemplate = () => {
-    if (calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      const events = calendarApi.getEvents();
-      const newTemplate = getTemplateFromCalendar(userId, events);
-
-      if (JSON.stringify(template) !== JSON.stringify(newTemplate)) {
-        updateTemplateArray(newTemplate);
-      }
-    }
-  };
 
   return (
     <FullCalendar
@@ -84,7 +38,6 @@ export default function TemplateBuilder({
       initialView="timeGridWeek"
       firstDay={weekStartDay}
       height={"100%"}
-      eventColor="royalblue"
       headerToolbar={{
         start: "",
         center: "",
@@ -104,49 +57,32 @@ export default function TemplateBuilder({
       eventResizableFromStart={true}
       selectable={true}
       select={(selectInfo) =>
-        handleSelect(
+        handleTemplateSelect(
           userId,
           calendarRef,
-          updateTemplateArrayEvents,
-          selectInfo,
-          true
+          updateTemplateArray,
+          selectInfo
         )
       }
       eventResize={(resizeInfo) =>
-        handleEventResize(updateTemplateArrayEvents, resizeInfo)
+        handleTemplateEventResize(updateTemplateArray, resizeInfo)
       }
       eventDrop={(dropInfo) =>
-        handleEventDrop(updateTemplateArrayEvents, dropInfo)
+        handleTemplateEventDrop(updateTemplateArray, dropInfo)
       }
       allDaySlot={false}
       dayHeaderFormat={{ weekday: "short" }}
-      eventContent={({ event }: ExtendedEventContentArg) => {
-        const simpleEvent = templateEvents.find((t) => t.id === event.id);
+      eventContent={(event: EventImpl) => {
         return (
-          simpleEvent && (
-            <EventContent
-              event={simpleEvent}
-              onEdit={() =>
-                handleEventEdit(
-                  calendarRef,
-                  updateTemplateArrayEvents,
-                  templateEvents,
-                  event.id
-                )
-              }
+          event && (
+            <TemplateEventContent
+              event={event}
+              onEditTitle={handleTemplateEventEdit}
               onCopy={() =>
-                handleEventCopy(
-                  calendarRef,
-                  updateTemplateArrayEvents,
-                  simpleEvent
-                )
+                handleTemplateEventCopy(updateTemplateArray, event, userId)
               }
               onDelete={() =>
-                handleEventDelete(
-                  calendarRef,
-                  updateTemplateArrayEvents,
-                  event.id
-                )
+                handleTemplateEventDelete(updateTemplateArray, event.id)
               }
               showButtons={true}
             />

@@ -83,10 +83,14 @@ export const transformEventsForFullCalendar = (
       parsedRRule = undefined;
     }
 
-    const item = {
+    const item: EventInput = {
       ...event,
       rrule: parsedRRule,
       duration: event.duration ?? undefined,
+      extendedProps: {
+        isTemplateItem: event.isTemplateItem,
+        backgroundColor: event.backgroundColor,
+      },
     };
 
     return item;

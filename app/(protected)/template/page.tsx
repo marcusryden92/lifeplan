@@ -1,23 +1,16 @@
 "use client";
 
-import { useState } from "react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 
 import TemplateBuilder from "./_components/TemplateBuilder";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { SimpleEvent } from "@/prisma/generated/client";
 import headerStyles from "../calendar/components/CalendarHeader.module.css";
 
 export default function TasksPage() {
-  const [templateEvents, updateTemplateArrayEvents] = useState<SimpleEvent[]>(
-    []
-  ); // State to manage events
-
   const { updateTemplateArray } = useCalendarProvider();
 
   const handleDeleteAll = () => {
     updateTemplateArray([]);
-    updateTemplateArrayEvents([]);
   };
 
   return (
@@ -37,10 +30,7 @@ export default function TasksPage() {
         </button>
       </header>
 
-      <TemplateBuilder
-        templateEvents={templateEvents}
-        updateTemplateArrayEvents={updateTemplateArrayEvents}
-      />
+      <TemplateBuilder />
     </div>
   );
 }

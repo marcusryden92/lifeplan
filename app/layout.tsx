@@ -3,9 +3,6 @@ import { Inter } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import "./globals.css";
-import StoreProvider from "@/context/StoreProvider";
-import UserProvider from "@/context/UserProvider";
-import CalendarProvider from "@/context/CalendarProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -25,13 +22,7 @@ export default async function RootLayout({
       <body
         className={`flex ${inter.className} bg-gray-200 h-auto min-h-[100vh] w-[100vw] overflow-x-hidden`}
       >
-        <SessionProvider session={session}>
-          <StoreProvider>
-            <UserProvider>
-              <CalendarProvider>{children}</CalendarProvider>
-            </UserProvider>
-          </StoreProvider>
-        </SessionProvider>
+        <SessionProvider session={session}>{children}</SessionProvider>
       </body>
     </html>
   );

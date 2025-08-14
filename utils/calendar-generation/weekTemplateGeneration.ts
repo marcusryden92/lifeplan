@@ -7,6 +7,7 @@ import {
 } from "@/utils/calendarUtils";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
+import { calendarColors } from "@/data/calendarColors";
 
 // Days of the week starting from Sunday (index 0)
 const daysFromSunday = [
@@ -116,7 +117,7 @@ function addTemplateEvent(
     rrule: JSON.stringify(rule),
     duration: event.duration * 60 * 1000, // Convert duration to milliseconds
     isTemplateItem: true,
-    backgroundColor: "#1242B2",
+    backgroundColor: (event.color as string) || calendarColors[0],
     borderColor: "transparent",
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
@@ -129,7 +130,7 @@ export function populateWeekWithTemplate(
   fromDate: Date,
   template: EventTemplate[],
   templateEventArray: SimpleEvent[]
-) {
+): SimpleEvent[] {
   // Days of the week starting from Sunday (index 0)
   const daysFromSunday = [
     "sunday", // index 0
@@ -149,10 +150,10 @@ export function populateWeekWithTemplate(
 
   if (!thisWeeksFirstDate) {
     console.error("Failed to calculate the start date of the week.");
-    return /* templateEventArray */;
+    return [...templateEventArray];
   }
 
-  // const updatedTemplateArray: SimpleEvent[] = [...templateEventArray];
+  const updatedTemplateArray: SimpleEvent[] = [];
 
   template.forEach((event) => {
     if (
@@ -191,14 +192,14 @@ export function populateWeekWithTemplate(
 
     const now = new Date();
 
-    templateEventArray.push({
+    updatedTemplateArray.push({
       userId,
       id: event.id, // Generate a unique ID for the event
       title: event.title,
       start: newStartDate.toISOString(), // Convert Date to ISO string
       end: newEndDate.toISOString(), // Convert Date to ISO string
       isTemplateItem: true,
-      backgroundColor: "#1242B2",
+      backgroundColor: (event.color as string) || calendarColors[0],
       borderColor: "transparent",
       duration: null,
       rrule: null,
@@ -207,5 +208,7 @@ export function populateWeekWithTemplate(
     });
   });
 
-  // return templateEventArray;
+  console.log(updatedTemplateArray);
+
+  return [...templateEventArray, ...updatedTemplateArray];
 }

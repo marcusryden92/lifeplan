@@ -8,10 +8,8 @@ import { RootState } from "@/redux/store";
 
 import { Planner, SimpleEvent, EventTemplate } from "@/prisma/generated/client";
 import { WeekDayIntegers } from "@/types/calendarTypes";
-import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
 
-import { EventInput } from "@fullcalendar/core/index.js";
 import useCalendarStateActions from "@/hooks/useCalendarStateActions";
 import useManuallyRefreshCalendar from "@/hooks/useManuallyRefreshCalendar";
 import useCalendarServerSync from "@/hooks/useCalendarServerSync";
@@ -19,7 +17,6 @@ import useCalendarServerSync from "@/hooks/useCalendarServerSync";
 type CalendarContextType = {
   userId: string;
   weekStartDay: WeekDayIntegers;
-  fullCalendarEvents: EventInput[];
   planner: Planner[];
   calendar: SimpleEvent[];
   template: EventTemplate[];
@@ -72,20 +69,11 @@ export default function CalendarProvider({
 
   useFetchCalendarData(userId, initializeState);
 
-  /* Transform SimpleEvent calendar to EventInput for FullCalendar */
-  const fullCalendarEvents: EventInput[] = useMemo(() => {
-    const newCal: EventInput[] = calendar
-      ? transformEventsForFullCalendar(calendar)
-      : [];
-    return newCal;
-  }, [calendar]);
-
-  if (!userId) return;
+  if (!userId) return null;
 
   const value = {
     userId,
     weekStartDay,
-    fullCalendarEvents,
     planner,
     calendar,
     template,

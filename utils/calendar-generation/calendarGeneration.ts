@@ -69,13 +69,13 @@ export function generateCalendar(
   // Create array to hold the first date of all the weeks
   // to which a template has been added
   // (so multiple instances of the template aren't added to the same week):
-  const templateEventsArray: SimpleEvent[] = [];
+  let templateEventsArray: SimpleEvent[] = [];
   const templatedWeeks: Date[] = [];
 
   // Initialize the first week:
   const weekFirstDate = getWeekFirstDate(weekStartDay, currentDate);
   templatedWeeks.push(new Date(weekFirstDate));
-  populateWeekWithTemplate(
+  templateEventsArray = populateWeekWithTemplate(
     userId,
     weekStartDay,
     currentDate,
@@ -251,7 +251,7 @@ function addTaskToCalendar(
     // Check if we've changed weeks and add a template to the new week if necessary
     if (getDayDifference(weekMarker, staticMarker) > 6) {
       if (!hasDateInArray(templatedWeeks, staticMarker)) {
-        populateWeekWithTemplate(
+        templateEventsArray = populateWeekWithTemplate(
           userId,
           weekStartDay,
           staticMarker,

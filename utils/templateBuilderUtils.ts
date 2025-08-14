@@ -1,67 +1,26 @@
-import { EventApi } from "@fullcalendar/core";
-import { getWeekdayFromDate } from "@/utils/calendarUtils";
-import { SimpleEvent } from "@/prisma/generated/client";
 import { shiftDate } from "@/utils/calendarUtils";
 import { setTimeOnDate } from "@/utils/calendarUtils";
 import { WeekDayIntegers } from "@/types/calendarTypes";
-
+import { calendarColors } from "@/data/calendarColors";
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 
 import { EventTemplate } from "@/prisma/generated/client";
+import { EventInput } from "@fullcalendar/core";
 
-function getTimeFromDate(date: Date): string {
+import { v4 as uuidv4 } from "uuid";
+
+export function getTimeFromDate(date: Date): string {
   const hours = date.getHours().toString().padStart(2, "0");
   const minutes = date.getMinutes().toString().padStart(2, "0");
   return `${hours}:${minutes}`;
-}
-
-export function getTemplateFromCalendar(
-  userId: string,
-  calendar: EventApi[]
-): EventTemplate[] {
-  const template: EventTemplate[] = [];
-
-  calendar.forEach((task) => {
-    if (!task.start || !task.end) {
-      console.error("Task start or end details are missing.", task);
-      return;
-    }
-
-    // Extract start and end times
-    const startDate = new Date(task.start);
-    const endDate = new Date(task.end);
-
-    // Calculate duration in minutes
-    const durationMinutes = Math.round(
-      (endDate.getTime() - startDate.getTime()) / (1000 * 60)
-    );
-
-    const now = new Date();
-
-    // Create new EventTemplate object
-    const newEvent: EventTemplate = {
-      userId: userId,
-      title: task.title,
-      id: task.id,
-      startDay: getWeekdayFromDate(startDate), // Assuming startDate is a Date object
-      startTime: getTimeFromDate(startDate), // Assuming startDate is a Date object
-      duration: durationMinutes, // Add duration in minutes
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-    };
-
-    template.push(newEvent);
-  });
-
-  return template;
 }
 
 export function populateTemplateCalendar(
   userId: string,
   weekStartDay: WeekDayIntegers,
   template: EventTemplate[]
-): SimpleEvent[] {
-  const eventArray: SimpleEvent[] = [];
+): EventInput[] {
+  const eventArray: EventInput[] = [];
   const todaysDate = new Date(2024, 0, 1);
 
   // Days of the week starting from Sunday (index 0)
@@ -80,11 +39,6 @@ export function populateTemplateCalendar(
     weekStartDay,
     todaysDate
   );
-
-  if (!thisWeeksFirstDate) {
-    console.error("Failed to calculate the start date of the week.");
-    return eventArray;
-  }
 
   template.forEach((event) => {
     if (
@@ -125,17 +79,16 @@ export function populateTemplateCalendar(
 
     eventArray.push({
       userId,
-      id: event.id, // Generate a unique ID for the event
+      id: uuidv4(), // Generate a unique ID for the event
       title: event.title,
       start: newStartDate.toISOString(), // Convert Date to ISO string
       end: newEndDate.toISOString(), // Convert Date to ISO string
       isTemplateItem: true,
-      backgroundColor: "#1242B2",
+      backgroundColor: (event.color as string) || calendarColors[0],
       borderColor: "transparent",
       duration: null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
-      rrule: null,
     });
   });
 

@@ -1,17 +1,18 @@
 model SimpleEvent {
-  id              String    @id @default(cuid())
+  id              String  @id @default(cuid())
   title           String
-  start           DateTime
-  end             DateTime
+  start           String
+  end             String
   duration        Int?
   userId          String
   rrule           String?
   isTemplateItem  Boolean
   backgroundColor String
   borderColor     String
-  createdAt       DateTime? @default(now())
-  updatedAt       DateTime?
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt String
+  updatedAt String
 
   @@map("SimpleEvents")
 }
@@ -23,14 +24,17 @@ model Planner {
   type               PlanType?
   isReady            Boolean?
   duration           Int?
-  deadline           DateTime?
-  starts             DateTime?
+  deadline           String?
+  starts             String?
   dependency         String?
-  completedStartTime DateTime?
-  completedEndTime   DateTime?
+  completedStartTime String?
+  completedEndTime   String?
   userId             String
   color              String?
   user               User      @relation(fields: [userId], references: [id])
+
+  createdAt String
+  updatedAt String
 
   @@map("Planners")
 }
@@ -40,11 +44,13 @@ model EventTemplate {
   title     String
   startDay  WeekDayType
   startTime String
-  duration  Int
-  createdAt DateTime?   @default(now())
-  updatedAt DateTime?
   userId    String
   user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  duration  Int
+  color     String?
+
+  createdAt String
+  updatedAt String
 
   @@map("EventTemplates")
 }

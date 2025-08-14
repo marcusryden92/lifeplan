@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -10,10 +10,12 @@ import RRulePlugin from "@fullcalendar/rrule";
 import luxonPlugin from "@fullcalendar/luxon";
 
 import EventContent from "@/components/events/EventContent";
+import TemplateEventContent from "@/components/events/TemplateEventContent";
 
 import { SimpleEvent } from "@/prisma/generated/client";
 import type { EventInput } from "@fullcalendar/core/index.js";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
 
 import {
   handleSelect,
@@ -23,6 +25,12 @@ import {
   handleEventDelete,
   handleEventEdit,
 } from "@/utils/calendarEventHandlers";
+
+import {
+  handleTemplateEventCopy,
+  handleTemplateEventDelete,
+  handleTemplateEventEdit,
+} from "@/utils/template-handlers/templateEventHandlers";
 import { EventContentArg } from "@fullcalendar/core/index.js";
 
 const EVENT_INTERACTION_ENABLED = false; // Constant to enable/disable event interaction
@@ -35,12 +43,20 @@ interface CalendarProps {
 
 export default function Calendar({
   initialEvents,
-  fullCalendarEvents,
   initialDate,
 }: CalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const [events, setEvents] = useState<SimpleEvent[]>(initialEvents || []);
-  const { userId } = useCalendarProvider();
+  const { userId, calendar, updateTemplateArray } = useCalendarProvider();
+
+  /* Transform SimpleEvent calendar to EventInput for FullCalendar */
+  const fullCalendarEvents: EventInput[] = useMemo(() => {
+    const newCal: EventInput[] = calendar
+      ? transformEventsForFullCalendar(calendar)
+      : [];
+
+    return newCal;
+  }, [calendar]);
 
   return (
     <>
@@ -84,7 +100,8 @@ export default function Calendar({
         eventContent={({ event }: EventContentArg) => {
           const simpleEvent = initialEvents?.find((e) => e.id === event.id);
           return (
-            simpleEvent && (
+            simpleEvent &&
+            (!event.extendedProps.isTemplateItem ? (
               <EventContent
                 event={simpleEvent}
                 onEdit={() =>
@@ -103,7 +120,21 @@ export default function Calendar({
                 }
                 showButtons={EVENT_INTERACTION_ENABLED}
               />
-            )
+            ) : (
+              event && (
+                <TemplateEventContent
+                  event={event}
+                  onEditTitle={handleTemplateEventEdit}
+                  onCopy={() =>
+                    handleTemplateEventCopy(updateTemplateArray, event, userId)
+                  }
+                  onDelete={() =>
+                    handleTemplateEventDelete(updateTemplateArray, event.id)
+                  }
+                  showButtons={true}
+                />
+              )
+            ))
           );
         }}
       />
