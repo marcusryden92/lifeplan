@@ -20,6 +20,9 @@ export const handleTemplateSelect = (
   const { start, end } = selectInfo;
   const title = prompt("Enter event title:", "New Event");
 
+  const startDay = getWeekdayFromDate(start);
+  const startTime = getTimeFromDate(start);
+
   if (userId && title && calendarRef.current) {
     const now = new Date();
 
@@ -32,9 +35,9 @@ export const handleTemplateSelect = (
     const newEvent: EventTemplate = {
       userId: userId,
       title,
-      id: Date.now().toString(),
-      startDay: getWeekdayFromDate(start), // Assuming startDate is a Date object
-      startTime: getTimeFromDate(end), // Assuming startDate is a Date object
+      id: uuidv4(),
+      startDay, // Assuming startDate is a Date object
+      startTime, // Assuming startDate is a Date object
       duration: durationMinutes, // Add duration in minutes
       color: calendarColors[0],
       createdAt: now.toISOString(),
@@ -49,13 +52,19 @@ export const handleTemplateEventResize = (
   updateTemplateArray: React.Dispatch<React.SetStateAction<EventTemplate[]>>,
   resizeInfo: EventResizeStartArg
 ) => {
-  const { event } = resizeInfo;
+  const { event }: EventResizeStartArg = resizeInfo;
+
+  const startDate = event.start;
+  const endDate = event.end;
+
+  if (!startDate || !endDate) return;
+
   updateTemplateArray((prevEvents) =>
     prevEvents.map((ev) => {
-      if (ev.id !== event.id) return ev;
-
-      const startDate = event.start!;
-      const endDate = event.end!;
+      if (ev.id !== event.id) {
+        console.log("error");
+        return ev;
+      }
 
       // Calculate duration in minutes
       const duration = Math.round(
@@ -65,7 +74,7 @@ export const handleTemplateEventResize = (
       return {
         ...ev,
         startDay: getWeekdayFromDate(startDate),
-        startTime: getTimeFromDate(endDate),
+        startTime: getTimeFromDate(startDate),
         duration,
       };
     })
@@ -78,12 +87,14 @@ export const handleTemplateEventDrop = (
 ) => {
   const { event } = dropInfo;
 
+  const startDate = event.start;
+  const endDate = event.end;
+
+  if (!startDate || !endDate) return;
+
   updateTemplateArray((prevEvents) =>
     prevEvents.map((ev) => {
       if (ev.id !== event.id) return ev;
-
-      const startDate = event.start!;
-      const endDate = event.end!;
 
       // Calculate duration in minutes
       const duration = Math.round(
@@ -93,7 +104,7 @@ export const handleTemplateEventDrop = (
       return {
         ...ev,
         startDay: getWeekdayFromDate(startDate),
-        startTime: getTimeFromDate(endDate),
+        startTime: getTimeFromDate(startDate),
         duration,
       };
     })
@@ -126,7 +137,7 @@ export const handleTemplateEventCopy = (
     title: event.title,
     id: uuidv4(),
     startDay: getWeekdayFromDate(startDate), // Assuming startDate is a Date object
-    startTime: getTimeFromDate(endDate), // Assuming startDate is a Date object
+    startTime: getTimeFromDate(startDate), // Assuming startDate is a Date object
     duration: durationMinutes, // Add duration in minutes
     color: event.backgroundColor,
     createdAt: now.toISOString(),
@@ -150,12 +161,9 @@ export const handleTemplateEventEdit = (
   eventTitle: string,
   eventId: string
 ) => {
-  const newTitle = prompt("Enter new title:", eventTitle);
-  if (newTitle) {
-    updateTemplateArray((prevEvents) =>
-      prevEvents.map((ev) =>
-        ev.id === eventId ? { ...ev, title: newTitle } : ev
-      )
-    );
-  }
+  updateTemplateArray((prevEvents) =>
+    prevEvents.map((ev) =>
+      ev.id === eventId ? { ...ev, title: eventTitle } : ev
+    )
+  );
 };

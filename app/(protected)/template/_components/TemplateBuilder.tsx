@@ -18,7 +18,6 @@ import {
   handleTemplateEventEdit,
 } from "@/utils/template-handlers/templateEventHandlers";
 import TemplateEventContent from "@/components/events/TemplateEventContent";
-import { EventImpl } from "@fullcalendar/core/internal";
 
 export default function TemplateBuilder() {
   const calendarRef = useRef<FullCalendar>(null);
@@ -72,7 +71,7 @@ export default function TemplateBuilder() {
       }
       allDaySlot={false}
       dayHeaderFormat={{ weekday: "short" }}
-      eventContent={(event: EventImpl) => {
+      eventContent={({ event }) => {
         return (
           event && (
             <TemplateEventContent

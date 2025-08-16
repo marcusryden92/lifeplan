@@ -7,8 +7,6 @@ import { getWeekFirstDate } from "@/utils/calendarUtils";
 import { EventTemplate } from "@/prisma/generated/client";
 import { EventInput } from "@fullcalendar/core";
 
-import { v4 as uuidv4 } from "uuid";
-
 export function getTimeFromDate(date: Date): string {
   const hours = date.getHours().toString().padStart(2, "0");
   const minutes = date.getMinutes().toString().padStart(2, "0");
@@ -79,14 +77,14 @@ export function populateTemplateCalendar(
 
     eventArray.push({
       userId,
-      id: uuidv4(), // Generate a unique ID for the event
+      id: event.id, // Generate a unique ID for the event
       title: event.title,
-      start: newStartDate.toISOString(), // Convert Date to ISO string
-      end: newEndDate.toISOString(), // Convert Date to ISO string
-      isTemplateItem: true,
+      start: newStartDate, // Convert Date to ISO string
+      end: newEndDate, // Convert Date to ISO string
       backgroundColor: (event.color as string) || calendarColors[0],
       borderColor: "transparent",
       duration: null,
+      extendedProps: { isTemplateItem: true },
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });

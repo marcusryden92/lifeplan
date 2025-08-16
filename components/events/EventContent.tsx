@@ -7,7 +7,6 @@ import {
 
 import { useRef, useState, useEffect } from "react";
 
-import { SimpleEvent } from "@/prisma/generated/client";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   taskIsCompleted,
@@ -17,6 +16,7 @@ import { floorMinutes } from "@/utils/calendarUtils";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { deletePlanner } from "@/utils/plannerUtils";
 import EventPopover from "./EventPopover";
+import { EventImpl } from "@fullcalendar/core/internal";
 
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date
@@ -26,7 +26,7 @@ const formatTime = (date: Date) => {
 };
 
 interface EventContentProps {
-  event: SimpleEvent;
+  event: EventImpl;
   onEdit: () => void;
   onCopy: () => void;
   onDelete: () => void;
@@ -76,13 +76,15 @@ const EventContent: React.FC<EventContentProps> = ({
   const task = planner.find((task) => task.id === event.id);
   const [onHover, setOnHover] = useState<boolean>(false);
 
-  const currentTime = new Date();
-  const startTime = new Date(event.start);
-  const endTime = new Date(event.end);
-
   const [isCompleted, setIsCompleted] = useState(
     task ? taskIsCompleted(task) : false
   );
+
+  if (!event.start || !event.end) return null;
+
+  const currentTime = new Date();
+  const startTime = new Date(event.start);
+  const endTime = new Date(event.end);
 
   const displayPostponeButton =
     !isCompleted && floorMinutes(currentTime) > floorMinutes(startTime);
@@ -240,7 +242,7 @@ const EventContent: React.FC<EventContentProps> = ({
       {onHover &&
         elementHeight > 40 &&
         elementWidth > 70 &&
-        !event.isTemplateItem && (
+        !event.extendedProps.isTemplateItem && (
           <div
             style={{
               display: "flex",
@@ -259,7 +261,7 @@ const EventContent: React.FC<EventContentProps> = ({
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                {!event.isTemplateItem &&
+                {!event.extendedProps.isTemplateItem &&
                   (task?.type === "goal" || task?.type === "task") && (
                     <>
                       <button
@@ -289,7 +291,8 @@ const EventContent: React.FC<EventContentProps> = ({
       {/* Render popover as a portal with its own positioning logic */}
       {showPopover && eventRect && (
         <EventPopover
-          event={{ ...event, title: updatedTitle }}
+          event={event}
+          updatedTitle={updatedTitle}
           task={task}
           eventRect={eventRect}
           startTime={startTime}

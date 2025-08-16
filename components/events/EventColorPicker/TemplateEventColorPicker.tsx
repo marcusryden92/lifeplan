@@ -30,9 +30,9 @@ const TemplateEventColorPicker = ({ templateId }: { templateId: string }) => {
 
   const handleClickColor = (color: string) => {
     updateTemplateArray((prev) =>
-      prev.map((template) =>
-        template.id === templateId ? { ...template, color } : template
-      )
+      prev.map((template) => {
+        return template.id === templateId ? { ...template, color } : template;
+      })
     );
     setPaletteIsOpen(false);
   };

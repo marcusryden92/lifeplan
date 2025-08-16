@@ -116,7 +116,7 @@ function addTemplateEvent(
     end: newEndDate.toISOString(),
     rrule: JSON.stringify(rule),
     duration: event.duration * 60 * 1000, // Convert duration to milliseconds
-    isTemplateItem: true,
+    extendedProps_isTemplateItem: true,
     backgroundColor: (event.color as string) || calendarColors[0],
     borderColor: "transparent",
     createdAt: now.toISOString(),
@@ -198,7 +198,7 @@ export function populateWeekWithTemplate(
       title: event.title,
       start: newStartDate.toISOString(), // Convert Date to ISO string
       end: newEndDate.toISOString(), // Convert Date to ISO string
-      isTemplateItem: true,
+      extendedProps_isTemplateItem: true,
       backgroundColor: (event.color as string) || calendarColors[0],
       borderColor: "transparent",
       duration: null,
@@ -207,8 +207,6 @@ export function populateWeekWithTemplate(
       updatedAt: now.toISOString(),
     });
   });
-
-  console.log(updatedTemplateArray);
 
   return [...templateEventArray, ...updatedTemplateArray];
 }

@@ -1,7 +1,7 @@
 // EventContent.tsx
 import { XMarkIcon } from "@heroicons/react/24/outline";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useLayoutEffect } from "react";
 
 import { useCalendarProvider } from "@/context/CalendarProvider";
 
@@ -9,7 +9,6 @@ import { EventImpl } from "@fullcalendar/core/internal";
 import { EventTemplate } from "@/prisma/generated/client";
 
 import TemplateEventPopover from "./TemplateEventPopover";
-import { calendarColors } from "@/data/calendarColors";
 
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date
@@ -44,7 +43,7 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
   const [showPopover, setShowPopover] = useState<boolean>(false);
   const [eventRect, setEventRect] = useState<DOMRect | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const parentElement = elementRef.current?.closest(
       ".fc-event"
     ) as HTMLElement;
@@ -71,22 +70,13 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
 
   const [onHover, setOnHover] = useState<boolean>(false);
 
-  if (
-    !event ||
-    !event.id ||
-    !event.start ||
-    !event.end ||
-    !event.backgroundColor
-  )
-    return null;
-
-  const startTime = new Date(event.start);
-  const endTime = new Date(event.end);
+  const startTime = event.start ? new Date(event.start) : new Date();
+  const endTime = event.end ? new Date(event.end) : new Date();
 
   const red = "#ef4444";
 
   const backgroundColor =
-    (event.extendedProps.backgroundColor as string) || "black";
+    typeof event.backgroundColor === "string" ? event.backgroundColor : "black";
 
   const handleClickDelete = () => {
     const parentElement = elementRef.current?.closest(

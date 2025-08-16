@@ -75,25 +75,31 @@ export const transformEventsForFullCalendar = (
   events: SimpleEvent[]
 ): EventInput[] => {
   return events.map((event) => {
-    let parsedRRule: Record<string, unknown> | undefined = undefined;
-    // Safely parse RRule JSON string
-    if (event.rrule) {
-      parsedRRule = JSON.parse(event.rrule) as Record<string, unknown>;
-    } else {
-      parsedRRule = undefined;
-    }
+    const parsedRRule = event.rrule
+      ? (JSON.parse(event.rrule) as Record<string, unknown>)
+      : undefined;
 
-    const item: EventInput = {
-      ...event,
+    const { rootProps, extendedProps } = Object.entries(event).reduce(
+      (acc, [key, value]) => {
+        if (key.startsWith("extendedProps_")) {
+          acc.extendedProps[key.replace("extendedProps_", "")] = value;
+        } else {
+          acc.rootProps[key] = value;
+        }
+        return acc;
+      },
+      {
+        rootProps: {} as Record<string, unknown>,
+        extendedProps: {} as Record<string, unknown>,
+      }
+    );
+
+    return {
+      ...rootProps,
       rrule: parsedRRule,
       duration: event.duration ?? undefined,
-      extendedProps: {
-        isTemplateItem: event.isTemplateItem,
-        backgroundColor: event.backgroundColor,
-      },
-    };
-
-    return item;
+      extendedProps,
+    } as EventInput;
   });
 };
 

@@ -38,7 +38,7 @@ export function generateCalendar(
   // Add unfinished events from previous calendar to new calendar
   if (prevCalendar.length > 0) {
     const memoizedEvents: SimpleEvent[] = prevCalendar.filter(
-      (e) => currentDate > new Date(e.start) && !e.isTemplateItem
+      (e) => currentDate > new Date(e.start) && !e.extendedProps_isTemplateItem
     );
 
     // Add IDs to the set
@@ -303,7 +303,7 @@ function addTaskToCalendar(
         title: item.title,
         start: startTime.toISOString(), // ISO 8601 string format for FullCalendar
         end: endTime.toISOString(), // ISO 8601 string format for FullCalendar
-        isTemplateItem: false,
+        extendedProps_isTemplateItem: false,
         backgroundColor: (item.color as string) || calendarColors[0],
         borderColor: "transparent",
         duration: null,

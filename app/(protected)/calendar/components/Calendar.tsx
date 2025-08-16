@@ -31,7 +31,7 @@ import {
   handleTemplateEventDelete,
   handleTemplateEventEdit,
 } from "@/utils/template-handlers/templateEventHandlers";
-import { EventContentArg } from "@fullcalendar/core/index.js";
+import { EventImpl } from "@fullcalendar/core/internal";
 
 const EVENT_INTERACTION_ENABLED = false; // Constant to enable/disable event interaction
 
@@ -92,48 +92,38 @@ export default function Calendar({
         eventResizableFromStart={EVENT_INTERACTION_ENABLED}
         selectable={EVENT_INTERACTION_ENABLED}
         select={(selectInfo) =>
-          handleSelect(userId, calendarRef, setEvents, selectInfo, false)
+          handleSelect(userId, calendarRef, setEvents, selectInfo)
         }
         headerToolbar={false}
         eventResize={(resizeInfo) => handleEventResize(setEvents, resizeInfo)}
         eventDrop={(dropInfo) => handleEventDrop(setEvents, dropInfo)}
-        eventContent={({ event }: EventContentArg) => {
-          const simpleEvent = initialEvents?.find((e) => e.id === event.id);
+        eventContent={({ event }: { event: EventImpl }) => {
           return (
-            simpleEvent &&
+            event &&
             (!event.extendedProps.isTemplateItem ? (
               <EventContent
-                event={simpleEvent}
+                event={event}
                 onEdit={() =>
-                  handleEventEdit(
-                    calendarRef,
-                    setEvents,
-                    events,
-                    simpleEvent.id
-                  )
+                  handleEventEdit(calendarRef, setEvents, events, event.id)
                 }
-                onCopy={() =>
-                  handleEventCopy(calendarRef, setEvents, simpleEvent)
-                }
+                onCopy={() => handleEventCopy(calendarRef, setEvents, event)}
                 onDelete={() =>
-                  handleEventDelete(calendarRef, setEvents, simpleEvent.id)
+                  handleEventDelete(calendarRef, setEvents, event.id)
                 }
                 showButtons={EVENT_INTERACTION_ENABLED}
               />
             ) : (
-              event && (
-                <TemplateEventContent
-                  event={event}
-                  onEditTitle={handleTemplateEventEdit}
-                  onCopy={() =>
-                    handleTemplateEventCopy(updateTemplateArray, event, userId)
-                  }
-                  onDelete={() =>
-                    handleTemplateEventDelete(updateTemplateArray, event.id)
-                  }
-                  showButtons={true}
-                />
-              )
+              <TemplateEventContent
+                event={event}
+                onEditTitle={handleTemplateEventEdit}
+                onCopy={() =>
+                  handleTemplateEventCopy(updateTemplateArray, event, userId)
+                }
+                onDelete={() =>
+                  handleTemplateEventDelete(updateTemplateArray, event.id)
+                }
+                showButtons={true}
+              />
             ))
           );
         }}

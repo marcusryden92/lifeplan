@@ -2,18 +2,25 @@ import { Planner } from "@/prisma/generated/client";
 import { SimpleEvent } from "@/prisma/generated/client";
 import { getMinuteDifference } from "./calendar-generation/calendarGenerationHelpers";
 import { floorMinutes } from "./calendarUtils";
+import { EventImpl } from "@fullcalendar/core/internal";
+import { assert } from "./assert/assert";
 
 export function getPlannerAndCalendarForCompletedTask(
   planner: Planner[],
   calendar: SimpleEvent[] = [],
-  event: SimpleEvent
+  event: EventImpl
 ):
   | {
       manuallyUpdatedTaskArray: Planner[];
       manuallyUpdatedCalendar: SimpleEvent[];
     }
   | undefined {
-  if (!event.start || !event.end) return;
+  const start = event.start;
+  const end = event.end;
+
+  assert(start, "start missing from getPlannerAndCalendarForCompletedTask");
+  assert(end, "end missing from getPlannerAndCalendarForCompletedTask");
+
   const currentTime = new Date();
   const eventStartDate = new Date(event.start);
 
@@ -49,10 +56,9 @@ export function getPlannerAndCalendarForCompletedTask(
           completedStartTime: startTime.toISOString(),
           completedEndTime: endTime.toISOString(),
         };
-      } else if (floorMinutes(currentTime) < floorMinutes(event.start)) {
+      } else if (floorMinutes(currentTime) < floorMinutes(start)) {
         const duration =
-          task.duration ||
-          getMinuteDifference(new Date(event.start), new Date(event.end));
+          task.duration || getMinuteDifference(new Date(start), new Date(end));
 
         const startTime = new Date(
           currentTime.getTime() - duration * 60 * 1000
@@ -70,8 +76,8 @@ export function getPlannerAndCalendarForCompletedTask(
       // Else, set end-time to event endtime
       return {
         ...task,
-        completedStartTime: event.start,
-        completedEndTime: event.end,
+        completedStartTime: start.toISOString(),
+        completedEndTime: end.toISOString(),
       };
     }
 
@@ -81,7 +87,10 @@ export function getPlannerAndCalendarForCompletedTask(
   return { manuallyUpdatedTaskArray, manuallyUpdatedCalendar };
 }
 
-export function currentlyInEvent(event: SimpleEvent) {
+export function currentlyInEvent(event: SimpleEvent | EventImpl) {
+  assert(event.start, "event.start missing from currentlyInEvent");
+  assert(event.end, "event.end missing from currentlyInEvent");
+
   const currentTime = new Date().getTime(); // Get current time in milliseconds
 
   const eventStartTime = new Date(event.start).getTime();

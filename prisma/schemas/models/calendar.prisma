@@ -1,15 +1,15 @@
 model SimpleEvent {
-  id              String  @id @default(cuid())
-  title           String
-  start           String
-  end             String
-  duration        Int?
-  userId          String
-  rrule           String?
-  isTemplateItem  Boolean
-  backgroundColor String
-  borderColor     String
-  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                           String  @id @default(cuid())
+  title                        String
+  start                        String
+  end                          String
+  duration                     Int?
+  userId                       String
+  rrule                        String?
+  extendedProps_isTemplateItem Boolean
+  backgroundColor              String
+  borderColor                  String
+  user                         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt String
   updatedAt String

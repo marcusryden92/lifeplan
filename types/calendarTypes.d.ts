@@ -1,5 +1,6 @@
 import { EventContentArg } from "@fullcalendar/core/index.js";
 import { EventImpl } from "@fullcalendar/core/internal";
+import { SimpleEvent } from "@/prisma/generated/client";
 
 export type WeekDayIntegers = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -40,20 +41,10 @@ export type RRule = {
   exdate?: string[]; // Exclude specific dates - ISO strings
 };
 
-export type ExtendedPropsType = {
-  isTemplateItem: boolean;
-  backgroundColor: string;
-  borderColor: string;
-};
-
-export type SimpleEvent = {
-  id: string;
-  title: string;
-  start: string;
-  end: string;
-  rrule?: RRule;
-  duration?: number;
-  extendedProps: ExtendedPropsType;
+export type ExtendedProps = {
+  [K in keyof SimpleEvent as K extends `extendedProps_${infer Rest}`
+    ? Rest
+    : never]: SimpleEvent[K];
 };
 
 export interface ExtendedEventContentArg extends EventContentArg {

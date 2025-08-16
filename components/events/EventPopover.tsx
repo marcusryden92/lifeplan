@@ -9,9 +9,9 @@ import {
   ClockIcon,
 } from "@heroicons/react/24/outline";
 import { createPortal } from "react-dom";
-import { SimpleEvent } from "@/prisma/generated/client";
 import { Planner } from "@/prisma/generated/client";
 import EventColorPicker from "./EventColorPicker/EventColorPicker";
+import { EventImpl } from "@fullcalendar/core/internal";
 
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date
@@ -21,8 +21,9 @@ const formatTime = (date: Date) => {
 };
 
 interface EventPopoverProps {
-  event: SimpleEvent;
+  event: EventImpl;
   task?: Planner; // Replace with your actual task type
+  updatedTitle: string;
   eventRect: DOMRect;
   startTime: Date;
   endTime: Date;
@@ -47,6 +48,7 @@ type Direction = "left" | "right";
 const EventPopover: React.FC<EventPopoverProps> = ({
   event,
   task,
+  updatedTitle,
   eventRect,
   startTime,
   endTime,
@@ -68,7 +70,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState<Position>({ top: 0, left: 0 });
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [titleValue, setTitleValue] = useState(event.title);
+  const [titleValue, setTitleValue] = useState(updatedTitle);
 
   // Popover dimensions
   const POPOVER_WIDTH = 280; // Slightly wider for better aesthetics
@@ -356,7 +358,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
           </div>
 
           {/* Status buttons - Only show if applicable */}
-          {!event.isTemplateItem &&
+          {!event.extendedProps.isTemplateItem &&
             (task?.type === "goal" || task?.type === "task") && (
               <div className="pt-2 border-t border-gray-100">
                 <div className="flex flex-wrap gap-2">

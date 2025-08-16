@@ -6,13 +6,13 @@ import {
   EventInput,
 } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
+import { EventImpl } from "@fullcalendar/core/internal";
 
 export const handleSelect = (
   userId: string | undefined,
   calendarRef: React.RefObject<FullCalendar>,
   setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
-  selectInfo: DateSelectArg,
-  isTemplateItem: boolean
+  selectInfo: DateSelectArg
 ) => {
   const { start, end } = selectInfo;
   const title = prompt("Enter event title:", "New Event");
@@ -27,7 +27,7 @@ export const handleSelect = (
       start: start.toISOString(),
       end: end.toISOString(),
       id: Date.now().toString(),
-      isTemplateItem: isTemplateItem,
+      extendedProps_isTemplateItem: false,
       rrule: null,
       backgroundColor: "#007BFF",
       borderColor: "#000000",
@@ -81,19 +81,22 @@ export const handleEventDrop = (
 export const handleEventCopy = (
   calendarRef: React.RefObject<FullCalendar>,
   setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
-  event: SimpleEvent,
+  event: EventImpl,
   userId?: string
 ) => {
+  if (!event.start || !event.end)
+    throw new Error("event.start or event.end missing in handleEventCopy");
+
   if (userId && calendarRef.current) {
     const now = new Date();
 
     const newEvent: SimpleEvent = {
       userId,
       title: event.title,
-      start: event.start,
-      end: event.end,
+      start: event.start.toISOString(),
+      end: event.end.toISOString(),
       id: Date.now().toString(),
-      isTemplateItem: event.isTemplateItem,
+      extendedProps_isTemplateItem: false,
       rrule: null,
       backgroundColor: "#007BFF",
       borderColor: "#000000",
