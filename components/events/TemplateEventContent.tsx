@@ -35,7 +35,7 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
   onCopy,
   onDelete,
 }) => {
-  const { updateTemplateArray } = useCalendarProvider();
+  const { updateTemplateArray, userSettings } = useCalendarProvider();
 
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
@@ -74,9 +74,6 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
   const endTime = event.end ? new Date(event.end) : new Date();
 
   const red = "#ef4444";
-
-  const backgroundColor =
-    typeof event.backgroundColor === "string" ? event.backgroundColor : "black";
 
   const handleClickDelete = () => {
     const parentElement = elementRef.current?.closest(
@@ -118,9 +115,10 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
         flexDirection: "column",
         justifyContent: "space-between",
         height: "100%",
-        padding: "0px",
-        backgroundColor: backgroundColor,
-        borderColor: event.borderColor,
+        padding: "8px",
+        borderRadius: userSettings.styles.events.borderRadius,
+        backgroundColor: event.backgroundColor,
+        borderLeft: userSettings.styles.template.event.borderLeft,
       }}
       onMouseEnter={() => setOnHover(true)}
       onMouseLeave={() => setOnHover(false)}
@@ -131,6 +129,7 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
           style={{
             marginBottom: "auto",
             fontSize: elementHeight > 20 ? "0.8rem" : "0.5rem",
+            fontWeight: "bold",
           }}
         >
           {event.title}
@@ -139,6 +138,7 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
           className="flex gap-2"
           style={{
             fontSize: elementHeight > 20 ? "0.8rem" : "0.5rem",
+            fontWeight: "bold",
           }}
         >
           <span>{formatTime(startTime)}</span>

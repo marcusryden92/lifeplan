@@ -38,7 +38,7 @@ const EventContent: React.FC<EventContentProps> = ({
   onEdit,
   onCopy,
 }) => {
-  const { planner, updatePlannerArray, updateAll, calendar } =
+  const { planner, updatePlannerArray, updateAll, calendar, userSettings } =
     useCalendarProvider();
 
   const elementRef = useRef<HTMLDivElement>(null);
@@ -212,9 +212,10 @@ const EventContent: React.FC<EventContentProps> = ({
         flexDirection: "column",
         justifyContent: "space-between",
         height: "100%",
-        padding: "0px",
+        padding: "8px",
+        borderRadius: userSettings.styles.events.borderRadius,
         backgroundColor: event.backgroundColor,
-        borderColor: event.borderColor,
+        borderLeft: userSettings.styles.calendar.event.borderLeft,
       }}
       onMouseEnter={() => setOnHover(true)}
       onMouseLeave={() => setOnHover(false)}
@@ -225,6 +226,7 @@ const EventContent: React.FC<EventContentProps> = ({
           style={{
             marginBottom: "auto",
             fontSize: elementHeight > 20 ? "0.8rem" : "0.5rem",
+            fontWeight: "bold",
           }}
         >
           {updatedTitle}
@@ -233,6 +235,7 @@ const EventContent: React.FC<EventContentProps> = ({
           className="flex gap-2"
           style={{
             fontSize: elementHeight > 20 ? "0.8rem" : "0.5rem",
+            fontWeight: "bold",
           }}
         >
           <span>{formatTime(startTime)}</span>

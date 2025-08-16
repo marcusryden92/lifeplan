@@ -237,7 +237,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
   return createPortal(
     <div
       ref={popoverRef}
-      className="fixed bg-white shadow-lg rounded-md z-50 overflow-hidden"
+      className="fixed bg-white bg-opacity-90 backdrop-blur-md shadow-lg rounded-md z-50 overflow-hidden"
       style={{
         top: `${position.top}px`,
         left: `${position.left}px`,

@@ -1,17 +1,20 @@
 export const calendarColors: string[] = [
-  "#60A5FA", // skyBlue
-  "#10B981", // emeraldGreen
-  "#F59E0B", // amberYellow
-  "#F43F5E", // roseRed
-  "#8B5CF6", // violetPurple
-  "#64748B", // slateGray
-  "#06B6D4", // cyanTeal
-  "#84CC16", // limeGreen
-  "#D946EF", // fuchsiaPink
-  "#FB923C", // warmOrange
-  "#BFDBFE", // pastelBlue
-  "#A7F3D0", // mintGreen
-  "#FEF3C7", // softYellow
-  "#FBCFE8", // blushPink
-  "#DDD6FE", // lavender
+  "#E63946", // bright red
+  "#C0392B", // deep red
+  "#D35400", // burnt orange
+  "#F77F00", // vivid orange
+  "#FFB703", // amber yellow
+  "#F4A261", // warm sand
+  "#2E7D32", // forest green
+  "#27AE60", // emerald
+  "#16A085", // teal green
+  "#20C997", // turquoise
+  "#1976D2", // royal blue
+  "#2980B9", // strong blue
+  "#457B9D", // steel blue
+  "#1D3557", // navy
+  "#6C5CE7", // violet (blue-purple)
+  "#8E44AD", // deep purple
+  "#D81B60", // raspberry pink (magenta)
+  "#2C3E50", // charcoal
 ];

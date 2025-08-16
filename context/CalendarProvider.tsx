@@ -9,6 +9,7 @@ import { RootState } from "@/redux/store";
 import { Planner, SimpleEvent, EventTemplate } from "@/prisma/generated/client";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
+import type { UserSettings } from "@/types/userTypes";
 
 import useCalendarStateActions from "@/hooks/useCalendarStateActions";
 import useManuallyRefreshCalendar from "@/hooks/useManuallyRefreshCalendar";
@@ -16,6 +17,7 @@ import useCalendarServerSync from "@/hooks/useCalendarServerSync";
 
 type CalendarContextType = {
   userId: string;
+  userSettings: UserSettings;
   weekStartDay: WeekDayIntegers;
   planner: Planner[];
   calendar: SimpleEvent[];
@@ -39,10 +41,19 @@ export default function CalendarProvider({
   children: ReactNode;
 }) {
   const dispatch = useDispatch<AppDispatch>();
-  const userState = useSelector((state: RootState) => state.user);
+  const user = useSelector((state: RootState) => state.user.user);
   const calendarState = useSelector((state: RootState) => state.calendar);
 
-  const userId = userState.user?.id;
+  const userId = user?.id;
+  const userSettings = {
+    styles: {
+      events: {
+        borderRadius: "8px",
+      },
+      template: { event: { borderLeft: "4px solid black" } },
+      calendar: { event: { borderLeft: "4px solid #ADD8E6" } },
+    },
+  };
 
   const { planner, calendar, template } = useMemo(
     () => calendarState,
@@ -73,6 +84,7 @@ export default function CalendarProvider({
 
   const value = {
     userId,
+    userSettings,
     weekStartDay,
     planner,
     calendar,
