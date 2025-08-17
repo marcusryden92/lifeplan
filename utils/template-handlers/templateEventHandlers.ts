@@ -68,7 +68,7 @@ export const handleTemplateEventResize = (
 
       // Calculate duration in minutes
       const duration = Math.round(
-        (startDate.getTime() - endDate.getTime()) / (1000 * 60)
+        (endDate.getTime() - startDate.getTime()) / (1000 * 60)
       );
 
       return {
@@ -98,7 +98,7 @@ export const handleTemplateEventDrop = (
 
       // Calculate duration in minutes
       const duration = Math.round(
-        (startDate.getTime() - endDate.getTime()) / (1000 * 60)
+        (endDate.getTime() - startDate.getTime()) / (1000 * 60)
       );
 
       return {
@@ -127,8 +127,8 @@ export const handleTemplateEventCopy = (
   const endDate = new Date(event.end);
 
   // Calculate duration in minutes
-  const durationMinutes = Math.round(
-    (startDate.getTime() - endDate.getTime()) / (1000 * 60)
+  const duration = Math.round(
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60)
   );
 
   // Create new EventTemplate object
@@ -138,7 +138,7 @@ export const handleTemplateEventCopy = (
     id: uuidv4(),
     startDay: getWeekdayFromDate(startDate), // Assuming startDate is a Date object
     startTime: getTimeFromDate(startDate), // Assuming startDate is a Date object
-    duration: durationMinutes, // Add duration in minutes
+    duration, // Add duration in minutes
     color: event.backgroundColor,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
