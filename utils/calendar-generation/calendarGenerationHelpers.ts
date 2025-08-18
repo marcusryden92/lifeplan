@@ -96,8 +96,8 @@ export function addCompletedItemsToArray(
         start: item.completedStartTime,
         end: item.completedEndTime, // Add the calculated end time here
         extendedProps_isTemplateItem: false,
-        backgroundColor: "#0ebf7e",
-        borderColor: "#0ca66e",
+        backgroundColor: item.color as string,
+        borderColor: "",
         duration: null,
         rrule: null,
         createdAt: now.toISOString(),

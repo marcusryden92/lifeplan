@@ -2,10 +2,10 @@
 import {
   CheckIcon,
   ArrowRightIcon,
-  XMarkIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useLayoutEffect } from "react";
 
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
@@ -48,28 +48,19 @@ const EventContent: React.FC<EventContentProps> = ({
   const [eventRect, setEventRect] = useState<DOMRect | null>(null);
   const [updatedTitle, setUpdatedTitle] = useState<string>(event.title);
 
-  useEffect(() => {
-    const parentElement = elementRef.current?.closest(
-      ".fc-event"
-    ) as HTMLElement;
-    if (parentElement) {
-      setElementHeight(parentElement.offsetHeight);
-      setElementWidth(parentElement.offsetWidth);
+  useLayoutEffect(() => {
+    const element = elementRef.current;
 
-      // Apply sky-500 border when popover is open
+    if (element) {
+      setElementHeight(element.offsetHeight);
+      setElementWidth(element.offsetWidth);
+
+      // Set z-index when opening popover
       if (showPopover) {
-        parentElement.style.outline = "1px solid #0ea5e9"; // sky-500
-        parentElement.style.outlineOffset = "0px";
-        parentElement.style.zIndex = "30"; // Ensure event is above others
+        element.style.zIndex = "30"; // Ensure event is above others
       } else {
-        parentElement.style.outline = "none";
-        parentElement.style.outlineOffset = "0";
-        parentElement.style.zIndex = ""; // Reset to default
+        element.style.zIndex = ""; // Reset to default
       }
-    }
-
-    if (elementHeight < 20 && parentElement) {
-      parentElement.style.padding = "0px";
     }
   }, [elementHeight, showPopover]);
 
@@ -90,30 +81,39 @@ const EventContent: React.FC<EventContentProps> = ({
     !isCompleted && floorMinutes(currentTime) > floorMinutes(startTime);
 
   const green = "#0ebf7e";
-  const orange = "#f59e0b";
   const red = "#ef4444";
 
   const handleClickCompleteTask = () => {
     // Set the element to green for a second, before rerendering
-    const parentElement = elementRef.current?.closest(
-      ".fc-event"
-    ) as HTMLElement;
-    const color = !isCompleted ? green : orange;
+    const element = elementRef.current;
 
-    if (parentElement) {
-      parentElement.style.backgroundColor = color;
-      parentElement.style.border = `solid 2px ${color}`;
+    if (!event || !element) return;
+
+    const color = !isCompleted
+      ? green
+      : (event.extendedProps.backgroundColor as string);
+
+    console.log(color);
+
+    if (element && color) {
+      element.style.backgroundColor = color;
     }
 
     // If already completed, set completed to undefined
     if (isCompleted) {
       setIsCompleted(false);
+
       const updatedPlanner = planner.map((item) =>
         item.id === event.id
-          ? { ...item, completedStartTime: null, completedEndTime: null }
+          ? {
+              ...item,
+              completedStartTime: null,
+              completedEndTime: null,
+            }
           : item
       );
-      updatePlannerArray(updatedPlanner);
+
+      updateAll(updatedPlanner);
     }
 
     // If not completed, update the planner with the
@@ -145,12 +145,11 @@ const EventContent: React.FC<EventContentProps> = ({
   };
 
   const handleClickDelete = () => {
-    const parentElement = elementRef.current?.closest(
-      ".fc-event"
-    ) as HTMLElement;
-    if (parentElement) {
-      parentElement.style.backgroundColor = red;
-      parentElement.style.border = `solid 2px ${red}`;
+    const element = elementRef.current;
+
+    if (element) {
+      element.style.backgroundColor = red;
+      element.style.border = `solid 2px ${red}`;
     }
 
     const updatedCalendar = calendar?.filter((e) => !(e.id === task?.id));
@@ -221,7 +220,10 @@ const EventContent: React.FC<EventContentProps> = ({
       onMouseLeave={() => setOnHover(false)}
       onDoubleClick={handleDoubleClick}
     >
-      <span className="flex gap-2 justify-between">
+      <span
+        className="flex gap-2 justify-between"
+        style={{ borderBottom: showPopover ? "4px dotted white" : "" }}
+      >
         <span
           style={{
             marginBottom: "auto",
@@ -229,7 +231,7 @@ const EventContent: React.FC<EventContentProps> = ({
             fontWeight: "bold",
           }}
         >
-          {updatedTitle}
+          {event.title}
         </span>
         <span
           className="flex gap-2"
@@ -259,7 +261,7 @@ const EventContent: React.FC<EventContentProps> = ({
                 style={{ display: "flex", justifyContent: "flex-end" }}
               >
                 <button onClick={handleClickDelete}>
-                  <XMarkIcon height="1rem" width="1rem" />
+                  <TrashIcon height="1rem" width="1rem" />
                 </button>
               </div>
 

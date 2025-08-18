@@ -85,6 +85,8 @@ export const transformEventsForFullCalendar = (
           acc.extendedProps[key.replace("extendedProps_", "")] = value;
         } else {
           acc.rootProps[key] = value;
+          if (key === "backgroundColor")
+            acc.extendedProps["backgroundColor"] = value;
         }
         return acc;
       },
