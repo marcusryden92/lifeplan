@@ -62,7 +62,14 @@ const useCalendarServerSync = (
       }
     };
 
-    if (!isInitialized) return;
+    // Skip sync if calendar isn't initialized or if data is identical
+    if (
+      !isInitialized ||
+      (previousPlanner.current === planner &&
+        previousCalendar.current === calendar &&
+        previousTemplate.current === template)
+    )
+      return;
 
     const timeout = setTimeout(processServerSync, 300);
 
