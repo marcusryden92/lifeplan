@@ -340,13 +340,15 @@ const EventPopover: React.FC<EventPopoverProps> = ({
           {/* Main action buttons */}
           <EventColorPicker taskId={task.id} />
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={onCopy}
-              className="flex items-center text-sm text-gray-700 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
-            >
-              <DocumentDuplicateIcon className="h-4 w-4 mr-1.5 text-gray-500" />
-              Duplicate
-            </button>
+            {task?.type !== "task" && task?.type !== "goal" && (
+              <button
+                onClick={onCopy}
+                className="flex items-center text-sm text-gray-700 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+              >
+                <DocumentDuplicateIcon className="h-4 w-4 mr-1.5 text-gray-500" />
+                Duplicate
+              </button>
+            )}
 
             <button
               onClick={onDelete}
