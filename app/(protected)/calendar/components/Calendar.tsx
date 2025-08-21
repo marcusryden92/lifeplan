@@ -33,7 +33,7 @@ import {
 } from "@/utils/template-handlers/templateEventHandlers";
 import { EventImpl } from "@fullcalendar/core/internal";
 
-const EVENT_INTERACTION_ENABLED = false; // Constant to enable/disable event interaction
+const EVENT_INTERACTION_ENABLED = true; // Constant to enable/disable event interaction
 
 interface CalendarProps {
   initialEvents?: SimpleEvent[] | undefined;
@@ -47,7 +47,8 @@ export default function Calendar({
 }: CalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
   const [events, setEvents] = useState<SimpleEvent[]>(initialEvents || []);
-  const { userId, calendar, updateTemplateArray } = useCalendarProvider();
+  const { userId, calendar, planner, updateTemplateArray, updatePlannerArray } =
+    useCalendarProvider();
 
   /* Transform SimpleEvent calendar to EventInput for FullCalendar */
   const fullCalendarEvents: EventInput[] = useMemo(() => {
@@ -92,7 +93,7 @@ export default function Calendar({
         eventResizableFromStart={EVENT_INTERACTION_ENABLED}
         selectable={EVENT_INTERACTION_ENABLED}
         select={(selectInfo) =>
-          handleSelect(userId, calendarRef, setEvents, selectInfo)
+          handleSelect(userId, calendarRef, updatePlannerArray, selectInfo)
         }
         headerToolbar={false}
         eventResize={(resizeInfo) => handleEventResize(setEvents, resizeInfo)}
@@ -108,7 +109,7 @@ export default function Calendar({
                 }
                 onCopy={() => handleEventCopy(calendarRef, setEvents, event)}
                 onDelete={() =>
-                  handleEventDelete(calendarRef, setEvents, event.id)
+                  handleEventDelete(planner, updatePlannerArray, event.id)
                 }
                 showButtons={EVENT_INTERACTION_ENABLED}
               />

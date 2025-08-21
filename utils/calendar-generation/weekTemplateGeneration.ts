@@ -116,7 +116,10 @@ function addTemplateEvent(
     end: newEndDate.toISOString(),
     rrule: JSON.stringify(rule),
     duration: event.duration * 60 * 1000, // Convert duration to milliseconds
-    extendedProps_isTemplateItem: true,
+    extendedProps_itemType: "template",
+    extendedProps_completedStartTime: null,
+    extendedProps_completedEndTime: null,
+    extendedProps_parentId: null,
     backgroundColor: (event.color as string) || calendarColors[0],
     borderColor: "transparent",
     createdAt: now.toISOString(),
@@ -198,7 +201,10 @@ export function populateWeekWithTemplate(
       title: event.title,
       start: newStartDate.toISOString(), // Convert Date to ISO string
       end: newEndDate.toISOString(), // Convert Date to ISO string
-      extendedProps_isTemplateItem: true,
+      extendedProps_itemType: "template",
+      extendedProps_completedStartTime: null,
+      extendedProps_completedEndTime: null,
+      extendedProps_parentId: null,
       backgroundColor: (event.color as string) || calendarColors[0],
       borderColor: "transparent",
       duration: null,

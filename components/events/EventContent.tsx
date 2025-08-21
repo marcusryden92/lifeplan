@@ -8,10 +8,7 @@ import {
 import { useRef, useState, useLayoutEffect } from "react";
 
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import {
-  taskIsCompleted,
-  getPlannerAndCalendarForCompletedTask,
-} from "@/utils/taskHelpers";
+import { getPlannerAndCalendarForCompletedTask } from "@/utils/taskHelpers";
 import { floorMinutes } from "@/utils/calendarUtils";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { deletePlanner } from "@/utils/plannerUtils";
@@ -48,6 +45,9 @@ const EventContent: React.FC<EventContentProps> = ({
   const [eventRect, setEventRect] = useState<DOMRect | null>(null);
   const [updatedTitle, setUpdatedTitle] = useState<string>(event.title);
 
+  const { itemType, parentId, completedStartTime, completedEndTime } =
+    event.extendedProps;
+
   useLayoutEffect(() => {
     const element = elementRef.current;
 
@@ -64,11 +64,10 @@ const EventContent: React.FC<EventContentProps> = ({
     }
   }, [elementHeight, showPopover]);
 
-  const task = planner.find((task) => task.id === event.id);
   const [onHover, setOnHover] = useState<boolean>(false);
 
-  const [isCompleted, setIsCompleted] = useState(
-    task ? taskIsCompleted(task) : false
+  const [isCompleted, setIsCompleted] = useState<boolean>(
+    !!(completedStartTime && completedEndTime) || false
   );
 
   if (!event.start || !event.end) return null;
@@ -152,18 +151,18 @@ const EventContent: React.FC<EventContentProps> = ({
       element.style.border = `solid 2px ${red}`;
     }
 
-    const updatedCalendar = calendar?.filter((e) => !(e.id === task?.id));
+    const updatedCalendar = calendar?.filter((e) => !(e.id === event?.id));
 
     setTimeout(() => {
-      if (task?.type === "goal") {
+      if (itemType === "goal") {
         deleteGoal({
           updatePlannerArray,
-          taskId: task.id,
-          parentId: task.parentId || null,
+          taskId: event.id,
+          parentId: typeof parentId === "string" ? parentId : null,
           manuallyUpdatedCalendar: updatedCalendar,
         });
-      } else if (task) {
-        deletePlanner(updatePlannerArray, task.id, updatedCalendar);
+      } else {
+        updatePlannerArray((prev) => prev.filter((t) => t.id !== event.id));
       }
     }, 500);
 
@@ -267,7 +266,8 @@ const EventContent: React.FC<EventContentProps> = ({
 
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 {!event.extendedProps.isTemplateItem &&
-                  (task?.type === "goal" || task?.type === "task") && (
+                  (event.extendedProps.itemType === "goal" ||
+                    event.extendedProps.itemType === "task") && (
                     <>
                       <button
                         onClick={handleClickCompleteTask}
@@ -298,7 +298,6 @@ const EventContent: React.FC<EventContentProps> = ({
         <EventPopover
           event={event}
           updatedTitle={updatedTitle}
-          task={task}
           eventRect={eventRect}
           startTime={startTime}
           endTime={endTime}

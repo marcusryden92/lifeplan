@@ -90,7 +90,7 @@ export default function TasksPage() {
 
   const handleDeleteAll = () => {
     const filterArray: Planner[] = planner.filter(
-      (task) => task.type !== "task" && !task.parentId
+      (task) => task.itemType !== "task" && !task.parentId
     );
 
     deleteAll({ updatePlannerArray, filter: filterArray });
@@ -236,11 +236,11 @@ export default function TasksPage() {
         ref={tasksContainerRef}
       >
         {planner.map((task, index) =>
-          task.type !== "task" && !task.parentId ? (
+          task.itemType !== "task" && !task.parentId ? (
             <div
               key={index}
               className={`flex flex-col rounded-lg w-[350px] group hover:shadow-md py-1 px-4 my-1 mx-1 ${
-                task.type === "plan" || changeToTask === index
+                task.itemType === "plan" || changeToTask === index
                   ? "bg-gray-800 text-white"
                   : "bg-transparent"
               }`}
@@ -309,7 +309,7 @@ export default function TasksPage() {
                   >
                     <div className="truncate max-w-[180px]">{task.title}</div>
 
-                    {task.type === "plan" && changeToTask !== index && (
+                    {task.itemType === "plan" && changeToTask !== index && (
                       <div className="text-sm text-white pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
                         <div>
                           {task.starts && format(task.starts, "yyyy-MM-dd")}
@@ -329,7 +329,7 @@ export default function TasksPage() {
                         >
                           <PencilIcon
                             className={`w-5 h-5 ${
-                              task.type === "plan" ? "text-white" : ""
+                              task.itemType === "plan" ? "text-white" : ""
                             }`}
                           />
                         </div>
@@ -339,7 +339,7 @@ export default function TasksPage() {
                         >
                           <XMarkIcon
                             className={`w-7 h-7 ${
-                              task.type === "plan" ? "text-white" : ""
+                              task.itemType === "plan" ? "text-white" : ""
                             }`}
                           />
                         </div>

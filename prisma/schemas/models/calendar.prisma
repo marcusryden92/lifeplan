@@ -1,15 +1,18 @@
 model SimpleEvent {
-  id                           String  @id @default(cuid())
-  title                        String
-  start                        String
-  end                          String
-  duration                     Int?
-  userId                       String
-  rrule                        String?
-  extendedProps_isTemplateItem Boolean
-  backgroundColor              String
-  borderColor                  String
-  user                         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                               String   @id @default(cuid())
+  title                            String
+  start                            String
+  end                              String
+  duration                         Int?
+  userId                           String
+  rrule                            String?
+  extendedProps_itemType           ItemType
+  extendedProps_completedStartTime String?
+  extendedProps_completedEndTime   String?
+  extendedProps_parentId           String?
+  backgroundColor                  String
+  borderColor                      String
+  user                             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt String
   updatedAt String
@@ -18,10 +21,10 @@ model SimpleEvent {
 }
 
 model Planner {
-  id                 String    @id @default(uuid())
+  id                 String   @id @default(uuid())
   title              String
   parentId           String?
-  type               PlanType?
+  itemType           ItemType
   isReady            Boolean?
   duration           Int?
   deadline           String?
@@ -31,7 +34,7 @@ model Planner {
   completedEndTime   String?
   userId             String
   color              String?
-  user               User      @relation(fields: [userId], references: [id])
+  user               User     @relation(fields: [userId], references: [id])
 
   createdAt String
   updatedAt String
@@ -65,8 +68,9 @@ enum WeekDayType {
   saturday
 }
 
-enum PlanType {
+enum ItemType {
   task
   plan
   goal
+  template
 }

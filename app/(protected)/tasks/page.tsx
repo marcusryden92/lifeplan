@@ -234,7 +234,7 @@ export default function TasksPage() {
             <div
               key={index}
               className={`flex flex-col rounded-lg w-[350px] group hover:shadow-md py-1 px-4 my-1 mx-1 ${
-                task.type === "task" || changeToTask === index
+                task.itemType === "task" || changeToTask === index
                   ? "bg-amber-500 text-white"
                   : "bg-transparent"
               }`}
@@ -302,7 +302,7 @@ export default function TasksPage() {
                   >
                     <div className="truncate max-w-[180px]">{task.title}</div>
 
-                    {task.type === "task" && changeToTask !== index && (
+                    {task.itemType === "task" && changeToTask !== index && (
                       <div className="text-sm text-white pl-2 flex flex-shrink-0 items-start justify-start space-x-2 min-w-[100px]">
                         <div>
                           {task.deadline && format(task.deadline, "yyyy-MM-dd")}
@@ -322,7 +322,7 @@ export default function TasksPage() {
                         >
                           <PencilIcon
                             className={`w-5 h-5 ${
-                              task.type === "task" ? "text-white" : ""
+                              task.itemType === "task" ? "text-white" : ""
                             }`}
                           />
                         </div>
@@ -332,7 +332,7 @@ export default function TasksPage() {
                         >
                           <XMarkIcon
                             className={`w-7 h-7 ${
-                              task.type === "task" ? "text-white" : ""
+                              task.itemType === "task" ? "text-white" : ""
                             }`}
                           />
                         </div>

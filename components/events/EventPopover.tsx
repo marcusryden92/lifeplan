@@ -9,7 +9,6 @@ import {
   ClockIcon,
 } from "@heroicons/react/24/outline";
 import { createPortal } from "react-dom";
-import { Planner } from "@/prisma/generated/client";
 import EventColorPicker from "./EventColorPicker/EventColorPicker";
 import { EventImpl } from "@fullcalendar/core/internal";
 
@@ -22,7 +21,6 @@ const formatTime = (date: Date) => {
 
 interface EventPopoverProps {
   event: EventImpl;
-  task?: Planner; // Replace with your actual task type
   updatedTitle: string;
   eventRect: DOMRect;
   startTime: Date;
@@ -47,7 +45,6 @@ type Direction = "left" | "right";
 
 const EventPopover: React.FC<EventPopoverProps> = ({
   event,
-  task,
   updatedTitle,
   eventRect,
   startTime,
@@ -61,8 +58,6 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   onPostpone,
   onUpdateTitle,
 }) => {
-  if (!task) return;
-
   const popoverRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [position, setPosition] = useState<Position>({ top: 0, left: 0 });
@@ -338,17 +333,18 @@ const EventPopover: React.FC<EventPopoverProps> = ({
         {/* Actions - Notion-style minimal buttons */}
         <div className="space-y-2">
           {/* Main action buttons */}
-          <EventColorPicker taskId={task.id} />
+          <EventColorPicker taskId={event.id} />
           <div className="flex flex-wrap gap-2">
-            {task?.type !== "task" && task?.type !== "goal" && (
-              <button
-                onClick={onCopy}
-                className="flex items-center text-sm text-gray-700 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
-              >
-                <DocumentDuplicateIcon className="h-4 w-4 mr-1.5 text-gray-500" />
-                Duplicate
-              </button>
-            )}
+            {event.extendedProps.itemType !== "task" &&
+              event.extendedProps.itemType !== "goal" && (
+                <button
+                  onClick={onCopy}
+                  className="flex items-center text-sm text-gray-700 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
+                >
+                  <DocumentDuplicateIcon className="h-4 w-4 mr-1.5 text-gray-500" />
+                  Duplicate
+                </button>
+              )}
 
             <button
               onClick={onDelete}
@@ -361,7 +357,8 @@ const EventPopover: React.FC<EventPopoverProps> = ({
 
           {/* Status buttons - Only show if applicable */}
           {!event.extendedProps.isTemplateItem &&
-            (task?.type === "goal" || task?.type === "task") && (
+            (event.extendedProps.itemType === "goal" ||
+              event.extendedProps.itemType === "task") && (
               <div className="pt-2 border-t border-gray-100">
                 <div className="flex flex-wrap gap-2">
                   <button

@@ -70,7 +70,7 @@ export default function RefineGoalsPage() {
 
   // Get all the goals
   const goalsList = useMemo(() => {
-    return planner.filter((task) => task.type === "goal" && !task.parentId);
+    return planner.filter((task) => task.itemType === "goal" && !task.parentId);
   }, [planner]);
 
   // Accessibility improvements for carousel controls

@@ -1,6 +1,5 @@
 # House Keeping
 
-- Redux
 - Change date picker
 
 # Calendar

@@ -150,7 +150,7 @@ const Goal = ({
                 >
                   <PencilIcon
                     className={`w-5 h-5 ${
-                      task.type === "goal" ? "text-black" : ""
+                      task.itemType === "goal" ? "text-black" : ""
                     }`}
                   />
                 </button>
@@ -161,7 +161,7 @@ const Goal = ({
                 >
                   <TrashIcon
                     className={`w-5 h-5 ${
-                      task.type === "goal" ? "text-black" : ""
+                      task.itemType === "goal" ? "text-black" : ""
                     }`}
                   />
                 </button>

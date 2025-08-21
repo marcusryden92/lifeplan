@@ -37,7 +37,7 @@ export default function GoalsSidebar({
   const [api] = carouselApi;
   const handleDeleteAll = useCallback(() => {
     const filteredArray = planner.filter(
-      (task) => task.type === "goal" && !task.parentId
+      (task) => task.itemType === "goal" && !task.parentId
     );
 
     filteredArray.forEach((item) =>

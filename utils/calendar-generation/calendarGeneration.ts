@@ -13,10 +13,9 @@ import {
   addWeekTemplateToCalendar,
   populateWeekWithTemplate,
 } from "./weekTemplateGeneration";
-import { SimpleEvent } from "@/prisma/generated/client";
 import { getDayDifference, hasDateInArray } from "./calendarGenerationHelpers";
 
-import { Planner, EventTemplate } from "@/prisma/generated/client";
+import { Planner, EventTemplate, SimpleEvent } from "@/prisma/generated/client";
 
 import { getSortedTreeBottomLayer } from "../goalPageHandlers";
 import { taskIsCompleted } from "../taskHelpers";
@@ -38,7 +37,9 @@ export function generateCalendar(
   // Add unfinished events from previous calendar to new calendar
   if (prevCalendar.length > 0) {
     const memoizedEvents: SimpleEvent[] = prevCalendar.filter(
-      (e) => currentDate > new Date(e.start) && !e.extendedProps_isTemplateItem
+      (e) =>
+        currentDate > new Date(e.start) &&
+        e.extendedProps_itemType !== "template"
     );
 
     // Add IDs to the set
@@ -120,8 +121,8 @@ function addEventsToCalendar(
 
   planner.forEach((task) => {
     if (
-      (task.type === "goal" && !task.parentId && task.isReady) ||
-      task.type === "task"
+      (task.itemType === "goal" && !task.parentId && task.isReady) ||
+      task.itemType === "task"
     ) {
       goalsAndTasks.push(task);
     }
@@ -136,7 +137,7 @@ function addEventsToCalendar(
 
   goalsAndTasks.forEach((item) => {
     // If item is a task:
-    if (item.type === "task" && !memoizedEventIds.has(item.id)) {
+    if (item.itemType === "task" && !memoizedEventIds.has(item.id)) {
       addTaskToCalendar(
         userId,
         item,
@@ -149,7 +150,7 @@ function addEventsToCalendar(
       );
     }
     // If Item is a goal:
-    else if (item.type === "goal") {
+    else if (item.itemType === "goal") {
       addGoalToCalendar(
         userId,
         planner,
@@ -301,9 +302,12 @@ function addTaskToCalendar(
         userId,
         id: item.id,
         title: item.title,
-        start: startTime.toISOString(), // ISO 8601 string format for FullCalendar
-        end: endTime.toISOString(), // ISO 8601 string format for FullCalendar
-        extendedProps_isTemplateItem: false,
+        start: startTime.toISOString(),
+        end: endTime.toISOString(),
+        extendedProps_itemType: item.itemType,
+        extendedProps_completedEndTime: null,
+        extendedProps_completedStartTime: null,
+        extendedProps_parentId: item.parentId || null,
         backgroundColor: (item.color as string) || calendarColors[0],
         borderColor: "transparent",
         duration: null,

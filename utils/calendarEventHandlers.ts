@@ -1,5 +1,5 @@
 import FullCalendar from "@fullcalendar/react";
-import { SimpleEvent } from "@/prisma/generated/client";
+import { SimpleEvent, Planner, ItemType } from "@/prisma/generated/client";
 import {
   DateSelectArg,
   EventDropArg,
@@ -7,11 +7,14 @@ import {
 } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 import { EventImpl } from "@fullcalendar/core/internal";
+import { v4 as uuidv4 } from "uuid";
+import React from "react";
+import { deleteGoal } from "./goalPageHandlers";
 
 export const handleSelect = (
   userId: string | undefined,
   calendarRef: React.RefObject<FullCalendar>,
-  setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
+  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   selectInfo: DateSelectArg
 ) => {
   const { start, end } = selectInfo;
@@ -19,25 +22,28 @@ export const handleSelect = (
 
   const now = new Date();
 
-  if (userId && title && calendarRef.current) {
-    const calendarApi = calendarRef.current.getApi();
-    const newEvent: SimpleEvent = {
-      userId,
+  const duration = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+
+  if (userId && title) {
+    const newEvent: Planner = {
+      id: uuidv4(),
       title,
-      start: start.toISOString(),
-      end: end.toISOString(),
-      id: Date.now().toString(),
-      extendedProps_isTemplateItem: false,
-      rrule: null,
-      backgroundColor: "#007BFF",
-      borderColor: "#000000",
-      duration: null,
+      parentId: null,
+      itemType: "plan",
+      isReady: true,
+      duration,
+      deadline: null,
+      starts: start.toISOString(),
+      dependency: null,
+      completedStartTime: null,
+      completedEndTime: null,
+      userId,
+      color: "black",
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };
 
-    calendarApi.addEvent(newEvent as EventInput);
-    setEvents((prevEvents) => [...prevEvents, newEvent]);
+    updatePlannerArray((prevEvents) => [...prevEvents, newEvent]);
   }
 };
 
@@ -96,7 +102,13 @@ export const handleEventCopy = (
       start: event.start.toISOString(),
       end: event.end.toISOString(),
       id: Date.now().toString(),
-      extendedProps_isTemplateItem: false,
+      extendedProps_itemType: event.extendedProps.itemType as ItemType,
+      extendedProps_completedEndTime: null,
+      extendedProps_completedStartTime: null,
+      extendedProps_parentId:
+        typeof event.extendedProps.parentId === "string"
+          ? event.extendedProps.parentId
+          : null,
       rrule: null,
       backgroundColor: "#007BFF",
       borderColor: "#000000",
@@ -112,17 +124,24 @@ export const handleEventCopy = (
 };
 
 export const handleEventDelete = (
-  calendarRef: React.RefObject<FullCalendar>,
-  setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
+  planner: Planner[],
+  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   eventId: string
 ) => {
-  if (calendarRef.current) {
-    const calendarApi = calendarRef.current.getApi();
-    const event = calendarApi.getEvents().find((ev) => ev.id === eventId);
-    if (event) {
-      event.remove();
-      setEvents((prevEvents) => prevEvents.filter((ev) => ev.id !== eventId));
-    }
+  const task = planner.find((t) => t.id === eventId);
+
+  if (!task) return;
+
+  const parentId = task.parentId ?? null;
+
+  if (task.itemType === "task" || task.itemType === "plan") {
+    updatePlannerArray((prev) => prev.filter((t) => t.id !== eventId));
+  } else if (task.itemType === "goal") {
+    deleteGoal({
+      updatePlannerArray,
+      taskId: eventId,
+      parentId,
+    });
   }
 };
 

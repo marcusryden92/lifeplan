@@ -51,7 +51,7 @@ export const onSubmit = ({
       title: values.title,
       id: uuidv4(),
       parentId: null,
-      type: type || "goal",
+      itemType: type || "goal",
       isReady: true,
       duration: 5,
       deadline: null,

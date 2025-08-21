@@ -17,7 +17,7 @@ export function addDateItemsToArray(
 
   // Filter out tasks that are of type "plan"
   planner.forEach((task) => {
-    if (task.type === "plan" && !memoizedEventIds.has(task.id)) {
+    if (task.itemType === "plan" && !memoizedEventIds.has(task.id)) {
       dateItems.push(task);
     }
   });
@@ -42,7 +42,10 @@ export function addDateItemsToArray(
         id: JSON.stringify(new Date()),
         start: date.starts,
         end: end.toISOString(), // Add the calculated end time here
-        extendedProps_isTemplateItem: false,
+        extendedProps_itemType: "plan",
+        extendedProps_parentId: null,
+        extendedProps_completedEndTime: null,
+        extendedProps_completedStartTime: null,
         backgroundColor: "black",
         borderColor: "black",
         duration: null,
@@ -95,7 +98,10 @@ export function addCompletedItemsToArray(
         id: item.id,
         start: item.completedStartTime,
         end: item.completedEndTime, // Add the calculated end time here
-        extendedProps_isTemplateItem: false,
+        extendedProps_itemType: item.itemType,
+        extendedProps_completedStartTime: item.completedStartTime,
+        extendedProps_completedEndTime: item.completedEndTime,
+        extendedProps_parentId: item.parentId ?? null,
         backgroundColor: item.color as string,
         borderColor: "",
         duration: null,

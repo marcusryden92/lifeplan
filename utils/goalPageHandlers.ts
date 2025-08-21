@@ -33,7 +33,7 @@ export function addSubtask({
       title: taskTitle,
       id: newId,
       parentId: task.id || null,
-      type: "goal",
+      itemType: "goal",
       isReady: true,
       duration: taskDuration < 5 ? 5 : taskDuration,
       deadline: null,

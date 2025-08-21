@@ -78,7 +78,8 @@ export default function InfluencePage() {
 
   const handleDeleteAll = () => {
     const filterArray: Planner[] = planner.filter(
-      (task) => task.type !== "task" && task.type !== "plan" && !task.parentId
+      (task) =>
+        task.itemType !== "task" && task.itemType !== "plan" && !task.parentId
     );
 
     deleteAll({ updatePlannerArray, filter: filterArray });
@@ -107,7 +108,7 @@ export default function InfluencePage() {
     updatePlannerArray((prevTaskArray) =>
       prevTaskArray.map((task, i) =>
         i === index
-          ? { ...task, type: task.type !== "goal" ? "goal" : null }
+          ? { ...task, type: task.itemType !== "goal" ? "goal" : null }
           : task
       )
     );
@@ -173,13 +174,13 @@ export default function InfluencePage() {
       >
         {planner.map(
           (task, index) =>
-            task.type !== "task" &&
-            task.type !== "plan" &&
+            task.itemType !== "task" &&
+            task.itemType !== "plan" &&
             !task.parentId && (
               <div
                 key={index}
                 className={`flex flex-row items-center rounded-lg w-[350px] group hover:shadow-md py-1 my-1 mx-1 px-4 space-x-3 ${
-                  task.type === "goal"
+                  task.itemType === "goal"
                     ? "bg-red-700 text-white"
                     : "bg-transparent"
                 }`}
