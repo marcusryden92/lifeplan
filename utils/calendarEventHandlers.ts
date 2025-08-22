@@ -66,18 +66,17 @@ export const handleEventResize = (
 };
 
 export const handleEventDrop = (
-  setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
+  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   dropInfo: EventDropArg
 ) => {
   const { event } = dropInfo;
 
-  setEvents((prevEvents) =>
+  updatePlannerArray((prevEvents) =>
     prevEvents.map((ev) =>
       ev.id === event.id
         ? {
             ...ev,
-            start: event.start ? event.start.toISOString() : ev.start,
-            end: event.end ? event.end.toISOString() : ev.end,
+            starts: event.start?.toISOString() || ev.starts,
           }
         : ev
     )
@@ -125,7 +124,10 @@ export const handleEventCopy = (
 
 export const handleEventDelete = (
   planner: Planner[],
-  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  updateAll: (
+    arg: Planner[] | ((prev: Planner[]) => Planner[]),
+    manuallyUpdatedCalendar?: SimpleEvent[]
+  ) => void,
   eventId: string
 ) => {
   const task = planner.find((t) => t.id === eventId);
@@ -135,36 +137,35 @@ export const handleEventDelete = (
   const parentId = task.parentId ?? null;
 
   if (task.itemType === "task" || task.itemType === "plan") {
-    updatePlannerArray((prev) => prev.filter((t) => t.id !== eventId));
+    updateAll((prev) => prev.filter((t) => t.id !== eventId));
   } else if (task.itemType === "goal") {
     deleteGoal({
-      updatePlannerArray,
+      updateAll,
       taskId: eventId,
       parentId,
     });
   }
 };
 
-export const handleEventEdit = (
-  calendarRef: React.RefObject<FullCalendar>,
-  setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
-  events: SimpleEvent[],
-  eventId: string
-) => {
-  const event = events.find((ev) => ev.id === eventId);
-  if (event) {
-    const newTitle = prompt("Enter new title:", event.title);
-    if (newTitle && calendarRef.current) {
-      const calendarApi = calendarRef.current.getApi();
-      const fullEvent = calendarApi.getEvents().find((ev) => ev.id === eventId);
-      if (fullEvent) {
-        fullEvent.setProp("title", newTitle);
-      }
-      setEvents((prevEvents) =>
-        prevEvents.map((ev) =>
-          ev.id === eventId ? { ...ev, title: newTitle } : ev
-        )
-      );
+export const handleUpdateTitle = (newTitle: string) => {
+  // Update the title in the calendar event
+  const updatedEvents = calendar?.map((calEvent) => {
+    if (calEvent.id === event.id) {
+      return { ...calEvent, title: newTitle };
     }
-  }
+    return calEvent;
+  });
+
+  if (updatedEvents) updateAll((prev) => prev, updatedEvents);
+
+  // Update the title in the planner
+  const updatedPlanner = planner.map((item) => {
+    if (item.id === event.id) {
+      return { ...item, title: newTitle };
+    }
+    return item;
+  });
+
+  updatePlannerArray(updatedPlanner);
+  setUpdatedTitle(newTitle);
 };

@@ -100,6 +100,7 @@ export const transformEventsForFullCalendar = (
       ...rootProps,
       rrule: parsedRRule,
       duration: event.duration ?? undefined,
+      editable: event.extendedProps_itemType === "template" ? false : true,
       extendedProps,
     } as EventInput;
   });

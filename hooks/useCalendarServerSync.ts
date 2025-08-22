@@ -65,9 +65,9 @@ const useCalendarServerSync = (
     // Skip sync if calendar isn't initialized or if data is identical
     if (
       !isInitialized ||
-      (previousPlanner.current === planner &&
-        previousCalendar.current === calendar &&
-        previousTemplate.current === template)
+      (JSON.stringify(previousPlanner.current) === JSON.stringify(planner) &&
+        JSON.stringify(previousCalendar.current) === JSON.stringify(calendar) &&
+        JSON.stringify(previousTemplate.current) === JSON.stringify(template))
     )
       return;
 

@@ -60,7 +60,7 @@ export function addSubtask({
 }
 
 interface DeleteGoalInterface {
-  updatePlannerArray: (
+  updateAll: (
     arg: Planner[] | ((prev: Planner[]) => Planner[]),
     manuallyUpdatedCalendar?: SimpleEvent[]
   ) => void;
@@ -70,12 +70,12 @@ interface DeleteGoalInterface {
 }
 
 export function deleteGoal({
-  updatePlannerArray,
+  updateAll,
   taskId,
   parentId,
   manuallyUpdatedCalendar,
 }: DeleteGoalInterface) {
-  updatePlannerArray((planner: Planner[]) => {
+  updateAll((planner: Planner[]) => {
     // Create a working copy of the state
     let newTaskArray = [...planner];
 

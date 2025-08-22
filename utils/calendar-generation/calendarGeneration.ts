@@ -3,7 +3,7 @@ import { findLargestGap } from "@/utils/templateBuilderUtils";
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import {
-  addDateItemsToArray,
+  addPlanItemsToArray,
   sortPlannersByDeadline,
   checkCurrentDateInEvents,
   getMinuteDifference,
@@ -51,7 +51,7 @@ export function generateCalendar(
   }
 
   // Add date items to the event array:
-  addDateItemsToArray(userId, planner, eventArray, memoizedEventIds);
+  addPlanItemsToArray(userId, planner, eventArray, memoizedEventIds);
 
   // Add completed items to the event array:
   addCompletedItemsToArray(userId, planner, eventArray, memoizedEventIds);

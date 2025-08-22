@@ -2,13 +2,13 @@ import { SimpleEvent } from "@/prisma/generated/client";
 import { Planner } from "@/prisma/generated/client";
 import { taskIsCompleted } from "../taskHelpers";
 
-export function addDateItemsToArray(
+export function addPlanItemsToArray(
   userId: string,
   planner: Planner[],
   eventArray: SimpleEvent[],
   memoizedEventIds: Set<string>
 ) {
-  const dateItems: Planner[] = [];
+  const planItems: Planner[] = [];
   const newArray: SimpleEvent[] = [];
 
   if (!planner || !eventArray) {
@@ -18,29 +18,29 @@ export function addDateItemsToArray(
   // Filter out tasks that are of type "plan"
   planner.forEach((task) => {
     if (task.itemType === "plan" && !memoizedEventIds.has(task.id)) {
-      dateItems.push(task);
+      planItems.push(task);
     }
   });
 
-  if (dateItems.length === 0) {
+  if (planItems.length === 0) {
     return [];
   }
 
   // Process each date item and calculate the end date based on duration (in minutes)
-  dateItems.forEach((date) => {
-    if (date.starts && date.duration) {
+  planItems.forEach((plan) => {
+    if (plan.starts && plan.duration) {
       // Calculate the end time by adding duration (in minutes) to the start time
       const end = new Date(
-        new Date(date.starts).getTime() + date.duration * 60000
+        new Date(plan.starts).getTime() + plan.duration * 60000
       ); // 60000 ms = 1 minute
 
       const now = new Date();
 
       const newDate: SimpleEvent = {
         userId,
-        title: date.title,
-        id: JSON.stringify(new Date()),
-        start: date.starts,
+        title: plan.title,
+        id: plan.id,
+        start: plan.starts,
         end: end.toISOString(), // Add the calculated end time here
         extendedProps_itemType: "plan",
         extendedProps_parentId: null,
