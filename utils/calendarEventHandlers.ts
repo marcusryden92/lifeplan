@@ -8,7 +8,7 @@ import {
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { v4 as uuidv4 } from "uuid";
-import React from "react";
+import React, { SetStateAction } from "react";
 import { deleteGoal } from "./goalPageHandlers";
 
 export const handleSelect = (
@@ -147,25 +147,34 @@ export const handleEventDelete = (
   }
 };
 
-export const handleUpdateTitle = (newTitle: string) => {
+export const handleUpdateTitle = (
+  title: string,
+  setTitle: React.Dispatch<React.SetStateAction<string>>,
+  taskId: string,
+  calendar: SimpleEvent[],
+  updateAll: (
+    arg: Planner[] | ((prev: Planner[]) => Planner[]),
+    manuallyUpdatedCalendar?: SimpleEvent[]
+  ) => void
+) => {
   // Update the title in the calendar event
   const updatedEvents = calendar?.map((calEvent) => {
-    if (calEvent.id === event.id) {
-      return { ...calEvent, title: newTitle };
+    if (calEvent.id === taskId) {
+      return { ...calEvent, title: title };
     }
     return calEvent;
   });
 
   if (updatedEvents) updateAll((prev) => prev, updatedEvents);
 
-  // Update the title in the planner
-  const updatedPlanner = planner.map((item) => {
-    if (item.id === event.id) {
-      return { ...item, title: newTitle };
-    }
-    return item;
-  });
+  updateAll((prev) =>
+    prev.map((item) => {
+      if (item.id === taskId) {
+        return { ...item, title };
+      }
+      return item;
+    })
+  );
 
-  updatePlannerArray(updatedPlanner);
-  setUpdatedTitle(newTitle);
+  setTitle(title);
 };

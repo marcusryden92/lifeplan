@@ -1,13 +1,16 @@
+import { useCalendarProvider } from "@/context/CalendarProvider";
 import { handleUpdateTitle } from "@/utils/calendarEventHandlers";
+import { EventImpl } from "@fullcalendar/core/internal";
 import { useState, useRef, useEffect } from "react";
 
 interface UseTitleEditorOptions {
-  initialTitle: string;
+  event: EventImpl;
 }
 
-const useTitleEditor = ({ initialTitle }: UseTitleEditorOptions) => {
+const useTitleEditor = ({ event }: UseTitleEditorOptions) => {
+  const { calendar, updateAll } = useCalendarProvider();
   const [isEditing, setIsEditing] = useState(false);
-  const [value, setValue] = useState(initialTitle);
+  const [title, setTitle] = useState<string>(event.title);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Focus and select text when editing starts
@@ -18,25 +21,20 @@ const useTitleEditor = ({ initialTitle }: UseTitleEditorOptions) => {
     }
   }, [isEditing]);
 
-  // Update value when initial title changes
-  useEffect(() => {
-    setValue(initialTitle);
-  }, [initialTitle]);
-
   const startEditing = () => {
     setIsEditing(true);
   };
 
   const handleSave = () => {
-    if (handleUpdateTitle && value.trim() !== "") {
-      handleUpdateTitle(value.trim());
+    if (handleUpdateTitle && title.trim() !== "") {
+      handleUpdateTitle(title.trim(), setTitle, event.id, calendar, updateAll);
     }
     setIsEditing(false);
   };
 
   const handleCancel = () => {
     setIsEditing(false);
-    setValue(initialTitle); // Reset to original value
+    setTitle(event.title); // Reset to original value
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -53,8 +51,8 @@ const useTitleEditor = ({ initialTitle }: UseTitleEditorOptions) => {
 
   return {
     isEditing,
-    value,
-    setValue,
+    title,
+    setTitle,
     inputRef,
     startEditing,
     handleSave,

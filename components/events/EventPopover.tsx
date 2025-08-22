@@ -1,5 +1,3 @@
-// EventPopover.tsx
-import { useRef, useEffect, useState } from "react";
 import {
   XMarkIcon,
   PencilIcon,
@@ -11,6 +9,10 @@ import {
 import { createPortal } from "react-dom";
 import EventColorPicker from "./EventColorPicker/EventColorPicker";
 import { EventImpl } from "@fullcalendar/core/internal";
+import usePopoverPosition from "@/hooks/usePopoverPosition";
+import useClickOutside from "@/hooks/useClickOutside";
+import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
+import useTitleEditor from "@/hooks/useTitleEditor";
 
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date
@@ -21,7 +23,6 @@ const formatTime = (date: Date) => {
 
 interface EventPopoverProps {
   event: EventImpl;
-  updatedTitle: string;
   eventRect: DOMRect;
   startTime: Date;
   endTime: Date;
@@ -33,19 +34,10 @@ interface EventPopoverProps {
   onDelete: () => void;
   onComplete: () => void;
   onPostpone: () => void;
-  onUpdateTitle?: (newTitle: string) => void;
 }
-
-type Position = {
-  top: number;
-  left: number;
-};
-
-type Direction = "left" | "right";
 
 const EventPopover: React.FC<EventPopoverProps> = ({
   event,
-  updatedTitle,
   eventRect,
   startTime,
   endTime,
@@ -56,192 +48,55 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   onDelete,
   onComplete,
   onPostpone,
-  onUpdateTitle,
 }) => {
-  const popoverRef = useRef<HTMLDivElement>(null);
-  const titleInputRef = useRef<HTMLInputElement>(null);
-  const [position, setPosition] = useState<Position>({ top: 0, left: 0 });
-  const [isPositioned, setIsPositioned] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState<Position>({ top: 0, left: 0 });
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [titleValue, setTitleValue] = useState(updatedTitle);
-
   // Popover dimensions
-  const POPOVER_WIDTH = 280; // Slightly wider for better aesthetics
-  const POPOVER_HEIGHT = 240; // Approximate height
-  const PADDING = 16; // Minimum padding from screen edges
+  const POPOVER_WIDTH = 280;
+  const POPOVER_HEIGHT = 300;
 
-  // Calculate optimal position before first render to avoid flickering
-  useEffect(() => {
-    if (!isPositioned) {
-      calculateOptimalPosition();
-    }
-  }, []);
+  // Custom hooks
+  const { position, isPositioned, isDragging, popoverRef, handleMouseDown } =
+    usePopoverPosition({
+      eventRect,
+      dimensions: { width: POPOVER_WIDTH, height: POPOVER_HEIGHT },
+      padding: 16,
+    });
 
-  // Focus the input when editing
-  useEffect(() => {
-    if (isEditingTitle && titleInputRef.current) {
-      titleInputRef.current.focus();
-      titleInputRef.current.select();
-    }
-  }, [isEditingTitle]);
+  const {
+    isEditing,
+    title,
+    setTitle,
+    inputRef,
+    startEditing,
+    handleSave,
+    handleCancel,
+    handleKeyDown,
+    handleBlur,
+  } = useTitleEditor({
+    event: event,
+  });
 
-  // Handle dragging functionality
-  useEffect(() => {
-    if (!isDragging) return;
-
-    const handleMouseMove = (event: MouseEvent) => {
-      setPosition({
-        top: event.clientY - dragOffset.top,
-        left: event.clientX - dragOffset.left,
-      });
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging, dragOffset]);
-
-  // Close popover when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(event.target as Node)
-      ) {
-        // Save title changes if we're currently editing
-        if (isEditingTitle && onUpdateTitle) {
-          onUpdateTitle(titleValue);
-        }
-
-        // Then close the popover
-        onClose();
+  // Handle click outside - save title if editing, then close
+  useClickOutside({
+    ref: popoverRef,
+    onClickOutside: () => {
+      if (isEditing) {
+        handleSave();
       }
-    };
+      onClose();
+    },
+  });
 
-    // Close popover on escape key
-    const handleEscapeKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        // If editing title, exit edit mode instead of closing popover
-        if (isEditingTitle) {
-          setIsEditingTitle(false);
-          setTitleValue(event.title); // Reset to original value
-        } else {
-          onClose();
-        }
-      }
-    };
+  // Handle keyboard shortcuts
+  useKeyboardShortcuts({
+    shortcuts: {
+      Escape: isEditing ? handleCancel : onClose,
+    },
+  });
 
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleEscapeKey);
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleEscapeKey);
-    };
-  }, [onClose, isEditingTitle, onUpdateTitle, titleValue]);
-
-  // Handle title edit saving
-  const handleTitleSave = () => {
-    if (onUpdateTitle && titleValue.trim() !== "") {
-      onUpdateTitle(titleValue);
-    }
-    setIsEditingTitle(false);
-  };
-
-  // Handle title input keydown
-  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleTitleSave();
-    } else if (e.key === "Escape") {
-      setIsEditingTitle(false);
-      setTitleValue(event.title); // Reset to original value
-    }
-  };
-
-  // Find the optimal horizontal direction (left or right)
-  const findOptimalHorizontalDirection = (): Direction => {
-    const viewportWidth = window.innerWidth;
-
-    // Calculate available space on each side
-    const spaceLeft = eventRect.left - PADDING;
-    const spaceRight = viewportWidth - eventRect.right - PADDING;
-
-    // Return the direction with more space
-    return spaceLeft > spaceRight ? "left" : "right";
-  };
-
-  // Calculate optimal position based on viewport and event position
-  const calculateOptimalPosition = () => {
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    // Prioritize left or right placement depending on available space
-    const horizontalDirection = findOptimalHorizontalDirection();
-
-    let top = 0;
-    let left = 0;
-
-    // Default vertical position - centered with the event
-    top = eventRect.top + eventRect.height / 2 - POPOVER_HEIGHT / 2;
-
-    // Set horizontal position based on the chosen direction
-    if (horizontalDirection === "left") {
-      left = eventRect.left - POPOVER_WIDTH - 8; // 8px gap
-    } else {
-      // right
-      left = eventRect.right + 8; // 8px gap
-    }
-
-    // Adjust vertical position if needed to keep within viewport
-    if (top < PADDING) {
-      top = PADDING; // Adjust if too close to top
-    } else if (top + POPOVER_HEIGHT > viewportHeight - PADDING) {
-      top = viewportHeight - POPOVER_HEIGHT - PADDING; // Adjust if too close to bottom
-    }
-
-    // Final safety check to ensure within viewport horizontally
-    if (left < PADDING) {
-      left = PADDING;
-    } else if (left + POPOVER_WIDTH > viewportWidth - PADDING) {
-      left = viewportWidth - POPOVER_WIDTH - PADDING;
-    }
-
-    setPosition({ top, left });
-    setIsPositioned(true);
-  };
-
-  // Handle mousedown on the popover header to start dragging
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Only enable dragging if clicked on the header and not editing title
-    if (
-      !isEditingTitle &&
-      e.target instanceof Element &&
-      (e.target.closest(".popover-header") ||
-        e.target.classList.contains("popover-header"))
-    ) {
-      setIsDragging(true);
-
-      // Calculate drag offset from the click position
-      if (popoverRef.current) {
-        const rect = popoverRef.current.getBoundingClientRect();
-        setDragOffset({
-          top: e.clientY - rect.top,
-          left: e.clientX - rect.left,
-        });
-      }
-
-      // Prevent text selection during drag
-      e.preventDefault();
+  const handleHeaderMouseDown = (e: React.MouseEvent) => {
+    // Don't allow dragging when editing title
+    if (!isEditing) {
+      handleMouseDown(e);
     }
   };
 
@@ -264,7 +119,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
         boxShadow:
           "0 2px 6px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04)",
       }}
-      onMouseDown={handleMouseDown}
+      onMouseDown={handleHeaderMouseDown}
     >
       {/* Header - Notion-style clean header */}
       <div
@@ -274,36 +129,35 @@ const EventPopover: React.FC<EventPopoverProps> = ({
           borderBottom: "1px solid #EAEAEA",
         }}
       >
-        {isEditingTitle ? (
+        {isEditing ? (
           <input
-            ref={titleInputRef}
+            ref={inputRef}
             type="text"
-            value={titleValue}
-            onChange={(e) => setTitleValue(e.target.value)}
-            onBlur={handleTitleSave}
-            onKeyDown={handleTitleKeyDown}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
             className="font-medium text-gray-800 bg-gray-50 px-1 py-0.5 rounded border border-gray-300 focus:ring-2 focus:ring-sky-500 focus:border-transparent focus:outline-none w-full"
-            autoFocus
           />
         ) : (
           <div
             className="flex items-center cursor-text group w-full"
-            onClick={() => onUpdateTitle && setIsEditingTitle(true)}
+            onClick={startEditing}
           >
             <h3 className="font-medium text-gray-800 truncate max-w-xs group-hover:text-sky-600">
-              {titleValue}
+              {title}
             </h3>
-            {onUpdateTitle && (
+            {
               <button
                 className="ml-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIsEditingTitle(true);
+                  startEditing();
                 }}
               >
                 <PencilIcon className="h-4 w-4" />
               </button>
-            )}
+            }
           </div>
         )}
         <button
@@ -324,12 +178,6 @@ const EventPopover: React.FC<EventPopoverProps> = ({
           </span>
         </div>
 
-        {/*  {task?.description && (
-          <div className="text-sm text-gray-600 mb-4 px-0.5">
-            {task.description}
-          </div>
-        )}
- */}
         {/* Actions - Notion-style minimal buttons */}
         <div className="space-y-2">
           {/* Main action buttons */}

@@ -11,7 +11,6 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import { getPlannerAndCalendarForCompletedTask } from "@/utils/taskHelpers";
 import { floorMinutes } from "@/utils/calendarUtils";
 import { deleteGoal } from "@/utils/goalPageHandlers";
-import { deletePlanner } from "@/utils/plannerUtils";
 import EventPopover from "./EventPopover";
 import { EventImpl } from "@fullcalendar/core/internal";
 
@@ -35,15 +34,13 @@ const EventContent: React.FC<EventContentProps> = ({
   onEdit,
   onCopy,
 }) => {
-  const { planner, updatePlannerArray, updateAll, calendar, userSettings } =
-    useCalendarProvider();
+  const { planner, updateAll, calendar, userSettings } = useCalendarProvider();
 
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
   const [elementWidth, setElementWidth] = useState<number>(0);
   const [showPopover, setShowPopover] = useState<boolean>(false);
   const [eventRect, setEventRect] = useState<DOMRect | null>(null);
-  const [updatedTitle, setUpdatedTitle] = useState<string>(event.title);
 
   const { itemType, parentId, completedStartTime, completedEndTime } =
     event.extendedProps;
@@ -156,40 +153,17 @@ const EventContent: React.FC<EventContentProps> = ({
     setTimeout(() => {
       if (itemType === "goal") {
         deleteGoal({
-          updatePlannerArray,
+          updateAll,
           taskId: event.id,
           parentId: typeof parentId === "string" ? parentId : null,
           manuallyUpdatedCalendar: updatedCalendar,
         });
       } else {
-        updatePlannerArray((prev) => prev.filter((t) => t.id !== event.id));
+        updateAll((prev) => prev.filter((t) => t.id !== event.id));
       }
     }, 500);
 
     setShowPopover(false);
-  };
-
-  const handleUpdateTitle = (newTitle: string) => {
-    // Update the title in the calendar event
-    const updatedEvents = calendar?.map((calEvent) => {
-      if (calEvent.id === event.id) {
-        return { ...calEvent, title: newTitle };
-      }
-      return calEvent;
-    });
-
-    if (updatedEvents) updateAll((prev) => prev, updatedEvents);
-
-    // Update the title in the planner
-    const updatedPlanner = planner.map((item) => {
-      if (item.id === event.id) {
-        return { ...item, title: newTitle };
-      }
-      return item;
-    });
-
-    updatePlannerArray(updatedPlanner);
-    setUpdatedTitle(newTitle);
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
@@ -297,7 +271,6 @@ const EventContent: React.FC<EventContentProps> = ({
       {showPopover && eventRect && (
         <EventPopover
           event={event}
-          updatedTitle={updatedTitle}
           eventRect={eventRect}
           startTime={startTime}
           endTime={endTime}
@@ -315,7 +288,6 @@ const EventContent: React.FC<EventContentProps> = ({
           onDelete={handleClickDelete}
           onComplete={handleClickCompleteTask}
           onPostpone={handlePostponeTask}
-          onUpdateTitle={handleUpdateTitle}
         />
       )}
     </div>
