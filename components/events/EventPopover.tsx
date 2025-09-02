@@ -13,6 +13,9 @@ import usePopoverPosition from "@/hooks/usePopoverPosition";
 import useClickOutside from "@/hooks/useClickOutside";
 import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
 import useTitleEditor from "@/hooks/useTitleEditor";
+import { handleEventCopy } from "@/utils/calendarEventHandlers";
+import React from "react";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 
 const formatTime = (date: Date) => {
   return `${date.getHours().toString().padStart(2, "0")}:${date
@@ -29,11 +32,10 @@ interface EventPopoverProps {
   isCompleted: boolean;
   displayPostponeButton: boolean;
   onClose: () => void;
-  onEdit: () => void;
-  onCopy: () => void;
   onDelete: () => void;
   onComplete: () => void;
   onPostpone: () => void;
+  setShowPopover: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const EventPopover: React.FC<EventPopoverProps> = ({
@@ -44,11 +46,13 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   isCompleted,
   displayPostponeButton,
   onClose,
-  onCopy,
   onDelete,
   onComplete,
   onPostpone,
+  setShowPopover,
 }) => {
+  const { updateAll } = useCalendarProvider();
+
   // Popover dimensions
   const POPOVER_WIDTH = 280;
   const POPOVER_HEIGHT = 300;
@@ -98,6 +102,11 @@ const EventPopover: React.FC<EventPopoverProps> = ({
     if (!isEditing) {
       handleMouseDown(e);
     }
+  };
+
+  const onCopy = () => {
+    setShowPopover(false);
+    handleEventCopy(event, updateAll);
   };
 
   // Use portal to render the popover at the root level of the DOM

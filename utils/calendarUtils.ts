@@ -147,3 +147,22 @@ export function getCalendarHeaderDateString(
 
   return result;
 }
+
+export function getDuration(start: Date | string, end: Date | string): number {
+  // Convert strings to Date objects if needed
+  const startDate = typeof start === "string" ? new Date(start) : start;
+  const endDate = typeof end === "string" ? new Date(end) : end;
+
+  // Calculate difference in minutes
+  const durationMinutes = Math.round(
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60)
+  );
+  return durationMinutes;
+}
+
+export const formatTime = (date: Date) => {
+  return `${date.getHours().toString().padStart(2, "0")}:${date
+    .getMinutes()
+    .toString()
+    .padStart(2, "0")}`;
+};

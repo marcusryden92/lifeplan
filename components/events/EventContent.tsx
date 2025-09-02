@@ -14,26 +14,15 @@ import { deleteGoal } from "@/utils/goalPageHandlers";
 import EventPopover from "./EventPopover";
 import { EventImpl } from "@fullcalendar/core/internal";
 
-const formatTime = (date: Date) => {
-  return `${date.getHours().toString().padStart(2, "0")}:${date
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")}`;
-};
+import { formatTime } from "@/utils/calendarUtils";
 
 interface EventContentProps {
   event: EventImpl;
-  onEdit: () => void;
-  onCopy: () => void;
   onDelete: () => void;
   showButtons: boolean;
 }
 
-const EventContent: React.FC<EventContentProps> = ({
-  event,
-  onEdit,
-  onCopy,
-}) => {
+const EventContent: React.FC<EventContentProps> = ({ event }) => {
   const { planner, updateAll, calendar, userSettings } = useCalendarProvider();
 
   const elementRef = useRef<HTMLDivElement>(null);
@@ -277,17 +266,10 @@ const EventContent: React.FC<EventContentProps> = ({
           isCompleted={isCompleted}
           displayPostponeButton={displayPostponeButton}
           onClose={() => setShowPopover(false)}
-          onEdit={() => {
-            setShowPopover(false);
-            onEdit();
-          }}
-          onCopy={() => {
-            setShowPopover(false);
-            onCopy();
-          }}
           onDelete={handleClickDelete}
           onComplete={handleClickCompleteTask}
           onPostpone={handlePostponeTask}
+          setShowPopover={setShowPopover}
         />
       )}
     </div>

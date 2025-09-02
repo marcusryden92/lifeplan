@@ -183,7 +183,8 @@ function addGoalToCalendar(
 ) {
   const goalBottomLayer = getSortedTreeBottomLayer(planner, rootItem.id);
   const filteredTasks = goalBottomLayer.filter(
-    (task) => !taskIsCompleted(task) && !memoizedEventIds.has(task.id)
+    (task) =>
+      !taskIsCompleted(task) && !memoizedEventIds.has(task.id) && task.parentId
   );
 
   let startTime: Date | undefined = undefined;

@@ -1,15 +1,13 @@
 import FullCalendar from "@fullcalendar/react";
-import { SimpleEvent, Planner, ItemType } from "@/prisma/generated/client";
-import {
-  DateSelectArg,
-  EventDropArg,
-  EventInput,
-} from "@fullcalendar/core/index.js";
+import { SimpleEvent, Planner, EventTemplate } from "@/prisma/generated/client";
+import { DateSelectArg, EventDropArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { v4 as uuidv4 } from "uuid";
-import React, { SetStateAction } from "react";
+import React from "react";
 import { deleteGoal } from "./goalPageHandlers";
+import { getDuration } from "./calendarUtils";
+import { assert } from "./assert/assert";
 
 export const handleSelect = (
   userId: string | undefined,
@@ -48,20 +46,37 @@ export const handleSelect = (
 };
 
 export const handleEventResize = (
-  setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
+  updateAll: (
+    planner?: Planner[] | ((prev: Planner[]) => Planner[]),
+    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
+    template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
+  ) => void,
   resizeInfo: EventResizeStartArg
 ) => {
   const { event } = resizeInfo;
-  setEvents((prevEvents) =>
-    prevEvents.map((ev) =>
-      ev.id === event.id
-        ? {
-            ...ev,
-            start: event.start ? event.start.toISOString() : ev.start,
-            end: event.end ? event.end.toISOString() : ev.end,
-          }
-        : ev
-    )
+
+  assert(event, "Event undefined in handleEventResize");
+  assert(event.start, "Event.start undefined in handleEventResize");
+  assert(event.end, "Event.end undefined in handleEventResize");
+
+  const start = event.start;
+  const end = event.end;
+
+  updateAll(
+    (prevPlanner) =>
+      prevPlanner.map((p) =>
+        p.id === event.id ? { ...p, duration: getDuration(start, end) } : p
+      ),
+    (prevEvents) =>
+      prevEvents.map((ev) =>
+        ev.id === event.id
+          ? {
+              ...ev,
+              start: event.start ? event.start.toISOString() : ev.start,
+              end: event.end ? event.end.toISOString() : ev.end,
+            }
+          : ev
+      )
   );
 };
 
@@ -84,42 +99,39 @@ export const handleEventDrop = (
 };
 
 export const handleEventCopy = (
-  calendarRef: React.RefObject<FullCalendar>,
-  setEvents: React.Dispatch<React.SetStateAction<SimpleEvent[]>>,
   event: EventImpl,
-  userId?: string
+  updateAll: (
+    planner?: Planner[] | ((prev: Planner[]) => Planner[]),
+    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
+    template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
+  ) => void
 ) => {
-  if (!event.start || !event.end)
-    throw new Error("event.start or event.end missing in handleEventCopy");
+  assert(event, "Event undefined in handleEventCopy");
+  assert(event.start, "Event.start undefined in handleEventCopy");
+  assert(event.end, "Event.end undefined in handleEventCopy");
 
-  if (userId && calendarRef.current) {
-    const now = new Date();
+  if (event.extendedProps.ItemType === "goal")
+    throw new Error("Can't copy goal in handleEventCopy");
 
-    const newEvent: SimpleEvent = {
-      userId,
-      title: event.title,
-      start: event.start.toISOString(),
-      end: event.end.toISOString(),
-      id: Date.now().toString(),
-      extendedProps_itemType: event.extendedProps.itemType as ItemType,
-      extendedProps_completedEndTime: null,
-      extendedProps_completedStartTime: null,
-      extendedProps_parentId:
-        typeof event.extendedProps.parentId === "string"
-          ? event.extendedProps.parentId
-          : null,
-      rrule: null,
-      backgroundColor: "#007BFF",
-      borderColor: "#000000",
-      duration: null,
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-    };
+  const now = new Date().toISOString();
 
-    const calendarApi = calendarRef.current.getApi();
-    calendarApi.addEvent(newEvent as EventInput);
-    setEvents((prevEvents) => [...prevEvents, newEvent]);
-  }
+  updateAll((prevPlanner) => {
+    const item = prevPlanner.find((p) => p.id === event.id);
+
+    return item
+      ? [
+          ...prevPlanner,
+          {
+            ...item,
+            id: uuidv4(),
+            completedStartTime: null,
+            completedEndTime: null,
+            createdAt: now,
+            updatedAt: now,
+          },
+        ]
+      : prevPlanner;
+  });
 };
 
 export const handleEventDelete = (

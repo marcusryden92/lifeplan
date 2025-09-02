@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useMemo } from "react";
+import { useRef, useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -12,7 +12,6 @@ import luxonPlugin from "@fullcalendar/luxon";
 import EventContent from "@/components/events/EventContent";
 import TemplateEventContent from "@/components/events/TemplateEventContent";
 
-import { SimpleEvent } from "@/prisma/generated/client";
 import type { EventInput } from "@fullcalendar/core/index.js";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
@@ -21,9 +20,7 @@ import {
   handleSelect,
   handleEventResize,
   handleEventDrop,
-  handleEventCopy,
   handleEventDelete,
-  handleEventEdit,
 } from "@/utils/calendarEventHandlers";
 
 import {
@@ -36,19 +33,20 @@ import { EventImpl } from "@fullcalendar/core/internal";
 const EVENT_INTERACTION_ENABLED = true; // Constant to enable/disable event interaction
 
 interface CalendarProps {
-  initialEvents?: SimpleEvent[] | undefined;
   fullCalendarEvents?: EventInput[] | undefined;
   initialDate: Date;
 }
 
-export default function Calendar({
-  initialEvents,
-  initialDate,
-}: CalendarProps) {
+export default function Calendar({ initialDate }: CalendarProps) {
   const calendarRef = useRef<FullCalendar>(null);
-  const [events, setEvents] = useState<SimpleEvent[]>(initialEvents || []);
-  const { userId, calendar, planner, updateTemplateArray, updatePlannerArray } =
-    useCalendarProvider();
+  const {
+    userId,
+    calendar,
+    planner,
+    updateTemplateArray,
+    updatePlannerArray,
+    updateAll,
+  } = useCalendarProvider();
 
   /* Transform SimpleEvent calendar to EventInput for FullCalendar */
   const fullCalendarEvents: EventInput[] = useMemo(() => {
@@ -96,18 +94,14 @@ export default function Calendar({
           handleSelect(userId, calendarRef, updatePlannerArray, selectInfo)
         }
         headerToolbar={false}
-        eventResize={(resizeInfo) => handleEventResize(setEvents, resizeInfo)}
-        eventDrop={(dropInfo) => handleEventDrop(setEvents, dropInfo)}
+        eventResize={(resizeInfo) => handleEventResize(updateAll, resizeInfo)}
+        eventDrop={(dropInfo) => handleEventDrop(updatePlannerArray, dropInfo)}
         eventContent={({ event }: { event: EventImpl }) => {
           return (
             event &&
             (!event.extendedProps.isTemplateItem ? (
               <EventContent
                 event={event}
-                onEdit={() =>
-                  handleEventEdit(calendarRef, setEvents, events, event.id)
-                }
-                onCopy={() => handleEventCopy(calendarRef, setEvents, event)}
                 onDelete={() =>
                   handleEventDelete(planner, updatePlannerArray, event.id)
                 }

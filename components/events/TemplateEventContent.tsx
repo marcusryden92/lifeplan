@@ -10,12 +10,7 @@ import { EventTemplate } from "@/prisma/generated/client";
 
 import TemplateEventPopover from "./TemplateEventPopover";
 
-const formatTime = (date: Date) => {
-  return `${date.getHours().toString().padStart(2, "0")}:${date
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")}`;
-};
+import { formatTime } from "@/utils/calendarUtils";
 
 interface TemplateEventContentProps {
   event: EventImpl;

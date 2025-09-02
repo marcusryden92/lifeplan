@@ -6,8 +6,7 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 const CalendarPage = () => {
-  const { calendar, weekStartDay, manuallyRefreshCalendar } =
-    useCalendarProvider();
+  const { weekStartDay, manuallyRefreshCalendar } = useCalendarProvider();
 
   const today = new Date();
   const [initialDate, setInitialDate] = useState<Date>(
@@ -27,7 +26,7 @@ const CalendarPage = () => {
         manuallyRefreshCalendar={manuallyRefreshCalendar}
       />
 
-      <Calendar initialEvents={calendar} initialDate={initialDate} />
+      <Calendar initialDate={initialDate} />
     </div>
   );
 };
