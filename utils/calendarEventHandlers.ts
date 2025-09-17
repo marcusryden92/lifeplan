@@ -1,17 +1,16 @@
-import FullCalendar from "@fullcalendar/react";
 import { SimpleEvent, Planner, EventTemplate } from "@/prisma/generated/client";
 import { DateSelectArg, EventDropArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { v4 as uuidv4 } from "uuid";
 import React from "react";
-import { deleteGoal } from "./goalPageHandlers";
 import { getDuration } from "./calendarUtils";
+import { getPlannerAndCalendarForCompletedTask } from "@/utils/taskHelpers";
+import { deleteGoal } from "@/utils/goalPageHandlers";
 import { assert } from "./assert/assert";
 
 export const handleSelect = (
   userId: string | undefined,
-  calendarRef: React.RefObject<FullCalendar>,
   updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
   selectInfo: DateSelectArg
 ) => {
@@ -19,7 +18,6 @@ export const handleSelect = (
   const title = prompt("Enter event title:", "New Event");
 
   const now = new Date();
-
   const duration = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
 
   if (userId && title) {
@@ -134,31 +132,6 @@ export const handleEventCopy = (
   });
 };
 
-export const handleEventDelete = (
-  planner: Planner[],
-  updateAll: (
-    arg: Planner[] | ((prev: Planner[]) => Planner[]),
-    manuallyUpdatedCalendar?: SimpleEvent[]
-  ) => void,
-  eventId: string
-) => {
-  const task = planner.find((t) => t.id === eventId);
-
-  if (!task) return;
-
-  const parentId = task.parentId ?? null;
-
-  if (task.itemType === "task" || task.itemType === "plan") {
-    updateAll((prev) => prev.filter((t) => t.id !== eventId));
-  } else if (task.itemType === "goal") {
-    deleteGoal({
-      updateAll,
-      taskId: eventId,
-      parentId,
-    });
-  }
-};
-
 export const handleUpdateTitle = (
   title: string,
   setTitle: React.Dispatch<React.SetStateAction<string>>,
@@ -169,7 +142,6 @@ export const handleUpdateTitle = (
     manuallyUpdatedCalendar?: SimpleEvent[]
   ) => void
 ) => {
-  // Update the title in the calendar event
   const updatedEvents = calendar?.map((calEvent) => {
     if (calEvent.id === taskId) {
       return { ...calEvent, title: title };
@@ -189,4 +161,121 @@ export const handleUpdateTitle = (
   );
 
   setTitle(title);
+};
+
+export const handleClickCompleteTask = (
+  event: EventImpl,
+  isCompleted: boolean,
+  setIsCompleted: React.Dispatch<React.SetStateAction<boolean>>,
+  elementRef: React.RefObject<HTMLDivElement>,
+  planner: Planner[],
+  calendar: SimpleEvent[],
+  updateAll: (
+    planner?: Planner[] | ((prev: Planner[]) => Planner[]),
+    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[])
+  ) => void,
+  green = "#0ebf7e"
+) => {
+  const element = elementRef.current;
+  if (!event || !element) return;
+
+  const color = !isCompleted
+    ? green
+    : (event.extendedProps.backgroundColor as string);
+
+  if (element && color) {
+    element.style.backgroundColor = color;
+  }
+
+  if (isCompleted) {
+    setIsCompleted(false);
+
+    const updatedPlanner = planner.map((item) =>
+      item.id === event.id
+        ? { ...item, completedStartTime: null, completedEndTime: null }
+        : item
+    );
+
+    updateAll(updatedPlanner);
+  } else {
+    setIsCompleted(true);
+    setTimeout(() => {
+      const result = getPlannerAndCalendarForCompletedTask(
+        planner,
+        calendar,
+        event
+      );
+      if (result) {
+        const { manuallyUpdatedTaskArray, manuallyUpdatedCalendar } = result;
+        updateAll(
+          (prev) => manuallyUpdatedTaskArray || prev,
+          manuallyUpdatedCalendar
+        );
+      }
+    }, 500);
+  }
+};
+
+export const handlePostponeTask = (
+  event: EventImpl,
+  calendar: SimpleEvent[],
+  updateAll: (
+    planner?: Planner[] | ((prev: Planner[]) => Planner[]),
+    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[])
+  ) => void
+) => {
+  const updatedCalendar = calendar?.filter((e) => e.id !== event.id);
+  if (updatedCalendar) updateAll((prev) => prev, updatedCalendar);
+};
+
+export const handleClickDelete = (
+  event: EventImpl,
+  elementRef: React.RefObject<HTMLDivElement>,
+  calendar: SimpleEvent[],
+  updateAll: (
+    planner?: Planner[] | ((prev: Planner[]) => Planner[]),
+    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[])
+  ) => void,
+  itemType: string,
+  parentId: string | null,
+  red = "#ef4444",
+  setShowPopover?: React.Dispatch<React.SetStateAction<boolean>>
+) => {
+  const element = elementRef.current;
+
+  if (element) {
+    element.style.backgroundColor = red;
+    element.style.border = `solid 2px ${red}`;
+  }
+
+  const updatedCalendar = calendar?.filter((e) => e.id !== event?.id);
+
+  setTimeout(() => {
+    if (itemType === "goal") {
+      deleteGoal({
+        updateAll,
+        taskId: event.id,
+        parentId,
+        manuallyUpdatedCalendar: updatedCalendar,
+      });
+    } else {
+      updateAll((prev) => prev.filter((t) => t.id !== event.id));
+    }
+  }, 500);
+
+  if (setShowPopover) setShowPopover(false);
+};
+
+export const handleDoubleClick = (
+  e: React.MouseEvent,
+  elementRef: React.RefObject<HTMLDivElement>,
+  setEventRect: React.Dispatch<React.SetStateAction<DOMRect | null>>,
+  setShowPopover: React.Dispatch<React.SetStateAction<boolean>>
+) => {
+  e.stopPropagation();
+
+  if (elementRef.current) {
+    setEventRect(elementRef.current.getBoundingClientRect());
+    setShowPopover(true);
+  }
 };

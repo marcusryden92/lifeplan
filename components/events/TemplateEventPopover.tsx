@@ -10,13 +10,7 @@ import {
 import { createPortal } from "react-dom";
 import { EventImpl } from "@fullcalendar/core/internal";
 import TemplateEventColorPicker from "./EventColorPicker/TemplateEventColorPicker";
-
-const formatTime = (date: Date) => {
-  return `${date.getHours().toString().padStart(2, "0")}:${date
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")}`;
-};
+import { formatTime } from "@/utils/calendarUtils";
 
 interface TemplateEventPopoverProps {
   event: EventImpl;

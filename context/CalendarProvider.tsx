@@ -49,6 +49,8 @@ export default function CalendarProvider({
     styles: {
       events: {
         borderRadius: "8px",
+        completedColor: "#0ebf7e",
+        errorColor: "#ef4444",
       },
       template: { event: { borderLeft: "4px solid black" } },
       calendar: { event: { borderLeft: "4px solid #ADD8E6" } },

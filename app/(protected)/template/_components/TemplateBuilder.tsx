@@ -83,7 +83,6 @@ export default function TemplateBuilder() {
               onDelete={() =>
                 handleTemplateEventDelete(updateTemplateArray, event.id)
               }
-              showButtons={true}
             />
           )
         );

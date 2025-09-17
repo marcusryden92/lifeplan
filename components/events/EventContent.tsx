@@ -5,53 +5,34 @@ import {
   TrashIcon,
 } from "@heroicons/react/24/outline";
 
-import { useRef, useState, useLayoutEffect } from "react";
+import { useRef, useState } from "react";
 
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { getPlannerAndCalendarForCompletedTask } from "@/utils/taskHelpers";
 import { floorMinutes } from "@/utils/calendarUtils";
-import { deleteGoal } from "@/utils/goalPageHandlers";
 import EventPopover from "./EventPopover";
+import EventWrapper from "./EventWrapper";
 import { EventImpl } from "@fullcalendar/core/internal";
-
-import { formatTime } from "@/utils/calendarUtils";
+import {
+  handleClickCompleteTask,
+  handleClickDelete,
+  handlePostponeTask,
+} from "@/utils/calendarEventHandlers";
+import { ItemType } from "@/prisma/generated/client";
 
 interface EventContentProps {
   event: EventImpl;
-  onDelete: () => void;
-  showButtons: boolean;
 }
 
 const EventContent: React.FC<EventContentProps> = ({ event }) => {
   const { planner, updateAll, calendar, userSettings } = useCalendarProvider();
-
+  const { itemType, parentId, completedStartTime, completedEndTime } =
+    event.extendedProps;
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
   const [elementWidth, setElementWidth] = useState<number>(0);
   const [showPopover, setShowPopover] = useState<boolean>(false);
   const [eventRect, setEventRect] = useState<DOMRect | null>(null);
-
-  const { itemType, parentId, completedStartTime, completedEndTime } =
-    event.extendedProps;
-
-  useLayoutEffect(() => {
-    const element = elementRef.current;
-
-    if (element) {
-      setElementHeight(element.offsetHeight);
-      setElementWidth(element.offsetWidth);
-
-      // Set z-index when opening popover
-      if (showPopover) {
-        element.style.zIndex = "30"; // Ensure event is above others
-      } else {
-        element.style.zIndex = ""; // Reset to default
-      }
-    }
-  }, [elementHeight, showPopover]);
-
   const [onHover, setOnHover] = useState<boolean>(false);
-
   const [isCompleted, setIsCompleted] = useState<boolean>(
     !!(completedStartTime && completedEndTime) || false
   );
@@ -62,150 +43,53 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
   const startTime = new Date(event.start);
   const endTime = new Date(event.end);
 
+  const green = userSettings.styles.events.completedColor;
+  const red = userSettings.styles.events.errorColor;
+
   const displayPostponeButton =
     !isCompleted && floorMinutes(currentTime) > floorMinutes(startTime);
 
-  const green = "#0ebf7e";
-  const red = "#ef4444";
-
-  const handleClickCompleteTask = () => {
-    // Set the element to green for a second, before rerendering
-    const element = elementRef.current;
-
-    if (!event || !element) return;
-
-    const color = !isCompleted
-      ? green
-      : (event.extendedProps.backgroundColor as string);
-
-    console.log(color);
-
-    if (element && color) {
-      element.style.backgroundColor = color;
-    }
-
-    // If already completed, set completed to undefined
-    if (isCompleted) {
-      setIsCompleted(false);
-
-      const updatedPlanner = planner.map((item) =>
-        item.id === event.id
-          ? {
-              ...item,
-              completedStartTime: null,
-              completedEndTime: null,
-            }
-          : item
-      );
-
-      updateAll(updatedPlanner);
-    }
-
-    // If not completed, update the planner with the
-    // new values, and calculate a new calendar from that
-    else {
-      setIsCompleted(true);
-      setTimeout(() => {
-        const result = getPlannerAndCalendarForCompletedTask(
-          planner,
-          calendar,
-          event
-        );
-
-        if (result) {
-          const { manuallyUpdatedTaskArray, manuallyUpdatedCalendar } = result;
-
-          updateAll(
-            (prev) => manuallyUpdatedTaskArray || prev,
-            manuallyUpdatedCalendar
-          );
-        }
-      }, 500);
-    }
+  const onDelete = () => {
+    handleClickDelete(
+      event,
+      elementRef,
+      calendar,
+      updateAll,
+      itemType as ItemType,
+      (parentId as string) ?? null,
+      red,
+      setShowPopover
+    );
   };
 
-  const handlePostponeTask = () => {
-    const updatedCalendar = calendar?.filter((e) => !(e.id === event.id));
-    if (updatedCalendar) updateAll((prev) => prev, updatedCalendar);
+  const onComplete = () => {
+    handleClickCompleteTask(
+      event,
+      isCompleted,
+      setIsCompleted,
+      elementRef,
+      planner,
+      calendar,
+      updateAll,
+      green
+    );
   };
 
-  const handleClickDelete = () => {
-    const element = elementRef.current;
-
-    if (element) {
-      element.style.backgroundColor = red;
-      element.style.border = `solid 2px ${red}`;
-    }
-
-    const updatedCalendar = calendar?.filter((e) => !(e.id === event?.id));
-
-    setTimeout(() => {
-      if (itemType === "goal") {
-        deleteGoal({
-          updateAll,
-          taskId: event.id,
-          parentId: typeof parentId === "string" ? parentId : null,
-          manuallyUpdatedCalendar: updatedCalendar,
-        });
-      } else {
-        updateAll((prev) => prev.filter((t) => t.id !== event.id));
-      }
-    }, 500);
-
-    setShowPopover(false);
-  };
-
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent event from bubbling up
-
-    // Get and store the element rect for popover positioning
-    if (elementRef.current) {
-      setEventRect(elementRef.current.getBoundingClientRect());
-      setShowPopover(true);
-    }
-  };
+  const onPostpone = () => handlePostponeTask(event, calendar, updateAll);
 
   return (
-    <div
-      ref={elementRef}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        height: "100%",
-        padding: "8px",
-        borderRadius: userSettings.styles.events.borderRadius,
-        backgroundColor: event.backgroundColor,
-        borderLeft: userSettings.styles.calendar.event.borderLeft,
-      }}
-      onMouseEnter={() => setOnHover(true)}
-      onMouseLeave={() => setOnHover(false)}
-      onDoubleClick={handleDoubleClick}
+    <EventWrapper
+      event={event}
+      elementRef={elementRef}
+      elementHeight={elementHeight}
+      setElementHeight={setElementHeight}
+      setElementWidth={setElementWidth}
+      setOnHover={setOnHover}
+      setEventRect={setEventRect}
+      isCompleted={isCompleted}
+      showPopover={showPopover}
+      setShowPopover={setShowPopover}
     >
-      <span
-        className="flex gap-2 justify-between"
-        style={{ borderBottom: showPopover ? "4px dotted white" : "" }}
-      >
-        <span
-          style={{
-            marginBottom: "auto",
-            fontSize: elementHeight > 20 ? "0.8rem" : "0.5rem",
-            fontWeight: "bold",
-          }}
-        >
-          {event.title}
-        </span>
-        <span
-          className="flex gap-2"
-          style={{
-            fontSize: elementHeight > 20 ? "0.8rem" : "0.5rem",
-            fontWeight: "bold",
-          }}
-        >
-          <span>{formatTime(startTime)}</span>
-          <span>{formatTime(endTime)}</span>
-        </span>
-      </span>
       {onHover &&
         elementHeight > 40 &&
         elementWidth > 70 &&
@@ -222,7 +106,7 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
                 className="m-1 ml-0"
                 style={{ display: "flex", justifyContent: "flex-end" }}
               >
-                <button onClick={handleClickDelete}>
+                <button onClick={onDelete}>
                   <TrashIcon height="1rem" width="1rem" />
                 </button>
               </div>
@@ -233,7 +117,7 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
                     event.extendedProps.itemType === "task") && (
                     <>
                       <button
-                        onClick={handleClickCompleteTask}
+                        onClick={onComplete}
                         style={{ marginLeft: "10px" }}
                       >
                         <CheckIcon height="1rem" width="1rem" />
@@ -241,7 +125,7 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
 
                       <button
                         disabled={!displayPostponeButton}
-                        onClick={handlePostponeTask}
+                        onClick={onPostpone}
                         style={{
                           marginLeft: "10px",
                           opacity: displayPostponeButton ? "100%" : "50%",
@@ -256,7 +140,6 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
           </div>
         )}
 
-      {/* Render popover as a portal with its own positioning logic */}
       {showPopover && eventRect && (
         <EventPopover
           event={event}
@@ -266,13 +149,13 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
           isCompleted={isCompleted}
           displayPostponeButton={displayPostponeButton}
           onClose={() => setShowPopover(false)}
-          onDelete={handleClickDelete}
-          onComplete={handleClickCompleteTask}
-          onPostpone={handlePostponeTask}
+          onDelete={onDelete}
+          onComplete={onComplete}
+          onPostpone={onPostpone}
           setShowPopover={setShowPopover}
         />
       )}
-    </div>
+    </EventWrapper>
   );
 };
 

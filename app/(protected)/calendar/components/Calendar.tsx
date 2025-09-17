@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useMemo } from "react";
+import { useMemo } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -20,7 +20,6 @@ import {
   handleSelect,
   handleEventResize,
   handleEventDrop,
-  handleEventDelete,
 } from "@/utils/calendarEventHandlers";
 
 import {
@@ -38,11 +37,9 @@ interface CalendarProps {
 }
 
 export default function Calendar({ initialDate }: CalendarProps) {
-  const calendarRef = useRef<FullCalendar>(null);
   const {
     userId,
     calendar,
-    planner,
     updateTemplateArray,
     updatePlannerArray,
     updateAll,
@@ -91,22 +88,18 @@ export default function Calendar({ initialDate }: CalendarProps) {
         eventResizableFromStart={EVENT_INTERACTION_ENABLED}
         selectable={EVENT_INTERACTION_ENABLED}
         select={(selectInfo) =>
-          handleSelect(userId, calendarRef, updatePlannerArray, selectInfo)
+          handleSelect(userId, updatePlannerArray, selectInfo)
         }
         headerToolbar={false}
         eventResize={(resizeInfo) => handleEventResize(updateAll, resizeInfo)}
         eventDrop={(dropInfo) => handleEventDrop(updatePlannerArray, dropInfo)}
         eventContent={({ event }: { event: EventImpl }) => {
+          const isTemplateItem = event.extendedProps.itemType === "template";
+
           return (
             event &&
-            (!event.extendedProps.isTemplateItem ? (
-              <EventContent
-                event={event}
-                onDelete={() =>
-                  handleEventDelete(planner, updatePlannerArray, event.id)
-                }
-                showButtons={EVENT_INTERACTION_ENABLED}
-              />
+            (!isTemplateItem ? (
+              <EventContent event={event} />
             ) : (
               <TemplateEventContent
                 event={event}
@@ -117,7 +110,7 @@ export default function Calendar({ initialDate }: CalendarProps) {
                 onDelete={() =>
                   handleTemplateEventDelete(updateTemplateArray, event.id)
                 }
-                showButtons={true}
+                disableInteraction
               />
             ))
           );
