@@ -14,9 +14,7 @@ interface GoalsSidebarProps {
   userId: string | undefined;
   goalsList: Planner[];
   planner: Planner[];
-  updatePlannerArray: (
-    planner: Planner[] | ((prev: Planner[]) => Planner[])
-  ) => void;
+  updateAll: (planner: Planner[] | ((prev: Planner[]) => Planner[])) => void;
   carouselIndex: number | undefined;
   setCarouselIndex: React.Dispatch<React.SetStateAction<number | undefined>>;
   carouselApi: [
@@ -29,7 +27,7 @@ export default function GoalsSidebar({
   userId,
   goalsList,
   planner,
-  updatePlannerArray,
+  updateAll,
   carouselIndex,
   setCarouselIndex,
   carouselApi,
@@ -42,12 +40,12 @@ export default function GoalsSidebar({
 
     filteredArray.forEach((item) =>
       deleteGoal({
-        updatePlannerArray,
+        updateAll,
         taskId: item.id,
         parentId: item.parentId,
       })
     );
-  }, [planner, updatePlannerArray]);
+  }, [planner, updateAll]);
 
   return (
     <CardContent className="max-w-[220px] pl-0 pr-[2.5rem] mb-8 flex flex-col items-center justify-between">

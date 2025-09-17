@@ -25,7 +25,8 @@ import { toggleGoalIsReady } from "@/utils/goal-handlers/toggleGoalIsReady";
 import styles from "./page.module.css";
 
 export default function RefineGoalsPage() {
-  const { userId, planner, updatePlannerArray } = useCalendarProvider();
+  const { userId, planner, updatePlannerArray, updateAll } =
+    useCalendarProvider();
 
   const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
   const [carouselIndex, setCarouselIndex] = useState<number | undefined>(
@@ -37,7 +38,7 @@ export default function RefineGoalsPage() {
   // Handler functions with proper dependency arrays - centralized to avoid duplication across Goal instances
   const handleDeleteTask = useCallback(
     (taskId: string) => {
-      deleteGoal({ updatePlannerArray, taskId, parentId: null });
+      deleteGoal({ updateAll, taskId, parentId: null });
     },
     [updatePlannerArray]
   );
@@ -84,7 +85,7 @@ export default function RefineGoalsPage() {
         userId={userId}
         goalsList={goalsList}
         planner={planner}
-        updatePlannerArray={updatePlannerArray}
+        updateAll={updateAll}
         carouselIndex={carouselIndex}
         setCarouselIndex={setCarouselIndex}
         carouselApi={[carouselApi, setCarouselApi]}

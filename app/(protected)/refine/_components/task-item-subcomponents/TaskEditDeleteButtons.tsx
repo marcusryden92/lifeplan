@@ -20,10 +20,10 @@ const TaskEditDeleteButtons: React.FC<TaskEditDeleteButtonsProps> = ({
   setDisplayEdit,
   setDisplayAddSubtask,
 }) => {
-  const { updatePlannerArray } = useCalendarProvider();
+  const { updateAll } = useCalendarProvider();
   const handleDelete = () => {
     deleteGoal({
-      updatePlannerArray,
+      updateAll,
       taskId: task.id,
       parentId: task.parentId,
     });
