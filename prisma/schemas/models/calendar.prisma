@@ -26,12 +26,13 @@ model Planner {
   parentId           String?
   itemType           ItemType
   isReady            Boolean?
-  duration           Int?
+  duration           Int
   deadline           String?
   starts             String?
   dependency         String?
   completedStartTime String?
   completedEndTime   String?
+  priority           Int
   userId             String
   color              String?
   user               User     @relation(fields: [userId], references: [id])

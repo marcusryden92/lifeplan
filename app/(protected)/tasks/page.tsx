@@ -44,6 +44,7 @@ import {
   clickEdit,
   confirmEdit,
 } from "@/utils/creationPagesFunctions";
+import PrioritySelector from "@/components/utilities/PrioritySelector";
 
 export default function TasksPage() {
   const { userId, planner, updatePlannerArray } = useCalendarProvider();
@@ -77,6 +78,7 @@ export default function TasksPage() {
       setEditTitle,
       form,
       setDefaultInfluence: true,
+      type: "task",
     });
   };
 
@@ -148,7 +150,7 @@ export default function TasksPage() {
       updatePlannerArray((prevTasks: Planner[]) =>
         prevTasks.map((task, index) =>
           index === changeToTask
-            ? { ...task, type: null, duration: null }
+            ? { ...task, type: "task", duration: null }
             : task
         )
       );
@@ -252,6 +254,10 @@ export default function TasksPage() {
                       setDate={setSelectedDate}
                     />
                   </div>
+                  <PrioritySelector
+                    updatePlannerArray={updatePlannerArray}
+                    taskId={task.id}
+                  />
                   <Input
                     ref={durationInputRef}
                     defaultValue={planner[index].duration ?? undefined}

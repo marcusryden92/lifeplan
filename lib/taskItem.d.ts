@@ -55,7 +55,7 @@ export interface AddSubtaskWrapperProps {
 
 export interface AddSubtaskProps {
   task: Planner;
-  parentId: string;
+  parentId?: string;
   isMainParent?: boolean;
   subtasksLength?: number;
 }

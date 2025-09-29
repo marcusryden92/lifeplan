@@ -59,6 +59,7 @@ export const onSubmit = ({
       dependency: null,
       completedStartTime: null,
       completedEndTime: null,
+      priority: 5,
       color: calendarColors[0],
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),

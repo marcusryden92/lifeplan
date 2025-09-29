@@ -41,6 +41,7 @@ export function addSubtask({
       dependency: null,
       completedStartTime: null,
       completedEndTime: null,
+      priority: Number(task.priority),
       color: (task?.color as string) || calendarColors[0],
       userId,
       createdAt: now.toISOString(),

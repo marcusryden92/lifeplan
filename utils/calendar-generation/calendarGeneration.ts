@@ -4,7 +4,7 @@ import { getWeekFirstDate } from "@/utils/calendarUtils";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import {
   addPlanItemsToArray,
-  sortPlannersByDeadline,
+  sortPlannersByPriority,
   checkCurrentDateInEvents,
   getMinuteDifference,
   addCompletedItemsToArray,
@@ -132,7 +132,11 @@ function addEventsToCalendar(
 
   // Then sort the array by due dates
   // (items with no due date end up last):
-  const newArray = sortPlannersByDeadline(goalsAndTasks);
+  const newArray = sortPlannersByPriority(
+    planner,
+    goalsAndTasks,
+    largestTemplateGap
+  );
   goalsAndTasks = newArray;
 
   goalsAndTasks.forEach((item) => {
