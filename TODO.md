@@ -1,6 +1,7 @@
 # House Keeping
 
 - Change date picker
+- Refactor calendarGeneration
 
 # Calendar
 
@@ -18,7 +19,6 @@
 
 # Calendar Engine Functionality
 
-- Add priority (product of selected priority and time proximity)
 - Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).
 - Give notice when an item is too large to fit within the template (alerts list)
 - Maximum time of a goal per day
@@ -50,6 +50,7 @@
 - Customize themes
 - Dark mode
 - Undo/redo function (might be smart to implement before optimistic updates to database on item updates)
+- User select or customize calendar scoring algorithm
 
 - Add a console for error messaging
 

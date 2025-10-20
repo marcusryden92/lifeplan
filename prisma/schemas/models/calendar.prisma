@@ -12,10 +12,9 @@ model SimpleEvent {
   extendedProps_parentId           String?
   backgroundColor                  String
   borderColor                      String
+  createdAt                        String
+  updatedAt                        String
   user                             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt String
-  updatedAt String
 
   @@map("SimpleEvents")
 }
@@ -35,10 +34,9 @@ model Planner {
   priority           Int
   userId             String
   color              String?
+  createdAt          String
+  updatedAt          String
   user               User     @relation(fields: [userId], references: [id])
-
-  createdAt String
-  updatedAt String
 
   @@map("Planners")
 }
@@ -49,12 +47,11 @@ model EventTemplate {
   startDay  WeekDayType
   startTime String
   userId    String
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   duration  Int
   color     String?
-
   createdAt String
   updatedAt String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("EventTemplates")
 }

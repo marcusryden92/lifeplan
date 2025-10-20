@@ -4,11 +4,11 @@ import { getWeekFirstDate } from "@/utils/calendarUtils";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import {
   addPlanItemsToArray,
-  sortPlannersByPriority,
   checkCurrentDateInEvents,
   getMinuteDifference,
   addCompletedItemsToArray,
 } from "./calendarGenerationHelpers";
+import sortPlannersByPriority from "./calendar-logic-helpers/sortPlannersByPriority";
 import {
   addWeekTemplateToCalendar,
   populateWeekWithTemplate,
@@ -132,11 +132,8 @@ function addEventsToCalendar(
 
   // Then sort the array by due dates
   // (items with no due date end up last):
-  const newArray = sortPlannersByPriority(
-    planner,
-    goalsAndTasks,
-    largestTemplateGap
-  );
+  const newArray = sortPlannersByPriority(planner, goalsAndTasks, template);
+
   goalsAndTasks = newArray;
 
   goalsAndTasks.forEach((item) => {

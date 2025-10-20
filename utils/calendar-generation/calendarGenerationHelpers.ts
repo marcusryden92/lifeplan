@@ -117,58 +117,6 @@ export function addCompletedItemsToArray(
   eventArray.push(...newArray); // Add the new dates to eventArray
 }
 
-export function sortPlannersByPriority(
-  planners: Planner[],
-  goalsAndTasks: Planner[],
-  largestTemplateGap?: number
-): Planner[] {
-  const now = new Date();
-
-  const totalPlannerTime = planners.reduce(
-    (acc, planner) => acc + planner.duration,
-    0
-  );
-
-  const totalTimeEstimate = largestTemplateGap
-    ? totalPlannerTime / largestTemplateGap
-    : totalPlannerTime;
-
-  const getMinutesBetween = (date1: Date, date2: Date) =>
-    (date2.getTime() - date1.getTime()) / (1000 * 60);
-
-  const sigmoid = (x: number, steepness = 6, midpoint = 0.5) => {
-    return 1 / (1 + Math.exp(-steepness * (x - midpoint)));
-  };
-
-  const processedGoalsAndTasks = goalsAndTasks.map((item) => {
-    let urgencyScore = 0;
-
-    if (item.deadline) {
-      const deadline = new Date(item.deadline);
-      const minutesUntilDeadline = getMinutesBetween(now, deadline);
-
-      // Ratio of task deadline to total estimated time
-      let timeRatio = minutesUntilDeadline / totalTimeEstimate;
-      timeRatio = Math.max(0, Math.min(1, timeRatio));
-
-      const skewedUrgency = 1 - sigmoid(timeRatio); // closer = higher
-
-      urgencyScore = item.priority * skewedUrgency;
-    } else {
-      // baseline factor for tasks without a deadline (e.g., 20% of priority)
-      const baselineFactor = 0.2;
-      urgencyScore = item.priority * baselineFactor;
-    }
-
-    return {
-      ...item,
-      urgencyScore,
-    };
-  });
-
-  return processedGoalsAndTasks.sort((a, b) => b.urgencyScore - a.urgencyScore);
-}
-
 // Function to check if the current date is within any events and return the end time as a Date
 export function checkCurrentDateInEvents(
   events: SimpleEvent[],
