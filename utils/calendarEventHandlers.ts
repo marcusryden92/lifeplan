@@ -31,6 +31,7 @@ export const handleSelect = (
       deadline: null,
       starts: start.toISOString(),
       dependency: null,
+      priority: 5,
       completedStartTime: null,
       completedEndTime: null,
       userId,

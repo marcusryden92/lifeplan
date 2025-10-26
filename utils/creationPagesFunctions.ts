@@ -189,7 +189,7 @@ export const editById = ({
         return {
           ...task,
           title: editTitle,
-          ...(editDuration !== undefined && { duration: editDuration }),
+          ...(editDuration !== undefined && { duration: editDuration ?? 0 }),
         };
       }
       return task;

@@ -17,6 +17,7 @@ export async function fetchCalendarData(userId: string) {
       where: {
         userId: userId,
       },
+      include: { extendedProps: true },
     });
 
     const templatesItems: EventTemplate[] = await db.eventTemplate.findMany({

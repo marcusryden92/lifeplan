@@ -22,6 +22,8 @@ import { taskIsCompleted } from "../taskHelpers";
 
 import { calendarColors } from "@/data/calendarColors";
 
+import { v4 as uuidv4 } from "uuid";
+
 export function generateCalendar(
   userId: string,
   weekStartDay: WeekDayIntegers,
@@ -306,10 +308,14 @@ function addTaskToCalendar(
         title: item.title,
         start: startTime.toISOString(),
         end: endTime.toISOString(),
-        extendedProps.itemType: item.itemType,
-        extendedProps_completedEndTime: null,
-        extendedProps_completedStartTime: null,
-        extendedProps_parentId: item.parentId || null,
+        extendedProps: {
+          id: uuidv4(),
+          eventId: item.id,
+          itemType: item.itemType,
+          completedEndTime: null,
+          completedStartTime: null,
+          parentId: item.parentId || null,
+        },
         backgroundColor: (item.color as string) || calendarColors[0],
         borderColor: "transparent",
         duration: null,

@@ -152,9 +152,7 @@ export default function TasksPage() {
     if (changeToTask !== null) {
       updatePlannerArray((prevTasks: Planner[]) =>
         prevTasks.map((task, index) =>
-          index === changeToTask
-            ? { ...task, type: null, duration: null }
-            : task
+          index === changeToTask ? { ...task, type: null, duration: 0 } : task
         )
       );
     }

@@ -1,6 +1,7 @@
 import { SimpleEvent } from "@/types/prisma";
 import { Planner } from "@/types/prisma";
 import { taskIsCompleted } from "../taskHelpers";
+import { v4 as uuidv4 } from "uuid";
 
 export function addPlanItemsToArray(
   userId: string,
@@ -42,10 +43,14 @@ export function addPlanItemsToArray(
         id: plan.id,
         start: plan.starts,
         end: end.toISOString(), // Add the calculated end time here
-        extendedProps.itemType: "plan",
-        extendedProps_parentId: null,
-        extendedProps_completedEndTime: null,
-        extendedProps_completedStartTime: null,
+        extendedProps: {
+          id: uuidv4(),
+          eventId: plan.id,
+          itemType: "plan",
+          parentId: null,
+          completedEndTime: null,
+          completedStartTime: null,
+        },
         backgroundColor: "black",
         borderColor: "black",
         duration: null,
@@ -98,14 +103,18 @@ export function addCompletedItemsToArray(
         id: item.id,
         start: item.completedStartTime,
         end: item.completedEndTime, // Add the calculated end time here
-        extendedProps.itemType: item.itemType,
-        extendedProps_completedStartTime: item.completedStartTime,
-        extendedProps_completedEndTime: item.completedEndTime,
-        extendedProps_parentId: item.parentId ?? null,
         backgroundColor: item.color as string,
         borderColor: "",
         duration: null,
         rrule: null,
+        extendedProps: {
+          id: uuidv4(),
+          eventId: item.id,
+          itemType: item.itemType,
+          completedStartTime: item.completedStartTime,
+          completedEndTime: item.completedEndTime,
+          parentId: item.parentId ?? null,
+        },
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
       };
