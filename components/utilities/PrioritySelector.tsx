@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Planner } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
 import {
   getCompleteTaskTreeIds,
   getRootParentId,

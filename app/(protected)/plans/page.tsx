@@ -30,7 +30,7 @@ import {
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { DateTimePicker } from "@/components/utilities/time-picker/DateTimePicker";
-import { Planner } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
 
 // Schemas
 import { TaskListSchema } from "@/schemas";

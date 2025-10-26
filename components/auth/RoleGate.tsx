@@ -1,7 +1,7 @@
 "use client";
 
 import { useCurrentRole } from "@/hooks/useCurrentRole";
-import { UserRole } from "@/prisma/generated/client";
+import { UserRole } from "@/types/prisma";
 import { FormError } from "@/components/ui/FormError";
 
 interface RoleGateProps {

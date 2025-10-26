@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/Input";
 
 // Definitions
 import { AddSubtaskProps } from "@/lib/taskItem";
-import type { Planner } from "@/prisma/generated/client";
+import type { Planner } from "@/types/prisma";
 
 // Context
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -28,7 +28,8 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
   const { planner, updatePlannerArray, userId } = useCalendarProvider();
   const refs = useRef(new Map<string, React.RefObject<HTMLInputElement>>());
 
-  const getRef = (parentId: string) => {
+  const getRef = (parentId?: string) => {
+    if (!parentId) return undefined;
     if (!refs.current.has(parentId)) {
       refs.current.set(parentId, createRef());
     }
@@ -59,7 +60,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
     event: React.KeyboardEvent<HTMLInputElement>,
     task: Planner
   ) => {
-    if (event.key === "Enter") {
+    if (event.key === "Enter" && parentId) {
       event.preventDefault();
       handleAddSubtask(task);
       const ref = getRef(parentId);
@@ -80,7 +81,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
           className={`bg-gray-20 bg-opacity-25 ${
             !isMainParent ? "max-w-[10rem]" : ""
           } border-gray-400 m-0 text-sm h-6 `}
-          ref={getRef(parentId)}
+          ref={getRef(parentId ?? undefined)}
           placeholder="New subtask name"
         />
         <Input

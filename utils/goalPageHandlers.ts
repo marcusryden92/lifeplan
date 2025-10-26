@@ -1,9 +1,9 @@
-import { Planner } from "@/prisma/generated/client";
+import { Planner, SimpleEvent } from "@/types/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
 
 import { updateDependenciesOnDelete_ReturnArray } from "@/utils/goal-handlers/update-dependencies/updateDependenciesOnDelete";
-import { SimpleEvent } from "@/prisma/generated/client";
+
 interface AddSubtaskInterface {
   userId?: string;
   planner: Planner[];

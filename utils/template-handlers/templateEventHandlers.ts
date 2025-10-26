@@ -1,7 +1,7 @@
 import FullCalendar from "@fullcalendar/react";
 import { DateSelectArg, EventDropArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
-import { EventTemplate } from "@/prisma/generated/client";
+import { EventTemplate } from "@/types/prisma";
 import { calendarColors } from "@/data/calendarColors";
 
 import { getWeekdayFromDate } from "../calendarUtils";

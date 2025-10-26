@@ -1,5 +1,5 @@
-import { Planner } from "@/prisma/generated/client";
-import { SimpleEvent } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
+import { SimpleEvent } from "@/types/prisma";
 export const deletePlanner = (
   updatePlannerArray: (
     arg: Planner[] | ((prev: Planner[]) => Planner[]),

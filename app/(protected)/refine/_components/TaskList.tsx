@@ -10,7 +10,7 @@ import {
   getSubtasksById,
   sortTasksByDependencies,
 } from "@/utils/goalPageHandlers";
-import { Planner } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
 
 const TaskList: React.FC<TaskListProps> = React.memo(({ id, subtasks }) => {
   const { planner, updatePlannerArray } = useCalendarProvider();

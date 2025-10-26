@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { EventImpl } from "@fullcalendar/core/internal";
-import { EventTemplate } from "@/prisma/generated/client";
+import { EventTemplate } from "@/types/prisma";
 
 import TemplateEventPopover from "./TemplateEventPopover";
 import EventWrapper from "./EventWrapper";

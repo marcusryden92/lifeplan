@@ -1,4 +1,4 @@
-import { SimpleEvent, Planner, EventTemplate } from "@/prisma/generated/client";
+import { SimpleEvent, Planner, EventTemplate } from "@/types/prisma";
 import { DateSelectArg, EventDropArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 import { EventImpl } from "@fullcalendar/core/internal";

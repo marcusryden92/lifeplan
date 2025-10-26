@@ -1,4 +1,4 @@
-import { Planner, EventTemplate } from "@/prisma/generated/client";
+import { Planner, EventTemplate } from "@/types/prisma";
 
 export default function sortPlannersByPriority(
   planners: Planner[],

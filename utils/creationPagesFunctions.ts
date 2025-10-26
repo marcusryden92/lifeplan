@@ -1,4 +1,4 @@
-import { Planner } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
 import { TaskListSchema } from "@/schemas";
 import { calendarColors } from "@/data/calendarColors";
 import { v4 as uuidv4 } from "uuid";

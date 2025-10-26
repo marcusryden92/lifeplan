@@ -1,6 +1,6 @@
 import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";
 
-import { SimpleEvent } from "@/prisma/generated/client";
+import { SimpleEvent } from "@/types/prisma";
 import { EventInput } from "@fullcalendar/core/index.js";
 import { RRule, Weekday } from "rrule";
 
@@ -70,40 +70,26 @@ export function getRRuleDayTypeFromIndex(day: number): Weekday {
   return rruleWeekdays[day];
 }
 
-// Helper function to transform Prisma events to FullCalendar format
 export const transformEventsForFullCalendar = (
   events: SimpleEvent[]
 ): EventInput[] => {
-  return events.map((event) => {
-    const parsedRRule = event.rrule
+  return events.map((event) => ({
+    id: event.id,
+    title: event.title,
+    start: event.start,
+    end: event.end,
+    duration: event.duration ?? undefined,
+    rrule: event.rrule
       ? (JSON.parse(event.rrule) as Record<string, unknown>)
-      : undefined;
-
-    const { rootProps, extendedProps } = Object.entries(event).reduce(
-      (acc, [key, value]) => {
-        if (key.startsWith("extendedProps_")) {
-          acc.extendedProps[key.replace("extendedProps_", "")] = value;
-        } else {
-          acc.rootProps[key] = value;
-          if (key === "backgroundColor")
-            acc.extendedProps["backgroundColor"] = value;
-        }
-        return acc;
-      },
-      {
-        rootProps: {} as Record<string, unknown>,
-        extendedProps: {} as Record<string, unknown>,
-      }
-    );
-
-    return {
-      ...rootProps,
-      rrule: parsedRRule,
-      duration: event.duration ?? undefined,
-      editable: event.extendedProps_itemType === "template" ? false : true,
-      extendedProps,
-    } as EventInput;
-  });
+      : undefined,
+    backgroundColor: event.backgroundColor,
+    borderColor: event.borderColor,
+    editable: event.extendedProps?.itemType !== "template",
+    extendedProps: {
+      ...event.extendedProps,
+      backgroundColor: event.backgroundColor,
+    },
+  }));
 };
 
 // Floor a date (or string) to seconds since epoch

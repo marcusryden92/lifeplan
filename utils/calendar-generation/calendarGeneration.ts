@@ -15,7 +15,7 @@ import {
 } from "./weekTemplateGeneration";
 import { getDayDifference, hasDateInArray } from "./calendarGenerationHelpers";
 
-import { Planner, EventTemplate, SimpleEvent } from "@/prisma/generated/client";
+import { Planner, EventTemplate, SimpleEvent } from "@/types/prisma";
 
 import { getSortedTreeBottomLayer } from "../goalPageHandlers";
 import { taskIsCompleted } from "../taskHelpers";
@@ -39,7 +39,7 @@ export function generateCalendar(
     const memoizedEvents: SimpleEvent[] = prevCalendar.filter(
       (e) =>
         currentDate > new Date(e.start) &&
-        e.extendedProps_itemType !== "template"
+        e.extendedProps?.itemType !== "template"
     );
 
     // Add IDs to the set
@@ -306,7 +306,7 @@ function addTaskToCalendar(
         title: item.title,
         start: startTime.toISOString(),
         end: endTime.toISOString(),
-        extendedProps_itemType: item.itemType,
+        extendedProps.itemType: item.itemType,
         extendedProps_completedEndTime: null,
         extendedProps_completedStartTime: null,
         extendedProps_parentId: item.parentId || null,

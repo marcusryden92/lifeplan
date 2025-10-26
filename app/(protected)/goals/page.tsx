@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/Button";
 
 // Schemas and utilities
 import { TaskListSchema } from "@/schemas";
-import { Planner } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
 import {
   onSubmit,
   deleteTask,

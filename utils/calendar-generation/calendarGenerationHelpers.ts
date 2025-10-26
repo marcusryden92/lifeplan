@@ -1,5 +1,5 @@
-import { SimpleEvent } from "@/prisma/generated/client";
-import { Planner } from "@/prisma/generated/client";
+import { SimpleEvent } from "@/types/prisma";
+import { Planner } from "@/types/prisma";
 import { taskIsCompleted } from "../taskHelpers";
 
 export function addPlanItemsToArray(
@@ -42,7 +42,7 @@ export function addPlanItemsToArray(
         id: plan.id,
         start: plan.starts,
         end: end.toISOString(), // Add the calculated end time here
-        extendedProps_itemType: "plan",
+        extendedProps.itemType: "plan",
         extendedProps_parentId: null,
         extendedProps_completedEndTime: null,
         extendedProps_completedStartTime: null,
@@ -98,7 +98,7 @@ export function addCompletedItemsToArray(
         id: item.id,
         start: item.completedStartTime,
         end: item.completedEndTime, // Add the calculated end time here
-        extendedProps_itemType: item.itemType,
+        extendedProps.itemType: item.itemType,
         extendedProps_completedStartTime: item.completedStartTime,
         extendedProps_completedEndTime: item.completedEndTime,
         extendedProps_parentId: item.parentId ?? null,

@@ -1,7 +1,7 @@
 import React from "react";
 
 // Types
-import { Planner } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
 
 // Utils
 import {

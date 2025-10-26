@@ -20,8 +20,8 @@ import RootTaskListWrapper from "./task-item-subcomponents/RootTaskListWrapper";
 import PrioritySelector from "@/components/utilities/PrioritySelector";
 
 // Local utilities
-import { Planner } from "@/prisma/generated/client";
-import { SimpleEvent } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
+import { SimpleEvent } from "@/types/prisma";
 import { getSubtasksById } from "@/utils/goalPageHandlers";
 
 import {
