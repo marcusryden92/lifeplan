@@ -24,11 +24,10 @@ export function handleCalendarChanges(
 
   // UPDATE
   for (const event of databaseChanges.calendar.update) {
-    const { extendedProps: _extendedProps, ...eventData } = event;
     operations.push(
       db.simpleEvent.update({
         where: { id: event.id },
-        data: { ...eventData, userId, updatedAt },
+        data: { ...event, userId, updatedAt },
       })
     );
   }

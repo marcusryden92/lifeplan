@@ -15,11 +15,16 @@ type ChangeGroup<T> = {
   destroy: T[];
 };
 
+type PlannerChange = Planner;
+type CalendarChange = Omit<SimpleEvent, "extendedProps">;
+type TemplateChange = EventTemplate;
+type ExtendedPropsChange = EventExtendedProps;
+
 export type DatabaseChanges = {
-  planner: ChangeGroup<Planner>;
-  calendar: ChangeGroup<SimpleEvent>;
-  template: ChangeGroup<EventTemplate>;
-  extendedProps: ChangeGroup<EventExtendedProps>;
+  planner: ChangeGroup<PlannerChange>;
+  calendar: ChangeGroup<CalendarChange>;
+  template: ChangeGroup<TemplateChange>;
+  extendedProps: ChangeGroup<ExtendedPropsChange>;
 };
 
 export async function handleServerTransaction(
@@ -92,11 +97,12 @@ export function compareData(
     const prevEvent = prevCalMap.get(event.id);
 
     if (!prevEvent) {
-      databaseChanges.calendar.create.push(event);
+      const { extendedProps, ...eventCore } = event;
+      databaseChanges.calendar.create.push(eventCore as CalendarChange);
 
-      if (event.extendedProps) {
+      if (extendedProps) {
         databaseChanges.extendedProps.create.push({
-          ...event.extendedProps,
+          ...extendedProps,
           eventId: event.id,
         } as EventExtendedProps);
       }
@@ -105,7 +111,8 @@ export function compareData(
     }
 
     if (!objectsAreEqual(prevEvent, event)) {
-      databaseChanges.calendar.update.push(event);
+      const { extendedProps: _extendedProps, ...eventCore } = event;
+      databaseChanges.calendar.update.push(eventCore as CalendarChange);
     }
 
     if (
@@ -123,7 +130,8 @@ export function compareData(
   // Find events to delete (events in previous but not in current)
   prevCalMap.forEach((event) => {
     if (!calendarMap.has(event.id)) {
-      databaseChanges.calendar.destroy.push(event);
+      const { extendedProps: _extendedProps, ...eventCore } = event;
+      databaseChanges.calendar.destroy.push(eventCore as CalendarChange);
     }
   });
 

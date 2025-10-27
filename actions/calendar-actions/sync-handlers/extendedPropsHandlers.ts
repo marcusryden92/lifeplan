@@ -21,10 +21,15 @@ export function handleExtendedPropsChanges(
 
   // UPDATE
   for (const props of databaseChanges.extendedProps.update) {
+    const { id: propsId, ...rest } = props;
     operations.push(
-      db.eventExtendedProps.update({
-        where: { id: props.id },
-        data: { ...props },
+      db.eventExtendedProps.upsert({
+        where: { eventId: props.eventId },
+        update: { ...rest },
+        create: {
+          id: propsId ?? props.eventId,
+          ...rest,
+        },
       })
     );
   }
