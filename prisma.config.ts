@@ -1,8 +1,9 @@
-import type { PrismaConfig } from "prisma";
+import { defineConfig } from "prisma/config";
 
-export default {
+export default defineConfig({
   schema: "prisma/schemas",
   migrations: {
     path: "prisma/migrations",
+    seed: "pnpm db:seed",
   },
-} satisfies PrismaConfig;
+});
