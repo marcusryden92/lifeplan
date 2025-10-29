@@ -11,9 +11,7 @@
     "postinstall": "prisma generate",
     "type-check": "tsc --noEmit",
     "test": "jest",
-    "test:watch": "jest --watch",
-    "prisma:dev": "dotenv -e .env.development prisma",
-    "prisma:prod": "dotenv -e .env.production.local prisma"
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.0",
