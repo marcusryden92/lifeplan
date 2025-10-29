@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Planner, SimpleEvent, EventTemplate } from "@/prisma/generated/client";
+import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
 
 type CalendarData = {
   planner: Planner[];

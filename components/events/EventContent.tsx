@@ -17,7 +17,6 @@ import {
   handleClickDelete,
   handlePostponeTask,
 } from "@/utils/calendarEventHandlers";
-import { ItemType } from "@/prisma/generated/client";
 
 interface EventContentProps {
   event: EventImpl;
@@ -55,7 +54,7 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
       elementRef,
       calendar,
       updateAll,
-      itemType as ItemType,
+      itemType as string,
       (parentId as string) ?? null,
       red,
       setShowPopover

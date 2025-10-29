@@ -1,23 +1,32 @@
 model SimpleEvent {
-  id                               String   @id @default(cuid())
-  title                            String
-  start                            String
-  end                              String
-  duration                         Int?
-  userId                           String
-  rrule                            String?
-  extendedProps_itemType           ItemType
-  extendedProps_completedStartTime String?
-  extendedProps_completedEndTime   String?
-  extendedProps_parentId           String?
-  backgroundColor                  String
-  borderColor                      String
-  user                             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  createdAt String
-  updatedAt String
+  id             String   @id @default(cuid())
+  title          String
+  start          String
+  end            String
+  duration       Int?
+  userId         String
+  rrule          String?
+  backgroundColor String
+  borderColor    String
+  createdAt      String
+  updatedAt      String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  extendedProps  EventExtendedProps?
 
   @@map("SimpleEvents")
+}
+
+
+model EventExtendedProps {
+  id                   String   @id @default(cuid())
+  itemType             ItemType
+  completedStartTime   String?
+  completedEndTime     String?
+  parentId             String?
+  eventId              String   @unique
+  event                SimpleEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("EventExtendedProps")
 }
 
 model Planner {
@@ -26,18 +35,18 @@ model Planner {
   parentId           String?
   itemType           ItemType
   isReady            Boolean?
-  duration           Int?
+  duration           Int
   deadline           String?
   starts             String?
   dependency         String?
   completedStartTime String?
   completedEndTime   String?
+  priority           Int
   userId             String
   color              String?
+  createdAt          String
+  updatedAt          String
   user               User     @relation(fields: [userId], references: [id])
-
-  createdAt String
-  updatedAt String
 
   @@map("Planners")
 }
@@ -48,12 +57,11 @@ model EventTemplate {
   startDay  WeekDayType
   startTime String
   userId    String
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   duration  Int
   color     String?
-
   createdAt String
   updatedAt String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("EventTemplates")
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useCallback, useState } from "react";
-import { Planner, SimpleEvent, EventTemplate } from "@/prisma/generated/client";
+import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
 import { handleServerTransaction } from "@/utils/server-handlers/compareCalendarData";
 
 const useCalendarServerSync = (

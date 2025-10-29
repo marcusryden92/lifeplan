@@ -7,7 +7,7 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 import { taskIsCompleted } from "@/utils/taskHelpers";
 
-import { Planner, SimpleEvent, EventTemplate } from "@/prisma/generated/client";
+import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
 
 const useManuallyRefreshCalendar = (
   userId: string | undefined,

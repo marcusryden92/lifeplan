@@ -1,6 +1,7 @@
 # House Keeping
 
 - Change date picker
+- Refactor calendarGeneration
 
 # Calendar
 
@@ -9,18 +10,17 @@
 - Feature for duplicate plans
 - Feature for duplicating templates in template builder
 
-- Multiple templates of different time span (3 days, 2 weeks etc)
+- (Multiple templates of different time span (3 days, 2 weeks etc))
 
-- Add RRule customization to plans
+- Add RRule exceptions to plans
 
-- Add categorization of goals
+- Add categorization of goals (tags)
 - Add inter-goal dependencies (and check for dependency loops)
 
 # Calendar Engine Functionality
 
-- Add priority
 - Add function to allow splitting of large tasks into smaller when generating calendar (minimum chunk size).
-- Give notice when an item is too large to fit within the template
+- Give notice when an item is too large to fit within the template (alerts list)
 - Maximum time of a goal per day
 
 - Add exceptions to template (like skip a day or move a particular repeating instance)
@@ -50,6 +50,7 @@
 - Customize themes
 - Dark mode
 - Undo/redo function (might be smart to implement before optimistic updates to database on item updates)
+- User select or customize calendar scoring algorithm
 
 - Add a console for error messaging
 

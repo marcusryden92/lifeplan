@@ -179,13 +179,15 @@ const SettingsForm = ({ user }: SettingsFormProps) => {
                       Enable two factor authentication for your account
                     </FormDescription>
                   </div>
-                  <FormControl>
-                    <Switch
-                      disabled={isPending}
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
+                  {
+                    <FormControl>
+                      <Switch
+                        disabled={isPending}
+                        checked={!!field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  }
                 </FormItem>
               )}
             />

@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import calendarSlice from "@/redux/slices/calendarSlice";
-import { Planner } from "@/prisma/generated/client";
-import { SimpleEvent } from "@/prisma/generated/client";
-import { EventTemplate } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
+import { SimpleEvent } from "@/types/prisma";
+import { EventTemplate } from "@/types/prisma";
 import { fetchCalendarData } from "@/actions/calendar-actions/fetchCalendarData";
 
 interface Data {

@@ -1,4 +1,4 @@
-import { Planner, SimpleEvent, EventTemplate } from "@/prisma/generated/client";
+import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { AppDispatch } from "../store";

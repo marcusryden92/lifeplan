@@ -4,23 +4,25 @@ import { getWeekFirstDate } from "@/utils/calendarUtils";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import {
   addPlanItemsToArray,
-  sortPlannersByDeadline,
   checkCurrentDateInEvents,
   getMinuteDifference,
   addCompletedItemsToArray,
 } from "./calendarGenerationHelpers";
+import sortPlannersByPriority from "./calendar-logic-helpers/sortPlannersByPriority";
 import {
   addWeekTemplateToCalendar,
   populateWeekWithTemplate,
 } from "./weekTemplateGeneration";
 import { getDayDifference, hasDateInArray } from "./calendarGenerationHelpers";
 
-import { Planner, EventTemplate, SimpleEvent } from "@/prisma/generated/client";
+import { Planner, EventTemplate, SimpleEvent } from "@/types/prisma";
 
 import { getSortedTreeBottomLayer } from "../goalPageHandlers";
 import { taskIsCompleted } from "../taskHelpers";
 
 import { calendarColors } from "@/data/calendarColors";
+
+import { v4 as uuidv4 } from "uuid";
 
 export function generateCalendar(
   userId: string,
@@ -39,7 +41,7 @@ export function generateCalendar(
     const memoizedEvents: SimpleEvent[] = prevCalendar.filter(
       (e) =>
         currentDate > new Date(e.start) &&
-        e.extendedProps_itemType !== "template"
+        e.extendedProps?.itemType !== "template"
     );
 
     // Add IDs to the set
@@ -132,7 +134,8 @@ function addEventsToCalendar(
 
   // Then sort the array by due dates
   // (items with no due date end up last):
-  const newArray = sortPlannersByDeadline(goalsAndTasks);
+  const newArray = sortPlannersByPriority(planner, goalsAndTasks, template);
+
   goalsAndTasks = newArray;
 
   goalsAndTasks.forEach((item) => {
@@ -305,10 +308,14 @@ function addTaskToCalendar(
         title: item.title,
         start: startTime.toISOString(),
         end: endTime.toISOString(),
-        extendedProps_itemType: item.itemType,
-        extendedProps_completedEndTime: null,
-        extendedProps_completedStartTime: null,
-        extendedProps_parentId: item.parentId || null,
+        extendedProps: {
+          id: uuidv4(),
+          eventId: item.id,
+          itemType: item.itemType,
+          completedEndTime: null,
+          completedStartTime: null,
+          parentId: item.parentId || null,
+        },
         backgroundColor: (item.color as string) || calendarColors[0],
         borderColor: "transparent",
         duration: null,

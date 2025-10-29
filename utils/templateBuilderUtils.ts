@@ -4,7 +4,7 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import { calendarColors } from "@/data/calendarColors";
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 
-import { EventTemplate } from "@/prisma/generated/client";
+import { EventTemplate } from "@/types/prisma";
 import { EventInput } from "@fullcalendar/core";
 
 export function getTimeFromDate(date: Date): string {

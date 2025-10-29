@@ -1,6 +1,6 @@
 "use server";
 import { db } from "@/lib/db";
-import { SimpleEvent, EventTemplate, Planner } from "@/prisma/generated/client";
+import { SimpleEvent, EventTemplate, Planner } from "@/types/prisma";
 
 // Fetches the raw data from the database
 export async function fetchCalendarData(userId: string) {
@@ -17,6 +17,7 @@ export async function fetchCalendarData(userId: string) {
       where: {
         userId: userId,
       },
+      include: { extendedProps: true },
     });
 
     const templatesItems: EventTemplate[] = await db.eventTemplate.findMany({

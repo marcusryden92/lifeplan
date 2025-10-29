@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 
 import { moveToEdge } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/moveToEdge";
-import { Planner } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
 
 import styles from "./TaskDivider.module.css";
 

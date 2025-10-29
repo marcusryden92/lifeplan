@@ -1,4 +1,4 @@
-import { Planner } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
 
 export interface TaskListProps {
   id: string;
@@ -55,7 +55,7 @@ export interface AddSubtaskWrapperProps {
 
 export interface AddSubtaskProps {
   task: Planner;
-  parentId: string;
+  parentId?: string;
   isMainParent?: boolean;
   subtasksLength?: number;
 }

@@ -1,4 +1,4 @@
-import { SimpleEvent, Planner, EventTemplate } from "@/prisma/generated/client";
+import { SimpleEvent, Planner, EventTemplate } from "@/types/prisma";
 import { DateSelectArg, EventDropArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 import { EventImpl } from "@fullcalendar/core/internal";
@@ -31,6 +31,7 @@ export const handleSelect = (
       deadline: null,
       starts: start.toISOString(),
       dependency: null,
+      priority: 5,
       completedStartTime: null,
       completedEndTime: null,
       userId,

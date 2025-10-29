@@ -1,8 +1,31 @@
 "use client";
 
-import { Planner, SimpleEvent, EventTemplate } from "@/prisma/generated/client";
+import {
+  Planner,
+  SimpleEvent,
+  EventTemplate,
+  EventExtendedProps,
+} from "@/types/prisma";
 import { objectsAreEqual } from "../generalUtils";
 import { syncCalendarData } from "@/actions/calendar-actions/syncCalendarData";
+
+type ChangeGroup<T> = {
+  create: T[];
+  update: T[];
+  destroy: T[];
+};
+
+type PlannerChange = Planner;
+type CalendarChange = Omit<SimpleEvent, "extendedProps">;
+type TemplateChange = EventTemplate;
+type ExtendedPropsChange = EventExtendedProps;
+
+export type DatabaseChanges = {
+  planner: ChangeGroup<PlannerChange>;
+  calendar: ChangeGroup<CalendarChange>;
+  template: ChangeGroup<TemplateChange>;
+  extendedProps: ChangeGroup<ExtendedPropsChange>;
+};
 
 export async function handleServerTransaction(
   userId: string,
@@ -13,17 +36,7 @@ export async function handleServerTransaction(
   template?: EventTemplate[],
   previousTemplate?: { current: EventTemplate[] }
 ) {
-  const {
-    create,
-    update,
-    destroy,
-    createEvent,
-    updateEvent,
-    destroyEvent,
-    createTemplate,
-    updateTemplate,
-    destroyTemplate,
-  } = compareData(
+  const databaseChanges = compareData(
     planner,
     previousPlanner,
     calendar,
@@ -32,18 +45,7 @@ export async function handleServerTransaction(
     previousTemplate
   );
 
-  const response = syncCalendarData(
-    userId,
-    create,
-    update,
-    destroy,
-    createEvent,
-    updateEvent,
-    destroyEvent,
-    createTemplate,
-    updateTemplate,
-    destroyTemplate
-  );
+  const response = syncCalendarData(userId, databaseChanges);
 
   return response;
 }
@@ -56,29 +58,32 @@ export function compareData(
   template?: EventTemplate[],
   previousTemplate?: { current: EventTemplate[] }
 ) {
+  const databaseChanges: DatabaseChanges = {
+    planner: { create: [], update: [], destroy: [] },
+    calendar: { create: [], update: [], destroy: [] },
+    template: { create: [], update: [], destroy: [] },
+    extendedProps: { create: [], update: [], destroy: [] },
+  };
+
   // Check planner changes
   const prevPlan: Planner[] = [...previousPlanner.current];
   const plannerMap = new Map(planner.map((planner) => [planner.id, planner]));
   const prevPlanMap = new Map(prevPlan.map((planner) => [planner.id, planner]));
 
-  const create: Planner[] = [];
-  const update: Planner[] = [];
-  const destroy: Planner[] = [];
-
   // Find items to create or update
   plannerMap.forEach((item) => {
     const prevItem = prevPlanMap.get(item.id);
     if (!prevItem) {
-      create.push(item);
+      databaseChanges.planner.create.push(item);
     } else if (!objectsAreEqual(prevItem, item)) {
-      update.push(item);
+      databaseChanges.planner.update.push(item);
     }
   });
 
   // Find items to delete (items in previous but not in current)
   prevPlanMap.forEach((item) => {
     if (!plannerMap.has(item.id)) {
-      destroy.push(item);
+      databaseChanges.planner.destroy.push(item);
     }
   });
 
@@ -87,31 +92,50 @@ export function compareData(
   const calendarMap = new Map(calendar.map((event) => [event.id, event]));
   const prevCalMap = new Map(prevCal.map((event) => [event.id, event]));
 
-  const createEvent: SimpleEvent[] = [];
-  const updateEvent: SimpleEvent[] = [];
-  const destroyEvent: SimpleEvent[] = [];
-
   // Find events to create or update
   calendarMap.forEach((event) => {
     const prevEvent = prevCalMap.get(event.id);
+
     if (!prevEvent) {
-      createEvent.push(event);
-    } else if (!objectsAreEqual(prevEvent, event)) {
-      updateEvent.push(event);
+      const { extendedProps, ...eventCore } = event;
+      databaseChanges.calendar.create.push(eventCore as CalendarChange);
+
+      if (extendedProps) {
+        databaseChanges.extendedProps.create.push({
+          ...extendedProps,
+          eventId: event.id,
+        } as EventExtendedProps);
+      }
+
+      return;
+    }
+
+    if (!objectsAreEqual(prevEvent, event)) {
+      const { extendedProps: _extendedProps, ...eventCore } = event;
+      databaseChanges.calendar.update.push(eventCore as CalendarChange);
+    }
+
+    if (
+      prevEvent.extendedProps &&
+      event.extendedProps &&
+      !objectsAreEqual(prevEvent.extendedProps, event.extendedProps)
+    ) {
+      databaseChanges.extendedProps.update.push({
+        ...event.extendedProps,
+        eventId: event.id,
+      } as EventExtendedProps);
     }
   });
 
   // Find events to delete (events in previous but not in current)
   prevCalMap.forEach((event) => {
     if (!calendarMap.has(event.id)) {
-      destroyEvent.push(event);
+      const { extendedProps: _extendedProps, ...eventCore } = event;
+      databaseChanges.calendar.destroy.push(eventCore as CalendarChange);
     }
   });
 
   // Check template changes
-  const createTemplate: EventTemplate[] = [];
-  const updateTemplate: EventTemplate[] = [];
-  const destroyTemplate: EventTemplate[] = [];
 
   if (template && previousTemplate) {
     const prevTemp: EventTemplate[] = [...previousTemplate.current];
@@ -126,29 +150,19 @@ export function compareData(
     templateMap.forEach((template) => {
       const prevTemplate = prevTempMap.get(template.id);
       if (!prevTemplate) {
-        createTemplate.push(template);
+        databaseChanges.template.create.push(template);
       } else if (!objectsAreEqual(prevTemplate, template)) {
-        updateTemplate.push(template);
+        databaseChanges.template.update.push(template);
       }
     });
 
     // Find templates to delete (templates in previous but not in current)
     prevTempMap.forEach((template) => {
       if (!templateMap.has(template.id)) {
-        destroyTemplate.push(template);
+        databaseChanges.template.destroy.push(template);
       }
     });
   }
 
-  return {
-    create,
-    update,
-    destroy,
-    createEvent,
-    updateEvent,
-    destroyEvent,
-    createTemplate,
-    updateTemplate,
-    destroyTemplate,
-  };
+  return databaseChanges;
 }

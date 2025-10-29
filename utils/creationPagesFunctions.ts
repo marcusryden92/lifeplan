@@ -1,4 +1,4 @@
-import { Planner } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
 import { TaskListSchema } from "@/schemas";
 import { calendarColors } from "@/data/calendarColors";
 import { v4 as uuidv4 } from "uuid";
@@ -59,6 +59,7 @@ export const onSubmit = ({
       dependency: null,
       completedStartTime: null,
       completedEndTime: null,
+      priority: 5,
       color: calendarColors[0],
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
@@ -188,7 +189,7 @@ export const editById = ({
         return {
           ...task,
           title: editTitle,
-          ...(editDuration !== undefined && { duration: editDuration }),
+          ...(editDuration !== undefined && { duration: editDuration ?? 0 }),
         };
       }
       return task;

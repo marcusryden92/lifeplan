@@ -17,7 +17,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 
-import { Planner } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
 
 // Local components and context
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -44,6 +44,7 @@ import {
   clickEdit,
   confirmEdit,
 } from "@/utils/creationPagesFunctions";
+import PrioritySelector from "@/components/utilities/PrioritySelector";
 
 export default function TasksPage() {
   const { userId, planner, updatePlannerArray } = useCalendarProvider();
@@ -77,6 +78,7 @@ export default function TasksPage() {
       setEditTitle,
       form,
       setDefaultInfluence: true,
+      type: "task",
     });
   };
 
@@ -147,9 +149,7 @@ export default function TasksPage() {
     if (changeToTask !== null) {
       updatePlannerArray((prevTasks: Planner[]) =>
         prevTasks.map((task, index) =>
-          index === changeToTask
-            ? { ...task, type: null, duration: null }
-            : task
+          index === changeToTask ? { ...task, type: "task", duration: 0 } : task
         )
       );
     }
@@ -252,6 +252,10 @@ export default function TasksPage() {
                       setDate={setSelectedDate}
                     />
                   </div>
+                  <PrioritySelector
+                    updatePlannerArray={updatePlannerArray}
+                    taskId={task.id}
+                  />
                   <Input
                     ref={durationInputRef}
                     defaultValue={planner[index].duration ?? undefined}

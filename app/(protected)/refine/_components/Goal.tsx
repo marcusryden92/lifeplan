@@ -17,10 +17,11 @@ import { DateTimePicker } from "@/components/utilities/time-picker/DateTimePicke
 import AddSubtask from "./task-item-subcomponents/AddSubtask";
 import TaskList from "./TaskList";
 import RootTaskListWrapper from "./task-item-subcomponents/RootTaskListWrapper";
+import PrioritySelector from "@/components/utilities/PrioritySelector";
 
 // Local utilities
-import { Planner } from "@/prisma/generated/client";
-import { SimpleEvent } from "@/prisma/generated/client";
+import { Planner } from "@/types/prisma";
+import { SimpleEvent } from "@/types/prisma";
 import { getSubtasksById } from "@/utils/goalPageHandlers";
 
 import {
@@ -46,6 +47,7 @@ type GoalProps = {
 const Goal = ({
   planner,
   task,
+  updatePlannerArray,
   handleDeleteTask,
   handleConfirmEdit,
   handleToggleReady,
@@ -57,6 +59,8 @@ const Goal = ({
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     task.deadline ? new Date(task.deadline) : undefined
   );
+
+  const priority = task.priority ? Number(task.priority) : 5;
 
   // Get subtasks
   const subtasks = useMemo(
@@ -142,6 +146,11 @@ const Goal = ({
             </div>
             <div className="flex flex-row space-x-2 items-center ml-auto transition-opacity">
               <>
+                <PrioritySelector
+                  updatePlannerArray={updatePlannerArray}
+                  taskId={task.id}
+                  initialPriority={priority}
+                />
                 <EventColorPicker taskId={task.id} />
                 <button
                   onClick={toggleEditMode}
