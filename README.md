@@ -20,3 +20,4 @@ pnpm run prisma migrate deploy
 - `pnpm db:seed` runs the Prisma seed script with `.env.development.local` loaded (use it whenever you need baseline data).
 - `pnpm prisma:migrate:deploy` applies migrations against the Docker database with `.env.development.local`.
 - `pnpm db:reset:dev` wipes the Docker volume, restarts Postgres, runs pending migrations, and then re-seeds with `pnpm db:seed`.
+- `pnpm db:studio` runs Prisma studio to view the database in the browser.

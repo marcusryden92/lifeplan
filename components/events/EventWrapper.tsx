@@ -64,7 +64,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
         flexDirection: "column",
         justifyContent: "space-between",
         height: "100%",
-        padding: "8px",
+        padding: elementHeight < 20 ? "2px 8px" : "8px",
         borderRadius: userSettings.styles.events.borderRadius,
         backgroundColor: isCompleted
           ? userSettings.styles.events.completedColor
@@ -81,12 +81,14 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
       {/* Header row with title and time */}
       <span
         className="flex gap-2 justify-between"
-        style={{ borderBottom: showPopover ? "4px dotted white" : "" }}
+        style={{
+          borderBottom: showPopover ? "4px dotted white" : "",
+        }}
       >
         <span
           style={{
             marginBottom: "auto",
-            fontSize: elementHeight > 20 ? "0.8rem" : "0.5rem",
+            fontSize: elementHeight > 20 ? "0.7rem" : "0.5rem",
             fontWeight: "bold",
           }}
         >
@@ -95,7 +97,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
         <span
           className="flex gap-2"
           style={{
-            fontSize: elementHeight > 20 ? "0.8rem" : "0.5rem",
+            fontSize: elementHeight > 20 ? "0.7rem" : "0.5rem",
             fontWeight: "bold",
           }}
         >
