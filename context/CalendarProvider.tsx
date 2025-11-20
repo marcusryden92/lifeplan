@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, ReactNode, useMemo } from "react";
+import React, {
+  createContext,
+  useContext,
+  ReactNode,
+  useMemo,
+  useEffect,
+} from "react";
 
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch } from "@/redux/store";
@@ -61,6 +67,10 @@ export default function CalendarProvider({
     () => calendarState,
     [calendarState]
   );
+
+  useEffect(() => {
+    console.log(planner);
+  }, [planner]);
 
   const weekStartDay: WeekDayIntegers = 1;
 
