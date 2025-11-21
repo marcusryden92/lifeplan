@@ -68,10 +68,6 @@ export default function CalendarProvider({
     [calendarState]
   );
 
-  useEffect(() => {
-    console.log(planner);
-  }, [planner]);
-
   const weekStartDay: WeekDayIntegers = 1;
 
   const {
