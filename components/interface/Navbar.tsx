@@ -60,7 +60,7 @@ export const Navbar = () => {
   return (
     <nav className={styles.navbar}>
       <section className={styles.titleContainer}>
-        <h1>DayDime.</h1>
+        <h1>Lifeplan.</h1>
       </section>
       <div className="mb-4" />
       <div className="flex lg:h-full lg:flex-col  justify-between gap-2">

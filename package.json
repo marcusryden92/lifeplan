@@ -11,7 +11,13 @@
     "postinstall": "prisma generate",
     "type-check": "tsc --noEmit",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "db:start": "docker compose -f docker-compose.dev.yml up -d",
+    "db:stop": "docker compose -f docker-compose.dev.yml down",
+    "db:reset:dev": "docker compose -f docker-compose.dev.yml down --volumes && docker compose -f docker-compose.dev.yml up -d && dotenv -e .env.development.local -- prisma migrate deploy && pnpm db:seed",
+    "prisma:migrate:deploy": "dotenv -e .env.development.local -- prisma migrate deploy",
+    "db:seed": "dotenv -e .env.development.local -- ts-node --project prisma/tsconfig.seed.json prisma/seed.ts",
+    "db:studio": "dotenv -e .env.development.local -- pnpx prisma studio"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.0",

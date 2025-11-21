@@ -35,7 +35,7 @@ export function addSubtask({
       parentId: task.id || null,
       itemType: "goal",
       isReady: true,
-      duration: taskDuration < 5 ? 5 : taskDuration,
+      duration: taskDuration < 15 ? 15 : taskDuration,
       deadline: null,
       starts: null,
       dependency: null,

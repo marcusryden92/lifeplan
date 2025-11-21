@@ -260,7 +260,10 @@ export const handleClickDelete = (
         manuallyUpdatedCalendar: updatedCalendar,
       });
     } else {
-      updateAll((prev) => prev.filter((t) => t.id !== event.id));
+      updateAll(
+        (prev) => prev.filter((t) => t.id !== event.id),
+        (prev) => prev.filter((t) => t.id !== event.id)
+      );
     }
   }, 500);
 
