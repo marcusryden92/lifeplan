@@ -81,7 +81,7 @@ export default function CalendarProvider({
     userId,
     calendarState,
     weekStartDay,
-    updateCalendarArray
+    dispatch
   );
 
   const initializeState = useCalendarServerSync(userId, calendarState);

@@ -197,7 +197,30 @@ export const handleClickCompleteTask = (
         : item
     );
 
-    updateAll(updatedPlanner);
+    // Keep the event in the calendar when uncompleting
+    // This ensures it stays visible and doesn't need to be rescheduled
+    const eventData: SimpleEvent = {
+      userId: event.extendedProps.userId || "",
+      id: event.id,
+      title: event.title,
+      start: event.start!.toISOString(),
+      end: event.end!.toISOString(),
+      extendedProps: event.extendedProps,
+      backgroundColor: event.backgroundColor || "",
+      borderColor: event.borderColor || "transparent",
+      duration: event._def.recurringDef?.duration || null,
+      rrule: event._def.recurringDef
+        ? JSON.stringify(event._def.recurringDef)
+        : null,
+      createdAt: event.extendedProps.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    updateAll(updatedPlanner, (prev) => {
+      // If event is already in calendar, keep it; otherwise add it
+      const exists = prev.some((e) => e.id === event.id);
+      return exists ? prev : [...prev, eventData];
+    });
   } else {
     setIsCompleted(true);
     setTimeout(() => {

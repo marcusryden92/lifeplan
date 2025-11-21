@@ -8,6 +8,8 @@ import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration
 import { taskIsCompleted } from "@/utils/taskHelpers";
 
 import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
+import { AppDispatch } from "@/redux/store";
+import calendarSlice from "@/redux/slices/calendarSlice";
 
 const useManuallyRefreshCalendar = (
   userId: string | undefined,
@@ -17,7 +19,7 @@ const useManuallyRefreshCalendar = (
     template: EventTemplate[];
   },
   weekStartDay: WeekDayIntegers,
-  updateCalendarArray: (calendar: SimpleEvent[]) => void
+  dispatch: AppDispatch
 ) => {
   const { planner, calendar, template } = calendarState;
 
@@ -44,9 +46,17 @@ const useManuallyRefreshCalendar = (
         filteredCalendar
       );
 
-      updateCalendarArray(newCalendar);
+      // Use updateAll to bypass the thunk's regeneration
+      // Pass the generated calendar directly without triggering another generation
+      dispatch(
+        calendarSlice.actions.updateCalendarArrayData({
+          planner,
+          calendar: newCalendar,
+          template,
+        })
+      );
     }
-  }, [userId, planner, calendar, template, weekStartDay, updateCalendarArray]);
+  }, [userId, planner, calendar, template, weekStartDay, dispatch]);
 
   return manuallyRefreshCalendar;
 };
