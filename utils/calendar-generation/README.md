@@ -653,9 +653,6 @@ A: It appears in `result.failures` with reason "TOO_LARGE".
 **Q: Can I have multiple scheduling strategies?**  
 A: Yes! Use CompositeStrategy to combine them with weights.
 
-**Q: Is this backward compatible?**  
-A: Yes, `generateCalendar()` works exactly like before.
-
 ---
 
 ## Where to Go Next
