@@ -9,9 +9,6 @@ services:
       POSTGRES_DB: lifeplan_dev
       POSTGRES_USER: lifeplan
       POSTGRES_PASSWORD: lifeplan
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
-      NEXTAUTH_SECRET: "secret"
-      DATABASE_URL: "postgresql://lifeplan:lifeplan@localhost:5433/lifeplan_dev?schema=public"
 
     volumes:
       - postgres-data:/var/lib/postgresql/data
