@@ -135,6 +135,6 @@ export const DEFAULT_COLORS = {
   GOAL: "#8b5cf6",
   PLAN: "#000000",
   TEMPLATE: "#6b7280",
-  COMPLETED: "#0ebf7e",
+  COMPLETED: "#00ab5bff",
   ERROR: "#ef4444",
 } as const;
