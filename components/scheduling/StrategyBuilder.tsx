@@ -39,23 +39,30 @@ interface Strategy {
   rules: StrategyRule[];
 }
 
-const RULE_TYPES = [
-  { value: "URGENCY", label: "Urgency (Deadline-based)", icon: "🔴" },
-  { value: "EARLIEST_SLOT", label: "Earliest Available Slot", icon: "⏰" },
-  { value: "PREFERRED_TIME", label: "Preferred Time Windows", icon: "🕐" },
-  { value: "ENERGY_LEVEL", label: "Energy Level Matching", icon: "⚡" },
-  { value: "DAY_PREFERENCE", label: "Day-of-Week Preference", icon: "📅" },
-  { value: "BUFFER_TIME", label: "Buffer Time Between Tasks", icon: "⏱️" },
-];
+import { RULE_TYPES } from "@/constants/scheduling";
+
+type ActionsModule = typeof import("@/actions/scheduling");
+
+// Fallback emoji map for older UIs that expect an emoji
+const RULE_TYPE_EMOJI: Record<string, string> = {
+  URGENCY: "🔴",
+  EARLIEST_SLOT: "⏰",
+  PREFERRED_TIME: "🕐",
+  ENERGY_LEVEL: "⚡",
+  DAY_PREFERENCE: "📅",
+  BUFFER_TIME: "⏱️",
+};
 
 export function StrategyBuilder({
   onStrategySaved,
   editingStrategy,
   onCancelEdit,
+  actions,
 }: {
   onStrategySaved?: () => void;
   editingStrategy?: Strategy | null;
   onCancelEdit?: () => void;
+  actions: ActionsModule;
 }) {
   const [strategy, setStrategy] = useState<Strategy>({
     name: "",
@@ -129,15 +136,11 @@ export function StrategyBuilder({
     try {
       // Weights are already stored internally as 0-1, so no conversion needed
       const isEditing = !!strategy.id;
-      const response = await fetch("/api/scheduling/strategies", {
-        method: isEditing ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(strategy),
-      });
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(errorData || "Failed to save strategy");
+      if (isEditing) {
+        await actions.updateStrategy(strategy as any);
+      } else {
+        await actions.createStrategy(strategy as any);
       }
 
       // Success!
@@ -279,12 +282,21 @@ export function StrategyBuilder({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {RULE_TYPES.map((type) => (
-                              <SelectItem key={type.value} value={type.value}>
-                                <span className="mr-2">{type.icon}</span>
-                                {type.label}
-                              </SelectItem>
-                            ))}
+                            {RULE_TYPES.map((type) => {
+                              const Icon = (type as any).Icon;
+                              return (
+                                <SelectItem key={type.value} value={type.value}>
+                                  <span className="mr-2">
+                                    {Icon ? (
+                                      <Icon className="w-4 h-4 inline" />
+                                    ) : (
+                                      RULE_TYPE_EMOJI[type.value]
+                                    )}
+                                  </span>
+                                  {type.label}
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                       </div>

@@ -32,19 +32,15 @@ This system adds a complete UI and database layer for users to create custom sch
 - Define energy level requirements
 - Toggle flexibility
 
-### 3. **API Routes**
+### 3. **Server Actions (recommended)**
 
-#### `app/api/scheduling/strategies/route.ts`
+All scheduling server-side logic has been consolidated into Server Actions under the existing `actions/` folder.
 
-- `POST` - Create new strategy
-- `GET` - List user's strategies
-- `PATCH` - Update existing strategy
-- `DELETE` - Delete strategy
+- `actions/scheduling.ts` - Canonical Server Actions for strategies and task preferences
 
-#### `app/api/scheduling/task-preferences/route.ts`
+- Use the exported actions from server components and pass them into client components like `StrategyList` and `TaskPreferencesEditor`. This removes the need for REST API routes and keeps the codebase cleaner.
 
-- `POST` - Save/update task preferences
-- `GET` - Load task preferences for a task
+If you were previously using `app/api/scheduling/*` routes, those thin adapters have been removed during the refactor — update any server components to import and pass the `actions/scheduling` methods instead.
 
 ### 4. **Settings Page** (`app/(protected)/settings/scheduling/page.tsx`)
 

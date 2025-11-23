@@ -134,6 +134,26 @@ export const Navbar = () => {
             </Link>
           </Button>
 
+          <Button
+            asChild
+            variant={pathname === "/scheduling" ? "default" : "outline"}
+            className="justify-start"
+            size="sm"
+          >
+            <Link
+              href="/scheduling"
+              className={clsx(
+                "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium",
+                pathname === "/scheduling"
+                  ? "bg-gray-800 text-white"
+                  : "hover:bg-gray-100"
+              )}
+            >
+              <FaClock className="h-5 w-5" />{" "}
+              <span className="hidden lg:block">Scheduling</span>
+            </Link>
+          </Button>
+
           <Button asChild variant="outline" size="sm" className="justify-start">
             <div
               className={clsx(

@@ -29,10 +29,12 @@ interface Strategy {
   rules: StrategyRule[];
 }
 
+type ActionsModule = typeof import("@/actions/scheduling");
+
 export const StrategyList = forwardRef<
   { refresh: () => void },
-  { onEdit?: (strategy: Strategy) => void }
->((props, ref) => {
+  { onEdit?: (strategy: Strategy) => void; actions: ActionsModule }
+>(({ actions, onEdit }, ref) => {
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,12 +43,8 @@ export const StrategyList = forwardRef<
   const fetchStrategies = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/scheduling/strategies");
-      if (!response.ok) {
-        throw new Error("Failed to fetch strategies");
-      }
-      const data = (await response.json()) as Strategy[];
-      setStrategies(data);
+      const data = await actions.fetchStrategiesForUser();
+      setStrategies(data as Strategy[]);
       setError(null);
     } catch (err) {
       setError(
@@ -61,7 +59,6 @@ export const StrategyList = forwardRef<
     fetchStrategies();
   }, []);
 
-  // Expose refresh method to parent via ref
   useImperativeHandle(ref, () => ({
     refresh: fetchStrategies,
   }));
@@ -69,7 +66,6 @@ export const StrategyList = forwardRef<
   const toggleActive = async (strategyId: string, currentActive: boolean) => {
     setUpdatingId(strategyId);
 
-    // Optimistic update
     setStrategies((prev) =>
       prev.map((s) =>
         s.id === strategyId ? { ...s, isActive: !currentActive } : s
@@ -77,24 +73,15 @@ export const StrategyList = forwardRef<
     );
 
     try {
-      const response = await fetch(`/api/scheduling/strategies`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: strategyId,
-          isActive: !currentActive,
-        }),
+      await actions.updateStrategy({
+        id: strategyId,
+        isActive: !currentActive,
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to update strategy");
-      }
     } catch (err) {
       console.error("Failed to toggle strategy:", err);
       setError(
         err instanceof Error ? err.message : "Failed to update strategy"
       );
-      // Revert on error
       await fetchStrategies();
     } finally {
       setUpdatingId(null);
@@ -104,31 +91,15 @@ export const StrategyList = forwardRef<
   const setAsDefault = async (strategyId: string) => {
     setUpdatingId(strategyId);
 
-    // Optimistic update
     setStrategies((prev) =>
-      prev.map((s) => ({
-        ...s,
-        isDefault: s.id === strategyId,
-      }))
+      prev.map((s) => ({ ...s, isDefault: s.id === strategyId }))
     );
 
     try {
-      const response = await fetch(`/api/scheduling/strategies`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: strategyId,
-          isDefault: true,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to set default strategy");
-      }
+      await actions.updateStrategy({ id: strategyId, isDefault: true });
     } catch (err) {
       console.error("Failed to set default:", err);
       setError(err instanceof Error ? err.message : "Failed to set default");
-      // Revert on error
       await fetchStrategies();
     } finally {
       setUpdatingId(null);
@@ -136,31 +107,18 @@ export const StrategyList = forwardRef<
   };
 
   const deleteStrategy = async (strategyId: string) => {
-    if (!confirm("Are you sure you want to delete this strategy?")) {
-      return;
-    }
+    if (!confirm("Are you sure you want to delete this strategy?")) return;
 
     setUpdatingId(strategyId);
-
-    // Optimistic update
     setStrategies((prev) => prev.filter((s) => s.id !== strategyId));
 
     try {
-      const response = await fetch(`/api/scheduling/strategies`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: strategyId }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete strategy");
-      }
+      await actions.deleteStrategy(strategyId);
     } catch (err) {
       console.error("Failed to delete strategy:", err);
       setError(
         err instanceof Error ? err.message : "Failed to delete strategy"
       );
-      // Revert on error
       await fetchStrategies();
     } finally {
       setUpdatingId(null);
@@ -264,7 +222,7 @@ export const StrategyList = forwardRef<
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => props.onEdit?.(strategy)}
+                      onClick={() => onEdit?.(strategy)}
                       title="Edit strategy"
                       disabled={updatingId === strategy.id}
                     >

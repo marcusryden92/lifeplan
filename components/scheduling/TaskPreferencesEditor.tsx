@@ -12,6 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/Select";
+import type {
+  TaskTypeEnum,
+  PriorityLevel,
+  EnergyLevel,
+} from "@/prisma/generated/client";
 import {
   Card,
   CardContent,
@@ -72,11 +77,14 @@ interface TaskPreferencesEditorProps {
   onSave?: (preferences: TaskPreferences) => void;
 }
 
+type ActionsModule = typeof import("@/actions/scheduling");
+
 export function TaskPreferencesEditor({
   plannerId,
   initialPreferences,
   onSave,
-}: TaskPreferencesEditorProps) {
+  actions,
+}: TaskPreferencesEditorProps & { actions?: ActionsModule }) {
   const [preferences, setPreferences] = useState<TaskPreferences>({
     preferredDays: initialPreferences?.preferredDays || [],
     avoidDays: initialPreferences?.avoidDays || [],
@@ -86,12 +94,21 @@ export function TaskPreferencesEditor({
   });
 
   const toggleDay = (day: number, type: "preferred" | "avoid") => {
-    const key = type === "preferred" ? "preferredDays" : "avoidDays";
-    const days = preferences[key];
+    if (type === "preferred") {
+      const days = preferences.preferredDays || [];
+      setPreferences({
+        ...preferences,
+        preferredDays: days.includes(day)
+          ? days.filter((d) => d !== day)
+          : [...days, day],
+      });
+      return;
+    }
 
+    const days = preferences.avoidDays || [];
     setPreferences({
       ...preferences,
-      [key]: days.includes(day)
+      avoidDays: days.includes(day)
         ? days.filter((d) => d !== day)
         : [...days, day],
     });
@@ -99,16 +116,34 @@ export function TaskPreferencesEditor({
 
   const handleSave = async () => {
     try {
-      const response = await fetch("/api/scheduling/task-preferences", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plannerId, ...preferences }),
-      });
+      // Actions are required for saving preferences in the new architecture.
+      if (!actions) throw new Error("Server actions not provided");
 
-      if (response.ok) {
-        onSave?.(preferences);
-        alert("Preferences saved!");
-      }
+      const payload: {
+        taskType?: TaskTypeEnum | null;
+        preferredDays?: number[] | null;
+        avoidDays?: number[] | null;
+        preferredStartTime?: string | null;
+        preferredEndTime?: string | null;
+        priority?: PriorityLevel | null;
+        energyLevel?: EnergyLevel | null;
+        allowFlexibility?: boolean | null;
+      } = {
+        taskType: (preferences.taskType as TaskTypeEnum) ?? null,
+        preferredDays: preferences.preferredDays?.length
+          ? preferences.preferredDays
+          : null,
+        avoidDays: preferences.avoidDays?.length ? preferences.avoidDays : null,
+        preferredStartTime: preferences.preferredStartTime ?? null,
+        preferredEndTime: preferences.preferredEndTime ?? null,
+        priority: (preferences.priority as PriorityLevel) ?? null,
+        energyLevel: (preferences.energyLevel as EnergyLevel) ?? null,
+        allowFlexibility: preferences.allowFlexibility ?? null,
+      };
+
+      await actions.upsertTaskPreferences(plannerId, payload);
+      onSave?.({ ...preferences });
+      alert("Preferences saved!");
     } catch (error) {
       console.error("Failed to save preferences:", error);
     }

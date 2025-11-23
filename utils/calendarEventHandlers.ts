@@ -215,7 +215,25 @@ export const handleClickCompleteTask = (
       },
       backgroundColor: event.backgroundColor || "",
       borderColor: event.borderColor || "transparent",
-      duration: event._def.recurringDef?.duration || null,
+      duration: (() => {
+        const d = event._def.recurringDef?.duration as any;
+        if (!d) return null;
+        if (typeof d === "number") return d;
+        // FullCalendar may expose a Duration-like object; try to derive minutes
+        if (typeof d.as === "function") {
+          try {
+            return Math.round(d.as("minutes"));
+          } catch (e) {
+            return null;
+          }
+        }
+        // Fallback: if it has a unit property or similar, try to parse
+        if (typeof d === "object" && (d.minutes || d.hours)) {
+          const minutes = (d.hours || 0) * 60 + (d.minutes || 0);
+          return minutes;
+        }
+        return null;
+      })(),
       rrule: event._def.recurringDef
         ? JSON.stringify(event._def.recurringDef)
         : null,

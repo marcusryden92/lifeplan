@@ -18,15 +18,7 @@ const SettingsPage = async () => {
         <CardContent className="space-y-6">
           <SettingsForm user={user} />
 
-          <div className="pt-6 border-t">
-            <h3 className="text-lg font-semibold mb-3">Advanced Settings</h3>
-            <Link href="/settings/scheduling">
-              <Button variant="outline" className="w-full justify-start">
-                <Calendar className="w-4 h-4 mr-2" />
-                Scheduling Strategies
-              </Button>
-            </Link>
-          </div>
+          {/* Advanced settings removed scheduling link — use sidebar link to access scheduling settings */}
         </CardContent>
       </Card>
     </div>
