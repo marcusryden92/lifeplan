@@ -5,10 +5,10 @@
  * Coordinates TimeSlotManager, TemplateExpander, and Scheduler.
  */
 
-import { Planner, SimpleEvent } from "@/types/prisma";
+import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "./TimeSlotManager";
-import { TemplateExpander } from "./TemplateExpander";
+import { TemplateExpander, PerTemplateMask } from "./TemplateExpander";
 import { Scheduler } from "./Scheduler";
 import { UrgencyStrategy } from "../strategies/UrgencyStrategy";
 import { EarliestSlotStrategy } from "../strategies/EarliestSlotStrategy";
@@ -47,8 +47,6 @@ export class CalendarGenerator {
    */
   generate(input: CalendarGenerationInput): SchedulingResult {
     const startTime = performance.now();
-
-    // Reset metrics for this run
     this.metrics = this.createEmptyMetrics();
 
     // Validate input
@@ -84,16 +82,11 @@ export class CalendarGenerator {
     const maxDaysAhead =
       input.config?.maxDaysAhead || SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH;
 
-    // Initialize event array
     let eventArray: SimpleEvent[] = [];
 
-    // Step 1: Add memoized events (events from previous calendar that are still valid)
+    // Step 1: memoized events
     const memoizedEventIds = new Set<string>();
-
     if (input.previousCalendar.length > 0) {
-      // Preserve only events that have ENDED (not just started)
-      // This allows ongoing events to be rescheduled if needed
-      // Template events will be regenerated fresh each time
       const pastEvents = input.previousCalendar.filter(
         (e) =>
           currentDate > new Date(e.end) &&
@@ -103,7 +96,7 @@ export class CalendarGenerator {
       eventArray.push(...pastEvents);
     }
 
-    // Step 2: Add plan items (fixed time items)
+    // Step 2: plan items
     eventArray = this.addPlanItems(
       input.userId,
       input.planners,
@@ -111,7 +104,7 @@ export class CalendarGenerator {
       memoizedEventIds
     );
 
-    // Step 3: Add completed items
+    // Step 3: completed items
     eventArray = this.addCompletedItems(
       input.userId,
       input.planners,
@@ -119,45 +112,44 @@ export class CalendarGenerator {
       memoizedEventIds
     );
 
-    // Step 4: Expand templates
+    // Step 4: Expand recurring template definitions
     const templateStart = performance.now();
-
-    // Calculate week start and search end date
     const weekStart = dateTimeService.getWeekFirstDate(
       currentDate,
       input.weekStartDay as WeekDayIntegers
     );
     const searchEndDate = dateTimeService.shiftDays(weekStart, maxDaysAhead);
 
-    // Always regenerate templates to ensure they're up-to-date
-    // Start from week beginning (Monday) not current day
     const recurringTemplateEvents = this.templateExpander.expandTemplates(
       input.userId,
       input.templates,
-      weekStart, // Start from Monday of current week
+      weekStart,
       searchEndDate
     );
 
-    // Remove any old template events and add fresh ones
+    // Remove any old template events and add recurring definitions
     eventArray = eventArray.filter(
       (e) => e.extendedProps?.itemType !== "template"
     );
     eventArray.push(...recurringTemplateEvents);
 
-    this.metrics.templateEventsGenerated = recurringTemplateEvents.length;
-
-    // Generate simple template events for slot calculation
+    // Build per-template masks and initial simple mask events (first week)
+    const perTemplateMasks = this.templateExpander.getPerTemplateMasks(
+      input.templates
+    );
     const simpleTemplateEvents =
-      this.templateExpander.generateSimpleTemplateEvents(
+      this.templateExpander.generateSimpleEventsFromPerTemplateMasks(
         input.userId,
-        input.templates,
-        weekStart
+        perTemplateMasks,
+        weekStart,
+        maxDaysAhead
       );
 
     const templateEnd = performance.now();
     this.metrics.templateExpansionTimeMs = templateEnd - templateStart;
+    this.metrics.templateEventsGenerated = recurringTemplateEvents.length;
 
-    // Step 5: Build time slots
+    // Step 5: Build slots
     this.slotManager.clear();
     this.slotManager.buildDailySlots(
       currentDate,
@@ -166,26 +158,25 @@ export class CalendarGenerator {
       simpleTemplateEvents
     );
 
-    // Calculate largest template gap
+    // Largest gap
     const largestTemplateGap = this.templateExpander.calculateLargestGap(
       input.templates
     );
 
-    // Step 6: Prepare scheduling context
-    // Note: Pass a copy of eventArray to prevent mutation of our source array
+    // Step 6: scheduling context
     const context: SchedulingContext = {
       currentDate,
       userId: input.userId,
       weekStartDay: input.weekStartDay as WeekDayIntegers,
       allPlanners: input.planners,
-      scheduledEvents: [...eventArray], // Create a copy to avoid mutation
+      scheduledEvents: [...eventArray],
       templateEvents: simpleTemplateEvents,
       availableMinutesPerWeek:
         this.slotManager.getWeekAvailableMinutes(weekStart),
       metrics: this.metrics,
     };
 
-    // Step 7: Create scheduling strategy
+    // Step 7: strategy
     const strategy = new CompositeStrategy([
       {
         strategy: new UrgencyStrategy(),
@@ -193,26 +184,23 @@ export class CalendarGenerator {
           input.config?.strategyWeights?.urgency ||
           STRATEGY_WEIGHTS.URGENCY_WEIGHT,
       },
-      {
-        strategy: new EarliestSlotStrategy(),
-        weight: 0.5, // Fallback weight
-      },
+      { strategy: new EarliestSlotStrategy(), weight: 0.5 },
     ]);
 
-    // Step 8: Schedule tasks and goals
+    // Step 8: schedule
     const scheduler = new Scheduler(this.slotManager, strategy, context);
     const schedulingResult = this.scheduleTasksAndGoals(
       input.userId,
       input.planners,
       memoizedEventIds,
       largestTemplateGap,
-      scheduler
+      scheduler,
+      perTemplateMasks,
+      input.templates,
+      context
     );
 
-    // Combine all events: base events + newly scheduled tasks/goals
-    // context.scheduledEvents now contains all events including newly scheduled ones
     const allEvents = context.scheduledEvents;
-
     const endTime = performance.now();
     this.metrics.totalExecutionTimeMs = endTime - startTime;
 
@@ -230,60 +218,143 @@ export class CalendarGenerator {
    */
   private scheduleTasksAndGoals(
     userId: string,
-    planners: Planner[],
+    allPlanners: Planner[],
     memoizedEventIds: Set<string>,
     largestTemplateGap: number,
-    scheduler: Scheduler
+    scheduler: Scheduler,
+    perTemplateMasks: PerTemplateMask[],
+    templates: EventTemplate[],
+    context: SchedulingContext
   ): {
     success: boolean;
     newEvents: SimpleEvent[];
     failures: SchedulingFailure[];
   } {
     const events: SimpleEvent[] = [];
-    const failures = [];
+    const failures: SchedulingFailure[] = [];
 
-    // Get all top-level goals and tasks
-    const goalsAndTasks: Planner[] = planners.filter(
+    // Get initial candidates (top-level goals + tasks)
+    let candidates: Planner[] = allPlanners.filter(
       (item) =>
         ((item.itemType === "goal" && !item.parentId && item.isReady) ||
           item.itemType === "task") &&
         !memoizedEventIds.has(item.id)
     );
 
-    // Sort by priority (using the original priority logic)
-    const sortedItems = this.sortByPriority(planners, goalsAndTasks);
+    // Sort by priority
+    candidates = this.sortByPriority(allPlanners, candidates);
 
-    // Schedule each item
-    for (const item of sortedItems) {
-      if (item.itemType === "task") {
-        // Check if task fits in template
-        if (largestTemplateGap && item.duration > largestTemplateGap) {
-          failures.push({
-            taskId: item.id,
-            taskTitle: item.title,
-            reason: SchedulingFailureReason.TOO_LARGE,
-            details: `Task duration (${item.duration} min) exceeds largest template gap (${largestTemplateGap} min)`,
-          });
-          this.metrics.tasksFailed++;
-          continue;
-        }
+    // Week-by-week orchestration
+    let weekStart = dateTimeService.getWeekFirstDate(
+      context.currentDate,
+      this.weekStartDay
+    );
+    let weeksSearched = 0;
 
-        const result = scheduler.scheduleTask(item);
-        if (result.success && result.event) {
-          events.push(result.event);
-        } else if (result.failure) {
-          failures.push(result.failure);
+    while (
+      candidates.length > 0 &&
+      weeksSearched < SCHEDULING_CONFIG.MAX_WEEKS_TO_SEARCH
+    ) {
+      // Try scheduling each candidate (iterate backwards to remove safely)
+      for (let i = candidates.length - 1; i >= 0; i--) {
+        const item = candidates[i];
+
+        if (item.itemType === "task") {
+          // Size check
+          if (largestTemplateGap && item.duration > largestTemplateGap) {
+            failures.push({
+              taskId: item.id,
+              taskTitle: item.title,
+              reason: SchedulingFailureReason.TOO_LARGE,
+              details: `Task duration (${item.duration} min) exceeds largest template gap (${largestTemplateGap} min)`,
+            });
+            this.metrics.tasksFailed++;
+            candidates.splice(i, 1);
+            continue;
+          }
+
+          const result = scheduler.scheduleTask(item);
+          if (result.success && result.event) {
+            events.push(result.event);
+            candidates.splice(i, 1);
+          } else if (result.failure) {
+            // If no slots, we'll expand next week; otherwise, mark failure
+            if (result.failure.reason !== SchedulingFailureReason.NO_SLOTS) {
+              failures.push(result.failure);
+              candidates.splice(i, 1);
+            }
+          }
+        } else if (item.itemType === "goal") {
+          this.metrics.goalsProcessed++;
+
+          // Attempt to schedule tasks in the goal sequentially; if any task hits NO_SLOTS, stop and retry next week
+          const goalTasks = getSortedTreeBottomLayer(
+            allPlanners,
+            item.id
+          ).filter((t) => !taskIsCompleted(t));
+
+          let goalFailedDueToNoSlots = false;
+
+          for (const task of goalTasks) {
+            if (largestTemplateGap && task.duration > largestTemplateGap) {
+              failures.push({
+                taskId: task.id,
+                taskTitle: task.title,
+                reason: SchedulingFailureReason.TOO_LARGE,
+                details: `Task duration (${task.duration} min) exceeds largest template gap (${largestTemplateGap} min)`,
+              });
+              this.metrics.tasksFailed++;
+              continue;
+            }
+
+            const res = scheduler.scheduleTask(task);
+            if (res.success && res.event) {
+              events.push(res.event);
+            } else if (res.failure) {
+              if (res.failure.reason === SchedulingFailureReason.NO_SLOTS) {
+                goalFailedDueToNoSlots = true;
+                break;
+              } else {
+                failures.push(res.failure);
+              }
+            }
+          }
+
+          if (!goalFailedDueToNoSlots) {
+            // Goal scheduled (all tasks that could be scheduled were scheduled)
+            candidates.splice(i, 1);
+          }
         }
-      } else if (item.itemType === "goal") {
-        this.metrics.goalsProcessed++;
-        const goalResult = this.scheduleGoal(
-          planners,
-          item,
-          largestTemplateGap,
-          scheduler
+      }
+
+      // If still candidates left, expand next week and build slots
+      if (candidates.length > 0) {
+        weeksSearched += 1;
+        weekStart = dateTimeService.shiftDays(weekStart, 7);
+
+        // Build slots for the new week using events already in context (plans, templates)
+        const weekStartDate = dateTimeService.startOfDay(weekStart);
+        const weekEndDate = dateTimeService.endOfDay(
+          dateTimeService.shiftDays(weekStart, 6)
         );
-        events.push(...goalResult.events);
-        failures.push(...goalResult.failures);
+
+        const weekEvents = context.scheduledEvents.filter((e) => {
+          const s = new Date(e.start);
+          return s >= weekStartDate && s <= weekEndDate;
+        });
+        const weekTemplateEvents = context.templateEvents.filter((e) => {
+          const s = new Date(e.start);
+          return s >= weekStartDate && s <= weekEndDate;
+        });
+
+        this.slotManager.buildDailySlots(
+          weekStart,
+          7,
+          weekEvents,
+          weekTemplateEvents
+        );
+        context.availableMinutesPerWeek =
+          this.slotManager.getWeekAvailableMinutes(weekStart);
       }
     }
 
@@ -296,9 +367,8 @@ export class CalendarGenerator {
     this.metrics.averageSchedulingTimeMs =
       schedulerMetrics.averageSchedulingTimeMs;
 
-    // Return only the newly scheduled events (not the full context)
     return {
-      success: failures.length === 0,
+      success: failures.length === 0 && candidates.length === 0,
       newEvents: events,
       failures,
     };

@@ -13,6 +13,42 @@ import { RRule, Weekday } from "rrule";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
 
+// Weekly mask types
+export type TimeInterval = { startTime: string; endTime: string };
+export type DayMask = TimeInterval[];
+export type WeeklyMask = Record<number, DayMask>;
+export type DateException = {
+  dateISO: string;
+  removed?: TimeInterval[];
+  added?: TimeInterval[];
+};
+
+export type TemplateMask = {
+  weeklyMask: WeeklyMask;
+  exceptions?: DateException[];
+};
+
+// Per-template sparse mask types
+export type TemplateTimeWithExceptions = {
+  startTime: string;
+  endTime: string;
+  exceptions?: string[]; // list of ISO dates (YYYY-MM-DD) when this time is removed/added
+};
+
+export type TemplateDayDef = {
+  day: number; // 0..6
+  times: TemplateTimeWithExceptions[];
+};
+
+export type PerTemplateMask = {
+  templateId: string;
+  title?: string;
+  color?: string;
+  occurrences: TemplateDayDef[]; // sparse list of defined weekdays
+  startDateISO?: string; // anchor start date for interval-based templates
+  intervalDays?: number; // if provided, template repeats every N days from startDateISO
+};
+
 export class TemplateExpander {
   private expandedTemplates: Map<string, SimpleEvent[]> = new Map();
 
@@ -26,7 +62,7 @@ export class TemplateExpander {
     userId: string,
     templates: EventTemplate[],
     startDate: Date,
-    endDate: Date
+    _endDate: Date
   ): SimpleEvent[] {
     const events: SimpleEvent[] = [];
 
@@ -188,12 +224,15 @@ export class TemplateExpander {
       return TIME_CONSTANTS.MINUTES_PER_WEEK;
     }
 
-    // Create a dummy week to calculate gaps
+    // Create a dummy week to calculate gaps. Use per-template masks so uneven
+    // templates are considered when calculating the largest free gap.
     const weekStart = dateTimeService.startOfDay(new Date());
-    const simpleEvents = this.generateSimpleTemplateEvents(
+    const masks = this.getPerTemplateMasks(templates);
+    const simpleEvents = this.generateSimpleEventsFromPerTemplateMasks(
       "temp",
-      templates,
-      weekStart
+      masks,
+      weekStart,
+      7
     );
 
     // Sort by start time
@@ -285,4 +324,402 @@ export class TemplateExpander {
   clear(): void {
     this.expandedTemplates.clear();
   }
+
+  /**
+   * Build a weekly mask from templates: for each weekday produce a list of
+   * unavailable time intervals (HH:MM strings). This mask can be applied to
+   * any week to derive concrete occupied times for that date.
+   */
+  getWeeklyMask(templates: EventTemplate[]): TemplateMask {
+    const weeklyMask: WeeklyMask = {
+      0: [],
+      1: [],
+      2: [],
+      3: [],
+      4: [],
+      5: [],
+      6: [],
+    };
+
+    const exceptions: DateException[] = [];
+
+    for (const template of templates) {
+      if (
+        !template.startDay ||
+        !template.startTime ||
+        template.duration === undefined
+      ) {
+        continue;
+      }
+
+      const startDayIndex = WEEKDAY_NAMES.indexOf(template.startDay);
+      if (startDayIndex === -1) continue;
+
+      // compute end time by adding duration
+      const [h, m] = template.startTime.split(":").map((s) => parseInt(s, 10));
+      const startMinutes = h * 60 + m;
+      const endMinutes = startMinutes + template.duration;
+
+      // If endMinutes crosses midnight, split across two days
+      if (endMinutes <= 24 * 60) {
+        weeklyMask[startDayIndex].push({
+          startTime: template.startTime,
+          endTime: minutesToTimeString(endMinutes),
+        });
+      } else {
+        // portion on startDay
+        weeklyMask[startDayIndex].push({
+          startTime: template.startTime,
+          endTime: "24:00",
+        });
+        // portion on next day
+        const nextDay = (startDayIndex + 1) % 7;
+        weeklyMask[nextDay].push({
+          startTime: "00:00",
+          endTime: minutesToTimeString(endMinutes - 24 * 60),
+        });
+      }
+    }
+
+    // Merge overlapping intervals per day
+    for (let d = 0; d < 7; d++) {
+      weeklyMask[d] = mergeDayMaskIntervals(weeklyMask[d]);
+    }
+
+    return {
+      weeklyMask,
+      exceptions: exceptions.length ? exceptions : undefined,
+    };
+  }
+
+  /**
+   * Return the list of unavailable time intervals for a specific date,
+   * applying any exceptions.
+   */
+  getDayMaskForDate(mask: TemplateMask, date: Date): TimeInterval[] {
+    const weekday = date.getDay();
+    let intervals = mask.weeklyMask[weekday] || [];
+
+    if (mask.exceptions && mask.exceptions.length > 0) {
+      const iso = date.toISOString().slice(0, 10);
+      const dayExceptions = mask.exceptions.find((ex) => ex.dateISO === iso);
+      if (dayExceptions) {
+        // remove specified intervals
+        if (dayExceptions.removed && dayExceptions.removed.length > 0) {
+          intervals = intervals.filter(
+            (intv) =>
+              !dayExceptions.removed!.some(
+                (r) =>
+                  r.startTime === intv.startTime && r.endTime === intv.endTime
+              )
+          );
+        }
+        // add specified intervals
+        if (dayExceptions.added && dayExceptions.added.length > 0) {
+          intervals = intervals.concat(dayExceptions.added);
+        }
+        intervals = mergeDayMaskIntervals(intervals);
+      }
+    }
+
+    return intervals;
+  }
+
+  /**
+   * Generate concrete `SimpleEvent` instances for a date range using a
+   * weekly mask. These are intended only for slot-calculation masking and
+   * should not be added to the final calendar as separate template events.
+   */
+  generateSimpleEventsFromMask(
+    userId: string,
+    mask: TemplateMask,
+    rangeStart: Date,
+    numDays: number
+  ): SimpleEvent[] {
+    const events: SimpleEvent[] = [];
+
+    for (let i = 0; i < numDays; i++) {
+      const date = dateTimeService.shiftDays(rangeStart, i);
+      const intervals = this.getDayMaskForDate(mask, date);
+
+      for (const intv of intervals) {
+        const start = dateTimeService.setTimeOnDate(date, intv.startTime);
+        const end = dateTimeService.setTimeOnDate(date, intv.endTime);
+        const now = new Date();
+
+        events.push({
+          userId,
+          id: uuidv4(),
+          title: "template-mask",
+          start: start.toISOString(),
+          end: end.toISOString(),
+          duration: null,
+          rrule: null,
+          extendedProps: {
+            id: uuidv4(),
+            eventId: "",
+            itemType: "template",
+            completedStartTime: null,
+            completedEndTime: null,
+            parentId: null,
+          },
+          backgroundColor: calendarColors[0],
+          borderColor: "transparent",
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        });
+      }
+    }
+
+    return events;
+  }
+
+  /**
+   * Build per-template sparse masks from templates. Each template with a
+   * weekly time definition will be turned into a `PerTemplateMask` that lists
+   * only the weekdays where it has times defined. Exceptions are kept per-time.
+   */
+  getPerTemplateMasks(templates: EventTemplate[]): PerTemplateMask[] {
+    const masks: PerTemplateMask[] = [];
+
+    for (const template of templates) {
+      if (
+        !template.startDay ||
+        !template.startTime ||
+        template.duration === undefined
+      ) {
+        continue;
+      }
+
+      const startDayIndex = WEEKDAY_NAMES.indexOf(template.startDay);
+      if (startDayIndex === -1) continue;
+
+      const endMinutes = (() => {
+        const [h, m] = template.startTime
+          .split(":")
+          .map((s) => parseInt(s, 10));
+        return h * 60 + m + template.duration;
+      })();
+
+      const times: TemplateTimeWithExceptions[] = [];
+
+      if (endMinutes <= 24 * 60) {
+        times.push({
+          startTime: template.startTime,
+          endTime: minutesToTimeString(endMinutes),
+          exceptions: [],
+        });
+      } else {
+        // split across days
+        times.push({
+          startTime: template.startTime,
+          endTime: "24:00",
+          exceptions: [],
+        });
+        // For the next day, we add a separate day def below
+      }
+
+      const occs: TemplateDayDef[] = [{ day: startDayIndex, times }];
+
+      // If it crosses midnight, add next day portion
+      if (endMinutes > 24 * 60) {
+        const nextDay = (startDayIndex + 1) % 7;
+        occs.push({
+          day: nextDay,
+          times: [
+            {
+              startTime: "00:00",
+              endTime: minutesToTimeString(endMinutes - 24 * 60),
+              exceptions: [],
+            },
+          ],
+        });
+      }
+
+      masks.push({
+        templateId: template.id,
+        title: template.title,
+        color: template.color as string,
+        occurrences: occs,
+        // Populate optional interval metadata if present on the template record.
+        // Support common field names that might be used for uneven recurrences.
+        startDateISO: (() => {
+          const t = template as unknown as Record<string, unknown>;
+          if (typeof t.startDateISO === "string") return t.startDateISO;
+          if (typeof t.startDate === "string") return t.startDate;
+          if (typeof t.anchorDate === "string") return t.anchorDate;
+          return undefined;
+        })(),
+        intervalDays: (() => {
+          const t = template as unknown as Record<string, unknown>;
+          if (typeof t.intervalDays === "number") return t.intervalDays;
+          if (typeof t.repeatEveryDays === "number") return t.repeatEveryDays;
+          if (typeof t.repeatInterval === "number") return t.repeatInterval;
+          return undefined;
+        })(),
+      });
+    }
+
+    return masks;
+  }
+
+  /**
+   * Generate concrete `SimpleEvent` instances from per-template masks for a date range.
+   * These are used only for slot calculation and are not returned in the final calendar.
+   */
+  generateSimpleEventsFromPerTemplateMasks(
+    userId: string,
+    masks: PerTemplateMask[],
+    rangeStart: Date,
+    numDays: number
+  ): SimpleEvent[] {
+    const events: SimpleEvent[] = [];
+
+    for (let i = 0; i < numDays; i++) {
+      const date = dateTimeService.shiftDays(rangeStart, i);
+      const isoDate = date.toISOString().slice(0, 10);
+      const weekday = date.getDay();
+
+      for (const mask of masks) {
+        // If mask defines an interval-based recurrence (every N days) and has an
+        // anchor start date, apply arithmetic to determine whether this date is
+        // a repeat anchor. For interval-based masks we generate occurrences for
+        // the anchor date and any occurrence parts that fall on subsequent days
+        // (e.g., cross-midnight parts) by mapping day definitions relative to
+        // the anchor.
+        if (mask.intervalDays && mask.startDateISO) {
+          const anchorDate = dateTimeService.fromISO(mask.startDateISO);
+          const daysSinceStart = dateTimeService.getDaysDifference(
+            anchorDate,
+            date
+          );
+
+          if (daysSinceStart >= 0 && daysSinceStart % mask.intervalDays === 0) {
+            // This `date` is an anchor occurrence. Map each day-def to the
+            // appropriate date relative to the anchor and emit events.
+            const anchorWeekday = anchorDate.getDay();
+
+            for (const occ of mask.occurrences) {
+              const offset = (occ.day - anchorWeekday + 7) % 7;
+              const eventDate = dateTimeService.shiftDays(date, offset);
+              const eventIso = eventDate.toISOString().slice(0, 10);
+
+              for (const t of occ.times) {
+                if (t.exceptions && t.exceptions.includes(eventIso)) continue;
+
+                const start = dateTimeService.setTimeOnDate(
+                  eventDate,
+                  t.startTime
+                );
+                const end = dateTimeService.setTimeOnDate(eventDate, t.endTime);
+                const now = new Date();
+
+                events.push({
+                  userId,
+                  id: `${mask.templateId}-${eventIso}-${t.startTime}`,
+                  title: mask.title || "template",
+                  start: start.toISOString(),
+                  end: end.toISOString(),
+                  duration: null,
+                  rrule: null,
+                  extendedProps: {
+                    id: uuidv4(),
+                    eventId: mask.templateId,
+                    itemType: "template",
+                    completedStartTime: null,
+                    completedEndTime: null,
+                    parentId: null,
+                  },
+                  backgroundColor: mask.color || calendarColors[0],
+                  borderColor: "transparent",
+                  createdAt: now.toISOString(),
+                  updatedAt: now.toISOString(),
+                });
+              }
+            }
+          }
+          // For interval-based masks we skip the regular weekday-matching
+          // behavior for this date.
+          continue;
+        }
+
+        // Default weekly behavior: only emit when the occurrence day matches
+        // the weekday we're iterating.
+        for (const occ of mask.occurrences) {
+          if (occ.day !== weekday) continue;
+
+          for (const t of occ.times) {
+            // apply exceptions per-time
+            if (t.exceptions && t.exceptions.includes(isoDate)) continue;
+
+            const start = dateTimeService.setTimeOnDate(date, t.startTime);
+            const end = dateTimeService.setTimeOnDate(date, t.endTime);
+            const now = new Date();
+
+            events.push({
+              userId,
+              id: `${mask.templateId}-${isoDate}-${t.startTime}`,
+              title: mask.title || "template",
+              start: start.toISOString(),
+              end: end.toISOString(),
+              duration: null,
+              rrule: null,
+              extendedProps: {
+                id: uuidv4(),
+                eventId: mask.templateId,
+                itemType: "template",
+                completedStartTime: null,
+                completedEndTime: null,
+                parentId: null,
+              },
+              backgroundColor: mask.color || calendarColors[0],
+              borderColor: "transparent",
+              createdAt: now.toISOString(),
+              updatedAt: now.toISOString(),
+            });
+          }
+        }
+      }
+    }
+
+    return events;
+  }
+}
+
+/** Helpers **/
+function minutesToTimeString(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+}
+
+function mergeDayMaskIntervals(intervals: TimeInterval[]): TimeInterval[] {
+  if (intervals.length === 0) return [];
+
+  // Convert to minutes and sort
+  const normalized = intervals
+    .map((it) => {
+      const [sh, sm] = it.startTime.split(":").map((s) => parseInt(s, 10));
+      const [eh, em] = it.endTime.split(":").map((s) => parseInt(s, 10));
+      return { start: sh * 60 + sm, end: eh * 60 + em };
+    })
+    .sort((a, b) => a.start - b.start);
+
+  const merged: { start: number; end: number }[] = [];
+  let cur = normalized[0];
+  for (let i = 1; i < normalized.length; i++) {
+    const nxt = normalized[i];
+    if (nxt.start <= cur.end) {
+      cur.end = Math.max(cur.end, nxt.end);
+    } else {
+      merged.push(cur);
+      cur = nxt;
+    }
+  }
+  merged.push(cur);
+
+  return merged.map((m) => ({
+    startTime: minutesToTimeString(m.start),
+    endTime: minutesToTimeString(m.end),
+  }));
 }

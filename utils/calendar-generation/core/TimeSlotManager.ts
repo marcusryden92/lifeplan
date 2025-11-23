@@ -1,8 +1,28 @@
+// Local enum for ItemType to match schema
+export enum ItemTypeEnum {
+  task = "task",
+  plan = "plan",
+  goal = "goal",
+  template = "template",
+}
+// Strict type for dynamic scheduling items
+export interface DynamicScheduleItem {
+  id: string;
+  durationMinutes: number;
+  title: string;
+  extendedProps?: {
+    id: string;
+    itemType: string;
+    completedStartTime: string | null;
+    completedEndTime: string | null;
+    parentId: string | null;
+    eventId: string;
+  };
+  backgroundColor?: string;
+}
 /**
  * TimeSlotManager
- *
  * Efficient management of available time slots for scheduling.
- * Replaces minute-by-minute iteration with interval-based approach.
  */
 
 import { SimpleEvent } from "@/types/prisma";
@@ -15,6 +35,9 @@ import {
 import { dateTimeService } from "../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../constants";
 import { WeekDayIntegers } from "@/types/calendarTypes";
+
+import { EventTemplate } from "@/types/prisma";
+import { TemplateExpander } from "./TemplateExpander";
 
 export class TimeSlotManager {
   private availableSlots: Map<string, TimeSlot[]> = new Map();
@@ -274,6 +297,146 @@ export class TimeSlotManager {
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
+  }
+
+  /**
+   * Schedule dynamic items week-by-week until all are placed or max days reached
+   * @param userId - ID of the user
+   * @param templates - All template items (with rrules, exceptions)
+   * @param staticEvents - Static events (plans, etc.)
+   * @param dynamicItems - Items to be scheduled dynamically
+   * @param startDate - Date to start scheduling from
+   * @param maxDays - Maximum days to schedule (default: Infinity)
+   * @returns Scheduled events and any unscheduled dynamic items
+   */
+  schedule(
+    userId: string,
+    templates: EventTemplate[],
+    staticEvents: SimpleEvent[],
+    dynamicItems: DynamicScheduleItem[],
+    startDate: Date,
+    maxDays: number = Infinity
+  ): {
+    scheduledEvents: SimpleEvent[];
+    unscheduledItems: DynamicScheduleItem[];
+  } {
+    const templateExpander = new TemplateExpander(this.weekStartDay);
+    let currentDate = new Date(startDate);
+    let daysScheduled = 0;
+    const scheduledEvents: SimpleEvent[] = [];
+    let unscheduledItems = [...dynamicItems];
+
+    // Clear previous slots
+    this.clear();
+
+    // Loop until all dynamic items are scheduled or max days reached
+    while (unscheduledItems.length > 0 && daysScheduled < maxDays) {
+      // Get week boundaries
+      const weekStart = dateTimeService.getWeekFirstDate(
+        currentDate,
+        this.weekStartDay
+      );
+      const weekEnd = dateTimeService.getWeekLastDate(
+        currentDate,
+        this.weekStartDay
+      );
+
+      // Expand template events for this week using per-template masks so
+      // uneven (every-N-days) templates and cross-midnight parts are
+      // respected without expanding full rrule occurrences.
+      const perTemplateMasks = templateExpander.getPerTemplateMasks(templates);
+      const templateEvents =
+        templateExpander.generateSimpleEventsFromPerTemplateMasks(
+          userId,
+          perTemplateMasks,
+          weekStart,
+          7
+        );
+
+      // Gather all static and template events for this week
+      const weekEvents = [
+        ...staticEvents.filter((e) => {
+          const eventStart = new Date(e.start);
+          return eventStart >= weekStart && eventStart <= weekEnd;
+        }),
+        ...templateEvents,
+      ];
+
+      // Build available slots for the week
+      const weekSlots = this.buildDailySlots(weekStart, 7, weekEvents, []);
+
+      // Try to place dynamic items into available slots
+      for (let i = unscheduledItems.length - 1; i >= 0; i--) {
+        const item = unscheduledItems[i];
+        let placed = false;
+        // Search each day in the week
+        for (let d = 0; d < 7 && !placed; d++) {
+          const date = dateTimeService.shiftDays(weekStart, d);
+          const dayKey = this.getDayKey(date);
+          const slots = weekSlots.get(dayKey) || [];
+          for (const slot of slots) {
+            if (
+              slot.isAvailable &&
+              slot.durationMinutes >= item.durationMinutes
+            ) {
+              // Reserve slot for this item
+              const start = slot.start;
+              const end = dateTimeService.addDuration(
+                start,
+                item.durationMinutes
+              );
+              this.reserveSlot(start, end, item.id, "task");
+              // Create scheduled event
+              scheduledEvents.push({
+                userId,
+                id: item.id,
+                title: item.title,
+                start: start.toISOString(),
+                end: end.toISOString(),
+                duration: item.durationMinutes * 60 * 1000,
+                rrule: null,
+                extendedProps: item.extendedProps
+                  ? {
+                      ...item.extendedProps,
+                      itemType:
+                        typeof item.extendedProps.itemType === "string"
+                          ? ItemTypeEnum[
+                              item.extendedProps
+                                .itemType as keyof typeof ItemTypeEnum
+                            ]
+                          : item.extendedProps.itemType,
+                    }
+                  : {
+                      id: item.id,
+                      itemType: ItemTypeEnum.task,
+                      completedStartTime: null,
+                      completedEndTime: null,
+                      parentId: null,
+                      eventId: item.id,
+                    },
+                backgroundColor: item.backgroundColor ?? "#2196f3",
+                borderColor: "transparent",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+              // Remove from unscheduled
+              unscheduledItems.splice(i, 1);
+              placed = true;
+              break;
+            }
+          }
+        }
+      }
+
+      // Move to next week
+      currentDate = dateTimeService.shiftDays(weekEnd, 1);
+      daysScheduled += 7;
+    }
+
+    return {
+      scheduledEvents,
+      unscheduledItems,
+    };
   }
 
   /**
