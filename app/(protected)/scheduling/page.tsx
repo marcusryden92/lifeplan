@@ -5,12 +5,9 @@ import * as actions from "@/actions/scheduling";
 
 export default function SchedulingPage() {
   return (
-    <div className="container mx-auto py-8">
+    <div className="pageContainer mx-auto py-8">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Scheduling</h1>
-        <p className="text-muted-foreground">
-          Manage your scheduling strategies
-        </p>
+        <h1 className="my-6 text-3xl font-bold">Scheduling</h1>
       </div>
 
       <StrategyManager actions={actions} />

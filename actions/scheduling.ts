@@ -33,7 +33,6 @@ export async function createStrategy(data: {
     config: Prisma.InputJsonValue;
   }>;
 }) {
-  "use server";
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -80,7 +79,6 @@ export async function updateStrategy(patch: {
     order: number;
   }>;
 }) {
-  "use server";
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -127,7 +125,6 @@ export async function updateStrategy(patch: {
 }
 
 export async function deleteStrategy(id: string) {
-  "use server";
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -141,7 +138,6 @@ export async function deleteStrategy(id: string) {
 }
 
 export async function fetchTaskPreferences(plannerId: string) {
-  "use server";
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -168,7 +164,6 @@ export async function upsertTaskPreferences(
     allowFlexibility?: boolean | null;
   }
 ) {
-  "use server";
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 

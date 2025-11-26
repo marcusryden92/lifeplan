@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
-import { Check, Trash2, Star, Edit } from "lucide-react";
+import { Check, Trash2, Star } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
   Card,
@@ -9,36 +9,46 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 
-interface StrategyRule {
-  id: string;
-  ruleType: string;
-  weight: number;
-  config: Record<string, unknown>;
-  order: number;
-}
+import { Strategy, StrategyRule } from "./types";
 
-interface Strategy {
-  id: string;
-  name: string;
-  description: string;
-  isActive: boolean;
-  isDefault: boolean;
-  rules: StrategyRule[];
-}
+// Built-in default strategies to show when user has none
+const BUILT_IN_STRATEGIES: Strategy[] = [
+  {
+    id: "__earliest",
+    name: "Earliest Slot",
+    description: "Prefer the earliest available time slots.",
+    isActive: false,
+    isDefault: false,
+    rules: [],
+  },
+  {
+    id: "__urgency",
+    name: "Urgency",
+    description: "Prefer slots based on task urgency and deadlines.",
+    isActive: false,
+    isDefault: false,
+    rules: [],
+  },
+];
 
 type ActionsModule = typeof import("@/actions/scheduling");
 
 export const StrategyList = forwardRef<
   { refresh: () => void },
-  { onEdit?: (strategy: Strategy) => void; actions: ActionsModule }
->(({ actions, onEdit }, ref) => {
+  {
+    onSelect?: (strategy: Strategy) => void;
+    actions: ActionsModule;
+  }
+>(({ actions, onSelect }, ref) => {
   const [strategies, setStrategies] = useState<Strategy[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const fetchStrategies = async () => {
     try {
@@ -151,34 +161,41 @@ export const StrategyList = forwardRef<
     );
   }
 
+  const displayStrategies =
+    strategies.length === 0 ? BUILT_IN_STRATEGIES : strategies;
+
   return (
-    <Card>
+    <Card className="h-[80vh] flex flex-col lg:max-w-[300px]">
       <CardHeader>
         <CardTitle>Your Strategies</CardTitle>
         <CardDescription>
           Select which strategy to use for automatic scheduling
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {strategies.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No strategies created yet. Create one below to get started.
-          </p>
-        ) : (
-          strategies.map((strategy) => (
-            <Card
-              key={strategy.id}
-              className={`border-2 ${
-                strategy.isActive
-                  ? "border-primary bg-primary/5"
-                  : "border-border"
-              }`}
-            >
-              <CardContent className="pt-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold">{strategy.name}</h4>
+      <CardContent className={`p-4 flex-1`}>
+        <div className="space-y-2 h-full overflow-auto">
+          <ul className="divide-y">
+            {displayStrategies
+              .slice()
+              .sort((a, b) =>
+                a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1
+              )
+              .map((strategy) => (
+                <li
+                  key={strategy.id}
+                  className={`py-2 flex items-center justify-between cursor-pointer ${
+                    selectedId === strategy.id ? "bg-accent/5" : ""
+                  }`}
+                  onClick={() => {
+                    setSelectedId(strategy.id);
+                    onSelect?.(strategy as Strategy);
+                  }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate">
+                        {strategy.name}
+                      </span>
                       {strategy.isDefault && (
                         <Badge variant="default" className="text-xs">
                           <Star className="w-3 h-3 mr-1" />
@@ -192,17 +209,9 @@ export const StrategyList = forwardRef<
                         </Badge>
                       )}
                     </div>
-                    {strategy.description && (
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {strategy.description}
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      {strategy.rules.length} rule
-                      {strategy.rules.length !== 1 ? "s" : ""}
-                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex items-center gap-2 ml-4">
                     <Button
                       variant={strategy.isActive ? "default" : "outline"}
                       size="sm"
@@ -219,15 +228,6 @@ export const StrategyList = forwardRef<
                         "Activate"
                       )}
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEdit?.(strategy)}
-                      title="Edit strategy"
-                      disabled={updatingId === strategy.id}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
                     {!strategy.isDefault && strategy.isActive && (
                       <Button
                         variant="ghost"
@@ -243,6 +243,7 @@ export const StrategyList = forwardRef<
                         )}
                       </Button>
                     )}
+
                     <Button
                       variant="ghost"
                       size="sm"
@@ -256,12 +257,44 @@ export const StrategyList = forwardRef<
                       )}
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
+                </li>
+              ))}
+          </ul>
+        </div>
       </CardContent>
+      <CardFooter>
+        <div className="w-full">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-sm"
+            onClick={async () => {
+              const name = prompt("Strategy name:");
+              if (!name) return;
+              try {
+                await actions.createStrategy({
+                  name,
+                  description: "",
+                  isActive: false,
+                  isDefault: false,
+                  rules: [],
+                });
+                // refresh list after creation
+                fetchStrategies();
+              } catch (err) {
+                console.error(err);
+                alert(
+                  err instanceof Error
+                    ? err.message
+                    : "Failed to create strategy"
+                );
+              }
+            }}
+          >
+            + Add Strategy
+          </Button>
+        </div>
+      </CardFooter>
     </Card>
   );
 });

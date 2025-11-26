@@ -1,8 +1,11 @@
+import type { StrategyRuleType } from "@/prisma/generated/client";
+import type { Prisma } from "@/prisma/generated/client";
+
 export interface StrategyRule {
   id: string;
-  ruleType: string;
+  ruleType: StrategyRuleType;
   weight: number;
-  config: Record<string, unknown>;
+  config: Prisma.InputJsonValue;
   order: number;
 }
 

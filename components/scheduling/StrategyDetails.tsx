@@ -13,11 +13,8 @@ import { Strategy, StrategyRule } from "./types";
 import { RuleCard } from "./RuleCard";
 import { RULE_TYPES } from "@/constants/scheduling";
 
-type ActionsModule = typeof import("@/actions/scheduling");
-
 interface Props {
   strategy: Strategy | null;
-  actions?: ActionsModule;
   onToggleActive: (id: string, current: boolean) => void;
   onSetDefault: (id: string) => void;
   onDelete: (id: string) => void;
@@ -27,7 +24,6 @@ interface Props {
 
 export function StrategyDetails({
   strategy,
-  actions,
   onToggleActive,
   onSetDefault,
   onDelete,
@@ -36,15 +32,15 @@ export function StrategyDetails({
 }: Props) {
   if (!strategy)
     return (
-      <Card>
-        <CardContent>
+      <Card className="h-full flex flex-col">
+        <CardContent className="flex-1 overflow-auto px-4">
           <p className="text-muted-foreground">No strategies available</p>
         </CardContent>
       </Card>
     );
 
   return (
-    <Card>
+    <Card className="min-h-full w-full flex flex-col ">
       <CardHeader>
         <div className="flex items-start justify-between w-full">
           <div>
@@ -80,21 +76,23 @@ export function StrategyDetails({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Name/Description and per-rule cards go here */}
-        {RULE_TYPES.map((t) => {
-          const existing = strategy.rules.find((r) => r.ruleType === t.value);
-          return (
-            <RuleCard
-              key={t.value}
-              strategy={strategy}
-              ruleType={t}
-              existing={existing}
-              onToggle={(rt, enabled) => onToggleRule(rt, enabled)}
-              onUpdate={(id, upd) => onUpdateRule(id, upd)}
-            />
-          );
-        })}
+      <CardContent className="px-4 flex-1">
+        <div className="space-y-4 h-full overflow-auto">
+          {/* Name/Description and per-rule cards go here */}
+          {RULE_TYPES.map((t) => {
+            const existing = strategy.rules.find((r) => r.ruleType === t.value);
+            return (
+              <RuleCard
+                key={t.value}
+                strategy={strategy}
+                ruleType={t}
+                existing={existing}
+                onToggle={(rt, enabled) => onToggleRule(rt, enabled)}
+                onUpdate={(id, upd) => onUpdateRule(id, upd)}
+              />
+            );
+          })}
+        </div>
       </CardContent>
     </Card>
   );

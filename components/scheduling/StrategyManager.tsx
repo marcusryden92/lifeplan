@@ -18,7 +18,6 @@ export function StrategyManager({ actions }: { actions: ActionsModule }) {
       <div className="w-full lg:w-2/3 max-h-[70vh] overflow-auto">
         <StrategyDetails
           strategy={first}
-          actions={actions}
           onToggleActive={() => {}}
           onSetDefault={() => {}}
           onDelete={() => {}}

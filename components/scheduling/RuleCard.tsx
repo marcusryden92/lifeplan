@@ -40,9 +40,6 @@ export function RuleCard({
             />
             <div>
               <div className="font-medium">{ruleType.label}</div>
-              <div className="text-sm text-muted-foreground">
-                {ruleType.value}
-              </div>
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
