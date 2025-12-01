@@ -10,7 +10,6 @@ model User {
   EventTemplate         EventTemplate[]
   Planner               Planner[]
   SimpleEvent           SimpleEvent[]
-  schedulingStrategies  SchedulingStrategy[]
   twoFactorConfirmation TwoFactorConfirmation?
   accounts              Account[]
 

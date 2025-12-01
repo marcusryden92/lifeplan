@@ -1,34 +1,3 @@
-// User-defined scheduling strategies
-model SchedulingStrategy {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String   // "My Morning Routine", "Focus Time Strategy"
-  description String?
-  isActive    Boolean  @default(true)
-  isDefault   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  rules       StrategyRule[]
-  
-  @@map("SchedulingStrategies")
-}
-
-// Individual rules within a strategy
-model StrategyRule {
-  id          String   @id @default(cuid())
-  strategyId  String
-  ruleType    StrategyRuleType
-  weight      Float    @default(0.5)  // 0.0 to 1.0
-  config      Json     // Flexible configuration per rule type
-  order       Int      // For display ordering
-  
-  strategy    SchedulingStrategy @relation(fields: [strategyId], references: [id], onDelete: Cascade)
-  
-  @@map("StrategyRules")
-}
-
 // Task/Habit preferences
 model TaskPreferences {
   id                  String   @id @default(cuid())
@@ -41,19 +10,8 @@ model TaskPreferences {
   priority            PriorityLevel @default(MEDIUM)
   energyLevel         EnergyLevel?
   allowFlexibility    Boolean  @default(true)
-  
-  @@map("TaskPreferences")
-}
 
-enum StrategyRuleType {
-  URGENCY              // Deadline-based
-  EARLIEST_SLOT        // ASAP preference
-  PREFERRED_TIME       // Time window constraints
-  TASK_TYPE_PREFERENCE // Type-based rules (exercise in morning, etc.)
-  CONFLICT_AVOIDANCE   // Avoid important meetings
-  ENERGY_LEVEL         // Match task energy to time of day
-  DAY_PREFERENCE       // Prefer specific days
-  BUFFER_TIME          // Add padding between tasks
+  @@map("TaskPreferences")
 }
 
 enum TaskTypeEnum {

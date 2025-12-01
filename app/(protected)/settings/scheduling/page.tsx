@@ -1,6 +1,4 @@
-import { StrategyManager } from "@/components/scheduling/StrategyManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
-import * as schedulingActions from "@/actions/scheduling";
 
 export default function SchedulingSettingsPage() {
   return (
@@ -12,7 +10,16 @@ export default function SchedulingSettingsPage() {
         </p>
       </div>
 
-      <StrategyManager actions={schedulingActions} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Scheduling Configuration</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">
+            Scheduling preferences will be added here soon.
+          </p>
+        </CardContent>
+      </Card>
     </div>
   );
 }
