@@ -8,8 +8,9 @@ import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration
 import { taskIsCompleted } from "@/utils/taskHelpers";
 
 import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
-import { AppDispatch } from "@/redux/store";
+import { AppDispatch, RootState } from "@/redux/store";
 import calendarSlice from "@/redux/slices/calendarSlice";
+import { useSelector } from "react-redux";
 
 const useManuallyRefreshCalendar = (
   userId: string | undefined,
@@ -22,6 +23,9 @@ const useManuallyRefreshCalendar = (
   dispatch: AppDispatch
 ) => {
   const { planner, calendar, template } = calendarState;
+  const bufferTimeMinutes = useSelector(
+    (state: RootState) => state.schedulingSettings.bufferTimeMinutes
+  );
 
   const manuallyRefreshCalendar = useCallback(() => {
     if (!userId) throw new Error("Id missing in manuallyRefreshCalendar");
@@ -43,7 +47,8 @@ const useManuallyRefreshCalendar = (
         weekStartDay,
         template,
         planner,
-        filteredCalendar
+        filteredCalendar,
+        bufferTimeMinutes
       );
 
       // Use updateAll to bypass the thunk's regeneration
@@ -56,7 +61,7 @@ const useManuallyRefreshCalendar = (
         })
       );
     }
-  }, [userId, planner, calendar, template, weekStartDay, dispatch]);
+  }, [userId, planner, calendar, template, weekStartDay, dispatch, bufferTimeMinutes]);
 
   return manuallyRefreshCalendar;
 };

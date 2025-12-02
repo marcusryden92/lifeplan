@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { Clock, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -12,6 +13,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/Card";
+import { setBufferTimeMinutes as setBufferTimeInRedux } from "@/redux/slices/schedulingSettingsSlice";
+import { useCalendarProvider } from "@/context/CalendarProvider";
+import { RootState } from "@/redux/store";
 
 type ActionsModule = typeof import("@/actions/scheduling");
 
@@ -20,7 +24,14 @@ interface BufferTimeSettingsProps {
 }
 
 export function BufferTimeSettings({ actions }: BufferTimeSettingsProps) {
-  const [bufferTimeMinutes, setBufferTimeMinutes] = useState<number>(15);
+  const dispatch = useDispatch();
+  const { manuallyRefreshCalendar } = useCalendarProvider();
+  const reduxBufferTime = useSelector(
+    (state: RootState) => state.schedulingSettings.bufferTimeMinutes
+  );
+
+  const [bufferTimeMinutes, setBufferTimeMinutes] =
+    useState<number>(reduxBufferTime);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +40,11 @@ export function BufferTimeSettings({ actions }: BufferTimeSettingsProps) {
   useEffect(() => {
     loadPreferences();
   }, []);
+
+  // Sync local state with Redux when it changes
+  useEffect(() => {
+    setBufferTimeMinutes(reduxBufferTime);
+  }, [reduxBufferTime]);
 
   const loadPreferences = async () => {
     try {
@@ -58,9 +74,16 @@ export function BufferTimeSettings({ actions }: BufferTimeSettingsProps) {
       setError(null);
       setSuccessMessage(null);
 
+      // Save to database
       await actions.updateUserSchedulingPreferences({
         bufferTimeMinutes,
       });
+
+      // Update Redux state
+      dispatch(setBufferTimeInRedux(bufferTimeMinutes));
+
+      // Refresh calendar with new buffer time
+      manuallyRefreshCalendar();
 
       setSuccessMessage("Buffer time saved successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
