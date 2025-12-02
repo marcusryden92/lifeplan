@@ -1,3 +1,14 @@
+// User-level scheduling preferences
+model UserSchedulingPreferences {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  bufferTimeMinutes Int      @default(15) // Minimum buffer time between scheduled items
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("UserSchedulingPreferences")
+}
+
 // Task/Habit preferences
 model TaskPreferences {
   id                  String   @id @default(cuid())

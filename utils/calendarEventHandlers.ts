@@ -191,61 +191,17 @@ export const handleClickCompleteTask = (
   if (isCompleted) {
     setIsCompleted(false);
 
-    const updatedPlanner = planner.map((item) =>
-      item.id === event.id
-        ? { ...item, completedStartTime: null, completedEndTime: null }
-        : item
+    // Remove the event from the calendar and clear completed times
+    // This allows it to be rescheduled by the calendar generator
+    updateAll(
+      (prev) =>
+        prev.map((item) =>
+          item.id === event.id
+            ? { ...item, completedStartTime: null, completedEndTime: null }
+            : item
+        ),
+      (prev) => prev.filter((e) => e.id !== event.id)
     );
-
-    // Keep the event in the calendar when uncompleting
-    // This ensures it stays visible and doesn't need to be rescheduled
-    const eventData: SimpleEvent = {
-      userId: event.extendedProps.userId || "",
-      id: event.id,
-      title: event.title,
-      start: event.start!.toISOString(),
-      end: event.end!.toISOString(),
-      extendedProps: {
-        id: event.extendedProps.id || "",
-        eventId: event.extendedProps.eventId || event.id,
-        itemType: event.extendedProps.itemType || "task",
-        completedStartTime: null,
-        completedEndTime: null,
-        parentId: event.extendedProps.parentId || null,
-      },
-      backgroundColor: event.backgroundColor || "",
-      borderColor: event.borderColor || "transparent",
-      duration: (() => {
-        const d = event._def.recurringDef?.duration as any;
-        if (!d) return null;
-        if (typeof d === "number") return d;
-        // FullCalendar may expose a Duration-like object; try to derive minutes
-        if (typeof d.as === "function") {
-          try {
-            return Math.round(d.as("minutes"));
-          } catch (e) {
-            return null;
-          }
-        }
-        // Fallback: if it has a unit property or similar, try to parse
-        if (typeof d === "object" && (d.minutes || d.hours)) {
-          const minutes = (d.hours || 0) * 60 + (d.minutes || 0);
-          return minutes;
-        }
-        return null;
-      })(),
-      rrule: event._def.recurringDef
-        ? JSON.stringify(event._def.recurringDef)
-        : null,
-      createdAt: event.extendedProps.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    updateAll(updatedPlanner, (prev) => {
-      // If event is already in calendar, keep it; otherwise add it
-      const exists = prev.some((e) => e.id === event.id);
-      return exists ? prev : [...prev, eventData];
-    });
   } else {
     setIsCompleted(true);
     setTimeout(() => {

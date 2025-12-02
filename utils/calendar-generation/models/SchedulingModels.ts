@@ -109,6 +109,8 @@ export interface CalendarGenerationConfig {
   maxIterationsPerTask?: number;
   /** Whether to enable detailed logging */
   enableLogging?: boolean;
+  /** Buffer time between scheduled items in minutes */
+  bufferTimeMinutes?: number;
   /** Strategy weights */
   strategyWeights?: {
     urgency?: number;

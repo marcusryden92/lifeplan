@@ -8,6 +8,38 @@ import type {
 } from "@/prisma/generated/client";
 import type { Prisma } from "@/prisma/generated/client";
 
+// User Scheduling Preferences
+export async function fetchUserSchedulingPreferences() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const prefs = await db.userSchedulingPreferences.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  return prefs ?? null;
+}
+
+export async function updateUserSchedulingPreferences(data: {
+  bufferTimeMinutes: number;
+}) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const prefs = await db.userSchedulingPreferences.upsert({
+    where: { userId: session.user.id },
+    update: {
+      bufferTimeMinutes: data.bufferTimeMinutes,
+    },
+    create: {
+      userId: session.user.id,
+      bufferTimeMinutes: data.bufferTimeMinutes,
+    },
+  });
+
+  return prefs;
+}
+
 export async function fetchTaskPreferences(plannerId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");

@@ -49,6 +49,10 @@ export class CalendarGenerator {
     const startTime = performance.now();
     this.metrics = this.createEmptyMetrics();
 
+    // Create slot manager with buffer time from config
+    const bufferTimeMinutes = input.config?.bufferTimeMinutes ?? 0;
+    this.slotManager = new TimeSlotManager(this.weekStartDay, new Date(), bufferTimeMinutes);
+
     // Validate input
     const validation = CalendarValidator.validateGenerationInput({
       userId: input.userId,
@@ -233,6 +237,9 @@ export class CalendarGenerator {
     const events: SimpleEvent[] = [];
     const failures: SchedulingFailure[] = [];
 
+    // Track tasks that have been scheduled during this run to prevent duplicates
+    const scheduledTaskIds = new Set<string>();
+
     // Get initial candidates (top-level goals + tasks)
     let candidates: Planner[] = allPlanners.filter(
       (item) =>
@@ -260,6 +267,12 @@ export class CalendarGenerator {
         const item = candidates[i];
 
         if (item.itemType === "task") {
+          // Skip if already scheduled
+          if (scheduledTaskIds.has(item.id)) {
+            candidates.splice(i, 1);
+            continue;
+          }
+
           // Size check
           if (largestTemplateGap && item.duration > largestTemplateGap) {
             failures.push({
@@ -276,6 +289,7 @@ export class CalendarGenerator {
           const result = scheduler.scheduleTask(item);
           if (result.success && result.event) {
             events.push(result.event);
+            scheduledTaskIds.add(item.id);
             candidates.splice(i, 1);
           } else if (result.failure) {
             // If no slots, we'll expand next week; otherwise, mark failure
@@ -288,10 +302,11 @@ export class CalendarGenerator {
           this.metrics.goalsProcessed++;
 
           // Attempt to schedule tasks in the goal sequentially; if any task hits NO_SLOTS, stop and retry next week
+          // Filter out already-scheduled tasks and completed tasks
           const goalTasks = getSortedTreeBottomLayer(
             allPlanners,
             item.id
-          ).filter((t) => !taskIsCompleted(t));
+          ).filter((t) => !taskIsCompleted(t) && !scheduledTaskIds.has(t.id));
 
           let goalFailedDueToNoSlots = false;
 
@@ -310,6 +325,7 @@ export class CalendarGenerator {
             const res = scheduler.scheduleTask(task);
             if (res.success && res.event) {
               events.push(res.event);
+              scheduledTaskIds.add(task.id);
             } else if (res.failure) {
               if (res.failure.reason === SchedulingFailureReason.NO_SLOTS) {
                 goalFailedDueToNoSlots = true;

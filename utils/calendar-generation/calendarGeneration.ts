@@ -18,6 +18,7 @@ import { SCHEDULING_CONFIG } from "./constants";
  * @param template - Event templates (recurring scheduled blocks)
  * @param planner - Planner items (tasks, goals, plans)
  * @param prevCalendar - Previous calendar events to preserve
+ * @param bufferTimeMinutes - Optional buffer time between items (default: 15)
  * @returns Array of calendar events
  */
 export function generateCalendar(
@@ -25,7 +26,8 @@ export function generateCalendar(
   weekStartDay: WeekDayIntegers,
   template: EventTemplate[],
   planner: Planner[],
-  prevCalendar: SimpleEvent[]
+  prevCalendar: SimpleEvent[],
+  bufferTimeMinutes: number = 15
 ): SimpleEvent[] {
   // Use the new CalendarGenerator
   const generator = new CalendarGenerator(weekStartDay);
@@ -39,6 +41,7 @@ export function generateCalendar(
     config: {
       maxDaysAhead: SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
       enableLogging: false,
+      bufferTimeMinutes,
     },
   });
 
