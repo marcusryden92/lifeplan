@@ -6,7 +6,7 @@ export type SchedulingSettings = {
 };
 
 const initialState: SchedulingSettings = {
-  bufferTimeMinutes: 15, // Default value
+  bufferTimeMinutes: 10, // Default value
   isLoaded: false,
 };
 

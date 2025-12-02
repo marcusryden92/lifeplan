@@ -2,7 +2,7 @@
 model UserSchedulingPreferences {
   id                String   @id @default(cuid())
   userId            String   @unique
-  bufferTimeMinutes Int      @default(15) // Minimum buffer time between scheduled items
+  bufferTimeMinutes Int      @default(10) // Minimum buffer time between scheduled items
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
