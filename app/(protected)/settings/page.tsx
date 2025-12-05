@@ -2,9 +2,6 @@ import { Card, CardHeader, CardContent } from "@/components/ui/Card";
 import { currentUser } from "@/lib/auth";
 import SettingsForm from "./_components/SettingsForm";
 import { SettingsPageUser } from "@/next-auth";
-import Link from "next/link";
-import { Button } from "@/components/ui/Button";
-import { Calendar } from "lucide-react";
 
 const SettingsPage = async () => {
   const user = (await currentUser()) as SettingsPageUser;
