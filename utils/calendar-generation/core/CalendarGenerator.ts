@@ -302,11 +302,11 @@ export class CalendarGenerator {
           this.metrics.goalsProcessed++;
 
           // Attempt to schedule tasks in the goal sequentially; if any task hits NO_SLOTS, stop and retry next week
-          // Filter out already-scheduled tasks and completed tasks
+          // Filter out already-scheduled tasks, completed tasks, and memoized (overdue) tasks
           const goalTasks = getSortedTreeBottomLayer(
             allPlanners,
             item.id
-          ).filter((t) => !taskIsCompleted(t) && !scheduledTaskIds.has(t.id));
+          ).filter((t) => !taskIsCompleted(t) && !scheduledTaskIds.has(t.id) && !memoizedEventIds.has(t.id));
 
           let goalFailedDueToNoSlots = false;
 

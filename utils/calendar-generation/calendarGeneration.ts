@@ -32,6 +32,8 @@ export function generateCalendar(
   // Use the new CalendarGenerator
   const generator = new CalendarGenerator(weekStartDay);
 
+  const enableLogging = false;
+
   const result = generator.generate({
     userId,
     weekStartDay,
@@ -40,13 +42,13 @@ export function generateCalendar(
     previousCalendar: prevCalendar,
     config: {
       maxDaysAhead: SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
-      enableLogging: false,
+      enableLogging,
       bufferTimeMinutes,
     },
   });
 
-  // Log detailed info in development
-  if (process.env.NODE_ENV === "development") {
+  // Log detailed info when enableLogging is true
+  if (enableLogging) {
     console.log("Calendar Generation Metrics:", result.metrics);
     console.log("Templates passed:", template?.length || 0);
     console.log(
