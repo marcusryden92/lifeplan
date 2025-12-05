@@ -12,8 +12,10 @@ const SettingsPage = async () => {
         <CardHeader>
           <p className="text-xl font-semibold">Settings</p>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           <SettingsForm user={user} />
+
+          {/* Advanced settings removed scheduling link — use sidebar link to access scheduling settings */}
         </CardContent>
       </Card>
     </div>

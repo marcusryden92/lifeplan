@@ -1,61 +1,53 @@
-import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";
+/**
+ * Calendar Utilities
+ *
+ * Backward-compatible exports. New code should use dateTimeService from
+ * calendar-generation/utils/dateTimeService instead.
+ */
 
+import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";
 import { SimpleEvent } from "@/types/prisma";
 import { EventInput } from "@fullcalendar/core/index.js";
 import { RRule, Weekday } from "rrule";
+import { dateTimeService } from "./calendar-generation/utils/dateTimeService";
 
-// Get weekday string from a Date object
-export function getWeekdayFromDate(date: Date): WeekDayType {
-  const weekdays: WeekDayType[] = [
-    "sunday",
-    "monday",
-    "tuesday",
-    "wednesday",
-    "thursday",
-    "friday",
-    "saturday",
-  ];
-  return weekdays[date.getDay()];
-}
+// Re-export from dateTimeService for backward compatibility
+export const getWeekdayFromDate = (date: Date): WeekDayType =>
+  dateTimeService.getWeekdayFromDate(date);
 
-// Shift a date by a given number of days
-export function shiftDate(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-}
+export const shiftDate = (date: Date, days: number): Date =>
+  dateTimeService.shiftDays(date, days);
 
-// Set time (HH:MM) on a date
-export function setTimeOnDate(date: Date, time: string): Date {
-  const [hours, minutes] = time.split(":").map(Number);
-  const result = new Date(date);
-  result.setHours(hours, minutes, 0, 0);
-  return result;
-}
+export const setTimeOnDate = (date: Date, time: string): Date =>
+  dateTimeService.setTimeOnDate(date, time);
 
-// Get the Monday of the current week
-export function getDateOfThisWeeksMonday(todaysDate: Date): Date | undefined {
+export const getDateOfThisWeeksMonday = (
+  todaysDate: Date
+): Date | undefined => {
   if (!todaysDate) {
     console.warn("todaysDate is undefined in getDateOfThisWeeksMonday.");
     return undefined;
   }
-
   const dayOfWeek = todaysDate.getDay();
   const daysToMonday = (dayOfWeek + 6) % 7;
-  return shiftDate(todaysDate, -daysToMonday);
-}
+  return dateTimeService.shiftDays(todaysDate, -daysToMonday);
+};
 
-// Get the start date of the current week based on a custom start day
-export function getWeekFirstDate(
+export const getWeekFirstDate = (
   weekStartDay: WeekDayIntegers,
   todaysDate: Date
-): Date {
-  const currentDay = todaysDate.getDay();
-  const daysDifference = (currentDay - weekStartDay + 7) % 7;
-  const firstDate = shiftDate(todaysDate, -daysDifference);
-  firstDate.setHours(0, 0, 0, 0);
-  return firstDate;
-}
+): Date => dateTimeService.getWeekFirstDate(todaysDate, weekStartDay);
+
+export const floorMinutes = (date: Date | string): number =>
+  dateTimeService.floorToSeconds(
+    typeof date === "string" ? new Date(date) : date
+  );
+
+export const getDuration = (start: Date | string, end: Date | string): number =>
+  dateTimeService.getDuration(start, end);
+
+export const formatTime = (date: Date): string =>
+  dateTimeService.formatTime(date);
 
 export function getRRuleDayTypeFromIndex(day: number): Weekday {
   const rruleWeekdays = [
@@ -92,63 +84,14 @@ export const transformEventsForFullCalendar = (
   }));
 };
 
-// Floor a date (or string) to seconds since epoch
-export function floorMinutes(date: Date | string): number {
-  const parsedDate = typeof date === "string" ? new Date(date) : date;
-  return Math.floor(parsedDate.getTime() / 1000);
-}
-
-// Generate calendar header date string (e.g., "Aug 1 - Aug 7, 2025")
 export function getCalendarHeaderDateString(
   initialDate: Date,
   finalDate: Date,
   monthArray: string[]
 ): string {
-  const initialDay = initialDate.getDate();
-  const finalDay = finalDate.getDate();
-  const initialMonth = initialDate.getMonth();
-  const finalMonth = finalDate.getMonth();
-  const initialYear = initialDate.getFullYear();
-  const finalYear = finalDate.getFullYear();
-
-  const initialMonthName = monthArray[initialMonth];
-  const finalMonthName = monthArray[finalMonth];
-
-  const isDifferentMonth = initialMonth !== finalMonth;
-  const isDifferentYear = initialYear !== finalYear;
-
-  let result = `${initialMonthName} ${initialDay}`;
-
-  if (isDifferentMonth) {
-    result += ` - ${finalMonthName} ${finalDay}`;
-  } else {
-    result += ` - ${finalDay}`;
-  }
-
-  result += `, ${initialYear}`;
-
-  if (isDifferentYear) {
-    result += ` - ${finalYear}`;
-  }
-
-  return result;
-}
-
-export function getDuration(start: Date | string, end: Date | string): number {
-  // Convert strings to Date objects if needed
-  const startDate = typeof start === "string" ? new Date(start) : start;
-  const endDate = typeof end === "string" ? new Date(end) : end;
-
-  // Calculate difference in minutes
-  const durationMinutes = Math.round(
-    (endDate.getTime() - startDate.getTime()) / (1000 * 60)
+  return dateTimeService.getCalendarHeaderDateString(
+    initialDate,
+    finalDate,
+    monthArray
   );
-  return durationMinutes;
 }
-
-export const formatTime = (date: Date) => {
-  return `${date.getHours().toString().padStart(2, "0")}:${date
-    .getMinutes()
-    .toString()
-    .padStart(2, "0")}`;
-};

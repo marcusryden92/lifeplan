@@ -97,15 +97,15 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
     });
   }
 
-  // Work Morning Session (09:00 - 12:00) - Weekdays only
+  // Work Morning Session (08:00 - 12:00) - Weekdays only
   for (let i = 0; i < weekdays.length; i++) {
     templateArray.push({
       id: uuidv4(),
       userId,
       title: "Work",
       startDay: weekdays[i] as WeekDayType,
-      startTime: "09:00",
-      duration: 180,
+      startTime: "08:00",
+      duration: 240,
       color: "#1976D2", // royal blue
       createdAt: timestamp,
       updatedAt: timestamp,

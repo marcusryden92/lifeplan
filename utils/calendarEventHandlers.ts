@@ -191,13 +191,17 @@ export const handleClickCompleteTask = (
   if (isCompleted) {
     setIsCompleted(false);
 
-    const updatedPlanner = planner.map((item) =>
-      item.id === event.id
-        ? { ...item, completedStartTime: null, completedEndTime: null }
-        : item
+    // Remove the event from the calendar and clear completed times
+    // This allows it to be rescheduled by the calendar generator
+    updateAll(
+      (prev) =>
+        prev.map((item) =>
+          item.id === event.id
+            ? { ...item, completedStartTime: null, completedEndTime: null }
+            : item
+        ),
+      (prev) => prev.filter((e) => e.id !== event.id)
     );
-
-    updateAll(updatedPlanner);
   } else {
     setIsCompleted(true);
     setTimeout(() => {

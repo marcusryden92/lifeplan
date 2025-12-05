@@ -37,6 +37,8 @@ export const updateAllCalendarStates =
     const currentPlanner: Planner[] = state.calendar.planner;
     const calendar: SimpleEvent[] = state.calendar.calendar;
     const template: EventTemplate[] = state.calendar.template;
+    const bufferTimeMinutes: number =
+      state.schedulingSettings.bufferTimeMinutes;
 
     const newPlanner = updates.planner
       ? processInput(updates.planner, currentPlanner)
@@ -53,7 +55,8 @@ export const updateAllCalendarStates =
       weekStartDay,
       newTemplate,
       newPlanner,
-      newCalendarInput
+      newCalendarInput,
+      bufferTimeMinutes
     );
 
     const calendarData = {

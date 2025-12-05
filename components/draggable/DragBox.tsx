@@ -9,6 +9,8 @@ export default function DragBox() {
   const mousePositionRef = useRef({ x: 0, y: 0 });
   const animationFrameId = useRef<number | null>(null);
 
+  const DRAG_DELAY = 300; // milliseconds
+
   const taskTitle = useRef<string>("");
 
   if (currentlyClickedItem) taskTitle.current = currentlyClickedItem.taskTitle;
@@ -20,7 +22,7 @@ export default function DragBox() {
         if (isMouseDown.current) {
           setDisplayDragBox(true);
         }
-      }, 150);
+      }, DRAG_DELAY);
 
       return () => clearTimeout(timeoutId);
     } else {
