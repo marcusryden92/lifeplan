@@ -14,7 +14,6 @@ import {
   CardTitle,
 } from "@/components/ui/Card";
 import { setBufferTimeMinutes as setBufferTimeInRedux } from "@/redux/slices/schedulingSettingsSlice";
-import { useCalendarProvider } from "@/context/CalendarProvider";
 import { RootState } from "@/redux/store";
 
 type ActionsModule = typeof import("@/actions/scheduling");
@@ -25,7 +24,6 @@ interface BufferTimeSettingsProps {
 
 export function BufferTimeSettings({ actions }: BufferTimeSettingsProps) {
   const dispatch = useDispatch();
-  const { manuallyRefreshCalendar } = useCalendarProvider();
   const reduxBufferTime = useSelector(
     (state: RootState) => state.schedulingSettings.bufferTimeMinutes
   );
@@ -79,11 +77,8 @@ export function BufferTimeSettings({ actions }: BufferTimeSettingsProps) {
         bufferTimeMinutes,
       });
 
-      // Update Redux state
+      // Update Redux state (CalendarProvider will auto-refresh the calendar)
       dispatch(setBufferTimeInRedux(bufferTimeMinutes));
-
-      // Refresh calendar with new buffer time
-      manuallyRefreshCalendar();
 
       setSuccessMessage("Buffer time saved successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);

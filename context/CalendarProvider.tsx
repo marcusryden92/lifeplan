@@ -6,6 +6,7 @@ import React, {
   ReactNode,
   useMemo,
   useEffect,
+  useRef,
 } from "react";
 
 import { useDispatch, useSelector } from "react-redux";
@@ -83,6 +84,21 @@ export default function CalendarProvider({
     weekStartDay,
     dispatch
   );
+
+  const bufferTimeMinutes = useSelector(
+    (state: RootState) => state.schedulingSettings.bufferTimeMinutes
+  );
+  const isInitialMount = useRef(true);
+
+  // Regenerate calendar when bufferTimeMinutes changes (preserves current event positions)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (!userId) return;
+    updateAll();
+  }, [bufferTimeMinutes, updateAll, userId]);
 
   const initializeState = useCalendarServerSync(userId, calendarState);
 

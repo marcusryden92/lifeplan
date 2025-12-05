@@ -18,7 +18,7 @@
     "prisma:migrate:dev": "dotenv -e .env.development.local -- prisma migrate dev",
     "prisma:migrate:deploy": "dotenv -e .env.development.local -- prisma migrate deploy",
     "db:seed": "dotenv -e .env.development.local -- ts-node --project prisma/tsconfig.seed.json prisma/seed.ts",
-    "db:studio": "dotenv -e .env.development.local -- pnpx prisma studio"
+    "db:studio": "dotenv -e .env.development.local -- pnpm exec prisma studio"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.9.0",

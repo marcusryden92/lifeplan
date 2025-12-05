@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { floorMinutes } from "@/utils/calendarUtils";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 
@@ -27,7 +27,13 @@ const useManuallyRefreshCalendar = (
     (state: RootState) => state.schedulingSettings.bufferTimeMinutes
   );
 
+  // Store latest values in refs so callback doesn't need to depend on them
+  const stateRef = useRef({ userId, planner, calendar, template, weekStartDay, bufferTimeMinutes, dispatch });
+  stateRef.current = { userId, planner, calendar, template, weekStartDay, bufferTimeMinutes, dispatch };
+
   const manuallyRefreshCalendar = useCallback(() => {
+    const { userId, planner, calendar, template, weekStartDay, bufferTimeMinutes, dispatch } = stateRef.current;
+
     if (!userId) throw new Error("Id missing in manuallyRefreshCalendar");
 
     const now = floorMinutes(new Date());
@@ -61,7 +67,7 @@ const useManuallyRefreshCalendar = (
         })
       );
     }
-  }, [userId, planner, calendar, template, weekStartDay, dispatch, bufferTimeMinutes]);
+  }, []);
 
   return manuallyRefreshCalendar;
 };
