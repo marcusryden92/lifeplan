@@ -140,7 +140,9 @@ export function BufferTimeSettings({ actions }: BufferTimeSettingsProps) {
             />
             <div className="text-sm text-muted-foreground">
               {bufferTimeMinutes === 0 ? (
-                <span>No buffer time (items can be scheduled back-to-back)</span>
+                <span>
+                  No buffer time (items can be scheduled back-to-back)
+                </span>
               ) : bufferTimeMinutes === 1 ? (
                 <span>1 minute between items</span>
               ) : (
@@ -163,11 +165,7 @@ export function BufferTimeSettings({ actions }: BufferTimeSettingsProps) {
         )}
 
         <div className="pt-4">
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="gap-2"
-          >
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
             {saving ? (
               <>
                 <div className="w-4 h-4 border-2 border-background border-t-transparent rounded-full animate-spin" />

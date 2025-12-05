@@ -111,6 +111,28 @@ export const Navbar = () => {
               </Link>
             </Button>
           ))}
+
+          <div className="mt-2 mb-2 border-b " />
+
+          <Button
+            asChild
+            variant={pathname === "/strategy" ? "default" : "outline"}
+            className="justify-start"
+            size="sm"
+          >
+            <Link
+              href="/strategy"
+              className={clsx(
+                "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium",
+                pathname === "/strategy"
+                  ? "bg-gray-800 text-white"
+                  : "hover:bg-gray-100"
+              )}
+            >
+              <FaClock className="h-5 w-5" />
+              <span className="hidden lg:block">Strategy</span>
+            </Link>
+          </Button>
         </div>
 
         <div className="lg:mt-auto flex lg:flex-col lg:space-y-2 content-start gap-2">
@@ -131,26 +153,6 @@ export const Navbar = () => {
             >
               <FaCog className="h-5 w-5" />{" "}
               <span className="hidden lg:block">Settings</span>
-            </Link>
-          </Button>
-
-          <Button
-            asChild
-            variant={pathname === "/scheduling" ? "default" : "outline"}
-            className="justify-start"
-            size="sm"
-          >
-            <Link
-              href="/scheduling"
-              className={clsx(
-                "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium",
-                pathname === "/scheduling"
-                  ? "bg-gray-800 text-white"
-                  : "hover:bg-gray-100"
-              )}
-            >
-              <FaClock className="h-5 w-5" />{" "}
-              <span className="hidden lg:block">Scheduling</span>
             </Link>
           </Button>
 
