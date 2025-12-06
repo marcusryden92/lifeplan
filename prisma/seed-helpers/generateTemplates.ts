@@ -32,6 +32,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       startTime: "00:00",
       duration: 360,
       color: "#1D3557", // navy
+      locationId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -47,6 +48,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       startTime: "21:00",
       duration: 180,
       color: "#1D3557", // navy
+      locationId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -62,6 +64,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       startTime: "12:00",
       duration: 60,
       color: "#F4A261", // warm sand
+      locationId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -77,6 +80,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       startTime: "07:00",
       duration: 30,
       color: "#FFB703", // amber yellow
+      locationId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -92,6 +96,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       startTime: "18:00",
       duration: 60,
       color: "#D35400", // burnt orange
+      locationId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -107,6 +112,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       startTime: "08:00",
       duration: 240,
       color: "#1976D2", // royal blue
+      locationId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -122,6 +128,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       startTime: "13:00",
       duration: 240,
       color: "#1976D2", // royal blue
+      locationId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -138,6 +145,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       startTime: "06:30",
       duration: 60,
       color: "#27AE60", // emerald
+      locationId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -154,6 +162,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       startTime: "19:30",
       duration: 60,
       color: "#2E7D32", // forest green
+      locationId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -168,6 +177,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
     startTime: "10:00",
     duration: 90,
     color: "#16A085", // teal green
+    locationId: null,
     createdAt: timestamp,
     updatedAt: timestamp,
   });
@@ -181,6 +191,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
     startTime: "14:00",
     duration: 90,
     color: "#20C997", // turquoise
+    locationId: null,
     createdAt: timestamp,
     updatedAt: timestamp,
   });
@@ -194,6 +205,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
     startTime: "11:00",
     duration: 90,
     color: "#8E44AD", // deep purple
+    locationId: null,
     createdAt: timestamp,
     updatedAt: timestamp,
   });

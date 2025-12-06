@@ -40,6 +40,7 @@ export const handleTemplateSelect = (
       startTime, // Assuming startDate is a Date object
       duration: durationMinutes, // Add duration in minutes
       color: calendarColors[0],
+      locationId: null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };
@@ -140,6 +141,7 @@ export const handleTemplateEventCopy = (
     startTime: getTimeFromDate(startDate), // Assuming startDate is a Date object
     duration, // Add duration in minutes
     color: event.backgroundColor,
+    locationId: null,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
   };

@@ -50,9 +50,14 @@ export class CalendarGenerator {
     const startTime = performance.now();
     this.metrics = this.createEmptyMetrics();
 
-    // Create slot manager with buffer time from config
+    // Create slot manager with buffer time and travel time matrix from config
     const bufferTimeMinutes = input.config?.bufferTimeMinutes ?? 0;
-    this.slotManager = new TimeSlotManager(this.weekStartDay, new Date(), bufferTimeMinutes);
+    this.slotManager = new TimeSlotManager(
+      this.weekStartDay,
+      new Date(),
+      bufferTimeMinutes,
+      input.config?.travelTimeMatrix
+    );
 
     // Validate input
     const validation = CalendarValidator.validateGenerationInput({
@@ -229,10 +234,9 @@ export class CalendarGenerator {
       context
     );
 
+    // Travel events are now created during scheduling by the Scheduler
+    // when reserveSlotWithTravel is called, so no post-processing needed
     const allEvents = context.scheduledEvents;
-
-    // Note: Travel time is now handled by LocationGroupingStrategy during scheduling
-    // which prefers placing tasks at locations that minimize travel
 
     const endTime = performance.now();
     this.metrics.totalExecutionTimeMs = endTime - startTime;

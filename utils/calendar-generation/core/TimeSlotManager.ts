@@ -38,18 +38,115 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 
 import { EventTemplate } from "@/types/prisma";
 import { TemplateExpander } from "./TemplateExpander";
+import { TravelTimeEntry } from "../models/SchedulingModels";
 
 export class TimeSlotManager {
   private availableSlots: Map<string, TimeSlot[]> = new Map();
   private occupiedSlots: Map<string, TimeSlot[]> = new Map();
   private bufferTimeMinutes: number = 0;
+  private travelTimeMatrix: Map<string, TravelTimeEntry> | null = null;
 
   constructor(
     private weekStartDay: WeekDayIntegers,
     private currentDate: Date = new Date(),
-    bufferTimeMinutes: number = 0
+    bufferTimeMinutes: number = 0,
+    travelTimeMatrix?: Map<string, TravelTimeEntry>
   ) {
     this.bufferTimeMinutes = bufferTimeMinutes;
+    this.travelTimeMatrix = travelTimeMatrix ?? null;
+  }
+
+  /**
+   * Set the travel time matrix for location-aware scheduling
+   */
+  setTravelTimeMatrix(matrix: Map<string, TravelTimeEntry> | null): void {
+    this.travelTimeMatrix = matrix;
+  }
+
+  /**
+   * Get travel time between two locations based on time of day
+   * Returns 0 if either location is null (meaning "Everywhere") or if no travel entry exists
+   */
+  getTravelTime(
+    fromLocationId: string | null,
+    toLocationId: string | null,
+    timeOfDay: Date
+  ): number {
+    // No travel needed if either location is null ("Everywhere") or same location
+    if (!fromLocationId || !toLocationId || fromLocationId === toLocationId) {
+      return 0;
+    }
+
+    if (!this.travelTimeMatrix) {
+      return 0;
+    }
+
+    const travelKey = `${fromLocationId}->${toLocationId}`;
+    const entry = this.travelTimeMatrix.get(travelKey);
+
+    if (!entry) {
+      return 0;
+    }
+
+    // Determine which travel time to use based on time of day
+    const hour = timeOfDay.getHours();
+
+    if ((hour >= 7 && hour < 9) || (hour >= 16 && hour < 19)) {
+      // Rush hour
+      return entry.rushHourMinutes;
+    } else if (hour >= 22 || hour < 6) {
+      // Night
+      return entry.nightMinutes;
+    } else {
+      // Regular
+      return entry.regularMinutes;
+    }
+  }
+
+  /**
+   * Calculate total travel time required for placing a task with a given location in a slot
+   * Returns { travelBefore, travelAfter } in minutes
+   */
+  calculateRequiredTravelTime(
+    slot: TimeSlot,
+    taskLocationId: string | null,
+    startTime: Date
+  ): { travelBefore: number; travelAfter: number } {
+    const travelBefore = this.getTravelTime(
+      slot.prevLocationId ?? null,
+      taskLocationId,
+      startTime
+    );
+
+    // Estimate end time for calculating travel after
+    const travelAfter = this.getTravelTime(
+      taskLocationId,
+      slot.nextLocationId ?? null,
+      startTime // Use start time as approximation
+    );
+
+    return { travelBefore, travelAfter };
+  }
+
+  /**
+   * Check if a slot can fit a task considering travel time requirements
+   * Returns the effective available minutes after accounting for travel
+   */
+  getEffectiveSlotCapacity(
+    slot: TimeSlot,
+    taskLocationId: string | null,
+    startTime: Date
+  ): number {
+    const { travelBefore, travelAfter } = this.calculateRequiredTravelTime(
+      slot,
+      taskLocationId,
+      startTime
+    );
+
+    // Total travel overhead
+    const travelOverhead = travelBefore + travelAfter;
+
+    return Math.max(0, slot.durationMinutes - travelOverhead);
   }
 
   /**
@@ -201,20 +298,22 @@ export class TimeSlotManager {
   }
 
   /**
-   * Find all slots that can fit a duration (plus buffer time on both sides)
+   * Find all slots that can fit a duration (plus buffer time and travel time)
    * Preserves location info (prevLocationId, nextLocationId) on returned slots
+   * @param taskLocationId - Location of the task being scheduled (for travel time calculation)
    */
   findAllFittingSlots(
     durationMinutes: number,
     afterDate: Date = this.currentDate,
-    maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH
+    maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
+    taskLocationId?: string | null
   ): TimeSlot[] {
     const fittingSlots: TimeSlot[] = [];
     const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
     let currentDate = new Date(afterDate);
 
-    // Account for buffer time on both sides of the event
-    const requiredMinutes = durationMinutes + (2 * this.bufferTimeMinutes);
+    // Base required time: task duration + buffer on both sides
+    const baseRequiredMinutes = durationMinutes + (2 * this.bufferTimeMinutes);
 
     while (currentDate <= searchEndDate) {
       const dayKey = this.getDayKey(currentDate);
@@ -231,7 +330,20 @@ export class TimeSlotManager {
             slot.end
           );
 
-          if (effectiveMinutes >= requiredMinutes) {
+          // Calculate travel time if task has a location
+          let travelOverhead = 0;
+          if (taskLocationId !== undefined) {
+            const { travelBefore, travelAfter } = this.calculateRequiredTravelTime(
+              slot,
+              taskLocationId,
+              effectiveStart
+            );
+            travelOverhead = travelBefore + travelAfter;
+          }
+
+          const totalRequiredMinutes = baseRequiredMinutes + travelOverhead;
+
+          if (effectiveMinutes >= totalRequiredMinutes) {
             fittingSlots.push({
               ...slot,
               start: effectiveStart,
@@ -305,6 +417,135 @@ export class TimeSlotManager {
     this.occupiedSlots.set(dayKey, occupiedSlots);
 
     return true;
+  }
+
+  /**
+   * Reserve a time slot with travel time handling
+   * Returns the travel events that should be created (if any)
+   * @param taskLocationId - Location of the task being placed
+   */
+  reserveSlotWithTravel(
+    start: Date,
+    end: Date,
+    eventId: string,
+    eventType: "task" | "goal" | "plan" | "template",
+    taskLocationId: string | null
+  ): {
+    success: boolean;
+    travelEvents: Array<{
+      id: string;
+      start: Date;
+      end: Date;
+      fromLocationId: string;
+      toLocationId: string;
+      travelMinutes: number;
+    }>;
+  } {
+    const dayKey = this.getDayKey(start);
+    const slots = this.availableSlots.get(dayKey);
+
+    if (!slots) {
+      return { success: false, travelEvents: [] };
+    }
+
+    // Find the slot that contains this time range
+    const slotIndex = slots.findIndex(
+      (slot) =>
+        slot.isAvailable &&
+        slot.start.getTime() <= start.getTime() &&
+        slot.end.getTime() >= end.getTime()
+    );
+
+    if (slotIndex === -1) {
+      return { success: false, travelEvents: [] };
+    }
+
+    const slot = slots[slotIndex];
+    const travelEvents: Array<{
+      id: string;
+      start: Date;
+      end: Date;
+      fromLocationId: string;
+      toLocationId: string;
+      travelMinutes: number;
+    }> = [];
+
+    // Calculate travel time before (from previous event's location to this task's location)
+    const travelBefore = this.getTravelTime(
+      slot.prevLocationId ?? null,
+      taskLocationId,
+      start
+    );
+
+    // Calculate travel time after (from this task's location to next event's location)
+    const travelAfter = this.getTravelTime(
+      taskLocationId,
+      slot.nextLocationId ?? null,
+      end
+    );
+
+    // If we need travel before, create a travel event and adjust task start
+    if (travelBefore > 0 && slot.prevLocationId && taskLocationId) {
+      const travelStart = new Date(start.getTime() - travelBefore * 60000);
+      travelEvents.push({
+        id: `travel-to-${eventId}`,
+        start: travelStart,
+        end: start,
+        fromLocationId: slot.prevLocationId,
+        toLocationId: taskLocationId,
+        travelMinutes: travelBefore,
+      });
+    }
+
+    // If we need travel after, create a travel event
+    if (travelAfter > 0 && taskLocationId && slot.nextLocationId) {
+      const travelEnd = new Date(end.getTime() + travelAfter * 60000);
+      travelEvents.push({
+        id: `travel-from-${eventId}`,
+        start: end,
+        end: travelEnd,
+        fromLocationId: taskLocationId,
+        toLocationId: slot.nextLocationId,
+        travelMinutes: travelAfter,
+      });
+    }
+
+    // Calculate the full range we need to reserve (task + travel events)
+    const fullStart = travelBefore > 0
+      ? new Date(start.getTime() - travelBefore * 60000)
+      : start;
+    const fullEnd = travelAfter > 0
+      ? new Date(end.getTime() + travelAfter * 60000)
+      : end;
+
+    // Verify the slot can still fit everything
+    if (fullStart.getTime() < slot.start.getTime() || fullEnd.getTime() > slot.end.getTime()) {
+      return { success: false, travelEvents: [] };
+    }
+
+    // Reserve the full range (including travel time)
+    const newSlots = TimeSlotUtils.occupySlot(
+      slot,
+      fullStart,
+      fullEnd,
+      eventId,
+      eventType,
+      taskLocationId
+    );
+
+    // Replace the old slot with the new slots
+    const availableNewSlots = newSlots.filter((s) => s.isAvailable);
+    slots.splice(slotIndex, 1, ...availableNewSlots);
+
+    // Track occupied slots
+    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+    occupiedSlots.push(...newSlots.filter((s) => !s.isAvailable));
+    this.occupiedSlots.set(dayKey, occupiedSlots);
+
+    return {
+      success: true,
+      travelEvents,
+    };
   }
 
   /**

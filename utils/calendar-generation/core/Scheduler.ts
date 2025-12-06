@@ -41,11 +41,12 @@ export class Scheduler {
 
   /**
    * Schedule a single task
+   * Returns the task event and any travel events created
    */
   scheduleTask(
     task: Planner,
     afterTime?: Date
-  ): { success: boolean; event?: SimpleEvent; failure?: SchedulingFailure } {
+  ): { success: boolean; event?: SimpleEvent; travelEvents?: SimpleEvent[]; failure?: SchedulingFailure } {
     const startTime = performance.now();
     this.metrics.tasksAttempted++;
 
@@ -63,10 +64,15 @@ export class Scheduler {
       };
     }
 
-    // Find all fitting slots
+    // Get task's location for travel-aware scheduling
+    const taskLocationId = task.locationId ?? null;
+
+    // Find all fitting slots (accounting for travel time if location is set)
     const fittingSlots = this.slotManager.findAllFittingSlots(
       task.duration,
-      afterTime || this.context.currentDate
+      afterTime || this.context.currentDate,
+      undefined, // maxDaysToSearch - use default
+      taskLocationId
     );
 
     if (fittingSlots.length === 0) {
@@ -103,18 +109,28 @@ export class Scheduler {
 
     // Create the event with buffer offset at the start
     const bufferMinutes = this.slotManager.getBufferTimeMinutes();
-    const startDate = dateTimeService.addDuration(bestSlot.slot.start, bufferMinutes);
+
+    // Calculate travel time before the task
+    const travelBefore = this.slotManager.getTravelTime(
+      fittingSlots.find(s => s.start.getTime() === bestSlot.slot.start.getTime())?.prevLocationId ?? null,
+      taskLocationId,
+      bestSlot.slot.start
+    );
+
+    // Start after buffer + travel before
+    const startDate = dateTimeService.addDuration(bestSlot.slot.start, bufferMinutes + travelBefore);
     const endDate = dateTimeService.addDuration(startDate, task.duration);
 
-    // Reserve the slot
-    const reserved = this.slotManager.reserveSlot(
+    // Reserve the slot with travel time handling
+    const reserveResult = this.slotManager.reserveSlotWithTravel(
       startDate,
       endDate,
       task.id,
-      task.itemType
+      task.itemType as "task" | "goal" | "plan" | "template",
+      taskLocationId
     );
 
-    if (!reserved) {
+    if (!reserveResult.success) {
       this.metrics.tasksFailed++;
       return {
         success: false,
@@ -129,6 +145,7 @@ export class Scheduler {
 
     const now = new Date();
 
+    // Create the main task event
     const event: SimpleEvent = {
       userId: this.context.userId,
       id: task.id,
@@ -154,6 +171,38 @@ export class Scheduler {
     // Add to scheduled events
     this.context.scheduledEvents.push(event);
 
+    // Create travel events if any
+    const travelEvents: SimpleEvent[] = [];
+    for (const travel of reserveResult.travelEvents) {
+      const travelEvent = {
+        userId: this.context.userId,
+        id: travel.id,
+        title: "Travel",
+        start: travel.start.toISOString(),
+        end: travel.end.toISOString(),
+        backgroundColor: "#9CA3AF",
+        borderColor: "#6B7280",
+        duration: null,
+        rrule: null,
+        extendedProps: {
+          id: uuidv4(),
+          eventId: travel.id,
+          itemType: "travel" as const,
+          parentId: null,
+          completedEndTime: null,
+          completedStartTime: null,
+          fromLocationId: travel.fromLocationId,
+          toLocationId: travel.toLocationId,
+          travelMinutes: travel.travelMinutes,
+        },
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+      } as SimpleEvent;
+
+      travelEvents.push(travelEvent);
+      this.context.scheduledEvents.push(travelEvent);
+    }
+
     const endTime = performance.now();
     const schedulingTime = endTime - startTime;
 
@@ -167,7 +216,7 @@ export class Scheduler {
     this.metrics.averageSchedulingTimeMs =
       totalTime / this.metrics.tasksScheduled;
 
-    return { success: true, event };
+    return { success: true, event, travelEvents };
   }
 
   /**
