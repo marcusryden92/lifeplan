@@ -11,6 +11,7 @@ import luxonPlugin from "@fullcalendar/luxon";
 
 import EventContent from "@/components/events/EventContent";
 import TemplateEventContent from "@/components/events/TemplateEventContent";
+import TravelEventContent from "@/components/events/TravelEventContent";
 
 import type { EventInput } from "@fullcalendar/core/index.js";
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -94,13 +95,10 @@ export default function Calendar({ initialDate }: CalendarProps) {
         eventResize={(resizeInfo) => handleEventResize(updateAll, resizeInfo)}
         eventDrop={(dropInfo) => handleEventDrop(updatePlannerArray, dropInfo)}
         eventContent={({ event }: { event: EventImpl }) => {
-          const isTemplateItem = event.extendedProps.itemType === "template";
+          const itemType = (event.extendedProps as { itemType?: string })?.itemType;
 
-          return (
-            event &&
-            (!isTemplateItem ? (
-              <EventContent event={event} />
-            ) : (
+          if (itemType === "template") {
+            return (
               <TemplateEventContent
                 event={event}
                 onEditTitle={handleTemplateEventEdit}
@@ -112,8 +110,14 @@ export default function Calendar({ initialDate }: CalendarProps) {
                 }
                 disableInteraction
               />
-            ))
-          );
+            );
+          }
+
+          if (itemType === "travel") {
+            return <TravelEventContent event={event} />;
+          }
+
+          return <EventContent event={event} />;
         }}
       />
     </>

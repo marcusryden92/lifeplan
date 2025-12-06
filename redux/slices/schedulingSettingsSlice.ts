@@ -11,11 +11,19 @@ export type SerializedTravelTimeEntry = {
   nightMinutes: number;
 };
 
+export type SerializedLocation = {
+  id: string;
+  name: string;
+  address: string;
+  placeId: string;
+};
+
 export type SchedulingSettings = {
   bufferTimeMinutes: number;
   enableTravelEvents: boolean;
   // Store as array for Redux serialization - convert to Map when needed
   travelTimeMatrix: SerializedTravelTimeEntry[] | null;
+  locations: SerializedLocation[];
   isLoaded: boolean;
 };
 
@@ -23,6 +31,7 @@ const initialState: SchedulingSettings = {
   bufferTimeMinutes: 10, // Default value
   enableTravelEvents: false, // Travel events disabled by default
   travelTimeMatrix: null,
+  locations: [],
   isLoaded: false,
 };
 
@@ -73,6 +82,9 @@ const schedulingSettingsSlice = createSlice({
     ) => {
       state.travelTimeMatrix = action.payload;
     },
+    setLocations: (state, action: PayloadAction<SerializedLocation[]>) => {
+      state.locations = action.payload;
+    },
   },
 });
 
@@ -81,5 +93,6 @@ export const {
   setBufferTimeMinutes,
   setEnableTravelEvents,
   setTravelTimeMatrix,
+  setLocations,
 } = schedulingSettingsSlice.actions;
 export default schedulingSettingsSlice;

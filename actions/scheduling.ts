@@ -21,7 +21,7 @@ export async function fetchUserSchedulingPreferences() {
 }
 
 /**
- * Fetch all user scheduling data at once (preferences + travel times)
+ * Fetch all user scheduling data at once (preferences + travel times + locations)
  * Called once at login to populate Redux store
  */
 export async function fetchAllSchedulingData(): Promise<{
@@ -37,6 +37,12 @@ export async function fetchAllSchedulingData(): Promise<{
     regularMinutes: number;
     nightMinutes: number;
   }>;
+  locations: Array<{
+    id: string;
+    name: string;
+    address: string;
+    placeId: string;
+  }>;
 }> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -48,17 +54,25 @@ export async function fetchAllSchedulingData(): Promise<{
 
   const defaultTransportMode = prefs?.defaultTransportMode ?? "DRIVING";
 
-  // Fetch travel times for user's default transport mode
-  const travelTimes = await db.travelTime.findMany({
-    where: {
-      userId: session.user.id,
-      transportMode: defaultTransportMode,
-    },
-  });
+  // Fetch locations and travel times in parallel
+  const [locations, travelTimes] = await Promise.all([
+    db.location.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, address: true, placeId: true },
+    }),
+    db.travelTime.findMany({
+      where: {
+        userId: session.user.id,
+        transportMode: defaultTransportMode,
+      },
+    }),
+  ]);
 
   // Convert travel times to serializable format with effective values
+  // Key format must match TimeSlotManager.getTravelTime: "fromId->toId"
   const travelTimeMatrix = travelTimes.map((tt) => ({
-    key: `${tt.fromLocationId}-${tt.toLocationId}`,
+    key: `${tt.fromLocationId}->${tt.toLocationId}`,
     fromLocationId: tt.fromLocationId,
     toLocationId: tt.toLocationId,
     rushHourMinutes: tt.customRushHourMinutes ?? tt.googleRushHourMinutes,
@@ -72,6 +86,7 @@ export async function fetchAllSchedulingData(): Promise<{
       defaultTransportMode,
     },
     travelTimes: travelTimeMatrix,
+    locations,
   };
 }
 

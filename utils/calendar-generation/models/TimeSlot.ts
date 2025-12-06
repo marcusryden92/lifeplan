@@ -83,6 +83,8 @@ export class TimeSlotUtils {
       ) {
         last.end = current.end;
         last.durationMinutes = TimeSlotUtils.getDurationMinutes(last);
+        // Preserve nextLocationId from the slot being absorbed (it's the rightmost)
+        last.nextLocationId = current.nextLocationId;
       } else {
         merged.push(current);
       }

@@ -88,8 +88,14 @@ export function compareData(
   });
 
   // Check calendar changes
-  const prevCal: SimpleEvent[] = [...previousCalendar.current];
-  const calendarMap = new Map(calendar.map((event) => [event.id, event]));
+  // Filter out travel and template events - they are generated dynamically and shouldn't be persisted
+  const prevCal: SimpleEvent[] = [...previousCalendar.current].filter(
+    (e) => e.extendedProps?.itemType !== "travel" && e.extendedProps?.itemType !== "template"
+  );
+  const filteredCalendar = calendar.filter(
+    (e) => e.extendedProps?.itemType !== "travel" && e.extendedProps?.itemType !== "template"
+  );
+  const calendarMap = new Map(filteredCalendar.map((event) => [event.id, event]));
   const prevCalMap = new Map(prevCal.map((event) => [event.id, event]));
 
   // Find events to create or update

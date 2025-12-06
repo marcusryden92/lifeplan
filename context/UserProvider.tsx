@@ -7,6 +7,7 @@ import { setUser } from "@/redux/slices/userSlice";
 import {
   setSchedulingSettings,
   setTravelTimeMatrix,
+  setLocations,
 } from "@/redux/slices/schedulingSettingsSlice";
 import { fetchAllSchedulingData } from "@/actions/scheduling";
 import { User } from "@/types/user";
@@ -21,7 +22,7 @@ export default function UserProvider({ children }: { children: ReactNode }) {
     if (status === "authenticated" && user) {
       dispatch(setUser(user));
 
-      // Load user's scheduling settings and travel times
+      // Load user's scheduling settings, travel times, and locations
       fetchAllSchedulingData().then((data) => {
         // Set scheduling preferences
         dispatch(
@@ -34,6 +35,9 @@ export default function UserProvider({ children }: { children: ReactNode }) {
         if (data.travelTimes.length > 0) {
           dispatch(setTravelTimeMatrix(data.travelTimes));
         }
+
+        // Store locations
+        dispatch(setLocations(data.locations));
       });
     }
   }, [status, user, dispatch]);

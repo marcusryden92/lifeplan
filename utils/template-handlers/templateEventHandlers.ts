@@ -60,10 +60,13 @@ export const handleTemplateEventResize = (
 
   if (!startDate || !endDate) return;
 
+  // Use extendedProps.eventId to get the original template ID
+  // (event.id is a compound ID like "templateId-date-time")
+  const templateId = (event.extendedProps?.eventId as string) || event.id;
+
   updateTemplateArray((prevEvents) =>
     prevEvents.map((ev) => {
-      if (ev.id !== event.id) {
-        console.log("error");
+      if (ev.id !== templateId) {
         return ev;
       }
 
@@ -77,6 +80,7 @@ export const handleTemplateEventResize = (
         startDay: getWeekdayFromDate(startDate),
         startTime: getTimeFromDate(startDate),
         duration,
+        updatedAt: new Date().toISOString(),
       };
     })
   );
@@ -93,9 +97,13 @@ export const handleTemplateEventDrop = (
 
   if (!startDate || !endDate) return;
 
+  // Use extendedProps.eventId to get the original template ID
+  // (event.id is a compound ID like "templateId-date-time")
+  const templateId = (event.extendedProps?.eventId as string) || event.id;
+
   updateTemplateArray((prevEvents) =>
     prevEvents.map((ev) => {
-      if (ev.id !== event.id) return ev;
+      if (ev.id !== templateId) return ev;
 
       // Calculate duration in minutes
       const duration = Math.round(
@@ -107,6 +115,7 @@ export const handleTemplateEventDrop = (
         startDay: getWeekdayFromDate(startDate),
         startTime: getTimeFromDate(startDate),
         duration,
+        updatedAt: new Date().toISOString(),
       };
     })
   );

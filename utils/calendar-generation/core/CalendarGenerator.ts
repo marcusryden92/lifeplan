@@ -342,6 +342,8 @@ export class CalendarGenerator {
           ).filter((t) => !taskIsCompleted(t) && !scheduledTaskIds.has(t.id) && !memoizedEventIds.has(t.id));
 
           let goalFailedDueToNoSlots = false;
+          // Track afterTime to ensure tasks within a goal are scheduled sequentially
+          let goalAfterTime: Date | undefined = undefined;
 
           for (const task of goalTasks) {
             if (largestTemplateGap && task.duration > largestTemplateGap) {
@@ -355,10 +357,13 @@ export class CalendarGenerator {
               continue;
             }
 
-            const res = scheduler.scheduleTask(task);
+            // Pass afterTime to ensure this task is scheduled after the previous one
+            const res = scheduler.scheduleTask(task, goalAfterTime);
             if (res.success && res.event) {
               events.push(res.event);
               scheduledTaskIds.add(task.id);
+              // Next task in goal must come after this one
+              goalAfterTime = new Date(res.event.end);
             } else if (res.failure) {
               if (res.failure.reason === SchedulingFailureReason.NO_SLOTS) {
                 goalFailedDueToNoSlots = true;

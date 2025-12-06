@@ -107,27 +107,29 @@ export class Scheduler {
       };
     }
 
-    // Create the event with buffer offset at the start
+    // Get buffer time
     const bufferMinutes = this.slotManager.getBufferTimeMinutes();
 
-    // Calculate travel time before the task
-    const travelBefore = this.slotManager.getTravelTime(
-      fittingSlots.find(s => s.start.getTime() === bestSlot.slot.start.getTime())?.prevLocationId ?? null,
-      taskLocationId,
-      bestSlot.slot.start
+    // Get the original slot with location info
+    const originalSlot = fittingSlots.find(
+      (s) => s.start.getTime() === bestSlot.slot.start.getTime()
     );
 
-    // Start after buffer + travel before
-    const startDate = dateTimeService.addDuration(bestSlot.slot.start, bufferMinutes + travelBefore);
-    const endDate = dateTimeService.addDuration(startDate, task.duration);
+    // Calculate task start: slot start + buffer
+    // Travel time is handled separately by reserveSlotWithTravel
+    const taskStartDate = dateTimeService.addDuration(bestSlot.slot.start, bufferMinutes);
+    const taskEndDate = dateTimeService.addDuration(taskStartDate, task.duration);
 
     // Reserve the slot with travel time handling
+    // Pass the slot's location info so travel can be calculated correctly
     const reserveResult = this.slotManager.reserveSlotWithTravel(
-      startDate,
-      endDate,
+      taskStartDate,
+      taskEndDate,
       task.id,
       task.itemType as "task" | "goal" | "plan" | "template",
-      taskLocationId
+      taskLocationId,
+      originalSlot?.prevLocationId ?? null,
+      originalSlot?.nextLocationId ?? null
     );
 
     if (!reserveResult.success) {
@@ -150,8 +152,8 @@ export class Scheduler {
       userId: this.context.userId,
       id: task.id,
       title: task.title,
-      start: startDate.toISOString(),
-      end: endDate.toISOString(),
+      start: taskStartDate.toISOString(),
+      end: taskEndDate.toISOString(),
       extendedProps: {
         id: uuidv4(),
         eventId: task.id,

@@ -202,11 +202,15 @@ export class TimeSlotManager {
         });
 
         // Look up locations from the planner map
+        // Use extendedProps.eventId first (for template events which have compound IDs),
+        // then fall back to event.id (for planner items)
         if (prevEvent) {
-          slot.prevLocationId = plannerLocationMap.get(prevEvent.id) ?? null;
+          const lookupId = (prevEvent.extendedProps?.eventId as string) || prevEvent.id;
+          slot.prevLocationId = plannerLocationMap.get(lookupId) ?? null;
         }
         if (nextEvent) {
-          slot.nextLocationId = plannerLocationMap.get(nextEvent.id) ?? null;
+          const lookupId = (nextEvent.extendedProps?.eventId as string) || nextEvent.id;
+          slot.nextLocationId = plannerLocationMap.get(lookupId) ?? null;
         }
       }
     }
@@ -423,13 +427,17 @@ export class TimeSlotManager {
    * Reserve a time slot with travel time handling
    * Returns the travel events that should be created (if any)
    * @param taskLocationId - Location of the task being placed
+   * @param prevLocationId - Location of the event before this slot (passed from caller for accuracy)
+   * @param nextLocationId - Location of the event after this slot (passed from caller for accuracy)
    */
   reserveSlotWithTravel(
     start: Date,
     end: Date,
     eventId: string,
     eventType: "task" | "goal" | "plan" | "template",
-    taskLocationId: string | null
+    taskLocationId: string | null,
+    prevLocationId?: string | null,
+    nextLocationId?: string | null
   ): {
     success: boolean;
     travelEvents: Array<{
@@ -470,9 +478,13 @@ export class TimeSlotManager {
       travelMinutes: number;
     }> = [];
 
+    // Use passed location IDs if provided, otherwise fall back to slot's info
+    const effectivePrevLocationId = prevLocationId !== undefined ? prevLocationId : (slot.prevLocationId ?? null);
+    const effectiveNextLocationId = nextLocationId !== undefined ? nextLocationId : (slot.nextLocationId ?? null);
+
     // Calculate travel time before (from previous event's location to this task's location)
     const travelBefore = this.getTravelTime(
-      slot.prevLocationId ?? null,
+      effectivePrevLocationId,
       taskLocationId,
       start
     );
@@ -480,32 +492,32 @@ export class TimeSlotManager {
     // Calculate travel time after (from this task's location to next event's location)
     const travelAfter = this.getTravelTime(
       taskLocationId,
-      slot.nextLocationId ?? null,
+      effectiveNextLocationId,
       end
     );
 
-    // If we need travel before, create a travel event and adjust task start
-    if (travelBefore > 0 && slot.prevLocationId && taskLocationId) {
+    // If we need travel before, create a travel event
+    if (travelBefore > 0 && effectivePrevLocationId && taskLocationId) {
       const travelStart = new Date(start.getTime() - travelBefore * 60000);
       travelEvents.push({
         id: `travel-to-${eventId}`,
         start: travelStart,
         end: start,
-        fromLocationId: slot.prevLocationId,
+        fromLocationId: effectivePrevLocationId,
         toLocationId: taskLocationId,
         travelMinutes: travelBefore,
       });
     }
 
     // If we need travel after, create a travel event
-    if (travelAfter > 0 && taskLocationId && slot.nextLocationId) {
+    if (travelAfter > 0 && taskLocationId && effectiveNextLocationId) {
       const travelEnd = new Date(end.getTime() + travelAfter * 60000);
       travelEvents.push({
         id: `travel-from-${eventId}`,
         start: end,
         end: travelEnd,
         fromLocationId: taskLocationId,
-        toLocationId: slot.nextLocationId,
+        toLocationId: effectiveNextLocationId,
         travelMinutes: travelAfter,
       });
     }
