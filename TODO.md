@@ -29,7 +29,6 @@
 
 - Option for adding locations and calculating travel time between tasks
 
-- Add minimum buffer option between events.
 - Add individual buffer option to events.
 
 - Add habits (repeating events with min/max size rendering within a given time frame)
