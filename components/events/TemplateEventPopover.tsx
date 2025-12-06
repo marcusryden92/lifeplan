@@ -117,21 +117,47 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
     };
   }, [isDragging, dragOffset]);
 
+  // Check if an element is inside a Radix UI portal (Select, Dialog, etc.)
+  const isInsideRadixPortal = (element: Element | null): boolean => {
+    let current = element;
+    while (current) {
+      if (
+        current.hasAttribute?.("data-radix-popper-content-wrapper") ||
+        current.hasAttribute?.("data-radix-select-content") ||
+        current.hasAttribute?.("data-radix-menu-content") ||
+        current.hasAttribute?.("data-radix-dialog-content") ||
+        current.getAttribute?.("role") === "listbox" ||
+        current.getAttribute?.("data-state") === "open"
+      ) {
+        return true;
+      }
+      current = current.parentElement;
+    }
+    return false;
+  };
+
   // Close popover when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(event.target as Node)
-      ) {
-        // Save title changes if we're currently editing
-        if (isEditingTitle && onEdit) {
-          onEdit(titleValue);
-        }
+      const target = event.target as Element;
 
-        // Then close the popover
-        onClose();
+      // Ignore clicks inside the popover
+      if (popoverRef.current && popoverRef.current.contains(target)) {
+        return;
       }
+
+      // Ignore clicks on Radix portals (e.g., Select dropdown)
+      if (isInsideRadixPortal(target)) {
+        return;
+      }
+
+      // Save title changes if we're currently editing
+      if (isEditingTitle && onEdit) {
+        onEdit(titleValue);
+      }
+
+      // Then close the popover
+      onClose();
     };
 
     // Close popover on escape key
