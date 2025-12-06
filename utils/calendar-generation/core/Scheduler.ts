@@ -101,8 +101,9 @@ export class Scheduler {
       };
     }
 
-    // Create the event
-    const startDate = bestSlot.slot.start;
+    // Create the event with buffer offset at the start
+    const bufferMinutes = this.slotManager.getBufferTimeMinutes();
+    const startDate = dateTimeService.addDuration(bestSlot.slot.start, bufferMinutes);
     const endDate = dateTimeService.addDuration(startDate, task.duration);
 
     // Reserve the slot

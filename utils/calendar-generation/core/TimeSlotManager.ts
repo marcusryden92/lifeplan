@@ -72,18 +72,11 @@ export class TimeSlotManager {
       return eventStart < endDate && eventEnd > startDate;
     });
 
-    // Extend events by buffer time to create proper spacing
-    const bufferedEvents = relevantEvents.map((event) => ({
-      ...event,
-      end: dateTimeService.addDuration(
-        new Date(event.end),
-        this.bufferTimeMinutes
-      ).toISOString(),
-    }));
+    // Buffer is now handled during scheduling (leading buffer before event start)
+    // so we don't extend event end times here
+    const occupiedIntervals = eventsToIntervals(relevantEvents);
 
-    const occupiedIntervals = eventsToIntervals(bufferedEvents);
-
-    // Find gaps between occupied intervals (now includes buffer)
+    // Find gaps between occupied intervals
     const gaps = findGaps(occupiedIntervals, startDate, endDate);
 
     // Convert gaps to available time slots
@@ -135,8 +128,8 @@ export class TimeSlotManager {
     const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
     let currentDate = new Date(afterDate);
 
-    // Account for buffer time that will be added when reserving
-    const requiredMinutes = durationMinutes + this.bufferTimeMinutes;
+    // Account for buffer time on both sides of the event
+    const requiredMinutes = durationMinutes + (2 * this.bufferTimeMinutes);
 
     while (currentDate <= searchEndDate) {
       const dayKey = this.getDayKey(currentDate);
@@ -173,7 +166,7 @@ export class TimeSlotManager {
   }
 
   /**
-   * Find all slots that can fit a duration (plus buffer time for reservation)
+   * Find all slots that can fit a duration (plus buffer time on both sides)
    */
   findAllFittingSlots(
     durationMinutes: number,
@@ -184,8 +177,8 @@ export class TimeSlotManager {
     const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
     let currentDate = new Date(afterDate);
 
-    // Account for buffer time that will be added when reserving
-    const requiredMinutes = durationMinutes + this.bufferTimeMinutes;
+    // Account for buffer time on both sides of the event
+    const requiredMinutes = durationMinutes + (2 * this.bufferTimeMinutes);
 
     while (currentDate <= searchEndDate) {
       const dayKey = this.getDayKey(currentDate);
@@ -220,6 +213,8 @@ export class TimeSlotManager {
 
   /**
    * Reserve a time slot (mark as occupied)
+   * The caller is responsible for offsetting the start time by buffer.
+   * This method simply marks [start, end] as occupied.
    */
   reserveSlot(
     start: Date,
@@ -232,30 +227,27 @@ export class TimeSlotManager {
 
     if (!slots) return false;
 
-    // Apply buffer time: extend the end time to include buffer
-    const bufferedEnd = dateTimeService.addDuration(end, this.bufferTimeMinutes);
-
     // Convert dates to timestamps for reliable comparison
     const startTime = start.getTime();
-    const bufferedEndTime = bufferedEnd.getTime();
+    const endTime = end.getTime();
 
-    // Find the slot that can contain this time range (including buffer)
+    // Find the slot that can contain this time range
     const slotIndex = slots.findIndex(
       (slot) =>
         slot.isAvailable &&
         slot.start.getTime() <= startTime &&
-        slot.end.getTime() >= bufferedEndTime
+        slot.end.getTime() >= endTime
     );
 
     if (slotIndex === -1) return false;
 
     const slot = slots[slotIndex];
 
-    // Split the slot and mark the middle part as occupied (including buffer)
+    // Split the slot and mark the middle part as occupied
     const newSlots = TimeSlotUtils.occupySlot(
       slot,
       start,
-      bufferedEnd,
+      end,
       eventId,
       eventType
     );
@@ -263,9 +255,6 @@ export class TimeSlotManager {
     // Replace the old slot with the new slots (keeping only available ones)
     const availableNewSlots = newSlots.filter((s) => s.isAvailable);
     slots.splice(slotIndex, 1, ...availableNewSlots);
-
-    // No need to set again since we mutated the array in place
-    // this.availableSlots already has the updated reference
 
     // Track occupied slot
     const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
@@ -309,6 +298,13 @@ export class TimeSlotManager {
   clear(): void {
     this.availableSlots.clear();
     this.occupiedSlots.clear();
+  }
+
+  /**
+   * Get the buffer time in minutes
+   */
+  getBufferTimeMinutes(): number {
+    return this.bufferTimeMinutes;
   }
 
   /**
@@ -388,8 +384,11 @@ export class TimeSlotManager {
       const weekSlots = this.buildDailySlots(weekStart, 7, weekEvents, []);
 
       // Try to place dynamic items into available slots
+      // Account for buffer time on both sides of the event
+      const requiredBuffer = 2 * this.bufferTimeMinutes;
       for (let i = unscheduledItems.length - 1; i >= 0; i--) {
         const item = unscheduledItems[i];
+        const requiredMinutes = item.durationMinutes + requiredBuffer;
         let placed = false;
         // Search each day in the week
         for (let d = 0; d < 7 && !placed; d++) {
@@ -399,10 +398,13 @@ export class TimeSlotManager {
           for (const slot of slots) {
             if (
               slot.isAvailable &&
-              slot.durationMinutes >= item.durationMinutes
+              slot.durationMinutes >= requiredMinutes
             ) {
-              // Reserve slot for this item
-              const start = slot.start;
+              // Reserve slot for this item with leading buffer
+              const start = dateTimeService.addDuration(
+                slot.start,
+                this.bufferTimeMinutes
+              );
               const end = dateTimeService.addDuration(
                 start,
                 item.durationMinutes
