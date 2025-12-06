@@ -123,6 +123,7 @@ export const generatePlans = (userId: string): Planner[] => {
       priority: 5,
       userId,
       color: data.color,
+      locationId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     };

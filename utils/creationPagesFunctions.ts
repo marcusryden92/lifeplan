@@ -61,6 +61,7 @@ export const onSubmit = ({
       completedEndTime: null,
       priority: 5,
       color: calendarColors[0],
+      locationId: null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };

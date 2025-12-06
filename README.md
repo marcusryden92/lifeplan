@@ -10,8 +10,8 @@ pnpm run prisma generate
 
 # Apply migrations to dev server
 
-pnpm run prisma migrate dev --name example_name
-pnpm run prisma migrate deploy
+pnpm run prisma:migrate:dev --name example_name
+pnpm run prisma:migrate:deploy
 
 ## Local Postgres Workflow
 

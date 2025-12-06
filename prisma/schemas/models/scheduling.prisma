@@ -1,10 +1,11 @@
 // User-level scheduling preferences
 model UserSchedulingPreferences {
-  id                String   @id @default(cuid())
-  userId            String   @unique
-  bufferTimeMinutes Int      @default(10) // Minimum buffer time between scheduled items
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                   String        @id @default(cuid())
+  userId               String        @unique
+  bufferTimeMinutes    Int           @default(10) // Minimum buffer time between scheduled items
+  defaultTransportMode TransportMode @default(DRIVING) // Default transport mode for travel time calculations
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
   @@map("UserSchedulingPreferences")
 }

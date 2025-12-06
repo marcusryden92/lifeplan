@@ -220,7 +220,7 @@ export class TimeSlotManager {
     start: Date,
     end: Date,
     eventId: string,
-    eventType: "task" | "goal" | "plan" | "template"
+    eventType: "task" | "goal" | "plan" | "template" | "travel"
   ): boolean {
     const dayKey = this.getDayKey(start);
     const slots = this.availableSlots.get(dayKey);

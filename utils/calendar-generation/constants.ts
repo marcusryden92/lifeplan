@@ -97,6 +97,28 @@ export const STRATEGY_WEIGHTS = {
   DEPENDENCY_WEIGHT: 0.8,
   /** Weight for energy/time-of-day optimization */
   ENERGY_WEIGHT: 0.5,
+  /** Weight for location-based grouping */
+  LOCATION_GROUPING_WEIGHT: 0.6,
+} as const;
+
+/**
+ * Location and travel time configuration
+ */
+export const LOCATION_CONFIG = {
+  /** Maximum number of locations a user can save */
+  MAX_LOCATIONS: 10,
+  /** Rush hour morning start (7 AM) */
+  RUSH_HOUR_MORNING_START: 7,
+  /** Rush hour morning end (9 AM) */
+  RUSH_HOUR_MORNING_END: 9,
+  /** Rush hour evening start (5 PM) */
+  RUSH_HOUR_EVENING_START: 17,
+  /** Rush hour evening end (7 PM) */
+  RUSH_HOUR_EVENING_END: 19,
+  /** Night time start (9 PM) */
+  NIGHT_START: 21,
+  /** Night time end (6 AM) */
+  NIGHT_END: 6,
 } as const;
 
 /**

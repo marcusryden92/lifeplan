@@ -1,0 +1,59 @@
+// Location and Travel Time models for geographical scheduling
+
+model Location {
+  id        String   @id @default(cuid())
+  name      String   // User-friendly name: "Home", "Office", etc.
+  address   String   // Full formatted address from Google Places
+  placeId   String   // Google Place ID for reference
+  lat       Float    // Latitude
+  lng       Float    // Longitude
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations to travel times (this location as origin or destination)
+  travelTimesFrom TravelTime[] @relation("FromLocation")
+  travelTimesTo   TravelTime[] @relation("ToLocation")
+
+  // Planners assigned to this location
+  planners Planner[]
+
+  @@unique([userId, placeId]) // Prevent duplicate locations per user
+  @@map("Locations")
+}
+
+model TravelTime {
+  id             String        @id @default(cuid())
+  fromLocationId String
+  toLocationId   String
+  transportMode  TransportMode
+
+  // Google API fetched values (baseline) - stored permanently
+  googleRushHourMinutes Int // 7-9 AM, 5-7 PM weekdays
+  googleRegularMinutes  Int // Other daytime hours
+  googleNightMinutes    Int // 9 PM - 6 AM
+
+  // User overrides (null = use Google value)
+  customRushHourMinutes Int?
+  customRegularMinutes  Int?
+  customNightMinutes    Int?
+
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fromLocation Location @relation("FromLocation", fields: [fromLocationId], references: [id], onDelete: Cascade)
+  toLocation   Location @relation("ToLocation", fields: [toLocationId], references: [id], onDelete: Cascade)
+
+  // Note: No self-referential entries (fromLocationId != toLocationId enforced in application code)
+  @@unique([fromLocationId, toLocationId, transportMode])
+  @@map("TravelTimes")
+}
+
+enum TransportMode {
+  DRIVING
+  TRANSIT
+  BICYCLING
+  WALKING
+}

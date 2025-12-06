@@ -36,6 +36,7 @@ export const handleSelect = (
       completedEndTime: null,
       userId,
       color: "black",
+      locationId: null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };

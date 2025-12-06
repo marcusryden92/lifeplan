@@ -12,6 +12,7 @@ model User {
   SimpleEvent           SimpleEvent[]
   twoFactorConfirmation TwoFactorConfirmation?
   accounts              Account[]
+  locations             Location[]
 
   @@map("users")
 }

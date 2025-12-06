@@ -100,6 +100,17 @@ export interface ScoredSlot {
 }
 
 /**
+ * Travel time entry for location-aware scheduling
+ */
+export interface TravelTimeEntry {
+  fromLocationId: string;
+  toLocationId: string;
+  rushHourMinutes: number;
+  regularMinutes: number;
+  nightMinutes: number;
+}
+
+/**
  * Configuration for calendar generation
  */
 export interface CalendarGenerationConfig {
@@ -116,7 +127,12 @@ export interface CalendarGenerationConfig {
     urgency?: number;
     dependency?: number;
     energy?: number;
+    locationGrouping?: number;
   };
+  /** Travel time matrix for location-aware scheduling */
+  travelTimeMatrix?: Map<string, TravelTimeEntry>;
+  /** Whether to inject travel events between location changes */
+  injectTravelEvents?: boolean;
 }
 
 /**

@@ -17,7 +17,7 @@ export interface TimeSlot {
   /** ID of the event occupying this slot (if any) */
   eventId?: string;
   /** Type of event occupying this slot (if any) */
-  eventType?: "task" | "goal" | "plan" | "template";
+  eventType?: "task" | "goal" | "plan" | "template" | "travel";
 }
 
 export interface TimeSlotBlock {
@@ -131,7 +131,7 @@ export class TimeSlotUtils {
     start: Date,
     end: Date,
     eventId: string,
-    eventType: "task" | "goal" | "plan" | "template"
+    eventType: "task" | "goal" | "plan" | "template" | "travel"
   ): TimeSlot[] {
     const result: TimeSlot[] = [];
 

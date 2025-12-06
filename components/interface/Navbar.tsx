@@ -12,6 +12,7 @@ import {
   FaFlag,
   FaBullseye,
   FaClock,
+  FaLocationArrow,
 } from "react-icons/fa";
 import { MdViewWeek } from "react-icons/md";
 
@@ -131,6 +132,26 @@ export const Navbar = () => {
             >
               <FaClock className="h-5 w-5" />
               <span className="hidden lg:block">Strategy</span>
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            variant={pathname === "/locations" ? "default" : "outline"}
+            className="justify-start"
+            size="sm"
+          >
+            <Link
+              href="/locations"
+              className={clsx(
+                "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium",
+                pathname === "/locations"
+                  ? "bg-gray-800 text-white"
+                  : "hover:bg-gray-100"
+              )}
+            >
+              <FaLocationArrow className="h-5 w-5" />
+              <span className="hidden lg:block">Locations</span>
             </Link>
           </Button>
         </div>
