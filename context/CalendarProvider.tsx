@@ -61,6 +61,7 @@ export default function CalendarProvider({
       },
       template: { event: { borderLeft: "4px solid black" } },
       calendar: { event: { borderLeft: "4px solid #ADD8E6" } },
+      travel: { event: { borderLeft: "5px solid #70757F" } },
     },
   };
 

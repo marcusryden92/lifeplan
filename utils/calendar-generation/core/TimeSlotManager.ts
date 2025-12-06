@@ -374,15 +374,19 @@ export class TimeSlotManager {
   }
 
   /**
-   * Reserve a time slot for an event with travel time handling
-   * Creates travel events if needed based on location differences
-   * @param start - Task start time
+   * Reserve a time slot for an event with travel time handling.
+   * Travel is stored as occupied slots (not SimpleEvents) that can be reclaimed
+   * by same-location tasks inserted later.
+   *
+   * @param start - Task start time (after buffer, after travel-before)
    * @param end - Task end time
    * @param eventId - ID of the event being placed
    * @param eventType - Type of the event
    * @param taskLocationId - Location of the task being placed (null = "everywhere")
    * @param travelBefore - Minutes of travel needed before task (pre-calculated by caller)
    * @param travelAfter - Minutes of travel needed after task (pre-calculated by caller)
+   * @param prevLocationId - Location of the event before this slot
+   * @param nextLocationId - Location of the event after this slot
    */
   reserveSlotWithTravel(
     start: Date,
@@ -394,29 +398,19 @@ export class TimeSlotManager {
     travelAfter: number,
     prevLocationId: string | null,
     nextLocationId: string | null
-  ): {
-    success: boolean;
-    travelEvents: Array<{
-      id: string;
-      start: Date;
-      end: Date;
-      fromLocationId: string;
-      toLocationId: string;
-      travelMinutes: number;
-    }>;
-  } {
+  ): { success: boolean } {
     const dayKey = this.getDayKey(start);
     const slots = this.availableSlots.get(dayKey);
 
     if (!slots) {
-      return { success: false, travelEvents: [] };
+      return { success: false };
     }
 
     // Calculate full occupied range including travel
-    const travelStart = travelBefore > 0
+    const travelStartTime = travelBefore > 0
       ? new Date(start.getTime() - travelBefore * 60000)
       : start;
-    const travelEnd = travelAfter > 0
+    const travelEndTime = travelAfter > 0
       ? new Date(end.getTime() + travelAfter * 60000)
       : end;
 
@@ -424,75 +418,301 @@ export class TimeSlotManager {
     const slotIndex = slots.findIndex(
       (slot) =>
         slot.isAvailable &&
-        slot.start.getTime() <= travelStart.getTime() &&
-        slot.end.getTime() >= travelEnd.getTime()
+        slot.start.getTime() <= travelStartTime.getTime() &&
+        slot.end.getTime() >= travelEndTime.getTime()
     );
 
     if (slotIndex === -1) {
-      return { success: false, travelEvents: [] };
+      return { success: false };
     }
 
     const slot = slots[slotIndex];
-    const travelEvents: Array<{
-      id: string;
-      start: Date;
-      end: Date;
-      fromLocationId: string;
-      toLocationId: string;
-      travelMinutes: number;
-    }> = [];
+    const newSlots: TimeSlot[] = [];
 
-    // Create travel event BEFORE the task if needed
+    // Slot before everything (available)
+    if (travelStartTime.getTime() > slot.start.getTime()) {
+      newSlots.push({
+        start: slot.start,
+        end: travelStartTime,
+        durationMinutes: Math.floor(
+          (travelStartTime.getTime() - slot.start.getTime()) / 60000
+        ),
+        isAvailable: true,
+        prevLocationId: slot.prevLocationId,
+        nextLocationId: prevLocationId, // Next thing is either travel-before or the task
+      });
+    }
+
+    // Travel slot BEFORE the task (if needed)
     if (travelBefore > 0 && prevLocationId && taskLocationId) {
-      travelEvents.push({
-        id: `travel-to-${eventId}`,
-        start: travelStart,
-        end: start,
-        fromLocationId: prevLocationId,
-        toLocationId: taskLocationId,
-        travelMinutes: travelBefore,
-      });
+      newSlots.push(
+        TimeSlotUtils.createTravelSlot(
+          travelStartTime,
+          start,
+          prevLocationId,
+          taskLocationId,
+          `travel-to-${eventId}`
+        )
+      );
     }
 
-    // Create travel event AFTER the task if needed
-    if (travelAfter > 0 && taskLocationId && nextLocationId) {
-      travelEvents.push({
-        id: `travel-from-${eventId}`,
-        start: end,
-        end: travelEnd,
-        fromLocationId: taskLocationId,
-        toLocationId: nextLocationId,
-        travelMinutes: travelAfter,
-      });
-    }
-
-    // For "everywhere" tasks, inherit the location context for remaining slots
-    // This preserves the travel requirement for subsequent tasks
-    const effectiveLocationId = taskLocationId ?? slot.prevLocationId;
-
-    // Reserve the full range (travel + task + travel)
-    const newSlots = TimeSlotUtils.occupySlot(
-      slot,
-      travelStart,
-      travelEnd,
+    // The task itself (occupied)
+    newSlots.push({
+      start,
+      end,
+      durationMinutes: Math.floor((end.getTime() - start.getTime()) / 60000),
+      isAvailable: false,
       eventId,
       eventType,
-      effectiveLocationId  // Pass effective location for slot inheritance
-    );
+      prevLocationId: taskLocationId, // Task's own location for context
+      nextLocationId: taskLocationId,
+    });
 
-    // Replace the old slot with the new slots
+    // Travel slot AFTER the task (if needed)
+    if (travelAfter > 0 && taskLocationId && nextLocationId) {
+      newSlots.push(
+        TimeSlotUtils.createTravelSlot(
+          end,
+          travelEndTime,
+          taskLocationId,
+          nextLocationId,
+          `travel-from-${eventId}`
+        )
+      );
+    }
+
+    // Slot after everything (available)
+    if (travelEndTime.getTime() < slot.end.getTime()) {
+      newSlots.push({
+        start: travelEndTime,
+        end: slot.end,
+        durationMinutes: Math.floor(
+          (slot.end.getTime() - travelEndTime.getTime()) / 60000
+        ),
+        isAvailable: true,
+        prevLocationId: taskLocationId ?? slot.prevLocationId,
+        nextLocationId: slot.nextLocationId,
+      });
+    }
+
+    // Replace the old slot with new slots
     const availableNewSlots = newSlots.filter((s) => s.isAvailable);
     slots.splice(slotIndex, 1, ...availableNewSlots);
 
-    // Track occupied slots
+    // Track all occupied slots (including travel)
     const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
     occupiedSlots.push(...newSlots.filter((s) => !s.isAvailable));
     this.occupiedSlots.set(dayKey, occupiedSlots);
 
-    return {
-      success: true,
-      travelEvents,
-    };
+    return { success: true };
+  }
+
+  /**
+   * Find fitting slots, considering that adjacent travel slots can be reclaimed
+   * if the new task has the same location as the travel's origin.
+   *
+   * Returns slots with additional info about reclaimable travel time.
+   */
+  findAllFittingSlotsWithTravelReclaim(
+    durationMinutes: number,
+    taskLocationId: string | null,
+    afterDate: Date = this.currentDate,
+    maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH
+  ): Array<TimeSlot & { reclaimableTravelBefore: number; reclaimableTravelAfter: number }> {
+    const fittingSlots: Array<TimeSlot & { reclaimableTravelBefore: number; reclaimableTravelAfter: number }> = [];
+    const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
+    let currentDate = new Date(afterDate);
+
+    const baseRequiredMinutes = durationMinutes + (2 * this.bufferTimeMinutes);
+
+    while (currentDate <= searchEndDate) {
+      const dayKey = this.getDayKey(currentDate);
+      const availableSlots = this.availableSlots.get(dayKey) || [];
+      const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+
+      for (const slot of availableSlots) {
+        if (slot.end <= afterDate) continue;
+
+        const effectiveStart = slot.start < afterDate ? afterDate : slot.start;
+        let effectiveMinutes = dateTimeService.getMinutesDifference(effectiveStart, slot.end);
+
+        // Check for reclaimable travel slots adjacent to this available slot
+        let reclaimableTravelBefore = 0;
+        let reclaimableTravelAfter = 0;
+
+        if (taskLocationId) {
+          // Check for travel slot immediately BEFORE this available slot
+          const travelBefore = occupiedSlots.find(
+            (occ) =>
+              TimeSlotUtils.isTravelSlot(occ) &&
+              Math.abs(occ.end.getTime() - slot.start.getTime()) < 60000 &&
+              occ.travelFromLocationId === taskLocationId
+          );
+
+          if (travelBefore) {
+            reclaimableTravelBefore = travelBefore.durationMinutes;
+            effectiveMinutes += reclaimableTravelBefore;
+          }
+
+          // Check for travel slot immediately AFTER this available slot
+          const travelAfter = occupiedSlots.find(
+            (occ) =>
+              TimeSlotUtils.isTravelSlot(occ) &&
+              Math.abs(occ.start.getTime() - slot.end.getTime()) < 60000 &&
+              occ.travelFromLocationId === taskLocationId
+          );
+
+          if (travelAfter) {
+            reclaimableTravelAfter = travelAfter.durationMinutes;
+            effectiveMinutes += reclaimableTravelAfter;
+          }
+        }
+
+        if (effectiveMinutes >= baseRequiredMinutes) {
+          fittingSlots.push({
+            ...slot,
+            start: effectiveStart,
+            durationMinutes: effectiveMinutes,
+            prevLocationId: slot.prevLocationId,
+            nextLocationId: slot.nextLocationId,
+            reclaimableTravelBefore,
+            reclaimableTravelAfter,
+          });
+        }
+      }
+
+      currentDate = dateTimeService.shiftDays(currentDate, 1);
+    }
+
+    return fittingSlots;
+  }
+
+  /**
+   * Reclaim a travel slot adjacent to an available slot, merging it back into available time.
+   * Used when inserting a same-location task that eliminates the need for that travel.
+   */
+  reclaimAdjacentTravelSlot(
+    availableSlot: TimeSlot,
+    position: "before" | "after"
+  ): boolean {
+    const dayKey = this.getDayKey(availableSlot.start);
+    const availableSlots = this.availableSlots.get(dayKey);
+    const occupiedSlots = this.occupiedSlots.get(dayKey);
+
+    if (!availableSlots || !occupiedSlots) return false;
+
+    // Find the travel slot
+    const travelSlotIndex = occupiedSlots.findIndex((occ) => {
+      if (!TimeSlotUtils.isTravelSlot(occ)) return false;
+      if (position === "before") {
+        return Math.abs(occ.end.getTime() - availableSlot.start.getTime()) < 60000;
+      } else {
+        return Math.abs(occ.start.getTime() - availableSlot.end.getTime()) < 60000;
+      }
+    });
+
+    if (travelSlotIndex === -1) return false;
+
+    const travelSlot = occupiedSlots[travelSlotIndex];
+
+    // Find the available slot in the available slots array
+    const availableSlotIndex = availableSlots.findIndex(
+      (s) => s.start.getTime() === availableSlot.start.getTime()
+    );
+
+    if (availableSlotIndex === -1) return false;
+
+    // Convert travel slot to available and merge with the existing available slot
+    const reclaimedSlot = TimeSlotUtils.reclaimTravelSlot(travelSlot);
+
+    if (position === "before") {
+      // Extend available slot backward
+      availableSlots[availableSlotIndex] = {
+        ...availableSlots[availableSlotIndex],
+        start: reclaimedSlot.start,
+        durationMinutes:
+          availableSlots[availableSlotIndex].durationMinutes +
+          reclaimedSlot.durationMinutes,
+        prevLocationId: reclaimedSlot.prevLocationId,
+      };
+    } else {
+      // Extend available slot forward
+      availableSlots[availableSlotIndex] = {
+        ...availableSlots[availableSlotIndex],
+        end: reclaimedSlot.end,
+        durationMinutes:
+          availableSlots[availableSlotIndex].durationMinutes +
+          reclaimedSlot.durationMinutes,
+        nextLocationId: reclaimedSlot.nextLocationId,
+      };
+    }
+
+    // Remove the travel slot from occupied
+    occupiedSlots.splice(travelSlotIndex, 1);
+
+    return true;
+  }
+
+  /**
+   * Get all occupied slots (for generating final travel events)
+   */
+  getAllOccupiedSlots(): Map<string, TimeSlot[]> {
+    return new Map(this.occupiedSlots);
+  }
+
+  /**
+   * Get all travel slots (for converting to SimpleEvents at the end)
+   */
+  getAllTravelSlots(): TimeSlot[] {
+    const travelSlots: TimeSlot[] = [];
+    for (const slots of this.occupiedSlots.values()) {
+      for (const slot of slots) {
+        if (TimeSlotUtils.isTravelSlot(slot)) {
+          travelSlots.push(slot);
+        }
+      }
+    }
+    return travelSlots;
+  }
+
+  /**
+   * Convert all travel slots to SimpleEvents
+   * Called at the end of scheduling to generate final travel events
+   */
+  generateTravelEvents(userId: string): SimpleEvent[] {
+    const travelSlots = this.getAllTravelSlots();
+    const now = new Date();
+
+    return travelSlots.map((slot) => {
+      const eventId = slot.eventId || `travel-${slot.start.getTime()}`;
+      // Travel events have extra props not in the base schema (fromLocationId, toLocationId, travelMinutes)
+      // These are used for display purposes only, not persisted
+      return {
+        userId,
+        id: eventId,
+        title: "Travel",
+        start: slot.start.toISOString(),
+        end: slot.end.toISOString(),
+        backgroundColor: "#9CA3AF",
+        borderColor: "#6B7280",
+        duration: null,
+        rrule: null,
+        extendedProps: {
+          id: eventId,
+          eventId: eventId,
+          itemType: "travel",
+          parentId: null,
+          completedEndTime: null,
+          completedStartTime: null,
+          // Extra travel-specific props (not in Prisma schema, used for display)
+          fromLocationId: slot.travelFromLocationId ?? null,
+          toLocationId: slot.travelToLocationId ?? null,
+          travelMinutes: slot.durationMinutes,
+        },
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+      } as SimpleEvent;
+    });
   }
 
   /**

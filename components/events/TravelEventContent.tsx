@@ -37,7 +37,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
         padding: elementHeight < 20 ? "2px 8px" : "8px",
         borderRadius: userSettings.styles.events.borderRadius,
         backgroundColor: event.backgroundColor,
-        borderLeft: "3px solid #6B7280",
+        borderLeft: userSettings.styles.travel.event.borderLeft,
         opacity: 0.85,
       }}
     >

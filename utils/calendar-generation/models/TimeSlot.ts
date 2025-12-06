@@ -22,6 +22,10 @@ export interface TimeSlot {
   prevLocationId?: string | null;
   /** Location ID of the event immediately after this slot (null if none or unknown) */
   nextLocationId?: string | null;
+  /** For travel slots: the location ID of the task this travel is associated with */
+  travelFromLocationId?: string | null;
+  /** For travel slots: the destination location ID */
+  travelToLocationId?: string | null;
 }
 
 export interface TimeSlotBlock {
@@ -198,5 +202,52 @@ export class TimeSlotUtils {
     }
 
     return result;
+  }
+
+  /**
+   * Create a travel slot (occupied, but can be reclaimed by same-location tasks)
+   */
+  static createTravelSlot(
+    start: Date,
+    end: Date,
+    fromLocationId: string,
+    toLocationId: string,
+    associatedEventId: string
+  ): TimeSlot {
+    return {
+      start,
+      end,
+      durationMinutes: Math.floor(
+        (end.getTime() - start.getTime()) / (1000 * 60)
+      ),
+      isAvailable: false,
+      eventId: associatedEventId,
+      eventType: "travel",
+      prevLocationId: fromLocationId,
+      nextLocationId: toLocationId,
+      travelFromLocationId: fromLocationId,
+      travelToLocationId: toLocationId,
+    };
+  }
+
+  /**
+   * Check if a slot is a travel slot that can be reclaimed
+   */
+  static isTravelSlot(slot: TimeSlot): boolean {
+    return slot.eventType === "travel" && !slot.isAvailable;
+  }
+
+  /**
+   * Convert a travel slot back to an available slot (for reclaiming)
+   */
+  static reclaimTravelSlot(travelSlot: TimeSlot): TimeSlot {
+    return {
+      start: travelSlot.start,
+      end: travelSlot.end,
+      durationMinutes: travelSlot.durationMinutes,
+      isAvailable: true,
+      prevLocationId: travelSlot.travelFromLocationId ?? travelSlot.prevLocationId,
+      nextLocationId: travelSlot.travelToLocationId ?? travelSlot.nextLocationId,
+    };
   }
 }

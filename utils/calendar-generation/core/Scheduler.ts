@@ -41,12 +41,12 @@ export class Scheduler {
 
   /**
    * Schedule a single task
-   * Returns the task event and any travel events created
+   * Travel is stored as occupied slots, not SimpleEvents - they get converted at the end
    */
   scheduleTask(
     task: Planner,
     afterTime?: Date
-  ): { success: boolean; event?: SimpleEvent; travelEvents?: SimpleEvent[]; failure?: SchedulingFailure } {
+  ): { success: boolean; event?: SimpleEvent; failure?: SchedulingFailure } {
     const startTime = performance.now();
     this.metrics.tasksAttempted++;
 
@@ -67,9 +67,11 @@ export class Scheduler {
     // Get task's location for travel-aware scheduling
     const taskLocationId = task.locationId ?? null;
 
-    // Step 1: Find all slots that can fit base requirement (duration + buffer)
-    const fittingSlots = this.slotManager.findAllFittingSlots(
+    // Step 1: Find all slots that can fit, including reclaimable travel slots
+    // This allows same-location tasks to "absorb" adjacent travel time
+    const fittingSlots = this.slotManager.findAllFittingSlotsWithTravelReclaim(
       task.duration,
+      taskLocationId,
       afterTime || this.context.currentDate
     );
 
@@ -93,12 +95,14 @@ export class Scheduler {
     const bufferMinutes = this.slotManager.getBufferTimeMinutes();
     const baseRequired = task.duration + (2 * bufferMinutes);
 
-    let selectedSlot: TimeSlot | null = null;
+    let selectedSlot: (TimeSlot & { reclaimableTravelBefore: number; reclaimableTravelAfter: number }) | null = null;
     let travelBefore = 0;
     let travelAfter = 0;
+    let reclaimBefore = false;
+    let reclaimAfter = false;
 
     for (const scoredSlot of scoredSlots) {
-      // Find the original slot with location info
+      // Find the original slot with location and reclaim info
       const slot = fittingSlots.find(
         (s) => s.start.getTime() === scoredSlot.slot.start.getTime()
       );
@@ -111,26 +115,39 @@ export class Scheduler {
 
       if (taskLocationId) {
         // Check if prev location is different (need travel before)
+        // But if we can reclaim travel, we don't need new travel on that side
         if (slot.prevLocationId && slot.prevLocationId !== taskLocationId) {
-          needTravelBefore = this.slotManager.getTravelTime(
-            slot.prevLocationId,
-            taskLocationId,
-            slot.start
-          );
+          if (slot.reclaimableTravelBefore > 0) {
+            // We can reclaim this travel - the slot already accounts for it in durationMinutes
+            reclaimBefore = true;
+          } else {
+            needTravelBefore = this.slotManager.getTravelTime(
+              slot.prevLocationId,
+              taskLocationId,
+              slot.start
+            );
+          }
         }
+
         // Check if next location is different (need travel after)
         if (slot.nextLocationId && slot.nextLocationId !== taskLocationId) {
-          needTravelAfter = this.slotManager.getTravelTime(
-            taskLocationId,
-            slot.nextLocationId,
-            slot.start
-          );
+          if (slot.reclaimableTravelAfter > 0) {
+            // We can reclaim this travel
+            reclaimAfter = true;
+          } else {
+            needTravelAfter = this.slotManager.getTravelTime(
+              taskLocationId,
+              slot.nextLocationId,
+              slot.start
+            );
+          }
         }
       }
 
       const totalRequired = baseRequired + needTravelBefore + needTravelAfter;
 
       // Check if this slot has enough capacity
+      // Note: slot.durationMinutes already includes reclaimable travel time
       if (slot.durationMinutes >= totalRequired) {
         selectedSlot = slot;
         travelBefore = needTravelBefore;
@@ -152,15 +169,28 @@ export class Scheduler {
       };
     }
 
-    // Step 4: Calculate task times
+    // Step 4: If reclaiming travel slots, do that first
+    if (reclaimBefore && selectedSlot.reclaimableTravelBefore > 0) {
+      this.slotManager.reclaimAdjacentTravelSlot(selectedSlot, "before");
+    }
+    if (reclaimAfter && selectedSlot.reclaimableTravelAfter > 0) {
+      this.slotManager.reclaimAdjacentTravelSlot(selectedSlot, "after");
+    }
+
+    // Step 5: Calculate task times
     // Layout: [slot.start] -> [buffer] -> [travelBefore] -> [task] -> [travelAfter] -> [buffer]
+    // If we reclaimed travel before, we insert at the reclaimed position (earlier)
+    const effectiveStart = reclaimBefore
+      ? new Date(selectedSlot.start.getTime() - selectedSlot.reclaimableTravelBefore * 60000)
+      : selectedSlot.start;
+
     const taskStartDate = dateTimeService.addDuration(
-      selectedSlot.start,
+      effectiveStart,
       bufferMinutes + travelBefore
     );
     const taskEndDate = dateTimeService.addDuration(taskStartDate, task.duration);
 
-    // Step 5: Reserve the slot with travel
+    // Step 6: Reserve the slot with travel (travel stored as occupied slots, not events)
     const reserveResult = this.slotManager.reserveSlotWithTravel(
       taskStartDate,
       taskEndDate,
@@ -188,7 +218,7 @@ export class Scheduler {
 
     const now = new Date();
 
-    // Create the main task event
+    // Create the main task event (travel events are created at the end from travel slots)
     const event: SimpleEvent = {
       userId: this.context.userId,
       id: task.id,
@@ -211,40 +241,8 @@ export class Scheduler {
       updatedAt: now.toISOString(),
     };
 
-    // Add to scheduled events
+    // Add to scheduled events (travel events added later by CalendarGenerator)
     this.context.scheduledEvents.push(event);
-
-    // Create travel events if any
-    const travelEvents: SimpleEvent[] = [];
-    for (const travel of reserveResult.travelEvents) {
-      const travelEvent = {
-        userId: this.context.userId,
-        id: travel.id,
-        title: "Travel",
-        start: travel.start.toISOString(),
-        end: travel.end.toISOString(),
-        backgroundColor: "#9CA3AF",
-        borderColor: "#6B7280",
-        duration: null,
-        rrule: null,
-        extendedProps: {
-          id: uuidv4(),
-          eventId: travel.id,
-          itemType: "travel" as const,
-          parentId: null,
-          completedEndTime: null,
-          completedStartTime: null,
-          fromLocationId: travel.fromLocationId,
-          toLocationId: travel.toLocationId,
-          travelMinutes: travel.travelMinutes,
-        },
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-      } as SimpleEvent;
-
-      travelEvents.push(travelEvent);
-      this.context.scheduledEvents.push(travelEvent);
-    }
 
     const endTime = performance.now();
     const schedulingTime = endTime - startTime;
@@ -259,7 +257,7 @@ export class Scheduler {
     this.metrics.averageSchedulingTimeMs =
       totalTime / this.metrics.tasksScheduled;
 
-    return { success: true, event, travelEvents };
+    return { success: true, event };
   }
 
   /**

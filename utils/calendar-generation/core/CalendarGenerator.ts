@@ -234,9 +234,11 @@ export class CalendarGenerator {
       context
     );
 
-    // Travel events are created during scheduling by Scheduler.scheduleTask()
-    // when reserveSlotWithTravel is called, so no post-processing needed
-    const allEvents = context.scheduledEvents;
+    // Step 10: Generate travel events from travel slots
+    // Travel is stored as occupied slots during scheduling, converted to SimpleEvents at the end
+    // This allows same-location tasks to reclaim travel slots when inserted
+    const travelEvents = this.slotManager.generateTravelEvents(input.userId);
+    const allEvents = [...context.scheduledEvents, ...travelEvents];
 
     const endTime = performance.now();
     this.metrics.totalExecutionTimeMs = endTime - startTime;
