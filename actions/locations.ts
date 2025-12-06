@@ -537,3 +537,56 @@ export async function updateDefaultTransportMode(
 
 // NOTE: Utility functions getEffectiveTravelTime and hasCustomOverride
 // have been moved to @/utils/locationHelpers.ts
+
+// ============================================================================
+// Calendar Generation Support
+// ============================================================================
+
+/**
+ * Fetch travel times formatted for calendar generation
+ * Returns an array that can be converted to a Map on the client
+ */
+export async function fetchTravelTimesForCalendar(
+  transportMode?: TransportMode
+): Promise<{
+  matrix: Array<{
+    key: string;
+    fromLocationId: string;
+    toLocationId: string;
+    rushHourMinutes: number;
+    regularMinutes: number;
+    nightMinutes: number;
+  }>;
+}> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  // Get user's default transport mode if not specified
+  const mode =
+    transportMode ??
+    (
+      await db.userSchedulingPreferences.findUnique({
+        where: { userId: session.user.id },
+      })
+    )?.defaultTransportMode ??
+    "DRIVING";
+
+  const travelTimes = await db.travelTime.findMany({
+    where: {
+      userId: session.user.id,
+      transportMode: mode,
+    },
+  });
+
+  // Convert to array format that can be serialized
+  const matrix = travelTimes.map((tt) => ({
+    key: `${tt.fromLocationId}-${tt.toLocationId}`,
+    fromLocationId: tt.fromLocationId,
+    toLocationId: tt.toLocationId,
+    rushHourMinutes: tt.customRushHourMinutes ?? tt.googleRushHourMinutes,
+    regularMinutes: tt.customRegularMinutes ?? tt.googleRegularMinutes,
+    nightMinutes: tt.customNightMinutes ?? tt.googleNightMinutes,
+  }));
+
+  return { matrix };
+}

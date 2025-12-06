@@ -1,8 +1,16 @@
 /**
  * LocationGroupingStrategy
  *
- * Scores time slots based on location proximity to minimize travel time.
- * Prefers scheduling tasks at the same location consecutively.
+ * Scores time slots based on location "sandwich" pattern to minimize travel time.
+ * Uses slot's prevLocationId/nextLocationId for efficient scoring.
+ *
+ * Scoring priority (highest to lowest):
+ * 1. Both ends match task location (sandwich) - no travel needed
+ * 2. One end matches task location - travel needed on one side
+ * 3. Neither end matches - travel needed on both sides
+ *
+ * When one or both ends don't match, also checks if slot has enough room
+ * for the task PLUS required travel time.
  */
 
 import { Planner } from "@/types/prisma";
@@ -12,15 +20,13 @@ import { SchedulingStrategy } from "./SchedulingStrategy";
 import { LOCATION_CONFIG } from "../constants";
 
 /**
- * Strategy that scores slots higher when tasks with the same location
- * are grouped together, reducing travel time.
+ * Strategy that scores slots based on location sandwich pattern
  */
 export class LocationGroupingStrategy implements SchedulingStrategy {
   readonly name = "location_grouping";
 
   constructor(
-    private travelTimeMatrix: Map<string, TravelTimeEntry>,
-    private defaultLocationId?: string // e.g., "home" location for first/last events
+    private travelTimeMatrix: Map<string, TravelTimeEntry>
   ) {}
 
   score(task: Planner, slot: TimeSlot, context: SchedulingContext): number {
@@ -29,103 +35,69 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
       return 0.5;
     }
 
-    let score = 0.5; // Neutral base
+    const taskLocation = task.locationId;
+    const prevLocation = slot.prevLocationId;
+    const nextLocation = slot.nextLocationId;
 
-    // Find the previous scheduled event (ends before this slot starts)
-    const prevEvent = this.findPreviousEvent(slot.start, context);
+    // Check location matches
+    const prevMatches = prevLocation === taskLocation;
+    const nextMatches = nextLocation === taskLocation;
+    const prevExists = prevLocation !== null && prevLocation !== undefined;
+    const nextExists = nextLocation !== null && nextLocation !== undefined;
 
-    // Find the next scheduled event (starts after this slot ends)
-    const nextEvent = this.findNextEvent(slot.end, context);
+    // Calculate travel times if needed
+    const travelToPrev = prevExists && !prevMatches && prevLocation
+      ? this.getTravelTimeMinutes(prevLocation, taskLocation, slot.start)
+      : 0;
+    const travelToNext = nextExists && !nextMatches && nextLocation
+      ? this.getTravelTimeMinutes(taskLocation, nextLocation, slot.end)
+      : 0;
 
-    // Bonus for same location as previous event
-    if (prevEvent?.locationId) {
-      if (prevEvent.locationId === task.locationId) {
-        // Same location - big bonus
-        score += 0.3;
-      } else {
-        // Different location - penalty based on travel time
-        const travelTime = this.getTravelTimeMinutes(
-          prevEvent.locationId,
-          task.locationId,
-          slot.start
-        );
-        if (travelTime > 0) {
-          // Penalty scales with travel time (max 0.25 penalty for 60+ min travel)
-          const penalty = Math.min(0.25, travelTime / 240);
-          score -= penalty;
-        }
-      }
+    // Total travel time needed
+    const totalTravelTime = travelToPrev + travelToNext;
+
+    // Check if slot has enough room for task + travel
+    const bufferTime = context.metrics ? 0 : 0; // Buffer handled elsewhere
+    const requiredDuration = task.duration + totalTravelTime + bufferTime;
+
+    if (slot.durationMinutes < requiredDuration) {
+      // Slot doesn't have room for travel - heavily penalize
+      return 0.1;
     }
 
-    // Bonus for same location as next event
-    if (nextEvent?.locationId) {
-      if (nextEvent.locationId === task.locationId) {
-        // Same location - bonus
-        score += 0.2;
-      } else {
-        // Different location - smaller penalty (next event is less certain)
-        const travelTime = this.getTravelTimeMinutes(
-          task.locationId,
-          nextEvent.locationId,
-          slot.end
-        );
-        if (travelTime > 0) {
-          const penalty = Math.min(0.15, travelTime / 240);
-          score -= penalty;
-        }
-      }
+    // Score based on sandwich pattern
+    if (prevMatches && nextMatches) {
+      // Perfect sandwich - both ends match, no travel needed
+      return 1.0;
     }
 
-    // Ensure score stays within bounds
-    return Math.max(0, Math.min(1, score));
-  }
+    if ((prevMatches && !nextExists) || (nextMatches && !prevExists)) {
+      // One end matches, other end is open (start/end of day) - very good
+      return 0.9;
+    }
 
-  /**
-   * Find the most recent event that ends before the given time
-   */
-  private findPreviousEvent(
-    beforeTime: Date,
-    context: SchedulingContext
-  ): { locationId: string | null } | null {
-    const events = context.scheduledEvents;
-    if (!events || events.length === 0) return null;
+    if (prevMatches || nextMatches) {
+      // One end matches, other doesn't - need travel on one side
+      // Penalize based on travel time (less penalty for shorter travel)
+      const singleTravelPenalty = Math.min(0.2, totalTravelTime / 120);
+      return 0.75 - singleTravelPenalty;
+    }
 
-    // Sort by end time descending and find first that ends before slot start
-    const sortedEvents = [...events]
-      .filter((e) => new Date(e.end) <= beforeTime)
-      .sort((a, b) => new Date(b.end).getTime() - new Date(a.end).getTime());
+    if (!prevExists && !nextExists) {
+      // Both ends are open (empty day) - neutral
+      return 0.5;
+    }
 
-    if (sortedEvents.length === 0) return null;
+    if (!prevExists || !nextExists) {
+      // One end is open, other doesn't match - travel on one side
+      const singleTravelPenalty = Math.min(0.15, totalTravelTime / 120);
+      return 0.5 - singleTravelPenalty;
+    }
 
-    const prevEvent = sortedEvents[0];
-
-    // Get location from planner if available
-    const planner = context.allPlanners.find((p) => p.id === prevEvent.id);
-    return { locationId: planner?.locationId ?? null };
-  }
-
-  /**
-   * Find the next event that starts after the given time
-   */
-  private findNextEvent(
-    afterTime: Date,
-    context: SchedulingContext
-  ): { locationId: string | null } | null {
-    const events = context.scheduledEvents;
-    if (!events || events.length === 0) return null;
-
-    // Sort by start time ascending and find first that starts after slot end
-    const sortedEvents = [...events]
-      .filter((e) => new Date(e.start) >= afterTime)
-      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-
-    if (sortedEvents.length === 0) return null;
-
-    const nextEvent = sortedEvents[0];
-
-    // Get location from planner if available
-    const planner = context.allPlanners.find((p) => p.id === nextEvent.id);
-    return { locationId: planner?.locationId ?? null };
+    // Neither end matches and both exist - travel on both sides
+    // This is the worst case for location grouping
+    const doubleTravelPenalty = Math.min(0.3, totalTravelTime / 90);
+    return 0.3 - doubleTravelPenalty;
   }
 
   /**

@@ -20,13 +20,11 @@ import {
   SchedulingContext,
   SchedulingMetrics,
   SchedulingFailure,
-  TravelTimeEntry,
 } from "../models/SchedulingModels";
 import {
   SCHEDULING_CONFIG,
   STRATEGY_WEIGHTS,
   SchedulingFailureReason,
-  LOCATION_CONFIG,
 } from "../constants";
 import { dateTimeService } from "../utils/dateTimeService";
 import { CalendarValidator } from "../utils/validationUtils";
@@ -156,13 +154,20 @@ export class CalendarGenerator {
     this.metrics.templateExpansionTimeMs = templateEnd - templateStart;
     this.metrics.templateEventsGenerated = recurringTemplateEvents.length;
 
-    // Step 5: Build slots
+    // Step 5: Build planner location map for location-aware slot building
+    const plannerLocationMap = new Map<string, string | null>();
+    for (const planner of input.planners) {
+      plannerLocationMap.set(planner.id, planner.locationId ?? null);
+    }
+
+    // Step 6: Build slots with location awareness
     this.slotManager.clear();
     this.slotManager.buildDailySlots(
       currentDate,
       maxDaysAhead,
       eventArray,
-      simpleTemplateEvents
+      simpleTemplateEvents,
+      plannerLocationMap
     );
 
     // Largest gap
@@ -170,7 +175,7 @@ export class CalendarGenerator {
       input.templates
     );
 
-    // Step 6: scheduling context
+    // Step 7: scheduling context
     const context: SchedulingContext = {
       currentDate,
       userId: input.userId,
@@ -183,7 +188,7 @@ export class CalendarGenerator {
       metrics: this.metrics,
     };
 
-    // Step 7: strategy
+    // Step 8: strategy
     const strategies: Array<{ strategy: SchedulingStrategy; weight: number }> = [
       {
         strategy: new UrgencyStrategy(),
@@ -206,7 +211,7 @@ export class CalendarGenerator {
 
     const strategy = new CompositeStrategy(strategies);
 
-    // Step 8: schedule
+    // Step 9: schedule
     const scheduler = new Scheduler(this.slotManager, strategy, context);
     const schedulingResult = this.scheduleTasksAndGoals(
       input.userId,
@@ -219,17 +224,10 @@ export class CalendarGenerator {
       context
     );
 
-    let allEvents = context.scheduledEvents;
+    const allEvents = context.scheduledEvents;
 
-    // Step 9: Inject travel events between location changes if enabled
-    if (input.config?.injectTravelEvents && input.config?.travelTimeMatrix) {
-      allEvents = this.injectTravelEvents(
-        allEvents,
-        input.planners,
-        input.config.travelTimeMatrix,
-        input.userId
-      );
-    }
+    // Note: Travel time is now handled by LocationGroupingStrategy during scheduling
+    // which prefers placing tasks at locations that minimize travel
 
     const endTime = performance.now();
     this.metrics.totalExecutionTimeMs = endTime - startTime;
@@ -586,132 +584,6 @@ export class CalendarGenerator {
 
     // Sort by urgency score (highest first)
     return withUrgency.sort((a, b) => b.urgencyScore - a.urgencyScore);
-  }
-
-  /**
-   * Inject travel events between consecutive events with different locations
-   */
-  private injectTravelEvents(
-    events: SimpleEvent[],
-    planners: Planner[],
-    travelTimeMatrix: Map<string, TravelTimeEntry>,
-    userId: string
-  ): SimpleEvent[] {
-    // Filter to only schedulable events (not templates) and sort by start time
-    const schedulableEvents = events
-      .filter((e) => e.extendedProps?.itemType !== "template")
-      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-
-    if (schedulableEvents.length < 2) {
-      return events;
-    }
-
-    const travelEvents: SimpleEvent[] = [];
-    const now = new Date();
-
-    // Create a map of event ID to planner for location lookup
-    const plannerMap = new Map(planners.map((p) => [p.id, p]));
-
-    for (let i = 0; i < schedulableEvents.length - 1; i++) {
-      const currentEvent = schedulableEvents[i];
-      const nextEvent = schedulableEvents[i + 1];
-
-      // Get locations from planners
-      const currentPlanner = plannerMap.get(currentEvent.id);
-      const nextPlanner = plannerMap.get(nextEvent.id);
-
-      const fromLocationId = currentPlanner?.locationId;
-      const toLocationId = nextPlanner?.locationId;
-
-      // Skip if either event has no location or same location
-      if (!fromLocationId || !toLocationId || fromLocationId === toLocationId) {
-        continue;
-      }
-
-      // Look up travel time
-      const key = `${fromLocationId}-${toLocationId}`;
-      const travelTimeEntry = travelTimeMatrix.get(key);
-
-      if (!travelTimeEntry) {
-        continue;
-      }
-
-      // Determine travel time based on departure time
-      const departureTime = new Date(currentEvent.end);
-      const travelMinutes = this.getTravelTimeForPeriod(
-        travelTimeEntry,
-        departureTime
-      );
-
-      if (travelMinutes <= 0) {
-        continue;
-      }
-
-      // Calculate travel event times
-      const travelStart = new Date(currentEvent.end);
-      const travelEnd = new Date(travelStart.getTime() + travelMinutes * 60000);
-
-      // Only add travel event if it fits before the next event
-      if (travelEnd <= new Date(nextEvent.start)) {
-        const travelEventId = `travel-${currentEvent.id}-${nextEvent.id}`;
-        travelEvents.push({
-          userId,
-          title: "Travel",
-          id: travelEventId,
-          start: travelStart.toISOString(),
-          end: travelEnd.toISOString(),
-          extendedProps: {
-            id: uuidv4(),
-            eventId: travelEventId,
-            itemType: "travel" as const,
-            parentId: null,
-            completedEndTime: null,
-            completedStartTime: null,
-          },
-          backgroundColor: "#6b7280", // Gray color for travel
-          borderColor: "#6b7280",
-          duration: travelMinutes,
-          rrule: null,
-          createdAt: now.toISOString(),
-          updatedAt: now.toISOString(),
-        } as SimpleEvent);
-      }
-    }
-
-    // Return original events plus travel events
-    return [...events, ...travelEvents];
-  }
-
-  /**
-   * Get travel time in minutes based on time of day
-   */
-  private getTravelTimeForPeriod(
-    entry: { rushHourMinutes: number; regularMinutes: number; nightMinutes: number },
-    atTime: Date
-  ): number {
-    const hour = atTime.getHours();
-    const dayOfWeek = atTime.getDay();
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-    // Rush hour check (weekdays only)
-    const isRushHour =
-      !isWeekend &&
-      ((hour >= LOCATION_CONFIG.RUSH_HOUR_MORNING_START &&
-        hour < LOCATION_CONFIG.RUSH_HOUR_MORNING_END) ||
-        (hour >= LOCATION_CONFIG.RUSH_HOUR_EVENING_START &&
-          hour < LOCATION_CONFIG.RUSH_HOUR_EVENING_END));
-
-    // Night check
-    const isNight =
-      hour >= LOCATION_CONFIG.NIGHT_START || hour < LOCATION_CONFIG.NIGHT_END;
-
-    if (isRushHour) {
-      return entry.rushHourMinutes;
-    } else if (isNight) {
-      return entry.nightMinutes;
-    } else {
-      return entry.regularMinutes;
-    }
   }
 
   /**

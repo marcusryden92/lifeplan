@@ -54,23 +54,28 @@ export class TimeSlotManager {
 
   /**
    * Build available time slots for a date range
+   * @param plannerLocationMap - Optional map of planner ID to location ID for tracking slot neighbors
    */
   buildAvailableSlots(
     startDate: Date,
     endDate: Date,
     existingEvents: SimpleEvent[],
-    templateEvents: SimpleEvent[]
+    templateEvents: SimpleEvent[],
+    plannerLocationMap?: Map<string, string | null>
   ): TimeSlot[] {
     // Combine all events that occupy time
     const allEvents = [...existingEvents, ...templateEvents];
 
     // Filter events to only those that overlap with this date range
-    const relevantEvents = allEvents.filter((event) => {
-      const eventStart = new Date(event.start);
-      const eventEnd = new Date(event.end);
-      // Event overlaps if it starts before range ends AND ends after range starts
-      return eventStart < endDate && eventEnd > startDate;
-    });
+    // and sort by start time for location tracking
+    const relevantEvents = allEvents
+      .filter((event) => {
+        const eventStart = new Date(event.start);
+        const eventEnd = new Date(event.end);
+        // Event overlaps if it starts before range ends AND ends after range starts
+        return eventStart < endDate && eventEnd > startDate;
+      })
+      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 
     // Buffer is now handled during scheduling (leading buffer before event start)
     // so we don't extend event end times here
@@ -82,18 +87,47 @@ export class TimeSlotManager {
     // Convert gaps to available time slots
     const slots = intervalsToTimeSlots(gaps, true);
 
-    // Merge adjacent slots
+    // If we have a planner location map, set prevLocationId and nextLocationId on each slot
+    if (plannerLocationMap && relevantEvents.length > 0) {
+      for (const slot of slots) {
+        // Find the event immediately before this slot
+        const prevEvent = relevantEvents.find((e) => {
+          const eventEnd = new Date(e.end);
+          // Event ends at or just before slot starts (within 1 minute tolerance)
+          return Math.abs(eventEnd.getTime() - slot.start.getTime()) < 60000;
+        });
+
+        // Find the event immediately after this slot
+        const nextEvent = relevantEvents.find((e) => {
+          const eventStart = new Date(e.start);
+          // Event starts at or just after slot ends (within 1 minute tolerance)
+          return Math.abs(eventStart.getTime() - slot.end.getTime()) < 60000;
+        });
+
+        // Look up locations from the planner map
+        if (prevEvent) {
+          slot.prevLocationId = plannerLocationMap.get(prevEvent.id) ?? null;
+        }
+        if (nextEvent) {
+          slot.nextLocationId = plannerLocationMap.get(nextEvent.id) ?? null;
+        }
+      }
+    }
+
+    // Merge adjacent slots (preserve location info from first slot in merge)
     return TimeSlotUtils.mergeAdjacentSlots(slots);
   }
 
   /**
    * Build slots for multiple days at once
+   * @param plannerLocationMap - Optional map of planner ID to location ID for tracking slot neighbors
    */
   buildDailySlots(
     startDate: Date,
     numDays: number,
     existingEvents: SimpleEvent[],
-    templateEvents: SimpleEvent[]
+    templateEvents: SimpleEvent[],
+    plannerLocationMap?: Map<string, string | null>
   ): Map<string, TimeSlot[]> {
     const dailySlots = new Map<string, TimeSlot[]>();
 
@@ -107,7 +141,8 @@ export class TimeSlotManager {
         dayStart,
         dayEnd,
         existingEvents,
-        templateEvents
+        templateEvents,
+        plannerLocationMap
       );
 
       dailySlots.set(dayKey, daySlots);
@@ -167,6 +202,7 @@ export class TimeSlotManager {
 
   /**
    * Find all slots that can fit a duration (plus buffer time on both sides)
+   * Preserves location info (prevLocationId, nextLocationId) on returned slots
    */
   findAllFittingSlots(
     durationMinutes: number,
@@ -200,6 +236,9 @@ export class TimeSlotManager {
               ...slot,
               start: effectiveStart,
               durationMinutes: effectiveMinutes,
+              // Preserve location info
+              prevLocationId: slot.prevLocationId,
+              nextLocationId: slot.nextLocationId,
             });
           }
         }
@@ -215,12 +254,14 @@ export class TimeSlotManager {
    * Reserve a time slot (mark as occupied)
    * The caller is responsible for offsetting the start time by buffer.
    * This method simply marks [start, end] as occupied.
+   * @param locationId - Location ID of the event being placed (for updating adjacent slot locations)
    */
   reserveSlot(
     start: Date,
     end: Date,
     eventId: string,
-    eventType: "task" | "goal" | "plan" | "template" | "travel"
+    eventType: "task" | "goal" | "plan" | "template" | "travel",
+    locationId?: string | null
   ): boolean {
     const dayKey = this.getDayKey(start);
     const slots = this.availableSlots.get(dayKey);
@@ -244,12 +285,14 @@ export class TimeSlotManager {
     const slot = slots[slotIndex];
 
     // Split the slot and mark the middle part as occupied
+    // Pass locationId to update adjacent slot locations
     const newSlots = TimeSlotUtils.occupySlot(
       slot,
       start,
       end,
       eventId,
-      eventType
+      eventType,
+      locationId
     );
 
     // Replace the old slot with the new slots (keeping only available ones)

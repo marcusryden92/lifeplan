@@ -39,6 +39,9 @@ export const updateAllCalendarStates =
     const template: EventTemplate[] = state.calendar.template;
     const bufferTimeMinutes: number =
       state.schedulingSettings.bufferTimeMinutes;
+    const enableTravelEvents: boolean =
+      state.schedulingSettings.enableTravelEvents;
+    const travelTimeMatrix = state.schedulingSettings.travelTimeMatrix;
 
     const newPlanner = updates.planner
       ? processInput(updates.planner, currentPlanner)
@@ -56,7 +59,11 @@ export const updateAllCalendarStates =
       newTemplate,
       newPlanner,
       newCalendarInput,
-      bufferTimeMinutes
+      {
+        bufferTimeMinutes,
+        travelTimeMatrix: travelTimeMatrix ?? undefined,
+        injectTravelEvents: enableTravelEvents,
+      }
     );
 
     const calendarData = {

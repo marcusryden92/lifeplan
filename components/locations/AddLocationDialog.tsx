@@ -156,6 +156,7 @@ export function AddLocationDialog({
                   }
                 }}
                 className="pl-10"
+                autoComplete="off"
               />
               {searching && (
                 <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
@@ -197,6 +198,7 @@ export function AddLocationDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={50}
+              autoComplete="off"
             />
             <p className="text-xs text-muted-foreground">
               A friendly name to identify this location

@@ -79,7 +79,11 @@ export default function LocationsPage() {
     }
   };
 
-  const handleAddLocation = async (name: string, placeId: string, sessionToken?: string) => {
+  const handleAddLocation = async (
+    name: string,
+    placeId: string,
+    sessionToken?: string
+  ) => {
     try {
       setError(null);
       const newLocation = await locationActions.createLocation({
@@ -99,12 +103,17 @@ export default function LocationsPage() {
   const handleUpdateLocationName = async (locationId: string, name: string) => {
     try {
       setError(null);
-      const updated = await locationActions.updateLocationName(locationId, name);
+      const updated = await locationActions.updateLocationName(
+        locationId,
+        name
+      );
       setLocations((prev) =>
         prev.map((loc) => (loc.id === locationId ? updated : loc))
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update location");
+      setError(
+        err instanceof Error ? err.message : "Failed to update location"
+      );
     }
   };
 
@@ -123,7 +132,9 @@ export default function LocationsPage() {
       setSuccessMessage("Location deleted successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete location");
+      setError(
+        err instanceof Error ? err.message : "Failed to delete location"
+      );
     }
   };
 
@@ -137,7 +148,8 @@ export default function LocationsPage() {
       setFetchingTimes(true);
       setError(null);
 
-      const result = await locationActions.fetchMissingTravelTimes(transportMode);
+      const result =
+        await locationActions.fetchMissingTravelTimes(transportMode);
 
       if (result.fetched > 0) {
         setSuccessMessage(
@@ -234,7 +246,7 @@ export default function LocationsPage() {
   }
 
   return (
-    <div className="pageContainer bg-white mx-auto py-8 w-full">
+    <div className="pageContainer overflow-y-auto bg-white mx-auto py-8 w-full">
       <div className="flex flex-col ml-20 max-w-[900px]">
         <div className="space-y-2 mb-8">
           <h1 className="my-6 text-3xl font-bold">Locations</h1>
@@ -266,7 +278,8 @@ export default function LocationsPage() {
                   Saved Locations ({locations.length}/{MAX_LOCATIONS})
                 </CardTitle>
                 <CardDescription>
-                  Add your home, office, gym, and other frequently visited places
+                  Add your home, office, gym, and other frequently visited
+                  places
                 </CardDescription>
               </div>
               <Button
@@ -328,8 +341,8 @@ export default function LocationsPage() {
                   <div>
                     <CardTitle>Travel Time Matrix</CardTitle>
                     <CardDescription>
-                      Travel times in minutes between your locations. Click a cell
-                      to customize.
+                      Travel times in minutes between your locations. Click a
+                      cell to customize.
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">

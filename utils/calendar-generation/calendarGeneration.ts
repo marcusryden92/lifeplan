@@ -9,6 +9,16 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import { Planner, EventTemplate, SimpleEvent } from "@/types/prisma";
 import { CalendarGenerator } from "./core/CalendarGenerator";
 import { SCHEDULING_CONFIG } from "./constants";
+import type { TravelTimeEntry } from "./models/SchedulingModels";
+
+/**
+ * Options for calendar generation
+ */
+export interface GenerateCalendarOptions {
+  bufferTimeMinutes?: number;
+  travelTimeMatrix?: Map<string, TravelTimeEntry>;
+  injectTravelEvents?: boolean;
+}
 
 /**
  * Generate calendar events from planners and templates
@@ -18,7 +28,7 @@ import { SCHEDULING_CONFIG } from "./constants";
  * @param template - Event templates (recurring scheduled blocks)
  * @param planner - Planner items (tasks, goals, plans)
  * @param prevCalendar - Previous calendar events to preserve
- * @param bufferTimeMinutes - Optional buffer time between items (default: 10)
+ * @param options - Optional configuration (bufferTimeMinutes, travelTimeMatrix, injectTravelEvents)
  * @returns Array of calendar events
  */
 export function generateCalendar(
@@ -27,8 +37,15 @@ export function generateCalendar(
   template: EventTemplate[],
   planner: Planner[],
   prevCalendar: SimpleEvent[],
-  bufferTimeMinutes: number = 10
+  options: GenerateCalendarOptions | number = {}
 ): SimpleEvent[] {
+  // Handle backwards compatibility - if a number is passed, treat it as bufferTimeMinutes
+  const opts: GenerateCalendarOptions = typeof options === "number"
+    ? { bufferTimeMinutes: options }
+    : options;
+
+  const bufferTimeMinutes = opts.bufferTimeMinutes ?? 10;
+
   // Use the new CalendarGenerator
   const generator = new CalendarGenerator(weekStartDay);
 
@@ -44,6 +61,8 @@ export function generateCalendar(
       maxDaysAhead: SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
       enableLogging,
       bufferTimeMinutes,
+      travelTimeMatrix: opts.travelTimeMatrix,
+      injectTravelEvents: opts.injectTravelEvents,
     },
   });
 

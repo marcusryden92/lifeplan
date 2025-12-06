@@ -18,6 +18,10 @@ export interface TimeSlot {
   eventId?: string;
   /** Type of event occupying this slot (if any) */
   eventType?: "task" | "goal" | "plan" | "template" | "travel";
+  /** Location ID of the event immediately before this slot (null if none or unknown) */
+  prevLocationId?: string | null;
+  /** Location ID of the event immediately after this slot (null if none or unknown) */
+  nextLocationId?: string | null;
 }
 
 export interface TimeSlotBlock {
@@ -125,17 +129,20 @@ export class TimeSlotUtils {
 
   /**
    * Create an occupied slot from an existing available slot
+   * @param locationId - Location ID of the event being placed (for updating adjacent slots)
    */
   static occupySlot(
     slot: TimeSlot,
     start: Date,
     end: Date,
     eventId: string,
-    eventType: "task" | "goal" | "plan" | "template" | "travel"
+    eventType: "task" | "goal" | "plan" | "template" | "travel",
+    locationId?: string | null
   ): TimeSlot[] {
     const result: TimeSlot[] = [];
 
     // Add slot before the occupied time
+    // Its nextLocationId becomes the locationId of the event we're placing
     if (start > slot.start) {
       result.push({
         start: slot.start,
@@ -144,6 +151,8 @@ export class TimeSlotUtils {
           (start.getTime() - slot.start.getTime()) / (1000 * 60)
         ),
         isAvailable: true,
+        prevLocationId: slot.prevLocationId,
+        nextLocationId: locationId,
       });
     }
 
@@ -160,6 +169,7 @@ export class TimeSlotUtils {
     });
 
     // Add slot after the occupied time
+    // Its prevLocationId becomes the locationId of the event we're placing
     if (end < slot.end) {
       result.push({
         start: end,
@@ -168,6 +178,8 @@ export class TimeSlotUtils {
           (slot.end.getTime() - end.getTime()) / (1000 * 60)
         ),
         isAvailable: true,
+        prevLocationId: locationId,
+        nextLocationId: slot.nextLocationId,
       });
     }
 

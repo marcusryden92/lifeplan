@@ -11,6 +11,7 @@ import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
 import { AppDispatch, RootState } from "@/redux/store";
 import calendarSlice from "@/redux/slices/calendarSlice";
 import { useSelector } from "react-redux";
+import type { TravelTimeEntry } from "@/utils/calendar-generation/models/SchedulingModels";
 
 const useManuallyRefreshCalendar = (
   userId: string | undefined,
@@ -26,13 +27,59 @@ const useManuallyRefreshCalendar = (
   const bufferTimeMinutes = useSelector(
     (state: RootState) => state.schedulingSettings.bufferTimeMinutes
   );
+  const enableTravelEvents = useSelector(
+    (state: RootState) => state.schedulingSettings.enableTravelEvents
+  );
+  const travelTimeMatrix = useSelector(
+    (state: RootState) => state.schedulingSettings.travelTimeMatrix
+  );
 
   // Store latest values in refs so callback doesn't need to depend on them
-  const stateRef = useRef({ userId, planner, calendar, template, weekStartDay, bufferTimeMinutes, dispatch });
-  stateRef.current = { userId, planner, calendar, template, weekStartDay, bufferTimeMinutes, dispatch };
+  const stateRef = useRef<{
+    userId: string | undefined;
+    planner: Planner[];
+    calendar: SimpleEvent[];
+    template: EventTemplate[];
+    weekStartDay: WeekDayIntegers;
+    bufferTimeMinutes: number;
+    enableTravelEvents: boolean;
+    travelTimeMatrix: Map<string, TravelTimeEntry> | null;
+    dispatch: AppDispatch;
+  }>({
+    userId,
+    planner,
+    calendar,
+    template,
+    weekStartDay,
+    bufferTimeMinutes,
+    enableTravelEvents,
+    travelTimeMatrix,
+    dispatch,
+  });
+  stateRef.current = {
+    userId,
+    planner,
+    calendar,
+    template,
+    weekStartDay,
+    bufferTimeMinutes,
+    enableTravelEvents,
+    travelTimeMatrix,
+    dispatch,
+  };
 
   const manuallyRefreshCalendar = useCallback(() => {
-    const { userId, planner, calendar, template, weekStartDay, bufferTimeMinutes, dispatch } = stateRef.current;
+    const {
+      userId,
+      planner,
+      calendar,
+      template,
+      weekStartDay,
+      bufferTimeMinutes,
+      enableTravelEvents,
+      travelTimeMatrix,
+      dispatch,
+    } = stateRef.current;
 
     if (!userId) throw new Error("Id missing in manuallyRefreshCalendar");
 
@@ -54,7 +101,11 @@ const useManuallyRefreshCalendar = (
         template,
         planner,
         filteredCalendar,
-        bufferTimeMinutes
+        {
+          bufferTimeMinutes,
+          travelTimeMatrix: travelTimeMatrix ?? undefined,
+          injectTravelEvents: enableTravelEvents,
+        }
       );
 
       // Use updateAll to bypass the thunk's regeneration

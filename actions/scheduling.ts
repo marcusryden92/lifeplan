@@ -20,6 +20,61 @@ export async function fetchUserSchedulingPreferences() {
   return prefs ?? null;
 }
 
+/**
+ * Fetch all user scheduling data at once (preferences + travel times)
+ * Called once at login to populate Redux store
+ */
+export async function fetchAllSchedulingData(): Promise<{
+  preferences: {
+    bufferTimeMinutes: number;
+    defaultTransportMode: string;
+  };
+  travelTimes: Array<{
+    key: string;
+    fromLocationId: string;
+    toLocationId: string;
+    rushHourMinutes: number;
+    regularMinutes: number;
+    nightMinutes: number;
+  }>;
+}> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  // Fetch user preferences
+  const prefs = await db.userSchedulingPreferences.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  const defaultTransportMode = prefs?.defaultTransportMode ?? "DRIVING";
+
+  // Fetch travel times for user's default transport mode
+  const travelTimes = await db.travelTime.findMany({
+    where: {
+      userId: session.user.id,
+      transportMode: defaultTransportMode,
+    },
+  });
+
+  // Convert travel times to serializable format with effective values
+  const travelTimeMatrix = travelTimes.map((tt) => ({
+    key: `${tt.fromLocationId}-${tt.toLocationId}`,
+    fromLocationId: tt.fromLocationId,
+    toLocationId: tt.toLocationId,
+    rushHourMinutes: tt.customRushHourMinutes ?? tt.googleRushHourMinutes,
+    regularMinutes: tt.customRegularMinutes ?? tt.googleRegularMinutes,
+    nightMinutes: tt.customNightMinutes ?? tt.googleNightMinutes,
+  }));
+
+  return {
+    preferences: {
+      bufferTimeMinutes: prefs?.bufferTimeMinutes ?? 10,
+      defaultTransportMode,
+    },
+    travelTimes: travelTimeMatrix,
+  };
+}
+
 export async function updateUserSchedulingPreferences(data: {
   bufferTimeMinutes: number;
 }) {

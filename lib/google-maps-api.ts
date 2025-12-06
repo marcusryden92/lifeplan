@@ -1,20 +1,20 @@
 /**
  * Google Maps API Integration
  *
- * Utilities for Places API (autocomplete, place details) and
- * Distance Matrix API (travel time calculations).
+ * Utilities for Places API (New) and Distance Matrix API.
+ * Uses the new Places API endpoints (not legacy).
  *
  * All functions are server-side only to protect API key.
  */
 
 import { TransportMode } from "@/prisma/generated/client";
 
-// Types for Google API responses
+// Types for our application
 export interface PlacePrediction {
   placeId: string;
-  description: string; // Full address description
-  mainText: string; // Primary text (e.g., business name or street)
-  secondaryText: string; // Secondary text (e.g., city, state)
+  description: string;
+  mainText: string;
+  secondaryText: string;
 }
 
 export interface PlaceDetails {
@@ -39,36 +39,49 @@ export interface TravelTimeBatchResult {
   night: TravelTimeResult;
 }
 
-// Google API response types
-interface GoogleAutocompleteResponse {
-  status: string;
-  error_message?: string;
-  predictions: Array<{
-    place_id: string;
-    description: string;
-    structured_formatting?: {
-      main_text?: string;
-      secondary_text?: string;
-    };
-  }>;
-}
-
-interface GooglePlaceDetailsResponse {
-  status: string;
-  error_message?: string;
-  result: {
-    place_id: string;
-    formatted_address: string;
-    geometry: {
-      location: {
-        lat: number;
-        lng: number;
+// Places API (New) response types
+interface PlacesAutocompleteNewResponse {
+  suggestions?: Array<{
+    placePrediction?: {
+      placeId: string;
+      text: {
+        text: string;
+      };
+      structuredFormat?: {
+        mainText: {
+          text: string;
+        };
+        secondaryText?: {
+          text: string;
+        };
       };
     };
-    name?: string;
+  }>;
+  error?: {
+    code: number;
+    message: string;
+    status: string;
   };
 }
 
+interface PlaceDetailsNewResponse {
+  id: string;
+  formattedAddress: string;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+  displayName?: {
+    text: string;
+  };
+  error?: {
+    code: number;
+    message: string;
+    status: string;
+  };
+}
+
+// Distance Matrix API response types (still uses legacy API)
 interface GoogleDistanceMatrixResponse {
   status: string;
   error_message?: string;
@@ -102,7 +115,7 @@ function getApiKey(): string {
 }
 
 /**
- * Search for places using Google Places Autocomplete API
+ * Search for places using Google Places API (New) - Autocomplete
  *
  * @param query - Search query string
  * @param sessionToken - Optional session token for billing optimization
@@ -117,83 +130,94 @@ export async function searchPlaces(
   }
 
   const apiKey = getApiKey();
-  const params = new URLSearchParams({
+
+  const requestBody: Record<string, unknown> = {
     input: query,
-    key: apiKey,
-    types: "address|establishment",
-  });
+    includedPrimaryTypes: ["street_address", "premise", "subpremise", "establishment"],
+  };
 
   if (sessionToken) {
-    params.append("sessiontoken", sessionToken);
+    requestBody.sessionToken = sessionToken;
   }
 
   const response = await fetch(
-    `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params}`
+    "https://places.googleapis.com/v1/places:autocomplete",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+      },
+      body: JSON.stringify(requestBody),
+    }
   );
 
   if (!response.ok) {
-    throw new Error(`Places API error: ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Places API error: ${response.status} - ${errorText}`);
   }
 
-  const data = (await response.json()) as GoogleAutocompleteResponse;
+  const data = (await response.json()) as PlacesAutocompleteNewResponse;
 
-  if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-    throw new Error(`Places API error: ${data.status} - ${data.error_message ?? "Unknown error"}`);
+  if (data.error) {
+    throw new Error(`Places API error: ${data.error.status} - ${data.error.message}`);
   }
 
-  return (data.predictions || []).map((prediction) => ({
-    placeId: prediction.place_id,
-    description: prediction.description,
-    mainText: prediction.structured_formatting?.main_text || "",
-    secondaryText: prediction.structured_formatting?.secondary_text || "",
-  }));
+  return (data.suggestions || [])
+    .filter((s) => s.placePrediction)
+    .map((suggestion) => {
+      const pred = suggestion.placePrediction!;
+      return {
+        placeId: pred.placeId,
+        description: pred.text.text,
+        mainText: pred.structuredFormat?.mainText?.text || pred.text.text,
+        secondaryText: pred.structuredFormat?.secondaryText?.text || "",
+      };
+    });
 }
 
 /**
  * Get detailed place information including coordinates
+ * Uses Places API (New)
  *
  * @param placeId - Google Place ID
- * @param sessionToken - Optional session token (use same as autocomplete for billing)
+ * @param _sessionToken - Session token (not used in new API for details, but kept for interface)
  * @returns Place details with coordinates
  */
 export async function getPlaceDetails(
   placeId: string,
-  sessionToken?: string
+  _sessionToken?: string
 ): Promise<PlaceDetails> {
   const apiKey = getApiKey();
-  const params = new URLSearchParams({
-    place_id: placeId,
-    key: apiKey,
-    fields: "place_id,formatted_address,geometry,name",
-  });
-
-  if (sessionToken) {
-    params.append("sessiontoken", sessionToken);
-  }
 
   const response = await fetch(
-    `https://maps.googleapis.com/maps/api/place/details/json?${params}`
+    `https://places.googleapis.com/v1/places/${placeId}`,
+    {
+      method: "GET",
+      headers: {
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "id,formattedAddress,location,displayName",
+      },
+    }
   );
 
   if (!response.ok) {
-    throw new Error(`Place Details API error: ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Place Details API error: ${response.status} - ${errorText}`);
   }
 
-  const data = (await response.json()) as GooglePlaceDetailsResponse;
+  const data = (await response.json()) as PlaceDetailsNewResponse;
 
-  if (data.status !== "OK") {
-    throw new Error(
-      `Place Details API error: ${data.status} - ${data.error_message ?? "Unknown error"}`
-    );
+  if (data.error) {
+    throw new Error(`Place Details API error: ${data.error.status} - ${data.error.message}`);
   }
 
-  const result = data.result;
   return {
-    placeId: result.place_id,
-    formattedAddress: result.formatted_address,
-    lat: result.geometry.location.lat,
-    lng: result.geometry.location.lng,
-    name: result.name,
+    placeId: data.id,
+    formattedAddress: data.formattedAddress,
+    lat: data.location.latitude,
+    lng: data.location.longitude,
+    name: data.displayName?.text,
   };
 }
 
