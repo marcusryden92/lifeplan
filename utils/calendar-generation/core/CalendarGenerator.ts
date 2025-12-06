@@ -234,7 +234,7 @@ export class CalendarGenerator {
       context
     );
 
-    // Travel events are now created during scheduling by the Scheduler
+    // Travel events are created during scheduling by Scheduler.scheduleTask()
     // when reserveSlotWithTravel is called, so no post-processing needed
     const allEvents = context.scheduledEvents;
 

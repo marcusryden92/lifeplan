@@ -23,7 +23,8 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
 
   const startTime = new Date(event.start);
   const endTime = new Date(event.end);
-  const travelMinutes = (event.extendedProps as { travelMinutes?: number })?.travelMinutes;
+  const travelMinutes = (event.extendedProps as { travelMinutes?: number })
+    ?.travelMinutes;
 
   return (
     <div
@@ -41,7 +42,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
       }}
     >
       {/* Header row with title and time */}
-      <span className="flex gap-2 justify-between">
+      <span className="flex flex-col gap-2 justify-between">
         <span
           style={{
             marginBottom: "auto",

@@ -67,12 +67,10 @@ export class Scheduler {
     // Get task's location for travel-aware scheduling
     const taskLocationId = task.locationId ?? null;
 
-    // Find all fitting slots (accounting for travel time if location is set)
+    // Step 1: Find all slots that can fit base requirement (duration + buffer)
     const fittingSlots = this.slotManager.findAllFittingSlots(
       task.duration,
-      afterTime || this.context.currentDate,
-      undefined, // maxDaysToSearch - use default
-      taskLocationId
+      afterTime || this.context.currentDate
     );
 
     if (fittingSlots.length === 0) {
@@ -88,13 +86,60 @@ export class Scheduler {
       };
     }
 
-    // Score all slots using the strategy
+    // Step 2: Score ALL slots using the strategy (includes location adjacency scoring)
     const scoredSlots = this.scoreSlots(task, fittingSlots);
 
-    // Choose the best slot
-    const bestSlot = scoredSlots[0];
+    // Step 3: Iterate through scored slots and find first one with enough capacity
+    const bufferMinutes = this.slotManager.getBufferTimeMinutes();
+    const baseRequired = task.duration + (2 * bufferMinutes);
 
-    if (!bestSlot) {
+    let selectedSlot: TimeSlot | null = null;
+    let travelBefore = 0;
+    let travelAfter = 0;
+
+    for (const scoredSlot of scoredSlots) {
+      // Find the original slot with location info
+      const slot = fittingSlots.find(
+        (s) => s.start.getTime() === scoredSlot.slot.start.getTime()
+      );
+      if (!slot) continue;
+
+      // Calculate travel times based on location match
+      // "Everywhere" (null) tasks don't need travel
+      let needTravelBefore = 0;
+      let needTravelAfter = 0;
+
+      if (taskLocationId) {
+        // Check if prev location is different (need travel before)
+        if (slot.prevLocationId && slot.prevLocationId !== taskLocationId) {
+          needTravelBefore = this.slotManager.getTravelTime(
+            slot.prevLocationId,
+            taskLocationId,
+            slot.start
+          );
+        }
+        // Check if next location is different (need travel after)
+        if (slot.nextLocationId && slot.nextLocationId !== taskLocationId) {
+          needTravelAfter = this.slotManager.getTravelTime(
+            taskLocationId,
+            slot.nextLocationId,
+            slot.start
+          );
+        }
+      }
+
+      const totalRequired = baseRequired + needTravelBefore + needTravelAfter;
+
+      // Check if this slot has enough capacity
+      if (slot.durationMinutes >= totalRequired) {
+        selectedSlot = slot;
+        travelBefore = needTravelBefore;
+        travelAfter = needTravelAfter;
+        break;
+      }
+    }
+
+    if (!selectedSlot) {
       this.metrics.tasksFailed++;
       return {
         success: false,
@@ -102,34 +147,30 @@ export class Scheduler {
           taskId: task.id,
           taskTitle: task.title,
           reason: SchedulingFailureReason.NO_SLOTS,
-          details: "No suitable slots found after scoring",
+          details: "No slots found with enough capacity for task + travel",
         },
       };
     }
 
-    // Get buffer time
-    const bufferMinutes = this.slotManager.getBufferTimeMinutes();
-
-    // Get the original slot with location info
-    const originalSlot = fittingSlots.find(
-      (s) => s.start.getTime() === bestSlot.slot.start.getTime()
+    // Step 4: Calculate task times
+    // Layout: [slot.start] -> [buffer] -> [travelBefore] -> [task] -> [travelAfter] -> [buffer]
+    const taskStartDate = dateTimeService.addDuration(
+      selectedSlot.start,
+      bufferMinutes + travelBefore
     );
-
-    // Calculate task start: slot start + buffer
-    // Travel time is handled separately by reserveSlotWithTravel
-    const taskStartDate = dateTimeService.addDuration(bestSlot.slot.start, bufferMinutes);
     const taskEndDate = dateTimeService.addDuration(taskStartDate, task.duration);
 
-    // Reserve the slot with travel time handling
-    // Pass the slot's location info so travel can be calculated correctly
+    // Step 5: Reserve the slot with travel
     const reserveResult = this.slotManager.reserveSlotWithTravel(
       taskStartDate,
       taskEndDate,
       task.id,
       task.itemType as "task" | "goal" | "plan" | "template",
       taskLocationId,
-      originalSlot?.prevLocationId ?? null,
-      originalSlot?.nextLocationId ?? null
+      travelBefore,
+      travelAfter,
+      selectedSlot.prevLocationId ?? null,
+      selectedSlot.nextLocationId ?? null
     );
 
     if (!reserveResult.success) {

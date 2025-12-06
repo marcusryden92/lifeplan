@@ -131,7 +131,13 @@ export class TimeSlotUtils {
 
   /**
    * Create an occupied slot from an existing available slot
-   * @param locationId - Location ID of the event being placed (for updating adjacent slots)
+   * @param locationId - Location ID of the event being placed (null = "everywhere")
+   *
+   * Location inheritance rules:
+   * - If task has a location: adjacent slots get that location
+   * - If task is "everywhere" (null):
+   *   - "before" slot gets nextLocationId = null (no travel to "everywhere")
+   *   - "after" slot inherits prevLocationId from original slot (preserve travel context)
    */
   static occupySlot(
     slot: TimeSlot,
@@ -143,8 +149,14 @@ export class TimeSlotUtils {
   ): TimeSlot[] {
     const result: TimeSlot[] = [];
 
+    // For "everywhere" tasks (locationId is null or undefined):
+    // - The "after" slot should inherit the original prevLocationId to preserve travel context
+    // For tasks with a location:
+    // - The "after" slot gets that location as its prevLocationId
+    const afterSlotPrevLocation = locationId ?? slot.prevLocationId;
+
     // Add slot before the occupied time
-    // Its nextLocationId becomes the locationId of the event we're placing
+    // Its nextLocationId becomes the task's location (null for "everywhere" = no travel needed)
     if (start > slot.start) {
       result.push({
         start: slot.start,
@@ -154,7 +166,7 @@ export class TimeSlotUtils {
         ),
         isAvailable: true,
         prevLocationId: slot.prevLocationId,
-        nextLocationId: locationId,
+        nextLocationId: locationId ?? null,  // null means no travel needed to reach this event
       });
     }
 
@@ -171,7 +183,7 @@ export class TimeSlotUtils {
     });
 
     // Add slot after the occupied time
-    // Its prevLocationId becomes the locationId of the event we're placing
+    // Its prevLocationId inherits for "everywhere" tasks, or uses task's location
     if (end < slot.end) {
       result.push({
         start: end,
@@ -180,7 +192,7 @@ export class TimeSlotUtils {
           (slot.end.getTime() - end.getTime()) / (1000 * 60)
         ),
         isAvailable: true,
-        prevLocationId: locationId,
+        prevLocationId: afterSlotPrevLocation,
         nextLocationId: slot.nextLocationId,
       });
     }

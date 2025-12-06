@@ -104,49 +104,11 @@ export class TimeSlotManager {
   }
 
   /**
-   * Calculate total travel time required for placing a task with a given location in a slot
-   * Returns { travelBefore, travelAfter } in minutes
+   * Get effective slot capacity (just the slot duration)
+   * NOTE: Travel time is handled in post-processing, not during slot fitting
    */
-  calculateRequiredTravelTime(
-    slot: TimeSlot,
-    taskLocationId: string | null,
-    startTime: Date
-  ): { travelBefore: number; travelAfter: number } {
-    const travelBefore = this.getTravelTime(
-      slot.prevLocationId ?? null,
-      taskLocationId,
-      startTime
-    );
-
-    // Estimate end time for calculating travel after
-    const travelAfter = this.getTravelTime(
-      taskLocationId,
-      slot.nextLocationId ?? null,
-      startTime // Use start time as approximation
-    );
-
-    return { travelBefore, travelAfter };
-  }
-
-  /**
-   * Check if a slot can fit a task considering travel time requirements
-   * Returns the effective available minutes after accounting for travel
-   */
-  getEffectiveSlotCapacity(
-    slot: TimeSlot,
-    taskLocationId: string | null,
-    startTime: Date
-  ): number {
-    const { travelBefore, travelAfter } = this.calculateRequiredTravelTime(
-      slot,
-      taskLocationId,
-      startTime
-    );
-
-    // Total travel overhead
-    const travelOverhead = travelBefore + travelAfter;
-
-    return Math.max(0, slot.durationMinutes - travelOverhead);
+  getEffectiveSlotCapacity(slot: TimeSlot): number {
+    return slot.durationMinutes;
   }
 
   /**
@@ -302,15 +264,14 @@ export class TimeSlotManager {
   }
 
   /**
-   * Find all slots that can fit a duration (plus buffer time and travel time)
+   * Find all slots that could potentially fit a duration (plus buffer time)
+   * Does NOT filter by travel time - caller should check capacity based on location match
    * Preserves location info (prevLocationId, nextLocationId) on returned slots
-   * @param taskLocationId - Location of the task being scheduled (for travel time calculation)
    */
   findAllFittingSlots(
     durationMinutes: number,
     afterDate: Date = this.currentDate,
-    maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
-    taskLocationId?: string | null
+    maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH
   ): TimeSlot[] {
     const fittingSlots: TimeSlot[] = [];
     const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
@@ -334,25 +295,14 @@ export class TimeSlotManager {
             slot.end
           );
 
-          // Calculate travel time if task has a location
-          let travelOverhead = 0;
-          if (taskLocationId !== undefined) {
-            const { travelBefore, travelAfter } = this.calculateRequiredTravelTime(
-              slot,
-              taskLocationId,
-              effectiveStart
-            );
-            travelOverhead = travelBefore + travelAfter;
-          }
-
-          const totalRequiredMinutes = baseRequiredMinutes + travelOverhead;
-
-          if (effectiveMinutes >= totalRequiredMinutes) {
+          // Only check if slot can fit base requirement (duration + buffer)
+          // Travel time capacity is checked later after scoring
+          if (effectiveMinutes >= baseRequiredMinutes) {
             fittingSlots.push({
               ...slot,
               start: effectiveStart,
               durationMinutes: effectiveMinutes,
-              // Preserve location info
+              // Preserve location info for scoring and capacity check
               prevLocationId: slot.prevLocationId,
               nextLocationId: slot.nextLocationId,
             });
@@ -424,11 +374,15 @@ export class TimeSlotManager {
   }
 
   /**
-   * Reserve a time slot with travel time handling
-   * Returns the travel events that should be created (if any)
-   * @param taskLocationId - Location of the task being placed
-   * @param prevLocationId - Location of the event before this slot (passed from caller for accuracy)
-   * @param nextLocationId - Location of the event after this slot (passed from caller for accuracy)
+   * Reserve a time slot for an event with travel time handling
+   * Creates travel events if needed based on location differences
+   * @param start - Task start time
+   * @param end - Task end time
+   * @param eventId - ID of the event being placed
+   * @param eventType - Type of the event
+   * @param taskLocationId - Location of the task being placed (null = "everywhere")
+   * @param travelBefore - Minutes of travel needed before task (pre-calculated by caller)
+   * @param travelAfter - Minutes of travel needed after task (pre-calculated by caller)
    */
   reserveSlotWithTravel(
     start: Date,
@@ -436,8 +390,10 @@ export class TimeSlotManager {
     eventId: string,
     eventType: "task" | "goal" | "plan" | "template",
     taskLocationId: string | null,
-    prevLocationId?: string | null,
-    nextLocationId?: string | null
+    travelBefore: number,
+    travelAfter: number,
+    prevLocationId: string | null,
+    nextLocationId: string | null
   ): {
     success: boolean;
     travelEvents: Array<{
@@ -456,12 +412,20 @@ export class TimeSlotManager {
       return { success: false, travelEvents: [] };
     }
 
-    // Find the slot that contains this time range
+    // Calculate full occupied range including travel
+    const travelStart = travelBefore > 0
+      ? new Date(start.getTime() - travelBefore * 60000)
+      : start;
+    const travelEnd = travelAfter > 0
+      ? new Date(end.getTime() + travelAfter * 60000)
+      : end;
+
+    // Find the slot that contains this full time range
     const slotIndex = slots.findIndex(
       (slot) =>
         slot.isAvailable &&
-        slot.start.getTime() <= start.getTime() &&
-        slot.end.getTime() >= end.getTime()
+        slot.start.getTime() <= travelStart.getTime() &&
+        slot.end.getTime() >= travelEnd.getTime()
     );
 
     if (slotIndex === -1) {
@@ -478,71 +442,42 @@ export class TimeSlotManager {
       travelMinutes: number;
     }> = [];
 
-    // Use passed location IDs if provided, otherwise fall back to slot's info
-    const effectivePrevLocationId = prevLocationId !== undefined ? prevLocationId : (slot.prevLocationId ?? null);
-    const effectiveNextLocationId = nextLocationId !== undefined ? nextLocationId : (slot.nextLocationId ?? null);
-
-    // Calculate travel time before (from previous event's location to this task's location)
-    const travelBefore = this.getTravelTime(
-      effectivePrevLocationId,
-      taskLocationId,
-      start
-    );
-
-    // Calculate travel time after (from this task's location to next event's location)
-    const travelAfter = this.getTravelTime(
-      taskLocationId,
-      effectiveNextLocationId,
-      end
-    );
-
-    // If we need travel before, create a travel event
-    if (travelBefore > 0 && effectivePrevLocationId && taskLocationId) {
-      const travelStart = new Date(start.getTime() - travelBefore * 60000);
+    // Create travel event BEFORE the task if needed
+    if (travelBefore > 0 && prevLocationId && taskLocationId) {
       travelEvents.push({
         id: `travel-to-${eventId}`,
         start: travelStart,
         end: start,
-        fromLocationId: effectivePrevLocationId,
+        fromLocationId: prevLocationId,
         toLocationId: taskLocationId,
         travelMinutes: travelBefore,
       });
     }
 
-    // If we need travel after, create a travel event
-    if (travelAfter > 0 && taskLocationId && effectiveNextLocationId) {
-      const travelEnd = new Date(end.getTime() + travelAfter * 60000);
+    // Create travel event AFTER the task if needed
+    if (travelAfter > 0 && taskLocationId && nextLocationId) {
       travelEvents.push({
         id: `travel-from-${eventId}`,
         start: end,
         end: travelEnd,
         fromLocationId: taskLocationId,
-        toLocationId: effectiveNextLocationId,
+        toLocationId: nextLocationId,
         travelMinutes: travelAfter,
       });
     }
 
-    // Calculate the full range we need to reserve (task + travel events)
-    const fullStart = travelBefore > 0
-      ? new Date(start.getTime() - travelBefore * 60000)
-      : start;
-    const fullEnd = travelAfter > 0
-      ? new Date(end.getTime() + travelAfter * 60000)
-      : end;
+    // For "everywhere" tasks, inherit the location context for remaining slots
+    // This preserves the travel requirement for subsequent tasks
+    const effectiveLocationId = taskLocationId ?? slot.prevLocationId;
 
-    // Verify the slot can still fit everything
-    if (fullStart.getTime() < slot.start.getTime() || fullEnd.getTime() > slot.end.getTime()) {
-      return { success: false, travelEvents: [] };
-    }
-
-    // Reserve the full range (including travel time)
+    // Reserve the full range (travel + task + travel)
     const newSlots = TimeSlotUtils.occupySlot(
       slot,
-      fullStart,
-      fullEnd,
+      travelStart,
+      travelEnd,
       eventId,
       eventType,
-      taskLocationId
+      effectiveLocationId  // Pass effective location for slot inheritance
     );
 
     // Replace the old slot with the new slots

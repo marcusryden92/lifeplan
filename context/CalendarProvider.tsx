@@ -55,7 +55,7 @@ export default function CalendarProvider({
   const userSettings = {
     styles: {
       events: {
-        borderRadius: "8px",
+        borderRadius: "0",
         completedColor: "#0ebf7e",
         errorColor: "#ef4444",
       },
