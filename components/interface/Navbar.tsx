@@ -12,7 +12,7 @@ import {
   FaFlag,
   FaBullseye,
   FaClock,
-  FaLocationArrow,
+  FaMapMarker,
 } from "react-icons/fa";
 import { MdViewWeek } from "react-icons/md";
 
@@ -150,7 +150,7 @@ export const Navbar = () => {
                   : "hover:bg-gray-100"
               )}
             >
-              <FaLocationArrow className="h-5 w-5" />
+              <FaMapMarker className="h-5 w-5" />
               <span className="hidden lg:block">Locations</span>
             </Link>
           </Button>

@@ -19,6 +19,9 @@ model Location {
   // Planners assigned to this location
   planners Planner[]
 
+  // Templates assigned to this location
+  templates EventTemplate[]
+
   @@unique([userId, placeId]) // Prevent duplicate locations per user
   @@map("Locations")
 }

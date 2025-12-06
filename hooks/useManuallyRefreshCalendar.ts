@@ -11,7 +11,10 @@ import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
 import { AppDispatch, RootState } from "@/redux/store";
 import calendarSlice from "@/redux/slices/calendarSlice";
 import { useSelector } from "react-redux";
-import type { TravelTimeEntry } from "@/utils/calendar-generation/models/SchedulingModels";
+import {
+  travelTimeArrayToMap,
+  type SerializedTravelTimeEntry,
+} from "@/redux/slices/schedulingSettingsSlice";
 
 const useManuallyRefreshCalendar = (
   userId: string | undefined,
@@ -43,7 +46,7 @@ const useManuallyRefreshCalendar = (
     weekStartDay: WeekDayIntegers;
     bufferTimeMinutes: number;
     enableTravelEvents: boolean;
-    travelTimeMatrix: Map<string, TravelTimeEntry> | null;
+    travelTimeMatrix: SerializedTravelTimeEntry[] | null;
     dispatch: AppDispatch;
   }>({
     userId,
@@ -95,6 +98,9 @@ const useManuallyRefreshCalendar = (
             !overdueIds.has(e.id) && floorMinutes(new Date(e.start)) < now
         ) || [];
 
+      // Convert serialized array to Map for calendar generation
+      const travelTimeMap = travelTimeArrayToMap(travelTimeMatrix);
+
       const newCalendar = generateCalendar(
         userId,
         weekStartDay,
@@ -103,7 +109,7 @@ const useManuallyRefreshCalendar = (
         filteredCalendar,
         {
           bufferTimeMinutes,
-          travelTimeMatrix: travelTimeMatrix ?? undefined,
+          travelTimeMatrix: travelTimeMap ?? undefined,
           injectTravelEvents: enableTravelEvents,
         }
       );

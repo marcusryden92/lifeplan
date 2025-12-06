@@ -155,9 +155,14 @@ export class CalendarGenerator {
     this.metrics.templateEventsGenerated = recurringTemplateEvents.length;
 
     // Step 5: Build planner location map for location-aware slot building
+    // Includes both planners and templates (since template events use template.id)
     const plannerLocationMap = new Map<string, string | null>();
     for (const planner of input.planners) {
       plannerLocationMap.set(planner.id, planner.locationId ?? null);
+    }
+    // Also add templates to the location map
+    for (const template of input.templates) {
+      plannerLocationMap.set(template.id, template.locationId ?? null);
     }
 
     // Step 6: Build slots with location awareness

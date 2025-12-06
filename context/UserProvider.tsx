@@ -10,7 +10,6 @@ import {
 } from "@/redux/slices/schedulingSettingsSlice";
 import { fetchAllSchedulingData } from "@/actions/scheduling";
 import { User } from "@/types/user";
-import type { TravelTimeEntry } from "@/utils/calendar-generation/models/SchedulingModels";
 import React from "react";
 
 export default function UserProvider({ children }: { children: ReactNode }) {
@@ -31,19 +30,9 @@ export default function UserProvider({ children }: { children: ReactNode }) {
           })
         );
 
-        // Convert travel times array to Map and store in Redux
+        // Store travel times as serializable array (converted to Map when needed)
         if (data.travelTimes.length > 0) {
-          const matrix = new Map<string, TravelTimeEntry>();
-          for (const tt of data.travelTimes) {
-            matrix.set(tt.key, {
-              fromLocationId: tt.fromLocationId,
-              toLocationId: tt.toLocationId,
-              rushHourMinutes: tt.rushHourMinutes,
-              regularMinutes: tt.regularMinutes,
-              nightMinutes: tt.nightMinutes,
-            });
-          }
-          dispatch(setTravelTimeMatrix(matrix));
+          dispatch(setTravelTimeMatrix(data.travelTimes));
         }
       });
     }

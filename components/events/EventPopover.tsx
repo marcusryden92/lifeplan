@@ -14,8 +14,10 @@ import useClickOutside from "@/hooks/useClickOutside";
 import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
 import useTitleEditor from "@/hooks/useTitleEditor";
 import { handleEventCopy } from "@/utils/calendarEventHandlers";
-import React from "react";
+import React, { useMemo } from "react";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { LocationSelector } from "@/components/locations/LocationSelector";
+import { assignLocationToPlanner } from "@/actions/locations";
 
 import { formatTime } from "@/utils/calendarUtils";
 
@@ -46,7 +48,27 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   onPostpone,
   setShowPopover,
 }) => {
-  const { updateAll } = useCalendarProvider();
+  const { updateAll, planner, updatePlannerArray } = useCalendarProvider();
+
+  // Get the current planner item to find its locationId
+  const plannerItem = useMemo(
+    () => planner.find((p) => p.id === event.id),
+    [planner, event.id]
+  );
+
+  const handleLocationChange = async (locationId: string | null) => {
+    try {
+      await assignLocationToPlanner(event.id, locationId);
+      // Update local state
+      updatePlannerArray((prev) =>
+        prev.map((p) =>
+          p.id === event.id ? { ...p, locationId: locationId } : p
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update location:", error);
+    }
+  };
 
   // Popover dimensions
   const POPOVER_WIDTH = 280;
@@ -181,6 +203,17 @@ const EventPopover: React.FC<EventPopoverProps> = ({
             {formatTime(startTime)} - {formatTime(endTime)}
           </span>
         </div>
+
+        {/* Location selector - for plans, tasks, and goals */}
+        {plannerItem && (
+          <div className="mb-4">
+            <LocationSelector
+              value={plannerItem.locationId ?? null}
+              onChange={handleLocationChange}
+              className="w-full"
+            />
+          </div>
+        )}
 
         {/* Actions - Notion-style minimal buttons */}
         <div className="space-y-2">

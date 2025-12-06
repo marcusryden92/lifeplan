@@ -1,10 +1,21 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { TravelTimeEntry } from "@/utils/calendar-generation/models/SchedulingModels";
 
+// Serializable format for Redux storage
+export type SerializedTravelTimeEntry = {
+  key: string;
+  fromLocationId: string;
+  toLocationId: string;
+  rushHourMinutes: number;
+  regularMinutes: number;
+  nightMinutes: number;
+};
+
 export type SchedulingSettings = {
   bufferTimeMinutes: number;
   enableTravelEvents: boolean;
-  travelTimeMatrix: Map<string, TravelTimeEntry> | null;
+  // Store as array for Redux serialization - convert to Map when needed
+  travelTimeMatrix: SerializedTravelTimeEntry[] | null;
   isLoaded: boolean;
 };
 
@@ -14,6 +25,27 @@ const initialState: SchedulingSettings = {
   travelTimeMatrix: null,
   isLoaded: false,
 };
+
+/**
+ * Helper to convert serialized array to Map for use in scheduling
+ */
+export function travelTimeArrayToMap(
+  array: SerializedTravelTimeEntry[] | null
+): Map<string, TravelTimeEntry> | null {
+  if (!array || array.length === 0) return null;
+
+  const map = new Map<string, TravelTimeEntry>();
+  for (const entry of array) {
+    map.set(entry.key, {
+      fromLocationId: entry.fromLocationId,
+      toLocationId: entry.toLocationId,
+      rushHourMinutes: entry.rushHourMinutes,
+      regularMinutes: entry.regularMinutes,
+      nightMinutes: entry.nightMinutes,
+    });
+  }
+  return map;
+}
 
 const schedulingSettingsSlice = createSlice({
   name: "schedulingSettings",
@@ -37,7 +69,7 @@ const schedulingSettingsSlice = createSlice({
     },
     setTravelTimeMatrix: (
       state,
-      action: PayloadAction<Map<string, TravelTimeEntry> | null>
+      action: PayloadAction<SerializedTravelTimeEntry[] | null>
     ) => {
       state.travelTimeMatrix = action.payload;
     },

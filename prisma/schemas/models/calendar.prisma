@@ -54,16 +54,18 @@ model Planner {
 }
 
 model EventTemplate {
-  id        String      @id @default(cuid())
-  title     String
-  startDay  WeekDayType
-  startTime String
-  userId    String
-  duration  Int
-  color     String?
-  createdAt String
-  updatedAt String
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String      @id @default(cuid())
+  title      String
+  startDay   WeekDayType
+  startTime  String
+  userId     String
+  duration   Int
+  color      String?
+  locationId String?     // Optional FK to Location (null = "Everywhere")
+  createdAt  String
+  updatedAt  String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  location   Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   @@map("EventTemplates")
 }

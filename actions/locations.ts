@@ -498,6 +498,74 @@ export async function assignLocationToPlanner(
   });
 }
 
+/**
+ * Assign a location to a template
+ * Set locationId to null for "Everywhere" (no specific location)
+ */
+export async function assignLocationToTemplate(
+  templateId: string,
+  locationId: string | null
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const template = await db.eventTemplate.findFirst({
+    where: { id: templateId, userId: session.user.id },
+  });
+
+  if (!template) {
+    throw new Error("Template not found");
+  }
+
+  // If locationId is provided, verify it belongs to the user
+  if (locationId) {
+    const location = await db.location.findFirst({
+      where: { id: locationId, userId: session.user.id },
+    });
+
+    if (!location) {
+      throw new Error("Location not found");
+    }
+  }
+
+  await db.eventTemplate.update({
+    where: { id: templateId },
+    data: { locationId },
+  });
+}
+
+/**
+ * Assign a location to multiple planner items at once
+ * Useful for cascading location changes to child items
+ */
+export async function assignLocationToMultiplePlanners(
+  plannerIds: string[],
+  locationId: string | null
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  // If locationId is provided, verify it belongs to the user
+  if (locationId) {
+    const location = await db.location.findFirst({
+      where: { id: locationId, userId: session.user.id },
+    });
+
+    if (!location) {
+      throw new Error("Location not found");
+    }
+  }
+
+  // Update all planners that belong to this user
+  await db.planner.updateMany({
+    where: {
+      id: { in: plannerIds },
+      userId: session.user.id,
+    },
+    data: { locationId },
+  });
+}
+
 // ============================================================================
 // User Preferences
 // ============================================================================

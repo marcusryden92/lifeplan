@@ -4,6 +4,7 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import { AppDispatch } from "../store";
 import { RootState } from "../store";
 import calendarSlice from "../slices/calendarSlice";
+import { travelTimeArrayToMap } from "../slices/schedulingSettingsSlice";
 
 type CalendarPayload = {
   planner?: Planner[] | ((prev: Planner[]) => Planner[]);
@@ -53,6 +54,9 @@ export const updateAllCalendarStates =
       ? processInput(updates.template, template)
       : template;
 
+    // Convert serialized array to Map for calendar generation
+    const travelTimeMap = travelTimeArrayToMap(travelTimeMatrix);
+
     const newCalendar = generateCalendar(
       userId,
       weekStartDay,
@@ -61,7 +65,7 @@ export const updateAllCalendarStates =
       newCalendarInput,
       {
         bufferTimeMinutes,
-        travelTimeMatrix: travelTimeMatrix ?? undefined,
+        travelTimeMatrix: travelTimeMap ?? undefined,
         injectTravelEvents: enableTravelEvents,
       }
     );
