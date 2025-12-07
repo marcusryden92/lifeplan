@@ -648,7 +648,7 @@ export async function fetchTravelTimesForCalendar(
 
   // Convert to array format that can be serialized
   const matrix = travelTimes.map((tt) => ({
-    key: `${tt.fromLocationId}-${tt.toLocationId}`,
+    key: `${tt.fromLocationId}->${tt.toLocationId}`,
     fromLocationId: tt.fromLocationId,
     toLocationId: tt.toLocationId,
     rushHourMinutes: tt.customRushHourMinutes ?? tt.googleRushHourMinutes,

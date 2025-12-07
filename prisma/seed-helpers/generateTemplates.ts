@@ -1,6 +1,7 @@
 import { EventTemplate } from "../generated/client";
 import { WeekDayType } from "@/types/calendarTypes";
 import { v4 as uuidv4 } from "uuid";
+import { LOCATION_IDS } from "./generateLocations";
 
 const days = [
   "sunday",
@@ -32,7 +33,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       startTime: "00:00",
       duration: 360,
       color: "#1D3557", // navy
-      locationId: null,
+      locationId: LOCATION_IDS.HOME,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -48,14 +49,14 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       startTime: "21:00",
       duration: 180,
       color: "#1D3557", // navy
-      locationId: null,
+      locationId: LOCATION_IDS.HOME,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
   }
 
   // Lunch break (12:00 - 13:00) - All days
-  for (let i = 0; i < days.length; i++) {
+  /*  for (let i = 0; i < days.length; i++) {
     templateArray.push({
       id: uuidv4(),
       userId,
@@ -68,7 +69,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       createdAt: timestamp,
       updatedAt: timestamp,
     });
-  }
+  } */
 
   // Breakfast (07:00 - 07:30) - All days
   for (let i = 0; i < days.length; i++) {
@@ -77,17 +78,17 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       userId,
       title: "Breakfast",
       startDay: days[i] as WeekDayType,
-      startTime: "07:00",
+      startTime: "06:00",
       duration: 30,
       color: "#FFB703", // amber yellow
-      locationId: null,
+      locationId: LOCATION_IDS.HOME,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
   }
 
   // Dinner (18:00 - 19:00) - All days
-  for (let i = 0; i < days.length; i++) {
+  /*  for (let i = 0; i < days.length; i++) {
     templateArray.push({
       id: uuidv4(),
       userId,
@@ -100,7 +101,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       createdAt: timestamp,
       updatedAt: timestamp,
     });
-  }
+  } */
 
   // Work Morning Session (08:00 - 12:00) - Weekdays only
   for (let i = 0; i < weekdays.length; i++) {
@@ -110,9 +111,9 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       title: "Work",
       startDay: weekdays[i] as WeekDayType,
       startTime: "08:00",
-      duration: 240,
+      duration: 30,
       color: "#1976D2", // royal blue
-      locationId: null,
+      locationId: LOCATION_IDS.WORK,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -125,17 +126,17 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       userId,
       title: "Work",
       startDay: weekdays[i] as WeekDayType,
-      startTime: "13:00",
-      duration: 240,
+      startTime: "16:00",
+      duration: 30,
       color: "#1976D2", // royal blue
-      locationId: null,
+      locationId: LOCATION_IDS.WORK,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
   }
 
   // Morning workout (06:30 - 07:30) - Monday, Wednesday, Friday
-  const workoutDays = [days[1], days[3], days[5]]; // Mon, Wed, Fri
+  /* const workoutDays = [days[1], days[3], days[5]]; // Mon, Wed, Fri
   for (let i = 0; i < workoutDays.length; i++) {
     templateArray.push({
       id: uuidv4(),
@@ -149,10 +150,10 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       createdAt: timestamp,
       updatedAt: timestamp,
     });
-  }
+  } */
 
   // Evening workout (19:30 - 20:30) - Tuesday, Thursday
-  const eveningWorkoutDays = [days[2], days[4]]; // Tue, Thu
+  /*   const eveningWorkoutDays = [days[2], days[4]]; // Tue, Thu
   for (let i = 0; i < eveningWorkoutDays.length; i++) {
     templateArray.push({
       id: uuidv4(),
@@ -167,7 +168,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       updatedAt: timestamp,
     });
   }
-
+ */
   // Cleaning (10:00 - 11:30) - Saturday
   templateArray.push({
     id: uuidv4(),
@@ -177,7 +178,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
     startTime: "10:00",
     duration: 90,
     color: "#16A085", // teal green
-    locationId: null,
+    locationId: LOCATION_IDS.HOME,
     createdAt: timestamp,
     updatedAt: timestamp,
   });
@@ -191,7 +192,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
     startTime: "14:00",
     duration: 90,
     color: "#20C997", // turquoise
-    locationId: null,
+    locationId: LOCATION_IDS.HOME,
     createdAt: timestamp,
     updatedAt: timestamp,
   });
@@ -202,10 +203,10 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
     userId,
     title: "Grocery Shopping",
     startDay: "saturday" as WeekDayType,
-    startTime: "11:00",
+    startTime: "12:00",
     duration: 90,
     color: "#8E44AD", // deep purple
-    locationId: null,
+    locationId: null, // No fixed location - could be any store
     createdAt: timestamp,
     updatedAt: timestamp,
   });

@@ -5,7 +5,13 @@ import {
   generatePlanners,
   plannerSeedData,
 } from "./seed-helpers/generatePlanners";
-import { generatePlans, planSeedData } from "./seed-helpers/generatePlans";
+import {
+  /* generatePlans, */ planSeedData,
+} from "./seed-helpers/generatePlans";
+import {
+  generateLocations,
+  generateTravelTimes,
+} from "./seed-helpers/generateLocations";
 
 const prisma = new PrismaClient();
 
@@ -30,6 +36,14 @@ async function main() {
     },
   });
 
+  // Seed locations first (templates reference them)
+  const locations = generateLocations(userId);
+  await prisma.location.createMany({ data: locations });
+
+  // Seed travel times
+  const travelTimes = generateTravelTimes(userId);
+  await prisma.travelTime.createMany({ data: travelTimes });
+
   // Seed event templates
   const templates = generateTemplates(userId);
   await prisma.eventTemplate.createMany({ data: templates });
@@ -39,11 +53,13 @@ async function main() {
   await prisma.planner.createMany({ data: planners });
 
   // Seed plans (scheduled tasks)
-  const plans = generatePlans(userId);
-  await prisma.planner.createMany({ data: plans });
+  /*  const plans = generatePlans(userId);
+  await prisma.planner.createMany({ data: plans }); */
 
   console.log("✓ Seeding completed successfully");
   console.log(`  - User: admin@lifeplan.com`);
+  console.log(`  - Locations: ${locations.length}`);
+  console.log(`  - Travel times: ${travelTimes.length}`);
   console.log(`  - Event templates: ${templates.length}`);
   console.log(`  - Planner goals: ${plannerSeedData.length}`);
   console.log(`  - Planner plans: ${planSeedData.length}`);

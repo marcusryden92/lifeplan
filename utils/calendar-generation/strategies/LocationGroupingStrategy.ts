@@ -66,21 +66,26 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
     }
 
     // Score based on sandwich pattern
+    // FLATTENED SCORING: Reduce the gap between perfect sandwich and single match
+    // to avoid over-prioritizing weekends just because both neighbors match.
+    // The urgency/earliest-slot strategies should take precedence for filling weekday gaps.
+
     if (prevMatches && nextMatches) {
       // Perfect sandwich - both ends match, no travel needed
-      return 1.0;
+      // Only slightly better than single match
+      return 0.75;
     }
 
     if ((prevMatches && !nextExists) || (nextMatches && !prevExists)) {
-      // One end matches, other end is open (start/end of day) - very good
-      return 0.9;
+      // One end matches, other end is open (start/end of day) - good
+      return 0.7;
     }
 
     if (prevMatches || nextMatches) {
       // One end matches, other doesn't - need travel on one side
-      // Penalize based on travel time (less penalty for shorter travel)
-      const singleTravelPenalty = Math.min(0.2, totalTravelTime / 120);
-      return 0.75 - singleTravelPenalty;
+      // Small penalty based on travel time
+      const singleTravelPenalty = Math.min(0.1, totalTravelTime / 180);
+      return 0.65 - singleTravelPenalty;
     }
 
     if (!prevExists && !nextExists) {
@@ -90,14 +95,14 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
 
     if (!prevExists || !nextExists) {
       // One end is open, other doesn't match - travel on one side
-      const singleTravelPenalty = Math.min(0.15, totalTravelTime / 120);
+      const singleTravelPenalty = Math.min(0.1, totalTravelTime / 180);
       return 0.5 - singleTravelPenalty;
     }
 
     // Neither end matches and both exist - travel on both sides
-    // This is the worst case for location grouping
-    const doubleTravelPenalty = Math.min(0.3, totalTravelTime / 90);
-    return 0.3 - doubleTravelPenalty;
+    // Moderate penalty but not severe
+    const doubleTravelPenalty = Math.min(0.15, totalTravelTime / 120);
+    return 0.4 - doubleTravelPenalty;
   }
 
   /**
@@ -108,7 +113,7 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
     toLocationId: string,
     atTime: Date
   ): number {
-    const key = `${fromLocationId}-${toLocationId}`;
+    const key = `${fromLocationId}->${toLocationId}`;
     const entry = this.travelTimeMatrix.get(key);
 
     if (!entry) return 0;
@@ -156,7 +161,7 @@ export function buildTravelTimeMatrix(
   const matrix = new Map<string, TravelTimeEntry>();
 
   for (const tt of travelTimes) {
-    const key = `${tt.fromLocationId}-${tt.toLocationId}`;
+    const key = `${tt.fromLocationId}->${tt.toLocationId}`;
     matrix.set(key, {
       fromLocationId: tt.fromLocationId,
       toLocationId: tt.toLocationId,

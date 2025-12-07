@@ -74,17 +74,23 @@ export class TimeSlotManager {
   ): number {
     // No travel needed if either location is null ("Everywhere") or same location
     if (!fromLocationId || !toLocationId || fromLocationId === toLocationId) {
+      console.log(`[getTravelTime] Returning 0: from=${fromLocationId} to=${toLocationId}`);
       return 0;
     }
 
     if (!this.travelTimeMatrix) {
+      console.log(`[getTravelTime] Returning 0: no travel matrix`);
       return 0;
     }
 
     const travelKey = `${fromLocationId}->${toLocationId}`;
     const entry = this.travelTimeMatrix.get(travelKey);
 
+    console.log(`[getTravelTime] Looking up key: ${travelKey}, found: ${entry ? 'yes' : 'no'}`);
     if (!entry) {
+      // Debug: Log all available keys
+      console.log(`[getTravelTime] Available keys in matrix:`);
+      this.travelTimeMatrix.forEach((_, key) => console.log(`  ${key}`));
       return 0;
     }
 
@@ -406,20 +412,44 @@ export class TimeSlotManager {
       return { success: false };
     }
 
-    // Calculate full occupied range including travel
-    const travelStartTime = travelBefore > 0
-      ? new Date(start.getTime() - travelBefore * 60000)
+    const bufferMinutes = this.bufferTimeMinutes;
+
+    // Layout: [buffer] -> [travelBefore] -> [buffer] -> [task] -> [buffer] -> [travelAfter] -> [buffer]
+    // The `start` param is the task start time (already positioned after travel + buffers by Scheduler)
+    // Calculate positions for all components
+
+    // Travel before starts after leading buffer, ends at buffer before task
+    // So: travelBeforeEnd = start - buffer, travelBeforeStart = travelBeforeEnd - travelBefore
+    const travelBeforeEnd = travelBefore > 0
+      ? new Date(start.getTime() - bufferMinutes * 60000)
       : start;
-    const travelEndTime = travelAfter > 0
-      ? new Date(end.getTime() + travelAfter * 60000)
+    const travelBeforeStart = travelBefore > 0
+      ? new Date(travelBeforeEnd.getTime() - travelBefore * 60000)
+      : start;
+
+    // Travel after starts at buffer after task, ends before trailing buffer
+    // So: travelAfterStart = end + buffer, travelAfterEnd = travelAfterStart + travelAfter
+    const travelAfterStart = travelAfter > 0
+      ? new Date(end.getTime() + bufferMinutes * 60000)
       : end;
+    const travelAfterEnd = travelAfter > 0
+      ? new Date(travelAfterStart.getTime() + travelAfter * 60000)
+      : end;
+
+    // Full occupied range: from leading buffer start to trailing buffer end
+    const fullStart = travelBefore > 0
+      ? new Date(travelBeforeStart.getTime() - bufferMinutes * 60000)
+      : new Date(start.getTime() - bufferMinutes * 60000);
+    const fullEnd = travelAfter > 0
+      ? new Date(travelAfterEnd.getTime() + bufferMinutes * 60000)
+      : new Date(end.getTime() + bufferMinutes * 60000);
 
     // Find the slot that contains this full time range
     const slotIndex = slots.findIndex(
       (slot) =>
         slot.isAvailable &&
-        slot.start.getTime() <= travelStartTime.getTime() &&
-        slot.end.getTime() >= travelEndTime.getTime()
+        slot.start.getTime() <= fullStart.getTime() &&
+        slot.end.getTime() >= fullEnd.getTime()
     );
 
     if (slotIndex === -1) {
@@ -429,17 +459,17 @@ export class TimeSlotManager {
     const slot = slots[slotIndex];
     const newSlots: TimeSlot[] = [];
 
-    // Slot before everything (available)
-    if (travelStartTime.getTime() > slot.start.getTime()) {
+    // Slot before everything (available) - ends at fullStart
+    if (fullStart.getTime() > slot.start.getTime()) {
       newSlots.push({
         start: slot.start,
-        end: travelStartTime,
+        end: fullStart,
         durationMinutes: Math.floor(
-          (travelStartTime.getTime() - slot.start.getTime()) / 60000
+          (fullStart.getTime() - slot.start.getTime()) / 60000
         ),
         isAvailable: true,
         prevLocationId: slot.prevLocationId,
-        nextLocationId: prevLocationId, // Next thing is either travel-before or the task
+        nextLocationId: prevLocationId ?? taskLocationId,
       });
     }
 
@@ -447,8 +477,8 @@ export class TimeSlotManager {
     if (travelBefore > 0 && prevLocationId && taskLocationId) {
       newSlots.push(
         TimeSlotUtils.createTravelSlot(
-          travelStartTime,
-          start,
+          travelBeforeStart,
+          travelBeforeEnd,
           prevLocationId,
           taskLocationId,
           `travel-to-${eventId}`
@@ -464,7 +494,7 @@ export class TimeSlotManager {
       isAvailable: false,
       eventId,
       eventType,
-      prevLocationId: taskLocationId, // Task's own location for context
+      prevLocationId: taskLocationId,
       nextLocationId: taskLocationId,
     });
 
@@ -472,8 +502,8 @@ export class TimeSlotManager {
     if (travelAfter > 0 && taskLocationId && nextLocationId) {
       newSlots.push(
         TimeSlotUtils.createTravelSlot(
-          end,
-          travelEndTime,
+          travelAfterStart,
+          travelAfterEnd,
           taskLocationId,
           nextLocationId,
           `travel-from-${eventId}`
@@ -481,13 +511,13 @@ export class TimeSlotManager {
       );
     }
 
-    // Slot after everything (available)
-    if (travelEndTime.getTime() < slot.end.getTime()) {
+    // Slot after everything (available) - starts at fullEnd
+    if (fullEnd.getTime() < slot.end.getTime()) {
       newSlots.push({
-        start: travelEndTime,
+        start: fullEnd,
         end: slot.end,
         durationMinutes: Math.floor(
-          (slot.end.getTime() - travelEndTime.getTime()) / 60000
+          (slot.end.getTime() - fullEnd.getTime()) / 60000
         ),
         isAvailable: true,
         prevLocationId: taskLocationId ?? slot.prevLocationId,

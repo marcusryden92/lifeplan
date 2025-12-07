@@ -40,9 +40,8 @@ export function generateCalendar(
   options: GenerateCalendarOptions | number = {}
 ): SimpleEvent[] {
   // Handle backwards compatibility - if a number is passed, treat it as bufferTimeMinutes
-  const opts: GenerateCalendarOptions = typeof options === "number"
-    ? { bufferTimeMinutes: options }
-    : options;
+  const opts: GenerateCalendarOptions =
+    typeof options === "number" ? { bufferTimeMinutes: options } : options;
 
   const bufferTimeMinutes = opts.bufferTimeMinutes ?? 10;
 

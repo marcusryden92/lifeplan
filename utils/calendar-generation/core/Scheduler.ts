@@ -67,11 +67,9 @@ export class Scheduler {
     // Get task's location for travel-aware scheduling
     const taskLocationId = task.locationId ?? null;
 
-    // Step 1: Find all slots that can fit, including reclaimable travel slots
-    // This allows same-location tasks to "absorb" adjacent travel time
-    const fittingSlots = this.slotManager.findAllFittingSlotsWithTravelReclaim(
+    // Step 1: Find all slots that can fit the base requirement (duration + buffer)
+    const fittingSlots = this.slotManager.findAllFittingSlots(
       task.duration,
-      taskLocationId,
       afterTime || this.context.currentDate
     );
 
@@ -93,16 +91,13 @@ export class Scheduler {
 
     // Step 3: Iterate through scored slots and find first one with enough capacity
     const bufferMinutes = this.slotManager.getBufferTimeMinutes();
-    const baseRequired = task.duration + (2 * bufferMinutes);
 
-    let selectedSlot: (TimeSlot & { reclaimableTravelBefore: number; reclaimableTravelAfter: number }) | null = null;
+    let selectedSlot: TimeSlot | null = null;
     let travelBefore = 0;
     let travelAfter = 0;
-    let reclaimBefore = false;
-    let reclaimAfter = false;
 
     for (const scoredSlot of scoredSlots) {
-      // Find the original slot with location and reclaim info
+      // Find the original slot with location info
       const slot = fittingSlots.find(
         (s) => s.start.getTime() === scoredSlot.slot.start.getTime()
       );
@@ -115,39 +110,34 @@ export class Scheduler {
 
       if (taskLocationId) {
         // Check if prev location is different (need travel before)
-        // But if we can reclaim travel, we don't need new travel on that side
         if (slot.prevLocationId && slot.prevLocationId !== taskLocationId) {
-          if (slot.reclaimableTravelBefore > 0) {
-            // We can reclaim this travel - the slot already accounts for it in durationMinutes
-            reclaimBefore = true;
-          } else {
-            needTravelBefore = this.slotManager.getTravelTime(
-              slot.prevLocationId,
-              taskLocationId,
-              slot.start
-            );
-          }
+          needTravelBefore = this.slotManager.getTravelTime(
+            slot.prevLocationId,
+            taskLocationId,
+            slot.start
+          );
         }
 
         // Check if next location is different (need travel after)
         if (slot.nextLocationId && slot.nextLocationId !== taskLocationId) {
-          if (slot.reclaimableTravelAfter > 0) {
-            // We can reclaim this travel
-            reclaimAfter = true;
-          } else {
-            needTravelAfter = this.slotManager.getTravelTime(
-              taskLocationId,
-              slot.nextLocationId,
-              slot.start
-            );
-          }
+          needTravelAfter = this.slotManager.getTravelTime(
+            taskLocationId,
+            slot.nextLocationId,
+            slot.start
+          );
         }
       }
 
-      const totalRequired = baseRequired + needTravelBefore + needTravelAfter;
+      // Calculate total required time with proper buffer placement:
+      // Layout: [buffer] -> [travelBefore] -> [buffer] -> [task] -> [buffer] -> [travelAfter] -> [buffer]
+      // - No travel: [buffer] -> [task] -> [buffer] = 2 buffers
+      // - Travel before only: [buffer] -> [travel] -> [buffer] -> [task] -> [buffer] = 3 buffers
+      // - Travel after only: [buffer] -> [task] -> [buffer] -> [travel] -> [buffer] = 3 buffers
+      // - Travel both: [buffer] -> [travel] -> [buffer] -> [task] -> [buffer] -> [travel] -> [buffer] = 4 buffers
+      const numBuffers = 2 + (needTravelBefore > 0 ? 1 : 0) + (needTravelAfter > 0 ? 1 : 0);
+      const totalRequired = task.duration + needTravelBefore + needTravelAfter + (numBuffers * bufferMinutes);
 
       // Check if this slot has enough capacity
-      // Note: slot.durationMinutes already includes reclaimable travel time
       if (slot.durationMinutes >= totalRequired) {
         selectedSlot = slot;
         travelBefore = needTravelBefore;
@@ -169,41 +159,38 @@ export class Scheduler {
       };
     }
 
-    // Step 4: If reclaiming travel slots, do that first
-    if (reclaimBefore && selectedSlot.reclaimableTravelBefore > 0) {
-      this.slotManager.reclaimAdjacentTravelSlot(selectedSlot, "before");
-    }
-    if (reclaimAfter && selectedSlot.reclaimableTravelAfter > 0) {
-      this.slotManager.reclaimAdjacentTravelSlot(selectedSlot, "after");
-    }
+    // Step 4: Calculate task times
+    // Layout: [buffer] -> [travelBefore] -> [buffer] -> [task] -> [buffer] -> [travelAfter] -> [buffer]
+    // Calculate offset to task start:
+    // - Always start with leading buffer
+    // - If travel before: add travel + another buffer before task
+    // - If no travel before: task starts after the single leading buffer
+    const offsetToTaskStart = travelBefore > 0
+      ? bufferMinutes + travelBefore + bufferMinutes  // [buffer] -> [travel] -> [buffer] -> [task]
+      : bufferMinutes;  // [buffer] -> [task]
 
-    // Step 5: Calculate task times
-    // Layout: [slot.start] -> [buffer] -> [travelBefore] -> [task] -> [travelAfter] -> [buffer]
-    // If we reclaimed travel before, we insert at the reclaimed position (earlier)
-    const effectiveStart = reclaimBefore
-      ? new Date(selectedSlot.start.getTime() - selectedSlot.reclaimableTravelBefore * 60000)
-      : selectedSlot.start;
-
-    const taskStartDate = dateTimeService.addDuration(
-      effectiveStart,
-      bufferMinutes + travelBefore
-    );
+    const taskStartDate = dateTimeService.addDuration(selectedSlot.start, offsetToTaskStart);
     const taskEndDate = dateTimeService.addDuration(taskStartDate, task.duration);
 
-    // Step 6: Reserve the slot with travel (travel stored as occupied slots, not events)
-    const reserveResult = this.slotManager.reserveSlotWithTravel(
-      taskStartDate,
-      taskEndDate,
+    // Calculate full reserved range (includes travel and all buffers)
+    // This prevents other tasks from being scheduled in the travel time
+    const fullReserveStart = selectedSlot.start;
+    const offsetToEnd = travelAfter > 0
+      ? task.duration + bufferMinutes + travelAfter + bufferMinutes
+      : task.duration + bufferMinutes;
+    const fullReserveEnd = dateTimeService.addDuration(taskStartDate, offsetToEnd);
+
+    // Step 5: Reserve the full slot (task + travel time + buffers)
+    // Travel events will be generated at the end from the timeline
+    const reserved = this.slotManager.reserveSlot(
+      fullReserveStart,
+      fullReserveEnd,
       task.id,
       task.itemType as "task" | "goal" | "plan" | "template",
-      taskLocationId,
-      travelBefore,
-      travelAfter,
-      selectedSlot.prevLocationId ?? null,
-      selectedSlot.nextLocationId ?? null
+      taskLocationId
     );
 
-    if (!reserveResult.success) {
+    if (!reserved) {
       this.metrics.tasksFailed++;
       return {
         success: false,
