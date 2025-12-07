@@ -97,8 +97,8 @@ export const STRATEGY_WEIGHTS = {
   DEPENDENCY_WEIGHT: 0.8,
   /** Weight for energy/time-of-day optimization */
   ENERGY_WEIGHT: 0.5,
-  /** Weight for location-based grouping */
-  LOCATION_GROUPING_WEIGHT: 0.6,
+  /** Weight for location-based grouping - kept low to act as tie-breaker, not dominant factor */
+  LOCATION_GROUPING_WEIGHT: 0.2,
 } as const;
 
 /**

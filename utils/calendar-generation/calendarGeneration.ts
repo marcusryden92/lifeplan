@@ -53,7 +53,7 @@ export function generateCalendar(
   const logging = {
     metrics: true,
     failures: true,
-    travelDebug: false,
+    travelDebug: true,
     templateInfo: false,
     planners: false,
     templates: false,

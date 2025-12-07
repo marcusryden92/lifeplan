@@ -108,6 +108,12 @@ export class Scheduler {
       let needTravelBefore = 0;
       let needTravelAfter = 0;
 
+      // Debug: Log slot location info for first few slots
+      if (scoredSlots.indexOf(scoredSlot) < 3) {
+        console.log(`[Scheduler] Task "${task.title}" (loc: ${taskLocationId}) checking slot at ${slot.start.toISOString()}`);
+        console.log(`  slot.prevLocationId: ${slot.prevLocationId}, slot.nextLocationId: ${slot.nextLocationId}`);
+      }
+
       if (taskLocationId) {
         // Travel BEFORE: needed if prev location differs from task location
         if (slot.prevLocationId && slot.prevLocationId !== taskLocationId) {
@@ -116,6 +122,7 @@ export class Scheduler {
             taskLocationId,
             slot.start
           );
+          console.log(`  -> needTravelBefore: ${needTravelBefore} (from ${slot.prevLocationId} to ${taskLocationId})`);
         }
 
         // Travel AFTER: needed if next location differs from task location
@@ -127,6 +134,7 @@ export class Scheduler {
             slot.nextLocationId,
             slot.start
           );
+          console.log(`  -> needTravelAfter: ${needTravelAfter} (from ${taskLocationId} to ${slot.nextLocationId})`);
         }
       }
       // Note: If taskLocationId is null, prevLocationId passes through unchanged
@@ -191,6 +199,7 @@ export class Scheduler {
     // Travel-before is placed at the START of the slot
     // Travel-after is placed at the END of the slot
     // Note: reserveSlotWithTravel expects task start/end times, not reservation times
+    console.log(`[Scheduler] Reserving slot for "${task.title}": travelBefore=${travelBefore}, travelAfter=${travelAfter}, taskLoc=${taskLocationId}, prevLoc=${selectedSlot.prevLocationId}, nextLoc=${selectedSlot.nextLocationId}`);
     const result = this.slotManager.reserveSlotWithTravel(
       taskStartDate,
       taskEndDate,

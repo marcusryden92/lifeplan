@@ -66,43 +66,46 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
     }
 
     // Score based on sandwich pattern
-    // FLATTENED SCORING: Reduce the gap between perfect sandwich and single match
+    // HEAVILY FLATTENED SCORING: Minimize the gap between perfect sandwich and other scenarios
     // to avoid over-prioritizing weekends just because both neighbors match.
     // The urgency/earliest-slot strategies should take precedence for filling weekday gaps.
+    //
+    // The goal: location grouping should be a tie-breaker, not a dominant factor.
+    // Max spread: 0.55 to 0.45 = 0.10 range (was 0.75 to 0.40 = 0.35 range)
 
     if (prevMatches && nextMatches) {
       // Perfect sandwich - both ends match, no travel needed
-      // Only slightly better than single match
-      return 0.75;
+      // Only a slight bonus over other scenarios
+      return 0.55;
     }
 
     if ((prevMatches && !nextExists) || (nextMatches && !prevExists)) {
-      // One end matches, other end is open (start/end of day) - good
-      return 0.7;
+      // One end matches, other end is open (start/end of day) - almost as good
+      return 0.53;
     }
 
     if (prevMatches || nextMatches) {
       // One end matches, other doesn't - need travel on one side
-      // Small penalty based on travel time
-      const singleTravelPenalty = Math.min(0.1, totalTravelTime / 180);
-      return 0.65 - singleTravelPenalty;
+      // Tiny penalty based on travel time
+      const singleTravelPenalty = Math.min(0.02, totalTravelTime / 600);
+      return 0.52 - singleTravelPenalty;
     }
 
     if (!prevExists && !nextExists) {
-      // Both ends are open (empty day) - neutral
-      return 0.5;
+      // Both ends are open (empty day) - neutral baseline
+      return 0.50;
     }
 
     if (!prevExists || !nextExists) {
       // One end is open, other doesn't match - travel on one side
-      const singleTravelPenalty = Math.min(0.1, totalTravelTime / 180);
-      return 0.5 - singleTravelPenalty;
+      const singleTravelPenalty = Math.min(0.02, totalTravelTime / 600);
+      return 0.48 - singleTravelPenalty;
     }
 
     // Neither end matches and both exist - travel on both sides
-    // Moderate penalty but not severe
-    const doubleTravelPenalty = Math.min(0.15, totalTravelTime / 120);
-    return 0.4 - doubleTravelPenalty;
+    // Small penalty but not severe - still acceptable
+    const doubleTravelPenalty = Math.min(0.03, totalTravelTime / 400);
+    return 0.45 - doubleTravelPenalty;
   }
 
   /**

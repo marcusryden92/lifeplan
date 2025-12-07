@@ -661,23 +661,35 @@ export class TimeSlotManager {
     const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
 
     // Calculate travel-after position
-    // If there's existing travel to the same destination, use its end position (travel shifts forward).
+    // If there's existing travel to the same destination NEAR the slot end, use its end position (travel shifts forward).
     // Otherwise, use slot.end (right before next template starts).
     let travelAfterEnd: Date | null = null;
     let travelAfterStart: Date | null = null;
 
     if (travelAfter > 0 && nextLocationId) {
-      // Look for existing travel going to the same destination
+      // Look for existing travel going to the same destination that's near our slot end
+      // This ensures we don't pick up unrelated travel (like morning commute) when scheduling afternoon tasks
+      const slotEndTime = slot.end.getTime();
+      const searchWindowMs = 3 * 60 * 60 * 1000; // 3 hours
+
       const existingTravel = occupiedSlots.find(
-        (occ) => TimeSlotUtils.isTravelSlot(occ) && occ.travelToLocationId === nextLocationId
+        (occ) => {
+          if (!TimeSlotUtils.isTravelSlot(occ)) return false;
+          if (occ.travelToLocationId !== nextLocationId) return false;
+          // Only match if the travel ends within the search window of our slot end
+          const travelEndTime = occ.end.getTime();
+          return Math.abs(travelEndTime - slotEndTime) < searchWindowMs;
+        }
       );
 
       if (existingTravel) {
         // Use existing travel's end position (it will be replaced)
         travelAfterEnd = new Date(existingTravel.end.getTime());
+        console.log(`[reserveSlotWithTravel] Found existing travel to ${nextLocationId} near slot end, using its position: ${existingTravel.end.toISOString()}`);
       } else {
-        // No existing travel, use slot.end
+        // No existing travel near slot end, use slot.end
         travelAfterEnd = new Date(slot.end.getTime());
+        console.log(`[reserveSlotWithTravel] No existing travel found near slot end, using slot.end: ${slot.end.toISOString()}`);
       }
       travelAfterStart = new Date(travelAfterEnd.getTime() - travelAfter * 60000);
     }
@@ -698,6 +710,29 @@ export class TimeSlotManager {
 
     // 2. Travel slot BEFORE the task (if needed)
     if (travelBefore > 0 && prevLocationId && taskLocationId) {
+      // Remove any existing travel going TO the same destination (taskLocationId)
+      // that is NEAR this task's start time. This handles the case where buildAvailableSlots
+      // created travel for template-to-template but now a dynamic task is being placed
+      // that needs its own travel-before.
+      // IMPORTANT: Only remove travel near this task - don't remove unrelated travel
+      // (e.g., morning commute shouldn't be removed when scheduling afternoon task)
+      const taskStartTime = start.getTime();
+      const searchWindowMs = 3 * 60 * 60 * 1000; // 3 hours
+
+      for (let i = occupiedSlots.length - 1; i >= 0; i--) {
+        const occ = occupiedSlots[i];
+        if (TimeSlotUtils.isTravelSlot(occ) && occ.travelToLocationId === taskLocationId) {
+          // Only remove if travel ends near where this task starts
+          const travelEndTime = occ.end.getTime();
+          const isNearTaskStart = Math.abs(travelEndTime - taskStartTime) < searchWindowMs;
+
+          if (isNearTaskStart) {
+            console.log(`[reserveSlotWithTravel] Removing existing travel TO ${taskLocationId} near task start (replaced by travel-before)`);
+            occupiedSlots.splice(i, 1);
+          }
+        }
+      }
+
       const travelSlot = TimeSlotUtils.createTravelSlot(
         travelBeforeStart,
         travelBeforeEnd,
@@ -747,13 +782,31 @@ export class TimeSlotManager {
       });
     }
 
-    // 5. Handle travel-after: remove existing travel going to same destination, then add new
-    if (travelAfter > 0 && nextLocationId) {
-      // Remove existing travel slots going TO nextLocationId
+    // 5. Handle travel-after: remove existing travel going to same destination AND in the same slot region
+    // We only remove travel that's being "shifted forward" by this task - not unrelated travel elsewhere
+    if (travelAfter > 0 && nextLocationId && travelAfterStart) {
+      // Remove existing travel slots going TO nextLocationId that are near the end of our slot
+      // This handles the "travel shifts forward" case where buildAvailableSlots created travel
+      // for template-to-template transitions, and now a dynamic task fills part of the gap
+      const slotEndTime = slot.end.getTime();
+      const searchWindowMs = 3 * 60 * 60 * 1000; // 3 hours - max reasonable travel + buffer window
+
+      console.log(`[reserveSlotWithTravel] Looking for travel to remove: toLocationId=${nextLocationId}, near slot.end=${slot.end.toISOString()}`);
+      console.log(`  Current occupied slots on ${dayKey}: ${occupiedSlots.length}`);
       for (let i = occupiedSlots.length - 1; i >= 0; i--) {
         const occ = occupiedSlots[i];
-        if (TimeSlotUtils.isTravelSlot(occ) && occ.travelToLocationId === nextLocationId) {
-          occupiedSlots.splice(i, 1);
+        if (TimeSlotUtils.isTravelSlot(occ)) {
+          console.log(`    Travel slot [${i}]: ${occ.travelFromLocationId} -> ${occ.travelToLocationId} (ends ${occ.end.toISOString()})`);
+          // Only remove if:
+          // 1. Goes to same destination
+          // 2. Ends within the search window of our slot's end (i.e., it's the travel we're replacing)
+          const travelEndTime = occ.end.getTime();
+          const isNearSlotEnd = Math.abs(travelEndTime - slotEndTime) < searchWindowMs;
+
+          if (occ.travelToLocationId === nextLocationId && isNearSlotEnd) {
+            console.log(`      REMOVING (matches nextLocationId AND near slot end)`);
+            occupiedSlots.splice(i, 1);
+          }
         }
       }
     }
