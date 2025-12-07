@@ -64,7 +64,12 @@ lifeplan/
 │   │       ├── user.prisma       # User model
 │   │       ├── calendar.prisma   # Planner, SimpleEvent, EventTemplate
 │   │       └── scheduling.prisma # UserSchedulingPreferences, TaskPreferences
-│   └── generated/                # Generated Prisma client
+│   ├── generated/                # Generated Prisma client
+│   └── seed-helpers/             # Seed data generators
+│       ├── generateLocations.ts  # Location & TravelTime seed data
+│       ├── generatePlanners.ts   # Planner seed data
+│       ├── generatePlans.ts      # Plan items seed data
+│       └── generateTemplates.ts  # EventTemplate seed data
 │
 ├── redux/
 │   ├── store.ts                  # Redux store configuration
@@ -87,7 +92,8 @@ lifeplan/
     │   ├── strategies/
     │   │   ├── SchedulingStrategy.ts  # Base interface + CompositeStrategy
     │   │   ├── UrgencyStrategy.ts     # Deadline-based scoring
-    │   │   └── EarliestSlotStrategy.ts
+    │   │   ├── EarliestSlotStrategy.ts
+    │   │   └── LocationGroupingStrategy.ts  # Location-aware scheduling
     │   ├── models/
     │   │   ├── SchedulingModels.ts    # Core interfaces
     │   │   └── TimeSlot.ts
@@ -128,8 +134,16 @@ Central model for all schedulable items:
   completedEndTime?: string;
   userId: string;
   color?: string;
+  locationId?: string;    // Reference to Location for travel time calculation
 }
 ```
+
+### Location System
+
+Items can have an associated location for travel time calculation:
+- **Location** - Named location with address, coordinates, and Google Place ID
+- **TravelTime** - Directional travel duration between two locations
+- Items with `locationId: null` are considered "Everywhere" (no travel time needed)
 
 ### Scheduling System
 
@@ -153,6 +167,7 @@ interface SchedulingStrategy {
 #### Current Strategies
 - **UrgencyStrategy** - Scores based on deadline proximity
 - **EarliestSlotStrategy** - Prefers earlier slots
+- **LocationGroupingStrategy** - Groups tasks at same location to minimize travel
 
 #### Weight Configuration (constants.ts)
 ```typescript
@@ -160,6 +175,7 @@ STRATEGY_WEIGHTS = {
   URGENCY_WEIGHT: 1.0,
   DEPENDENCY_WEIGHT: 0.8,
   ENERGY_WEIGHT: 0.5,
+  LOCATION_GROUPING_WEIGHT: 0.6,
 };
 ```
 
@@ -208,12 +224,24 @@ pnpm prisma generate
 # Push schema changes to database
 pnpm prisma db push
 
+# Reset database and run seed (development)
+pnpm prisma db push --force-reset && pnpm prisma db seed
+
 # Open Prisma Studio
 pnpm prisma studio
 
 # Create migration
 pnpm prisma migrate dev --name migration_name
 ```
+
+### Seed Data
+
+Seed helpers in `prisma/seed-helpers/` provide test data with location assignments:
+- **A items** - No location (can be done anywhere)
+- **B items** - Work location
+- **C items** - Home location
+- **D items** - Gym location
+- **Templates** - Sleep/Breakfast/Cleaning at Home, Work at Work
 
 ---
 
@@ -267,6 +295,29 @@ RESEND_API_KEY=""
 
 ---
 
+## Debugging Calendar Generation
+
+Granular logging is available in `utils/calendar-generation/calendarGeneration.ts`:
+
+```typescript
+const enableLogging = true;  // Master switch
+const logging = {
+  metrics: false,           // Scheduling metrics
+  failures: false,          // Scheduling failures
+  finalEvents: false,       // Final calendar events JSON
+  travelDebug: false,       // Travel calculation debug
+  templateInfo: false,      // Template expansion info
+  planners: false,          // Input planners JSON
+  templates: false,         // Input templates JSON
+  locations: false,         // Location map
+  strategySettings: false,  // Strategy configuration
+};
+```
+
+Set `enableLogging = true` and flip individual flags to get specific dumps.
+
+---
+
 ## Active Feature Plans
 
-- **Travel Time & Location Management** - See `PLAN-travel-time-feature.md` for full implementation details
+- **Travel Time & Location Management** - Location-aware scheduling with travel time injection between events at different locations
