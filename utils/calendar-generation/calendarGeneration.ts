@@ -48,7 +48,19 @@ export function generateCalendar(
   // Use the new CalendarGenerator
   const generator = new CalendarGenerator(weekStartDay);
 
-  const enableLogging = false;
+  // Logging configuration - set enableLogging to false to disable all logging
+  const enableLogging = true;
+  const logging = {
+    metrics: false,
+    failures: false,
+    travelDebug: false,
+    templateInfo: false,
+    planners: false,
+    templates: false,
+    locations: false,
+    strategySettings: false,
+    finalEvents: true,
+  };
 
   const result = generator.generate({
     userId,
@@ -59,37 +71,12 @@ export function generateCalendar(
     config: {
       maxDaysAhead: SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
       enableLogging,
+      logging,
       bufferTimeMinutes,
       travelTimeMatrix: opts.travelTimeMatrix,
       injectTravelEvents: opts.injectTravelEvents,
     },
   });
-
-  // Log detailed info when enableLogging is true
-  if (enableLogging) {
-    console.log("Calendar Generation Metrics:", result.metrics);
-    console.log("Templates passed:", template?.length || 0);
-    console.log(
-      "Template events generated:",
-      result.metrics.templateEventsGenerated
-    );
-    console.log("Total events returned:", result.events.length);
-    console.log(
-      "Template events in result:",
-      result.events.filter((e) => e.extendedProps?.itemType === "template")
-        .length
-    );
-    if (result.failures.length > 0) {
-      console.warn("Scheduling Failures:", result.failures);
-      console.table(
-        result.failures.map((f) => ({
-          task: f.taskTitle,
-          reason: f.reason,
-          details: f.details,
-        }))
-      );
-    }
-  }
 
   return result.events;
 }

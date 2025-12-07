@@ -74,22 +74,22 @@ export class TimeSlotManager {
   ): number {
     // No travel needed if either location is null ("Everywhere") or same location
     if (!fromLocationId || !toLocationId || fromLocationId === toLocationId) {
-      console.log(`[getTravelTime] Returning 0: from=${fromLocationId} to=${toLocationId}`);
+      // console.log(`[getTravelTime] Returning 0: from=${fromLocationId} to=${toLocationId}`);
       return 0;
     }
 
     if (!this.travelTimeMatrix) {
-      console.log(`[getTravelTime] Returning 0: no travel matrix`);
+      // console.log(`[getTravelTime] Returning 0: no travel matrix`);
       return 0;
     }
 
     const travelKey = `${fromLocationId}->${toLocationId}`;
     const entry = this.travelTimeMatrix.get(travelKey);
 
-    console.log(`[getTravelTime] Looking up key: ${travelKey}, found: ${entry ? 'yes' : 'no'}`);
+    // console.log(`[getTravelTime] Looking up key: ${travelKey}, found: ${entry ? 'yes' : 'no'}`);
     if (!entry) {
       // Debug: Log all available keys
-      console.log(`[getTravelTime] Available keys in matrix:`);
+      // console.log(`[getTravelTime] Available keys in matrix:`);
       this.travelTimeMatrix.forEach((_, key) => console.log(`  ${key}`));
       return 0;
     }
@@ -140,7 +140,9 @@ export class TimeSlotManager {
         // Event overlaps if it starts before range ends AND ends after range starts
         return eventStart < endDate && eventEnd > startDate;
       })
-      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
+      .sort(
+        (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+      );
 
     // Buffer is now handled during scheduling (leading buffer before event start)
     // so we don't extend event end times here
@@ -173,11 +175,13 @@ export class TimeSlotManager {
         // Use extendedProps.eventId first (for template events which have compound IDs),
         // then fall back to event.id (for planner items)
         if (prevEvent) {
-          const lookupId = (prevEvent.extendedProps?.eventId as string) || prevEvent.id;
+          const lookupId =
+            (prevEvent.extendedProps?.eventId as string) || prevEvent.id;
           slot.prevLocationId = plannerLocationMap.get(lookupId) ?? null;
         }
         if (nextEvent) {
-          const lookupId = (nextEvent.extendedProps?.eventId as string) || nextEvent.id;
+          const lookupId =
+            (nextEvent.extendedProps?.eventId as string) || nextEvent.id;
           slot.nextLocationId = plannerLocationMap.get(lookupId) ?? null;
         }
       }
@@ -233,7 +237,7 @@ export class TimeSlotManager {
     let currentDate = new Date(afterDate);
 
     // Account for buffer time on both sides of the event
-    const requiredMinutes = durationMinutes + (2 * this.bufferTimeMinutes);
+    const requiredMinutes = durationMinutes + 2 * this.bufferTimeMinutes;
 
     while (currentDate <= searchEndDate) {
       const dayKey = this.getDayKey(currentDate);
@@ -284,7 +288,7 @@ export class TimeSlotManager {
     let currentDate = new Date(afterDate);
 
     // Base required time: task duration + buffer on both sides
-    const baseRequiredMinutes = durationMinutes + (2 * this.bufferTimeMinutes);
+    const baseRequiredMinutes = durationMinutes + 2 * this.bufferTimeMinutes;
 
     while (currentDate <= searchEndDate) {
       const dayKey = this.getDayKey(currentDate);
@@ -420,29 +424,33 @@ export class TimeSlotManager {
 
     // Travel before starts after leading buffer, ends at buffer before task
     // So: travelBeforeEnd = start - buffer, travelBeforeStart = travelBeforeEnd - travelBefore
-    const travelBeforeEnd = travelBefore > 0
-      ? new Date(start.getTime() - bufferMinutes * 60000)
-      : start;
-    const travelBeforeStart = travelBefore > 0
-      ? new Date(travelBeforeEnd.getTime() - travelBefore * 60000)
-      : start;
+    const travelBeforeEnd =
+      travelBefore > 0
+        ? new Date(start.getTime() - bufferMinutes * 60000)
+        : start;
+    const travelBeforeStart =
+      travelBefore > 0
+        ? new Date(travelBeforeEnd.getTime() - travelBefore * 60000)
+        : start;
 
     // Travel after starts at buffer after task, ends before trailing buffer
     // So: travelAfterStart = end + buffer, travelAfterEnd = travelAfterStart + travelAfter
-    const travelAfterStart = travelAfter > 0
-      ? new Date(end.getTime() + bufferMinutes * 60000)
-      : end;
-    const travelAfterEnd = travelAfter > 0
-      ? new Date(travelAfterStart.getTime() + travelAfter * 60000)
-      : end;
+    const travelAfterStart =
+      travelAfter > 0 ? new Date(end.getTime() + bufferMinutes * 60000) : end;
+    const travelAfterEnd =
+      travelAfter > 0
+        ? new Date(travelAfterStart.getTime() + travelAfter * 60000)
+        : end;
 
     // Full occupied range: from leading buffer start to trailing buffer end
-    const fullStart = travelBefore > 0
-      ? new Date(travelBeforeStart.getTime() - bufferMinutes * 60000)
-      : new Date(start.getTime() - bufferMinutes * 60000);
-    const fullEnd = travelAfter > 0
-      ? new Date(travelAfterEnd.getTime() + bufferMinutes * 60000)
-      : new Date(end.getTime() + bufferMinutes * 60000);
+    const fullStart =
+      travelBefore > 0
+        ? new Date(travelBeforeStart.getTime() - bufferMinutes * 60000)
+        : new Date(start.getTime() - bufferMinutes * 60000);
+    const fullEnd =
+      travelAfter > 0
+        ? new Date(travelAfterEnd.getTime() + bufferMinutes * 60000)
+        : new Date(end.getTime() + bufferMinutes * 60000);
 
     // Find the slot that contains this full time range
     const slotIndex = slots.findIndex(
@@ -548,12 +556,22 @@ export class TimeSlotManager {
     taskLocationId: string | null,
     afterDate: Date = this.currentDate,
     maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH
-  ): Array<TimeSlot & { reclaimableTravelBefore: number; reclaimableTravelAfter: number }> {
-    const fittingSlots: Array<TimeSlot & { reclaimableTravelBefore: number; reclaimableTravelAfter: number }> = [];
+  ): Array<
+    TimeSlot & {
+      reclaimableTravelBefore: number;
+      reclaimableTravelAfter: number;
+    }
+  > {
+    const fittingSlots: Array<
+      TimeSlot & {
+        reclaimableTravelBefore: number;
+        reclaimableTravelAfter: number;
+      }
+    > = [];
     const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
     let currentDate = new Date(afterDate);
 
-    const baseRequiredMinutes = durationMinutes + (2 * this.bufferTimeMinutes);
+    const baseRequiredMinutes = durationMinutes + 2 * this.bufferTimeMinutes;
 
     while (currentDate <= searchEndDate) {
       const dayKey = this.getDayKey(currentDate);
@@ -564,7 +582,10 @@ export class TimeSlotManager {
         if (slot.end <= afterDate) continue;
 
         const effectiveStart = slot.start < afterDate ? afterDate : slot.start;
-        let effectiveMinutes = dateTimeService.getMinutesDifference(effectiveStart, slot.end);
+        let effectiveMinutes = dateTimeService.getMinutesDifference(
+          effectiveStart,
+          slot.end
+        );
 
         // Check for reclaimable travel slots adjacent to this available slot
         let reclaimableTravelBefore = 0;
@@ -635,9 +656,13 @@ export class TimeSlotManager {
     const travelSlotIndex = occupiedSlots.findIndex((occ) => {
       if (!TimeSlotUtils.isTravelSlot(occ)) return false;
       if (position === "before") {
-        return Math.abs(occ.end.getTime() - availableSlot.start.getTime()) < 60000;
+        return (
+          Math.abs(occ.end.getTime() - availableSlot.start.getTime()) < 60000
+        );
       } else {
-        return Math.abs(occ.start.getTime() - availableSlot.end.getTime()) < 60000;
+        return (
+          Math.abs(occ.start.getTime() - availableSlot.end.getTime()) < 60000
+        );
       }
     });
 
@@ -877,10 +902,7 @@ export class TimeSlotManager {
           const dayKey = this.getDayKey(date);
           const slots = weekSlots.get(dayKey) || [];
           for (const slot of slots) {
-            if (
-              slot.isAvailable &&
-              slot.durationMinutes >= requiredMinutes
-            ) {
+            if (slot.isAvailable && slot.durationMinutes >= requiredMinutes) {
               // Reserve slot for this item with leading buffer
               const start = dateTimeService.addDuration(
                 slot.start,

@@ -44,6 +44,18 @@ export class CalendarGenerator {
   }
 
   /**
+   * Check if a specific logging flag is enabled
+   */
+  private shouldLog(
+    input: CalendarGenerationInput,
+    flag: "metrics" | "failures" | "finalEvents" | "travelDebug" | "templateInfo" | "planners" | "templates" | "locations" | "strategySettings"
+  ): boolean {
+    const config = input.config;
+    if (!config?.enableLogging || !config?.logging) return false;
+    return !!config.logging[flag];
+  }
+
+  /**
    * Generate calendar from input
    */
   generate(input: CalendarGenerationInput): SchedulingResult {
@@ -95,12 +107,14 @@ export class CalendarGenerator {
     let eventArray: SimpleEvent[] = [];
 
     // Step 1: memoized events
+    // Filter out template and travel events - templates are regenerated, travel is recalculated
     const memoizedEventIds = new Set<string>();
     if (input.previousCalendar.length > 0) {
       const pastEvents = input.previousCalendar.filter(
         (e) =>
           currentDate > new Date(e.end) &&
-          e.extendedProps?.itemType !== "template"
+          e.extendedProps?.itemType !== "template" &&
+          e.extendedProps?.itemType !== "travel"
       );
       pastEvents.forEach((e) => memoizedEventIds.add(e.id));
       eventArray.push(...pastEvents);
@@ -248,23 +262,26 @@ export class CalendarGenerator {
     const allEventsBeforeTravel = [...scheduledNonTemplateEvents, ...simpleTemplateEvents];
 
     // Debug: Log events being processed for travel
-    console.log("[Travel Debug] Events for travel calculation:");
-    console.log(`  scheduledNonTemplateEvents: ${scheduledNonTemplateEvents.length}`);
-    console.log(`  simpleTemplateEvents: ${simpleTemplateEvents.length}`);
-    console.log(`  total allEventsBeforeTravel: ${allEventsBeforeTravel.length}`);
-    for (const e of allEventsBeforeTravel.slice(0, 20)) {
-      const lookupId = (e.extendedProps?.eventId as string) || e.id;
-      console.log(`  - "${e.title}" (${e.extendedProps?.itemType}) lookupId=${lookupId} start=${e.start}`);
-    }
-    if (allEventsBeforeTravel.length > 20) {
-      console.log(`  ... and ${allEventsBeforeTravel.length - 20} more`);
+    if (this.shouldLog(input, "travelDebug")) {
+      console.log("[Travel Debug] Events for travel calculation:");
+      console.log(`  scheduledNonTemplateEvents: ${scheduledNonTemplateEvents.length}`);
+      console.log(`  simpleTemplateEvents: ${simpleTemplateEvents.length}`);
+      console.log(`  total allEventsBeforeTravel: ${allEventsBeforeTravel.length}`);
+      for (const e of allEventsBeforeTravel.slice(0, 20)) {
+        const lookupId = (e.extendedProps?.eventId as string) || e.id;
+        console.log(`  - "${e.title}" (${e.extendedProps?.itemType}) lookupId=${lookupId} start=${e.start}`);
+      }
+      if (allEventsBeforeTravel.length > 20) {
+        console.log(`  ... and ${allEventsBeforeTravel.length - 20} more`);
+      }
     }
 
     const travelEvents = this.generateTravelEventsFromTimeline(
       allEventsBeforeTravel,
       plannerLocationMap,
       input.userId,
-      bufferMinutes
+      bufferMinutes,
+      this.shouldLog(input, "travelDebug")
     );
 
     // Final event list includes:
@@ -279,6 +296,69 @@ export class CalendarGenerator {
 
     const endTime = performance.now();
     this.metrics.totalExecutionTimeMs = endTime - startTime;
+
+    // Granular logging based on config flags
+    if (this.shouldLog(input, "planners")) {
+      console.log("=== INPUT PLANNERS ===");
+      console.log(JSON.stringify(input.planners, null, 2));
+      console.log("=== END INPUT PLANNERS ===");
+    }
+
+    if (this.shouldLog(input, "templates")) {
+      console.log("=== INPUT TEMPLATES ===");
+      console.log(JSON.stringify(input.templates, null, 2));
+      console.log("=== END INPUT TEMPLATES ===");
+    }
+
+    if (this.shouldLog(input, "locations")) {
+      console.log("=== LOCATION MAP ===");
+      const locationObj: Record<string, string | null> = {};
+      plannerLocationMap.forEach((loc, id) => {
+        locationObj[id] = loc;
+      });
+      console.log(JSON.stringify(locationObj, null, 2));
+      console.log("=== END LOCATION MAP ===");
+    }
+
+    if (this.shouldLog(input, "strategySettings")) {
+      console.log("=== STRATEGY SETTINGS ===");
+      console.log(JSON.stringify({
+        strategies: strategies.map(s => ({ name: s.strategy.name, weight: s.weight })),
+        bufferTimeMinutes: input.config?.bufferTimeMinutes,
+        maxDaysAhead: input.config?.maxDaysAhead,
+        travelTimeMatrixSize: input.config?.travelTimeMatrix?.size ?? 0,
+      }, null, 2));
+      console.log("=== END STRATEGY SETTINGS ===");
+    }
+
+    if (this.shouldLog(input, "metrics")) {
+      console.log("=== SCHEDULING METRICS ===");
+      console.log(JSON.stringify(this.metrics, null, 2));
+      console.log("=== END SCHEDULING METRICS ===");
+    }
+
+    if (this.shouldLog(input, "failures") && schedulingResult.failures.length > 0) {
+      console.log("=== SCHEDULING FAILURES ===");
+      console.log(JSON.stringify(schedulingResult.failures, null, 2));
+      console.log("=== END SCHEDULING FAILURES ===");
+    }
+
+    if (this.shouldLog(input, "templateInfo")) {
+      console.log("=== TEMPLATE INFO ===");
+      console.log(JSON.stringify({
+        templatesCount: input.templates.length,
+        recurringEventsGenerated: recurringTemplateEvents.length,
+        simpleTemplateEventsCount: simpleTemplateEvents.length,
+        largestTemplateGap,
+      }, null, 2));
+      console.log("=== END TEMPLATE INFO ===");
+    }
+
+    if (this.shouldLog(input, "finalEvents")) {
+      console.log("=== FINAL CALENDAR EVENTS ===");
+      console.log(JSON.stringify(allEvents, null, 2));
+      console.log("=== END FINAL EVENTS ===");
+    }
 
     return {
       success: schedulingResult.failures.length === 0,
@@ -671,12 +751,14 @@ export class CalendarGenerator {
    * @param plannerLocationMap - Map of planner/template ID to location ID
    * @param userId - User ID for the travel events
    * @param bufferMinutes - Buffer time in minutes
+   * @param logTravelDebug - Whether to log travel debug info
    */
   private generateTravelEventsFromTimeline(
     events: SimpleEvent[],
     plannerLocationMap: Map<string, string | null>,
     userId: string,
-    bufferMinutes: number
+    bufferMinutes: number,
+    logTravelDebug: boolean = false
   ): SimpleEvent[] {
     // Sort events chronologically
     const sortedEvents = [...events]
@@ -687,10 +769,12 @@ export class CalendarGenerator {
     const now = new Date();
 
     // Debug: Log plannerLocationMap entries
-    console.log("[Travel Debug] plannerLocationMap entries:");
-    plannerLocationMap.forEach((loc, id) => {
-      console.log(`  ${id} -> ${loc}`);
-    });
+    if (logTravelDebug) {
+      console.log("[Travel Debug] plannerLocationMap entries:");
+      plannerLocationMap.forEach((loc, id) => {
+        console.log(`  ${id} -> ${loc}`);
+      });
+    }
 
     for (let i = 0; i < sortedEvents.length - 1; i++) {
       const currentEvent = sortedEvents[i];
@@ -704,13 +788,17 @@ export class CalendarGenerator {
       const nextLocationId = plannerLocationMap.get(nextLookupId) ?? null;
 
       // Debug logging
-      console.log(`[Travel Debug] Checking pair: "${currentEvent.title}" -> "${nextEvent.title}"`);
-      console.log(`  currentLookupId: ${currentLookupId}, nextLookupId: ${nextLookupId}`);
-      console.log(`  currentLocationId: ${currentLocationId}, nextLocationId: ${nextLocationId}`);
+      if (logTravelDebug) {
+        console.log(`[Travel Debug] Checking pair: "${currentEvent.title}" -> "${nextEvent.title}"`);
+        console.log(`  currentLookupId: ${currentLookupId}, nextLookupId: ${nextLookupId}`);
+        console.log(`  currentLocationId: ${currentLocationId}, nextLocationId: ${nextLocationId}`);
+      }
 
       // Skip if either location is null ("Everywhere") or same location
       if (!currentLocationId || !nextLocationId || currentLocationId === nextLocationId) {
-        console.log(`  SKIPPED: ${!currentLocationId ? 'currentLoc null' : ''} ${!nextLocationId ? 'nextLoc null' : ''} ${currentLocationId === nextLocationId ? 'same location' : ''}`);
+        if (logTravelDebug) {
+          console.log(`  SKIPPED: ${!currentLocationId ? 'currentLoc null' : ''} ${!nextLocationId ? 'nextLoc null' : ''} ${currentLocationId === nextLocationId ? 'same location' : ''}`);
+        }
         continue;
       }
 
@@ -726,10 +814,14 @@ export class CalendarGenerator {
         currentEnd
       );
 
-      console.log(`  travelTime: ${travelTime} min, gapMinutes: ${gapMinutes} min`);
+      if (logTravelDebug) {
+        console.log(`  travelTime: ${travelTime} min, gapMinutes: ${gapMinutes} min`);
+      }
 
       if (travelTime <= 0) {
-        console.log(`  SKIPPED: travelTime is 0 or negative`);
+        if (logTravelDebug) {
+          console.log(`  SKIPPED: travelTime is 0 or negative`);
+        }
         continue;
       }
 
@@ -737,16 +829,22 @@ export class CalendarGenerator {
       // Layout: [currentEvent.end] -> [buffer] -> [travel] -> [buffer] -> [nextEvent.start]
       const requiredGap = travelTime + (2 * bufferMinutes);
 
-      console.log(`  requiredGap: ${requiredGap} min (travel ${travelTime} + 2*buffer ${bufferMinutes})`);
+      if (logTravelDebug) {
+        console.log(`  requiredGap: ${requiredGap} min (travel ${travelTime} + 2*buffer ${bufferMinutes})`);
+      }
 
       if (gapMinutes < requiredGap) {
         // Not enough space for travel with buffers - skip this travel
         // (The events are too close together)
-        console.log(`  SKIPPED: not enough gap (${gapMinutes} < ${requiredGap})`);
+        if (logTravelDebug) {
+          console.log(`  SKIPPED: not enough gap (${gapMinutes} < ${requiredGap})`);
+        }
         continue;
       }
 
-      console.log(`  CREATING TRAVEL EVENT!`);
+      if (logTravelDebug) {
+        console.log(`  CREATING TRAVEL EVENT!`);
+      }
 
       // Calculate travel start and end times
       // Travel starts after buffer from current event, ends before buffer of next event

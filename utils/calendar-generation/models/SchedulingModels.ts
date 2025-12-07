@@ -111,6 +111,30 @@ export interface TravelTimeEntry {
 }
 
 /**
+ * Granular logging configuration
+ */
+export interface LoggingConfig {
+  /** Log scheduling metrics */
+  metrics?: boolean;
+  /** Log scheduling failures */
+  failures?: boolean;
+  /** Log final events array */
+  finalEvents?: boolean;
+  /** Log travel calculation debug info */
+  travelDebug?: boolean;
+  /** Log template expansion info */
+  templateInfo?: boolean;
+  /** Log input planners */
+  planners?: boolean;
+  /** Log input templates */
+  templates?: boolean;
+  /** Log location map */
+  locations?: boolean;
+  /** Log strategy settings */
+  strategySettings?: boolean;
+}
+
+/**
  * Configuration for calendar generation
  */
 export interface CalendarGenerationConfig {
@@ -118,8 +142,10 @@ export interface CalendarGenerationConfig {
   maxDaysAhead?: number;
   /** Maximum iterations per task */
   maxIterationsPerTask?: number;
-  /** Whether to enable detailed logging */
+  /** Whether to enable detailed logging (master switch) */
   enableLogging?: boolean;
+  /** Granular logging options (only used if enableLogging is true) */
+  logging?: LoggingConfig;
   /** Buffer time between scheduled items in minutes */
   bufferTimeMinutes?: number;
   /** Strategy weights */
