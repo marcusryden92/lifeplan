@@ -84,7 +84,7 @@ export function populateTemplateCalendar(
       backgroundColor: (event.color as string) || calendarColors[0],
       borderColor: "transparent",
       duration: null,
-      extendedProps: { isTemplateItem: true },
+      extendedProps: { isTemplateItem: true, locationId: event.locationId },
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });

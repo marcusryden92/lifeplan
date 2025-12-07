@@ -130,7 +130,10 @@ export function BufferTimeSettings({ actions }: BufferTimeSettingsProps) {
               max="120"
               step="5"
               value={bufferTimeMinutes}
-              onChange={(e) => setBufferTimeMinutes(parseInt(e.target.value))}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                setBufferTimeMinutes(isNaN(value) ? 0 : value);
+              }}
               className="w-32"
             />
             <div className="text-sm text-muted-foreground">

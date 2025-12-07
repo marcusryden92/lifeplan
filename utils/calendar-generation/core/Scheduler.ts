@@ -103,13 +103,13 @@ export class Scheduler {
       );
       if (!slot) continue;
 
-      // Calculate travel times based on location match
-      // "Everywhere" (null) tasks don't need travel
+      // Calculate travel times based on location
+      // Null-location tasks ("everywhere") don't need travel - they're transparent
       let needTravelBefore = 0;
       let needTravelAfter = 0;
 
       if (taskLocationId) {
-        // Check if prev location is different (need travel before)
+        // Travel BEFORE: needed if prev location differs from task location
         if (slot.prevLocationId && slot.prevLocationId !== taskLocationId) {
           needTravelBefore = this.slotManager.getTravelTime(
             slot.prevLocationId,
@@ -118,7 +118,9 @@ export class Scheduler {
           );
         }
 
-        // Check if next location is different (need travel after)
+        // Travel AFTER: needed if next location differs from task location
+        // This travel will be placed at the END of the slot and shifts forward
+        // as more tasks are added
         if (slot.nextLocationId && slot.nextLocationId !== taskLocationId) {
           needTravelAfter = this.slotManager.getTravelTime(
             taskLocationId,
@@ -127,15 +129,26 @@ export class Scheduler {
           );
         }
       }
+      // Note: If taskLocationId is null, prevLocationId passes through unchanged
+      // (null tasks are "transparent" for travel purposes)
 
-      // Calculate total required time with proper buffer placement:
-      // Layout: [buffer] -> [travelBefore] -> [buffer] -> [task] -> [buffer] -> [travelAfter] -> [buffer]
-      // - No travel: [buffer] -> [task] -> [buffer] = 2 buffers
-      // - Travel before only: [buffer] -> [travel] -> [buffer] -> [task] -> [buffer] = 3 buffers
-      // - Travel after only: [buffer] -> [task] -> [buffer] -> [travel] -> [buffer] = 3 buffers
-      // - Travel both: [buffer] -> [travel] -> [buffer] -> [task] -> [buffer] -> [travel] -> [buffer] = 4 buffers
-      const numBuffers = 2 + (needTravelBefore > 0 ? 1 : 0) + (needTravelAfter > 0 ? 1 : 0);
-      const totalRequired = task.duration + needTravelBefore + needTravelAfter + (numBuffers * bufferMinutes);
+      // Calculate total required time:
+      // Layout: [travelBefore] [buffer] [task] [buffer] [travelAfter]
+      // Buffers separate items, not surround them
+      // - 1 buffer between travelBefore and task (if travelBefore exists)
+      // - 1 buffer between task and travelAfter/end
+      //
+      // Note: If there's existing travel to the same destination, it will be replaced
+      // (travel "shifts forward"). In this case, we don't need extra space for travel-after
+      // because we're reusing the existing travel's position.
+      const numBuffers = 1 + (needTravelBefore > 0 ? 1 : 0);
+
+      // Check if existing travel to the destination can be reused
+      // Travel-after doesn't require NEW space if it replaces existing travel
+      const effectiveTravelAfter = needTravelAfter;  // For now, always include travel-after in calculation
+      // The TimeSlotManager will handle the actual placement at the existing position
+
+      const totalRequired = task.duration + needTravelBefore + effectiveTravelAfter + (numBuffers * bufferMinutes);
 
       // Check if this slot has enough capacity
       if (slot.durationMinutes >= totalRequired) {
@@ -160,35 +173,36 @@ export class Scheduler {
     }
 
     // Step 4: Calculate task times
-    // Layout: [buffer] -> [travelBefore] -> [buffer] -> [task] -> [buffer] -> [travelAfter] -> [buffer]
-    // Calculate offset to task start:
-    // - Always start with leading buffer
-    // - If travel before: add travel + another buffer before task
-    // - If no travel before: task starts after the single leading buffer
+    // Layout: [travelBefore] [buffer] [task] [buffer] [FREE] [travelAfter]
+    // Travel-after is placed at the END of the slot, free space is between task and travel-after
+
+    // Calculate offset to task start from slot start
     const offsetToTaskStart = travelBefore > 0
-      ? bufferMinutes + travelBefore + bufferMinutes  // [buffer] -> [travel] -> [buffer] -> [task]
-      : bufferMinutes;  // [buffer] -> [task]
+      ? travelBefore + bufferMinutes  // [travel] [buffer] [task]
+      : 0;  // [task] starts at slot start
 
     const taskStartDate = dateTimeService.addDuration(selectedSlot.start, offsetToTaskStart);
     const taskEndDate = dateTimeService.addDuration(taskStartDate, task.duration);
 
-    // Calculate full reserved range (includes travel and all buffers)
-    // This prevents other tasks from being scheduled in the travel time
-    const fullReserveStart = selectedSlot.start;
-    const offsetToEnd = travelAfter > 0
-      ? task.duration + bufferMinutes + travelAfter + bufferMinutes
-      : task.duration + bufferMinutes;
-    const fullReserveEnd = dateTimeService.addDuration(taskStartDate, offsetToEnd);
+    // Calculate where task reservation ends (task + trailing buffer)
+    const taskReserveEnd = dateTimeService.addDuration(taskEndDate, bufferMinutes);
 
-    // Step 5: Reserve the full slot (task + travel time + buffers)
-    // Travel events will be generated at the end from the timeline
-    const reserved = this.slotManager.reserveSlot(
-      fullReserveStart,
-      fullReserveEnd,
+    // Step 5: Reserve the slot with travel placement
+    // Travel-before is placed at the START of the slot
+    // Travel-after is placed at the END of the slot
+    // Note: reserveSlotWithTravel expects task start/end times, not reservation times
+    const result = this.slotManager.reserveSlotWithTravel(
+      taskStartDate,
+      taskEndDate,
       task.id,
       task.itemType as "task" | "goal" | "plan" | "template",
-      taskLocationId
+      taskLocationId,
+      travelBefore,
+      travelAfter,
+      selectedSlot.prevLocationId ?? null,
+      selectedSlot.nextLocationId ?? null
     );
+    const reserved = result.success;
 
     if (!reserved) {
       this.metrics.tasksFailed++;

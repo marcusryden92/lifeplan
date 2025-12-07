@@ -29,6 +29,12 @@ import {
   formatMinutesToHours,
 } from "@/utils/taskArrayUtils";
 import EventColorPicker from "@/components/events/EventColorPicker/EventColorPicker";
+import { LocationSelector } from "@/components/locations/LocationSelector";
+import {
+  assignLocationToPlanner,
+  assignLocationToMultiplePlanners,
+} from "@/actions/locations";
+import { getGoalTree } from "@/utils/goalPageHandlers";
 
 type GoalProps = {
   planner: Planner[];
@@ -58,6 +64,10 @@ const Goal = ({
   const [editTitle, setEditTitle] = useState<string>(task.title);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
     task.deadline ? new Date(task.deadline) : undefined
+  );
+  const [showCascadeConfirm, setShowCascadeConfirm] = useState<boolean>(false);
+  const [pendingLocationId, setPendingLocationId] = useState<string | null>(
+    null
   );
 
   const priority = task.priority ? Number(task.priority) : 5;
@@ -96,6 +106,55 @@ const Goal = ({
     handleUpdateDeadline(task.id, null);
     setSelectedDate(undefined);
   }, [task.id, handleUpdateDeadline]);
+
+  // Location change handler with cascade support
+  const handleLocationChange = async (locationId: string | null) => {
+    // If goal has subtasks, ask about cascading
+    if (subtasks.length > 0) {
+      setPendingLocationId(locationId);
+      setShowCascadeConfirm(true);
+      return;
+    }
+
+    // No subtasks, just update this item
+    await applyLocationChange(locationId, false);
+  };
+
+  const applyLocationChange = async (
+    locationId: string | null,
+    cascade: boolean
+  ) => {
+    try {
+      if (cascade) {
+        // Get all items in the tree (this item + all descendants)
+        const treeItems = getGoalTree(planner, task.id);
+        const treeIds = treeItems.map((item) => item.id);
+
+        await assignLocationToMultiplePlanners(treeIds, locationId);
+
+        // Update local state for all items
+        updatePlannerArray((prev) =>
+          prev.map((p) =>
+            treeIds.includes(p.id) ? { ...p, locationId: locationId } : p
+          )
+        );
+      } else {
+        await assignLocationToPlanner(task.id, locationId);
+
+        // Update local state
+        updatePlannerArray((prev) =>
+          prev.map((p) =>
+            p.id === task.id ? { ...p, locationId: locationId } : p
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Failed to update location:", error);
+    } finally {
+      setShowCascadeConfirm(false);
+      setPendingLocationId(null);
+    }
+  };
 
   return (
     <div className="flex flex-col w-full h-full group hover:shadow-md px-12 py-4 transition-colors duration-300 text-black">
@@ -146,6 +205,11 @@ const Goal = ({
             </div>
             <div className="flex flex-row space-x-2 items-center ml-auto transition-opacity">
               <>
+                <LocationSelector
+                  value={task.locationId ?? null}
+                  onChange={handleLocationChange}
+                  compact
+                />
                 <PrioritySelector
                   updatePlannerArray={updatePlannerArray}
                   taskId={task.id}
@@ -214,6 +278,41 @@ const Goal = ({
         </div>
 
         <AddSubtask task={task} parentId={task.id} isMainParent />
+
+        {/* Cascade confirmation dialog */}
+        {showCascadeConfirm && (
+          <div
+            className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowCascadeConfirm(false);
+              setPendingLocationId(null);
+            }}
+          >
+            <div
+              className="bg-white rounded-lg p-4 shadow-lg max-w-sm mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-sm text-gray-700 mb-4">
+                Apply this location to all child items?
+              </p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded"
+                  onClick={() => applyLocationChange(pendingLocationId, false)}
+                >
+                  This item only
+                </button>
+                <button
+                  className="px-3 py-1.5 text-sm text-white bg-sky-500 hover:bg-sky-600 rounded"
+                  onClick={() => applyLocationChange(pendingLocationId, true)}
+                >
+                  All children
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </>
     </div>
   );

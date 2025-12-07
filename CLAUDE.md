@@ -5,6 +5,7 @@
 LifePlan is a personal scheduling and task management application that automatically schedules tasks based on priorities, deadlines, and user preferences.
 
 **Stack:**
+
 - Next.js 14.2.6 (App Router)
 - React 18 + TypeScript 5.5
 - Prisma ORM with PostgreSQL
@@ -119,6 +120,7 @@ lifeplan/
 ### Planner Model
 
 Central model for all schedulable items:
+
 ```typescript
 {
   id: string;
@@ -141,6 +143,7 @@ Central model for all schedulable items:
 ### Location System
 
 Items can have an associated location for travel time calculation:
+
 - **Location** - Named location with address, coordinates, and Google Place ID
 - **TravelTime** - Directional travel duration between two locations
 - Items with `locationId: null` are considered "Everywhere" (no travel time needed)
@@ -156,6 +159,7 @@ The calendar generation uses a **strategy-based architecture**:
 5. **CompositeStrategy** - Combines multiple weighted strategies
 
 #### Strategy Interface
+
 ```typescript
 interface SchedulingStrategy {
   readonly name: string;
@@ -165,11 +169,13 @@ interface SchedulingStrategy {
 ```
 
 #### Current Strategies
+
 - **UrgencyStrategy** - Scores based on deadline proximity
 - **EarliestSlotStrategy** - Prefers earlier slots
 - **LocationGroupingStrategy** - Groups tasks at same location to minimize travel
 
 #### Weight Configuration (constants.ts)
+
 ```typescript
 STRATEGY_WEIGHTS = {
   URGENCY_WEIGHT: 1.0,
@@ -184,7 +190,9 @@ STRATEGY_WEIGHTS = {
 ## Key Patterns
 
 ### Server Actions
+
 Prefer server actions over API routes:
+
 ```typescript
 "use server";
 import { auth } from "@/auth";
@@ -199,7 +207,9 @@ export async function myAction(data: MyType) {
 ```
 
 ### Form Handling
+
 React Hook Form + Zod:
+
 ```typescript
 const form = useForm<z.infer<typeof MySchema>>({
   resolver: zodResolver(MySchema),
@@ -208,7 +218,9 @@ const form = useForm<z.infer<typeof MySchema>>({
 ```
 
 ### Data Context
+
 CalendarProvider manages planner state:
+
 ```typescript
 const { plannerArray, updatePlannerArray } = useCalendarProvider();
 ```
@@ -237,6 +249,7 @@ pnpm prisma migrate dev --name migration_name
 ### Seed Data
 
 Seed helpers in `prisma/seed-helpers/` provide test data with location assignments:
+
 - **A items** - No location (can be done anywhere)
 - **B items** - Work location
 - **C items** - Home location
@@ -248,6 +261,7 @@ Seed helpers in `prisma/seed-helpers/` provide test data with location assignmen
 ## Environment Variables
 
 Required in `.env`:
+
 ```
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 NEXTAUTH_SECRET=""
@@ -300,17 +314,17 @@ RESEND_API_KEY=""
 Granular logging is available in `utils/calendar-generation/calendarGeneration.ts`:
 
 ```typescript
-const enableLogging = true;  // Master switch
+const enableLogging = true; // Master switch
 const logging = {
-  metrics: false,           // Scheduling metrics
-  failures: false,          // Scheduling failures
-  finalEvents: false,       // Final calendar events JSON
-  travelDebug: false,       // Travel calculation debug
-  templateInfo: false,      // Template expansion info
-  planners: false,          // Input planners JSON
-  templates: false,         // Input templates JSON
-  locations: false,         // Location map
-  strategySettings: false,  // Strategy configuration
+  metrics: false, // Scheduling metrics
+  failures: false, // Scheduling failures
+  finalEvents: false, // Final calendar events JSON
+  travelDebug: false, // Travel calculation debug
+  templateInfo: false, // Template expansion info
+  planners: false, // Input planners JSON
+  templates: false, // Input templates JSON
+  locations: false, // Location map
+  strategySettings: false, // Strategy configuration
 };
 ```
 

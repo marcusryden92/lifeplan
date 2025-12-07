@@ -51,15 +51,15 @@ export function generateCalendar(
   // Logging configuration - set enableLogging to false to disable all logging
   const enableLogging = true;
   const logging = {
-    metrics: false,
-    failures: false,
+    metrics: true,
+    failures: true,
     travelDebug: false,
     templateInfo: false,
     planners: false,
     templates: false,
     locations: false,
     strategySettings: false,
-    finalEvents: true,
+    finalEvents: false,
   };
 
   const result = generator.generate({

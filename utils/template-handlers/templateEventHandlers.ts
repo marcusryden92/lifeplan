@@ -141,16 +141,16 @@ export const handleTemplateEventCopy = (
     (endDate.getTime() - startDate.getTime()) / (1000 * 60)
   );
 
-  // Create new EventTemplate object
+  // Create new EventTemplate object, copying locationId from original event
   const newEvent: EventTemplate = {
     userId: userId,
     title: event.title,
     id: uuidv4(),
-    startDay: getWeekdayFromDate(startDate), // Assuming startDate is a Date object
-    startTime: getTimeFromDate(startDate), // Assuming startDate is a Date object
-    duration, // Add duration in minutes
+    startDay: getWeekdayFromDate(startDate),
+    startTime: getTimeFromDate(startDate),
+    duration,
     color: event.backgroundColor,
-    locationId: null,
+    locationId: (event.extendedProps?.locationId as string | null) ?? null,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
   };

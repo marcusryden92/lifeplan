@@ -155,7 +155,11 @@ export class TimeSlotManager {
     const slots = intervalsToTimeSlots(gaps, true);
 
     // If we have a planner location map, set prevLocationId and nextLocationId on each slot
+    // Also create travel slots between adjacent events with different locations
     if (plannerLocationMap && relevantEvents.length > 0) {
+      const dayKey = this.getDayKey(startDate);
+      const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+
       for (const slot of slots) {
         // Find the event immediately before this slot
         const prevEvent = relevantEvents.find((e) => {
@@ -174,17 +178,58 @@ export class TimeSlotManager {
         // Look up locations from the planner map
         // Use extendedProps.eventId first (for template events which have compound IDs),
         // then fall back to event.id (for planner items)
+        let prevLocationId: string | null = null;
+        let nextLocationId: string | null = null;
+
         if (prevEvent) {
           const lookupId =
             (prevEvent.extendedProps?.eventId as string) || prevEvent.id;
-          slot.prevLocationId = plannerLocationMap.get(lookupId) ?? null;
+          prevLocationId = plannerLocationMap.get(lookupId) ?? null;
+          slot.prevLocationId = prevLocationId;
         }
         if (nextEvent) {
           const lookupId =
             (nextEvent.extendedProps?.eventId as string) || nextEvent.id;
-          slot.nextLocationId = plannerLocationMap.get(lookupId) ?? null;
+          nextLocationId = plannerLocationMap.get(lookupId) ?? null;
+          slot.nextLocationId = nextLocationId;
+        }
+
+        // Create travel slot if prev and next locations differ (and both exist)
+        // This handles template-to-template travel
+        if (prevLocationId && nextLocationId && prevLocationId !== nextLocationId) {
+          const travelMinutes = this.getTravelTime(prevLocationId, nextLocationId, slot.end);
+          if (travelMinutes > 0) {
+            // Travel is placed at the END of the slot (right before nextEvent)
+            // Layout: [FREE SLOT] [buffer] [travel] [nextEvent]
+            const bufferMs = this.bufferTimeMinutes * 60000;
+            const travelMs = travelMinutes * 60000;
+
+            // Travel ends at slot.end (which is when next event starts)
+            const travelEnd = new Date(slot.end.getTime());
+            const travelStart = new Date(travelEnd.getTime() - travelMs);
+
+            // Only create travel if there's room for it (need buffer + travel)
+            if (travelStart.getTime() > slot.start.getTime() + bufferMs) {
+              const travelSlot = TimeSlotUtils.createTravelSlot(
+                travelStart,
+                travelEnd,
+                prevLocationId,
+                nextLocationId,
+                `travel-${prevEvent?.id}-to-${nextEvent?.id}`
+              );
+              occupiedSlots.push(travelSlot);
+
+              // Shrink the available slot to end at the buffer before travel
+              slot.end = new Date(travelStart.getTime() - bufferMs);
+              slot.durationMinutes = Math.floor(
+                (slot.end.getTime() - slot.start.getTime()) / 60000
+              );
+            }
+          }
         }
       }
+
+      this.occupiedSlots.set(dayKey, occupiedSlots);
     }
 
     // Merge adjacent slots (preserve location info from first slot in merge)
@@ -287,8 +332,9 @@ export class TimeSlotManager {
     const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
     let currentDate = new Date(afterDate);
 
-    // Base required time: task duration + buffer on both sides
-    const baseRequiredMinutes = durationMinutes + 2 * this.bufferTimeMinutes;
+    // Base required time: task duration + 1 buffer (minimum)
+    // The Scheduler will do the final capacity check including travel time
+    const baseRequiredMinutes = durationMinutes + this.bufferTimeMinutes;
 
     while (currentDate <= searchEndDate) {
       const dayKey = this.getDayKey(currentDate);
@@ -384,6 +430,151 @@ export class TimeSlotManager {
   }
 
   /**
+   * Reserve a time slot with travel-after placed at the END of the original slot.
+   *
+   * Layout: [task reservation] [FREE SLOT] [travel-after]
+   *
+   * The travel-after is anchored to the end (before the next template/event).
+   * The free slot in between has prevLocationId = taskLocationId so subsequent
+   * same-location tasks don't need travel-before.
+   *
+   * When the next task is placed in the free slot, travel-after shifts forward.
+   *
+   * @param taskReserveStart - Start of task reservation (includes leading buffer + travel-before if any)
+   * @param taskReserveEnd - End of task reservation (task end + trailing buffer)
+   * @param eventId - ID of the event being placed
+   * @param eventType - Type of the event
+   * @param taskLocationId - Location of the task (null = "everywhere", transparent for travel)
+   * @param travelAfterMinutes - Minutes of travel needed after (0 if none)
+   * @param nextLocationId - Location of the next event (for travel-after destination)
+   */
+  reserveSlotWithTravelAfter(
+    taskReserveStart: Date,
+    taskReserveEnd: Date,
+    eventId: string,
+    eventType: "task" | "goal" | "plan" | "template",
+    taskLocationId: string | null,
+    travelAfterMinutes: number,
+    nextLocationId: string | null
+  ): boolean {
+    const dayKey = this.getDayKey(taskReserveStart);
+    const slots = this.availableSlots.get(dayKey);
+
+    if (!slots) return false;
+
+    const bufferMinutes = this.bufferTimeMinutes;
+
+    // Find the slot that contains the task reservation
+    const slotIndex = slots.findIndex(
+      (slot) =>
+        slot.isAvailable &&
+        slot.start.getTime() <= taskReserveStart.getTime() &&
+        slot.end.getTime() >= taskReserveEnd.getTime()
+    );
+
+    if (slotIndex === -1) return false;
+
+    const slot = slots[slotIndex];
+    const newSlots: TimeSlot[] = [];
+
+    // Calculate travel-after position at the END of the original slot
+    // Layout at end: [buffer] [travel] ending at slot.end
+    // The buffer separates the free slot from travel, travel ends at slot.end
+    const travelAfterEnd = travelAfterMinutes > 0
+      ? new Date(slot.end.getTime())
+      : null;
+    const travelAfterStart = travelAfterMinutes > 0 && travelAfterEnd
+      ? new Date(travelAfterEnd.getTime() - travelAfterMinutes * 60000)
+      : null;
+    const travelAfterBufferStart = travelAfterStart
+      ? new Date(travelAfterStart.getTime() - bufferMinutes * 60000)
+      : null;
+
+    // 1. Slot before task (if any space)
+    if (taskReserveStart.getTime() > slot.start.getTime()) {
+      newSlots.push({
+        start: slot.start,
+        end: taskReserveStart,
+        durationMinutes: Math.floor(
+          (taskReserveStart.getTime() - slot.start.getTime()) / 60000
+        ),
+        isAvailable: true,
+        prevLocationId: slot.prevLocationId,
+        nextLocationId: taskLocationId ?? slot.prevLocationId, // null tasks are transparent
+      });
+    }
+
+    // 2. Task reservation (occupied) - this is NOT a slot we track, task event handles it
+    // We just need to mark this time as used by splitting the slot
+
+    // 3. Free slot BETWEEN task and travel-after
+    // prevLocationId = taskLocationId (or preserved if task is null/everywhere)
+    // nextLocationId = slot.nextLocationId (the template location)
+    const freeSlotStart = taskReserveEnd;
+    const freeSlotEnd = travelAfterBufferStart ?? slot.end;
+
+    // Determine prevLocationId for free slot:
+    // - If task has location: use task's location
+    // - If task is null (everywhere): preserve the original slot's prevLocationId
+    const freeSlotPrevLocation = taskLocationId ?? slot.prevLocationId;
+
+    if (freeSlotEnd.getTime() > freeSlotStart.getTime()) {
+      newSlots.push({
+        start: freeSlotStart,
+        end: freeSlotEnd,
+        durationMinutes: Math.floor(
+          (freeSlotEnd.getTime() - freeSlotStart.getTime()) / 60000
+        ),
+        isAvailable: true,
+        prevLocationId: freeSlotPrevLocation,
+        nextLocationId: slot.nextLocationId,
+      });
+    }
+
+    // 4. Handle travel-after: remove any existing travel that ends near where the new travel would be,
+    // then add new travel at the shifted position
+    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+
+    // Remove any existing travel slot that ends near slot.end (the original template position)
+    // This handles both:
+    // - Travel placed by buildAvailableSlots (template-to-template)
+    // - Travel placed by previous task scheduling that now needs to shift
+    // We look for travel ending within 2 buffer periods of the original slot end
+    const searchWindowStart = slot.end.getTime() - (3 * bufferMinutes * 60000 + 60 * 60000); // allow for up to 60min travel
+    const searchWindowEnd = slot.end.getTime() + (bufferMinutes * 60000);
+
+    // Remove all travel slots that would be "overwritten" by placing this task
+    for (let i = occupiedSlots.length - 1; i >= 0; i--) {
+      const occ = occupiedSlots[i];
+      if (TimeSlotUtils.isTravelSlot(occ) &&
+          occ.end.getTime() >= searchWindowStart &&
+          occ.end.getTime() <= searchWindowEnd) {
+        occupiedSlots.splice(i, 1);
+      }
+    }
+
+    // Add new travel-after slot at the END of the remaining free space
+    if (travelAfterMinutes > 0 && travelAfterStart && travelAfterEnd && taskLocationId && nextLocationId) {
+      const travelSlot = TimeSlotUtils.createTravelSlot(
+        travelAfterStart,
+        travelAfterEnd,
+        taskLocationId,
+        nextLocationId,
+        `travel-from-${eventId}`
+      );
+
+      occupiedSlots.push(travelSlot);
+    }
+
+    this.occupiedSlots.set(dayKey, occupiedSlots);
+
+    // Replace old slot with new available slots
+    slots.splice(slotIndex, 1, ...newSlots);
+
+    return true;
+  }
+
+  /**
    * Reserve a time slot for an event with travel time handling.
    * Travel is stored as occupied slots (not SimpleEvents) that can be reclaimed
    * by same-location tasks inserted later.
@@ -418,12 +609,14 @@ export class TimeSlotManager {
 
     const bufferMinutes = this.bufferTimeMinutes;
 
-    // Layout: [buffer] -> [travelBefore] -> [buffer] -> [task] -> [buffer] -> [travelAfter] -> [buffer]
-    // The `start` param is the task start time (already positioned after travel + buffers by Scheduler)
-    // Calculate positions for all components
+    // Layout with "travel at END of slot" model:
+    // [travelBefore] [buffer] [task] [buffer] [FREE SPACE] [buffer] [travelAfter at slot.end]
+    //
+    // Travel-after is anchored to the END of the original slot (right before next template).
+    // Free space between task and travel-after allows subsequent same-location tasks.
+    // When next task is scheduled, travel-after shifts forward (is removed and re-added).
 
-    // Travel before starts after leading buffer, ends at buffer before task
-    // So: travelBeforeEnd = start - buffer, travelBeforeStart = travelBeforeEnd - travelBefore
+    // Travel before: ends at (start - buffer), starts at (start - buffer - travelBefore)
     const travelBeforeEnd =
       travelBefore > 0
         ? new Date(start.getTime() - bufferMinutes * 60000)
@@ -433,41 +626,63 @@ export class TimeSlotManager {
         ? new Date(travelBeforeEnd.getTime() - travelBefore * 60000)
         : start;
 
-    // Travel after starts at buffer after task, ends before trailing buffer
-    // So: travelAfterStart = end + buffer, travelAfterEnd = travelAfterStart + travelAfter
-    const travelAfterStart =
-      travelAfter > 0 ? new Date(end.getTime() + bufferMinutes * 60000) : end;
-    const travelAfterEnd =
-      travelAfter > 0
-        ? new Date(travelAfterStart.getTime() + travelAfter * 60000)
-        : end;
+    // Calculate fullStart for finding the slot:
+    // - With travelBefore: starts at travelBeforeStart
+    // - Without travelBefore: starts at task start
+    const fullStart = travelBefore > 0 ? travelBeforeStart : start;
 
-    // Full occupied range: from leading buffer start to trailing buffer end
-    const fullStart =
-      travelBefore > 0
-        ? new Date(travelBeforeStart.getTime() - bufferMinutes * 60000)
-        : new Date(start.getTime() - bufferMinutes * 60000);
-    const fullEnd =
-      travelAfter > 0
-        ? new Date(travelAfterEnd.getTime() + bufferMinutes * 60000)
-        : new Date(end.getTime() + bufferMinutes * 60000);
+    // Task reservation end (task + trailing buffer)
+    const taskReserveEnd = new Date(end.getTime() + bufferMinutes * 60000);
 
-    // Find the slot that contains this full time range
+    // Find the slot that contains at minimum [fullStart, taskReserveEnd]
+    // We'll place travel-after at the END of this slot (not right after task)
     const slotIndex = slots.findIndex(
       (slot) =>
         slot.isAvailable &&
         slot.start.getTime() <= fullStart.getTime() &&
-        slot.end.getTime() >= fullEnd.getTime()
+        slot.end.getTime() >= taskReserveEnd.getTime()
     );
 
     if (slotIndex === -1) {
+      // Debug: log why we couldn't find a slot
+      console.log(`[reserveSlotWithTravel] FAILED to find slot for ${eventId}`);
+      console.log(`  Looking for: fullStart=${fullStart.toISOString()}, taskReserveEnd=${taskReserveEnd.toISOString()}`);
+      console.log(`  Task: start=${start.toISOString()}, end=${end.toISOString()}`);
+      console.log(`  Travel: before=${travelBefore}, after=${travelAfter}`);
+      console.log(`  Available slots on ${dayKey}:`);
+      slots.forEach((s, idx) => {
+        console.log(`    [${idx}] ${s.start.toISOString()} - ${s.end.toISOString()} (${s.durationMinutes}min, avail=${s.isAvailable})`);
+      });
       return { success: false };
     }
 
     const slot = slots[slotIndex];
     const newSlots: TimeSlot[] = [];
+    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
 
-    // Slot before everything (available) - ends at fullStart
+    // Calculate travel-after position
+    // If there's existing travel to the same destination, use its end position (travel shifts forward).
+    // Otherwise, use slot.end (right before next template starts).
+    let travelAfterEnd: Date | null = null;
+    let travelAfterStart: Date | null = null;
+
+    if (travelAfter > 0 && nextLocationId) {
+      // Look for existing travel going to the same destination
+      const existingTravel = occupiedSlots.find(
+        (occ) => TimeSlotUtils.isTravelSlot(occ) && occ.travelToLocationId === nextLocationId
+      );
+
+      if (existingTravel) {
+        // Use existing travel's end position (it will be replaced)
+        travelAfterEnd = new Date(existingTravel.end.getTime());
+      } else {
+        // No existing travel, use slot.end
+        travelAfterEnd = new Date(slot.end.getTime());
+      }
+      travelAfterStart = new Date(travelAfterEnd.getTime() - travelAfter * 60000);
+    }
+
+    // 1. Slot before everything (available) - from slot.start to fullStart
     if (fullStart.getTime() > slot.start.getTime()) {
       newSlots.push({
         start: slot.start,
@@ -481,21 +696,20 @@ export class TimeSlotManager {
       });
     }
 
-    // Travel slot BEFORE the task (if needed)
+    // 2. Travel slot BEFORE the task (if needed)
     if (travelBefore > 0 && prevLocationId && taskLocationId) {
-      newSlots.push(
-        TimeSlotUtils.createTravelSlot(
-          travelBeforeStart,
-          travelBeforeEnd,
-          prevLocationId,
-          taskLocationId,
-          `travel-to-${eventId}`
-        )
+      const travelSlot = TimeSlotUtils.createTravelSlot(
+        travelBeforeStart,
+        travelBeforeEnd,
+        prevLocationId,
+        taskLocationId,
+        `travel-to-${eventId}`
       );
+      newSlots.push(travelSlot);
     }
 
-    // The task itself (occupied)
-    newSlots.push({
+    // 3. The task itself (occupied) - NOT added to newSlots, just to occupiedSlots
+    const taskSlot: TimeSlot = {
       start,
       end,
       durationMinutes: Math.floor((end.getTime() - start.getTime()) / 60000),
@@ -504,41 +718,64 @@ export class TimeSlotManager {
       eventType,
       prevLocationId: taskLocationId,
       nextLocationId: taskLocationId,
-    });
+    };
 
-    // Travel slot AFTER the task (if needed)
-    if (travelAfter > 0 && taskLocationId && nextLocationId) {
-      newSlots.push(
-        TimeSlotUtils.createTravelSlot(
-          travelAfterStart,
-          travelAfterEnd,
-          taskLocationId,
-          nextLocationId,
-          `travel-from-${eventId}`
-        )
-      );
+    // 4. FREE slot BETWEEN task+buffer and travel-after (or slot.end if no travel)
+    // When there's travel-after, the FREE slot ends at [buffer] before the travel.
+    // This ensures no overlap between available slot and travel.
+    const freeSlotStart = taskReserveEnd;
+    // If travel-after exists, FREE slot ends at buffer before travel. Otherwise, extends to slot.end.
+    // Note: travelAfterStart might be positioned at existing travel's end (shifted forward case)
+    let freeSlotEnd: Date;
+    if (travelAfterStart) {
+      freeSlotEnd = new Date(travelAfterStart.getTime() - bufferMinutes * 60000);
+    } else {
+      freeSlotEnd = slot.end;
     }
+    const freeSlotPrevLocation = taskLocationId ?? slot.prevLocationId;
 
-    // Slot after everything (available) - starts at fullEnd
-    if (fullEnd.getTime() < slot.end.getTime()) {
+    if (freeSlotEnd.getTime() > freeSlotStart.getTime()) {
       newSlots.push({
-        start: fullEnd,
-        end: slot.end,
+        start: freeSlotStart,
+        end: freeSlotEnd,
         durationMinutes: Math.floor(
-          (slot.end.getTime() - fullEnd.getTime()) / 60000
+          (freeSlotEnd.getTime() - freeSlotStart.getTime()) / 60000
         ),
         isAvailable: true,
-        prevLocationId: taskLocationId ?? slot.prevLocationId,
-        nextLocationId: slot.nextLocationId,
+        prevLocationId: freeSlotPrevLocation,
+        nextLocationId: slot.nextLocationId,  // Still points to next template
       });
     }
 
-    // Replace the old slot with new slots
+    // 5. Handle travel-after: remove existing travel going to same destination, then add new
+    if (travelAfter > 0 && nextLocationId) {
+      // Remove existing travel slots going TO nextLocationId
+      for (let i = occupiedSlots.length - 1; i >= 0; i--) {
+        const occ = occupiedSlots[i];
+        if (TimeSlotUtils.isTravelSlot(occ) && occ.travelToLocationId === nextLocationId) {
+          occupiedSlots.splice(i, 1);
+        }
+      }
+    }
+
+    // Add new travel-after at the END of the slot
+    if (travelAfter > 0 && travelAfterStart && travelAfterEnd && taskLocationId && nextLocationId) {
+      const travelSlot = TimeSlotUtils.createTravelSlot(
+        travelAfterStart,
+        travelAfterEnd,
+        taskLocationId,
+        nextLocationId,
+        `travel-from-${eventId}`
+      );
+      newSlots.push(travelSlot);
+    }
+
+    // Replace the old slot with new available slots only
     const availableNewSlots = newSlots.filter((s) => s.isAvailable);
     slots.splice(slotIndex, 1, ...availableNewSlots);
 
-    // Track all occupied slots (including travel)
-    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+    // Track all occupied slots (task + travel)
+    occupiedSlots.push(taskSlot);
     occupiedSlots.push(...newSlots.filter((s) => !s.isAvailable));
     this.occupiedSlots.set(dayKey, occupiedSlots);
 

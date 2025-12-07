@@ -248,41 +248,28 @@ export class CalendarGenerator {
       context
     );
 
-    // Step 10: Generate travel events by walking through the final timeline
-    // This creates travel between ALL adjacent events with different locations,
-    // including templates which don't go through the scheduling process
-    const bufferMinutes = input.config?.bufferTimeMinutes ?? 0;
+    // Step 10: Generate travel events from stored travel slots
+    // Travel slots are created during scheduling and stored in occupiedSlots.
+    // This approach ensures travel is correctly placed at the end of free slots
+    // and shifts forward as tasks fill in.
 
-    // Combine scheduled events with simple template events for travel calculation
-    // IMPORTANT: Exclude recurring template events (with rrule) because we use
-    // simpleTemplateEvents instead - they have concrete times for each day
     const scheduledNonTemplateEvents = context.scheduledEvents.filter(
       (e) => e.extendedProps?.itemType !== "template"
     );
-    const allEventsBeforeTravel = [...scheduledNonTemplateEvents, ...simpleTemplateEvents];
 
-    // Debug: Log events being processed for travel
+    // Get travel events from stored travel slots
+    const travelEvents = this.slotManager.generateTravelEvents(input.userId);
+
+    // Debug: Log travel events
     if (this.shouldLog(input, "travelDebug")) {
-      console.log("[Travel Debug] Events for travel calculation:");
-      console.log(`  scheduledNonTemplateEvents: ${scheduledNonTemplateEvents.length}`);
-      console.log(`  simpleTemplateEvents: ${simpleTemplateEvents.length}`);
-      console.log(`  total allEventsBeforeTravel: ${allEventsBeforeTravel.length}`);
-      for (const e of allEventsBeforeTravel.slice(0, 20)) {
-        const lookupId = (e.extendedProps?.eventId as string) || e.id;
-        console.log(`  - "${e.title}" (${e.extendedProps?.itemType}) lookupId=${lookupId} start=${e.start}`);
-      }
-      if (allEventsBeforeTravel.length > 20) {
-        console.log(`  ... and ${allEventsBeforeTravel.length - 20} more`);
+      console.log("[Travel Debug] Generated travel events from slots:");
+      console.log(`  travelEvents count: ${travelEvents.length}`);
+      for (const e of travelEvents) {
+        const props = e.extendedProps as Record<string, unknown>;
+        console.log(`  - Travel: ${e.start} to ${e.end}`);
+        console.log(`    from: ${props?.fromLocationId} to: ${props?.toLocationId}`);
       }
     }
-
-    const travelEvents = this.generateTravelEventsFromTimeline(
-      allEventsBeforeTravel,
-      plannerLocationMap,
-      input.userId,
-      bufferMinutes,
-      this.shouldLog(input, "travelDebug")
-    );
 
     // Final event list includes:
     // 1. Scheduled non-template events (tasks, plans, completed items)
@@ -743,142 +730,4 @@ export class CalendarGenerator {
     return { ...this.metrics };
   }
 
-  /**
-   * Generate travel events by walking through the final timeline.
-   * Creates travel events between any adjacent events with different locations.
-   *
-   * @param events - All events (scheduled tasks + template events)
-   * @param plannerLocationMap - Map of planner/template ID to location ID
-   * @param userId - User ID for the travel events
-   * @param bufferMinutes - Buffer time in minutes
-   * @param logTravelDebug - Whether to log travel debug info
-   */
-  private generateTravelEventsFromTimeline(
-    events: SimpleEvent[],
-    plannerLocationMap: Map<string, string | null>,
-    userId: string,
-    bufferMinutes: number,
-    logTravelDebug: boolean = false
-  ): SimpleEvent[] {
-    // Sort events chronologically
-    const sortedEvents = [...events]
-      .filter(e => e.extendedProps?.itemType !== "travel") // Exclude any existing travel events
-      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-
-    const travelEvents: SimpleEvent[] = [];
-    const now = new Date();
-
-    // Debug: Log plannerLocationMap entries
-    if (logTravelDebug) {
-      console.log("[Travel Debug] plannerLocationMap entries:");
-      plannerLocationMap.forEach((loc, id) => {
-        console.log(`  ${id} -> ${loc}`);
-      });
-    }
-
-    for (let i = 0; i < sortedEvents.length - 1; i++) {
-      const currentEvent = sortedEvents[i];
-      const nextEvent = sortedEvents[i + 1];
-
-      // Get locations - use eventId for lookup (templates use templateId as eventId)
-      const currentLookupId = (currentEvent.extendedProps?.eventId as string) || currentEvent.id;
-      const nextLookupId = (nextEvent.extendedProps?.eventId as string) || nextEvent.id;
-
-      const currentLocationId = plannerLocationMap.get(currentLookupId) ?? null;
-      const nextLocationId = plannerLocationMap.get(nextLookupId) ?? null;
-
-      // Debug logging
-      if (logTravelDebug) {
-        console.log(`[Travel Debug] Checking pair: "${currentEvent.title}" -> "${nextEvent.title}"`);
-        console.log(`  currentLookupId: ${currentLookupId}, nextLookupId: ${nextLookupId}`);
-        console.log(`  currentLocationId: ${currentLocationId}, nextLocationId: ${nextLocationId}`);
-      }
-
-      // Skip if either location is null ("Everywhere") or same location
-      if (!currentLocationId || !nextLocationId || currentLocationId === nextLocationId) {
-        if (logTravelDebug) {
-          console.log(`  SKIPPED: ${!currentLocationId ? 'currentLoc null' : ''} ${!nextLocationId ? 'nextLoc null' : ''} ${currentLocationId === nextLocationId ? 'same location' : ''}`);
-        }
-        continue;
-      }
-
-      // Calculate gap between events
-      const currentEnd = new Date(currentEvent.end);
-      const nextStart = new Date(nextEvent.start);
-      const gapMinutes = (nextStart.getTime() - currentEnd.getTime()) / 60000;
-
-      // Get travel time needed
-      const travelTime = this.slotManager.getTravelTime(
-        currentLocationId,
-        nextLocationId,
-        currentEnd
-      );
-
-      if (logTravelDebug) {
-        console.log(`  travelTime: ${travelTime} min, gapMinutes: ${gapMinutes} min`);
-      }
-
-      if (travelTime <= 0) {
-        if (logTravelDebug) {
-          console.log(`  SKIPPED: travelTime is 0 or negative`);
-        }
-        continue;
-      }
-
-      // Check if there's enough gap for travel + buffers
-      // Layout: [currentEvent.end] -> [buffer] -> [travel] -> [buffer] -> [nextEvent.start]
-      const requiredGap = travelTime + (2 * bufferMinutes);
-
-      if (logTravelDebug) {
-        console.log(`  requiredGap: ${requiredGap} min (travel ${travelTime} + 2*buffer ${bufferMinutes})`);
-      }
-
-      if (gapMinutes < requiredGap) {
-        // Not enough space for travel with buffers - skip this travel
-        // (The events are too close together)
-        if (logTravelDebug) {
-          console.log(`  SKIPPED: not enough gap (${gapMinutes} < ${requiredGap})`);
-        }
-        continue;
-      }
-
-      if (logTravelDebug) {
-        console.log(`  CREATING TRAVEL EVENT!`);
-      }
-
-      // Calculate travel start and end times
-      // Travel starts after buffer from current event, ends before buffer of next event
-      const travelStart = new Date(currentEnd.getTime() + bufferMinutes * 60000);
-      const travelEnd = new Date(travelStart.getTime() + travelTime * 60000);
-
-      const travelId = `travel-${currentEvent.id}-to-${nextEvent.id}`;
-
-      travelEvents.push({
-        userId,
-        id: travelId,
-        title: "Travel",
-        start: travelStart.toISOString(),
-        end: travelEnd.toISOString(),
-        backgroundColor: "#9CA3AF",
-        borderColor: "#6B7280",
-        duration: null,
-        rrule: null,
-        extendedProps: {
-          id: travelId,
-          eventId: travelId,
-          itemType: "travel",
-          parentId: null,
-          completedEndTime: null,
-          completedStartTime: null,
-          fromLocationId: currentLocationId,
-          toLocationId: nextLocationId,
-          travelMinutes: travelTime,
-        },
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-      } as SimpleEvent);
-    }
-
-    return travelEvents;
-  }
 }
