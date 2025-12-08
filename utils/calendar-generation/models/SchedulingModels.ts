@@ -132,6 +132,8 @@ export interface LoggingConfig {
   locations?: boolean;
   /** Log strategy settings */
   strategySettings?: boolean;
+  /** Log lean calendar (title, start, end, location) sorted by start */
+  leanCalendar?: boolean;
 }
 
 /**

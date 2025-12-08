@@ -48,7 +48,7 @@ export class CalendarGenerator {
    */
   private shouldLog(
     input: CalendarGenerationInput,
-    flag: "metrics" | "failures" | "finalEvents" | "travelDebug" | "templateInfo" | "planners" | "templates" | "locations" | "strategySettings"
+    flag: "metrics" | "failures" | "finalEvents" | "travelDebug" | "templateInfo" | "planners" | "templates" | "locations" | "strategySettings" | "leanCalendar"
   ): boolean {
     const config = input.config;
     if (!config?.enableLogging || !config?.logging) return false;
@@ -345,6 +345,21 @@ export class CalendarGenerator {
       console.log("=== FINAL CALENDAR EVENTS ===");
       console.log(JSON.stringify(allEvents, null, 2));
       console.log("=== END FINAL EVENTS ===");
+    }
+
+    if (this.shouldLog(input, "leanCalendar")) {
+      const leanCalendar = [...allEvents]
+        .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+        .map((e) => ({
+          title: e.title,
+          start: e.start,
+          end: e.end,
+          locationId: plannerLocationMap.get(e.extendedProps?.eventId || e.id) ?? null,
+        }));
+
+      console.log("=== LEAN CALENDAR ===");
+      console.log(JSON.stringify(leanCalendar, null, 2));
+      console.log("=== END LEAN CALENDAR ===");
     }
 
     return {

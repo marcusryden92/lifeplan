@@ -96,6 +96,14 @@ export class Scheduler {
     let travelBefore = 0;
     let travelAfter = 0;
 
+    // DEBUG: Log first few slots for this task
+    console.log(`[Scheduler] Task "${task.title}" (loc: ${taskLocationId}) - first 3 scored slots:`);
+    for (let i = 0; i < Math.min(3, scoredSlots.length); i++) {
+      const ss = scoredSlots[i];
+      const slot = fittingSlots.find(s => s.start.getTime() === ss.slot.start.getTime());
+      console.log(`  ${i}: ${ss.slot.start.toISOString()} dur=${ss.slot.durationMinutes}min score=${ss.score.toFixed(3)} prev=${slot?.prevLocationId} next=${slot?.nextLocationId}`);
+    }
+
     for (const scoredSlot of scoredSlots) {
       // Find the original slot with location info
       const slot = fittingSlots.find(
@@ -108,12 +116,6 @@ export class Scheduler {
       let needTravelBefore = 0;
       let needTravelAfter = 0;
 
-      // Debug: Log slot location info for first few slots
-      if (scoredSlots.indexOf(scoredSlot) < 3) {
-        console.log(`[Scheduler] Task "${task.title}" (loc: ${taskLocationId}) checking slot at ${slot.start.toISOString()}`);
-        console.log(`  slot.prevLocationId: ${slot.prevLocationId}, slot.nextLocationId: ${slot.nextLocationId}`);
-      }
-
       if (taskLocationId) {
         // Travel BEFORE: needed if prev location differs from task location
         if (slot.prevLocationId && slot.prevLocationId !== taskLocationId) {
@@ -122,7 +124,6 @@ export class Scheduler {
             taskLocationId,
             slot.start
           );
-          console.log(`  -> needTravelBefore: ${needTravelBefore} (from ${slot.prevLocationId} to ${taskLocationId})`);
         }
 
         // Travel AFTER: needed if next location differs from task location
@@ -134,7 +135,6 @@ export class Scheduler {
             slot.nextLocationId,
             slot.start
           );
-          console.log(`  -> needTravelAfter: ${needTravelAfter} (from ${taskLocationId} to ${slot.nextLocationId})`);
         }
       }
       // Note: If taskLocationId is null, prevLocationId passes through unchanged
@@ -158,11 +158,15 @@ export class Scheduler {
 
       const totalRequired = task.duration + needTravelBefore + effectiveTravelAfter + (numBuffers * bufferMinutes);
 
+      // DEBUG: Log capacity check for first few slots
+      console.log(`  Checking slot ${slot.start.toISOString()}: need=${totalRequired} (dur=${task.duration} + trvlB=${needTravelBefore} + trvlA=${effectiveTravelAfter} + buf=${numBuffers * bufferMinutes}) has=${slot.durationMinutes} -> ${slot.durationMinutes >= totalRequired ? 'FITS' : 'NO FIT'}`);
+
       // Check if this slot has enough capacity
       if (slot.durationMinutes >= totalRequired) {
         selectedSlot = slot;
         travelBefore = needTravelBefore;
         travelAfter = needTravelAfter;
+        console.log(`  -> Selected this slot!`);
         break;
       }
     }
@@ -199,7 +203,6 @@ export class Scheduler {
     // Travel-before is placed at the START of the slot
     // Travel-after is placed at the END of the slot
     // Note: reserveSlotWithTravel expects task start/end times, not reservation times
-    console.log(`[Scheduler] Reserving slot for "${task.title}": travelBefore=${travelBefore}, travelAfter=${travelAfter}, taskLoc=${taskLocationId}, prevLoc=${selectedSlot.prevLocationId}, nextLoc=${selectedSlot.nextLocationId}`);
     const result = this.slotManager.reserveSlotWithTravel(
       taskStartDate,
       taskEndDate,
@@ -313,8 +316,12 @@ export class Scheduler {
       };
     });
 
-    // Sort by score (highest first)
-    return scored.sort((a, b) => b.score - a.score);
+    // Sort by score (highest first), then by start time (earliest first) as tiebreaker
+    return scored.sort((a, b) => {
+      const scoreDiff = b.score - a.score;
+      if (scoreDiff !== 0) return scoreDiff;
+      return a.slot.start.getTime() - b.slot.start.getTime();
+    });
   }
 
   /**
