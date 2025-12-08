@@ -31,6 +31,7 @@ import {
 } from "../constants";
 import { dateTimeService } from "../utils/dateTimeService";
 import { CalendarValidator } from "../utils/validationUtils";
+import { logCalendarDebugInfo } from "../utils/loggingUtils";
 import { getSortedTreeBottomLayer } from "../../goalPageHandlers";
 import { taskIsCompleted } from "../../taskHelpers";
 import { v4 as uuidv4 } from "uuid";
@@ -44,28 +45,6 @@ export class CalendarGenerator {
     this.slotManager = new TimeSlotManager(weekStartDay);
     this.templateExpander = new TemplateExpander(weekStartDay);
     this.metrics = this.createEmptyMetrics();
-  }
-
-  /**
-   * Check if a specific logging flag is enabled
-   */
-  private shouldLog(
-    input: CalendarGenerationInput,
-    flag:
-      | "metrics"
-      | "failures"
-      | "finalEvents"
-      | "travelDebug"
-      | "templateInfo"
-      | "planners"
-      | "templates"
-      | "locations"
-      | "strategySettings"
-      | "leanCalendar"
-  ): boolean {
-    const config = input.config;
-    if (!config?.enableLogging || !config?.logging) return false;
-    return !!config.logging[flag];
   }
 
   /**
@@ -265,19 +244,6 @@ export class CalendarGenerator {
     // Get travel events from stored travel slots
     const travelEvents = this.slotManager.generateTravelEvents(input.userId);
 
-    // Debug: Log travel events
-    if (this.shouldLog(input, "travelDebug")) {
-      console.log("[Travel Debug] Generated travel events from slots:");
-      console.log(`  travelEvents count: ${travelEvents.length}`);
-      for (const e of travelEvents) {
-        const props = e.extendedProps as Record<string, unknown>;
-        console.log(`  - Travel: ${e.start} to ${e.end}`);
-        console.log(
-          `    from: ${props?.fromLocationId} to: ${props?.toLocationId}`
-        );
-      }
-    }
-
     // Final event list includes:
     // 1. Scheduled non-template events (tasks, plans, completed items)
     // 2. Recurring template events (with rrule) for FullCalendar UI
@@ -295,104 +261,18 @@ export class CalendarGenerator {
     const endTime = performance.now();
     this.metrics.totalExecutionTimeMs = endTime - startTime;
 
-    // Granular logging based on config flags
-    if (this.shouldLog(input, "planners")) {
-      console.log("=== INPUT PLANNERS ===");
-      console.log(JSON.stringify(input.planners, null, 2));
-      console.log("=== END INPUT PLANNERS ===");
-    }
-
-    if (this.shouldLog(input, "templates")) {
-      console.log("=== INPUT TEMPLATES ===");
-      console.log(JSON.stringify(input.templates, null, 2));
-      console.log("=== END INPUT TEMPLATES ===");
-    }
-
-    if (this.shouldLog(input, "locations")) {
-      console.log("=== LOCATION MAP ===");
-      const locationObj: Record<string, string | null> = {};
-      plannerLocationMap.forEach((loc, id) => {
-        locationObj[id] = loc;
-      });
-      console.log(JSON.stringify(locationObj, null, 2));
-      console.log("=== END LOCATION MAP ===");
-    }
-
-    if (this.shouldLog(input, "strategySettings")) {
-      console.log("=== STRATEGY SETTINGS ===");
-      console.log(
-        JSON.stringify(
-          {
-            strategies: strategies.map((s) => ({
-              name: s.strategy.name,
-              weight: s.weight,
-            })),
-            bufferTimeMinutes: input.config?.bufferTimeMinutes,
-            maxDaysAhead: input.config?.maxDaysAhead,
-            travelTimeMatrixSize: input.config?.travelTimeMatrix?.size ?? 0,
-          },
-          null,
-          2
-        )
-      );
-      console.log("=== END STRATEGY SETTINGS ===");
-    }
-
-    if (this.shouldLog(input, "metrics")) {
-      console.log("=== SCHEDULING METRICS ===");
-      console.log(JSON.stringify(this.metrics, null, 2));
-      console.log("=== END SCHEDULING METRICS ===");
-    }
-
-    if (
-      this.shouldLog(input, "failures") &&
-      schedulingResult.failures.length > 0
-    ) {
-      console.log("=== SCHEDULING FAILURES ===");
-      console.log(JSON.stringify(schedulingResult.failures, null, 2));
-      console.log("=== END SCHEDULING FAILURES ===");
-    }
-
-    if (this.shouldLog(input, "templateInfo")) {
-      console.log("=== TEMPLATE INFO ===");
-      console.log(
-        JSON.stringify(
-          {
-            templatesCount: input.templates.length,
-            recurringEventsGenerated: recurringTemplateEvents.length,
-            templateMasksCount: perTemplateMasks.length,
-            largestTemplateGap,
-          },
-          null,
-          2
-        )
-      );
-      console.log("=== END TEMPLATE INFO ===");
-    }
-
-    if (this.shouldLog(input, "finalEvents")) {
-      console.log("=== FINAL CALENDAR EVENTS ===");
-      console.log(JSON.stringify(allEvents, null, 2));
-      console.log("=== END FINAL EVENTS ===");
-    }
-
-    if (this.shouldLog(input, "leanCalendar")) {
-      const leanCalendar = [...allEvents]
-        .sort(
-          (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
-        )
-        .map((e) => ({
-          title: e.title,
-          start: e.start,
-          end: e.end,
-          locationId:
-            plannerLocationMap.get(e.extendedProps?.eventId || e.id) ?? null,
-        }));
-
-      console.log("=== LEAN CALENDAR ===");
-      console.log(JSON.stringify(leanCalendar, null, 2));
-      console.log("=== END LEAN CALENDAR ===");
-    }
+    // Handle all debug logging
+    logCalendarDebugInfo(input, {
+      allEvents,
+      travelEvents,
+      recurringTemplateEvents,
+      perTemplateMasks,
+      largestTemplateGap,
+      plannerLocationMap,
+      strategies,
+      schedulingResult,
+      metrics: this.metrics,
+    });
 
     return {
       success: schedulingResult.failures.length === 0,
