@@ -30,7 +30,7 @@ export const DEFAULT_STRATEGY_WEIGHTS = {
  */
 export const DEFAULT_LOCATION_GROUPING_SCORES = {
   /** Score when both adjacent events match task location (perfect sandwich) */
-  bothMatch: 0.75,
+  bothMatch: 0.9,
   /** Score when one end matches, other end is open (start/end of day) */
   oneMatchOneOpen: 0.75,
   /** Score when one end matches, other doesn't */

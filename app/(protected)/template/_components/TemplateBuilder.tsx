@@ -36,6 +36,7 @@ export default function TemplateBuilder() {
       events={fullcalendarEvents}
       initialView="timeGridWeek"
       firstDay={weekStartDay}
+      snapDuration={"00:05:00"}
       height={"100%"}
       headerToolbar={{
         start: "",

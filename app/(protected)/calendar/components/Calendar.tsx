@@ -72,6 +72,7 @@ export default function Calendar({ initialDate }: CalendarProps) {
         initialView="timeGridWeek"
         scrollTime={"05:00:00"}
         allDaySlot={false}
+        snapDuration={"00:05:00"}
         firstDay={1}
         nowIndicator={true}
         height={"100%"}
