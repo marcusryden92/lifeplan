@@ -10,6 +10,7 @@ import { TimeSlot } from "../models/TimeSlot";
 import { SchedulingContext } from "../models/SchedulingModels";
 import { SchedulingStrategy } from "./SchedulingStrategy";
 import { URGENCY_CONFIG } from "../constants";
+import { DEFAULT_URGENCY_SCORES } from "./defaultStrategy";
 import { dateTimeService } from "../utils/dateTimeService";
 
 export class UrgencyStrategy implements SchedulingStrategy {
@@ -54,7 +55,10 @@ export class UrgencyStrategy implements SchedulingStrategy {
     );
 
     // Combine urgency and time preference
-    return urgencyScore * 0.7 + timePreference * 0.3;
+    return (
+      urgencyScore * DEFAULT_URGENCY_SCORES.urgencyScoreWeight +
+      timePreference * DEFAULT_URGENCY_SCORES.timePreferenceWeight
+    );
   }
 
   /**
@@ -70,11 +74,11 @@ export class UrgencyStrategy implements SchedulingStrategy {
       slot.start
     );
 
-    // Linear decay: 1.0 for today, 0.3 for 90 days out
-    const maxDays = 90;
+    // Linear decay: 1.0 for today, MIN_URGENCY_MULTIPLIER for max days out
+    const maxDays = DEFAULT_URGENCY_SCORES.noDeadlineMaxDays;
     const score = Math.max(
       URGENCY_CONFIG.MIN_URGENCY_MULTIPLIER,
-      1 - (daysFromNow / maxDays) * 0.7
+      1 - (daysFromNow / maxDays) * DEFAULT_URGENCY_SCORES.noDeadlineDecayFactor
     );
 
     return score;
@@ -119,14 +123,15 @@ export class UrgencyStrategy implements SchedulingStrategy {
     if (totalTimeToDeadline === 0) return 1;
 
     const ratio = timeToSlot / totalTimeToDeadline;
+    const urgentThreshold = DEFAULT_URGENCY_SCORES.urgentRatioThreshold;
 
-    // For urgent tasks (ratio < 0.3), strongly prefer earlier
-    if (ratio < 0.3) {
-      return 1 - ratio / 0.3;
+    // For urgent tasks (ratio < threshold), strongly prefer earlier
+    if (ratio < urgentThreshold) {
+      return 1 - ratio / urgentThreshold;
     }
 
     // For non-urgent tasks, gradually decrease preference
-    return Math.max(0.3, 1 - ratio);
+    return Math.max(DEFAULT_URGENCY_SCORES.minTimePreference, 1 - ratio);
   }
 
   /**

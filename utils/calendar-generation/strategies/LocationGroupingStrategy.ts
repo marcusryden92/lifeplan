@@ -18,6 +18,10 @@ import { TimeSlot } from "../models/TimeSlot";
 import { SchedulingContext, TravelTimeEntry } from "../models/SchedulingModels";
 import { SchedulingStrategy } from "./SchedulingStrategy";
 import { LOCATION_CONFIG } from "../constants";
+import {
+  DEFAULT_LOCATION_GROUPING_SCORES,
+  DEFAULT_LOCATION_GROUPING_PENALTIES,
+} from "./defaultStrategy";
 
 /**
  * Strategy that scores slots based on location sandwich pattern
@@ -30,9 +34,12 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
   ) {}
 
   score(task: Planner, slot: TimeSlot, context: SchedulingContext): number {
+    const scores = DEFAULT_LOCATION_GROUPING_SCORES;
+    const penalties = DEFAULT_LOCATION_GROUPING_PENALTIES;
+
     // If task has no location, return neutral score - doesn't affect grouping
     if (!task.locationId) {
-      return 0.5;
+      return scores.noLocation;
     }
 
     const taskLocation = task.locationId;
@@ -46,12 +53,14 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
     const nextExists = nextLocation !== null && nextLocation !== undefined;
 
     // Calculate travel times if needed
-    const travelToPrev = prevExists && !prevMatches && prevLocation
-      ? this.getTravelTimeMinutes(prevLocation, taskLocation, slot.start)
-      : 0;
-    const travelToNext = nextExists && !nextMatches && nextLocation
-      ? this.getTravelTimeMinutes(taskLocation, nextLocation, slot.end)
-      : 0;
+    const travelToPrev =
+      prevExists && !prevMatches && prevLocation
+        ? this.getTravelTimeMinutes(prevLocation, taskLocation, slot.start)
+        : 0;
+    const travelToNext =
+      nextExists && !nextMatches && nextLocation
+        ? this.getTravelTimeMinutes(taskLocation, nextLocation, slot.end)
+        : 0;
 
     // Total travel time needed
     const totalTravelTime = travelToPrev + travelToNext;
@@ -62,7 +71,7 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
 
     if (slot.durationMinutes < requiredDuration) {
       // Slot doesn't have room for travel - heavily penalize
-      return 0.1;
+      return scores.insufficientRoom;
     }
 
     // Score based on sandwich pattern
@@ -71,41 +80,46 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
     // The urgency/earliest-slot strategies should take precedence for filling weekday gaps.
     //
     // The goal: location grouping should be a tie-breaker, not a dominant factor.
-    // Max spread: 0.55 to 0.45 = 0.10 range (was 0.75 to 0.40 = 0.35 range)
 
     if (prevMatches && nextMatches) {
       // Perfect sandwich - both ends match, no travel needed
-      // Only a slight bonus over other scenarios
-      return 0.55;
+      return scores.bothMatch;
     }
 
     if ((prevMatches && !nextExists) || (nextMatches && !prevExists)) {
       // One end matches, other end is open (start/end of day) - almost as good
-      return 0.53;
+      return scores.oneMatchOneOpen;
     }
 
     if (prevMatches || nextMatches) {
       // One end matches, other doesn't - need travel on one side
-      // Tiny penalty based on travel time
-      const singleTravelPenalty = Math.min(0.02, totalTravelTime / 600);
-      return 0.52 - singleTravelPenalty;
+      const singleTravelPenalty = Math.min(
+        penalties.maxSingleTravelPenalty,
+        totalTravelTime / penalties.singleTravelPenaltyDivisor
+      );
+      return scores.oneMatch - singleTravelPenalty;
     }
 
     if (!prevExists && !nextExists) {
       // Both ends are open (empty day) - neutral baseline
-      return 0.50;
+      return scores.bothOpen;
     }
 
     if (!prevExists || !nextExists) {
       // One end is open, other doesn't match - travel on one side
-      const singleTravelPenalty = Math.min(0.02, totalTravelTime / 600);
-      return 0.48 - singleTravelPenalty;
+      const singleTravelPenalty = Math.min(
+        penalties.maxSingleTravelPenalty,
+        totalTravelTime / penalties.singleTravelPenaltyDivisor
+      );
+      return scores.oneOpenNoMatch - singleTravelPenalty;
     }
 
     // Neither end matches and both exist - travel on both sides
-    // Small penalty but not severe - still acceptable
-    const doubleTravelPenalty = Math.min(0.03, totalTravelTime / 400);
-    return 0.45 - doubleTravelPenalty;
+    const doubleTravelPenalty = Math.min(
+      penalties.maxDoubleTravelPenalty,
+      totalTravelTime / penalties.doubleTravelPenaltyDivisor
+    );
+    return scores.neitherMatch - doubleTravelPenalty;
   }
 
   /**

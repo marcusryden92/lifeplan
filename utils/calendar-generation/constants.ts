@@ -87,19 +87,9 @@ export const URGENCY_CONFIG = {
   URGENCY_SCALE_MAX: 1.0,
 } as const;
 
-/**
- * Strategy weights for multi-strategy scheduling
- */
-export const STRATEGY_WEIGHTS = {
-  /** Weight for urgency-based scheduling */
-  URGENCY_WEIGHT: 1.0,
-  /** Weight for dependency-aware scheduling */
-  DEPENDENCY_WEIGHT: 0.8,
-  /** Weight for energy/time-of-day optimization */
-  ENERGY_WEIGHT: 0.5,
-  /** Weight for location-based grouping - kept low to act as tie-breaker, not dominant factor */
-  LOCATION_GROUPING_WEIGHT: 0.2,
-} as const;
+// NOTE: Strategy weights and scoring configs have been moved to:
+// utils/calendar-generation/strategies/defaultStrategy.ts
+// This allows for future user customization of strategy parameters.
 
 /**
  * Location and travel time configuration

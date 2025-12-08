@@ -24,11 +24,8 @@ import {
   SchedulingMetrics,
   SchedulingFailure,
 } from "../models/SchedulingModels";
-import {
-  SCHEDULING_CONFIG,
-  STRATEGY_WEIGHTS,
-  SchedulingFailureReason,
-} from "../constants";
+import { SCHEDULING_CONFIG, SchedulingFailureReason } from "../constants";
+import { DEFAULT_STRATEGY_WEIGHTS } from "../strategies/defaultStrategy";
 import { dateTimeService } from "../utils/dateTimeService";
 import { CalendarValidator } from "../utils/validationUtils";
 import { logCalendarDebugInfo } from "../utils/loggingUtils";
@@ -208,10 +205,15 @@ export class CalendarGenerator {
         {
           strategy: new UrgencyStrategy(),
           weight:
-            input.config?.strategyWeights?.urgency ||
-            STRATEGY_WEIGHTS.URGENCY_WEIGHT,
+            input.config?.strategyWeights?.urgency ??
+            DEFAULT_STRATEGY_WEIGHTS.urgency,
         },
-        { strategy: new EarliestSlotStrategy(), weight: 0.5 },
+        {
+          strategy: new EarliestSlotStrategy(),
+          weight:
+            input.config?.strategyWeights?.earliestSlot ??
+            DEFAULT_STRATEGY_WEIGHTS.earliestSlot,
+        },
       ];
 
     // Add location grouping strategy if travel time matrix is provided
@@ -222,8 +224,8 @@ export class CalendarGenerator {
       strategies.push({
         strategy: new LocationGroupingStrategy(input.config.travelTimeMatrix),
         weight:
-          input.config?.strategyWeights?.locationGrouping ||
-          STRATEGY_WEIGHTS.LOCATION_GROUPING_WEIGHT,
+          input.config?.strategyWeights?.locationGrouping ??
+          DEFAULT_STRATEGY_WEIGHTS.locationGrouping,
       });
     }
 
