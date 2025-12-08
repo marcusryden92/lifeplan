@@ -44,6 +44,7 @@ export type PerTemplateMask = {
   templateId: string;
   title?: string;
   color?: string;
+  locationId?: string | null;
   occurrences: TemplateDayDef[]; // sparse list of defined weekdays
   startDateISO?: string; // anchor start date for interval-based templates
   intervalDays?: number; // if provided, template repeats every N days from startDateISO
@@ -160,55 +161,84 @@ export class TemplateExpander {
       return TIME_CONSTANTS.MINUTES_PER_WEEK;
     }
 
-    // Create a dummy week to calculate gaps. Use per-template masks so uneven
-    // templates are considered when calculating the largest free gap.
+    // Use masks directly to calculate the largest gap across a week
     const weekStart = dateTimeService.startOfDay(new Date());
     const masks = this.getPerTemplateMasks(templates);
-    const simpleEvents = this.generateSimpleEventsFromPerTemplateMasks(
-      "temp",
-      masks,
-      weekStart,
-      7
-    );
-
-    // Sort by start time
-    const sorted = simpleEvents.sort(
-      (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
-    );
 
     let largestGap = 0;
-    const weekEnd = dateTimeService.shiftDays(weekStart, 7);
 
-    // Gap before first event
-    if (sorted.length > 0) {
-      const firstStart = new Date(sorted[0].start);
-      largestGap = Math.max(
-        largestGap,
-        dateTimeService.getMinutesDifference(weekStart, firstStart)
-      );
-    }
+    // Check each day of the week for gaps
+    for (let d = 0; d < 7; d++) {
+      const dayStart = dateTimeService.shiftDays(weekStart, d);
+      const dayEnd = dateTimeService.endOfDay(dayStart);
 
-    // Gaps between events
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const currentEnd = new Date(sorted[i].end);
-      const nextStart = new Date(sorted[i + 1].start);
-      const gap = dateTimeService.getMinutesDifference(currentEnd, nextStart);
-      largestGap = Math.max(largestGap, gap);
-    }
+      // Convert masks to intervals for this day
+      const intervals = this.masksToIntervalsForDay(masks, dayStart);
 
-    // Gap after last event
-    if (sorted.length > 0) {
-      const lastEnd = new Date(sorted[sorted.length - 1].end);
-      const gap = dateTimeService.getMinutesDifference(lastEnd, weekEnd);
-      largestGap = Math.max(largestGap, gap);
-    }
+      if (intervals.length === 0) {
+        // Entire day is available
+        const dayMinutes = (dayEnd.getTime() - dayStart.getTime()) / (1000 * 60);
+        largestGap = Math.max(largestGap, dayMinutes);
+        continue;
+      }
 
-    // If no events, the entire week is available
-    if (sorted.length === 0) {
-      largestGap = TIME_CONSTANTS.MINUTES_PER_WEEK;
+      // Sort intervals by start time
+      intervals.sort((a, b) => a.start.getTime() - b.start.getTime());
+
+      // Gap before first interval
+      const firstGap = (intervals[0].start.getTime() - dayStart.getTime()) / (1000 * 60);
+      largestGap = Math.max(largestGap, firstGap);
+
+      // Gaps between intervals
+      for (let i = 0; i < intervals.length - 1; i++) {
+        const gap = (intervals[i + 1].start.getTime() - intervals[i].end.getTime()) / (1000 * 60);
+        largestGap = Math.max(largestGap, gap);
+      }
+
+      // Gap after last interval
+      const lastGap = (dayEnd.getTime() - intervals[intervals.length - 1].end.getTime()) / (1000 * 60);
+      largestGap = Math.max(largestGap, lastGap);
     }
 
     return largestGap;
+  }
+
+  /**
+   * Convert masks to intervals for a specific day (helper for calculateLargestGap)
+   */
+  private masksToIntervalsForDay(
+    masks: PerTemplateMask[],
+    date: Date
+  ): Array<{ start: Date; end: Date }> {
+    const dayOfWeek = date.getDay();
+    const intervals: Array<{ start: Date; end: Date }> = [];
+
+    for (const mask of masks) {
+      const dayDef = mask.occurrences.find((occ) => occ.day === dayOfWeek);
+      if (!dayDef) continue;
+
+      for (const time of dayDef.times) {
+        const dateISO = date.toISOString().split("T")[0];
+        if (time.exceptions?.includes(dateISO)) continue;
+
+        const [startH, startM] = time.startTime.split(":").map(Number);
+        const [endH, endM] = time.endTime.split(":").map(Number);
+
+        const start = new Date(date);
+        start.setHours(startH, startM, 0, 0);
+
+        const end = new Date(date);
+        end.setHours(endH, endM, 0, 0);
+
+        if (time.endTime === "24:00") {
+          end.setHours(23, 59, 59, 999);
+        }
+
+        intervals.push({ start, end });
+      }
+    }
+
+    return intervals;
   }
 
   /**
@@ -437,20 +467,27 @@ export class TemplateExpander {
         return h * 60 + m + template.duration;
       })();
 
+      // Get exceptions if available (will be populated when UX is implemented)
+      const templateExceptions: string[] = (() => {
+        const t = template as unknown as Record<string, unknown>;
+        if (Array.isArray(t.exceptions)) return t.exceptions as string[];
+        return [];
+      })();
+
       const times: TemplateTimeWithExceptions[] = [];
 
       if (endMinutes <= 24 * 60) {
         times.push({
           startTime: template.startTime,
           endTime: minutesToTimeString(endMinutes),
-          exceptions: [],
+          exceptions: templateExceptions,
         });
       } else {
-        // split across days
+        // split across days - start day part uses original exception dates
         times.push({
           startTime: template.startTime,
           endTime: "24:00",
-          exceptions: [],
+          exceptions: templateExceptions,
         });
         // For the next day, we add a separate day def below
       }
@@ -460,13 +497,19 @@ export class TemplateExpander {
       // If it crosses midnight, add next day portion
       if (endMinutes > 24 * 60) {
         const nextDay = (startDayIndex + 1) % 7;
+        // Next day part needs exceptions shifted by +1 day
+        const shiftedExceptions = templateExceptions.map((dateISO) => {
+          const d = new Date(dateISO);
+          d.setDate(d.getDate() + 1);
+          return d.toISOString().split("T")[0];
+        });
         occs.push({
           day: nextDay,
           times: [
             {
               startTime: "00:00",
               endTime: minutesToTimeString(endMinutes - 24 * 60),
-              exceptions: [],
+              exceptions: shiftedExceptions,
             },
           ],
         });
@@ -476,6 +519,7 @@ export class TemplateExpander {
         templateId: template.id,
         title: template.title,
         color: template.color as string,
+        locationId: template.locationId ?? null,
         occurrences: occs,
         // Populate optional interval metadata if present on the template record.
         // Support common field names that might be used for uneven recurrences.
@@ -497,128 +541,6 @@ export class TemplateExpander {
     }
 
     return masks;
-  }
-
-  /**
-   * Generate concrete `SimpleEvent` instances from per-template masks for a date range.
-   * These are used only for slot calculation and are not returned in the final calendar.
-   */
-  generateSimpleEventsFromPerTemplateMasks(
-    userId: string,
-    masks: PerTemplateMask[],
-    rangeStart: Date,
-    numDays: number
-  ): SimpleEvent[] {
-    const events: SimpleEvent[] = [];
-
-    for (let i = 0; i < numDays; i++) {
-      const date = dateTimeService.shiftDays(rangeStart, i);
-      const isoDate = date.toISOString().slice(0, 10);
-      const weekday = date.getDay();
-
-      for (const mask of masks) {
-        // If mask defines an interval-based recurrence (every N days) and has an
-        // anchor start date, apply arithmetic to determine whether this date is
-        // a repeat anchor. For interval-based masks we generate occurrences for
-        // the anchor date and any occurrence parts that fall on subsequent days
-        // (e.g., cross-midnight parts) by mapping day definitions relative to
-        // the anchor.
-        if (mask.intervalDays && mask.startDateISO) {
-          const anchorDate = dateTimeService.fromISO(mask.startDateISO);
-          const daysSinceStart = dateTimeService.getDaysDifference(
-            anchorDate,
-            date
-          );
-
-          if (daysSinceStart >= 0 && daysSinceStart % mask.intervalDays === 0) {
-            // This `date` is an anchor occurrence. Map each day-def to the
-            // appropriate date relative to the anchor and emit events.
-            const anchorWeekday = anchorDate.getDay();
-
-            for (const occ of mask.occurrences) {
-              const offset = (occ.day - anchorWeekday + 7) % 7;
-              const eventDate = dateTimeService.shiftDays(date, offset);
-              const eventIso = eventDate.toISOString().slice(0, 10);
-
-              for (const t of occ.times) {
-                if (t.exceptions && t.exceptions.includes(eventIso)) continue;
-
-                const start = dateTimeService.setTimeOnDate(
-                  eventDate,
-                  t.startTime
-                );
-                const end = dateTimeService.setTimeOnDate(eventDate, t.endTime);
-                const now = new Date();
-
-                events.push({
-                  userId,
-                  id: `${mask.templateId}-${eventIso}-${t.startTime}`,
-                  title: mask.title || "template",
-                  start: start.toISOString(),
-                  end: end.toISOString(),
-                  duration: null,
-                  rrule: null,
-                  extendedProps: {
-                    id: uuidv4(),
-                    eventId: mask.templateId,
-                    itemType: "template",
-                    completedStartTime: null,
-                    completedEndTime: null,
-                    parentId: null,
-                  },
-                  backgroundColor: mask.color || calendarColors[0],
-                  borderColor: "transparent",
-                  createdAt: now.toISOString(),
-                  updatedAt: now.toISOString(),
-                });
-              }
-            }
-          }
-          // For interval-based masks we skip the regular weekday-matching
-          // behavior for this date.
-          continue;
-        }
-
-        // Default weekly behavior: only emit when the occurrence day matches
-        // the weekday we're iterating.
-        for (const occ of mask.occurrences) {
-          if (occ.day !== weekday) continue;
-
-          for (const t of occ.times) {
-            // apply exceptions per-time
-            if (t.exceptions && t.exceptions.includes(isoDate)) continue;
-
-            const start = dateTimeService.setTimeOnDate(date, t.startTime);
-            const end = dateTimeService.setTimeOnDate(date, t.endTime);
-            const now = new Date();
-
-            events.push({
-              userId,
-              id: `${mask.templateId}-${isoDate}-${t.startTime}`,
-              title: mask.title || "template",
-              start: start.toISOString(),
-              end: end.toISOString(),
-              duration: null,
-              rrule: null,
-              extendedProps: {
-                id: uuidv4(),
-                eventId: mask.templateId,
-                itemType: "template",
-                completedStartTime: null,
-                completedEndTime: null,
-                parentId: null,
-              },
-              backgroundColor: mask.color || calendarColors[0],
-              borderColor: "transparent",
-              createdAt: now.toISOString(),
-              updatedAt: now.toISOString(),
-            });
-          }
-        }
-      }
-    }
-
-    return events;
   }
 }
 

@@ -31,6 +31,8 @@ import {
   eventsToIntervals,
   findGaps,
   gapsToTimeSlots,
+  masksToIntervals,
+  PerTemplateMask,
 } from "../utils/intervalUtils";
 import { dateTimeService } from "../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../constants";
@@ -119,28 +121,32 @@ export class TimeSlotManager {
 
   /**
    * Build available time slots for a date range
+   * @param templateMasks - Template masks for determining occupied time (no SimpleEvent generation needed)
    * @param plannerLocationMap - Optional map of planner ID to location ID for tracking slot neighbors
    */
   buildAvailableSlots(
     startDate: Date,
     endDate: Date,
     existingEvents: SimpleEvent[],
-    templateEvents: SimpleEvent[],
+    templateMasks: PerTemplateMask[],
     plannerLocationMap?: Map<string, string | null>
   ): TimeSlot[] {
-    // Combine all events that occupy time
-    const allEvents = [...existingEvents, ...templateEvents];
-
-    // Filter events to only those that overlap with this date range
-    const relevantEvents = allEvents.filter((event) => {
+    // Filter existing events to only those that overlap with this date range
+    const relevantEvents = existingEvents.filter((event) => {
       const eventStart = new Date(event.start);
       const eventEnd = new Date(event.end);
       // Event overlaps if it starts before range ends AND ends after range starts
       return eventStart < endDate && eventEnd > startDate;
     });
 
-    // Convert events to intervals with location info (location flows through the pipeline)
-    const occupiedIntervals = eventsToIntervals(relevantEvents, plannerLocationMap);
+    // Convert existing events to intervals with location info
+    const eventIntervals = eventsToIntervals(relevantEvents, plannerLocationMap);
+
+    // Convert template masks directly to intervals for this date (no SimpleEvent creation)
+    const templateIntervals = masksToIntervals(templateMasks, startDate);
+
+    // Combine all occupied intervals
+    const occupiedIntervals = [...eventIntervals, ...templateIntervals];
 
     // Find gaps between occupied intervals (gaps now have prevLocationId/nextLocationId)
     const gaps = findGaps(occupiedIntervals, startDate, endDate);
@@ -234,7 +240,7 @@ export class TimeSlotManager {
     startDate: Date,
     numDays: number,
     existingEvents: SimpleEvent[],
-    templateEvents: SimpleEvent[],
+    templateMasks: PerTemplateMask[],
     plannerLocationMap?: Map<string, string | null>
   ): Map<string, TimeSlot[]> {
     const dailySlots = new Map<string, TimeSlot[]>();
@@ -249,7 +255,7 @@ export class TimeSlotManager {
         dayStart,
         dayEnd,
         existingEvents,
-        templateEvents,
+        templateMasks,
         plannerLocationMap
       );
 
@@ -1141,7 +1147,7 @@ export class TimeSlotManager {
 
   /**
    * Schedule dynamic items week-by-week until all are placed or max days reached
-   * @param userId - ID of the user
+   * @param userId - ID of the user (for creating scheduled events)
    * @param templates - All template items (with rrules, exceptions)
    * @param staticEvents - Static events (plans, etc.)
    * @param dynamicItems - Items to be scheduled dynamically
@@ -1181,29 +1187,17 @@ export class TimeSlotManager {
         this.weekStartDay
       );
 
-      // Expand template events for this week using per-template masks so
-      // uneven (every-N-days) templates and cross-midnight parts are
-      // respected without expanding full rrule occurrences.
+      // Build per-template masks for direct slot building (no SimpleEvent generation)
       const perTemplateMasks = templateExpander.getPerTemplateMasks(templates);
-      const templateEvents =
-        templateExpander.generateSimpleEventsFromPerTemplateMasks(
-          userId,
-          perTemplateMasks,
-          weekStart,
-          7
-        );
 
-      // Gather all static and template events for this week
-      const weekEvents = [
-        ...staticEvents.filter((e) => {
-          const eventStart = new Date(e.start);
-          return eventStart >= weekStart && eventStart <= weekEnd;
-        }),
-        ...templateEvents,
-      ];
+      // Filter static events for this week
+      const weekStaticEvents = staticEvents.filter((e) => {
+        const eventStart = new Date(e.start);
+        return eventStart >= weekStart && eventStart <= weekEnd;
+      });
 
-      // Build available slots for the week
-      const weekSlots = this.buildDailySlots(weekStart, 7, weekEvents, []);
+      // Build available slots for the week using masks directly
+      const weekSlots = this.buildDailySlots(weekStart, 7, weekStaticEvents, perTemplateMasks);
 
       // Try to place dynamic items into available slots
       // Account for buffer time on both sides of the event

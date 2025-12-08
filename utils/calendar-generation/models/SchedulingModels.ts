@@ -75,8 +75,6 @@ export interface SchedulingContext {
   allPlanners: Planner[];
   /** Already scheduled events */
   scheduledEvents: SimpleEvent[];
-  /** Template events for the period */
-  templateEvents: SimpleEvent[];
   /** Total available time per week (minutes) */
   availableMinutesPerWeek: number;
   /** Scheduling metrics (mutable, updated during scheduling) */

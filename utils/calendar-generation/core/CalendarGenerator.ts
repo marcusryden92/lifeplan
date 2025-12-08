@@ -5,14 +5,17 @@
  * Coordinates TimeSlotManager, TemplateExpander, and Scheduler.
  */
 
-import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
+import { Planner, SimpleEvent } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "./TimeSlotManager";
 import { TemplateExpander, PerTemplateMask } from "./TemplateExpander";
 import { Scheduler } from "./Scheduler";
 import { UrgencyStrategy } from "../strategies/UrgencyStrategy";
 import { EarliestSlotStrategy } from "../strategies/EarliestSlotStrategy";
-import { CompositeStrategy, SchedulingStrategy } from "../strategies/SchedulingStrategy";
+import {
+  CompositeStrategy,
+  SchedulingStrategy,
+} from "../strategies/SchedulingStrategy";
 import { LocationGroupingStrategy } from "../strategies/LocationGroupingStrategy";
 import {
   CalendarGenerationInput,
@@ -48,7 +51,17 @@ export class CalendarGenerator {
    */
   private shouldLog(
     input: CalendarGenerationInput,
-    flag: "metrics" | "failures" | "finalEvents" | "travelDebug" | "templateInfo" | "planners" | "templates" | "locations" | "strategySettings" | "leanCalendar"
+    flag:
+      | "metrics"
+      | "failures"
+      | "finalEvents"
+      | "travelDebug"
+      | "templateInfo"
+      | "planners"
+      | "templates"
+      | "locations"
+      | "strategySettings"
+      | "leanCalendar"
   ): boolean {
     const config = input.config;
     if (!config?.enableLogging || !config?.logging) return false;
@@ -157,40 +170,30 @@ export class CalendarGenerator {
     );
     eventArray.push(...recurringTemplateEvents);
 
-    // Build per-template masks and initial simple mask events (first week)
+    // Build per-template masks (used directly for slot building - no SimpleEvent generation needed)
     const perTemplateMasks = this.templateExpander.getPerTemplateMasks(
       input.templates
     );
-    const simpleTemplateEvents =
-      this.templateExpander.generateSimpleEventsFromPerTemplateMasks(
-        input.userId,
-        perTemplateMasks,
-        weekStart,
-        maxDaysAhead
-      );
 
     const templateEnd = performance.now();
     this.metrics.templateExpansionTimeMs = templateEnd - templateStart;
     this.metrics.templateEventsGenerated = recurringTemplateEvents.length;
 
     // Step 5: Build planner location map for location-aware slot building
-    // Includes both planners and templates (since template events use template.id)
     const plannerLocationMap = new Map<string, string | null>();
     for (const planner of input.planners) {
       plannerLocationMap.set(planner.id, planner.locationId ?? null);
     }
-    // Also add templates to the location map
-    for (const template of input.templates) {
-      plannerLocationMap.set(template.id, template.locationId ?? null);
-    }
 
-    // Step 6: Build slots with location awareness
+    // Step 6: Build slots with location awareness (initial 2-week window)
+    // Template masks are used directly - no SimpleEvent objects created
+    const initialWeeks = 2;
     this.slotManager.clear();
     this.slotManager.buildDailySlots(
       currentDate,
-      maxDaysAhead,
+      initialWeeks * 7,
       eventArray,
-      simpleTemplateEvents,
+      perTemplateMasks,
       plannerLocationMap
     );
 
@@ -206,25 +209,28 @@ export class CalendarGenerator {
       weekStartDay: input.weekStartDay as WeekDayIntegers,
       allPlanners: input.planners,
       scheduledEvents: [...eventArray],
-      templateEvents: simpleTemplateEvents,
       availableMinutesPerWeek:
         this.slotManager.getWeekAvailableMinutes(weekStart),
       metrics: this.metrics,
     };
 
     // Step 8: strategy
-    const strategies: Array<{ strategy: SchedulingStrategy; weight: number }> = [
-      {
-        strategy: new UrgencyStrategy(),
-        weight:
-          input.config?.strategyWeights?.urgency ||
-          STRATEGY_WEIGHTS.URGENCY_WEIGHT,
-      },
-      { strategy: new EarliestSlotStrategy(), weight: 0.5 },
-    ];
+    const strategies: Array<{ strategy: SchedulingStrategy; weight: number }> =
+      [
+        {
+          strategy: new UrgencyStrategy(),
+          weight:
+            input.config?.strategyWeights?.urgency ||
+            STRATEGY_WEIGHTS.URGENCY_WEIGHT,
+        },
+        { strategy: new EarliestSlotStrategy(), weight: 0.5 },
+      ];
 
     // Add location grouping strategy if travel time matrix is provided
-    if (input.config?.travelTimeMatrix && input.config.travelTimeMatrix.size > 0) {
+    if (
+      input.config?.travelTimeMatrix &&
+      input.config.travelTimeMatrix.size > 0
+    ) {
       strategies.push({
         strategy: new LocationGroupingStrategy(input.config.travelTimeMatrix),
         weight:
@@ -238,13 +244,11 @@ export class CalendarGenerator {
     // Step 9: schedule
     const scheduler = new Scheduler(this.slotManager, strategy, context);
     const schedulingResult = this.scheduleTasksAndGoals(
-      input.userId,
       input.planners,
       memoizedEventIds,
       largestTemplateGap,
       scheduler,
       perTemplateMasks,
-      input.templates,
       context,
       plannerLocationMap
     );
@@ -268,7 +272,9 @@ export class CalendarGenerator {
       for (const e of travelEvents) {
         const props = e.extendedProps as Record<string, unknown>;
         console.log(`  - Travel: ${e.start} to ${e.end}`);
-        console.log(`    from: ${props?.fromLocationId} to: ${props?.toLocationId}`);
+        console.log(
+          `    from: ${props?.fromLocationId} to: ${props?.toLocationId}`
+        );
       }
     }
 
@@ -276,11 +282,15 @@ export class CalendarGenerator {
     // 1. Scheduled non-template events (tasks, plans, completed items)
     // 2. Recurring template events (with rrule) for FullCalendar UI
     // 3. Travel events generated from timeline
-    // NOTE: We DON'T include simpleTemplateEvents in final output - they're only for slot/travel calculation
+    // NOTE: Template masks are used directly for slot calculation - no SimpleEvent objects needed
     const templateEventsForUI = context.scheduledEvents.filter(
       (e) => e.extendedProps?.itemType === "template"
     );
-    const allEvents = [...scheduledNonTemplateEvents, ...templateEventsForUI, ...travelEvents];
+    const allEvents = [
+      ...scheduledNonTemplateEvents,
+      ...templateEventsForUI,
+      ...travelEvents,
+    ];
 
     const endTime = performance.now();
     this.metrics.totalExecutionTimeMs = endTime - startTime;
@@ -310,12 +320,21 @@ export class CalendarGenerator {
 
     if (this.shouldLog(input, "strategySettings")) {
       console.log("=== STRATEGY SETTINGS ===");
-      console.log(JSON.stringify({
-        strategies: strategies.map(s => ({ name: s.strategy.name, weight: s.weight })),
-        bufferTimeMinutes: input.config?.bufferTimeMinutes,
-        maxDaysAhead: input.config?.maxDaysAhead,
-        travelTimeMatrixSize: input.config?.travelTimeMatrix?.size ?? 0,
-      }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            strategies: strategies.map((s) => ({
+              name: s.strategy.name,
+              weight: s.weight,
+            })),
+            bufferTimeMinutes: input.config?.bufferTimeMinutes,
+            maxDaysAhead: input.config?.maxDaysAhead,
+            travelTimeMatrixSize: input.config?.travelTimeMatrix?.size ?? 0,
+          },
+          null,
+          2
+        )
+      );
       console.log("=== END STRATEGY SETTINGS ===");
     }
 
@@ -325,7 +344,10 @@ export class CalendarGenerator {
       console.log("=== END SCHEDULING METRICS ===");
     }
 
-    if (this.shouldLog(input, "failures") && schedulingResult.failures.length > 0) {
+    if (
+      this.shouldLog(input, "failures") &&
+      schedulingResult.failures.length > 0
+    ) {
       console.log("=== SCHEDULING FAILURES ===");
       console.log(JSON.stringify(schedulingResult.failures, null, 2));
       console.log("=== END SCHEDULING FAILURES ===");
@@ -333,12 +355,18 @@ export class CalendarGenerator {
 
     if (this.shouldLog(input, "templateInfo")) {
       console.log("=== TEMPLATE INFO ===");
-      console.log(JSON.stringify({
-        templatesCount: input.templates.length,
-        recurringEventsGenerated: recurringTemplateEvents.length,
-        simpleTemplateEventsCount: simpleTemplateEvents.length,
-        largestTemplateGap,
-      }, null, 2));
+      console.log(
+        JSON.stringify(
+          {
+            templatesCount: input.templates.length,
+            recurringEventsGenerated: recurringTemplateEvents.length,
+            templateMasksCount: perTemplateMasks.length,
+            largestTemplateGap,
+          },
+          null,
+          2
+        )
+      );
       console.log("=== END TEMPLATE INFO ===");
     }
 
@@ -350,12 +378,15 @@ export class CalendarGenerator {
 
     if (this.shouldLog(input, "leanCalendar")) {
       const leanCalendar = [...allEvents]
-        .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+        .sort(
+          (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+        )
         .map((e) => ({
           title: e.title,
           start: e.start,
           end: e.end,
-          locationId: plannerLocationMap.get(e.extendedProps?.eventId || e.id) ?? null,
+          locationId:
+            plannerLocationMap.get(e.extendedProps?.eventId || e.id) ?? null,
         }));
 
       console.log("=== LEAN CALENDAR ===");
@@ -376,13 +407,11 @@ export class CalendarGenerator {
    * Returns newly scheduled events (not including templates or memoized events)
    */
   private scheduleTasksAndGoals(
-    userId: string,
     allPlanners: Planner[],
     memoizedEventIds: Set<string>,
     largestTemplateGap: number,
     scheduler: Scheduler,
     perTemplateMasks: PerTemplateMask[],
-    templates: EventTemplate[],
     context: SchedulingContext,
     plannerLocationMap: Map<string, string | null>
   ): {
@@ -462,7 +491,12 @@ export class CalendarGenerator {
           const goalTasks = getSortedTreeBottomLayer(
             allPlanners,
             item.id
-          ).filter((t) => !taskIsCompleted(t) && !scheduledTaskIds.has(t.id) && !memoizedEventIds.has(t.id));
+          ).filter(
+            (t) =>
+              !taskIsCompleted(t) &&
+              !scheduledTaskIds.has(t.id) &&
+              !memoizedEventIds.has(t.id)
+          );
 
           let goalFailedDueToNoSlots = false;
           // Track afterTime to ensure tasks within a goal are scheduled sequentially
@@ -519,16 +553,13 @@ export class CalendarGenerator {
           const s = new Date(e.start);
           return s >= weekStartDate && s <= weekEndDate;
         });
-        const weekTemplateEvents = context.templateEvents.filter((e) => {
-          const s = new Date(e.start);
-          return s >= weekStartDate && s <= weekEndDate;
-        });
 
+        // Pass masks directly - no SimpleEvent generation needed
         this.slotManager.buildDailySlots(
           weekStart,
           7,
           weekEvents,
-          weekTemplateEvents,
+          perTemplateMasks,
           plannerLocationMap
         );
         context.availableMinutesPerWeek =
@@ -747,5 +778,4 @@ export class CalendarGenerator {
   getMetrics(): SchedulingMetrics {
     return { ...this.metrics };
   }
-
 }
