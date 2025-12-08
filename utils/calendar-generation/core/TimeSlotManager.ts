@@ -134,11 +134,13 @@ export class TimeSlotManager {
     plannerLocationMap?: Map<string, string | null>
   ): TimeSlot[] {
     // Filter existing events to only those that overlap with this date range
+    // Exclude template events since we create intervals from masks instead
     const relevantEvents = existingEvents.filter((event) => {
       const eventStart = new Date(event.start);
       const eventEnd = new Date(event.end);
+      const isTemplate = event.extendedProps?.itemType === "template";
       // Event overlaps if it starts before range ends AND ends after range starts
-      return eventStart < endDate && eventEnd > startDate;
+      return !isTemplate && eventStart < endDate && eventEnd > startDate;
     });
 
     // Convert existing events to intervals with location info
@@ -148,6 +150,7 @@ export class TimeSlotManager {
     );
 
     // Convert template masks directly to intervals for this date (no SimpleEvent creation)
+    // Templates are handled via masks to avoid duplication
     const templateIntervals = masksToIntervals(templateMasks, startDate);
 
     // Combine all occupied intervals
@@ -161,7 +164,10 @@ export class TimeSlotManager {
 
     // Create travel slots between adjacent events with different locations
     if (plannerLocationMap) {
-      const allIntervals: Interval[] = [...eventIntervals, ...templateIntervals];
+      const allIntervals: Interval[] = [
+        ...eventIntervals,
+        ...templateIntervals,
+      ];
       this.processTravelTransitions(startDate, allIntervals, slots);
     }
 
