@@ -26,6 +26,10 @@ export interface TimeSlot {
   travelFromLocationId?: string | null;
   /** For travel slots: the destination location ID */
   travelToLocationId?: string | null;
+  /** For travel slots: true if actual travel time is less than required */
+  insufficientTravel?: boolean;
+  /** For travel slots: the original required travel time in minutes */
+  requiredTravelMinutes?: number;
 }
 
 export interface TimeSlotBlock {
@@ -206,13 +210,18 @@ export class TimeSlotUtils {
 
   /**
    * Create a travel slot (occupied, but can be reclaimed by same-location tasks)
+   * @param options - Optional properties for tracking travel issues
    */
   static createTravelSlot(
     start: Date,
     end: Date,
     fromLocationId: string,
     toLocationId: string,
-    associatedEventId: string
+    associatedEventId: string,
+    options?: {
+      insufficientTravel?: boolean;
+      requiredTravelMinutes?: number;
+    }
   ): TimeSlot {
     return {
       start,
@@ -227,6 +236,8 @@ export class TimeSlotUtils {
       nextLocationId: toLocationId,
       travelFromLocationId: fromLocationId,
       travelToLocationId: toLocationId,
+      insufficientTravel: options?.insufficientTravel,
+      requiredTravelMinutes: options?.requiredTravelMinutes,
     };
   }
 

@@ -28,8 +28,10 @@ export interface DynamicScheduleItem {
 import { SimpleEvent } from "@/types/prisma";
 import { TimeSlot, TimeSlotUtils } from "../models/TimeSlot";
 import {
+  Interval,
   eventsToIntervals,
   findGaps,
+  findLocationTransitions,
   gapsToTimeSlots,
   masksToIntervals,
   PerTemplateMask,
@@ -159,61 +161,149 @@ export class TimeSlotManager {
 
     // Create travel slots between adjacent events with different locations
     if (plannerLocationMap) {
-      const dayKey = this.getDayKey(startDate);
-      const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
-
-      for (const slot of slots) {
-        const { prevLocationId, nextLocationId } = slot;
-
-        // Create travel slot if prev and next locations differ (and both exist)
-        // This handles template-to-template travel
-        if (
-          prevLocationId &&
-          nextLocationId &&
-          prevLocationId !== nextLocationId
-        ) {
-          const travelMinutes = this.getTravelTime(
-            prevLocationId,
-            nextLocationId,
-            slot.end
-          );
-
-          if (travelMinutes > 0) {
-            // Travel is placed at the END of the slot (right before nextEvent)
-            // Layout: [FREE SLOT] [buffer] [travel] [nextEvent]
-            const bufferMs = this.bufferTimeMinutes * 60000;
-            const travelMs = travelMinutes * 60000;
-
-            // Travel ends at slot.end (which is when next event starts)
-            const travelEnd = new Date(slot.end.getTime());
-            const travelStart = new Date(travelEnd.getTime() - travelMs);
-
-            // Only create travel if there's room for it (need buffer + travel)
-            if (travelStart.getTime() > slot.start.getTime() + bufferMs) {
-              const travelSlot = TimeSlotUtils.createTravelSlot(
-                travelStart,
-                travelEnd,
-                prevLocationId,
-                nextLocationId,
-                `travel-gap-${slot.start.getTime()}`
-              );
-              occupiedSlots.push(travelSlot);
-
-              // Shrink the available slot to end at the buffer before travel
-              slot.end = new Date(travelStart.getTime() - bufferMs);
-              slot.durationMinutes = Math.floor(
-                (slot.end.getTime() - slot.start.getTime()) / 60000
-              );
-            }
-          }
-        }
-      }
-
-      this.occupiedSlots.set(dayKey, occupiedSlots);
+      const allIntervals: Interval[] = [...eventIntervals, ...templateIntervals];
+      this.processTravelTransitions(startDate, allIntervals, slots);
     }
 
     // Merge adjacent slots (preserve location info from first slot in merge)
     return TimeSlotUtils.mergeAdjacentSlots(slots);
+  }
+
+  /**
+   * Process location transitions to create travel slots
+   * Handles: normal travel, insufficient travel (partial), and trespassing (no travel)
+   * Modifies slots array in place and adds travel slots to occupiedSlots
+   */
+  private processTravelTransitions(
+    startDate: Date,
+    intervals: Interval[],
+    slots: TimeSlot[]
+  ): void {
+    const dayKey = this.getDayKey(startDate);
+    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+    const transitions = findLocationTransitions(intervals);
+
+    for (const transition of transitions) {
+      const requiredTravelMinutes = this.getTravelTime(
+        transition.fromLocationId,
+        transition.toLocationId,
+        transition.toEventStart
+      );
+
+      if (requiredTravelMinutes <= 0) continue;
+
+      const availableMinutes = transition.gapMinutes;
+
+      if (transition.isTrespassing) {
+        // Events overlap or touch exactly - NO travel event is created
+        // Trespassing indicators are added to events in CalendarGenerator
+        continue;
+      }
+
+      if (availableMinutes < requiredTravelMinutes) {
+        // Insufficient space - create travel that fills available space
+        this.createInsufficientTravelSlot(
+          transition,
+          requiredTravelMinutes,
+          slots,
+          occupiedSlots
+        );
+      } else {
+        // Normal case - enough space for full travel
+        this.createNormalTravelSlot(
+          transition,
+          requiredTravelMinutes,
+          slots,
+          occupiedSlots
+        );
+      }
+    }
+
+    this.occupiedSlots.set(dayKey, occupiedSlots);
+  }
+
+  /**
+   * Create a travel slot when there's insufficient time (fills available space)
+   */
+  private createInsufficientTravelSlot(
+    transition: ReturnType<typeof findLocationTransitions>[number],
+    requiredTravelMinutes: number,
+    slots: TimeSlot[],
+    occupiedSlots: TimeSlot[]
+  ): void {
+    const travelEnd = new Date(transition.toEventStart.getTime());
+    const travelStart = new Date(transition.fromEventEnd.getTime());
+
+    const travelSlot = TimeSlotUtils.createTravelSlot(
+      travelStart,
+      travelEnd,
+      transition.fromLocationId!,
+      transition.toLocationId!,
+      `travel-insufficient-${transition.toEventStart.getTime()}`,
+      {
+        insufficientTravel: true,
+        requiredTravelMinutes,
+      }
+    );
+    occupiedSlots.push(travelSlot);
+
+    // Shrink the corresponding available slot
+    const correspondingSlot = slots.find(
+      (s) =>
+        s.end.getTime() === transition.toEventStart.getTime() &&
+        s.prevLocationId === transition.fromLocationId
+    );
+    if (correspondingSlot) {
+      correspondingSlot.end = travelStart;
+      correspondingSlot.durationMinutes = Math.floor(
+        (correspondingSlot.end.getTime() - correspondingSlot.start.getTime()) /
+          60000
+      );
+    }
+  }
+
+  /**
+   * Create a travel slot when there's enough time for full travel
+   * Travel is placed at the END of the slot (right before the next event)
+   */
+  private createNormalTravelSlot(
+    transition: ReturnType<typeof findLocationTransitions>[number],
+    requiredTravelMinutes: number,
+    slots: TimeSlot[],
+    occupiedSlots: TimeSlot[]
+  ): void {
+    const bufferMs = this.bufferTimeMinutes * 60000;
+    const travelMs = requiredTravelMinutes * 60000;
+
+    const travelEnd = new Date(transition.toEventStart.getTime());
+    const travelStart = new Date(travelEnd.getTime() - travelMs);
+
+    const correspondingSlot = slots.find(
+      (s) =>
+        s.end.getTime() === transition.toEventStart.getTime() &&
+        s.prevLocationId === transition.fromLocationId
+    );
+
+    if (
+      correspondingSlot &&
+      travelStart.getTime() > correspondingSlot.start.getTime() + bufferMs
+    ) {
+      const travelSlot = TimeSlotUtils.createTravelSlot(
+        travelStart,
+        travelEnd,
+        transition.fromLocationId!,
+        transition.toLocationId!,
+        `travel-gap-${correspondingSlot.start.getTime()}`
+      );
+      occupiedSlots.push(travelSlot);
+
+      // Shrink the available slot to end at buffer before travel
+      correspondingSlot.end = new Date(travelStart.getTime() - bufferMs);
+      correspondingSlot.durationMinutes = Math.floor(
+        (correspondingSlot.end.getTime() - correspondingSlot.start.getTime()) /
+          60000
+      );
+    }
   }
 
   /**
@@ -1094,35 +1184,51 @@ export class TimeSlotManager {
     const travelSlots = this.getAllTravelSlots();
     const now = new Date();
 
-    return travelSlots.map((slot) => {
-      const eventId = slot.eventId || `travel-${slot.start.getTime()}`;
-      // Travel events have extra props not in the base schema (fromLocationId, toLocationId, travelMinutes)
+    return travelSlots.map((slot: TimeSlot) => {
+      const eventId: string = slot.eventId ?? `travel-${slot.start.getTime()}`;
+      const isInsufficient: boolean = slot.insufficientTravel === true;
+      const requiredMinutes: number | null =
+        typeof slot.requiredTravelMinutes === "number"
+          ? slot.requiredTravelMinutes
+          : null;
+      const fromLocation: string | null =
+        typeof slot.travelFromLocationId === "string"
+          ? slot.travelFromLocationId
+          : null;
+      const toLocation: string | null =
+        typeof slot.travelToLocationId === "string"
+          ? slot.travelToLocationId
+          : null;
+
+      // Travel events have extra props not in the base Prisma schema
       // These are used for display purposes only, not persisted
+      // Cast to SimpleEvent since travel-specific fields are runtime-only
       return {
         userId,
         id: eventId,
         title: "Travel",
         start: slot.start.toISOString(),
         end: slot.end.toISOString(),
-        backgroundColor: "#9CA3AF",
-        borderColor: "#6B7280",
+        backgroundColor: isInsufficient ? "#F87171" : "#9CA3AF",
+        borderColor: isInsufficient ? "#DC2626" : "#6B7280",
         duration: null,
         rrule: null,
         extendedProps: {
           id: eventId,
           eventId: eventId,
-          itemType: "travel",
+          itemType: "travel" as const,
           parentId: null,
           completedEndTime: null,
           completedStartTime: null,
-          // Extra travel-specific props (not in Prisma schema, used for display)
-          fromLocationId: slot.travelFromLocationId ?? null,
-          toLocationId: slot.travelToLocationId ?? null,
+          fromLocationId: fromLocation,
+          toLocationId: toLocation,
           travelMinutes: slot.durationMinutes,
+          insufficientTravel: isInsufficient,
+          requiredTravelMinutes: requiredMinutes,
         },
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
-      } as SimpleEvent;
+      } as unknown as SimpleEvent;
     });
   }
 

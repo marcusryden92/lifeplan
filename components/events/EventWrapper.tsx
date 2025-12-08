@@ -4,6 +4,12 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
 
+interface EventExtendedPropsWithTrespassing {
+  trespassingStart?: boolean;
+  trespassingEnd?: boolean;
+  [key: string]: unknown;
+}
+
 interface EventWrapperProps {
   event: EventImpl;
   elementRef: React.RefObject<HTMLDivElement>;
@@ -56,6 +62,28 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
   const startTime = new Date(event.start);
   const endTime = new Date(event.end);
 
+  // Check for trespassing indicators (overlapping events with different locations)
+  const extendedProps = event.extendedProps as EventExtendedPropsWithTrespassing;
+  const trespassingStart = extendedProps?.trespassingStart ?? false;
+  const trespassingEnd = extendedProps?.trespassingEnd ?? false;
+
+  // Build border styles - trespassing borders are red, indicating location conflicts
+  const getBorderStyles = (): React.CSSProperties => {
+    const styles: React.CSSProperties = {
+      borderLeft: userSettings.styles.calendar.event.borderLeft,
+    };
+
+    // In a week/day view, "start" is the top of the event, "end" is the bottom
+    if (trespassingStart) {
+      styles.borderTop = "4px solid #DC2626"; // Red top border
+    }
+    if (trespassingEnd) {
+      styles.borderBottom = "4px solid #DC2626"; // Red bottom border
+    }
+
+    return styles;
+  };
+
   return (
     <div
       ref={elementRef}
@@ -69,7 +97,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
         backgroundColor: isCompleted
           ? userSettings.styles.events.completedColor
           : event.backgroundColor,
-        borderLeft: userSettings.styles.calendar.event.borderLeft,
+        ...getBorderStyles(),
       }}
       onMouseEnter={() => setOnHover(true)}
       onMouseLeave={() => setOnHover(false)}

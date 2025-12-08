@@ -56,6 +56,190 @@ export function mergeIntervals(intervals: Interval[]): Interval[] {
 }
 
 /**
+ * Represents a location transition between adjacent events that may require travel
+ */
+export interface LocationTransition {
+  /** End time of the first event */
+  fromEventEnd: Date;
+  /** Start time of the second event */
+  toEventStart: Date;
+  /** Location of the first event */
+  fromLocationId: string | null;
+  /** Location of the second event */
+  toLocationId: string | null;
+  /** Gap in minutes (negative if events overlap) */
+  gapMinutes: number;
+  /** True if events overlap or touch exactly */
+  isTrespassing: boolean;
+}
+
+/**
+ * Find all location transitions between adjacent events with different locations
+ * This includes overlapping events (trespassing) and events with insufficient gaps
+ * Does NOT merge intervals, so overlaps are preserved
+ */
+export function findLocationTransitions(
+  intervals: Interval[]
+): LocationTransition[] {
+  if (intervals.length <= 1) return [];
+
+  // Sort by start time
+  const sorted = [...intervals].sort(
+    (a, b) => a.start.getTime() - b.start.getTime()
+  );
+
+  const transitions: LocationTransition[] = [];
+
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const current = sorted[i];
+    const next = sorted[i + 1];
+
+    // Only create transitions when locations differ
+    // Skip if either location is null ("everywhere" - no travel needed)
+    if (
+      current.locationId &&
+      next.locationId &&
+      current.locationId !== next.locationId
+    ) {
+      const gapMs = next.start.getTime() - current.end.getTime();
+      const gapMinutes = Math.floor(gapMs / 60000);
+
+      transitions.push({
+        fromEventEnd: current.end,
+        toEventStart: next.start,
+        fromLocationId: current.locationId,
+        toLocationId: next.locationId,
+        gapMinutes,
+        isTrespassing: gapMinutes <= 0,
+      });
+    }
+  }
+
+  return transitions;
+}
+
+/**
+ * Extended interval with optional event ID for tracking
+ */
+export interface IntervalWithId extends Interval {
+  eventId?: string;
+}
+
+/**
+ * Trespassing info for an event - which borders should be red
+ */
+export interface TrespassingInfo {
+  eventId: string;
+  /** True if the event's start border should be red (overlaps at start) */
+  trespassingStart: boolean;
+  /** True if the event's end border should be red (overlaps at end) */
+  trespassingEnd: boolean;
+}
+
+/**
+ * Detect trespassing (overlapping) events with different locations
+ * Returns a map of event IDs to their trespassing border info
+ *
+ * Rules:
+ * - Event A ends after Event B starts (A infringes on B): A gets red BOTTOM border
+ * - Event B nested inside Event A: B gets BOTH red top AND bottom borders
+ * - Start times equal: Both events get red TOP border
+ * - End times equal: Both events get red BOTTOM border
+ */
+export function detectTrespassingEvents(
+  intervals: IntervalWithId[]
+): Map<string, TrespassingInfo> {
+  const trespassingMap = new Map<string, TrespassingInfo>();
+
+  if (intervals.length <= 1) return trespassingMap;
+
+  // Helper to get or create trespassing info for an event
+  const getOrCreate = (eventId: string): TrespassingInfo => {
+    if (!trespassingMap.has(eventId)) {
+      trespassingMap.set(eventId, {
+        eventId,
+        trespassingStart: false,
+        trespassingEnd: false,
+      });
+    }
+    return trespassingMap.get(eventId)!;
+  };
+
+  // Sort by start time, then by end time (longer events first for same start)
+  const sorted = [...intervals].sort((a, b) => {
+    const startDiff = a.start.getTime() - b.start.getTime();
+    if (startDiff !== 0) return startDiff;
+    // For same start time, put longer events first
+    return b.end.getTime() - a.end.getTime();
+  });
+
+  // Check each pair of events for overlaps with different locations
+  for (let i = 0; i < sorted.length; i++) {
+    for (let j = i + 1; j < sorted.length; j++) {
+      const eventA = sorted[i];
+      const eventB = sorted[j];
+
+      // Skip if no event IDs (can't track)
+      if (!eventA.eventId || !eventB.eventId) continue;
+
+      // Skip if same location or either is null ("everywhere")
+      if (
+        !eventA.locationId ||
+        !eventB.locationId ||
+        eventA.locationId === eventB.locationId
+      ) {
+        continue;
+      }
+
+      const aStart = eventA.start.getTime();
+      const aEnd = eventA.end.getTime();
+      const bStart = eventB.start.getTime();
+      const bEnd = eventB.end.getTime();
+
+      // Check for overlaps
+      const startsEqual = aStart === bStart;
+      const endsEqual = aEnd === bEnd;
+      const aContainsB = aStart <= bStart && aEnd >= bEnd;
+      const bStartsDuringA = bStart < aEnd && bStart > aStart;
+      const aEndsDuringB = aEnd > bStart && aEnd < bEnd;
+
+      // Case: Start times equal - both get red START border
+      if (startsEqual) {
+        getOrCreate(eventA.eventId).trespassingStart = true;
+        getOrCreate(eventB.eventId).trespassingStart = true;
+      }
+
+      // Case: End times equal - both get red END border
+      if (endsEqual) {
+        getOrCreate(eventA.eventId).trespassingEnd = true;
+        getOrCreate(eventB.eventId).trespassingEnd = true;
+      }
+
+      // Case: B is nested inside A (A contains B completely)
+      // B gets both red borders (if not already handled by equal start/end)
+      if (aContainsB && !startsEqual && !endsEqual) {
+        getOrCreate(eventB.eventId).trespassingStart = true;
+        getOrCreate(eventB.eventId).trespassingEnd = true;
+      }
+
+      // Case: A ends during B (A infringes on B) - A gets red END border
+      // (but not if it's a nesting case already handled)
+      if (aEndsDuringB && !startsEqual) {
+        getOrCreate(eventA.eventId).trespassingEnd = true;
+      }
+
+      // Case: B starts during A (A infringes on B from before)
+      // Same as above but checking from B's perspective
+      if (bStartsDuringA && !aContainsB) {
+        getOrCreate(eventA.eventId).trespassingEnd = true;
+      }
+    }
+  }
+
+  return trespassingMap;
+}
+
+/**
  * Find gaps between occupied intervals
  * Returns available time slots with location context from adjacent events
  */

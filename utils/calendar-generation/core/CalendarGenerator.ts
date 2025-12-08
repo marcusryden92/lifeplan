@@ -32,6 +32,10 @@ import {
 import { dateTimeService } from "../utils/dateTimeService";
 import { CalendarValidator } from "../utils/validationUtils";
 import { logCalendarDebugInfo } from "../utils/loggingUtils";
+import {
+  detectTrespassingEvents,
+  IntervalWithId,
+} from "../utils/intervalUtils";
 import { getSortedTreeBottomLayer } from "../../goalPageHandlers";
 import { taskIsCompleted } from "../../taskHelpers";
 import { v4 as uuidv4 } from "uuid";
@@ -257,6 +261,10 @@ export class CalendarGenerator {
       ...templateEventsForUI,
       ...travelEvents,
     ];
+
+    // Detect trespassing events (overlapping events with different locations)
+    // and mark them with red border indicators
+    this.markTrespassingEvents(allEvents, plannerLocationMap);
 
     const endTime = performance.now();
     this.metrics.totalExecutionTimeMs = endTime - startTime;
@@ -650,6 +658,47 @@ export class CalendarGenerator {
       templateEventsGenerated: 0,
       templateExpansionTimeMs: 0,
     };
+  }
+
+  /**
+   * Mark events that are trespassing (overlapping with different locations)
+   * Modifies events in place to add trespassingTop/trespassingBottom to extendedProps
+   */
+  private markTrespassingEvents(
+    events: SimpleEvent[],
+    plannerLocationMap: Map<string, string | null>
+  ): void {
+    // Convert events to intervals with IDs and locations
+    const intervals: IntervalWithId[] = events
+      .filter((e) => e.extendedProps?.itemType !== "travel") // Skip travel events
+      .map((e) => {
+        // Get location from plannerLocationMap using the event's linked planner ID
+        const plannerId = (e.extendedProps as { eventId?: string })?.eventId || e.id;
+        const locationId = plannerLocationMap.get(plannerId) ?? null;
+
+        return {
+          start: new Date(e.start),
+          end: new Date(e.end),
+          locationId,
+          eventId: e.id,
+        };
+      });
+
+    // Detect trespassing
+    const trespassingMap = detectTrespassingEvents(intervals);
+
+    // Mark events with trespassing info
+    for (const event of events) {
+      const info = trespassingMap.get(event.id);
+      if (info && event.extendedProps) {
+        // Add trespassing indicators as display-only props (not in Prisma schema)
+        // Similar to how travel events add extra props
+        (event.extendedProps as Record<string, unknown>).trespassingStart =
+          info.trespassingStart;
+        (event.extendedProps as Record<string, unknown>).trespassingEnd =
+          info.trespassingEnd;
+      }
+    }
   }
 
   /**
