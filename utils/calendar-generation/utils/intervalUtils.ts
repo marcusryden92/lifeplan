@@ -11,6 +11,17 @@ import { TimeSlot } from "../models/TimeSlot";
 export interface Interval {
   start: Date;
   end: Date;
+  locationId?: string | null;  // Location of the event occupying this interval
+}
+
+/**
+ * A gap between occupied intervals, with location context from adjacent events
+ */
+export interface GapInterval {
+  start: Date;
+  end: Date;
+  prevLocationId: string | null;  // Location of the event before this gap
+  nextLocationId: string | null;  // Location of the event after this gap
 }
 
 /**
@@ -46,25 +57,27 @@ export function mergeIntervals(intervals: Interval[]): Interval[] {
 
 /**
  * Find gaps between occupied intervals
- * Returns available time slots
+ * Returns available time slots with location context from adjacent events
  */
 export function findGaps(
   occupiedIntervals: Interval[],
   rangeStart: Date,
   rangeEnd: Date
-): Interval[] {
+): GapInterval[] {
   if (occupiedIntervals.length === 0) {
-    return [{ start: rangeStart, end: rangeEnd }];
+    return [{ start: rangeStart, end: rangeEnd, prevLocationId: null, nextLocationId: null }];
   }
 
   const merged = mergeIntervals(occupiedIntervals);
-  const gaps: Interval[] = [];
+  const gaps: GapInterval[] = [];
 
   // Check for gap before first interval
   if (merged[0].start > rangeStart) {
     gaps.push({
       start: rangeStart,
       end: merged[0].start,
+      prevLocationId: null,  // No event before the range start
+      nextLocationId: merged[0].locationId ?? null,
     });
   }
 
@@ -77,16 +90,20 @@ export function findGaps(
       gaps.push({
         start: gapStart,
         end: gapEnd,
+        prevLocationId: merged[i].locationId ?? null,
+        nextLocationId: merged[i + 1].locationId ?? null,
       });
     }
   }
 
   // Check for gap after last interval
-  const lastEnd = merged[merged.length - 1].end;
-  if (lastEnd < rangeEnd) {
+  const lastInterval = merged[merged.length - 1];
+  if (lastInterval.end < rangeEnd) {
     gaps.push({
-      start: lastEnd,
+      start: lastInterval.end,
       end: rangeEnd,
+      prevLocationId: lastInterval.locationId ?? null,
+      nextLocationId: null,  // No event after the range end
     });
   }
 
@@ -95,12 +112,21 @@ export function findGaps(
 
 /**
  * Convert SimpleEvents to Intervals
+ * @param events - Events to convert
+ * @param plannerLocationMap - Optional map of planner/event ID to location ID
  */
-export function eventsToIntervals(events: SimpleEvent[]): Interval[] {
-  return events.map((event) => ({
-    start: new Date(event.start),
-    end: new Date(event.end),
-  }));
+export function eventsToIntervals(
+  events: SimpleEvent[],
+  plannerLocationMap?: Map<string, string | null>
+): Interval[] {
+  return events.map((event) => {
+    const lookupId = (event.extendedProps?.eventId as string) || event.id;
+    return {
+      start: new Date(event.start),
+      end: new Date(event.end),
+      locationId: plannerLocationMap?.get(lookupId) ?? null,
+    };
+  });
 }
 
 /**
@@ -212,18 +238,17 @@ export function getLargestGapMinutes(gaps: Interval[]): number {
 }
 
 /**
- * Convert intervals to TimeSlots
+ * Convert gap intervals to TimeSlots with location context
  */
-export function intervalsToTimeSlots(
-  intervals: Interval[],
-  isAvailable: boolean = true
-): TimeSlot[] {
-  return intervals.map((interval) => ({
-    start: interval.start,
-    end: interval.end,
+export function gapsToTimeSlots(gaps: GapInterval[]): TimeSlot[] {
+  return gaps.map((gap) => ({
+    start: gap.start,
+    end: gap.end,
     durationMinutes: Math.floor(
-      (interval.end.getTime() - interval.start.getTime()) / (1000 * 60)
+      (gap.end.getTime() - gap.start.getTime()) / (1000 * 60)
     ),
-    isAvailable,
+    isAvailable: true,
+    prevLocationId: gap.prevLocationId,
+    nextLocationId: gap.nextLocationId,
   }));
 }

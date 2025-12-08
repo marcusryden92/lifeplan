@@ -245,7 +245,8 @@ export class CalendarGenerator {
       scheduler,
       perTemplateMasks,
       input.templates,
-      context
+      context,
+      plannerLocationMap
     );
 
     // Step 10: Generate travel events from stored travel slots
@@ -382,7 +383,8 @@ export class CalendarGenerator {
     scheduler: Scheduler,
     perTemplateMasks: PerTemplateMask[],
     templates: EventTemplate[],
-    context: SchedulingContext
+    context: SchedulingContext,
+    plannerLocationMap: Map<string, string | null>
   ): {
     success: boolean;
     newEvents: SimpleEvent[];
@@ -526,7 +528,8 @@ export class CalendarGenerator {
           weekStart,
           7,
           weekEvents,
-          weekTemplateEvents
+          weekTemplateEvents,
+          plannerLocationMap
         );
         context.availableMinutesPerWeek =
           this.slotManager.getWeekAvailableMinutes(weekStart);

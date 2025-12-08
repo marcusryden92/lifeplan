@@ -30,7 +30,7 @@ import { TimeSlot, TimeSlotUtils } from "../models/TimeSlot";
 import {
   eventsToIntervals,
   findGaps,
-  intervalsToTimeSlots,
+  gapsToTimeSlots,
 } from "../utils/intervalUtils";
 import { dateTimeService } from "../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../constants";
@@ -132,76 +132,36 @@ export class TimeSlotManager {
     const allEvents = [...existingEvents, ...templateEvents];
 
     // Filter events to only those that overlap with this date range
-    // and sort by start time for location tracking
-    const relevantEvents = allEvents
-      .filter((event) => {
-        const eventStart = new Date(event.start);
-        const eventEnd = new Date(event.end);
-        // Event overlaps if it starts before range ends AND ends after range starts
-        return eventStart < endDate && eventEnd > startDate;
-      })
-      .sort(
-        (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
-      );
+    const relevantEvents = allEvents.filter((event) => {
+      const eventStart = new Date(event.start);
+      const eventEnd = new Date(event.end);
+      // Event overlaps if it starts before range ends AND ends after range starts
+      return eventStart < endDate && eventEnd > startDate;
+    });
 
-    // Buffer is now handled during scheduling (leading buffer before event start)
-    // so we don't extend event end times here
-    const occupiedIntervals = eventsToIntervals(relevantEvents);
+    // Convert events to intervals with location info (location flows through the pipeline)
+    const occupiedIntervals = eventsToIntervals(relevantEvents, plannerLocationMap);
 
-    // Find gaps between occupied intervals
+    // Find gaps between occupied intervals (gaps now have prevLocationId/nextLocationId)
     const gaps = findGaps(occupiedIntervals, startDate, endDate);
 
-    // Convert gaps to available time slots
-    const slots = intervalsToTimeSlots(gaps, true);
+    // Convert gaps to available time slots (location info is preserved)
+    const slots = gapsToTimeSlots(gaps);
 
-    // If we have a planner location map, set prevLocationId and nextLocationId on each slot
-    // Also create travel slots between adjacent events with different locations
-    if (plannerLocationMap && relevantEvents.length > 0) {
+    // Create travel slots between adjacent events with different locations
+    if (plannerLocationMap) {
       const dayKey = this.getDayKey(startDate);
       const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
 
       for (const slot of slots) {
-        // Find the event immediately before this slot
-        const prevEvent = relevantEvents.find((e) => {
-          const eventEnd = new Date(e.end);
-          // Event ends at or just before slot starts (within 1 minute tolerance)
-          return Math.abs(eventEnd.getTime() - slot.start.getTime()) < 60000;
-        });
-
-        // Find the event immediately after this slot
-        const nextEvent = relevantEvents.find((e) => {
-          const eventStart = new Date(e.start);
-          // Event starts at or just after slot ends (within 1 minute tolerance)
-          return Math.abs(eventStart.getTime() - slot.end.getTime()) < 60000;
-        });
-
-        // Look up locations from the planner map
-        // Use extendedProps.eventId first (for template events which have compound IDs),
-        // then fall back to event.id (for planner items)
-        let prevLocationId: string | null = null;
-        let nextLocationId: string | null = null;
-
-        if (prevEvent) {
-          const lookupId =
-            (prevEvent.extendedProps?.eventId as string) || prevEvent.id;
-          prevLocationId = plannerLocationMap.get(lookupId) ?? null;
-          slot.prevLocationId = prevLocationId;
-        }
-        if (nextEvent) {
-          const lookupId =
-            (nextEvent.extendedProps?.eventId as string) || nextEvent.id;
-          nextLocationId = plannerLocationMap.get(lookupId) ?? null;
-          slot.nextLocationId = nextLocationId;
-        }
+        const { prevLocationId, nextLocationId } = slot;
 
         // DEBUG: Log slot location detection - check for timezone issues
         const dayKeyDebug = this.getDayKey(startDate);
-        // Log for ANY day that might be 12/9 in any timezone
         if (startDate.toISOString().includes('2025-12-09') || dayKeyDebug === '2025-12-09') {
           console.log(`[buildAvailableSlots] startDate=${startDate.toISOString()} dayKey=${dayKeyDebug}`);
           console.log(`  Slot ${slot.start.toISOString()} to ${slot.end.toISOString()} dur=${slot.durationMinutes}min`);
-          console.log(`  prevEvent: ${prevEvent?.title ?? 'none'} prevLoc: ${prevLocationId}`);
-          console.log(`  nextEvent: ${nextEvent?.title ?? 'none'} nextLoc: ${nextLocationId}`);
+          console.log(`  prevLoc: ${prevLocationId} nextLoc: ${nextLocationId}`);
         }
 
         // Create travel slot if prev and next locations differ (and both exist)
@@ -228,7 +188,7 @@ export class TimeSlotManager {
                 travelEnd,
                 prevLocationId,
                 nextLocationId,
-                `travel-${prevEvent?.id}-to-${nextEvent?.id}`
+                `travel-gap-${slot.start.getTime()}`
               );
               occupiedSlots.push(travelSlot);
               if (startDate.toISOString().includes('2025-12-09') || dayKeyDebug === '2025-12-09') {
