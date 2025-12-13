@@ -9,7 +9,12 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import { Planner, EventTemplate, SimpleEvent } from "@/types/prisma";
 import { CalendarGenerator } from "./core/CalendarGenerator";
 import { SCHEDULING_CONFIG } from "./constants";
-import type { TravelTimeEntry } from "./models/SchedulingModels";
+import type {
+  TravelTimeEntry,
+  LocationGroupingScoresConfig,
+  LocationGroupingPenaltiesConfig,
+  UrgencyScoresConfig,
+} from "./models/SchedulingModels";
 
 /**
  * Options for calendar generation
@@ -18,6 +23,16 @@ export interface GenerateCalendarOptions {
   bufferTimeMinutes?: number;
   travelTimeMatrix?: Map<string, TravelTimeEntry>;
   injectTravelEvents?: boolean;
+  strategyWeights?: {
+    urgency?: number;
+    earliestSlot?: number;
+    dependency?: number;
+    energy?: number;
+    locationGrouping?: number;
+  };
+  locationGroupingScores?: LocationGroupingScoresConfig;
+  locationGroupingPenalties?: LocationGroupingPenaltiesConfig;
+  urgencyScores?: UrgencyScoresConfig;
 }
 
 /**
@@ -76,6 +91,10 @@ export function generateCalendar(
       bufferTimeMinutes,
       travelTimeMatrix: opts.travelTimeMatrix,
       injectTravelEvents: opts.injectTravelEvents,
+      strategyWeights: opts.strategyWeights,
+      locationGroupingScores: opts.locationGroupingScores,
+      locationGroupingPenalties: opts.locationGroupingPenalties,
+      urgencyScores: opts.urgencyScores,
     },
   });
 

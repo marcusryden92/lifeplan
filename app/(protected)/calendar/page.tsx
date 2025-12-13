@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Calendar from "./components/Calendar";
 import CalendarHeader from "./components/CalendarHeader";
+import StrategyDebugDashboard from "./components/StrategyDebugDashboard";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 
 import { getWeekFirstDate } from "@/utils/calendarUtils";
@@ -27,6 +28,7 @@ const CalendarPage = () => {
       />
 
       <Calendar initialDate={initialDate} />
+      <StrategyDebugDashboard />
     </div>
   );
 };

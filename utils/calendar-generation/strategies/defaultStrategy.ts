@@ -93,12 +93,58 @@ export const DEFAULT_STRATEGY_CONFIG = {
 } as const;
 
 /**
- * Type definitions for strategy configuration
+ * Type definitions for strategy configuration (readonly, from defaults)
+ */
+export type StrategyWeightsReadonly = typeof DEFAULT_STRATEGY_WEIGHTS;
+export type LocationGroupingScoresReadonly = typeof DEFAULT_LOCATION_GROUPING_SCORES;
+export type LocationGroupingPenaltiesReadonly = typeof DEFAULT_LOCATION_GROUPING_PENALTIES;
+export type UrgencyScoresReadonly = typeof DEFAULT_URGENCY_SCORES;
+export type StrategyConfigReadonly = typeof DEFAULT_STRATEGY_CONFIG;
+
+/**
+ * Mutable type definitions for strategy configuration
  * These can be used when users override default values
  */
-export type StrategyWeights = typeof DEFAULT_STRATEGY_WEIGHTS;
-export type LocationGroupingScores = typeof DEFAULT_LOCATION_GROUPING_SCORES;
-export type LocationGroupingPenalties =
-  typeof DEFAULT_LOCATION_GROUPING_PENALTIES;
-export type UrgencyScores = typeof DEFAULT_URGENCY_SCORES;
-export type StrategyConfig = typeof DEFAULT_STRATEGY_CONFIG;
+export type StrategyWeights = {
+  urgency: number;
+  earliestSlot: number;
+  dependency: number;
+  energy: number;
+  locationGrouping: number;
+};
+
+export type LocationGroupingScores = {
+  bothMatch: number;
+  oneMatchOneOpen: number;
+  oneMatch: number;
+  bothOpen: number;
+  oneOpenNoMatch: number;
+  neitherMatch: number;
+  insufficientRoom: number;
+  noLocation: number;
+};
+
+export type LocationGroupingPenalties = {
+  maxSingleTravelPenalty: number;
+  maxDoubleTravelPenalty: number;
+  singleTravelPenaltyDivisor: number;
+  doubleTravelPenaltyDivisor: number;
+};
+
+export type UrgencyScores = {
+  urgencyScoreWeight: number;
+  timePreferenceWeight: number;
+  noDeadlineMaxDays: number;
+  noDeadlineDecayFactor: number;
+  urgentRatioThreshold: number;
+  minTimePreference: number;
+};
+
+export type StrategyConfig = {
+  weights: StrategyWeights;
+  locationGrouping: {
+    scores: LocationGroupingScores;
+    penalties: LocationGroupingPenalties;
+  };
+  urgency: UrgencyScores;
+};

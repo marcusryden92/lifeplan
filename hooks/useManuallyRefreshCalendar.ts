@@ -14,6 +14,7 @@ import { useSelector } from "react-redux";
 import {
   travelTimeArrayToMap,
   type SerializedTravelTimeEntry,
+  type DebugStrategyConfig,
 } from "@/redux/slices/schedulingSettingsSlice";
 
 const useManuallyRefreshCalendar = (
@@ -36,6 +37,9 @@ const useManuallyRefreshCalendar = (
   const travelTimeMatrix = useSelector(
     (state: RootState) => state.schedulingSettings.travelTimeMatrix
   );
+  const debugStrategyConfig = useSelector(
+    (state: RootState) => state.schedulingSettings.debugStrategyConfig
+  );
 
   // Store latest values in refs so callback doesn't need to depend on them
   const stateRef = useRef<{
@@ -47,6 +51,7 @@ const useManuallyRefreshCalendar = (
     bufferTimeMinutes: number;
     enableTravelEvents: boolean;
     travelTimeMatrix: SerializedTravelTimeEntry[] | null;
+    debugStrategyConfig: DebugStrategyConfig;
     dispatch: AppDispatch;
   }>({
     userId,
@@ -57,6 +62,7 @@ const useManuallyRefreshCalendar = (
     bufferTimeMinutes,
     enableTravelEvents,
     travelTimeMatrix,
+    debugStrategyConfig,
     dispatch,
   });
   stateRef.current = {
@@ -68,6 +74,7 @@ const useManuallyRefreshCalendar = (
     bufferTimeMinutes,
     enableTravelEvents,
     travelTimeMatrix,
+    debugStrategyConfig,
     dispatch,
   };
 
@@ -81,6 +88,7 @@ const useManuallyRefreshCalendar = (
       bufferTimeMinutes,
       enableTravelEvents,
       travelTimeMatrix,
+      debugStrategyConfig,
       dispatch,
     } = stateRef.current;
 
@@ -111,6 +119,10 @@ const useManuallyRefreshCalendar = (
           bufferTimeMinutes,
           travelTimeMatrix: travelTimeMap ?? undefined,
           injectTravelEvents: enableTravelEvents,
+          strategyWeights: debugStrategyConfig.weights,
+          locationGroupingScores: debugStrategyConfig.locationGrouping.scores,
+          locationGroupingPenalties: debugStrategyConfig.locationGrouping.penalties,
+          urgencyScores: debugStrategyConfig.urgency,
         }
       );
 

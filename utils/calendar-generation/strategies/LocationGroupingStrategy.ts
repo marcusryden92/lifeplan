@@ -15,12 +15,19 @@
 
 import { Planner } from "@/types/prisma";
 import { TimeSlot } from "../models/TimeSlot";
-import { SchedulingContext, TravelTimeEntry } from "../models/SchedulingModels";
+import {
+  SchedulingContext,
+  TravelTimeEntry,
+  LocationGroupingScoresConfig,
+  LocationGroupingPenaltiesConfig,
+} from "../models/SchedulingModels";
 import { SchedulingStrategy } from "./SchedulingStrategy";
 import { LOCATION_CONFIG } from "../constants";
 import {
   DEFAULT_LOCATION_GROUPING_SCORES,
   DEFAULT_LOCATION_GROUPING_PENALTIES,
+  type LocationGroupingScores,
+  type LocationGroupingPenalties,
 } from "./defaultStrategy";
 
 /**
@@ -28,14 +35,21 @@ import {
  */
 export class LocationGroupingStrategy implements SchedulingStrategy {
   readonly name = "location_grouping";
+  private scores: LocationGroupingScores;
+  private penalties: LocationGroupingPenalties;
 
   constructor(
-    private travelTimeMatrix: Map<string, TravelTimeEntry>
-  ) {}
+    private travelTimeMatrix: Map<string, TravelTimeEntry>,
+    scoresConfig?: LocationGroupingScoresConfig,
+    penaltiesConfig?: LocationGroupingPenaltiesConfig
+  ) {
+    this.scores = { ...DEFAULT_LOCATION_GROUPING_SCORES, ...scoresConfig };
+    this.penalties = { ...DEFAULT_LOCATION_GROUPING_PENALTIES, ...penaltiesConfig };
+  }
 
   score(task: Planner, slot: TimeSlot, context: SchedulingContext): number {
-    const scores = DEFAULT_LOCATION_GROUPING_SCORES;
-    const penalties = DEFAULT_LOCATION_GROUPING_PENALTIES;
+    const scores = this.scores;
+    const penalties = this.penalties;
 
     // If task has no location, return neutral score - doesn't affect grouping
     if (!task.locationId) {

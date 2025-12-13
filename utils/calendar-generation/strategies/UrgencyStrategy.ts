@@ -7,14 +7,19 @@
 
 import { Planner } from "@/types/prisma";
 import { TimeSlot } from "../models/TimeSlot";
-import { SchedulingContext } from "../models/SchedulingModels";
+import { SchedulingContext, UrgencyScoresConfig } from "../models/SchedulingModels";
 import { SchedulingStrategy } from "./SchedulingStrategy";
 import { URGENCY_CONFIG } from "../constants";
-import { DEFAULT_URGENCY_SCORES } from "./defaultStrategy";
+import { DEFAULT_URGENCY_SCORES, type UrgencyScores } from "./defaultStrategy";
 import { dateTimeService } from "../utils/dateTimeService";
 
 export class UrgencyStrategy implements SchedulingStrategy {
   readonly name = "urgency";
+  private scores: UrgencyScores;
+
+  constructor(scoresConfig?: UrgencyScoresConfig) {
+    this.scores = { ...DEFAULT_URGENCY_SCORES, ...scoresConfig };
+  }
 
   score(task: Planner, slot: TimeSlot, context: SchedulingContext): number {
     // If no deadline, prefer earlier slots slightly
@@ -56,8 +61,8 @@ export class UrgencyStrategy implements SchedulingStrategy {
 
     // Combine urgency and time preference
     return (
-      urgencyScore * DEFAULT_URGENCY_SCORES.urgencyScoreWeight +
-      timePreference * DEFAULT_URGENCY_SCORES.timePreferenceWeight
+      urgencyScore * this.scores.urgencyScoreWeight +
+      timePreference * this.scores.timePreferenceWeight
     );
   }
 
@@ -75,10 +80,10 @@ export class UrgencyStrategy implements SchedulingStrategy {
     );
 
     // Linear decay: 1.0 for today, MIN_URGENCY_MULTIPLIER for max days out
-    const maxDays = DEFAULT_URGENCY_SCORES.noDeadlineMaxDays;
+    const maxDays = this.scores.noDeadlineMaxDays;
     const score = Math.max(
       URGENCY_CONFIG.MIN_URGENCY_MULTIPLIER,
-      1 - (daysFromNow / maxDays) * DEFAULT_URGENCY_SCORES.noDeadlineDecayFactor
+      1 - (daysFromNow / maxDays) * this.scores.noDeadlineDecayFactor
     );
 
     return score;
@@ -123,7 +128,7 @@ export class UrgencyStrategy implements SchedulingStrategy {
     if (totalTimeToDeadline === 0) return 1;
 
     const ratio = timeToSlot / totalTimeToDeadline;
-    const urgentThreshold = DEFAULT_URGENCY_SCORES.urgentRatioThreshold;
+    const urgentThreshold = this.scores.urgentRatioThreshold;
 
     // For urgent tasks (ratio < threshold), strongly prefer earlier
     if (ratio < urgentThreshold) {
@@ -131,7 +136,7 @@ export class UrgencyStrategy implements SchedulingStrategy {
     }
 
     // For non-urgent tasks, gradually decrease preference
-    return Math.max(DEFAULT_URGENCY_SCORES.minTimePreference, 1 - ratio);
+    return Math.max(this.scores.minTimePreference, 1 - ratio);
   }
 
   /**

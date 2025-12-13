@@ -203,7 +203,7 @@ export class CalendarGenerator {
     const strategies: Array<{ strategy: SchedulingStrategy; weight: number }> =
       [
         {
-          strategy: new UrgencyStrategy(),
+          strategy: new UrgencyStrategy(input.config?.urgencyScores),
           weight:
             input.config?.strategyWeights?.urgency ??
             DEFAULT_STRATEGY_WEIGHTS.urgency,
@@ -222,7 +222,11 @@ export class CalendarGenerator {
       input.config.travelTimeMatrix.size > 0
     ) {
       strategies.push({
-        strategy: new LocationGroupingStrategy(input.config.travelTimeMatrix),
+        strategy: new LocationGroupingStrategy(
+          input.config.travelTimeMatrix,
+          input.config?.locationGroupingScores,
+          input.config?.locationGroupingPenalties
+        ),
         weight:
           input.config?.strategyWeights?.locationGrouping ??
           DEFAULT_STRATEGY_WEIGHTS.locationGrouping,
