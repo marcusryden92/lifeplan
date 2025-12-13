@@ -16,31 +16,32 @@ export const DEFAULT_STRATEGY_WEIGHTS = {
   urgency: 1.0,
   /** Weight for earliest-slot preference */
   earliestSlot: 0.5,
-  /** Weight for dependency-aware scheduling */
-  dependency: 0.8,
-  /** Weight for energy/time-of-day optimization */
-  energy: 0.5,
-  /** Weight for location-based grouping - kept low to act as tie-breaker */
-  locationGrouping: 0.2,
+  /** Weight for location-based grouping - high enough to prioritize same-location continuity */
+  locationGrouping: 0.6,
 } as const;
 
 /**
  * Location grouping strategy internal scoring configuration
  * Controls how slots are scored based on location sandwich patterns
+ *
+ * IMPORTANT: The score differential between oneMatch (0.85) and neitherMatch (0.4)
+ * is intentionally large (0.45) so that same-location continuity is prioritized.
+ * With location grouping weight of 0.2, this gives a ~0.09 boost to the final score,
+ * which is enough to overcome minor urgency/earliestSlot differences.
  */
 export const DEFAULT_LOCATION_GROUPING_SCORES = {
   /** Score when both adjacent events match task location (perfect sandwich) */
-  bothMatch: 0.9,
+  bothMatch: 0.95,
   /** Score when one end matches, other end is open (start/end of day) */
-  oneMatchOneOpen: 0.75,
-  /** Score when one end matches, other doesn't */
-  oneMatch: 0.7,
+  oneMatchOneOpen: 0.85,
+  /** Score when one end matches, other doesn't - CRUCIAL for location continuity */
+  oneMatch: 0.85,
   /** Score when both ends are open (empty day) */
-  bothOpen: 0.75,
+  bothOpen: 0.7,
   /** Score when one end is open, other doesn't match */
-  oneOpenNoMatch: 0.48,
+  oneOpenNoMatch: 0.45,
   /** Score when neither end matches */
-  neitherMatch: 0.45,
+  neitherMatch: 0.4,
   /** Score returned when slot doesn't have room for task + travel */
   insufficientRoom: 0.1,
   /** Score returned for tasks without a location (neutral) */
@@ -108,8 +109,6 @@ export type StrategyConfigReadonly = typeof DEFAULT_STRATEGY_CONFIG;
 export type StrategyWeights = {
   urgency: number;
   earliestSlot: number;
-  dependency: number;
-  energy: number;
   locationGrouping: number;
 };
 

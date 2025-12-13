@@ -188,8 +188,6 @@ export interface CalendarGenerationConfig {
   strategyWeights?: {
     urgency?: number;
     earliestSlot?: number;
-    dependency?: number;
-    energy?: number;
     locationGrouping?: number;
   };
   /** Location grouping strategy internal scores */

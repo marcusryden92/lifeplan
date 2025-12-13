@@ -66,7 +66,8 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
     const prevExists = prevLocation !== null && prevLocation !== undefined;
     const nextExists = nextLocation !== null && nextLocation !== undefined;
 
-    // Calculate travel times if needed
+    // Calculate travel times for penalty calculation (not capacity check)
+    // Note: Capacity check is handled by Scheduler which accounts for travel reuse
     const travelToPrev =
       prevExists && !prevMatches && prevLocation
         ? this.getTravelTimeMinutes(prevLocation, taskLocation, slot.start)
@@ -76,17 +77,8 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
         ? this.getTravelTimeMinutes(taskLocation, nextLocation, slot.end)
         : 0;
 
-    // Total travel time needed
+    // Total travel time needed (for penalty calculation only)
     const totalTravelTime = travelToPrev + travelToNext;
-
-    // Check if slot has enough room for task + travel
-    const bufferTime = context.metrics ? 0 : 0; // Buffer handled elsewhere
-    const requiredDuration = task.duration + totalTravelTime + bufferTime;
-
-    if (slot.durationMinutes < requiredDuration) {
-      // Slot doesn't have room for travel - heavily penalize
-      return scores.insufficientRoom;
-    }
 
     // Score based on sandwich pattern
     // HEAVILY FLATTENED SCORING: Minimize the gap between perfect sandwich and other scenarios

@@ -28,8 +28,6 @@ export type SerializedLocation = {
 export type StrategyWeights = {
   urgency: number;
   earliestSlot: number;
-  dependency: number;
-  energy: number;
   locationGrouping: number;
 };
 

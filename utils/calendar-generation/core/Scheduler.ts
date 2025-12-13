@@ -95,13 +95,26 @@ export class Scheduler {
     let selectedSlot: TimeSlot | null = null;
     let travelBefore = 0;
     let travelAfter = 0;
+    let selectedReusableTravelStart: Date | null = null;
 
     // DEBUG: Log first few slots for this task
-    console.log(`[Scheduler] Task "${task.title}" (loc: ${taskLocationId}) - first 3 scored slots:`);
+    console.log(`[Scheduler] Task "${task.title}" (loc: ${taskLocationId}) - first 3 scored slots (of ${scoredSlots.length} total), fittingSlots=${fittingSlots.length}:`);
     for (let i = 0; i < Math.min(3, scoredSlots.length); i++) {
       const ss = scoredSlots[i];
       const slot = fittingSlots.find(s => s.start.getTime() === ss.slot.start.getTime());
       console.log(`  ${i}: ${ss.slot.start.toISOString()} dur=${ss.slot.durationMinutes}min score=${ss.score.toFixed(3)} prev=${slot?.prevLocationId} next=${slot?.nextLocationId}`);
+    }
+    // Log if there's a small slot that might be the one after D1
+    const smallSlots = scoredSlots.filter(ss => ss.slot.durationMinutes < 60);
+    if (smallSlots.length > 0) {
+      console.log(`  Small slots (<60min):`, smallSlots.map(ss => `${ss.slot.start.toISOString().slice(11,16)} dur=${ss.slot.durationMinutes} score=${ss.score.toFixed(3)}`));
+    }
+    // DEBUG: Log all fitting slots for D tasks
+    if (task.title.startsWith('D')) {
+      console.log(`  [DEBUG D task] All ${fittingSlots.length} fitting slots:`);
+      fittingSlots.forEach((s, i) => {
+        console.log(`    ${i}: ${s.start.toISOString().slice(11,16)}-${s.end.toISOString().slice(11,16)} dur=${s.durationMinutes}min prev=${s.prevLocationId} next=${s.nextLocationId}`);
+      });
     }
 
     for (const scoredSlot of scoredSlots) {
@@ -152,9 +165,22 @@ export class Scheduler {
       const numBuffers = 1 + (needTravelBefore > 0 ? 1 : 0);
 
       // Check if existing travel to the destination can be reused
-      // Travel-after doesn't require NEW space if it replaces existing travel
-      const effectiveTravelAfter = needTravelAfter;  // For now, always include travel-after in calculation
-      // The TimeSlotManager will handle the actual placement at the existing position
+      // Travel-after doesn't require NEW space if it replaces existing travel at the slot end
+      let effectiveTravelAfter = needTravelAfter;
+      let reusableTravelStart: Date | null = null;
+
+      if (needTravelAfter > 0 && slot.nextLocationId) {
+        // Check if there's already a travel slot going to nextLocationId near the end of this slot
+        // If so, we can reuse it and don't need to reserve additional space
+        reusableTravelStart = this.slotManager.findAdjacentTravelTo(
+          slot.end,
+          slot.nextLocationId
+        );
+        if (reusableTravelStart) {
+          effectiveTravelAfter = 0;
+          console.log(`    Found reusable travel to ${slot.nextLocationId} starting at ${reusableTravelStart.toISOString()} - effectiveTravelAfter=0`);
+        }
+      }
 
       const totalRequired = task.duration + needTravelBefore + effectiveTravelAfter + (numBuffers * bufferMinutes);
 
@@ -165,8 +191,10 @@ export class Scheduler {
       if (slot.durationMinutes >= totalRequired) {
         selectedSlot = slot;
         travelBefore = needTravelBefore;
-        travelAfter = needTravelAfter;
-        console.log(`  -> Selected this slot!`);
+        // Use effectiveTravelAfter - if we're reusing existing travel, don't create new travel
+        travelAfter = effectiveTravelAfter;
+        selectedReusableTravelStart = reusableTravelStart;
+        console.log(`  -> Selected this slot! travelAfter=${travelAfter} (effective, not needTravelAfter=${needTravelAfter}), reusableTravelStart=${reusableTravelStart?.toISOString() ?? 'null'}`);
         break;
       }
     }
@@ -212,7 +240,8 @@ export class Scheduler {
       travelBefore,
       travelAfter,
       selectedSlot.prevLocationId ?? null,
-      selectedSlot.nextLocationId ?? null
+      selectedSlot.nextLocationId ?? null,
+      selectedReusableTravelStart
     );
     const reserved = result.success;
 
@@ -304,6 +333,15 @@ export class Scheduler {
   private scoreSlots(task: Planner, slots: TimeSlot[]): ScoredSlot[] {
     const scored: ScoredSlot[] = slots.map((slot) => {
       const score = this.strategy.score(task, slot, this.context);
+
+      // DEBUG: For D tasks, log detailed strategy scores for key slots
+      if (task.title.startsWith('D') && (slot.durationMinutes < 60 || slot.durationMinutes === 100)) {
+        const composite = this.strategy as any;
+        if (composite.getDetailedScores) {
+          const detailed = composite.getDetailedScores(task, slot, this.context);
+          console.log(`  [DETAILED SCORES] ${task.title} slot ${slot.start.toISOString().slice(11,16)} dur=${slot.durationMinutes}:`, detailed, `-> final=${score.toFixed(3)}`);
+        }
+      }
 
       return {
         slot: {
