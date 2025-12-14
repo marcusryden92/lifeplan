@@ -13,7 +13,6 @@ import type {
   TravelTimeEntry,
   LocationGroupingScoresConfig,
   LocationGroupingPenaltiesConfig,
-  UrgencyScoresConfig,
 } from "./models/SchedulingModels";
 
 /**
@@ -24,13 +23,10 @@ export interface GenerateCalendarOptions {
   travelTimeMatrix?: Map<string, TravelTimeEntry>;
   injectTravelEvents?: boolean;
   strategyWeights?: {
-    urgency?: number;
-    earliestSlot?: number;
     locationGrouping?: number;
   };
   locationGroupingScores?: LocationGroupingScoresConfig;
   locationGroupingPenalties?: LocationGroupingPenaltiesConfig;
-  urgencyScores?: UrgencyScoresConfig;
 }
 
 /**
@@ -92,7 +88,6 @@ export function generateCalendar(
       strategyWeights: opts.strategyWeights,
       locationGroupingScores: opts.locationGroupingScores,
       locationGroupingPenalties: opts.locationGroupingPenalties,
-      urgencyScores: opts.urgencyScores,
     },
   });
 

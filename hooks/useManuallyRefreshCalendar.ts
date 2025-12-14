@@ -122,7 +122,6 @@ const useManuallyRefreshCalendar = (
           strategyWeights: debugStrategyConfig.weights,
           locationGroupingScores: debugStrategyConfig.locationGrouping.scores,
           locationGroupingPenalties: debugStrategyConfig.locationGrouping.penalties,
-          urgencyScores: debugStrategyConfig.urgency,
         }
       );
 

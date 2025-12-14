@@ -4,7 +4,6 @@ import {
   DEFAULT_STRATEGY_WEIGHTS,
   DEFAULT_LOCATION_GROUPING_SCORES,
   DEFAULT_LOCATION_GROUPING_PENALTIES,
-  DEFAULT_URGENCY_SCORES,
 } from "@/utils/calendar-generation/strategies/defaultStrategy";
 
 // Serializable format for Redux storage
@@ -26,8 +25,6 @@ export type SerializedLocation = {
 
 // Strategy configuration types (mutable versions of the readonly defaults)
 export type StrategyWeights = {
-  urgency: number;
-  earliestSlot: number;
   locationGrouping: number;
 };
 
@@ -38,7 +35,6 @@ export type LocationGroupingScores = {
   bothOpen: number;
   oneOpenNoMatch: number;
   neitherMatch: number;
-  insufficientRoom: number;
   noLocation: number;
 };
 
@@ -49,22 +45,12 @@ export type LocationGroupingPenalties = {
   doubleTravelPenaltyDivisor: number;
 };
 
-export type UrgencyScores = {
-  urgencyScoreWeight: number;
-  timePreferenceWeight: number;
-  noDeadlineMaxDays: number;
-  noDeadlineDecayFactor: number;
-  urgentRatioThreshold: number;
-  minTimePreference: number;
-};
-
 export type DebugStrategyConfig = {
   weights: StrategyWeights;
   locationGrouping: {
     scores: LocationGroupingScores;
     penalties: LocationGroupingPenalties;
   };
-  urgency: UrgencyScores;
 };
 
 export type SchedulingSettings = {
@@ -92,7 +78,6 @@ const initialState: SchedulingSettings = {
       scores: { ...DEFAULT_LOCATION_GROUPING_SCORES },
       penalties: { ...DEFAULT_LOCATION_GROUPING_PENALTIES },
     },
-    urgency: { ...DEFAULT_URGENCY_SCORES },
   },
   debugDashboardEnabled: false,
 };
@@ -169,12 +154,6 @@ const schedulingSettingsSlice = createSlice({
         ...action.payload,
       };
     },
-    setUrgencyScores: (state, action: PayloadAction<Partial<UrgencyScores>>) => {
-      state.debugStrategyConfig.urgency = {
-        ...state.debugStrategyConfig.urgency,
-        ...action.payload,
-      };
-    },
     resetStrategyConfig: (state) => {
       state.debugStrategyConfig = {
         weights: { ...DEFAULT_STRATEGY_WEIGHTS },
@@ -182,7 +161,6 @@ const schedulingSettingsSlice = createSlice({
           scores: { ...DEFAULT_LOCATION_GROUPING_SCORES },
           penalties: { ...DEFAULT_LOCATION_GROUPING_PENALTIES },
         },
-        urgency: { ...DEFAULT_URGENCY_SCORES },
       };
     },
   },
@@ -198,7 +176,6 @@ export const {
   setStrategyWeights,
   setLocationGroupingScores,
   setLocationGroupingPenalties,
-  setUrgencyScores,
   resetStrategyConfig,
 } = schedulingSettingsSlice.actions;
 export default schedulingSettingsSlice;

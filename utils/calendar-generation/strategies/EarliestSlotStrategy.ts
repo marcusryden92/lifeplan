@@ -1,28 +1,42 @@
 /**
  * EarliestSlotStrategy
  *
- * Simple strategy that prefers the earliest available time slot.
- * Useful as a fallback or for tasks without special requirements.
+ * Simple strategy that prefers earlier time slots.
+ * Acts as a baseline for other strategies to compete against.
+ *
+ * Score is based on how early in the scheduling window the slot is:
+ * - Slots today score highest
+ * - Slots further in the future score lower
  */
 
 import { Planner } from "@/types/prisma";
 import { TimeSlot } from "../models/TimeSlot";
 import { SchedulingContext } from "../models/SchedulingModels";
 import { SchedulingStrategy } from "./SchedulingStrategy";
-import { dateTimeService } from "../utils/dateTimeService";
-import { SCHEDULING_CONFIG } from "../constants";
 
 export class EarliestSlotStrategy implements SchedulingStrategy {
-  readonly name = "earliest";
+  readonly name = "earliestSlot";
 
-  score(task: Planner, slot: TimeSlot, context: SchedulingContext): number {
-    const daysFromNow = dateTimeService.getDaysDifference(
-      context.currentDate,
-      slot.start
-    );
+  /**
+   * Score a slot based on how early it is.
+   * Earlier slots get higher scores.
+   *
+   * @param task - The task (ignored - scoring is task-independent)
+   * @param slot - The time slot to score
+   * @param context - Scheduling context with current date
+   * @returns Score from 0.0 to 1.0 (higher = earlier = better)
+   */
+  score(_task: Planner, slot: TimeSlot, context: SchedulingContext): number {
+    const now = context.currentDate;
+    const slotStart = slot.start;
 
-    // Linear decay: 1.0 for now, 0.0 for MAX_DAYS_TO_SEARCH
-    const maxDays = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH;
+    // Calculate days from now to slot
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const daysFromNow = (slotStart.getTime() - now.getTime()) / msPerDay;
+
+    // Score decays over 14 days (typical scheduling window)
+    // Day 0 = 1.0, Day 14 = 0.0
+    const maxDays = 14;
     const score = Math.max(0, 1 - daysFromNow / maxDays);
 
     return score;

@@ -10,13 +10,13 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "./TimeSlotManager";
 import { TemplateExpander, PerTemplateMask } from "./TemplateExpander";
 import { Scheduler } from "./Scheduler";
-import { UrgencyStrategy } from "../strategies/UrgencyStrategy";
-import { EarliestSlotStrategy } from "../strategies/EarliestSlotStrategy";
 import {
   CompositeStrategy,
   SchedulingStrategy,
 } from "../strategies/SchedulingStrategy";
 import { LocationGroupingStrategy } from "../strategies/LocationGroupingStrategy";
+import { EarliestSlotStrategy } from "../strategies/EarliestSlotStrategy";
+import { calculateTaskUrgency } from "../calendar-logic-helpers/sortPlannersByPriority";
 import {
   CalendarGenerationInput,
   SchedulingResult,
@@ -200,20 +200,14 @@ export class CalendarGenerator {
     };
 
     // Step 8: strategy
+    // Task ordering is handled by sortByPriority (urgency-based)
+    // Slot scoring combines:
+    // - EarliestSlotStrategy: baseline preference for earlier slots (weight 1.0)
+    // - LocationGroupingStrategy: preference for location continuity (configurable weight)
     const strategies: Array<{ strategy: SchedulingStrategy; weight: number }> =
       [
-        {
-          strategy: new UrgencyStrategy(input.config?.urgencyScores),
-          weight:
-            input.config?.strategyWeights?.urgency ??
-            DEFAULT_STRATEGY_WEIGHTS.urgency,
-        },
-        {
-          strategy: new EarliestSlotStrategy(),
-          weight:
-            input.config?.strategyWeights?.earliestSlot ??
-            DEFAULT_STRATEGY_WEIGHTS.earliestSlot,
-        },
+        // EarliestSlot is always included as the baseline
+        { strategy: new EarliestSlotStrategy(), weight: 1.0 },
       ];
 
     // Add location grouping strategy if travel time matrix is provided
@@ -644,7 +638,7 @@ export class CalendarGenerator {
     // Calculate urgency scores
     const withUrgency = goalsAndTasks.map((item) => ({
       ...item,
-      urgencyScore: UrgencyStrategy.calculateTaskUrgency(item, {
+      urgencyScore: calculateTaskUrgency(item, {
         currentDate: now,
         totalEstimatedTime,
       }),

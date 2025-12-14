@@ -14,10 +14,10 @@ export { TemplateExpander } from "./core/TemplateExpander";
 export { Scheduler } from "./core/Scheduler";
 
 // Strategies
-export { UrgencyStrategy } from "./strategies/UrgencyStrategy";
-export { EarliestSlotStrategy } from "./strategies/EarliestSlotStrategy";
 export { CompositeStrategy } from "./strategies/SchedulingStrategy";
 export type { SchedulingStrategy } from "./strategies/SchedulingStrategy";
+export { LocationGroupingStrategy } from "./strategies/LocationGroupingStrategy";
+export { EarliestSlotStrategy } from "./strategies/EarliestSlotStrategy";
 
 // Models and types
 export type {

@@ -7,7 +7,6 @@ import {
   setStrategyWeights,
   setLocationGroupingScores,
   setLocationGroupingPenalties,
-  setUrgencyScores,
   resetStrategyConfig,
 } from "@/redux/slices/schedulingSettingsSlice";
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -81,14 +80,14 @@ function CollapsibleSection({
 export default function StrategyDebugDashboard() {
   const dispatch = useDispatch<AppDispatch>();
   const { manuallyRefreshCalendar } = useCalendarProvider();
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
   const isFirstRender = useRef(true);
 
   const { debugDashboardEnabled, debugStrategyConfig } = useSelector(
     (state: RootState) => state.schedulingSettings
   );
 
-  const { weights, locationGrouping, urgency } = debugStrategyConfig;
+  const { weights, locationGrouping } = debugStrategyConfig;
 
   // Auto-refresh effect: triggers AFTER React has re-rendered with new config values
   // This ensures the stateRef in useManuallyRefreshCalendar has the updated values
@@ -135,29 +134,11 @@ export default function StrategyDebugDashboard() {
 
   const weightSliders: SliderConfig[] = [
     {
-      key: "urgency",
-      label: "Urgency",
-      min: 0,
-      max: 2,
-      step: 0.1,
-      value: weights.urgency,
-      onChange: (v) => dispatch(setStrategyWeights({ urgency: v })),
-    },
-    {
-      key: "earliestSlot",
-      label: "Earliest Slot",
-      min: 0,
-      max: 2,
-      step: 0.1,
-      value: weights.earliestSlot,
-      onChange: (v) => dispatch(setStrategyWeights({ earliestSlot: v })),
-    },
-    {
       key: "locationGrouping",
       label: "Location Grouping",
       min: 0,
-      max: 2,
-      step: 0.1,
+      max: 0.5,
+      step: 0.05,
       value: weights.locationGrouping,
       onChange: (v) => dispatch(setStrategyWeights({ locationGrouping: v })),
     },
@@ -221,16 +202,6 @@ export default function StrategyDebugDashboard() {
       onChange: (v) => dispatch(setLocationGroupingScores({ neitherMatch: v })),
     },
     {
-      key: "insufficientRoom",
-      label: "Insufficient Room",
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: locationGrouping.scores.insufficientRoom,
-      onChange: (v) =>
-        dispatch(setLocationGroupingScores({ insufficientRoom: v })),
-    },
-    {
       key: "noLocation",
       label: "No Location",
       min: 0,
@@ -288,63 +259,6 @@ export default function StrategyDebugDashboard() {
     },
   ];
 
-  const urgencySliders: SliderConfig[] = [
-    {
-      key: "urgencyScoreWeight",
-      label: "Urgency Score Weight",
-      min: 0,
-      max: 1,
-      step: 0.1,
-      value: urgency.urgencyScoreWeight,
-      onChange: (v) => dispatch(setUrgencyScores({ urgencyScoreWeight: v })),
-    },
-    {
-      key: "timePreferenceWeight",
-      label: "Time Preference Weight",
-      min: 0,
-      max: 1,
-      step: 0.1,
-      value: urgency.timePreferenceWeight,
-      onChange: (v) => dispatch(setUrgencyScores({ timePreferenceWeight: v })),
-    },
-    {
-      key: "noDeadlineMaxDays",
-      label: "No Deadline Max Days",
-      min: 7,
-      max: 180,
-      step: 7,
-      value: urgency.noDeadlineMaxDays,
-      onChange: (v) => dispatch(setUrgencyScores({ noDeadlineMaxDays: v })),
-    },
-    {
-      key: "noDeadlineDecayFactor",
-      label: "No Deadline Decay",
-      min: 0,
-      max: 1,
-      step: 0.1,
-      value: urgency.noDeadlineDecayFactor,
-      onChange: (v) => dispatch(setUrgencyScores({ noDeadlineDecayFactor: v })),
-    },
-    {
-      key: "urgentRatioThreshold",
-      label: "Urgent Ratio Threshold",
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: urgency.urgentRatioThreshold,
-      onChange: (v) => dispatch(setUrgencyScores({ urgentRatioThreshold: v })),
-    },
-    {
-      key: "minTimePreference",
-      label: "Min Time Preference",
-      min: 0,
-      max: 1,
-      step: 0.1,
-      value: urgency.minTimePreference,
-      onChange: (v) => dispatch(setUrgencyScores({ minTimePreference: v })),
-    },
-  ];
-
   return (
     <div className="fixed bottom-4 right-4 z-50 w-[420px] max-h-[80vh] bg-background/80 backdrop-blur-sm border rounded-lg shadow-xl overflow-hidden flex flex-col">
       <div className="flex items-center justify-between p-3 border-b bg-muted/30">
@@ -383,12 +297,6 @@ export default function StrategyDebugDashboard() {
 
         <CollapsibleSection title="Location Penalties">
           {penaltySliders.map((config) => (
-            <SliderRow key={config.key} config={config} />
-          ))}
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Urgency Settings">
-          {urgencySliders.map((config) => (
             <SliderRow key={config.key} config={config} />
           ))}
         </CollapsibleSection>

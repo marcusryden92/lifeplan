@@ -144,7 +144,6 @@ export interface LocationGroupingScoresConfig {
   bothOpen?: number;
   oneOpenNoMatch?: number;
   neitherMatch?: number;
-  insufficientRoom?: number;
   noLocation?: number;
 }
 
@@ -156,18 +155,6 @@ export interface LocationGroupingPenaltiesConfig {
   maxDoubleTravelPenalty?: number;
   singleTravelPenaltyDivisor?: number;
   doubleTravelPenaltyDivisor?: number;
-}
-
-/**
- * Urgency strategy score configuration
- */
-export interface UrgencyScoresConfig {
-  urgencyScoreWeight?: number;
-  timePreferenceWeight?: number;
-  noDeadlineMaxDays?: number;
-  noDeadlineDecayFactor?: number;
-  urgentRatioThreshold?: number;
-  minTimePreference?: number;
 }
 
 /**
@@ -184,18 +171,14 @@ export interface CalendarGenerationConfig {
   logging?: LoggingConfig;
   /** Buffer time between scheduled items in minutes */
   bufferTimeMinutes?: number;
-  /** Strategy weights */
+  /** Strategy weights (for slot scoring, not task ordering) */
   strategyWeights?: {
-    urgency?: number;
-    earliestSlot?: number;
     locationGrouping?: number;
   };
   /** Location grouping strategy internal scores */
   locationGroupingScores?: LocationGroupingScoresConfig;
   /** Location grouping strategy penalties */
   locationGroupingPenalties?: LocationGroupingPenaltiesConfig;
-  /** Urgency strategy scores */
-  urgencyScores?: UrgencyScoresConfig;
   /** Travel time matrix for location-aware scheduling */
   travelTimeMatrix?: Map<string, TravelTimeEntry>;
   /** Whether to inject travel events between location changes */
