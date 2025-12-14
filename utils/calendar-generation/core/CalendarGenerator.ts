@@ -202,12 +202,16 @@ export class CalendarGenerator {
     // Step 8: strategy
     // Task ordering is handled by sortByPriority (urgency-based)
     // Slot scoring combines:
-    // - EarliestSlotStrategy: baseline preference for earlier slots (weight 1.0)
-    // - LocationGroupingStrategy: preference for location continuity (configurable weight)
+    // - EarliestSlotStrategy: baseline preference for earlier slots
+    // - LocationGroupingStrategy: preference for location continuity
     const strategies: Array<{ strategy: SchedulingStrategy; weight: number }> =
       [
-        // EarliestSlot is always included as the baseline
-        { strategy: new EarliestSlotStrategy(), weight: 1.0 },
+        {
+          strategy: new EarliestSlotStrategy(),
+          weight:
+            input.config?.strategyWeights?.earliestSlot ??
+            DEFAULT_STRATEGY_WEIGHTS.earliestSlot,
+        },
       ];
 
     // Add location grouping strategy if travel time matrix is provided

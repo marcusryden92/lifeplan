@@ -25,6 +25,7 @@ export type SerializedLocation = {
 
 // Strategy configuration types (mutable versions of the readonly defaults)
 export type StrategyWeights = {
+  earliestSlot: number;
   locationGrouping: number;
 };
 

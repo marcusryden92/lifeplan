@@ -5,8 +5,6 @@ import { AppDispatch, RootState } from "@/redux/store";
 import {
   setDebugDashboardEnabled,
   setStrategyWeights,
-  setLocationGroupingScores,
-  setLocationGroupingPenalties,
   resetStrategyConfig,
 } from "@/redux/slices/schedulingSettingsSlice";
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -14,7 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { Slider } from "@/components/ui/Slider";
 import { Label } from "@/components/ui/Label";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { ChevronDown, ChevronUp, RotateCcw, X } from "lucide-react";
+import { RotateCcw, X } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 
 type SliderConfig = {
@@ -48,35 +46,6 @@ function SliderRow({ config }: { config: SliderConfig }) {
   );
 }
 
-function CollapsibleSection({
-  title,
-  children,
-  defaultOpen = false,
-}: {
-  title: string;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-}) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
-
-  return (
-    <div className="border-b border-border/50 last:border-b-0">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between w-full py-2 text-sm font-medium text-left hover:bg-muted/50 px-2 -mx-2 rounded"
-      >
-        {title}
-        {isOpen ? (
-          <ChevronUp className="h-4 w-4" />
-        ) : (
-          <ChevronDown className="h-4 w-4" />
-        )}
-      </button>
-      {isOpen && <div className="space-y-3 pb-3">{children}</div>}
-    </div>
-  );
-}
-
 export default function StrategyDebugDashboard() {
   const dispatch = useDispatch<AppDispatch>();
   const { manuallyRefreshCalendar } = useCalendarProvider();
@@ -87,7 +56,7 @@ export default function StrategyDebugDashboard() {
     (state: RootState) => state.schedulingSettings
   );
 
-  const { weights, locationGrouping } = debugStrategyConfig;
+  const { weights } = debugStrategyConfig;
 
   // Auto-refresh effect: triggers AFTER React has re-rendered with new config values
   // This ensures the stateRef in useManuallyRefreshCalendar has the updated values
@@ -134,6 +103,15 @@ export default function StrategyDebugDashboard() {
 
   const weightSliders: SliderConfig[] = [
     {
+      key: "earliestSlot",
+      label: "Earliest Slot",
+      min: 0,
+      max: 2,
+      step: 0.1,
+      value: weights.earliestSlot,
+      onChange: (v) => dispatch(setStrategyWeights({ earliestSlot: v })),
+    },
+    {
       key: "locationGrouping",
       label: "Location Grouping",
       min: 0,
@@ -144,125 +122,10 @@ export default function StrategyDebugDashboard() {
     },
   ];
 
-  const locationScoreSliders: SliderConfig[] = [
-    {
-      key: "bothMatch",
-      label: "Both Match",
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: locationGrouping.scores.bothMatch,
-      onChange: (v) => dispatch(setLocationGroupingScores({ bothMatch: v })),
-    },
-    {
-      key: "oneMatchOneOpen",
-      label: "One Match, One Open",
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: locationGrouping.scores.oneMatchOneOpen,
-      onChange: (v) =>
-        dispatch(setLocationGroupingScores({ oneMatchOneOpen: v })),
-    },
-    {
-      key: "oneMatch",
-      label: "One Match",
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: locationGrouping.scores.oneMatch,
-      onChange: (v) => dispatch(setLocationGroupingScores({ oneMatch: v })),
-    },
-    {
-      key: "bothOpen",
-      label: "Both Open",
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: locationGrouping.scores.bothOpen,
-      onChange: (v) => dispatch(setLocationGroupingScores({ bothOpen: v })),
-    },
-    {
-      key: "oneOpenNoMatch",
-      label: "One Open, No Match",
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: locationGrouping.scores.oneOpenNoMatch,
-      onChange: (v) =>
-        dispatch(setLocationGroupingScores({ oneOpenNoMatch: v })),
-    },
-    {
-      key: "neitherMatch",
-      label: "Neither Match",
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: locationGrouping.scores.neitherMatch,
-      onChange: (v) => dispatch(setLocationGroupingScores({ neitherMatch: v })),
-    },
-    {
-      key: "noLocation",
-      label: "No Location",
-      min: 0,
-      max: 1,
-      step: 0.05,
-      value: locationGrouping.scores.noLocation,
-      onChange: (v) => dispatch(setLocationGroupingScores({ noLocation: v })),
-    },
-  ];
-
-  const penaltySliders: SliderConfig[] = [
-    {
-      key: "maxSingleTravelPenalty",
-      label: "Max Single Penalty",
-      min: 0,
-      max: 0.2,
-      step: 0.01,
-      value: locationGrouping.penalties.maxSingleTravelPenalty,
-      onChange: (v) =>
-        dispatch(setLocationGroupingPenalties({ maxSingleTravelPenalty: v })),
-    },
-    {
-      key: "maxDoubleTravelPenalty",
-      label: "Max Double Penalty",
-      min: 0,
-      max: 0.2,
-      step: 0.01,
-      value: locationGrouping.penalties.maxDoubleTravelPenalty,
-      onChange: (v) =>
-        dispatch(setLocationGroupingPenalties({ maxDoubleTravelPenalty: v })),
-    },
-    {
-      key: "singleTravelPenaltyDivisor",
-      label: "Single Penalty Divisor",
-      min: 100,
-      max: 1000,
-      step: 50,
-      value: locationGrouping.penalties.singleTravelPenaltyDivisor,
-      onChange: (v) =>
-        dispatch(
-          setLocationGroupingPenalties({ singleTravelPenaltyDivisor: v })
-        ),
-    },
-    {
-      key: "doubleTravelPenaltyDivisor",
-      label: "Double Penalty Divisor",
-      min: 100,
-      max: 1000,
-      step: 50,
-      value: locationGrouping.penalties.doubleTravelPenaltyDivisor,
-      onChange: (v) =>
-        dispatch(
-          setLocationGroupingPenalties({ doubleTravelPenaltyDivisor: v })
-        ),
-    },
-  ];
-
   return (
     <div className="fixed bottom-4 right-4 z-50 w-[420px] max-h-[80vh] bg-background/80 backdrop-blur-sm border rounded-lg shadow-xl overflow-hidden flex flex-col">
       <div className="flex items-center justify-between p-3 border-b bg-muted/30">
-        <h3 className="font-semibold text-sm">Strategy Debug</h3>
+        <h3 className="font-semibold text-sm">Strategy Settings</h3>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -282,24 +145,10 @@ export default function StrategyDebugDashboard() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1">
-        <CollapsibleSection title="Strategy Weights" defaultOpen={true}>
-          {weightSliders.map((config) => (
-            <SliderRow key={config.key} config={config} />
-          ))}
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Location Grouping Scores">
-          {locationScoreSliders.map((config) => (
-            <SliderRow key={config.key} config={config} />
-          ))}
-        </CollapsibleSection>
-
-        <CollapsibleSection title="Location Penalties">
-          {penaltySliders.map((config) => (
-            <SliderRow key={config.key} config={config} />
-          ))}
-        </CollapsibleSection>
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-3">
+        {weightSliders.map((config) => (
+          <SliderRow key={config.key} config={config} />
+        ))}
       </div>
 
       <div className="p-3 border-t bg-muted/30 space-y-2">

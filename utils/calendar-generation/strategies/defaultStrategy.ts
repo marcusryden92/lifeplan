@@ -14,6 +14,8 @@
  * These weights only affect slot scoring (e.g., location grouping)
  */
 export const DEFAULT_STRATEGY_WEIGHTS = {
+  /** Weight for earliest slot preference (baseline) */
+  earliestSlot: 1.0,
   /** Weight for location-based grouping */
   locationGrouping: 0.2,
 } as const;
@@ -79,6 +81,7 @@ export type StrategyConfigReadonly = typeof DEFAULT_STRATEGY_CONFIG;
  * These can be used when users override default values
  */
 export type StrategyWeights = {
+  earliestSlot: number;
   locationGrouping: number;
 };
 

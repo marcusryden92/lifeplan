@@ -173,6 +173,7 @@ export interface CalendarGenerationConfig {
   bufferTimeMinutes?: number;
   /** Strategy weights (for slot scoring, not task ordering) */
   strategyWeights?: {
+    earliestSlot?: number;
     locationGrouping?: number;
   };
   /** Location grouping strategy internal scores */

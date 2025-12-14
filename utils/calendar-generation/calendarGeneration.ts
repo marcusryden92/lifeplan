@@ -23,6 +23,7 @@ export interface GenerateCalendarOptions {
   travelTimeMatrix?: Map<string, TravelTimeEntry>;
   injectTravelEvents?: boolean;
   strategyWeights?: {
+    earliestSlot?: number;
     locationGrouping?: number;
   };
   locationGroupingScores?: LocationGroupingScoresConfig;
