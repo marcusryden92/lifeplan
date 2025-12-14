@@ -13,14 +13,13 @@ import { Slider } from "@/components/ui/Slider";
 import { Label } from "@/components/ui/Label";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { RotateCcw, X } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 type SliderConfig = {
   key: string;
   label: string;
   min: number;
   max: number;
-  step: number;
   value: number;
   onChange: (value: number) => void;
 };
@@ -35,7 +34,7 @@ function SliderRow({ config }: { config: SliderConfig }) {
         value={[config.value]}
         min={config.min}
         max={config.max}
-        step={config.step}
+        step={0.01}
         onValueChange={([v]) => config.onChange(v)}
         className="flex-1 min-w-0"
       />
@@ -58,8 +57,19 @@ export default function StrategyDebugDashboard() {
 
   const { weights } = debugStrategyConfig;
 
+  // Debounced auto-refresh: waits 50ms after last change before refreshing calendar
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const debouncedRefresh = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      manuallyRefreshCalendar();
+    }, 50);
+  }, [manuallyRefreshCalendar]);
+
   // Auto-refresh effect: triggers AFTER React has re-rendered with new config values
-  // This ensures the stateRef in useManuallyRefreshCalendar has the updated values
   useEffect(() => {
     // Skip the first render to avoid refreshing on mount
     if (isFirstRender.current) {
@@ -68,14 +78,23 @@ export default function StrategyDebugDashboard() {
     }
 
     if (autoRefresh && debugDashboardEnabled) {
-      manuallyRefreshCalendar();
+      debouncedRefresh();
     }
   }, [
     debugStrategyConfig,
     autoRefresh,
     debugDashboardEnabled,
-    manuallyRefreshCalendar,
+    debouncedRefresh,
   ]);
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
 
   if (!debugDashboardEnabled) {
     return (
@@ -107,7 +126,6 @@ export default function StrategyDebugDashboard() {
       label: "Earliest Slot",
       min: 0,
       max: 2,
-      step: 0.1,
       value: weights.earliestSlot,
       onChange: (v) => dispatch(setStrategyWeights({ earliestSlot: v })),
     },
@@ -116,7 +134,6 @@ export default function StrategyDebugDashboard() {
       label: "Location Grouping",
       min: 0,
       max: 0.5,
-      step: 0.05,
       value: weights.locationGrouping,
       onChange: (v) => dispatch(setStrategyWeights({ locationGrouping: v })),
     },
