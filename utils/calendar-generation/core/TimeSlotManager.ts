@@ -160,7 +160,33 @@ export class TimeSlotManager {
     const gaps = findGaps(occupiedIntervals, startDate, endDate);
 
     // Convert gaps to available time slots (location info is preserved)
-    const slots = gapsToTimeSlots(gaps);
+    let slots = gapsToTimeSlots(gaps);
+
+    // Apply leading buffer to slots that have a preceding event
+    // This ensures tasks don't touch the template/event before them
+    // Slots after reserved tasks already have buffer baked in (taskReserveEnd = task.end + buffer)
+    // We identify "start of range" slots by comparing slot.start to startDate
+    if (this.bufferTimeMinutes > 0) {
+      const rangeStartTime = startDate.getTime();
+      slots = slots.map((slot) => {
+        // Only apply leading buffer if this slot doesn't start at the range beginning
+        // (meaning there's a preceding event/template before this slot)
+        const isStartOfRange = slot.start.getTime() === rangeStartTime;
+        if (!isStartOfRange) {
+          const newStart = new Date(slot.start.getTime() + this.bufferTimeMinutes * 60000);
+          const newDuration = Math.floor((slot.end.getTime() - newStart.getTime()) / 60000);
+          // Only shrink if there's still usable time left
+          if (newDuration > 0) {
+            return {
+              ...slot,
+              start: newStart,
+              durationMinutes: newDuration,
+            };
+          }
+        }
+        return slot;
+      }).filter((slot) => slot.durationMinutes > 0);
+    }
 
     // Create travel slots between adjacent events with different locations
     if (plannerLocationMap) {
