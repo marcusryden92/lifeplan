@@ -209,8 +209,8 @@ export class CalendarGenerator {
         {
           strategy: new EarliestSlotStrategy(),
           weight:
-            input.config?.strategyWeights?.earliestSlot ??
-            DEFAULT_STRATEGY_WEIGHTS.earliestSlot,
+            (input.config?.strategyWeights?.earliestSlot ??
+              DEFAULT_STRATEGY_WEIGHTS.earliestSlot) as number,
         },
       ];
 

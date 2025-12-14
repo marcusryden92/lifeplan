@@ -59,7 +59,7 @@ export function generateCalendar(
   const generator = new CalendarGenerator(weekStartDay);
 
   // Logging configuration - set enableLogging to false to disable all logging
-  const enableLogging = true;
+  const enableLogging = false;
   const logging = {
     metrics: false,
     failures: false,

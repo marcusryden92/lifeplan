@@ -90,11 +90,7 @@ export class TimeSlotManager {
     const travelKey = `${fromLocationId}->${toLocationId}`;
     const entry = this.travelTimeMatrix.get(travelKey);
 
-    // console.log(`[getTravelTime] Looking up key: ${travelKey}, found: ${entry ? 'yes' : 'no'}`);
     if (!entry) {
-      // Debug: Log all available keys
-      // console.log(`[getTravelTime] Available keys in matrix:`);
-      this.travelTimeMatrix.forEach((_, key) => console.log(`  ${key}`));
       return 0;
     }
 
@@ -437,17 +433,6 @@ export class TimeSlotManager {
     // Base required time: task duration + 1 buffer (minimum)
     // The Scheduler will do the final capacity check including travel time
     const baseRequiredMinutes = durationMinutes + this.bufferTimeMinutes;
-
-    // DEBUG: Log first day's available slots
-    const firstDayKey = this.getDayKey(afterDate);
-    const firstDaySlots = this.availableSlots.get(firstDayKey);
-    console.log(`[findAllFittingSlots] afterDate=${afterDate.toISOString()} dayKey=${firstDayKey} availableSlots=${firstDaySlots?.length ?? 0} baseRequired=${baseRequiredMinutes}`);
-    if (firstDaySlots && firstDaySlots.length <= 10) {
-      firstDaySlots.forEach((s, i) => {
-        const passes = s.end > afterDate && Math.floor((Math.max(s.start.getTime(), afterDate.getTime()) - s.end.getTime()) / -60000) >= baseRequiredMinutes;
-        console.log(`  slot[${i}]: ${s.start.toISOString().slice(11,16)}-${s.end.toISOString().slice(11,16)} dur=${s.durationMinutes}min passes=${passes}`);
-      });
-    }
 
     while (currentDate <= searchEndDate) {
       const dayKey = this.getDayKey(currentDate);
@@ -851,7 +836,6 @@ export class TimeSlotManager {
             // Track the removed travel's end time - this was a travelAfter from a previous task
             // that we're now replacing with our travelBefore. The slot should extend to this end time.
             removedTravelAfterEnd = new Date(occ.end.getTime());
-            console.log(`  [reserveSlotWithTravel] Removed existing travel to ${taskLocationId} ending at ${removedTravelAfterEnd.toISOString()}`);
             occupiedSlots.splice(i, 1);
           }
         }
@@ -891,10 +875,6 @@ export class TimeSlotManager {
     // But the slot may have been pre-shrunk by buildAvailableSlots which created travel.
     // We need to find and remove that pre-created travel and extend freeSlotEnd to the actual next event start.
     let reclaimedTravelEnd: Date | null = null;
-    const reserveDayKey = this.getDayKey(start);
-    console.log(
-      `  [reserveSlotWithTravel] dayKey=${reserveDayKey} Checking reclaim: travelAfter=${travelAfter} taskLoc=${taskLocationId} nextLoc=${nextLocationId} match=${taskLocationId === nextLocationId}`
-    );
     if (
       travelAfter === 0 &&
       taskLocationId &&
@@ -904,20 +884,6 @@ export class TimeSlotManager {
       // Task is at same location as next event - find and remove pre-created travel
       const slotEndTime = slot.end.getTime();
       const searchWindowMs = 3 * 60 * 60 * 1000; // 3 hours
-
-      console.log(
-        `  [reserveSlotWithTravel] Looking for travel to ${nextLocationId} ending after slot.end=${slot.end.toISOString()} (slotEndTime=${slotEndTime})`
-      );
-      console.log(
-        `  [reserveSlotWithTravel] occupiedSlots count: ${occupiedSlots.length}`
-      );
-      for (const occ of occupiedSlots) {
-        if (TimeSlotUtils.isTravelSlot(occ)) {
-          console.log(
-            `    Travel: ${occ.start.toISOString()} to ${occ.end.toISOString()} -> ${occ.travelToLocationId}`
-          );
-        }
-      }
 
       for (let i = occupiedSlots.length - 1; i >= 0; i--) {
         const occ = occupiedSlots[i];
@@ -931,21 +897,12 @@ export class TimeSlotManager {
           const meetsCondition =
             travelEndTime > slotEndTime &&
             travelEndTime - slotEndTime < searchWindowMs;
-          console.log(
-            `    Checking travel ${occ.start.toISOString()}-${occ.end.toISOString()}: travelEndTime=${travelEndTime} > slotEndTime=${slotEndTime}? ${travelEndTime > slotEndTime}, diff=${travelEndTime - slotEndTime}ms < ${searchWindowMs}? ${travelEndTime - slotEndTime < searchWindowMs}, MATCH=${meetsCondition}`
-          );
           if (meetsCondition) {
             reclaimedTravelEnd = new Date(occ.end.getTime());
             occupiedSlots.splice(i, 1);
-            console.log(
-              `  [reserveSlotWithTravel] Reclaimed pre-created travel to ${nextLocationId}, extending to ${reclaimedTravelEnd.toISOString()}`
-            );
             break;
           }
         }
-      }
-      if (!reclaimedTravelEnd) {
-        console.log(`  [reserveSlotWithTravel] No reclaimable travel found`);
       }
     }
 
@@ -961,26 +918,13 @@ export class TimeSlotManager {
       // (because our travelBefore goes to the same destination). The slot should extend
       // to where that removed travel ended (the actual next event start).
       freeSlotEnd = removedTravelAfterEnd;
-      console.log(`  [reserveSlotWithTravel] Extended freeSlotEnd to ${removedTravelAfterEnd.toISOString()} from removed travelAfter`);
     } else if (reusableTravelStart) {
       // We're reusing existing travel (travelAfter=0), so the free slot ends where that travel starts (minus buffer)
       freeSlotEnd = new Date(reusableTravelStart.getTime() - bufferMinutes * 60000);
-      console.log(`  [reserveSlotWithTravel] Free slot ends at ${freeSlotEnd.toISOString()} (before reusable travel at ${reusableTravelStart.toISOString()})`);
     } else {
       freeSlotEnd = slot.end;
     }
     const freeSlotPrevLocation = taskLocationId ?? slot.prevLocationId;
-
-    // DEBUG: Log free slot creation
-    const freeSlotDuration = Math.floor(
-      (freeSlotEnd.getTime() - freeSlotStart.getTime()) / 60000
-    );
-    console.log(
-      `[reserveSlotWithTravel] eventId=${eventId} Creating free slot: ${freeSlotStart.toISOString()} to ${freeSlotEnd.toISOString()} (${freeSlotDuration}min) prev=${freeSlotPrevLocation} next=${slot.nextLocationId}`
-    );
-    console.log(
-      `  travelAfterStart=${travelAfterStart?.toISOString() ?? "null"} slot.end=${slot.end.toISOString()}`
-    );
 
     if (freeSlotEnd.getTime() > freeSlotStart.getTime()) {
       newSlots.push({
@@ -993,9 +937,6 @@ export class TimeSlotManager {
         prevLocationId: freeSlotPrevLocation,
         nextLocationId: slot.nextLocationId, // Still points to next template
       });
-      console.log(`  -> Added free slot to newSlots`);
-    } else {
-      console.log(`  -> Free slot NOT added (end <= start)`);
     }
 
     // 5. Handle travel-after: remove existing travel going to same destination AND in the same slot region
@@ -1235,8 +1176,6 @@ export class TimeSlotManager {
     const bufferMs = this.bufferTimeMinutes * 60000;
     const searchWindowMs = bufferMs + 10 * 60000; // buffer + 10 minutes tolerance
 
-    console.log(`    [findAdjacentTravelTo] Looking for travel to ${toLocationId} near ${nearTime.toISOString()}, searchWindow=${searchWindowMs}ms`);
-
     for (const slot of occupiedSlots) {
       if (
         TimeSlotUtils.isTravelSlot(slot) &&
@@ -1244,7 +1183,6 @@ export class TimeSlotManager {
       ) {
         // Check if this travel starts near our search time
         const timeDiff = Math.abs(slot.start.getTime() - nearTime.getTime());
-        console.log(`      Found travel ${slot.start.toISOString()}->${slot.travelToLocationId}, timeDiff=${timeDiff}ms, fits=${timeDiff <= searchWindowMs}`);
         if (timeDiff <= searchWindowMs) {
           return new Date(slot.start.getTime());
         }
