@@ -1,15 +1,8 @@
 "use client";
 
 // Third-party libraries
-import { useState, useMemo, useCallback } from "react";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-  CarouselApi,
-} from "@/components/ui/Carousel";
+import { useState, useMemo, useCallback, useEffect } from "react";
+// Removed Carousel in favor of simple index navigation
 
 // Local components and context
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -28,7 +21,6 @@ export default function RefineGoalsPage() {
   const { userId, planner, updatePlannerArray, updateAll } =
     useCalendarProvider();
 
-  const [carouselApi, setCarouselApi] = useState<CarouselApi | null>(null);
   const [carouselIndex, setCarouselIndex] = useState<number | undefined>(
     undefined
   );
@@ -74,10 +66,38 @@ export default function RefineGoalsPage() {
     return planner.filter((task) => task.itemType === "goal" && !task.parentId);
   }, [planner]);
 
+  // Initialize selected index when goalsList changes
+  useEffect(() => {
+    if (!goalsList.length) {
+      setCarouselIndex(undefined);
+    } else if (
+      carouselIndex === undefined ||
+      carouselIndex >= goalsList.length
+    ) {
+      setCarouselIndex(0);
+    }
+  }, [goalsList, carouselIndex]);
+
   // Accessibility improvements for carousel controls
   const isPrevDisabled = planner.length === 0 || carouselIndex === 0;
   const isNextDisabled =
-    planner.length === 0 || carouselIndex === goalsList.length - 1;
+    planner.length === 0 ||
+    carouselIndex === undefined ||
+    carouselIndex === goalsList.length - 1;
+
+  const goPrev = () => {
+    if (carouselIndex === undefined) return;
+    setCarouselIndex((idx) => (idx && idx > 0 ? idx - 1 : 0));
+  };
+
+  const goNext = () => {
+    if (carouselIndex === undefined) return;
+    setCarouselIndex((idx) => {
+      if (idx === undefined) return idx;
+      const next = idx + 1;
+      return next < goalsList.length ? next : idx;
+    });
+  };
 
   return (
     <div className={styles.refinePageContainer}>
@@ -88,47 +108,49 @@ export default function RefineGoalsPage() {
         updateAll={updateAll}
         carouselIndex={carouselIndex}
         setCarouselIndex={setCarouselIndex}
-        carouselApi={[carouselApi, setCarouselApi]}
+        carouselApi={[null, () => {}]}
       />
       <DraggableContextProvider>
         <div className="flex flex-1 lg:overflow-y-auto my-8 border-l items-start justify-center flex-wrap content-start no-scrollbar">
-          <Carousel
-            className="w-[90%] max-w-[700px] h-full border-x"
-            onIndexChange={setCarouselIndex}
-            setApi={setCarouselApi}
-            opts={{ watchDrag: false }}
-          >
-            <CarouselContent className="h-full select-none ">
-              {goalsList.map((task) => (
-                <CarouselItem key={task.id}>
-                  <Goal
-                    planner={planner}
-                    updatePlannerArray={updatePlannerArray}
-                    task={task}
-                    devMode={devMode}
-                    handleDeleteTask={handleDeleteTask}
-                    handleConfirmEdit={handleConfirmEdit}
-                    handleToggleReady={handleToggleReady}
-                    handleUpdateDeadline={handleUpdateDeadline}
-                  />
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious
-              className={`transition-opacity duration-500 ${
-                isPrevDisabled ? "!opacity-0" : ""
-              }`}
-              aria-disabled={isPrevDisabled}
-              tabIndex={isPrevDisabled ? -1 : 0}
-            />
-            <CarouselNext
-              className={`transition-opacity duration-500 ${
-                isNextDisabled ? "!opacity-0" : ""
-              }`}
-              aria-disabled={isNextDisabled}
-              tabIndex={isNextDisabled ? -1 : 0}
-            />
-          </Carousel>
+          <div className="w-[90%] max-w-[700px] h-full border-x flex flex-col items-stretch">
+            <div className="flex-1 select-none">
+              {carouselIndex !== undefined && goalsList[carouselIndex] && (
+                <Goal
+                  planner={planner}
+                  updatePlannerArray={updatePlannerArray}
+                  task={goalsList[carouselIndex]}
+                  devMode={devMode}
+                  handleDeleteTask={handleDeleteTask}
+                  handleConfirmEdit={handleConfirmEdit}
+                  handleToggleReady={handleToggleReady}
+                  handleUpdateDeadline={handleUpdateDeadline}
+                />
+              )}
+            </div>
+            <div className="flex items-center justify-between p-2">
+              <button
+                className={`transition-opacity duration-500 btn btn-secondary ${isPrevDisabled ? "!opacity-0" : ""}`}
+                onClick={goPrev}
+                aria-disabled={isPrevDisabled}
+                tabIndex={isPrevDisabled ? -1 : 0}
+              >
+                Previous
+              </button>
+              <div className="text-sm text-muted-foreground">
+                {goalsList.length > 0 && carouselIndex !== undefined
+                  ? `${carouselIndex + 1} / ${goalsList.length}`
+                  : "No goals"}
+              </div>
+              <button
+                className={`transition-opacity duration-500 btn btn-secondary ${isNextDisabled ? "!opacity-0" : ""}`}
+                onClick={goNext}
+                aria-disabled={isNextDisabled}
+                tabIndex={isNextDisabled ? -1 : 0}
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </DraggableContextProvider>
     </div>
