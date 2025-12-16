@@ -45,10 +45,12 @@ model Planner {
   userId             String
   color              String?
   locationId         String?   // Optional FK to Location (null = "Everywhere")
+  categoryId         String?   // Optional FK to Category for organization
   createdAt          String
   updatedAt          String
   user               User      @relation(fields: [userId], references: [id])
   location           Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  category           Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@map("Planners")
 }

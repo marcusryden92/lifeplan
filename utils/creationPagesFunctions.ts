@@ -62,6 +62,7 @@ export const onSubmit = ({
       priority: 5,
       color: calendarColors[0],
       locationId: null,
+      categoryId: null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };

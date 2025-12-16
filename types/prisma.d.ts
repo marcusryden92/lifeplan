@@ -25,3 +25,13 @@ export type TravelTime = Prisma.TravelTimeGetPayload<undefined>;
 export type TravelTimeWithLocations = Prisma.TravelTimeGetPayload<{
   include: { fromLocation: true; toLocation: true };
 }>;
+
+export type Category = Prisma.CategoryGetPayload<undefined>;
+
+export type CategoryWithChildren = Prisma.CategoryGetPayload<{
+  include: { children: true };
+}>;
+
+export type PlannerWithCategory = Prisma.PlannerGetPayload<{
+  include: { category: true };
+}>;

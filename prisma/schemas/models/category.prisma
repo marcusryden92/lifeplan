@@ -1,0 +1,24 @@
+model Category {
+  id        String     @id @default(uuid())
+  name      String
+  icon      String?    // Emoji or icon identifier
+  color     String?    // Hex color for visual distinction
+  sortOrder Int        @default(0)
+
+  // Self-referential hierarchy (subcategories)
+  parentId  String?
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Category[] @relation("CategoryHierarchy")
+
+  // User ownership
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Items in this category (back-reference)
+  planners  Planner[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("Categories")
+}
