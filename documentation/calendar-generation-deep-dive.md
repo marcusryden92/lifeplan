@@ -1,6 +1,6 @@
 # Calendar Generation System - Deep Dive Documentation
 
-This document explains the complete flow of the calendar generation system in excruciating detail. It covers every step from input to output, all the supporting classes, and how they interact.
+This document explains the complete flow of the calendar generation system. It covers every step from input to output, all the supporting classes, and how they interact.
 
 ---
 
