@@ -177,7 +177,8 @@ export class TemplateExpander {
 
       if (intervals.length === 0) {
         // Entire day is available
-        const dayMinutes = (dayEnd.getTime() - dayStart.getTime()) / (1000 * 60);
+        const dayMinutes =
+          (dayEnd.getTime() - dayStart.getTime()) / (1000 * 60);
         largestGap = Math.max(largestGap, dayMinutes);
         continue;
       }
@@ -186,17 +187,22 @@ export class TemplateExpander {
       intervals.sort((a, b) => a.start.getTime() - b.start.getTime());
 
       // Gap before first interval
-      const firstGap = (intervals[0].start.getTime() - dayStart.getTime()) / (1000 * 60);
+      const firstGap =
+        (intervals[0].start.getTime() - dayStart.getTime()) / (1000 * 60);
       largestGap = Math.max(largestGap, firstGap);
 
       // Gaps between intervals
       for (let i = 0; i < intervals.length - 1; i++) {
-        const gap = (intervals[i + 1].start.getTime() - intervals[i].end.getTime()) / (1000 * 60);
+        const gap =
+          (intervals[i + 1].start.getTime() - intervals[i].end.getTime()) /
+          (1000 * 60);
         largestGap = Math.max(largestGap, gap);
       }
 
       // Gap after last interval
-      const lastGap = (dayEnd.getTime() - intervals[intervals.length - 1].end.getTime()) / (1000 * 60);
+      const lastGap =
+        (dayEnd.getTime() - intervals[intervals.length - 1].end.getTime()) /
+        (1000 * 60);
       largestGap = Math.max(largestGap, lastGap);
     }
 
@@ -242,33 +248,6 @@ export class TemplateExpander {
   }
 
   /**
-   * Get all weeks that fall within a date range
-   */
-  private getWeeksInRange(startDate: Date, endDate: Date): Date[] {
-    const weeks: Date[] = [];
-    let current = dateTimeService.getWeekFirstDate(
-      startDate,
-      this.weekStartDay
-    );
-
-    while (current <= endDate) {
-      weeks.push(new Date(current));
-      current = dateTimeService.shiftDays(current, 7);
-    }
-
-    return weeks;
-  }
-
-  /**
-   * Get unique week key for caching
-   */
-  private getWeekKey(weekStartDate: Date): string {
-    return `${weekStartDate.getFullYear()}-W${Math.floor(
-      weekStartDate.getTime() / TIME_CONSTANTS.MS_PER_WEEK
-    )}`;
-  }
-
-  /**
    * Convert day index to RRule Weekday
    */
   private getRRuleDayFromIndex(day: number): Weekday {
@@ -289,155 +268,6 @@ export class TemplateExpander {
    */
   clear(): void {
     this.expandedTemplates.clear();
-  }
-
-  /**
-   * Build a weekly mask from templates: for each weekday produce a list of
-   * unavailable time intervals (HH:MM strings). This mask can be applied to
-   * any week to derive concrete occupied times for that date.
-   */
-  getWeeklyMask(templates: EventTemplate[]): TemplateMask {
-    const weeklyMask: WeeklyMask = {
-      0: [],
-      1: [],
-      2: [],
-      3: [],
-      4: [],
-      5: [],
-      6: [],
-    };
-
-    const exceptions: DateException[] = [];
-
-    for (const template of templates) {
-      if (
-        !template.startDay ||
-        !template.startTime ||
-        template.duration === undefined
-      ) {
-        continue;
-      }
-
-      const startDayIndex = WEEKDAY_NAMES.indexOf(template.startDay);
-      if (startDayIndex === -1) continue;
-
-      // compute end time by adding duration
-      const [h, m] = template.startTime.split(":").map((s) => parseInt(s, 10));
-      const startMinutes = h * 60 + m;
-      const endMinutes = startMinutes + template.duration;
-
-      // If endMinutes crosses midnight, split across two days
-      if (endMinutes <= 24 * 60) {
-        weeklyMask[startDayIndex].push({
-          startTime: template.startTime,
-          endTime: minutesToTimeString(endMinutes),
-        });
-      } else {
-        // portion on startDay
-        weeklyMask[startDayIndex].push({
-          startTime: template.startTime,
-          endTime: "24:00",
-        });
-        // portion on next day
-        const nextDay = (startDayIndex + 1) % 7;
-        weeklyMask[nextDay].push({
-          startTime: "00:00",
-          endTime: minutesToTimeString(endMinutes - 24 * 60),
-        });
-      }
-    }
-
-    // Merge overlapping intervals per day
-    for (let d = 0; d < 7; d++) {
-      weeklyMask[d] = mergeDayMaskIntervals(weeklyMask[d]);
-    }
-
-    return {
-      weeklyMask,
-      exceptions: exceptions.length ? exceptions : undefined,
-    };
-  }
-
-  /**
-   * Return the list of unavailable time intervals for a specific date,
-   * applying any exceptions.
-   */
-  getDayMaskForDate(mask: TemplateMask, date: Date): TimeInterval[] {
-    const weekday = date.getDay();
-    let intervals = mask.weeklyMask[weekday] || [];
-
-    if (mask.exceptions && mask.exceptions.length > 0) {
-      const iso = date.toISOString().slice(0, 10);
-      const dayExceptions = mask.exceptions.find((ex) => ex.dateISO === iso);
-      if (dayExceptions) {
-        // remove specified intervals
-        if (dayExceptions.removed && dayExceptions.removed.length > 0) {
-          intervals = intervals.filter(
-            (intv) =>
-              !dayExceptions.removed!.some(
-                (r) =>
-                  r.startTime === intv.startTime && r.endTime === intv.endTime
-              )
-          );
-        }
-        // add specified intervals
-        if (dayExceptions.added && dayExceptions.added.length > 0) {
-          intervals = intervals.concat(dayExceptions.added);
-        }
-        intervals = mergeDayMaskIntervals(intervals);
-      }
-    }
-
-    return intervals;
-  }
-
-  /**
-   * Generate concrete `SimpleEvent` instances for a date range using a
-   * weekly mask. These are intended only for slot-calculation masking and
-   * should not be added to the final calendar as separate template events.
-   */
-  generateSimpleEventsFromMask(
-    userId: string,
-    mask: TemplateMask,
-    rangeStart: Date,
-    numDays: number
-  ): SimpleEvent[] {
-    const events: SimpleEvent[] = [];
-
-    for (let i = 0; i < numDays; i++) {
-      const date = dateTimeService.shiftDays(rangeStart, i);
-      const intervals = this.getDayMaskForDate(mask, date);
-
-      for (const intv of intervals) {
-        const start = dateTimeService.setTimeOnDate(date, intv.startTime);
-        const end = dateTimeService.setTimeOnDate(date, intv.endTime);
-        const now = new Date();
-
-        events.push({
-          userId,
-          id: uuidv4(),
-          title: "template-mask",
-          start: start.toISOString(),
-          end: end.toISOString(),
-          duration: null,
-          rrule: null,
-          extendedProps: {
-            id: uuidv4(),
-            eventId: "",
-            itemType: "template",
-            completedStartTime: null,
-            completedEndTime: null,
-            parentId: null,
-          },
-          backgroundColor: calendarColors[0],
-          borderColor: "transparent",
-          createdAt: now.toISOString(),
-          updatedAt: now.toISOString(),
-        });
-      }
-    }
-
-    return events;
   }
 
   /**
@@ -549,35 +379,4 @@ function minutesToTimeString(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-function mergeDayMaskIntervals(intervals: TimeInterval[]): TimeInterval[] {
-  if (intervals.length === 0) return [];
-
-  // Convert to minutes and sort
-  const normalized = intervals
-    .map((it) => {
-      const [sh, sm] = it.startTime.split(":").map((s) => parseInt(s, 10));
-      const [eh, em] = it.endTime.split(":").map((s) => parseInt(s, 10));
-      return { start: sh * 60 + sm, end: eh * 60 + em };
-    })
-    .sort((a, b) => a.start - b.start);
-
-  const merged: { start: number; end: number }[] = [];
-  let cur = normalized[0];
-  for (let i = 1; i < normalized.length; i++) {
-    const nxt = normalized[i];
-    if (nxt.start <= cur.end) {
-      cur.end = Math.max(cur.end, nxt.end);
-    } else {
-      merged.push(cur);
-      cur = nxt;
-    }
-  }
-  merged.push(cur);
-
-  return merged.map((m) => ({
-    startTime: minutesToTimeString(m.start),
-    endTime: minutesToTimeString(m.end),
-  }));
 }
