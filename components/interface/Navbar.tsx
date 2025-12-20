@@ -12,7 +12,6 @@ import {
   FaCalendar,
   FaClock,
   FaMapMarker,
-  FaBullseye,
 } from "react-icons/fa";
 import { MdViewWeek } from "react-icons/md";
 
@@ -42,11 +41,6 @@ const itemLinks = [
     name: "Categories",
     href: "/categories",
     icon: <FaFolderOpen className="h-5 w-5" />,
-  },
-  {
-    name: "Refine Goals",
-    href: "/refine",
-    icon: <FaBullseye className="h-5 w-5" />,
   },
 ];
 

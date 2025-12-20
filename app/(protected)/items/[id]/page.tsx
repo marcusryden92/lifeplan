@@ -51,10 +51,10 @@ import PrioritySelector from "@/components/utilities/PrioritySelector";
 import EventColorPicker from "@/components/events/EventColorPicker/EventColorPicker";
 import { LocationSelector } from "@/components/locations/LocationSelector";
 
-// Refine components for subtasks
-import TaskList from "@/app/(protected)/refine/_components/TaskList";
-import RootTaskListWrapper from "@/app/(protected)/refine/_components/task-item-subcomponents/RootTaskListWrapper";
-import AddSubtask from "@/app/(protected)/refine/_components/task-item-subcomponents/AddSubtask";
+// Task components for subtasks
+import TaskList from "@/components/tasks/TaskList";
+import RootTaskListWrapper from "@/components/tasks/task-item-subcomponents/RootTaskListWrapper";
+import AddSubtask from "@/components/tasks/task-item-subcomponents/AddSubtask";
 
 import * as categoryActions from "@/actions/categories";
 import {
@@ -324,7 +324,7 @@ export default function ItemDetailPage() {
   return (
     <DraggableContextProvider>
       <div className="pageContainer overflow-y-auto bg-white mx-auto py-8 w-full">
-        <div className="flex flex-col ml-20 max-w-[900px] pr-8">
+        <div className="flex flex-col ml-20 max-w-[1400px] pr-8">
           {/* Back button */}
           <Button
             variant="ghost"
@@ -335,240 +335,248 @@ export default function ItemDetailPage() {
             Back to Items
           </Button>
 
-          {/* Header */}
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4">
-                  {/* Type icon */}
-                  <div className={`p-3 rounded-lg ${config.color}`}>
-                    <Icon className="w-6 h-6 text-white" />
-                  </div>
-
-                  <div className="flex-1">
-                    {/* Category */}
-                    {category && (
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
-                        {category.icon && <span>{category.icon}</span>}
-                        <span>{category.name}</span>
+          {/* Main content */}
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-[1fr_2fr]">
+            {/* Left column: Header + Properties */}
+            <div className="flex flex-col gap-6">
+              {/* Header */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                      {/* Type icon */}
+                      <div className={`p-3 rounded-lg ${config.color}`}>
+                        <Icon className="w-6 h-6 text-white" />
                       </div>
-                    )}
 
-                    {/* Title */}
-                    {isEditingTitle ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          className="text-2xl font-bold h-auto py-1"
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSaveTitle();
-                            if (e.key === "Escape") setIsEditingTitle(false);
-                          }}
-                        />
-                        <Button variant="ghost" size="sm" onClick={handleSaveTitle}>
-                          <Check className="w-4 h-4" />
-                        </Button>
+                      <div className="flex-1">
+                        {/* Category */}
+                        {category && (
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
+                            {category.icon && <span>{category.icon}</span>}
+                            <span>{category.name}</span>
+                          </div>
+                        )}
+
+                        {/* Title */}
+                        {isEditingTitle ? (
+                          <div className="flex items-center gap-2">
+                            <Input
+                              value={editTitle}
+                              onChange={(e) => setEditTitle(e.target.value)}
+                              className="text-2xl font-bold h-auto py-1"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") handleSaveTitle();
+                                if (e.key === "Escape") setIsEditingTitle(false);
+                              }}
+                            />
+                            <Button variant="ghost" size="sm" onClick={handleSaveTitle}>
+                              <Check className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setIsEditingTitle(false)}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <h1 className="text-2xl font-bold">{item.title}</h1>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditTitle(item.title);
+                                setIsEditingTitle(true);
+                              }}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* Meta row */}
+                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {formatMinutesToHours(totalDuration)}
+                          </span>
+                          {item.deadline && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              {format(new Date(item.deadline), "MMM d, yyyy")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2">
+                      {item.itemType === "goal" && (
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setIsEditingTitle(false)}
+                          variant={item.isReady ? "default" : "outline"}
+                          onClick={handleToggleReady}
+                          disabled={subtasks.length === 0}
+                          className="gap-2"
                         >
-                          <X className="w-4 h-4" />
+                          <CheckCircledIcon className="w-4 h-4" />
+                          {item.isReady ? "Ready" : "Mark Ready"}
                         </Button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <h1 className="text-2xl font-bold">{item.title}</h1>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditTitle(item.title);
-                            setIsEditingTitle(true);
-                          }}
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Meta row */}
-                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {formatMinutesToHours(totalDuration)}
-                      </span>
-                      {item.deadline && (
-                        <span className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          {format(new Date(item.deadline), "MMM d, yyyy")}
-                        </span>
                       )}
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => setShowDeleteConfirm(true)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                </div>
+                </CardHeader>
+              </Card>
 
-                {/* Actions */}
-                <div className="flex items-center gap-2">
-                  {item.itemType === "goal" && (
-                    <Button
-                      variant={item.isReady ? "default" : "outline"}
-                      onClick={handleToggleReady}
-                      disabled={subtasks.length === 0}
-                      className="gap-2"
-                    >
-                      <CheckCircledIcon className="w-4 h-4" />
-                      {item.isReady ? "Ready" : "Mark Ready"}
-                    </Button>
-                  )}
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => setShowDeleteConfirm(true)}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
+              {/* Properties */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Properties</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-4">
+                    {/* Type */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Type</label>
+                      <Select
+                        value={item.itemType}
+                        onValueChange={(v) => handleTypeChange(v as ItemType)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="task">Task</SelectItem>
+                          <SelectItem value="plan">Plan</SelectItem>
+                          <SelectItem value="goal">Goal</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-          {/* Properties */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">Properties</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Type */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Type</label>
-                  <Select
-                    value={item.itemType}
-                    onValueChange={(v) => handleTypeChange(v as ItemType)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="task">Task</SelectItem>
-                      <SelectItem value="plan">Plan</SelectItem>
-                      <SelectItem value="goal">Goal</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                    {/* Category */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Category</label>
+                      <Select
+                        value={item.categoryId ?? "none"}
+                        onValueChange={(v) =>
+                          handleCategoryChange(v === "none" ? null : v)
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No category</SelectItem>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              {cat.icon && <span className="mr-2">{cat.icon}</span>}
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                {/* Category */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Category</label>
-                  <Select
-                    value={item.categoryId ?? "none"}
-                    onValueChange={(v) =>
-                      handleCategoryChange(v === "none" ? null : v)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No category</SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.icon && <span className="mr-2">{cat.icon}</span>}
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                    {/* Duration (for non-goals) */}
+                    {item.itemType !== "goal" && (
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">
+                          Duration (minutes)
+                        </label>
+                        <Input
+                          type="number"
+                          min={1}
+                          value={item.duration}
+                          onChange={(e) =>
+                            handleUpdateField("duration", Number(e.target.value))
+                          }
+                        />
+                      </div>
+                    )}
 
-                {/* Duration (for non-goals) */}
-                {item.itemType !== "goal" && (
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Duration (minutes)
-                    </label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={item.duration}
-                      onChange={(e) =>
-                        handleUpdateField("duration", Number(e.target.value))
-                      }
-                    />
+                    {/* Deadline */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        {item.itemType === "plan" ? "Scheduled Time" : "Deadline"}
+                      </label>
+                      <DateTimePickerWrapper
+                        item={item}
+                        onDateChange={handleDateChange}
+                      />
+                    </div>
+
+                    {/* Location */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Location</label>
+                      <LocationSelector
+                        value={item.locationId ?? null}
+                        onChange={handleLocationChange}
+                      />
+                    </div>
+
+                    {/* Priority */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Priority</label>
+                      <PrioritySelector
+                        updatePlannerArray={updatePlannerArray}
+                        taskId={item.id}
+                        initialPriority={item.priority}
+                      />
+                    </div>
+
+                    {/* Color */}
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Color</label>
+                      <EventColorPicker taskId={item.id} />
+                    </div>
                   </div>
-                )}
+                </CardContent>
+              </Card>
+            </div>
 
-                {/* Deadline */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    {item.itemType === "plan" ? "Scheduled Time" : "Deadline"}
-                  </label>
-                  <DateTimePickerWrapper
-                    item={item}
-                    onDateChange={handleDateChange}
-                  />
-                </div>
+            {/* Right column: Subtasks (shown for goals, empty for others) */}
+            <div>
+              {item.itemType === "goal" && (
+                <Card className="h-fit">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-lg">Subtasks</CardTitle>
+                        <CardDescription>
+                          Break down this goal into actionable tasks
+                        </CardDescription>
+                      </div>
+                      <Badge variant="outline">
+                        {subtasks.length} subtask{subtasks.length !== 1 ? "s" : ""}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Subtask list using existing components */}
+                    <div className="mb-4">
+                      <RootTaskListWrapper subtasksLength={subtasks.length}>
+                        <TaskList id={item.id} />
+                      </RootTaskListWrapper>
+                    </div>
 
-                {/* Location */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Location</label>
-                  <LocationSelector
-                    value={item.locationId ?? null}
-                    onChange={handleLocationChange}
-                  />
-                </div>
-
-                {/* Priority */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Priority</label>
-                  <PrioritySelector
-                    updatePlannerArray={updatePlannerArray}
-                    taskId={item.id}
-                    initialPriority={item.priority}
-                  />
-                </div>
-
-                {/* Color */}
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Color</label>
-                  <EventColorPicker taskId={item.id} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Subtasks (for goals only) */}
-          {item.itemType === "goal" && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-lg">Subtasks</CardTitle>
-                    <CardDescription>
-                      Break down this goal into actionable tasks
-                    </CardDescription>
-                  </div>
-                  <Badge variant="outline">
-                    {subtasks.length} subtask{subtasks.length !== 1 ? "s" : ""}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {/* Subtask list using existing components */}
-                <div className="mb-4">
-                  <RootTaskListWrapper subtasksLength={subtasks.length}>
-                    <TaskList id={item.id} />
-                  </RootTaskListWrapper>
-                </div>
-
-                {/* Add subtask */}
-                <AddSubtask task={item} parentId={item.id} isMainParent />
-              </CardContent>
-            </Card>
-          )}
+                    {/* Add subtask */}
+                    <AddSubtask task={item} parentId={item.id} isMainParent />
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Delete confirmation */}

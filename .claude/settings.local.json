@@ -3,7 +3,8 @@
     "allow": [
       "Bash(find:*)",
       "Bash(pnpm prisma generate:*)",
-      "Bash(pnpm lint:*)"
+      "Bash(pnpm lint:*)",
+      "Bash(xcopy:*)"
     ]
   }
 }

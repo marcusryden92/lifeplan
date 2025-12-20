@@ -59,7 +59,7 @@ export function AddItemDialog({
       itemType,
       duration,
       deadline: deadline?.toISOString() ?? null,
-      starts: itemType === "plan" ? starts?.toISOString() ?? null : null,
+      starts: itemType === "plan" ? (starts?.toISOString() ?? null) : null,
       categoryId: categoryId ?? null,
     });
 
@@ -93,9 +93,9 @@ export function AddItemDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
+          <div className="flex flex-col gap-4 py-4 h-[420px]">
             {/* Title */}
-            <div className="grid gap-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="title">Title</Label>
               <Input
                 id="title"
@@ -107,7 +107,7 @@ export function AddItemDialog({
             </div>
 
             {/* Item Type */}
-            <div className="grid gap-2">
+            <div className="flex flex-col gap-2">
               <Label>Type</Label>
               <div className="flex gap-2">
                 <Button
@@ -135,15 +135,18 @@ export function AddItemDialog({
                   Goal
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">
-                {itemType === "task" && "A one-time item without a specific date/time"}
-                {itemType === "plan" && "A scheduled appointment with a specific date/time"}
-                {itemType === "goal" && "A larger objective with multiple subtasks"}
+              <p className="text-xs text-muted-foreground h-4">
+                {itemType === "task" &&
+                  "A one-time item without a specific date/time"}
+                {itemType === "plan" &&
+                  "A scheduled appointment with a specific date/time"}
+                {itemType === "goal" &&
+                  "A larger objective with multiple subtasks"}
               </p>
             </div>
 
-            {/* Duration */}
-            <div className="grid gap-2">
+            {/* Duration (not for goals) */}
+            <div className={`flex flex-col gap-2 ${itemType === "goal" ? "invisible" : ""}`}>
               <Label htmlFor="duration">Duration (minutes)</Label>
               <Input
                 id="duration"
@@ -154,28 +157,26 @@ export function AddItemDialog({
               />
             </div>
 
-            {/* Deadline (for tasks) */}
-            {itemType === "task" && (
-              <div className="grid gap-2">
-                <Label>Deadline (optional)</Label>
-                <DateTimePicker date={deadline} setDate={setDeadline} />
-              </div>
-            )}
-
-            {/* Start time (for plans) */}
-            {itemType === "plan" && (
-              <div className="grid gap-2">
-                <Label>Scheduled Time</Label>
+            {/* Deadline (for tasks) / Scheduled Time (for plans) */}
+            <div className={`flex flex-col gap-2 ${itemType === "goal" ? "invisible" : ""}`}>
+              <Label>
+                {itemType === "plan" ? "Scheduled Time" : "Deadline (optional)"}
+              </Label>
+              {itemType === "plan" ? (
                 <DateTimePicker date={starts} setDate={setStarts} />
-              </div>
-            )}
+              ) : (
+                <DateTimePicker date={deadline} setDate={setDeadline} />
+              )}
+            </div>
 
             {/* Category */}
-            <div className="grid gap-2">
+            <div className="flex flex-col gap-2">
               <Label>Category (optional)</Label>
               <Select
                 value={categoryId ?? "none"}
-                onValueChange={(v) => setCategoryId(v === "none" ? undefined : v)}
+                onValueChange={(v) =>
+                  setCategoryId(v === "none" ? undefined : v)
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a category" />
