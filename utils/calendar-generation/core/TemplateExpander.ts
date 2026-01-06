@@ -63,7 +63,7 @@ export class TemplateExpander {
     userId: string,
     templates: EventTemplate[],
     startDate: Date,
-    _endDate: Date
+    _endDate: Date // Comment: unused variable, implement for multiple templates
   ): SimpleEvent[] {
     const events: SimpleEvent[] = [];
 
@@ -299,7 +299,7 @@ export class TemplateExpander {
 
       // Get exceptions if available (will be populated when UX is implemented)
       const templateExceptions: string[] = (() => {
-        const t = template as unknown as Record<string, unknown>;
+        const t = template as unknown as Record<string, unknown>; // Comment: Why is this unknown?
         if (Array.isArray(t.exceptions)) return t.exceptions as string[];
         return [];
       })();

@@ -159,7 +159,7 @@ export class CalendarGenerator {
     this.metrics.templateExpansionTimeMs = templateEnd - templateStart;
     this.metrics.templateEventsGenerated = recurringTemplateEvents.length;
 
-    // Step 5: Build location map for location-aware slot building
+    // Step 5: Build location map for location -aware slot building
     // Includes both planners AND templates (both can have locations)
     const plannerLocationMap = new Map<string, string | null>();
     for (const planner of input.planners) {
@@ -185,7 +185,10 @@ export class CalendarGenerator {
     // Largest gap
     const largestTemplateGap = this.templateExpander.calculateLargestGap(
       input.templates
-    );
+    ); // Comment: Use available slots instead to find the largest
+    // slot? Presumably re-run function per new iteration of
+    // available slots, cache too large items and only add them to
+    // 'too large' array at the end
 
     // Step 7: scheduling context
     const context: SchedulingContext = {
@@ -682,7 +685,8 @@ export class CalendarGenerator {
       .filter((e) => e.extendedProps?.itemType !== "travel") // Skip travel events
       .map((e) => {
         // Get location from plannerLocationMap using the event's linked planner ID
-        const plannerId = (e.extendedProps as { eventId?: string })?.eventId || e.id;
+        const plannerId =
+          (e.extendedProps as { eventId?: string })?.eventId || e.id;
         const locationId = plannerLocationMap.get(plannerId) ?? null;
 
         return {

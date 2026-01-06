@@ -40,8 +40,6 @@ import { dateTimeService } from "../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../constants";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 
-import { EventTemplate } from "@/types/prisma";
-import { TemplateExpander } from "./TemplateExpander";
 import { TravelTimeEntry } from "../models/SchedulingModels";
 
 export class TimeSlotManager {
@@ -115,7 +113,8 @@ export class TimeSlotManager {
    * @param plannerLocationMap - Optional map of planner ID to location ID for tracking slot neighbors
    */
   buildAvailableSlots(
-    startDate: Date,
+    startDate: Date, // Comment: Why start and end date when this function
+    // is only used to calculate slots for one day?
     endDate: Date,
     existingEvents: SimpleEvent[],
     templateMasks: PerTemplateMask[],
@@ -137,7 +136,7 @@ export class TimeSlotManager {
       plannerLocationMap
     );
 
-    // Convert template masks directly to intervals for this date (no SimpleEvent creation)
+    // Convert template masks directly to intervals for this date
     // Templates are handled via masks to avoid duplication
     const templateIntervals = masksToIntervals(templateMasks, startDate);
 
