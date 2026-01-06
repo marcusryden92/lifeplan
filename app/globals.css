@@ -313,3 +313,23 @@ input[type="number"] {
   border-top: 1px solid #d1d5db;
   border-radius: 0.375rem;
 }
+
+/* Disable text selection globally while dragging (except in editable fields) */
+body.lp-dragging {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Allow selection inside form fields and explicitly allowed elements */
+body.lp-dragging input,
+body.lp-dragging textarea,
+body.lp-dragging select,
+body.lp-dragging [contenteditable="true"],
+body.lp-dragging .lp-allow-select {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
