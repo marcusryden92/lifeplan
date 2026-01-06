@@ -23,6 +23,7 @@ import {
 import { CategoryItem } from "./_components/CategoryItem";
 import { AddCategoryDialog } from "./_components/AddCategoryDialog";
 import * as categoryActions from "@/actions/categories";
+import { buildCategoryTree, CategoryNode } from "@/utils/categoryUtils";
 import type { Category } from "@/types/prisma";
 
 type CategoryWithChildren = Category & {
@@ -53,25 +54,29 @@ export default function CategoriesPage() {
     try {
       setLoading(true);
       setError(null);
-      const data = await categoryActions.fetchCategoryTree();
+      // Fetch flat list and build full deep tree on client
+      const flat = await categoryActions.fetchCategories();
+      const tree = buildCategoryTree(flat);
 
-      // Also fetch counts
-      const allCategories = await categoryActions.fetchCategoriesWithCounts();
-      const countMap = new Map(allCategories.map(c => [c.id, c._count.planners]));
+      // Fetch counts and attach to all nodes
+      const withCountsArr = await categoryActions.fetchCategoriesWithCounts();
+      const countMap = new Map(
+        withCountsArr.map((c) => [c.id, c._count.planners])
+      );
 
-      // Merge counts into tree
-      const withCounts = data.map(cat => ({
-        ...cat,
-        _count: { planners: countMap.get(cat.id) ?? 0 },
-        children: cat.children.map(child => ({
-          ...child,
-          _count: { planners: countMap.get(child.id) ?? 0 },
-        })),
-      }));
+      const attachCounts = (nodes: CategoryNode[]): CategoryWithChildren[] =>
+        nodes.map((node) => ({
+          ...node,
+          _count: { planners: countMap.get(node.id) ?? 0 },
+          children: attachCounts(node.children) as Category[],
+        }));
 
+      const withCounts = attachCounts(tree);
       setCategories(withCounts);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load categories");
+      setError(
+        err instanceof Error ? err.message : "Failed to load categories"
+      );
     } finally {
       setLoading(false);
     }
@@ -93,7 +98,9 @@ export default function CategoriesPage() {
       setAddParentId(undefined);
       setAddParentName(undefined);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create category");
+      setError(
+        err instanceof Error ? err.message : "Failed to create category"
+      );
     }
   };
 
@@ -103,7 +110,9 @@ export default function CategoriesPage() {
       await categoryActions.updateCategory(id, { name });
       await loadCategories();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update category");
+      setError(
+        err instanceof Error ? err.message : "Failed to update category"
+      );
     }
   };
 
@@ -117,7 +126,9 @@ export default function CategoriesPage() {
       setSuccessMessage("Category deleted successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete category");
+      setError(
+        err instanceof Error ? err.message : "Failed to delete category"
+      );
     } finally {
       setDeleteId(null);
       setDeleteName("");
@@ -136,7 +147,7 @@ export default function CategoriesPage() {
       for (const cat of cats) {
         if (cat.id === id) return cat.name;
         if (cat.children) {
-          const found = cat.children.find(c => c.id === id);
+          const found = cat.children.find((c) => c.id === id);
           if (found) return found.name;
         }
       }
@@ -163,7 +174,8 @@ export default function CategoriesPage() {
         <div className="space-y-2 mb-8">
           <h1 className="my-6 text-3xl font-bold">Life Areas</h1>
           <p className="text-muted-foreground">
-            Organize your goals and tasks into categories that represent different areas of your life.
+            Organize your goals and tasks into categories that represent
+            different areas of your life.
           </p>
         </div>
 
@@ -188,7 +200,8 @@ export default function CategoriesPage() {
                   Categories
                 </CardTitle>
                 <CardDescription>
-                  Create categories like Career, Health, Relationships to organize your items
+                  Create categories like Career, Health, Relationships to
+                  organize your items
                 </CardDescription>
               </div>
               <Button onClick={() => openAddDialog()} className="gap-2">
@@ -203,7 +216,8 @@ export default function CategoriesPage() {
                 <FolderTree className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p className="mb-2">No categories yet</p>
                 <p className="text-sm">
-                  Create your first category to start organizing your goals and tasks
+                  Create your first category to start organizing your goals and
+                  tasks
                 </p>
               </div>
             ) : (
@@ -216,7 +230,7 @@ export default function CategoriesPage() {
                     onEdit={handleEditCategory}
                     onDelete={openDeleteDialog}
                     onAddSubcategory={(parentId) => {
-                      const parent = categories.find(c => c.id === parentId);
+                      const parent = categories.find((c) => c.id === parentId);
                       openAddDialog(parentId, parent?.name);
                     }}
                   />
@@ -276,8 +290,9 @@ export default function CategoriesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Category</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete &ldquo;{deleteName}&rdquo;?
-              This will also delete all subcategories. Items in this category will become uncategorized.
+              Are you sure you want to delete &ldquo;{deleteName}&rdquo;? This
+              will also delete all subcategories. Items in this category will
+              become uncategorized.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

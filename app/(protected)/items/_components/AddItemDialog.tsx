@@ -12,13 +12,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
+import { CategorySelect } from "@/components/categories/CategorySelect";
 import { DateTimePicker } from "@/components/utilities/time-picker/DateTimePicker";
 import type { Category } from "@/types/prisma";
 import type { ItemType } from "@/prisma/generated/client";
@@ -53,7 +47,6 @@ export function AddItemDialog({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-
     onAdd({
       title: title.trim(),
       itemType,
@@ -62,9 +55,6 @@ export function AddItemDialog({
       starts: itemType === "plan" ? (starts?.toISOString() ?? null) : null,
       categoryId: categoryId ?? null,
     });
-
-    // Reset form
-    resetForm();
     onOpenChange(false);
   };
 
@@ -146,7 +136,9 @@ export function AddItemDialog({
             </div>
 
             {/* Duration (not for goals) */}
-            <div className={`flex flex-col gap-2 ${itemType === "goal" ? "invisible" : ""}`}>
+            <div
+              className={`flex flex-col gap-2 ${itemType === "goal" ? "invisible" : ""}`}
+            >
               <Label htmlFor="duration">Duration (minutes)</Label>
               <Input
                 id="duration"
@@ -158,7 +150,9 @@ export function AddItemDialog({
             </div>
 
             {/* Deadline (for tasks) / Scheduled Time (for plans) */}
-            <div className={`flex flex-col gap-2 ${itemType === "goal" ? "invisible" : ""}`}>
+            <div
+              className={`flex flex-col gap-2 ${itemType === "goal" ? "invisible" : ""}`}
+            >
               <Label>
                 {itemType === "plan" ? "Scheduled Time" : "Deadline (optional)"}
               </Label>
@@ -172,25 +166,13 @@ export function AddItemDialog({
             {/* Category */}
             <div className="flex flex-col gap-2">
               <Label>Category (optional)</Label>
-              <Select
+              <CategorySelect
                 value={categoryId ?? "none"}
-                onValueChange={(v) =>
-                  setCategoryId(v === "none" ? undefined : v)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No category</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.icon && <span className="mr-2">{cat.icon}</span>}
-                      {cat.parentId ? `  └ ${cat.name}` : cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                categories={categories}
+                includeNone
+                noneLabel="No category"
+                onChange={(v) => setCategoryId(v === "none" ? undefined : v)}
+              />
             </div>
           </div>
 

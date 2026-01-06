@@ -28,13 +28,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/Card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
+import { CategorySelect } from "@/components/categories/CategorySelect";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -61,14 +55,17 @@ import {
   assignLocationToPlanner,
   assignLocationToMultiplePlanners,
 } from "@/actions/locations";
-import { deleteGoal, getSubtasksById, getGoalTree } from "@/utils/goalPageHandlers";
+import {
+  deleteGoal,
+  getSubtasksById,
+  getGoalTree,
+} from "@/utils/goalPageHandlers";
 import { toggleGoalIsReady } from "@/utils/goal-handlers/toggleGoalIsReady";
 import {
   totalSubtaskDuration,
   formatMinutesToHours,
 } from "@/utils/taskArrayUtils";
 import type { Planner, Category } from "@/types/prisma";
-import type { ItemType } from "@/prisma/generated/client";
 
 const typeConfig = {
   task: { icon: CheckSquare, color: "bg-amber-500", label: "Task" },
@@ -129,7 +126,9 @@ export default function ItemDetailPage() {
 
   // Location cascade
   const [showCascadeConfirm, setShowCascadeConfirm] = useState(false);
-  const [pendingLocationId, setPendingLocationId] = useState<string | null>(null);
+  const [pendingLocationId, setPendingLocationId] = useState<string | null>(
+    null
+  );
 
   // Load categories
   useEffect(() => {
@@ -172,7 +171,9 @@ export default function ItemDetailPage() {
     return categories.find((c) => c.id === item.categoryId);
   }, [item, categories]);
 
-  const config = item ? typeConfig[item.itemType] || typeConfig.task : typeConfig.task;
+  const config = item
+    ? typeConfig[item.itemType] || typeConfig.task
+    : typeConfig.task;
   const Icon = config.icon;
 
   // Handlers
@@ -181,7 +182,11 @@ export default function ItemDetailPage() {
     updatePlannerArray((prev: Planner[]) =>
       prev.map((p) =>
         p.id === item.id
-          ? { ...p, title: editTitle.trim(), updatedAt: new Date().toISOString() }
+          ? {
+              ...p,
+              title: editTitle.trim(),
+              updatedAt: new Date().toISOString(),
+            }
           : p
       )
     );
@@ -213,19 +218,20 @@ export default function ItemDetailPage() {
     [item, updatePlannerArray]
   );
 
-  const handleTypeChange = useCallback(
-    (newType: ItemType) => {
-      if (!item) return;
-      updatePlannerArray((prev: Planner[]) =>
-        prev.map((p) =>
-          p.id === item.id
-            ? { ...p, itemType: newType, updatedAt: new Date().toISOString() }
-            : p
-        )
-      );
-    },
-    [item, updatePlannerArray]
-  );
+  // Item type update handler (currently unused)
+  // const handleTypeChange = useCallback(
+  //   (newType: ItemType) => {
+  //     if (!item) return;
+  //     updatePlannerArray((prev: Planner[]) =>
+  //       prev.map((p) =>
+  //         p.id === item.id
+  //           ? { ...p, itemType: newType, updatedAt: new Date().toISOString() }
+  //           : p
+  //       )
+  //     );
+  //   },
+  //   [item, updatePlannerArray]
+  // );
 
   const handleDateChange = useCallback(
     (date: Date | undefined) => {
@@ -275,9 +281,7 @@ export default function ItemDetailPage() {
           const treeIds = treeItems.map((i) => i.id);
           await assignLocationToMultiplePlanners(treeIds, locationId);
           updatePlannerArray((prev) =>
-            prev.map((p) =>
-              treeIds.includes(p.id) ? { ...p, locationId } : p
-            )
+            prev.map((p) => (treeIds.includes(p.id) ? { ...p, locationId } : p))
           );
         } else {
           await assignLocationToPlanner(item.id, locationId);
@@ -368,10 +372,15 @@ export default function ItemDetailPage() {
                               autoFocus
                               onKeyDown={(e) => {
                                 if (e.key === "Enter") handleSaveTitle();
-                                if (e.key === "Escape") setIsEditingTitle(false);
+                                if (e.key === "Escape")
+                                  setIsEditingTitle(false);
                               }}
                             />
-                            <Button variant="ghost" size="sm" onClick={handleSaveTitle}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleSaveTitle}
+                            >
                               <Check className="w-4 h-4" />
                             </Button>
                             <Button
@@ -438,108 +447,83 @@ export default function ItemDetailPage() {
                   </div>
                 </CardHeader>
               </Card>
-
               {/* Properties */}
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Properties</CardTitle>
-                </CardHeader>
                 <CardContent>
-                  <div className="flex flex-col gap-4">
-                    {/* Type */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Type</label>
-                      <Select
-                        value={item.itemType}
-                        onValueChange={(v) => handleTypeChange(v as ItemType)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="task">Task</SelectItem>
-                          <SelectItem value="plan">Plan</SelectItem>
-                          <SelectItem value="goal">Goal</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  {/* Category */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Category
+                    </label>
+                    <CategorySelect
+                      value={item.categoryId ?? "none"}
+                      categories={categories}
+                      includeNone
+                      noneLabel="No category"
+                      placeholder="Select category"
+                      onChange={(v) =>
+                        handleCategoryChange(v === "none" ? null : v)
+                      }
+                    />
+                  </div>
 
-                    {/* Category */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Category</label>
-                      <Select
-                        value={item.categoryId ?? "none"}
-                        onValueChange={(v) =>
-                          handleCategoryChange(v === "none" ? null : v)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No category</SelectItem>
-                          {categories.map((cat) => (
-                            <SelectItem key={cat.id} value={cat.id}>
-                              {cat.icon && <span className="mr-2">{cat.icon}</span>}
-                              {cat.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Duration (for non-goals) */}
-                    {item.itemType !== "goal" && (
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">
-                          Duration (minutes)
-                        </label>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={item.duration}
-                          onChange={(e) =>
-                            handleUpdateField("duration", Number(e.target.value))
-                          }
-                        />
-                      </div>
-                    )}
-
-                    {/* Deadline */}
+                  {/* Duration (for non-goals) */}
+                  {item.itemType !== "goal" && (
                     <div>
                       <label className="text-sm font-medium mb-2 block">
-                        {item.itemType === "plan" ? "Scheduled Time" : "Deadline"}
+                        Duration (minutes)
                       </label>
-                      <DateTimePickerWrapper
-                        item={item}
-                        onDateChange={handleDateChange}
+                      <Input
+                        type="number"
+                        min={1}
+                        value={item.duration}
+                        onChange={(e) =>
+                          handleUpdateField("duration", Number(e.target.value))
+                        }
                       />
                     </div>
+                  )}
 
-                    {/* Location */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Location</label>
-                      <LocationSelector
-                        value={item.locationId ?? null}
-                        onChange={handleLocationChange}
-                      />
-                    </div>
+                  {/* Deadline */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      {item.itemType === "plan" ? "Scheduled Time" : "Deadline"}
+                    </label>
+                    <DateTimePickerWrapper
+                      item={item}
+                      onDateChange={handleDateChange}
+                    />
+                  </div>
 
-                    {/* Priority */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Priority</label>
-                      <PrioritySelector
-                        updatePlannerArray={updatePlannerArray}
-                        taskId={item.id}
-                        initialPriority={item.priority}
-                      />
-                    </div>
+                  {/* Location */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Location
+                    </label>
+                    <LocationSelector
+                      value={item.locationId ?? null}
+                      onChange={handleLocationChange}
+                    />
+                  </div>
 
-                    {/* Color */}
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">Color</label>
-                      <EventColorPicker taskId={item.id} />
-                    </div>
+                  {/* Priority */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Priority
+                    </label>
+                    <PrioritySelector
+                      updatePlannerArray={updatePlannerArray}
+                      taskId={item.id}
+                      initialPriority={item.priority}
+                    />
+                  </div>
+
+                  {/* Color */}
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">
+                      Color
+                    </label>
+                    <EventColorPicker taskId={item.id} />
                   </div>
                 </CardContent>
               </Card>
@@ -558,7 +542,8 @@ export default function ItemDetailPage() {
                         </CardDescription>
                       </div>
                       <Badge variant="outline">
-                        {subtasks.length} subtask{subtasks.length !== 1 ? "s" : ""}
+                        {subtasks.length} subtask
+                        {subtasks.length !== 1 ? "s" : ""}
                       </Badge>
                     </div>
                   </CardHeader>
@@ -580,7 +565,10 @@ export default function ItemDetailPage() {
         </div>
 
         {/* Delete confirmation */}
-        <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialog
+          open={showDeleteConfirm}
+          onOpenChange={setShowDeleteConfirm}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Item</AlertDialogTitle>
