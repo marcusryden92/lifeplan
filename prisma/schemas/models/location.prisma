@@ -22,6 +22,9 @@ model Location {
   // Templates assigned to this location
   templates EventTemplate[]
 
+  // Categories assigned to this location
+  categories Category[]
+
   @@unique([userId, placeId]) // Prevent duplicate locations per user
   @@map("Locations")
 }

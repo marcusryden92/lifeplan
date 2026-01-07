@@ -12,11 +12,15 @@ const CalendarHeader = ({
   setInitialDate,
   reupdateCalendarArray,
   manuallyRefreshCalendar,
+  hoveredCategoryName,
+  hoveredCategoryColor,
 }: {
   initialDate: Date;
   setInitialDate: React.Dispatch<React.SetStateAction<Date>>;
   reupdateCalendarArray: () => void;
   manuallyRefreshCalendar: () => void;
+  hoveredCategoryName?: string | null;
+  hoveredCategoryColor?: string | null;
 }) => {
   const monthArray = useMemo(
     () => [
@@ -55,9 +59,20 @@ const CalendarHeader = ({
 
   return (
     <header className={styles.headerContainer}>
-      <span className="flex-1 text-lg font-medium text-gray-700">
-        Calendar: {dateString}
-      </span>
+      <div className="flex flex-col gap-1 flex-1">
+        <span className="text-lg font-medium text-gray-700">
+          Calendar: {dateString}
+        </span>
+        {hoveredCategoryName && (
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <div
+              className="h-3 w-3 rounded-full"
+              style={{ backgroundColor: hoveredCategoryColor || "#3b82f6" }}
+            />
+            <span>{hoveredCategoryName}</span>
+          </div>
+        )}
+      </div>
       {/* Centered Refresh Button */}
       <div className="flex-1 flex justify-center">
         <Button

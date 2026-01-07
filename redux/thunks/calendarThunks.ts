@@ -1,4 +1,4 @@
-import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
+import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { AppDispatch } from "../store";
@@ -38,6 +38,7 @@ export const updateAllCalendarStates =
     const currentPlanner: Planner[] = state.calendar.planner;
     const calendar: SimpleEvent[] = state.calendar.calendar;
     const template: EventTemplate[] = state.calendar.template;
+    const categories: Category[] = state.calendar.categories;
     const bufferTimeMinutes: number =
       state.schedulingSettings.bufferTimeMinutes;
     const enableTravelEvents: boolean =
@@ -67,6 +68,7 @@ export const updateAllCalendarStates =
         bufferTimeMinutes,
         travelTimeMatrix: travelTimeMap ?? undefined,
         injectTravelEvents: enableTravelEvents,
+        categories,
       }
     );
 
@@ -74,6 +76,7 @@ export const updateAllCalendarStates =
       planner: newPlanner,
       calendar: newCalendar,
       template: newTemplate,
+      categories,
     };
 
     dispatch(calendarSlice.actions.updateCalendarArrayData(calendarData));

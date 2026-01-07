@@ -19,6 +19,7 @@ import { SchedulingFailureReason } from "../constants";
 import { dateTimeService } from "../utils/dateTimeService";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
+import { canScheduleAtTime } from "../utils/categoryConstraintUtils";
 
 export class Scheduler {
   private metrics: SchedulingMetrics = {
@@ -86,8 +87,29 @@ export class Scheduler {
       };
     }
 
+    // Step 1.5: Filter slots by category time constraints
+    const categoryConstraints = this.context.categoryConstraints;
+    const validSlots = categoryConstraints
+      ? fittingSlots.filter((slot) =>
+          canScheduleAtTime(slot.start, task.categoryId, categoryConstraints)
+        )
+      : fittingSlots;
+
+    if (validSlots.length === 0) {
+      this.metrics.tasksFailed++;
+      return {
+        success: false,
+        failure: {
+          taskId: task.id,
+          taskTitle: task.title,
+          reason: SchedulingFailureReason.NO_SLOTS,
+          details: `No available time slots found within category time constraints`,
+        },
+      };
+    }
+
     // Step 2: Score ALL slots using the strategy (includes location adjacency scoring)
-    const scoredSlots = this.scoreSlots(task, fittingSlots);
+    const scoredSlots = this.scoreSlots(task, validSlots);
 
     // Step 3: Iterate through scored slots and find first one with enough capacity
     const bufferMinutes = this.slotManager.getBufferTimeMinutes();

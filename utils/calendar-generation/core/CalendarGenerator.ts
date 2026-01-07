@@ -23,6 +23,7 @@ import {
   SchedulingContext,
   SchedulingMetrics,
   SchedulingFailure,
+  CategoryConstraint,
 } from "../models/SchedulingModels";
 import { SCHEDULING_CONFIG, SchedulingFailureReason } from "../constants";
 import { DEFAULT_STRATEGY_WEIGHTS } from "../strategies/defaultStrategy";
@@ -36,6 +37,10 @@ import {
 import { getSortedTreeBottomLayer } from "../../goalPageHandlers";
 import { taskIsCompleted } from "../../taskHelpers";
 import { v4 as uuidv4 } from "uuid";
+import {
+  buildCategoryConstraintMap,
+  generateCategorySlotPeriods,
+} from "../utils/categoryConstraintUtils";
 
 export class CalendarGenerator {
   private slotManager: TimeSlotManager;
@@ -190,7 +195,12 @@ export class CalendarGenerator {
     // available slots, cache too large items and only add them to
     // 'too large' array at the end
 
-    // Step 7: scheduling context
+    // Step 7: Build category constraints map
+    const categoryConstraints = input.categories
+      ? buildCategoryConstraintMap(input.categories)
+      : new Map();
+
+    // Step 8: scheduling context
     const context: SchedulingContext = {
       currentDate,
       userId: input.userId,
@@ -200,9 +210,10 @@ export class CalendarGenerator {
       availableMinutesPerWeek:
         this.slotManager.getWeekAvailableMinutes(weekStart),
       metrics: this.metrics,
+      categoryConstraints,
     };
 
-    // Step 8: strategy
+    // Step 9: strategy
     // Task ordering is handled by sortByPriority (urgency-based)
     // Slot scoring combines:
     // - EarliestSlotStrategy: baseline preference for earlier slots
@@ -260,10 +271,52 @@ export class CalendarGenerator {
     // Get travel events from stored travel slots
     const travelEvents = this.slotManager.generateTravelEvents(input.userId);
 
+    // Step 10.5: Generate category wrapper events
+    const categoryWrapperEvents: SimpleEvent[] = [];
+    if (input.categories && input.categories.length > 0) {
+      const categoryConstraintsList = Array.from(
+        categoryConstraints.values()
+      ) as CategoryConstraint[];
+      const searchEndDate = dateTimeService.shiftDays(weekStart, maxDaysAhead);
+
+      const categoryPeriods = generateCategorySlotPeriods(
+        currentDate,
+        searchEndDate,
+        categoryConstraintsList
+      );
+
+      for (const period of categoryPeriods) {
+        categoryWrapperEvents.push({
+          id: uuidv4(),
+          title: `${period.categoryName} Time Slot`,
+          start: period.start.toISOString(),
+          end: period.end.toISOString(),
+          duration: Math.floor(
+            (period.end.getTime() - period.start.getTime()) / 60000
+          ),
+          userId: input.userId,
+          rrule: null,
+          backgroundColor: period.categoryColor || "#3b82f6",
+          borderColor: period.categoryColor || "#3b82f6",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          extendedProps: {
+            id: uuidv4(),
+            itemType: "category",
+            eventId: "",
+            parentId: null,
+            completedStartTime: null,
+            completedEndTime: null,
+          },
+        });
+      }
+    }
+
     // Final event list includes:
     // 1. Scheduled non-template events (tasks, plans, completed items)
     // 2. Recurring template events (with rrule) for FullCalendar UI
     // 3. Travel events generated from timeline
+    // 4. Category wrapper events for time slot visualization
     // NOTE: Template masks are used directly for slot calculation - no SimpleEvent objects needed
     const templateEventsForUI = context.scheduledEvents.filter(
       (e) => e.extendedProps?.itemType === "template"
@@ -272,6 +325,7 @@ export class CalendarGenerator {
       ...scheduledNonTemplateEvents,
       ...templateEventsForUI,
       ...travelEvents,
+      ...categoryWrapperEvents,
     ];
 
     // Detect trespassing events (overlapping events with different locations)

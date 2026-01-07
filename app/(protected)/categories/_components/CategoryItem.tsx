@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Edit2, Trash2, Plus } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Edit2,
+  Trash2,
+  Plus,
+  Settings,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import type { Category } from "@/types/prisma";
@@ -12,6 +19,7 @@ interface CategoryItemProps {
   onEdit: (id: string, name: string) => void;
   onDelete: (id: string) => void;
   onAddSubcategory: (parentId: string) => void;
+  onOpenSettings: (id: string) => void;
   onSelect?: (id: string) => void;
   selectedId?: string;
 }
@@ -22,6 +30,7 @@ export function CategoryItem({
   onEdit,
   onDelete,
   onAddSubcategory,
+  onOpenSettings,
   onSelect,
   selectedId,
 }: CategoryItemProps) {
@@ -52,7 +61,9 @@ export function CategoryItem({
     <div className="select-none">
       <div
         className={`flex items-center gap-2 py-2 px-2 rounded-md hover:bg-gray-100 group transition-colors ${
-          selectedId === category.id ? "bg-blue-50 border-l-2 border-blue-500" : ""
+          selectedId === category.id
+            ? "bg-blue-50 border-l-2 border-blue-500"
+            : ""
         }`}
         style={{ paddingLeft: `${level * 24 + 8}px` }}
       >
@@ -119,9 +130,18 @@ export function CategoryItem({
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => onOpenSettings(category.id)}
+            className="h-7 w-7 p-0"
+            title="Settings (time constraints, location)"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setIsEditing(true)}
             className="h-7 w-7 p-0"
-            title="Edit"
+            title="Rename"
           >
             <Edit2 className="w-3.5 h-3.5" />
           </Button>
@@ -148,6 +168,7 @@ export function CategoryItem({
               onEdit={onEdit}
               onDelete={onDelete}
               onAddSubcategory={onAddSubcategory}
+              onOpenSettings={onOpenSettings}
               onSelect={onSelect}
               selectedId={selectedId}
             />

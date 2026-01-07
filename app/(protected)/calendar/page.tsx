@@ -14,6 +14,21 @@ const CalendarPage = () => {
     getWeekFirstDate(weekStartDay, today)
   );
 
+  const [hoveredCategoryName, setHoveredCategoryName] = useState<string | null>(
+    null
+  );
+  const [hoveredCategoryColor, setHoveredCategoryColor] = useState<
+    string | null
+  >(null);
+
+  const handleCategoryHover = (
+    categoryName: string | null,
+    categoryColor: string | null
+  ) => {
+    setHoveredCategoryName(categoryName);
+    setHoveredCategoryColor(categoryColor);
+  };
+
   const reupdateCalendarArray = () => {
     setInitialDate(getWeekFirstDate(weekStartDay, today));
   };
@@ -25,9 +40,14 @@ const CalendarPage = () => {
         setInitialDate={setInitialDate}
         reupdateCalendarArray={reupdateCalendarArray}
         manuallyRefreshCalendar={manuallyRefreshCalendar}
+        hoveredCategoryName={hoveredCategoryName}
+        hoveredCategoryColor={hoveredCategoryColor}
       />
 
-      <Calendar initialDate={initialDate} />
+      <Calendar
+        initialDate={initialDate}
+        onCategoryHover={handleCategoryHover}
+      />
       <StrategyDebugDashboard />
     </div>
   );

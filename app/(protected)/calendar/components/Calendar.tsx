@@ -12,6 +12,7 @@ import luxonPlugin from "@fullcalendar/luxon";
 import EventContent from "@/components/events/EventContent";
 import TemplateEventContent from "@/components/events/TemplateEventContent";
 import TravelEventContent from "@/components/events/TravelEventContent";
+import { CategoryWrapperEvent } from "@/components/events/CategoryWrapperEvent";
 
 import type { EventInput } from "@fullcalendar/core/index.js";
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -35,9 +36,16 @@ const EVENT_INTERACTION_ENABLED = true; // Constant to enable/disable event inte
 interface CalendarProps {
   fullCalendarEvents?: EventInput[] | undefined;
   initialDate: Date;
+  onCategoryHover?: (
+    categoryName: string | null,
+    categoryColor: string | null
+  ) => void;
 }
 
-export default function Calendar({ initialDate }: CalendarProps) {
+export default function Calendar({
+  initialDate,
+  onCategoryHover,
+}: CalendarProps) {
   const {
     userId,
     calendar,
@@ -96,7 +104,31 @@ export default function Calendar({ initialDate }: CalendarProps) {
         eventResize={(resizeInfo) => handleEventResize(updateAll, resizeInfo)}
         eventDrop={(dropInfo) => handleEventDrop(updatePlannerArray, dropInfo)}
         eventContent={({ event }: { event: EventImpl }) => {
-          const itemType = (event.extendedProps as { itemType?: string })?.itemType;
+          const itemType = (event.extendedProps as { itemType?: string })
+            ?.itemType;
+
+          if (itemType === "category") {
+            const categoryId =
+              (event.extendedProps as { categoryId?: string })?.categoryId ||
+              "";
+            const isStrict =
+              (event.extendedProps as { isStrict?: boolean })?.isStrict ||
+              false;
+
+            return (
+              <CategoryWrapperEvent
+                categoryId={categoryId}
+                categoryName={event.title}
+                categoryColor={event.backgroundColor}
+                isStrict={isStrict}
+                start={event.start || new Date()}
+                end={event.end || new Date()}
+                onHover={onCategoryHover}
+              >
+                {/* Children items will be rendered by FullCalendar */}
+              </CategoryWrapperEvent>
+            );
+          }
 
           if (itemType === "template") {
             return (

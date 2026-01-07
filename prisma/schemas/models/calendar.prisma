@@ -88,4 +88,5 @@ enum ItemType {
   goal
   template
   travel
+  category
 }

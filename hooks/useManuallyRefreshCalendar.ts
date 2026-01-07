@@ -7,7 +7,7 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 import { taskIsCompleted } from "@/utils/taskHelpers";
 
-import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
+import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
 import { AppDispatch, RootState } from "@/redux/store";
 import calendarSlice from "@/redux/slices/calendarSlice";
 import { useSelector } from "react-redux";
@@ -23,11 +23,12 @@ const useManuallyRefreshCalendar = (
     planner: Planner[];
     calendar: SimpleEvent[];
     template: EventTemplate[];
+    categories: Category[];
   },
   weekStartDay: WeekDayIntegers,
   dispatch: AppDispatch
 ) => {
-  const { planner, calendar, template } = calendarState;
+  const { planner, calendar, template, categories } = calendarState;
   const bufferTimeMinutes = useSelector(
     (state: RootState) => state.schedulingSettings.bufferTimeMinutes
   );
@@ -47,6 +48,7 @@ const useManuallyRefreshCalendar = (
     planner: Planner[];
     calendar: SimpleEvent[];
     template: EventTemplate[];
+    categories: Category[];
     weekStartDay: WeekDayIntegers;
     bufferTimeMinutes: number;
     enableTravelEvents: boolean;
@@ -58,6 +60,7 @@ const useManuallyRefreshCalendar = (
     planner,
     calendar,
     template,
+    categories,
     weekStartDay,
     bufferTimeMinutes,
     enableTravelEvents,
@@ -70,6 +73,7 @@ const useManuallyRefreshCalendar = (
     planner,
     calendar,
     template,
+    categories,
     weekStartDay,
     bufferTimeMinutes,
     enableTravelEvents,
@@ -84,6 +88,7 @@ const useManuallyRefreshCalendar = (
       planner,
       calendar,
       template,
+      categories,
       weekStartDay,
       bufferTimeMinutes,
       enableTravelEvents,
@@ -121,7 +126,9 @@ const useManuallyRefreshCalendar = (
           injectTravelEvents: enableTravelEvents,
           strategyWeights: debugStrategyConfig.weights,
           locationGroupingScores: debugStrategyConfig.locationGrouping.scores,
-          locationGroupingPenalties: debugStrategyConfig.locationGrouping.penalties,
+          locationGroupingPenalties:
+            debugStrategyConfig.locationGrouping.penalties,
+          categories,
         }
       );
 
@@ -132,6 +139,7 @@ const useManuallyRefreshCalendar = (
           planner,
           calendar: newCalendar,
           template,
+          categories,
         })
       );
     }

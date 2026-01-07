@@ -4,8 +4,9 @@
  * Core interfaces and types for the scheduling system
  */
 
-import { SimpleEvent, Planner, EventTemplate } from "@/types/prisma";
+import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
 import { SchedulingFailureReason } from "../constants";
+import type { CategoryTimeSlot } from "@/types/categoryTypes";
 
 /**
  * Result of a scheduling operation
@@ -79,6 +80,8 @@ export interface SchedulingContext {
   availableMinutesPerWeek: number;
   /** Scheduling metrics (mutable, updated during scheduling) */
   metrics: SchedulingMetrics;
+  /** Category constraints for time-based scheduling */
+  categoryConstraints?: Map<string, CategoryConstraint>;
 }
 
 /**
@@ -202,6 +205,20 @@ export interface CalendarGenerationInput {
   previousCalendar: SimpleEvent[];
   /** Optional configuration overrides */
   config?: CalendarGenerationConfig;
+  /** Categories with time constraints */
+  categories?: Category[];
+}
+
+/**
+ * Category time constraint information
+ */
+export interface CategoryConstraint {
+  id: string;
+  name: string;
+  color?: string | null;
+  timeSlots: CategoryTimeSlot[];
+  isStrict: boolean;
+  locationId?: string | null;
 }
 
 /**

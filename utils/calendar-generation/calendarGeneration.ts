@@ -6,7 +6,7 @@
  */
 
 import { WeekDayIntegers } from "@/types/calendarTypes";
-import { Planner, EventTemplate, SimpleEvent } from "@/types/prisma";
+import { Planner, EventTemplate, SimpleEvent, Category } from "@/types/prisma";
 import { CalendarGenerator } from "./core/CalendarGenerator";
 import { SCHEDULING_CONFIG } from "./constants";
 import type {
@@ -28,6 +28,7 @@ export interface GenerateCalendarOptions {
   };
   locationGroupingScores?: LocationGroupingScoresConfig;
   locationGroupingPenalties?: LocationGroupingPenaltiesConfig;
+  categories?: Category[];
 }
 
 /**
@@ -79,6 +80,7 @@ export function generateCalendar(
     templates: template,
     planners: planner,
     previousCalendar: prevCalendar,
+    categories: opts.categories,
     config: {
       maxDaysAhead: SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
       enableLogging,

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/AlertDialog";
 import { CategoryItem } from "./_components/CategoryItem";
 import { AddCategoryDialog } from "./_components/AddCategoryDialog";
+import { EditCategoryDialog } from "./_components/EditCategoryDialog";
 import * as categoryActions from "@/actions/categories";
 import { buildCategoryTree, CategoryNode } from "@/utils/categoryUtils";
 import type { Category } from "@/types/prisma";
@@ -41,6 +42,10 @@ export default function CategoriesPage() {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addParentId, setAddParentId] = useState<string | undefined>();
   const [addParentName, setAddParentName] = useState<string | undefined>();
+
+  // Edit dialog state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -113,6 +118,48 @@ export default function CategoriesPage() {
       setError(
         err instanceof Error ? err.message : "Failed to update category"
       );
+    }
+  };
+
+  const handleSaveCategory = async (data: {
+    name: string;
+    timeSlots?: any[];
+    isStrict?: boolean;
+    locationId?: string | null;
+  }) => {
+    if (!editingCategory) return;
+
+    try {
+      setError(null);
+      await categoryActions.updateCategory(editingCategory.id, data);
+      await loadCategories();
+      setSuccessMessage("Category updated successfully!");
+      setTimeout(() => setSuccessMessage(null), 3000);
+      setEditDialogOpen(false);
+      setEditingCategory(null);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to update category"
+      );
+    }
+  };
+
+  const openEditDialog = (id: string) => {
+    const findCategory = (cats: CategoryWithChildren[]): Category | null => {
+      for (const cat of cats) {
+        if (cat.id === id) return cat;
+        if (cat.children) {
+          const found = findCategory(cat.children as CategoryWithChildren[]);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const category = findCategory(categories);
+    if (category) {
+      setEditingCategory(category);
+      setEditDialogOpen(true);
     }
   };
 
@@ -229,6 +276,7 @@ export default function CategoriesPage() {
                     level={0}
                     onEdit={handleEditCategory}
                     onDelete={openDeleteDialog}
+                    onOpenSettings={openEditDialog}
                     onAddSubcategory={(parentId) => {
                       const parent = categories.find((c) => c.id === parentId);
                       openAddDialog(parentId, parent?.name);
@@ -282,6 +330,14 @@ export default function CategoriesPage() {
         onAdd={handleAddCategory}
         parentId={addParentId}
         parentName={addParentName}
+      />
+
+      {/* Edit Category Dialog */}
+      <EditCategoryDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSave={handleSaveCategory}
+        category={editingCategory}
       />
 
       {/* Delete Confirmation Dialog */}

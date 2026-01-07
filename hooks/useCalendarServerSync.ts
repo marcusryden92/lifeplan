@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useCallback, useState } from "react";
-import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
+import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
 import { handleServerTransaction } from "@/utils/server-handlers/compareCalendarData";
 
 const useCalendarServerSync = (
@@ -10,6 +10,7 @@ const useCalendarServerSync = (
     planner: Planner[];
     calendar: SimpleEvent[];
     template: EventTemplate[];
+    categories: Category[];
   }
 ) => {
   // Previous state refs to track what the server has
@@ -25,7 +26,8 @@ const useCalendarServerSync = (
     (
       planner: Planner[],
       calendar: SimpleEvent[],
-      template: EventTemplate[]
+      template: EventTemplate[],
+      _categories: Category[]
     ) => {
       previousPlanner.current = planner;
       previousCalendar.current = calendar;

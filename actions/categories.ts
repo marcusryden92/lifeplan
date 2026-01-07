@@ -93,6 +93,9 @@ export async function createCategory(data: {
   icon?: string;
   color?: string;
   parentId?: string;
+  timeSlots?: any;
+  isStrict?: boolean;
+  locationId?: string | null;
 }): Promise<Category> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -104,6 +107,16 @@ export async function createCategory(data: {
     });
     if (!parent) {
       throw new Error("Parent category not found");
+    }
+  }
+
+  // If locationId provided, verify it exists and belongs to user
+  if (data.locationId) {
+    const location = await db.location.findFirst({
+      where: { id: data.locationId, userId: session.user.id },
+    });
+    if (!location) {
+      throw new Error("Location not found");
     }
   }
 
@@ -122,6 +135,9 @@ export async function createCategory(data: {
       icon: data.icon,
       color: data.color,
       parentId: data.parentId,
+      timeSlots: data.timeSlots ?? null,
+      isStrict: data.isStrict ?? false,
+      locationId: data.locationId ?? null,
       sortOrder: (maxSortOrder._max.sortOrder ?? -1) + 1,
       userId: session.user.id,
     },
@@ -139,6 +155,9 @@ export async function updateCategory(
     name?: string;
     icon?: string | null;
     color?: string | null;
+    timeSlots?: any;
+    isStrict?: boolean;
+    locationId?: string | null;
   }
 ): Promise<Category> {
   const session = await auth();
@@ -152,12 +171,25 @@ export async function updateCategory(
     throw new Error("Category not found");
   }
 
+  // If locationId provided, verify it exists and belongs to user
+  if (data.locationId !== undefined && data.locationId !== null) {
+    const location = await db.location.findFirst({
+      where: { id: data.locationId, userId: session.user.id },
+    });
+    if (!location) {
+      throw new Error("Location not found");
+    }
+  }
+
   const updated = await db.category.update({
     where: { id: categoryId },
     data: {
       name: data.name,
       icon: data.icon,
       color: data.color,
+      timeSlots: data.timeSlots,
+      isStrict: data.isStrict,
+      locationId: data.locationId,
     },
   });
 
@@ -293,9 +325,7 @@ export async function moveCategory(
 /**
  * Reorder categories at the same level
  */
-export async function reorderCategories(
-  orderedIds: string[]
-): Promise<void> {
+export async function reorderCategories(orderedIds: string[]): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
