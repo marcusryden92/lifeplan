@@ -44,19 +44,31 @@ export class CalendarValidator {
       errors.push({ field: "userId", message: "User ID is required" });
     }
 
-    // Duration validation
-    if (planner.duration === undefined || planner.duration === null) {
-      errors.push({ field: "duration", message: "Duration is required" });
-    } else if (planner.duration <= 0) {
-      errors.push({
-        field: "duration",
-        message: "Duration must be positive",
-        value: planner.duration,
-      });
-    } else if (planner.duration > TIME_CONSTANTS.MINUTES_PER_WEEK) {
-      warnings.push(
-        `Task "${planner.title}" duration (${planner.duration} min) exceeds one week`
-      );
+    // Duration validation (required for tasks and plans; goals may derive duration from subtasks)
+    if (planner.itemType !== "goal") {
+      if (planner.duration === undefined || planner.duration === null) {
+        errors.push({ field: "duration", message: "Duration is required" });
+      } else if (planner.duration <= 0) {
+        errors.push({
+          field: "duration",
+          message: "Duration must be positive",
+          value: planner.duration,
+        });
+      } else if (planner.duration > TIME_CONSTANTS.MINUTES_PER_WEEK) {
+        warnings.push(
+          `Task "${planner.title}" duration (${planner.duration} min) exceeds one week`
+        );
+      }
+    } else {
+      // For goals, if a duration is provided and is excessively large, log a warning
+      if (
+        typeof planner.duration === "number" &&
+        planner.duration > TIME_CONSTANTS.MINUTES_PER_WEEK
+      ) {
+        warnings.push(
+          `Goal "${planner.title}" duration (${planner.duration} min) exceeds one week`
+        );
+      }
     }
 
     // Deadline validation
