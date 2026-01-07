@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
 import { MapPin, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -23,6 +24,8 @@ import { TravelTimeMatrix } from "@/components/locations/TravelTimeMatrix";
 import * as locationActions from "@/actions/locations";
 import type { Location, TravelTime } from "@/types/prisma";
 import type { TransportMode } from "@/prisma/generated/client";
+import { setLocations as setLocationsInRedux } from "@/redux/slices/schedulingSettingsSlice";
+import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 
 const TRANSPORT_MODES: { value: TransportMode; label: string }[] = [
   { value: "DRIVING", label: "Driving" },
@@ -34,6 +37,7 @@ const TRANSPORT_MODES: { value: TransportMode; label: string }[] = [
 const MAX_LOCATIONS = 10;
 
 export default function LocationsPage() {
+  const dispatch = useDispatch();
   const [locations, setLocations] = useState<Location[]>([]);
   const [travelTimes, setTravelTimes] = useState<TravelTime[]>([]);
   const [transportMode, setTransportMode] = useState<TransportMode>("DRIVING");
@@ -63,6 +67,15 @@ export default function LocationsPage() {
 
       setLocations(locs);
       setTransportMode(defaultMode);
+
+      // Sync locations to Redux so LocationSelector components see the updated list
+      const serializedLocations: SerializedLocation[] = locs.map((loc) => ({
+        id: loc.id,
+        name: loc.name,
+        address: loc.address || "",
+        placeId: loc.placeId,
+      }));
+      dispatch(setLocationsInRedux(serializedLocations));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load data");
     } finally {
@@ -91,7 +104,20 @@ export default function LocationsPage() {
         placeId,
         sessionToken,
       });
-      setLocations((prev) => [...prev, newLocation]);
+      const updatedLocations = [...locations, newLocation];
+      setLocations(updatedLocations);
+
+      // Sync to Redux so LocationSelector components immediately see the new location
+      const serializedLocations: SerializedLocation[] = updatedLocations.map(
+        (loc) => ({
+          id: loc.id,
+          name: loc.name,
+          address: loc.address || "",
+          placeId: loc.placeId,
+        })
+      );
+      dispatch(setLocationsInRedux(serializedLocations));
+
       setSuccessMessage(`"${name}" added successfully!`);
       setTimeout(() => setSuccessMessage(null), 3000);
       setAddDialogOpen(false);
@@ -107,9 +133,21 @@ export default function LocationsPage() {
         locationId,
         name
       );
-      setLocations((prev) =>
-        prev.map((loc) => (loc.id === locationId ? updated : loc))
+      const updatedLocations = locations.map((loc) =>
+        loc.id === locationId ? updated : loc
       );
+      setLocations(updatedLocations);
+
+      // Sync to Redux so LocationSelector components see the updated name
+      const serializedLocations: SerializedLocation[] = updatedLocations.map(
+        (loc) => ({
+          id: loc.id,
+          name: loc.name,
+          address: loc.address || "",
+          placeId: loc.placeId,
+        })
+      );
+      dispatch(setLocationsInRedux(serializedLocations));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to update location"
@@ -121,7 +159,20 @@ export default function LocationsPage() {
     try {
       setError(null);
       await locationActions.deleteLocation(locationId);
-      setLocations((prev) => prev.filter((loc) => loc.id !== locationId));
+      const updatedLocations = locations.filter((loc) => loc.id !== locationId);
+      setLocations(updatedLocations);
+
+      // Sync to Redux so LocationSelector components see the deletion
+      const serializedLocations: SerializedLocation[] = updatedLocations.map(
+        (loc) => ({
+          id: loc.id,
+          name: loc.name,
+          address: loc.address || "",
+          placeId: loc.placeId,
+        })
+      );
+      dispatch(setLocationsInRedux(serializedLocations));
+
       // Also remove related travel times from state
       setTravelTimes((prev) =>
         prev.filter(
