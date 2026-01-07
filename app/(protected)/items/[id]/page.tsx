@@ -250,8 +250,10 @@ export default function ItemDetailPage() {
       if (!item) return;
       await categoryActions.assignCategoryToPlanner(item.id, categoryId);
       handleUpdateField("categoryId", categoryId);
+      // Regenerate calendar since category constraints affect scheduling
+      updateAll();
     },
-    [item, handleUpdateField]
+    [item, handleUpdateField, updateAll]
   );
 
   const handleLocationChange = useCallback(

@@ -60,7 +60,11 @@ export default function Calendar({
       ? transformEventsForFullCalendar(calendar)
       : [];
 
-    return newCal;
+    // Filter out events that have a categoryWrapperId - they'll be rendered inside the wrapper
+    return newCal.filter((event) => {
+      const extendedProps = event.extendedProps as any;
+      return !extendedProps?.categoryWrapperId;
+    });
   }, [calendar]);
 
   return (
@@ -114,6 +118,8 @@ export default function Calendar({
             const isStrict =
               (event.extendedProps as { isStrict?: boolean })?.isStrict ||
               false;
+            const wrapperId =
+              (event.extendedProps as { wrapperId?: string })?.wrapperId || "";
 
             return (
               <CategoryWrapperEvent
@@ -123,9 +129,10 @@ export default function Calendar({
                 isStrict={isStrict}
                 start={event.start || new Date()}
                 end={event.end || new Date()}
+                wrapperId={wrapperId}
                 onHover={onCategoryHover}
               >
-                {/* Children items will be rendered by FullCalendar */}
+                {/* Children items will be rendered inside the wrapper */}
               </CategoryWrapperEvent>
             );
           }

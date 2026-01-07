@@ -22,10 +22,25 @@ export async function syncCalendarData(
       ...handleTemplateChanges(db, userId, databaseChanges, updatedAt),
     ];
 
+    console.log("📊 Sync operations:", {
+      totalOps: operations.length,
+      plannerOps:
+        databaseChanges.planner.create.length +
+        databaseChanges.planner.update.length +
+        databaseChanges.planner.destroy.length,
+      calendarOps:
+        databaseChanges.calendar.create.length +
+        databaseChanges.calendar.update.length +
+        databaseChanges.calendar.destroy.length,
+    });
+
     await db.$transaction(operations);
     return { success: true };
   } catch (error) {
-    console.error("Failed to sync planner and calendar data:", error);
-    return { success: false };
+    console.error("❌ Failed to sync planner and calendar data:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
   }
 }

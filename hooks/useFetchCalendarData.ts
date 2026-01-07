@@ -47,11 +47,38 @@ export function useFetchCalendarData(
 
         setData(newData);
 
+        // Serialize categories to avoid non-serializable Date objects in Redux
+        const serializedCategories = categories.map((cat) => ({
+          ...cat,
+          createdAt:
+            cat.createdAt instanceof Date
+              ? cat.createdAt.toISOString()
+              : cat.createdAt,
+          updatedAt:
+            cat.updatedAt instanceof Date
+              ? cat.updatedAt.toISOString()
+              : cat.updatedAt,
+          // Also serialize location dates if present
+          location: cat.location
+            ? {
+                ...cat.location,
+                createdAt:
+                  cat.location.createdAt instanceof Date
+                    ? cat.location.createdAt.toISOString()
+                    : cat.location.createdAt,
+                updatedAt:
+                  cat.location.updatedAt instanceof Date
+                    ? cat.location.updatedAt.toISOString()
+                    : cat.location.updatedAt,
+              }
+            : null,
+        }));
+
         const calendarData = {
           planner: newData.planner,
           calendar: newData.calendar,
           template: newData.template,
-          categories: newData.categories,
+          categories: serializedCategories,
         };
 
         dispatch(calendarSlice.actions.updateCalendarArrayData(calendarData));

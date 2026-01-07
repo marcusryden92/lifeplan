@@ -91,7 +91,12 @@ export class Scheduler {
     const categoryConstraints = this.context.categoryConstraints;
     const validSlots = categoryConstraints
       ? fittingSlots.filter((slot) =>
-          canScheduleAtTime(slot.start, task.categoryId, categoryConstraints)
+          canScheduleAtTime(
+            slot.start,
+            task.categoryId,
+            categoryConstraints,
+            task.duration
+          )
         )
       : fittingSlots;
 
@@ -265,6 +270,32 @@ export class Scheduler {
 
     const now = new Date();
 
+    // Check if this task is within a category time slot and get the wrapper ID
+    let categoryWrapperId: string | null = null;
+    if (task.categoryId && this.context.categoryConstraints) {
+      const constraint = this.context.categoryConstraints.get(task.categoryId);
+      if (constraint && constraint.timeSlots.length > 0) {
+        // Task is in a category with time constraints
+        // Generate wrapper ID based on category, day, and time slot
+        const dayOfWeek = taskStartDate.getDay();
+        const timeSlots = constraint.timeSlots;
+
+        for (const slot of timeSlots) {
+          if (slot.days.includes(dayOfWeek)) {
+            const startTime = `${String(taskStartDate.getHours()).padStart(2, "0")}:${String(
+              taskStartDate.getMinutes()
+            ).padStart(2, "0")}`;
+
+            if (startTime >= slot.startTime && startTime < slot.endTime) {
+              // This task falls within this category slot
+              categoryWrapperId = `${constraint.id}-${dayOfWeek}-${slot.startTime}-${slot.endTime}`;
+              break;
+            }
+          }
+        }
+      }
+    }
+
     // Create the main task event (travel events are created at the end from travel slots)
     const event: SimpleEvent = {
       userId: this.context.userId,
@@ -276,6 +307,7 @@ export class Scheduler {
         id: uuidv4(),
         eventId: task.id,
         itemType: task.itemType,
+        categoryWrapperId,
         completedEndTime: null,
         completedStartTime: null,
         parentId: task.parentId || null,

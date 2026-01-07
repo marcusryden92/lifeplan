@@ -35,6 +35,44 @@ export function isTimeInCategorySlots(
 }
 
 /**
+ * Check if a time range completely fits within any of the category's time slots
+ */
+export function doesTimeRangeFitInCategorySlots(
+  startDate: Date,
+  endDate: Date,
+  timeSlots: CategoryTimeSlot[]
+): boolean {
+  if (!timeSlots || timeSlots.length === 0) return true;
+
+  const dayOfWeek = startDate.getDay();
+  const startTime = `${String(startDate.getHours()).padStart(2, "0")}:${String(
+    startDate.getMinutes()
+  ).padStart(2, "0")}`;
+  const endTime = `${String(endDate.getHours()).padStart(2, "0")}:${String(
+    endDate.getMinutes()
+  ).padStart(2, "0")}`;
+
+  // Check if both start and end are on the same day
+  if (startDate.getDay() !== endDate.getDay()) {
+    // Task spans multiple days - need to check if it fits within slots on both days
+    // For now, we'll be conservative and say it doesn't fit
+    return false;
+  }
+
+  // Find a slot on this day that contains the entire time range
+  for (const slot of timeSlots) {
+    if (!slot.days.includes(dayOfWeek)) continue;
+
+    // Check if both start and end times fit within this slot
+    if (startTime >= slot.startTime && endTime <= slot.endTime) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Check if a time range overlaps with any of the category's time slots
  */
 export function doesTimeRangeOverlapCategorySlots(
@@ -151,11 +189,16 @@ export function buildCategoryConstraintMap(
 
 /**
  * Check if an item can be scheduled at a given time based on category constraints
+ * @param startDate - When the item would start
+ * @param categoryId - The category ID of the item
+ * @param categoryConstraints - Map of category constraints
+ * @param durationMinutes - How long the item lasts (optional, if provided checks entire duration fits)
  */
 export function canScheduleAtTime(
-  date: Date,
+  startDate: Date,
   categoryId: string | null | undefined,
-  categoryConstraints: Map<string, CategoryConstraint>
+  categoryConstraints: Map<string, CategoryConstraint>,
+  durationMinutes?: number
 ): boolean {
   // If item has no category, it can be scheduled anywhere (unless there's a strict category slot)
   if (!categoryId) {
@@ -163,19 +206,37 @@ export function canScheduleAtTime(
     for (const constraint of categoryConstraints.values()) {
       const timeSlots = constraint.timeSlots;
 
-      if (constraint.isStrict && isTimeInCategorySlots(date, timeSlots)) {
-        return false; // Strict slot blocks uncategorized items
+      if (constraint.isStrict) {
+        // If duration provided, check if the entire duration overlaps with strict slot
+        if (durationMinutes) {
+          const endDate = new Date(
+            startDate.getTime() + durationMinutes * 60 * 1000
+          );
+          if (
+            doesTimeRangeOverlapCategorySlots(startDate, endDate, timeSlots)
+          ) {
+            return false; // Strict slot blocks uncategorized items
+          }
+        } else if (isTimeInCategorySlots(startDate, timeSlots)) {
+          return false; // Strict slot blocks uncategorized items
+        }
       }
     }
     return true;
   }
 
   // Get the category constraint
-
   const constraint = categoryConstraints.get(categoryId);
   if (!constraint) return true; // No constraint, can schedule anywhere
 
   // Item must be within its category's time slots
   const timeSlots = constraint.timeSlots;
-  return isTimeInCategorySlots(date, timeSlots);
+
+  // If duration provided, check if entire task fits within time slots
+  if (durationMinutes) {
+    const endDate = new Date(startDate.getTime() + durationMinutes * 60 * 1000);
+    return doesTimeRangeFitInCategorySlots(startDate, endDate, timeSlots);
+  }
+
+  return isTimeInCategorySlots(startDate, timeSlots);
 }

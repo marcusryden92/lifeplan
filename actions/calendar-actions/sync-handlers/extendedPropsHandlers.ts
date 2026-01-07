@@ -11,9 +11,11 @@ export function handleExtendedPropsChanges(
   if (databaseChanges.extendedProps.create.length) {
     operations.push(
       db.eventExtendedProps.createMany({
-        data: databaseChanges.extendedProps.create.map((props) => ({
-          ...props,
-        })),
+        data: databaseChanges.extendedProps.create.map((props) => {
+          // Strip runtime-only fields that don't exist in database schema
+          const { categoryWrapperId, wrapperId, ...dbProps } = props as any;
+          return dbProps;
+        }),
         skipDuplicates: true,
       })
     );
@@ -21,7 +23,8 @@ export function handleExtendedPropsChanges(
 
   // UPDATE
   for (const props of databaseChanges.extendedProps.update) {
-    const { id: propsId, ...rest } = props;
+    // Strip runtime-only fields that don't exist in database schema
+    const { id: propsId, categoryWrapperId, wrapperId, ...rest } = props as any;
     operations.push(
       db.eventExtendedProps.upsert({
         where: { eventId: props.eventId },

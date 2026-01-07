@@ -36,16 +36,47 @@ export async function handleServerTransaction(
   template?: EventTemplate[],
   previousTemplate?: { current: EventTemplate[] }
 ) {
-  const databaseChanges = compareData(
-    planner,
-    previousPlanner,
-    calendar,
-    previousCalendar,
-    template,
-    previousTemplate
+  // Filter out generated events (travel, template, category wrappers) BEFORE serialization
+  // These are dynamically generated and should never be persisted to database
+  const filterGeneratedEvents = (events: SimpleEvent[]) =>
+    events.filter(
+      (e) =>
+        e.extendedProps?.itemType !== "travel" &&
+        e.extendedProps?.itemType !== "template" &&
+        !e.extendedProps?.wrapperId // Category wrapper events have wrapperId
+    );
+
+  const filteredCalendar = filterGeneratedEvents(calendar);
+  const filteredPreviousCalendar = filterGeneratedEvents(
+    previousCalendar.current
   );
 
-  const response = syncCalendarData(userId, databaseChanges);
+  // Serialize inputs to remove any Date objects or non-serializable data
+  const serializedPlanner = JSON.parse(JSON.stringify(planner));
+  const serializedPreviousPlanner = {
+    current: JSON.parse(JSON.stringify(previousPlanner.current)),
+  };
+  const serializedCalendar = JSON.parse(JSON.stringify(filteredCalendar));
+  const serializedPreviousCalendar = {
+    current: JSON.parse(JSON.stringify(filteredPreviousCalendar)),
+  };
+  const serializedTemplate = template
+    ? JSON.parse(JSON.stringify(template))
+    : undefined;
+  const serializedPreviousTemplate = previousTemplate
+    ? { current: JSON.parse(JSON.stringify(previousTemplate.current)) }
+    : undefined;
+
+  const databaseChanges = compareData(
+    serializedPlanner,
+    serializedPreviousPlanner,
+    serializedCalendar,
+    serializedPreviousCalendar,
+    serializedTemplate,
+    serializedPreviousTemplate
+  );
+
+  const response = await syncCalendarData(userId, databaseChanges);
 
   return response;
 }
@@ -88,14 +119,13 @@ export function compareData(
   });
 
   // Check calendar changes
-  // Filter out travel and template events - they are generated dynamically and shouldn't be persisted
-  const prevCal: SimpleEvent[] = [...previousCalendar.current].filter(
-    (e) => e.extendedProps?.itemType !== "travel" && e.extendedProps?.itemType !== "template"
+  // Note: Generated events (travel, template, category wrappers) are already filtered out
+  // in handleServerTransaction before this function is called
+  const prevCal: SimpleEvent[] = [...previousCalendar.current];
+  const filteredCalendar = [...calendar];
+  const calendarMap = new Map(
+    filteredCalendar.map((event) => [event.id, event])
   );
-  const filteredCalendar = calendar.filter(
-    (e) => e.extendedProps?.itemType !== "travel" && e.extendedProps?.itemType !== "template"
-  );
-  const calendarMap = new Map(filteredCalendar.map((event) => [event.id, event]));
   const prevCalMap = new Map(prevCal.map((event) => [event.id, event]));
 
   // Find events to create or update

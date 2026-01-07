@@ -286,6 +286,16 @@ export class CalendarGenerator {
       );
 
       for (const period of categoryPeriods) {
+        // Format times as HH:MM to match the slot times
+        const startHours = String(period.start.getHours()).padStart(2, "0");
+        const startMinutes = String(period.start.getMinutes()).padStart(2, "0");
+        const endHours = String(period.end.getHours()).padStart(2, "0");
+        const endMinutes = String(period.end.getMinutes()).padStart(2, "0");
+        const startTimeStr = `${startHours}:${startMinutes}`;
+        const endTimeStr = `${endHours}:${endMinutes}`;
+
+        const wrapperId = `${period.categoryId}-${period.start.getDay()}-${startTimeStr}-${endTimeStr}`;
+
         categoryWrapperEvents.push({
           id: uuidv4(),
           title: `${period.categoryName} Time Slot`,
@@ -307,6 +317,9 @@ export class CalendarGenerator {
             parentId: null,
             completedStartTime: null,
             completedEndTime: null,
+            categoryId: period.categoryId,
+            isStrict: period.isStrict,
+            wrapperId: wrapperId,
           },
         });
       }
@@ -754,18 +767,28 @@ export class CalendarGenerator {
     // Detect trespassing
     const trespassingMap = detectTrespassingEvents(intervals);
 
-    // Mark events with trespassing info
+    // Mark events with trespassing info - modify the events array with new objects
+    const updatedEvents: SimpleEvent[] = [];
     for (const event of events) {
       const info = trespassingMap.get(event.id);
       if (info && event.extendedProps) {
-        // Add trespassing indicators as display-only props (not in Prisma schema)
-        // Similar to how travel events add extra props
-        (event.extendedProps as Record<string, unknown>).trespassingStart =
-          info.trespassingStart;
-        (event.extendedProps as Record<string, unknown>).trespassingEnd =
-          info.trespassingEnd;
+        // Create a new event object with updated extendedProps
+        updatedEvents.push({
+          ...event,
+          extendedProps: {
+            ...event.extendedProps,
+            trespassingStart: info.trespassingStart,
+            trespassingEnd: info.trespassingEnd,
+          },
+        });
+      } else {
+        updatedEvents.push(event);
       }
     }
+
+    // Replace events array with updated one
+    events.length = 0;
+    events.push(...updatedEvents);
   }
 
   /**
