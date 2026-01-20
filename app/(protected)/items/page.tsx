@@ -17,6 +17,7 @@ import { AddItemDialog } from "./_components/AddItemDialog";
 import * as categoryActions from "@/actions/categories";
 import { fetchLocations } from "@/actions/locations";
 import { getSubtasksById } from "@/utils/goalPageHandlers";
+import { getCategoryAndDescendants } from "@/utils/categoryUtils";
 import type { Planner, Category, Location } from "@/types/prisma";
 import type { ItemType } from "@/prisma/generated/client";
 
@@ -93,7 +94,9 @@ export default function ItemsPage() {
     if (filters.categoryId === "uncategorized") {
       result = result.filter((item) => !item.categoryId);
     } else if (filters.categoryId !== "all") {
-      result = result.filter((item) => item.categoryId === filters.categoryId);
+      // Include the selected category and all its subcategories
+      const categoryIds = getCategoryAndDescendants(filters.categoryId, categories);
+      result = result.filter((item) => item.categoryId && categoryIds.includes(item.categoryId));
     }
 
     // Status filter

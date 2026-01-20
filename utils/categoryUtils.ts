@@ -106,3 +106,31 @@ export function buildCategoryTree(categories: Category[]): CategoryNode[] {
   const roots = (byParent.get(null) || []).map(buildNode);
   return roots;
 }
+
+/**
+ * Get all descendant category IDs for a given category (including the category itself)
+ */
+export function getCategoryAndDescendants(
+  categoryId: string,
+  categories: Category[]
+): string[] {
+  const result: string[] = [categoryId];
+  const byParent = new Map<string | null, Category[]>();
+
+  for (const c of categories) {
+    const key = c.parentId ?? null;
+    if (!byParent.has(key)) byParent.set(key, []);
+    byParent.get(key)!.push(c);
+  }
+
+  const visit = (id: string) => {
+    const children = byParent.get(id) || [];
+    for (const child of children) {
+      result.push(child.id);
+      visit(child.id);
+    }
+  };
+
+  visit(categoryId);
+  return result;
+}

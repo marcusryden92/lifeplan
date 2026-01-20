@@ -56,7 +56,7 @@ export function CategoryWrapperEvent({
   }, []);
 
   const handleMouseEnter = () => {
-    onHover?.(categoryId, categoryName);
+    onHover?.(categoryName, categoryColor || null);
   };
 
   const handleMouseLeave = () => {

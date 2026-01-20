@@ -183,10 +183,10 @@ export default function ItemDetailPage() {
       prev.map((p) =>
         p.id === item.id
           ? {
-              ...p,
-              title: editTitle.trim(),
-              updatedAt: new Date().toISOString(),
-            }
+            ...p,
+            title: editTitle.trim(),
+            updatedAt: new Date().toISOString(),
+          }
           : p
       )
     );
@@ -341,120 +341,147 @@ export default function ItemDetailPage() {
             Back to Items
           </Button>
 
+          {/* Header */}
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4 flex-1">
+                  {/* Color picker as icon */}
+                  <EventColorPicker taskId={item.id} />
+
+                  <div className="flex-1">
+                    {/* Category */}
+                    {category && (
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
+                        {category.icon && <span>{category.icon}</span>}
+                        <span>{category.name}</span>
+                      </div>
+                    )}
+
+                    {/* Title */}
+                    {isEditingTitle ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          className="text-2xl font-bold h-auto py-1"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") handleSaveTitle();
+                            if (e.key === "Escape")
+                              setIsEditingTitle(false);
+                          }}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleSaveTitle}
+                        >
+                          <Check className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsEditingTitle(false)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-bold">{item.title}</h1>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditTitle(item.title);
+                            setIsEditingTitle(true);
+                          }}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Meta row */}
+                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {formatMinutesToHours(totalDuration)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-3">
+                  {item.itemType === "goal" && (
+                    <Button
+                      variant={item.isReady ? "default" : "outline"}
+                      onClick={handleToggleReady}
+                      disabled={subtasks.length === 0}
+                      className="gap-2"
+                    >
+                      <CheckCircledIcon className="w-4 h-4" />
+                      {item.isReady ? "Ready" : "Mark Ready"}
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="text-muted-foreground hover:text-red-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
           {/* Main content */}
           <div className="grid gap-6 grid-cols-1 lg:grid-cols-[1fr_2fr]">
-            {/* Left column: Header + Properties */}
+            {/* Left column: Properties */}
             <div className="flex flex-col gap-6">
-              {/* Header */}
+              {/* Properties */}
               <Card>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
-                      {/* Type icon */}
-                      <div className={`p-3 rounded-lg ${config.color}`}>
-                        <Icon className="w-6 h-6 text-white" />
-                      </div>
-
-                      <div className="flex-1">
-                        {/* Category */}
-                        {category && (
-                          <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
-                            {category.icon && <span>{category.icon}</span>}
-                            <span>{category.name}</span>
-                          </div>
-                        )}
-
-                        {/* Title */}
-                        {isEditingTitle ? (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              value={editTitle}
-                              onChange={(e) => setEditTitle(e.target.value)}
-                              className="text-2xl font-bold h-auto py-1"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") handleSaveTitle();
-                                if (e.key === "Escape")
-                                  setIsEditingTitle(false);
-                              }}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleSaveTitle}
-                            >
-                              <Check className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setIsEditingTitle(false)}
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <h1 className="text-2xl font-bold">{item.title}</h1>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setEditTitle(item.title);
-                                setIsEditingTitle(true);
-                              }}
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        )}
-
-                        {/* Meta row */}
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            {formatMinutesToHours(totalDuration)}
-                          </span>
-                          {item.deadline && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              {format(new Date(item.deadline), "MMM d, yyyy")}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-2">
-                      {item.itemType === "goal" && (
-                        <Button
-                          variant={item.isReady ? "default" : "outline"}
-                          onClick={handleToggleReady}
-                          disabled={subtasks.length === 0}
-                          className="gap-2"
-                        >
-                          <CheckCircledIcon className="w-4 h-4" />
-                          {item.isReady ? "Ready" : "Mark Ready"}
-                        </Button>
-                      )}
+                <CardContent className="space-y-4 pt-6">
+                  {/* Item Type Selector */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Type</label>
+                    <div className="flex gap-2">
                       <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => setShowDeleteConfirm(true)}
+                        type="button"
+                        variant={item.itemType === "task" ? "default" : "outline"}
+                        onClick={() => handleUpdateField("itemType", "task")}
+                        className="flex-1"
+                        size="sm"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        Task
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={item.itemType === "plan" ? "default" : "outline"}
+                        onClick={() => handleUpdateField("itemType", "plan")}
+                        className="flex-1"
+                        size="sm"
+                      >
+                        Plan
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={item.itemType === "goal" ? "default" : "outline"}
+                        onClick={() => handleUpdateField("itemType", "goal")}
+                        className="flex-1"
+                        size="sm"
+                      >
+                        Goal
                       </Button>
                     </div>
                   </div>
-                </CardHeader>
-              </Card>
-              {/* Properties */}
-              <Card>
-                <CardContent>
                   {/* Category */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
                       Category
                     </label>
                     <CategorySelect
@@ -469,10 +496,57 @@ export default function ItemDetailPage() {
                     />
                   </div>
 
+                  {/* Priority */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Priority
+                    </label>
+                    <div className="flex gap-1">
+                      {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => {
+                        const getPriorityColor = (priority: number) => {
+                          if (priority === 0) return "bg-gray-300 hover:bg-gray-300 text-gray-700 hover:text-gray-700";
+                          if (priority === 1) return "bg-green-400 hover:bg-green-400 text-white hover:text-white";
+                          if (priority === 2) return "bg-green-500 hover:bg-green-500 text-white hover:text-white";
+                          if (priority === 3) return "bg-lime-500 hover:bg-lime-500 text-white hover:text-white";
+                          if (priority === 4) return "bg-yellow-400 hover:bg-yellow-400 text-white hover:text-white";
+                          if (priority === 5) return "bg-yellow-500 hover:bg-yellow-500 text-white hover:text-white";
+                          if (priority === 6) return "bg-yellow-600 hover:bg-yellow-600 text-white hover:text-white";
+                          if (priority === 7) return "bg-orange-500 hover:bg-orange-500 text-white hover:text-white";
+                          if (priority === 8) return "bg-orange-600 hover:bg-orange-600 text-white hover:text-white";
+                          if (priority === 9) return "bg-red-500 hover:bg-red-500 text-white hover:text-white";
+                          return "bg-red-600 hover:bg-red-600 text-white hover:text-white";
+                        };
+                        return (
+                          <Button
+                            key={p}
+                            type="button"
+                            size="sm"
+                            variant={item.priority === p ? "default" : "outline"}
+                            onClick={() => handleUpdateField("priority", p)}
+                            className={`flex-1 hover:opacity-90 transition-opacity ${item.priority === p ? getPriorityColor(p) : ""}`}
+                          >
+                            {p}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Location */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      Location
+                    </label>
+                    <LocationSelector
+                      value={item.locationId ?? null}
+                      onChange={handleLocationChange}
+                    />
+                  </div>
+
                   {/* Duration (for non-goals) */}
                   {item.itemType !== "goal" && (
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
                         Duration (minutes)
                       </label>
                       <Input
@@ -486,69 +560,58 @@ export default function ItemDetailPage() {
                     </div>
                   )}
 
-                  {/* Deadline */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      {item.itemType === "plan" ? "Scheduled Time" : "Deadline"}
-                    </label>
-                    <DateTimePickerWrapper
-                      item={item}
-                      onDateChange={handleDateChange}
-                    />
-                  </div>
+                  {/* Deadline / Scheduled Time */}
+                  {item.itemType === "plan" ? (
+                    <div className="flex flex-col space-y-2">
+                      <label className="text-sm font-medium">
+                        Scheduled Time
+                      </label>
+                      <DateTimePickerWrapper
+                        item={item}
+                        onDateChange={handleDateChange}
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col space-y-2">
+                      <label className="text-sm font-medium">
+                        Deadline (optional)
+                      </label>
+                      <DateTimePickerWrapper
+                        item={item}
+                        onDateChange={handleDateChange}
+                      />
+                    </div>
+                  )}
 
-                  {/* Location */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Location
-                    </label>
-                    <LocationSelector
-                      value={item.locationId ?? null}
-                      onChange={handleLocationChange}
-                    />
-                  </div>
 
-                  {/* Priority */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Priority
-                    </label>
-                    <PrioritySelector
-                      updatePlannerArray={updatePlannerArray}
-                      taskId={item.id}
-                      initialPriority={item.priority}
-                    />
-                  </div>
-
-                  {/* Color */}
-                  <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      Color
-                    </label>
-                    <EventColorPicker taskId={item.id} />
-                  </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Right column: Subtasks (shown for goals, empty for others) */}
+            {/* Right column: Subtasks (always shown, grayed out for non-goals) */}
             <div>
-              {item.itemType === "goal" && (
-                <Card className="h-fit">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-lg">Subtasks</CardTitle>
-                        <CardDescription>
-                          Break down this goal into actionable tasks
-                        </CardDescription>
-                      </div>
+              <Card
+                className={`h-fit ${item.itemType !== "goal" ? "opacity-40 pointer-events-none" : ""}`}
+              >
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">Subtasks</CardTitle>
+                      <CardDescription>
+                        {item.itemType === "goal"
+                          ? "Break down this goal into actionable tasks"
+                          : "Convert to a goal to add subtasks"}
+                      </CardDescription>
+                    </div>
+                    {item.itemType === "goal" && (
                       <Badge variant="outline">
                         {subtasks.length} subtask
                         {subtasks.length !== 1 ? "s" : ""}
                       </Badge>
-                    </div>
-                  </CardHeader>
+                    )}
+                  </div>
+                </CardHeader>
+                {item.itemType === "goal" && (
                   <CardContent>
                     {/* Subtask list using existing components */}
                     <div className="mb-4">
@@ -560,8 +623,8 @@ export default function ItemDetailPage() {
                     {/* Add subtask */}
                     <AddSubtask task={item} parentId={item.id} isMainParent />
                   </CardContent>
-                </Card>
-              )}
+                )}
+              </Card>
             </div>
           </div>
         </div>

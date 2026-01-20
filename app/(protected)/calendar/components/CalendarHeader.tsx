@@ -66,7 +66,7 @@ const CalendarHeader = ({
         {hoveredCategoryName && (
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <div
-              className="h-3 w-3 rounded-full"
+              className="h-3 w-3 rounded-full flex-shrink-0"
               style={{ backgroundColor: hoveredCategoryColor || "#3b82f6" }}
             />
             <span>{hoveredCategoryName}</span>

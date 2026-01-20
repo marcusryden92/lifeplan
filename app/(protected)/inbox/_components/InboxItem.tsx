@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
   MoreHorizontal,
@@ -13,6 +14,7 @@ import {
   Target,
   CheckSquare,
   CalendarClock,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -48,6 +50,7 @@ export function InboxItem({
   onDelete,
   onClassify,
 }: InboxItemProps) {
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
 
@@ -149,34 +152,44 @@ export function InboxItem({
 
       {/* Actions */}
       {!isEditing && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <MoreHorizontal className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onClassify(item)}>
-              <Target className="w-4 h-4 mr-2" />
-              Classify
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setIsEditing(true)}>
-              <Edit2 className="w-4 h-4 mr-2" />
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => onDelete(item.id)}
-              className="text-red-600"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => onClassify(item)}>
+                <Target className="w-4 h-4 mr-2" />
+                Classify
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setIsEditing(true)}>
+                <Edit2 className="w-4 h-4 mr-2" />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onDelete(item.id)}
+                className="text-red-600"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push(`/items/${item.id}`)}
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
       )}
     </div>
   );
