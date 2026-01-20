@@ -40,13 +40,21 @@ import { dateTimeService } from "../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../constants";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 
-import { TravelTimeEntry } from "../models/SchedulingModels";
+import {
+  TravelTimeEntry,
+  CategoryConstraint,
+} from "../models/SchedulingModels";
 
 export class TimeSlotManager {
   private availableSlots: Map<string, TimeSlot[]> = new Map();
   private occupiedSlots: Map<string, TimeSlot[]> = new Map();
   private bufferTimeMinutes: number = 0;
   private travelTimeMatrix: Map<string, TravelTimeEntry> | null = null;
+  // Category periods by day for wrapper-aware travel context
+  private categoryPeriodsByDay: Map<
+    string,
+    Array<{ start: Date; end: Date; locationId: string | null }>
+  > = new Map();
 
   constructor(
     private weekStartDay: WeekDayIntegers,
@@ -59,10 +67,231 @@ export class TimeSlotManager {
   }
 
   /**
+   * Check if we can place a standalone travel-before that ends at a given time.
+   * Non-mutating: scans available slots on the day to see if [travelStart, travelEnd] fits.
+   */
+  canPlaceStandaloneTravelBefore(
+    travelEnd: Date,
+    travelMinutes: number
+  ): boolean {
+    const dayKey = this.getDayKey(travelEnd);
+    const slots = this.availableSlots.get(dayKey) || [];
+
+    const travelEndMs = travelEnd.getTime();
+    const travelStartMs = travelEndMs - travelMinutes * 60000;
+
+    // Travel should end buffer before the task start, so ensure positive duration
+    if (travelMinutes <= 0 || travelStartMs >= travelEndMs) return false;
+
+    // Find an available slot that contains the full travel window
+    return (
+      slots.findIndex(
+        (slot) =>
+          slot.isAvailable &&
+          slot.start.getTime() <= travelStartMs &&
+          slot.end.getTime() >= travelEndMs
+      ) !== -1
+    );
+  }
+
+  /**
+   * Reserve a standalone travel-before segment that ends at a given time.
+   * Splits the containing available slot and records the travel as occupied.
+   */
+  reserveStandaloneTravelBefore(
+    travelEnd: Date,
+    travelMinutes: number,
+    fromLocationId: string,
+    toLocationId: string,
+    eventId: string
+  ): { success: boolean } {
+    const dayKey = this.getDayKey(travelEnd);
+    const slots = this.availableSlots.get(dayKey);
+    if (!slots) return { success: false };
+
+    const travelEndMs = travelEnd.getTime();
+    const travelStart = new Date(travelEndMs - travelMinutes * 60000);
+    const travelStartMs = travelStart.getTime();
+
+    const slotIndex = slots.findIndex(
+      (slot) =>
+        slot.isAvailable &&
+        slot.start.getTime() <= travelStartMs &&
+        slot.end.getTime() >= travelEndMs
+    );
+    if (slotIndex === -1) return { success: false };
+
+    const slot = slots[slotIndex];
+    const newSlots: TimeSlot[] = [];
+
+    // Available before travel
+    if (travelStartMs > slot.start.getTime()) {
+      newSlots.push({
+        start: slot.start,
+        end: travelStart,
+        durationMinutes: Math.floor(
+          (travelStartMs - slot.start.getTime()) / 60000
+        ),
+        isAvailable: true,
+        prevLocationId: slot.prevLocationId,
+        nextLocationId: fromLocationId,
+      });
+    }
+
+    // Occupied travel segment
+    const travelSlot = TimeSlotUtils.createTravelSlot(
+      travelStart,
+      travelEnd,
+      fromLocationId,
+      toLocationId,
+      `travel-to-${eventId}`
+    );
+    newSlots.push(travelSlot);
+
+    // Available after travel
+    if (slot.end.getTime() > travelEndMs) {
+      newSlots.push({
+        start: travelEnd,
+        end: slot.end,
+        durationMinutes: Math.floor((slot.end.getTime() - travelEndMs) / 60000),
+        isAvailable: true,
+        prevLocationId: toLocationId,
+        nextLocationId: slot.nextLocationId,
+      });
+    }
+
+    // Replace slot and record occupied travel
+    const availableNewSlots = newSlots.filter((s) => s.isAvailable);
+    slots.splice(slotIndex, 1, ...availableNewSlots);
+
+    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+    occupiedSlots.push(...newSlots.filter((s) => !s.isAvailable));
+    this.occupiedSlots.set(dayKey, occupiedSlots);
+
+    return { success: true };
+  }
+
+  /**
+   * Reserve a standalone travel-after segment that starts at a given time.
+   * Splits the containing available slot and records the travel as occupied.
+   */
+  reserveStandaloneTravelAfter(
+    travelStart: Date,
+    travelMinutes: number,
+    fromLocationId: string,
+    toLocationId: string,
+    eventId: string
+  ): { success: boolean } {
+    const dayKey = this.getDayKey(travelStart);
+    const slots = this.availableSlots.get(dayKey);
+    if (!slots) return { success: false };
+
+    const travelStartMs = travelStart.getTime();
+    const travelEnd = new Date(travelStartMs + travelMinutes * 60000);
+    const travelEndMs = travelEnd.getTime();
+
+    const slotIndex = slots.findIndex(
+      (slot) =>
+        slot.isAvailable &&
+        slot.start.getTime() <= travelStartMs &&
+        slot.end.getTime() >= travelEndMs
+    );
+    if (slotIndex === -1) return { success: false };
+
+    const slot = slots[slotIndex];
+    const newSlots: TimeSlot[] = [];
+
+    // Available before travel
+    if (travelStartMs > slot.start.getTime()) {
+      newSlots.push({
+        start: slot.start,
+        end: travelStart,
+        durationMinutes: Math.floor(
+          (travelStartMs - slot.start.getTime()) / 60000
+        ),
+        isAvailable: true,
+        prevLocationId: slot.prevLocationId,
+        nextLocationId: fromLocationId,
+      });
+    }
+
+    // Occupied travel segment
+    const travelSlot = TimeSlotUtils.createTravelSlot(
+      travelStart,
+      travelEnd,
+      fromLocationId,
+      toLocationId,
+      `travel-from-${eventId}`
+    );
+    newSlots.push(travelSlot);
+
+    // Available after travel
+    if (slot.end.getTime() > travelEndMs) {
+      newSlots.push({
+        start: travelEnd,
+        end: slot.end,
+        durationMinutes: Math.floor((slot.end.getTime() - travelEndMs) / 60000),
+        isAvailable: true,
+        prevLocationId: toLocationId,
+        nextLocationId: slot.nextLocationId,
+      });
+    }
+
+    // Replace slot and record occupied travel
+    const availableNewSlots = newSlots.filter((s) => s.isAvailable);
+    slots.splice(slotIndex, 1, ...availableNewSlots);
+
+    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+    occupiedSlots.push(...newSlots.filter((s) => !s.isAvailable));
+    this.occupiedSlots.set(dayKey, occupiedSlots);
+
+    return { success: true };
+  }
+
+  /**
    * Set the travel time matrix for location-aware scheduling
    */
   setTravelTimeMatrix(matrix: Map<string, TravelTimeEntry> | null): void {
     this.travelTimeMatrix = matrix;
+  }
+
+  /**
+   * Provide category periods (wrappers) with locations for travel context.
+   * Call this from CalendarGenerator after computing category windows.
+   */
+  setCategoryPeriods(
+    periods: Array<{ start: Date; end: Date; locationId: string | null }>
+  ): void {
+    this.categoryPeriodsByDay.clear();
+    for (const p of periods) {
+      const key = this.getDayKey(p.start);
+      const list = this.categoryPeriodsByDay.get(key) || [];
+      list.push({
+        start: p.start,
+        end: p.end,
+        locationId: p.locationId ?? null,
+      });
+      this.categoryPeriodsByDay.set(key, list);
+    }
+    // Sort periods per day by start time for faster lookup
+    for (const [k, list] of this.categoryPeriodsByDay.entries()) {
+      list.sort((a, b) => a.start.getTime() - b.start.getTime());
+      this.categoryPeriodsByDay.set(k, list);
+    }
+  }
+
+  /**
+   * Lookup category location at a given time if the time falls inside a wrapper.
+   */
+  private getCategoryLocationAt(date: Date): string | null {
+    const key = this.getDayKey(date);
+    const list = this.categoryPeriodsByDay.get(key) || [];
+    for (const p of list) {
+      if (date >= p.start && date <= p.end) {
+        return p.locationId ?? null;
+      }
+    }
+    return null;
   }
 
   /**
@@ -209,9 +438,24 @@ export class TimeSlotManager {
     const transitions = findLocationTransitions(intervals);
 
     for (const transition of transitions) {
+      // Determine effective from-location for travel, preferring category-wrapper location
+      const catLocAtTo = this.getCategoryLocationAt(transition.toEventStart);
+      let effectiveFromLocationId = transition.fromLocationId;
+      if (catLocAtTo) {
+        effectiveFromLocationId = catLocAtTo;
+      } else {
+        // Fallback: prefer slot-based prev location when available
+        const slotAtGapEnd = slots.find(
+          (s) => s.end.getTime() === transition.toEventStart.getTime()
+        );
+        effectiveFromLocationId =
+          slotAtGapEnd?.prevLocationId ?? transition.fromLocationId;
+      }
+      const effectiveToLocationId = transition.toLocationId;
+
       const requiredTravelMinutes = this.getTravelTime(
-        transition.fromLocationId,
-        transition.toLocationId,
+        effectiveFromLocationId,
+        effectiveToLocationId,
         transition.toEventStart
       );
 
@@ -231,7 +475,9 @@ export class TimeSlotManager {
           transition,
           requiredTravelMinutes,
           slots,
-          occupiedSlots
+          occupiedSlots,
+          effectiveFromLocationId,
+          effectiveToLocationId
         );
       } else {
         // Normal case - enough space for full travel
@@ -239,7 +485,9 @@ export class TimeSlotManager {
           transition,
           requiredTravelMinutes,
           slots,
-          occupiedSlots
+          occupiedSlots,
+          effectiveFromLocationId,
+          effectiveToLocationId
         );
       }
     }
@@ -254,7 +502,9 @@ export class TimeSlotManager {
     transition: ReturnType<typeof findLocationTransitions>[number],
     requiredTravelMinutes: number,
     slots: TimeSlot[],
-    occupiedSlots: TimeSlot[]
+    occupiedSlots: TimeSlot[],
+    effectiveFromLocationId: string | null | undefined,
+    effectiveToLocationId: string | null | undefined
   ): void {
     const travelEnd = new Date(transition.toEventStart.getTime());
     const travelStart = new Date(transition.fromEventEnd.getTime());
@@ -262,8 +512,8 @@ export class TimeSlotManager {
     const travelSlot = TimeSlotUtils.createTravelSlot(
       travelStart,
       travelEnd,
-      transition.fromLocationId!,
-      transition.toLocationId!,
+      effectiveFromLocationId!,
+      effectiveToLocationId!,
       `travel-insufficient-${transition.toEventStart.getTime()}`,
       {
         insufficientTravel: true,
@@ -276,7 +526,7 @@ export class TimeSlotManager {
     const correspondingSlot = slots.find(
       (s) =>
         s.end.getTime() === transition.toEventStart.getTime() &&
-        s.prevLocationId === transition.fromLocationId
+        s.prevLocationId === effectiveFromLocationId
     );
     if (correspondingSlot) {
       correspondingSlot.end = travelStart;
@@ -295,7 +545,9 @@ export class TimeSlotManager {
     transition: ReturnType<typeof findLocationTransitions>[number],
     requiredTravelMinutes: number,
     slots: TimeSlot[],
-    occupiedSlots: TimeSlot[]
+    occupiedSlots: TimeSlot[],
+    effectiveFromLocationId: string | null | undefined,
+    effectiveToLocationId: string | null | undefined
   ): void {
     const bufferMs = this.bufferTimeMinutes * 60000;
     const travelMs = requiredTravelMinutes * 60000;
@@ -306,7 +558,7 @@ export class TimeSlotManager {
     const correspondingSlot = slots.find(
       (s) =>
         s.end.getTime() === transition.toEventStart.getTime() &&
-        s.prevLocationId === transition.fromLocationId
+        s.prevLocationId === effectiveFromLocationId
     );
 
     if (
@@ -316,8 +568,8 @@ export class TimeSlotManager {
       const travelSlot = TimeSlotUtils.createTravelSlot(
         travelStart,
         travelEnd,
-        transition.fromLocationId!,
-        transition.toLocationId!,
+        effectiveFromLocationId!,
+        effectiveToLocationId!,
         `travel-gap-${correspondingSlot.start.getTime()}`
       );
       occupiedSlots.push(travelSlot);
@@ -373,7 +625,8 @@ export class TimeSlotManager {
   findAllFittingSlots(
     durationMinutes: number,
     afterDate: Date = this.currentDate,
-    maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH
+    maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
+    categoryConstraint?: CategoryConstraint
   ): TimeSlot[] {
     const fittingSlots: TimeSlot[] = [];
     const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
@@ -388,27 +641,80 @@ export class TimeSlotManager {
       const slots = this.availableSlots.get(dayKey);
 
       if (slots) {
-        for (const slot of slots) {
-          if (slot.end <= afterDate) continue;
+        // If a category constraint is provided, intersect free slots with that day's category windows
+        if (categoryConstraint && categoryConstraint.timeSlots?.length) {
+          const dayOfWeek = currentDate.getDay();
+          // Build category window periods for this day
+          const categoryPeriods: Array<{ start: Date; end: Date }> = [];
+          for (const catSlot of categoryConstraint.timeSlots) {
+            if (!catSlot.days.includes(dayOfWeek)) continue;
+            const [startHour, startMin] = catSlot.startTime
+              .split(":")
+              .map(Number);
+            const [endHour, endMin] = catSlot.endTime.split(":").map(Number);
+            const periodStart = new Date(currentDate);
+            periodStart.setHours(startHour, startMin, 0, 0);
+            const periodEnd = new Date(currentDate);
+            periodEnd.setHours(endHour, endMin, 0, 0);
+            categoryPeriods.push({ start: periodStart, end: periodEnd });
+          }
 
-          const effectiveStart =
-            slot.start < afterDate ? afterDate : slot.start;
-          const effectiveMinutes = dateTimeService.getMinutesDifference(
-            effectiveStart,
-            slot.end
-          );
+          for (const slot of slots) {
+            if (slot.end <= afterDate) continue;
 
-          // Only check if slot can fit base requirement (duration + buffer)
-          // Travel time capacity is checked later after scoring
-          if (effectiveMinutes >= baseRequiredMinutes) {
-            fittingSlots.push({
-              ...slot,
-              start: effectiveStart,
-              durationMinutes: effectiveMinutes,
-              // Preserve location info for scoring and capacity check
-              prevLocationId: slot.prevLocationId,
-              nextLocationId: slot.nextLocationId,
-            });
+            for (const period of categoryPeriods) {
+              // Compute intersection of available slot and category period
+              const intersectStart =
+                slot.start > period.start ? slot.start : period.start;
+              const intersectEnd =
+                slot.end < period.end ? slot.end : period.end;
+              if (intersectEnd <= intersectStart) continue;
+
+              const effectiveStart =
+                intersectStart < afterDate ? afterDate : intersectStart;
+              if (intersectEnd <= effectiveStart) continue;
+
+              const effectiveMinutes = dateTimeService.getMinutesDifference(
+                effectiveStart,
+                intersectEnd
+              );
+
+              if (effectiveMinutes >= baseRequiredMinutes) {
+                // Inside a category window: prefer the category's location context for travel
+                const categoryLoc = categoryConstraint?.locationId ?? null;
+                fittingSlots.push({
+                  ...slot,
+                  start: effectiveStart,
+                  end: intersectEnd,
+                  durationMinutes: effectiveMinutes,
+                  prevLocationId: categoryLoc ?? slot.prevLocationId,
+                  nextLocationId: categoryLoc ?? slot.nextLocationId,
+                });
+              }
+            }
+          }
+        } else {
+          // Original behavior: consider all free slots
+          for (const slot of slots) {
+            if (slot.end <= afterDate) continue;
+
+            const effectiveStart =
+              slot.start < afterDate ? afterDate : slot.start;
+            const effectiveMinutes = dateTimeService.getMinutesDifference(
+              effectiveStart,
+              slot.end
+            );
+
+            // Only check if slot can fit base requirement (duration + buffer)
+            if (effectiveMinutes >= baseRequiredMinutes) {
+              fittingSlots.push({
+                ...slot,
+                start: effectiveStart,
+                durationMinutes: effectiveMinutes,
+                prevLocationId: slot.prevLocationId,
+                nextLocationId: slot.nextLocationId,
+              });
+            }
           }
         }
       }

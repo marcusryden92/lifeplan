@@ -65,13 +65,28 @@ export class Scheduler {
       };
     }
 
-    // Get task's location for travel-aware scheduling
-    const taskLocationId = task.locationId ?? null;
+    // Get task's effective location for travel-aware scheduling
+    // Prefer explicit task location; else inherit from category via context map
+    const taskLocationId =
+      (task.locationId ?? null) !== null
+        ? task.locationId
+        : (this.context.plannerLocationMap?.get(task.id) ?? null);
+
+    // If task has a category and constraints are available, pass them to slot search
+    const constraintForTask =
+      task.categoryId && this.context.categoryConstraints
+        ? this.context.categoryConstraints.get(task.categoryId) || undefined
+        : undefined;
 
     // Step 1: Find all slots that can fit the base requirement (duration + buffer)
+    // If task has a category and constraints are available, pass them to slot search
+    // constraintForTask computed above (also used for location inheritance)
+
     const fittingSlots = this.slotManager.findAllFittingSlots(
       task.duration,
-      afterTime || this.context.currentDate
+      afterTime || this.context.currentDate,
+      undefined,
+      constraintForTask
     );
 
     if (fittingSlots.length === 0) {
@@ -89,6 +104,7 @@ export class Scheduler {
 
     // Step 1.5: Filter slots by category time constraints
     const categoryConstraints = this.context.categoryConstraints;
+
     const validSlots = categoryConstraints
       ? fittingSlots.filter((slot) =>
           canScheduleAtTime(
@@ -99,6 +115,13 @@ export class Scheduler {
           )
         )
       : fittingSlots;
+
+    // Debug category filtering
+    if (task.categoryId) {
+      console.log(
+        `Task ${task.title} (category: ${task.categoryId}): ${fittingSlots.length} slots → ${validSlots.length} valid`
+      );
+    }
 
     if (validSlots.length === 0) {
       this.metrics.tasksFailed++;
@@ -160,16 +183,9 @@ export class Scheduler {
       // Note: If taskLocationId is null, prevLocationId passes through unchanged
       // (null tasks are "transparent" for travel purposes)
 
-      // Calculate total required time:
-      // Layout: [travelBefore] [buffer] [task] [buffer] [travelAfter]
-      // Buffers separate items, not surround them
-      // - 1 buffer between travelBefore and task (if travelBefore exists)
-      // - 1 buffer between task and travelAfter/end
-      //
-      // Note: If there's existing travel to the same destination, it will be replaced
-      // (travel "shifts forward"). In this case, we don't need extra space for travel-after
-      // because we're reusing the existing travel's position.
-      const numBuffers = 1 + (needTravelBefore > 0 ? 1 : 0);
+      // Calculate required inside-slot time:
+      // Layout: [task] [buffer] [FREE] [travelAfter]
+      // If travel-before can be placed outside, it is excluded from inside-slot requirement.
 
       // Check if existing travel to the destination can be reused
       // Travel-after doesn't require NEW space if it replaces existing travel at the slot end
@@ -188,14 +204,29 @@ export class Scheduler {
         }
       }
 
-      const totalRequired =
-        task.duration +
-        needTravelBefore +
-        effectiveTravelAfter +
-        numBuffers * bufferMinutes;
+      // If we can place travel-before outside the slot (ending buffer before slot.start),
+      // reduce the inside-slot requirement accordingly.
+      let canPlaceTravelOutside = false;
+      let requiredInside = task.duration + effectiveTravelAfter + bufferMinutes; // buffer after task
+
+      if (needTravelBefore > 0 && slot.prevLocationId && taskLocationId) {
+        const travelEnd = new Date(
+          slot.start.getTime() - bufferMinutes * 60000
+        );
+        canPlaceTravelOutside = this.slotManager.canPlaceStandaloneTravelBefore(
+          travelEnd,
+          needTravelBefore
+        );
+        if (!canPlaceTravelOutside) {
+          // Fallback: include travel-before and its buffer inside the slot
+          requiredInside += needTravelBefore + bufferMinutes;
+        }
+      } else {
+        // No travel-before needed; requiredInside remains
+      }
 
       // Check if this slot has enough capacity
-      if (slot.durationMinutes >= totalRequired) {
+      if (slot.durationMinutes >= requiredInside) {
         selectedSlot = slot;
         travelBefore = needTravelBefore;
         // Use effectiveTravelAfter - if we're reusing existing travel, don't create new travel
@@ -223,10 +254,19 @@ export class Scheduler {
     // Travel-after is placed at the END of the slot, free space is between task and travel-after
 
     // Calculate offset to task start from slot start
-    const offsetToTaskStart =
-      travelBefore > 0
-        ? travelBefore + bufferMinutes // [travel] [buffer] [task]
-        : 0; // [task] starts at slot start
+    // If travel-before is placed outside, task starts at slot.start.
+    // Otherwise, task starts after [travel-before + buffer] inside the slot.
+    let offsetToTaskStart = 0;
+    if (travelBefore > 0) {
+      const travelEnd = new Date(
+        selectedSlot.start.getTime() - bufferMinutes * 60000
+      );
+      const canPlaceOutside = this.slotManager.canPlaceStandaloneTravelBefore(
+        travelEnd,
+        travelBefore
+      );
+      offsetToTaskStart = canPlaceOutside ? 0 : travelBefore + bufferMinutes;
+    }
 
     const taskStartDate = dateTimeService.addDuration(
       selectedSlot.start,
@@ -241,6 +281,26 @@ export class Scheduler {
     // Travel-before is placed at the START of the slot
     // Travel-after is placed at the END of the slot
     // Note: reserveSlotWithTravel expects task start/end times, not reservation times
+    // If placing travel-before outside, reserve it separately and omit travel-before inside
+    if (travelBefore > 0) {
+      const travelEnd = new Date(
+        selectedSlot.start.getTime() - bufferMinutes * 60000
+      );
+      const placed = this.slotManager.reserveStandaloneTravelBefore(
+        travelEnd,
+        travelBefore,
+        selectedSlot.prevLocationId as string,
+        taskLocationId as string,
+        task.id
+      );
+      if (!placed.success) {
+        // Fallback handled by offsetToTaskStart above (travel placed inside the slot)
+      } else {
+        // Travel-before placed outside; do not include it inside reserveSlotWithTravel
+        travelBefore = 0;
+      }
+    }
+
     const result = this.slotManager.reserveSlotWithTravel(
       taskStartDate,
       taskEndDate,
@@ -272,8 +332,10 @@ export class Scheduler {
 
     // Check if this task is within a category time slot and get the wrapper ID
     let categoryWrapperId: string | null = null;
+
     if (task.categoryId && this.context.categoryConstraints) {
       const constraint = this.context.categoryConstraints.get(task.categoryId);
+
       if (constraint && constraint.timeSlots.length > 0) {
         // Task is in a category with time constraints
         // Generate wrapper ID based on category, day, and time slot
@@ -286,14 +348,25 @@ export class Scheduler {
               taskStartDate.getMinutes()
             ).padStart(2, "0")}`;
 
+            console.log(
+              `  - Checking slot ${slot.startTime}-${slot.endTime} for day ${dayOfWeek}, task starts at ${startTime}`
+            );
+
             if (startTime >= slot.startTime && startTime < slot.endTime) {
               // This task falls within this category slot
               categoryWrapperId = `${constraint.id}-${dayOfWeek}-${slot.startTime}-${slot.endTime}`;
+              console.log(`  ✅ Assigned wrapper ID: ${categoryWrapperId}`);
               break;
             }
           }
         }
       }
+    }
+
+    if (!categoryWrapperId && task.categoryId) {
+      console.log(
+        `  ⚠️ Task ${task.title} has categoryId but NO wrapper ID assigned`
+      );
     }
 
     // Create the main task event (travel events are created at the end from travel slots)

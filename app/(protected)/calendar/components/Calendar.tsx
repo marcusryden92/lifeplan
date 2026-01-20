@@ -30,6 +30,7 @@ import {
   handleTemplateEventEdit,
 } from "@/utils/template-handlers/templateEventHandlers";
 import { EventImpl } from "@fullcalendar/core/internal";
+import { RuntimeEventExtendedProps } from "@/types/ui";
 
 const EVENT_INTERACTION_ENABLED = true; // Constant to enable/disable event interaction
 
@@ -62,7 +63,9 @@ export default function Calendar({
 
     // Filter out events that have a categoryWrapperId - they'll be rendered inside the wrapper
     return newCal.filter((event) => {
-      const extendedProps = event.extendedProps as any;
+      const extendedProps = event.extendedProps as
+        | RuntimeEventExtendedProps
+        | undefined;
       return !extendedProps?.categoryWrapperId;
     });
   }, [calendar]);
@@ -108,18 +111,17 @@ export default function Calendar({
         eventResize={(resizeInfo) => handleEventResize(updateAll, resizeInfo)}
         eventDrop={(dropInfo) => handleEventDrop(updatePlannerArray, dropInfo)}
         eventContent={({ event }: { event: EventImpl }) => {
-          const itemType = (event.extendedProps as { itemType?: string })
-            ?.itemType;
+          const itemType = (
+            event.extendedProps as RuntimeEventExtendedProps | undefined
+          )?.itemType;
 
           if (itemType === "category") {
-            const categoryId =
-              (event.extendedProps as { categoryId?: string })?.categoryId ||
-              "";
-            const isStrict =
-              (event.extendedProps as { isStrict?: boolean })?.isStrict ||
-              false;
-            const wrapperId =
-              (event.extendedProps as { wrapperId?: string })?.wrapperId || "";
+            const ext = event.extendedProps as
+              | RuntimeEventExtendedProps
+              | undefined;
+            const categoryId = ext?.categoryId || "";
+            const isStrict = !!ext?.isStrict;
+            const wrapperId = ext?.wrapperId || "";
 
             return (
               <CategoryWrapperEvent

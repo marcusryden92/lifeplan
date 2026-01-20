@@ -41,7 +41,6 @@ const useCalendarServerSync = (
     const processServerSync = async () => {
       if (!userId) throw new Error("Id missing in processServerSync");
 
-      console.log("🔄 Processing server sync...");
       try {
         const response = await handleServerTransaction(
           userId,
@@ -54,7 +53,6 @@ const useCalendarServerSync = (
         );
 
         if (response.success) {
-          console.log("✅ Server sync success!");
           // Update the previous refs to the current state
           previousPlanner.current = planner;
           previousCalendar.current = calendar;
@@ -84,12 +82,6 @@ const useCalendarServerSync = (
       console.log("⏭️ Skipping sync: no changes detected");
       return;
     }
-
-    console.log("🔍 Changes detected:", {
-      plannerSame,
-      calendarSame,
-      templateSame,
-    });
 
     const timeout = setTimeout(processServerSync, 300);
 

@@ -64,7 +64,16 @@ export function doesTimeRangeFitInCategorySlots(
     if (!slot.days.includes(dayOfWeek)) continue;
 
     // Check if both start and end times fit within this slot
-    if (startTime >= slot.startTime && endTime <= slot.endTime) {
+    const fits = startTime >= slot.startTime && endTime <= slot.endTime;
+
+    // Log first few comparisons for debugging
+    if (!fits && Math.random() < 0.1) {
+      console.log(
+        `Slot check: task ${startTime}-${endTime} vs slot ${slot.startTime}-${slot.endTime} on day ${dayOfWeek} = ${fits}`
+      );
+    }
+
+    if (fits) {
       return true;
     }
   }

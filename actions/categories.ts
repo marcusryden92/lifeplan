@@ -347,6 +347,7 @@ export async function reorderCategories(orderedIds: string[]): Promise<void> {
 /**
  * Assign a category to a planner item
  * Set categoryId to null to remove from category
+ * If the item is a goal, the category cascades to all descendants (tasks/subgoals)
  */
 export async function assignCategoryToPlanner(
   plannerId: string,
@@ -378,6 +379,26 @@ export async function assignCategoryToPlanner(
     where: { id: plannerId },
     data: { categoryId },
   });
+
+  // If this is a goal, cascade the category to all descendants
+  if (planner.itemType === "goal") {
+    // Get all planners for this user to traverse the tree
+    const allPlanners = await db.planner.findMany({
+      where: { userId: session.user.id },
+    });
+
+    // Get all descendant IDs (children, grandchildren, etc.)
+    const { getTaskTreeIds } = await import("@/utils/goalPageHandlers");
+    const descendantIds = getTaskTreeIds(allPlanners, plannerId);
+
+    // Update all descendants with the same category
+    if (descendantIds.length > 0) {
+      await db.planner.updateMany({
+        where: { id: { in: descendantIds } },
+        data: { categoryId },
+      });
+    }
+  }
 }
 
 /**

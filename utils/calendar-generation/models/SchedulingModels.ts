@@ -82,6 +82,8 @@ export interface SchedulingContext {
   metrics: SchedulingMetrics;
   /** Category constraints for time-based scheduling */
   categoryConstraints?: Map<string, CategoryConstraint>;
+  /** Effective planner -> location map (includes category inheritance) */
+  plannerLocationMap?: Map<string, string | null>;
 }
 
 /**

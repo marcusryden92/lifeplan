@@ -6,6 +6,7 @@
  */
 
 import { Planner, SimpleEvent } from "@/types/prisma";
+import { RuntimeEventExtendedProps } from "@/types/ui";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "./TimeSlotManager";
 import { TemplateExpander, PerTemplateMask } from "./TemplateExpander";
@@ -149,6 +150,19 @@ export class CalendarGenerator {
       searchEndDate
     );
 
+    // Debug: Check what templates are blocking the schedule
+    console.log("Templates expanded:", recurringTemplateEvents.length);
+    if (recurringTemplateEvents.length > 0) {
+      const workHourTemplates = recurringTemplateEvents.filter((t) => {
+        const start = new Date(t.start);
+        const hour = start.getHours();
+        return hour >= 9 && hour < 17;
+      });
+      console.log(
+        `Templates in work hours (9am-5pm): ${workHourTemplates.length}/${recurringTemplateEvents.length}`
+      );
+    }
+
     // Remove any old template events and add recurring definitions
     eventArray = eventArray.filter(
       (e) => e.extendedProps?.itemType !== "template"
@@ -160,17 +174,46 @@ export class CalendarGenerator {
       input.templates
     );
 
+    // Debug: Check template masks
+    console.log("Template masks:", {
+      count: perTemplateMasks.length,
+      masks: perTemplateMasks.map((m) => ({
+        templateTitle: input.templates.find((t) => t.id === m.templateId)
+          ?.title,
+        occurrences: m.occurrences.map((occ) => ({
+          day: occ.day,
+          times: occ.times.map((t) => ({
+            startTime: t.startTime,
+            endTime: t.endTime,
+          })),
+        })),
+      })),
+    });
+
     const templateEnd = performance.now();
     this.metrics.templateExpansionTimeMs = templateEnd - templateStart;
     this.metrics.templateEventsGenerated = recurringTemplateEvents.length;
 
-    // Step 5: Build location map for location -aware slot building
+    // Step 5: Build location map for location-aware slot building
     // Includes both planners AND templates (both can have locations)
+    // If a planner lacks a location, inherit from its category (if defined)
     const plannerLocationMap = new Map<string, string | null>();
-    for (const planner of input.planners) {
-      plannerLocationMap.set(planner.id, planner.locationId ?? null);
+    const categoryById = new Map<string, { locationId: string | null }>();
+    for (const c of input.categories || []) {
+      // Normalize to null when undefined
+      categoryById.set(c.id, { locationId: c.locationId ?? null });
     }
-    // Add template locations to the map
+
+    for (const planner of input.planners) {
+      const inheritedLocation =
+        (planner.locationId ?? null) !== null
+          ? planner.locationId
+          : planner.categoryId
+            ? (categoryById.get(planner.categoryId)?.locationId ?? null)
+            : null;
+      plannerLocationMap.set(planner.id, inheritedLocation ?? null);
+    }
+    // Add template locations to the map (templates don't inherit category)
     for (const template of input.templates) {
       plannerLocationMap.set(template.id, template.locationId ?? null);
     }
@@ -179,6 +222,64 @@ export class CalendarGenerator {
     // Template masks are used directly - no SimpleEvent objects created
     const initialWeeks = 2;
     this.slotManager.clear();
+
+    // Debug: Check what events are blocking slots
+    const workHourEvents = eventArray.filter((e) => {
+      const start = new Date(e.start);
+      const hour = start.getHours();
+      return hour >= 9 && hour < 17;
+    });
+
+    console.log("Building slots from events:", {
+      totalEvents: eventArray.length,
+      workHourEvents: workHourEvents.length,
+      workHourDetails: workHourEvents.slice(0, 5).map((e) => ({
+        title: e.title,
+        start: new Date(e.start).toLocaleTimeString(),
+        end: new Date(e.end).toLocaleTimeString(),
+        type: e.extendedProps?.itemType,
+      })),
+      eventTypes: eventArray.reduce(
+        (acc, e) => {
+          const type = e.extendedProps?.itemType || "unknown";
+          acc[type] = (acc[type] || 0) + 1;
+          return acc;
+        },
+        {} as Record<string, number>
+      ),
+    });
+
+    // If categories exist, pre-compute wrapper periods and pass to slot manager BEFORE building slots
+    if (input.categories && input.categories.length > 0) {
+      const categoryConstraintsListEarly = Array.from(
+        (input.categories
+          ? buildCategoryConstraintMap(input.categories)
+          : new Map()
+        ).values()
+      ) as CategoryConstraint[];
+      const searchEndDateStaticEarly = dateTimeService.shiftDays(
+        weekStart,
+        maxDaysAhead
+      );
+      const categoryPeriodsStaticEarly = generateCategorySlotPeriods(
+        currentDate,
+        searchEndDateStaticEarly,
+        categoryConstraintsListEarly
+      );
+      const wrapperPeriodsForManagerEarly = categoryPeriodsStaticEarly
+        .map((p) => ({
+          start: p.start,
+          end: p.end,
+          locationId:
+            categoryConstraintsListEarly.find((c) => c.id === p.categoryId)
+              ?.locationId ?? null,
+        }))
+        .filter((w) => w.locationId !== null);
+      if (wrapperPeriodsForManagerEarly.length > 0) {
+        this.slotManager.setCategoryPeriods(wrapperPeriodsForManagerEarly);
+      }
+    }
+
     this.slotManager.buildDailySlots(
       currentDate,
       initialWeeks * 7,
@@ -186,6 +287,238 @@ export class CalendarGenerator {
       perTemplateMasks,
       plannerLocationMap
     );
+
+    // Pre-create static travel to/from category wrappers (like templates)
+    if (input.categories && input.categories.length > 0) {
+      const categoryConstraintsList = Array.from(
+        (input.categories
+          ? buildCategoryConstraintMap(input.categories)
+          : new Map()
+        ).values()
+      ) as CategoryConstraint[];
+      const searchEndDateStatic = dateTimeService.shiftDays(
+        weekStart,
+        maxDaysAhead
+      );
+      const categoryPeriodsStatic = generateCategorySlotPeriods(
+        currentDate,
+        searchEndDateStatic,
+        categoryConstraintsList
+      );
+
+      const bufferMinutes = this.slotManager.getBufferTimeMinutes();
+
+      // Provide wrapper periods with locations to TimeSlotManager for travel context
+      const wrapperPeriodsForManager = categoryPeriodsStatic
+        .map((p) => ({
+          start: p.start,
+          end: p.end,
+          locationId:
+            categoryConstraintsList.find((c) => c.id === p.categoryId)
+              ?.locationId ?? null,
+        }))
+        .filter((w) => w.locationId !== null);
+      if (wrapperPeriodsForManager.length > 0) {
+        this.slotManager.setCategoryPeriods(wrapperPeriodsForManager);
+      }
+
+      for (const period of categoryPeriodsStatic) {
+        // Only if category has a location
+        const categoryLoc =
+          categoryConstraintsList.find((c) => c.id === period.categoryId)
+            ?.locationId ?? null;
+        if (!categoryLoc) continue;
+
+        // Build helper list of non-template, non-travel events inside this period (for precedence checks)
+        const periodStart = new Date(period.start);
+        const periodEnd = new Date(period.end);
+        const nonTemplateEventsInPeriod = eventArray
+          .filter((e) => {
+            const type = e.extendedProps?.itemType;
+            if (type === "template" || type === "travel") return false;
+            const s = new Date(e.start);
+            const eend = new Date(e.end);
+            return s >= periodStart && s < periodEnd && eend > periodStart;
+          })
+          .sort(
+            (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+          );
+
+        // Travel BEFORE: by default prev -> category, but if earliest event's travel intersects wrapper start,
+        // route prev -> earliestEvent.location (item travel takes precedence)
+        const daySlotsStart = this.slotManager.getDaySlots(period.start);
+        const travelEndBefore = new Date(
+          period.start.getTime() - bufferMinutes * 60000
+        );
+        const containingIndexBefore = daySlotsStart.findIndex(
+          (s) =>
+            s.isAvailable &&
+            s.start.getTime() <= travelEndBefore.getTime() &&
+            s.end.getTime() >= travelEndBefore.getTime()
+        );
+        if (containingIndexBefore !== -1) {
+          const slotCtx = daySlotsStart[containingIndexBefore];
+          const prevLoc = slotCtx.prevLocationId ?? null;
+          if (prevLoc) {
+            let placedBefore = false;
+            const earliestEvent = nonTemplateEventsInPeriod[0];
+            if (earliestEvent) {
+              const evStart = new Date(earliestEvent.start);
+              const extEarly = earliestEvent.extendedProps as
+                | RuntimeEventExtendedProps
+                | undefined;
+              const plannerId: string = extEarly?.eventId ?? earliestEvent.id;
+              const eventLoc = plannerLocationMap.get(plannerId) ?? null;
+              if (eventLoc && eventLoc !== categoryLoc) {
+                const minutesToEvent = this.slotManager.getTravelTime(
+                  prevLoc,
+                  eventLoc,
+                  evStart
+                );
+                if (minutesToEvent > 0) {
+                  const travelEndToEvent = new Date(
+                    evStart.getTime() - bufferMinutes * 60000
+                  );
+                  const travelStartToEvent = new Date(
+                    travelEndToEvent.getTime() - minutesToEvent * 60000
+                  );
+                  // precedence when travel starts before wrapper start
+                  if (travelStartToEvent < periodStart) {
+                    const canPlace =
+                      this.slotManager.canPlaceStandaloneTravelBefore(
+                        travelEndToEvent,
+                        minutesToEvent
+                      );
+                    if (canPlace) {
+                      this.slotManager.reserveStandaloneTravelBefore(
+                        travelEndToEvent,
+                        minutesToEvent,
+                        prevLoc,
+                        eventLoc,
+                        `${earliestEvent.id}-precedence-before`
+                      );
+                      placedBefore = true;
+                    }
+                  }
+                }
+              }
+            }
+
+            if (!placedBefore) {
+              const minutes = this.slotManager.getTravelTime(
+                prevLoc,
+                categoryLoc,
+                period.start
+              );
+              if (
+                minutes > 0 &&
+                this.slotManager.canPlaceStandaloneTravelBefore(
+                  travelEndBefore,
+                  minutes
+                )
+              ) {
+                this.slotManager.reserveStandaloneTravelBefore(
+                  travelEndBefore,
+                  minutes,
+                  prevLoc,
+                  categoryLoc,
+                  `${period.categoryId}-${period.start.toISOString()}`
+                );
+              }
+            }
+          }
+        }
+
+        // Travel AFTER: by default category -> next, but if last event's travel starts before wrapper end,
+        // route lastEvent.location -> next (item travel takes precedence)
+        const daySlotsEnd = this.slotManager.getDaySlots(period.end);
+        const travelStartAfter = new Date(
+          period.end.getTime() + bufferMinutes * 60000
+        );
+        const containingIndexAfter = daySlotsEnd.findIndex(
+          (s) =>
+            s.isAvailable &&
+            s.start.getTime() <= travelStartAfter.getTime() &&
+            s.end.getTime() >= travelStartAfter.getTime()
+        );
+        if (containingIndexAfter !== -1) {
+          const slotCtx = daySlotsEnd[containingIndexAfter];
+          const nextLoc = slotCtx.nextLocationId ?? null;
+          if (nextLoc) {
+            let placedAfter = false;
+            const lastEvent = [...nonTemplateEventsInPeriod]
+              .filter((e) => new Date(e.end) <= periodEnd)
+              .sort(
+                (a, b) => new Date(b.end).getTime() - new Date(a.end).getTime()
+              )[0];
+            if (lastEvent) {
+              const evEnd = new Date(lastEvent.end);
+              const extLast = lastEvent.extendedProps as
+                | RuntimeEventExtendedProps
+                | undefined;
+              const plannerId: string = extLast?.eventId ?? lastEvent.id;
+              const eventLoc = plannerLocationMap.get(plannerId) ?? null;
+              if (eventLoc) {
+                const minutesFromEvent = this.slotManager.getTravelTime(
+                  eventLoc,
+                  nextLoc,
+                  evEnd
+                );
+                if (minutesFromEvent > 0) {
+                  const travelStartFromEvent = new Date(
+                    evEnd.getTime() + bufferMinutes * 60000
+                  );
+                  if (travelStartFromEvent < periodEnd) {
+                    const canPlace =
+                      this.slotManager.canPlaceStandaloneTravelBefore(
+                        new Date(
+                          travelStartFromEvent.getTime() +
+                            minutesFromEvent * 60000
+                        ),
+                        minutesFromEvent
+                      );
+                    if (canPlace) {
+                      this.slotManager.reserveStandaloneTravelAfter(
+                        travelStartFromEvent,
+                        minutesFromEvent,
+                        eventLoc,
+                        nextLoc,
+                        `${lastEvent.id}-precedence-after`
+                      );
+                      placedAfter = true;
+                    }
+                  }
+                }
+              }
+            }
+
+            if (!placedAfter) {
+              const minutes = this.slotManager.getTravelTime(
+                categoryLoc,
+                nextLoc,
+                period.end
+              );
+              if (minutes > 0) {
+                const canPlace =
+                  this.slotManager.canPlaceStandaloneTravelBefore(
+                    new Date(travelStartAfter.getTime() + minutes * 60000),
+                    minutes
+                  );
+                if (canPlace) {
+                  this.slotManager.reserveStandaloneTravelAfter(
+                    travelStartAfter,
+                    minutes,
+                    categoryLoc,
+                    nextLoc,
+                    `${period.categoryId}-${period.end.toISOString()}`
+                  );
+                }
+              }
+            }
+          }
+        }
+      }
+    }
 
     // Largest gap
     const largestTemplateGap = this.templateExpander.calculateLargestGap(
@@ -211,6 +544,7 @@ export class CalendarGenerator {
         this.slotManager.getWeekAvailableMinutes(weekStart),
       metrics: this.metrics,
       categoryConstraints,
+      plannerLocationMap,
     };
 
     // Step 9: strategy
@@ -296,6 +630,19 @@ export class CalendarGenerator {
 
         const wrapperId = `${period.categoryId}-${period.start.getDay()}-${startTimeStr}-${endTimeStr}`;
 
+        const extendedPropsForWrapper: RuntimeEventExtendedProps = {
+          id: uuidv4(),
+          itemType: "category" as const,
+          eventId: "",
+          parentId: null,
+          completedStartTime: null,
+          completedEndTime: null,
+          // UI-only fields below (not persisted)
+          categoryId: period.categoryId,
+          isStrict: period.isStrict,
+          wrapperId: wrapperId,
+        };
+
         categoryWrapperEvents.push({
           id: uuidv4(),
           title: `${period.categoryName} Time Slot`,
@@ -310,21 +657,10 @@ export class CalendarGenerator {
           borderColor: period.categoryColor || "#3b82f6",
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          extendedProps: {
-            id: uuidv4(),
-            itemType: "category",
-            eventId: "",
-            parentId: null,
-            completedStartTime: null,
-            completedEndTime: null,
-            categoryId: period.categoryId,
-            isStrict: period.isStrict,
-            wrapperId: wrapperId,
-          },
+          extendedProps: extendedPropsForWrapper,
         });
       }
     }
-
     // Final event list includes:
     // 1. Scheduled non-template events (tasks, plans, completed items)
     // 2. Recurring template events (with rrule) for FullCalendar UI
@@ -334,6 +670,7 @@ export class CalendarGenerator {
     const templateEventsForUI = context.scheduledEvents.filter(
       (e) => e.extendedProps?.itemType === "template"
     );
+
     const allEvents = [
       ...scheduledNonTemplateEvents,
       ...templateEventsForUI,
@@ -341,14 +678,13 @@ export class CalendarGenerator {
       ...categoryWrapperEvents,
     ];
 
-    // Detect trespassing events (overlapping events with different locations)
-    // and mark them with red border indicators
+    // Detect trespassing and mark
     this.markTrespassingEvents(allEvents, plannerLocationMap);
 
     const endTime = performance.now();
     this.metrics.totalExecutionTimeMs = endTime - startTime;
 
-    // Handle all debug logging
+    // Debug logging
     logCalendarDebugInfo(input, {
       allEvents,
       travelEvents,
@@ -403,6 +739,14 @@ export class CalendarGenerator {
     // Sort by priority
     candidates = this.sortByPriority(allPlanners, candidates);
 
+    // Debug: Show scheduling order
+    if (candidates.length > 0) {
+      console.log(
+        "Scheduling order (first should be A):",
+        candidates.map((c) => c.title)
+      );
+    }
+
     // Week-by-week orchestration
     let weekStart = dateTimeService.getWeekFirstDate(
       context.currentDate,
@@ -439,6 +783,7 @@ export class CalendarGenerator {
           }
 
           const result = scheduler.scheduleTask(item);
+
           if (result.success && result.event) {
             events.push(result.event);
             scheduledTaskIds.add(item.id);
@@ -710,16 +1055,50 @@ export class CalendarGenerator {
     const totalEstimatedTime = totalPlannerTime; // Simplified
 
     // Calculate urgency scores
-    const withUrgency = goalsAndTasks.map((item) => ({
-      ...item,
-      urgencyScore: calculateTaskUrgency(item, {
-        currentDate: now,
-        totalEstimatedTime,
-      }),
-    }));
+    const withUrgency = goalsAndTasks.map((item) => {
+      // For goals, check if ANY child task has a category constraint
+      let hasCategoryConstraint = item.categoryId !== null;
 
-    // Sort by urgency score (highest first)
-    return withUrgency.sort((a, b) => b.urgencyScore - a.urgencyScore);
+      if (item.itemType === "goal" && !hasCategoryConstraint) {
+        // Check if any child tasks have category constraints
+        const childTasks = allPlanners.filter((p) => {
+          // Direct children or descendants
+          let current = p;
+          while (current.parentId) {
+            if (current.parentId === item.id) return true;
+            current =
+              allPlanners.find((parent) => parent.id === current.parentId) ||
+              current;
+            if (!current.parentId) break;
+          }
+          return false;
+        });
+        hasCategoryConstraint = childTasks.some(
+          (child) => child.categoryId !== null
+        );
+      }
+
+      return {
+        ...item,
+        urgencyScore: calculateTaskUrgency(item, {
+          currentDate: now,
+          totalEstimatedTime,
+        }),
+        hasCategoryConstraint,
+      };
+    });
+
+    // Sort by:
+    // 1. Category constraint (tasks with constraints first)
+    // 2. Urgency score (highest first)
+    return withUrgency.sort((a, b) => {
+      // Prioritize tasks with category constraints
+      if (a.hasCategoryConstraint && !b.hasCategoryConstraint) return -1;
+      if (!a.hasCategoryConstraint && b.hasCategoryConstraint) return 1;
+
+      // Then by urgency
+      return b.urgencyScore - a.urgencyScore;
+    });
   }
 
   /**
@@ -773,13 +1152,15 @@ export class CalendarGenerator {
       const info = trespassingMap.get(event.id);
       if (info && event.extendedProps) {
         // Create a new event object with updated extendedProps
+        const updatedProps: RuntimeEventExtendedProps = {
+          ...(event.extendedProps || {}),
+          trespassingStart: info.trespassingStart,
+          trespassingEnd: info.trespassingEnd,
+        };
+
         updatedEvents.push({
           ...event,
-          extendedProps: {
-            ...event.extendedProps,
-            trespassingStart: info.trespassingStart,
-            trespassingEnd: info.trespassingEnd,
-          },
+          extendedProps: updatedProps,
         });
       } else {
         updatedEvents.push(event);
