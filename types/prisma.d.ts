@@ -2,9 +2,20 @@ import { Prisma } from "@/prisma/generated/client";
 
 export type UserRole = Prisma.UserRoleGetPayload<undefined>;
 
-export type SimpleEvent = Prisma.SimpleEventGetPayload<{
-  include: { extendedProps: true };
-}>;
+// SimpleEvent with runtime fields added to extendedProps
+export type SimpleEvent = Omit<
+  Prisma.SimpleEventGetPayload<{
+    include: { extendedProps: true };
+  }>,
+  "extendedProps"
+> & {
+  extendedProps:
+    | (Prisma.EventExtendedPropsGetPayload<undefined> & {
+        categoryWrapperId?: string | null;
+        wrapperId?: string | null;
+      })
+    | null;
+};
 
 export type Planner = Prisma.PlannerGetPayload<undefined>;
 

@@ -4,7 +4,8 @@
       "Bash(find:*)",
       "Bash(pnpm prisma generate:*)",
       "Bash(pnpm lint:*)",
-      "Bash(xcopy:*)"
+      "Bash(xcopy:*)",
+      "Bash(pnpm run lint)"
     ]
   }
 }

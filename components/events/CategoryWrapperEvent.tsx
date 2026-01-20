@@ -25,7 +25,7 @@ interface CategoryWrapperEventProps {
  * Wrapper component for category time slots that contains nested items
  */
 export function CategoryWrapperEvent({
-  categoryId,
+  categoryId: _categoryId,
   categoryName,
   categoryColor,
   isStrict,

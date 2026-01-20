@@ -3,7 +3,7 @@ import { EventExtendedProps } from "@/types/prisma";
 // Runtime/UI-only extensions for event extendedProps used by the calendar UI
 export type RuntimeEventExtendedProps = EventExtendedProps & {
   // Category wrapper fields
-  wrapperId?: string;
+  wrapperId?: string | null;
   categoryId?: string;
   isStrict?: boolean;
   // Link from scheduled tasks/plans to their category wrapper

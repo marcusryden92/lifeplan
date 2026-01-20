@@ -53,10 +53,10 @@ export function EditCategoryDialog({
         try {
           const parsed =
             typeof category.timeSlots === "string"
-              ? JSON.parse(category.timeSlots)
+              ? (JSON.parse(category.timeSlots) as unknown)
               : category.timeSlots;
           setTimeSlots(Array.isArray(parsed) ? parsed : []);
-        } catch (e) {
+        } catch {
           setTimeSlots([]);
         }
       } else {

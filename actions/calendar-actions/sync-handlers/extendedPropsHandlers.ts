@@ -1,4 +1,5 @@
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
+import type { Prisma } from "@/prisma/generated/client";
 type Database = typeof import("@/lib/db").db;
 
 export function handleExtendedPropsChanges(
@@ -9,13 +10,18 @@ export function handleExtendedPropsChanges(
 
   // CREATE
   if (databaseChanges.extendedProps.create.length) {
+    const cleanData: Prisma.EventExtendedPropsCreateManyInput[] = databaseChanges.extendedProps.create.map((props) => ({
+      id: props.id,
+      eventId: props.eventId,
+      itemType: props.itemType,
+      parentId: props.parentId,
+      completedStartTime: props.completedStartTime,
+      completedEndTime: props.completedEndTime,
+    }));
+
     operations.push(
       db.eventExtendedProps.createMany({
-        data: databaseChanges.extendedProps.create.map((props) => {
-          // Strip runtime-only fields that don't exist in database schema
-          const { categoryWrapperId, wrapperId, ...dbProps } = props as any;
-          return dbProps;
-        }),
+        data: cleanData,
         skipDuplicates: true,
       })
     );
@@ -23,16 +29,27 @@ export function handleExtendedPropsChanges(
 
   // UPDATE
   for (const props of databaseChanges.extendedProps.update) {
-    // Strip runtime-only fields that don't exist in database schema
-    const { id: propsId, categoryWrapperId, wrapperId, ...rest } = props as any;
+    const updateData: Prisma.EventExtendedPropsUpdateInput = {
+      itemType: props.itemType,
+      parentId: props.parentId,
+      completedStartTime: props.completedStartTime,
+      completedEndTime: props.completedEndTime,
+    };
+
+    const createData: Prisma.EventExtendedPropsCreateInput = {
+      id: props.id,
+      event: { connect: { id: props.eventId } },
+      itemType: props.itemType,
+      parentId: props.parentId,
+      completedStartTime: props.completedStartTime,
+      completedEndTime: props.completedEndTime,
+    };
+
     operations.push(
       db.eventExtendedProps.upsert({
         where: { eventId: props.eventId },
-        update: { ...rest },
-        create: {
-          id: propsId ?? props.eventId,
-          ...rest,
-        },
+        update: updateData,
+        create: createData,
       })
     );
   }

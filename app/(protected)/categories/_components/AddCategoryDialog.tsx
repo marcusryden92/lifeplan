@@ -214,7 +214,7 @@ export function AddCategoryDialog({
                   </Label>
                   <p className="text-sm text-muted-foreground">
                     Items in this category without a location will inherit this
-                    (or parent category's) location
+                    (or parent category&apos;s) location
                   </p>
                   <LocationSelector
                     value={locationId}

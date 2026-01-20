@@ -41,7 +41,7 @@ const typeConfig = {
   goal: { icon: Target, color: "bg-purple-500", label: "Goal" },
   template: { icon: Calendar, color: "bg-gray-500", label: "Template" },
   travel: { icon: Clock, color: "bg-green-500", label: "Travel" },
-};
+} as const;
 
 export function InboxItem({
   item,
@@ -54,7 +54,7 @@ export function InboxItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
 
-  const config = typeConfig[item.itemType] || typeConfig.task;
+  const config = (item.itemType in typeConfig) ? typeConfig[item.itemType as keyof typeof typeConfig] : typeConfig.task;
   const Icon = config.icon;
 
   const handleSaveEdit = () => {

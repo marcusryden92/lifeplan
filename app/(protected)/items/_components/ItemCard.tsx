@@ -28,7 +28,7 @@ const typeConfig = {
   goal: { icon: Target, color: "bg-purple-500", label: "Goal" },
   template: { icon: Calendar, color: "bg-gray-500", label: "Template" },
   travel: { icon: Clock, color: "bg-green-500", label: "Travel" },
-};
+} as const;
 
 export function ItemCard({
   item,
@@ -38,7 +38,7 @@ export function ItemCard({
   completedSubtasks = 0,
 }: ItemCardProps) {
   const router = useRouter();
-  const config = typeConfig[item.itemType] || typeConfig.task;
+  const config = (item.itemType in typeConfig) ? typeConfig[item.itemType as keyof typeof typeConfig] : typeConfig.task;
   const Icon = config.icon;
 
   const isOverdue =

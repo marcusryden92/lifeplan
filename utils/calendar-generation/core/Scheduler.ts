@@ -37,7 +37,7 @@ export class Scheduler {
   constructor(
     private slotManager: TimeSlotManager,
     private strategy: SchedulingStrategy,
-    private context: SchedulingContext
+    private context: SchedulingContext,
   ) {}
 
   /**
@@ -46,7 +46,7 @@ export class Scheduler {
    */
   scheduleTask(
     task: Planner,
-    afterTime?: Date
+    afterTime?: Date,
   ): { success: boolean; event?: SimpleEvent; failure?: SchedulingFailure } {
     const startTime = performance.now();
     this.metrics.tasksAttempted++;
@@ -86,7 +86,7 @@ export class Scheduler {
       task.duration,
       afterTime || this.context.currentDate,
       undefined,
-      constraintForTask
+      constraintForTask,
     );
 
     if (fittingSlots.length === 0) {
@@ -111,15 +111,15 @@ export class Scheduler {
             slot.start,
             task.categoryId,
             categoryConstraints,
-            task.duration
-          )
+            task.duration,
+          ),
         )
       : fittingSlots;
 
     // Debug category filtering
     if (task.categoryId) {
       console.log(
-        `Task ${task.title} (category: ${task.categoryId}): ${fittingSlots.length} slots → ${validSlots.length} valid`
+        `Task ${task.title} (category: ${task.categoryId}): ${fittingSlots.length} slots → ${validSlots.length} valid`,
       );
     }
 
@@ -150,7 +150,7 @@ export class Scheduler {
     for (const scoredSlot of scoredSlots) {
       // Find the original slot with location info
       const slot = fittingSlots.find(
-        (s) => s.start.getTime() === scoredSlot.slot.start.getTime()
+        (s) => s.start.getTime() === scoredSlot.slot.start.getTime(),
       );
       if (!slot) continue;
 
@@ -165,7 +165,7 @@ export class Scheduler {
           needTravelBefore = this.slotManager.getTravelTime(
             slot.prevLocationId,
             taskLocationId,
-            slot.start
+            slot.start,
           );
         }
 
@@ -176,7 +176,7 @@ export class Scheduler {
           needTravelAfter = this.slotManager.getTravelTime(
             taskLocationId,
             slot.nextLocationId,
-            slot.start
+            slot.start,
           );
         }
       }
@@ -197,7 +197,7 @@ export class Scheduler {
         // If so, we can reuse it and don't need to reserve additional space
         reusableTravelStart = this.slotManager.findAdjacentTravelTo(
           slot.end,
-          slot.nextLocationId
+          slot.nextLocationId,
         );
         if (reusableTravelStart) {
           effectiveTravelAfter = 0;
@@ -211,11 +211,11 @@ export class Scheduler {
 
       if (needTravelBefore > 0 && slot.prevLocationId && taskLocationId) {
         const travelEnd = new Date(
-          slot.start.getTime() - bufferMinutes * 60000
+          slot.start.getTime() - bufferMinutes * 60000,
         );
         canPlaceTravelOutside = this.slotManager.canPlaceStandaloneTravelBefore(
           travelEnd,
-          needTravelBefore
+          needTravelBefore,
         );
         if (!canPlaceTravelOutside) {
           // Fallback: include travel-before and its buffer inside the slot
@@ -259,22 +259,22 @@ export class Scheduler {
     let offsetToTaskStart = 0;
     if (travelBefore > 0) {
       const travelEnd = new Date(
-        selectedSlot.start.getTime() - bufferMinutes * 60000
+        selectedSlot.start.getTime() - bufferMinutes * 60000,
       );
       const canPlaceOutside = this.slotManager.canPlaceStandaloneTravelBefore(
         travelEnd,
-        travelBefore
+        travelBefore,
       );
       offsetToTaskStart = canPlaceOutside ? 0 : travelBefore + bufferMinutes;
     }
 
     const taskStartDate = dateTimeService.addDuration(
       selectedSlot.start,
-      offsetToTaskStart
+      offsetToTaskStart,
     );
     const taskEndDate = dateTimeService.addDuration(
       taskStartDate,
-      task.duration
+      task.duration,
     );
 
     // Step 5: Reserve the slot with travel placement
@@ -284,14 +284,14 @@ export class Scheduler {
     // If placing travel-before outside, reserve it separately and omit travel-before inside
     if (travelBefore > 0) {
       const travelEnd = new Date(
-        selectedSlot.start.getTime() - bufferMinutes * 60000
+        selectedSlot.start.getTime() - bufferMinutes * 60000,
       );
       const placed = this.slotManager.reserveStandaloneTravelBefore(
         travelEnd,
         travelBefore,
         selectedSlot.prevLocationId as string,
         taskLocationId as string,
-        task.id
+        task.id,
       );
       if (!placed.success) {
         // Fallback handled by offsetToTaskStart above (travel placed inside the slot)
@@ -311,7 +311,7 @@ export class Scheduler {
       travelAfter,
       selectedSlot.prevLocationId ?? null,
       selectedSlot.nextLocationId ?? null,
-      selectedReusableTravelStart
+      selectedReusableTravelStart,
     );
     const reserved = result.success;
 
@@ -345,11 +345,11 @@ export class Scheduler {
         for (const slot of timeSlots) {
           if (slot.days.includes(dayOfWeek)) {
             const startTime = `${String(taskStartDate.getHours()).padStart(2, "0")}:${String(
-              taskStartDate.getMinutes()
+              taskStartDate.getMinutes(),
             ).padStart(2, "0")}`;
 
             console.log(
-              `  - Checking slot ${slot.startTime}-${slot.endTime} for day ${dayOfWeek}, task starts at ${startTime}`
+              `  - Checking slot ${slot.startTime}-${slot.endTime} for day ${dayOfWeek}, task starts at ${startTime}`,
             );
 
             if (startTime >= slot.startTime && startTime < slot.endTime) {
@@ -365,26 +365,30 @@ export class Scheduler {
 
     if (!categoryWrapperId && task.categoryId) {
       console.log(
-        `  ⚠️ Task ${task.title} has categoryId but NO wrapper ID assigned`
+        `  ⚠️ Task ${task.title} has categoryId but NO wrapper ID assigned`,
       );
     }
 
     // Create the main task event (travel events are created at the end from travel slots)
+    // Build extendedProps with only schema fields, then add runtime fields
+    const baseExtendedProps = {
+      id: uuidv4(),
+      eventId: task.id,
+      itemType: task.itemType,
+      completedEndTime: null,
+      completedStartTime: null,
+      parentId: task.parentId || null,
+    };
+
     const event: SimpleEvent = {
       userId: this.context.userId,
       id: task.id,
       title: task.title,
       start: taskStartDate.toISOString(),
       end: taskEndDate.toISOString(),
-      extendedProps: {
-        id: uuidv4(),
-        eventId: task.id,
-        itemType: task.itemType,
-        categoryWrapperId,
-        completedEndTime: null,
-        completedStartTime: null,
-        parentId: task.parentId || null,
-      },
+      extendedProps: categoryWrapperId
+        ? { ...baseExtendedProps, categoryWrapperId }
+        : baseExtendedProps,
       backgroundColor: (task.color as string) || calendarColors[0],
       borderColor: "transparent",
       duration: null,

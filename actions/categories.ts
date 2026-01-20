@@ -3,6 +3,7 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import type { Category } from "@/types/prisma";
+import { Prisma } from "@/prisma/generated/client";
 
 // ============================================================================
 // Category CRUD Operations
@@ -93,7 +94,7 @@ export async function createCategory(data: {
   icon?: string;
   color?: string;
   parentId?: string;
-  timeSlots?: any;
+  timeSlots?: Prisma.InputJsonValue;
   isStrict?: boolean;
   locationId?: string | null;
 }): Promise<Category> {
@@ -135,7 +136,7 @@ export async function createCategory(data: {
       icon: data.icon,
       color: data.color,
       parentId: data.parentId,
-      timeSlots: data.timeSlots ?? null,
+      timeSlots: data.timeSlots ?? Prisma.DbNull,
       isStrict: data.isStrict ?? false,
       locationId: data.locationId ?? null,
       sortOrder: (maxSortOrder._max.sortOrder ?? -1) + 1,
@@ -155,7 +156,7 @@ export async function updateCategory(
     name?: string;
     icon?: string | null;
     color?: string | null;
-    timeSlots?: any;
+    timeSlots?: Prisma.InputJsonValue;
     isStrict?: boolean;
     locationId?: string | null;
   }
@@ -187,7 +188,7 @@ export async function updateCategory(
       name: data.name,
       icon: data.icon,
       color: data.color,
-      timeSlots: data.timeSlots,
+      ...(data.timeSlots !== undefined && { timeSlots: data.timeSlots }),
       isStrict: data.isStrict,
       locationId: data.locationId,
     },

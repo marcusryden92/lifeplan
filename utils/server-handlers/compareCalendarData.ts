@@ -43,7 +43,7 @@ export async function handleServerTransaction(
       (e) =>
         e.extendedProps?.itemType !== "travel" &&
         e.extendedProps?.itemType !== "template" &&
-        !e.extendedProps?.wrapperId // Category wrapper events have wrapperId
+        !(e.extendedProps && 'wrapperId' in e.extendedProps && e.extendedProps.wrapperId) // Category wrapper events have wrapperId
     );
 
   const filteredCalendar = filterGeneratedEvents(calendar);
@@ -52,19 +52,19 @@ export async function handleServerTransaction(
   );
 
   // Serialize inputs to remove any Date objects or non-serializable data
-  const serializedPlanner = JSON.parse(JSON.stringify(planner));
+  const serializedPlanner = JSON.parse(JSON.stringify(planner)) as Planner[];
   const serializedPreviousPlanner = {
-    current: JSON.parse(JSON.stringify(previousPlanner.current)),
+    current: JSON.parse(JSON.stringify(previousPlanner.current)) as Planner[],
   };
-  const serializedCalendar = JSON.parse(JSON.stringify(filteredCalendar));
+  const serializedCalendar = JSON.parse(JSON.stringify(filteredCalendar)) as SimpleEvent[];
   const serializedPreviousCalendar = {
-    current: JSON.parse(JSON.stringify(filteredPreviousCalendar)),
+    current: JSON.parse(JSON.stringify(filteredPreviousCalendar)) as SimpleEvent[],
   };
   const serializedTemplate = template
-    ? JSON.parse(JSON.stringify(template))
+    ? (JSON.parse(JSON.stringify(template)) as EventTemplate[])
     : undefined;
   const serializedPreviousTemplate = previousTemplate
-    ? { current: JSON.parse(JSON.stringify(previousTemplate.current)) }
+    ? { current: JSON.parse(JSON.stringify(previousTemplate.current)) as EventTemplate[] }
     : undefined;
 
   const databaseChanges = compareData(
