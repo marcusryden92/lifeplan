@@ -29,8 +29,8 @@ export interface CategoryWithTimeSlots {
   parentId?: string | null;
   userId: string;
   sortOrder: number;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**

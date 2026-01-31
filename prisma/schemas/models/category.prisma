@@ -30,8 +30,8 @@ model Category {
   // Items in this category (back-reference)
   planners  Planner[]
 
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt String     @default(dbgenerated("NOW()::text"))
+  updatedAt String
 
   @@map("Categories")
 }

@@ -130,6 +130,7 @@ export async function createCategory(data: {
     _max: { sortOrder: true },
   });
 
+  const now = new Date().toISOString();
   const category = await db.category.create({
     data: {
       name: data.name,
@@ -141,6 +142,8 @@ export async function createCategory(data: {
       locationId: data.locationId ?? null,
       sortOrder: (maxSortOrder._max.sortOrder ?? -1) + 1,
       userId: session.user.id,
+      createdAt: now,
+      updatedAt: now,
     },
   });
 
@@ -191,6 +194,7 @@ export async function updateCategory(
       ...(data.timeSlots !== undefined && { timeSlots: data.timeSlots }),
       isStrict: data.isStrict,
       locationId: data.locationId,
+      updatedAt: new Date().toISOString(),
     },
   });
 
@@ -317,6 +321,7 @@ export async function moveCategory(
     data: {
       parentId: newParentId,
       sortOrder: (maxSortOrder._max.sortOrder ?? -1) + 1,
+      updatedAt: new Date().toISOString(),
     },
   });
 
@@ -331,11 +336,12 @@ export async function reorderCategories(orderedIds: string[]): Promise<void> {
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   // Update each category's sortOrder
+  const now = new Date().toISOString();
   await Promise.all(
     orderedIds.map((id, index) =>
       db.category.updateMany({
         where: { id, userId: session.user.id },
-        data: { sortOrder: index },
+        data: { sortOrder: index, updatedAt: now },
       })
     )
   );
