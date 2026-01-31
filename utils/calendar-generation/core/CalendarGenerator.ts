@@ -151,16 +151,18 @@ export class CalendarGenerator {
     );
 
     // Debug: Check what templates are blocking the schedule
-    console.log("Templates expanded:", recurringTemplateEvents.length);
-    if (recurringTemplateEvents.length > 0) {
-      const workHourTemplates = recurringTemplateEvents.filter((t) => {
-        const start = new Date(t.start);
-        const hour = start.getHours();
-        return hour >= 9 && hour < 17;
-      });
-      console.log(
-        `Templates in work hours (9am-5pm): ${workHourTemplates.length}/${recurringTemplateEvents.length}`
-      );
+    if (input.config?.enableLogging) {
+      console.log("Templates expanded:", recurringTemplateEvents.length);
+      if (recurringTemplateEvents.length > 0) {
+        const workHourTemplates = recurringTemplateEvents.filter((t) => {
+          const start = new Date(t.start);
+          const hour = start.getHours();
+          return hour >= 9 && hour < 17;
+        });
+        console.log(
+          `Templates in work hours (9am-5pm): ${workHourTemplates.length}/${recurringTemplateEvents.length}`
+        );
+      }
     }
 
     // Remove any old template events and add recurring definitions
@@ -175,24 +177,27 @@ export class CalendarGenerator {
     );
 
     // Debug: Check template masks
-    console.log("Template masks:", {
-      count: perTemplateMasks.length,
-      masks: perTemplateMasks.map((m) => ({
-        templateTitle: input.templates.find((t) => t.id === m.templateId)
-          ?.title,
-        occurrences: m.occurrences.map((occ) => ({
-          day: occ.day,
-          times: occ.times.map((t) => ({
-            startTime: t.startTime,
-            endTime: t.endTime,
+    if (input.config?.enableLogging) {
+      console.log("Template masks:", {
+        count: perTemplateMasks.length,
+        masks: perTemplateMasks.map((m) => ({
+          templateTitle: input.templates.find((t) => t.id === m.templateId)
+            ?.title,
+          occurrences: m.occurrences.map((occ) => ({
+            day: occ.day,
+            times: occ.times.map((t) => ({
+              startTime: t.startTime,
+              endTime: t.endTime,
+            })),
           })),
         })),
-      })),
-    });
+      });
+    }
 
     const templateEnd = performance.now();
     this.metrics.templateExpansionTimeMs = templateEnd - templateStart;
     this.metrics.templateEventsGenerated = recurringTemplateEvents.length;
+    this.metrics.templatesFailed = this.templateExpander.getTemplateFailureCount();
 
     // Step 5: Build location map for location-aware slot building
     // Includes both planners AND templates (both can have locations)
@@ -224,60 +229,67 @@ export class CalendarGenerator {
     this.slotManager.clear();
 
     // Debug: Check what events are blocking slots
-    const workHourEvents = eventArray.filter((e) => {
-      const start = new Date(e.start);
-      const hour = start.getHours();
-      return hour >= 9 && hour < 17;
-    });
+    if (input.config?.enableLogging) {
+      const workHourEvents = eventArray.filter((e) => {
+        const start = new Date(e.start);
+        const hour = start.getHours();
+        return hour >= 9 && hour < 17;
+      });
 
-    console.log("Building slots from events:", {
-      totalEvents: eventArray.length,
-      workHourEvents: workHourEvents.length,
-      workHourDetails: workHourEvents.slice(0, 5).map((e) => ({
-        title: e.title,
-        start: new Date(e.start).toLocaleTimeString(),
-        end: new Date(e.end).toLocaleTimeString(),
-        type: e.extendedProps?.itemType,
-      })),
-      eventTypes: eventArray.reduce(
-        (acc, e) => {
-          const type = e.extendedProps?.itemType || "unknown";
-          acc[type] = (acc[type] || 0) + 1;
-          return acc;
-        },
-        {} as Record<string, number>
-      ),
-    });
+      console.log("Building slots from events:", {
+        totalEvents: eventArray.length,
+        workHourEvents: workHourEvents.length,
+        workHourDetails: workHourEvents.slice(0, 5).map((e) => ({
+          title: e.title,
+          start: new Date(e.start).toLocaleTimeString(),
+          end: new Date(e.end).toLocaleTimeString(),
+          type: e.extendedProps?.itemType,
+        })),
+        eventTypes: eventArray.reduce(
+          (acc, e) => {
+            const type = e.extendedProps?.itemType || "unknown";
+            acc[type] = (acc[type] || 0) + 1;
+            return acc;
+          },
+          {} as Record<string, number>
+        ),
+      });
+    }
 
-    // If categories exist, pre-compute wrapper periods and pass to slot manager BEFORE building slots
-    if (input.categories && input.categories.length > 0) {
-      const categoryConstraintsListEarly = Array.from(
-        (input.categories
-          ? buildCategoryConstraintMap(input.categories)
-          : new Map()
-        ).values()
-      ) as CategoryConstraint[];
-      const searchEndDateStaticEarly = dateTimeService.shiftDays(
-        weekStart,
-        maxDaysAhead
-      );
-      const categoryPeriodsStaticEarly = generateCategorySlotPeriods(
-        currentDate,
-        searchEndDateStaticEarly,
-        categoryConstraintsListEarly
-      );
-      const wrapperPeriodsForManagerEarly = categoryPeriodsStaticEarly
-        .map((p) => ({
-          start: p.start,
-          end: p.end,
-          locationId:
-            categoryConstraintsListEarly.find((c) => c.id === p.categoryId)
-              ?.locationId ?? null,
-        }))
-        .filter((w) => w.locationId !== null);
-      if (wrapperPeriodsForManagerEarly.length > 0) {
-        this.slotManager.setCategoryPeriods(wrapperPeriodsForManagerEarly);
-      }
+    // Build category constraint map once and reuse (avoid O(n²) duplicate computation)
+    const categoryConstraintMap = input.categories
+      ? buildCategoryConstraintMap(input.categories)
+      : new Map<string, CategoryConstraint>();
+    const categoryConstraintsList = Array.from(categoryConstraintMap.values());
+
+    // Pre-compute category periods once for the entire search range
+    const searchEndDateStatic = dateTimeService.shiftDays(
+      weekStart,
+      maxDaysAhead
+    );
+    const categoryPeriodsStatic =
+      categoryConstraintsList.length > 0
+        ? generateCategorySlotPeriods(
+            currentDate,
+            searchEndDateStatic,
+            categoryConstraintsList
+          )
+        : [];
+
+    // Build wrapper periods with locations for slot manager
+    const wrapperPeriodsForManager = categoryPeriodsStatic
+      .map((p) => ({
+        start: p.start,
+        end: p.end,
+        locationId:
+          categoryConstraintsList.find((c) => c.id === p.categoryId)
+            ?.locationId ?? null,
+      }))
+      .filter((w) => w.locationId !== null);
+
+    // If categories exist, pass wrapper periods to slot manager BEFORE building slots
+    if (wrapperPeriodsForManager.length > 0) {
+      this.slotManager.setCategoryPeriods(wrapperPeriodsForManager);
     }
 
     this.slotManager.buildDailySlots(
@@ -289,60 +301,51 @@ export class CalendarGenerator {
     );
 
     // Pre-create static travel to/from category wrappers (like templates)
-    if (input.categories && input.categories.length > 0) {
-      const categoryConstraintsList = Array.from(
-        (input.categories
-          ? buildCategoryConstraintMap(input.categories)
-          : new Map()
-        ).values()
-      ) as CategoryConstraint[];
-      const searchEndDateStatic = dateTimeService.shiftDays(
-        weekStart,
-        maxDaysAhead
-      );
-      const categoryPeriodsStatic = generateCategorySlotPeriods(
-        currentDate,
-        searchEndDateStatic,
-        categoryConstraintsList
-      );
-
+    // categoryConstraintsList and categoryPeriodsStatic are already computed above
+    if (categoryConstraintsList.length > 0) {
       const bufferMinutes = this.slotManager.getBufferTimeMinutes();
 
-      // Provide wrapper periods with locations to TimeSlotManager for travel context
-      const wrapperPeriodsForManager = categoryPeriodsStatic
-        .map((p) => ({
-          start: p.start,
-          end: p.end,
-          locationId:
-            categoryConstraintsList.find((c) => c.id === p.categoryId)
-              ?.locationId ?? null,
-        }))
-        .filter((w) => w.locationId !== null);
-      if (wrapperPeriodsForManager.length > 0) {
-        this.slotManager.setCategoryPeriods(wrapperPeriodsForManager);
+      // Pre-index non-template events by day for O(1) lookup instead of O(n) filter per period
+      const nonTemplateEventsByDay = new Map<string, SimpleEvent[]>();
+      for (const e of eventArray) {
+        const type = e.extendedProps?.itemType;
+        if (type === "template" || type === "travel") continue;
+        const dayKey = e.start.slice(0, 10); // "YYYY-MM-DD"
+        const dayEvents = nonTemplateEventsByDay.get(dayKey) || [];
+        dayEvents.push(e);
+        nonTemplateEventsByDay.set(dayKey, dayEvents);
+      }
+      // Pre-sort each day's events by start time
+      for (const [key, events] of nonTemplateEventsByDay) {
+        events.sort(
+          (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+        );
+        nonTemplateEventsByDay.set(key, events);
+      }
+
+      // Build a lookup map for category locations to avoid repeated find() calls
+      const categoryLocationMap = new Map<string, string | null>();
+      for (const c of categoryConstraintsList) {
+        categoryLocationMap.set(c.id, c.locationId ?? null);
       }
 
       for (const period of categoryPeriodsStatic) {
         // Only if category has a location
-        const categoryLoc =
-          categoryConstraintsList.find((c) => c.id === period.categoryId)
-            ?.locationId ?? null;
+        const categoryLoc = categoryLocationMap.get(period.categoryId) ?? null;
         if (!categoryLoc) continue;
 
-        // Build helper list of non-template, non-travel events inside this period (for precedence checks)
-        const periodStart = new Date(period.start);
-        const periodEnd = new Date(period.end);
-        const nonTemplateEventsInPeriod = eventArray
-          .filter((e) => {
-            const type = e.extendedProps?.itemType;
-            if (type === "template" || type === "travel") return false;
-            const s = new Date(e.start);
-            const eend = new Date(e.end);
-            return s >= periodStart && s < periodEnd && eend > periodStart;
-          })
-          .sort(
-            (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
-          );
+        // Get events for this day from pre-indexed map (O(1) lookup)
+        const periodStart = period.start;
+        const periodEnd = period.end;
+        const dayKey = periodStart.toISOString().slice(0, 10);
+        const dayEvents = nonTemplateEventsByDay.get(dayKey) || [];
+
+        // Filter to events within this specific period (much smaller array now)
+        const nonTemplateEventsInPeriod = dayEvents.filter((e) => {
+          const s = new Date(e.start);
+          const eend = new Date(e.end);
+          return s >= periodStart && s < periodEnd && eend > periodStart;
+        });
 
         // Travel BEFORE: by default prev -> category, but if earliest event's travel intersects wrapper start,
         // route prev -> earliestEvent.location (item travel takes precedence)
@@ -528,10 +531,8 @@ export class CalendarGenerator {
     // available slots, cache too large items and only add them to
     // 'too large' array at the end
 
-    // Step 7: Build category constraints map
-    const categoryConstraints = input.categories
-      ? buildCategoryConstraintMap(input.categories)
-      : new Map();
+    // Step 7: Reuse category constraint map built earlier
+    // categoryConstraintMap was built above when computing category periods
 
     // Step 8: scheduling context
     const context: SchedulingContext = {
@@ -543,7 +544,7 @@ export class CalendarGenerator {
       availableMinutesPerWeek:
         this.slotManager.getWeekAvailableMinutes(weekStart),
       metrics: this.metrics,
-      categoryConstraints,
+      categoryConstraints: categoryConstraintMap,
       plannerLocationMap,
     };
 
@@ -606,20 +607,10 @@ export class CalendarGenerator {
     const travelEvents = this.slotManager.generateTravelEvents(input.userId);
 
     // Step 10.5: Generate category wrapper events
+    // Reuse categoryPeriodsStatic computed earlier (avoid recomputation)
     const categoryWrapperEvents: SimpleEvent[] = [];
-    if (input.categories && input.categories.length > 0) {
-      const categoryConstraintsList = Array.from(
-        categoryConstraints.values()
-      ) as CategoryConstraint[];
-      const searchEndDate = dateTimeService.shiftDays(weekStart, maxDaysAhead);
-
-      const categoryPeriods = generateCategorySlotPeriods(
-        currentDate,
-        searchEndDate,
-        categoryConstraintsList
-      );
-
-      for (const period of categoryPeriods) {
+    if (categoryPeriodsStatic.length > 0) {
+      for (const period of categoryPeriodsStatic) {
         // Format times as HH:MM to match the slot times
         const startHours = String(period.start.getHours()).padStart(2, "0");
         const startMinutes = String(period.start.getMinutes()).padStart(2, "0");
@@ -739,13 +730,7 @@ export class CalendarGenerator {
     // Sort by priority
     candidates = this.sortByPriority(allPlanners, candidates);
 
-    // Debug: Show scheduling order
-    if (candidates.length > 0) {
-      console.log(
-        "Scheduling order (first should be A):",
-        candidates.map((c) => c.title)
-      );
-    }
+    // Debug logging for scheduling order is handled in logCalendarDebugInfo
 
     // Week-by-week orchestration
     let weekStart = dateTimeService.getWeekFirstDate(
@@ -1115,6 +1100,7 @@ export class CalendarGenerator {
       totalExecutionTimeMs: 0,
       templateEventsGenerated: 0,
       templateExpansionTimeMs: 0,
+      templatesFailed: 0,
     };
   }
 

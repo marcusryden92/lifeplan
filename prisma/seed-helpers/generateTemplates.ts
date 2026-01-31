@@ -104,7 +104,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
   } */
 
   // Work Morning Session (08:00 - 12:00) - Weekdays only
-  for (let i = 0; i < weekdays.length; i++) {
+  /* for (let i = 0; i < weekdays.length; i++) {
     templateArray.push({
       id: uuidv4(),
       userId,
@@ -133,7 +133,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       createdAt: timestamp,
       updatedAt: timestamp,
     });
-  }
+  } */
 
   // Morning workout (06:30 - 07:30) - Monday, Wednesday, Friday
   /* const workoutDays = [days[1], days[3], days[5]]; // Mon, Wed, Fri

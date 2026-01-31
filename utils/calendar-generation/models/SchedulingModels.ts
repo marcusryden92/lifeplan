@@ -60,6 +60,8 @@ export interface SchedulingMetrics {
   templateEventsGenerated: number;
   /** Time spent on template expansion (in ms) */
   templateExpansionTimeMs: number;
+  /** Number of templates that failed to expand (incomplete data) */
+  templatesFailed?: number;
 }
 
 /**

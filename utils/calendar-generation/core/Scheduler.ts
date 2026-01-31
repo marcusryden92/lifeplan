@@ -32,6 +32,7 @@ export class Scheduler {
     totalExecutionTimeMs: 0,
     templateEventsGenerated: 0,
     templateExpansionTimeMs: 0,
+    templatesFailed: 0,
   };
 
   constructor(
@@ -115,13 +116,6 @@ export class Scheduler {
           ),
         )
       : fittingSlots;
-
-    // Debug category filtering
-    if (task.categoryId) {
-      console.log(
-        `Task ${task.title} (category: ${task.categoryId}): ${fittingSlots.length} slots → ${validSlots.length} valid`,
-      );
-    }
 
     if (validSlots.length === 0) {
       this.metrics.tasksFailed++;
@@ -282,15 +276,15 @@ export class Scheduler {
     // Travel-after is placed at the END of the slot
     // Note: reserveSlotWithTravel expects task start/end times, not reservation times
     // If placing travel-before outside, reserve it separately and omit travel-before inside
-    if (travelBefore > 0) {
+    if (travelBefore > 0 && selectedSlot.prevLocationId && taskLocationId) {
       const travelEnd = new Date(
         selectedSlot.start.getTime() - bufferMinutes * 60000,
       );
       const placed = this.slotManager.reserveStandaloneTravelBefore(
         travelEnd,
         travelBefore,
-        selectedSlot.prevLocationId as string,
-        taskLocationId as string,
+        selectedSlot.prevLocationId,
+        taskLocationId,
         task.id,
       );
       if (!placed.success) {
@@ -348,25 +342,14 @@ export class Scheduler {
               taskStartDate.getMinutes(),
             ).padStart(2, "0")}`;
 
-            console.log(
-              `  - Checking slot ${slot.startTime}-${slot.endTime} for day ${dayOfWeek}, task starts at ${startTime}`,
-            );
-
             if (startTime >= slot.startTime && startTime < slot.endTime) {
               // This task falls within this category slot
               categoryWrapperId = `${constraint.id}-${dayOfWeek}-${slot.startTime}-${slot.endTime}`;
-              console.log(`  ✅ Assigned wrapper ID: ${categoryWrapperId}`);
               break;
             }
           }
         }
       }
-    }
-
-    if (!categoryWrapperId && task.categoryId) {
-      console.log(
-        `  ⚠️ Task ${task.title} has categoryId but NO wrapper ID assigned`,
-      );
     }
 
     // Create the main task event (travel events are created at the end from travel slots)
@@ -488,6 +471,7 @@ export class Scheduler {
       totalExecutionTimeMs: 0,
       templateEventsGenerated: 0,
       templateExpansionTimeMs: 0,
+      templatesFailed: 0,
     };
   }
 }

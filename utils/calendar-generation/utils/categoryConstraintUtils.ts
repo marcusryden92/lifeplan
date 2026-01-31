@@ -10,6 +10,14 @@ import { parseCategoryTimeSlots } from "@/utils/categoryHelpers";
 /**
  * Check if a given date/time falls within any of the category's time slots
  */
+/**
+ * Convert time string (HH:MM) to minutes since midnight for reliable comparison
+ */
+function timeStringToMinutes(timeStr: string): number {
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
 export function isTimeInCategorySlots(
   date: Date,
   timeSlots: CategoryTimeSlot[]
@@ -17,16 +25,16 @@ export function isTimeInCategorySlots(
   if (!timeSlots || timeSlots.length === 0) return true;
 
   const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
-  const timeString = `${String(date.getHours()).padStart(2, "0")}:${String(
-    date.getMinutes()
-  ).padStart(2, "0")}`;
+  const taskMinutes = date.getHours() * 60 + date.getMinutes();
 
   for (const slot of timeSlots) {
     // Check if this day is included in the slot
     if (!slot.days.includes(dayOfWeek)) continue;
 
-    // Check if time falls within the slot
-    if (timeString >= slot.startTime && timeString <= slot.endTime) {
+    // Check if time falls within the slot using numeric comparison
+    const startMinutes = timeStringToMinutes(slot.startTime);
+    const endMinutes = timeStringToMinutes(slot.endTime);
+    if (taskMinutes >= startMinutes && taskMinutes <= endMinutes) {
       return true;
     }
   }
@@ -45,12 +53,8 @@ export function doesTimeRangeFitInCategorySlots(
   if (!timeSlots || timeSlots.length === 0) return true;
 
   const dayOfWeek = startDate.getDay();
-  const startTime = `${String(startDate.getHours()).padStart(2, "0")}:${String(
-    startDate.getMinutes()
-  ).padStart(2, "0")}`;
-  const endTime = `${String(endDate.getHours()).padStart(2, "0")}:${String(
-    endDate.getMinutes()
-  ).padStart(2, "0")}`;
+  const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
+  const endMinutes = endDate.getHours() * 60 + endDate.getMinutes();
 
   // Check if both start and end are on the same day
   if (startDate.getDay() !== endDate.getDay()) {
@@ -63,15 +67,11 @@ export function doesTimeRangeFitInCategorySlots(
   for (const slot of timeSlots) {
     if (!slot.days.includes(dayOfWeek)) continue;
 
-    // Check if both start and end times fit within this slot
-    const fits = startTime >= slot.startTime && endTime <= slot.endTime;
-
-    // Log first few comparisons for debugging
-    if (!fits && Math.random() < 0.1) {
-      console.log(
-        `Slot check: task ${startTime}-${endTime} vs slot ${slot.startTime}-${slot.endTime} on day ${dayOfWeek} = ${fits}`
-      );
-    }
+    // Check if both start and end times fit within this slot using numeric comparison
+    const slotStartMinutes = timeStringToMinutes(slot.startTime);
+    const slotEndMinutes = timeStringToMinutes(slot.endTime);
+    const fits =
+      startMinutes >= slotStartMinutes && endMinutes <= slotEndMinutes;
 
     if (fits) {
       return true;

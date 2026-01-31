@@ -1,14 +1,15 @@
+- Calendar items not loading properly on initial load
+- Issues with category items not displaying properly with seed data
+- Handling of category-items overlapping, or how and where to create them
+  (Its own view? In template view? In categories like now?)
+
 # House Keeping
 
 - Change date picker
-- Refactor calendarGeneration
 
 # Calendar
 
 - Allow moving/pinning of objects
-
-- Feature for duplicate plans
-- Feature for duplicating templates in template builder
 
 - (Multiple templates of different time span (3 days, 2 weeks etc))
 
@@ -24,19 +25,11 @@
 - Maximum time of a goal per day
 
 - Add exceptions to template (like skip a day or move a particular repeating instance)
-- Add category function, so that a segment of time can be demarcated and relevant events
-  only render within the confines of that time slot ('Work' for instance).
-
-- Option for adding locations and calculating travel time between tasks
 
 - Add individual buffer option to events.
 
 - Add habits (repeating events with min/max size rendering within a given time frame)
 - Add routines (tasks that are always bundled)
-
-# Creation Pages
-
-- Add mark all and unmark all options for task/plans/goals.
 
 # Server Setup
 
@@ -53,9 +46,7 @@
 
 - Add a console for error messaging
 
-- Add page to display all planner objects at once, to easily swap and sort between them.
-
-  - Add dragging function to this page to easily move objects from standalone to be nested (in goal tasks for example).
+- Add dragging function to items page to easily move objects from standalone to be nested (in goal tasks for example).
 
 - Generally improve UX and user flow/process.
 

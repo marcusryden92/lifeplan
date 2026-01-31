@@ -66,6 +66,10 @@ export const SCHEDULING_CONFIG = {
   MIN_SLOT_SIZE: 5,
   /** Buffer time between events in minutes */
   BUFFER_TIME_MINUTES: 0,
+  /** Time window (ms) for matching adjacent travel slots (3 hours) */
+  TRAVEL_SEARCH_WINDOW_MS: 3 * 60 * 60 * 1000,
+  /** Time window (ms) for adjacent travel search including tolerance (buffer + 10 min) */
+  ADJACENT_TRAVEL_TOLERANCE_MS: 10 * 60 * 1000,
 } as const;
 
 /**

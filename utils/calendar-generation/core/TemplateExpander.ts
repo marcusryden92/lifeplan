@@ -52,6 +52,7 @@ export type PerTemplateMask = {
 
 export class TemplateExpander {
   private expandedTemplates: Map<string, SimpleEvent[]> = new Map();
+  private templateFailureCount: number = 0;
 
   constructor(private weekStartDay: WeekDayIntegers) {}
 
@@ -66,6 +67,7 @@ export class TemplateExpander {
     _endDate: Date // Comment: unused variable, implement for multiple templates
   ): SimpleEvent[] {
     const events: SimpleEvent[] = [];
+    this.templateFailureCount = 0;
 
     for (const template of templates) {
       const event = this.createRecurringTemplateEvent(
@@ -75,10 +77,19 @@ export class TemplateExpander {
       );
       if (event) {
         events.push(event);
+      } else {
+        this.templateFailureCount++;
       }
     }
 
     return events;
+  }
+
+  /**
+   * Get the count of templates that failed to expand
+   */
+  getTemplateFailureCount(): number {
+    return this.templateFailureCount;
   }
 
   /**

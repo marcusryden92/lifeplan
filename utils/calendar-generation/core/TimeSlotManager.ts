@@ -378,9 +378,13 @@ export class TimeSlotManager {
     // Convert gaps to available time slots (location info is preserved)
     let slots = gapsToTimeSlots(gaps);
 
-    // Apply leading buffer to slots that have a preceding event
-    // This ensures tasks don't touch the template/event before them
-    // Slots after reserved tasks already have buffer baked in (taskReserveEnd = task.end + buffer)
+    // Apply leading buffer to slots that follow templates/fixed events
+    // This ensures scheduled tasks don't start immediately after templates.
+    // NOTE: This is NOT double-buffering - it handles different scenarios:
+    // - Leading buffer: Applied once during initial slot building (after templates)
+    // - Trailing buffer: Applied when scheduling tasks (via reserveSlotWithTravel)
+    // When a task is scheduled, the slot is split and the "after" slot starts
+    // at taskEnd + buffer, so subsequent tasks get proper spacing automatically.
     // We identify "start of range" slots by comparing slot.start to startDate
     if (this.bufferTimeMinutes > 0) {
       const rangeStartTime = startDate.getTime();
@@ -871,7 +875,7 @@ export class TimeSlotManager {
       // Look for existing travel going to the same destination that's near our slot end
       // This ensures we don't pick up unrelated travel (like morning commute) when scheduling afternoon tasks
       const slotEndTime = slot.end.getTime();
-      const searchWindowMs = 3 * 60 * 60 * 1000; // 3 hours
+      const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
 
       const existingTravel = occupiedSlots.find((occ) => {
         if (!TimeSlotUtils.isTravelSlot(occ)) return false;
@@ -894,6 +898,7 @@ export class TimeSlotManager {
     }
 
     // 1. Slot before everything (available) - from slot.start to fullStart
+    // The slot BEFORE a task should have nextLocationId = taskLocationId (where we're going)
     if (fullStart.getTime() > slot.start.getTime()) {
       newSlots.push({
         start: slot.start,
@@ -903,7 +908,7 @@ export class TimeSlotManager {
         ),
         isAvailable: true,
         prevLocationId: slot.prevLocationId,
-        nextLocationId: prevLocationId ?? taskLocationId,
+        nextLocationId: taskLocationId ?? slot.nextLocationId,
       });
     }
 
@@ -920,7 +925,7 @@ export class TimeSlotManager {
       // IMPORTANT: Only remove travel near this task - don't remove unrelated travel
       // (e.g., morning commute shouldn't be removed when scheduling afternoon task)
       const taskStartTime = start.getTime();
-      const searchWindowMs = 3 * 60 * 60 * 1000; // 3 hours
+      const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
 
       for (let i = occupiedSlots.length - 1; i >= 0; i--) {
         const occ = occupiedSlots[i];
@@ -984,7 +989,7 @@ export class TimeSlotManager {
     ) {
       // Task is at same location as next event - find and remove pre-created travel
       const slotEndTime = slot.end.getTime();
-      const searchWindowMs = 3 * 60 * 60 * 1000; // 3 hours
+      const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
 
       for (let i = occupiedSlots.length - 1; i >= 0; i--) {
         const occ = occupiedSlots[i];
@@ -1049,7 +1054,7 @@ export class TimeSlotManager {
       // This handles the "travel shifts forward" case where buildAvailableSlots created travel
       // for template-to-template transitions, and now a dynamic task fills part of the gap
       const slotEndTime = slot.end.getTime();
-      const searchWindowMs = 3 * 60 * 60 * 1000; // 3 hours - max reasonable travel + buffer window
+      const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
 
       for (let i = occupiedSlots.length - 1; i >= 0; i--) {
         const occ = occupiedSlots[i];
@@ -1114,7 +1119,7 @@ export class TimeSlotManager {
     // 1. Go to the same destination (toLocationId)
     // 2. Start near the given time (within buffer + reasonable search window)
     const bufferMs = this.bufferTimeMinutes * 60000;
-    const searchWindowMs = bufferMs + 10 * 60000; // buffer + 10 minutes tolerance
+    const searchWindowMs = bufferMs + SCHEDULING_CONFIG.ADJACENT_TRAVEL_TOLERANCE_MS;
 
     for (const slot of occupiedSlots) {
       if (

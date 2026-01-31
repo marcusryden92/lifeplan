@@ -5,7 +5,9 @@
       "Bash(pnpm prisma generate:*)",
       "Bash(pnpm lint:*)",
       "Bash(xcopy:*)",
-      "Bash(pnpm run lint)"
+      "Bash(pnpm run lint)",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm build:*)"
     ]
   }
 }
