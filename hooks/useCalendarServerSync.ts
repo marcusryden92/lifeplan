@@ -11,7 +11,7 @@ const useCalendarServerSync = (
     calendar: SimpleEvent[];
     template: EventTemplate[];
     categories: Category[];
-  }
+  },
 ) => {
   // Previous state refs to track what the server has
   const previousPlanner = useRef<Planner[]>([]);
@@ -27,14 +27,14 @@ const useCalendarServerSync = (
       planner: Planner[],
       calendar: SimpleEvent[],
       template: EventTemplate[],
-      _categories: Category[]
+      _categories: Category[],
     ) => {
       previousPlanner.current = planner;
       previousCalendar.current = calendar;
       previousTemplate.current = template;
       setIsInitialized(true);
     },
-    []
+    [],
   );
 
   useEffect(() => {
@@ -49,7 +49,7 @@ const useCalendarServerSync = (
           calendar,
           previousCalendar,
           template,
-          previousTemplate
+          previousTemplate,
         );
 
         if (response.success) {
@@ -58,16 +58,16 @@ const useCalendarServerSync = (
           previousCalendar.current = calendar;
           previousTemplate.current = template;
         } else {
-          console.warn("⚠️ Server sync response not successful:", response);
+          console.warn("Server sync response not successful:", response);
         }
       } catch (error) {
-        console.error("❌ Error processing server sync:", error);
+        console.error("Error processing server sync:", error);
       }
     };
 
     // Skip sync if calendar isn't initialized or if data is identical
     if (!isInitialized) {
-      console.log("⏭️ Skipping sync: not initialized");
+      console.log("⏭ Skipping sync: not initialized");
       return;
     }
 
@@ -79,7 +79,7 @@ const useCalendarServerSync = (
       JSON.stringify(previousTemplate.current) === JSON.stringify(template);
 
     if (plannerSame && calendarSame && templateSame) {
-      console.log("⏭️ Skipping sync: no changes detected");
+      console.log("⏭ Skipping sync: no changes detected");
       return;
     }
 

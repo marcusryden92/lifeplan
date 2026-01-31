@@ -39,7 +39,7 @@ interface CalendarProps {
   initialDate: Date;
   onCategoryHover?: (
     categoryName: string | null,
-    categoryColor: string | null
+    categoryColor: string | null,
   ) => void;
 }
 
@@ -101,6 +101,7 @@ export default function Calendar({
           minute: "2-digit",
           hour12: false,
         }}
+        eventOrder={"-duration,start"}
         editable={EVENT_INTERACTION_ENABLED}
         eventResizableFromStart={EVENT_INTERACTION_ENABLED}
         selectable={EVENT_INTERACTION_ENABLED}

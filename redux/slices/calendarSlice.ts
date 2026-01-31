@@ -35,8 +35,11 @@ const calendarSlice = createSlice({
         state.categories = action.payload.categories;
       }
     },
+    setCategories: (state, action: PayloadAction<Category[]>) => {
+      state.categories = action.payload;
+    },
   },
 });
 
-export const { updateCalendarArrayData } = calendarSlice.actions;
+export const { updateCalendarArrayData, setCategories } = calendarSlice.actions;
 export default calendarSlice;

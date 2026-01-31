@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
 import { FolderTree, Plus } from "lucide-react";
+import { setCategories as setCategoriesInRedux } from "@/redux/slices/calendarSlice";
 import { Button } from "@/components/ui/Button";
 import {
   Card,
@@ -35,6 +37,7 @@ type CategoryWithChildren = Category & {
 };
 
 export default function CategoriesPage() {
+  const dispatch = useDispatch();
   const [categories, setCategories] = useState<CategoryWithChildren[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +67,9 @@ export default function CategoriesPage() {
       // Fetch flat list and build full deep tree on client
       const flat = await categoryActions.fetchCategories();
       const tree = buildCategoryTree(flat);
+
+      // Sync flat categories to Redux so other components see the updated list
+      dispatch(setCategoriesInRedux(flat));
 
       // Fetch counts and attach to all nodes
       const withCountsArr = await categoryActions.fetchCategoriesWithCounts();

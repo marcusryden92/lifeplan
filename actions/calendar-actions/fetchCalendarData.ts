@@ -27,12 +27,24 @@ export async function fetchCalendarData(userId: string) {
     });
 
     // Fetch all categories for the user with timeSlots and location
-    const categories: Category[] = await db.category.findMany({
+    const categoriesRaw = await db.category.findMany({
       where: {
         userId: userId,
       },
       include: { location: true },
     });
+
+    // Serialize Date fields in location to avoid Redux non-serializable warnings
+    const categories = categoriesRaw.map((cat) => ({
+      ...cat,
+      location: cat.location
+        ? {
+            ...cat.location,
+            createdAt: cat.location.createdAt.toISOString(),
+            updatedAt: cat.location.updatedAt.toISOString(),
+          }
+        : null,
+    }));
 
     return {
       success: true,
@@ -40,7 +52,7 @@ export async function fetchCalendarData(userId: string) {
         planner: planner,
         calendar: calendarEvents,
         template: templatesItems,
-        categories: categories,
+        categories: categories as Category[],
       },
     };
   } catch (error) {
