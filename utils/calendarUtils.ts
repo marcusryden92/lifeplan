@@ -65,23 +65,30 @@ export function getRRuleDayTypeFromIndex(day: number): Weekday {
 export const transformEventsForFullCalendar = (
   events: SimpleEvent[]
 ): EventInput[] => {
-  return events.map((event) => ({
-    id: event.id,
-    title: event.title,
-    start: event.start,
-    end: event.end,
-    duration: event.duration ?? undefined,
-    rrule: event.rrule
-      ? (JSON.parse(event.rrule) as Record<string, unknown>)
-      : undefined,
-    backgroundColor: event.backgroundColor,
-    borderColor: event.borderColor,
-    editable: event.extendedProps?.itemType !== "template",
-    extendedProps: {
-      ...event.extendedProps,
+  return events.map((event) => {
+    const isCategory = event.extendedProps?.itemType === "category";
+    const isTemplate = event.extendedProps?.itemType === "template";
+
+    return {
+      id: event.id,
+      title: event.title,
+      start: event.start,
+      end: event.end,
+      duration: event.duration ?? undefined,
+      rrule: event.rrule
+        ? (JSON.parse(event.rrule) as Record<string, unknown>)
+        : undefined,
       backgroundColor: event.backgroundColor,
-    },
-  }));
+      borderColor: event.borderColor,
+      editable: !isTemplate && !isCategory,
+      // Category wrapper events render as background events
+      display: isCategory ? "background" : undefined,
+      extendedProps: {
+        ...event.extendedProps,
+        backgroundColor: event.backgroundColor,
+      },
+    };
+  });
 };
 
 export function getCalendarHeaderDateString(

@@ -57,17 +57,9 @@ export default function Calendar({
 
   /* Transform SimpleEvent calendar to EventInput for FullCalendar */
   const fullCalendarEvents: EventInput[] = useMemo(() => {
-    const newCal: EventInput[] = calendar
-      ? transformEventsForFullCalendar(calendar)
-      : [];
-
-    // Filter out events that have a categoryWrapperId - they'll be rendered inside the wrapper
-    return newCal.filter((event) => {
-      const extendedProps = event.extendedProps as
-        | RuntimeEventExtendedProps
-        | undefined;
-      return !extendedProps?.categoryWrapperId;
-    });
+    return calendar ? transformEventsForFullCalendar(calendar) : [];
+    // Note: Category wrappers are now background events, and items with categoryWrapperId
+    // are rendered as regular foreground events on top of them
   }, [calendar]);
 
   return (
