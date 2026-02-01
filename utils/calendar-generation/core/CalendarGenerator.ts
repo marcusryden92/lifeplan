@@ -349,10 +349,9 @@ export class CalendarGenerator {
 
         // Travel BEFORE: by default prev -> category, but if earliest event's travel intersects wrapper start,
         // route prev -> earliestEvent.location (item travel takes precedence)
+        // Note: Travel ends exactly at category start (no buffer) - consistent with regular event travel
         const daySlotsStart = this.slotManager.getDaySlots(period.start);
-        const travelEndBefore = new Date(
-          period.start.getTime() - bufferMinutes * 60000
-        );
+        const travelEndBefore = new Date(period.start.getTime());
         const containingIndexBefore = daySlotsStart.findIndex(
           (s) =>
             s.isAvailable &&
@@ -413,19 +412,20 @@ export class CalendarGenerator {
                 categoryLoc,
                 period.start
               );
-              if (
-                minutes > 0 &&
-                this.slotManager.canPlaceStandaloneTravelBefore(
-                  travelEndBefore,
-                  minutes
-                )
-              ) {
-                this.slotManager.reserveStandaloneTravelBefore(
-                  travelEndBefore,
+              if (minutes > 0) {
+                // Force full travel duration for categories - travel time is what it is
+                // regardless of schedule conflicts. Travel starts from the available slot
+                // and extends forward, potentially overlapping into the category.
+                // Use slot start (adjusted for buffer) as travel start point.
+                const bufferMs = bufferMinutes * 60000;
+                const travelStart = new Date(slotCtx.start.getTime() - bufferMs);
+                this.slotManager.reserveStandaloneTravelAfter(
+                  travelStart,
                   minutes,
                   prevLoc,
                   categoryLoc,
-                  `${period.categoryId}-${period.start.toISOString()}`
+                  `${period.categoryId}-${period.start.toISOString()}`,
+                  true // force
                 );
               }
             }
@@ -434,10 +434,9 @@ export class CalendarGenerator {
 
         // Travel AFTER: by default category -> next, but if last event's travel starts before wrapper end,
         // route lastEvent.location -> next (item travel takes precedence)
+        // Note: Travel starts exactly at category end (no buffer) - consistent with regular event travel
         const daySlotsEnd = this.slotManager.getDaySlots(period.end);
-        const travelStartAfter = new Date(
-          period.end.getTime() + bufferMinutes * 60000
-        );
+        const travelStartAfter = new Date(period.end.getTime());
         const containingIndexAfter = daySlotsEnd.findIndex(
           (s) =>
             s.isAvailable &&
@@ -502,20 +501,16 @@ export class CalendarGenerator {
                 period.end
               );
               if (minutes > 0) {
-                const canPlace =
-                  this.slotManager.canPlaceStandaloneTravelBefore(
-                    new Date(travelStartAfter.getTime() + minutes * 60000),
-                    minutes
-                  );
-                if (canPlace) {
-                  this.slotManager.reserveStandaloneTravelAfter(
-                    travelStartAfter,
-                    minutes,
-                    categoryLoc,
-                    nextLoc,
-                    `${period.categoryId}-${period.end.toISOString()}`
-                  );
-                }
+                // Force full travel duration for categories - travel time is what it is
+                // regardless of schedule conflicts (you still have to travel there)
+                this.slotManager.reserveStandaloneTravelAfter(
+                  travelStartAfter,
+                  minutes,
+                  categoryLoc,
+                  nextLoc,
+                  `${period.categoryId}-${period.end.toISOString()}`,
+                  true // force
+                );
               }
             }
           }

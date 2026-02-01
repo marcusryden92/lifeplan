@@ -83,12 +83,17 @@ export class TimeSlotManager {
     // Travel should end buffer before the task start, so ensure positive duration
     if (travelMinutes <= 0 || travelStartMs >= travelEndMs) return false;
 
-    // Find an available slot that contains the full travel window
+    // Find an available slot that contains the travel end point.
+    // Travel can start in the buffer zone before the slot (slot.start is buffer-adjusted),
+    // so we only require that travelEnd is within the slot and travelStart is at or after
+    // the original gap start (which is slot.start - bufferTimeMinutes).
+    const bufferMs = this.bufferTimeMinutes * 60000;
+
     return (
       slots.findIndex(
         (slot) =>
           slot.isAvailable &&
-          slot.start.getTime() <= travelStartMs &&
+          slot.start.getTime() - bufferMs <= travelStartMs &&
           slot.end.getTime() >= travelEndMs
       ) !== -1
     );
@@ -97,26 +102,89 @@ export class TimeSlotManager {
   /**
    * Reserve a standalone travel-before segment that ends at a given time.
    * Splits the containing available slot and records the travel as occupied.
+   * @param force If true, creates the travel at full duration and marks overlapping
+   *              slots as unavailable. Used for category travel where travel time is
+   *              fixed regardless of schedule conflicts.
    */
   reserveStandaloneTravelBefore(
     travelEnd: Date,
     travelMinutes: number,
     fromLocationId: string,
     toLocationId: string,
-    eventId: string
+    eventId: string,
+    force: boolean = false
   ): { success: boolean } {
     const dayKey = this.getDayKey(travelEnd);
-    const slots = this.availableSlots.get(dayKey);
-    if (!slots) return { success: false };
-
     const travelEndMs = travelEnd.getTime();
     const travelStart = new Date(travelEndMs - travelMinutes * 60000);
     const travelStartMs = travelStart.getTime();
 
+    // Force mode: create travel at full duration and mark overlapping slots as unavailable
+    if (force) {
+      const travelSlot = TimeSlotUtils.createTravelSlot(
+        travelStart,
+        travelEnd,
+        fromLocationId,
+        toLocationId,
+        `travel-to-${eventId}`
+      );
+      const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+      occupiedSlots.push(travelSlot);
+      this.occupiedSlots.set(dayKey, occupiedSlots);
+
+      // Also mark overlapping available slots as occupied
+      const slots = this.availableSlots.get(dayKey);
+      if (slots) {
+        const newSlots: TimeSlot[] = [];
+        for (const slot of slots) {
+          if (!slot.isAvailable) {
+            newSlots.push(slot);
+            continue;
+          }
+          const slotStartMs = slot.start.getTime();
+          const slotEndMs = slot.end.getTime();
+
+          // No overlap - keep slot as is
+          if (slotEndMs <= travelStartMs || slotStartMs >= travelEndMs) {
+            newSlots.push(slot);
+            continue;
+          }
+
+          // Partial overlap - keep portion before travel
+          if (slotStartMs < travelStartMs) {
+            newSlots.push({
+              ...slot,
+              end: travelStart,
+              durationMinutes: Math.floor((travelStartMs - slotStartMs) / 60000),
+            });
+          }
+
+          // Partial overlap - keep portion after travel
+          if (slotEndMs > travelEndMs) {
+            newSlots.push({
+              ...slot,
+              start: travelEnd,
+              durationMinutes: Math.floor((slotEndMs - travelEndMs) / 60000),
+              prevLocationId: toLocationId,
+            });
+          }
+          // If slot is fully contained by travel, it's removed (not added to newSlots)
+        }
+        this.availableSlots.set(dayKey, newSlots);
+      }
+
+      return { success: true };
+    }
+
+    const slots = this.availableSlots.get(dayKey);
+    if (!slots) return { success: false };
+
+    // Travel can start in the buffer zone before the slot (slot.start is buffer-adjusted)
+    const bufferMs = this.bufferTimeMinutes * 60000;
     const slotIndex = slots.findIndex(
       (slot) =>
         slot.isAvailable &&
-        slot.start.getTime() <= travelStartMs &&
+        slot.start.getTime() - bufferMs <= travelStartMs &&
         slot.end.getTime() >= travelEndMs
     );
     if (slotIndex === -1) return { success: false };
@@ -124,7 +192,7 @@ export class TimeSlotManager {
     const slot = slots[slotIndex];
     const newSlots: TimeSlot[] = [];
 
-    // Available before travel
+    // Available before travel (only if travel starts after the slot's buffer-adjusted start)
     if (travelStartMs > slot.start.getTime()) {
       newSlots.push({
         start: slot.start,
@@ -174,26 +242,89 @@ export class TimeSlotManager {
   /**
    * Reserve a standalone travel-after segment that starts at a given time.
    * Splits the containing available slot and records the travel as occupied.
+   * @param force If true, creates the travel at full duration and marks overlapping
+   *              slots as unavailable. Used for category travel where travel time is
+   *              fixed regardless of schedule conflicts.
    */
   reserveStandaloneTravelAfter(
     travelStart: Date,
     travelMinutes: number,
     fromLocationId: string,
     toLocationId: string,
-    eventId: string
+    eventId: string,
+    force: boolean = false
   ): { success: boolean } {
     const dayKey = this.getDayKey(travelStart);
-    const slots = this.availableSlots.get(dayKey);
-    if (!slots) return { success: false };
-
     const travelStartMs = travelStart.getTime();
     const travelEnd = new Date(travelStartMs + travelMinutes * 60000);
     const travelEndMs = travelEnd.getTime();
 
+    // Force mode: create travel at full duration and mark overlapping slots as unavailable
+    if (force) {
+      const travelSlot = TimeSlotUtils.createTravelSlot(
+        travelStart,
+        travelEnd,
+        fromLocationId,
+        toLocationId,
+        `travel-from-${eventId}`
+      );
+      const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+      occupiedSlots.push(travelSlot);
+      this.occupiedSlots.set(dayKey, occupiedSlots);
+
+      // Also mark overlapping available slots as occupied
+      const slots = this.availableSlots.get(dayKey);
+      if (slots) {
+        const newSlots: TimeSlot[] = [];
+        for (const slot of slots) {
+          if (!slot.isAvailable) {
+            newSlots.push(slot);
+            continue;
+          }
+          const slotStartMs = slot.start.getTime();
+          const slotEndMs = slot.end.getTime();
+
+          // No overlap - keep slot as is
+          if (slotEndMs <= travelStartMs || slotStartMs >= travelEndMs) {
+            newSlots.push(slot);
+            continue;
+          }
+
+          // Partial overlap - keep portion before travel
+          if (slotStartMs < travelStartMs) {
+            newSlots.push({
+              ...slot,
+              end: travelStart,
+              durationMinutes: Math.floor((travelStartMs - slotStartMs) / 60000),
+            });
+          }
+
+          // Partial overlap - keep portion after travel
+          if (slotEndMs > travelEndMs) {
+            newSlots.push({
+              ...slot,
+              start: travelEnd,
+              durationMinutes: Math.floor((slotEndMs - travelEndMs) / 60000),
+              prevLocationId: toLocationId,
+            });
+          }
+          // If slot is fully contained by travel, it's removed (not added to newSlots)
+        }
+        this.availableSlots.set(dayKey, newSlots);
+      }
+
+      return { success: true };
+    }
+
+    const slots = this.availableSlots.get(dayKey);
+    if (!slots) return { success: false };
+
+    // Travel can start in the buffer zone before the slot (slot.start is buffer-adjusted)
+    const bufferMs = this.bufferTimeMinutes * 60000;
     const slotIndex = slots.findIndex(
       (slot) =>
         slot.isAvailable &&
-        slot.start.getTime() <= travelStartMs &&
+        slot.start.getTime() - bufferMs <= travelStartMs &&
         slot.end.getTime() >= travelEndMs
     );
     if (slotIndex === -1) return { success: false };
@@ -201,7 +332,7 @@ export class TimeSlotManager {
     const slot = slots[slotIndex];
     const newSlots: TimeSlot[] = [];
 
-    // Available before travel
+    // Available before travel (only if travel starts after the slot's buffer-adjusted start)
     if (travelStartMs > slot.start.getTime()) {
       newSlots.push({
         start: slot.start,
@@ -236,6 +367,160 @@ export class TimeSlotManager {
         nextLocationId: slot.nextLocationId,
       });
     }
+
+    // Replace slot and record occupied travel
+    const availableNewSlots = newSlots.filter((s) => s.isAvailable);
+    slots.splice(slotIndex, 1, ...availableNewSlots);
+
+    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+    occupiedSlots.push(...newSlots.filter((s) => !s.isAvailable));
+    this.occupiedSlots.set(dayKey, occupiedSlots);
+
+    return { success: true };
+  }
+
+  /**
+   * Reserve an insufficient travel-before segment when there's not enough room for full travel.
+   * Creates a travel event that fills whatever space is available before the target time,
+   * marked with insufficientTravel flag for alert styling.
+   */
+  reserveInsufficientTravelBefore(
+    travelEnd: Date,
+    requiredTravelMinutes: number,
+    fromLocationId: string,
+    toLocationId: string,
+    eventId: string
+  ): { success: boolean } {
+    const dayKey = this.getDayKey(travelEnd);
+    const slots = this.availableSlots.get(dayKey);
+    if (!slots) return { success: false };
+
+    const travelEndMs = travelEnd.getTime();
+    const bufferMs = this.bufferTimeMinutes * 60000;
+
+    // Find the slot that ends at or contains travelEnd
+    const slotIndex = slots.findIndex(
+      (slot) =>
+        slot.isAvailable &&
+        slot.end.getTime() >= travelEndMs
+    );
+    if (slotIndex === -1) return { success: false };
+
+    const slot = slots[slotIndex];
+
+    // Travel starts at the original slot start (before buffer adjustment)
+    // This allows travel to fill the entire gap including the buffer zone
+    const travelStart = new Date(slot.start.getTime() - bufferMs);
+    const travelStartMs = travelStart.getTime();
+
+    // If there's no space at all, skip
+    if (travelStartMs >= travelEndMs) return { success: false };
+
+    const newSlots: TimeSlot[] = [];
+
+    // Occupied travel segment (insufficient - fills available space)
+    const travelSlot = TimeSlotUtils.createTravelSlot(
+      travelStart,
+      travelEnd,
+      fromLocationId,
+      toLocationId,
+      `travel-insufficient-${eventId}`,
+      {
+        insufficientTravel: true,
+        requiredTravelMinutes,
+      }
+    );
+    newSlots.push(travelSlot);
+
+    // Available after travel (if any)
+    if (slot.end.getTime() > travelEndMs) {
+      newSlots.push({
+        start: travelEnd,
+        end: slot.end,
+        durationMinutes: Math.floor((slot.end.getTime() - travelEndMs) / 60000),
+        isAvailable: true,
+        prevLocationId: toLocationId,
+        nextLocationId: slot.nextLocationId,
+      });
+    }
+
+    // Replace slot and record occupied travel
+    const availableNewSlots = newSlots.filter((s) => s.isAvailable);
+    slots.splice(slotIndex, 1, ...availableNewSlots);
+
+    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+    occupiedSlots.push(...newSlots.filter((s) => !s.isAvailable));
+    this.occupiedSlots.set(dayKey, occupiedSlots);
+
+    return { success: true };
+  }
+
+  /**
+   * Reserve an insufficient travel-after segment when there's not enough room for full travel.
+   * Creates a travel event that fills whatever space is available after the start time,
+   * marked with insufficientTravel flag for alert styling.
+   */
+  reserveInsufficientTravelAfter(
+    travelStart: Date,
+    requiredTravelMinutes: number,
+    fromLocationId: string,
+    toLocationId: string,
+    eventId: string
+  ): { success: boolean } {
+    const dayKey = this.getDayKey(travelStart);
+    const slots = this.availableSlots.get(dayKey);
+    if (!slots) return { success: false };
+
+    const travelStartMs = travelStart.getTime();
+    const bufferMs = this.bufferTimeMinutes * 60000;
+
+    // Find the slot that contains travelStart (account for buffer zone)
+    const slotIndex = slots.findIndex(
+      (slot) =>
+        slot.isAvailable &&
+        slot.start.getTime() - bufferMs <= travelStartMs &&
+        slot.end.getTime() > travelStartMs
+    );
+    if (slotIndex === -1) return { success: false };
+
+    const slot = slots[slotIndex];
+
+    // Travel ends at the slot end (filling available space)
+    const travelEnd = slot.end;
+    const travelEndMs = travelEnd.getTime();
+
+    // If there's no space at all, skip
+    if (travelStartMs >= travelEndMs) return { success: false };
+
+    const newSlots: TimeSlot[] = [];
+
+    // Available before travel (if any)
+    if (travelStartMs > slot.start.getTime()) {
+      newSlots.push({
+        start: slot.start,
+        end: travelStart,
+        durationMinutes: Math.floor(
+          (travelStartMs - slot.start.getTime()) / 60000
+        ),
+        isAvailable: true,
+        prevLocationId: slot.prevLocationId,
+        nextLocationId: fromLocationId,
+      });
+    }
+
+    // Occupied travel segment (insufficient - fills available space)
+    const travelSlot = TimeSlotUtils.createTravelSlot(
+      travelStart,
+      travelEnd,
+      fromLocationId,
+      toLocationId,
+      `travel-insufficient-${eventId}`,
+      {
+        insufficientTravel: true,
+        requiredTravelMinutes,
+      }
+    );
+    newSlots.push(travelSlot);
 
     // Replace slot and record occupied travel
     const availableNewSlots = newSlots.filter((s) => s.isAvailable);
