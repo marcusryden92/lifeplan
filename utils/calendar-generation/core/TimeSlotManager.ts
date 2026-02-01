@@ -559,31 +559,40 @@ export class TimeSlotManager {
     const travelEnd = new Date(transition.toEventStart.getTime());
     const travelStart = new Date(travelEnd.getTime() - travelMs);
 
-    const correspondingSlot = slots.find(
-      (s) =>
-        s.end.getTime() === transition.toEventStart.getTime() &&
-        s.prevLocationId === effectiveFromLocationId
-    );
+    // Use the original gap start (fromEventEnd) to check if travel fits,
+    // since correspondingSlot.start may have been adjusted by buffer
+    const originalGapStart = transition.fromEventEnd.getTime();
 
-    if (
-      correspondingSlot &&
-      travelStart.getTime() > correspondingSlot.start.getTime() + bufferMs
-    ) {
+    // Travel fits if it starts at or after the original gap start
+    if (travelStart.getTime() >= originalGapStart) {
       const travelSlot = TimeSlotUtils.createTravelSlot(
         travelStart,
         travelEnd,
         effectiveFromLocationId!,
         effectiveToLocationId!,
-        `travel-gap-${correspondingSlot.start.getTime()}`
+        `travel-gap-${originalGapStart}`
       );
       occupiedSlots.push(travelSlot);
 
-      // Shrink the available slot to end at buffer before travel
-      correspondingSlot.end = new Date(travelStart.getTime() - bufferMs);
-      correspondingSlot.durationMinutes = Math.floor(
-        (correspondingSlot.end.getTime() - correspondingSlot.start.getTime()) /
-          60000
+      // Find and shrink the corresponding available slot
+      const correspondingSlot = slots.find(
+        (s) =>
+          s.end.getTime() === transition.toEventStart.getTime() &&
+          s.prevLocationId === effectiveFromLocationId
       );
+
+      if (correspondingSlot) {
+        // Shrink the available slot to end at buffer before travel (or slot start if no room)
+        const newEndTime = Math.max(
+          correspondingSlot.start.getTime(),
+          travelStart.getTime() - bufferMs
+        );
+        correspondingSlot.end = new Date(newEndTime);
+        correspondingSlot.durationMinutes = Math.floor(
+          (correspondingSlot.end.getTime() - correspondingSlot.start.getTime()) /
+            60000
+        );
+      }
     }
   }
 
