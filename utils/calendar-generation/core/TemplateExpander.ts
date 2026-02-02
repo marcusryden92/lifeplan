@@ -64,7 +64,8 @@ export class TemplateExpander {
     userId: string,
     templates: EventTemplate[],
     startDate: Date,
-    _endDate: Date // Comment: unused variable, implement for multiple templates
+    // Comment: unused variable, implement for multiple templates
+    _endDate: Date,
   ): SimpleEvent[] {
     const events: SimpleEvent[] = [];
     this.templateFailureCount = 0;
@@ -73,7 +74,7 @@ export class TemplateExpander {
       const event = this.createRecurringTemplateEvent(
         userId,
         template,
-        startDate
+        startDate,
       );
       if (event) {
         events.push(event);
@@ -98,7 +99,7 @@ export class TemplateExpander {
   private createRecurringTemplateEvent(
     userId: string,
     template: EventTemplate,
-    weekStartDate: Date
+    weekStartDate: Date,
   ): SimpleEvent | null {
     if (
       !template.startDay ||
@@ -109,6 +110,7 @@ export class TemplateExpander {
       return null;
     }
 
+    // Comment: Should WEEKDAY_NAMES be an enum?
     // Calculate the day offset from week start
     const startDayIndex = WEEKDAY_NAMES.indexOf(template.startDay);
     if (startDayIndex === -1) {
@@ -122,7 +124,7 @@ export class TemplateExpander {
     // Set the time
     const startDate = dateTimeService.setTimeOnDate(
       eventDate,
-      template.startTime
+      template.startTime,
     );
     const endDate = dateTimeService.addDuration(startDate, template.duration);
 
@@ -225,7 +227,7 @@ export class TemplateExpander {
    */
   private masksToIntervalsForDay(
     masks: PerTemplateMask[],
-    date: Date
+    date: Date,
   ): Array<{ start: Date; end: Date }> {
     const dayOfWeek = date.getDay();
     const intervals: Array<{ start: Date; end: Date }> = [];

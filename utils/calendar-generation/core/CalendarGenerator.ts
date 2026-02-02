@@ -67,7 +67,7 @@ export class CalendarGenerator {
       this.weekStartDay,
       new Date(),
       bufferTimeMinutes,
-      input.config?.travelTimeMatrix
+      input.config?.travelTimeMatrix,
     );
 
     // Validate input
@@ -113,7 +113,7 @@ export class CalendarGenerator {
         (e) =>
           currentDate > new Date(e.end) &&
           e.extendedProps?.itemType !== "template" &&
-          e.extendedProps?.itemType !== "travel"
+          e.extendedProps?.itemType !== "travel",
       );
       pastEvents.forEach((e) => memoizedEventIds.add(e.id));
       eventArray.push(...pastEvents);
@@ -124,7 +124,7 @@ export class CalendarGenerator {
       input.userId,
       input.planners,
       eventArray,
-      memoizedEventIds
+      memoizedEventIds,
     );
 
     // Step 3: completed items
@@ -132,14 +132,14 @@ export class CalendarGenerator {
       input.userId,
       input.planners,
       eventArray,
-      memoizedEventIds
+      memoizedEventIds,
     );
 
     // Step 4: Expand recurring template definitions
     const templateStart = performance.now();
     const weekStart = dateTimeService.getWeekFirstDate(
       currentDate,
-      input.weekStartDay as WeekDayIntegers
+      input.weekStartDay as WeekDayIntegers,
     );
     const searchEndDate = dateTimeService.shiftDays(weekStart, maxDaysAhead);
 
@@ -147,7 +147,7 @@ export class CalendarGenerator {
       input.userId,
       input.templates,
       weekStart,
-      searchEndDate
+      searchEndDate,
     );
 
     // Debug: Check what templates are blocking the schedule
@@ -160,20 +160,21 @@ export class CalendarGenerator {
           return hour >= 9 && hour < 17;
         });
         console.log(
-          `Templates in work hours (9am-5pm): ${workHourTemplates.length}/${recurringTemplateEvents.length}`
+          `Templates in work hours (9am-5pm): ${workHourTemplates.length}/${recurringTemplateEvents.length}`,
         );
       }
     }
 
+    // Comment: Does this remove historical events which we might want to keep?
     // Remove any old template events and add recurring definitions
     eventArray = eventArray.filter(
-      (e) => e.extendedProps?.itemType !== "template"
+      (e) => e.extendedProps?.itemType !== "template",
     );
     eventArray.push(...recurringTemplateEvents);
 
     // Build per-template masks (used directly for slot building - no SimpleEvent generation needed)
     const perTemplateMasks = this.templateExpander.getPerTemplateMasks(
-      input.templates
+      input.templates,
     );
 
     // Debug: Check template masks
@@ -197,7 +198,8 @@ export class CalendarGenerator {
     const templateEnd = performance.now();
     this.metrics.templateExpansionTimeMs = templateEnd - templateStart;
     this.metrics.templateEventsGenerated = recurringTemplateEvents.length;
-    this.metrics.templatesFailed = this.templateExpander.getTemplateFailureCount();
+    this.metrics.templatesFailed =
+      this.templateExpander.getTemplateFailureCount();
 
     // Step 5: Build location map for location-aware slot building
     // Includes both planners AND templates (both can have locations)
@@ -210,6 +212,7 @@ export class CalendarGenerator {
     }
 
     for (const planner of input.planners) {
+      // Comment: This is a fucking mess to look at
       const inheritedLocation =
         (planner.locationId ?? null) !== null
           ? planner.locationId
@@ -251,7 +254,7 @@ export class CalendarGenerator {
             acc[type] = (acc[type] || 0) + 1;
             return acc;
           },
-          {} as Record<string, number>
+          {} as Record<string, number>,
         ),
       });
     }
@@ -265,14 +268,14 @@ export class CalendarGenerator {
     // Pre-compute category periods once for the entire search range
     const searchEndDateStatic = dateTimeService.shiftDays(
       weekStart,
-      maxDaysAhead
+      maxDaysAhead,
     );
     const categoryPeriodsStatic =
       categoryConstraintsList.length > 0
         ? generateCategorySlotPeriods(
             currentDate,
             searchEndDateStatic,
-            categoryConstraintsList
+            categoryConstraintsList,
           )
         : [];
 
@@ -297,7 +300,7 @@ export class CalendarGenerator {
       initialWeeks * 7,
       eventArray,
       perTemplateMasks,
-      plannerLocationMap
+      plannerLocationMap,
     );
 
     // Pre-create travel TO/FROM categories that have a location.
@@ -334,7 +337,7 @@ export class CalendarGenerator {
       // Sort by start time
       for (const [k, arr] of eventsByDay) {
         arr.sort(
-          (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+          (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
         );
         eventsByDay.set(k, arr);
       }
@@ -384,7 +387,7 @@ export class CalendarGenerator {
             (s) =>
               s.isAvailable &&
               s.start.getTime() <= periodStartMs &&
-              s.end.getTime() >= periodStartMs
+              s.end.getTime() >= periodStartMs,
           );
           if (slotAtStart) {
             prevLoc = slotAtStart.prevLocationId ?? null;
@@ -399,7 +402,7 @@ export class CalendarGenerator {
           const minutes = this.slotManager.getTravelTime(
             prevLoc,
             categoryLoc,
-            periodStart
+            periodStart,
           );
           if (minutes > 0) {
             if (eventOverlapsCategory) {
@@ -407,7 +410,7 @@ export class CalendarGenerator {
               // Travel must be entirely inside category, starting at category start
               // (or event end if event extends past category start)
               const travelStart = new Date(
-                Math.max(periodStartMs, prevEventEnd!.getTime())
+                Math.max(periodStartMs, prevEventEnd!.getTime()),
               );
               this.slotManager.reserveStandaloneTravelAfter(
                 travelStart,
@@ -415,14 +418,14 @@ export class CalendarGenerator {
                 prevLoc,
                 categoryLoc,
                 `${period.categoryId}-${period.start.toISOString()}`,
-                true // force - marks overlapping slots as unavailable
+                true, // force - marks overlapping slots as unavailable
               );
             } else {
               // Scenarios 1-2: Event ends before category
               const travelEndBefore = new Date(periodStartMs);
               const canFit = this.slotManager.canPlaceStandaloneTravelBefore(
                 travelEndBefore,
-                minutes
+                minutes,
               );
               if (canFit) {
                 // Scenario 1: Travel fits before category start
@@ -431,11 +434,12 @@ export class CalendarGenerator {
                   minutes,
                   prevLoc,
                   categoryLoc,
-                  `${period.categoryId}-${period.start.toISOString()}`
+                  `${period.categoryId}-${period.start.toISOString()}`,
                 );
               } else {
                 // Scenario 2: Not enough room, travel extends into category
-                const bufferMs = this.slotManager.getBufferTimeMinutes() * 60000;
+                const bufferMs =
+                  this.slotManager.getBufferTimeMinutes() * 60000;
                 const travelStart = prevEventEnd
                   ? new Date(prevEventEnd.getTime() + bufferMs)
                   : new Date(periodStartMs - minutes * 60000);
@@ -445,7 +449,7 @@ export class CalendarGenerator {
                   prevLoc,
                   categoryLoc,
                   `${period.categoryId}-${period.start.toISOString()}`,
-                  true // force - marks overlapping slots as unavailable
+                  true, // force - marks overlapping slots as unavailable
                 );
               }
             }
@@ -468,25 +472,28 @@ export class CalendarGenerator {
             | RuntimeEventExtendedProps
             | undefined;
           const lastEventPlannerId = lastEventExt?.eventId ?? lastEventInCat.id;
-          const lastEventLoc = plannerLocationMap.get(lastEventPlannerId) ?? null;
+          const lastEventLoc =
+            plannerLocationMap.get(lastEventPlannerId) ?? null;
 
           if (lastEventLoc && lastEventLoc !== categoryLoc) {
             // Last event has different location - need travel back to category
             const minutesBack = this.slotManager.getTravelTime(
               lastEventLoc,
               categoryLoc,
-              lastEventEnd
+              lastEventEnd,
             );
             if (minutesBack > 0) {
               const bufferMs = this.slotManager.getBufferTimeMinutes() * 60000;
-              const travelBackStart = new Date(lastEventEnd.getTime() + bufferMs);
+              const travelBackStart = new Date(
+                lastEventEnd.getTime() + bufferMs,
+              );
               this.slotManager.reserveStandaloneTravelAfter(
                 travelBackStart,
                 minutesBack,
                 lastEventLoc,
                 categoryLoc,
                 `${lastEventInCat.id}-return-to-category`,
-                true // force - may overlap into remaining category time
+                true, // force - may overlap into remaining category time
               );
             }
           }
@@ -499,7 +506,7 @@ export class CalendarGenerator {
           (s) =>
             s.isAvailable &&
             s.start.getTime() <= periodEndMs &&
-            s.end.getTime() >= periodEndMs
+            s.end.getTime() >= periodEndMs,
         );
         if (slotAfter) {
           const nextLoc = slotAfter.nextLocationId ?? null;
@@ -507,7 +514,7 @@ export class CalendarGenerator {
             const minutes = this.slotManager.getTravelTime(
               categoryLoc,
               nextLoc,
-              periodEnd
+              periodEnd,
             );
             if (minutes > 0) {
               this.slotManager.reserveStandaloneTravelAfter(
@@ -515,7 +522,7 @@ export class CalendarGenerator {
                 minutes,
                 categoryLoc,
                 nextLoc,
-                `${period.categoryId}-${period.end.toISOString()}`
+                `${period.categoryId}-${period.end.toISOString()}`,
               );
             }
           }
@@ -525,7 +532,7 @@ export class CalendarGenerator {
 
     // Largest gap
     const largestTemplateGap = this.templateExpander.calculateLargestGap(
-      input.templates
+      input.templates,
     ); // Comment: Use available slots instead to find the largest
     // slot? Presumably re-run function per new iteration of
     // available slots, cache too large items and only add them to
@@ -572,7 +579,7 @@ export class CalendarGenerator {
         strategy: new LocationGroupingStrategy(
           input.config.travelTimeMatrix,
           input.config?.locationGroupingScores,
-          input.config?.locationGroupingPenalties
+          input.config?.locationGroupingPenalties,
         ),
         weight:
           input.config?.strategyWeights?.locationGrouping ??
@@ -591,7 +598,7 @@ export class CalendarGenerator {
       scheduler,
       perTemplateMasks,
       context,
-      plannerLocationMap
+      plannerLocationMap,
     );
 
     // Step 10: Generate travel events from stored travel slots
@@ -600,7 +607,7 @@ export class CalendarGenerator {
     // and shifts forward as tasks fill in.
 
     const scheduledNonTemplateEvents = context.scheduledEvents.filter(
-      (e) => e.extendedProps?.itemType !== "template"
+      (e) => e.extendedProps?.itemType !== "template",
     );
 
     // Get travel events from stored travel slots
@@ -640,7 +647,7 @@ export class CalendarGenerator {
           start: period.start.toISOString(),
           end: period.end.toISOString(),
           duration: Math.floor(
-            (period.end.getTime() - period.start.getTime()) / 60000
+            (period.end.getTime() - period.start.getTime()) / 60000,
           ),
           userId: input.userId,
           rrule: null,
@@ -659,7 +666,7 @@ export class CalendarGenerator {
     // 4. Category wrapper events for time slot visualization
     // NOTE: Template masks are used directly for slot calculation - no SimpleEvent objects needed
     const templateEventsForUI = context.scheduledEvents.filter(
-      (e) => e.extendedProps?.itemType === "template"
+      (e) => e.extendedProps?.itemType === "template",
     );
 
     const allEvents = [
@@ -707,7 +714,7 @@ export class CalendarGenerator {
     scheduler: Scheduler,
     perTemplateMasks: PerTemplateMask[],
     context: SchedulingContext,
-    plannerLocationMap: Map<string, string | null>
+    plannerLocationMap: Map<string, string | null>,
   ): {
     success: boolean;
     newEvents: SimpleEvent[];
@@ -724,7 +731,7 @@ export class CalendarGenerator {
       (item) =>
         ((item.itemType === "goal" && !item.parentId && item.isReady) ||
           item.itemType === "task") &&
-        !memoizedEventIds.has(item.id)
+        !memoizedEventIds.has(item.id),
     );
 
     // Sort by priority
@@ -735,7 +742,7 @@ export class CalendarGenerator {
     // Week-by-week orchestration
     let weekStart = dateTimeService.getWeekFirstDate(
       context.currentDate,
-      this.weekStartDay
+      this.weekStartDay,
     );
     let weeksSearched = 0;
 
@@ -787,12 +794,12 @@ export class CalendarGenerator {
           // Filter out already-scheduled tasks, completed tasks, and memoized (overdue) tasks
           const goalTasks = getSortedTreeBottomLayer(
             allPlanners,
-            item.id
+            item.id,
           ).filter(
             (t) =>
               !taskIsCompleted(t) &&
               !scheduledTaskIds.has(t.id) &&
-              !memoizedEventIds.has(t.id)
+              !memoizedEventIds.has(t.id),
           );
 
           let goalFailedDueToNoSlots = false;
@@ -843,7 +850,7 @@ export class CalendarGenerator {
         // Build slots for the new week using events already in context (plans, templates)
         const weekStartDate = dateTimeService.startOfDay(weekStart);
         const weekEndDate = dateTimeService.endOfDay(
-          dateTimeService.shiftDays(weekStart, 6)
+          dateTimeService.shiftDays(weekStart, 6),
         );
 
         const weekEvents = context.scheduledEvents.filter((e) => {
@@ -857,7 +864,7 @@ export class CalendarGenerator {
           7,
           weekEvents,
           perTemplateMasks,
-          plannerLocationMap
+          plannerLocationMap,
         );
         context.availableMinutesPerWeek =
           this.slotManager.getWeekAvailableMinutes(weekStart);
@@ -887,7 +894,7 @@ export class CalendarGenerator {
     allPlanners: Planner[],
     rootGoal: Planner,
     largestTemplateGap: number,
-    scheduler: Scheduler
+    scheduler: Scheduler,
   ): SchedulingResult {
     const events: SimpleEvent[] = [];
     const failures = [];
@@ -937,16 +944,16 @@ export class CalendarGenerator {
     userId: string,
     planners: Planner[],
     eventArray: SimpleEvent[],
-    memoizedEventIds: Set<string>
+    memoizedEventIds: Set<string>,
   ): SimpleEvent[] {
     const planItems = planners.filter(
-      (task) => task.itemType === "plan" && !memoizedEventIds.has(task.id)
+      (task) => task.itemType === "plan" && !memoizedEventIds.has(task.id),
     );
 
     for (const plan of planItems) {
       if (plan.starts && plan.duration) {
         const end = new Date(
-          new Date(plan.starts).getTime() + plan.duration * 60000
+          new Date(plan.starts).getTime() + plan.duration * 60000,
         );
 
         const now = new Date();
@@ -985,10 +992,10 @@ export class CalendarGenerator {
     userId: string,
     planners: Planner[],
     eventArray: SimpleEvent[],
-    memoizedEventIds: Set<string>
+    memoizedEventIds: Set<string>,
   ): SimpleEvent[] {
     const completedItems = planners.filter(
-      (task) => taskIsCompleted(task) && !memoizedEventIds.has(task.id)
+      (task) => taskIsCompleted(task) && !memoizedEventIds.has(task.id),
     );
 
     for (const item of completedItems) {
@@ -1027,20 +1034,21 @@ export class CalendarGenerator {
    */
   private sortByPriority(
     allPlanners: Planner[],
-    goalsAndTasks: Planner[]
+    goalsAndTasks: Planner[],
   ): Planner[] {
     const now = new Date();
 
     // Calculate total time estimates
     const totalPlannerTime = allPlanners.reduce(
       (acc, p) => acc + p.duration,
-      0
+      0,
     );
 
-    const totalEstimatedTime = totalPlannerTime; // Simplified
+    const totalEstimatedTime = totalPlannerTime;
 
     // Calculate urgency scores
     const withUrgency = goalsAndTasks.map((item) => {
+      // Comment: Why is this necessary?
       // For goals, check if ANY child task has a category constraint
       let hasCategoryConstraint = item.categoryId !== null;
 
@@ -1059,12 +1067,13 @@ export class CalendarGenerator {
           return false;
         });
         hasCategoryConstraint = childTasks.some(
-          (child) => child.categoryId !== null
+          (child) => child.categoryId !== null,
         );
       }
 
       return {
         ...item,
+        // Comment: Why is this done per item instead of batching the calculations in calculateTaskUrgency? Lots of calculations in this function will be repeated a thousand times.
         urgencyScore: calculateTaskUrgency(item, {
           currentDate: now,
           totalEstimatedTime,
@@ -1110,7 +1119,7 @@ export class CalendarGenerator {
    */
   private markTrespassingEvents(
     events: SimpleEvent[],
-    plannerLocationMap: Map<string, string | null>
+    plannerLocationMap: Map<string, string | null>,
   ): void {
     // Convert events to intervals with IDs and locations
     const intervals: IntervalWithId[] = events
