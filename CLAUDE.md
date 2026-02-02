@@ -36,6 +36,8 @@ lifeplan/
 ├── actions/                      # Next.js Server Actions ("use server")
 │   ├── scheduling.ts             # User/task scheduling preferences
 │   ├── settings.ts               # User settings
+│   ├── categories.ts             # Category CRUD operations
+│   ├── locations.ts              # Location & TravelTime operations
 │   ├── calendar-actions/         # Calendar data operations
 │   │   ├── fetchCalendarData.ts
 │   │   ├── syncCalendarData.ts
@@ -64,6 +66,8 @@ lifeplan/
 │   │   └── models/
 │   │       ├── user.prisma       # User model
 │   │       ├── calendar.prisma   # Planner, SimpleEvent, EventTemplate
+│   │       ├── category.prisma   # Category (hierarchical task organization)
+│   │       ├── location.prisma   # Location, TravelTime
 │   │       └── scheduling.prisma # UserSchedulingPreferences, TaskPreferences
 │   ├── generated/                # Generated Prisma client
 │   └── seed-helpers/             # Seed data generators
@@ -92,7 +96,7 @@ lifeplan/
     │   │   └── TemplateExpander.ts    # Recurring template expansion
     │   ├── strategies/
     │   │   ├── SchedulingStrategy.ts  # Base interface + CompositeStrategy
-    │   │   ├── UrgencyStrategy.ts     # Deadline-based scoring
+    │   │   ├── defaultStrategy.ts     # Default weights and scoring config
     │   │   ├── EarliestSlotStrategy.ts
     │   │   └── LocationGroupingStrategy.ts  # Location-aware scheduling
     │   ├── models/
@@ -116,6 +120,8 @@ lifeplan/
 - **plan** - Fixed-time appointment (has `starts` datetime)
 - **goal** - Container for tasks (hierarchical)
 - **template** - Recurring calendar blocks
+- **travel** - Auto-generated travel time between locations
+- **category** - Organizational container with time constraints
 
 ### Planner Model
 
@@ -137,6 +143,7 @@ Central model for all schedulable items:
   userId: string;
   color?: string;
   locationId?: string;    // Reference to Location for travel time calculation
+  categoryId?: string;    // Reference to Category for organization
 }
 ```
 
@@ -145,8 +152,25 @@ Central model for all schedulable items:
 Items can have an associated location for travel time calculation:
 
 - **Location** - Named location with address, coordinates, and Google Place ID
-- **TravelTime** - Directional travel duration between two locations
+- **TravelTime** - Directional travel duration between two locations with transport modes (DRIVING, TRANSIT, BICYCLING, WALKING)
+  - Stores Google API baseline values for rush hour, regular, and night times
+  - Supports user overrides for custom travel times
 - Items with `locationId: null` are considered "Everywhere" (no travel time needed)
+
+### Category System
+
+Categories provide organizational structure with time-based scheduling constraints:
+
+- **Category** - Hierarchical organizational container for planners
+  - `timeSlots`: JSON array defining when category items can be scheduled
+    - Format: `[{ days: [1,3,5], startTime: "08:00", endTime: "17:00" }, ...]`
+    - days: 0=Sunday, 1=Monday, ... 6=Saturday
+  - `isStrict`: Boolean controlling whether other items can fill empty time slots
+    - `true`: Only items from this category can be scheduled in these slots
+    - `false`: Other items can fill empty space in the time slots
+  - `locationId`: Optional default location (items without location inherit this)
+  - Supports parent-child hierarchy via `parentId` for subcategories
+- Categories appear as background events on the calendar to visualize time constraints
 
 ### Scheduling System
 
@@ -170,18 +194,29 @@ interface SchedulingStrategy {
 
 #### Current Strategies
 
-- **UrgencyStrategy** - Scores based on deadline proximity
-- **EarliestSlotStrategy** - Prefers earlier slots
+- **EarliestSlotStrategy** - Prefers earlier time slots
 - **LocationGroupingStrategy** - Groups tasks at same location to minimize travel
+  - Scores slots based on adjacent location matches (sandwich patterns)
+  - Applies travel time penalties for cross-location scheduling
 
-#### Weight Configuration (constants.ts)
+Note: Task urgency/deadline prioritization is handled by `sortPlannersByPriority` before slot scoring.
+
+#### Weight Configuration (defaultStrategy.ts)
 
 ```typescript
-STRATEGY_WEIGHTS = {
-  URGENCY_WEIGHT: 1.0,
-  DEPENDENCY_WEIGHT: 0.8,
-  ENERGY_WEIGHT: 0.5,
-  LOCATION_GROUPING_WEIGHT: 0.6,
+DEFAULT_STRATEGY_WEIGHTS = {
+  earliestSlot: 1.0,        // Baseline preference for earlier slots
+  locationGrouping: 0.2,    // Weight for location-based grouping
+};
+
+DEFAULT_LOCATION_GROUPING_SCORES = {
+  bothMatch: 0.95,          // Both adjacent events match task location
+  oneMatchOneOpen: 0.8,     // One end matches, other end is open
+  oneMatch: 0.5,            // One end matches, other doesn't
+  bothOpen: 0.7,            // Both ends are open (empty day)
+  oneOpenNoMatch: 0.45,     // One end open, other doesn't match
+  neitherMatch: 0.4,        // Neither end matches
+  noLocation: 0.5,          // Task has no location (neutral)
 };
 ```
 
@@ -332,6 +367,12 @@ Set `enableLogging = true` and flip individual flags to get specific dumps.
 
 ---
 
-## Active Feature Plans
+## Implemented Features
 
 - **Travel Time & Location Management** - Location-aware scheduling with travel time injection between events at different locations
+- **Category System** - Hierarchical task organization with time-based scheduling constraints (strict/non-strict modes)
+
+## Active Feature Plans
+
+- Further refinement of category-based scheduling strategies
+- Enhanced user preferences for strategy weight customization

@@ -17,8 +17,9 @@ This document explains the complete flow of the calendar generation system. It c
 5. [Strategy System](#strategy-system)
 6. [Data Models](#data-models)
 7. [Travel Time System](#travel-time-system)
-8. [Utility Functions](#utility-functions)
-9. [Complete Data Flow Diagram](#complete-data-flow-diagram)
+8. [Category System](#category-system)
+9. [Utility Functions](#utility-functions)
+10. [Complete Data Flow Diagram](#complete-data-flow-diagram)
 
 ---
 
@@ -29,6 +30,7 @@ The calendar generation system takes a user's tasks, goals, templates (recurring
 **Key Concepts:**
 - **Planner**: A task, goal, or plan item that needs to be scheduled or organized
 - **Template**: A recurring event (like "Sleep 10pm-6am" or "Work 9am-5pm") that blocks time
+- **Category**: Organizational container with time-based scheduling constraints (can be strict or non-strict)
 - **SimpleEvent**: The output format - actual calendar events with start/end times
 - **TimeSlot**: An available window of time where tasks can be placed
 
@@ -366,8 +368,21 @@ const strategy = new CompositeStrategy(strategies);
 **What happens:**
 - Creates scoring strategies for slot selection
 - **EarliestSlotStrategy**: Prefers earlier slots (today > tomorrow > next week)
+  - Default weight: 1.0
 - **LocationGroupingStrategy**: Prefers slots that minimize travel (if travel matrix provided)
+  - Default weight: 0.2
+  - Only added if travel time data exists
 - Strategies are combined with weights using CompositeStrategy
+
+**Default Strategy Configuration** (from `defaultStrategy.ts`):
+```typescript
+DEFAULT_STRATEGY_WEIGHTS = {
+  earliestSlot: 1.0,
+  locationGrouping: 0.2,
+};
+```
+
+The location grouping weight is intentionally low (0.2) to act as a tie-breaker rather than a dominant factor. This prevents over-prioritizing weekend slots just because they have matching neighbors.
 
 ### Step 11: Schedule Tasks and Goals (Lines 237-246)
 
@@ -780,6 +795,18 @@ scheduleTask(task: Planner, afterTime?: Date): { success, event?, failure? } {
 
 Location: `utils/calendar-generation/strategies/`
 
+### Overview
+
+The scheduling system uses a **weighted composite strategy** approach where multiple scoring strategies are combined to determine the best time slot for each task. Default weights and configurations are defined in [defaultStrategy.ts](utils/calendar-generation/strategies/defaultStrategy.ts).
+
+**Key Strategy Files:**
+- `SchedulingStrategy.ts` - Base interface and CompositeStrategy implementation
+- `defaultStrategy.ts` - Default weights and scoring configurations
+- `EarliestSlotStrategy.ts` - Prefers earlier time slots
+- `LocationGroupingStrategy.ts` - Minimizes travel time
+
+**Note:** Task urgency/deadline prioritization is handled by `sortPlannersByPriority` **before** slot scoring. Strategies only score available slots, they don't determine task order.
+
 ### SchedulingStrategy Interface
 
 ```typescript
@@ -813,33 +840,92 @@ class CompositeStrategy implements SchedulingStrategy {
 
 ### EarliestSlotStrategy
 
+Location: `utils/calendar-generation/strategies/EarliestSlotStrategy.ts`
+
+Provides baseline preference for scheduling tasks sooner rather than later.
+
 ```typescript
 score(_task, slot, context): number {
   const now = context.currentDate;
   const daysFromNow = (slot.start - now) / MS_PER_DAY;
 
-  // Score decays over 14 days
-  // Day 0 = 1.0, Day 14 = 0.0
+  // Score decays linearly over 14 days
+  // Day 0 = 1.0, Day 7 = 0.5, Day 14 = 0.0
   return Math.max(0, 1 - daysFromNow / 14);
 }
 ```
 
+**Default Weight:** 1.0 (from `DEFAULT_STRATEGY_WEIGHTS.earliestSlot`)
+
 ### LocationGroupingStrategy
 
-Scores based on "sandwich" pattern to minimize travel:
+Location: `utils/calendar-generation/strategies/LocationGroupingStrategy.ts`
+
+Scores based on "sandwich" pattern to minimize travel. Uses configurable scores from `defaultStrategy.ts`:
 
 ```typescript
 score(task, slot): number {
-  if (!task.locationId) return 0.6;  // No location = neutral
+  if (!task.locationId) return scores.noLocation;  // Default: 0.5 (neutral)
 
   const prevMatches = slot.prevLocationId === task.locationId;
   const nextMatches = slot.nextLocationId === task.locationId;
+  const prevExists = slot.prevLocationId !== null;
+  const nextExists = slot.nextLocationId !== null;
 
-  if (prevMatches && nextMatches) return 0.7;      // Perfect sandwich
-  if (prevMatches || nextMatches) return 0.65;     // One side matches
-  if (!slot.prevLocationId && !slot.nextLocationId) return 0.6;  // Empty day
-  return 0.55 - travelPenalty;  // Neither matches
+  // Calculate travel time penalties
+  const totalTravelTime = calculateTravelTime(prevLocation, nextLocation);
+
+  if (prevMatches && nextMatches) {
+    return scores.bothMatch;  // Default: 0.95 - Perfect sandwich
+  }
+  if ((prevMatches && !nextExists) || (nextMatches && !prevExists)) {
+    return scores.oneMatchOneOpen;  // Default: 0.8 - One match, one open
+  }
+  if (prevMatches || nextMatches) {
+    const penalty = Math.min(
+      penalties.maxSingleTravelPenalty,
+      totalTravelTime / penalties.singleTravelPenaltyDivisor
+    );
+    return scores.oneMatch - penalty;  // Default: 0.5 - penalty
+  }
+  if (!prevExists && !nextExists) {
+    return scores.bothOpen;  // Default: 0.7 - Empty day
+  }
+  if (!prevExists || !nextExists) {
+    const penalty = Math.min(
+      penalties.maxSingleTravelPenalty,
+      totalTravelTime / penalties.singleTravelPenaltyDivisor
+    );
+    return scores.oneOpenNoMatch - penalty;  // Default: 0.45 - penalty
+  }
+
+  // Neither matches, both exist
+  const penalty = Math.min(
+    penalties.maxDoubleTravelPenalty,
+    totalTravelTime / penalties.doubleTravelPenaltyDivisor
+  );
+  return scores.neitherMatch - penalty;  // Default: 0.4 - penalty
 }
+```
+
+**Default Configuration (from `defaultStrategy.ts`):**
+```typescript
+DEFAULT_LOCATION_GROUPING_SCORES = {
+  bothMatch: 0.95,          // Both adjacent events match
+  oneMatchOneOpen: 0.8,     // One match, one open
+  oneMatch: 0.5,            // One match, one doesn't
+  bothOpen: 0.7,            // Both open (empty day)
+  oneOpenNoMatch: 0.45,     // One open, one doesn't match
+  neitherMatch: 0.4,        // Neither matches
+  noLocation: 0.5,          // Task has no location
+};
+
+DEFAULT_LOCATION_GROUPING_PENALTIES = {
+  maxSingleTravelPenalty: 0.02,
+  maxDoubleTravelPenalty: 0.03,
+  singleTravelPenaltyDivisor: 600,  // Travel minutes / 600
+  doubleTravelPenaltyDivisor: 400,  // Travel minutes / 400
+};
 ```
 
 ---
@@ -855,7 +941,7 @@ interface TimeSlot {
   durationMinutes: number;
   isAvailable: boolean;
   eventId?: string;           // What's occupying this slot
-  eventType?: "task" | "goal" | "plan" | "template" | "travel";
+  eventType?: "task" | "goal" | "plan" | "template" | "travel" | "category";
   prevLocationId?: string | null;  // Location of event BEFORE this slot
   nextLocationId?: string | null;  // Location of event AFTER this slot
 
@@ -950,6 +1036,103 @@ Tasks with `locationId: null` are considered "everywhere" - they don't need trav
 - No travel-before needed
 - No travel-after needed
 - They're "transparent" for travel purposes
+
+---
+
+## Category System
+
+### Overview
+
+Categories provide organizational structure with time-based scheduling constraints. They enable users to define when certain types of tasks should be scheduled and whether those time slots are exclusive.
+
+### Category Model
+
+```typescript
+interface Category {
+  id: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  sortOrder: number;
+
+  // Time constraint slots (JSON array)
+  // Format: [{ days: [1,3,5], startTime: "08:00", endTime: "17:00" }, ...]
+  // days: 0=Sunday, 1=Monday, ... 6=Saturday
+  timeSlots: TimeSlotDefinition[] | null;
+
+  // Strict mode control
+  isStrict: boolean;  // true = only category items allowed in slots
+                      // false = other items can fill empty space
+
+  // Optional location inheritance
+  locationId?: string | null;
+
+  // Hierarchical structure
+  parentId?: string | null;
+
+  userId: string;
+}
+```
+
+### How Categories Work
+
+1. **Time Slot Definition**: Categories can define specific time windows when their items should be scheduled
+   - Example: "Work" category with weekday 9am-5pm slots
+   - Example: "Exercise" category with Mon/Wed/Fri 6-7am slots
+
+2. **Strict vs Non-Strict Mode**:
+   - **Strict (`isStrict: true`)**: Only items from this category can occupy the defined time slots
+     - Other tasks will be blocked from these times
+     - Ensures dedicated time for specific activities
+   - **Non-Strict (`isStrict: false`)**: Category items are preferred but other items can fill empty space
+     - More flexible scheduling
+     - Good for optional or aspirational categories
+
+3. **Location Inheritance**: Items without a specific location inherit the category's location
+   - Example: "Work" category with office location applies to all work tasks by default
+
+4. **Visual Representation**: Categories appear as background events on the calendar
+   - Shows time constraints visually
+   - Helps users understand their scheduling structure
+   - Rendered using [CategoryWrapperEvent.tsx](components/events/CategoryWrapperEvent.tsx)
+
+### Integration with Scheduling
+
+Categories affect the scheduling system in two ways:
+
+1. **Slot Generation**: TimeSlotManager treats category time slots similarly to templates
+   - Category slots reduce available time (like templates)
+   - But can be "filled" if non-strict mode
+
+2. **Task Filtering**: Scheduler respects category constraints
+   - Tasks with `categoryId` are preferentially placed in category time slots
+   - Non-category tasks avoid strict category slots
+
+### Example Use Cases
+
+**Software Engineer's Schedule:**
+```typescript
+{
+  name: "Deep Work",
+  timeSlots: [
+    { days: [1,2,3,4,5], startTime: "09:00", endTime: "12:00" }
+  ],
+  isStrict: true,  // No meetings or other tasks during this time
+  locationId: "home-office"
+}
+```
+
+**Fitness Routine:**
+```typescript
+{
+  name: "Exercise",
+  timeSlots: [
+    { days: [1,3,5], startTime: "06:00", endTime: "07:00" }
+  ],
+  isStrict: false,  // Preferred time, but flexible if needed
+  locationId: "gym"
+}
+```
 
 ---
 
