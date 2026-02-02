@@ -60,7 +60,7 @@ export class TimeSlotManager {
     private weekStartDay: WeekDayIntegers,
     private currentDate: Date = new Date(),
     bufferTimeMinutes: number = 0,
-    travelTimeMatrix?: Map<string, TravelTimeEntry>
+    travelTimeMatrix?: Map<string, TravelTimeEntry>,
   ) {
     this.bufferTimeMinutes = bufferTimeMinutes;
     this.travelTimeMatrix = travelTimeMatrix ?? null;
@@ -72,7 +72,7 @@ export class TimeSlotManager {
    */
   canPlaceStandaloneTravelBefore(
     travelEnd: Date,
-    travelMinutes: number
+    travelMinutes: number,
   ): boolean {
     const dayKey = this.getDayKey(travelEnd);
     const slots = this.availableSlots.get(dayKey) || [];
@@ -94,7 +94,7 @@ export class TimeSlotManager {
         (slot) =>
           slot.isAvailable &&
           slot.start.getTime() - bufferMs <= travelStartMs &&
-          slot.end.getTime() >= travelEndMs
+          slot.end.getTime() >= travelEndMs,
       ) !== -1
     );
   }
@@ -112,7 +112,7 @@ export class TimeSlotManager {
     fromLocationId: string,
     toLocationId: string,
     eventId: string,
-    force: boolean = false
+    force: boolean = false,
   ): { success: boolean } {
     const dayKey = this.getDayKey(travelEnd);
     const travelEndMs = travelEnd.getTime();
@@ -126,7 +126,7 @@ export class TimeSlotManager {
         travelEnd,
         fromLocationId,
         toLocationId,
-        `travel-to-${eventId}`
+        `travel-to-${eventId}`,
       );
       const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
       occupiedSlots.push(travelSlot);
@@ -155,7 +155,9 @@ export class TimeSlotManager {
             newSlots.push({
               ...slot,
               end: travelStart,
-              durationMinutes: Math.floor((travelStartMs - slotStartMs) / 60000),
+              durationMinutes: Math.floor(
+                (travelStartMs - slotStartMs) / 60000,
+              ),
             });
           }
 
@@ -185,7 +187,7 @@ export class TimeSlotManager {
       (slot) =>
         slot.isAvailable &&
         slot.start.getTime() - bufferMs <= travelStartMs &&
-        slot.end.getTime() >= travelEndMs
+        slot.end.getTime() >= travelEndMs,
     );
     if (slotIndex === -1) return { success: false };
 
@@ -198,7 +200,7 @@ export class TimeSlotManager {
         start: slot.start,
         end: travelStart,
         durationMinutes: Math.floor(
-          (travelStartMs - slot.start.getTime()) / 60000
+          (travelStartMs - slot.start.getTime()) / 60000,
         ),
         isAvailable: true,
         prevLocationId: slot.prevLocationId,
@@ -212,7 +214,7 @@ export class TimeSlotManager {
       travelEnd,
       fromLocationId,
       toLocationId,
-      `travel-to-${eventId}`
+      `travel-to-${eventId}`,
     );
     newSlots.push(travelSlot);
 
@@ -252,7 +254,7 @@ export class TimeSlotManager {
     fromLocationId: string,
     toLocationId: string,
     eventId: string,
-    force: boolean = false
+    force: boolean = false,
   ): { success: boolean } {
     const dayKey = this.getDayKey(travelStart);
     const travelStartMs = travelStart.getTime();
@@ -266,7 +268,7 @@ export class TimeSlotManager {
         travelEnd,
         fromLocationId,
         toLocationId,
-        `travel-from-${eventId}`
+        `travel-from-${eventId}`,
       );
       const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
       occupiedSlots.push(travelSlot);
@@ -295,7 +297,9 @@ export class TimeSlotManager {
             newSlots.push({
               ...slot,
               end: travelStart,
-              durationMinutes: Math.floor((travelStartMs - slotStartMs) / 60000),
+              durationMinutes: Math.floor(
+                (travelStartMs - slotStartMs) / 60000,
+              ),
             });
           }
 
@@ -325,7 +329,7 @@ export class TimeSlotManager {
       (slot) =>
         slot.isAvailable &&
         slot.start.getTime() - bufferMs <= travelStartMs &&
-        slot.end.getTime() >= travelEndMs
+        slot.end.getTime() >= travelEndMs,
     );
     if (slotIndex === -1) return { success: false };
 
@@ -338,7 +342,7 @@ export class TimeSlotManager {
         start: slot.start,
         end: travelStart,
         durationMinutes: Math.floor(
-          (travelStartMs - slot.start.getTime()) / 60000
+          (travelStartMs - slot.start.getTime()) / 60000,
         ),
         isAvailable: true,
         prevLocationId: slot.prevLocationId,
@@ -352,7 +356,7 @@ export class TimeSlotManager {
       travelEnd,
       fromLocationId,
       toLocationId,
-      `travel-from-${eventId}`
+      `travel-from-${eventId}`,
     );
     newSlots.push(travelSlot);
 
@@ -389,7 +393,7 @@ export class TimeSlotManager {
     requiredTravelMinutes: number,
     fromLocationId: string,
     toLocationId: string,
-    eventId: string
+    eventId: string,
   ): { success: boolean } {
     const dayKey = this.getDayKey(travelEnd);
     const slots = this.availableSlots.get(dayKey);
@@ -400,9 +404,7 @@ export class TimeSlotManager {
 
     // Find the slot that ends at or contains travelEnd
     const slotIndex = slots.findIndex(
-      (slot) =>
-        slot.isAvailable &&
-        slot.end.getTime() >= travelEndMs
+      (slot) => slot.isAvailable && slot.end.getTime() >= travelEndMs,
     );
     if (slotIndex === -1) return { success: false };
 
@@ -428,7 +430,7 @@ export class TimeSlotManager {
       {
         insufficientTravel: true,
         requiredTravelMinutes,
-      }
+      },
     );
     newSlots.push(travelSlot);
 
@@ -465,7 +467,7 @@ export class TimeSlotManager {
     requiredTravelMinutes: number,
     fromLocationId: string,
     toLocationId: string,
-    eventId: string
+    eventId: string,
   ): { success: boolean } {
     const dayKey = this.getDayKey(travelStart);
     const slots = this.availableSlots.get(dayKey);
@@ -479,7 +481,7 @@ export class TimeSlotManager {
       (slot) =>
         slot.isAvailable &&
         slot.start.getTime() - bufferMs <= travelStartMs &&
-        slot.end.getTime() > travelStartMs
+        slot.end.getTime() > travelStartMs,
     );
     if (slotIndex === -1) return { success: false };
 
@@ -500,7 +502,7 @@ export class TimeSlotManager {
         start: slot.start,
         end: travelStart,
         durationMinutes: Math.floor(
-          (travelStartMs - slot.start.getTime()) / 60000
+          (travelStartMs - slot.start.getTime()) / 60000,
         ),
         isAvailable: true,
         prevLocationId: slot.prevLocationId,
@@ -518,7 +520,7 @@ export class TimeSlotManager {
       {
         insufficientTravel: true,
         requiredTravelMinutes,
-      }
+      },
     );
     newSlots.push(travelSlot);
 
@@ -545,7 +547,7 @@ export class TimeSlotManager {
    * Call this from CalendarGenerator after computing category windows.
    */
   setCategoryPeriods(
-    periods: Array<{ start: Date; end: Date; locationId: string | null }>
+    periods: Array<{ start: Date; end: Date; locationId: string | null }>,
   ): void {
     this.categoryPeriodsByDay.clear();
     for (const p of periods) {
@@ -586,7 +588,7 @@ export class TimeSlotManager {
   getTravelTime(
     fromLocationId: string | null,
     toLocationId: string | null,
-    timeOfDay: Date
+    timeOfDay: Date,
   ): number {
     // No travel needed if either location is null ("Everywhere") or same location
     if (!fromLocationId || !toLocationId || fromLocationId === toLocationId) {
@@ -632,7 +634,7 @@ export class TimeSlotManager {
     endDate: Date,
     existingEvents: SimpleEvent[],
     templateMasks: PerTemplateMask[],
-    plannerLocationMap?: Map<string, string | null>
+    plannerLocationMap?: Map<string, string | null>,
   ): TimeSlot[] {
     // Filter existing events to only those that overlap with this date range
     // Exclude template events since we create intervals from masks instead
@@ -647,7 +649,7 @@ export class TimeSlotManager {
     // Convert existing events to intervals with location info
     const eventIntervals = eventsToIntervals(
       relevantEvents,
-      plannerLocationMap
+      plannerLocationMap,
     );
 
     // Convert template masks directly to intervals for this date
@@ -680,10 +682,10 @@ export class TimeSlotManager {
           const isStartOfRange = slot.start.getTime() === rangeStartTime;
           if (!isStartOfRange) {
             const newStart = new Date(
-              slot.start.getTime() + this.bufferTimeMinutes * 60000
+              slot.start.getTime() + this.bufferTimeMinutes * 60000,
             );
             const newDuration = Math.floor(
-              (slot.end.getTime() - newStart.getTime()) / 60000
+              (slot.end.getTime() - newStart.getTime()) / 60000,
             );
             // Only shrink if there's still usable time left
             if (newDuration > 0) {
@@ -720,7 +722,7 @@ export class TimeSlotManager {
   private processTravelTransitions(
     startDate: Date,
     intervals: Interval[],
-    slots: TimeSlot[]
+    slots: TimeSlot[],
   ): void {
     const dayKey = this.getDayKey(startDate);
     const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
@@ -746,7 +748,7 @@ export class TimeSlotManager {
       } else {
         // Not in a category - use slot-based prev location when available
         const slotAtGapEnd = slots.find(
-          (s) => s.end.getTime() === transition.toEventStart.getTime()
+          (s) => s.end.getTime() === transition.toEventStart.getTime(),
         );
         effectiveFromLocationId =
           slotAtGapEnd?.prevLocationId ?? transition.fromLocationId;
@@ -762,23 +764,23 @@ export class TimeSlotManager {
       const requiredTravelMinutes = this.getTravelTime(
         effectiveFromLocationId,
         effectiveToLocationId,
-        transition.toEventStart
+        transition.toEventStart,
       );
 
       // DEBUG - find interval names
-      const fromInterval = intervals.find(
-        (i) => i.end.getTime() === transition.fromEventEnd.getTime()
+      const _fromInterval = intervals.find(
+        (i) => i.end.getTime() === transition.fromEventEnd.getTime(),
       );
-      const toInterval = intervals.find(
-        (i) => i.start.getTime() === transition.toEventStart.getTime()
+      const _toInterval = intervals.find(
+        (i) => i.start.getTime() === transition.toEventStart.getTime(),
       );
       console.log(
-        `[TRAVEL] "${(fromInterval as any)?.title || "?"}" → "${(toInterval as any)?.title || "?"}" | ` +
+        `[TRAVEL] "${"fromEvent"}" → "${"toEvent"}" | ` +
           `times: ${transition.fromEventEnd.toLocaleTimeString()}-${transition.toEventStart.toLocaleTimeString()} | ` +
           `origLocs: ${transition.fromLocationId || "null"}→${transition.toLocationId || "null"} | ` +
           `catLocs: from=${catLocAtFrom || "null"} to=${catLocAtTo || "null"} | ` +
           `effective: ${effectiveFromLocationId || "null"}→${effectiveToLocationId || "null"} | ` +
-          `travel=${requiredTravelMinutes}min gap=${transition.gapMinutes}min`
+          `travel=${requiredTravelMinutes}min gap=${transition.gapMinutes}min`,
       );
 
       if (requiredTravelMinutes <= 0) continue;
@@ -800,7 +802,7 @@ export class TimeSlotManager {
           slots,
           occupiedSlots,
           effectiveFromLocationId,
-          effectiveToLocationId
+          effectiveToLocationId,
         );
       } else {
         // Normal case - enough space for full travel
@@ -811,7 +813,7 @@ export class TimeSlotManager {
           slots,
           occupiedSlots,
           effectiveFromLocationId,
-          effectiveToLocationId
+          effectiveToLocationId,
         );
       }
     }
@@ -828,7 +830,7 @@ export class TimeSlotManager {
     slots: TimeSlot[],
     occupiedSlots: TimeSlot[],
     effectiveFromLocationId: string | null | undefined,
-    effectiveToLocationId: string | null | undefined
+    effectiveToLocationId: string | null | undefined,
   ): void {
     const travelEnd = new Date(transition.toEventStart.getTime());
     const travelStart = new Date(transition.fromEventEnd.getTime());
@@ -842,7 +844,7 @@ export class TimeSlotManager {
       {
         insufficientTravel: true,
         requiredTravelMinutes,
-      }
+      },
     );
     occupiedSlots.push(travelSlot);
 
@@ -850,13 +852,13 @@ export class TimeSlotManager {
     const correspondingSlot = slots.find(
       (s) =>
         s.end.getTime() === transition.toEventStart.getTime() &&
-        s.prevLocationId === effectiveFromLocationId
+        s.prevLocationId === effectiveFromLocationId,
     );
     if (correspondingSlot) {
       correspondingSlot.end = travelStart;
       correspondingSlot.durationMinutes = Math.floor(
         (correspondingSlot.end.getTime() - correspondingSlot.start.getTime()) /
-          60000
+          60000,
       );
     }
   }
@@ -871,7 +873,7 @@ export class TimeSlotManager {
     slots: TimeSlot[],
     occupiedSlots: TimeSlot[],
     effectiveFromLocationId: string | null | undefined,
-    effectiveToLocationId: string | null | undefined
+    effectiveToLocationId: string | null | undefined,
   ): void {
     const bufferMs = this.bufferTimeMinutes * 60000;
     const travelMs = requiredTravelMinutes * 60000;
@@ -890,7 +892,7 @@ export class TimeSlotManager {
         travelEnd,
         effectiveFromLocationId!,
         effectiveToLocationId!,
-        `travel-gap-${originalGapStart}`
+        `travel-gap-${originalGapStart}`,
       );
       occupiedSlots.push(travelSlot);
 
@@ -898,19 +900,20 @@ export class TimeSlotManager {
       const correspondingSlot = slots.find(
         (s) =>
           s.end.getTime() === transition.toEventStart.getTime() &&
-          s.prevLocationId === effectiveFromLocationId
+          s.prevLocationId === effectiveFromLocationId,
       );
 
       if (correspondingSlot) {
         // Shrink the available slot to end at buffer before travel (or slot start if no room)
         const newEndTime = Math.max(
           correspondingSlot.start.getTime(),
-          travelStart.getTime() - bufferMs
+          travelStart.getTime() - bufferMs,
         );
         correspondingSlot.end = new Date(newEndTime);
         correspondingSlot.durationMinutes = Math.floor(
-          (correspondingSlot.end.getTime() - correspondingSlot.start.getTime()) /
-            60000
+          (correspondingSlot.end.getTime() -
+            correspondingSlot.start.getTime()) /
+            60000,
         );
       }
     }
@@ -925,7 +928,7 @@ export class TimeSlotManager {
     numDays: number,
     existingEvents: SimpleEvent[],
     templateMasks: PerTemplateMask[],
-    plannerLocationMap?: Map<string, string | null>
+    plannerLocationMap?: Map<string, string | null>,
   ): Map<string, TimeSlot[]> {
     const dailySlots = new Map<string, TimeSlot[]>();
 
@@ -940,7 +943,7 @@ export class TimeSlotManager {
         dayEnd,
         existingEvents,
         templateMasks,
-        plannerLocationMap
+        plannerLocationMap,
       );
 
       dailySlots.set(dayKey, daySlots);
@@ -959,7 +962,7 @@ export class TimeSlotManager {
     durationMinutes: number,
     afterDate: Date = this.currentDate,
     maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
-    categoryConstraint?: CategoryConstraint
+    categoryConstraint?: CategoryConstraint,
   ): TimeSlot[] {
     const fittingSlots: TimeSlot[] = [];
     const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
@@ -1009,7 +1012,7 @@ export class TimeSlotManager {
 
               const effectiveMinutes = dateTimeService.getMinutesDifference(
                 effectiveStart,
-                intersectEnd
+                intersectEnd,
               );
 
               if (effectiveMinutes >= baseRequiredMinutes) {
@@ -1035,7 +1038,7 @@ export class TimeSlotManager {
               slot.start < afterDate ? afterDate : slot.start;
             const effectiveMinutes = dateTimeService.getMinutesDifference(
               effectiveStart,
-              slot.end
+              slot.end,
             );
 
             // Only check if slot can fit base requirement (duration + buffer)
@@ -1069,7 +1072,7 @@ export class TimeSlotManager {
     end: Date,
     eventId: string,
     eventType: "task" | "goal" | "plan" | "template" | "travel",
-    locationId?: string | null
+    locationId?: string | null,
   ): boolean {
     const dayKey = this.getDayKey(start);
     const slots = this.availableSlots.get(dayKey);
@@ -1085,7 +1088,7 @@ export class TimeSlotManager {
       (slot) =>
         slot.isAvailable &&
         slot.start.getTime() <= startTime &&
-        slot.end.getTime() >= endTime
+        slot.end.getTime() >= endTime,
     );
 
     if (slotIndex === -1) return false;
@@ -1100,7 +1103,7 @@ export class TimeSlotManager {
       end,
       eventId,
       eventType,
-      locationId
+      locationId,
     );
 
     // Replace the old slot with the new slots (keeping only available ones)
@@ -1141,7 +1144,7 @@ export class TimeSlotManager {
     travelAfter: number,
     prevLocationId: string | null,
     nextLocationId: string | null,
-    reusableTravelStart?: Date | null
+    reusableTravelStart?: Date | null,
   ): { success: boolean } {
     const dayKey = this.getDayKey(start);
     const slots = this.availableSlots.get(dayKey);
@@ -1183,7 +1186,7 @@ export class TimeSlotManager {
       (slot) =>
         slot.isAvailable &&
         slot.start.getTime() <= fullStart.getTime() &&
-        slot.end.getTime() >= taskReserveEnd.getTime()
+        slot.end.getTime() >= taskReserveEnd.getTime(),
     );
 
     if (slotIndex === -1) {
@@ -1222,7 +1225,7 @@ export class TimeSlotManager {
         travelAfterEnd = new Date(slot.end.getTime());
       }
       travelAfterStart = new Date(
-        travelAfterEnd.getTime() - travelAfter * 60000
+        travelAfterEnd.getTime() - travelAfter * 60000,
       );
     }
 
@@ -1233,7 +1236,7 @@ export class TimeSlotManager {
         start: slot.start,
         end: fullStart,
         durationMinutes: Math.floor(
-          (fullStart.getTime() - slot.start.getTime()) / 60000
+          (fullStart.getTime() - slot.start.getTime()) / 60000,
         ),
         isAvailable: true,
         prevLocationId: slot.prevLocationId,
@@ -1281,7 +1284,7 @@ export class TimeSlotManager {
         travelBeforeEnd,
         prevLocationId,
         taskLocationId,
-        `travel-to-${eventId}`
+        `travel-to-${eventId}`,
       );
       newSlots.push(travelSlot);
     }
@@ -1343,7 +1346,7 @@ export class TimeSlotManager {
 
     if (travelAfterStart) {
       freeSlotEnd = new Date(
-        travelAfterStart.getTime() - bufferMinutes * 60000
+        travelAfterStart.getTime() - bufferMinutes * 60000,
       );
     } else if (reclaimedTravelEnd) {
       // Use the reclaimed travel's end time (actual next event start)
@@ -1356,7 +1359,7 @@ export class TimeSlotManager {
     } else if (reusableTravelStart) {
       // We're reusing existing travel (travelAfter=0), so the free slot ends where that travel starts (minus buffer)
       freeSlotEnd = new Date(
-        reusableTravelStart.getTime() - bufferMinutes * 60000
+        reusableTravelStart.getTime() - bufferMinutes * 60000,
       );
     } else {
       freeSlotEnd = slot.end;
@@ -1368,7 +1371,7 @@ export class TimeSlotManager {
         start: freeSlotStart,
         end: freeSlotEnd,
         durationMinutes: Math.floor(
-          (freeSlotEnd.getTime() - freeSlotStart.getTime()) / 60000
+          (freeSlotEnd.getTime() - freeSlotStart.getTime()) / 60000,
         ),
         isAvailable: true,
         prevLocationId: freeSlotPrevLocation,
@@ -1415,7 +1418,7 @@ export class TimeSlotManager {
         travelAfterEnd,
         taskLocationId,
         nextLocationId,
-        `travel-from-${eventId}`
+        `travel-from-${eventId}`,
       );
       newSlots.push(travelSlot);
     }
@@ -1448,7 +1451,8 @@ export class TimeSlotManager {
     // 1. Go to the same destination (toLocationId)
     // 2. Start near the given time (within buffer + reasonable search window)
     const bufferMs = this.bufferTimeMinutes * 60000;
-    const searchWindowMs = bufferMs + SCHEDULING_CONFIG.ADJACENT_TRAVEL_TOLERANCE_MS;
+    const searchWindowMs =
+      bufferMs + SCHEDULING_CONFIG.ADJACENT_TRAVEL_TOLERANCE_MS;
 
     for (const slot of occupiedSlots) {
       if (

@@ -8,7 +8,9 @@
       "Bash(pnpm run lint)",
       "Bash(npx tsc:*)",
       "Bash(pnpm build:*)",
-      "Bash(pnpm tsc:*)"
+      "Bash(pnpm tsc:*)",
+      "Bash(wc:*)",
+      "Bash(npm run lint)"
     ]
   }
 }
