@@ -300,218 +300,223 @@ export class CalendarGenerator {
       plannerLocationMap
     );
 
-    // Pre-create static travel to/from category wrappers (like templates)
-    // categoryConstraintsList and categoryPeriodsStatic are already computed above
+    // Pre-create travel TO/FROM categories that have a location.
+    //
+    // Scenarios for travel TO category:
+    // 1. Plan before cat with plenty of space → Travel ends at category start
+    // 2. Plan too close → Travel extends into category, pushing items forward
+    // 3. Plan overlaps start of cat → Travel entirely inside category (from cat start)
+    // 4. Plan entirely inside cat near start → Travel TO plan overlaps cat start
+    // 5. Plan far into cat → Category needs its own to-travel, plan handles its own
+    //
+    // Key insight: We need to ensure there's no "orphan" category time at the start
+    // without travel to it. If the first event inside the category has a different
+    // location, that event handles its own travel. But we still need travel TO the
+    // category location for the category time before that event.
     if (categoryConstraintsList.length > 0) {
-      const bufferMinutes = this.slotManager.getBufferTimeMinutes();
-
-      // Pre-index non-template events by day for O(1) lookup instead of O(n) filter per period
-      const nonTemplateEventsByDay = new Map<string, SimpleEvent[]>();
-      for (const e of eventArray) {
-        const type = e.extendedProps?.itemType;
-        if (type === "template" || type === "travel") continue;
-        const dayKey = e.start.slice(0, 10); // "YYYY-MM-DD"
-        const dayEvents = nonTemplateEventsByDay.get(dayKey) || [];
-        dayEvents.push(e);
-        nonTemplateEventsByDay.set(dayKey, dayEvents);
-      }
-      // Pre-sort each day's events by start time
-      for (const [key, events] of nonTemplateEventsByDay) {
-        events.sort(
-          (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
-        );
-        nonTemplateEventsByDay.set(key, events);
-      }
-
-      // Build a lookup map for category locations to avoid repeated find() calls
+      // Build a lookup map for category locations
       const categoryLocationMap = new Map<string, string | null>();
       for (const c of categoryConstraintsList) {
         categoryLocationMap.set(c.id, c.locationId ?? null);
       }
 
+      // Index events by day for quick lookup
+      const eventsByDay = new Map<string, SimpleEvent[]>();
+      for (const e of eventArray) {
+        const type = e.extendedProps?.itemType;
+        if (type === "template" || type === "travel" || type === "category")
+          continue;
+        const dayKey = e.start.slice(0, 10);
+        const arr = eventsByDay.get(dayKey) || [];
+        arr.push(e);
+        eventsByDay.set(dayKey, arr);
+      }
+      // Sort by start time
+      for (const [k, arr] of eventsByDay) {
+        arr.sort(
+          (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime()
+        );
+        eventsByDay.set(k, arr);
+      }
+
       for (const period of categoryPeriodsStatic) {
-        // Only if category has a location
         const categoryLoc = categoryLocationMap.get(period.categoryId) ?? null;
         if (!categoryLoc) continue;
 
-        // Get events for this day from pre-indexed map (O(1) lookup)
         const periodStart = period.start;
         const periodEnd = period.end;
+        const periodStartMs = periodStart.getTime();
+        const periodEndMs = periodEnd.getTime();
         const dayKey = periodStart.toISOString().slice(0, 10);
-        const dayEvents = nonTemplateEventsByDay.get(dayKey) || [];
+        const dayEvents = eventsByDay.get(dayKey) || [];
 
-        // Filter to events within this specific period (much smaller array now)
-        const nonTemplateEventsInPeriod = dayEvents.filter((e) => {
-          const s = new Date(e.start);
-          const eend = new Date(e.end);
-          return s >= periodStart && s < periodEnd && eend > periodStart;
-        });
+        // Find the event that precedes or overlaps category start
+        // This is the last event that starts before category start
+        const eventBeforeCat = [...dayEvents]
+          .filter((e) => new Date(e.start).getTime() < periodStartMs)
+          .pop();
 
-        // Travel BEFORE: by default prev -> category, but if earliest event's travel intersects wrapper start,
-        // route prev -> earliestEvent.location (item travel takes precedence)
-        // Note: Travel ends exactly at category start (no buffer) - consistent with regular event travel
-        const daySlotsStart = this.slotManager.getDaySlots(period.start);
-        const travelEndBefore = new Date(period.start.getTime());
-        const containingIndexBefore = daySlotsStart.findIndex(
-          (s) =>
-            s.isAvailable &&
-            s.start.getTime() <= travelEndBefore.getTime() &&
-            s.end.getTime() >= travelEndBefore.getTime()
-        );
-        if (containingIndexBefore !== -1) {
-          const slotCtx = daySlotsStart[containingIndexBefore];
-          const prevLoc = slotCtx.prevLocationId ?? null;
-          if (prevLoc) {
-            let placedBefore = false;
-            const earliestEvent = nonTemplateEventsInPeriod[0];
-            if (earliestEvent) {
-              const evStart = new Date(earliestEvent.start);
-              const extEarly = earliestEvent.extendedProps as
-                | RuntimeEventExtendedProps
-                | undefined;
-              const plannerId: string = extEarly?.eventId ?? earliestEvent.id;
-              const eventLoc = plannerLocationMap.get(plannerId) ?? null;
-              if (eventLoc && eventLoc !== categoryLoc) {
-                const minutesToEvent = this.slotManager.getTravelTime(
-                  prevLoc,
-                  eventLoc,
-                  evStart
-                );
-                if (minutesToEvent > 0) {
-                  const travelEndToEvent = new Date(
-                    evStart.getTime() - bufferMinutes * 60000
-                  );
-                  const travelStartToEvent = new Date(
-                    travelEndToEvent.getTime() - minutesToEvent * 60000
-                  );
-                  // precedence when travel starts before wrapper start
-                  if (travelStartToEvent < periodStart) {
-                    const canPlace =
-                      this.slotManager.canPlaceStandaloneTravelBefore(
-                        travelEndToEvent,
-                        minutesToEvent
-                      );
-                    if (canPlace) {
-                      this.slotManager.reserveStandaloneTravelBefore(
-                        travelEndToEvent,
-                        minutesToEvent,
-                        prevLoc,
-                        eventLoc,
-                        `${earliestEvent.id}-precedence-before`
-                      );
-                      placedBefore = true;
-                    }
-                  }
-                }
-              }
-            }
+        // Determine the location of whatever is "before" category start
+        let prevLoc: string | null = null;
+        let prevEventEnd: Date | null = null;
+        let eventOverlapsCategory = false;
 
-            if (!placedBefore) {
-              const minutes = this.slotManager.getTravelTime(
+        if (eventBeforeCat) {
+          const evEnd = new Date(eventBeforeCat.end);
+          const evEndMs = evEnd.getTime();
+          prevEventEnd = evEnd;
+
+          // Get the location of this event
+          const ext = eventBeforeCat.extendedProps as
+            | RuntimeEventExtendedProps
+            | undefined;
+          const plannerId = ext?.eventId ?? eventBeforeCat.id;
+          prevLoc = plannerLocationMap.get(plannerId) ?? null;
+
+          // Check if this event overlaps into the category (scenarios 3-5)
+          if (evEndMs > periodStartMs) {
+            eventOverlapsCategory = true;
+          }
+        } else {
+          // No event before category - check available slots for prevLocationId
+          const daySlots = this.slotManager.getDaySlots(periodStart);
+          const slotAtStart = daySlots.find(
+            (s) =>
+              s.isAvailable &&
+              s.start.getTime() <= periodStartMs &&
+              s.end.getTime() >= periodStartMs
+          );
+          if (slotAtStart) {
+            prevLoc = slotAtStart.prevLocationId ?? null;
+            prevEventEnd = slotAtStart.start;
+          }
+        }
+
+        // Create travel TO category if prev location differs from category location
+        // This handles ALL scenarios - items inside category with different locations
+        // will handle their own travel FROM category location via processTravelTransitions
+        if (prevLoc && prevLoc !== categoryLoc) {
+          const minutes = this.slotManager.getTravelTime(
+            prevLoc,
+            categoryLoc,
+            periodStart
+          );
+          if (minutes > 0) {
+            if (eventOverlapsCategory) {
+              // Scenarios 3-5: Event overlaps into category
+              // Travel must be entirely inside category, starting at category start
+              // (or event end if event extends past category start)
+              const travelStart = new Date(
+                Math.max(periodStartMs, prevEventEnd!.getTime())
+              );
+              this.slotManager.reserveStandaloneTravelAfter(
+                travelStart,
+                minutes,
                 prevLoc,
                 categoryLoc,
-                period.start
+                `${period.categoryId}-${period.start.toISOString()}`,
+                true // force - marks overlapping slots as unavailable
               );
-              if (minutes > 0) {
-                // Force full travel duration for categories - travel time is what it is
-                // regardless of schedule conflicts. Travel starts from the available slot
-                // and extends forward, potentially overlapping into the category.
-                // Use slot start (adjusted for buffer) as travel start point.
-                const bufferMs = bufferMinutes * 60000;
-                const travelStart = new Date(slotCtx.start.getTime() - bufferMs);
+            } else {
+              // Scenarios 1-2: Event ends before category
+              const travelEndBefore = new Date(periodStartMs);
+              const canFit = this.slotManager.canPlaceStandaloneTravelBefore(
+                travelEndBefore,
+                minutes
+              );
+              if (canFit) {
+                // Scenario 1: Travel fits before category start
+                this.slotManager.reserveStandaloneTravelBefore(
+                  travelEndBefore,
+                  minutes,
+                  prevLoc,
+                  categoryLoc,
+                  `${period.categoryId}-${period.start.toISOString()}`
+                );
+              } else {
+                // Scenario 2: Not enough room, travel extends into category
+                const bufferMs = this.slotManager.getBufferTimeMinutes() * 60000;
+                const travelStart = prevEventEnd
+                  ? new Date(prevEventEnd.getTime() + bufferMs)
+                  : new Date(periodStartMs - minutes * 60000);
                 this.slotManager.reserveStandaloneTravelAfter(
                   travelStart,
                   minutes,
                   prevLoc,
                   categoryLoc,
                   `${period.categoryId}-${period.start.toISOString()}`,
-                  true // force
+                  true // force - marks overlapping slots as unavailable
                 );
               }
             }
           }
         }
 
-        // Travel AFTER: by default category -> next, but if last event's travel starts before wrapper end,
-        // route lastEvent.location -> next (item travel takes precedence)
-        // Note: Travel starts exactly at category end (no buffer) - consistent with regular event travel
-        const daySlotsEnd = this.slotManager.getDaySlots(period.end);
-        const travelStartAfter = new Date(period.end.getTime());
-        const containingIndexAfter = daySlotsEnd.findIndex(
+        // Find events inside the category to check for travel back to category
+        const eventsInCategory = dayEvents.filter((e) => {
+          const s = new Date(e.start).getTime();
+          const end = new Date(e.end).getTime();
+          return s >= periodStartMs && s < periodEndMs && end <= periodEndMs;
+        });
+
+        // If the last event inside the category has a different location than the category,
+        // we need travel FROM that event back TO the category location
+        if (eventsInCategory.length > 0) {
+          const lastEventInCat = eventsInCategory[eventsInCategory.length - 1];
+          const lastEventEnd = new Date(lastEventInCat.end);
+          const lastEventExt = lastEventInCat.extendedProps as
+            | RuntimeEventExtendedProps
+            | undefined;
+          const lastEventPlannerId = lastEventExt?.eventId ?? lastEventInCat.id;
+          const lastEventLoc = plannerLocationMap.get(lastEventPlannerId) ?? null;
+
+          if (lastEventLoc && lastEventLoc !== categoryLoc) {
+            // Last event has different location - need travel back to category
+            const minutesBack = this.slotManager.getTravelTime(
+              lastEventLoc,
+              categoryLoc,
+              lastEventEnd
+            );
+            if (minutesBack > 0) {
+              const bufferMs = this.slotManager.getBufferTimeMinutes() * 60000;
+              const travelBackStart = new Date(lastEventEnd.getTime() + bufferMs);
+              this.slotManager.reserveStandaloneTravelAfter(
+                travelBackStart,
+                minutesBack,
+                lastEventLoc,
+                categoryLoc,
+                `${lastEventInCat.id}-return-to-category`,
+                true // force - may overlap into remaining category time
+              );
+            }
+          }
+        }
+
+        // Travel AFTER category: category location -> next location
+        const daySlotsEnd = this.slotManager.getDaySlots(periodEnd);
+        const travelStartAfter = new Date(periodEndMs);
+        const slotAfter = daySlotsEnd.find(
           (s) =>
             s.isAvailable &&
-            s.start.getTime() <= travelStartAfter.getTime() &&
-            s.end.getTime() >= travelStartAfter.getTime()
+            s.start.getTime() <= periodEndMs &&
+            s.end.getTime() >= periodEndMs
         );
-        if (containingIndexAfter !== -1) {
-          const slotCtx = daySlotsEnd[containingIndexAfter];
-          const nextLoc = slotCtx.nextLocationId ?? null;
-          if (nextLoc) {
-            let placedAfter = false;
-            const lastEvent = [...nonTemplateEventsInPeriod]
-              .filter((e) => new Date(e.end) <= periodEnd)
-              .sort(
-                (a, b) => new Date(b.end).getTime() - new Date(a.end).getTime()
-              )[0];
-            if (lastEvent) {
-              const evEnd = new Date(lastEvent.end);
-              const extLast = lastEvent.extendedProps as
-                | RuntimeEventExtendedProps
-                | undefined;
-              const plannerId: string = extLast?.eventId ?? lastEvent.id;
-              const eventLoc = plannerLocationMap.get(plannerId) ?? null;
-              if (eventLoc) {
-                const minutesFromEvent = this.slotManager.getTravelTime(
-                  eventLoc,
-                  nextLoc,
-                  evEnd
-                );
-                if (minutesFromEvent > 0) {
-                  const travelStartFromEvent = new Date(
-                    evEnd.getTime() + bufferMinutes * 60000
-                  );
-                  if (travelStartFromEvent < periodEnd) {
-                    const canPlace =
-                      this.slotManager.canPlaceStandaloneTravelBefore(
-                        new Date(
-                          travelStartFromEvent.getTime() +
-                            minutesFromEvent * 60000
-                        ),
-                        minutesFromEvent
-                      );
-                    if (canPlace) {
-                      this.slotManager.reserveStandaloneTravelAfter(
-                        travelStartFromEvent,
-                        minutesFromEvent,
-                        eventLoc,
-                        nextLoc,
-                        `${lastEvent.id}-precedence-after`
-                      );
-                      placedAfter = true;
-                    }
-                  }
-                }
-              }
-            }
-
-            if (!placedAfter) {
-              const minutes = this.slotManager.getTravelTime(
+        if (slotAfter) {
+          const nextLoc = slotAfter.nextLocationId ?? null;
+          if (nextLoc && nextLoc !== categoryLoc) {
+            const minutes = this.slotManager.getTravelTime(
+              categoryLoc,
+              nextLoc,
+              periodEnd
+            );
+            if (minutes > 0) {
+              this.slotManager.reserveStandaloneTravelAfter(
+                travelStartAfter,
+                minutes,
                 categoryLoc,
                 nextLoc,
-                period.end
+                `${period.categoryId}-${period.end.toISOString()}`
               );
-              if (minutes > 0) {
-                // Force full travel duration for categories - travel time is what it is
-                // regardless of schedule conflicts (you still have to travel there)
-                this.slotManager.reserveStandaloneTravelAfter(
-                  travelStartAfter,
-                  minutes,
-                  categoryLoc,
-                  nextLoc,
-                  `${period.categoryId}-${period.end.toISOString()}`,
-                  true // force
-                );
-              }
             }
           }
         }

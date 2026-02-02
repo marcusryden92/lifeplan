@@ -7,7 +7,8 @@
       "Bash(xcopy:*)",
       "Bash(pnpm run lint)",
       "Bash(npx tsc:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(pnpm tsc:*)"
     ]
   }
 }

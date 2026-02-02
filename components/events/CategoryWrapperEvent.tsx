@@ -44,7 +44,7 @@ export function CategoryWrapperEvent({
       className="relative w-full h-full"
       style={{
         backgroundColor,
-        border: `1px ${isStrict ? "solid" : "solid"} ${categoryColor || "#3b82f6"}`,
+        border: `1px ${isStrict ? "solid" : "dotted"} ${categoryColor || "#3b82f6"}`,
         borderRadius: "4px",
       }}
       onMouseEnter={handleMouseEnter}

@@ -727,25 +727,58 @@ export class TimeSlotManager {
     const transitions = findLocationTransitions(intervals);
 
     for (const transition of transitions) {
-      // Determine effective from-location for travel, preferring category-wrapper location
+      // Determine effective from-location and to-location for travel
+      // considering category boundaries.
+      //
+      // If the TO event is inside a category, travel should be FROM category location
+      // If the FROM event is inside a category, travel should be TO category location
+      // (then separate category travel handles category → outside)
+
+      const catLocAtFrom = this.getCategoryLocationAt(transition.fromEventEnd);
       const catLocAtTo = this.getCategoryLocationAt(transition.toEventStart);
+
       let effectiveFromLocationId = transition.fromLocationId;
+      let effectiveToLocationId = transition.toLocationId;
+
       if (catLocAtTo) {
+        // TO event is inside a category - travel should be from category location
         effectiveFromLocationId = catLocAtTo;
       } else {
-        // Fallback: prefer slot-based prev location when available
+        // Not in a category - use slot-based prev location when available
         const slotAtGapEnd = slots.find(
           (s) => s.end.getTime() === transition.toEventStart.getTime()
         );
         effectiveFromLocationId =
           slotAtGapEnd?.prevLocationId ?? transition.fromLocationId;
       }
-      const effectiveToLocationId = transition.toLocationId;
+
+      if (catLocAtFrom && !catLocAtTo) {
+        // FROM event is inside a category, TO event is outside
+        // Travel should return to category location first
+        // (category travel AFTER will handle category → next location)
+        effectiveToLocationId = catLocAtFrom;
+      }
 
       const requiredTravelMinutes = this.getTravelTime(
         effectiveFromLocationId,
         effectiveToLocationId,
         transition.toEventStart
+      );
+
+      // DEBUG - find interval names
+      const fromInterval = intervals.find(
+        (i) => i.end.getTime() === transition.fromEventEnd.getTime()
+      );
+      const toInterval = intervals.find(
+        (i) => i.start.getTime() === transition.toEventStart.getTime()
+      );
+      console.log(
+        `[TRAVEL] "${(fromInterval as any)?.title || "?"}" → "${(toInterval as any)?.title || "?"}" | ` +
+          `times: ${transition.fromEventEnd.toLocaleTimeString()}-${transition.toEventStart.toLocaleTimeString()} | ` +
+          `origLocs: ${transition.fromLocationId || "null"}→${transition.toLocationId || "null"} | ` +
+          `catLocs: from=${catLocAtFrom || "null"} to=${catLocAtTo || "null"} | ` +
+          `effective: ${effectiveFromLocationId || "null"}→${effectiveToLocationId || "null"} | ` +
+          `travel=${requiredTravelMinutes}min gap=${transition.gapMinutes}min`
       );
 
       if (requiredTravelMinutes <= 0) continue;
@@ -760,6 +793,7 @@ export class TimeSlotManager {
 
       if (availableMinutes < requiredTravelMinutes) {
         // Insufficient space - create travel that fills available space
+        console.log(`[TRAVEL] → CREATING INSUFFICIENT travel slot`);
         this.createInsufficientTravelSlot(
           transition,
           requiredTravelMinutes,
@@ -770,6 +804,7 @@ export class TimeSlotManager {
         );
       } else {
         // Normal case - enough space for full travel
+        console.log(`[TRAVEL] → CREATING NORMAL travel slot`);
         this.createNormalTravelSlot(
           transition,
           requiredTravelMinutes,
