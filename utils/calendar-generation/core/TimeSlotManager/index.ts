@@ -11,7 +11,8 @@
  */
 
 // Context
-export { CategoryContext, CategoryPeriod } from "./context/CategoryContext";
+export { CategoryContext } from "./context/CategoryContext";
+export type { CategoryPeriod } from "./context/CategoryContext";
 
 // Travel
 export { TravelManager } from "./travel/TravelManager";
