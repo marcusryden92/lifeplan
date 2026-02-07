@@ -20,6 +20,20 @@ LifePlan is a personal scheduling and task management application that automatic
 
 ---
 
+## Code Style Rules
+
+- **No emojis** in code, comments, or generated documentation. Keep it professional.
+- **No pointless comments** like `// Fixed this function to now take numbers` or `// Updated to use new API`. Comments should explain *why* something is non-obvious, not narrate what was changed. If someone reading the code for the first time wouldn't benefit from the comment, don't write it.
+- **No summary or log files** added to the repo. No `REFACTOR_SUMMARY.md`, no `CHANGELOG.md` for refactors, no `MIGRATION_NOTES.md`. Just make the changes and commit them.
+- **No over-documentation**. The code should speak for itself. Only document complex logic, non-obvious decisions, and public APIs.
+- Use absolute imports with `@/` prefix.
+- Components use React.FC typing.
+- Prefer server actions over API routes.
+- Use Zod for validation schemas.
+- shadcn/ui components in `components/ui/`.
+
+---
+
 ## Directory Structure
 
 ```
@@ -48,17 +62,26 @@ lifeplan/
 │   ├── ui/                       # shadcn/ui primitives
 │   ├── auth/                     # Auth components
 │   ├── events/                   # Calendar event components
+│   ├── locations/                # Location management components
+│   ├── tasks/                    # Task editing components
+│   ├── scheduling/               # Strategy builder components
 │   └── draggable/                # Drag-and-drop components
 │
 ├── context/
 │   └── CalendarProvider.tsx      # Main data context for planners/calendar
+│
+├── docs/                         # Project documentation
+│   └── calendar-generation.md    # Deep dive into the scheduling engine
 │
 ├── hooks/                        # Custom React hooks
 │
 ├── lib/
 │   ├── auth.ts                   # Auth utilities
 │   ├── db.ts                     # Prisma client singleton
+│   ├── google-maps-api.ts        # Google Places/Distance Matrix API
 │   └── [other utilities]
+│
+├── notes/                        # Personal notes and TODOs (not documentation)
 │
 ├── prisma/
 │   ├── schemas/
@@ -89,23 +112,68 @@ lifeplan/
 │
 └── utils/
     ├── calendar-generation/      # Core scheduling engine
-    │   ├── core/
-    │   │   ├── CalendarGenerator.ts   # Main orchestrator
-    │   │   ├── Scheduler.ts           # Task placement logic
-    │   │   ├── TimeSlotManager.ts     # Slot management (O(n log n))
+    │   ├── calendarGeneration.ts      # Public entry point (backward-compatible)
+    │   ├── calendarGenerationHelpers.ts
+    │   ├── weekTemplateGeneration.ts
+    │   ├── constants.ts               # All configuration constants
+    │   ├── index.ts                   # Public API exports
+    │   │
+    │   ├── core/                      # Orchestrator classes + subfunctions
+    │   │   ├── CalendarGenerator.ts   # Main orchestrator (~260 lines)
+    │   │   ├── CalendarGenerator/     # Subfunctions by phase
+    │   │   │   ├── initialization/    # validateInput, buildInitialEventArray
+    │   │   │   ├── template-processing/  # expandTemplates
+    │   │   │   ├── slot-building/     # buildLocationMap, buildInitialSlots,
+    │   │   │   │                      # buildCategoryConstraints, injectCategoryTravel
+    │   │   │   ├── scheduling/        # prepareSchedulingContext, buildSchedulingStrategy,
+    │   │   │   │                      # prepareCandidates
+    │   │   │   └── finalization/      # assembleFinalEvents
+    │   │   │
+    │   │   ├── Scheduler.ts           # Task placement orchestrator (~117 lines)
+    │   │   ├── Scheduler/             # Subfunctions by phase
+    │   │   │   ├── validation/        # validateTask
+    │   │   │   ├── slot-selection/    # findValidSlots, selectBestSlot
+    │   │   │   ├── reservation/       # reserveTaskSlot
+    │   │   │   ├── event-creation/    # buildTaskEvent
+    │   │   │   └── scheduling/        # scheduleTask, scheduleTasks
+    │   │   │
+    │   │   ├── TimeSlotManager.ts     # Slot management orchestrator (~385 lines)
+    │   │   ├── TimeSlotManager/       # Subfunctions by domain
+    │   │   │   ├── context/           # CategoryContext
+    │   │   │   ├── travel/            # TravelManager
+    │   │   │   ├── converter/         # TravelConverter
+    │   │   │   ├── builder/           # SlotBuilder
+    │   │   │   ├── finder/            # SlotFinder
+    │   │   │   └── reserver/          # SlotReserver
+    │   │   │
     │   │   └── TemplateExpander.ts    # Recurring template expansion
+    │   │
     │   ├── strategies/
     │   │   ├── SchedulingStrategy.ts  # Base interface + CompositeStrategy
     │   │   ├── defaultStrategy.ts     # Default weights and scoring config
     │   │   ├── EarliestSlotStrategy.ts
-    │   │   └── LocationGroupingStrategy.ts  # Location-aware scheduling
+    │   │   └── LocationGroupingStrategy.ts
+    │   │
     │   ├── models/
     │   │   ├── SchedulingModels.ts    # Core interfaces
     │   │   └── TimeSlot.ts
-    │   ├── constants.ts               # Configuration constants
+    │   │
+    │   ├── helpers/
+    │   │   ├── events/                # EventAssembler
+    │   │   ├── location/              # LocationMapper
+    │   │   ├── category/              # CategoryTravelManager
+    │   │   └── scheduling/            # PrioritySorter, TaskSchedulingOrchestrator
+    │   │
+    │   ├── calendar-logic-helpers/
+    │   │   └── sortPlannersByPriority.ts
+    │   │
     │   └── utils/
-    │       ├── dateTimeService.ts     # Date utilities
-    │       └── validationUtils.ts     # Input validation
+    │       ├── dateTimeService.ts     # Centralized date utilities
+    │       ├── validationUtils.ts     # Input validation
+    │       ├── loggingUtils.ts        # Debug logging
+    │       ├── categoryConstraintUtils.ts
+    │       └── intervalUtils.ts
+    │
     ├── goalPageHandlers.ts            # Goal tree utilities
     └── taskHelpers.ts                 # Task utility functions
 ```
@@ -181,6 +249,8 @@ The calendar generation uses a **strategy-based architecture**:
 3. **TemplateExpander** - Expands recurring templates
 4. **Scheduler** - Places tasks using strategies
 5. **CompositeStrategy** - Combines multiple weighted strategies
+
+See `docs/calendar-generation.md` for a detailed walkthrough.
 
 #### Strategy Interface
 
@@ -316,14 +386,14 @@ RESEND_API_KEY=""
 
 1. Create strategy in `utils/calendar-generation/strategies/`
 2. Implement `SchedulingStrategy` interface
-3. Add weight constant in `constants.ts`
-4. Add to CompositeStrategy in `CalendarGenerator.ts`
+3. Add weight constant in `strategies/defaultStrategy.ts`
+4. Add to CompositeStrategy in `CalendarGenerator/scheduling/buildSchedulingStrategy.ts`
 
 ### Adding a new Prisma model:
 
 1. Create/modify file in `prisma/schemas/models/`
 2. Import in `prisma/schemas/schema.prisma` if new file
-3. Run `npx prisma generate` and `npx prisma db push`
+3. Run `pnpm prisma generate` and `pnpm prisma db push`
 4. Add type export in `types/prisma.d.ts`
 
 ### Adding server actions:
@@ -334,16 +404,6 @@ RESEND_API_KEY=""
 
 ---
 
-## Code Style
-
-- Use absolute imports with `@/` prefix
-- Components use React.FC typing
-- Prefer server actions over API routes
-- Use Zod for validation schemas
-- shadcn/ui components in `components/ui/`
-
----
-
 ## Debugging Calendar Generation
 
 Granular logging is available in `utils/calendar-generation/calendarGeneration.ts`:
@@ -351,15 +411,15 @@ Granular logging is available in `utils/calendar-generation/calendarGeneration.t
 ```typescript
 const enableLogging = true; // Master switch
 const logging = {
-  metrics: false, // Scheduling metrics
-  failures: false, // Scheduling failures
-  finalEvents: false, // Final calendar events JSON
-  travelDebug: false, // Travel calculation debug
-  templateInfo: false, // Template expansion info
-  planners: false, // Input planners JSON
-  templates: false, // Input templates JSON
-  locations: false, // Location map
-  strategySettings: false, // Strategy configuration
+  metrics: false,
+  failures: false,
+  finalEvents: false,
+  travelDebug: false,
+  templateInfo: false,
+  planners: false,
+  templates: false,
+  locations: false,
+  strategySettings: false,
 };
 ```
 
