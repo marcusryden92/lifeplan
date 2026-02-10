@@ -26,7 +26,6 @@ import { expandTemplates } from "./CalendarGenerator/template-processing/expandT
 import { buildLocationMap } from "./CalendarGenerator/slot-building/buildLocationMap";
 import { buildCategoryConstraints } from "./CalendarGenerator/slot-building/buildCategoryConstraints";
 import { buildInitialSlots } from "./CalendarGenerator/slot-building/buildInitialSlots";
-import { injectCategoryTravel } from "./CalendarGenerator/slot-building/injectCategoryTravel";
 import { prepareSchedulingContext } from "./CalendarGenerator/scheduling/prepareSchedulingContext";
 import { buildSchedulingStrategy } from "./CalendarGenerator/scheduling/buildSchedulingStrategy";
 import { prepareCandidates } from "./CalendarGenerator/scheduling/prepareCandidates";
@@ -122,7 +121,7 @@ export class CalendarGenerator {
       maxDaysAhead
     );
 
-    // Phase 6: Build initial slots
+    // Phase 6: Build initial slots (includes category boundary splits + travel carving)
     buildInitialSlots(
       this.slotManager,
       currentDate,
@@ -134,16 +133,7 @@ export class CalendarGenerator {
       enableLogging
     );
 
-    // Phase 7: Inject category travel
-    injectCategoryTravel(
-      this.slotManager,
-      categoryPeriodsStatic,
-      categoryConstraintMap,
-      filteredEvents,
-      plannerLocationMap
-    );
-
-    // Phase 8: Prepare scheduling context
+    // Phase 7: Prepare scheduling context
     const context = prepareSchedulingContext(
       input.userId,
       currentDate,

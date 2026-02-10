@@ -313,21 +313,10 @@ export function eventsToIntervals(
   return events.map((event) => {
     const lookupId = (event.extendedProps?.eventId as string) || event.id;
     const locationId = plannerLocationMap?.get(lookupId) ?? null;
-    // DEBUG
-    const title = event.title || "?";
-    if (
-      title.toLowerCase().includes("debug") ||
-      title.toLowerCase().includes("plan")
-    ) {
-      console.log(
-        `[eventsToIntervals] "${title}" lookupId=${lookupId} locationId=${locationId} mapHas=${plannerLocationMap?.has(lookupId)}`,
-      );
-    }
     return {
       start: new Date(event.start),
       end: new Date(event.end),
       locationId,
-      title, // Add title for debugging
     };
   });
 }

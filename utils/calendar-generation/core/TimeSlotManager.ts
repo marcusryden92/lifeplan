@@ -25,7 +25,6 @@ export interface DynamicScheduleItem {
  * TimeSlotManager - Orchestrator Class
  *
  * Lightweight orchestrator that delegates to specialized helper classes:
- * - CategoryContext: Manages category periods and location lookups
  * - TravelManager: Handles travel time calculations and lookups
  * - TravelConverter: Converts travel slots to SimpleEvents
  * - SlotBuilder: Builds available slots from events and templates
@@ -44,7 +43,6 @@ import {
 } from "../models/SchedulingModels";
 
 // Import helper classes
-import { CategoryContext } from "./TimeSlotManager/context/CategoryContext";
 import { TravelManager } from "./TimeSlotManager/travel/TravelManager";
 import { TravelConverter } from "./TimeSlotManager/converter/TravelConverter";
 import { SlotBuilder } from "./TimeSlotManager/builder/SlotBuilder";
@@ -58,7 +56,6 @@ export class TimeSlotManager {
   private bufferTimeMinutes: number = 0;
 
   // Helper class instances
-  private categoryContext: CategoryContext;
   private travelManager: TravelManager;
   private slotBuilder: SlotBuilder;
   private slotFinder: SlotFinder;
@@ -72,14 +69,10 @@ export class TimeSlotManager {
   ) {
     this.bufferTimeMinutes = bufferTimeMinutes;
 
-    // Initialize helper classes with correct constructor signatures
-    this.categoryContext = new CategoryContext(this.getDayKey.bind(this));
-
     this.travelManager = new TravelManager(
       this.availableSlots,
       this.occupiedSlots,
       bufferTimeMinutes,
-      this.categoryContext,
       this.getDayKey.bind(this),
       travelTimeMatrix,
     );
@@ -127,7 +120,7 @@ export class TimeSlotManager {
   setCategoryPeriods(
     periods: Array<{ start: Date; end: Date; locationId: string | null }>,
   ): void {
-    this.categoryContext.setCategoryPeriods(periods);
+    this.slotBuilder.setCategoryPeriods(periods);
   }
 
   // ===== Slot Building =====

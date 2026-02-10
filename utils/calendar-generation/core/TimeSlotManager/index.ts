@@ -2,17 +2,12 @@
  * TimeSlotManager Sub-modules
  *
  * Domain-organized helper modules:
- * - context: Category period management
  * - travel: Travel time calculations and reservations
  * - converter: Travel slot to event conversion
  * - builder: Slot building from events and templates
  * - finder: Slot search and filtering
  * - reserver: Slot reservation and travel placement
  */
-
-// Context
-export { CategoryContext } from "./context/CategoryContext";
-export type { CategoryPeriod } from "./context/CategoryContext";
 
 // Travel
 export { TravelManager } from "./travel/TravelManager";

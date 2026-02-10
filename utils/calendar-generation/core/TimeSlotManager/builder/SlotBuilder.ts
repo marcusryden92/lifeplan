@@ -9,7 +9,6 @@ import { SimpleEvent } from "@/types/prisma";
 import { TimeSlot, TimeSlotUtils } from "../../../models/TimeSlot";
 import { TravelManager } from "../travel/TravelManager";
 import {
-  Interval,
   eventsToIntervals,
   findGaps,
   gapsToTimeSlots,
@@ -20,6 +19,12 @@ import { dateTimeService } from "../../../utils/dateTimeService";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 
 export class SlotBuilder {
+  private categoryPeriods: Array<{
+    start: Date;
+    end: Date;
+    locationId: string | null;
+  }> = [];
+
   constructor(
     private availableSlots: Map<string, TimeSlot[]>,
     private occupiedSlots: Map<string, TimeSlot[]>,
@@ -28,6 +33,12 @@ export class SlotBuilder {
     private weekStartDay: WeekDayIntegers,
     private bufferTimeMinutes: number,
   ) {}
+
+  setCategoryPeriods(
+    periods: Array<{ start: Date; end: Date; locationId: string | null }>,
+  ): void {
+    this.categoryPeriods = periods;
+  }
 
   /**
    * Build available time slots for a date range
@@ -107,31 +118,201 @@ export class SlotBuilder {
         .filter((slot) => slot.durationMinutes > 0);
     }
 
-    // Create travel slots between adjacent events with different locations
+    // Single-pass travel injection:
+    // 1. Split slots at category boundaries to embed location transitions in the chain
+    // 2. Walk the chain and carve travel where prevLocationId != nextLocationId
+    // 3. Merge adjacent available slots back for the scheduler
     if (plannerLocationMap) {
-      const allIntervals: Interval[] = [
-        ...eventIntervals,
-        ...templateIntervals,
-      ];
-      this.processTravelTransitions(startDate, allIntervals, slots);
+      slots = this.splitSlotsAtCategoryBoundaries(slots, startDate, endDate);
+      slots = this.carveTravelFromChain(slots, startDate);
     }
 
-    // Merge adjacent slots (preserve location info from first slot in merge)
     return TimeSlotUtils.mergeAdjacentSlots(slots);
   }
 
   /**
-   * Process location transitions to create travel slots
-   * Handles: normal travel, insufficient travel (partial), and trespassing (no travel)
-   * Modifies slots array in place and adds travel slots to occupiedSlots
+   * Split available slots at category boundaries so that category location
+   * transitions are visible in the prevLocationId/nextLocationId chain.
+   *
+   * At each boundary (start or end of a category period), if an available slot
+   * spans that boundary, it is split into two slots:
+   * - Before portion: nextLocationId = categoryLocationId
+   * - After portion: prevLocationId = categoryLocationId
    */
-  private processTravelTransitions(
-    startDate: Date,
-    intervals: Interval[],
+  private splitSlotsAtCategoryBoundaries(
     slots: TimeSlot[],
-  ): void {
-    // Delegate to TravelManager which has the logic for processing transitions
-    this.travelManager.processTravelTransitions(startDate, intervals, slots);
+    dayStart: Date,
+    dayEnd: Date,
+  ): TimeSlot[] {
+    const dayStartMs = dayStart.getTime();
+    const dayEndMs = dayEnd.getTime();
+
+    const dayPeriods = this.categoryPeriods.filter(
+      (p) =>
+        p.start.getTime() < dayEndMs &&
+        p.end.getTime() > dayStartMs &&
+        p.locationId !== null,
+    );
+
+    if (dayPeriods.length === 0) return slots;
+
+    let result = slots;
+
+    for (const period of dayPeriods) {
+      const catLoc = period.locationId!;
+      const boundaries = [period.start, period.end].filter(
+        (b) => b.getTime() > dayStartMs && b.getTime() < dayEndMs,
+      );
+
+      for (const boundary of boundaries) {
+        const boundaryMs = boundary.getTime();
+        const newResult: TimeSlot[] = [];
+
+        for (const slot of result) {
+          if (!slot.isAvailable) {
+            newResult.push(slot);
+            continue;
+          }
+
+          const slotStartMs = slot.start.getTime();
+          const slotEndMs = slot.end.getTime();
+
+          if (boundaryMs > slotStartMs && boundaryMs < slotEndMs) {
+            const beforeDuration = Math.floor(
+              (boundaryMs - slotStartMs) / 60000,
+            );
+            const afterDuration = Math.floor(
+              (slotEndMs - boundaryMs) / 60000,
+            );
+
+            if (beforeDuration > 0) {
+              newResult.push({
+                start: slot.start,
+                end: new Date(boundaryMs),
+                durationMinutes: beforeDuration,
+                isAvailable: true,
+                prevLocationId: slot.prevLocationId,
+                nextLocationId: catLoc,
+              });
+            }
+
+            if (afterDuration > 0) {
+              newResult.push({
+                start: new Date(boundaryMs),
+                end: slot.end,
+                durationMinutes: afterDuration,
+                isAvailable: true,
+                prevLocationId: catLoc,
+                nextLocationId: slot.nextLocationId,
+              });
+            }
+          } else {
+            newResult.push(slot);
+          }
+        }
+
+        result = newResult;
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Walk the slot chain and carve travel slots where prevLocationId != nextLocationId.
+   * Travel is placed at the END of the available slot (right before the next event/boundary).
+   * Returns only the remaining available slots; travel slots go to occupiedSlots.
+   */
+  private carveTravelFromChain(
+    slots: TimeSlot[],
+    dayStart: Date,
+  ): TimeSlot[] {
+    const dayKey = this.getDayKeyFn(dayStart);
+    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+    const result: TimeSlot[] = [];
+
+    for (const slot of slots) {
+      if (!slot.isAvailable) {
+        result.push(slot);
+        continue;
+      }
+
+      const prevLoc = slot.prevLocationId;
+      const nextLoc = slot.nextLocationId;
+
+      if (!prevLoc || !nextLoc || prevLoc === nextLoc) {
+        result.push(slot);
+        continue;
+      }
+
+      const travelMinutes = this.travelManager.getTravelTime(
+        prevLoc,
+        nextLoc,
+        slot.end,
+      );
+
+      if (travelMinutes <= 0) {
+        result.push(slot);
+        continue;
+      }
+
+      if (slot.durationMinutes <= 0) {
+        result.push(slot);
+        continue;
+      }
+
+      const travelMs = travelMinutes * 60000;
+      const bufferMs = this.bufferTimeMinutes * 60000;
+      const travelEnd = new Date(slot.end.getTime());
+      const travelStart = new Date(travelEnd.getTime() - travelMs);
+
+      if (travelStart.getTime() >= slot.start.getTime()) {
+        // Normal: enough room for full travel
+        const travelSlot = TimeSlotUtils.createTravelSlot(
+          travelStart,
+          travelEnd,
+          prevLoc,
+          nextLoc,
+          `travel-gap-${slot.start.getTime()}`,
+        );
+        occupiedSlots.push(travelSlot);
+
+        const availableEndMs = Math.max(
+          slot.start.getTime(),
+          travelStart.getTime() - bufferMs,
+        );
+
+        if (availableEndMs > slot.start.getTime()) {
+          result.push({
+            start: slot.start,
+            end: new Date(availableEndMs),
+            durationMinutes: Math.floor(
+              (availableEndMs - slot.start.getTime()) / 60000,
+            ),
+            isAvailable: true,
+            prevLocationId: slot.prevLocationId,
+            nextLocationId: prevLoc,
+          });
+        }
+      } else {
+        // Insufficient: not enough room for full travel, fill entire slot
+        const travelSlot = TimeSlotUtils.createTravelSlot(
+          slot.start,
+          slot.end,
+          prevLoc,
+          nextLoc,
+          `travel-insufficient-${slot.start.getTime()}`,
+          {
+            insufficientTravel: true,
+            requiredTravelMinutes: travelMinutes,
+          },
+        );
+        occupiedSlots.push(travelSlot);
+      }
+    }
+
+    this.occupiedSlots.set(dayKey, occupiedSlots);
+    return result;
   }
 
   /**

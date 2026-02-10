@@ -20,7 +20,6 @@ export { expandTemplates } from "./template-processing/expandTemplates";
 export { buildLocationMap } from "./slot-building/buildLocationMap";
 export { buildCategoryConstraints } from "./slot-building/buildCategoryConstraints";
 export { buildInitialSlots } from "./slot-building/buildInitialSlots";
-export { injectCategoryTravel } from "./slot-building/injectCategoryTravel";
 
 // Scheduling
 export { prepareSchedulingContext } from "./scheduling/prepareSchedulingContext";
