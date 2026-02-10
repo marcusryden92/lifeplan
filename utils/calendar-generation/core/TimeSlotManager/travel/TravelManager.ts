@@ -30,14 +30,14 @@ export class TravelManager {
 
   /**
    * Get travel time between two locations based on time of day
-   * Returns 0 if either location is null (meaning "Everywhere") or if no travel entry exists
+   * Returns 0 if either location is null (meaning "Anywhere") or if no travel entry exists
    */
   getTravelTime(
     fromLocationId: string | null,
     toLocationId: string | null,
     timeOfDay: Date,
   ): number {
-    // No travel needed if either location is null ("Everywhere") or same location
+    // No travel needed if either location is null ("Anywhere") or same location
     if (!fromLocationId || !toLocationId || fromLocationId === toLocationId) {
       // console.log(`[getTravelTime] Returning 0: from=${fromLocationId} to=${toLocationId}`);
       return 0;
@@ -573,5 +573,4 @@ export class TravelManager {
 
     return null;
   }
-
 }

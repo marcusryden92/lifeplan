@@ -28,6 +28,7 @@ This document explains the complete flow of the calendar generation system. It c
 The calendar generation system takes a user's tasks, goals, templates (recurring events), and existing calendar events, then automatically schedules all unscheduled tasks into available time slots.
 
 **Key Concepts:**
+
 - **Planner**: A task, goal, or plan item that needs to be scheduled or organized
 - **Template**: A recurring event (like "Sleep 10pm-6am" or "Work 9am-5pm") that blocks time
 - **Category**: Organizational container with time-based scheduling constraints (can be strict or non-strict)
@@ -35,6 +36,7 @@ The calendar generation system takes a user's tasks, goals, templates (recurring
 - **TimeSlot**: An available window of time where tasks can be placed
 
 **The Four Core Classes:**
+
 ```
 CalendarGenerator (orchestrator)
     ├── TimeSlotManager (manages available time slots)
@@ -52,11 +54,11 @@ Location: `utils/calendar-generation/core/CalendarGenerator.ts:54-300`
 
 ```typescript
 interface CalendarGenerationInput {
-  userId: string;                    // Who this calendar belongs to
-  weekStartDay: number;              // 0-6 (Sunday-Saturday)
-  templates: EventTemplate[];        // Recurring time blocks
-  planners: Planner[];               // Tasks, goals, and plans to schedule
-  previousCalendar: SimpleEvent[];   // Existing calendar events to preserve
+  userId: string; // Who this calendar belongs to
+  weekStartDay: number; // 0-6 (Sunday-Saturday)
+  templates: EventTemplate[]; // Recurring time blocks
+  planners: Planner[]; // Tasks, goals, and plans to schedule
+  previousCalendar: SimpleEvent[]; // Existing calendar events to preserve
   config?: CalendarGenerationConfig; // Optional settings
 }
 ```
@@ -65,8 +67,8 @@ interface CalendarGenerationInput {
 
 ```typescript
 interface SchedulingResult {
-  success: boolean;           // True if all tasks were scheduled
-  events: SimpleEvent[];      // The complete calendar (past + scheduled + templates)
+  success: boolean; // True if all tasks were scheduled
+  events: SimpleEvent[]; // The complete calendar (past + scheduled + templates)
   failures: SchedulingFailure[]; // Tasks that couldn't be scheduled
   metrics: SchedulingMetrics; // Performance/debug info
 }
@@ -99,6 +101,7 @@ generate(input: CalendarGenerationInput): SchedulingResult {
 ```
 
 **What happens:**
+
 1. Performance timer starts
 2. Fresh metrics object created
 3. TimeSlotManager instantiated with buffer time between events
@@ -114,7 +117,7 @@ if (input.previousCalendar.length > 0) {
     (e) =>
       currentDate > new Date(e.end) &&
       e.extendedProps?.itemType !== "template" &&
-      e.extendedProps?.itemType !== "travel"
+      e.extendedProps?.itemType !== "travel",
   );
   pastEvents.forEach((e) => memoizedEventIds.add(e.id));
   eventArray.push(...pastEvents);
@@ -122,6 +125,7 @@ if (input.previousCalendar.length > 0) {
 ```
 
 **What happens:**
+
 - Past events (already completed) are preserved from the previous calendar
 - Template events are excluded (they'll be regenerated)
 - Travel events are excluded (they'll be recalculated)
@@ -134,16 +138,18 @@ eventArray = this.addPlanItems(
   input.userId,
   input.planners,
   eventArray,
-  memoizedEventIds
+  memoizedEventIds,
 );
 ```
 
 **What happens:**
+
 - Plan items have fixed times (`starts` field) - they're appointments
 - Converted directly to SimpleEvents at their specified times
 - Not subject to automatic scheduling
 
 **The addPlanItems method (Lines 536-579):**
+
 ```typescript
 private addPlanItems(...): SimpleEvent[] {
   const planItems = planners.filter(
@@ -174,11 +180,12 @@ eventArray = this.addCompletedItems(
   input.userId,
   input.planners,
   eventArray,
-  memoizedEventIds
+  memoizedEventIds,
 );
 ```
 
 **What happens:**
+
 - Tasks that have `completedStartTime` and `completedEndTime` are already done
 - They're added to the calendar at their completed times
 - Won't be re-scheduled
@@ -187,7 +194,10 @@ eventArray = this.addCompletedItems(
 
 ```typescript
 const templateStart = performance.now();
-const weekStart = dateTimeService.getWeekFirstDate(currentDate, input.weekStartDay);
+const weekStart = dateTimeService.getWeekFirstDate(
+  currentDate,
+  input.weekStartDay,
+);
 const searchEndDate = dateTimeService.shiftDays(weekStart, maxDaysAhead);
 
 // Create recurring template events for FullCalendar UI
@@ -195,7 +205,7 @@ const recurringTemplateEvents = this.templateExpander.expandTemplates(
   input.userId,
   input.templates,
   weekStart,
-  searchEndDate
+  searchEndDate,
 );
 
 // Remove old templates, add new ones
@@ -203,10 +213,13 @@ eventArray = eventArray.filter((e) => e.extendedProps?.itemType !== "template");
 eventArray.push(...recurringTemplateEvents);
 
 // Build per-template masks for slot calculation
-const perTemplateMasks = this.templateExpander.getPerTemplateMasks(input.templates);
+const perTemplateMasks = this.templateExpander.getPerTemplateMasks(
+  input.templates,
+);
 ```
 
 **What happens:**
+
 1. Calculate the scheduling window (current week start to maxDaysAhead)
 2. `expandTemplates()` creates ONE SimpleEvent per template with an RRule (recurrence rule)
 3. `getPerTemplateMasks()` creates a compact representation for slot calculation
@@ -220,18 +233,18 @@ type PerTemplateMask = {
   templateId: string;
   title?: string;
   locationId?: string | null;
-  occurrences: TemplateDayDef[];  // Sparse list of weekdays with times
+  occurrences: TemplateDayDef[]; // Sparse list of weekdays with times
 };
 
 type TemplateDayDef = {
-  day: number;  // 0-6 (Sunday-Saturday)
+  day: number; // 0-6 (Sunday-Saturday)
   times: TemplateTimeWithExceptions[];
 };
 
 type TemplateTimeWithExceptions = {
-  startTime: string;  // "09:00"
-  endTime: string;    // "17:00"
-  exceptions?: string[];  // Dates to skip
+  startTime: string; // "09:00"
+  endTime: string; // "17:00"
+  exceptions?: string[]; // Dates to skip
 };
 ```
 
@@ -248,6 +261,7 @@ for (const template of input.templates) {
 ```
 
 **What happens:**
+
 - Creates a lookup map: planner/template ID -> location ID
 - Used for travel time calculation between events
 - `null` location means "everywhere" (no travel needed)
@@ -259,14 +273,15 @@ const initialWeeks = 2;
 this.slotManager.clear();
 this.slotManager.buildDailySlots(
   currentDate,
-  initialWeeks * 7,  // 14 days
+  initialWeeks * 7, // 14 days
   eventArray,
   perTemplateMasks,
-  plannerLocationMap
+  plannerLocationMap,
 );
 ```
 
 **What happens:**
+
 1. Clear any existing slots
 2. For each day in the 14-day window:
    - Start with 24 hours available
@@ -277,6 +292,7 @@ this.slotManager.buildDailySlots(
    - Result: list of available TimeSlots per day
 
 **The buildAvailableSlots method (TimeSlotManager Lines 125-198):**
+
 ```typescript
 buildAvailableSlots(startDate, endDate, existingEvents, templateMasks, plannerLocationMap) {
   // 1. Convert existing events to intervals (with location info)
@@ -313,10 +329,13 @@ buildAvailableSlots(startDate, endDate, existingEvents, templateMasks, plannerLo
 ### Step 8: Calculate Largest Template Gap (Lines 186-188)
 
 ```typescript
-const largestTemplateGap = this.templateExpander.calculateLargestGap(input.templates);
+const largestTemplateGap = this.templateExpander.calculateLargestGap(
+  input.templates,
+);
 ```
 
 **What happens:**
+
 - Finds the biggest continuous free window in a typical week
 - Used to reject tasks that are too long to ever fit
 - Example: If templates block everything except 2-hour windows, a 3-hour task will fail immediately
@@ -336,6 +355,7 @@ const context: SchedulingContext = {
 ```
 
 **What happens:**
+
 - Creates a context object passed to the Scheduler
 - Contains everything needed to make scheduling decisions
 - `scheduledEvents` is a mutable array - new events get added here
@@ -346,7 +366,9 @@ const context: SchedulingContext = {
 const strategies: Array<{ strategy: SchedulingStrategy; weight: number }> = [
   {
     strategy: new EarliestSlotStrategy(),
-    weight: input.config?.strategyWeights?.earliestSlot ?? DEFAULT_STRATEGY_WEIGHTS.earliestSlot,
+    weight:
+      input.config?.strategyWeights?.earliestSlot ??
+      DEFAULT_STRATEGY_WEIGHTS.earliestSlot,
   },
 ];
 
@@ -356,9 +378,11 @@ if (input.config?.travelTimeMatrix && input.config.travelTimeMatrix.size > 0) {
     strategy: new LocationGroupingStrategy(
       input.config.travelTimeMatrix,
       input.config?.locationGroupingScores,
-      input.config?.locationGroupingPenalties
+      input.config?.locationGroupingPenalties,
     ),
-    weight: input.config?.strategyWeights?.locationGrouping ?? DEFAULT_STRATEGY_WEIGHTS.locationGrouping,
+    weight:
+      input.config?.strategyWeights?.locationGrouping ??
+      DEFAULT_STRATEGY_WEIGHTS.locationGrouping,
   });
 }
 
@@ -366,6 +390,7 @@ const strategy = new CompositeStrategy(strategies);
 ```
 
 **What happens:**
+
 - Creates scoring strategies for slot selection
 - **EarliestSlotStrategy**: Prefers earlier slots (today > tomorrow > next week)
   - Default weight: 1.0
@@ -375,6 +400,7 @@ const strategy = new CompositeStrategy(strategies);
 - Strategies are combined with weights using CompositeStrategy
 
 **Default Strategy Configuration** (from `defaultStrategy.ts`):
+
 ```typescript
 DEFAULT_STRATEGY_WEIGHTS = {
   earliestSlot: 1.0,
@@ -395,7 +421,7 @@ const schedulingResult = this.scheduleTasksAndGoals(
   scheduler,
   perTemplateMasks,
   context,
-  plannerLocationMap
+  plannerLocationMap,
 );
 ```
 
@@ -424,11 +450,13 @@ private scheduleTasksAndGoals(...): { success, newEvents, failures } {
 ```
 
 **Candidate Selection Logic:**
+
 - Top-level goals (no parent, marked ready) - these contain tasks to schedule
 - Standalone tasks (not part of a goal)
 - Excludes already-scheduled items (memoized)
 
 **Priority Sorting (Lines 628-653):**
+
 ```typescript
 private sortByPriority(allPlanners, goalsAndTasks): Planner[] {
   const now = new Date();
@@ -448,10 +476,11 @@ private sortByPriority(allPlanners, goalsAndTasks): Planner[] {
 ```
 
 **Urgency Calculation (sortPlannersByPriority.ts):**
+
 ```typescript
 function calculateTaskUrgency(task, context): number {
   if (!task.deadline) {
-    return task.priority * 0.3;  // No deadline = 30% priority
+    return task.priority * 0.3; // No deadline = 30% priority
   }
 
   const deadline = new Date(task.deadline);
@@ -475,7 +504,10 @@ function calculateTaskUrgency(task, context): number {
 **The Week-by-Week Scheduling Loop (Lines 343-464):**
 
 ```typescript
-let weekStart = dateTimeService.getWeekFirstDate(context.currentDate, this.weekStartDay);
+let weekStart = dateTimeService.getWeekFirstDate(
+  context.currentDate,
+  this.weekStartDay,
+);
 let weeksSearched = 0;
 
 while (candidates.length > 0 && weeksSearched < MAX_WEEKS_TO_SEARCH) {
@@ -495,7 +527,7 @@ while (candidates.length > 0 && weeksSearched < MAX_WEEKS_TO_SEARCH) {
         failures.push({
           taskId: item.id,
           reason: SchedulingFailureReason.TOO_LARGE,
-          details: `Duration (${item.duration}) exceeds largest gap (${largestTemplateGap})`
+          details: `Duration (${item.duration}) exceeds largest gap (${largestTemplateGap})`,
         });
         candidates.splice(i, 1);
         continue;
@@ -515,11 +547,11 @@ while (candidates.length > 0 && weeksSearched < MAX_WEEKS_TO_SEARCH) {
         }
         // If NO_SLOTS, keep in candidates - might fit in next week
       }
-    }
-    else if (item.itemType === "goal") {
+    } else if (item.itemType === "goal") {
       // Goals contain tasks - schedule them in dependency order
-      const goalTasks = getSortedTreeBottomLayer(allPlanners, item.id)
-        .filter((t) => !taskIsCompleted(t) && !scheduledTaskIds.has(t.id));
+      const goalTasks = getSortedTreeBottomLayer(allPlanners, item.id).filter(
+        (t) => !taskIsCompleted(t) && !scheduledTaskIds.has(t.id),
+      );
 
       let goalAfterTime: Date | undefined = undefined;
 
@@ -549,7 +581,7 @@ while (candidates.length > 0 && weeksSearched < MAX_WEEKS_TO_SEARCH) {
       7,
       weekEvents,
       perTemplateMasks,
-      plannerLocationMap
+      plannerLocationMap,
     );
   }
 }
@@ -559,7 +591,7 @@ while (candidates.length > 0 && weeksSearched < MAX_WEEKS_TO_SEARCH) {
 
 ```typescript
 const scheduledNonTemplateEvents = context.scheduledEvents.filter(
-  (e) => e.extendedProps?.itemType !== "template"
+  (e) => e.extendedProps?.itemType !== "template",
 );
 
 // Convert travel slots to SimpleEvents
@@ -567,7 +599,7 @@ const travelEvents = this.slotManager.generateTravelEvents(input.userId);
 
 // Combine all events
 const templateEventsForUI = context.scheduledEvents.filter(
-  (e) => e.extendedProps?.itemType === "template"
+  (e) => e.extendedProps?.itemType === "template",
 );
 const allEvents = [
   ...scheduledNonTemplateEvents,
@@ -577,6 +609,7 @@ const allEvents = [
 ```
 
 **What happens:**
+
 - During scheduling, travel time was tracked as "occupied slots" (not events)
 - Now convert those travel slots to actual SimpleEvents for the calendar
 - Travel events show up as gray blocks between events at different locations
@@ -588,6 +621,7 @@ this.markTrespassingEvents(allEvents, plannerLocationMap);
 ```
 
 **What happens:**
+
 - Detects overlapping events with different locations
 - These are "trespassing" - physically impossible to be in two places
 - Marks events with red borders so the user can see the conflict
@@ -614,10 +648,11 @@ Location: `utils/calendar-generation/core/TimeSlotManager.ts`
 **Purpose:** Manages available time slots and tracks what's occupied.
 
 **Key Data Structures:**
+
 ```typescript
 class TimeSlotManager {
-  private availableSlots: Map<string, TimeSlot[]>;  // day key -> available slots
-  private occupiedSlots: Map<string, TimeSlot[]>;   // day key -> occupied slots (including travel)
+  private availableSlots: Map<string, TimeSlot[]>; // day key -> available slots
+  private occupiedSlots: Map<string, TimeSlot[]>; // day key -> occupied slots (including travel)
   private bufferTimeMinutes: number;
   private travelTimeMatrix: Map<string, TravelTimeEntry> | null;
 }
@@ -626,20 +661,26 @@ class TimeSlotManager {
 **Key Methods:**
 
 #### `buildAvailableSlots(startDate, endDate, existingEvents, templateMasks, plannerLocationMap)`
+
 Constructs available time slots for a day by:
+
 1. Finding all occupied intervals (events + templates)
 2. Computing gaps between occupied intervals
 3. Applying buffer time
 4. Creating travel slots at location transitions
 
 #### `findAllFittingSlots(durationMinutes, afterDate, maxDaysToSearch)`
+
 Returns all slots that can fit a task of given duration.
+
 - Searches day by day from afterDate
 - Returns slots with location info (prevLocationId, nextLocationId)
 - Used by Scheduler to get candidates for scoring
 
 #### `reserveSlotWithTravel(start, end, eventId, eventType, taskLocationId, travelBefore, travelAfter, prevLocationId, nextLocationId)`
+
 Reserves a slot for a task, handling travel:
+
 1. Finds the containing available slot
 2. Creates travel-before if needed (at slot start)
 3. Marks task time as occupied
@@ -648,6 +689,7 @@ Reserves a slot for a task, handling travel:
 6. Updates adjacent slots' location references
 
 #### `generateTravelEvents(userId)`
+
 Converts all travel slots to SimpleEvents for display.
 
 ### TemplateExpander
@@ -659,11 +701,14 @@ Location: `utils/calendar-generation/core/TemplateExpander.ts`
 **Key Methods:**
 
 #### `expandTemplates(userId, templates, startDate, endDate)`
+
 Creates one SimpleEvent per template with an RRule for recurrence.
 Used for FullCalendar UI display.
 
 #### `getPerTemplateMasks(templates)`
+
 Creates compact masks for slot calculation:
+
 ```typescript
 {
   templateId: "abc",
@@ -677,6 +722,7 @@ Creates compact masks for slot calculation:
 ```
 
 #### `calculateLargestGap(templates)`
+
 Finds the biggest continuous available window in a week.
 Used to pre-reject tasks that can never fit.
 
@@ -800,6 +846,7 @@ Location: `utils/calendar-generation/strategies/`
 The scheduling system uses a **weighted composite strategy** approach where multiple scoring strategies are combined to determine the best time slot for each task. Default weights and configurations are defined in [defaultStrategy.ts](utils/calendar-generation/strategies/defaultStrategy.ts).
 
 **Key Strategy Files:**
+
 - `SchedulingStrategy.ts` - Base interface and CompositeStrategy implementation
 - `defaultStrategy.ts` - Default weights and scoring configurations
 - `EarliestSlotStrategy.ts` - Prefers earlier time slots
@@ -909,22 +956,23 @@ score(task, slot): number {
 ```
 
 **Default Configuration (from `defaultStrategy.ts`):**
+
 ```typescript
 DEFAULT_LOCATION_GROUPING_SCORES = {
-  bothMatch: 0.95,          // Both adjacent events match
-  oneMatchOneOpen: 0.8,     // One match, one open
-  oneMatch: 0.5,            // One match, one doesn't
-  bothOpen: 0.7,            // Both open (empty day)
-  oneOpenNoMatch: 0.45,     // One open, one doesn't match
-  neitherMatch: 0.4,        // Neither matches
-  noLocation: 0.5,          // Task has no location
+  bothMatch: 0.95, // Both adjacent events match
+  oneMatchOneOpen: 0.8, // One match, one open
+  oneMatch: 0.5, // One match, one doesn't
+  bothOpen: 0.7, // Both open (empty day)
+  oneOpenNoMatch: 0.45, // One open, one doesn't match
+  neitherMatch: 0.4, // Neither matches
+  noLocation: 0.5, // Task has no location
 };
 
 DEFAULT_LOCATION_GROUPING_PENALTIES = {
   maxSingleTravelPenalty: 0.02,
   maxDoubleTravelPenalty: 0.03,
-  singleTravelPenaltyDivisor: 600,  // Travel minutes / 600
-  doubleTravelPenaltyDivisor: 400,  // Travel minutes / 400
+  singleTravelPenaltyDivisor: 600, // Travel minutes / 600
+  doubleTravelPenaltyDivisor: 400, // Travel minutes / 400
 };
 ```
 
@@ -940,10 +988,10 @@ interface TimeSlot {
   end: Date;
   durationMinutes: number;
   isAvailable: boolean;
-  eventId?: string;           // What's occupying this slot
+  eventId?: string; // What's occupying this slot
   eventType?: "task" | "goal" | "plan" | "template" | "travel" | "category";
-  prevLocationId?: string | null;  // Location of event BEFORE this slot
-  nextLocationId?: string | null;  // Location of event AFTER this slot
+  prevLocationId?: string | null; // Location of event BEFORE this slot
+  nextLocationId?: string | null; // Location of event AFTER this slot
 
   // Travel-specific fields
   travelFromLocationId?: string | null;
@@ -961,7 +1009,7 @@ interface SchedulingContext {
   userId: string;
   weekStartDay: number;
   allPlanners: Planner[];
-  scheduledEvents: SimpleEvent[];  // Mutable - events added here
+  scheduledEvents: SimpleEvent[]; // Mutable - events added here
   availableMinutesPerWeek: number;
   metrics: SchedulingMetrics;
 }
@@ -973,7 +1021,7 @@ interface SchedulingContext {
 interface SchedulingFailure {
   taskId: string;
   taskTitle: string;
-  reason: SchedulingFailureReason;  // TOO_LARGE | NO_SLOTS | INVALID_TASK | etc.
+  reason: SchedulingFailureReason; // TOO_LARGE | NO_SLOTS | INVALID_TASK | etc.
   details: string;
   context?: Record<string, unknown>;
 }
@@ -1030,9 +1078,10 @@ When scheduling a task at a different location than neighbors:
 
 **Travel Shifting:** When a new task is added in the FREE SPACE, travel-after shifts forward to stay adjacent to the next event.
 
-### "Everywhere" Tasks
+### "Anywhere" Tasks
 
 Tasks with `locationId: null` are considered "everywhere" - they don't need travel:
+
 - No travel-before needed
 - No travel-after needed
 - They're "transparent" for travel purposes
@@ -1061,8 +1110,8 @@ interface Category {
   timeSlots: TimeSlotDefinition[] | null;
 
   // Strict mode control
-  isStrict: boolean;  // true = only category items allowed in slots
-                      // false = other items can fill empty space
+  isStrict: boolean; // true = only category items allowed in slots
+  // false = other items can fill empty space
 
   // Optional location inheritance
   locationId?: string | null;
@@ -1077,10 +1126,12 @@ interface Category {
 ### How Categories Work
 
 1. **Time Slot Definition**: Categories can define specific time windows when their items should be scheduled
+
    - Example: "Work" category with weekday 9am-5pm slots
    - Example: "Exercise" category with Mon/Wed/Fri 6-7am slots
 
 2. **Strict vs Non-Strict Mode**:
+
    - **Strict (`isStrict: true`)**: Only items from this category can occupy the defined time slots
      - Other tasks will be blocked from these times
      - Ensures dedicated time for specific activities
@@ -1089,6 +1140,7 @@ interface Category {
      - Good for optional or aspirational categories
 
 3. **Location Inheritance**: Items without a specific location inherit the category's location
+
    - Example: "Work" category with office location applies to all work tasks by default
 
 4. **Visual Representation**: Categories appear as background events on the calendar
@@ -1101,6 +1153,7 @@ interface Category {
 Categories affect the scheduling system in two ways:
 
 1. **Slot Generation**: TimeSlotManager treats category time slots similarly to templates
+
    - Category slots reduce available time (like templates)
    - But can be "filled" if non-strict mode
 
@@ -1111,6 +1164,7 @@ Categories affect the scheduling system in two ways:
 ### Example Use Cases
 
 **Software Engineer's Schedule:**
+
 ```typescript
 {
   name: "Deep Work",
@@ -1123,6 +1177,7 @@ Categories affect the scheduling system in two ways:
 ```
 
 **Fitness Routine:**
+
 ```typescript
 {
   name: "Exercise",
@@ -1292,42 +1347,55 @@ OUTPUT
 ## Key Gotchas and Edge Cases
 
 ### 1. Tasks vs Goals
+
 - Tasks are scheduled directly
 - Goals are containers - their child tasks are scheduled in dependency order
 - `getSortedTreeBottomLayer()` extracts the actual tasks from a goal tree
 
 ### 2. The "afterTime" Parameter
+
 When scheduling goal tasks, each task must come after the previous:
+
 ```typescript
 let goalAfterTime: Date | undefined;
 for (const task of goalTasks) {
   const res = scheduler.scheduleTask(task, goalAfterTime);
   if (res.success) {
-    goalAfterTime = new Date(res.event.end);  // Next task after this
+    goalAfterTime = new Date(res.event.end); // Next task after this
   }
 }
 ```
 
 ### 3. Travel Reuse
+
 If existing travel already goes to the right destination, it's reused:
+
 ```typescript
-const reusable = this.slotManager.findAdjacentTravelTo(slot.end, slot.nextLocationId);
+const reusable = this.slotManager.findAdjacentTravelTo(
+  slot.end,
+  slot.nextLocationId,
+);
 if (reusable) {
-  effectiveTravelAfter = 0;  // Don't reserve new space
+  effectiveTravelAfter = 0; // Don't reserve new space
 }
 ```
 
 ### 4. Week Expansion
+
 If no slots found in current week, the system expands:
+
 - Builds slots for next week
 - Continues trying candidates
 - Stops after MAX_WEEKS_TO_SEARCH (12 weeks)
 
 ### 5. Memoization
+
 Events from `previousCalendar` that are past and non-template/non-travel are preserved and not re-scheduled.
 
 ### 6. Buffer Time Layout
+
 Buffers separate items, not surround them:
+
 ```
 [TRAVEL] [BUFFER] [TASK] [BUFFER] [FREE] [BUFFER] [TRAVEL]
 ```
@@ -1337,6 +1405,7 @@ Buffers separate items, not surround them:
 ## Debugging Tips
 
 Enable logging in config:
+
 ```typescript
 config: {
   enableLogging: true,

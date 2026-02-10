@@ -112,7 +112,7 @@ export async function createLocation(data: {
  */
 export async function updateLocationName(
   locationId: string,
-  name: string
+  name: string,
 ): Promise<Location> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -180,7 +180,7 @@ export async function fetchTravelTimes(): Promise<TravelTime[]> {
  * Fetch travel times for a specific transport mode
  */
 export async function fetchTravelTimesByMode(
-  transportMode: TransportMode
+  transportMode: TransportMode,
 ): Promise<TravelTime[]> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -204,7 +204,7 @@ export async function fetchTravelTimesByMode(
  * Only fetches missing pairs - incremental update
  */
 export async function fetchMissingTravelTimes(
-  transportMode: TransportMode
+  transportMode: TransportMode,
 ): Promise<{ fetched: number; skipped: number }> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -230,7 +230,7 @@ export async function fetchMissingTravelTimes(
   });
 
   const existingPairs = new Set(
-    existingTimes.map((t) => `${t.fromLocationId}-${t.toLocationId}`)
+    existingTimes.map((t) => `${t.fromLocationId}-${t.toLocationId}`),
   );
 
   // Find missing pairs (excluding self-referential)
@@ -259,7 +259,7 @@ export async function fetchMissingTravelTimes(
     const times = await getTravelTimesAllPeriods(
       { lat: pair.from.lat, lng: pair.from.lng },
       { lat: pair.to.lat, lng: pair.to.lng },
-      transportMode
+      transportMode,
     );
 
     await db.travelTime.create({
@@ -286,7 +286,7 @@ export async function fetchMissingTravelTimes(
  */
 export async function fetchTravelTimesForLocation(
   locationId: string,
-  transportMode: TransportMode
+  transportMode: TransportMode,
 ): Promise<{ fetched: number }> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -314,7 +314,7 @@ export async function fetchTravelTimesForLocation(
   const results = await calculateTravelTimesForNewLocation(
     { id: newLocation.id, lat: newLocation.lat, lng: newLocation.lng },
     otherLocations.map((loc) => ({ id: loc.id, lat: loc.lat, lng: loc.lng })),
-    transportMode
+    transportMode,
   );
 
   // Store results in database
@@ -352,7 +352,7 @@ export async function fetchTravelTimesForLocation(
  * Preserves custom overrides - only updates Google values
  */
 export async function refreshAllTravelTimes(
-  transportMode: TransportMode
+  transportMode: TransportMode,
 ): Promise<{ updated: number }> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -375,7 +375,7 @@ export async function refreshAllTravelTimes(
       const times = await getTravelTimesAllPeriods(
         { lat: from.lat, lng: from.lng },
         { lat: to.lat, lng: to.lng },
-        transportMode
+        transportMode,
       );
 
       await db.travelTime.upsert({
@@ -420,7 +420,7 @@ export async function updateTravelTimeOverride(
     customRushHourMinutes?: number | null;
     customRegularMinutes?: number | null;
     customNightMinutes?: number | null;
-  }
+  },
 ): Promise<TravelTime> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -449,7 +449,7 @@ export async function updateTravelTimeOverride(
  * Clear all custom overrides for a travel time (revert to Google values)
  */
 export async function clearTravelTimeOverrides(
-  travelTimeId: string
+  travelTimeId: string,
 ): Promise<TravelTime> {
   return updateTravelTimeOverride(travelTimeId, {
     customRushHourMinutes: null,
@@ -464,11 +464,11 @@ export async function clearTravelTimeOverrides(
 
 /**
  * Assign a location to a planner item
- * Set locationId to null for "Everywhere" (no specific location)
+ * Set locationId to null for "Anywhere" (no specific location)
  */
 export async function assignLocationToPlanner(
   plannerId: string,
-  locationId: string | null
+  locationId: string | null,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -500,11 +500,11 @@ export async function assignLocationToPlanner(
 
 /**
  * Assign a location to a template
- * Set locationId to null for "Everywhere" (no specific location)
+ * Set locationId to null for "Anywhere" (no specific location)
  */
 export async function assignLocationToTemplate(
   templateId: string,
-  locationId: string | null
+  locationId: string | null,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -540,7 +540,7 @@ export async function assignLocationToTemplate(
  */
 export async function assignLocationToMultiplePlanners(
   plannerIds: string[],
-  locationId: string | null
+  locationId: string | null,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -588,7 +588,7 @@ export async function getDefaultTransportMode(): Promise<TransportMode> {
  * Update user's default transport mode
  */
 export async function updateDefaultTransportMode(
-  transportMode: TransportMode
+  transportMode: TransportMode,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -615,7 +615,7 @@ export async function updateDefaultTransportMode(
  * Returns an array that can be converted to a Map on the client
  */
 export async function fetchTravelTimesForCalendar(
-  transportMode?: TransportMode
+  transportMode?: TransportMode,
 ): Promise<{
   matrix: Array<{
     key: string;

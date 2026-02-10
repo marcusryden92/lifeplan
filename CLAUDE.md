@@ -23,7 +23,7 @@ LifePlan is a personal scheduling and task management application that automatic
 ## Code Style Rules
 
 - **No emojis** in code, comments, or generated documentation. Keep it professional.
-- **No pointless comments** like `// Fixed this function to now take numbers` or `// Updated to use new API`. Comments should explain *why* something is non-obvious, not narrate what was changed. If someone reading the code for the first time wouldn't benefit from the comment, don't write it.
+- **No pointless comments** like `// Fixed this function to now take numbers` or `// Updated to use new API`. Comments should explain _why_ something is non-obvious, not narrate what was changed. If someone reading the code for the first time wouldn't benefit from the comment, don't write it.
 - **No summary or log files** added to the repo. No `REFACTOR_SUMMARY.md`, no `CHANGELOG.md` for refactors, no `MIGRATION_NOTES.md`. Just make the changes and commit them.
 - **No over-documentation**. The code should speak for itself. Only document complex logic, non-obvious decisions, and public APIs.
 - Use absolute imports with `@/` prefix.
@@ -223,7 +223,7 @@ Items can have an associated location for travel time calculation:
 - **TravelTime** - Directional travel duration between two locations with transport modes (DRIVING, TRANSIT, BICYCLING, WALKING)
   - Stores Google API baseline values for rush hour, regular, and night times
   - Supports user overrides for custom travel times
-- Items with `locationId: null` are considered "Everywhere" (no travel time needed)
+- Items with `locationId: null` are considered "Anywhere" (no travel time needed)
 
 ### Category System
 
@@ -275,18 +275,18 @@ Note: Task urgency/deadline prioritization is handled by `sortPlannersByPriority
 
 ```typescript
 DEFAULT_STRATEGY_WEIGHTS = {
-  earliestSlot: 1.0,        // Baseline preference for earlier slots
-  locationGrouping: 0.2,    // Weight for location-based grouping
+  earliestSlot: 1.0, // Baseline preference for earlier slots
+  locationGrouping: 0.2, // Weight for location-based grouping
 };
 
 DEFAULT_LOCATION_GROUPING_SCORES = {
-  bothMatch: 0.95,          // Both adjacent events match task location
-  oneMatchOneOpen: 0.8,     // One end matches, other end is open
-  oneMatch: 0.5,            // One end matches, other doesn't
-  bothOpen: 0.7,            // Both ends are open (empty day)
-  oneOpenNoMatch: 0.45,     // One end open, other doesn't match
-  neitherMatch: 0.4,        // Neither end matches
-  noLocation: 0.5,          // Task has no location (neutral)
+  bothMatch: 0.95, // Both adjacent events match task location
+  oneMatchOneOpen: 0.8, // One end matches, other end is open
+  oneMatch: 0.5, // One end matches, other doesn't
+  bothOpen: 0.7, // Both ends are open (empty day)
+  oneOpenNoMatch: 0.45, // One end open, other doesn't match
+  neitherMatch: 0.4, // Neither end matches
+  noLocation: 0.5, // Task has no location (neutral)
 };
 ```
 

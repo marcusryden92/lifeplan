@@ -28,7 +28,7 @@ export function LocationSelector({
   compact = false,
 }: LocationSelectorProps) {
   const locations = useSelector(
-    (state: RootState) => state.schedulingSettings.locations
+    (state: RootState) => state.schedulingSettings.locations,
   );
 
   // Normalize undefined to null to prevent controlled/uncontrolled switch
@@ -71,7 +71,7 @@ export function LocationSelector({
           <span className="flex min-w-[100px] items-center gap-1.5 truncate">
             <MapPin className="w-3.5 h-3.5 text-gray-400" />
             <span className="truncate text-gray-600 leading-none">
-              {selectedLocation?.name ?? "Everywhere"}
+              {selectedLocation?.name ?? "Anywhere"}
             </span>
           </span>
         </SelectTrigger>
@@ -79,7 +79,7 @@ export function LocationSelector({
           <SelectItem value="everywhere">
             <span className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-muted-foreground" />
-              Everywhere
+              Anywhere
             </span>
           </SelectItem>
           {locations.map((location) => (
@@ -105,7 +105,7 @@ export function LocationSelector({
         <SelectValue>
           <span className="flex items-center gap-2">
             <MapPin className="w-4 h-4" />
-            {selectedLocation?.name ?? "Everywhere"}
+            {selectedLocation?.name ?? "Anywhere"}
           </span>
         </SelectValue>
       </SelectTrigger>
@@ -113,7 +113,7 @@ export function LocationSelector({
         <SelectItem value="everywhere">
           <span className="flex items-center gap-2">
             <MapPin className="w-4 h-4 text-muted-foreground" />
-            Everywhere
+            Anywhere
           </span>
         </SelectItem>
         {locations.map((location) => (
