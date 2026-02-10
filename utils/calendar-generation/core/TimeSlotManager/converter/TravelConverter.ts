@@ -56,7 +56,7 @@ export class TravelConverter {
       return {
         userId,
         id: eventId,
-        title: "Travel",
+        title: `Travel_${fromLocation ?? "unknown"}_${toLocation ?? "unknown"}`,
         start: slot.start.toISOString(),
         end: slot.end.toISOString(),
         backgroundColor: isInsufficient ? "#F87171" : "#9CA3AF",
