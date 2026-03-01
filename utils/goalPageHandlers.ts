@@ -44,8 +44,8 @@ export function addSubtask({
       priority: Number(task.priority),
       color: (task?.color as string) || calendarColors[0],
       userId,
-      locationId: null,
-      categoryId: null,
+      locationId: task.locationId ?? null,
+      categoryId: task.categoryId ?? null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };

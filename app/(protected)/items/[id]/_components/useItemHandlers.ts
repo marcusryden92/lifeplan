@@ -15,13 +15,17 @@ export function useItemHandlers(
   subtasks: Planner[],
   planner: Planner[],
   updatePlannerArray: Dispatch<SetStateAction<Planner[]>>,
-  updateAll: () => void
+  updateAll: () => void,
+  categoryHasLocation: boolean = false
 ) {
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCascadeConfirm, setShowCascadeConfirm] = useState(false);
   const [pendingLocationId, setPendingLocationId] = useState<string | null>(
     null
+  );
+  const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
+    () => categoryHasLocation && !!item?.locationId
   );
 
   const handleSaveTitle = useCallback(
@@ -131,11 +135,31 @@ export function useItemHandlers(
     [item, planner, updatePlannerArray, handleUpdateField]
   );
 
+  const handleToggleLocationOverride = useCallback(async () => {
+    if (!item || !categoryHasLocation) return;
+
+    if (locationOverrideEnabled) {
+      // Turning off override: clear explicit location so it falls back to category
+      if (item.itemType === "goal" && subtasks.length > 0) {
+        setPendingLocationId(null);
+        setShowCascadeConfirm(true);
+        setLocationOverrideEnabled(false);
+        return;
+      }
+      await assignLocationToPlanner(item.id, null);
+      handleUpdateField("locationId", null);
+      setLocationOverrideEnabled(false);
+    } else {
+      setLocationOverrideEnabled(true);
+    }
+  }, [item, categoryHasLocation, locationOverrideEnabled, subtasks, handleUpdateField]);
+
   return {
     showDeleteConfirm,
     setShowDeleteConfirm,
     showCascadeConfirm,
     pendingLocationId,
+    locationOverrideEnabled,
     handleSaveTitle,
     handleDelete,
     handleToggleReady,
@@ -143,6 +167,7 @@ export function useItemHandlers(
     handleDateChange,
     handleCategoryChange,
     handleLocationChange,
+    handleToggleLocationOverride,
     applyLocationChange,
     closeCascadeDialog: () => {
       setShowCascadeConfirm(false);

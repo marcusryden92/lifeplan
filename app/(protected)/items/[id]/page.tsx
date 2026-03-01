@@ -71,12 +71,15 @@ export default function ItemDetailPage() {
     return categories.find((c) => c.id === item.categoryId);
   }, [item, categories]);
 
+  const categoryHasLocation = !!(category?.locationId);
+
   // Handlers
   const {
     showDeleteConfirm,
     setShowDeleteConfirm,
     showCascadeConfirm,
     pendingLocationId,
+    locationOverrideEnabled,
     handleSaveTitle,
     handleDelete,
     handleToggleReady,
@@ -84,9 +87,10 @@ export default function ItemDetailPage() {
     handleDateChange,
     handleCategoryChange,
     handleLocationChange,
+    handleToggleLocationOverride,
     applyLocationChange,
     closeCascadeDialog,
-  } = useItemHandlers(item, subtasks, planner, updatePlannerArray, updateAll);
+  } = useItemHandlers(item, subtasks, planner, updatePlannerArray, updateAll, categoryHasLocation);
 
   if (loading) {
     return (
@@ -148,9 +152,12 @@ export default function ItemDetailPage() {
               <PropertiesCard
                 item={item}
                 categories={categories}
+                category={category ?? null}
+                locationOverrideEnabled={locationOverrideEnabled}
                 onUpdateField={handleUpdateField}
                 onCategoryChange={handleCategoryChange}
                 onLocationChange={handleLocationChange}
+                onToggleLocationOverride={handleToggleLocationOverride}
                 onDateChange={handleDateChange}
               />
             </div>

@@ -14,10 +14,12 @@ import useClickOutside from "@/hooks/useClickOutside";
 import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
 import useTitleEditor from "@/hooks/useTitleEditor";
 import { handleEventCopy } from "@/utils/calendarEventHandlers";
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useCallback } from "react";
+import { useSelector } from "react-redux";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { LocationSelector } from "@/components/locations/LocationSelector";
 import { assignLocationToPlanner } from "@/actions/locations";
+import type { RootState } from "@/redux/store";
 
 import { formatTime } from "@/utils/calendarUtils";
 
@@ -48,18 +50,34 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   onPostpone,
   setShowPopover,
 }) => {
-  const { updateAll, planner, updatePlannerArray } = useCalendarProvider();
+  const { updateAll, planner, updatePlannerArray, categories } =
+    useCalendarProvider();
+  const locations = useSelector(
+    (state: RootState) => state.schedulingSettings.locations,
+  );
 
-  // Get the current planner item to find its locationId
   const plannerItem = useMemo(
     () => planner.find((p) => p.id === event.id),
     [planner, event.id]
   );
 
+  const category = useMemo(() => {
+    if (!plannerItem?.categoryId) return null;
+    return categories.find((c) => c.id === plannerItem.categoryId) ?? null;
+  }, [plannerItem, categories]);
+
+  const categoryHasLocation = !!(category?.locationId);
+  const categoryLocationName = category?.locationId
+    ? locations.find((l) => l.id === category.locationId)?.name
+    : undefined;
+
+  const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
+    () => categoryHasLocation && !!plannerItem?.locationId
+  );
+
   const handleLocationChange = async (locationId: string | null) => {
     try {
       await assignLocationToPlanner(event.id, locationId);
-      // Update local state
       updatePlannerArray((prev) =>
         prev.map((p) =>
           p.id === event.id ? { ...p, locationId: locationId } : p
@@ -69,6 +87,26 @@ const EventPopover: React.FC<EventPopoverProps> = ({
       console.error("Failed to update location:", error);
     }
   };
+
+  const handleToggleLocationOverride = useCallback(async () => {
+    if (!plannerItem || !categoryHasLocation) return;
+
+    if (locationOverrideEnabled) {
+      try {
+        await assignLocationToPlanner(plannerItem.id, null);
+        updatePlannerArray((prev) =>
+          prev.map((p) =>
+            p.id === plannerItem.id ? { ...p, locationId: null } : p
+          )
+        );
+      } catch (error) {
+        console.error("Failed to clear location override:", error);
+      }
+      setLocationOverrideEnabled(false);
+    } else {
+      setLocationOverrideEnabled(true);
+    }
+  }, [plannerItem, categoryHasLocation, locationOverrideEnabled, updatePlannerArray]);
 
   // Popover dimensions
   const POPOVER_WIDTH = 280;
@@ -210,7 +248,10 @@ const EventPopover: React.FC<EventPopoverProps> = ({
             <LocationSelector
               value={plannerItem.locationId ?? null}
               onChange={handleLocationChange}
-              className="w-full"
+              categoryName={category?.name}
+              categoryLocationName={categoryLocationName}
+              isOverridden={locationOverrideEnabled}
+              onToggleOverride={handleToggleLocationOverride}
             />
           </div>
         )}
