@@ -124,6 +124,7 @@ export const generatePlans = (userId: string): Planner[] => {
       userId,
       color: data.color,
       locationId: null,
+      useParentLocation: false,
       categoryId: null,
       createdAt: timestamp,
       updatedAt: timestamp,

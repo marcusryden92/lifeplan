@@ -36,6 +36,12 @@ async function main() {
     },
   });
 
+  // Clear existing data (order matters for foreign keys)
+  await prisma.planner.deleteMany({});
+  await prisma.eventTemplate.deleteMany({});
+  await prisma.travelTime.deleteMany({});
+  await prisma.location.deleteMany({});
+
   // Seed locations first (templates reference them)
   const locations = generateLocations(userId);
   await prisma.location.createMany({ data: locations });
