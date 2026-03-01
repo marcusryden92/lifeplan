@@ -499,6 +499,43 @@ export async function assignLocationToPlanner(
 }
 
 /**
+ * Set useParentLocation for a planner item.
+ * When true, the category's location overrides the item's own locationId.
+ * The item's locationId is preserved so it can be restored by toggling back off.
+ */
+export async function setUseParentLocation(
+  plannerId: string,
+  useParentLocation: boolean,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  await db.planner.update({
+    where: { id: plannerId },
+    data: { useParentLocation },
+  });
+}
+
+/**
+ * Set useParentLocation for multiple planner items at once
+ */
+export async function setUseParentLocationMultiple(
+  plannerIds: string[],
+  useParentLocation: boolean,
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  await db.planner.updateMany({
+    where: {
+      id: { in: plannerIds },
+      userId: session.user.id,
+    },
+    data: { useParentLocation },
+  });
+}
+
+/**
  * Assign a location to a template
  * Set locationId to null for "Anywhere" (no specific location)
  */

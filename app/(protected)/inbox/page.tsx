@@ -96,6 +96,7 @@ export default function InboxPage() {
         userId,
         color: null,
         locationId: null,
+        useParentLocation: false,
         categoryId: null,
         createdAt: now,
         updatedAt: now,

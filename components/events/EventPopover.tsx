@@ -18,7 +18,7 @@ import React, { useMemo, useState, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { LocationSelector } from "@/components/locations/LocationSelector";
-import { assignLocationToPlanner } from "@/actions/locations";
+import { assignLocationToPlanner, setUseParentLocation } from "@/actions/locations";
 import type { RootState } from "@/redux/store";
 
 import { formatTime } from "@/utils/calendarUtils";
@@ -72,7 +72,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
     : undefined;
 
   const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
-    () => categoryHasLocation && !!plannerItem?.locationId
+    () => categoryHasLocation && !plannerItem?.useParentLocation
   );
 
   const handleLocationChange = async (locationId: string | null) => {
@@ -91,20 +91,18 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   const handleToggleLocationOverride = useCallback(async () => {
     if (!plannerItem || !categoryHasLocation) return;
 
-    if (locationOverrideEnabled) {
-      try {
-        await assignLocationToPlanner(plannerItem.id, null);
-        updatePlannerArray((prev) =>
-          prev.map((p) =>
-            p.id === plannerItem.id ? { ...p, locationId: null } : p
-          )
-        );
-      } catch (error) {
-        console.error("Failed to clear location override:", error);
-      }
-      setLocationOverrideEnabled(false);
-    } else {
-      setLocationOverrideEnabled(true);
+    const newOverrideEnabled = !locationOverrideEnabled;
+    const newUseParent = !newOverrideEnabled;
+    try {
+      await setUseParentLocation(plannerItem.id, newUseParent);
+      updatePlannerArray((prev) =>
+        prev.map((p) =>
+          p.id === plannerItem.id ? { ...p, useParentLocation: newUseParent } : p
+        )
+      );
+      setLocationOverrideEnabled(newOverrideEnabled);
+    } catch (error) {
+      console.error("Failed to toggle location override:", error);
     }
   }, [plannerItem, categoryHasLocation, locationOverrideEnabled, updatePlannerArray]);
 

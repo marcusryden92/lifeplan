@@ -45,6 +45,7 @@ model Planner {
   userId             String
   color              String?
   locationId         String?   // Optional FK to Location (null = "Anywhere")
+  useParentLocation  Boolean   @default(false) // When true, use category location instead of item's own locationId
   categoryId         String?   // Optional FK to Category for organization
   createdAt          String
   updatedAt          String

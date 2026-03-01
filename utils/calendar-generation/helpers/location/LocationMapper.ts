@@ -43,16 +43,21 @@ export class LocationMapper {
   }
 
   /**
-   * Resolve the effective location for a planner
-   * Returns explicit location if set, otherwise inherits from category
+   * Resolve the effective location for a planner.
+   * If useParentLocation is true, the category's location overrides the item's own locationId.
+   * Otherwise the item's own locationId takes precedence.
    */
   private resolveLocation(planner: Planner): string | null {
-    // Explicit location takes precedence
+    if (planner.useParentLocation && planner.categoryId) {
+      const categoryLocation = this.categoryLocationMap.get(planner.categoryId) ?? null;
+      if (categoryLocation) return categoryLocation;
+    }
+
     if (planner.locationId) {
       return planner.locationId;
     }
 
-    // Inherit from category if available
+    // Fall back to category location even when useParentLocation is false
     if (planner.categoryId) {
       return this.categoryLocationMap.get(planner.categoryId) ?? null;
     }

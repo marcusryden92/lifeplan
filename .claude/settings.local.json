@@ -10,7 +10,10 @@
       "Bash(pnpm build:*)",
       "Bash(pnpm tsc:*)",
       "Bash(wc:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(dotenv -e .env.development.local -- pnpm exec prisma generate)",
+      "Bash(pnpm exec dotenv -e .env.development.local -- pnpm exec prisma generate)",
+      "Bash(pnpm exec dotenv -e .env.development.local -- pnpm exec prisma db push)"
     ]
   }
 }

@@ -20,6 +20,8 @@ import type { RootState } from "@/redux/store";
 import {
   assignLocationToPlanner,
   assignLocationToMultiplePlanners,
+  setUseParentLocation,
+  setUseParentLocationMultiple,
 } from "@/actions/locations";
 import { getGoalTree } from "@/utils/goalPageHandlers";
 
@@ -57,29 +59,29 @@ export const TaskHeader = ({
     : undefined;
 
   const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
-    () => categoryHasLocation && !!task.locationId
+    () => categoryHasLocation && !task.useParentLocation
   );
 
   const handleToggleLocationOverride = useCallback(async () => {
     if (!categoryHasLocation) return;
 
-    if (locationOverrideEnabled) {
-      if (hasChildren) {
-        setPendingLocationId(null);
-        setShowCascadeConfirm(true);
-        setLocationOverrideEnabled(false);
-        return;
-      }
-      await assignLocationToPlanner(task.id, null);
-      updatePlannerArray((prev) =>
-        prev.map((p) =>
-          p.id === task.id ? { ...p, locationId: null } : p
-        )
-      );
+    const newOverrideEnabled = !locationOverrideEnabled;
+
+    if (!newOverrideEnabled && hasChildren) {
+      setPendingLocationId(null);
+      setShowCascadeConfirm(true);
       setLocationOverrideEnabled(false);
-    } else {
-      setLocationOverrideEnabled(true);
+      return;
     }
+
+    const newUseParent = !newOverrideEnabled;
+    await setUseParentLocation(task.id, newUseParent);
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === task.id ? { ...p, useParentLocation: newUseParent } : p
+      )
+    );
+    setLocationOverrideEnabled(newOverrideEnabled);
   }, [categoryHasLocation, locationOverrideEnabled, hasChildren, task.id, updatePlannerArray]);
 
   const handleLocationChange = async (locationId: string | null) => {
@@ -99,14 +101,28 @@ export const TaskHeader = ({
     cascade: boolean
   ) => {
     try {
-      if (cascade) {
-        // Get all items in the tree (this item + all descendants)
-        const treeItems = getGoalTree(planner, task.id);
-        const treeIds = treeItems.map((item) => item.id);
+      const treeItems = getGoalTree(planner, task.id);
+      const treeIds = treeItems.map((item) => item.id);
 
+      if (locationId === null && !locationOverrideEnabled) {
+        // Toggling override OFF — set useParentLocation=true, preserve locationId
+        if (cascade) {
+          await setUseParentLocationMultiple(treeIds, true);
+          updatePlannerArray((prev) =>
+            prev.map((p) =>
+              treeIds.includes(p.id) ? { ...p, useParentLocation: true } : p
+            )
+          );
+        } else {
+          await setUseParentLocation(task.id, true);
+          updatePlannerArray((prev) =>
+            prev.map((p) =>
+              p.id === task.id ? { ...p, useParentLocation: true } : p
+            )
+          );
+        }
+      } else if (cascade) {
         await assignLocationToMultiplePlanners(treeIds, locationId);
-
-        // Update local state for all items
         updatePlannerArray((prev) =>
           prev.map((p) =>
             treeIds.includes(p.id) ? { ...p, locationId: locationId } : p
@@ -114,8 +130,6 @@ export const TaskHeader = ({
         );
       } else {
         await assignLocationToPlanner(task.id, locationId);
-
-        // Update local state
         updatePlannerArray((prev) =>
           prev.map((p) =>
             p.id === task.id ? { ...p, locationId: locationId } : p
