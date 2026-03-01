@@ -1,12 +1,16 @@
-import React, { useRef, useState, useLayoutEffect } from "react";
+import React, { useRef, useState, useLayoutEffect, useMemo } from "react";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { formatTime } from "@/utils/calendarUtils";
 
 interface TravelExtendedProps {
   travelMinutes?: number;
   requiredTravelMinutes?: number | null;
   insufficientTravel?: boolean;
+  fromLocationId?: string | null;
+  toLocationId?: string | null;
 }
 
 interface TravelEventContentProps {
@@ -15,8 +19,19 @@ interface TravelEventContentProps {
 
 const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   const { userSettings } = useCalendarProvider();
+  const locations = useSelector(
+    (state: RootState) => state.schedulingSettings.locations
+  );
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
+
+  const locationNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const loc of locations) {
+      map.set(loc.id, loc.name);
+    }
+    return map;
+  }, [locations]);
 
   useLayoutEffect(() => {
     const element = elementRef.current;
@@ -33,6 +48,14 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   const travelMinutes = extendedProps?.travelMinutes;
   const requiredTravelMinutes = extendedProps?.requiredTravelMinutes;
   const insufficientTravel = extendedProps?.insufficientTravel ?? false;
+  const fromName = extendedProps?.fromLocationId
+    ? locationNameMap.get(extendedProps.fromLocationId) ?? extendedProps.fromLocationId
+    : null;
+  const toName = extendedProps?.toLocationId
+    ? locationNameMap.get(extendedProps.toLocationId) ?? extendedProps.toLocationId
+    : null;
+  const travelLabel =
+    fromName && toName ? `${fromName} → ${toName}` : "Travel";
 
   // Warning icon for insufficient travel
   const WarningIcon = () => (
@@ -94,7 +117,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
           }}
         >
           {insufficientTravel ? <WarningIcon /> : <TravelArrowIcon />}
-          {event.title}
+          {travelLabel}
           {travelMinutes !== undefined && elementHeight > 30 && (
             <span style={{ fontWeight: "normal", opacity: 0.8 }}>
               ({travelMinutes} min
