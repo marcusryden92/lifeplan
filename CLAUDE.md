@@ -70,8 +70,8 @@ lifeplan/
 ├── context/
 │   └── CalendarProvider.tsx      # Main data context for planners/calendar
 │
-├── docs/                         # Project documentation
-│   └── calendar-generation.md    # Deep dive into the scheduling engine
+├── documentation/                # Project documentation
+│   └── calendar-generation-deep-dive.md  # Deep dive into the scheduling engine
 │
 ├── hooks/                        # Custom React hooks
 │
@@ -124,7 +124,7 @@ lifeplan/
     │   │   │   ├── initialization/    # validateInput, buildInitialEventArray
     │   │   │   ├── template-processing/  # expandTemplates
     │   │   │   ├── slot-building/     # buildLocationMap, buildInitialSlots,
-    │   │   │   │                      # buildCategoryConstraints, injectCategoryTravel
+    │   │   │   │                      # buildCategoryConstraints
     │   │   │   ├── scheduling/        # prepareSchedulingContext, buildSchedulingStrategy,
     │   │   │   │                      # prepareCandidates
     │   │   │   └── finalization/      # assembleFinalEvents
@@ -139,7 +139,6 @@ lifeplan/
     │   │   │
     │   │   ├── TimeSlotManager.ts     # Slot management orchestrator (~385 lines)
     │   │   ├── TimeSlotManager/       # Subfunctions by domain
-    │   │   │   ├── context/           # CategoryContext
     │   │   │   ├── travel/            # TravelManager
     │   │   │   ├── converter/         # TravelConverter
     │   │   │   ├── builder/           # SlotBuilder
@@ -161,7 +160,6 @@ lifeplan/
     │   ├── helpers/
     │   │   ├── events/                # EventAssembler
     │   │   ├── location/              # LocationMapper
-    │   │   ├── category/              # CategoryTravelManager
     │   │   └── scheduling/            # PrioritySorter, TaskSchedulingOrchestrator
     │   │
     │   ├── calendar-logic-helpers/
@@ -250,7 +248,7 @@ The calendar generation uses a **strategy-based architecture**:
 4. **Scheduler** - Places tasks using strategies
 5. **CompositeStrategy** - Combines multiple weighted strategies
 
-See `docs/calendar-generation.md` for a detailed walkthrough.
+See `documentation/calendar-generation-deep-dive.md` for a detailed walkthrough.
 
 #### Strategy Interface
 
