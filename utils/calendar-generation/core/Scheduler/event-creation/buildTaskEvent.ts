@@ -20,8 +20,11 @@ export function buildTaskEvent(
   // Check if this task is within a category time slot and get the wrapper ID
   let categoryWrapperId: string | null = null;
 
-  if (task.categoryId && context.categoryConstraints) {
-    const constraint = context.categoryConstraints.get(task.categoryId);
+  const effectiveCategoryId =
+    context.plannerCategoryMap?.get(task.id) ?? task.categoryId;
+
+  if (effectiveCategoryId && context.categoryConstraints) {
+    const constraint = context.categoryConstraints.get(effectiveCategoryId);
 
     if (constraint && constraint.timeSlots.length > 0) {
       // Task is in a category with time constraints

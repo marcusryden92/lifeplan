@@ -44,9 +44,9 @@ export function addSubtask({
       priority: Number(task.priority),
       color: (task?.color as string) || calendarColors[0],
       userId,
-      locationId: task.locationId ?? null,
-      useParentLocation: task.useParentLocation ?? false,
-      categoryId: task.categoryId ?? null,
+      locationId: null,
+      useParentLocation: true,
+      categoryId: null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };
@@ -462,6 +462,27 @@ export function getGoalTree(planner: Planner[], id: string): Planner[] {
     },
     [planner.find((task) => task.id === id)!] // Include the current task's object in the result
   );
+}
+
+export function getEffectiveCategoryId(
+  planner: Planner[],
+  id: string
+): string | null {
+  const visited = new Set<string>();
+  let currentId: string | null = id;
+
+  while (currentId) {
+    if (visited.has(currentId)) break;
+    visited.add(currentId);
+
+    const task = planner.find((t) => t.id === currentId);
+    if (!task) break;
+
+    if (task.categoryId) return task.categoryId;
+    currentId = task.parentId;
+  }
+
+  return null;
 }
 
 // Check if any ID's in the main tree matches any of the dependencies in the tree to check

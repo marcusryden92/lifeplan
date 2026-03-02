@@ -9,7 +9,7 @@ import {
   setUseParentLocationMultiple,
 } from "@/actions/locations";
 import * as categoryActions from "@/actions/categories";
-import type { Planner } from "@/types/prisma";
+import type { Planner, Category } from "@/types/prisma";
 import type { Dispatch, SetStateAction } from "react";
 
 export function useItemHandlers(
@@ -18,7 +18,8 @@ export function useItemHandlers(
   planner: Planner[],
   updatePlannerArray: Dispatch<SetStateAction<Planner[]>>,
   updateAll: () => void,
-  categoryHasLocation: boolean = false
+  categoryHasLocation: boolean = false,
+  categories: Category[] = []
 ) {
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -90,23 +91,43 @@ export function useItemHandlers(
       if (!item) return;
       await categoryActions.assignCategoryToPlanner(item.id, categoryId);
 
-      // The server action cascades categoryId to all descendants for goals.
-      // Mirror that in local state so the UI and calendar generation stay in sync.
-      if (item.itemType === "goal") {
-        const descendantIds = getTaskTreeIds(planner, item.id);
-        updatePlannerArray((prev: Planner[]) =>
-          prev.map((p) =>
-            descendantIds.includes(p.id)
-              ? { ...p, categoryId, updatedAt: new Date().toISOString() }
-              : p
-          )
-        );
-      } else {
-        handleUpdateField("categoryId", categoryId);
-      }
+      const newCategoryHasLocation = categoryId
+        ? !!categories.find((c) => c.id === categoryId)?.locationId
+        : false;
+
+      // Only update the target item's categoryId — descendants inherit it
+      // automatically at scheduling time via parent-chain resolution.
+      // Also mirror useParentLocation for location inheritance from the category.
+      updatePlannerArray((prev: Planner[]) =>
+        prev.map((p) => {
+          if (p.id !== item.id) {
+            // For goal descendants: update useParentLocation if category has a location
+            if (
+              item.itemType === "goal" &&
+              newCategoryHasLocation &&
+              !p.locationId
+            ) {
+              const descendantIds = getTaskTreeIds(planner, item.id);
+              if (descendantIds.includes(p.id)) {
+                return { ...p, useParentLocation: true };
+              }
+            }
+            return p;
+          }
+          const updated: Planner = {
+            ...p,
+            categoryId,
+            updatedAt: new Date().toISOString(),
+          };
+          if (newCategoryHasLocation && !p.locationId) {
+            updated.useParentLocation = true;
+          }
+          return updated;
+        })
+      );
       updateAll();
     },
-    [item, planner, updatePlannerArray, handleUpdateField, updateAll]
+    [item, planner, categories, updatePlannerArray, updateAll]
   );
 
   const handleLocationChange = useCallback(

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 // Components
 import TaskDisplay from "./TaskDisplay";
@@ -15,8 +15,6 @@ import DurationDisplay from "./DurationDisplay";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import { LocationSelector } from "@/components/locations/LocationSelector";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { useSelector } from "react-redux";
-import type { RootState } from "@/redux/store";
 import {
   assignLocationToPlanner,
   assignLocationToMultiplePlanners,
@@ -41,30 +39,15 @@ export const TaskHeader = ({
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   const { currentlyClickedItem, displayDragBox } = useDraggableContext();
-  const { planner, updatePlannerArray, categories } = useCalendarProvider();
-  const locations = useSelector(
-    (state: RootState) => state.schedulingSettings.locations,
-  );
+  const { planner, updatePlannerArray } = useCalendarProvider();
 
   const hasChildren = subtasks.length > 0;
 
-  const category = useMemo(() => {
-    if (!task.categoryId) return null;
-    return categories.find((c) => c.id === task.categoryId) ?? null;
-  }, [task.categoryId, categories]);
-
-  const categoryHasLocation = !!(category?.locationId);
-  const categoryLocationName = category?.locationId
-    ? locations.find((l) => l.id === category.locationId)?.name
-    : undefined;
-
   const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
-    () => categoryHasLocation && !task.useParentLocation
+    () => !task.useParentLocation
   );
 
   const handleToggleLocationOverride = useCallback(async () => {
-    if (!categoryHasLocation) return;
-
     const newOverrideEnabled = !locationOverrideEnabled;
 
     if (!newOverrideEnabled && hasChildren) {
@@ -82,7 +65,7 @@ export const TaskHeader = ({
       )
     );
     setLocationOverrideEnabled(newOverrideEnabled);
-  }, [categoryHasLocation, locationOverrideEnabled, hasChildren, task.id, updatePlannerArray]);
+  }, [locationOverrideEnabled, hasChildren, task.id, updatePlannerArray]);
 
   const handleLocationChange = async (locationId: string | null) => {
     // If task has children, ask about cascading
@@ -221,8 +204,6 @@ export const TaskHeader = ({
                 value={task.locationId ?? null}
                 onChange={handleLocationChange}
                 compact
-                categoryName={category?.name}
-                categoryLocationName={categoryLocationName}
                 isOverridden={locationOverrideEnabled}
                 onToggleOverride={handleToggleLocationOverride}
               />

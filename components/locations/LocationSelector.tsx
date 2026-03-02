@@ -19,11 +19,7 @@ interface LocationSelectorProps {
   className?: string;
   /** Compact mode for inline display (e.g., task headers) */
   compact?: boolean;
-  /** Category name when location is inherited from a category */
-  categoryName?: string;
-  /** Category's default location name */
-  categoryLocationName?: string;
-  /** Whether the user has overridden the category location */
+  /** Whether the user has overridden the inherited location */
   isOverridden?: boolean;
   /** Callback when the user toggles the override */
   onToggleOverride?: () => void;
@@ -35,8 +31,6 @@ export function LocationSelector({
   disabled = false,
   className,
   compact = false,
-  categoryName,
-  categoryLocationName,
   isOverridden,
   onToggleOverride,
 }: LocationSelectorProps) {
@@ -55,8 +49,7 @@ export function LocationSelector({
     ? locations.find((l) => l.id === normalizedValue)
     : null;
 
-  const hasCategoryLocation = !!categoryLocationName;
-  const showCategoryDefault = hasCategoryLocation && !isOverridden;
+  const showInherited = !!onToggleOverride && !isOverridden;
 
   if (locations.length === 0) {
     return (
@@ -78,9 +71,9 @@ export function LocationSelector({
     return (
       <div className="flex items-center gap-1.5">
         <Select
-          value={showCategoryDefault ? "category-default" : (normalizedValue ?? "everywhere")}
+          value={showInherited ? "category-default" : (normalizedValue ?? "everywhere")}
           onValueChange={handleChange}
-          disabled={disabled || showCategoryDefault}
+          disabled={disabled || showInherited}
         >
           <SelectTrigger
             className={`h-7 w-auto min-w-[80px] max-w-[200px] text-xs bg-transparent border-none shadow-none hover:bg-gray-100 focus:ring-0 [&>span]:!flex [&>span]:items-center ${className ?? ""}`}
@@ -88,8 +81,8 @@ export function LocationSelector({
             <span className="flex min-w-[100px] items-center gap-1.5 truncate">
               <MapPin className="w-3.5 h-3.5 text-gray-400" />
               <span className="truncate text-gray-600 leading-none">
-                {showCategoryDefault
-                  ? `${categoryName}: ${categoryLocationName}`
+                {showInherited
+                  ? "Inherited"
                   : (selectedLocation?.name ?? "Anywhere")}
               </span>
             </span>
@@ -111,7 +104,7 @@ export function LocationSelector({
             ))}
           </SelectContent>
         </Select>
-        {hasCategoryLocation && onToggleOverride && (
+        {onToggleOverride && (
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
             <Switch
               checked={!!isOverridden}
@@ -128,16 +121,16 @@ export function LocationSelector({
   return (
     <div className="flex items-center gap-2">
       <Select
-        value={showCategoryDefault ? "category-default" : (value ?? "everywhere")}
+        value={showInherited ? "category-default" : (value ?? "everywhere")}
         onValueChange={handleChange}
-        disabled={disabled || showCategoryDefault}
+        disabled={disabled || showInherited}
       >
         <SelectTrigger className={`flex-1 ${className ?? ""}`}>
           <SelectValue>
             <span className="flex items-center gap-2">
               <MapPin className="w-4 h-4" />
-              {showCategoryDefault
-                ? `${categoryName}: ${categoryLocationName}`
+              {showInherited
+                ? "Inherited"
                 : (selectedLocation?.name ?? "Anywhere")}
             </span>
           </SelectValue>
@@ -159,7 +152,7 @@ export function LocationSelector({
           ))}
         </SelectContent>
       </Select>
-      {hasCategoryLocation && onToggleOverride && (
+      {onToggleOverride && (
         <div className="flex items-center gap-1.5 shrink-0">
           <Switch
             checked={!!isOverridden}

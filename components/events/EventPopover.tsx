@@ -19,6 +19,7 @@ import { useSelector } from "react-redux";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { LocationSelector } from "@/components/locations/LocationSelector";
 import { assignLocationToPlanner, setUseParentLocation } from "@/actions/locations";
+import { getEffectiveCategoryId } from "@/utils/goalPageHandlers";
 import type { RootState } from "@/redux/store";
 
 import { formatTime } from "@/utils/calendarUtils";
@@ -62,9 +63,11 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   );
 
   const category = useMemo(() => {
-    if (!plannerItem?.categoryId) return null;
-    return categories.find((c) => c.id === plannerItem.categoryId) ?? null;
-  }, [plannerItem, categories]);
+    if (!plannerItem) return null;
+    const effectiveId = getEffectiveCategoryId(planner, plannerItem.id);
+    if (!effectiveId) return null;
+    return categories.find((c) => c.id === effectiveId) ?? null;
+  }, [plannerItem, planner, categories]);
 
   const categoryHasLocation = !!(category?.locationId);
   const categoryLocationName = category?.locationId
@@ -246,8 +249,6 @@ const EventPopover: React.FC<EventPopoverProps> = ({
             <LocationSelector
               value={plannerItem.locationId ?? null}
               onChange={handleLocationChange}
-              categoryName={category?.name}
-              categoryLocationName={categoryLocationName}
               isOverridden={locationOverrideEnabled}
               onToggleOverride={handleToggleLocationOverride}
             />

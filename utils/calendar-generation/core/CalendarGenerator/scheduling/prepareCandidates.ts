@@ -10,9 +10,9 @@ import { PrioritySorter } from "../../../helpers/scheduling/PrioritySorter";
 export function prepareCandidates(
   planners: Planner[],
   memoizedEventIds: Set<string>,
-  currentDate: Date
+  currentDate: Date,
+  plannerCategoryMap?: Map<string, string | null>
 ): Planner[] {
-  // Get initial candidates (top-level goals + tasks)
   let candidates = planners.filter(
     (item) =>
       ((item.itemType === "goal" && !item.parentId && item.isReady) ||
@@ -20,11 +20,11 @@ export function prepareCandidates(
       !memoizedEventIds.has(item.id)
   );
 
-  // Sort by priority
   candidates = PrioritySorter.sortByPriorityAndConstraints(
     planners,
     candidates,
-    currentDate
+    currentDate,
+    plannerCategoryMap
   );
 
   return candidates;

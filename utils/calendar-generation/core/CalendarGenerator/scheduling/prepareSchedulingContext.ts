@@ -23,7 +23,8 @@ export function prepareSchedulingContext(
   slotManager: TimeSlotManager,
   metrics: SchedulingMetrics,
   categoryConstraints: Map<string, CategoryConstraint>,
-  plannerLocationMap: Map<string, string | null>
+  plannerLocationMap: Map<string, string | null>,
+  plannerCategoryMap: Map<string, string | null>
 ): SchedulingContext {
   const weekStart = dateTimeService.getWeekFirstDate(currentDate, weekStartDay);
 
@@ -37,5 +38,6 @@ export function prepareSchedulingContext(
     metrics,
     categoryConstraints,
     plannerLocationMap,
+    plannerCategoryMap,
   };
 }

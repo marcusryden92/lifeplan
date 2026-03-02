@@ -16,19 +16,19 @@ export class PrioritySorter {
   static sortByPriorityAndConstraints(
     allPlanners: Planner[],
     goalsAndTasks: Planner[],
-    currentDate: Date
+    currentDate: Date,
+    plannerCategoryMap?: Map<string, string | null>
   ): Planner[] {
-    // Calculate total time estimate
     const totalPlannerTime = allPlanners.reduce(
       (acc, p) => acc + p.duration,
       0
     );
 
-    // Map each item to include urgency score and category constraint flag
     const withUrgency = goalsAndTasks.map((item) => {
       const hasCategoryConstraint = this.hasCategoryConstraint(
         item,
-        allPlanners
+        allPlanners,
+        plannerCategoryMap
       );
 
       const urgencyScore = calculateTaskUrgency(item, {
@@ -43,9 +43,6 @@ export class PrioritySorter {
       };
     });
 
-    // Sort by:
-    // 1. Category constraint (tasks with constraints first)
-    // 2. Urgency score (highest first)
     return withUrgency.sort((a, b) => {
       if (a.hasCategoryConstraint && !b.hasCategoryConstraint) return -1;
       if (!a.hasCategoryConstraint && b.hasCategoryConstraint) return 1;
@@ -54,37 +51,47 @@ export class PrioritySorter {
   }
 
   /**
-   * Check if a planner or any of its children have a category constraint
+   * Check if a planner or any of its descendants have an effective category constraint
    */
   private static hasCategoryConstraint(
     item: Planner,
-    allPlanners: Planner[]
+    allPlanners: Planner[],
+    plannerCategoryMap?: Map<string, string | null>
   ): boolean {
-    // Direct category constraint
-    if (item.categoryId !== null) return true;
+    const effectiveCategoryId =
+      plannerCategoryMap?.get(item.id) ?? item.categoryId;
+    if (effectiveCategoryId !== null) return true;
 
-    // For goals, check if any child tasks have category constraints
     if (item.itemType === "goal") {
-      return this.hasChildWithCategoryConstraint(item.id, allPlanners);
+      return this.hasChildWithCategoryConstraint(
+        item.id,
+        allPlanners,
+        plannerCategoryMap
+      );
     }
 
     return false;
   }
 
-  /**
-   * Recursively check if any descendants have a category constraint
-   */
   private static hasChildWithCategoryConstraint(
     parentId: string,
-    allPlanners: Planner[]
+    allPlanners: Planner[],
+    plannerCategoryMap?: Map<string, string | null>
   ): boolean {
     const children = allPlanners.filter((p) => p.parentId === parentId);
 
     for (const child of children) {
-      if (child.categoryId !== null) return true;
+      const effectiveCategoryId =
+        plannerCategoryMap?.get(child.id) ?? child.categoryId;
+      if (effectiveCategoryId !== null) return true;
 
-      // Recurse into child's descendants
-      if (this.hasChildWithCategoryConstraint(child.id, allPlanners)) {
+      if (
+        this.hasChildWithCategoryConstraint(
+          child.id,
+          allPlanners,
+          plannerCategoryMap
+        )
+      ) {
         return true;
       }
     }

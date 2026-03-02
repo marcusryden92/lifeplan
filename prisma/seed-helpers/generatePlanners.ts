@@ -38,8 +38,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "a2d8280b-0362-4fc1-8947-4db30233e47a",
     duration: 15,
     color: "#6C5CE7",
-    locationId: null,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "5d3d674c-5bc0-45b0-8bce-d01a30d81522",
@@ -47,8 +45,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
     duration: 45,
     color: "#6C5CE7",
-    locationId: null,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "ded9475d-4b1b-433e-96d2-76b987654cb2",
@@ -57,8 +53,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 45,
     color: "#6C5CE7",
     dependency: "5d3d674c-5bc0-45b0-8bce-d01a30d81522",
-    locationId: null,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "da47b873-4a31-4671-b729-5748ce070d22",
@@ -67,8 +61,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 45,
     color: "#6C5CE7",
     dependency: "ded9475d-4b1b-433e-96d2-76b987654cb2",
-    locationId: null,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "ef08d5bb-54aa-4403-8783-47f5ba65e8ac",
@@ -77,8 +69,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 15,
     color: "#6C5CE7",
     dependency: "da47b873-4a31-4671-b729-5748ce070d22",
-    locationId: null,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "c123a380-1303-415b-849f-6211fac04001",
@@ -87,8 +77,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 30,
     color: "#6C5CE7",
     dependency: "ef08d5bb-54aa-4403-8783-47f5ba65e8ac",
-    locationId: null,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "3ac9edae-5a09-49be-ac16-940a05047a18",
@@ -97,8 +85,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 15,
     color: "#6C5CE7",
     dependency: "c123a380-1303-415b-849f-6211fac04001",
-    locationId: null,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "d0bc9d33-3acd-429b-99ec-9993f44e9741",
@@ -107,8 +93,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 60,
     color: "#6C5CE7",
     dependency: "3ac9edae-5a09-49be-ac16-940a05047a18",
-    locationId: null,
-    categoryId: CATEGORY_IDS.WORK,
   },
 
   // Goal B hierarchy - Work location, Work category
@@ -127,8 +111,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
     duration: 15,
     color: "#8E44AD",
-    locationId: LOCATION_IDS.WORK,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "13878697-4a27-4e18-bb0b-bf99dfad3e4c",
@@ -137,8 +119,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 15,
     color: "#8E44AD",
     dependency: "7f8665a1-a476-412f-83ad-71fd21158372",
-    locationId: LOCATION_IDS.WORK,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "9adc0a2f-5505-4334-9e5a-dae3e744bdd4",
@@ -147,8 +127,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 45,
     color: "#8E44AD",
     dependency: "13878697-4a27-4e18-bb0b-bf99dfad3e4c",
-    locationId: LOCATION_IDS.WORK,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "d9abc068-181b-4e32-a97b-362ee85bfcb6",
@@ -157,8 +135,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 100,
     color: "#8E44AD",
     dependency: "9adc0a2f-5505-4334-9e5a-dae3e744bdd4",
-    locationId: LOCATION_IDS.WORK,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "e53e6d6a-c5da-4621-8165-da7f1102b5c8",
@@ -167,8 +143,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 50,
     color: "#8E44AD",
     dependency: "d9abc068-181b-4e32-a97b-362ee85bfcb6",
-    locationId: LOCATION_IDS.WORK,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "e908862a-8b2a-4b06-9f5f-b2695101994e",
@@ -177,8 +151,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 30,
     color: "#8E44AD",
     dependency: "e53e6d6a-c5da-4621-8165-da7f1102b5c8",
-    locationId: LOCATION_IDS.WORK,
-    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "d696ed65-01a7-437a-9b67-1e5076e52e30",
@@ -187,8 +159,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 45,
     color: "#8E44AD",
     dependency: "e908862a-8b2a-4b06-9f5f-b2695101994e",
-    locationId: LOCATION_IDS.WORK,
-    categoryId: CATEGORY_IDS.WORK,
   },
 
   // Goal C hierarchy - Home location
@@ -206,7 +176,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
     duration: 30,
     color: "#457B9D",
-    locationId: LOCATION_IDS.HOME,
   },
   {
     id: "9403a111-3d02-470a-a930-4baf95097bfd",
@@ -215,7 +184,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 45,
     color: "#457B9D",
     dependency: "0fcae948-e489-44ed-92fc-cd03a42e2f5f",
-    locationId: LOCATION_IDS.HOME,
   },
   {
     id: "6a68c08b-b2ed-4c0a-a927-7f7d14bfa8f8",
@@ -224,7 +192,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 55,
     color: "#457B9D",
     dependency: "9403a111-3d02-470a-a930-4baf95097bfd",
-    locationId: LOCATION_IDS.HOME,
   },
   {
     id: "0a1101c5-d1d1-426c-b53e-4c0a31cb6168",
@@ -233,7 +200,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 20,
     color: "#457B9D",
     dependency: "6a68c08b-b2ed-4c0a-a927-7f7d14bfa8f8",
-    locationId: LOCATION_IDS.HOME,
   },
   {
     id: "333e37fd-55c9-44f2-8947-107d01980b65",
@@ -242,7 +208,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 20,
     color: "#457B9D",
     dependency: "0a1101c5-d1d1-426c-b53e-4c0a31cb6168",
-    locationId: LOCATION_IDS.HOME,
   },
   {
     id: "d85763b6-175a-4841-90d4-2ce14eb58d9e",
@@ -251,10 +216,9 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 60,
     color: "#457B9D",
     dependency: "333e37fd-55c9-44f2-8947-107d01980b65",
-    locationId: LOCATION_IDS.HOME,
   },
 
-  // Goal D hierarchy - Gym location
+  // Goal D hierarchy - Gym location (no category, no root location — children override)
   {
     id: "3f2588fe-0190-4e58-baf9-a7045cad9d96",
     title: "D",
@@ -269,7 +233,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "3f2588fe-0190-4e58-baf9-a7045cad9d96",
     duration: 15,
     color: "#E63946",
-    locationId: null,
   },
   {
     id: "3c039ae5-e3a3-4a71-8dd9-3ad194578ff8",
@@ -294,29 +257,38 @@ export const plannerSeedData: SimplePlannerData[] = [
  * Generates full Planner objects from simplified seed data.
  * This centralizes the planner creation logic, so changes to the Planner model
  * only need to be updated here.
+ *
+ * Note: categoryId is only set on root items that specify it directly.
+ * Descendants inherit their effective category at scheduling time via
+ * buildPlannerCategoryMap which walks up the parent chain.
  */
 export const generatePlanners = (userId: string): Planner[] => {
   const timestamp = new Date().toISOString();
 
-  return plannerSeedData.map((data) => ({
-    id: data.id,
-    title: data.title,
-    parentId: data.parentId,
-    itemType: "goal" as const,
-    isReady: true,
-    duration: data.duration,
-    deadline: null,
-    starts: null,
-    dependency: data.dependency ?? null,
-    completedStartTime: null,
-    completedEndTime: null,
-    priority: 5,
-    userId,
-    color: data.color,
-    locationId: data.locationId ?? null,
-    useParentLocation: false,
-    categoryId: data.categoryId ?? null,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  }));
+  return plannerSeedData.map((data) => {
+    const isChild = data.parentId !== null;
+    const hasCustomLocation = !!data.locationId;
+
+    return {
+      id: data.id,
+      title: data.title,
+      parentId: data.parentId,
+      itemType: "goal" as const,
+      isReady: true,
+      duration: data.duration,
+      deadline: null,
+      starts: null,
+      dependency: data.dependency ?? null,
+      completedStartTime: null,
+      completedEndTime: null,
+      priority: 5,
+      userId,
+      color: data.color,
+      locationId: data.locationId ?? null,
+      useParentLocation: isChild && !hasCustomLocation,
+      categoryId: data.categoryId ?? null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+  });
 };

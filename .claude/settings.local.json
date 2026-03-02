@@ -14,7 +14,8 @@
       "Bash(dotenv -e .env.development.local -- pnpm exec prisma generate)",
       "Bash(pnpm exec dotenv -e .env.development.local -- pnpm exec prisma generate)",
       "Bash(pnpm exec dotenv -e .env.development.local -- pnpm exec prisma db push)",
-      "Bash(pnpm exec dotenv -e .env.development.local -- pnpm exec prisma migrate dev --name add_use_parent_location)"
+      "Bash(pnpm exec dotenv -e .env.development.local -- pnpm exec prisma migrate dev --name add_use_parent_location)",
+      "Bash(echo \"Exit code: $?\")"
     ]
   }
 }

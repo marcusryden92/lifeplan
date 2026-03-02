@@ -4,7 +4,7 @@
 
 import type { CategoryTimeSlot } from "@/types/categoryTypes";
 import type { CategoryConstraint } from "../models/SchedulingModels";
-import { Category } from "@/types/prisma";
+import { Category, Planner } from "@/types/prisma";
 import { parseCategoryTimeSlots } from "@/utils/categoryHelpers";
 
 /**
@@ -248,4 +248,43 @@ export function canScheduleAtTime(
   }
 
   return isTimeInCategorySlots(startDate, timeSlots);
+}
+
+/**
+ * Build a map of planner ID -> effective categoryId by walking up the parent chain.
+ * Only the root item needs categoryId stored; descendants inherit it automatically.
+ */
+export function buildPlannerCategoryMap(
+  planners: Planner[]
+): Map<string, string | null> {
+  const plannerMap = new Map(planners.map((p) => [p.id, p]));
+  const result = new Map<string, string | null>();
+
+  for (const planner of planners) {
+    if (planner.categoryId) {
+      result.set(planner.id, planner.categoryId);
+      continue;
+    }
+
+    let resolved: string | null = null;
+    const visited = new Set<string>();
+    let currentId = planner.parentId;
+
+    while (currentId) {
+      if (visited.has(currentId)) break;
+      visited.add(currentId);
+
+      const parent = plannerMap.get(currentId);
+      if (!parent) break;
+      if (parent.categoryId) {
+        resolved = parent.categoryId;
+        break;
+      }
+      currentId = parent.parentId;
+    }
+
+    result.set(planner.id, resolved);
+  }
+
+  return result;
 }

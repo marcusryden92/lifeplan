@@ -117,8 +117,6 @@ export function PropertiesCard({
           <LocationSelector
             value={item.locationId ?? null}
             onChange={onLocationChange}
-            categoryName={category?.name}
-            categoryLocationName={categoryLocationName}
             isOverridden={locationOverrideEnabled}
             onToggleOverride={onToggleLocationOverride}
           />

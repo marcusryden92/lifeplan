@@ -352,9 +352,9 @@ export async function reorderCategories(orderedIds: string[]): Promise<void> {
 // ============================================================================
 
 /**
- * Assign a category to a planner item
- * Set categoryId to null to remove from category
- * If the item is a goal, the category cascades to all descendants (tasks/subgoals)
+ * Assign a category to a planner item.
+ * Only sets categoryId on the target item — descendants inherit it automatically
+ * at scheduling time via the plannerCategoryMap parent-chain resolution.
  */
 export async function assignCategoryToPlanner(
   plannerId: string,
@@ -371,7 +371,6 @@ export async function assignCategoryToPlanner(
     throw new Error("Planner item not found");
   }
 
-  // If categoryId is provided, verify it belongs to the user
   if (categoryId) {
     const category = await db.category.findFirst({
       where: { id: categoryId, userId: session.user.id },
@@ -382,27 +381,39 @@ export async function assignCategoryToPlanner(
     }
   }
 
+  // Check if the new category has a location for useParentLocation inheritance
+  const categoryHasLocation = categoryId
+    ? !!(await db.category.findUnique({ where: { id: categoryId }, select: { locationId: true } }))?.locationId
+    : false;
+
+  const shouldInheritLocation =
+    categoryHasLocation && !planner.locationId;
+
   await db.planner.update({
     where: { id: plannerId },
-    data: { categoryId },
+    data: {
+      categoryId,
+      ...(shouldInheritLocation && { useParentLocation: true }),
+    },
   });
 
-  // If this is a goal, cascade the category to all descendants
-  if (planner.itemType === "goal") {
-    // Get all planners for this user to traverse the tree
+  // For goals with a category that has a location, set useParentLocation
+  // on descendants without custom locations so they inherit the category's location
+  if (planner.itemType === "goal" && categoryHasLocation) {
     const allPlanners = await db.planner.findMany({
       where: { userId: session.user.id },
     });
 
-    // Get all descendant IDs (children, grandchildren, etc.)
     const { getTaskTreeIds } = await import("@/utils/goalPageHandlers");
     const descendantIds = getTaskTreeIds(allPlanners, plannerId);
 
-    // Update all descendants with the same category
     if (descendantIds.length > 0) {
       await db.planner.updateMany({
-        where: { id: { in: descendantIds } },
-        data: { categoryId },
+        where: {
+          id: { in: descendantIds },
+          locationId: null,
+        },
+        data: { useParentLocation: true },
       });
     }
   }

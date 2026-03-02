@@ -90,7 +90,7 @@ export default function ItemDetailPage() {
     handleToggleLocationOverride,
     applyLocationChange,
     closeCascadeDialog,
-  } = useItemHandlers(item, subtasks, planner, updatePlannerArray, updateAll, categoryHasLocation);
+  } = useItemHandlers(item, subtasks, planner, updatePlannerArray, updateAll, categoryHasLocation, categories);
 
   if (loading) {
     return (

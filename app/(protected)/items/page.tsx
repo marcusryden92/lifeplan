@@ -190,6 +190,7 @@ export default function ItemsPage() {
         userId: "",
         color: null,
         locationId: null,
+        useParentLocation: true,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };

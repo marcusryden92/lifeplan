@@ -18,6 +18,7 @@ import {
 import { SCHEDULING_CONFIG } from "../constants";
 import { logCalendarDebugInfo } from "../utils/loggingUtils";
 import { TaskSchedulingOrchestrator } from "../helpers/scheduling/TaskSchedulingOrchestrator";
+import { buildPlannerCategoryMap } from "../utils/categoryConstraintUtils";
 
 // Import subfunctions
 import { validateInput } from "./CalendarGenerator/initialization/validateInput";
@@ -133,7 +134,10 @@ export class CalendarGenerator {
       enableLogging
     );
 
-    // Phase 7: Prepare scheduling context
+    // Phase 7: Build effective category map (resolves inheritance from parent chain)
+    const plannerCategoryMap = buildPlannerCategoryMap(input.planners);
+
+    // Phase 8: Prepare scheduling context
     const context = prepareSchedulingContext(
       input.userId,
       currentDate,
@@ -143,7 +147,8 @@ export class CalendarGenerator {
       this.slotManager,
       this.metrics,
       categoryConstraintMap,
-      plannerLocationMap
+      plannerLocationMap,
+      plannerCategoryMap
     );
 
     // Phase 9: Build scheduling strategy
@@ -158,7 +163,8 @@ export class CalendarGenerator {
     const candidates = prepareCandidates(
       input.planners,
       memoizedEventIds,
-      currentDate
+      currentDate,
+      plannerCategoryMap
     );
 
     // Phase 11: Schedule tasks and goals

@@ -35,10 +35,13 @@ export function findValidSlots(
       ? task.locationId
       : (context.plannerLocationMap?.get(task.id) ?? null);
 
-  // If task has a category and constraints are available, pass them to slot search
+  // Resolve effective category from parent chain via pre-built map
+  const effectiveCategoryId =
+    context.plannerCategoryMap?.get(task.id) ?? task.categoryId;
+
   const constraintForTask =
-    task.categoryId && context.categoryConstraints
-      ? context.categoryConstraints.get(task.categoryId) || undefined
+    effectiveCategoryId && context.categoryConstraints
+      ? context.categoryConstraints.get(effectiveCategoryId) || undefined
       : undefined;
 
   // Find all slots that can fit the base requirement (duration + buffer)
@@ -67,7 +70,7 @@ export function findValidSlots(
     ? fittingSlots.filter((slot) =>
         canScheduleAtTime(
           slot.start,
-          task.categoryId,
+          effectiveCategoryId,
           categoryConstraints,
           task.duration
         )

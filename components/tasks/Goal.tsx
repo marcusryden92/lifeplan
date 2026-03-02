@@ -33,6 +33,8 @@ import { LocationSelector } from "@/components/locations/LocationSelector";
 import {
   assignLocationToPlanner,
   assignLocationToMultiplePlanners,
+  setUseParentLocation,
+  setUseParentLocationMultiple,
 } from "@/actions/locations";
 import { getGoalTree } from "@/utils/goalPageHandlers";
 
@@ -72,6 +74,10 @@ const Goal = ({
 
   const priority = task.priority ? Number(task.priority) : 5;
 
+  const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
+    () => !task.useParentLocation
+  );
+
   // Get subtasks
   const subtasks = useMemo(
     () => getSubtasksById(planner, task.id),
@@ -107,16 +113,33 @@ const Goal = ({
     setSelectedDate(undefined);
   }, [task.id, handleUpdateDeadline]);
 
-  // Location change handler with cascade support
+  const handleToggleLocationOverride = useCallback(async () => {
+    const newOverrideEnabled = !locationOverrideEnabled;
+
+    if (!newOverrideEnabled && subtasks.length > 0) {
+      setPendingLocationId(null);
+      setShowCascadeConfirm(true);
+      setLocationOverrideEnabled(false);
+      return;
+    }
+
+    const newUseParent = !newOverrideEnabled;
+    await setUseParentLocation(task.id, newUseParent);
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === task.id ? { ...p, useParentLocation: newUseParent } : p
+      )
+    );
+    setLocationOverrideEnabled(newOverrideEnabled);
+  }, [locationOverrideEnabled, subtasks.length, task.id, updatePlannerArray]);
+
   const handleLocationChange = async (locationId: string | null) => {
-    // If goal has subtasks, ask about cascading
     if (subtasks.length > 0) {
       setPendingLocationId(locationId);
       setShowCascadeConfirm(true);
       return;
     }
 
-    // No subtasks, just update this item
     await applyLocationChange(locationId, false);
   };
 
@@ -125,14 +148,27 @@ const Goal = ({
     cascade: boolean
   ) => {
     try {
-      if (cascade) {
-        // Get all items in the tree (this item + all descendants)
-        const treeItems = getGoalTree(planner, task.id);
-        const treeIds = treeItems.map((item) => item.id);
+      const treeItems = getGoalTree(planner, task.id);
+      const treeIds = treeItems.map((item) => item.id);
 
+      if (locationId === null && !locationOverrideEnabled) {
+        if (cascade) {
+          await setUseParentLocationMultiple(treeIds, true);
+          updatePlannerArray((prev) =>
+            prev.map((p) =>
+              treeIds.includes(p.id) ? { ...p, useParentLocation: true } : p
+            )
+          );
+        } else {
+          await setUseParentLocation(task.id, true);
+          updatePlannerArray((prev) =>
+            prev.map((p) =>
+              p.id === task.id ? { ...p, useParentLocation: true } : p
+            )
+          );
+        }
+      } else if (cascade) {
         await assignLocationToMultiplePlanners(treeIds, locationId);
-
-        // Update local state for all items
         updatePlannerArray((prev) =>
           prev.map((p) =>
             treeIds.includes(p.id) ? { ...p, locationId: locationId } : p
@@ -140,8 +176,6 @@ const Goal = ({
         );
       } else {
         await assignLocationToPlanner(task.id, locationId);
-
-        // Update local state
         updatePlannerArray((prev) =>
           prev.map((p) =>
             p.id === task.id ? { ...p, locationId: locationId } : p
@@ -209,6 +243,8 @@ const Goal = ({
                   value={task.locationId ?? null}
                   onChange={handleLocationChange}
                   compact
+                  isOverridden={locationOverrideEnabled}
+                  onToggleOverride={handleToggleLocationOverride}
                 />
                 <PrioritySelector
                   updatePlannerArray={updatePlannerArray}
