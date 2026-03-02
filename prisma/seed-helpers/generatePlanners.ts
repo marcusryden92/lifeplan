@@ -1,5 +1,6 @@
 import { Planner } from "../generated/client";
 import { LOCATION_IDS } from "./generateLocations";
+import { CATEGORY_IDS } from "./generateCategories";
 
 /**
  * Simplified planner data structure - only specify the essential fields.
@@ -13,6 +14,7 @@ export interface SimplePlannerData {
   color: string;
   dependency?: string | null;
   locationId?: string | null;
+  categoryId?: string | null;
 }
 
 /**
@@ -20,7 +22,7 @@ export interface SimplePlannerData {
  * Three main goal hierarchies: A, B, and C with their respective subgoals.
  */
 export const plannerSeedData: SimplePlannerData[] = [
-  // Goal A hierarchy - No specific location (everywhere)
+  // Goal A hierarchy - No specific location, Work category
   {
     id: "a2d8280b-0362-4fc1-8947-4db30233e47a",
     title: "A",
@@ -28,6 +30,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 5,
     color: "#6C5CE7",
     locationId: null,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "414c5e8d-2e48-44c5-911d-df2522da1465",
@@ -36,6 +39,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 15,
     color: "#6C5CE7",
     locationId: null,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "5d3d674c-5bc0-45b0-8bce-d01a30d81522",
@@ -44,6 +48,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 45,
     color: "#6C5CE7",
     locationId: null,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "ded9475d-4b1b-433e-96d2-76b987654cb2",
@@ -53,6 +58,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#6C5CE7",
     dependency: "5d3d674c-5bc0-45b0-8bce-d01a30d81522",
     locationId: null,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "da47b873-4a31-4671-b729-5748ce070d22",
@@ -62,6 +68,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#6C5CE7",
     dependency: "ded9475d-4b1b-433e-96d2-76b987654cb2",
     locationId: null,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "ef08d5bb-54aa-4403-8783-47f5ba65e8ac",
@@ -71,6 +78,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#6C5CE7",
     dependency: "da47b873-4a31-4671-b729-5748ce070d22",
     locationId: null,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "c123a380-1303-415b-849f-6211fac04001",
@@ -80,6 +88,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#6C5CE7",
     dependency: "ef08d5bb-54aa-4403-8783-47f5ba65e8ac",
     locationId: null,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "3ac9edae-5a09-49be-ac16-940a05047a18",
@@ -89,6 +98,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#6C5CE7",
     dependency: "c123a380-1303-415b-849f-6211fac04001",
     locationId: null,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "d0bc9d33-3acd-429b-99ec-9993f44e9741",
@@ -98,9 +108,10 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#6C5CE7",
     dependency: "3ac9edae-5a09-49be-ac16-940a05047a18",
     locationId: null,
+    categoryId: CATEGORY_IDS.WORK,
   },
 
-  // Goal B hierarchy - Work location
+  // Goal B hierarchy - Work location, Work category
   {
     id: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
     title: "B",
@@ -108,6 +119,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 5,
     color: "#8E44AD",
     locationId: LOCATION_IDS.WORK,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "7f8665a1-a476-412f-83ad-71fd21158372",
@@ -116,6 +128,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     duration: 15,
     color: "#8E44AD",
     locationId: LOCATION_IDS.WORK,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "13878697-4a27-4e18-bb0b-bf99dfad3e4c",
@@ -125,6 +138,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#8E44AD",
     dependency: "7f8665a1-a476-412f-83ad-71fd21158372",
     locationId: LOCATION_IDS.WORK,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "9adc0a2f-5505-4334-9e5a-dae3e744bdd4",
@@ -134,6 +148,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#8E44AD",
     dependency: "13878697-4a27-4e18-bb0b-bf99dfad3e4c",
     locationId: LOCATION_IDS.WORK,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "d9abc068-181b-4e32-a97b-362ee85bfcb6",
@@ -143,6 +158,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#8E44AD",
     dependency: "9adc0a2f-5505-4334-9e5a-dae3e744bdd4",
     locationId: LOCATION_IDS.WORK,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "e53e6d6a-c5da-4621-8165-da7f1102b5c8",
@@ -152,6 +168,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#8E44AD",
     dependency: "d9abc068-181b-4e32-a97b-362ee85bfcb6",
     locationId: LOCATION_IDS.WORK,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "e908862a-8b2a-4b06-9f5f-b2695101994e",
@@ -161,6 +178,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#8E44AD",
     dependency: "e53e6d6a-c5da-4621-8165-da7f1102b5c8",
     locationId: LOCATION_IDS.WORK,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "d696ed65-01a7-437a-9b67-1e5076e52e30",
@@ -170,6 +188,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#8E44AD",
     dependency: "e908862a-8b2a-4b06-9f5f-b2695101994e",
     locationId: LOCATION_IDS.WORK,
+    categoryId: CATEGORY_IDS.WORK,
   },
 
   // Goal C hierarchy - Home location
@@ -296,7 +315,7 @@ export const generatePlanners = (userId: string): Planner[] => {
     color: data.color,
     locationId: data.locationId ?? null,
     useParentLocation: false,
-    categoryId: null,
+    categoryId: data.categoryId ?? null,
     createdAt: timestamp,
     updatedAt: timestamp,
   }));

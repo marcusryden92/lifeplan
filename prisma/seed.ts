@@ -12,6 +12,7 @@ import {
   generateLocations,
   generateTravelTimes,
 } from "./seed-helpers/generateLocations";
+import { generateCategories } from "./seed-helpers/generateCategories";
 
 const prisma = new PrismaClient();
 
@@ -39,6 +40,7 @@ async function main() {
   // Clear existing data (order matters for foreign keys)
   await prisma.planner.deleteMany({});
   await prisma.eventTemplate.deleteMany({});
+  await prisma.category.deleteMany({});
   await prisma.travelTime.deleteMany({});
   await prisma.location.deleteMany({});
 
@@ -49,6 +51,10 @@ async function main() {
   // Seed travel times
   const travelTimes = generateTravelTimes(userId);
   await prisma.travelTime.createMany({ data: travelTimes });
+
+  // Seed categories (before planners, since planners reference them)
+  const categories = generateCategories(userId);
+  await prisma.category.createMany({ data: categories });
 
   // Seed event templates
   const templates = generateTemplates(userId);
