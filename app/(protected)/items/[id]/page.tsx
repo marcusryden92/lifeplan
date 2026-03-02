@@ -152,7 +152,6 @@ export default function ItemDetailPage() {
               <PropertiesCard
                 item={item}
                 categories={categories}
-                category={category ?? null}
                 locationOverrideEnabled={locationOverrideEnabled}
                 onUpdateField={handleUpdateField}
                 onCategoryChange={handleCategoryChange}

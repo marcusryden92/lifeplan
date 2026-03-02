@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { useSelector } from "react-redux";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -9,13 +8,12 @@ import { CategorySelect } from "@/components/categories/CategorySelect";
 import { LocationSelector } from "@/components/locations/LocationSelector";
 import { DateTimePickerWrapper } from "./DateTimePickerWrapper";
 import { getPriorityColor } from "./constants";
-import type { RootState } from "@/redux/store";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { Planner, Category } from "@/types/prisma";
 
 interface PropertiesCardProps {
   item: Planner;
   categories: Category[];
-  category: Category | null;
   locationOverrideEnabled: boolean;
   onUpdateField: (field: keyof Planner, value: unknown) => void;
   onCategoryChange: (categoryId: string | null) => void;
@@ -27,7 +25,6 @@ interface PropertiesCardProps {
 export function PropertiesCard({
   item,
   categories,
-  category,
   locationOverrideEnabled,
   onUpdateField,
   onCategoryChange,
@@ -35,13 +32,9 @@ export function PropertiesCard({
   onToggleLocationOverride,
   onDateChange,
 }: PropertiesCardProps) {
-  const locations = useSelector(
-    (state: RootState) => state.schedulingSettings.locations,
-  );
+  const { inheritedLocationMap } = useCalendarProvider();
+  const inheritedInfo = inheritedLocationMap.get(item.id);
 
-  const categoryLocationName = category?.locationId
-    ? locations.find((l) => l.id === category.locationId)?.name
-    : undefined;
   return (
     <Card>
       <CardContent className="space-y-4 pt-6">
@@ -119,6 +112,8 @@ export function PropertiesCard({
             onChange={onLocationChange}
             isOverridden={locationOverrideEnabled}
             onToggleOverride={onToggleLocationOverride}
+            inheritedLocationName={inheritedInfo?.locationName}
+            inheritedFromLabel={inheritedInfo?.fromLabel}
           />
         </div>
 

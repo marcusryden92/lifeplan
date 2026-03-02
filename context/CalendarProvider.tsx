@@ -21,6 +21,7 @@ import type { UserSettings } from "@/types/userTypes";
 import useCalendarStateActions from "@/hooks/useCalendarStateActions";
 import useManuallyRefreshCalendar from "@/hooks/useManuallyRefreshCalendar";
 import useCalendarServerSync from "@/hooks/useCalendarServerSync";
+import { buildInheritedLocationMap, InheritedLocationInfo } from "@/utils/goalPageHandlers";
 
 type CalendarContextType = {
   userId: string;
@@ -39,6 +40,7 @@ type CalendarContextType = {
     template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
   ) => void;
   manuallyRefreshCalendar: () => void;
+  inheritedLocationMap: Map<string, InheritedLocationInfo>;
 };
 
 const CalendarContext = createContext<CalendarContextType | null>(null);
@@ -90,6 +92,9 @@ export default function CalendarProvider({
   const bufferTimeMinutes = useSelector(
     (state: RootState) => state.schedulingSettings.bufferTimeMinutes
   );
+  const locations = useSelector(
+    (state: RootState) => state.schedulingSettings.locations
+  );
   const isInitialMount = useRef(true);
 
   // Regenerate calendar when bufferTimeMinutes changes (preserves current event positions)
@@ -106,6 +111,11 @@ export default function CalendarProvider({
 
   useFetchCalendarData(userId, initializeState);
 
+  const inheritedLocationMap = useMemo(
+    () => buildInheritedLocationMap(planner, categories, locations),
+    [planner, categories, locations]
+  );
+
   if (!userId) return null;
 
   const value = {
@@ -121,6 +131,7 @@ export default function CalendarProvider({
     updateTemplateArray,
     updateAll,
     manuallyRefreshCalendar,
+    inheritedLocationMap,
   };
 
   return (

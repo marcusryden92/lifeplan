@@ -23,6 +23,10 @@ interface LocationSelectorProps {
   isOverridden?: boolean;
   /** Callback when the user toggles the override */
   onToggleOverride?: () => void;
+  /** Name of the inherited location (shown in the dropdown when inherited) */
+  inheritedLocationName?: string;
+  /** Label describing the source of inheritance (e.g. category name or parent item title) */
+  inheritedFromLabel?: string;
 }
 
 export function LocationSelector({
@@ -33,6 +37,8 @@ export function LocationSelector({
   compact = false,
   isOverridden,
   onToggleOverride,
+  inheritedLocationName,
+  inheritedFromLabel,
 }: LocationSelectorProps) {
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
@@ -67,6 +73,29 @@ export function LocationSelector({
     );
   }
 
+  const displayedLocationName = showInherited
+    ? (inheritedLocationName ?? "Anywhere")
+    : (selectedLocation?.name ?? "Anywhere");
+
+  const selectItems = (
+    <>
+      <SelectItem value="everywhere">
+        <span className="flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-muted-foreground" />
+          Anywhere
+        </span>
+      </SelectItem>
+      {locations.map((location) => (
+        <SelectItem key={location.id} value={location.id}>
+          <span className="flex items-center gap-2">
+            <MapPin className="w-4 h-4" />
+            <span className="truncate">{location.name}</span>
+          </span>
+        </SelectItem>
+      ))}
+    </>
+  );
+
   if (compact) {
     return (
       <div className="flex items-center gap-1.5">
@@ -81,28 +110,11 @@ export function LocationSelector({
             <span className="flex min-w-[100px] items-center gap-1.5 truncate">
               <MapPin className="w-3.5 h-3.5 text-gray-400" />
               <span className="truncate text-gray-600 leading-none">
-                {showInherited
-                  ? "Inherited"
-                  : (selectedLocation?.name ?? "Anywhere")}
+                {displayedLocationName}
               </span>
             </span>
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="everywhere">
-              <span className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-muted-foreground" />
-                Anywhere
-              </span>
-            </SelectItem>
-            {locations.map((location) => (
-              <SelectItem key={location.id} value={location.id}>
-                <span className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  <span className="truncate">{location.name}</span>
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
+          <SelectContent>{selectItems}</SelectContent>
         </Select>
         {onToggleOverride && (
           <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -111,7 +123,13 @@ export function LocationSelector({
               onCheckedChange={onToggleOverride}
               className="scale-75"
             />
-            <span className="text-[10px] text-gray-400">Custom</span>
+            {showInherited ? (
+              <span className="inline-flex items-center gap-1 text-[10px] text-white bg-gray-400 px-1.5 py-0.5 rounded-full truncate max-w-[160px]">
+                Inherited{inheritedFromLabel ? ` from ${inheritedFromLabel}` : ""}
+              </span>
+            ) : (
+              <span className="inline-flex items-center text-[10px] text-white bg-black px-1.5 py-0.5 rounded-full">Custom</span>
+            )}
           </div>
         )}
       </div>
@@ -119,46 +137,35 @@ export function LocationSelector({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-1.5">
       <Select
         value={showInherited ? "category-default" : (value ?? "everywhere")}
         onValueChange={handleChange}
         disabled={disabled || showInherited}
       >
-        <SelectTrigger className={`flex-1 ${className ?? ""}`}>
+        <SelectTrigger className={`w-full ${className ?? ""}`}>
           <SelectValue>
             <span className="flex items-center gap-2">
               <MapPin className="w-4 h-4" />
-              {showInherited
-                ? "Inherited"
-                : (selectedLocation?.name ?? "Anywhere")}
+              {displayedLocationName}
             </span>
           </SelectValue>
         </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="everywhere">
-            <span className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-muted-foreground" />
-              Anywhere
-            </span>
-          </SelectItem>
-          {locations.map((location) => (
-            <SelectItem key={location.id} value={location.id}>
-              <span className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
-                <span> {location.name}</span>
-              </span>
-            </SelectItem>
-          ))}
-        </SelectContent>
+        <SelectContent>{selectItems}</SelectContent>
       </Select>
       {onToggleOverride && (
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5">
           <Switch
             checked={!!isOverridden}
             onCheckedChange={onToggleOverride}
           />
-          <span className="text-xs text-muted-foreground">Custom</span>
+          {showInherited ? (
+            <span className="inline-flex items-center gap-1 text-xs text-white bg-gray-400 px-2 py-0.5 rounded-full">
+              Inherited{inheritedFromLabel ? <><span className="text-gray-300">from</span> {inheritedFromLabel}</> : ""}
+            </span>
+          ) : (
+            <span className="inline-flex items-center text-xs text-white bg-black px-2 py-0.5 rounded-full">Custom</span>
+          )}
         </div>
       )}
     </div>

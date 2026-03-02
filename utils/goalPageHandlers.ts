@@ -1,4 +1,4 @@
-import { Planner, SimpleEvent } from "@/types/prisma";
+import { Planner, SimpleEvent, Category } from "@/types/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
 
@@ -483,6 +483,59 @@ export function getEffectiveCategoryId(
   }
 
   return null;
+}
+
+export interface InheritedLocationInfo {
+  locationName: string;
+  fromLabel: string;
+}
+
+/**
+ * Build a map of planner ID -> InheritedLocationInfo for all planners.
+ * Computed once and shared via context so each component just reads from it.
+ */
+export function buildInheritedLocationMap(
+  planners: Planner[],
+  categories: Category[],
+  locations: { id: string; name: string }[]
+): Map<string, InheritedLocationInfo> {
+  const result = new Map<string, InheritedLocationInfo>();
+  const plannerMap = new Map(planners.map((p) => [p.id, p]));
+  const findLocation = (id: string) => locations.find((l) => l.id === id);
+
+  for (const planner of planners) {
+    // Walk up parent chain for an ancestor with a custom location
+    const visited = new Set<string>();
+    let currentId = planner.parentId;
+    let info: InheritedLocationInfo | null = null;
+
+    while (currentId) {
+      if (visited.has(currentId)) break;
+      visited.add(currentId);
+      const parent = plannerMap.get(currentId);
+      if (!parent) break;
+      if (!parent.useParentLocation && parent.locationId) {
+        const loc = findLocation(parent.locationId);
+        if (loc) { info = { locationName: loc.name, fromLabel: parent.title }; break; }
+      }
+      currentId = parent.parentId;
+    }
+
+    if (!info) {
+      const effectiveCategoryId = getEffectiveCategoryId(planners, planner.id);
+      if (effectiveCategoryId) {
+        const category = categories.find((c) => c.id === effectiveCategoryId);
+        if (category?.locationId) {
+          const loc = findLocation(category.locationId);
+          if (loc) info = { locationName: loc.name, fromLabel: category.name };
+        }
+      }
+    }
+
+    if (info) result.set(planner.id, info);
+  }
+
+  return result;
 }
 
 // Check if any ID's in the main tree matches any of the dependencies in the tree to check

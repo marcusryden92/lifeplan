@@ -95,14 +95,13 @@ export const plannerSeedData: SimplePlannerData[] = [
     dependency: "3ac9edae-5a09-49be-ac16-940a05047a18",
   },
 
-  // Goal B hierarchy - Work location, Work category
+  // Goal B hierarchy - Work category (location inherited from category)
   {
     id: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
     title: "B",
     parentId: null,
     duration: 5,
     color: "#8E44AD",
-    locationId: LOCATION_IDS.WORK,
     categoryId: CATEGORY_IDS.WORK,
   },
   {

@@ -39,9 +39,11 @@ export const TaskHeader = ({
   const headerRef = useRef<HTMLDivElement | null>(null);
 
   const { currentlyClickedItem, displayDragBox } = useDraggableContext();
-  const { planner, updatePlannerArray } = useCalendarProvider();
+  const { planner, updatePlannerArray, inheritedLocationMap } = useCalendarProvider();
 
   const hasChildren = subtasks.length > 0;
+
+  const inheritedInfo = inheritedLocationMap.get(task.id);
 
   const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
     () => !task.useParentLocation
@@ -206,6 +208,8 @@ export const TaskHeader = ({
                 compact
                 isOverridden={locationOverrideEnabled}
                 onToggleOverride={handleToggleLocationOverride}
+                inheritedLocationName={inheritedInfo?.locationName}
+                inheritedFromLabel={inheritedInfo?.fromLabel}
               />
             </div>
           )}

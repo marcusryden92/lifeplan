@@ -15,12 +15,10 @@ import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
 import useTitleEditor from "@/hooks/useTitleEditor";
 import { handleEventCopy } from "@/utils/calendarEventHandlers";
 import React, { useMemo, useState, useCallback } from "react";
-import { useSelector } from "react-redux";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { LocationSelector } from "@/components/locations/LocationSelector";
 import { assignLocationToPlanner, setUseParentLocation } from "@/actions/locations";
 import { getEffectiveCategoryId } from "@/utils/goalPageHandlers";
-import type { RootState } from "@/redux/store";
 
 import { formatTime } from "@/utils/calendarUtils";
 
@@ -51,11 +49,8 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   onPostpone,
   setShowPopover,
 }) => {
-  const { updateAll, planner, updatePlannerArray, categories } =
+  const { updateAll, planner, updatePlannerArray, categories, inheritedLocationMap } =
     useCalendarProvider();
-  const locations = useSelector(
-    (state: RootState) => state.schedulingSettings.locations,
-  );
 
   const plannerItem = useMemo(
     () => planner.find((p) => p.id === event.id),
@@ -69,10 +64,8 @@ const EventPopover: React.FC<EventPopoverProps> = ({
     return categories.find((c) => c.id === effectiveId) ?? null;
   }, [plannerItem, planner, categories]);
 
-  const categoryHasLocation = !!(category?.locationId);
-  const categoryLocationName = category?.locationId
-    ? locations.find((l) => l.id === category.locationId)?.name
-    : undefined;
+  const inheritedInfo = plannerItem ? inheritedLocationMap.get(plannerItem.id) : undefined;
+  const categoryHasLocation = !!inheritedInfo;
 
   const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
     () => categoryHasLocation && !plannerItem?.useParentLocation
@@ -251,6 +244,8 @@ const EventPopover: React.FC<EventPopoverProps> = ({
               onChange={handleLocationChange}
               isOverridden={locationOverrideEnabled}
               onToggleOverride={handleToggleLocationOverride}
+              inheritedLocationName={inheritedInfo?.locationName}
+              inheritedFromLabel={inheritedInfo?.fromLabel}
             />
           </div>
         )}
