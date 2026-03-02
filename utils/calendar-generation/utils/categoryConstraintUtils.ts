@@ -253,6 +253,7 @@ export function canScheduleAtTime(
 /**
  * Build a map of planner ID -> effective categoryId by walking up the parent chain.
  * Only the root item needs categoryId stored; descendants inherit it automatically.
+ * Uses memoization so each node is resolved at most once — O(n) total regardless of tree depth.
  */
 export function buildPlannerCategoryMap(
   planners: Planner[]
@@ -260,30 +261,27 @@ export function buildPlannerCategoryMap(
   const plannerMap = new Map(planners.map((p) => [p.id, p]));
   const result = new Map<string, string | null>();
 
-  for (const planner of planners) {
+  function resolve(id: string): string | null {
+    if (result.has(id)) return result.get(id)!;
+
+    const planner = plannerMap.get(id);
+    if (!planner) {
+      result.set(id, null);
+      return null;
+    }
+
     if (planner.categoryId) {
-      result.set(planner.id, planner.categoryId);
-      continue;
+      result.set(id, planner.categoryId);
+      return planner.categoryId;
     }
 
-    let resolved: string | null = null;
-    const visited = new Set<string>();
-    let currentId = planner.parentId;
+    const resolved = planner.parentId ? resolve(planner.parentId) : null;
+    result.set(id, resolved);
+    return resolved;
+  }
 
-    while (currentId) {
-      if (visited.has(currentId)) break;
-      visited.add(currentId);
-
-      const parent = plannerMap.get(currentId);
-      if (!parent) break;
-      if (parent.categoryId) {
-        resolved = parent.categoryId;
-        break;
-      }
-      currentId = parent.parentId;
-    }
-
-    result.set(planner.id, resolved);
+  for (const planner of planners) {
+    resolve(planner.id);
   }
 
   return result;
