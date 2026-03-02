@@ -88,6 +88,9 @@ export default function ItemDetailPage() {
     handleCategoryChange,
     handleLocationChange,
     handleToggleLocationOverride,
+    showResetLocationsConfirm,
+    setShowResetLocationsConfirm,
+    confirmResetSubgoalLocations,
     applyLocationChange,
     closeCascadeDialog,
   } = useItemHandlers(item, subtasks, planner, updatePlannerArray, updateAll, categoryHasLocation, categories);
@@ -157,6 +160,7 @@ export default function ItemDetailPage() {
                 onCategoryChange={handleCategoryChange}
                 onLocationChange={handleLocationChange}
                 onToggleLocationOverride={handleToggleLocationOverride}
+                onResetSubgoalLocations={() => setShowResetLocationsConfirm(true)}
                 onDateChange={handleDateChange}
               />
             </div>
@@ -182,6 +186,31 @@ export default function ItemDetailPage() {
           onApplyToThis={() => applyLocationChange(pendingLocationId, false)}
           onApplyToAll={() => applyLocationChange(pendingLocationId, true)}
         />
+
+        {/* Reset sub-goal locations confirmation */}
+        {showResetLocationsConfirm && (
+          <div
+            className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
+            onClick={() => setShowResetLocationsConfirm(false)}
+          >
+            <div
+              className="bg-white rounded-lg p-4 shadow-lg max-w-sm mx-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-sm text-gray-700 mb-4">
+                Reset all sub-goal locations to inherited? This will remove any custom location overrides.
+              </p>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setShowResetLocationsConfirm(false)}>
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={confirmResetSubgoalLocations}>
+                  Reset all
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DraggableContextProvider>
   );

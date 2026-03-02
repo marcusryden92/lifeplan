@@ -14,7 +14,7 @@ import useClickOutside from "@/hooks/useClickOutside";
 import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
 import useTitleEditor from "@/hooks/useTitleEditor";
 import { handleEventCopy } from "@/utils/calendarEventHandlers";
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { LocationSelector } from "@/components/locations/LocationSelector";
 import { assignLocationToPlanner, setUseParentLocation } from "@/actions/locations";
@@ -70,6 +70,10 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
     () => categoryHasLocation && !plannerItem?.useParentLocation
   );
+
+  useEffect(() => {
+    setLocationOverrideEnabled(categoryHasLocation && !plannerItem?.useParentLocation);
+  }, [categoryHasLocation, plannerItem?.useParentLocation]);
 
   const handleLocationChange = async (locationId: string | null) => {
     try {

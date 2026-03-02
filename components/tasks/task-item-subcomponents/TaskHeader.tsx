@@ -49,6 +49,10 @@ export const TaskHeader = ({
     () => !task.useParentLocation
   );
 
+  useEffect(() => {
+    setLocationOverrideEnabled(!task.useParentLocation);
+  }, [task.useParentLocation]);
+
   const handleToggleLocationOverride = useCallback(async () => {
     const newOverrideEnabled = !locationOverrideEnabled;
 

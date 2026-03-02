@@ -24,6 +24,7 @@ export function useItemHandlers(
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCascadeConfirm, setShowCascadeConfirm] = useState(false);
+  const [showResetLocationsConfirm, setShowResetLocationsConfirm] = useState(false);
   const [pendingLocationId, setPendingLocationId] = useState<string | null>(
     null
   );
@@ -205,6 +206,26 @@ export function useItemHandlers(
     setLocationOverrideEnabled(newOverrideEnabled);
   }, [item, categoryHasLocation, locationOverrideEnabled, subtasks, handleUpdateField]);
 
+  const confirmResetSubgoalLocations = useCallback(async () => {
+    if (!item) return;
+
+    const treeIds = getGoalTree(planner, item.id).map((i) => i.id);
+
+    try {
+      await setUseParentLocationMultiple(treeIds, true);
+      updatePlannerArray((prev) =>
+        prev.map((p) =>
+          treeIds.includes(p.id) ? { ...p, useParentLocation: true } : p
+        )
+      );
+      setLocationOverrideEnabled(false);
+    } catch (error) {
+      console.error("Failed to reset sub-goal locations:", error);
+    } finally {
+      setShowResetLocationsConfirm(false);
+    }
+  }, [item, planner, updatePlannerArray]);
+
   return {
     showDeleteConfirm,
     setShowDeleteConfirm,
@@ -219,6 +240,9 @@ export function useItemHandlers(
     handleCategoryChange,
     handleLocationChange,
     handleToggleLocationOverride,
+    showResetLocationsConfirm,
+    setShowResetLocationsConfirm,
+    confirmResetSubgoalLocations,
     applyLocationChange,
     closeCascadeDialog: () => {
       setShowCascadeConfirm(false);

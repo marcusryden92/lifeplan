@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Card, CardContent } from "@/components/ui/Card";
@@ -19,6 +20,7 @@ interface PropertiesCardProps {
   onCategoryChange: (categoryId: string | null) => void;
   onLocationChange: (locationId: string | null) => void;
   onToggleLocationOverride: () => void;
+  onResetSubgoalLocations: () => void;
   onDateChange: (date: Date | undefined) => void;
 }
 
@@ -30,6 +32,7 @@ export function PropertiesCard({
   onCategoryChange,
   onLocationChange,
   onToggleLocationOverride,
+  onResetSubgoalLocations,
   onDateChange,
 }: PropertiesCardProps) {
   const { inheritedLocationMap } = useCalendarProvider();
@@ -115,6 +118,18 @@ export function PropertiesCard({
             inheritedLocationName={inheritedInfo?.locationName}
             inheritedFromLabel={inheritedInfo?.fromLabel}
           />
+          {item.itemType === "goal" && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full mt-1.5 text-xs text-muted-foreground"
+              onClick={onResetSubgoalLocations}
+            >
+              <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+              Reset all sub-goal locations
+            </Button>
+          )}
         </div>
 
         {/* Duration (for non-goals) */}
