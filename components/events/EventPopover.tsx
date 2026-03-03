@@ -68,11 +68,11 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   const categoryHasLocation = !!inheritedInfo;
 
   const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
-    () => categoryHasLocation && !plannerItem?.useParentLocation
+    () => !categoryHasLocation || !plannerItem?.useParentLocation
   );
 
   useEffect(() => {
-    setLocationOverrideEnabled(categoryHasLocation && !plannerItem?.useParentLocation);
+    setLocationOverrideEnabled(!categoryHasLocation || !plannerItem?.useParentLocation);
   }, [categoryHasLocation, plannerItem?.useParentLocation]);
 
   const handleLocationChange = async (locationId: string | null) => {
@@ -247,7 +247,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
               value={plannerItem.locationId ?? null}
               onChange={handleLocationChange}
               isOverridden={locationOverrideEnabled}
-              onToggleOverride={handleToggleLocationOverride}
+              onToggleOverride={inheritedInfo ? handleToggleLocationOverride : undefined}
               inheritedLocationName={inheritedInfo?.locationName}
               inheritedFromLabel={inheritedInfo?.fromLabel}
             />

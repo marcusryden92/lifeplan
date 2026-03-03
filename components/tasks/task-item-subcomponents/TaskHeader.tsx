@@ -211,7 +211,7 @@ export const TaskHeader = ({
                 onChange={handleLocationChange}
                 compact
                 isOverridden={locationOverrideEnabled}
-                onToggleOverride={handleToggleLocationOverride}
+                onToggleOverride={inheritedInfo ? handleToggleLocationOverride : undefined}
                 inheritedLocationName={inheritedInfo?.locationName}
                 inheritedFromLabel={inheritedInfo?.fromLabel}
               />

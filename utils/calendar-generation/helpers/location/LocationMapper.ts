@@ -47,6 +47,11 @@ export class LocationMapper {
   }
 
   private resolveLocation(planner: Planner): string | null {
+    // Plan items always use their own location (no inheritance)
+    if (planner.itemType === "plan") {
+      return planner.locationId ?? null;
+    }
+
     if (!planner.useParentLocation && planner.locationId) {
       return planner.locationId;
     }

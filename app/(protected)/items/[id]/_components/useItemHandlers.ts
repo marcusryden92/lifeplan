@@ -29,7 +29,7 @@ export function useItemHandlers(
     null
   );
   const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
-    () => categoryHasLocation && !item?.useParentLocation
+    () => !categoryHasLocation || !item?.useParentLocation
   );
 
   const handleSaveTitle = useCallback(

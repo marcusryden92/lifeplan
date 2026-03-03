@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 
 import {
   XMarkIcon,
@@ -73,6 +74,8 @@ const Goal = ({
   );
 
   const priority = task.priority ? Number(task.priority) : 5;
+  const { inheritedLocationMap } = useCalendarProvider();
+  const inheritedInfo = inheritedLocationMap.get(task.id);
 
   const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
     () => !task.useParentLocation
@@ -244,7 +247,9 @@ const Goal = ({
                   onChange={handleLocationChange}
                   compact
                   isOverridden={locationOverrideEnabled}
-                  onToggleOverride={handleToggleLocationOverride}
+                  onToggleOverride={inheritedInfo ? handleToggleLocationOverride : undefined}
+                  inheritedLocationName={inheritedInfo?.locationName}
+                  inheritedFromLabel={inheritedInfo?.fromLabel}
                 />
                 <PrioritySelector
                   updatePlannerArray={updatePlannerArray}

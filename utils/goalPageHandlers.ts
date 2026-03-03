@@ -504,6 +504,9 @@ export function buildInheritedLocationMap(
   const findLocation = (id: string) => locations.find((l) => l.id === id);
 
   for (const planner of planners) {
+    // Plan items always use their own location (no inheritance)
+    if (planner.itemType === "plan") continue;
+
     // Walk up parent chain for an ancestor with a custom location
     const visited = new Set<string>();
     let currentId = planner.parentId;

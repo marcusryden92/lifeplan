@@ -114,7 +114,7 @@ export function PropertiesCard({
             value={item.locationId ?? null}
             onChange={onLocationChange}
             isOverridden={locationOverrideEnabled}
-            onToggleOverride={onToggleLocationOverride}
+            onToggleOverride={inheritedInfo ? onToggleLocationOverride : undefined}
             inheritedLocationName={inheritedInfo?.locationName}
             inheritedFromLabel={inheritedInfo?.fromLabel}
           />
