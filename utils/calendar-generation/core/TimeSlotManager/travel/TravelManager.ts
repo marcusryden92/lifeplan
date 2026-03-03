@@ -573,4 +573,39 @@ export class TravelManager {
 
     return null;
   }
+
+  /**
+   * Find an existing travel slot originating FROM a given location near a given time.
+   * Used to detect when a previous task at the same location already created a travel-after
+   * that can be absorbed by a new same-location task placed after it.
+   *
+   * @param nearTime - The time to search near (typically the start of an available slot)
+   * @param fromLocationId - The origin location to check for
+   * @returns The travel slot if found, null otherwise
+   */
+  findAdjacentTravelFrom(
+    nearTime: Date,
+    fromLocationId: string,
+  ): TimeSlot | null {
+    const dayKey = this.getDayKeyFn(nearTime);
+    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+
+    const bufferMs = this.bufferTimeMinutes * 60000;
+    const searchWindowMs = bufferMs + 10 * 60 * 1000;
+
+    for (const slot of occupiedSlots) {
+      if (
+        TimeSlotUtils.isTravelSlot(slot) &&
+        slot.travelFromLocationId === fromLocationId &&
+        slot.eventId?.startsWith("travel-from-")
+      ) {
+        const timeDiff = Math.abs(slot.end.getTime() - nearTime.getTime());
+        if (timeDiff <= searchWindowMs) {
+          return slot;
+        }
+      }
+    }
+
+    return null;
+  }
 }

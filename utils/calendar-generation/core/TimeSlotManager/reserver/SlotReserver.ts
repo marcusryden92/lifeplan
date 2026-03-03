@@ -87,6 +87,7 @@ export class SlotReserver {
    * @param prevLocationId - Location of the event before this slot
    * @param nextLocationId - Location of the event after this slot
    * @param reusableTravelStart - If reusing existing travel, the start time of that travel (for free slot end calculation)
+   * @param absorbPrevTravelAfter - If true, the previous task was at the same location and its travel-after should be removed
    */
   reserveSlotWithTravel(
     start: Date,
@@ -99,6 +100,7 @@ export class SlotReserver {
     prevLocationId: string | null,
     nextLocationId: string | null,
     reusableTravelStart?: Date | null,
+    absorbPrevTravelAfter?: boolean,
   ): { success: boolean } {
     const dayKey = this.getDayKeyFn(start);
     const slots = this.availableSlots.get(dayKey);
@@ -108,13 +110,42 @@ export class SlotReserver {
     }
 
     const bufferMinutes = this.bufferTimeMinutes;
+    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
 
-    // Layout with "travel at END of slot" model:
-    // [travelBefore] [buffer] [task] [buffer] [FREE SPACE] [buffer] [travelAfter at slot.end]
-    //
-    // Travel-after is anchored to the END of the original slot (right before next template).
-    // Free space between task and travel-after allows subsequent same-location tasks.
-    // When next task is scheduled, travel-after shifts forward (is removed and re-added).
+    // Absorb previous task's travel-after if this task is at the same location.
+    // Must happen before slot search since the task start is in the reclaimed space.
+    if (absorbPrevTravelAfter && taskLocationId) {
+      const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
+      for (let i = occupiedSlots.length - 1; i >= 0; i--) {
+        const occ = occupiedSlots[i];
+        if (
+          TimeSlotUtils.isTravelSlot(occ) &&
+          occ.travelFromLocationId === taskLocationId &&
+          occ.eventId?.startsWith("travel-from-")
+        ) {
+          // Find the available slot that starts near where this travel ends
+          const travelEndTime = occ.end.getTime();
+          for (const availSlot of slots) {
+            if (!availSlot.isAvailable) continue;
+            const timeDiff = Math.abs(availSlot.start.getTime() - travelEndTime);
+            if (timeDiff <= searchWindowMs) {
+              // Expand the available slot backward to include the reclaimed travel space
+              availSlot.start = occ.start;
+              availSlot.durationMinutes = Math.floor(
+                (availSlot.end.getTime() - availSlot.start.getTime()) / 60000,
+              );
+              availSlot.prevLocationId = taskLocationId;
+              occupiedSlots.splice(i, 1);
+              break;
+            }
+          }
+          break;
+        }
+      }
+    }
+
+    // Layout: [travelBefore] [buffer] [task] [buffer] [travel-after] [buffer] [FREE SPACE]
+    // Travel-after is placed right after the task so it appears between consecutive tasks.
 
     // Travel before: ends at (start - buffer), starts at (start - buffer - travelBefore)
     const travelBeforeEnd =
@@ -135,7 +166,6 @@ export class SlotReserver {
     const taskReserveEnd = new Date(end.getTime() + bufferMinutes * 60000);
 
     // Find the slot that contains at minimum [fullStart, taskReserveEnd]
-    // We'll place travel-after at the END of this slot (not right after task)
     const slotIndex = slots.findIndex(
       (slot) =>
         slot.isAvailable &&
@@ -149,37 +179,20 @@ export class SlotReserver {
 
     const slot = slots[slotIndex];
     const newSlots: TimeSlot[] = [];
-    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
 
     // Calculate travel-after position
-    // If there's existing travel to the same destination NEAR the slot end, use its end position (travel shifts forward).
-    // Otherwise, use slot.end (right before next template starts).
+    // Place travel right after the task + buffer, so the layout is:
+    // [task] [buffer] [travel-after] [FREE]
+    // This ensures travel appears between the task and subsequent tasks in the slot.
     let travelAfterEnd: Date | null = null;
     let travelAfterStart: Date | null = null;
 
     if (travelAfter > 0 && nextLocationId) {
-      // Look for existing travel going to the same destination that's near our slot end
-      // This ensures we don't pick up unrelated travel (like morning commute) when scheduling afternoon tasks
-      const slotEndTime = slot.end.getTime();
-      const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
-
-      const existingTravel = occupiedSlots.find((occ) => {
-        if (!TimeSlotUtils.isTravelSlot(occ)) return false;
-        if (occ.travelToLocationId !== nextLocationId) return false;
-        // Only match if the travel ends within the search window of our slot end
-        const travelEndTime = occ.end.getTime();
-        return Math.abs(travelEndTime - slotEndTime) < searchWindowMs;
-      });
-
-      if (existingTravel) {
-        // Use existing travel's end position (it will be replaced)
-        travelAfterEnd = new Date(existingTravel.end.getTime());
-      } else {
-        // No existing travel near slot end, use slot.end
-        travelAfterEnd = new Date(slot.end.getTime());
-      }
       travelAfterStart = new Date(
-        travelAfterEnd.getTime() - travelAfter * 60000,
+        end.getTime() + bufferMinutes * 60000,
+      );
+      travelAfterEnd = new Date(
+        travelAfterStart.getTime() + travelAfter * 60000,
       );
     }
 
@@ -255,17 +268,11 @@ export class SlotReserver {
       nextLocationId: taskLocationId,
     };
 
-    // 4. FREE slot BETWEEN task+buffer and travel-after (or slot.end if no travel)
-    // When there's travel-after, the FREE slot ends at [buffer] before the travel.
-    // This ensures no overlap between available slot and travel.
-    const freeSlotStart = taskReserveEnd;
-    // If travel-after exists, FREE slot ends at buffer before travel. Otherwise, extends to slot.end.
-    // Note: travelAfterStart might be positioned at existing travel's end (shifted forward case)
-    let freeSlotEnd: Date;
+    // 4. FREE slot AFTER task (and after travel-after if present)
+    // Layout: [task] [buffer] [travel-after] [buffer] [FREE] ... [slot.end]
+    // If no travel-after: [task] [buffer] [FREE] ... [slot.end]
 
-    // IMPORTANT: If task location matches nextLocationId, no travel is needed after this task.
-    // But the slot may have been pre-shrunk by buildAvailableSlots which created travel.
-    // We need to find and remove that pre-created travel and extend freeSlotEnd to the actual next event start.
+    // Reclaim pre-carved category/gap travel if task is at the same location as the destination
     let reclaimedTravelEnd: Date | null = null;
     if (
       travelAfter === 0 &&
@@ -273,7 +280,6 @@ export class SlotReserver {
       nextLocationId &&
       taskLocationId === nextLocationId
     ) {
-      // Task is at same location as next event - find and remove pre-created travel
       const slotEndTime = slot.end.getTime();
       const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
 
@@ -283,9 +289,13 @@ export class SlotReserver {
           TimeSlotUtils.isTravelSlot(occ) &&
           occ.travelToLocationId === nextLocationId
         ) {
-          // Check if this travel ends near our slot end (i.e., it's the pre-created travel for this gap)
+          // Only reclaim pre-carved category/gap travel, not dynamic task-to-task travel.
+          const isPreCarved =
+            occ.eventId?.startsWith("travel-gap-") ||
+            occ.eventId?.startsWith("travel-insufficient-");
+          if (!isPreCarved) continue;
+
           const travelEndTime = occ.end.getTime();
-          // The travel should end AFTER slot.end since slot was shrunk to make room for it
           const meetsCondition =
             travelEndTime > slotEndTime &&
             travelEndTime - slotEndTime < searchWindowMs;
@@ -298,27 +308,32 @@ export class SlotReserver {
       }
     }
 
-    if (travelAfterStart) {
-      freeSlotEnd = new Date(
-        travelAfterStart.getTime() - bufferMinutes * 60000,
-      );
-    } else if (reclaimedTravelEnd) {
-      // Use the reclaimed travel's end time (actual next event start)
+    // Determine free slot start: after travel-after + buffer, or after task + buffer
+    let freeSlotStart: Date;
+    if (travelAfterEnd) {
+      freeSlotStart = new Date(travelAfterEnd.getTime() + bufferMinutes * 60000);
+    } else {
+      freeSlotStart = taskReserveEnd;
+    }
+
+    // Determine free slot end
+    let freeSlotEnd: Date;
+    if (reclaimedTravelEnd) {
       freeSlotEnd = reclaimedTravelEnd;
     } else if (removedTravelAfterEnd) {
-      // We removed a travelAfter from a previous task when creating our travelBefore
-      // (because our travelBefore goes to the same destination). The slot should extend
-      // to where that removed travel ended (the actual next event start).
       freeSlotEnd = removedTravelAfterEnd;
     } else if (reusableTravelStart) {
-      // We're reusing existing travel (travelAfter=0), so the free slot ends where that travel starts (minus buffer)
       freeSlotEnd = new Date(
         reusableTravelStart.getTime() - bufferMinutes * 60000,
       );
     } else {
       freeSlotEnd = slot.end;
     }
-    const freeSlotPrevLocation = taskLocationId ?? slot.prevLocationId;
+
+    // After travel-after, the prev location is the travel destination (nextLocationId)
+    const freeSlotPrevLocation = travelAfterEnd
+      ? (nextLocationId ?? taskLocationId ?? slot.prevLocationId)
+      : (taskLocationId ?? slot.prevLocationId);
 
     if (freeSlotEnd.getTime() > freeSlotStart.getTime()) {
       newSlots.push({
@@ -329,7 +344,7 @@ export class SlotReserver {
         ),
         isAvailable: true,
         prevLocationId: freeSlotPrevLocation,
-        nextLocationId: slot.nextLocationId, // Still points to next template
+        nextLocationId: slot.nextLocationId,
       });
     }
 
@@ -359,7 +374,7 @@ export class SlotReserver {
       }
     }
 
-    // Add new travel-after at the END of the slot
+    // Add new travel-after right after the task
     if (
       travelAfter > 0 &&
       travelAfterStart &&

@@ -197,6 +197,10 @@ export class TimeSlotManager {
     return this.travelManager.findAdjacentTravelTo(nearTime, toLocationId);
   }
 
+  findAdjacentTravelFrom(nearTime: Date, fromLocationId: string): TimeSlot | null {
+    return this.travelManager.findAdjacentTravelFrom(nearTime, fromLocationId);
+  }
+
   // ===== Slot Reservation =====
 
   reserveSlot(
@@ -226,6 +230,7 @@ export class TimeSlotManager {
     prevLocationId: string | null,
     nextLocationId: string | null,
     reusableTravelStart?: Date | null,
+    absorbPrevTravelAfter?: boolean,
   ): { success: boolean } {
     return this.slotReserver.reserveSlotWithTravel(
       start,
@@ -238,6 +243,7 @@ export class TimeSlotManager {
       prevLocationId,
       nextLocationId,
       reusableTravelStart,
+      absorbPrevTravelAfter,
     );
   }
 

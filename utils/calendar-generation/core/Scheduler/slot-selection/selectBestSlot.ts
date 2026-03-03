@@ -22,6 +22,8 @@ export interface SlotSelectionResult {
   travelAfter: number;
   reusableTravelStart: Date | null;
   taskLocationId: string | null | undefined;
+  absorbPrevTravelAfter: boolean;
+  absorbedTravelStart: Date | null;
 }
 
 /**
@@ -74,6 +76,8 @@ export function selectBestSlot(
   let travelBefore = 0;
   let travelAfter = 0;
   let selectedReusableTravelStart: Date | null = null;
+  let selectedAbsorbPrevTravel = false;
+  let selectedAbsorbedTravelStart: Date | null = null;
 
   for (const scoredSlot of scoredSlots) {
     // Find the original slot with location info
@@ -87,60 +91,51 @@ export function selectBestSlot(
     let needTravelBefore = 0;
     let needTravelAfter = 0;
 
+    let canAbsorbPrevTravel = false;
+    let absorbableTravel: ReturnType<typeof slotManager.findAdjacentTravelFrom> = null;
+
     if (taskLocationId) {
       // Travel BEFORE: needed if prev location differs from task location
       if (slot.prevLocationId && slot.prevLocationId !== taskLocationId) {
-        needTravelBefore = slotManager.getTravelTime(
-          slot.prevLocationId,
-          taskLocationId,
-          slot.start
+        // Check if the prev location is actually a travel destination from a previous
+        // task at OUR location. e.g., B4 (Uppsala) placed travel-after Uppsala->GamlaStan,
+        // so the free slot has prevLocationId=GamlaStan. If B5 is also Uppsala, we can
+        // absorb B4's travel-after instead of creating new travel-before.
+        absorbableTravel = slotManager.findAdjacentTravelFrom(
+          slot.start,
+          taskLocationId
         );
-        // DEBUG: Log travel-before triggers during scheduling
-        console.log("SELECT SLOT TRAVEL BEFORE:", {
-          task: task.title,
-          taskLoc: taskLocationId,
-          slotPrevLoc: slot.prevLocationId,
-          slotStart: slot.start.toISOString(),
-          slotEnd: slot.end.toISOString(),
-          travelBefore: needTravelBefore,
-        });
+        if (absorbableTravel) {
+          canAbsorbPrevTravel = true;
+          needTravelBefore = 0;
+        } else {
+          needTravelBefore = slotManager.getTravelTime(
+            slot.prevLocationId,
+            taskLocationId,
+            slot.start
+          );
+        }
       }
 
       // Travel AFTER: needed if next location differs from task location
-      // This travel will be placed at the END of the slot and shifts forward
-      // as more tasks are added
       if (slot.nextLocationId && slot.nextLocationId !== taskLocationId) {
         needTravelAfter = slotManager.getTravelTime(
           taskLocationId,
           slot.nextLocationId,
           slot.start
         );
-        // DEBUG: Log travel-after triggers during scheduling
-        console.log("SELECT SLOT TRAVEL AFTER:", {
-          task: task.title,
-          taskLoc: taskLocationId,
-          slotNextLoc: slot.nextLocationId,
-          slotStart: slot.start.toISOString(),
-          slotEnd: slot.end.toISOString(),
-          travelAfter: needTravelAfter,
-        });
       }
     }
-    // Note: If taskLocationId is null, prevLocationId passes through unchanged
-    // (null tasks are "transparent" for travel purposes)
 
     // Calculate required inside-slot time:
-    // Layout: [task] [buffer] [FREE] [travelAfter]
+    // Layout: [task] [buffer] [travel-after] [buffer]
     // If travel-before can be placed outside, it is excluded from inside-slot requirement.
 
     // Check if existing travel to the destination can be reused
-    // Travel-after doesn't require NEW space if it replaces existing travel at the slot end
     let effectiveTravelAfter = needTravelAfter;
     let reusableTravelStart: Date | null = null;
 
     if (needTravelAfter > 0 && slot.nextLocationId) {
-      // Check if there's already a travel slot going to nextLocationId near the end of this slot
-      // If so, we can reuse it and don't need to reserve additional space
       reusableTravelStart = slotManager.findAdjacentTravelTo(
         slot.end,
         slot.nextLocationId
@@ -150,10 +145,9 @@ export function selectBestSlot(
       }
     }
 
-    // If we can place travel-before outside the slot (ending buffer before slot.start),
-    // reduce the inside-slot requirement accordingly.
     let canPlaceTravelOutside = false;
-    let requiredInside = task.duration + effectiveTravelAfter + bufferMinutes; // buffer after task
+    let requiredInside = task.duration + bufferMinutes
+      + (effectiveTravelAfter > 0 ? effectiveTravelAfter + bufferMinutes : 0);
 
     if (needTravelBefore > 0 && slot.prevLocationId && taskLocationId) {
       const travelEnd = new Date(
@@ -164,18 +158,27 @@ export function selectBestSlot(
         needTravelBefore
       );
       if (!canPlaceTravelOutside) {
-        // Fallback: include travel-before and its buffer inside the slot
         requiredInside += needTravelBefore + bufferMinutes;
       }
     }
 
+    // When absorbing a previous task's travel-after, the reclaimed travel space
+    // adds to the effective slot capacity (travel duration + buffer before it)
+    let effectiveCapacity = slot.durationMinutes;
+    let absorbedStart: Date | null = null;
+    if (canAbsorbPrevTravel && absorbableTravel) {
+      effectiveCapacity += absorbableTravel.durationMinutes + bufferMinutes;
+      absorbedStart = new Date(absorbableTravel.start.getTime());
+    }
+
     // Check if this slot has enough capacity
-    if (slot.durationMinutes >= requiredInside) {
+    if (effectiveCapacity >= requiredInside) {
       selectedSlot = slot;
       travelBefore = needTravelBefore;
-      // Use effectiveTravelAfter - if we're reusing existing travel, don't create new travel
       travelAfter = effectiveTravelAfter;
       selectedReusableTravelStart = reusableTravelStart;
+      selectedAbsorbPrevTravel = canAbsorbPrevTravel;
+      selectedAbsorbedTravelStart = absorbedStart;
       break;
     }
   }
@@ -197,5 +200,7 @@ export function selectBestSlot(
     travelAfter,
     reusableTravelStart: selectedReusableTravelStart,
     taskLocationId,
+    absorbPrevTravelAfter: selectedAbsorbPrevTravel,
+    absorbedTravelStart: selectedAbsorbedTravelStart,
   };
 }

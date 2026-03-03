@@ -24,13 +24,14 @@ export function reserveTaskSlot(
   travelAfter: number,
   taskLocationId: string | null | undefined,
   reusableTravelStart: Date | null,
-  slotManager: TimeSlotManager
+  slotManager: TimeSlotManager,
+  absorbPrevTravelAfter: boolean = false,
+  absorbedTravelStart: Date | null = null,
 ): ReservationResult | { failure: SchedulingFailure } {
   const bufferMinutes = slotManager.getBufferTimeMinutes();
 
   // Calculate task times
-  // Layout: [travelBefore] [buffer] [task] [buffer] [FREE] [travelAfter]
-  // Travel-after is placed at the END of the slot, free space is between task and travel-after
+  // Layout: [travelBefore] [buffer] [task] [buffer] [travel-after] [buffer] [FREE]
 
   // Calculate offset to task start from slot start
   // If travel-before is placed outside, task starts at slot.start.
@@ -49,8 +50,12 @@ export function reserveTaskSlot(
     offsetToTaskStart = canPlaceOutside ? 0 : travelBefore + bufferMinutes;
   }
 
+  // When absorbing the previous task's travel-after, start at the absorbed travel's
+  // position instead of the free slot start (which is after the travel + buffer)
+  const effectiveSlotStart = absorbedTravelStart ?? selectedSlot.start;
+
   const taskStartDate = dateTimeService.addDuration(
-    selectedSlot.start,
+    effectiveSlotStart,
     offsetToTaskStart
   );
   const taskEndDate = dateTimeService.addDuration(
@@ -90,7 +95,8 @@ export function reserveTaskSlot(
     travelAfter,
     selectedSlot.prevLocationId ?? null,
     selectedSlot.nextLocationId ?? null,
-    reusableTravelStart
+    reusableTravelStart,
+    absorbPrevTravelAfter,
   );
 
   if (!result.success) {

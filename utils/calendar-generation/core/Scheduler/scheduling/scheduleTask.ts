@@ -60,6 +60,8 @@ export function scheduleTask(
     selectionResult.taskLocationId,
     selectionResult.reusableTravelStart,
     slotManager,
+    selectionResult.absorbPrevTravelAfter,
+    selectionResult.absorbedTravelStart,
   );
   if ("failure" in reservationResult) {
     return { success: false, failure: reservationResult.failure };

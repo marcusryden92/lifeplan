@@ -50,18 +50,6 @@ export function buildInitialSlots(
 
   // Set category periods if they exist
   if (wrapperPeriods.length > 0) {
-    if (enableLogging) {
-      const uniqueLocations = [...new Set(wrapperPeriods.map((w) => w.locationId))];
-      console.log("Category wrapper periods for slot manager:", {
-        count: wrapperPeriods.length,
-        uniqueLocations,
-        firstFew: wrapperPeriods.slice(0, 3).map((w) => ({
-          start: w.start.toISOString(),
-          end: w.end.toISOString(),
-          locationId: w.locationId,
-        })),
-      });
-    }
     slotManager.setCategoryPeriods(wrapperPeriods);
   }
 
