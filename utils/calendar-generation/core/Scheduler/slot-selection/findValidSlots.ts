@@ -28,12 +28,10 @@ export function findValidSlots(
   context: SchedulingContext,
   afterTime?: Date
 ): FindValidSlotsResult | { failure: SchedulingFailure } {
-  // Get task's effective location for travel-aware scheduling
-  // Prefer explicit task location; else inherit from category via context map
+  // Get task's effective location from the pre-built planner location map,
+  // which respects useParentLocation, parent-chain inheritance, and category fallback
   const taskLocationId =
-    (task.locationId ?? null) !== null
-      ? task.locationId
-      : (context.plannerLocationMap?.get(task.id) ?? null);
+    context.plannerLocationMap?.get(task.id) ?? null;
 
   // Resolve effective category from parent chain via pre-built map
   const effectiveCategoryId =

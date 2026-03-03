@@ -60,18 +60,18 @@ export function generateCalendar(
   const generator = new CalendarGenerator(weekStartDay);
 
   // Logging configuration - set enableLogging to false to disable all logging
-  const enableLogging = false;
+  const enableLogging = true;
   const logging = {
-    metrics: false,
-    failures: false,
-    travelDebug: false,
+    metrics: true,
+    failures: true,
+    travelDebug: true,
     templateInfo: false,
     planners: false,
     templates: false,
-    locations: false,
+    locations: true,
     strategySettings: false,
     finalEvents: false,
-    leanCalendar: false,
+    leanCalendar: true,
   };
 
   const result = generator.generate({

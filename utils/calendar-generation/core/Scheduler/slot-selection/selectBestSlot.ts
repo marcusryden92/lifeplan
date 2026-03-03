@@ -95,6 +95,15 @@ export function selectBestSlot(
           taskLocationId,
           slot.start
         );
+        // DEBUG: Log travel-before triggers during scheduling
+        console.log("SELECT SLOT TRAVEL BEFORE:", {
+          task: task.title,
+          taskLoc: taskLocationId,
+          slotPrevLoc: slot.prevLocationId,
+          slotStart: slot.start.toISOString(),
+          slotEnd: slot.end.toISOString(),
+          travelBefore: needTravelBefore,
+        });
       }
 
       // Travel AFTER: needed if next location differs from task location
@@ -106,6 +115,15 @@ export function selectBestSlot(
           slot.nextLocationId,
           slot.start
         );
+        // DEBUG: Log travel-after triggers during scheduling
+        console.log("SELECT SLOT TRAVEL AFTER:", {
+          task: task.title,
+          taskLoc: taskLocationId,
+          slotNextLoc: slot.nextLocationId,
+          slotStart: slot.start.toISOString(),
+          slotEnd: slot.end.toISOString(),
+          travelAfter: needTravelAfter,
+        });
       }
     }
     // Note: If taskLocationId is null, prevLocationId passes through unchanged

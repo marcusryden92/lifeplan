@@ -160,6 +160,12 @@ export class SlotBuilder {
 
     for (const period of dayPeriods) {
       const catLoc = period.locationId!;
+      // DEBUG: Log category boundary splits
+      console.log("CATEGORY SPLIT:", {
+        periodStart: period.start.toISOString(),
+        periodEnd: period.end.toISOString(),
+        catLoc,
+      });
       const boundaries = [period.start, period.end].filter(
         (b) => b.getTime() > dayStartMs && b.getTime() < dayEndMs,
       );
@@ -244,6 +250,15 @@ export class SlotBuilder {
         result.push(slot);
         continue;
       }
+
+      // DEBUG: Log travel-triggering slots
+      console.log("CARVE TRAVEL:", {
+        slotStart: slot.start.toISOString(),
+        slotEnd: slot.end.toISOString(),
+        prevLoc,
+        nextLoc,
+        duration: slot.durationMinutes,
+      });
 
       const travelMinutes = this.travelManager.getTravelTime(
         prevLoc,
