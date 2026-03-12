@@ -4,14 +4,23 @@
  * Builds initial time slots for scheduling
  */
 
-import { SimpleEvent } from "@/types/prisma";
+import { Planner, SimpleEvent } from "@/types/prisma";
 import { TimeSlotManager } from "../../TimeSlotManager";
 import { PerTemplateMask } from "../../TemplateExpander";
+
+function weeksNeededForPlans(planners: Planner[], currentDate: Date): number {
+  const furthestPlanMs = planners
+    .filter((p) => p.itemType === "plan" && p.starts)
+    .reduce((max, p) => Math.max(max, new Date(p.starts!).getTime()), currentDate.getTime());
+  const days = Math.ceil((furthestPlanMs - currentDate.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.ceil(days / 7);
+}
 
 export function buildInitialSlots(
   slotManager: TimeSlotManager,
   currentDate: Date,
   initialWeeks: number,
+  planners: Planner[],
   eventArray: SimpleEvent[],
   perTemplateMasks: PerTemplateMask[],
   plannerLocationMap: Map<string, string | null>,
@@ -54,9 +63,10 @@ export function buildInitialSlots(
   }
 
   // Build daily slots
+  const weeks = Math.max(initialWeeks, weeksNeededForPlans(planners, currentDate));
   slotManager.buildDailySlots(
     currentDate,
-    initialWeeks * 7,
+    weeks * 7,
     eventArray,
     perTemplateMasks,
     plannerLocationMap

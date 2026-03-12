@@ -126,7 +126,8 @@ export class CalendarGenerator {
     buildInitialSlots(
       this.slotManager,
       currentDate,
-      2, // initial weeks
+      2,
+      input.planners,
       filteredEvents,
       perTemplateMasks,
       plannerLocationMap,
