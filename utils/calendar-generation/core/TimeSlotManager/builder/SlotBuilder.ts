@@ -23,6 +23,8 @@ export class SlotBuilder {
     start: Date;
     end: Date;
     locationId: string | null;
+    categoryId: string;
+    isStrict: boolean;
   }> = [];
 
   constructor(
@@ -35,7 +37,7 @@ export class SlotBuilder {
   ) {}
 
   setCategoryPeriods(
-    periods: Array<{ start: Date; end: Date; locationId: string | null }>,
+    periods: Array<{ start: Date; end: Date; locationId: string | null; categoryId: string; isStrict: boolean }>,
   ): void {
     this.categoryPeriods = periods;
   }
@@ -131,13 +133,16 @@ export class SlotBuilder {
   }
 
   /**
-   * Split available slots at category boundaries so that category location
-   * transitions are visible in the prevLocationId/nextLocationId chain.
+   * Split available slots at category boundaries so that:
+   * 1. Category location transitions are visible in the prevLocationId/nextLocationId chain
+   * 2. Each slot fragment is tagged with the categoryId it falls within
    *
-   * At each boundary (start or end of a category period), if an available slot
-   * spans that boundary, it is split into two slots:
-   * - Before portion: nextLocationId = categoryLocationId
-   * - After portion: prevLocationId = categoryLocationId
+   * For each period boundary, we distinguish entering (period start) vs exiting (period end):
+   * - Entering: before-fragment is outside, after-fragment is inside
+   * - Exiting:  before-fragment is inside, after-fragment is outside
+   *
+   * After boundary splits, a second pass tags any slots that were entirely inside
+   * a category period and never hit a boundary.
    */
   private splitSlotsAtCategoryBoundaries(
     slots: TimeSlot[],
@@ -150,8 +155,7 @@ export class SlotBuilder {
     const dayPeriods = this.categoryPeriods.filter(
       (p) =>
         p.start.getTime() < dayEndMs &&
-        p.end.getTime() > dayStartMs &&
-        p.locationId !== null,
+        p.end.getTime() > dayStartMs,
     );
 
     if (dayPeriods.length === 0) return slots;
@@ -159,12 +163,17 @@ export class SlotBuilder {
     let result = slots;
 
     for (const period of dayPeriods) {
-      const catLoc = period.locationId!;
-      const boundaries = [period.start, period.end].filter(
-        (b) => b.getTime() > dayStartMs && b.getTime() < dayEndMs,
-      );
+      const catLoc = period.locationId;
+      const boundaries: Array<{ time: Date; entering: boolean }> = [];
 
-      for (const boundary of boundaries) {
+      if (period.start.getTime() > dayStartMs && period.start.getTime() < dayEndMs) {
+        boundaries.push({ time: period.start, entering: true });
+      }
+      if (period.end.getTime() > dayStartMs && period.end.getTime() < dayEndMs) {
+        boundaries.push({ time: period.end, entering: false });
+      }
+
+      for (const { time: boundary, entering } of boundaries) {
         const boundaryMs = boundary.getTime();
         const newResult: TimeSlot[] = [];
 
@@ -178,32 +187,36 @@ export class SlotBuilder {
           const slotEndMs = slot.end.getTime();
 
           if (boundaryMs > slotStartMs && boundaryMs < slotEndMs) {
-            const beforeDuration = Math.floor(
-              (boundaryMs - slotStartMs) / 60000,
-            );
-            const afterDuration = Math.floor(
-              (slotEndMs - boundaryMs) / 60000,
-            );
+            const beforeDuration = Math.floor((boundaryMs - slotStartMs) / 60000);
+            const afterDuration = Math.floor((slotEndMs - boundaryMs) / 60000);
 
+            // Before-fragment is inside the period only when exiting (at period end)
             if (beforeDuration > 0) {
+              const isInside = !entering;
               newResult.push({
                 start: slot.start,
                 end: new Date(boundaryMs),
                 durationMinutes: beforeDuration,
                 isAvailable: true,
                 prevLocationId: slot.prevLocationId,
-                nextLocationId: catLoc,
+                nextLocationId: catLoc !== null ? catLoc : slot.nextLocationId,
+                categoryId: isInside ? period.categoryId : null,
+                isStrictCategory: isInside ? period.isStrict : false,
               });
             }
 
+            // After-fragment is inside the period only when entering (at period start)
             if (afterDuration > 0) {
+              const isInside = entering;
               newResult.push({
                 start: new Date(boundaryMs),
                 end: slot.end,
                 durationMinutes: afterDuration,
                 isAvailable: true,
-                prevLocationId: catLoc,
+                prevLocationId: catLoc !== null ? catLoc : slot.prevLocationId,
                 nextLocationId: slot.nextLocationId,
+                categoryId: isInside ? period.categoryId : null,
+                isStrictCategory: isInside ? period.isStrict : false,
               });
             }
           } else {
@@ -214,6 +227,25 @@ export class SlotBuilder {
         result = newResult;
       }
     }
+
+    // Second pass: tag slots that were entirely inside a category period and never
+    // hit a boundary (categoryId is still undefined on them).
+    result = result.map((slot) => {
+      if (!slot.isAvailable || slot.categoryId !== undefined) return slot;
+
+      const slotMidMs = (slot.start.getTime() + slot.end.getTime()) / 2;
+      for (const period of dayPeriods) {
+        if (slotMidMs >= period.start.getTime() && slotMidMs < period.end.getTime()) {
+          return {
+            ...slot,
+            categoryId: period.categoryId,
+            isStrictCategory: period.isStrict,
+          };
+        }
+      }
+
+      return { ...slot, categoryId: null, isStrictCategory: false };
+    });
 
     return result;
   }

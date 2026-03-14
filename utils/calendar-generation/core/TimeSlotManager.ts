@@ -118,7 +118,7 @@ export class TimeSlotManager {
   // ===== Category Period Management =====
 
   setCategoryPeriods(
-    periods: Array<{ start: Date; end: Date; locationId: string | null }>,
+    periods: Array<{ start: Date; end: Date; locationId: string | null; categoryId: string; isStrict: boolean }>,
   ): void {
     this.slotBuilder.setCategoryPeriods(periods);
   }

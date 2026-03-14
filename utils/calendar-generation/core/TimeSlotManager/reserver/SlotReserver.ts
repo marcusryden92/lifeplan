@@ -208,6 +208,8 @@ export class SlotReserver {
         isAvailable: true,
         prevLocationId: slot.prevLocationId,
         nextLocationId: taskLocationId ?? slot.nextLocationId,
+        categoryId: slot.categoryId,
+        isStrictCategory: slot.isStrictCategory,
       });
     }
 
@@ -345,6 +347,8 @@ export class SlotReserver {
         isAvailable: true,
         prevLocationId: freeSlotPrevLocation,
         nextLocationId: slot.nextLocationId,
+        categoryId: slot.categoryId,
+        isStrictCategory: slot.isStrictCategory,
       });
     }
 

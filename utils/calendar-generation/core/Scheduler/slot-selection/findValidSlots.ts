@@ -13,7 +13,6 @@ import {
 } from "../../../models/SchedulingModels";
 import { TimeSlot } from "../../../models/TimeSlot";
 import { SchedulingFailureReason } from "../../../constants";
-import { canScheduleAtTime } from "../../../utils/categoryConstraintUtils";
 
 export interface FindValidSlotsResult {
   validSlots: TimeSlot[];
@@ -62,19 +61,16 @@ export function findValidSlots(
     };
   }
 
-  // Filter slots by category time constraints
-  const categoryConstraints = context.categoryConstraints;
-
-  const validSlots = categoryConstraints
-    ? fittingSlots.filter((slot) =>
-        canScheduleAtTime(
-          slot.start,
-          effectiveCategoryId,
-          categoryConstraints,
-          task.duration
-        )
-      )
-    : fittingSlots;
+  // Filter slots by category identity:
+  // - Categorized task: must be placed within its own category's window (slot.categoryId must match)
+  // - Uncategorized task: cannot be placed inside a strict category's window
+  const validSlots = fittingSlots.filter((slot) => {
+    if (effectiveCategoryId) {
+      return slot.categoryId === effectiveCategoryId;
+    } else {
+      return !slot.isStrictCategory;
+    }
+  });
 
   if (validSlots.length === 0) {
     return {

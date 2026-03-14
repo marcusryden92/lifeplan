@@ -30,6 +30,10 @@ export interface TimeSlot {
   insufficientTravel?: boolean;
   /** For travel slots: the original required travel time in minutes */
   requiredTravelMinutes?: number;
+  /** Category that owns this time window, null if uncategorized free time */
+  categoryId?: string | null;
+  /** Whether this slot belongs to a strict category (blocks uncategorized tasks) */
+  isStrictCategory?: boolean;
 }
 
 export interface TimeSlotBlock {
@@ -83,11 +87,12 @@ export class TimeSlotUtils {
       const current = sorted[i];
       const last = merged[merged.length - 1];
 
-      // If slots are adjacent and both available, merge them
+      // If slots are adjacent, both available, and in the same category window, merge them
       if (
         last.isAvailable &&
         current.isAvailable &&
-        last.end.getTime() === current.start.getTime()
+        last.end.getTime() === current.start.getTime() &&
+        last.categoryId === current.categoryId
       ) {
         last.end = current.end;
         last.durationMinutes = TimeSlotUtils.getDurationMinutes(last);
@@ -121,6 +126,8 @@ export class TimeSlotUtils {
       isAvailable: slot.isAvailable,
       eventId: slot.eventId,
       eventType: slot.eventType,
+      categoryId: slot.categoryId,
+      isStrictCategory: slot.isStrictCategory,
     };
 
     const after: TimeSlot = {
@@ -132,6 +139,8 @@ export class TimeSlotUtils {
       isAvailable: slot.isAvailable,
       eventId: slot.eventId,
       eventType: slot.eventType,
+      categoryId: slot.categoryId,
+      isStrictCategory: slot.isStrictCategory,
     };
 
     return [before, after];
@@ -175,6 +184,8 @@ export class TimeSlotUtils {
         isAvailable: true,
         prevLocationId: slot.prevLocationId,
         nextLocationId: locationId ?? null,  // null means no travel needed to reach this event
+        categoryId: slot.categoryId,
+        isStrictCategory: slot.isStrictCategory,
       });
     }
 
@@ -202,6 +213,8 @@ export class TimeSlotUtils {
         isAvailable: true,
         prevLocationId: afterSlotPrevLocation,
         nextLocationId: slot.nextLocationId,
+        categoryId: slot.categoryId,
+        isStrictCategory: slot.isStrictCategory,
       });
     }
 

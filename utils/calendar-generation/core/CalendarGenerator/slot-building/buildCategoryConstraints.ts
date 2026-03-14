@@ -28,6 +28,8 @@ export interface CategoryPeriodsResult {
     start: Date;
     end: Date;
     locationId: string | null;
+    categoryId: string;
+    isStrict: boolean;
   }>;
 }
 
@@ -61,16 +63,17 @@ export function buildCategoryConstraints(
         )
       : [];
 
-  // Build wrapper periods with locations for slot manager
-  const wrapperPeriodsForManager = categoryPeriodsStatic
-    .map((p) => ({
-      start: p.start,
-      end: p.end,
-      locationId:
-        categoryConstraintsList.find((c) => c.id === p.categoryId)?.locationId ??
-        null,
-    }))
-    .filter((w) => w.locationId !== null);
+  // Build wrapper periods for slot manager — all periods, not just those with locations,
+  // so that location-less categories still participate in slot identity tagging.
+  const wrapperPeriodsForManager = categoryPeriodsStatic.map((p) => ({
+    start: p.start,
+    end: p.end,
+    locationId:
+      categoryConstraintsList.find((c) => c.id === p.categoryId)?.locationId ??
+      null,
+    categoryId: p.categoryId,
+    isStrict: p.isStrict,
+  }));
 
   return {
     categoryConstraintMap,

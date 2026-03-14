@@ -24,7 +24,7 @@ export function buildInitialSlots(
   eventArray: SimpleEvent[],
   perTemplateMasks: PerTemplateMask[],
   plannerLocationMap: Map<string, string | null>,
-  wrapperPeriods: Array<{ start: Date; end: Date; locationId: string | null }>,
+  wrapperPeriods: Array<{ start: Date; end: Date; locationId: string | null; categoryId: string; isStrict: boolean }>,
   enableLogging: boolean
 ): void {
   slotManager.clear();
