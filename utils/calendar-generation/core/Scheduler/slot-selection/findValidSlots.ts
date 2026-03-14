@@ -28,10 +28,11 @@ export function findValidSlots(
   context: SchedulingContext,
   afterTime?: Date
 ): FindValidSlotsResult | { failure: SchedulingFailure } {
-  // Get task's effective location from the pre-built planner location map,
-  // which respects useParentLocation, parent-chain inheritance, and category fallback
+  // Use the travel-specific location map (no category fallback) so that items
+  // whose location comes solely from a category don't generate travel events.
+  // The category window constraint already co-locates them with same-category items.
   const taskLocationId =
-    context.plannerLocationMap?.get(task.id) ?? null;
+    context.plannerTravelLocationMap?.get(task.id) ?? null;
 
   // Resolve effective category from parent chain via pre-built map
   const effectiveCategoryId =

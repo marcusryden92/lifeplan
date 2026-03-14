@@ -11,7 +11,10 @@ export function buildLocationMap(
   planners: Planner[],
   templates: EventTemplate[],
   categories: Category[]
-): Map<string, string | null> {
+): { locationMap: Map<string, string | null>; travelLocationMap: Map<string, string | null> } {
   const locationMapper = new LocationMapper(categories);
-  return locationMapper.buildLocationMap(planners, templates);
+  return {
+    locationMap: locationMapper.buildLocationMap(planners, templates),
+    travelLocationMap: locationMapper.buildTravelLocationMap(planners, templates),
+  };
 }

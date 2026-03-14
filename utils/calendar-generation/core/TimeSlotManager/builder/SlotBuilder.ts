@@ -228,7 +228,13 @@ export class SlotBuilder {
     dayStart: Date,
   ): TimeSlot[] {
     const dayKey = this.getDayKeyFn(dayStart);
-    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+    // Remove any previously carved gap-travel for this day so rebuilding a day
+    // doesn't accumulate duplicate entries in occupiedSlots.
+    const occupiedSlots = (this.occupiedSlots.get(dayKey) || []).filter(
+      (s) =>
+        !s.eventId?.startsWith("travel-gap-") &&
+        !s.eventId?.startsWith("travel-insufficient-"),
+    );
     const result: TimeSlot[] = [];
 
     for (const slot of slots) {
@@ -291,7 +297,7 @@ export class SlotBuilder {
             ),
             isAvailable: true,
             prevLocationId: slot.prevLocationId,
-            nextLocationId: prevLoc,
+            nextLocationId: nextLoc,
           });
         }
       } else {

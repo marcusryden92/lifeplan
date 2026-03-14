@@ -77,15 +77,19 @@ export class SlotFinder {
               );
 
               if (effectiveMinutes >= baseRequiredMinutes) {
-                // Inside a category window: prefer the category's location context for travel
+                // Actual slot location context (from adjacent events) takes priority.
+                // Category location is a fallback only when the slot has no context.
                 const categoryLoc = categoryConstraint?.locationId ?? null;
+                const resolvedPrev = slot.prevLocationId ?? categoryLoc;
+                const resolvedNext = slot.nextLocationId ?? categoryLoc;
+                // console.log(`[SlotFinder] category slot: ${effectiveStart.toISOString()} -> ${intersectEnd.toISOString()} | slot.prev=${slot.prevLocationId} slot.next=${slot.nextLocationId} catLoc=${categoryLoc} => prev=${resolvedPrev} next=${resolvedNext}`);
                 fittingSlots.push({
                   ...slot,
                   start: effectiveStart,
                   end: intersectEnd,
                   durationMinutes: effectiveMinutes,
-                  prevLocationId: categoryLoc ?? slot.prevLocationId,
-                  nextLocationId: categoryLoc ?? slot.nextLocationId,
+                  prevLocationId: resolvedPrev,
+                  nextLocationId: resolvedNext,
                 });
               }
             }

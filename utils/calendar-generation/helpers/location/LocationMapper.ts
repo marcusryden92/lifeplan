@@ -46,6 +46,48 @@ export class LocationMapper {
     return locationMap;
   }
 
+  /**
+   * Builds a location map for travel calculation only.
+   * Does NOT fall back to category location — items with no own or parent-chain
+   * location resolve to null ("anywhere"), so they don't generate travel events.
+   */
+  buildTravelLocationMap(
+    planners: Planner[],
+    templates: EventTemplate[]
+  ): Map<string, string | null> {
+    const locationMap = new Map<string, string | null>();
+
+    this.plannerMap = new Map();
+    for (const planner of planners) {
+      this.plannerMap.set(planner.id, planner);
+    }
+
+    for (const planner of planners) {
+      locationMap.set(planner.id, this.resolveTravelLocation(planner));
+    }
+
+    for (const template of templates) {
+      locationMap.set(template.id, template.locationId ?? null);
+    }
+
+    return locationMap;
+  }
+
+  private resolveTravelLocation(planner: Planner): string | null {
+    if (planner.itemType === "plan") {
+      return planner.locationId ?? null;
+    }
+
+    if (!planner.useParentLocation && planner.locationId) {
+      return planner.locationId;
+    }
+
+    const ancestorLocation = this.findAncestorLocation(planner.parentId);
+    if (ancestorLocation) return ancestorLocation;
+
+    return null;
+  }
+
   private resolveLocation(planner: Planner): string | null {
     // Plan items always use their own location (no inheritance)
     if (planner.itemType === "plan") {

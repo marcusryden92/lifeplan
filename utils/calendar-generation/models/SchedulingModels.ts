@@ -86,6 +86,8 @@ export interface SchedulingContext {
   categoryConstraints?: Map<string, CategoryConstraint>;
   /** Effective planner -> location map (includes category inheritance) */
   plannerLocationMap?: Map<string, string | null>;
+  /** Planner -> location map for travel calculation only (no category fallback) */
+  plannerTravelLocationMap?: Map<string, string | null>;
   /** Effective planner -> categoryId map (resolved by walking up parent chain) */
   plannerCategoryMap?: Map<string, string | null>;
 }
