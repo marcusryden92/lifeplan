@@ -468,6 +468,55 @@ export class SlotBuilder {
         }
       }
 
+      // Mirror of catSlotTooSmall: last category slot returning from a foreign plan is
+      // fully consumed by return travel (planLoc→catLoc >= slot duration). Skip the
+      // intermediate catLoc stop and travel direct planLoc→destLoc from slot.start,
+      // absorbing the immediately-following post-category slot.
+      if (placeAtStart && slot.categoryId) {
+        const nextSlot = i + 1 < slots.length ? slots[i + 1] : null;
+        if (
+          travelMinutes >= slot.durationMinutes &&
+          nextSlot?.isAvailable &&
+          !nextSlot.categoryId &&
+          nextSlot.start.getTime() === slot.end.getTime() &&
+          nextSlot.prevLocationId === nextLoc &&
+          nextSlot.nextLocationId
+        ) {
+          const dLoc = nextSlot.nextLocationId;
+          const directMinutes = this.travelManager.getTravelTime(prevLoc, dLoc, slot.start);
+          const spanEnd = nextSlot.end;
+          const travelEnd = new Date(slot.start.getTime() + directMinutes * 60000);
+
+          if (travelEnd.getTime() <= spanEnd.getTime()) {
+            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+              slot.start, travelEnd, prevLoc, dLoc,
+              `travel-gap-${slot.start.getTime()}`,
+            ));
+            const availStart = new Date(travelEnd.getTime() + bufferMs);
+            if (availStart.getTime() < spanEnd.getTime()) {
+              result.push({
+                start: availStart,
+                end: spanEnd,
+                durationMinutes: Math.floor((spanEnd.getTime() - availStart.getTime()) / 60000),
+                isAvailable: true,
+                prevLocationId: dLoc,
+                nextLocationId: nextSlot.nextLocationId,
+                categoryId: null,
+                isStrictCategory: false,
+              });
+            }
+          } else {
+            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+              slot.start, spanEnd, prevLoc, dLoc,
+              `travel-insufficient-${slot.start.getTime()}`,
+              { insufficientTravel: true, requiredTravelMinutes: directMinutes },
+            ));
+          }
+          skipNextSlot = true;
+          continue;
+        }
+      }
+
       if (placeAtStart) {
         // Travel at START: immediately after preceding fixed event
         const travelStart = new Date(slot.start.getTime());
