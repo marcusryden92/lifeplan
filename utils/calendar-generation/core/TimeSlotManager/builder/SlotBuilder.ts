@@ -370,6 +370,58 @@ export class SlotBuilder {
         }
       }
 
+      // Double-transition inside a category: both prevLoc and nextLoc are foreign
+      // (e.g. slot follows Plan A at varmdo and precedes Plan B at gym, inside work window).
+      // Place travel-at-START (return to category home) and travel-at-END (depart for
+      // next event) as two separate events if both fit; otherwise fall through to the
+      // single merged prevLoc→nextLoc travel below.
+      if (slot.categoryId) {
+        const categoryPeriod = this.categoryPeriods.find(
+          (p) => p.categoryId === slot.categoryId,
+        );
+        const catLoc = categoryPeriod?.locationId ?? null;
+        if (catLoc && prevLoc !== catLoc && nextLoc !== catLoc) {
+          const travelBeforeMinutes = this.travelManager.getTravelTime(prevLoc, catLoc, slot.start);
+          const travelAfterMinutes = this.travelManager.getTravelTime(catLoc, nextLoc, slot.end);
+          const travelBeforeMs = travelBeforeMinutes * 60000;
+          const travelAfterMs = travelAfterMinutes * 60000;
+          const slotMs = slot.end.getTime() - slot.start.getTime();
+
+          if (travelBeforeMs + travelAfterMs <= slotMs) {
+            const travelBeforeEnd = new Date(slot.start.getTime() + travelBeforeMs);
+            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+              slot.start, travelBeforeEnd, prevLoc, catLoc,
+              `travel-gap-${slot.start.getTime()}`,
+            ));
+
+            const travelAfterStart = new Date(slot.end.getTime() - travelAfterMs);
+            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+              travelAfterStart, slot.end, catLoc, nextLoc,
+              `travel-gap-${slot.end.getTime()}`,
+            ));
+
+            const availStart = new Date(travelBeforeEnd.getTime() + bufferMs);
+            const availEnd = new Date(travelAfterStart.getTime() - bufferMs);
+            if (availEnd.getTime() > availStart.getTime()) {
+              result.push({
+                start: availStart,
+                end: availEnd,
+                durationMinutes: Math.floor(
+                  (availEnd.getTime() - availStart.getTime()) / 60000,
+                ),
+                isAvailable: true,
+                prevLocationId: catLoc,
+                nextLocationId: catLoc,
+                categoryId: slot.categoryId,
+                isStrictCategory: slot.isStrictCategory,
+              });
+            }
+            continue;
+          }
+          // Both don't fit — fall through to single merged travel (prevLoc→nextLoc).
+        }
+      }
+
       if (placeAtStart) {
         // Travel at START: immediately after preceding fixed event
         const travelStart = new Date(slot.start.getTime());
