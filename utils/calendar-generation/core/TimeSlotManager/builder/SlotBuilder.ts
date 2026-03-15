@@ -279,7 +279,9 @@ export class SlotBuilder {
     // "returning home" transitions in non-category slots.
     const dayHomeLoc = slots.find((s) => s.isAvailable)?.prevLocationId ?? null;
 
+    let skipNextSlot = false;
     for (let i = 0; i < slots.length; i++) {
+      if (skipNextSlot) { skipNextSlot = false; continue; }
       const slot = slots[i];
       const bufferMs = this.bufferTimeMinutes * 60000;
 
@@ -316,6 +318,57 @@ export class SlotBuilder {
       }
 
       const travelMs = travelMinutes * 60000;
+
+      // Detect "A → cat → B" double-travel chains where combined travel exceeds the gap.
+      // When Plan A returns to category and the category slot immediately goes to Plan B,
+      // replace both hops with a single direct A→B travel if the two-hop route doesn't fit.
+      if (!placeAtStart && !slot.categoryId) {
+        const nextSlot = i + 1 < slots.length ? slots[i + 1] : null;
+        if (
+          nextSlot?.isAvailable &&
+          nextSlot.categoryId &&
+          nextSlot.start.getTime() === slot.end.getTime() &&
+          nextSlot.nextLocationId &&
+          nextSlot.nextLocationId !== nextLoc
+        ) {
+          const bLoc = nextSlot.nextLocationId;
+          const travelCatToB = this.travelManager.getTravelTime(nextLoc, bLoc, nextSlot.end);
+          if (travelCatToB > 0) {
+            const availableMinutes = slot.durationMinutes + nextSlot.durationMinutes;
+            const combinedMinutes = travelMinutes + this.bufferTimeMinutes + travelCatToB;
+            if (combinedMinutes > availableMinutes) {
+              const directMinutes = this.travelManager.getTravelTime(prevLoc, bLoc, slot.start);
+              const travelEnd = new Date(slot.start.getTime() + directMinutes * 60000);
+              const spanEnd = nextSlot.end;
+              if (travelEnd.getTime() <= spanEnd.getTime()) {
+                occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+                  slot.start, travelEnd, prevLoc, bLoc,
+                  `travel-gap-${slot.start.getTime()}`,
+                ));
+                const newCatStart = new Date(travelEnd.getTime() + bufferMs);
+                if (newCatStart.getTime() < spanEnd.getTime()) {
+                  slots[i + 1] = {
+                    ...nextSlot,
+                    start: newCatStart,
+                    durationMinutes: Math.floor((spanEnd.getTime() - newCatStart.getTime()) / 60000),
+                    prevLocationId: bLoc,
+                  };
+                } else {
+                  skipNextSlot = true;
+                }
+              } else {
+                occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+                  slot.start, spanEnd, prevLoc, bLoc,
+                  `travel-insufficient-${slot.start.getTime()}`,
+                  { insufficientTravel: true, requiredTravelMinutes: directMinutes },
+                ));
+                skipNextSlot = true;
+              }
+              continue;
+            }
+          }
+        }
+      }
 
       if (placeAtStart) {
         // Travel at START: immediately after preceding fixed event
