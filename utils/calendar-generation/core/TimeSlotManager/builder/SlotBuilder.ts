@@ -279,7 +279,10 @@ export class SlotBuilder {
     // "returning home" transitions in non-category slots.
     const dayHomeLoc = slots.find((s) => s.isAvailable)?.prevLocationId ?? null;
 
-    for (const slot of slots) {
+    for (let i = 0; i < slots.length; i++) {
+      const slot = slots[i];
+      const bufferMs = this.bufferTimeMinutes * 60000;
+
       if (!slot.isAvailable) {
         result.push(slot);
         continue;
@@ -313,7 +316,6 @@ export class SlotBuilder {
       }
 
       const travelMs = travelMinutes * 60000;
-      const bufferMs = this.bufferTimeMinutes * 60000;
 
       if (placeAtStart) {
         // Travel at START: immediately after preceding fixed event
@@ -386,14 +388,42 @@ export class SlotBuilder {
             });
           }
         } else {
-          occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-            slot.start,
-            slot.end,
-            prevLoc,
-            nextLoc,
-            `travel-insufficient-${slot.start.getTime()}`,
-            { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
-          ));
+          // Travel doesn't fit before the category boundary. If the very next slot is
+          // an adjacent category slot, start the travel adjacent to the plan and let it
+          // bleed through the boundary — trimming the category slot's start accordingly.
+          const nextSlot = i + 1 < slots.length ? slots[i + 1] : null;
+          if (
+            !slot.categoryId &&
+            nextSlot?.isAvailable &&
+            nextSlot.categoryId &&
+            nextSlot.start.getTime() === slot.end.getTime()
+          ) {
+            const bleedEnd = new Date(slot.start.getTime() + travelMs);
+            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+              slot.start, bleedEnd, prevLoc, nextLoc,
+              `travel-gap-${slot.start.getTime()}`,
+            ));
+            // Shrink the category slot's start to after the bleeding travel.
+            const newCatStart = new Date(bleedEnd.getTime() + bufferMs);
+            if (newCatStart.getTime() < nextSlot.end.getTime()) {
+              slots[i + 1] = {
+                ...nextSlot,
+                start: newCatStart,
+                durationMinutes: Math.floor((nextSlot.end.getTime() - newCatStart.getTime()) / 60000),
+                prevLocationId: nextLoc,
+              };
+            }
+            // Pre-category slot fully consumed by travel — not pushed to result.
+          } else {
+            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+              slot.start,
+              slot.end,
+              prevLoc,
+              nextLoc,
+              `travel-insufficient-${slot.start.getTime()}`,
+              { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
+            ));
+          }
         }
       }
     }
