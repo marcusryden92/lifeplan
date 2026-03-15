@@ -278,10 +278,16 @@ export function findGaps(
     const gapEnd = merged[i + 1].start;
 
     if (gapStart < gapEnd) {
+      // Walk backward to find the nearest located event (skip "anywhere" items with null location)
+      let prevLoc: string | null = null;
+      for (let j = i; j >= 0; j--) {
+        if (merged[j].locationId != null) { prevLoc = merged[j].locationId!; break; }
+      }
+
       gaps.push({
         start: gapStart,
         end: gapEnd,
-        prevLocationId: merged[i].locationId ?? null,
+        prevLocationId: prevLoc,
         nextLocationId: merged[i + 1].locationId ?? null,
       });
     }
@@ -290,11 +296,17 @@ export function findGaps(
   // Check for gap after last interval
   const lastInterval = merged[merged.length - 1];
   if (lastInterval.end < rangeEnd) {
+    // Walk backward to find the nearest located event
+    let prevLoc: string | null = null;
+    for (let j = merged.length - 1; j >= 0; j--) {
+      if (merged[j].locationId != null) { prevLoc = merged[j].locationId!; break; }
+    }
+
     gaps.push({
       start: lastInterval.end,
       end: rangeEnd,
-      prevLocationId: lastInterval.locationId ?? null,
-      nextLocationId: null, // No event after the range end
+      prevLocationId: prevLoc,
+      nextLocationId: null,
     });
   }
 
