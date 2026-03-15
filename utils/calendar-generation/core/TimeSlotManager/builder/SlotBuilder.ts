@@ -275,6 +275,10 @@ export class SlotBuilder {
     );
     const result: TimeSlot[] = [];
 
+    // The location where the day starts (before the first event) — used to identify
+    // "returning home" transitions in non-category slots.
+    const dayHomeLoc = slots.find((s) => s.isAvailable)?.prevLocationId ?? null;
+
     for (const slot of slots) {
       if (!slot.isAvailable) {
         result.push(slot);
@@ -294,7 +298,7 @@ export class SlotBuilder {
         continue;
       }
 
-      const placeAtStart = this.shouldPlaceTravelAtStart(slot, prevLoc, nextLoc);
+      const placeAtStart = this.shouldPlaceTravelAtStart(slot, prevLoc, nextLoc, dayHomeLoc);
       const travelDepartureTime = placeAtStart ? slot.start : slot.end;
 
       const travelMinutes = this.travelManager.getTravelTime(
@@ -402,25 +406,38 @@ export class SlotBuilder {
    * Returns true if pre-carved gap travel should be placed at the START of the slot
    * (return immediately after the preceding event) rather than at the end.
    *
-   * This applies when the slot is inside a category window and we are returning
-   * from a foreign location back to the category's base location — i.e., prevLoc
-   * is the foreign event's location and nextLoc matches the category's locationId.
-   * Placing travel at the start ensures subsequent tasks resume in the home-location
-   * context rather than filling the foreign-location transition zone.
+   * Two cases trigger this:
+   *
+   * Case 1 — inside a category window: prevLoc is a foreign location and nextLoc
+   * matches the category's base location (returning to category home after a detour).
+   *
+   * Case 2 — outside any category: prevLoc is a foreign location and nextLoc matches
+   * the day's starting location (returning to the "home" location after a round trip,
+   * e.g. a standalone plan at a foreign location on a day with no formal category).
+   *
+   * In both cases placing travel at the start ensures subsequent tasks resume in the
+   * correct home-location context rather than filling the foreign-location gap.
    */
   private shouldPlaceTravelAtStart(
     slot: TimeSlot,
     prevLoc: string,
     nextLoc: string,
+    dayHomeLoc: string | null,
   ): boolean {
-    if (!slot.categoryId) return false;
+    if (slot.categoryId) {
+      // Case 1: within a category window
+      const categoryPeriod = this.categoryPeriods.find(
+        (p) => p.categoryId === slot.categoryId,
+      );
+      if (categoryPeriod?.locationId) {
+        return prevLoc !== categoryPeriod.locationId && nextLoc === categoryPeriod.locationId;
+      }
+    } else if (dayHomeLoc && prevLoc !== dayHomeLoc && nextLoc === dayHomeLoc) {
+      // Case 2: outside any category, returning to the day's starting location
+      return true;
+    }
 
-    const categoryPeriod = this.categoryPeriods.find(
-      (p) => p.categoryId === slot.categoryId,
-    );
-    if (!categoryPeriod?.locationId) return false;
-
-    return prevLoc !== categoryPeriod.locationId && nextLoc === categoryPeriod.locationId;
+    return false;
   }
 
   /**
