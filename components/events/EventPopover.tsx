@@ -76,13 +76,13 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   }, [categoryHasLocation, plannerItem?.useParentLocation]);
 
   const handleLocationChange = async (locationId: string | null) => {
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === event.id ? { ...p, locationId: locationId } : p
+      )
+    );
     try {
       await assignLocationToPlanner(event.id, locationId);
-      updatePlannerArray((prev) =>
-        prev.map((p) =>
-          p.id === event.id ? { ...p, locationId: locationId } : p
-        )
-      );
     } catch (error) {
       console.error("Failed to update location:", error);
     }
@@ -93,14 +93,14 @@ const EventPopover: React.FC<EventPopoverProps> = ({
 
     const newOverrideEnabled = !locationOverrideEnabled;
     const newUseParent = !newOverrideEnabled;
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === plannerItem.id ? { ...p, useParentLocation: newUseParent } : p
+      )
+    );
+    setLocationOverrideEnabled(newOverrideEnabled);
     try {
       await setUseParentLocation(plannerItem.id, newUseParent);
-      updatePlannerArray((prev) =>
-        prev.map((p) =>
-          p.id === plannerItem.id ? { ...p, useParentLocation: newUseParent } : p
-        )
-      );
-      setLocationOverrideEnabled(newOverrideEnabled);
     } catch (error) {
       console.error("Failed to toggle location override:", error);
     }
