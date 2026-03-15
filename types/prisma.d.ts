@@ -13,6 +13,11 @@ export type SimpleEvent = Omit<
     | (Prisma.EventExtendedPropsGetPayload<undefined> & {
         categoryWrapperId?: string | null;
         wrapperId?: string | null;
+        fromLocationId?: string | null;
+        toLocationId?: string | null;
+        travelMinutes?: number | null;
+        insufficientTravel?: boolean;
+        requiredTravelMinutes?: number | null;
       })
     | null;
 };
