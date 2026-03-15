@@ -252,7 +252,13 @@ export class SlotBuilder {
 
   /**
    * Walk the slot chain and carve travel slots where prevLocationId != nextLocationId.
-   * Travel is placed at the END of the available slot (right before the next event/boundary).
+   *
+   * Direction of travel placement:
+   * - "Going to" a foreign event: travel at END of slot (depart as late as possible).
+   * - "Returning from" a foreign event inside a category window: travel at START of slot
+   *   (return to the category's home location immediately, so subsequent tasks are
+   *   back in the home-location context rather than in the foreign-location transition zone).
+   *
    * Returns only the remaining available slots; travel slots go to occupiedSlots.
    */
   private carveTravelFromChain(
@@ -283,10 +289,18 @@ export class SlotBuilder {
         continue;
       }
 
+      if (slot.durationMinutes <= 0) {
+        result.push(slot);
+        continue;
+      }
+
+      const placeAtStart = this.shouldPlaceTravelAtStart(slot, prevLoc, nextLoc);
+      const travelDepartureTime = placeAtStart ? slot.start : slot.end;
+
       const travelMinutes = this.travelManager.getTravelTime(
         prevLoc,
         nextLoc,
-        slot.end,
+        travelDepartureTime,
       );
 
       if (travelMinutes <= 0) {
@@ -294,63 +308,119 @@ export class SlotBuilder {
         continue;
       }
 
-      if (slot.durationMinutes <= 0) {
-        result.push(slot);
-        continue;
-      }
-
       const travelMs = travelMinutes * 60000;
       const bufferMs = this.bufferTimeMinutes * 60000;
-      const travelEnd = new Date(slot.end.getTime());
-      const travelStart = new Date(travelEnd.getTime() - travelMs);
 
-      if (travelStart.getTime() >= slot.start.getTime()) {
-        // Normal: enough room for full travel
-        const travelSlot = TimeSlotUtils.createTravelSlot(
-          travelStart,
-          travelEnd,
-          prevLoc,
-          nextLoc,
-          `travel-gap-${slot.start.getTime()}`,
-        );
-        occupiedSlots.push(travelSlot);
+      if (placeAtStart) {
+        // Travel at START: immediately after preceding fixed event
+        const travelStart = new Date(slot.start.getTime());
+        const travelEnd = new Date(travelStart.getTime() + travelMs);
 
-        const availableEndMs = Math.max(
-          slot.start.getTime(),
-          travelStart.getTime() - bufferMs,
-        );
+        if (travelEnd.getTime() <= slot.end.getTime()) {
+          occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+            travelStart,
+            travelEnd,
+            prevLoc,
+            nextLoc,
+            `travel-gap-${slot.start.getTime()}`,
+          ));
 
-        if (availableEndMs > slot.start.getTime()) {
-          result.push({
-            start: slot.start,
-            end: new Date(availableEndMs),
-            durationMinutes: Math.floor(
-              (availableEndMs - slot.start.getTime()) / 60000,
-            ),
-            isAvailable: true,
-            prevLocationId: slot.prevLocationId,
-            nextLocationId: nextLoc,
-          });
+          const availableStartMs = travelEnd.getTime() + bufferMs;
+          if (availableStartMs < slot.end.getTime()) {
+            result.push({
+              start: new Date(availableStartMs),
+              end: slot.end,
+              durationMinutes: Math.floor((slot.end.getTime() - availableStartMs) / 60000),
+              isAvailable: true,
+              prevLocationId: nextLoc,
+              nextLocationId: slot.nextLocationId,
+              categoryId: slot.categoryId,
+              isStrictCategory: slot.isStrictCategory,
+            });
+          }
+        } else {
+          occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+            slot.start,
+            slot.end,
+            prevLoc,
+            nextLoc,
+            `travel-insufficient-${slot.start.getTime()}`,
+            { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
+          ));
         }
       } else {
-        // Insufficient: not enough room for full travel, fill entire slot
-        const travelSlot = TimeSlotUtils.createTravelSlot(
-          slot.start,
-          slot.end,
-          prevLoc,
-          nextLoc,
-          `travel-insufficient-${slot.start.getTime()}`,
-          {
-            insufficientTravel: true,
-            requiredTravelMinutes: travelMinutes,
-          },
-        );
-        occupiedSlots.push(travelSlot);
+        // Travel at END: depart as late as possible (going to a foreign event)
+        const travelEnd = new Date(slot.end.getTime());
+        const travelStart = new Date(travelEnd.getTime() - travelMs);
+
+        if (travelStart.getTime() >= slot.start.getTime()) {
+          occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+            travelStart,
+            travelEnd,
+            prevLoc,
+            nextLoc,
+            `travel-gap-${slot.start.getTime()}`,
+          ));
+
+          const availableEndMs = Math.max(
+            slot.start.getTime(),
+            travelStart.getTime() - bufferMs,
+          );
+
+          if (availableEndMs > slot.start.getTime()) {
+            result.push({
+              start: slot.start,
+              end: new Date(availableEndMs),
+              durationMinutes: Math.floor(
+                (availableEndMs - slot.start.getTime()) / 60000,
+              ),
+              isAvailable: true,
+              prevLocationId: slot.prevLocationId,
+              nextLocationId: nextLoc,
+              categoryId: slot.categoryId,
+              isStrictCategory: slot.isStrictCategory,
+            });
+          }
+        } else {
+          occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+            slot.start,
+            slot.end,
+            prevLoc,
+            nextLoc,
+            `travel-insufficient-${slot.start.getTime()}`,
+            { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
+          ));
+        }
       }
     }
 
     this.occupiedSlots.set(dayKey, occupiedSlots);
     return result;
+  }
+
+  /**
+   * Returns true if pre-carved gap travel should be placed at the START of the slot
+   * (return immediately after the preceding event) rather than at the end.
+   *
+   * This applies when the slot is inside a category window and we are returning
+   * from a foreign location back to the category's base location — i.e., prevLoc
+   * is the foreign event's location and nextLoc matches the category's locationId.
+   * Placing travel at the start ensures subsequent tasks resume in the home-location
+   * context rather than filling the foreign-location transition zone.
+   */
+  private shouldPlaceTravelAtStart(
+    slot: TimeSlot,
+    prevLoc: string,
+    nextLoc: string,
+  ): boolean {
+    if (!slot.categoryId) return false;
+
+    const categoryPeriod = this.categoryPeriods.find(
+      (p) => p.categoryId === slot.categoryId,
+    );
+    if (!categoryPeriod?.locationId) return false;
+
+    return prevLoc !== categoryPeriod.locationId && nextLoc === categoryPeriod.locationId;
   }
 
   /**
