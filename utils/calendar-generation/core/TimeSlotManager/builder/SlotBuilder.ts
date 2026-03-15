@@ -319,9 +319,15 @@ export class SlotBuilder {
 
       const travelMs = travelMinutes * 60000;
 
-      // Detect "A → cat → B" double-travel chains where combined travel exceeds the gap.
-      // When Plan A returns to category and the category slot immediately goes to Plan B,
-      // replace both hops with a single direct A→B travel if the two-hop route doesn't fit.
+      // When a pre-category slot (prevLoc→catLoc) is immediately followed by a category
+      // slot that transitions to a foreign location (catLoc→planLoc), check two cases:
+      //
+      // (a) catSlotTooSmall: the category slot is too small to hold the catLoc→planLoc
+      //     travel. Skip both hops and travel direct prevLoc→planLoc, placed at END so
+      //     departure is as late as possible (maximum available time before the event).
+      //
+      // (b) combinedTooSmall: the two-hop route doesn't fit in the combined span at all.
+      //     Same direct bypass but placed at START (depart immediately from prev event).
       if (!placeAtStart && !slot.categoryId) {
         const nextSlot = i + 1 < slots.length ? slots[i + 1] : null;
         if (
@@ -334,35 +340,75 @@ export class SlotBuilder {
           const bLoc = nextSlot.nextLocationId;
           const travelCatToB = this.travelManager.getTravelTime(nextLoc, bLoc, nextSlot.end);
           if (travelCatToB > 0) {
+            const catSlotTooSmall = travelCatToB > nextSlot.durationMinutes;
             const availableMinutes = slot.durationMinutes + nextSlot.durationMinutes;
             const combinedMinutes = travelMinutes + this.bufferTimeMinutes + travelCatToB;
-            if (combinedMinutes > availableMinutes) {
-              const directMinutes = this.travelManager.getTravelTime(prevLoc, bLoc, slot.start);
-              const travelEnd = new Date(slot.start.getTime() + directMinutes * 60000);
+            const combinedTooSmall = combinedMinutes > availableMinutes;
+
+            if (catSlotTooSmall || combinedTooSmall) {
               const spanEnd = nextSlot.end;
-              if (travelEnd.getTime() <= spanEnd.getTime()) {
-                occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-                  slot.start, travelEnd, prevLoc, bLoc,
-                  `travel-gap-${slot.start.getTime()}`,
-                ));
-                const newCatStart = new Date(travelEnd.getTime() + bufferMs);
-                if (newCatStart.getTime() < spanEnd.getTime()) {
-                  slots[i + 1] = {
-                    ...nextSlot,
-                    start: newCatStart,
-                    durationMinutes: Math.floor((spanEnd.getTime() - newCatStart.getTime()) / 60000),
-                    prevLocationId: bLoc,
-                  };
+              if (catSlotTooSmall) {
+                // Travel at END: depart as late as possible, arrive just before the plan.
+                const directMinutes = this.travelManager.getTravelTime(prevLoc, bLoc, spanEnd);
+                const travelStart = new Date(spanEnd.getTime() - directMinutes * 60000);
+                if (travelStart.getTime() >= slot.start.getTime()) {
+                  occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+                    travelStart, spanEnd, prevLoc, bLoc,
+                    `travel-gap-${slot.start.getTime()}`,
+                  ));
+                  const availEnd = new Date(travelStart.getTime() - bufferMs);
+                  if (availEnd.getTime() > slot.start.getTime()) {
+                    result.push({
+                      start: slot.start,
+                      end: availEnd,
+                      durationMinutes: Math.floor(
+                        (availEnd.getTime() - slot.start.getTime()) / 60000,
+                      ),
+                      isAvailable: true,
+                      prevLocationId: slot.prevLocationId,
+                      nextLocationId: bLoc,
+                      categoryId: slot.categoryId,
+                      isStrictCategory: slot.isStrictCategory,
+                    });
+                  }
                 } else {
+                  occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+                    slot.start, spanEnd, prevLoc, bLoc,
+                    `travel-insufficient-${slot.start.getTime()}`,
+                    { insufficientTravel: true, requiredTravelMinutes: directMinutes },
+                  ));
+                }
+                skipNextSlot = true;
+              } else {
+                // combinedTooSmall: travel at START, depart immediately from previous event.
+                const directMinutes = this.travelManager.getTravelTime(prevLoc, bLoc, slot.start);
+                const travelEnd = new Date(slot.start.getTime() + directMinutes * 60000);
+                if (travelEnd.getTime() <= spanEnd.getTime()) {
+                  occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+                    slot.start, travelEnd, prevLoc, bLoc,
+                    `travel-gap-${slot.start.getTime()}`,
+                  ));
+                  const newCatStart = new Date(travelEnd.getTime() + bufferMs);
+                  if (newCatStart.getTime() < spanEnd.getTime()) {
+                    slots[i + 1] = {
+                      ...nextSlot,
+                      start: newCatStart,
+                      durationMinutes: Math.floor(
+                        (spanEnd.getTime() - newCatStart.getTime()) / 60000,
+                      ),
+                      prevLocationId: bLoc,
+                    };
+                  } else {
+                    skipNextSlot = true;
+                  }
+                } else {
+                  occupiedSlots.push(TimeSlotUtils.createTravelSlot(
+                    slot.start, spanEnd, prevLoc, bLoc,
+                    `travel-insufficient-${slot.start.getTime()}`,
+                    { insufficientTravel: true, requiredTravelMinutes: directMinutes },
+                  ));
                   skipNextSlot = true;
                 }
-              } else {
-                occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-                  slot.start, spanEnd, prevLoc, bLoc,
-                  `travel-insufficient-${slot.start.getTime()}`,
-                  { insufficientTravel: true, requiredTravelMinutes: directMinutes },
-                ));
-                skipNextSlot = true;
               }
               continue;
             }
