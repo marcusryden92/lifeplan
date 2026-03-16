@@ -61,11 +61,14 @@ lifeplan/
 ├── components/
 │   ├── ui/                       # shadcn/ui primitives
 │   ├── auth/                     # Auth components
+│   ├── categories/               # Category selection components
 │   ├── events/                   # Calendar event components
+│   ├── interface/                # Global UI (Navbar, etc.)
 │   ├── locations/                # Location management components
 │   ├── tasks/                    # Task editing components
 │   ├── scheduling/               # Strategy builder components
-│   └── draggable/                # Drag-and-drop components
+│   ├── draggable/                # Drag-and-drop components
+│   └── utilities/                # Shared utility components (e.g., time-picker)
 │
 ├── context/
 │   └── CalendarProvider.tsx      # Main data context for planners/calendar
@@ -108,7 +111,12 @@ lifeplan/
 │
 ├── types/
 │   ├── prisma.d.ts               # Prisma type exports
-│   └── calendarTypes.ts          # Calendar-specific types
+│   ├── calendarTypes.d.ts        # Calendar-specific types (WeekDayIntegers, TravelExtendedProps, etc.)
+│   ├── categoryTypes.d.ts        # Category-related types
+│   ├── models.d.ts               # Shared model types
+│   ├── ui.d.ts                   # UI component types
+│   ├── user.d.ts                 # User types
+│   └── userTypes.d.ts            # Extended user types
 │
 └── utils/
     ├── calendar-generation/      # Core scheduling engine
@@ -210,6 +218,7 @@ Central model for all schedulable items:
   color?: string;
   locationId?: string;    // Reference to Location for travel time calculation
   categoryId?: string;    // Reference to Category for organization
+  useParentLocation?: boolean; // If true, inherits location from parent item
 }
 ```
 
@@ -285,6 +294,13 @@ DEFAULT_LOCATION_GROUPING_SCORES = {
   oneOpenNoMatch: 0.45, // One end open, other doesn't match
   neitherMatch: 0.4, // Neither end matches
   noLocation: 0.5, // Task has no location (neutral)
+};
+
+DEFAULT_LOCATION_GROUPING_PENALTIES = {
+  maxSingleTravelPenalty: 0.02,
+  maxDoubleTravelPenalty: 0.03,
+  singleTravelPenaltyDivisor: 600, // travelMinutes / divisor = penalty
+  doubleTravelPenaltyDivisor: 400,
 };
 ```
 
@@ -418,6 +434,7 @@ const logging = {
   templates: false,
   locations: false,
   strategySettings: false,
+  leanCalendar: false,  // Sorted events with location info
 };
 ```
 

@@ -168,10 +168,22 @@ type TemplateTimeWithExceptions = {
 ### Phase 4: Build Location Map
 
 ```typescript
-const plannerLocationMap = buildLocationMap(input.planners, input.templates, input.categories || []);
+const { locationMap, travelLocationMap } = buildLocationMap(input.planners, input.templates, input.categories || []);
 ```
 
-Creates a lookup map: `planner/template ID -> location ID`. Used for travel time calculation between events. Items with `null` location are "Anywhere" (no travel needed). Category location inheritance is included -- items without a location inherit their category's location.
+Builds **two** separate location maps via `LocationMapper`:
+
+- **`locationMap`** -- used for display and scheduling context. Resolves location with full inheritance: own location → parent chain → category location.
+- **`travelLocationMap`** -- used exclusively for travel time calculation. Resolves location via own location and parent chain only. Category location fallback is intentionally excluded.
+
+The reason for the split: a task can visually belong to a category with a default location, but should not generate travel events unless it has an explicit location assignment on the item or its ancestors. Category location is a soft organizational default, not a physical travel constraint.
+
+**Resolution order for each item:**
+1. Plan items always use their own `locationId` (no inheritance)
+2. If item has `useParentLocation=false` and owns a `locationId`: use it
+3. Walk up parent chain for nearest ancestor with a `locationId`
+4. (`locationMap` only) Fall back to category location via `categoryId`
+5. Return `null` ("Anywhere")
 
 ### Phase 5: Build Category Constraints
 
@@ -436,12 +448,14 @@ Scheduler/
 1. Score all valid slots using the CompositeStrategy
 2. Sort by score (highest first), then start time (earliest) as tiebreaker
 3. For each scored slot, calculate travel requirements:
-   - Travel before: needed if previous location differs from task location
-   - Travel after: needed if next location differs from task location
-   - Check for reusable existing travel (avoids duplicate travel slots)
-   - Check if travel-before can be placed outside the slot
-4. Verify total capacity: `task.duration + effectiveTravelAfter + bufferMinutes` (plus travel-before if it can't be placed outside)
-5. Return the first slot with enough capacity
+   - **Travel before:** if `prevLocationId` differs from task location, check if a same-location adjacent task exists whose travel-after can be absorbed (sets `canAbsorbPrevTravel=true`, `needTravelBefore=0`). Otherwise calculate travel minutes.
+   - **Travel after:** if `nextLocationId` differs from task location, calculate travel-after needed. Then check for reusable existing travel going to `nextLocationId` near slot end (`findAdjacentTravelTo`). If reusable travel found, `effectiveTravelAfter=0`.
+4. Verify capacity:
+   - Base required: `task.duration + bufferMinutes`
+   - Add travel-after cost: `effectiveTravelAfter + bufferMinutes` (if non-zero)
+   - Add travel-before cost: `needTravelBefore + bufferMinutes` only if it *cannot* be placed outside the slot
+   - Bonus capacity: if absorbing previous task's travel-after, that travel's duration is added to effective slot capacity
+5. Return the first slot where `slotDuration >= requiredInside`
 
 ### TaskSchedulingOrchestrator
 
@@ -678,7 +692,7 @@ interface CategoryConstraint {
 
 ### How Travel Works
 
-1. **Location Map:** Each planner/template has an optional `locationId`. Items inherit their category's location if they don't have one.
+1. **Location Map:** Each planner/template has an optional `locationId`. The `travelLocationMap` resolves this via own location and parent chain only (category fallback excluded — see Phase 4).
 2. **Travel Matrix:** Maps `"fromLocationId->toLocationId"` to travel times
 3. **Time Periods:** Rush hour, regular, night have different travel times
 
@@ -698,9 +712,9 @@ getTravelTime(fromLocationId, toLocationId, timeOfDay): number {
   const hour = timeOfDay.getHours();
 
   if ((hour >= 7 && hour < 9) || (hour >= 16 && hour < 19)) {
-    return entry.rushHourMinutes;
+    return entry.rushHourMinutes;  // 7-9am, 4-7pm
   } else if (hour >= 22 || hour < 6) {
-    return entry.nightMinutes;
+    return entry.nightMinutes;     // 10pm-6am
   } else {
     return entry.regularMinutes;
   }
@@ -722,13 +736,21 @@ When scheduling a task at a different location than neighbors:
 [Next Event @ Location C]
 ```
 
-**Travel-before placement:** The Scheduler first checks if travel-before can be placed *outside* the slot (in the previous slot's free space via `canPlaceStandaloneTravelBefore`). If so, it doesn't consume capacity inside the task's slot. If not, it falls back to including travel-before inside the slot.
+**Travel-before placement:** The Scheduler first checks if travel-before can be placed *outside* the slot (in the previous slot's free space via `canPlaceStandaloneTravelBefore`). Travel can start inside the buffer zone before a slot, not just within the slot's boundaries. If placement outside fails, falls back to including travel-before inside the slot.
 
 **Travel shifting:** When a new task is added in the FREE SPACE, travel-after shifts forward to stay adjacent to the next event.
 
-**Travel reuse:** If existing travel already goes to the right destination (checked via `findAdjacentTravelTo`), it's reused and no new travel space is reserved.
+**Travel reuse:** If existing travel already goes to the right destination (checked via `findAdjacentTravelTo`), it's reused and no new travel space is reserved. The search window for adjacency is `bufferTime + 10 minutes` to allow some tolerance.
 
-**Insufficient travel:** When there isn't enough space for the full required travel time, `reserveInsufficientTravelBefore/After` creates a travel slot marked with `insufficientTravel: true` and `requiredTravelMinutes` for the originally needed duration.
+**Insufficient travel:** When there isn't enough space for the full required travel time, `reserveInsufficientTravelBefore/After` creates a travel slot marked with `insufficientTravel: true` and `requiredTravelMinutes` for the originally needed duration. These render in red on the calendar.
+
+**Travel-before conflict removal:** When reserving a slot, `SlotReserver` automatically removes any existing travel going to the same destination that ends near the task's start time (within the search window). This handles the case where a task fills a gap that was previously bridged by travel.
+
+**Previous travel absorption:** If a same-location task is scheduled adjacent to the current task's slot, and the previous task already has travel-after going away from that shared location, the `SlotReserver` can absorb (reclaim) that travel slot. This frees up the space and is reflected as additional effective capacity in slot selection.
+
+**Pre-carved vs dynamic travel:** `SlotReserver` distinguishes travel created during slot-building (pre-carved category/gap travel, named `travel-gap-*` or `travel-insufficient-*`) from travel placed during task scheduling. When reclaiming absorbed travel, only pre-carved travel is removed — dynamic task-to-task travel is preserved.
+
+**Force mode:** `reserveStandaloneTravelBefore/After` has a `force` parameter used for category-boundary travel. In force mode, travel is placed at full duration even if it overlaps available slots, and those overlapping slots are marked unavailable.
 
 ### "Anywhere" Tasks
 
@@ -1007,9 +1029,9 @@ for (const task of goalTasks) {
 }
 ```
 
-### 3. Travel Reuse
+### 3. Travel Reuse and Absorption
 
-If existing travel already goes to the right destination, it's reused:
+**Reuse:** If existing travel already goes to the right destination, no new travel-after is needed:
 
 ```typescript
 const reusable = slotManager.findAdjacentTravelTo(slot.end, slot.nextLocationId);
@@ -1017,6 +1039,8 @@ if (reusable) {
   effectiveTravelAfter = 0;
 }
 ```
+
+**Absorption:** If the previous task shares the same location, its outbound travel-after can be reclaimed. `selectBestSlot` detects this and sets `canAbsorbPrevTravel=true`. When `SlotReserver` executes, it removes that travel slot and expands the available window backward, so the absorbed travel minutes become usable capacity for the current task's slot.
 
 ### 4. Week Expansion
 
