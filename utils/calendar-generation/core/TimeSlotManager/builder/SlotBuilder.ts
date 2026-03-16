@@ -13,7 +13,9 @@ import {
   findGaps,
   gapsToTimeSlots,
   masksToIntervals,
+  mergeIntervals,
   PerTemplateMask,
+  Interval,
 } from "../../../utils/intervalUtils";
 import { dateTimeService } from "../../../utils/dateTimeService";
 import { WeekDayIntegers } from "@/types/calendarTypes";
@@ -78,8 +80,18 @@ export class SlotBuilder {
     // Combine all occupied intervals
     const occupiedIntervals = [...eventIntervals, ...templateIntervals];
 
+    // An "anywhere" (null-location) event inside a category wrapper should adopt the
+    // category's location for interval purposes. Without this, findGaps tunnels past
+    // the null-location event and picks up the pre-category location as prevLocationId
+    // for the gap after the event, which then triggers spurious return-travel.
+    const adjustedIntervals = this.applyCategoriesToNullIntervals(
+      occupiedIntervals,
+      startDate,
+      endDate,
+    );
+
     // Find gaps between occupied intervals (gaps now have prevLocationId/nextLocationId)
-    const gaps = findGaps(occupiedIntervals, startDate, endDate);
+    const gaps = findGaps(adjustedIntervals, startDate, endDate);
 
     // Convert gaps to available time slots (location info is preserved)
     let slots = gapsToTimeSlots(gaps);
@@ -125,11 +137,109 @@ export class SlotBuilder {
     // 2. Walk the chain and carve travel where prevLocationId != nextLocationId
     // 3. Merge adjacent available slots back for the scheduler
     if (plannerLocationMap) {
+      slots = this.fixPostCategoryPrevLoc(slots, adjustedIntervals, startDate, endDate);
       slots = this.splitSlotsAtCategoryBoundaries(slots, startDate, endDate);
       slots = this.carveTravelFromChain(slots, startDate);
     }
 
     return TimeSlotUtils.mergeAdjacentSlots(slots);
+  }
+
+  /**
+   * Correct stale prevLocationId on slots that start after a category period ends.
+   *
+   * When an "anywhere" (null) event sits between a category period and a later gap,
+   * findGaps walks backward past the null event and lands on whatever was before the
+   * category — typically a home-location template — producing an incorrect prevLoc.
+   *
+   * For each slot whose start is at or after a category period's end, if there is no
+   * non-null located interval between that period's end and the slot's start, the most
+   * recent category's location is the correct prevLoc (we are still "in context" of
+   * having been at that location).
+   */
+  private fixPostCategoryPrevLoc(
+    slots: TimeSlot[],
+    occupiedIntervals: Interval[],
+    dayStart: Date,
+    dayEnd: Date,
+  ): TimeSlot[] {
+    const dayStartMs = dayStart.getTime();
+    const dayEndMs = dayEnd.getTime();
+    const dayPeriods = this.categoryPeriods.filter(
+      (p) =>
+        p.locationId !== null &&
+        p.start.getTime() < dayEndMs &&
+        p.end.getTime() > dayStartMs,
+    );
+    if (dayPeriods.length === 0) return slots;
+
+    const merged = mergeIntervals([...occupiedIntervals]);
+
+    return slots.map((slot) => {
+      if (!slot.isAvailable) return slot;
+
+      const slotStartMs = slot.start.getTime();
+
+      // Find category periods that have already ended before this slot starts,
+      // sorted most-recently-ended first.
+      const relevantPeriods = dayPeriods
+        .filter((p) => slotStartMs >= p.end.getTime())
+        .sort((a, b) => b.end.getTime() - a.end.getTime());
+
+      for (const period of relevantPeriods) {
+        const periodEndMs = period.end.getTime();
+        // If any non-null located interval sits between the period end and this slot,
+        // that interval already establishes a fresh location context — stop looking.
+        const hasInterveningLocation = merged.some(
+          (interval) =>
+            interval.locationId !== null &&
+            interval.start.getTime() >= periodEndMs &&
+            interval.end.getTime() <= slotStartMs,
+        );
+        if (hasInterveningLocation) break;
+
+        return { ...slot, prevLocationId: period.locationId };
+      }
+
+      return slot;
+    });
+  }
+
+  /**
+   * For null-location (anywhere) intervals that fall entirely within a category period
+   * that has a location, assign the category's location to the interval.
+   *
+   * Without this, findGaps walks backward past the null-location interval and resolves
+   * prevLocationId to whatever was before the category entry — causing carveTravelFromChain
+   * to generate spurious return-travel at the start of the next available slot.
+   */
+  private applyCategoriesToNullIntervals(
+    intervals: Interval[],
+    dayStart: Date,
+    dayEnd: Date,
+  ): Interval[] {
+    const dayStartMs = dayStart.getTime();
+    const dayEndMs = dayEnd.getTime();
+    const dayPeriods = this.categoryPeriods.filter(
+      (p) =>
+        p.locationId !== null &&
+        p.start.getTime() < dayEndMs &&
+        p.end.getTime() > dayStartMs,
+    );
+    if (dayPeriods.length === 0) return intervals;
+
+    return intervals.map((interval) => {
+      if (interval.locationId !== null) return interval;
+      for (const period of dayPeriods) {
+        if (
+          interval.start.getTime() >= period.start.getTime() &&
+          interval.end.getTime() <= period.end.getTime()
+        ) {
+          return { ...interval, locationId: period.locationId };
+        }
+      }
+      return interval;
+    });
   }
 
   /**
