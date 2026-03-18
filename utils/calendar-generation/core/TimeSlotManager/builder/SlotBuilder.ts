@@ -132,13 +132,16 @@ export class SlotBuilder {
         .filter((slot) => slot.durationMinutes > 0);
     }
 
-    // Single-pass travel injection:
+    // Travel injection pipeline:
     // 1. Split slots at category boundaries to embed location transitions in the chain
-    // 2. Walk the chain and carve travel where prevLocationId != nextLocationId
-    // 3. Merge adjacent available slots back for the scheduler
+    // 2. Carve fixed travel between adjacent category periods (centering algorithm)
+    // 3. Walk the chain and carve event-driven travel where prevLocationId != nextLocationId
+    // 4. Merge adjacent available slots back for the scheduler
     if (plannerLocationMap) {
+      const mergedOccupied = mergeIntervals([...adjustedIntervals]);
       slots = this.fixPostCategoryPrevLoc(slots, adjustedIntervals, startDate, endDate);
       slots = this.splitSlotsAtCategoryBoundaries(slots, startDate, endDate);
+      slots = this.carveCategoryBoundaryTravel(slots, mergedOccupied, startDate, endDate);
       slots = this.carveTravelFromChain(slots, startDate);
     }
 
@@ -296,7 +299,7 @@ export class SlotBuilder {
           const slotStartMs = slot.start.getTime();
           const slotEndMs = slot.end.getTime();
 
-          if (boundaryMs > slotStartMs && boundaryMs < slotEndMs) {
+          if (boundaryMs >= slotStartMs && boundaryMs < slotEndMs) {
             const beforeDuration = Math.floor((boundaryMs - slotStartMs) / 60000);
             const afterDuration = Math.floor((slotEndMs - boundaryMs) / 60000);
 
@@ -358,6 +361,207 @@ export class SlotBuilder {
     });
 
     return result;
+  }
+
+  /**
+   * Trim available slots to exclude a carved range [from, to].
+   *
+   * For each available slot overlapping [from, to]:
+   *   - Entirely inside  → removed
+   *   - Left overlap     → trimmed to end at `from`
+   *   - Right overlap    → trimmed to start at `to`, prevLocationId set to arrivedAtLoc
+   *   - Spanning         → split into left (ends at from) and right (starts at to)
+   *
+   * Non-available slots pass through unchanged.
+   */
+  private carveRangeFromSlots(
+    slots: TimeSlot[],
+    from: Date,
+    to: Date,
+    arrivedAtLoc: string | null,
+  ): TimeSlot[] {
+    const fromMs = from.getTime();
+    const toMs = to.getTime();
+    const result: TimeSlot[] = [];
+
+    for (const slot of slots) {
+      if (!slot.isAvailable) {
+        result.push(slot);
+        continue;
+      }
+
+      const sMs = slot.start.getTime();
+      const eMs = slot.end.getTime();
+
+      // No overlap
+      if (eMs <= fromMs || sMs >= toMs) {
+        result.push(slot);
+        continue;
+      }
+
+      // Left fragment: slot starts before `from`.
+      // Keep nextLocationId = slot.prevLocationId (same-location context) so that
+      // carveTravelFromChain does not generate a duplicate transition for the already-carved
+      // category boundary travel.
+      if (sMs < fromMs) {
+        const leftDuration = Math.floor((fromMs - sMs) / 60000);
+        if (leftDuration > 0) {
+          result.push({
+            ...slot,
+            end: from,
+            durationMinutes: leftDuration,
+            nextLocationId: slot.prevLocationId ?? null,
+          });
+        }
+      }
+
+      // Right fragment: slot ends after `to`
+      if (eMs > toMs) {
+        const rightDuration = Math.floor((eMs - toMs) / 60000);
+        if (rightDuration > 0) {
+          result.push({
+            ...slot,
+            start: to,
+            durationMinutes: rightDuration,
+            prevLocationId: arrivedAtLoc,
+          });
+        }
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Carve travel between adjacent category periods that have different locations.
+   *
+   * Unlike event-driven travel (which reacts to scheduled tasks), category boundary
+   * travel is a fixed obligation: whenever two categories with different locations are
+   * adjacent (touching or with a small gap), the travel between them must be reserved
+   * before scheduling begins.
+   *
+   * Placement uses a centering algorithm:
+   *   - gap >= travel  → depart at catA.end (travel fits entirely in gap)
+   *   - gap < travel   → center travel on gap midpoint, bleeding into both categories
+   *
+   * Constraint walls prevent the travel from overlapping existing events/templates:
+   *   - leftWall  = latest occupied-interval end within T minutes before catA.end
+   *   - rightWall = earliest occupied-interval start within T minutes after catB.start
+   */
+  private carveCategoryBoundaryTravel(
+    slots: TimeSlot[],
+    mergedOccupied: Interval[],
+    dayStart: Date,
+    dayEnd: Date,
+  ): TimeSlot[] {
+    const dayStartMs = dayStart.getTime();
+    const dayEndMs = dayEnd.getTime();
+
+    const dayPeriods = this.categoryPeriods
+      .filter(
+        (p) =>
+          p.locationId !== null &&
+          p.start.getTime() < dayEndMs &&
+          p.end.getTime() > dayStartMs,
+      )
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+    if (dayPeriods.length < 2) return slots;
+
+    const dayKey = this.getDayKeyFn(dayStart);
+    // Strip previously carved category-boundary travel so rebuilding a day doesn't
+    // accumulate duplicate entries (mirrors the gap-travel cleanup in carveTravelFromChain).
+    const occupiedSlots = (this.occupiedSlots.get(dayKey) ?? []).filter(
+      (s) => !s.eventId?.startsWith("travel-cat-boundary-"),
+    );
+
+    for (let i = 0; i < dayPeriods.length - 1; i++) {
+      const catA = dayPeriods[i];
+      const catB = dayPeriods[i + 1];
+
+      if (!catA.locationId || !catB.locationId) continue;
+      if (catA.locationId === catB.locationId) continue;
+
+      const tAMs = catA.end.getTime();
+      const tBMs = catB.start.getTime();
+      if (tAMs > tBMs) continue; // overlapping categories — skip
+
+      const travelMinutes = this.travelManager.getTravelTime(
+        catA.locationId,
+        catB.locationId,
+        catA.end,
+      );
+      if (travelMinutes <= 0) continue;
+
+      const T = travelMinutes * 60000;
+      const gapMs = tBMs - tAMs;
+
+      // Left wall: latest occupied-interval end in [max(catA.start, tA-T), tA]
+      const leftSearchStart = Math.max(catA.start.getTime(), tAMs - T);
+      let leftWallMs = leftSearchStart;
+      for (const interval of mergedOccupied) {
+        const iEndMs = interval.end.getTime();
+        if (iEndMs > leftSearchStart && iEndMs <= tAMs) {
+          leftWallMs = Math.max(leftWallMs, iEndMs);
+        }
+      }
+
+      // Right wall: earliest occupied-interval start in [tB, min(catB.end, tB+T)]
+      const rightSearchEnd = Math.min(catB.end.getTime(), tBMs + T);
+      let rightWallMs = rightSearchEnd;
+      for (const interval of mergedOccupied) {
+        const iStartMs = interval.start.getTime();
+        if (iStartMs >= tBMs && iStartMs < rightSearchEnd) {
+          rightWallMs = Math.min(rightWallMs, iStartMs);
+        }
+      }
+
+      // Ideal window
+      let travelStartMs: number;
+      let travelEndMs: number;
+      if (gapMs >= T) {
+        travelStartMs = tAMs;
+        travelEndMs = tAMs + T;
+      } else {
+        const centerMs = Math.round((tAMs + tBMs) / 2);
+        travelStartMs = centerMs - Math.round(T / 2);
+        travelEndMs = travelStartMs + T;
+      }
+
+      // Apply constraint walls
+      if (travelStartMs < leftWallMs) {
+        travelStartMs = leftWallMs;
+        travelEndMs = travelStartMs + T;
+      }
+      if (travelEndMs > rightWallMs) {
+        travelEndMs = rightWallMs;
+        travelStartMs = travelEndMs - T;
+      }
+
+      const insufficient = travelStartMs < leftWallMs;
+      const travelStart = new Date(travelStartMs);
+      const travelEnd = new Date(travelEndMs);
+
+      const eventId = insufficient
+        ? `travel-cat-boundary-insuf-${travelStartMs}`
+        : `travel-cat-boundary-${travelStartMs}`;
+
+      occupiedSlots.push(
+        TimeSlotUtils.createTravelSlot(
+          travelStart,
+          travelEnd,
+          catA.locationId,
+          catB.locationId,
+          eventId,
+          insufficient ? { insufficientTravel: true, requiredTravelMinutes: travelMinutes } : undefined,
+        ),
+      );
+
+      slots = this.carveRangeFromSlots(slots, travelStart, travelEnd, catB.locationId);
+    }
+
+    this.occupiedSlots.set(dayKey, occupiedSlots);
+    return slots;
   }
 
   /**
