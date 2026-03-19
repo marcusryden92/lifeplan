@@ -14,15 +14,6 @@ export interface Interval {
   locationId?: string | null; // Location of the event occupying this interval
 }
 
-/**
- * A gap between occupied intervals, with location context from adjacent events
- */
-export interface GapInterval {
-  start: Date;
-  end: Date;
-  prevLocationId: string | null; // Location of the event before this gap
-  nextLocationId: string | null; // Location of the event after this gap
-}
 
 /**
  * Merge overlapping intervals into non-overlapping ranges
@@ -247,12 +238,15 @@ export function findGaps(
   occupiedIntervals: Interval[],
   rangeStart: Date,
   rangeEnd: Date,
-): GapInterval[] {
+): TimeSlot[] {
   if (occupiedIntervals.length === 0) {
+    const durationMinutes = Math.floor((rangeEnd.getTime() - rangeStart.getTime()) / 60000);
     return [
       {
         start: rangeStart,
         end: rangeEnd,
+        durationMinutes,
+        isAvailable: true,
         prevLocationId: null,
         nextLocationId: null,
       },
@@ -260,14 +254,17 @@ export function findGaps(
   }
 
   const merged = mergeIntervals(occupiedIntervals);
-  const gaps: GapInterval[] = [];
+  const gaps: TimeSlot[] = [];
 
   // Check for gap before first interval
   if (merged[0].start > rangeStart) {
+    const end = merged[0].start;
     gaps.push({
       start: rangeStart,
-      end: merged[0].start,
-      prevLocationId: null, // No event before the range start
+      end,
+      durationMinutes: Math.floor((end.getTime() - rangeStart.getTime()) / 60000),
+      isAvailable: true,
+      prevLocationId: null,
       nextLocationId: merged[0].locationId ?? null,
     });
   }
@@ -287,6 +284,8 @@ export function findGaps(
       gaps.push({
         start: gapStart,
         end: gapEnd,
+        durationMinutes: Math.floor((gapEnd.getTime() - gapStart.getTime()) / 60000),
+        isAvailable: true,
         prevLocationId: prevLoc,
         nextLocationId: merged[i + 1].locationId ?? null,
       });
@@ -305,6 +304,8 @@ export function findGaps(
     gaps.push({
       start: lastInterval.end,
       end: rangeEnd,
+      durationMinutes: Math.floor((rangeEnd.getTime() - lastInterval.end.getTime()) / 60000),
+      isAvailable: true,
       prevLocationId: prevLoc,
       nextLocationId: null,
     });
@@ -404,7 +405,7 @@ export function splitIntoHourlyIntervals(
 export function findDailyGaps(
   date: Date,
   occupiedIntervals: Interval[],
-): Interval[] {
+): TimeSlot[] {
   const dayStart = new Date(date);
   dayStart.setHours(0, 0, 0, 0);
 
@@ -441,21 +442,6 @@ export function getLargestGapMinutes(gaps: Interval[]): number {
   return (largest.end.getTime() - largest.start.getTime()) / (1000 * 60);
 }
 
-/**
- * Convert gap intervals to TimeSlots with location context
- */
-export function gapsToTimeSlots(gaps: GapInterval[]): TimeSlot[] {
-  return gaps.map((gap) => ({
-    start: gap.start,
-    end: gap.end,
-    durationMinutes: Math.floor(
-      (gap.end.getTime() - gap.start.getTime()) / (1000 * 60),
-    ),
-    isAvailable: true,
-    prevLocationId: gap.prevLocationId,
-    nextLocationId: gap.nextLocationId,
-  }));
-}
 
 /**
  * Mask types for template-based interval generation

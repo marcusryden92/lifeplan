@@ -115,7 +115,6 @@ export default function Calendar({
             const categoryId = ext?.categoryId || "";
             const isStrict = !!ext?.isStrict;
             const wrapperId = ext?.wrapperId || "";
-
             return (
               <CategoryWrapperEvent
                 categoryId={categoryId}
