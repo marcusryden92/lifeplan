@@ -33,7 +33,7 @@ function scoreSlots(
   task: Planner,
   slots: TimeSlot[],
   strategy: SchedulingStrategy,
-  context: SchedulingContext
+  context: SchedulingContext,
 ): ScoredSlot[] {
   const scored: ScoredSlot[] = slots.map((slot) => {
     const score = strategy.score(task, slot, context);
@@ -64,7 +64,7 @@ export function selectBestSlot(
   taskLocationId: string | null | undefined,
   slotManager: TimeSlotManager,
   strategy: SchedulingStrategy,
-  context: SchedulingContext
+  context: SchedulingContext,
 ): SlotSelectionResult | { failure: SchedulingFailure } {
   // Score ALL slots using the strategy (includes location adjacency scoring)
   const scoredSlots = scoreSlots(task, validSlots, strategy, context);
@@ -82,7 +82,7 @@ export function selectBestSlot(
   for (const scoredSlot of scoredSlots) {
     // Find the original slot with location info
     const slot = fittingSlots.find(
-      (s) => s.start.getTime() === scoredSlot.slot.start.getTime()
+      (s) => s.start.getTime() === scoredSlot.slot.start.getTime(),
     );
     if (!slot) continue;
 
@@ -92,9 +92,10 @@ export function selectBestSlot(
     let needTravelAfter = 0;
 
     let canAbsorbPrevTravel = false;
-    let absorbableTravel: ReturnType<typeof slotManager.findAdjacentTravelFrom> = null;
+    let absorbableTravel: ReturnType<
+      typeof slotManager.findAdjacentTravelFrom
+    > = null;
 
-    // console.log(`[selectBestSlot] task="${task.title}" taskLoc=${taskLocationId} | slot ${slot.start.toISOString()} prev=${slot.prevLocationId} next=${slot.nextLocationId}`);
     if (taskLocationId) {
       // Travel BEFORE: needed if prev location differs from task location
       if (slot.prevLocationId && slot.prevLocationId !== taskLocationId) {
@@ -104,7 +105,7 @@ export function selectBestSlot(
         // absorb B4's travel-after instead of creating new travel-before.
         absorbableTravel = slotManager.findAdjacentTravelFrom(
           slot.start,
-          taskLocationId
+          taskLocationId,
         );
         if (absorbableTravel) {
           canAbsorbPrevTravel = true;
@@ -113,7 +114,7 @@ export function selectBestSlot(
           needTravelBefore = slotManager.getTravelTime(
             slot.prevLocationId,
             taskLocationId,
-            slot.start
+            slot.start,
           );
         }
       }
@@ -123,7 +124,7 @@ export function selectBestSlot(
         needTravelAfter = slotManager.getTravelTime(
           taskLocationId,
           slot.nextLocationId,
-          slot.start
+          slot.start,
         );
       }
     }
@@ -139,7 +140,7 @@ export function selectBestSlot(
     if (needTravelAfter > 0 && slot.nextLocationId) {
       reusableTravelStart = slotManager.findAdjacentTravelTo(
         slot.end,
-        slot.nextLocationId
+        slot.nextLocationId,
       );
       if (reusableTravelStart) {
         effectiveTravelAfter = 0;
@@ -147,16 +148,16 @@ export function selectBestSlot(
     }
 
     let canPlaceTravelOutside = false;
-    let requiredInside = task.duration + bufferMinutes
-      + (effectiveTravelAfter > 0 ? effectiveTravelAfter + bufferMinutes : 0);
+    let requiredInside =
+      task.duration +
+      bufferMinutes +
+      (effectiveTravelAfter > 0 ? effectiveTravelAfter + bufferMinutes : 0);
 
     if (needTravelBefore > 0 && slot.prevLocationId && taskLocationId) {
-      const travelEnd = new Date(
-        slot.start.getTime() - bufferMinutes * 60000
-      );
+      const travelEnd = new Date(slot.start.getTime() - bufferMinutes * 60000);
       canPlaceTravelOutside = slotManager.canPlaceStandaloneTravelBefore(
         travelEnd,
-        needTravelBefore
+        needTravelBefore,
       );
       if (!canPlaceTravelOutside) {
         requiredInside += needTravelBefore + bufferMinutes;
@@ -172,7 +173,6 @@ export function selectBestSlot(
       absorbedStart = new Date(absorbableTravel.start.getTime());
     }
 
-    // console.log(`[selectBestSlot]   => travelBefore=${needTravelBefore} travelAfter=${needTravelAfter} effectiveTravelAfter=${effectiveTravelAfter} capacity=${effectiveCapacity} required=${requiredInside}`);
     // Check if this slot has enough capacity
     if (effectiveCapacity >= requiredInside) {
       selectedSlot = slot;
@@ -195,8 +195,6 @@ export function selectBestSlot(
       },
     };
   }
-
-  console.log(`[selectBestSlot] SELECTED task="${task.title}" loc=${taskLocationId} slot=${selectedSlot.start.toISOString()} prev=${selectedSlot.prevLocationId} next=${selectedSlot.nextLocationId} travelBefore=${travelBefore} travelAfter=${travelAfter} absorb=${selectedAbsorbPrevTravel}`);
 
   return {
     selectedSlot,

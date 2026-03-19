@@ -48,7 +48,7 @@ export function generateCalendar(
   template: EventTemplate[],
   planner: Planner[],
   prevCalendar: SimpleEvent[],
-  options: GenerateCalendarOptions | number = {}
+  options: GenerateCalendarOptions | number = {},
 ): SimpleEvent[] {
   // Handle backwards compatibility - if a number is passed, treat it as bufferTimeMinutes
   const opts: GenerateCalendarOptions =
@@ -62,13 +62,13 @@ export function generateCalendar(
   // Logging configuration - set enableLogging to false to disable all logging
   const enableLogging = true;
   const logging = {
-    metrics: true,
-    failures: true,
-    travelDebug: true,
+    metrics: false,
+    failures: false,
+    travelDebug: false,
     templateInfo: false,
     planners: false,
     templates: false,
-    locations: true,
+    locations: false,
     strategySettings: false,
     finalEvents: false,
     leanCalendar: true,
