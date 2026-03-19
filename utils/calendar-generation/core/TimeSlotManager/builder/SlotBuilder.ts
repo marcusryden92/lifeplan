@@ -486,6 +486,20 @@ export class SlotBuilder {
       const tBMs = catB.start.getTime();
       if (tAMs > tBMs) continue; // overlapping categories — skip
 
+      // If a plan at a different location straddles catA.end or catB.start, the
+      // boundary is interrupted by a real event transition. Skip and let
+      // carveTravelFromChain generate travel based on actual event locations.
+      const boundaryInterrupted = mergedOccupied.some((interval) => {
+        if (interval.locationId === null) return false;
+        const iStartMs = interval.start.getTime();
+        const iEndMs = interval.end.getTime();
+        return (
+          (interval.locationId !== catA.locationId && iStartMs < tAMs && iEndMs > tAMs) ||
+          (interval.locationId !== catB.locationId && iStartMs < tBMs && iEndMs > tBMs)
+        );
+      });
+      if (boundaryInterrupted) continue;
+
       const travelMinutes = this.travelManager.getTravelTime(
         catA.locationId,
         catB.locationId,
@@ -496,22 +510,24 @@ export class SlotBuilder {
       const T = travelMinutes * 60000;
       const gapMs = tBMs - tAMs;
 
-      // Left wall: latest occupied-interval end in [max(catA.start, tA-T), tA]
+      // Left wall: latest occupied-interval end in [max(catA.start, tA-T), tB]
+      // Upper bound extends to tB so events ending inside the gap are captured.
       const leftSearchStart = Math.max(catA.start.getTime(), tAMs - T);
       let leftWallMs = leftSearchStart;
       for (const interval of mergedOccupied) {
         const iEndMs = interval.end.getTime();
-        if (iEndMs > leftSearchStart && iEndMs <= tAMs) {
+        if (iEndMs > leftSearchStart && iEndMs <= tBMs) {
           leftWallMs = Math.max(leftWallMs, iEndMs);
         }
       }
 
-      // Right wall: earliest occupied-interval start in [tB, min(catB.end, tB+T)]
+      // Right wall: earliest occupied-interval start in [tA, min(catB.end, tB+T)]
+      // Lower bound extends to tA so events starting inside the gap are captured.
       const rightSearchEnd = Math.min(catB.end.getTime(), tBMs + T);
       let rightWallMs = rightSearchEnd;
       for (const interval of mergedOccupied) {
         const iStartMs = interval.start.getTime();
-        if (iStartMs >= tBMs && iStartMs < rightSearchEnd) {
+        if (iStartMs >= tAMs && iStartMs < rightSearchEnd) {
           rightWallMs = Math.min(rightWallMs, iStartMs);
         }
       }
