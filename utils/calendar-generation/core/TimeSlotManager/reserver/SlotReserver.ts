@@ -339,12 +339,14 @@ export class SlotReserver {
       }
     }
 
-    // Determine free slot start: after travel-after + buffer, or after task + buffer
+    // Determine free slot start.
+    // No extra buffer added here — buffers are injected at task placement time via leadingBuffer.
+    // Consecutive tasks get exactly one buffer (leadingBuffer) between them.
     let freeSlotStart: Date;
     if (travelAfterEnd) {
-      freeSlotStart = new Date(travelAfterEnd.getTime() + bufferMinutes * 60000);
+      freeSlotStart = travelAfterEnd;
     } else {
-      freeSlotStart = taskReserveEnd;
+      freeSlotStart = end;
     }
 
     // Determine free slot end
@@ -354,9 +356,7 @@ export class SlotReserver {
     } else if (removedTravelAfterEnd) {
       freeSlotEnd = removedTravelAfterEnd;
     } else if (reusableTravelStart) {
-      freeSlotEnd = new Date(
-        reusableTravelStart.getTime() - bufferMinutes * 60000,
-      );
+      freeSlotEnd = reusableTravelStart;
     } else {
       freeSlotEnd = slot.end;
     }

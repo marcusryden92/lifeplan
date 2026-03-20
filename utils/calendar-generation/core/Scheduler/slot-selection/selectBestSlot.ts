@@ -180,7 +180,7 @@ export function selectBestSlot(
       leadingBuffer +
       task.duration +
       bufferMinutes +
-      (effectiveTravelAfter > 0 ? effectiveTravelAfter + bufferMinutes : 0);
+      (effectiveTravelAfter > 0 ? effectiveTravelAfter : 0);
 
     if (needTravelBefore > 0 && slot.prevLocationId && taskLocationId) {
       const travelEnd = new Date(slot.start.getTime());

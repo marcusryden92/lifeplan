@@ -472,7 +472,7 @@ export class SlotBuilder {
                     travelStart, spanEnd, prevLoc, bLoc,
                     `travel-gap-${slot.start.getTime()}`,
                   ));
-                  const availEnd = new Date(travelStart.getTime() - bufferMs);
+                  const availEnd = new Date(travelStart.getTime());
                   if (availEnd.getTime() > slot.start.getTime()) {
                     result.push({
                       start: slot.start,
@@ -504,7 +504,7 @@ export class SlotBuilder {
                     slot.start, travelEnd, prevLoc, bLoc,
                     `travel-gap-${slot.start.getTime()}`,
                   ));
-                  const newCatStart = new Date(travelEnd.getTime() + bufferMs);
+                  const newCatStart = new Date(travelEnd.getTime());
                   if (newCatStart.getTime() < spanEnd.getTime()) {
                     slots[i + 1] = {
                       ...nextSlot,
@@ -563,8 +563,8 @@ export class SlotBuilder {
               `travel-gap-${slot.end.getTime()}`,
             ));
 
-            const availStart = new Date(travelBeforeEnd.getTime() + bufferMs);
-            const availEnd = new Date(travelAfterStart.getTime() - bufferMs);
+            const availStart = new Date(travelBeforeEnd.getTime());
+            const availEnd = new Date(travelAfterStart.getTime());
             if (availEnd.getTime() > availStart.getTime()) {
               result.push({
                 start: availStart,
@@ -611,7 +611,7 @@ export class SlotBuilder {
               slot.start, travelEnd, prevLoc, dLoc,
               `travel-gap-${slot.start.getTime()}`,
             ));
-            const availStart = new Date(travelEnd.getTime() + bufferMs);
+            const availStart = new Date(travelEnd.getTime());
             if (availStart.getTime() < spanEnd.getTime()) {
               result.push({
                 start: availStart,
@@ -653,7 +653,7 @@ export class SlotBuilder {
             `travel-gap-${slot.start.getTime()}`,
           ));
 
-          const availableStartMs = travelEnd.getTime() + bufferMs;
+          const availableStartMs = travelEnd.getTime();
           if (availableStartMs < slot.end.getTime()) {
             result.push({
               start: new Date(availableStartMs),
@@ -685,7 +685,7 @@ export class SlotBuilder {
         if (travelStart.getTime() >= slot.start.getTime()) {
           const availableEndMs = Math.max(
             slot.start.getTime(),
-            travelStart.getTime() - bufferMs,
+            travelStart.getTime(),
           );
 
           if (availableEndMs > slot.start.getTime()) {
