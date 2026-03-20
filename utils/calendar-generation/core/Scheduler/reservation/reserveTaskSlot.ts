@@ -37,24 +37,27 @@ export function reserveTaskSlot(
     ? reclaimPrecedingGapTravel.travelFromLocationId ?? selectedSlot.prevLocationId
     : selectedSlot.prevLocationId;
 
-  // Calculate task times
-  // Layout: [travelBefore] [buffer] [task] [buffer] [travel-after] [buffer] [FREE]
+  // Calculate task times.
+  // Layout: [leading buffer] [travelBefore] [buffer] [task] [buffer] [travel-after] [buffer] [FREE]
+  // slot.start = eventEnd (no pre-baked buffer). The leading buffer is added here so
+  // the task starts at eventEnd + bufferMinutes (or eventEnd + buffer + travel + buffer).
+  // Absorb cases (absorbPrevTravelAfter) already have a buffer baked into absorbedTravelStart.
 
-  // Calculate offset to task start from slot start
-  // If travel-before is placed outside, task starts at slot.start.
-  // Otherwise, task starts after [travel-before + buffer] inside the slot.
-  let offsetToTaskStart = 0;
+  // Leading buffer: skipped only when absorbing a previous task's travel-after,
+  // because absorbedTravelStart is already positioned past that buffer.
+  const leadingBuffer = absorbPrevTravelAfter ? 0 : bufferMinutes;
+
+  let offsetToTaskStart = leadingBuffer;
   let effectiveTravelBefore = travelBefore;
 
   if (travelBefore > 0) {
-    const travelEnd = new Date(
-      selectedSlot.start.getTime() - bufferMinutes * 60000
-    );
+    // travelEnd = slot.start = eventEnd (standalone travel ends here, task starts after buffer)
+    const travelEnd = new Date(selectedSlot.start.getTime());
     const canPlaceOutside = slotManager.canPlaceStandaloneTravelBefore(
       travelEnd,
       travelBefore
     );
-    offsetToTaskStart = canPlaceOutside ? 0 : travelBefore + bufferMinutes;
+    offsetToTaskStart = canPlaceOutside ? leadingBuffer : leadingBuffer + travelBefore + bufferMinutes;
   }
 
   // When absorbing the previous task's travel-after, or reclaiming a preceding gap travel,
@@ -70,14 +73,10 @@ export function reserveTaskSlot(
     task.duration
   );
 
-  // Reserve the slot with travel placement
-  // Travel-before is placed at the START of the slot
-  // Travel-after is placed at the END of the slot
-  // If placing travel-before outside, reserve it separately and omit travel-before inside
+  // Reserve the slot with travel placement.
+  // If placing travel-before outside, reserve it separately and omit travel-before inside.
   if (effectiveTravelBefore > 0 && effectivePrevLocationId && taskLocationId) {
-    const travelEnd = new Date(
-      selectedSlot.start.getTime() - bufferMinutes * 60000
-    );
+    const travelEnd = new Date(selectedSlot.start.getTime());
     const placed = slotManager.reserveStandaloneTravelBefore(
       travelEnd,
       effectiveTravelBefore,

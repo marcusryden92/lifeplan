@@ -153,9 +153,11 @@ export function selectBestSlot(
       }
     }
 
-    // Calculate required inside-slot time:
-    // Layout: [task] [buffer] [travel-after] [buffer]
+    // Calculate required inside-slot time.
+    // Layout: [leading buffer] [task] [trailing buffer] [travel-after] [buffer]
+    // The leading buffer is no longer pre-baked into slot.start; it's accounted for here.
     // If travel-before can be placed outside, it is excluded from inside-slot requirement.
+    // Absorb cases provide their own leading context (no extra buffer needed).
 
     // Check if existing travel to the destination can be reused
     let effectiveTravelAfter = needTravelAfter;
@@ -172,13 +174,16 @@ export function selectBestSlot(
     }
 
     let canPlaceTravelOutside = false;
+    // Leading buffer is only needed when not absorbing (absorb start already has a buffer from prior task)
+    const leadingBuffer = canAbsorbPrevTravel ? 0 : bufferMinutes;
     let requiredInside =
+      leadingBuffer +
       task.duration +
       bufferMinutes +
       (effectiveTravelAfter > 0 ? effectiveTravelAfter + bufferMinutes : 0);
 
     if (needTravelBefore > 0 && slot.prevLocationId && taskLocationId) {
-      const travelEnd = new Date(slot.start.getTime() - bufferMinutes * 60000);
+      const travelEnd = new Date(slot.start.getTime());
       canPlaceTravelOutside = slotManager.canPlaceStandaloneTravelBefore(
         travelEnd,
         needTravelBefore,

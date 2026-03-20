@@ -29,9 +29,10 @@ export class SlotFinder {
     const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
     let currentDate = new Date(afterDate);
 
-    // Base required time: task duration + 1 buffer (minimum)
-    // The Scheduler will do the final capacity check including travel time
-    const baseRequiredMinutes = durationMinutes + this.bufferTimeMinutes;
+    // Base required time: task duration + leading buffer + trailing buffer (minimum).
+    // Slots no longer have a pre-baked leading buffer, so we account for both here.
+    // The Scheduler does the final capacity check including travel time.
+    const baseRequiredMinutes = durationMinutes + 2 * this.bufferTimeMinutes;
 
     while (currentDate <= searchEndDate) {
       const dayKey = this.getDayKeyFn(currentDate);

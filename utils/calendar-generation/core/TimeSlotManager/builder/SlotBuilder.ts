@@ -95,41 +95,10 @@ export class SlotBuilder {
     // Convert gaps to available time slots (location info is preserved)
     let slots = gaps;
 
-    // Apply leading buffer to slots that follow templates/fixed events
-    // This ensures scheduled tasks don't start immediately after templates.
-    // NOTE: This is NOT double-buffering - it handles different scenarios:
-    // - Leading buffer: Applied once during initial slot building (after templates)
-    // - Trailing buffer: Applied when scheduling tasks (via reserveSlotWithTravel)
-    // When a task is scheduled, the slot is split and the "after" slot starts
-    // at taskEnd + buffer, so subsequent tasks get proper spacing automatically.
-    // We identify "start of range" slots by comparing slot.start to startDate
-    if (this.bufferTimeMinutes > 0) {
-      const rangeStartTime = startDate.getTime();
-      slots = slots
-        .map((slot) => {
-          // Only apply leading buffer if this slot doesn't start at the range beginning
-          // (meaning there's a preceding event/template before this slot)
-          const isStartOfRange = slot.start.getTime() === rangeStartTime;
-          if (!isStartOfRange) {
-            const newStart = new Date(
-              slot.start.getTime() + this.bufferTimeMinutes * 60000,
-            );
-            const newDuration = Math.floor(
-              (slot.end.getTime() - newStart.getTime()) / 60000,
-            );
-            // Only shrink if there's still usable time left
-            if (newDuration > 0) {
-              return {
-                ...slot,
-                start: newStart,
-                durationMinutes: newDuration,
-              };
-            }
-          }
-          return slot;
-        })
-        .filter((slot) => slot.durationMinutes > 0);
-    }
+    // No leading buffer pre-applied here. Buffers are handled at task placement time:
+    // when a task is reserved, the slot is split so [slot.start, taskStart] becomes
+    // an explicit buffer slot and [taskEnd, taskEnd+buffer] is the trailing buffer.
+    // This allows gap travel (return trips) to start at slot.start = eventEnd directly.
 
     // Travel injection pipeline:
     // 1. Fix stale prevLocationId on slots following category periods
@@ -403,10 +372,11 @@ export class SlotBuilder {
     );
     const result: TimeSlot[] = [];
 
-    // Tracks location pairs for which a "going" travel has been carved.
-    // A gap whose (prevLoc, nextLoc) mirrors an entry here is a return trip
-    // and gets travel placed at its START rather than its END.
-    const outgoingTransitions = new Set<string>();
+    // Tracks locations from which gap travel has already departed on this day.
+    // If the current travel's destination (nextLoc) is in this set, it means we've
+    // previously left from that location — so this is a return trip and travel is placed
+    // at START (depart immediately). Otherwise travel is placed at END (depart as late as possible).
+    const departureLocations = new Set<string>();
 
     let skipNextSlot = false;
     for (let i = 0; i < slots.length; i++) {
@@ -432,7 +402,9 @@ export class SlotBuilder {
         continue;
       }
 
-      const placeAtStart = outgoingTransitions.has(`${nextLoc}->${prevLoc}`);
+      // Place at start if a previous gap travel departed FROM nextLoc (our current destination),
+      // meaning this travel is a return trip to a place we've already left from.
+      const placeAtStart = departureLocations.has(nextLoc);
       const travelDepartureTime = placeAtStart ? slot.start : slot.end;
 
       const travelMinutes = this.travelManager.getTravelTime(
@@ -554,7 +526,7 @@ export class SlotBuilder {
                   skipNextSlot = true;
                 }
               }
-              outgoingTransitions.add(`${prevLoc}->${bLoc}`);
+              departureLocations.add(prevLoc);
               continue;
             }
           }
@@ -607,7 +579,8 @@ export class SlotBuilder {
                 isStrictCategory: slot.isStrictCategory,
               });
             }
-            outgoingTransitions.add(`${catLoc}->${nextLoc}`);
+            departureLocations.add(prevLoc);
+            departureLocations.add(catLoc);
             continue;
           }
           // Both don't fit — fall through to single merged travel (prevLoc→nextLoc).
@@ -659,12 +632,15 @@ export class SlotBuilder {
             ));
           }
           skipNextSlot = true;
+          departureLocations.add(prevLoc);
           continue;
         }
       }
 
       if (placeAtStart) {
-        // Travel at START: immediately after preceding fixed event
+        // Travel at START: depart immediately when the preceding event ends.
+        // slot.start = eventEnd (no pre-baked buffer), so travel starts right here.
+        departureLocations.add(prevLoc);
         const travelStart = new Date(slot.start.getTime());
         const travelEnd = new Date(travelStart.getTime() + travelMs);
 
@@ -692,7 +668,7 @@ export class SlotBuilder {
           }
         } else {
           occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-            slot.start,
+            travelStart,
             slot.end,
             prevLoc,
             nextLoc,
@@ -701,8 +677,8 @@ export class SlotBuilder {
           ));
         }
       } else {
-        // Travel at END: going to a foreign event — record for symmetric return detection.
-        outgoingTransitions.add(`${prevLoc}->${nextLoc}`);
+        // Travel at END: departing from prevLoc toward a new destination.
+        departureLocations.add(prevLoc);
         const travelEnd = new Date(slot.end.getTime());
         const travelStart = new Date(travelEnd.getTime() - travelMs);
 
