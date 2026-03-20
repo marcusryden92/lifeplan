@@ -188,13 +188,15 @@ export class SlotBuilder {
 
       for (const period of relevantPeriods) {
         const periodEndMs = period.end.getTime();
-        // If any non-null located interval sits between the period end and this slot,
-        // that interval already establishes a fresh location context — stop looking.
+        // If any non-null located interval overlaps with the post-period region
+        // [periodEnd, slotStart], it establishes a fresh location context — stop looking.
+        // Use overlap check (start < slotStart && end > periodEnd) rather than containment,
+        // so events that straddle the category boundary are also detected.
         const hasInterveningLocation = merged.some(
           (interval) =>
             interval.locationId !== null &&
-            interval.start.getTime() >= periodEndMs &&
-            interval.end.getTime() <= slotStartMs,
+            interval.start.getTime() < slotStartMs &&
+            interval.end.getTime() > periodEndMs,
         );
         if (hasInterveningLocation) break;
 
@@ -733,16 +735,19 @@ export class SlotBuilder {
             });
           } else {
             // Slot fully consumed by travel (no task space, no trailing buffer before
-            // the next fixed event). Check for backward bleed into adjacent category.
+            // the next fixed event). Check for backward bleed into adjacent slot.
             const lastResult = result.length > 0 ? result[result.length - 1] : null;
-            if (
-              !slot.categoryId &&
+            const newTravelEnd = new Date(slot.end.getTime() - bufferMs);
+            const newTravelStart = new Date(newTravelEnd.getTime() - travelMs);
+            // Only bleed backward if the travel start lands within the previous slot.
+            // If newTravelStart < lastResult.start the travel would cross into occupied
+            // time before that slot, creating overlapping events.
+            const canBleed = !!(
               lastResult?.isAvailable &&
-              lastResult.categoryId &&
-              lastResult.end.getTime() + bufferMs >= slot.start.getTime()
-            ) {
-              const newTravelEnd = new Date(slot.end.getTime() - bufferMs);
-              const newTravelStart = new Date(newTravelEnd.getTime() - travelMs);
+              lastResult.end.getTime() + bufferMs >= slot.start.getTime() &&
+              newTravelStart.getTime() >= lastResult.start.getTime()
+            );
+            if (!slot.categoryId && canBleed && lastResult?.categoryId) {
               occupiedSlots.push(TimeSlotUtils.createTravelSlot(
                 newTravelStart, newTravelEnd, prevLoc, nextLoc,
                 `travel-gap-${slot.start.getTime()}`,
@@ -760,23 +765,18 @@ export class SlotBuilder {
                 result.pop();
               }
               // Post-category slot fully consumed — not pushed to result.
-            } else if (
-              lastResult?.isAvailable &&
-              lastResult.end.getTime() + bufferMs >= slot.start.getTime()
-            ) {
-              const newTravelEnd = new Date(slot.end.getTime() - bufferMs);
-              const newTravelStart = new Date(newTravelEnd.getTime() - travelMs);
+            } else if (canBleed) {
               occupiedSlots.push(TimeSlotUtils.createTravelSlot(
                 newTravelStart, newTravelEnd, prevLoc, nextLoc,
                 `travel-gap-${slot.start.getTime()}`,
               ));
               const newLastEnd = new Date(newTravelStart.getTime() - bufferMs);
-              if (newLastEnd.getTime() > lastResult.start.getTime()) {
+              if (newLastEnd.getTime() > lastResult!.start.getTime()) {
                 result[result.length - 1] = {
-                  ...lastResult,
+                  ...lastResult!,
                   end: newLastEnd,
                   durationMinutes: Math.floor(
-                    (newLastEnd.getTime() - lastResult.start.getTime()) / 60000,
+                    (newLastEnd.getTime() - lastResult!.start.getTime()) / 60000,
                   ),
                 };
               } else {
@@ -784,7 +784,7 @@ export class SlotBuilder {
               }
               // Slot fully consumed by travel — not pushed to result.
             } else {
-              // No adjacent available slot to bleed into: place travel as-is.
+              // No adjacent slot or bleed would cross into occupied time: place travel as-is.
               occupiedSlots.push(TimeSlotUtils.createTravelSlot(
                 travelStart, travelEnd, prevLoc, nextLoc,
                 `travel-gap-${slot.start.getTime()}`,
@@ -793,16 +793,17 @@ export class SlotBuilder {
           }
         } else {
           // Travel doesn't fit in the slot at all.
-          // Check for backward bleed into an adjacent preceding category slot first.
+          // Check for backward bleed into an adjacent preceding slot.
           const lastResult = result.length > 0 ? result[result.length - 1] : null;
-          if (
-            !slot.categoryId &&
+          const newTravelEnd = new Date(slot.end.getTime() - bufferMs);
+          const newTravelStart = new Date(newTravelEnd.getTime() - travelMs);
+          // Only bleed backward if the travel start lands within the previous slot.
+          const canBleed = !!(
             lastResult?.isAvailable &&
-            lastResult.categoryId &&
-            lastResult.end.getTime() + bufferMs >= slot.start.getTime()
-          ) {
-            const newTravelEnd = new Date(slot.end.getTime() - bufferMs);
-            const newTravelStart = new Date(newTravelEnd.getTime() - travelMs);
+            lastResult.end.getTime() + bufferMs >= slot.start.getTime() &&
+            newTravelStart.getTime() >= lastResult.start.getTime()
+          );
+          if (!slot.categoryId && canBleed && lastResult?.categoryId) {
             occupiedSlots.push(TimeSlotUtils.createTravelSlot(
               newTravelStart, newTravelEnd, prevLoc, nextLoc,
               `travel-gap-${slot.start.getTime()}`,
@@ -820,24 +821,18 @@ export class SlotBuilder {
               result.pop();
             }
             // Post-category slot consumed — not pushed to result.
-          } else if (
-            slot.categoryId &&
-            lastResult?.isAvailable &&
-            lastResult.end.getTime() + bufferMs >= slot.start.getTime()
-          ) {
-            const newTravelEnd = new Date(slot.end.getTime() - bufferMs);
-            const newTravelStart = new Date(newTravelEnd.getTime() - travelMs);
+          } else if (slot.categoryId && canBleed) {
             occupiedSlots.push(TimeSlotUtils.createTravelSlot(
               newTravelStart, newTravelEnd, prevLoc, nextLoc,
               `travel-gap-${slot.start.getTime()}`,
             ));
             const newLastEnd = new Date(newTravelStart.getTime() - bufferMs);
-            if (newLastEnd.getTime() > lastResult.start.getTime()) {
+            if (newLastEnd.getTime() > lastResult!.start.getTime()) {
               result[result.length - 1] = {
-                ...lastResult,
+                ...lastResult!,
                 end: newLastEnd,
                 durationMinutes: Math.floor(
-                  (newLastEnd.getTime() - lastResult.start.getTime()) / 60000,
+                  (newLastEnd.getTime() - lastResult!.start.getTime()) / 60000,
                 ),
               };
             } else {

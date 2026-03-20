@@ -113,8 +113,7 @@ export class CalendarGenerator {
     // Phase 5: Build category constraints and periods
     const {
       categoryConstraintMap,
-      categoryPeriodsStatic,
-      wrapperPeriodsForManager,
+      categoryPeriods,
     } = buildCategoryConstraints(
       input.categories,
       currentDate,
@@ -131,7 +130,7 @@ export class CalendarGenerator {
       filteredEvents,
       perTemplateMasks,
       plannerLocationMap,
-      wrapperPeriodsForManager,
+      categoryPeriods,
       enableLogging
     );
 
@@ -195,7 +194,7 @@ export class CalendarGenerator {
       input.userId,
       this.slotManager,
       context,
-      categoryPeriodsStatic,
+      categoryPeriods,
       plannerLocationMap
     );
 

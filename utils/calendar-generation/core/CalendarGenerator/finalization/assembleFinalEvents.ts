@@ -15,6 +15,7 @@ interface CategoryPeriod {
   categoryId: string;
   categoryName: string;
   categoryColor?: string | null;
+  locationId: string | null;
   isStrict: boolean;
 }
 

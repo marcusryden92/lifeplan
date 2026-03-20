@@ -112,6 +112,7 @@ export function generateCategorySlotPeriods(
   categoryId: string;
   categoryName: string;
   categoryColor?: string | null;
+  locationId: string | null;
   isStrict: boolean;
 }> {
   const periods: Array<{
@@ -120,6 +121,7 @@ export function generateCategorySlotPeriods(
     categoryId: string;
     categoryName: string;
     categoryColor?: string | null;
+    locationId: string | null;
     isStrict: boolean;
   }> = [];
 
@@ -154,6 +156,7 @@ export function generateCategorySlotPeriods(
             categoryId: category.id,
             categoryName: category.name,
             categoryColor: category.color,
+            locationId: category.locationId ?? null,
             isStrict: category.isStrict,
           });
         }
