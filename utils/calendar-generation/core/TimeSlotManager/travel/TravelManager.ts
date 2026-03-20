@@ -575,6 +575,35 @@ export class TravelManager {
   }
 
   /**
+   * Find a gap-travel slot that ends just before a given slot start.
+   * Used to detect when a pre-carved return trip (e.g. Gamla Stan → Home) precedes a
+   * free slot, so that a task placed in that slot can bypass the intermediate stop and
+   * travel direct from the real origin (e.g. Gamla Stan → Gym).
+   *
+   * @param slotStart - The start of the available slot (gap travel ends at slotStart - buffer)
+   * @returns The travel-gap slot if found, null otherwise
+   */
+  findPrecedingGapTravel(slotStart: Date): TimeSlot | null {
+    const dayKey = this.getDayKeyFn(slotStart);
+    const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
+    const bufferMs = this.bufferTimeMinutes * 60000;
+    // Gap travel ends at slotStart - buffer; allow small tolerance
+    const expectedEnd = slotStart.getTime() - bufferMs;
+    const toleranceMs = bufferMs + 10 * 60 * 1000;
+
+    for (const slot of occupiedSlots) {
+      if (!TimeSlotUtils.isTravelSlot(slot)) continue;
+      if (!slot.eventId?.startsWith("travel-gap-")) continue;
+      if (!slot.travelFromLocationId) continue;
+      const timeDiff = Math.abs(slot.end.getTime() - expectedEnd);
+      if (timeDiff <= toleranceMs) {
+        return slot;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Find an existing travel slot originating FROM a given location near a given time.
    * Used to detect when a previous task at the same location already created a travel-after
    * that can be absorbed by a new same-location task placed after it.

@@ -101,6 +101,7 @@ export class SlotReserver {
     nextLocationId: string | null,
     reusableTravelStart?: Date | null,
     absorbPrevTravelAfter?: boolean,
+    reclaimPrecedingGapTravel?: TimeSlot | null,
   ): { success: boolean } {
     const dayKey = this.getDayKeyFn(start);
     const slots = this.availableSlots.get(dayKey);
@@ -140,6 +141,34 @@ export class SlotReserver {
             }
           }
           break;
+        }
+      }
+    }
+
+    // Reclaim a preceding gap travel (e.g. Gamla Stan → Home) by removing it and expanding
+    // the available slot backward. The caller has already set prevLocationId to the gap
+    // travel's real fromLocationId and travelBefore to the direct route duration.
+    // Must happen before the slot search so the expanded slot is visible.
+    if (reclaimPrecedingGapTravel) {
+      const gapTravel = reclaimPrecedingGapTravel;
+      const gapIdx = occupiedSlots.findIndex((s) => s.eventId === gapTravel.eventId);
+      if (gapIdx !== -1) {
+        occupiedSlots.splice(gapIdx, 1);
+        // Expand the available slot backward to cover the reclaimed gap travel window
+        const expectedSlotStart = gapTravel.end.getTime() + bufferMinutes * 60000;
+        const searchWindowMs = bufferMinutes * 60000 + 10 * 60 * 1000;
+        for (const availSlot of slots) {
+          if (!availSlot.isAvailable) continue;
+          const diff = Math.abs(availSlot.start.getTime() - expectedSlotStart);
+          if (diff <= searchWindowMs) {
+            availSlot.start = gapTravel.start;
+            availSlot.durationMinutes = Math.floor(
+              (availSlot.end.getTime() - availSlot.start.getTime()) / 60000,
+            );
+            availSlot.prevLocationId =
+              gapTravel.travelFromLocationId ?? availSlot.prevLocationId;
+            break;
+          }
         }
       }
     }

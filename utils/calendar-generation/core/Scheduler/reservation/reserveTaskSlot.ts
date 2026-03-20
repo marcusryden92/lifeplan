@@ -27,8 +27,15 @@ export function reserveTaskSlot(
   slotManager: TimeSlotManager,
   absorbPrevTravelAfter: boolean = false,
   absorbedTravelStart: Date | null = null,
+  reclaimPrecedingGapTravel: TimeSlot | null = null,
 ): ReservationResult | { failure: SchedulingFailure } {
   const bufferMinutes = slotManager.getBufferTimeMinutes();
+
+  // When reclaiming a preceding gap travel (e.g. Gamla Stan → Home), use the gap
+  // travel's real origin as prevLocationId so travel-before is routed correctly.
+  const effectivePrevLocationId = reclaimPrecedingGapTravel
+    ? reclaimPrecedingGapTravel.travelFromLocationId ?? selectedSlot.prevLocationId
+    : selectedSlot.prevLocationId;
 
   // Calculate task times
   // Layout: [travelBefore] [buffer] [task] [buffer] [travel-after] [buffer] [FREE]
@@ -50,8 +57,8 @@ export function reserveTaskSlot(
     offsetToTaskStart = canPlaceOutside ? 0 : travelBefore + bufferMinutes;
   }
 
-  // When absorbing the previous task's travel-after, start at the absorbed travel's
-  // position instead of the free slot start (which is after the travel + buffer)
+  // When absorbing the previous task's travel-after, or reclaiming a preceding gap travel,
+  // start at the reclaimed position instead of the free slot start.
   const effectiveSlotStart = absorbedTravelStart ?? selectedSlot.start;
 
   const taskStartDate = dateTimeService.addDuration(
@@ -67,14 +74,14 @@ export function reserveTaskSlot(
   // Travel-before is placed at the START of the slot
   // Travel-after is placed at the END of the slot
   // If placing travel-before outside, reserve it separately and omit travel-before inside
-  if (effectiveTravelBefore > 0 && selectedSlot.prevLocationId && taskLocationId) {
+  if (effectiveTravelBefore > 0 && effectivePrevLocationId && taskLocationId) {
     const travelEnd = new Date(
       selectedSlot.start.getTime() - bufferMinutes * 60000
     );
     const placed = slotManager.reserveStandaloneTravelBefore(
       travelEnd,
       effectiveTravelBefore,
-      selectedSlot.prevLocationId,
+      effectivePrevLocationId,
       taskLocationId,
       task.id
     );
@@ -93,10 +100,11 @@ export function reserveTaskSlot(
     taskLocationId ?? null,
     effectiveTravelBefore,
     travelAfter,
-    selectedSlot.prevLocationId ?? null,
+    effectivePrevLocationId ?? null,
     selectedSlot.nextLocationId ?? null,
     reusableTravelStart,
     absorbPrevTravelAfter,
+    reclaimPrecedingGapTravel,
   );
 
   if (!result.success) {

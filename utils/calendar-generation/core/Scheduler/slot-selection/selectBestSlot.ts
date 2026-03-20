@@ -24,6 +24,7 @@ export interface SlotSelectionResult {
   taskLocationId: string | null | undefined;
   absorbPrevTravelAfter: boolean;
   absorbedTravelStart: Date | null;
+  reclaimPrecedingGapTravel: TimeSlot | null;
 }
 
 /**
@@ -78,6 +79,7 @@ export function selectBestSlot(
   let selectedReusableTravelStart: Date | null = null;
   let selectedAbsorbPrevTravel = false;
   let selectedAbsorbedTravelStart: Date | null = null;
+  let selectedReclaimPrecedingGapTravel: TimeSlot | null = null;
 
   for (const scoredSlot of scoredSlots) {
     // Find the original slot with location info
@@ -95,6 +97,7 @@ export function selectBestSlot(
     let absorbableTravel: ReturnType<
       typeof slotManager.findAdjacentTravelFrom
     > = null;
+    let reclaimPrecedingGapTravel: TimeSlot | null = null;
 
     if (taskLocationId) {
       // Travel BEFORE: needed if prev location differs from task location
@@ -111,11 +114,32 @@ export function selectBestSlot(
           canAbsorbPrevTravel = true;
           needTravelBefore = 0;
         } else {
-          needTravelBefore = slotManager.getTravelTime(
-            slot.prevLocationId,
-            taskLocationId,
-            slot.start,
-          );
+          // Check if there is a pre-carved gap travel (e.g. a return trip Gamla Stan → Home)
+          // immediately before this slot. If so, we can bypass the intermediate stop and
+          // travel direct from the real origin (Gamla Stan) to the task location.
+          const precedingGapTravel = slotManager.findPrecedingGapTravel(slot.start);
+          if (
+            precedingGapTravel?.travelFromLocationId &&
+            precedingGapTravel.travelFromLocationId !== taskLocationId
+          ) {
+            const directTravel = slotManager.getTravelTime(
+              precedingGapTravel.travelFromLocationId,
+              taskLocationId,
+              precedingGapTravel.start,
+            );
+            if (directTravel > 0) {
+              needTravelBefore = directTravel;
+              reclaimPrecedingGapTravel = precedingGapTravel;
+            }
+          }
+
+          if (!reclaimPrecedingGapTravel) {
+            needTravelBefore = slotManager.getTravelTime(
+              slot.prevLocationId,
+              taskLocationId,
+              slot.start,
+            );
+          }
         }
       }
 
@@ -164,13 +188,17 @@ export function selectBestSlot(
       }
     }
 
-    // When absorbing a previous task's travel-after, the reclaimed travel space
-    // adds to the effective slot capacity (travel duration + buffer before it)
+    // When absorbing a previous task's travel-after, or reclaiming a preceding gap travel,
+    // the reclaimed travel space adds to the effective slot capacity.
     let effectiveCapacity = slot.durationMinutes;
     let absorbedStart: Date | null = null;
     if (canAbsorbPrevTravel && absorbableTravel) {
       effectiveCapacity += absorbableTravel.durationMinutes + bufferMinutes;
       absorbedStart = new Date(absorbableTravel.start.getTime());
+    } else if (reclaimPrecedingGapTravel) {
+      // Expand capacity backward to include the gap travel window + the buffer between it and the slot
+      effectiveCapacity += reclaimPrecedingGapTravel.durationMinutes + bufferMinutes;
+      absorbedStart = new Date(reclaimPrecedingGapTravel.start.getTime());
     }
 
     // Check if this slot has enough capacity
@@ -181,6 +209,7 @@ export function selectBestSlot(
       selectedReusableTravelStart = reusableTravelStart;
       selectedAbsorbPrevTravel = canAbsorbPrevTravel;
       selectedAbsorbedTravelStart = absorbedStart;
+      selectedReclaimPrecedingGapTravel = reclaimPrecedingGapTravel;
       break;
     }
   }
@@ -204,5 +233,6 @@ export function selectBestSlot(
     taskLocationId,
     absorbPrevTravelAfter: selectedAbsorbPrevTravel,
     absorbedTravelStart: selectedAbsorbedTravelStart,
+    reclaimPrecedingGapTravel: selectedReclaimPrecedingGapTravel,
   };
 }
