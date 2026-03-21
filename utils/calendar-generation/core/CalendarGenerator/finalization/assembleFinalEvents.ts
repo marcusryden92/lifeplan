@@ -6,18 +6,8 @@
 
 import { SimpleEvent } from "@/types/prisma";
 import { TimeSlotManager } from "../../TimeSlotManager";
-import { SchedulingContext } from "../../../models/SchedulingModels";
+import { SchedulingContext, CategoryPeriod } from "../../../models/SchedulingModels";
 import { EventAssembler } from "../../../helpers/events/EventAssembler";
-
-interface CategoryPeriod {
-  start: Date;
-  end: Date;
-  categoryId: string;
-  categoryName: string;
-  categoryColor?: string | null;
-  locationId: string | null;
-  isStrict: boolean;
-}
 
 export function assembleFinalEvents(
   userId: string,

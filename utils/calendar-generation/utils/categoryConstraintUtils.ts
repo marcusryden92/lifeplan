@@ -3,7 +3,7 @@
  */
 
 import type { CategoryTimeSlot } from "@/types/categoryTypes";
-import type { CategoryConstraint } from "../models/SchedulingModels";
+import type { CategoryConstraint, CategoryPeriod } from "../models/SchedulingModels";
 import { Category, Planner } from "@/types/prisma";
 import { parseCategoryTimeSlots } from "@/utils/categoryHelpers";
 
@@ -106,24 +106,8 @@ export function generateCategorySlotPeriods(
   startDate: Date,
   endDate: Date,
   categories: CategoryConstraint[]
-): Array<{
-  start: Date;
-  end: Date;
-  categoryId: string;
-  categoryName: string;
-  categoryColor?: string | null;
-  locationId: string | null;
-  isStrict: boolean;
-}> {
-  const periods: Array<{
-    start: Date;
-    end: Date;
-    categoryId: string;
-    categoryName: string;
-    categoryColor?: string | null;
-    locationId: string | null;
-    isStrict: boolean;
-  }> = [];
+): CategoryPeriod[] {
+  const periods: CategoryPeriod[] = [];
 
   for (const category of categories) {
     const timeSlots = category.timeSlots;

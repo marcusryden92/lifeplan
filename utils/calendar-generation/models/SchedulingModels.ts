@@ -217,6 +217,19 @@ export interface CalendarGenerationInput {
 }
 
 /**
+ * A concrete category time period expanded from a CategoryConstraint's time slot rules
+ */
+export interface CategoryPeriod {
+  start: Date;
+  end: Date;
+  categoryId: string;
+  categoryName: string;
+  categoryColor?: string | null;
+  locationId: string | null;
+  isStrict: boolean;
+}
+
+/**
  * Category time constraint information
  */
 export interface CategoryConstraint {

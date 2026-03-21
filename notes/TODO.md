@@ -1,5 +1,6 @@
+- Implement rolling window in calendar generation (for category periods for instance)
+
 - Calendar items not loading properly on initial load
-- Issues with category items not displaying properly with seed data
 - Handling of category-items overlapping, or how and where to create them
   (Its own view? In template view? In categories like now?)
 

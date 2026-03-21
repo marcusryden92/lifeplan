@@ -5,7 +5,7 @@
  */
 
 import { Category } from "@/types/prisma";
-import { CategoryConstraint } from "../../../models/SchedulingModels";
+import { CategoryConstraint, CategoryPeriod } from "../../../models/SchedulingModels";
 import {
   buildCategoryConstraintMap,
   generateCategorySlotPeriods,
@@ -16,15 +16,7 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 export interface CategoryPeriodsResult {
   categoryConstraintMap: Map<string, CategoryConstraint>;
   categoryConstraintsList: CategoryConstraint[];
-  categoryPeriods: Array<{
-    start: Date;
-    end: Date;
-    categoryId: string;
-    categoryName: string;
-    categoryColor?: string | null;
-    locationId: string | null;
-    isStrict: boolean;
-  }>;
+  categoryPeriods: CategoryPeriod[];
 }
 
 export function buildCategoryConstraints(

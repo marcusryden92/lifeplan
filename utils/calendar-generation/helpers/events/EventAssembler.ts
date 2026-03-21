@@ -18,15 +18,7 @@ import {
   detectTrespassingEvents,
   IntervalWithId,
 } from "../../utils/intervalUtils";
-
-interface CategoryPeriod {
-  start: Date;
-  end: Date;
-  categoryId: string;
-  categoryName: string;
-  categoryColor?: string | null;
-  isStrict: boolean;
-}
+import { CategoryPeriod } from "../../models/SchedulingModels";
 
 export class EventAssembler {
   /**

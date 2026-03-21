@@ -109,7 +109,26 @@ export class SlotBuilder {
     if (plannerLocationMap) {
       slots = this.fixPostCategoryPrevLoc(slots, adjustedIntervals, startDate, endDate);
       slots = this.splitSlotsAtCategoryBoundaries(slots, startDate, endDate);
+      // DEBUG
+      if (startDate.getDate() === 24) {
+        const fmt = (d: Date) => d.toTimeString().slice(0, 5);
+        const loc = (id: string | null | undefined) => id ? id.slice(-12) : "null";
+        console.log(`\n=== SLOTS BEFORE CARVE (${startDate.toDateString()}) ===`);
+        console.log("OCCUPIED INTERVALS:", adjustedIntervals.map(i => `${fmt(i.start)}-${fmt(i.end)} loc=${loc(i.locationId)}`));
+        slots.forEach((s, i) => console.log(`  [${i}] ${fmt(s.start)}-${fmt(s.end)} prev=${loc(s.prevLocationId)} next=${loc(s.nextLocationId)} cat=${s.categoryId ? "YES" : "no"}`));
+      }
       slots = this.carveTravelFromChain(slots, startDate);
+      // DEBUG
+      if (startDate.getDate() === 24) {
+        const fmt = (d: Date) => d.toTimeString().slice(0, 5);
+        const loc = (id: string | null | undefined) => id ? id.slice(-12) : "null";
+        console.log(`=== SLOTS AFTER CARVE (${startDate.toDateString()}) ===`);
+        slots.forEach((s, i) => console.log(`  [${i}] ${fmt(s.start)}-${fmt(s.end)} prev=${loc(s.prevLocationId)} next=${loc(s.nextLocationId)}`));
+        const dayKey = this.getDayKeyFn(startDate);
+        const carved = (this.occupiedSlots.get(dayKey) || []).filter(s => s.travelType === "preliminary");
+        console.log(`=== CARVED TRAVEL ===`);
+        carved.forEach(s => console.log(`  ${fmt(s.start)}-${fmt(s.end)} ${loc(s.travelFromLocationId)}→${loc(s.travelToLocationId)}`));
+      }
     }
 
     return TimeSlotUtils.mergeAdjacentSlots(slots);
