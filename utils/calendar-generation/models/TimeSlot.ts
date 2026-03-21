@@ -26,6 +26,8 @@ export interface TimeSlot {
   travelFromLocationId?: string | null;
   /** For travel slots: the destination location ID */
   travelToLocationId?: string | null;
+  /** For travel slots: discriminates between preliminary (first-pass), inbound (before task), and outbound (after task) */
+  travelType?: "preliminary" | "inbound" | "outbound";
   /** For travel slots: true if actual travel time is less than required */
   insufficientTravel?: boolean;
   /** For travel slots: the original required travel time in minutes */
@@ -230,7 +232,8 @@ export class TimeSlotUtils {
     end: Date,
     fromLocationId: string,
     toLocationId: string,
-    associatedEventId: string,
+    travelType: "preliminary" | "inbound" | "outbound",
+    eventId: string,
     options?: {
       insufficientTravel?: boolean;
       requiredTravelMinutes?: number;
@@ -243,8 +246,9 @@ export class TimeSlotUtils {
         (end.getTime() - start.getTime()) / (1000 * 60)
       ),
       isAvailable: false,
-      eventId: associatedEventId,
+      eventId,
       eventType: "travel",
+      travelType,
       prevLocationId: fromLocationId,
       nextLocationId: toLocationId,
       travelFromLocationId: fromLocationId,

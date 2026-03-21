@@ -1,6 +1,7 @@
 import { TimeSlot, TimeSlotUtils } from "../../../models/TimeSlot";
 import { TravelManager } from "../travel/TravelManager";
 import { SCHEDULING_CONFIG } from "../../../constants";
+import { v4 as uuidv4 } from "uuid";
 
 /**
  * SlotReserver
@@ -122,7 +123,7 @@ export class SlotReserver {
         if (
           TimeSlotUtils.isTravelSlot(occ) &&
           occ.travelFromLocationId === taskLocationId &&
-          occ.eventId?.startsWith("travel-from-")
+          occ.travelType === "outbound"
         ) {
           // Find the available slot that starts near where this travel ends
           const travelEndTime = occ.end.getTime();
@@ -282,7 +283,8 @@ export class SlotReserver {
         travelBeforeEnd,
         prevLocationId,
         taskLocationId,
-        `travel-to-${eventId}`,
+        "inbound",
+        uuidv4(),
       );
       newSlots.push(travelSlot);
     }
@@ -321,9 +323,7 @@ export class SlotReserver {
           occ.travelToLocationId === nextLocationId
         ) {
           // Only reclaim pre-carved category/gap travel, not dynamic task-to-task travel.
-          const isPreCarved =
-            occ.eventId?.startsWith("travel-gap-") ||
-            occ.eventId?.startsWith("travel-insufficient-");
+          const isPreCarved = occ.travelType === "preliminary";
           if (!isPreCarved) continue;
 
           const travelEndTime = occ.end.getTime();
@@ -420,7 +420,8 @@ export class SlotReserver {
         travelAfterEnd,
         taskLocationId,
         nextLocationId,
-        `travel-from-${eventId}`,
+        "outbound",
+        uuidv4(),
       );
       newSlots.push(travelSlot);
     }

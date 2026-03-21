@@ -18,6 +18,7 @@ import {
 } from "../../../utils/intervalUtils";
 import { dateTimeService } from "../../../utils/dateTimeService";
 import { WeekDayIntegers } from "@/types/calendarTypes";
+import { v4 as uuidv4 } from "uuid";
 
 export class SlotBuilder {
   private categoryPeriods: Array<{
@@ -366,9 +367,7 @@ export class SlotBuilder {
     // Remove any previously carved gap-travel for this day so rebuilding a day
     // doesn't accumulate duplicate entries in occupiedSlots.
     const occupiedSlots = (this.occupiedSlots.get(dayKey) || []).filter(
-      (s) =>
-        !s.eventId?.startsWith("travel-gap-") &&
-        !s.eventId?.startsWith("travel-insufficient-"),
+      (s) => s.travelType !== "preliminary",
     );
     const result: TimeSlot[] = [];
 
@@ -470,7 +469,7 @@ export class SlotBuilder {
                 if (travelStart.getTime() >= slot.start.getTime()) {
                   occupiedSlots.push(TimeSlotUtils.createTravelSlot(
                     travelStart, spanEnd, prevLoc, bLoc,
-                    `travel-gap-${slot.start.getTime()}`,
+                    "preliminary", uuidv4(),
                   ));
                   const availEnd = new Date(travelStart.getTime());
                   if (availEnd.getTime() > slot.start.getTime()) {
@@ -490,7 +489,7 @@ export class SlotBuilder {
                 } else {
                   occupiedSlots.push(TimeSlotUtils.createTravelSlot(
                     slot.start, spanEnd, prevLoc, bLoc,
-                    `travel-insufficient-${slot.start.getTime()}`,
+                    "preliminary", uuidv4(),
                     { insufficientTravel: true, requiredTravelMinutes: directMinutes },
                   ));
                 }
@@ -502,7 +501,7 @@ export class SlotBuilder {
                 if (travelEnd.getTime() <= spanEnd.getTime()) {
                   occupiedSlots.push(TimeSlotUtils.createTravelSlot(
                     slot.start, travelEnd, prevLoc, bLoc,
-                    `travel-gap-${slot.start.getTime()}`,
+                    "preliminary", uuidv4(),
                   ));
                   const newCatStart = new Date(travelEnd.getTime());
                   if (newCatStart.getTime() < spanEnd.getTime()) {
@@ -520,7 +519,7 @@ export class SlotBuilder {
                 } else {
                   occupiedSlots.push(TimeSlotUtils.createTravelSlot(
                     slot.start, spanEnd, prevLoc, bLoc,
-                    `travel-insufficient-${slot.start.getTime()}`,
+                    "preliminary", uuidv4(),
                     { insufficientTravel: true, requiredTravelMinutes: directMinutes },
                   ));
                   skipNextSlot = true;
@@ -554,13 +553,13 @@ export class SlotBuilder {
             const travelBeforeEnd = new Date(slot.start.getTime() + travelBeforeMs);
             occupiedSlots.push(TimeSlotUtils.createTravelSlot(
               slot.start, travelBeforeEnd, prevLoc, catLoc,
-              `travel-gap-${slot.start.getTime()}`,
+              "preliminary", uuidv4(),
             ));
 
             const travelAfterStart = new Date(slot.end.getTime() - travelAfterMs);
             occupiedSlots.push(TimeSlotUtils.createTravelSlot(
               travelAfterStart, slot.end, catLoc, nextLoc,
-              `travel-gap-${slot.end.getTime()}`,
+              "preliminary", uuidv4(),
             ));
 
             const availStart = new Date(travelBeforeEnd.getTime());
@@ -609,7 +608,7 @@ export class SlotBuilder {
           if (travelEnd.getTime() <= spanEnd.getTime()) {
             occupiedSlots.push(TimeSlotUtils.createTravelSlot(
               slot.start, travelEnd, prevLoc, dLoc,
-              `travel-gap-${slot.start.getTime()}`,
+              "preliminary", uuidv4(),
             ));
             const availStart = new Date(travelEnd.getTime());
             if (availStart.getTime() < spanEnd.getTime()) {
@@ -627,7 +626,7 @@ export class SlotBuilder {
           } else {
             occupiedSlots.push(TimeSlotUtils.createTravelSlot(
               slot.start, spanEnd, prevLoc, dLoc,
-              `travel-insufficient-${slot.start.getTime()}`,
+              "preliminary", uuidv4(),
               { insufficientTravel: true, requiredTravelMinutes: directMinutes },
             ));
           }
@@ -650,7 +649,7 @@ export class SlotBuilder {
             travelEnd,
             prevLoc,
             nextLoc,
-            `travel-gap-${slot.start.getTime()}`,
+            "preliminary", uuidv4(),
           ));
 
           const availableStartMs = travelEnd.getTime();
@@ -672,7 +671,7 @@ export class SlotBuilder {
             slot.end,
             prevLoc,
             nextLoc,
-            `travel-insufficient-${slot.start.getTime()}`,
+            "preliminary", uuidv4(),
             { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
           ));
         }
@@ -695,7 +694,7 @@ export class SlotBuilder {
               travelEnd,
               prevLoc,
               nextLoc,
-              `travel-gap-${slot.start.getTime()}`,
+              "preliminary", uuidv4(),
             ));
             result.push({
               start: slot.start,
@@ -726,7 +725,7 @@ export class SlotBuilder {
             if (!slot.categoryId && canBleed && lastResult?.categoryId) {
               occupiedSlots.push(TimeSlotUtils.createTravelSlot(
                 newTravelStart, newTravelEnd, prevLoc, nextLoc,
-                `travel-gap-${slot.start.getTime()}`,
+                "preliminary", uuidv4(),
               ));
               const newCatEnd = new Date(newTravelStart.getTime() - bufferMs);
               if (newCatEnd.getTime() > lastResult.start.getTime()) {
@@ -744,7 +743,7 @@ export class SlotBuilder {
             } else if (canBleed) {
               occupiedSlots.push(TimeSlotUtils.createTravelSlot(
                 newTravelStart, newTravelEnd, prevLoc, nextLoc,
-                `travel-gap-${slot.start.getTime()}`,
+                "preliminary", uuidv4(),
               ));
               const newLastEnd = new Date(newTravelStart.getTime() - bufferMs);
               if (newLastEnd.getTime() > lastResult!.start.getTime()) {
@@ -763,7 +762,7 @@ export class SlotBuilder {
               // No adjacent slot or bleed would cross into occupied time: place travel as-is.
               occupiedSlots.push(TimeSlotUtils.createTravelSlot(
                 travelStart, travelEnd, prevLoc, nextLoc,
-                `travel-gap-${slot.start.getTime()}`,
+                "preliminary", uuidv4(),
               ));
             }
           }
@@ -782,7 +781,7 @@ export class SlotBuilder {
           if (!slot.categoryId && canBleed && lastResult?.categoryId) {
             occupiedSlots.push(TimeSlotUtils.createTravelSlot(
               newTravelStart, newTravelEnd, prevLoc, nextLoc,
-              `travel-gap-${slot.start.getTime()}`,
+              "preliminary", uuidv4(),
             ));
             const newCatEnd = new Date(newTravelStart.getTime() - bufferMs);
             if (newCatEnd.getTime() > lastResult.start.getTime()) {
@@ -800,7 +799,7 @@ export class SlotBuilder {
           } else if (slot.categoryId && canBleed) {
             occupiedSlots.push(TimeSlotUtils.createTravelSlot(
               newTravelStart, newTravelEnd, prevLoc, nextLoc,
-              `travel-gap-${slot.start.getTime()}`,
+              "preliminary", uuidv4(),
             ));
             const newLastEnd = new Date(newTravelStart.getTime() - bufferMs);
             if (newLastEnd.getTime() > lastResult!.start.getTime()) {
@@ -828,7 +827,7 @@ export class SlotBuilder {
               const bleedEnd = new Date(slot.start.getTime() + travelMs);
               occupiedSlots.push(TimeSlotUtils.createTravelSlot(
                 slot.start, bleedEnd, prevLoc, nextLoc,
-                `travel-gap-${slot.start.getTime()}`,
+                "preliminary", uuidv4(),
               ));
               // Shrink the category slot's start to after the bleeding travel.
               const newCatStart = new Date(bleedEnd.getTime() + bufferMs);
@@ -847,7 +846,7 @@ export class SlotBuilder {
                 slot.end,
                 prevLoc,
                 nextLoc,
-                `travel-insufficient-${slot.start.getTime()}`,
+                "preliminary", uuidv4(),
                 { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
               ));
             }

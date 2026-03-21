@@ -270,7 +270,6 @@ export class TimeSlotManager {
     travelMinutes: number,
     fromLocationId: string,
     toLocationId: string,
-    eventId: string,
     force: boolean = false,
   ): { success: boolean } {
     return this.travelManager.reserveStandaloneTravelBefore(
@@ -278,7 +277,6 @@ export class TimeSlotManager {
       travelMinutes,
       fromLocationId,
       toLocationId,
-      eventId,
       force,
     );
   }
@@ -288,7 +286,6 @@ export class TimeSlotManager {
     travelMinutes: number,
     fromLocationId: string,
     toLocationId: string,
-    eventId: string,
     force: boolean = false,
   ): { success: boolean } {
     return this.travelManager.reserveStandaloneTravelAfter(
@@ -296,7 +293,6 @@ export class TimeSlotManager {
       travelMinutes,
       fromLocationId,
       toLocationId,
-      eventId,
       force,
     );
   }
@@ -306,14 +302,12 @@ export class TimeSlotManager {
     requiredTravelMinutes: number,
     fromLocationId: string,
     toLocationId: string,
-    eventId: string,
   ): { success: boolean } {
     return this.travelManager.reserveInsufficientTravelBefore(
       travelEnd,
       requiredTravelMinutes,
       fromLocationId,
       toLocationId,
-      eventId,
     );
   }
 
@@ -322,14 +316,12 @@ export class TimeSlotManager {
     requiredTravelMinutes: number,
     fromLocationId: string,
     toLocationId: string,
-    eventId: string,
   ): { success: boolean } {
     return this.travelManager.reserveInsufficientTravelAfter(
       travelStart,
       requiredTravelMinutes,
       fromLocationId,
       toLocationId,
-      eventId,
     );
   }
 

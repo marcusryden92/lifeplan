@@ -82,7 +82,6 @@ export function reserveTaskSlot(
       effectiveTravelBefore,
       effectivePrevLocationId,
       taskLocationId,
-      task.id
     );
     if (placed.success) {
       // Travel-before placed outside; do not include it inside reserveSlotWithTravel

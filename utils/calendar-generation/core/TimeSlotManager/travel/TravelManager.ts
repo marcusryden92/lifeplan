@@ -7,6 +7,7 @@
 
 import { TimeSlot, TimeSlotUtils } from "../../../models/TimeSlot";
 import { TravelTimeEntry } from "../../../models/SchedulingModels";
+import { v4 as uuidv4 } from "uuid";
 
 export class TravelManager {
   private travelTimeMatrix: Map<string, TravelTimeEntry> | null = null;
@@ -115,7 +116,6 @@ export class TravelManager {
     travelMinutes: number,
     fromLocationId: string,
     toLocationId: string,
-    eventId: string,
     force: boolean = false,
   ): { success: boolean } {
     const dayKey = this.getDayKeyFn(travelEnd);
@@ -130,7 +130,8 @@ export class TravelManager {
         travelEnd,
         fromLocationId,
         toLocationId,
-        `travel-to-${eventId}`,
+        "inbound",
+        uuidv4(),
       );
       const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
       occupiedSlots.push(travelSlot);
@@ -218,7 +219,8 @@ export class TravelManager {
       travelEnd,
       fromLocationId,
       toLocationId,
-      `travel-to-${eventId}`,
+      "inbound",
+      uuidv4(),
     );
     newSlots.push(travelSlot);
 
@@ -257,7 +259,6 @@ export class TravelManager {
     travelMinutes: number,
     fromLocationId: string,
     toLocationId: string,
-    eventId: string,
     force: boolean = false,
   ): { success: boolean } {
     const dayKey = this.getDayKeyFn(travelStart);
@@ -272,7 +273,8 @@ export class TravelManager {
         travelEnd,
         fromLocationId,
         toLocationId,
-        `travel-from-${eventId}`,
+        "outbound",
+        uuidv4(),
       );
       const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
       occupiedSlots.push(travelSlot);
@@ -360,7 +362,8 @@ export class TravelManager {
       travelEnd,
       fromLocationId,
       toLocationId,
-      `travel-from-${eventId}`,
+      "outbound",
+      uuidv4(),
     );
     newSlots.push(travelSlot);
 
@@ -397,7 +400,6 @@ export class TravelManager {
     requiredTravelMinutes: number,
     fromLocationId: string,
     toLocationId: string,
-    eventId: string,
   ): { success: boolean } {
     const dayKey = this.getDayKeyFn(travelEnd);
     const slots = this.availableSlots.get(dayKey);
@@ -430,7 +432,8 @@ export class TravelManager {
       travelEnd,
       fromLocationId,
       toLocationId,
-      `travel-insufficient-${eventId}`,
+      "inbound",
+      uuidv4(),
       {
         insufficientTravel: true,
         requiredTravelMinutes,
@@ -471,7 +474,6 @@ export class TravelManager {
     requiredTravelMinutes: number,
     fromLocationId: string,
     toLocationId: string,
-    eventId: string,
   ): { success: boolean } {
     const dayKey = this.getDayKeyFn(travelStart);
     const slots = this.availableSlots.get(dayKey);
@@ -520,7 +522,8 @@ export class TravelManager {
       travelEnd,
       fromLocationId,
       toLocationId,
-      `travel-insufficient-${eventId}`,
+      "outbound",
+      uuidv4(),
       {
         insufficientTravel: true,
         requiredTravelMinutes,
@@ -593,7 +596,7 @@ export class TravelManager {
 
     for (const slot of occupiedSlots) {
       if (!TimeSlotUtils.isTravelSlot(slot)) continue;
-      if (!slot.eventId?.startsWith("travel-gap-")) continue;
+      if (slot.travelType !== "preliminary" && slot.travelType !== "outbound") continue;
       if (!slot.travelFromLocationId) continue;
       const timeDiff = Math.abs(slot.end.getTime() - expectedEnd);
       if (timeDiff <= toleranceMs) {
@@ -626,7 +629,7 @@ export class TravelManager {
       if (
         TimeSlotUtils.isTravelSlot(slot) &&
         slot.travelFromLocationId === fromLocationId &&
-        slot.eventId?.startsWith("travel-from-")
+        slot.travelType === "outbound"
       ) {
         const timeDiff = Math.abs(slot.end.getTime() - nearTime.getTime());
         if (timeDiff <= searchWindowMs) {
