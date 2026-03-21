@@ -6,6 +6,7 @@ import type { CategoryTimeSlot } from "@/types/categoryTypes";
 import type { CategoryConstraint, CategoryPeriod } from "../models/SchedulingModels";
 import { Category, Planner } from "@/types/prisma";
 import { parseCategoryTimeSlots } from "@/utils/categoryHelpers";
+import { TIME_CONSTANTS } from "../constants";
 
 /**
  * Check if a given date/time falls within any of the category's time slots
@@ -108,51 +109,53 @@ export function generateCategorySlotPeriods(
   categories: CategoryConstraint[]
 ): CategoryPeriod[] {
   const periods: CategoryPeriod[] = [];
+  const { MS_PER_WEEK } = TIME_CONSTANTS;
 
   for (const category of categories) {
     const timeSlots = category.timeSlots;
     if (!timeSlots || timeSlots.length === 0) continue;
 
-    // Iterate through each day in the range
-    const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-      const dayOfWeek = currentDate.getDay();
+    for (const slot of timeSlots) {
+      const [startHour, startMin] = slot.startTime.split(":").map(Number);
+      const [endHour, endMin] = slot.endTime.split(":").map(Number);
 
-      // Check each time slot
-      for (const slot of timeSlots) {
-        if (!slot.days.includes(dayOfWeek)) continue;
+      const startMinutes = startHour * 60 + startMin;
+      let endMinutes = endHour * 60 + endMin;
+      // Overnight slot: end is on the following day
+      if (endMinutes <= startMinutes) endMinutes += 24 * 60;
+      const durationMs = (endMinutes - startMinutes) * 60000;
 
-        // Parse start and end times
-        const [startHour, startMin] = slot.startTime.split(":").map(Number);
-        const [endHour, endMin] = slot.endTime.split(":").map(Number);
+      for (const dayOfWeek of slot.days) {
+        // Find the first occurrence of this weekday on or after startDate
+        const searchBase = new Date(startDate);
+        searchBase.setHours(0, 0, 0, 0);
+        const daysUntil = (dayOfWeek - searchBase.getDay() + 7) % 7;
+        searchBase.setDate(searchBase.getDate() + daysUntil);
 
-        const periodStart = new Date(currentDate);
-        periodStart.setHours(startHour, startMin, 0, 0);
+        // Step weekly through the range
+        while (searchBase <= endDate) {
+          const periodStart = new Date(searchBase);
+          periodStart.setHours(startHour, startMin, 0, 0);
+          const periodEnd = new Date(periodStart.getTime() + durationMs);
 
-        const periodEnd = new Date(currentDate);
-        periodEnd.setHours(endHour, endMin, 0, 0);
+          if (periodEnd > startDate && periodStart < endDate) {
+            periods.push({
+              start: periodStart,
+              end: periodEnd,
+              categoryId: category.id,
+              categoryName: category.name,
+              categoryColor: category.color,
+              locationId: category.locationId ?? null,
+              isStrict: category.isStrict,
+            });
+          }
 
-        // Only add if within the overall range
-        if (periodStart >= startDate && periodEnd <= endDate) {
-          periods.push({
-            start: periodStart,
-            end: periodEnd,
-            categoryId: category.id,
-            categoryName: category.name,
-            categoryColor: category.color,
-            locationId: category.locationId ?? null,
-            isStrict: category.isStrict,
-          });
+          searchBase.setTime(searchBase.getTime() + MS_PER_WEEK);
         }
       }
-
-      // Move to next day
-      currentDate.setDate(currentDate.getDate() + 1);
-      currentDate.setHours(0, 0, 0, 0);
     }
   }
 
-  // Sort by start time
   periods.sort((a, b) => a.start.getTime() - b.start.getTime());
 
   return periods;
