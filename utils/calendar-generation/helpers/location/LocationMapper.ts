@@ -42,7 +42,7 @@ export class LocationMapper {
     }
 
     for (const template of templates) {
-      locationMap.set(template.id, { locationId: template.locationId ?? null, fromCategory: false });
+      locationMap.set(template.id, { locationId: template.locationId ?? null });
     }
 
     return locationMap;
@@ -50,18 +50,17 @@ export class LocationMapper {
 
   private resolveLocationEntry(planner: Planner): LocationEntry {
     if (planner.itemType === "plan") {
-      return { locationId: planner.locationId ?? null, fromCategory: false };
+      return { locationId: planner.locationId ?? null };
     }
 
     if (!planner.useParentLocation && planner.locationId) {
-      return { locationId: planner.locationId, fromCategory: false };
+      return { locationId: planner.locationId };
     }
 
     const ancestorLocation = this.findAncestorLocation(planner.parentId);
-    if (ancestorLocation) return { locationId: ancestorLocation, fromCategory: false };
+    if (ancestorLocation) return { locationId: ancestorLocation };
 
-    const categoryLocation = this.resolveCategoryLocation(planner);
-    return { locationId: categoryLocation, fromCategory: categoryLocation !== null };
+    return { locationId: this.resolveCategoryLocation(planner) };
   }
 
   private findAncestorLocation(parentId: string | null): string | null {

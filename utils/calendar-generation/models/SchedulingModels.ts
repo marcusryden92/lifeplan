@@ -6,14 +6,8 @@
 
 import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
 
-/**
- * Resolved location entry for a planner item.
- * fromCategory is true when the location came solely from a category fallback,
- * meaning travel events should not be generated for this item.
- */
 export interface LocationEntry {
   locationId: string | null;
-  fromCategory: boolean;
 }
 import { SchedulingFailureReason } from "../constants";
 import type { CategoryTimeSlot } from "@/types/categoryTypes";
