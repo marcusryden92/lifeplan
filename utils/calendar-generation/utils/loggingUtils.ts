@@ -10,7 +10,6 @@ import {
   CalendarGenerationInput,
   SchedulingFailure,
   SchedulingMetrics,
-  LocationEntry,
 } from "../models/SchedulingModels";
 import { SchedulingStrategy } from "../strategies/SchedulingStrategy";
 
@@ -20,7 +19,7 @@ export interface LoggingData {
   recurringTemplateEvents: SimpleEvent[];
   perTemplateMasks: PerTemplateMask[];
   largestTemplateGap: number;
-  plannerLocationMap: Map<string, LocationEntry>;
+  plannerLocationMap: Map<string, string | null>;
   strategies: Array<{ strategy: SchedulingStrategy; weight: number }>;
   schedulingResult: {
     success: boolean;

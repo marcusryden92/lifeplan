@@ -28,7 +28,7 @@ export function findValidSlots(
   afterTime?: Date
 ): FindValidSlotsResult | { failure: SchedulingFailure } {
   const taskLocationId =
-    context.plannerLocationMap?.get(task.id)?.locationId ?? null;
+    context.plannerLocationMap?.get(task.id) ?? null;
 
   // Resolve effective category from parent chain via pre-built map
   const effectiveCategoryId =

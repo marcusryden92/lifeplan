@@ -13,7 +13,6 @@ import { PerTemplateMask } from "../../core/TemplateExpander";
 import {
   SchedulingContext,
   SchedulingFailure,
-  LocationEntry,
 } from "../../models/SchedulingModels";
 import { SchedulingFailureReason, SCHEDULING_CONFIG } from "../../constants";
 import { dateTimeService } from "../../utils/dateTimeService";
@@ -38,7 +37,7 @@ export class TaskSchedulingOrchestrator {
     largestTemplateGap: number,
     perTemplateMasks: PerTemplateMask[],
     context: SchedulingContext,
-    plannerLocationMap: Map<string, LocationEntry>
+    plannerLocationMap: Map<string, string | null>
   ): {
     success: boolean;
     newEvents: SimpleEvent[];
@@ -224,7 +223,7 @@ export class TaskSchedulingOrchestrator {
     weekStart: Date,
     context: SchedulingContext,
     perTemplateMasks: PerTemplateMask[],
-    plannerLocationMap: Map<string, LocationEntry>
+    plannerLocationMap: Map<string, string | null>
   ): void {
     const weekStartDate = dateTimeService.startOfDay(weekStart);
     const weekEndDate = dateTimeService.endOfDay(

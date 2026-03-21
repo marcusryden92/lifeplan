@@ -6,7 +6,7 @@
 
 import { SimpleEvent } from "@/types/prisma";
 import { TimeSlotManager } from "../../TimeSlotManager";
-import { SchedulingContext, LocationEntry } from "../../../models/SchedulingModels";
+import { SchedulingContext } from "../../../models/SchedulingModels";
 import { EventAssembler } from "../../../helpers/events/EventAssembler";
 
 interface CategoryPeriod {
@@ -24,7 +24,7 @@ export function assembleFinalEvents(
   slotManager: TimeSlotManager,
   context: SchedulingContext,
   categoryPeriodsStatic: CategoryPeriod[],
-  plannerLocationMap: Map<string, LocationEntry>
+  plannerLocationMap: Map<string, string | null>
 ): SimpleEvent[] {
   // Generate travel events from stored travel slots
   const travelEvents = slotManager.generateTravelEvents(userId);

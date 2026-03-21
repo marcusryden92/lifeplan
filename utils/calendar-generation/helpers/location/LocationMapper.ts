@@ -11,7 +11,6 @@
  */
 
 import { Planner, EventTemplate, Category } from "@/types/prisma";
-import { LocationEntry } from "@/utils/calendar-generation/models/SchedulingModels";
 
 export class LocationMapper {
   private categoryLocationMap: Map<string, string | null>;
@@ -28,8 +27,8 @@ export class LocationMapper {
   buildLocationMap(
     planners: Planner[],
     templates: EventTemplate[]
-  ): Map<string, LocationEntry> {
-    const locationMap = new Map<string, LocationEntry>();
+  ): Map<string, string | null> {
+    const locationMap = new Map<string, string | null>();
 
     if (this.plannerMap.size === 0) {
       for (const planner of planners) {
@@ -38,29 +37,29 @@ export class LocationMapper {
     }
 
     for (const planner of planners) {
-      locationMap.set(planner.id, this.resolveLocationEntry(planner));
+      locationMap.set(planner.id, this.resolveLocation(planner));
     }
 
     for (const template of templates) {
-      locationMap.set(template.id, { locationId: template.locationId ?? null });
+      locationMap.set(template.id, template.locationId ?? null);
     }
 
     return locationMap;
   }
 
-  private resolveLocationEntry(planner: Planner): LocationEntry {
+  private resolveLocation(planner: Planner): string | null {
     if (planner.itemType === "plan") {
-      return { locationId: planner.locationId ?? null };
+      return planner.locationId ?? null;
     }
 
     if (!planner.useParentLocation && planner.locationId) {
-      return { locationId: planner.locationId };
+      return planner.locationId;
     }
 
     const ancestorLocation = this.findAncestorLocation(planner.parentId);
-    if (ancestorLocation) return { locationId: ancestorLocation };
+    if (ancestorLocation) return ancestorLocation;
 
-    return { locationId: this.resolveCategoryLocation(planner) };
+    return this.resolveCategoryLocation(planner);
   }
 
   private findAncestorLocation(parentId: string | null): string | null {

@@ -6,13 +6,11 @@
 
 import { Planner, EventTemplate, Category } from "@/types/prisma";
 import { LocationMapper } from "../../../helpers/location/LocationMapper";
-import { LocationEntry } from "../../../models/SchedulingModels";
-
 export function buildLocationMap(
   planners: Planner[],
   templates: EventTemplate[],
   categories: Category[]
-): Map<string, LocationEntry> {
+): Map<string, string | null> {
   const locationMapper = new LocationMapper(categories);
   return locationMapper.buildLocationMap(planners, templates);
 }

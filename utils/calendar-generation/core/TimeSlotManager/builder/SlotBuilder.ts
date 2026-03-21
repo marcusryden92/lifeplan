@@ -18,7 +18,6 @@ import {
 } from "../../../utils/intervalUtils";
 import { dateTimeService } from "../../../utils/dateTimeService";
 import { WeekDayIntegers } from "@/types/calendarTypes";
-import { LocationEntry } from "../../../models/SchedulingModels";
 
 export class SlotBuilder {
   private categoryPeriods: Array<{
@@ -55,7 +54,7 @@ export class SlotBuilder {
     endDate: Date,
     existingEvents: SimpleEvent[],
     templateMasks: PerTemplateMask[],
-    plannerLocationMap?: Map<string, LocationEntry>,
+    plannerLocationMap?: Map<string, string | null>,
   ): TimeSlot[] {
     // Filter existing events to only those that overlap with this date range
     // Exclude template events since we create intervals from masks instead
@@ -871,7 +870,7 @@ export class SlotBuilder {
     numDays: number,
     existingEvents: SimpleEvent[],
     templateMasks: PerTemplateMask[],
-    plannerLocationMap?: Map<string, LocationEntry>,
+    plannerLocationMap?: Map<string, string | null>,
   ): Map<string, TimeSlot[]> {
     const dailySlots = new Map<string, TimeSlot[]>();
 

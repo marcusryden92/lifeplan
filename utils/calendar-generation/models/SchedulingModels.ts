@@ -6,9 +6,6 @@
 
 import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
 
-export interface LocationEntry {
-  locationId: string | null;
-}
 import { SchedulingFailureReason } from "../constants";
 import type { CategoryTimeSlot } from "@/types/categoryTypes";
 
@@ -88,8 +85,8 @@ export interface SchedulingContext {
   metrics: SchedulingMetrics;
   /** Category constraints for time-based scheduling */
   categoryConstraints?: Map<string, CategoryConstraint>;
-  /** Effective planner -> location map (includes category inheritance and fromCategory flag) */
-  plannerLocationMap?: Map<string, LocationEntry>;
+  /** Effective planner -> location map */
+  plannerLocationMap?: Map<string, string | null>;
   /** Effective planner -> categoryId map (resolved by walking up parent chain) */
   plannerCategoryMap?: Map<string, string | null>;
 }

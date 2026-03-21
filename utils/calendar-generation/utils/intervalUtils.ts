@@ -7,7 +7,6 @@
 
 import { SimpleEvent } from "@/types/prisma";
 import { TimeSlot } from "../models/TimeSlot";
-import { LocationEntry } from "../models/SchedulingModels";
 
 export interface Interval {
   start: Date;
@@ -322,11 +321,11 @@ export function findGaps(
  */
 export function eventsToIntervals(
   events: SimpleEvent[],
-  plannerLocationMap?: Map<string, LocationEntry>,
+  plannerLocationMap?: Map<string, string | null>,
 ): Interval[] {
   return events.map((event) => {
     const lookupId = (event.extendedProps?.eventId as string) || event.id;
-    const locationId = plannerLocationMap?.get(lookupId)?.locationId ?? null;
+    const locationId = plannerLocationMap?.get(lookupId) ?? null;
     return {
       start: new Date(event.start),
       end: new Date(event.end),
