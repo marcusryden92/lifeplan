@@ -7,6 +7,7 @@
 import { Planner, SimpleEvent } from "@/types/prisma";
 import { TimeSlotManager } from "../../TimeSlotManager";
 import { PerTemplateMask } from "../../TemplateExpander";
+import { LocationEntry } from "../../../models/SchedulingModels";
 
 function weeksNeededForPlans(planners: Planner[], currentDate: Date): number {
   const furthestPlanMs = planners
@@ -23,7 +24,7 @@ export function buildInitialSlots(
   planners: Planner[],
   eventArray: SimpleEvent[],
   perTemplateMasks: PerTemplateMask[],
-  plannerLocationMap: Map<string, string | null>,
+  plannerLocationMap: Map<string, LocationEntry>,
   wrapperPeriods: Array<{ start: Date; end: Date; locationId: string | null; categoryId: string; categoryName?: string; categoryColor?: string | null; isStrict: boolean }>,
   enableLogging: boolean
 ): void {

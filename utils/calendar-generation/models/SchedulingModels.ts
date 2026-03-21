@@ -5,6 +5,16 @@
  */
 
 import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
+
+/**
+ * Resolved location entry for a planner item.
+ * fromCategory is true when the location came solely from a category fallback,
+ * meaning travel events should not be generated for this item.
+ */
+export interface LocationEntry {
+  locationId: string | null;
+  fromCategory: boolean;
+}
 import { SchedulingFailureReason } from "../constants";
 import type { CategoryTimeSlot } from "@/types/categoryTypes";
 
@@ -84,10 +94,8 @@ export interface SchedulingContext {
   metrics: SchedulingMetrics;
   /** Category constraints for time-based scheduling */
   categoryConstraints?: Map<string, CategoryConstraint>;
-  /** Effective planner -> location map (includes category inheritance) */
-  plannerLocationMap?: Map<string, string | null>;
-  /** Planner -> location map for travel calculation only (no category fallback) */
-  plannerTravelLocationMap?: Map<string, string | null>;
+  /** Effective planner -> location map (includes category inheritance and fromCategory flag) */
+  plannerLocationMap?: Map<string, LocationEntry>;
   /** Effective planner -> categoryId map (resolved by walking up parent chain) */
   plannerCategoryMap?: Map<string, string | null>;
 }

@@ -13,6 +13,7 @@
 import { Planner, SimpleEvent } from "@/types/prisma";
 import { RuntimeEventExtendedProps } from "@/types/ui";
 import { v4 as uuidv4 } from "uuid";
+import { LocationEntry } from "@/utils/calendar-generation/models/SchedulingModels";
 import { taskIsCompleted } from "../../../taskHelpers";
 import {
   detectTrespassingEvents,
@@ -204,7 +205,7 @@ export class EventAssembler {
    */
   static markTrespassingEvents(
     events: SimpleEvent[],
-    plannerLocationMap: Map<string, string | null>
+    plannerLocationMap: Map<string, LocationEntry>
   ): void {
     // Convert events to intervals with IDs and locations
     const intervals: IntervalWithId[] = events
@@ -212,7 +213,7 @@ export class EventAssembler {
       .map((e) => {
         const plannerId =
           (e.extendedProps as { eventId?: string })?.eventId || e.id;
-        const locationId = plannerLocationMap.get(plannerId) ?? null;
+        const locationId = plannerLocationMap.get(plannerId)?.locationId ?? null;
 
         return {
           start: new Date(e.start),

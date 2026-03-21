@@ -104,7 +104,7 @@ export class CalendarGenerator {
     filteredEvents.push(...recurringTemplateEvents);
 
     // Phase 4: Build location map
-    const { locationMap: plannerLocationMap, travelLocationMap: plannerTravelLocationMap } = buildLocationMap(
+    const plannerLocationMap = buildLocationMap(
       input.planners,
       input.templates,
       input.categories || []
@@ -149,7 +149,6 @@ export class CalendarGenerator {
       categoryConstraintMap,
       plannerLocationMap,
       plannerCategoryMap,
-      plannerTravelLocationMap
     );
 
     // Phase 9: Build scheduling strategy

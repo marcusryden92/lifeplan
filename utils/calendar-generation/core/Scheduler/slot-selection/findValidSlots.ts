@@ -27,11 +27,11 @@ export function findValidSlots(
   context: SchedulingContext,
   afterTime?: Date
 ): FindValidSlotsResult | { failure: SchedulingFailure } {
-  // Use the travel-specific location map (no category fallback) so that items
-  // whose location comes solely from a category don't generate travel events.
-  // The category window constraint already co-locates them with same-category items.
+  // Items whose location comes solely from a category fallback should not generate
+  // travel events — the category window constraint already co-locates them.
+  const locationEntry = context.plannerLocationMap?.get(task.id);
   const taskLocationId =
-    context.plannerTravelLocationMap?.get(task.id) ?? null;
+    locationEntry && !locationEntry.fromCategory ? locationEntry.locationId : null;
 
   // Resolve effective category from parent chain via pre-built map
   const effectiveCategoryId =

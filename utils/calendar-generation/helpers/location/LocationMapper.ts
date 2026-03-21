@@ -11,6 +11,7 @@
  */
 
 import { Planner, EventTemplate, Category } from "@/types/prisma";
+import { LocationEntry } from "@/utils/calendar-generation/models/SchedulingModels";
 
 export class LocationMapper {
   private categoryLocationMap: Map<string, string | null>;
@@ -27,83 +28,40 @@ export class LocationMapper {
   buildLocationMap(
     planners: Planner[],
     templates: EventTemplate[]
-  ): Map<string, string | null> {
-    const locationMap = new Map<string, string | null>();
+  ): Map<string, LocationEntry> {
+    const locationMap = new Map<string, LocationEntry>();
 
-    this.plannerMap = new Map();
-    for (const planner of planners) {
-      this.plannerMap.set(planner.id, planner);
+    if (this.plannerMap.size === 0) {
+      for (const planner of planners) {
+        this.plannerMap.set(planner.id, planner);
+      }
     }
 
     for (const planner of planners) {
-      locationMap.set(planner.id, this.resolveLocation(planner));
+      locationMap.set(planner.id, this.resolveLocationEntry(planner));
     }
 
     for (const template of templates) {
-      locationMap.set(template.id, template.locationId ?? null);
+      locationMap.set(template.id, { locationId: template.locationId ?? null, fromCategory: false });
     }
 
     return locationMap;
   }
 
-  /**
-   * Builds a location map for travel calculation only.
-   * Does NOT fall back to category location — items with no own or parent-chain
-   * location resolve to null ("anywhere"), so they don't generate travel events.
-   */
-  buildTravelLocationMap(
-    planners: Planner[],
-    templates: EventTemplate[]
-  ): Map<string, string | null> {
-    const locationMap = new Map<string, string | null>();
-
-    this.plannerMap = new Map();
-    for (const planner of planners) {
-      this.plannerMap.set(planner.id, planner);
-    }
-
-    for (const planner of planners) {
-      locationMap.set(planner.id, this.resolveTravelLocation(planner));
-    }
-
-    for (const template of templates) {
-      locationMap.set(template.id, template.locationId ?? null);
-    }
-
-    return locationMap;
-  }
-
-  private resolveTravelLocation(planner: Planner): string | null {
+  private resolveLocationEntry(planner: Planner): LocationEntry {
     if (planner.itemType === "plan") {
-      return planner.locationId ?? null;
+      return { locationId: planner.locationId ?? null, fromCategory: false };
     }
 
     if (!planner.useParentLocation && planner.locationId) {
-      return planner.locationId;
+      return { locationId: planner.locationId, fromCategory: false };
     }
 
     const ancestorLocation = this.findAncestorLocation(planner.parentId);
-    if (ancestorLocation) return ancestorLocation;
+    if (ancestorLocation) return { locationId: ancestorLocation, fromCategory: false };
 
-    return null;
-  }
-
-  private resolveLocation(planner: Planner): string | null {
-    // Plan items always use their own location (no inheritance)
-    if (planner.itemType === "plan") {
-      return planner.locationId ?? null;
-    }
-
-    if (!planner.useParentLocation && planner.locationId) {
-      return planner.locationId;
-    }
-
-    // Walk up the parent chain looking for a custom location
-    const ancestorLocation = this.findAncestorLocation(planner.parentId);
-    if (ancestorLocation) return ancestorLocation;
-
-    // Fall back to category location
-    return this.resolveCategoryLocation(planner);
+    const categoryLocation = this.resolveCategoryLocation(planner);
+    return { locationId: categoryLocation, fromCategory: categoryLocation !== null };
   }
 
   private findAncestorLocation(parentId: string | null): string | null {
@@ -146,17 +104,4 @@ export class LocationMapper {
     return null;
   }
 
-  getLocation(plannerId: string, planners: Planner[]): string | null {
-    const planner = planners.find((p) => p.id === plannerId);
-    if (!planner) return null;
-
-    // Ensure plannerMap is populated
-    if (this.plannerMap.size === 0) {
-      for (const p of planners) {
-        this.plannerMap.set(p.id, p);
-      }
-    }
-
-    return this.resolveLocation(planner);
-  }
 }

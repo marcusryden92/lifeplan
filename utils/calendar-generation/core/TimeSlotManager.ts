@@ -40,6 +40,7 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import {
   TravelTimeEntry,
   CategoryConstraint,
+  LocationEntry,
 } from "../models/SchedulingModels";
 
 // Import helper classes
@@ -130,7 +131,7 @@ export class TimeSlotManager {
     endDate: Date,
     existingEvents: SimpleEvent[],
     templateMasks: PerTemplateMask[],
-    plannerLocationMap?: Map<string, string | null>,
+    plannerLocationMap?: Map<string, LocationEntry>,
   ): TimeSlot[] {
     const slots = this.slotBuilder.buildAvailableSlots(
       startDate,
@@ -152,7 +153,7 @@ export class TimeSlotManager {
     numDays: number,
     existingEvents: SimpleEvent[],
     templateMasks: PerTemplateMask[],
-    plannerLocationMap?: Map<string, string | null>,
+    plannerLocationMap?: Map<string, LocationEntry>,
   ): Map<string, TimeSlot[]> {
     const dailySlots = new Map<string, TimeSlot[]>();
 

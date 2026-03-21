@@ -11,6 +11,7 @@ import {
   SchedulingContext,
   SchedulingMetrics,
   CategoryConstraint,
+  LocationEntry,
 } from "../../../models/SchedulingModels";
 import { dateTimeService } from "../../../utils/dateTimeService";
 
@@ -23,9 +24,8 @@ export function prepareSchedulingContext(
   slotManager: TimeSlotManager,
   metrics: SchedulingMetrics,
   categoryConstraints: Map<string, CategoryConstraint>,
-  plannerLocationMap: Map<string, string | null>,
+  plannerLocationMap: Map<string, LocationEntry>,
   plannerCategoryMap: Map<string, string | null>,
-  plannerTravelLocationMap?: Map<string, string | null>
 ): SchedulingContext {
   const weekStart = dateTimeService.getWeekFirstDate(currentDate, weekStartDay);
 
@@ -39,7 +39,6 @@ export function prepareSchedulingContext(
     metrics,
     categoryConstraints,
     plannerLocationMap,
-    plannerTravelLocationMap,
     plannerCategoryMap,
   };
 }
