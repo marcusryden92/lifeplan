@@ -16,3 +16,6 @@ export { PrioritySorter } from "./scheduling/PrioritySorter";
 
 // Event helpers
 export { EventAssembler } from "./events/EventAssembler";
+
+// Slot-building helpers
+export { weeksNeededForPlans } from "./slot-building/SlotBuildingHelpers";

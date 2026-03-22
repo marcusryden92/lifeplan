@@ -53,6 +53,32 @@ export function shouldLog(input: CalendarGenerationInput, flag: LogFlag): boolea
 /**
  * Handle all debug logging for calendar generation
  */
+export function logInitialSlotContext(eventArray: SimpleEvent[]): void {
+  const workHourEvents = eventArray.filter((e) => {
+    const hour = new Date(e.start).getHours();
+    return hour >= 9 && hour < 17;
+  });
+
+  console.log("Building slots from events:", {
+    totalEvents: eventArray.length,
+    workHourEvents: workHourEvents.length,
+    workHourDetails: workHourEvents.slice(0, 5).map((e) => ({
+      title: e.title,
+      start: new Date(e.start).toLocaleTimeString(),
+      end: new Date(e.end).toLocaleTimeString(),
+      type: e.extendedProps?.itemType,
+    })),
+    eventTypes: eventArray.reduce(
+      (acc, e) => {
+        const type = e.extendedProps?.itemType || "unknown";
+        acc[type] = (acc[type] || 0) + 1;
+        return acc;
+      },
+      {} as Record<string, number>
+    ),
+  });
+}
+
 export function logCalendarDebugInfo(
   input: CalendarGenerationInput,
   data: LoggingData
