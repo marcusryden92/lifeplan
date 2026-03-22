@@ -56,9 +56,6 @@ export function generateCalendar(
 
   const bufferTimeMinutes = opts.bufferTimeMinutes ?? 10;
 
-  // Use the new CalendarGenerator
-  const generator = new CalendarGenerator(weekStartDay);
-
   // Logging configuration - set enableLogging to false to disable all logging
   const enableLogging = true;
   const logging = {
@@ -74,7 +71,7 @@ export function generateCalendar(
     leanCalendar: true,
   };
 
-  const result = generator.generate({
+  const result = new CalendarGenerator(weekStartDay, {
     userId,
     weekStartDay,
     templates: template,
@@ -92,7 +89,7 @@ export function generateCalendar(
       locationGroupingScores: opts.locationGroupingScores,
       locationGroupingPenalties: opts.locationGroupingPenalties,
     },
-  });
+  }).generate();
 
   return result.events;
 }

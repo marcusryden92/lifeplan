@@ -239,13 +239,12 @@ export class TaskSchedulingOrchestrator {
       return s >= weekStartDate && s <= weekEndDate;
     });
 
-    this.slotManager.buildDailySlots(
+    this.slotManager.buildWeekSlots(
       weekStart,
-      7,
       weekEvents,
       perTemplateMasks,
       categoryPeriods,
-      plannerLocationMap
+      plannerLocationMap,
     );
 
     context.availableMinutesPerWeek =

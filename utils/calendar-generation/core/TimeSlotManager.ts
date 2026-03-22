@@ -32,23 +32,19 @@ export interface DynamicScheduleItem {
  * - SlotReserver: Reserves slots and manages travel placement
  */
 
-import { SimpleEvent } from "@/types/prisma";
+import { Planner, SimpleEvent } from "@/types/prisma";
+import { weeksNeededForPlans } from "../helpers/slot-building/SlotBuildingHelpers";
 import { CategoryPeriod } from "@/types/categoryTypes";
 import { TimeSlot } from "../models/TimeSlot";
 import { PerTemplateMask } from "../utils/intervalUtils";
 import { dateTimeService } from "../utils/dateTimeService";
-import { WeekDayIntegers } from "@/types/calendarTypes";
+import { logInitialSlotContext } from "../utils/loggingUtils";
 import {
   TravelTimeEntry,
   CategoryConstraint,
 } from "../models/SchedulingModels";
 
-// Import helper classes
-import { TravelManager } from "./TimeSlotManager/travel/TravelManager";
-import { TravelConverter } from "./TimeSlotManager/converter/TravelConverter";
-import { SlotBuilder } from "./TimeSlotManager/builder/SlotBuilder";
-import { SlotFinder } from "./TimeSlotManager/finder/SlotFinder";
-import { SlotReserver } from "./TimeSlotManager/reserver/SlotReserver";
+import { TravelManager, TravelConverter, SlotBuilder, SlotFinder, SlotReserver } from "./TimeSlotManager/index";
 
 export class TimeSlotManager {
   // Core state
@@ -63,7 +59,6 @@ export class TimeSlotManager {
   private slotReserver: SlotReserver;
 
   constructor(
-    private weekStartDay: WeekDayIntegers,
     private currentDate: Date = new Date(),
     bufferTimeMinutes: number = 0,
     travelTimeMatrix?: Map<string, TravelTimeEntry>,
@@ -82,7 +77,6 @@ export class TimeSlotManager {
       this.occupiedSlots,
       this.travelManager,
       this.getDayKey.bind(this),
-      weekStartDay,
       bufferTimeMinutes,
     );
 
@@ -112,52 +106,54 @@ export class TimeSlotManager {
     toLocationId: string | null,
     timeOfDay: Date,
   ): number {
-    return this.travelManager.getTravelTime(fromLocationId, toLocationId, timeOfDay);
+    return this.travelManager.getTravelTime(
+      fromLocationId,
+      toLocationId,
+      timeOfDay,
+    );
   }
 
   // ===== Slot Building =====
 
-  buildAvailableSlots(
+  buildDailySlots(
     startDate: Date,
-    endDate: Date,
+    planners: Planner[],
     existingEvents: SimpleEvent[],
     templateMasks: PerTemplateMask[],
     categoryPeriods: CategoryPeriod[],
     plannerLocationMap?: Map<string, string | null>,
-  ): TimeSlot[] {
-    const slots = this.slotBuilder.buildAvailableSlots(
-      startDate,
-      endDate,
-      existingEvents,
-      templateMasks,
-      categoryPeriods,
-      plannerLocationMap,
-    );
-
-    // Update availableSlots map
-    const dayKey = this.getDayKey(startDate);
-    this.availableSlots.set(dayKey, slots);
-
-    return slots;
+    enableLogging?: boolean,
+  ): void {
+    this.clear();
+    if (enableLogging) logInitialSlotContext(existingEvents);
+    const numDays = Math.max(2, weeksNeededForPlans(planners, startDate)) * 7;
+    this.buildSlots(startDate, numDays, existingEvents, templateMasks, categoryPeriods, plannerLocationMap);
   }
 
-  buildDailySlots(
+  buildWeekSlots(
+    weekStart: Date,
+    existingEvents: SimpleEvent[],
+    templateMasks: PerTemplateMask[],
+    categoryPeriods: CategoryPeriod[],
+    plannerLocationMap?: Map<string, string | null>,
+  ): void {
+    this.buildSlots(weekStart, 7, existingEvents, templateMasks, categoryPeriods, plannerLocationMap);
+  }
+
+  private buildSlots(
     startDate: Date,
     numDays: number,
     existingEvents: SimpleEvent[],
     templateMasks: PerTemplateMask[],
     categoryPeriods: CategoryPeriod[],
     plannerLocationMap?: Map<string, string | null>,
-  ): Map<string, TimeSlot[]> {
-    const dailySlots = new Map<string, TimeSlot[]>();
-
+  ): void {
     for (let i = 0; i < numDays; i++) {
       const date = dateTimeService.shiftDays(startDate, i);
-      const dayKey = this.getDayKey(date);
       const dayStart = dateTimeService.startOfDay(date);
       const dayEnd = dateTimeService.endOfDay(date);
 
-      const daySlots = this.buildAvailableSlots(
+      const slots = this.slotBuilder.buildAvailableSlots(
         dayStart,
         dayEnd,
         existingEvents,
@@ -166,11 +162,8 @@ export class TimeSlotManager {
         plannerLocationMap,
       );
 
-      dailySlots.set(dayKey, daySlots);
-      this.availableSlots.set(dayKey, daySlots);
+      this.availableSlots.set(this.getDayKey(date), slots);
     }
-
-    return dailySlots;
   }
 
   // ===== Slot Finding =====
@@ -193,7 +186,10 @@ export class TimeSlotManager {
     return this.travelManager.findAdjacentTravelTo(nearTime, toLocationId);
   }
 
-  findAdjacentTravelFrom(nearTime: Date, fromLocationId: string): TimeSlot | null {
+  findAdjacentTravelFrom(
+    nearTime: Date,
+    fromLocationId: string,
+  ): TimeSlot | null {
     return this.travelManager.findAdjacentTravelFrom(nearTime, fromLocationId);
   }
 
@@ -328,10 +324,7 @@ export class TimeSlotManager {
   }
 
   generateTravelEvents(userId: string): SimpleEvent[] {
-    return TravelConverter.generateTravelEvents(
-      this.occupiedSlots,
-      userId,
-    );
+    return TravelConverter.generateTravelEvents(this.occupiedSlots, userId);
   }
 
   // ===== Slot Queries =====

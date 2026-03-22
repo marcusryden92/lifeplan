@@ -20,13 +20,15 @@ export function prepareSchedulingContext(
   weekStartDay: WeekDayIntegers,
   allPlanners: Planner[],
   scheduledEvents: SimpleEvent[],
-  slotManager: TimeSlotManager,
+  timeSlotManager: TimeSlotManager,
   metrics: SchedulingMetrics,
   categoryConstraints: Map<string, CategoryConstraint>,
   plannerLocationMap: Map<string, string | null>,
   plannerCategoryMap: Map<string, string | null>,
 ): SchedulingContext {
   const weekStart = dateTimeService.getWeekFirstDate(currentDate, weekStartDay);
+  const availableMinutesPerWeek =
+    timeSlotManager.getWeekAvailableMinutes(weekStart);
 
   return {
     currentDate,
@@ -34,7 +36,7 @@ export function prepareSchedulingContext(
     weekStartDay,
     allPlanners,
     scheduledEvents,
-    availableMinutesPerWeek: slotManager.getWeekAvailableMinutes(weekStart),
+    availableMinutesPerWeek,
     metrics,
     categoryConstraints,
     plannerLocationMap,

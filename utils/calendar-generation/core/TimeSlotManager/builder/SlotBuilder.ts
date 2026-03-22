@@ -17,7 +17,6 @@ import {
   PerTemplateMask,
   Interval,
 } from "../../../utils/intervalUtils";
-import { WeekDayIntegers } from "@/types/calendarTypes";
 import { v4 as uuidv4 } from "uuid";
 
 export class SlotBuilder {
@@ -27,7 +26,6 @@ export class SlotBuilder {
     private occupiedSlots: Map<string, TimeSlot[]>,
     private travelManager: TravelManager,
     private getDayKeyFn: (date: Date) => string,
-    private weekStartDay: WeekDayIntegers,
     private bufferTimeMinutes: number,
   ) {}
 
@@ -45,27 +43,20 @@ export class SlotBuilder {
     plannerLocationMap?: Map<string, string | null>,
   ): TimeSlot[] {
     this.categoryPeriods = categoryPeriods;
-    // Filter existing events to only those that overlap with this date range
-    // Exclude template events since we create intervals from masks instead
+    // Filter existing events to only those that overlap with this date range.
+    // Exclude template events since we create intervals from masks instead.
     const relevantEvents = existingEvents.filter((event) => {
       const eventStart = new Date(event.start);
       const eventEnd = new Date(event.end);
       const isTemplate = event.extendedProps?.itemType === "template";
-      // Event overlaps if it starts before range ends AND ends after range starts
       return !isTemplate && eventStart < endDate && eventEnd > startDate;
     });
 
-    // Convert existing events to intervals with location info
     const eventIntervals = eventsToIntervals(
       relevantEvents,
       plannerLocationMap,
     );
-
-    // Convert template masks directly to intervals for this date
-    // Templates are handled via masks to avoid duplication
     const templateIntervals = masksToIntervals(templateMasks, startDate);
-
-    // Combine all occupied intervals
     const occupiedIntervals = [...eventIntervals, ...templateIntervals];
 
     // An "anywhere" (null-location) event inside a category wrapper should adopt the
@@ -78,16 +69,14 @@ export class SlotBuilder {
       endDate,
     );
 
-    // Find gaps between occupied intervals (gaps now have prevLocationId/nextLocationId)
+    // Find gaps between occupied intervals (gaps now have prevLocationId/nextLocationId).
     const gaps = findGaps(adjustedIntervals, startDate, endDate);
-
-    // Convert gaps to available time slots (location info is preserved)
-    let slots = gaps;
 
     // No leading buffer pre-applied here. Buffers are handled at task placement time:
     // when a task is reserved, the slot is split so [slot.start, taskStart] becomes
     // an explicit buffer slot and [taskEnd, taskEnd+buffer] is the trailing buffer.
     // This allows gap travel (return trips) to start at slot.start = eventEnd directly.
+    let slots = gaps;
 
     // Travel injection pipeline:
     // 1. Fix stale prevLocationId on slots following category periods
@@ -95,28 +84,14 @@ export class SlotBuilder {
     // 3. Walk the chain and carve travel where prevLocationId != nextLocationId
     // 4. Merge adjacent available slots back for the scheduler
     if (plannerLocationMap) {
-      slots = this.fixPostCategoryPrevLoc(slots, adjustedIntervals, startDate, endDate);
+      slots = this.fixPostCategoryPrevLoc(
+        slots,
+        adjustedIntervals,
+        startDate,
+        endDate,
+      );
       slots = this.splitSlotsAtCategoryBoundaries(slots, startDate, endDate);
-      // DEBUG
-      if (startDate.getDate() === 24) {
-        const fmt = (d: Date) => d.toTimeString().slice(0, 5);
-        const loc = (id: string | null | undefined) => id ? id.slice(-12) : "null";
-        console.log(`\n=== SLOTS BEFORE CARVE (${startDate.toDateString()}) ===`);
-        console.log("OCCUPIED INTERVALS:", adjustedIntervals.map(i => `${fmt(i.start)}-${fmt(i.end)} loc=${loc(i.locationId)}`));
-        slots.forEach((s, i) => console.log(`  [${i}] ${fmt(s.start)}-${fmt(s.end)} prev=${loc(s.prevLocationId)} next=${loc(s.nextLocationId)} cat=${s.categoryId ? "YES" : "no"}`));
-      }
       slots = this.carveTravelFromChain(slots, startDate);
-      // DEBUG
-      if (startDate.getDate() === 24) {
-        const fmt = (d: Date) => d.toTimeString().slice(0, 5);
-        const loc = (id: string | null | undefined) => id ? id.slice(-12) : "null";
-        console.log(`=== SLOTS AFTER CARVE (${startDate.toDateString()}) ===`);
-        slots.forEach((s, i) => console.log(`  [${i}] ${fmt(s.start)}-${fmt(s.end)} prev=${loc(s.prevLocationId)} next=${loc(s.nextLocationId)}`));
-        const dayKey = this.getDayKeyFn(startDate);
-        const carved = (this.occupiedSlots.get(dayKey) || []).filter(s => s.travelType === "preliminary");
-        console.log(`=== CARVED TRAVEL ===`);
-        carved.forEach(s => console.log(`  ${fmt(s.start)}-${fmt(s.end)} ${loc(s.travelFromLocationId)}→${loc(s.travelToLocationId)}`));
-      }
     }
 
     return TimeSlotUtils.mergeAdjacentSlots(slots);
@@ -242,9 +217,7 @@ export class SlotBuilder {
     const dayEndMs = dayEnd.getTime();
 
     const dayPeriods = this.categoryPeriods.filter(
-      (p) =>
-        p.start.getTime() < dayEndMs &&
-        p.end.getTime() > dayStartMs,
+      (p) => p.start.getTime() < dayEndMs && p.end.getTime() > dayStartMs,
     );
 
     if (dayPeriods.length === 0) return slots;
@@ -255,10 +228,16 @@ export class SlotBuilder {
       const catLoc = period.locationId;
       const boundaries: Array<{ time: Date; entering: boolean }> = [];
 
-      if (period.start.getTime() > dayStartMs && period.start.getTime() < dayEndMs) {
+      if (
+        period.start.getTime() > dayStartMs &&
+        period.start.getTime() < dayEndMs
+      ) {
         boundaries.push({ time: period.start, entering: true });
       }
-      if (period.end.getTime() > dayStartMs && period.end.getTime() < dayEndMs) {
+      if (
+        period.end.getTime() > dayStartMs &&
+        period.end.getTime() < dayEndMs
+      ) {
         boundaries.push({ time: period.end, entering: false });
       }
 
@@ -289,7 +268,9 @@ export class SlotBuilder {
           const slotEndMs = slot.end.getTime();
 
           if (boundaryMs >= slotStartMs && boundaryMs < slotEndMs) {
-            const beforeDuration = Math.floor((boundaryMs - slotStartMs) / 60000);
+            const beforeDuration = Math.floor(
+              (boundaryMs - slotStartMs) / 60000,
+            );
             const afterDuration = Math.floor((slotEndMs - boundaryMs) / 60000);
 
             // Before-fragment is inside the period only when exiting (at period end).
@@ -297,7 +278,9 @@ export class SlotBuilder {
             // so the transition is visible to carveTravelFromChain.
             if (beforeDuration > 0) {
               const isInside = !entering;
-              const beforeNextLoc = adjacentCatLoc ?? (catLoc !== null ? catLoc : slot.nextLocationId);
+              const beforeNextLoc =
+                adjacentCatLoc ??
+                (catLoc !== null ? catLoc : slot.nextLocationId);
               newResult.push({
                 start: slot.start,
                 end: new Date(boundaryMs),
@@ -340,7 +323,10 @@ export class SlotBuilder {
 
       const slotMidMs = (slot.start.getTime() + slot.end.getTime()) / 2;
       for (const period of dayPeriods) {
-        if (slotMidMs >= period.start.getTime() && slotMidMs < period.end.getTime()) {
+        if (
+          slotMidMs >= period.start.getTime() &&
+          slotMidMs < period.end.getTime()
+        ) {
           return {
             ...slot,
             categoryId: period.categoryId,
@@ -366,10 +352,7 @@ export class SlotBuilder {
    *
    * Returns only the remaining available slots; travel slots go to occupiedSlots.
    */
-  private carveTravelFromChain(
-    slots: TimeSlot[],
-    dayStart: Date,
-  ): TimeSlot[] {
+  private carveTravelFromChain(slots: TimeSlot[], dayStart: Date): TimeSlot[] {
     const dayKey = this.getDayKeyFn(dayStart);
     // Remove any previously carved gap-travel for this day so rebuilding a day
     // doesn't accumulate duplicate entries in occupiedSlots.
@@ -379,16 +362,17 @@ export class SlotBuilder {
     const result: TimeSlot[] = [];
 
     // Tracks locations from which gap travel has already departed on this day.
-    // If the current travel's destination (nextLoc) is in this set, it means we've
-    // previously left from that location — so this is a return trip and travel is placed
-    // at START (depart immediately). Otherwise travel is placed at END (depart as late as possible).
+    // If nextLoc is in this set, this is a return trip and travel is placed at START
+    // (depart immediately). Otherwise travel is placed at END (depart as late as possible).
     const departureLocations = new Set<string>();
 
     let skipNextSlot = false;
     for (let i = 0; i < slots.length; i++) {
-      if (skipNextSlot) { skipNextSlot = false; continue; }
+      if (skipNextSlot) {
+        skipNextSlot = false;
+        continue;
+      }
       const slot = slots[i];
-      const bufferMs = this.bufferTimeMinutes * 60000;
 
       if (!slot.isAvailable) {
         result.push(slot);
@@ -397,472 +381,710 @@ export class SlotBuilder {
 
       const prevLoc = slot.prevLocationId;
       const nextLoc = slot.nextLocationId;
-
       if (!prevLoc || !nextLoc || prevLoc === nextLoc) {
         result.push(slot);
         continue;
       }
-
       if (slot.durationMinutes <= 0) {
         result.push(slot);
         continue;
       }
 
-      // Place at start if a previous gap travel departed FROM nextLoc (our current destination),
-      // meaning this travel is a return trip to a place we've already left from.
       const placeAtStart = departureLocations.has(nextLoc);
-      const travelDepartureTime = placeAtStart ? slot.start : slot.end;
-
       const travelMinutes = this.travelManager.getTravelTime(
         prevLoc,
         nextLoc,
-        travelDepartureTime,
+        placeAtStart ? slot.start : slot.end,
       );
-
       if (travelMinutes <= 0) {
         result.push(slot);
         continue;
       }
 
-      const travelMs = travelMinutes * 60000;
+      const nextSlot = i + 1 < slots.length ? slots[i + 1] : null;
 
-      // When a pre-category slot (prevLoc→catLoc) is immediately followed by a category
-      // slot that transitions to a foreign location (catLoc→planLoc), check two cases:
-      //
-      // (a) catSlotTooSmall: the category slot is too small to hold the catLoc→planLoc
-      //     travel. Skip both hops and travel direct prevLoc→planLoc, placed at END so
-      //     departure is as late as possible (maximum available time before the event).
-      //
-      // (b) combinedTooSmall: the two-hop route doesn't fit in the combined span at all.
-      //     Same direct bypass but placed at START (depart immediately from prev event).
+      // When going outbound (not a return), check if the next slot is a category slot
+      // whose plan destination is only reachable via a two-hop route (prevLoc→catLoc→plan).
+      // If the catLoc→plan hop is too large for the category slot, bypass with direct travel.
       if (!placeAtStart && !slot.categoryId) {
-        const nextSlot = i + 1 < slots.length ? slots[i + 1] : null;
-        // nextLoc is only a plan *inside* catB when catB slot ends before the period boundary.
-        // If catB slot runs to the period end, nextLoc is simply the post-catB event location
-        // and normal travel (prevLoc→catLoc) should be placed instead.
-        const catPeriodEnd = nextSlot?.categoryId
-          ? this.categoryPeriods.find(
-              (p) =>
-                p.categoryId === nextSlot.categoryId &&
-                p.start.getTime() <= nextSlot.start.getTime() &&
-                p.end.getTime() >= nextSlot.end.getTime(),
-            )?.end
-          : undefined;
-        const nextLocIsInsideCatB =
-          catPeriodEnd !== undefined &&
-          nextSlot!.end.getTime() < catPeriodEnd.getTime();
-        if (
-          nextLocIsInsideCatB &&
-          nextSlot?.isAvailable &&
-          nextSlot.categoryId &&
-          nextSlot.start.getTime() === slot.end.getTime() &&
-          nextSlot.nextLocationId &&
-          nextSlot.nextLocationId !== nextLoc
-        ) {
-          const bLoc = nextSlot.nextLocationId;
-          const travelCatToB = this.travelManager.getTravelTime(nextLoc, bLoc, nextSlot.end);
-          if (travelCatToB > 0) {
-            const catSlotTooSmall = travelCatToB > nextSlot.durationMinutes;
-            const availableMinutes = slot.durationMinutes + nextSlot.durationMinutes;
-            const combinedMinutes = travelMinutes + this.bufferTimeMinutes + travelCatToB;
-            const combinedTooSmall = combinedMinutes > availableMinutes;
-
-            if (catSlotTooSmall || combinedTooSmall) {
-              const spanEnd = nextSlot.end;
-              if (catSlotTooSmall) {
-                // Travel at END: depart as late as possible, arrive just before the plan.
-                const directMinutes = this.travelManager.getTravelTime(prevLoc, bLoc, spanEnd);
-                const travelStart = new Date(spanEnd.getTime() - directMinutes * 60000);
-                if (travelStart.getTime() >= slot.start.getTime()) {
-                  occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-                    travelStart, spanEnd, prevLoc, bLoc,
-                    "preliminary", uuidv4(),
-                  ));
-                  const availEnd = new Date(travelStart.getTime());
-                  if (availEnd.getTime() > slot.start.getTime()) {
-                    result.push({
-                      start: slot.start,
-                      end: availEnd,
-                      durationMinutes: Math.floor(
-                        (availEnd.getTime() - slot.start.getTime()) / 60000,
-                      ),
-                      isAvailable: true,
-                      prevLocationId: slot.prevLocationId,
-                      nextLocationId: bLoc,
-                      categoryId: slot.categoryId,
-                      isStrictCategory: slot.isStrictCategory,
-                    });
-                  }
-                } else {
-                  occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-                    slot.start, spanEnd, prevLoc, bLoc,
-                    "preliminary", uuidv4(),
-                    { insufficientTravel: true, requiredTravelMinutes: directMinutes },
-                  ));
-                }
-                skipNextSlot = true;
-              } else {
-                // combinedTooSmall: travel at START, depart immediately from previous event.
-                const directMinutes = this.travelManager.getTravelTime(prevLoc, bLoc, slot.start);
-                const travelEnd = new Date(slot.start.getTime() + directMinutes * 60000);
-                if (travelEnd.getTime() <= spanEnd.getTime()) {
-                  occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-                    slot.start, travelEnd, prevLoc, bLoc,
-                    "preliminary", uuidv4(),
-                  ));
-                  const newCatStart = new Date(travelEnd.getTime());
-                  if (newCatStart.getTime() < spanEnd.getTime()) {
-                    slots[i + 1] = {
-                      ...nextSlot,
-                      start: newCatStart,
-                      durationMinutes: Math.floor(
-                        (spanEnd.getTime() - newCatStart.getTime()) / 60000,
-                      ),
-                      prevLocationId: bLoc,
-                    };
-                  } else {
-                    skipNextSlot = true;
-                  }
-                } else {
-                  occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-                    slot.start, spanEnd, prevLoc, bLoc,
-                    "preliminary", uuidv4(),
-                    { insufficientTravel: true, requiredTravelMinutes: directMinutes },
-                  ));
-                  skipNextSlot = true;
-                }
-              }
-              departureLocations.add(prevLoc);
-              continue;
-            }
-          }
-        }
-      }
-
-      // Double-transition inside a category: both prevLoc and nextLoc are foreign
-      // (e.g. slot follows Plan A at varmdo and precedes Plan B at gym, inside work window).
-      // Place travel-at-START (return to category home) and travel-at-END (depart for
-      // next event) as two separate events if both fit; otherwise fall through to the
-      // single merged prevLoc→nextLoc travel below.
-      if (slot.categoryId) {
-        const categoryPeriod = this.categoryPeriods.find(
-          (p) => p.categoryId === slot.categoryId,
+        const bypass = this.tryDirectBypass(
+          slot,
+          nextSlot,
+          slots,
+          i,
+          prevLoc,
+          nextLoc,
+          travelMinutes,
+          occupiedSlots,
+          result,
         );
-        const catLoc = categoryPeriod?.locationId ?? null;
-        if (catLoc && prevLoc !== catLoc && nextLoc !== catLoc) {
-          const travelBeforeMinutes = this.travelManager.getTravelTime(prevLoc, catLoc, slot.start);
-          const travelAfterMinutes = this.travelManager.getTravelTime(catLoc, nextLoc, slot.end);
-          const travelBeforeMs = travelBeforeMinutes * 60000;
-          const travelAfterMs = travelAfterMinutes * 60000;
-          const slotMs = slot.end.getTime() - slot.start.getTime();
-
-          if (travelBeforeMs + travelAfterMs <= slotMs) {
-            const travelBeforeEnd = new Date(slot.start.getTime() + travelBeforeMs);
-            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-              slot.start, travelBeforeEnd, prevLoc, catLoc,
-              "preliminary", uuidv4(),
-            ));
-
-            const travelAfterStart = new Date(slot.end.getTime() - travelAfterMs);
-            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-              travelAfterStart, slot.end, catLoc, nextLoc,
-              "preliminary", uuidv4(),
-            ));
-
-            const availStart = new Date(travelBeforeEnd.getTime());
-            const availEnd = new Date(travelAfterStart.getTime());
-            if (availEnd.getTime() > availStart.getTime()) {
-              result.push({
-                start: availStart,
-                end: availEnd,
-                durationMinutes: Math.floor(
-                  (availEnd.getTime() - availStart.getTime()) / 60000,
-                ),
-                isAvailable: true,
-                prevLocationId: catLoc,
-                nextLocationId: catLoc,
-                categoryId: slot.categoryId,
-                isStrictCategory: slot.isStrictCategory,
-              });
-            }
-            departureLocations.add(prevLoc);
-            departureLocations.add(catLoc);
-            continue;
-          }
-          // Both don't fit — fall through to single merged travel (prevLoc→nextLoc).
+        if (bypass.handled) {
+          departureLocations.add(prevLoc);
+          if (bypass.skipNext) skipNextSlot = true;
+          continue;
         }
       }
 
-      // Mirror of catSlotTooSmall: last category slot returning from a foreign plan is
-      // fully consumed by return travel (planLoc→catLoc >= slot duration). Skip the
-      // intermediate catLoc stop and travel direct planLoc→destLoc from slot.start,
-      // absorbing the immediately-following post-category slot.
-      if (placeAtStart && slot.categoryId) {
-        const nextSlot = i + 1 < slots.length ? slots[i + 1] : null;
-        if (
-          travelMinutes >= slot.durationMinutes &&
-          nextSlot?.isAvailable &&
-          !nextSlot.categoryId &&
-          nextSlot.start.getTime() === slot.end.getTime() &&
-          nextSlot.prevLocationId === nextLoc &&
-          nextSlot.nextLocationId
-        ) {
-          const dLoc = nextSlot.nextLocationId;
-          const directMinutes = this.travelManager.getTravelTime(prevLoc, dLoc, slot.start);
-          const spanEnd = nextSlot.end;
-          const travelEnd = new Date(slot.start.getTime() + directMinutes * 60000);
-
-          if (travelEnd.getTime() <= spanEnd.getTime()) {
-            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-              slot.start, travelEnd, prevLoc, dLoc,
-              "preliminary", uuidv4(),
-            ));
-            const availStart = new Date(travelEnd.getTime());
-            if (availStart.getTime() < spanEnd.getTime()) {
-              result.push({
-                start: availStart,
-                end: spanEnd,
-                durationMinutes: Math.floor((spanEnd.getTime() - availStart.getTime()) / 60000),
-                isAvailable: true,
-                prevLocationId: dLoc,
-                nextLocationId: nextSlot.nextLocationId,
-                categoryId: null,
-                isStrictCategory: false,
-              });
-            }
-          } else {
-            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-              slot.start, spanEnd, prevLoc, dLoc,
-              "preliminary", uuidv4(),
-              { insufficientTravel: true, requiredTravelMinutes: directMinutes },
-            ));
-          }
-          skipNextSlot = true;
+      // Double-transition: slot is inside a category, but both prevLoc and nextLoc are
+      // foreign to the category's location. Carve return-travel + depart-travel separately.
+      if (slot.categoryId) {
+        const dbl = this.tryDoubleTransition(
+          slot,
+          prevLoc,
+          nextLoc,
+          occupiedSlots,
+          result,
+        );
+        if (dbl.handled) {
           departureLocations.add(prevLoc);
+          if (dbl.catLoc) departureLocations.add(dbl.catLoc);
+          continue;
+        }
+      }
+
+      // Return absorption: category slot is fully consumed by return travel.
+      // Absorb the immediately-following post-category slot and travel direct prevLoc→dLoc.
+      if (placeAtStart && slot.categoryId) {
+        const absorb = this.tryReturnAbsorption(
+          slot,
+          nextSlot,
+          prevLoc,
+          nextLoc,
+          travelMinutes,
+          occupiedSlots,
+          result,
+        );
+        if (absorb.handled) {
+          departureLocations.add(prevLoc);
+          if (absorb.skipNext) skipNextSlot = true;
           continue;
         }
       }
 
       if (placeAtStart) {
-        // Travel at START: depart immediately when the preceding event ends.
-        // slot.start = eventEnd (no pre-baked buffer), so travel starts right here.
-        departureLocations.add(prevLoc);
-        const travelStart = new Date(slot.start.getTime());
-        const travelEnd = new Date(travelStart.getTime() + travelMs);
-
-        if (travelEnd.getTime() <= slot.end.getTime()) {
-          occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-            travelStart,
-            travelEnd,
-            prevLoc,
-            nextLoc,
-            "preliminary", uuidv4(),
-          ));
-
-          const availableStartMs = travelEnd.getTime();
-          if (availableStartMs < slot.end.getTime()) {
-            result.push({
-              start: new Date(availableStartMs),
-              end: slot.end,
-              durationMinutes: Math.floor((slot.end.getTime() - availableStartMs) / 60000),
-              isAvailable: true,
-              prevLocationId: nextLoc,
-              nextLocationId: slot.nextLocationId,
-              categoryId: slot.categoryId,
-              isStrictCategory: slot.isStrictCategory,
-            });
-          }
-        } else {
-          occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-            travelStart,
-            slot.end,
-            prevLoc,
-            nextLoc,
-            "preliminary", uuidv4(),
-            { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
-          ));
-        }
+        this.carveAtStart(
+          slot,
+          prevLoc,
+          nextLoc,
+          travelMinutes,
+          occupiedSlots,
+          result,
+        );
       } else {
-        // Travel at END: departing from prevLoc toward a new destination.
-        departureLocations.add(prevLoc);
-        const travelEnd = new Date(slot.end.getTime());
-        const travelStart = new Date(travelEnd.getTime() - travelMs);
-
-        if (travelStart.getTime() >= slot.start.getTime()) {
-          const availableEndMs = Math.max(
-            slot.start.getTime(),
-            travelStart.getTime(),
-          );
-
-          if (availableEndMs > slot.start.getTime()) {
-            // Normal fit: space remains before the travel block.
-            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-              travelStart,
-              travelEnd,
-              prevLoc,
-              nextLoc,
-              "preliminary", uuidv4(),
-            ));
-            result.push({
-              start: slot.start,
-              end: new Date(availableEndMs),
-              durationMinutes: Math.floor(
-                (availableEndMs - slot.start.getTime()) / 60000,
-              ),
-              isAvailable: true,
-              prevLocationId: slot.prevLocationId,
-              nextLocationId: nextLoc,
-              categoryId: slot.categoryId,
-              isStrictCategory: slot.isStrictCategory,
-            });
-          } else {
-            // Slot fully consumed by travel (no task space, no trailing buffer before
-            // the next fixed event). Check for backward bleed into adjacent slot.
-            const lastResult = result.length > 0 ? result[result.length - 1] : null;
-            const newTravelEnd = new Date(slot.end.getTime() - bufferMs);
-            const newTravelStart = new Date(newTravelEnd.getTime() - travelMs);
-            // Only bleed backward if the travel start lands within the previous slot.
-            // If newTravelStart < lastResult.start the travel would cross into occupied
-            // time before that slot, creating overlapping events.
-            const canBleed = !!(
-              lastResult?.isAvailable &&
-              lastResult.end.getTime() + bufferMs >= slot.start.getTime() &&
-              newTravelStart.getTime() >= lastResult.start.getTime()
-            );
-            if (!slot.categoryId && canBleed && lastResult?.categoryId) {
-              occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-                newTravelStart, newTravelEnd, prevLoc, nextLoc,
-                "preliminary", uuidv4(),
-              ));
-              const newCatEnd = new Date(newTravelStart.getTime() - bufferMs);
-              if (newCatEnd.getTime() > lastResult.start.getTime()) {
-                result[result.length - 1] = {
-                  ...lastResult,
-                  end: newCatEnd,
-                  durationMinutes: Math.floor(
-                    (newCatEnd.getTime() - lastResult.start.getTime()) / 60000,
-                  ),
-                };
-              } else {
-                result.pop();
-              }
-              // Post-category slot fully consumed — not pushed to result.
-            } else if (canBleed) {
-              occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-                newTravelStart, newTravelEnd, prevLoc, nextLoc,
-                "preliminary", uuidv4(),
-              ));
-              const newLastEnd = new Date(newTravelStart.getTime() - bufferMs);
-              if (newLastEnd.getTime() > lastResult!.start.getTime()) {
-                result[result.length - 1] = {
-                  ...lastResult!,
-                  end: newLastEnd,
-                  durationMinutes: Math.floor(
-                    (newLastEnd.getTime() - lastResult!.start.getTime()) / 60000,
-                  ),
-                };
-              } else {
-                result.pop();
-              }
-              // Slot fully consumed by travel — not pushed to result.
-            } else {
-              // No adjacent slot or bleed would cross into occupied time: place travel as-is.
-              occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-                travelStart, travelEnd, prevLoc, nextLoc,
-                "preliminary", uuidv4(),
-              ));
-            }
-          }
-        } else {
-          // Travel doesn't fit in the slot at all.
-          // Check for backward bleed into an adjacent preceding slot.
-          const lastResult = result.length > 0 ? result[result.length - 1] : null;
-          const newTravelEnd = new Date(slot.end.getTime() - bufferMs);
-          const newTravelStart = new Date(newTravelEnd.getTime() - travelMs);
-          // Only bleed backward if the travel start lands within the previous slot.
-          const canBleed = !!(
-            lastResult?.isAvailable &&
-            lastResult.end.getTime() + bufferMs >= slot.start.getTime() &&
-            newTravelStart.getTime() >= lastResult.start.getTime()
-          );
-          if (!slot.categoryId && canBleed && lastResult?.categoryId) {
-            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-              newTravelStart, newTravelEnd, prevLoc, nextLoc,
-              "preliminary", uuidv4(),
-            ));
-            const newCatEnd = new Date(newTravelStart.getTime() - bufferMs);
-            if (newCatEnd.getTime() > lastResult.start.getTime()) {
-              result[result.length - 1] = {
-                ...lastResult,
-                end: newCatEnd,
-                durationMinutes: Math.floor(
-                  (newCatEnd.getTime() - lastResult.start.getTime()) / 60000,
-                ),
-              };
-            } else {
-              result.pop();
-            }
-            // Post-category slot consumed — not pushed to result.
-          } else if (slot.categoryId && canBleed) {
-            occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-              newTravelStart, newTravelEnd, prevLoc, nextLoc,
-              "preliminary", uuidv4(),
-            ));
-            const newLastEnd = new Date(newTravelStart.getTime() - bufferMs);
-            if (newLastEnd.getTime() > lastResult!.start.getTime()) {
-              result[result.length - 1] = {
-                ...lastResult!,
-                end: newLastEnd,
-                durationMinutes: Math.floor(
-                  (newLastEnd.getTime() - lastResult!.start.getTime()) / 60000,
-                ),
-              };
-            } else {
-              result.pop();
-            }
-            // Slot consumed by travel — not pushed to result.
-          } else {
-            // If the very next slot is an adjacent category slot, start the travel
-            // adjacent to the plan and let it bleed through the boundary (Fix 2).
-            const nextSlot = i + 1 < slots.length ? slots[i + 1] : null;
-            if (
-              !slot.categoryId &&
-              nextSlot?.isAvailable &&
-              nextSlot.categoryId &&
-              nextSlot.start.getTime() === slot.end.getTime()
-            ) {
-              const bleedEnd = new Date(slot.start.getTime() + travelMs);
-              occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-                slot.start, bleedEnd, prevLoc, nextLoc,
-                "preliminary", uuidv4(),
-              ));
-              // Shrink the category slot's start to after the bleeding travel.
-              const newCatStart = new Date(bleedEnd.getTime() + bufferMs);
-              if (newCatStart.getTime() < nextSlot.end.getTime()) {
-                slots[i + 1] = {
-                  ...nextSlot,
-                  start: newCatStart,
-                  durationMinutes: Math.floor((nextSlot.end.getTime() - newCatStart.getTime()) / 60000),
-                  prevLocationId: nextLoc,
-                };
-              }
-              // Pre-category slot fully consumed by travel — not pushed to result.
-            } else {
-              occupiedSlots.push(TimeSlotUtils.createTravelSlot(
-                slot.start,
-                slot.end,
-                prevLoc,
-                nextLoc,
-                "preliminary", uuidv4(),
-                { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
-              ));
-            }
-          }
-        }
+        this.carveAtEnd(
+          slot,
+          slots,
+          i,
+          prevLoc,
+          nextLoc,
+          travelMinutes,
+          occupiedSlots,
+          result,
+        );
       }
+      departureLocations.add(prevLoc);
     }
 
     this.occupiedSlots.set(dayKey, occupiedSlots);
     return result;
+  }
+
+  /**
+   * When catSlotTooSmall or combinedTooSmall, skip the intermediate catLoc stop and
+   * travel direct prevLoc→bLoc. Mutates occupiedSlots and result directly.
+   *
+   * catSlotTooSmall: travel at END (depart as late as possible).
+   * combinedTooSmall: travel at START (depart immediately from previous event).
+   */
+  private tryDirectBypass(
+    slot: TimeSlot,
+    nextSlot: TimeSlot | null,
+    slots: TimeSlot[],
+    slotIndex: number,
+    prevLoc: string,
+    nextLoc: string,
+    travelMinutes: number,
+    occupiedSlots: TimeSlot[],
+    result: TimeSlot[],
+  ): { handled: boolean; skipNext?: boolean } {
+    // nextLoc is only a plan *inside* catB when catB slot ends before the period boundary.
+    // If catB slot runs to the period end, nextLoc is simply the post-catB event location
+    // and normal travel (prevLoc→catLoc) should be placed instead.
+    const catPeriodEnd = nextSlot?.categoryId
+      ? this.categoryPeriods.find(
+          (p) =>
+            p.categoryId === nextSlot.categoryId &&
+            p.start.getTime() <= nextSlot.start.getTime() &&
+            p.end.getTime() >= nextSlot.end.getTime(),
+        )?.end
+      : undefined;
+    const nextLocIsInsideCatB =
+      catPeriodEnd !== undefined &&
+      nextSlot!.end.getTime() < catPeriodEnd.getTime();
+
+    if (
+      !nextLocIsInsideCatB ||
+      !nextSlot?.isAvailable ||
+      !nextSlot.categoryId ||
+      nextSlot.start.getTime() !== slot.end.getTime() ||
+      !nextSlot.nextLocationId ||
+      nextSlot.nextLocationId === nextLoc
+    ) {
+      return { handled: false };
+    }
+
+    const bLoc = nextSlot.nextLocationId;
+    const travelCatToB = this.travelManager.getTravelTime(
+      nextLoc,
+      bLoc,
+      nextSlot.end,
+    );
+    if (travelCatToB <= 0) return { handled: false };
+
+    const catSlotTooSmall = travelCatToB > nextSlot.durationMinutes;
+    const availableMinutes = slot.durationMinutes + nextSlot.durationMinutes;
+    const combinedTooSmall =
+      travelMinutes + this.bufferTimeMinutes + travelCatToB > availableMinutes;
+
+    if (!catSlotTooSmall && !combinedTooSmall) return { handled: false };
+
+    const spanEnd = nextSlot.end;
+
+    if (catSlotTooSmall) {
+      // Travel at END: depart as late as possible, arrive just before the plan.
+      const directMinutes = this.travelManager.getTravelTime(
+        prevLoc,
+        bLoc,
+        spanEnd,
+      );
+      const travelStart = new Date(spanEnd.getTime() - directMinutes * 60000);
+      if (travelStart.getTime() >= slot.start.getTime()) {
+        occupiedSlots.push(
+          TimeSlotUtils.createTravelSlot(
+            travelStart,
+            spanEnd,
+            prevLoc,
+            bLoc,
+            "preliminary",
+            uuidv4(),
+          ),
+        );
+        const availEnd = new Date(travelStart.getTime());
+        if (availEnd.getTime() > slot.start.getTime()) {
+          result.push({
+            start: slot.start,
+            end: availEnd,
+            durationMinutes: Math.floor(
+              (availEnd.getTime() - slot.start.getTime()) / 60000,
+            ),
+            isAvailable: true,
+            prevLocationId: slot.prevLocationId,
+            nextLocationId: bLoc,
+            categoryId: slot.categoryId,
+            isStrictCategory: slot.isStrictCategory,
+          });
+        }
+      } else {
+        occupiedSlots.push(
+          TimeSlotUtils.createTravelSlot(
+            slot.start,
+            spanEnd,
+            prevLoc,
+            bLoc,
+            "preliminary",
+            uuidv4(),
+            { insufficientTravel: true, requiredTravelMinutes: directMinutes },
+          ),
+        );
+      }
+      return { handled: true, skipNext: true };
+    } else {
+      // combinedTooSmall: travel at START, depart immediately from previous event.
+      const directMinutes = this.travelManager.getTravelTime(
+        prevLoc,
+        bLoc,
+        slot.start,
+      );
+      const travelEnd = new Date(slot.start.getTime() + directMinutes * 60000);
+      if (travelEnd.getTime() <= spanEnd.getTime()) {
+        occupiedSlots.push(
+          TimeSlotUtils.createTravelSlot(
+            slot.start,
+            travelEnd,
+            prevLoc,
+            bLoc,
+            "preliminary",
+            uuidv4(),
+          ),
+        );
+        const newCatStart = new Date(travelEnd.getTime());
+        if (newCatStart.getTime() < spanEnd.getTime()) {
+          slots[slotIndex + 1] = {
+            ...nextSlot,
+            start: newCatStart,
+            durationMinutes: Math.floor(
+              (spanEnd.getTime() - newCatStart.getTime()) / 60000,
+            ),
+            prevLocationId: bLoc,
+          };
+          return { handled: true, skipNext: false };
+        }
+      } else {
+        occupiedSlots.push(
+          TimeSlotUtils.createTravelSlot(
+            slot.start,
+            spanEnd,
+            prevLoc,
+            bLoc,
+            "preliminary",
+            uuidv4(),
+            { insufficientTravel: true, requiredTravelMinutes: directMinutes },
+          ),
+        );
+      }
+      return { handled: true, skipNext: true };
+    }
+  }
+
+  /**
+   * Both prevLoc and nextLoc are foreign to the category's location (double-transition).
+   * Carve return-travel [prevLoc→catLoc] at START and depart-travel [catLoc→nextLoc] at END
+   * if both fit within the slot. Falls through (returns handled: false) if they don't fit,
+   * allowing single merged prevLoc→nextLoc travel to be placed instead.
+   */
+  private tryDoubleTransition(
+    slot: TimeSlot,
+    prevLoc: string,
+    nextLoc: string,
+    occupiedSlots: TimeSlot[],
+    result: TimeSlot[],
+  ): { handled: boolean; catLoc?: string } {
+    const categoryPeriod = this.categoryPeriods.find(
+      (p) => p.categoryId === slot.categoryId,
+    );
+    const catLoc = categoryPeriod?.locationId ?? null;
+    if (!catLoc || prevLoc === catLoc || nextLoc === catLoc)
+      return { handled: false };
+
+    const travelBeforeMinutes = this.travelManager.getTravelTime(
+      prevLoc,
+      catLoc,
+      slot.start,
+    );
+    const travelAfterMinutes = this.travelManager.getTravelTime(
+      catLoc,
+      nextLoc,
+      slot.end,
+    );
+    const travelBeforeMs = travelBeforeMinutes * 60000;
+    const travelAfterMs = travelAfterMinutes * 60000;
+    const slotMs = slot.end.getTime() - slot.start.getTime();
+
+    if (travelBeforeMs + travelAfterMs > slotMs) return { handled: false };
+
+    const travelBeforeEnd = new Date(slot.start.getTime() + travelBeforeMs);
+    occupiedSlots.push(
+      TimeSlotUtils.createTravelSlot(
+        slot.start,
+        travelBeforeEnd,
+        prevLoc,
+        catLoc,
+        "preliminary",
+        uuidv4(),
+      ),
+    );
+
+    const travelAfterStart = new Date(slot.end.getTime() - travelAfterMs);
+    occupiedSlots.push(
+      TimeSlotUtils.createTravelSlot(
+        travelAfterStart,
+        slot.end,
+        catLoc,
+        nextLoc,
+        "preliminary",
+        uuidv4(),
+      ),
+    );
+
+    const availStart = new Date(travelBeforeEnd.getTime());
+    const availEnd = new Date(travelAfterStart.getTime());
+    if (availEnd.getTime() > availStart.getTime()) {
+      result.push({
+        start: availStart,
+        end: availEnd,
+        durationMinutes: Math.floor(
+          (availEnd.getTime() - availStart.getTime()) / 60000,
+        ),
+        isAvailable: true,
+        prevLocationId: catLoc,
+        nextLocationId: catLoc,
+        categoryId: slot.categoryId,
+        isStrictCategory: slot.isStrictCategory,
+      });
+    }
+    return { handled: true, catLoc };
+  }
+
+  /**
+   * Mirror of catSlotTooSmall: the last category slot is fully consumed by return travel
+   * (planLoc→catLoc >= slot duration). Skip the intermediate catLoc stop and travel direct
+   * prevLoc→dLoc from slot.start, absorbing the immediately-following post-category slot.
+   */
+  private tryReturnAbsorption(
+    slot: TimeSlot,
+    nextSlot: TimeSlot | null,
+    prevLoc: string,
+    nextLoc: string,
+    travelMinutes: number,
+    occupiedSlots: TimeSlot[],
+    result: TimeSlot[],
+  ): { handled: boolean; skipNext?: boolean } {
+    if (
+      travelMinutes < slot.durationMinutes ||
+      !nextSlot?.isAvailable ||
+      nextSlot.categoryId ||
+      nextSlot.start.getTime() !== slot.end.getTime() ||
+      nextSlot.prevLocationId !== nextLoc ||
+      !nextSlot.nextLocationId
+    ) {
+      return { handled: false };
+    }
+
+    const dLoc = nextSlot.nextLocationId;
+    const directMinutes = this.travelManager.getTravelTime(
+      prevLoc,
+      dLoc,
+      slot.start,
+    );
+    const spanEnd = nextSlot.end;
+    const travelEnd = new Date(slot.start.getTime() + directMinutes * 60000);
+
+    if (travelEnd.getTime() <= spanEnd.getTime()) {
+      occupiedSlots.push(
+        TimeSlotUtils.createTravelSlot(
+          slot.start,
+          travelEnd,
+          prevLoc,
+          dLoc,
+          "preliminary",
+          uuidv4(),
+        ),
+      );
+      const availStart = new Date(travelEnd.getTime());
+      if (availStart.getTime() < spanEnd.getTime()) {
+        result.push({
+          start: availStart,
+          end: spanEnd,
+          durationMinutes: Math.floor(
+            (spanEnd.getTime() - availStart.getTime()) / 60000,
+          ),
+          isAvailable: true,
+          prevLocationId: dLoc,
+          nextLocationId: nextSlot.nextLocationId,
+          categoryId: null,
+          isStrictCategory: false,
+        });
+      }
+    } else {
+      occupiedSlots.push(
+        TimeSlotUtils.createTravelSlot(
+          slot.start,
+          spanEnd,
+          prevLoc,
+          dLoc,
+          "preliminary",
+          uuidv4(),
+          { insufficientTravel: true, requiredTravelMinutes: directMinutes },
+        ),
+      );
+    }
+    return { handled: true, skipNext: true };
+  }
+
+  /**
+   * Place travel at the START of a slot (return trip — depart immediately when the
+   * preceding event ends). slot.start = eventEnd with no pre-baked buffer.
+   */
+  private carveAtStart(
+    slot: TimeSlot,
+    prevLoc: string,
+    nextLoc: string,
+    travelMinutes: number,
+    occupiedSlots: TimeSlot[],
+    result: TimeSlot[],
+  ): void {
+    const travelMs = travelMinutes * 60000;
+    const travelEnd = new Date(slot.start.getTime() + travelMs);
+
+    if (travelEnd.getTime() <= slot.end.getTime()) {
+      occupiedSlots.push(
+        TimeSlotUtils.createTravelSlot(
+          slot.start,
+          travelEnd,
+          prevLoc,
+          nextLoc,
+          "preliminary",
+          uuidv4(),
+        ),
+      );
+      const availableStartMs = travelEnd.getTime();
+      if (availableStartMs < slot.end.getTime()) {
+        result.push({
+          start: new Date(availableStartMs),
+          end: slot.end,
+          durationMinutes: Math.floor(
+            (slot.end.getTime() - availableStartMs) / 60000,
+          ),
+          isAvailable: true,
+          prevLocationId: nextLoc,
+          nextLocationId: slot.nextLocationId,
+          categoryId: slot.categoryId,
+          isStrictCategory: slot.isStrictCategory,
+        });
+      }
+    } else {
+      occupiedSlots.push(
+        TimeSlotUtils.createTravelSlot(
+          slot.start,
+          slot.end,
+          prevLoc,
+          nextLoc,
+          "preliminary",
+          uuidv4(),
+          { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
+        ),
+      );
+    }
+  }
+
+  /**
+   * Place travel at the END of a slot (outbound trip — depart as late as possible).
+   * When the slot is too small for the travel block, attempts backward bleed into the
+   * preceding available slot, then forward bleed into an adjacent category slot (Fix 2),
+   * then falls back to marking the travel as insufficient.
+   */
+  private carveAtEnd(
+    slot: TimeSlot,
+    slots: TimeSlot[],
+    slotIndex: number,
+    prevLoc: string,
+    nextLoc: string,
+    travelMinutes: number,
+    occupiedSlots: TimeSlot[],
+    result: TimeSlot[],
+  ): void {
+    const travelMs = travelMinutes * 60000;
+    const bufferMs = this.bufferTimeMinutes * 60000;
+    const travelEnd = slot.end;
+    const travelStart = new Date(travelEnd.getTime() - travelMs);
+
+    if (travelStart.getTime() >= slot.start.getTime()) {
+      if (travelStart.getTime() > slot.start.getTime()) {
+        // Normal fit: space remains before the travel block.
+        occupiedSlots.push(
+          TimeSlotUtils.createTravelSlot(
+            travelStart,
+            travelEnd,
+            prevLoc,
+            nextLoc,
+            "preliminary",
+            uuidv4(),
+          ),
+        );
+        result.push({
+          start: slot.start,
+          end: new Date(travelStart.getTime()),
+          durationMinutes: Math.floor(
+            (travelStart.getTime() - slot.start.getTime()) / 60000,
+          ),
+          isAvailable: true,
+          prevLocationId: slot.prevLocationId,
+          nextLocationId: nextLoc,
+          categoryId: slot.categoryId,
+          isStrictCategory: slot.isStrictCategory,
+        });
+      } else {
+        // Slot exactly consumed by travel: try backward bleed, else place as-is.
+        if (
+          !this.tryBleedBackward(
+            slot,
+            prevLoc,
+            nextLoc,
+            travelMinutes,
+            bufferMs,
+            false,
+            occupiedSlots,
+            result,
+          )
+        ) {
+          occupiedSlots.push(
+            TimeSlotUtils.createTravelSlot(
+              travelStart,
+              travelEnd,
+              prevLoc,
+              nextLoc,
+              "preliminary",
+              uuidv4(),
+            ),
+          );
+        }
+      }
+    } else {
+      // Travel doesn't fit: try backward bleed, then forward bleed (Fix 2), else mark insufficient.
+      if (
+        !this.tryBleedBackward(
+          slot,
+          prevLoc,
+          nextLoc,
+          travelMinutes,
+          bufferMs,
+          true,
+          occupiedSlots,
+          result,
+        )
+      ) {
+        const nextSlot =
+          slotIndex + 1 < slots.length ? slots[slotIndex + 1] : null;
+        if (
+          !slot.categoryId &&
+          nextSlot?.isAvailable &&
+          nextSlot.categoryId &&
+          nextSlot.start.getTime() === slot.end.getTime()
+        ) {
+          // Fix 2: bleed travel forward into the adjacent category slot.
+          const bleedEnd = new Date(slot.start.getTime() + travelMs);
+          occupiedSlots.push(
+            TimeSlotUtils.createTravelSlot(
+              slot.start,
+              bleedEnd,
+              prevLoc,
+              nextLoc,
+              "preliminary",
+              uuidv4(),
+            ),
+          );
+          const newCatStart = new Date(bleedEnd.getTime() + bufferMs);
+          if (newCatStart.getTime() < nextSlot.end.getTime()) {
+            slots[slotIndex + 1] = {
+              ...nextSlot,
+              start: newCatStart,
+              durationMinutes: Math.floor(
+                (nextSlot.end.getTime() - newCatStart.getTime()) / 60000,
+              ),
+              prevLocationId: nextLoc,
+            };
+          }
+        } else {
+          occupiedSlots.push(
+            TimeSlotUtils.createTravelSlot(
+              slot.start,
+              slot.end,
+              prevLoc,
+              nextLoc,
+              "preliminary",
+              uuidv4(),
+              {
+                insufficientTravel: true,
+                requiredTravelMinutes: travelMinutes,
+              },
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  /**
+   * Try to bleed travel backward into the preceding available slot by shifting the
+   * travel block earlier (slot.end - buffer - travelMs).
+   *
+   * Used when the current slot is fully consumed by travel and can't hold it cleanly.
+   * The `requireSlotCategoryId` flag controls whether the general bleed branch (second
+   * condition) requires the current slot to be inside a category — true when the slot
+   * didn't even start with enough room (travelStart < slot.start), false when it was
+   * exact (travelStart === slot.start).
+   *
+   * Returns true if a bleed was performed (travel placed, previous slot shrunk or removed).
+   */
+  private tryBleedBackward(
+    slot: TimeSlot,
+    prevLoc: string,
+    nextLoc: string,
+    travelMinutes: number,
+    bufferMs: number,
+    requireSlotCategoryId: boolean,
+    occupiedSlots: TimeSlot[],
+    result: TimeSlot[],
+  ): boolean {
+    const lastResult = result.length > 0 ? result[result.length - 1] : null;
+    const newTravelEnd = new Date(slot.end.getTime() - bufferMs);
+    const newTravelStart = new Date(
+      newTravelEnd.getTime() - travelMinutes * 60000,
+    );
+    // Only bleed backward if the travel start lands within the previous slot.
+    // If newTravelStart < lastResult.start the travel would cross into occupied
+    // time before that slot, creating overlapping events.
+    const canBleed = !!(
+      lastResult?.isAvailable &&
+      lastResult.end.getTime() + bufferMs >= slot.start.getTime() &&
+      newTravelStart.getTime() >= lastResult.start.getTime()
+    );
+
+    if (!canBleed) return false;
+
+    if (!slot.categoryId && lastResult?.categoryId) {
+      // Post-category slot: bleed travel into the preceding category slot.
+      occupiedSlots.push(
+        TimeSlotUtils.createTravelSlot(
+          newTravelStart,
+          newTravelEnd,
+          prevLoc,
+          nextLoc,
+          "preliminary",
+          uuidv4(),
+        ),
+      );
+      const newCatEnd = new Date(newTravelStart.getTime() - bufferMs);
+      if (newCatEnd.getTime() > lastResult.start.getTime()) {
+        result[result.length - 1] = {
+          ...lastResult,
+          end: newCatEnd,
+          durationMinutes: Math.floor(
+            (newCatEnd.getTime() - lastResult.start.getTime()) / 60000,
+          ),
+        };
+      } else {
+        result.pop();
+      }
+      return true;
+    }
+
+    if (!requireSlotCategoryId || slot.categoryId) {
+      occupiedSlots.push(
+        TimeSlotUtils.createTravelSlot(
+          newTravelStart,
+          newTravelEnd,
+          prevLoc,
+          nextLoc,
+          "preliminary",
+          uuidv4(),
+        ),
+      );
+      const newLastEnd = new Date(newTravelStart.getTime() - bufferMs);
+      if (newLastEnd.getTime() > lastResult.start.getTime()) {
+        result[result.length - 1] = {
+          ...lastResult,
+          end: newLastEnd,
+          durationMinutes: Math.floor(
+            (newLastEnd.getTime() - lastResult.start.getTime()) / 60000,
+          ),
+        };
+      } else {
+        result.pop();
+      }
+      return true;
+    }
+
+    return false;
   }
 }

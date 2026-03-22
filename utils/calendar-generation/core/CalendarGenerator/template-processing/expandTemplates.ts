@@ -12,6 +12,7 @@ import { SchedulingMetrics } from "../../../models/SchedulingModels";
 
 export function expandTemplates(
   userId: string,
+  eventArray: SimpleEvent[],
   templates: EventTemplate[],
   weekStartDay: WeekDayIntegers,
   currentDate: Date,
@@ -19,6 +20,7 @@ export function expandTemplates(
   enableLogging: boolean,
   metrics: SchedulingMetrics
 ): {
+  filteredEvents: SimpleEvent[];
   recurringTemplateEvents: SimpleEvent[];
   perTemplateMasks: PerTemplateMask[];
   largestTemplateGap: number;
@@ -74,7 +76,13 @@ export function expandTemplates(
   const templateEnd = performance.now();
   const largestTemplateGap = templateExpander.calculateLargestGap(templates);
 
+  const filteredEvents = eventArray.filter(
+    (e) => e.extendedProps?.itemType !== "template",
+  );
+  filteredEvents.push(...recurringTemplateEvents);
+
   return {
+    filteredEvents,
     recurringTemplateEvents,
     perTemplateMasks,
     largestTemplateGap,

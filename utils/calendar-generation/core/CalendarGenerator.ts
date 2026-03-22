@@ -9,6 +9,7 @@ import { SimpleEvent } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "./TimeSlotManager";
 import { Scheduler } from "./Scheduler";
+import { CompositeStrategy } from "../strategies/SchedulingStrategy";
 import {
   CalendarGenerationInput,
   SchedulingResult,
@@ -18,48 +19,63 @@ import {
 import { SCHEDULING_CONFIG } from "../constants";
 import { logCalendarDebugInfo } from "../utils/loggingUtils";
 import { TaskSchedulingOrchestrator } from "../helpers/scheduling/TaskSchedulingOrchestrator";
-import { buildPlannerCategoryMap } from "./CalendarGenerator/slot-building/buildPlannerCategoryMap";
-
-// Import subfunctions
-import { validateInput } from "./CalendarGenerator/initialization/validateInput";
-import { buildInitialEventArray } from "./CalendarGenerator/initialization/buildInitialEventArray";
-import { expandTemplates } from "./CalendarGenerator/template-processing/expandTemplates";
-import { buildLocationMap } from "./CalendarGenerator/slot-building/buildLocationMap";
-import { buildCategoryConstraints } from "./CalendarGenerator/slot-building/buildCategoryConstraints";
-import { buildInitialSlots } from "./CalendarGenerator/slot-building/buildInitialSlots";
-import { prepareSchedulingContext } from "./CalendarGenerator/scheduling/prepareSchedulingContext";
-import { buildSchedulingStrategy } from "./CalendarGenerator/scheduling/buildSchedulingStrategy";
-import { prepareCandidates } from "./CalendarGenerator/scheduling/prepareCandidates";
-import { assembleFinalEvents } from "./CalendarGenerator/finalization/assembleFinalEvents";
+import {
+  validateInput,
+  buildInitialEventArray,
+  expandTemplates,
+  buildLocationMap,
+  buildCategoryConstraints,
+  buildPlannerCategoryMap,
+  prepareSchedulingContext,
+  buildSchedulingStrategy,
+  prepareCandidates,
+  assembleFinalEvents,
+} from "./CalendarGenerator/index";
 
 export class CalendarGenerator {
-  private slotManager: TimeSlotManager;
+  // Class instances
+  private readonly slotManager: TimeSlotManager;
+  private readonly strategy: CompositeStrategy;
+
+  // Config derived from input
+  private readonly currentDate: Date;
+  private readonly maxDaysAhead: number;
+  private readonly bufferTimeMinutes: number;
+  private readonly enableLogging: boolean;
+
+  // Mutable state
   private metrics: SchedulingMetrics;
 
-  constructor(private weekStartDay: WeekDayIntegers) {
-    this.slotManager = new TimeSlotManager(weekStartDay);
+  constructor(
+    private readonly weekStartDay: WeekDayIntegers,
+    private readonly input: CalendarGenerationInput,
+  ) {
+    this.currentDate = new Date();
+    this.maxDaysAhead = input.config?.maxDaysAhead || SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH;
+    this.bufferTimeMinutes = input.config?.bufferTimeMinutes ?? 0;
+    this.enableLogging = input.config?.enableLogging ?? false;
+
+    this.slotManager = new TimeSlotManager(
+      this.currentDate,
+      this.bufferTimeMinutes,
+      input.config?.travelTimeMatrix,
+    );
+    this.strategy = buildSchedulingStrategy({
+      travelTimeMatrix: input.config?.travelTimeMatrix,
+      strategyWeights: input.config?.strategyWeights,
+      locationGroupingScores: input.config?.locationGroupingScores,
+      locationGroupingPenalties: input.config?.locationGroupingPenalties,
+    });
+
     this.metrics = this.createEmptyMetrics();
   }
 
   /**
    * Generate calendar from input
    */
-  generate(input: CalendarGenerationInput): SchedulingResult {
+  generate(): SchedulingResult {
     const startTime = performance.now();
-    this.metrics = this.createEmptyMetrics();
-    const currentDate = new Date();
-    const maxDaysAhead =
-      input.config?.maxDaysAhead || SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH;
-    const bufferTimeMinutes = input.config?.bufferTimeMinutes ?? 0;
-    const enableLogging = input.config?.enableLogging ?? false;
-
-    // Initialize slot manager
-    this.slotManager = new TimeSlotManager(
-      this.weekStartDay,
-      currentDate,
-      bufferTimeMinutes,
-      input.config?.travelTimeMatrix
-    );
+    const { input, slotManager, strategy, currentDate, weekStartDay, maxDaysAhead, enableLogging } = this;
 
     // Phase 1: Validation
     const validation = validateInput(input);
@@ -77,61 +93,52 @@ export class CalendarGenerator {
       input.userId,
       input.planners,
       input.previousCalendar,
-      currentDate
+      currentDate,
     );
 
     // Phase 3: Expand templates
     const {
+      filteredEvents,
       recurringTemplateEvents,
       perTemplateMasks,
       largestTemplateGap,
       updatedMetrics,
     } = expandTemplates(
       input.userId,
+      eventArray,
       input.templates,
-      this.weekStartDay,
+      weekStartDay,
       currentDate,
       maxDaysAhead,
       enableLogging,
-      this.metrics
+      this.metrics,
     );
     this.metrics = updatedMetrics;
-
-    // Remove old template events and add new ones
-    const filteredEvents = eventArray.filter(
-      (e: SimpleEvent) => e.extendedProps?.itemType !== "template"
-    );
-    filteredEvents.push(...recurringTemplateEvents);
 
     // Phase 4: Build location map
     const plannerLocationMap = buildLocationMap(
       input.planners,
       input.templates,
-      input.categories || []
+      input.categories || [],
     );
 
     // Phase 5: Build category constraints and periods
-    const {
-      categoryConstraintMap,
-      categoryPeriods,
-    } = buildCategoryConstraints(
+    const { categoryConstraintMap, categoryPeriods } = buildCategoryConstraints(
       input.categories,
       currentDate,
-      this.weekStartDay,
-      maxDaysAhead
+      weekStartDay,
+      maxDaysAhead,
     );
 
     // Phase 6: Build initial slots (includes category boundary splits + travel carving)
-    buildInitialSlots(
-      this.slotManager,
+    slotManager.buildDailySlots(
       currentDate,
-      2,
       input.planners,
       filteredEvents,
       perTemplateMasks,
-      plannerLocationMap,
       categoryPeriods,
-      enableLogging
+      plannerLocationMap,
+      enableLogging,
     );
 
     // Phase 7: Build effective category map (resolves inheritance from parent chain)
@@ -141,39 +148,27 @@ export class CalendarGenerator {
     const context = prepareSchedulingContext(
       input.userId,
       currentDate,
-      this.weekStartDay,
+      weekStartDay,
       input.planners,
       filteredEvents,
-      this.slotManager,
+      slotManager,
       this.metrics,
       categoryConstraintMap,
       plannerLocationMap,
       plannerCategoryMap,
     );
 
-    // Phase 9: Build scheduling strategy
-    const strategy = buildSchedulingStrategy({
-      travelTimeMatrix: input.config?.travelTimeMatrix,
-      strategyWeights: input.config?.strategyWeights,
-      locationGroupingScores: input.config?.locationGroupingScores,
-      locationGroupingPenalties: input.config?.locationGroupingPenalties,
-    });
-
-    // Phase 10: Prepare candidates
+    // Phase 9: Prepare candidates
     const candidates = prepareCandidates(
       input.planners,
       memoizedEventIds,
       currentDate,
-      plannerCategoryMap
+      plannerCategoryMap,
     );
 
-    // Phase 11: Schedule tasks and goals
-    const scheduler = new Scheduler(this.slotManager, strategy, context);
-    const orchestrator = new TaskSchedulingOrchestrator(
-      this.slotManager,
-      scheduler,
-      this.weekStartDay
-    );
+    // Phase 10: Schedule tasks and goals
+    const scheduler = new Scheduler(slotManager, strategy, context);
+    const orchestrator = new TaskSchedulingOrchestrator(slotManager, scheduler, weekStartDay);
     const schedulingResult: {
       success: boolean;
       newEvents: SimpleEvent[];
@@ -186,34 +181,31 @@ export class CalendarGenerator {
       perTemplateMasks,
       context,
       plannerLocationMap,
-      categoryPeriods
+      categoryPeriods,
     );
 
-    // Phase 12: Assemble final events
+    // Phase 11: Assemble final events
     const allEvents = assembleFinalEvents(
       input.userId,
-      this.slotManager,
+      slotManager,
       context,
       categoryPeriods,
-      plannerLocationMap
+      plannerLocationMap,
     );
 
     // Update metrics
     const endTime = performance.now();
     this.metrics.totalExecutionTimeMs = endTime - startTime;
-
-    // Update metrics from scheduler
     const schedulerMetrics = scheduler.getMetrics();
     this.metrics.tasksAttempted = schedulerMetrics.tasksAttempted;
     this.metrics.tasksScheduled = schedulerMetrics.tasksScheduled;
     this.metrics.tasksFailed = schedulerMetrics.tasksFailed;
     this.metrics.totalIterations = schedulerMetrics.totalIterations;
-    this.metrics.averageSchedulingTimeMs =
-      schedulerMetrics.averageSchedulingTimeMs;
+    this.metrics.averageSchedulingTimeMs = schedulerMetrics.averageSchedulingTimeMs;
 
     // Debug logging
     if (enableLogging) {
-      const travelEvents = this.slotManager.generateTravelEvents(input.userId);
+      const travelEvents = slotManager.generateTravelEvents(input.userId);
       logCalendarDebugInfo(input, {
         allEvents,
         travelEvents,
@@ -235,9 +227,6 @@ export class CalendarGenerator {
     };
   }
 
-  /**
-   * Create empty metrics object
-   */
   private createEmptyMetrics(): SchedulingMetrics {
     return {
       tasksAttempted: 0,
@@ -253,9 +242,6 @@ export class CalendarGenerator {
     };
   }
 
-  /**
-   * Get current metrics
-   */
   getMetrics(): SchedulingMetrics {
     return { ...this.metrics };
   }
