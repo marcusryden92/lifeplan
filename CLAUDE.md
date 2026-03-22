@@ -132,7 +132,7 @@ lifeplan/
     │   │   │   ├── initialization/    # validateInput, buildInitialEventArray
     │   │   │   ├── template-processing/  # expandTemplates
     │   │   │   ├── slot-building/     # buildLocationMap, buildInitialSlots,
-    │   │   │   │                      # buildCategoryConstraints
+    │   │   │   │                      # buildCategoryConstraints, buildPlannerCategoryMap
     │   │   │   ├── scheduling/        # prepareSchedulingContext, buildSchedulingStrategy,
     │   │   │   │                      # prepareCandidates
     │   │   │   └── finalization/      # assembleFinalEvents
@@ -177,7 +177,6 @@ lifeplan/
     │       ├── dateTimeService.ts     # Centralized date utilities
     │       ├── validationUtils.ts     # Input validation
     │       ├── loggingUtils.ts        # Debug logging
-    │       ├── categoryConstraintUtils.ts
     │       └── intervalUtils.ts
     │
     ├── goalPageHandlers.ts            # Goal tree utilities

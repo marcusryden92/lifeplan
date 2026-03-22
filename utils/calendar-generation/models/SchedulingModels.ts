@@ -7,7 +7,8 @@
 import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
 
 import { SchedulingFailureReason } from "../constants";
-import type { CategoryTimeSlot } from "@/types/categoryTypes";
+import type { CategoryConstraint, CategoryPeriod } from "@/types/categoryTypes";
+export type { CategoryConstraint, CategoryPeriod };
 
 /**
  * Result of a scheduling operation
@@ -214,31 +215,6 @@ export interface CalendarGenerationInput {
   config?: CalendarGenerationConfig;
   /** Categories with time constraints */
   categories?: Category[];
-}
-
-/**
- * A concrete category time period expanded from a CategoryConstraint's time slot rules
- */
-export interface CategoryPeriod {
-  start: Date;
-  end: Date;
-  categoryId: string;
-  categoryName: string;
-  categoryColor?: string | null;
-  locationId: string | null;
-  isStrict: boolean;
-}
-
-/**
- * Category time constraint information
- */
-export interface CategoryConstraint {
-  id: string;
-  name: string;
-  color?: string | null;
-  timeSlots: CategoryTimeSlot[];
-  isStrict: boolean;
-  locationId?: string | null;
 }
 
 /**

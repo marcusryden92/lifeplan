@@ -34,6 +34,31 @@ export interface CategoryWithTimeSlots {
 }
 
 /**
+ * A processed category constraint used by the scheduling engine
+ */
+export interface CategoryConstraint {
+  id: string;
+  name: string;
+  color?: string | null;
+  timeSlots: CategoryTimeSlot[];
+  isStrict: boolean;
+  locationId?: string | null;
+}
+
+/**
+ * A concrete category time period expanded from a CategoryConstraint's time slot rules
+ */
+export interface CategoryPeriod {
+  start: Date;
+  end: Date;
+  categoryId: string;
+  categoryName: string;
+  categoryColor?: string | null;
+  locationId: string | null;
+  isStrict: boolean;
+}
+
+/**
  * Helper to parse timeSlots JSON from Prisma
  */
 export function parseCategoryTimeSlots(

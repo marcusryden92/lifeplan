@@ -198,7 +198,7 @@ Builds category constraint data used throughout scheduling:
 - `categoryPeriodsStatic` -- concrete time periods (start/end dates) for category wrapper events on the calendar
 - `wrapperPeriodsForManager` -- periods with locations for the SlotBuilder to split slots at category boundaries
 
-Uses `buildCategoryConstraintMap()` and `generateCategorySlotPeriods()` from `categoryConstraintUtils.ts`.
+Uses `buildCategoryConstraintMap()` and `generateCategorySlotPeriods()` from `buildCategoryConstraints.ts`.
 
 ### Phase 6: Build Initial Slots
 
@@ -844,14 +844,6 @@ Categories affect the scheduling system in several concrete ways:
 ---
 
 ## Utility Functions
-
-### categoryConstraintUtils.ts
-
-**`buildCategoryConstraintMap(categories)`**
-Converts Category array to `Map<categoryId, CategoryConstraint>`.
-
-**`generateCategorySlotPeriods(startDate, endDate, constraints)`**
-Generates concrete time periods from category constraints across a date range.
 
 ### intervalUtils.ts
 

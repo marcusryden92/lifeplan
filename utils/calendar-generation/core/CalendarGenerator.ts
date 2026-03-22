@@ -18,7 +18,7 @@ import {
 import { SCHEDULING_CONFIG } from "../constants";
 import { logCalendarDebugInfo } from "../utils/loggingUtils";
 import { TaskSchedulingOrchestrator } from "../helpers/scheduling/TaskSchedulingOrchestrator";
-import { buildPlannerCategoryMap } from "../utils/categoryConstraintUtils";
+import { buildPlannerCategoryMap } from "./CalendarGenerator/slot-building/buildPlannerCategoryMap";
 
 // Import subfunctions
 import { validateInput } from "./CalendarGenerator/initialization/validateInput";
