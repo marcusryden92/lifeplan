@@ -1,5 +1,6 @@
 import { TimeSlot, TimeSlotUtils } from "../../../models/TimeSlot";
 import { TravelManager } from "../travel/TravelManager";
+import { dateTimeService } from "../../../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../../../constants";
 import { v4 as uuidv4 } from "uuid";
 
@@ -12,7 +13,6 @@ export class SlotReserver {
     private availableSlots: Map<string, TimeSlot[]>,
     private occupiedSlots: Map<string, TimeSlot[]>,
     private travelManager: TravelManager,
-    private getDayKeyFn: (date: Date) => string,
     private bufferTimeMinutes: number,
   ) {}
 
@@ -29,7 +29,7 @@ export class SlotReserver {
     eventType: "task" | "goal" | "plan" | "template" | "travel",
     locationId?: string | null,
   ): boolean {
-    const dayKey = this.getDayKeyFn(start);
+    const dayKey = dateTimeService.getDayKey(start);
     const slots = this.availableSlots.get(dayKey);
 
     if (!slots) return false;
@@ -104,7 +104,7 @@ export class SlotReserver {
     absorbPrevTravelAfter?: boolean,
     reclaimPrecedingGapTravel?: TimeSlot | null,
   ): { success: boolean } {
-    const dayKey = this.getDayKeyFn(start);
+    const dayKey = dateTimeService.getDayKey(start);
     const slots = this.availableSlots.get(dayKey);
 
     if (!slots) {

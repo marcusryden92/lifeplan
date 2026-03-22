@@ -1,26 +1,3 @@
-// Local enum for ItemType to match schema
-export enum ItemTypeEnum {
-  task = "task",
-  plan = "plan",
-  goal = "goal",
-  template = "template",
-}
-// Strict type for dynamic scheduling items
-export interface DynamicScheduleItem {
-  id: string;
-  durationMinutes: number;
-  title: string;
-  extendedProps?: {
-    id: string;
-    itemType: string;
-    completedStartTime: string | null;
-    completedEndTime: string | null;
-    parentId: string | null;
-    eventId: string;
-  };
-  backgroundColor?: string;
-}
-
 /**
  * TimeSlotManager - Orchestrator Class
  *
@@ -69,20 +46,17 @@ export class TimeSlotManager {
       this.availableSlots,
       this.occupiedSlots,
       bufferTimeMinutes,
-      this.getDayKey.bind(this),
       travelTimeMatrix,
     );
 
     this.slotBuilder = new SlotBuilder(
       this.occupiedSlots,
       this.travelManager,
-      this.getDayKey.bind(this),
       bufferTimeMinutes,
     );
 
     this.slotFinder = new SlotFinder(
       this.availableSlots,
-      this.getDayKey.bind(this),
       bufferTimeMinutes,
     );
 
@@ -90,7 +64,6 @@ export class TimeSlotManager {
       this.availableSlots,
       this.occupiedSlots,
       this.travelManager,
-      this.getDayKey.bind(this),
       bufferTimeMinutes,
     );
   }
@@ -162,7 +135,7 @@ export class TimeSlotManager {
         plannerLocationMap,
       );
 
-      this.availableSlots.set(this.getDayKey(date), slots);
+      this.availableSlots.set(dateTimeService.getDayKey(date), slots);
     }
   }
 
@@ -330,7 +303,7 @@ export class TimeSlotManager {
   // ===== Slot Queries =====
 
   getDaySlots(date: Date): TimeSlot[] {
-    const dayKey = this.getDayKey(date);
+    const dayKey = dateTimeService.getDayKey(date);
     return this.availableSlots.get(dayKey) || [];
   }
 
@@ -359,13 +332,4 @@ export class TimeSlotManager {
     return this.bufferTimeMinutes;
   }
 
-  /**
-   * Get a unique key for a day
-   */
-  private getDayKey(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
 }

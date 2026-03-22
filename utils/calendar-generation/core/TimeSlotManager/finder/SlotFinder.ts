@@ -10,7 +10,6 @@ import { SCHEDULING_CONFIG } from "../../../constants";
 export class SlotFinder {
   constructor(
     private availableSlots: Map<string, TimeSlot[]>,
-    private getDayKeyFn: (date: Date) => string,
     private bufferTimeMinutes: number,
   ) {}
 
@@ -35,7 +34,7 @@ export class SlotFinder {
     const baseRequiredMinutes = durationMinutes + 2 * this.bufferTimeMinutes;
 
     while (currentDate <= searchEndDate) {
-      const dayKey = this.getDayKeyFn(currentDate);
+      const dayKey = dateTimeService.getDayKey(currentDate);
       const slots = this.availableSlots.get(dayKey);
 
       if (slots) {
@@ -131,7 +130,7 @@ export class SlotFinder {
    * Get available slots for a specific day
    */
   getDaySlots(date: Date): TimeSlot[] {
-    const dayKey = this.getDayKeyFn(date);
+    const dayKey = dateTimeService.getDayKey(date);
     return this.availableSlots.get(dayKey) || [];
   }
 

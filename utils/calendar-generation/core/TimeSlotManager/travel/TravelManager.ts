@@ -7,6 +7,7 @@
 
 import { TimeSlot, TimeSlotUtils } from "../../../models/TimeSlot";
 import { TravelTimeEntry } from "../../../models/SchedulingModels";
+import { dateTimeService } from "../../../utils/dateTimeService";
 import { v4 as uuidv4 } from "uuid";
 
 export class TravelManager {
@@ -16,7 +17,6 @@ export class TravelManager {
     private availableSlots: Map<string, TimeSlot[]>,
     private occupiedSlots: Map<string, TimeSlot[]>,
     private bufferTimeMinutes: number,
-    private getDayKeyFn: (date: Date) => string,
     travelTimeMatrix?: Map<string, TravelTimeEntry>,
   ) {
     this.travelTimeMatrix = travelTimeMatrix ?? null;
@@ -79,7 +79,7 @@ export class TravelManager {
     travelEnd: Date,
     travelMinutes: number,
   ): boolean {
-    const dayKey = this.getDayKeyFn(travelEnd);
+    const dayKey = dateTimeService.getDayKey(travelEnd);
     const slots = this.availableSlots.get(dayKey) || [];
 
     const travelEndMs = travelEnd.getTime();
@@ -118,7 +118,7 @@ export class TravelManager {
     toLocationId: string,
     force: boolean = false,
   ): { success: boolean } {
-    const dayKey = this.getDayKeyFn(travelEnd);
+    const dayKey = dateTimeService.getDayKey(travelEnd);
     const travelEndMs = travelEnd.getTime();
     const travelStart = new Date(travelEndMs - travelMinutes * 60000);
     const travelStartMs = travelStart.getTime();
@@ -261,7 +261,7 @@ export class TravelManager {
     toLocationId: string,
     force: boolean = false,
   ): { success: boolean } {
-    const dayKey = this.getDayKeyFn(travelStart);
+    const dayKey = dateTimeService.getDayKey(travelStart);
     const travelStartMs = travelStart.getTime();
     const travelEnd = new Date(travelStartMs + travelMinutes * 60000);
     const travelEndMs = travelEnd.getTime();
@@ -401,7 +401,7 @@ export class TravelManager {
     fromLocationId: string,
     toLocationId: string,
   ): { success: boolean } {
-    const dayKey = this.getDayKeyFn(travelEnd);
+    const dayKey = dateTimeService.getDayKey(travelEnd);
     const slots = this.availableSlots.get(dayKey);
     if (!slots) return { success: false };
 
@@ -475,7 +475,7 @@ export class TravelManager {
     fromLocationId: string,
     toLocationId: string,
   ): { success: boolean } {
-    const dayKey = this.getDayKeyFn(travelStart);
+    const dayKey = dateTimeService.getDayKey(travelStart);
     const slots = this.availableSlots.get(dayKey);
     if (!slots) return { success: false };
 
@@ -551,7 +551,7 @@ export class TravelManager {
    * @returns The travel slot's start time if found, null otherwise
    */
   findAdjacentTravelTo(nearTime: Date, toLocationId: string): Date | null {
-    const dayKey = this.getDayKeyFn(nearTime);
+    const dayKey = dateTimeService.getDayKey(nearTime);
     const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
 
     // Look for travel slots that:
@@ -587,7 +587,7 @@ export class TravelManager {
    * @returns The travel-gap slot if found, null otherwise
    */
   findPrecedingGapTravel(slotStart: Date): TimeSlot | null {
-    const dayKey = this.getDayKeyFn(slotStart);
+    const dayKey = dateTimeService.getDayKey(slotStart);
     const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
     const bufferMs = this.bufferTimeMinutes * 60000;
     // Gap travel ends at slotStart - buffer; allow small tolerance
@@ -619,7 +619,7 @@ export class TravelManager {
     nearTime: Date,
     fromLocationId: string,
   ): TimeSlot | null {
-    const dayKey = this.getDayKeyFn(nearTime);
+    const dayKey = dateTimeService.getDayKey(nearTime);
     const occupiedSlots = this.occupiedSlots.get(dayKey) || [];
 
     const bufferMs = this.bufferTimeMinutes * 60000;

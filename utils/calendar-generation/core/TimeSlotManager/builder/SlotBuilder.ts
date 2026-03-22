@@ -9,6 +9,7 @@ import { SimpleEvent } from "@/types/prisma";
 import { CategoryPeriod } from "@/types/categoryTypes";
 import { TimeSlot, TimeSlotUtils } from "../../../models/TimeSlot";
 import { TravelManager } from "../travel/TravelManager";
+import { dateTimeService } from "../../../utils/dateTimeService";
 import {
   eventsToIntervals,
   findGaps,
@@ -25,7 +26,6 @@ export class SlotBuilder {
   constructor(
     private occupiedSlots: Map<string, TimeSlot[]>,
     private travelManager: TravelManager,
-    private getDayKeyFn: (date: Date) => string,
     private bufferTimeMinutes: number,
   ) {}
 
@@ -353,7 +353,7 @@ export class SlotBuilder {
    * Returns only the remaining available slots; travel slots go to occupiedSlots.
    */
   private carveTravelFromChain(slots: TimeSlot[], dayStart: Date): TimeSlot[] {
-    const dayKey = this.getDayKeyFn(dayStart);
+    const dayKey = dateTimeService.getDayKey(dayStart);
     // Remove any previously carved gap-travel for this day so rebuilding a day
     // doesn't accumulate duplicate entries in occupiedSlots.
     const occupiedSlots = (this.occupiedSlots.get(dayKey) || []).filter(
