@@ -6,6 +6,7 @@
  */
 
 import { SimpleEvent } from "@/types/prisma";
+import { CategoryPeriod } from "@/types/categoryTypes";
 import { TimeSlot, TimeSlotUtils } from "../../../models/TimeSlot";
 import { TravelManager } from "../travel/TravelManager";
 import {
@@ -16,21 +17,13 @@ import {
   PerTemplateMask,
   Interval,
 } from "../../../utils/intervalUtils";
-import { dateTimeService } from "../../../utils/dateTimeService";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { v4 as uuidv4 } from "uuid";
 
 export class SlotBuilder {
-  private categoryPeriods: Array<{
-    start: Date;
-    end: Date;
-    locationId: string | null;
-    categoryId: string;
-    isStrict: boolean;
-  }> = [];
+  private categoryPeriods: CategoryPeriod[] = [];
 
   constructor(
-    private availableSlots: Map<string, TimeSlot[]>,
     private occupiedSlots: Map<string, TimeSlot[]>,
     private travelManager: TravelManager,
     private getDayKeyFn: (date: Date) => string,
@@ -38,25 +31,20 @@ export class SlotBuilder {
     private bufferTimeMinutes: number,
   ) {}
 
-  setCategoryPeriods(
-    periods: Array<{ start: Date; end: Date; locationId: string | null; categoryId: string; isStrict: boolean }>,
-  ): void {
-    this.categoryPeriods = periods;
-  }
-
   /**
    * Build available time slots for a date range
    * @param templateMasks - Template masks for determining occupied time (no SimpleEvent generation needed)
    * @param plannerLocationMap - Optional map of planner ID to location ID for tracking slot neighbors
    */
   buildAvailableSlots(
-    startDate: Date, // Comment: Why start and end date when this function
-    // is only used to calculate slots for one day?
+    startDate: Date,
     endDate: Date,
     existingEvents: SimpleEvent[],
     templateMasks: PerTemplateMask[],
+    categoryPeriods: CategoryPeriod[],
     plannerLocationMap?: Map<string, string | null>,
   ): TimeSlot[] {
+    this.categoryPeriods = categoryPeriods;
     // Filter existing events to only those that overlap with this date range
     // Exclude template events since we create intervals from masks instead
     const relevantEvents = existingEvents.filter((event) => {
@@ -876,40 +864,5 @@ export class SlotBuilder {
 
     this.occupiedSlots.set(dayKey, occupiedSlots);
     return result;
-  }
-
-
-  /**
-   * Build slots for multiple days at once
-   * @param plannerLocationMap - Optional map of planner ID to location ID for tracking slot neighbors
-   */
-  buildDailySlots(
-    startDate: Date,
-    numDays: number,
-    existingEvents: SimpleEvent[],
-    templateMasks: PerTemplateMask[],
-    plannerLocationMap?: Map<string, string | null>,
-  ): Map<string, TimeSlot[]> {
-    const dailySlots = new Map<string, TimeSlot[]>();
-
-    for (let i = 0; i < numDays; i++) {
-      const date = dateTimeService.shiftDays(startDate, i);
-      const dayKey = this.getDayKeyFn(date);
-      const dayStart = dateTimeService.startOfDay(date);
-      const dayEnd = dateTimeService.endOfDay(date);
-
-      const daySlots = this.buildAvailableSlots(
-        dayStart,
-        dayEnd,
-        existingEvents,
-        templateMasks,
-        plannerLocationMap,
-      );
-
-      dailySlots.set(dayKey, daySlots);
-      this.availableSlots.set(dayKey, daySlots);
-    }
-
-    return dailySlots;
   }
 }

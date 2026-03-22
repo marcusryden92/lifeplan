@@ -33,6 +33,7 @@ export interface DynamicScheduleItem {
  */
 
 import { SimpleEvent } from "@/types/prisma";
+import { CategoryPeriod } from "@/types/categoryTypes";
 import { TimeSlot } from "../models/TimeSlot";
 import { PerTemplateMask } from "../utils/intervalUtils";
 import { dateTimeService } from "../utils/dateTimeService";
@@ -78,7 +79,6 @@ export class TimeSlotManager {
     );
 
     this.slotBuilder = new SlotBuilder(
-      this.availableSlots,
       this.occupiedSlots,
       this.travelManager,
       this.getDayKey.bind(this),
@@ -115,14 +115,6 @@ export class TimeSlotManager {
     return this.travelManager.getTravelTime(fromLocationId, toLocationId, timeOfDay);
   }
 
-  // ===== Category Period Management =====
-
-  setCategoryPeriods(
-    periods: Array<{ start: Date; end: Date; locationId: string | null; categoryId: string; isStrict: boolean }>,
-  ): void {
-    this.slotBuilder.setCategoryPeriods(periods);
-  }
-
   // ===== Slot Building =====
 
   buildAvailableSlots(
@@ -130,6 +122,7 @@ export class TimeSlotManager {
     endDate: Date,
     existingEvents: SimpleEvent[],
     templateMasks: PerTemplateMask[],
+    categoryPeriods: CategoryPeriod[],
     plannerLocationMap?: Map<string, string | null>,
   ): TimeSlot[] {
     const slots = this.slotBuilder.buildAvailableSlots(
@@ -137,6 +130,7 @@ export class TimeSlotManager {
       endDate,
       existingEvents,
       templateMasks,
+      categoryPeriods,
       plannerLocationMap,
     );
 
@@ -152,6 +146,7 @@ export class TimeSlotManager {
     numDays: number,
     existingEvents: SimpleEvent[],
     templateMasks: PerTemplateMask[],
+    categoryPeriods: CategoryPeriod[],
     plannerLocationMap?: Map<string, string | null>,
   ): Map<string, TimeSlot[]> {
     const dailySlots = new Map<string, TimeSlot[]>();
@@ -167,6 +162,7 @@ export class TimeSlotManager {
         dayEnd,
         existingEvents,
         templateMasks,
+        categoryPeriods,
         plannerLocationMap,
       );
 

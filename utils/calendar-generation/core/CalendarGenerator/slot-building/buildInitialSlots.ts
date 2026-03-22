@@ -22,14 +22,13 @@ export function buildInitialSlots(
     logInitialSlotContext(eventArray);
   }
 
-  slotManager.setCategoryPeriods(wrapperPeriods);
-
   const weeks = Math.max(initialWeeks, weeksNeededForPlans(planners, currentDate));
   slotManager.buildDailySlots(
     currentDate,
     weeks * 7,
     eventArray,
     perTemplateMasks,
+    wrapperPeriods,
     plannerLocationMap
   );
 }

@@ -7,6 +7,7 @@
  */
 
 import { Planner, SimpleEvent } from "@/types/prisma";
+import { CategoryPeriod } from "@/types/categoryTypes";
 import { Scheduler } from "../../core/Scheduler";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
 import { PerTemplateMask } from "../../core/TemplateExpander";
@@ -37,7 +38,8 @@ export class TaskSchedulingOrchestrator {
     largestTemplateGap: number,
     perTemplateMasks: PerTemplateMask[],
     context: SchedulingContext,
-    plannerLocationMap: Map<string, string | null>
+    plannerLocationMap: Map<string, string | null>,
+    categoryPeriods: CategoryPeriod[]
   ): {
     success: boolean;
     newEvents: SimpleEvent[];
@@ -101,7 +103,8 @@ export class TaskSchedulingOrchestrator {
           weekStart,
           context,
           perTemplateMasks,
-          plannerLocationMap
+          plannerLocationMap,
+          categoryPeriods
         );
       }
     }
@@ -223,7 +226,8 @@ export class TaskSchedulingOrchestrator {
     weekStart: Date,
     context: SchedulingContext,
     perTemplateMasks: PerTemplateMask[],
-    plannerLocationMap: Map<string, string | null>
+    plannerLocationMap: Map<string, string | null>,
+    categoryPeriods: CategoryPeriod[]
   ): void {
     const weekStartDate = dateTimeService.startOfDay(weekStart);
     const weekEndDate = dateTimeService.endOfDay(
@@ -240,6 +244,7 @@ export class TaskSchedulingOrchestrator {
       7,
       weekEvents,
       perTemplateMasks,
+      categoryPeriods,
       plannerLocationMap
     );
 

@@ -185,7 +185,8 @@ export class CalendarGenerator {
       largestTemplateGap,
       perTemplateMasks,
       context,
-      plannerLocationMap
+      plannerLocationMap,
+      categoryPeriods
     );
 
     // Phase 12: Assemble final events
