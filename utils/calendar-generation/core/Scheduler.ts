@@ -14,8 +14,8 @@ import {
   SchedulingFailure,
   SchedulingMetrics,
 } from "../models/SchedulingModels";
-import { scheduleTask } from "./Scheduler/scheduling/scheduleTask";
-import { scheduleTasks } from "./Scheduler/scheduling/scheduleTasks";
+import { scheduleTask } from "./Scheduler/scheduleTask";
+import { scheduleTasks } from "./Scheduler/scheduleTasks";
 
 export class Scheduler {
   private metrics: SchedulingMetrics = {

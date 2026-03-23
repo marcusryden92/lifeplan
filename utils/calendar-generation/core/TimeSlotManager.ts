@@ -21,7 +21,11 @@ import {
   CategoryConstraint,
 } from "../models/SchedulingModels";
 
-import { TravelManager, TravelConverter, SlotBuilder, SlotFinder, SlotReserver } from "./TimeSlotManager/index";
+import { TravelManager } from "./TravelManager";
+import { TravelConverter } from "./TravelConverter";
+import { SlotBuilder } from "./SlotBuilder";
+import { SlotFinder } from "./SlotFinder";
+import { SlotReserver } from "./SlotReserver";
 
 export class TimeSlotManager {
   // Core state

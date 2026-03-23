@@ -18,7 +18,11 @@
       "Bash(echo \"Exit code: $?\")",
       "Bash(xargs grep:*)",
       "Bash(pnpm prisma:*)",
-      "Bash(find /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))"
+      "Bash(find /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(rm utils/calendar-generation/core/TimeSlotManager/travel/TravelManager.ts utils/calendar-generation/core/TimeSlotManager/converter/TravelConverter.ts utils/calendar-generation/core/TimeSlotManager/builder/SlotBuilder.ts utils/calendar-generation/core/TimeSlotManager/finder/SlotFinder.ts utils/calendar-generation/core/TimeSlotManager/reserver/SlotReserver.ts)",
+      "Bash(rmdir utils/calendar-generation/core/TimeSlotManager/travel utils/calendar-generation/core/TimeSlotManager/converter utils/calendar-generation/core/TimeSlotManager/builder utils/calendar-generation/core/TimeSlotManager/finder utils/calendar-generation/core/TimeSlotManager/reserver)",
+      "Bash(rm utils/calendar-generation/core/TimeSlotManager/index.ts)",
+      "Bash(rmdir utils/calendar-generation/core/TimeSlotManager)"
     ]
   }
 }

@@ -34,7 +34,7 @@ import {
 
 export class CalendarGenerator {
   // Class instances
-  private readonly slotManager: TimeSlotManager;
+  private readonly timeSlotManager: TimeSlotManager;
   private readonly strategy: CompositeStrategy;
 
   // Config derived from input
@@ -51,11 +51,12 @@ export class CalendarGenerator {
     private readonly input: CalendarGenerationInput,
   ) {
     this.currentDate = new Date();
-    this.maxDaysAhead = input.config?.maxDaysAhead || SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH;
+    this.maxDaysAhead =
+      input.config?.maxDaysAhead || SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH;
     this.bufferTimeMinutes = input.config?.bufferTimeMinutes ?? 0;
     this.enableLogging = input.config?.enableLogging ?? false;
 
-    this.slotManager = new TimeSlotManager(
+    this.timeSlotManager = new TimeSlotManager(
       this.currentDate,
       this.bufferTimeMinutes,
       input.config?.travelTimeMatrix,
@@ -75,7 +76,15 @@ export class CalendarGenerator {
    */
   generate(): SchedulingResult {
     const startTime = performance.now();
-    const { input, slotManager, strategy, currentDate, weekStartDay, maxDaysAhead, enableLogging } = this;
+    const {
+      input,
+      timeSlotManager,
+      strategy,
+      currentDate,
+      weekStartDay,
+      maxDaysAhead,
+      enableLogging,
+    } = this;
 
     // Phase 1: Validation
     const validation = validateInput(input);
@@ -131,7 +140,7 @@ export class CalendarGenerator {
     );
 
     // Phase 6: Build initial slots (includes category boundary splits + travel carving)
-    slotManager.buildDailySlots(
+    timeSlotManager.buildDailySlots(
       currentDate,
       input.planners,
       filteredEvents,
@@ -151,7 +160,7 @@ export class CalendarGenerator {
       weekStartDay,
       input.planners,
       filteredEvents,
-      slotManager,
+      timeSlotManager,
       this.metrics,
       categoryConstraintMap,
       plannerLocationMap,
@@ -167,8 +176,12 @@ export class CalendarGenerator {
     );
 
     // Phase 10: Schedule tasks and goals
-    const scheduler = new Scheduler(slotManager, strategy, context);
-    const orchestrator = new TaskSchedulingOrchestrator(slotManager, scheduler, weekStartDay);
+    const scheduler = new Scheduler(timeSlotManager, strategy, context);
+    const orchestrator = new TaskSchedulingOrchestrator(
+      timeSlotManager,
+      scheduler,
+      weekStartDay,
+    );
     const schedulingResult: {
       success: boolean;
       newEvents: SimpleEvent[];
@@ -187,7 +200,7 @@ export class CalendarGenerator {
     // Phase 11: Assemble final events
     const allEvents = assembleFinalEvents(
       input.userId,
-      slotManager,
+      timeSlotManager,
       context,
       categoryPeriods,
       plannerLocationMap,
@@ -201,11 +214,12 @@ export class CalendarGenerator {
     this.metrics.tasksScheduled = schedulerMetrics.tasksScheduled;
     this.metrics.tasksFailed = schedulerMetrics.tasksFailed;
     this.metrics.totalIterations = schedulerMetrics.totalIterations;
-    this.metrics.averageSchedulingTimeMs = schedulerMetrics.averageSchedulingTimeMs;
+    this.metrics.averageSchedulingTimeMs =
+      schedulerMetrics.averageSchedulingTimeMs;
 
     // Debug logging
     if (enableLogging) {
-      const travelEvents = slotManager.generateTravelEvents(input.userId);
+      const travelEvents = timeSlotManager.generateTravelEvents(input.userId);
       logCalendarDebugInfo(input, {
         allEvents,
         travelEvents,
