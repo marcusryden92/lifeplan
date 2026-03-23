@@ -91,13 +91,17 @@ export class TemplateExpander {
       eventDate,
       template.startTime,
     );
-    const endDate = dateTimeService.addDuration(startDate, template.duration);
+    const endMinutes = (startDate.getHours() * 60 + startDate.getMinutes()) + template.duration;
+    const endDayOffset = Math.floor(endMinutes / 1440);
+    const endTimeMinutes = endMinutes % 1440;
+    const endDate = new Date(eventDate);
+    endDate.setDate(endDate.getDate() + endDayOffset);
+    endDate.setHours(Math.floor(endTimeMinutes / 60), endTimeMinutes % 60, 0, 0);
 
-    // Get RRule day
-    const utcDate = new Date(startDate.toUTCString());
-    const rruleDay = this.getRRuleDayFromIndex(utcDate.getUTCDay());
+    const rruleDay = this.getRRuleDayFromIndex(startDate.getDay());
 
-    const startISO = startDate.toISOString();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const startISO = `${startDate.getFullYear()}-${pad(startDate.getMonth() + 1)}-${pad(startDate.getDate())}T${pad(startDate.getHours())}:${pad(startDate.getMinutes())}:${pad(startDate.getSeconds())}`;
 
     const rule = {
       freq: "weekly",
@@ -200,10 +204,18 @@ export class TemplateExpander {
 
     return masks
       .filter((mask) => mask.dayOfWeek === dayOfWeek)
-      .map((mask) => ({
-        start: new Date(dayStart.getTime() + mask.startMinutes * 60000),
-        end: new Date(dayStart.getTime() + mask.endMinutes * 60000),
-      }));
+      .map((mask) => {
+        const start = new Date(dayStart);
+        start.setHours(Math.floor(mask.startMinutes / 60), mask.startMinutes % 60, 0, 0);
+
+        const endDayOffset = Math.floor(mask.endMinutes / 1440);
+        const endTimeMinutes = mask.endMinutes % 1440;
+        const end = new Date(dayStart);
+        end.setDate(end.getDate() + endDayOffset);
+        end.setHours(Math.floor(endTimeMinutes / 60), endTimeMinutes % 60, 0, 0);
+
+        return { start, end };
+      });
   }
 
   /**

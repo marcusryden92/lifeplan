@@ -466,11 +466,16 @@ export function masksToIntervals(
     for (const mask of masks) {
       if (mask.dayOfWeek !== dayOfWeek) continue;
 
-      intervals.push({
-        start: new Date(dayStart.getTime() + mask.startMinutes * 60000),
-        end: new Date(dayStart.getTime() + mask.endMinutes * 60000),
-        locationId: mask.locationId ?? null,
-      });
+      const start = new Date(dayStart);
+      start.setHours(Math.floor(mask.startMinutes / 60), mask.startMinutes % 60, 0, 0);
+
+      const endDayOffset = Math.floor(mask.endMinutes / 1440);
+      const endTimeMinutes = mask.endMinutes % 1440;
+      const end = new Date(dayStart);
+      end.setDate(end.getDate() + endDayOffset);
+      end.setHours(Math.floor(endTimeMinutes / 60), endTimeMinutes % 60, 0, 0);
+
+      intervals.push({ start, end, locationId: mask.locationId ?? null });
     }
   }
 
