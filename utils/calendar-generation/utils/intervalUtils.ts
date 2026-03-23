@@ -442,48 +442,33 @@ export function getLargestGapMinutes(gaps: Interval[]): number {
 }
 
 
-import type { TemplateTimeWithExceptions, TemplateDayDef, PerTemplateMask } from "../models/TemplateModels";
-export type { TemplateTimeWithExceptions, TemplateDayDef, PerTemplateMask };
+import type { PerTemplateMask } from "../models/TemplateModels";
+export type { PerTemplateMask };
 
 /**
- * Convert PerTemplateMasks to Intervals for a specific date
- * Directly uses mask data without creating SimpleEvent objects
+ * Convert PerTemplateMasks to Intervals over a date range
  */
 export function masksToIntervals(
   masks: PerTemplateMask[],
-  date: Date,
+  startDate: Date,
+  endDate: Date,
 ): Interval[] {
-  const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
   const intervals: Interval[] = [];
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const numDays = Math.ceil((endDate.getTime() - startDate.getTime()) / msPerDay);
 
-  for (const mask of masks) {
-    // Find occurrences for this day of week
-    const dayDef = mask.occurrences.find((occ) => occ.day === dayOfWeek);
-    if (!dayDef) continue;
+  for (let i = 0; i < numDays; i++) {
+    const dayStart = new Date(startDate);
+    dayStart.setDate(dayStart.getDate() + i);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayOfWeek = dayStart.getDay();
 
-    for (const time of dayDef.times) {
-      // Check if this date is an exception
-      const dateISO = date.toISOString().split("T")[0];
-      if (time.exceptions?.includes(dateISO)) continue;
-
-      // Parse time strings and create Date objects
-      const [startH, startM] = time.startTime.split(":").map(Number);
-      const [endH, endM] = time.endTime.split(":").map(Number);
-
-      const start = new Date(date);
-      start.setHours(startH, startM, 0, 0);
-
-      const end = new Date(date);
-      end.setHours(endH, endM, 0, 0);
-
-      // Handle "24:00" as end of day
-      if (time.endTime === "24:00") {
-        end.setHours(23, 59, 59, 999);
-      }
+    for (const mask of masks) {
+      if (mask.dayOfWeek !== dayOfWeek) continue;
 
       intervals.push({
-        start,
-        end,
+        start: new Date(dayStart.getTime() + mask.startMinutes * 60000),
+        end: new Date(dayStart.getTime() + mask.endMinutes * 60000),
         locationId: mask.locationId ?? null,
       });
     }

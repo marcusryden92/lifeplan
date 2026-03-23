@@ -12,17 +12,8 @@ import { WEEKDAY_NAMES, TIME_CONSTANTS } from "../constants";
 import { RRule, Weekday } from "rrule";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
-import {
-  TimeInterval,
-  DayMask,
-  WeeklyMask,
-  DateException,
-  TemplateMask,
-  TemplateTimeWithExceptions,
-  TemplateDayDef,
-  PerTemplateMask,
-} from "../models/TemplateModels";
-export type { TimeInterval, DayMask, WeeklyMask, DateException, TemplateMask, TemplateTimeWithExceptions, TemplateDayDef, PerTemplateMask };
+import { PerTemplateMask } from "../models/TemplateModels";
+export type { PerTemplateMask };
 
 export class TemplateExpander {
   private expandedTemplates: Map<string, SimpleEvent[]> = new Map();
@@ -204,34 +195,15 @@ export class TemplateExpander {
     date: Date,
   ): Array<{ start: Date; end: Date }> {
     const dayOfWeek = date.getDay();
-    const intervals: Array<{ start: Date; end: Date }> = [];
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
 
-    for (const mask of masks) {
-      const dayDef = mask.occurrences.find((occ) => occ.day === dayOfWeek);
-      if (!dayDef) continue;
-
-      for (const time of dayDef.times) {
-        const dateISO = date.toISOString().split("T")[0];
-        if (time.exceptions?.includes(dateISO)) continue;
-
-        const [startH, startM] = time.startTime.split(":").map(Number);
-        const [endH, endM] = time.endTime.split(":").map(Number);
-
-        const start = new Date(date);
-        start.setHours(startH, startM, 0, 0);
-
-        const end = new Date(date);
-        end.setHours(endH, endM, 0, 0);
-
-        if (time.endTime === "24:00") {
-          end.setHours(23, 59, 59, 999);
-        }
-
-        intervals.push({ start, end });
-      }
-    }
-
-    return intervals;
+    return masks
+      .filter((mask) => mask.dayOfWeek === dayOfWeek)
+      .map((mask) => ({
+        start: new Date(dayStart.getTime() + mask.startMinutes * 60000),
+        end: new Date(dayStart.getTime() + mask.endMinutes * 60000),
+      }));
   }
 
   /**
@@ -266,89 +238,34 @@ export class TemplateExpander {
     const masks: PerTemplateMask[] = [];
 
     for (const template of templates) {
-      if (
-        !template.startDay ||
-        !template.startTime ||
-        template.duration === undefined
-      ) {
+      if (!template.startDay || !template.startTime || template.duration === undefined) {
         continue;
       }
 
       const startDayIndex = WEEKDAY_NAMES.indexOf(template.startDay);
       if (startDayIndex === -1) continue;
 
-      const endMinutes = (() => {
-        const [h, m] = template.startTime
-          .split(":")
-          .map((s) => parseInt(s, 10));
-        return h * 60 + m + template.duration;
-      })();
+      const [h, m] = template.startTime.split(":").map((s) => parseInt(s, 10));
+      const startMinutes = h * 60 + m;
+      const endMinutes = startMinutes + template.duration;
 
-      // Get exceptions if available (will be populated when UX is implemented)
-      const templateExceptions: string[] = (() => {
-        const t = template as unknown as Record<string, unknown>; // Comment: Why is this unknown?
-        if (Array.isArray(t.exceptions)) return t.exceptions as string[];
-        return [];
-      })();
-
-      const times: TemplateTimeWithExceptions[] = [];
-
-      if (endMinutes <= 24 * 60) {
-        times.push({
-          startTime: template.startTime,
-          endTime: minutesToTimeString(endMinutes),
-          exceptions: templateExceptions,
-        });
-      } else {
-        // split across days - start day part uses original exception dates
-        times.push({
-          startTime: template.startTime,
-          endTime: "24:00",
-          exceptions: templateExceptions,
-        });
-        // For the next day, we add a separate day def below
-      }
-
-      const occs: TemplateDayDef[] = [{ day: startDayIndex, times }];
-
-      // If it crosses midnight, add next day portion
-      if (endMinutes > 24 * 60) {
-        const nextDay = (startDayIndex + 1) % 7;
-        // Next day part needs exceptions shifted by +1 day
-        const shiftedExceptions = templateExceptions.map((dateISO) => {
-          const d = new Date(dateISO);
-          d.setDate(d.getDate() + 1);
-          return d.toISOString().split("T")[0];
-        });
-        occs.push({
-          day: nextDay,
-          times: [
-            {
-              startTime: "00:00",
-              endTime: minutesToTimeString(endMinutes - 24 * 60),
-              exceptions: shiftedExceptions,
-            },
-          ],
-        });
-      }
+      const t = template as unknown as Record<string, unknown>;
 
       masks.push({
         templateId: template.id,
         title: template.title,
         color: template.color as string,
         locationId: template.locationId ?? null,
-        occurrences: occs,
-        // Populate optional interval metadata if present on the template record.
-        // Support common field names that might be used for uneven recurrences.
+        dayOfWeek: startDayIndex,
+        startMinutes,
+        endMinutes,
         startDateISO: (() => {
-          const t = template as unknown as Record<string, unknown>;
           if (typeof t.startDateISO === "string") return t.startDateISO;
           if (typeof t.startDate === "string") return t.startDate;
           if (typeof t.anchorDate === "string") return t.anchorDate;
           return undefined;
         })(),
         intervalDays: (() => {
-          const t = template as unknown as Record<string, unknown>;
           if (typeof t.intervalDays === "number") return t.intervalDays;
           if (typeof t.repeatEveryDays === "number") return t.repeatEveryDays;
           if (typeof t.repeatInterval === "number") return t.repeatInterval;
@@ -361,9 +278,3 @@ export class TemplateExpander {
   }
 }
 
-/** Helpers **/
-function minutesToTimeString(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}

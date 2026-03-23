@@ -42,12 +42,7 @@ export function buildAvailableSlots(
 
   const eventIntervals = eventsToIntervals(relevantEvents, plannerLocationMap);
 
-  // Template masks repeat weekly, so iterate each day in the range
-  const templateIntervals = [];
-  for (let i = 0; i < numDays; i++) {
-    const day = dateTimeService.shiftDays(startDate, i);
-    templateIntervals.push(...masksToIntervals(templateMasks, day));
-  }
+  const templateIntervals = masksToIntervals(templateMasks, startDate, endDate);
 
   const occupiedIntervals = [...eventIntervals, ...templateIntervals];
   const adjustedIntervals = applyCategoriesToNullIntervals(

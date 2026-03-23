@@ -63,13 +63,9 @@ export function expandTemplates(
       count: perTemplateMasks.length,
       masks: perTemplateMasks.map((m) => ({
         templateTitle: templates.find((t) => t.id === m.templateId)?.title,
-        occurrences: m.occurrences.map((occ) => ({
-          day: occ.day,
-          times: occ.times.map((t) => ({
-            startTime: t.startTime,
-            endTime: t.endTime,
-          })),
-        })),
+        dayOfWeek: m.dayOfWeek,
+        startMinutes: m.startMinutes,
+        endMinutes: m.endMinutes,
       })),
     });
   }
