@@ -5,7 +5,9 @@
  * Handles normal travel, insufficient travel, and location transitions.
  */
 
+import { SimpleEvent } from "@/types/prisma";
 import { TimeSlot } from "../models/TimeSlot";
+import { TimeSlotManager } from "./TimeSlotManager";
 import { TravelTimeEntry } from "../models/SchedulingModels";
 import {
   setTravelTimeMatrix,
@@ -18,19 +20,23 @@ import {
   findAdjacentTravelTo,
   findAdjacentTravelFrom,
   findPrecedingGapTravel,
+  getAllTravelSlots,
+  generateTravelEvents,
 } from "../helpers/TravelManager";
 
 export class TravelManager {
   private travelTimeMatrix: Map<string, TravelTimeEntry> | null = null;
 
   constructor(
-    private availableSlots: Map<string, TimeSlot[]>,
-    private occupiedSlots: Map<string, TimeSlot[]>,
+    private slotManager: TimeSlotManager,
     private bufferTimeMinutes: number,
     travelTimeMatrix?: Map<string, TravelTimeEntry>,
   ) {
     this.travelTimeMatrix = travelTimeMatrix ?? null;
   }
+
+  private get availableSlots(): TimeSlot[] { return this.slotManager.availableSlots; }
+  private get occupiedSlots(): TimeSlot[] { return this.slotManager.occupiedSlots; }
 
   /**
    * Set the travel time matrix for location-aware scheduling
@@ -53,7 +59,7 @@ export class TravelManager {
 
   /**
    * Check if we can place a standalone travel-before that ends at a given time.
-   * Non-mutating: scans available slots on the day to see if [travelStart, travelEnd] fits.
+   * Non-mutating: scans available slots to see if [travelStart, travelEnd] fits.
    */
   canPlaceStandaloneTravelBefore(
     travelEnd: Date,
@@ -166,10 +172,6 @@ export class TravelManager {
   /**
    * Find an existing travel slot going to a destination near a given time.
    * Used to determine if travel-after can be reused instead of reserving new space.
-   *
-   * @param nearTime - The time to search near (typically the end of an available slot)
-   * @param toLocationId - The destination location to check for
-   * @returns The travel slot's start time if found, null otherwise
    */
   findAdjacentTravelTo(nearTime: Date, toLocationId: string): Date | null {
     return findAdjacentTravelTo(this.occupiedSlots, this.bufferTimeMinutes, nearTime, toLocationId);
@@ -177,12 +179,7 @@ export class TravelManager {
 
   /**
    * Find a gap-travel slot that ends just before a given slot start.
-   * Used to detect when a pre-carved return trip (e.g. Gamla Stan → Home) precedes a
-   * free slot, so that a task placed in that slot can bypass the intermediate stop and
-   * travel direct from the real origin (e.g. Gamla Stan → Gym).
-   *
-   * @param slotStart - The start of the available slot (gap travel ends at slotStart - buffer)
-   * @returns The travel-gap slot if found, null otherwise
+   * Used to detect when a pre-carved return trip precedes a free slot.
    */
   findPrecedingGapTravel(slotStart: Date): TimeSlot | null {
     return findPrecedingGapTravel(this.occupiedSlots, this.bufferTimeMinutes, slotStart);
@@ -190,17 +187,17 @@ export class TravelManager {
 
   /**
    * Find an existing travel slot originating FROM a given location near a given time.
-   * Used to detect when a previous task at the same location already created a travel-after
-   * that can be absorbed by a new same-location task placed after it.
-   *
-   * @param nearTime - The time to search near (typically the start of an available slot)
-   * @param fromLocationId - The origin location to check for
-   * @returns The travel slot if found, null otherwise
+   * Used to detect when a previous task already created a travel-after that can be absorbed.
    */
-  findAdjacentTravelFrom(
-    nearTime: Date,
-    fromLocationId: string,
-  ): TimeSlot | null {
+  findAdjacentTravelFrom(nearTime: Date, fromLocationId: string): TimeSlot | null {
     return findAdjacentTravelFrom(this.occupiedSlots, this.bufferTimeMinutes, nearTime, fromLocationId);
+  }
+
+  getAllTravelSlots(): TimeSlot[] {
+    return getAllTravelSlots(this.occupiedSlots);
+  }
+
+  generateTravelEvents(userId: string): SimpleEvent[] {
+    return generateTravelEvents(this.occupiedSlots, userId);
   }
 }

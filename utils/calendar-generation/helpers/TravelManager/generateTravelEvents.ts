@@ -3,7 +3,7 @@ import { TimeSlot } from "../../models/TimeSlot";
 import { getAllTravelSlots } from "./getAllTravelSlots";
 
 export function generateTravelEvents(
-  occupiedSlots: Map<string, TimeSlot[]>,
+  occupiedSlots: TimeSlot[],
   userId: string
 ): SimpleEvent[] {
   const travelSlots = getAllTravelSlots(occupiedSlots);

@@ -1,13 +1,12 @@
 import { TimeSlot } from "../../models/TimeSlot";
 import { isTravelSlot, createTravelSlot } from "../../utils/timeSlotUtils";
 import { TravelManager } from "../../core/TravelManager";
-import { dateTimeService } from "../../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../../constants";
 import { v4 as uuidv4 } from "uuid";
 
 export function reserveSlotWithTravel(
-  availableSlots: Map<string, TimeSlot[]>,
-  occupiedSlots: Map<string, TimeSlot[]>,
+  availableSlots: TimeSlot[],
+  occupiedSlots: TimeSlot[],
   travelManager: TravelManager,
   bufferTimeMinutes: number,
   start: Date,
@@ -23,27 +22,19 @@ export function reserveSlotWithTravel(
   absorbPrevTravelAfter?: boolean,
   reclaimPrecedingGapTravel?: TimeSlot | null,
 ): { success: boolean } {
-  const dayKey = dateTimeService.getDayKey(start);
-  const slots = availableSlots.get(dayKey);
-
-  if (!slots) {
-    return { success: false };
-  }
-
-  const bufferMinutes = bufferTimeMinutes;
-  const occupied = occupiedSlots.get(dayKey) || [];
+  const bufferMs = bufferTimeMinutes * 60000;
 
   if (absorbPrevTravelAfter && taskLocationId) {
     const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
-    for (let i = occupied.length - 1; i >= 0; i--) {
-      const occ = occupied[i];
+    for (let i = occupiedSlots.length - 1; i >= 0; i--) {
+      const occ = occupiedSlots[i];
       if (
         isTravelSlot(occ) &&
         occ.travelFromLocationId === taskLocationId &&
         occ.travelType === "outbound"
       ) {
         const travelEndTime = occ.end.getTime();
-        for (const availSlot of slots) {
+        for (const availSlot of availableSlots) {
           if (!availSlot.isAvailable) continue;
           const timeDiff = Math.abs(availSlot.start.getTime() - travelEndTime);
           if (timeDiff <= searchWindowMs) {
@@ -52,7 +43,7 @@ export function reserveSlotWithTravel(
               (availSlot.end.getTime() - availSlot.start.getTime()) / 60000,
             );
             availSlot.prevLocationId = taskLocationId;
-            occupied.splice(i, 1);
+            occupiedSlots.splice(i, 1);
             break;
           }
         }
@@ -63,12 +54,12 @@ export function reserveSlotWithTravel(
 
   if (reclaimPrecedingGapTravel) {
     const gapTravel = reclaimPrecedingGapTravel;
-    const gapIdx = occupied.findIndex((s) => s.eventId === gapTravel.eventId);
+    const gapIdx = occupiedSlots.findIndex((s) => s.eventId === gapTravel.eventId);
     if (gapIdx !== -1) {
-      occupied.splice(gapIdx, 1);
-      const expectedSlotStart = gapTravel.end.getTime() + bufferMinutes * 60000;
-      const searchWindowMs = bufferMinutes * 60000 + 10 * 60 * 1000;
-      for (const availSlot of slots) {
+      occupiedSlots.splice(gapIdx, 1);
+      const expectedSlotStart = gapTravel.end.getTime() + bufferMs;
+      const searchWindowMs = bufferMs + 10 * 60 * 1000;
+      for (const availSlot of availableSlots) {
         if (!availSlot.isAvailable) continue;
         const diff = Math.abs(availSlot.start.getTime() - expectedSlotStart);
         if (diff <= searchWindowMs) {
@@ -85,19 +76,16 @@ export function reserveSlotWithTravel(
   }
 
   const travelBeforeEnd =
-    travelBefore > 0
-      ? new Date(start.getTime() - bufferMinutes * 60000)
-      : start;
+    travelBefore > 0 ? new Date(start.getTime() - bufferMs) : start;
   const travelBeforeStart =
     travelBefore > 0
       ? new Date(travelBeforeEnd.getTime() - travelBefore * 60000)
       : start;
 
   const fullStart = travelBefore > 0 ? travelBeforeStart : start;
+  const taskReserveEnd = new Date(end.getTime() + bufferMs);
 
-  const taskReserveEnd = new Date(end.getTime() + bufferMinutes * 60000);
-
-  const slotIndex = slots.findIndex(
+  const slotIndex = availableSlots.findIndex(
     (slot) =>
       slot.isAvailable &&
       slot.start.getTime() <= fullStart.getTime() &&
@@ -108,28 +96,22 @@ export function reserveSlotWithTravel(
     return { success: false };
   }
 
-  const slot = slots[slotIndex];
+  const slot = availableSlots[slotIndex];
   const newSlots: TimeSlot[] = [];
 
   let travelAfterEnd: Date | null = null;
   let travelAfterStart: Date | null = null;
 
   if (travelAfter > 0 && nextLocationId) {
-    travelAfterStart = new Date(
-      end.getTime() + bufferMinutes * 60000,
-    );
-    travelAfterEnd = new Date(
-      travelAfterStart.getTime() + travelAfter * 60000,
-    );
+    travelAfterStart = new Date(end.getTime() + bufferMs);
+    travelAfterEnd = new Date(travelAfterStart.getTime() + travelAfter * 60000);
   }
 
   if (fullStart.getTime() > slot.start.getTime()) {
     newSlots.push({
       start: slot.start,
       end: fullStart,
-      durationMinutes: Math.floor(
-        (fullStart.getTime() - slot.start.getTime()) / 60000,
-      ),
+      durationMinutes: Math.floor((fullStart.getTime() - slot.start.getTime()) / 60000),
       isAvailable: true,
       prevLocationId: slot.prevLocationId,
       nextLocationId: taskLocationId ?? slot.nextLocationId,
@@ -144,35 +126,33 @@ export function reserveSlotWithTravel(
     const taskStartTime = start.getTime();
     const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
 
-    for (let i = occupied.length - 1; i >= 0; i--) {
-      const occ = occupied[i];
+    for (let i = occupiedSlots.length - 1; i >= 0; i--) {
+      const occ = occupiedSlots[i];
       if (
         isTravelSlot(occ) &&
         occ.travelToLocationId === taskLocationId
       ) {
         const travelEndTime = occ.end.getTime();
-        const isNearTaskStart =
-          Math.abs(travelEndTime - taskStartTime) < searchWindowMs;
-
-        if (isNearTaskStart) {
+        if (Math.abs(travelEndTime - taskStartTime) < searchWindowMs) {
           removedTravelAfterEnd = new Date(occ.end.getTime());
-          occupied.splice(i, 1);
+          occupiedSlots.splice(i, 1);
         }
       }
     }
 
-    const travelSlot = createTravelSlot(
-      travelBeforeStart,
-      travelBeforeEnd,
-      prevLocationId,
-      taskLocationId,
-      "inbound",
-      uuidv4(),
+    newSlots.push(
+      createTravelSlot(
+        travelBeforeStart,
+        travelBeforeEnd,
+        prevLocationId,
+        taskLocationId,
+        "inbound",
+        uuidv4(),
+      ),
     );
-    newSlots.push(travelSlot);
   }
 
-  const taskSlot: TimeSlot = {
+  newSlots.push({
     start,
     end,
     durationMinutes: Math.floor((end.getTime() - start.getTime()) / 60000),
@@ -181,7 +161,7 @@ export function reserveSlotWithTravel(
     eventType,
     prevLocationId: taskLocationId,
     nextLocationId: taskLocationId,
-  };
+  });
 
   let reclaimedTravelEnd: Date | null = null;
   if (
@@ -193,22 +173,20 @@ export function reserveSlotWithTravel(
     const slotEndTime = slot.end.getTime();
     const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
 
-    for (let i = occupied.length - 1; i >= 0; i--) {
-      const occ = occupied[i];
+    for (let i = occupiedSlots.length - 1; i >= 0; i--) {
+      const occ = occupiedSlots[i];
       if (
         isTravelSlot(occ) &&
-        occ.travelToLocationId === nextLocationId
+        occ.travelToLocationId === nextLocationId &&
+        occ.travelType === "preliminary"
       ) {
-        const isPreCarved = occ.travelType === "preliminary";
-        if (!isPreCarved) continue;
-
         const travelEndTime = occ.end.getTime();
-        const meetsCondition =
+        if (
           travelEndTime > slotEndTime &&
-          travelEndTime - slotEndTime < searchWindowMs;
-        if (meetsCondition) {
+          travelEndTime - slotEndTime < searchWindowMs
+        ) {
           reclaimedTravelEnd = new Date(occ.end.getTime());
-          occupied.splice(i, 1);
+          occupiedSlots.splice(i, 1);
           break;
         }
       }
@@ -241,9 +219,7 @@ export function reserveSlotWithTravel(
     newSlots.push({
       start: freeSlotStart,
       end: freeSlotEnd,
-      durationMinutes: Math.floor(
-        (freeSlotEnd.getTime() - freeSlotStart.getTime()) / 60000,
-      ),
+      durationMinutes: Math.floor((freeSlotEnd.getTime() - freeSlotStart.getTime()) / 60000),
       isAvailable: true,
       prevLocationId: freeSlotPrevLocation,
       nextLocationId: slot.nextLocationId,
@@ -256,44 +232,35 @@ export function reserveSlotWithTravel(
     const slotEndTime = slot.end.getTime();
     const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
 
-    for (let i = occupied.length - 1; i >= 0; i--) {
-      const occ = occupied[i];
-      if (isTravelSlot(occ)) {
-        const travelEndTime = occ.end.getTime();
-        const isNearSlotEnd =
-          Math.abs(travelEndTime - slotEndTime) < searchWindowMs;
-
-        if (occ.travelToLocationId === nextLocationId && isNearSlotEnd) {
-          occupied.splice(i, 1);
-        }
+    for (let i = occupiedSlots.length - 1; i >= 0; i--) {
+      const occ = occupiedSlots[i];
+      if (
+        isTravelSlot(occ) &&
+        occ.travelToLocationId === nextLocationId &&
+        Math.abs(occ.end.getTime() - slotEndTime) < searchWindowMs
+      ) {
+        occupiedSlots.splice(i, 1);
       }
     }
   }
 
-  if (
-    travelAfter > 0 &&
-    travelAfterStart &&
-    travelAfterEnd &&
-    taskLocationId &&
-    nextLocationId
-  ) {
-    const travelSlot = createTravelSlot(
-      travelAfterStart,
-      travelAfterEnd,
-      taskLocationId,
-      nextLocationId,
-      "outbound",
-      uuidv4(),
+  if (travelAfter > 0 && travelAfterStart && travelAfterEnd && taskLocationId && nextLocationId) {
+    newSlots.push(
+      createTravelSlot(
+        travelAfterStart,
+        travelAfterEnd,
+        taskLocationId,
+        nextLocationId,
+        "outbound",
+        uuidv4(),
+      ),
     );
-    newSlots.push(travelSlot);
   }
 
-  const availableNewSlots = newSlots.filter((s) => s.isAvailable);
-  slots.splice(slotIndex, 1, ...availableNewSlots);
-
-  occupied.push(taskSlot);
-  occupied.push(...newSlots.filter((s) => !s.isAvailable));
-  occupiedSlots.set(dayKey, occupied);
+  availableSlots.splice(slotIndex, 1, ...newSlots.filter((s) => s.isAvailable));
+  occupiedSlots.push(
+    ...newSlots.filter((s) => !s.isAvailable),
+  );
 
   return { success: true };
 }

@@ -1,29 +1,22 @@
 import { TimeSlot } from "../../models/TimeSlot";
 import { isTravelSlot } from "../../utils/timeSlotUtils";
-import { dateTimeService } from "../../utils/dateTimeService";
 
 export function findAdjacentTravelFrom(
-  occupiedSlots: Map<string, TimeSlot[]>,
+  occupiedSlots: TimeSlot[],
   bufferTimeMinutes: number,
   nearTime: Date,
   fromLocationId: string,
 ): TimeSlot | null {
-  const dayKey = dateTimeService.getDayKey(nearTime);
-  const slots = occupiedSlots.get(dayKey) || [];
+  const searchWindowMs = bufferTimeMinutes * 60000 + 10 * 60 * 1000;
 
-  const bufferMs = bufferTimeMinutes * 60000;
-  const searchWindowMs = bufferMs + 10 * 60 * 1000;
-
-  for (const slot of slots) {
+  for (const slot of occupiedSlots) {
     if (
       isTravelSlot(slot) &&
       slot.travelFromLocationId === fromLocationId &&
-      slot.travelType === "outbound"
+      slot.travelType === "outbound" &&
+      Math.abs(slot.end.getTime() - nearTime.getTime()) <= searchWindowMs
     ) {
-      const timeDiff = Math.abs(slot.end.getTime() - nearTime.getTime());
-      if (timeDiff <= searchWindowMs) {
-        return slot;
-      }
+      return slot;
     }
   }
 

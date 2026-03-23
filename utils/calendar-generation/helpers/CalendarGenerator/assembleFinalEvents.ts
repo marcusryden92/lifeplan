@@ -5,19 +5,19 @@
  */
 
 import { SimpleEvent } from "@/types/prisma";
-import { TimeSlotManager } from "../../core/TimeSlotManager";
+import { TravelManager } from "../../core/TravelManager";
 import { SchedulingContext, CategoryPeriod } from "../../models/SchedulingModels";
 import { EventAssembler } from "../../core/EventAssembler";
 
 export function assembleFinalEvents(
   userId: string,
-  slotManager: TimeSlotManager,
+  travelManager: TravelManager,
   context: SchedulingContext,
   categoryPeriodsStatic: CategoryPeriod[],
   plannerLocationMap: Map<string, string | null>
 ): SimpleEvent[] {
   // Generate travel events from stored travel slots
-  const travelEvents = slotManager.generateTravelEvents(userId);
+  const travelEvents = travelManager.generateTravelEvents(userId);
 
   // Debug: group travel events by date to spot duplicates
   const travelByDate = new Map<string, typeof travelEvents>();

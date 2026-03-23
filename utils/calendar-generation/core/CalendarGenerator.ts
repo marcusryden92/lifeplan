@@ -5,9 +5,9 @@
  * Delegates to specialized subfunctions for each phase.
  */
 
-
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "./TimeSlotManager";
+import { TravelManager } from "./TravelManager";
 import { Scheduler } from "./Scheduler";
 import { CompositeStrategy } from "../strategies/SchedulingStrategy";
 import {
@@ -29,10 +29,13 @@ import {
   prepareCandidates,
   assembleFinalEvents,
 } from "../helpers/CalendarGenerator";
+import { buildAvailableSlots } from "../helpers/TimeSlotManager/buildAvailableSlots";
+import { carveTravelFromChain } from "../helpers/TravelManager/carveTravelFromChain";
 
 export class CalendarGenerator {
   // Class instances
   private readonly timeSlotManager: TimeSlotManager;
+  private readonly travelManager: TravelManager;
   private readonly strategy: CompositeStrategy;
 
   // Config derived from input
@@ -57,6 +60,10 @@ export class CalendarGenerator {
     this.timeSlotManager = new TimeSlotManager(
       this.currentDate,
       this.bufferTimeMinutes,
+    );
+    this.travelManager = new TravelManager(
+      this.timeSlotManager,
+      this.bufferTimeMinutes,
       input.config?.travelTimeMatrix,
     );
     this.strategy = buildSchedulingStrategy({
@@ -77,6 +84,7 @@ export class CalendarGenerator {
     const {
       input,
       timeSlotManager,
+      travelManager,
       strategy,
       currentDate,
       weekStartDay,
@@ -137,16 +145,29 @@ export class CalendarGenerator {
       maxDaysAhead,
     );
 
-    // Phase 6: Build initial slots (includes category boundary splits + travel carving)
-    timeSlotManager.buildDailySlots(
-      currentDate,
+    // Phase 6a: Build available slots over the full scheduling timeline
+    const builtSlots = buildAvailableSlots(
       input.planners,
+      currentDate,
       filteredEvents,
       perTemplateMasks,
       categoryPeriods,
       plannerLocationMap,
       enableLogging,
     );
+    timeSlotManager.availableSlots.push(...builtSlots);
+
+    // Phase 6b: Carve travel slots (separate pass after slot building)
+    if (plannerLocationMap) {
+      const carved = carveTravelFromChain(
+        categoryPeriods,
+        timeSlotManager.occupiedSlots,
+        travelManager,
+        this.bufferTimeMinutes,
+        timeSlotManager.availableSlots,
+      );
+      timeSlotManager.availableSlots = carved;
+    }
 
     // Phase 7: Build effective category map (resolves inheritance from parent chain)
     const plannerCategoryMap = buildPlannerCategoryMap(input.planners);
@@ -174,7 +195,12 @@ export class CalendarGenerator {
     );
 
     // Phase 10: Schedule tasks and goals
-    const scheduler = new Scheduler(timeSlotManager, strategy, context);
+    const scheduler = new Scheduler(
+      timeSlotManager,
+      travelManager,
+      strategy,
+      context,
+    );
     const schedulingResult = scheduler.scheduleTasksAndGoals(
       weekStartDay,
       input.planners,
@@ -189,7 +215,7 @@ export class CalendarGenerator {
     // Phase 11: Assemble final events
     const allEvents = assembleFinalEvents(
       input.userId,
-      timeSlotManager,
+      travelManager,
       context,
       categoryPeriods,
       plannerLocationMap,
@@ -208,7 +234,7 @@ export class CalendarGenerator {
 
     // Debug logging
     if (enableLogging) {
-      const travelEvents = timeSlotManager.generateTravelEvents(input.userId);
+      const travelEvents = travelManager.generateTravelEvents(input.userId);
       logCalendarDebugInfo(input, {
         allEvents,
         travelEvents,

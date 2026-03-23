@@ -1,31 +1,25 @@
 import { TimeSlot } from "../../models/TimeSlot";
 import { createTravelSlot } from "../../utils/timeSlotUtils";
-import { dateTimeService } from "../../utils/dateTimeService";
 import { v4 as uuidv4 } from "uuid";
 
 export function reserveInsufficientTravelBefore(
-  availableSlots: Map<string, TimeSlot[]>,
-  occupiedSlots: Map<string, TimeSlot[]>,
+  availableSlots: TimeSlot[],
+  occupiedSlots: TimeSlot[],
   bufferTimeMinutes: number,
   travelEnd: Date,
   requiredTravelMinutes: number,
   fromLocationId: string,
   toLocationId: string,
 ): { success: boolean } {
-  const dayKey = dateTimeService.getDayKey(travelEnd);
-  const slots = availableSlots.get(dayKey);
-  if (!slots) return { success: false };
-
   const travelEndMs = travelEnd.getTime();
   const bufferMs = bufferTimeMinutes * 60000;
 
-  const slotIndex = slots.findIndex(
+  const slotIndex = availableSlots.findIndex(
     (slot) => slot.isAvailable && slot.end.getTime() >= travelEndMs,
   );
   if (slotIndex === -1) return { success: false };
 
-  const slot = slots[slotIndex];
-
+  const slot = availableSlots[slotIndex];
   const travelStart = new Date(slot.start.getTime() - bufferMs);
   const travelStartMs = travelStart.getTime();
 
@@ -33,19 +27,12 @@ export function reserveInsufficientTravelBefore(
 
   const newSlots: TimeSlot[] = [];
 
-  const travelSlot = createTravelSlot(
-    travelStart,
-    travelEnd,
-    fromLocationId,
-    toLocationId,
-    "inbound",
-    uuidv4(),
-    {
+  newSlots.push(
+    createTravelSlot(travelStart, travelEnd, fromLocationId, toLocationId, "inbound", uuidv4(), {
       insufficientTravel: true,
       requiredTravelMinutes,
-    },
+    }),
   );
-  newSlots.push(travelSlot);
 
   if (slot.end.getTime() > travelEndMs) {
     newSlots.push({
@@ -58,12 +45,8 @@ export function reserveInsufficientTravelBefore(
     });
   }
 
-  const availableNewSlots = newSlots.filter((s) => s.isAvailable);
-  slots.splice(slotIndex, 1, ...availableNewSlots);
-
-  const occupied = occupiedSlots.get(dayKey) || [];
-  occupied.push(...newSlots.filter((s) => !s.isAvailable));
-  occupiedSlots.set(dayKey, occupied);
+  availableSlots.splice(slotIndex, 1, ...newSlots.filter((s) => s.isAvailable));
+  occupiedSlots.push(...newSlots.filter((s) => !s.isAvailable));
 
   return { success: true };
 }

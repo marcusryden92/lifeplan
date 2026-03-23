@@ -1,1 +1,10 @@
 export { weeksNeededForPlans } from "./weeksNeededForPlans";
+export { buildAvailableSlots } from "./buildAvailableSlots";
+export { applyCategoriesToNullIntervals } from "./applyCategoriesToNullIntervals";
+export { fixPostCategoryPrevLoc } from "./fixPostCategoryPrevLoc";
+export { splitSlotsAtCategoryBoundaries } from "./splitSlotsAtCategoryBoundaries";
+export { findAllFittingSlots } from "./findAllFittingSlots";
+export { getDaySlots } from "./getDaySlots";
+export { getDayAvailableMinutes } from "./getDayAvailableMinutes";
+export { reserveSlot } from "./reserveSlot";
+export { reserveSlotWithTravel } from "./reserveSlotWithTravel";

@@ -7,6 +7,7 @@
 
 import { Planner, SimpleEvent } from "@/types/prisma";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
+import { TravelManager } from "../../core/TravelManager";
 import { SchedulingStrategy } from "../../strategies/SchedulingStrategy";
 import {
   SchedulingContext,
@@ -21,6 +22,7 @@ import { buildTaskEvent } from "./buildTaskEvent";
 export function scheduleTask(
   task: Planner,
   slotManager: TimeSlotManager,
+  travelManager: TravelManager,
   strategy: SchedulingStrategy,
   context: SchedulingContext,
   afterTime?: Date,
@@ -44,6 +46,7 @@ export function scheduleTask(
     slotsResult.fittingSlots,
     slotsResult.taskLocationId,
     slotManager,
+    travelManager,
     strategy,
     context,
   );
@@ -60,6 +63,7 @@ export function scheduleTask(
     selectionResult.taskLocationId,
     selectionResult.reusableTravelStart,
     slotManager,
+    travelManager,
     selectionResult.absorbPrevTravelAfter,
     selectionResult.absorbedTravelStart,
     selectionResult.reclaimPrecedingGapTravel,

@@ -7,10 +7,12 @@
 
 import { Planner } from "@/types/prisma";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
+import { TravelManager } from "../../core/TravelManager";
 import { SchedulingFailure, ReservationResult } from "../../models/SchedulingModels";
 import { TimeSlot } from "../../models/TimeSlot";
 import { SchedulingFailureReason } from "../../constants";
 import { dateTimeService } from "../../utils/dateTimeService";
+import { reserveSlotWithTravel } from "../TimeSlotManager/reserveSlotWithTravel";
 
 export function reserveTaskSlot(
   task: Planner,
@@ -20,11 +22,12 @@ export function reserveTaskSlot(
   taskLocationId: string | null | undefined,
   reusableTravelStart: Date | null,
   slotManager: TimeSlotManager,
+  travelManager: TravelManager,
   absorbPrevTravelAfter: boolean = false,
   absorbedTravelStart: Date | null = null,
   reclaimPrecedingGapTravel: TimeSlot | null = null,
 ): ReservationResult | { failure: SchedulingFailure } {
-  const bufferMinutes = slotManager.getBufferTimeMinutes();
+  const bufferMinutes = slotManager.bufferTimeMinutes;
 
   // When reclaiming a preceding gap travel (e.g. Gamla Stan → Home), use the gap
   // travel's real origin as prevLocationId so travel-before is routed correctly.
@@ -48,7 +51,7 @@ export function reserveTaskSlot(
   if (travelBefore > 0) {
     // travelEnd = slot.start = eventEnd (standalone travel ends here, task starts after buffer)
     const travelEnd = new Date(selectedSlot.start.getTime());
-    const canPlaceOutside = slotManager.canPlaceStandaloneTravelBefore(
+    const canPlaceOutside = travelManager.canPlaceStandaloneTravelBefore(
       travelEnd,
       travelBefore
     );
@@ -72,7 +75,7 @@ export function reserveTaskSlot(
   // If placing travel-before outside, reserve it separately and omit travel-before inside.
   if (effectiveTravelBefore > 0 && effectivePrevLocationId && taskLocationId) {
     const travelEnd = new Date(selectedSlot.start.getTime());
-    const placed = slotManager.reserveStandaloneTravelBefore(
+    const placed = travelManager.reserveStandaloneTravelBefore(
       travelEnd,
       effectiveTravelBefore,
       effectivePrevLocationId,
@@ -85,7 +88,11 @@ export function reserveTaskSlot(
     // Fallback handled by offsetToTaskStart above (travel placed inside the slot)
   }
 
-  const result = slotManager.reserveSlotWithTravel(
+  const result = reserveSlotWithTravel(
+    slotManager.availableSlots,
+    slotManager.occupiedSlots,
+    travelManager,
+    slotManager.bufferTimeMinutes,
     taskStartDate,
     taskEndDate,
     task.id,

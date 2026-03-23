@@ -1,7 +1,6 @@
 import { CategoryPeriod } from "@/types/categoryTypes";
 import { TimeSlot } from "../../models/TimeSlot";
 import { TravelManager } from "../../core/TravelManager";
-import { dateTimeService } from "../../utils/dateTimeService";
 import { tryDirectBypass } from "./tryDirectBypass";
 import { tryDoubleTransition } from "./tryDoubleTransition";
 import { tryReturnAbsorption } from "./tryReturnAbsorption";
@@ -10,18 +9,12 @@ import { carveAtEnd } from "./carveAtEnd";
 
 export function carveTravelFromChain(
   categoryPeriods: CategoryPeriod[],
-  occupiedSlotsMap: Map<string, TimeSlot[]>,
+  occupiedSlots: TimeSlot[],
   travelManager: TravelManager,
   bufferTimeMinutes: number,
   slots: TimeSlot[],
-  dayStart: Date,
 ): TimeSlot[] {
-  const dayKey = dateTimeService.getDayKey(dayStart);
-  const occupiedSlots = (occupiedSlotsMap.get(dayKey) || []).filter(
-    (s) => s.travelType !== "preliminary",
-  );
   const result: TimeSlot[] = [];
-
   const departureLocations = new Set<string>();
 
   let skipNextSlot = false;
@@ -119,30 +112,12 @@ export function carveTravelFromChain(
     }
 
     if (placeAtStart) {
-      carveAtStart(
-        slot,
-        prevLoc,
-        nextLoc,
-        travelMinutes,
-        occupiedSlots,
-        result,
-      );
+      carveAtStart(slot, prevLoc, nextLoc, travelMinutes, occupiedSlots, result);
     } else {
-      carveAtEnd(
-        slot,
-        slots,
-        i,
-        prevLoc,
-        nextLoc,
-        travelMinutes,
-        bufferTimeMinutes,
-        occupiedSlots,
-        result,
-      );
+      carveAtEnd(slot, slots, i, prevLoc, nextLoc, travelMinutes, bufferTimeMinutes, occupiedSlots, result);
     }
     departureLocations.add(prevLoc);
   }
 
-  occupiedSlotsMap.set(dayKey, occupiedSlots);
   return result;
 }

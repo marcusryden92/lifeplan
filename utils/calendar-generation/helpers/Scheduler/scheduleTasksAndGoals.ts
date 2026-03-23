@@ -2,6 +2,7 @@ import { Planner, SimpleEvent } from "@/types/prisma";
 import { CategoryPeriod } from "@/types/categoryTypes";
 import { Scheduler } from "../../core/Scheduler";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
+import { TravelManager } from "../../core/TravelManager";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import {
   SchedulingContext,
@@ -16,6 +17,7 @@ import { expandSlotsForNextWeek } from "./expandSlotsForNextWeek";
 
 export function scheduleTasksAndGoals(
   slotManager: TimeSlotManager,
+  travelManager: TravelManager,
   scheduler: Scheduler,
   weekStartDay: WeekDayIntegers,
   allPlanners: Planner[],
@@ -91,7 +93,8 @@ export function scheduleTasksAndGoals(
         perTemplateMasks,
         plannerLocationMap,
         categoryPeriods,
-        slotManager
+        slotManager,
+        travelManager,
       );
     }
   }

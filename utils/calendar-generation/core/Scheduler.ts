@@ -9,6 +9,7 @@ import { Planner, SimpleEvent } from "@/types/prisma";
 import { CategoryPeriod } from "@/types/categoryTypes";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "./TimeSlotManager";
+import { TravelManager } from "./TravelManager";
 import { SchedulingStrategy } from "../strategies/SchedulingStrategy";
 import {
   SchedulingContext,
@@ -37,6 +38,7 @@ export class Scheduler {
 
   constructor(
     private slotManager: TimeSlotManager,
+    private travelManager: TravelManager,
     private strategy: SchedulingStrategy,
     private context: SchedulingContext,
   ) {}
@@ -55,6 +57,7 @@ export class Scheduler {
     const result = scheduleTask(
       task,
       this.slotManager,
+      this.travelManager,
       this.strategy,
       this.context,
       afterTime,
@@ -92,6 +95,7 @@ export class Scheduler {
   ): { success: boolean; newEvents: SimpleEvent[]; failures: SchedulingFailure[] } {
     return scheduleTasksAndGoals(
       this.slotManager,
+      this.travelManager,
       this,
       weekStartDay,
       allPlanners,
@@ -112,6 +116,7 @@ export class Scheduler {
     return scheduleTasks(
       tasks,
       this.slotManager,
+      this.travelManager,
       this.strategy,
       this.context,
       () => this.getMetrics(),

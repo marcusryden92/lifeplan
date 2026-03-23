@@ -13,6 +13,7 @@ import {
   FindValidSlotsResult,
 } from "../../models/SchedulingModels";
 import { SchedulingFailureReason } from "../../constants";
+import { findAllFittingSlots } from "../TimeSlotManager/findAllFittingSlots";
 
 export function findValidSlots(
   task: Planner,
@@ -33,7 +34,9 @@ export function findValidSlots(
       : undefined;
 
   // Find all slots that can fit the base requirement (duration + buffer)
-  const fittingSlots = slotManager.findAllFittingSlots(
+  const fittingSlots = findAllFittingSlots(
+    slotManager.availableSlots,
+    slotManager.bufferTimeMinutes,
     task.duration,
     afterTime || context.currentDate,
     undefined,

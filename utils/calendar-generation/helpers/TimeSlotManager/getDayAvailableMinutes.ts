@@ -2,7 +2,7 @@ import { TimeSlot } from "../../models/TimeSlot";
 import { getDaySlots } from "./getDaySlots";
 
 export function getDayAvailableMinutes(
-  availableSlots: Map<string, TimeSlot[]>,
+  availableSlots: TimeSlot[],
   date: Date,
 ): number {
   const slots = getDaySlots(availableSlots, date);

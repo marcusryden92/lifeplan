@@ -7,6 +7,7 @@
 
 import { Planner } from "@/types/prisma";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
+import { TravelManager } from "../../core/TravelManager";
 import { SchedulingStrategy } from "../../strategies/SchedulingStrategy";
 import {
   SchedulingContext,
@@ -54,6 +55,7 @@ export function selectBestSlot(
   fittingSlots: TimeSlot[],
   taskLocationId: string | null | undefined,
   slotManager: TimeSlotManager,
+  travelManager: TravelManager,
   strategy: SchedulingStrategy,
   context: SchedulingContext,
 ): SlotSelectionResult | { failure: SchedulingFailure } {
@@ -61,7 +63,7 @@ export function selectBestSlot(
   const scoredSlots = scoreSlots(task, validSlots, strategy, context);
 
   // Iterate through scored slots and find first one with enough capacity
-  const bufferMinutes = slotManager.getBufferTimeMinutes();
+  const bufferMinutes = slotManager.bufferTimeMinutes;
 
   let selectedSlot: TimeSlot | null = null;
   let travelBefore = 0;
@@ -84,9 +86,7 @@ export function selectBestSlot(
     let needTravelAfter = 0;
 
     let canAbsorbPrevTravel = false;
-    let absorbableTravel: ReturnType<
-      typeof slotManager.findAdjacentTravelFrom
-    > = null;
+    let absorbableTravel: TimeSlot | null = null;
     let reclaimPrecedingGapTravel: TimeSlot | null = null;
 
     if (taskLocationId) {
@@ -96,7 +96,7 @@ export function selectBestSlot(
         // task at OUR location. e.g., B4 (Uppsala) placed travel-after Uppsala->GamlaStan,
         // so the free slot has prevLocationId=GamlaStan. If B5 is also Uppsala, we can
         // absorb B4's travel-after instead of creating new travel-before.
-        absorbableTravel = slotManager.findAdjacentTravelFrom(
+        absorbableTravel = travelManager.findAdjacentTravelFrom(
           slot.start,
           taskLocationId,
         );
@@ -107,12 +107,12 @@ export function selectBestSlot(
           // Check if there is a pre-carved gap travel (e.g. a return trip Gamla Stan → Home)
           // immediately before this slot. If so, we can bypass the intermediate stop and
           // travel direct from the real origin (Gamla Stan) to the task location.
-          const precedingGapTravel = slotManager.findPrecedingGapTravel(slot.start);
+          const precedingGapTravel = travelManager.findPrecedingGapTravel(slot.start);
           if (
             precedingGapTravel?.travelFromLocationId &&
             precedingGapTravel.travelFromLocationId !== taskLocationId
           ) {
-            const directTravel = slotManager.getTravelTime(
+            const directTravel = travelManager.getTravelTime(
               precedingGapTravel.travelFromLocationId,
               taskLocationId,
               precedingGapTravel.start,
@@ -124,7 +124,7 @@ export function selectBestSlot(
           }
 
           if (!reclaimPrecedingGapTravel) {
-            needTravelBefore = slotManager.getTravelTime(
+            needTravelBefore = travelManager.getTravelTime(
               slot.prevLocationId,
               taskLocationId,
               slot.start,
@@ -135,7 +135,7 @@ export function selectBestSlot(
 
       // Travel AFTER: needed if next location differs from task location
       if (slot.nextLocationId && slot.nextLocationId !== taskLocationId) {
-        needTravelAfter = slotManager.getTravelTime(
+        needTravelAfter = travelManager.getTravelTime(
           taskLocationId,
           slot.nextLocationId,
           slot.start,
@@ -154,7 +154,7 @@ export function selectBestSlot(
     let reusableTravelStart: Date | null = null;
 
     if (needTravelAfter > 0 && slot.nextLocationId) {
-      reusableTravelStart = slotManager.findAdjacentTravelTo(
+      reusableTravelStart = travelManager.findAdjacentTravelTo(
         slot.end,
         slot.nextLocationId,
       );
@@ -174,7 +174,7 @@ export function selectBestSlot(
 
     if (needTravelBefore > 0 && slot.prevLocationId && taskLocationId) {
       const travelEnd = new Date(slot.start.getTime());
-      canPlaceTravelOutside = slotManager.canPlaceStandaloneTravelBefore(
+      canPlaceTravelOutside = travelManager.canPlaceStandaloneTravelBefore(
         travelEnd,
         needTravelBefore,
       );
