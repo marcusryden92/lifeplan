@@ -1,4 +1,4 @@
-export { weeksNeededForPlans } from "./weeksNeededForPlans";
+export { daysNeededForPlans } from "./daysNeededForPlans";
 export { buildAvailableSlots } from "./buildAvailableSlots";
 export { applyCategoriesToNullIntervals } from "./applyCategoriesToNullIntervals";
 export { fixPostCategoryPrevLoc } from "./fixPostCategoryPrevLoc";

@@ -324,8 +324,7 @@ export function eventsToIntervals(
   plannerLocationMap?: Map<string, string | null>,
 ): Interval[] {
   return events.map((event) => {
-    const lookupId = (event.extendedProps?.eventId as string) || event.id;
-    const locationId = plannerLocationMap?.get(lookupId) ?? null;
+    const locationId = plannerLocationMap?.get(event.id) ?? null;
     return {
       start: new Date(event.start),
       end: new Date(event.end),
