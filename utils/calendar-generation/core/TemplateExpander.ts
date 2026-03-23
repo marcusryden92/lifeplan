@@ -12,43 +12,17 @@ import { WEEKDAY_NAMES, TIME_CONSTANTS } from "../constants";
 import { RRule, Weekday } from "rrule";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
-
-// Weekly mask types
-export type TimeInterval = { startTime: string; endTime: string };
-export type DayMask = TimeInterval[];
-export type WeeklyMask = Record<number, DayMask>;
-export type DateException = {
-  dateISO: string;
-  removed?: TimeInterval[];
-  added?: TimeInterval[];
-};
-
-export type TemplateMask = {
-  weeklyMask: WeeklyMask;
-  exceptions?: DateException[];
-};
-
-// Per-template sparse mask types
-export type TemplateTimeWithExceptions = {
-  startTime: string;
-  endTime: string;
-  exceptions?: string[]; // list of ISO dates (YYYY-MM-DD) when this time is removed/added
-};
-
-export type TemplateDayDef = {
-  day: number; // 0..6
-  times: TemplateTimeWithExceptions[];
-};
-
-export type PerTemplateMask = {
-  templateId: string;
-  title?: string;
-  color?: string;
-  locationId?: string | null;
-  occurrences: TemplateDayDef[]; // sparse list of defined weekdays
-  startDateISO?: string; // anchor start date for interval-based templates
-  intervalDays?: number; // if provided, template repeats every N days from startDateISO
-};
+import {
+  TimeInterval,
+  DayMask,
+  WeeklyMask,
+  DateException,
+  TemplateMask,
+  TemplateTimeWithExceptions,
+  TemplateDayDef,
+  PerTemplateMask,
+} from "../models/TemplateModels";
+export type { TimeInterval, DayMask, WeeklyMask, DateException, TemplateMask, TemplateTimeWithExceptions, TemplateDayDef, PerTemplateMask };
 
 export class TemplateExpander {
   private expandedTemplates: Map<string, SimpleEvent[]> = new Map();

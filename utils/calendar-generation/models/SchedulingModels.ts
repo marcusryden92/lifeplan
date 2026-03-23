@@ -9,6 +9,7 @@ import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
 import { SchedulingFailureReason } from "../constants";
 import type { CategoryConstraint, CategoryPeriod } from "@/types/categoryTypes";
 export type { CategoryConstraint, CategoryPeriod };
+import { TimeSlot } from "./TimeSlot";
 
 /**
  * Result of a scheduling operation
@@ -215,6 +216,45 @@ export interface CalendarGenerationInput {
   config?: CalendarGenerationConfig;
   /** Categories with time constraints */
   categories?: Category[];
+}
+
+export interface StrategyConfig {
+  travelTimeMatrix?: Map<string, TravelTimeEntry>;
+  strategyWeights?: {
+    earliestSlot?: number;
+    locationGrouping?: number;
+  };
+  locationGroupingScores?: LocationGroupingScoresConfig;
+  locationGroupingPenalties?: LocationGroupingPenaltiesConfig;
+}
+
+export interface CategoryPeriodsResult {
+  categoryConstraintMap: Map<string, CategoryConstraint>;
+  categoryConstraintsList: CategoryConstraint[];
+  categoryPeriods: CategoryPeriod[];
+}
+
+export interface FindValidSlotsResult {
+  validSlots: TimeSlot[];
+  fittingSlots: TimeSlot[];
+  taskLocationId: string | null | undefined;
+  constraintForTask: CategoryConstraint | undefined;
+}
+
+export interface SlotSelectionResult {
+  selectedSlot: TimeSlot;
+  travelBefore: number;
+  travelAfter: number;
+  reusableTravelStart: Date | null;
+  taskLocationId: string | null | undefined;
+  absorbPrevTravelAfter: boolean;
+  absorbedTravelStart: Date | null;
+  reclaimPrecedingGapTravel: TimeSlot | null;
+}
+
+export interface ReservationResult {
+  taskStartDate: Date;
+  taskEndDate: Date;
 }
 
 /**

@@ -31,15 +31,25 @@ export type {
   DetailedSchedulingResult,
 } from "./models/SchedulingModels";
 export type { TimeSlot, TimeSlotBlock } from "./models/TimeSlot";
-export { TimeSlotUtils } from "./models/TimeSlot";
+export {
+  getDurationMinutes,
+  canFitDuration,
+  doSlotsOverlap,
+  mergeAdjacentSlots,
+  splitSlot,
+  occupySlot,
+  createTravelSlot,
+  isTravelSlot,
+  reclaimTravelSlot,
+} from "./utils/timeSlotUtils";
 
 // Utilities
 export { dateTimeService, DateTimeService } from "./utils/dateTimeService";
-export { CalendarValidator } from "./utils/validationUtils";
+export { CalendarValidator } from "./core/CalendarValidator";
 export type {
   ValidationResult,
   ValidationError,
-} from "./utils/validationUtils";
+} from "./core/CalendarValidator";
 export * from "./utils/intervalUtils";
 
 // Constants

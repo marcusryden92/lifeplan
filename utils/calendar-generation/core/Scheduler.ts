@@ -6,6 +6,8 @@
  */
 
 import { Planner, SimpleEvent } from "@/types/prisma";
+import { CategoryPeriod } from "@/types/categoryTypes";
+import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "./TimeSlotManager";
 import { SchedulingStrategy } from "../strategies/SchedulingStrategy";
 import {
@@ -14,8 +16,10 @@ import {
   SchedulingFailure,
   SchedulingMetrics,
 } from "../models/SchedulingModels";
-import { scheduleTask } from "./Scheduler/scheduleTask";
-import { scheduleTasks } from "./Scheduler/scheduleTasks";
+import { PerTemplateMask } from "../models/TemplateModels";
+import { scheduleTask } from "../helpers/Scheduler/scheduleTask";
+import { scheduleTasks } from "../helpers/Scheduler/scheduleTasks";
+import { scheduleTasksAndGoals } from "../helpers/Scheduler/scheduleTasksAndGoals";
 
 export class Scheduler {
   private metrics: SchedulingMetrics = {
@@ -74,6 +78,31 @@ export class Scheduler {
     }
 
     return result;
+  }
+
+  scheduleTasksAndGoals(
+    weekStartDay: WeekDayIntegers,
+    allPlanners: Planner[],
+    candidates: Planner[],
+    memoizedEventIds: Set<string>,
+    largestTemplateGap: number,
+    perTemplateMasks: PerTemplateMask[],
+    plannerLocationMap: Map<string, string | null>,
+    categoryPeriods: CategoryPeriod[],
+  ): { success: boolean; newEvents: SimpleEvent[]; failures: SchedulingFailure[] } {
+    return scheduleTasksAndGoals(
+      this.slotManager,
+      this,
+      weekStartDay,
+      allPlanners,
+      candidates,
+      memoizedEventIds,
+      largestTemplateGap,
+      perTemplateMasks,
+      this.context,
+      plannerLocationMap,
+      categoryPeriods,
+    );
   }
 
   /**

@@ -18,7 +18,7 @@ import {
   findAdjacentTravelTo,
   findAdjacentTravelFrom,
   findPrecedingGapTravel,
-} from "./TravelManager/index";
+} from "../helpers/TravelManager";
 
 export class TravelManager {
   private travelTimeMatrix: Map<string, TravelTimeEntry> | null = null;

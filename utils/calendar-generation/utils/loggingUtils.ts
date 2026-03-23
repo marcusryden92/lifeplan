@@ -5,7 +5,7 @@
  */
 
 import { SimpleEvent } from "@/types/prisma";
-import { PerTemplateMask } from "./intervalUtils";
+import { PerTemplateMask } from "../models/TemplateModels";
 import {
   CalendarGenerationInput,
   SchedulingFailure,

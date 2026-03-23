@@ -9,8 +9,8 @@ import { SimpleEvent } from "@/types/prisma";
 import { CategoryPeriod } from "@/types/categoryTypes";
 import { TimeSlot } from "../models/TimeSlot";
 import { TravelManager } from "./TravelManager";
-import { PerTemplateMask } from "../utils/intervalUtils";
-import { buildAvailableSlots } from "./SlotBuilder/index";
+import { PerTemplateMask } from "../models/TemplateModels";
+import { buildAvailableSlots } from "../helpers/SlotBuilder";
 
 export class SlotBuilder {
   private categoryPeriods: CategoryPeriod[] = [];

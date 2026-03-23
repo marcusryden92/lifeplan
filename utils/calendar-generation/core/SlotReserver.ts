@@ -1,6 +1,6 @@
 import { TimeSlot } from "../models/TimeSlot";
 import { TravelManager } from "./TravelManager";
-import { reserveSlot, reserveSlotWithTravel } from "./SlotReserver/index";
+import { reserveSlot, reserveSlotWithTravel } from "../helpers/SlotReserver";
 
 /**
  * SlotReserver

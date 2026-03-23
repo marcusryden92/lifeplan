@@ -443,25 +443,8 @@ export function getLargestGapMinutes(gaps: Interval[]): number {
 }
 
 
-/**
- * Mask types for template-based interval generation
- */
-export type TemplateTimeWithExceptions = {
-  startTime: string;
-  endTime: string;
-  exceptions?: string[];
-};
-
-export type TemplateDayDef = {
-  day: number;
-  times: TemplateTimeWithExceptions[];
-};
-
-export type PerTemplateMask = {
-  templateId: string;
-  locationId?: string | null;
-  occurrences: TemplateDayDef[];
-};
+import type { TemplateTimeWithExceptions, TemplateDayDef, PerTemplateMask } from "../models/TemplateModels";
+export type { TemplateTimeWithExceptions, TemplateDayDef, PerTemplateMask };
 
 /**
  * Convert PerTemplateMasks to Intervals for a specific date

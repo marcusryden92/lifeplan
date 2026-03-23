@@ -6,7 +6,7 @@
 
 import { SimpleEvent } from "@/types/prisma";
 import { TimeSlot } from "../models/TimeSlot";
-import { getAllTravelSlots, generateTravelEvents } from "./TravelConverter/index";
+import { getAllTravelSlots, generateTravelEvents } from "../helpers/TravelConverter";
 
 export class TravelConverter {
   static getAllTravelSlots(occupiedSlots: Map<string, TimeSlot[]>): TimeSlot[] {

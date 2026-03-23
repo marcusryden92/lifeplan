@@ -22,7 +22,18 @@
       "Bash(rm utils/calendar-generation/core/TimeSlotManager/travel/TravelManager.ts utils/calendar-generation/core/TimeSlotManager/converter/TravelConverter.ts utils/calendar-generation/core/TimeSlotManager/builder/SlotBuilder.ts utils/calendar-generation/core/TimeSlotManager/finder/SlotFinder.ts utils/calendar-generation/core/TimeSlotManager/reserver/SlotReserver.ts)",
       "Bash(rmdir utils/calendar-generation/core/TimeSlotManager/travel utils/calendar-generation/core/TimeSlotManager/converter utils/calendar-generation/core/TimeSlotManager/builder utils/calendar-generation/core/TimeSlotManager/finder utils/calendar-generation/core/TimeSlotManager/reserver)",
       "Bash(rm utils/calendar-generation/core/TimeSlotManager/index.ts)",
-      "Bash(rmdir utils/calendar-generation/core/TimeSlotManager)"
+      "Bash(rmdir utils/calendar-generation/core/TimeSlotManager)",
+      "Bash(grep -n \"from.*helpers\\\\|from.*validationUtils\" c:/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/core/CalendarGenerator/*.ts)",
+      "Bash(cp -r /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/core/CalendarGenerator /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/CalendarGenerator)",
+      "Bash(cp -r /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/core/Scheduler /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/Scheduler)",
+      "Bash(cp -r /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/core/SlotBuilder /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/SlotBuilder)",
+      "Bash(cp -r /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/core/SlotFinder /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/SlotFinder)",
+      "Bash(cp -r /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/core/SlotReserver /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/SlotReserver)",
+      "Bash(cp -r /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/core/TravelManager /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/TravelManager)",
+      "Bash(cp -r /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/core/TravelConverter /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/TravelConverter)",
+      "Bash(grep -n \"from \"\"\\\\.\\\\.\" /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/CalendarGenerator/*.ts)",
+      "Bash(grep -n \"from \"\"\\\\.\\\\.\" /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/Scheduler/*.ts)",
+      "Bash(grep -rn calendar-generation/helpers /c/Users/Marcus/Desktop/Lifeplan/ --include=*.ts)"
     ]
   }
 }

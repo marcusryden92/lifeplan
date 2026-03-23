@@ -5,7 +5,7 @@ import {
   findAllFittingSlots,
   getDaySlots,
   getDayAvailableMinutes,
-} from "./SlotFinder/index";
+} from "../helpers/SlotFinder";
 
 /**
  * SlotFinder

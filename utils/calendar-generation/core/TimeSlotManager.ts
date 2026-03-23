@@ -10,10 +10,10 @@
  */
 
 import { Planner, SimpleEvent } from "@/types/prisma";
-import { weeksNeededForPlans } from "../helpers/slot-building/SlotBuildingHelpers";
+import { weeksNeededForPlans } from "../helpers/TimeSlotManager/weeksNeededForPlans";
 import { CategoryPeriod } from "@/types/categoryTypes";
 import { TimeSlot } from "../models/TimeSlot";
-import { PerTemplateMask } from "../utils/intervalUtils";
+import { PerTemplateMask } from "../models/TemplateModels";
 import { dateTimeService } from "../utils/dateTimeService";
 import { logInitialSlotContext } from "../utils/loggingUtils";
 import {
@@ -72,7 +72,7 @@ export class TimeSlotManager {
     );
   }
 
-  // ===== Travel Time Matrix Management =====
+  // Travel time matrix management
 
   setTravelTimeMatrix(matrix: Map<string, TravelTimeEntry> | null): void {
     this.travelManager.setTravelTimeMatrix(matrix);
@@ -90,7 +90,7 @@ export class TimeSlotManager {
     );
   }
 
-  // ===== Slot Building =====
+  // Slot building
 
   buildDailySlots(
     startDate: Date,
@@ -143,7 +143,7 @@ export class TimeSlotManager {
     }
   }
 
-  // ===== Slot Finding =====
+  // Slot finding
 
   findAllFittingSlots(
     durationMinutes: number,
@@ -174,7 +174,7 @@ export class TimeSlotManager {
     return this.travelManager.findPrecedingGapTravel(slotStart);
   }
 
-  // ===== Slot Reservation =====
+  // Slot reservation
 
   reserveSlot(
     start: Date,
@@ -222,7 +222,7 @@ export class TimeSlotManager {
     );
   }
 
-  // ===== Standalone Travel Reservation =====
+  // Standalone travel reservation
 
   canPlaceStandaloneTravelBefore(
     travelEnd: Date,
@@ -294,7 +294,7 @@ export class TimeSlotManager {
     );
   }
 
-  // ===== Travel Event Generation =====
+  // Travel event generation
 
   getAllTravelSlots(): TimeSlot[] {
     return TravelConverter.getAllTravelSlots(this.occupiedSlots);
@@ -304,7 +304,7 @@ export class TimeSlotManager {
     return TravelConverter.generateTravelEvents(this.occupiedSlots, userId);
   }
 
-  // ===== Slot Queries =====
+  // Slot queries
 
   getDaySlots(date: Date): TimeSlot[] {
     const dayKey = dateTimeService.getDayKey(date);
@@ -325,7 +325,7 @@ export class TimeSlotManager {
     return total;
   }
 
-  // ===== Utility Methods =====
+  // Utility methods
 
   clear(): void {
     this.availableSlots.clear();

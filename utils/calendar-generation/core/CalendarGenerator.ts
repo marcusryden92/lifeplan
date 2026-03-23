@@ -5,7 +5,7 @@
  * Delegates to specialized subfunctions for each phase.
  */
 
-import { SimpleEvent } from "@/types/prisma";
+
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "./TimeSlotManager";
 import { Scheduler } from "./Scheduler";
@@ -14,11 +14,9 @@ import {
   CalendarGenerationInput,
   SchedulingResult,
   SchedulingMetrics,
-  SchedulingFailure,
 } from "../models/SchedulingModels";
 import { SCHEDULING_CONFIG } from "../constants";
 import { logCalendarDebugInfo } from "../utils/loggingUtils";
-import { TaskSchedulingOrchestrator } from "../helpers/scheduling/TaskSchedulingOrchestrator";
 import {
   validateInput,
   buildInitialEventArray,
@@ -30,7 +28,7 @@ import {
   buildSchedulingStrategy,
   prepareCandidates,
   assembleFinalEvents,
-} from "./CalendarGenerator/index";
+} from "../helpers/CalendarGenerator";
 
 export class CalendarGenerator {
   // Class instances
@@ -177,22 +175,13 @@ export class CalendarGenerator {
 
     // Phase 10: Schedule tasks and goals
     const scheduler = new Scheduler(timeSlotManager, strategy, context);
-    const orchestrator = new TaskSchedulingOrchestrator(
-      timeSlotManager,
-      scheduler,
+    const schedulingResult = scheduler.scheduleTasksAndGoals(
       weekStartDay,
-    );
-    const schedulingResult: {
-      success: boolean;
-      newEvents: SimpleEvent[];
-      failures: SchedulingFailure[];
-    } = orchestrator.scheduleTasksAndGoals(
       input.planners,
       candidates,
       memoizedEventIds,
       largestTemplateGap,
       perTemplateMasks,
-      context,
       plannerLocationMap,
       categoryPeriods,
     );
