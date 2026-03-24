@@ -37,6 +37,7 @@ export function tryBleedBackward(
         nextLoc,
         "preliminary",
         uuidv4(),
+        { categoryId: lastAvail.categoryId, isStrictCategory: lastAvail.isStrictCategory },
       ),
     );
     const newCatEnd = new Date(newTravelStart.getTime() - bufferMs);
@@ -63,6 +64,7 @@ export function tryBleedBackward(
         nextLoc,
         "preliminary",
         uuidv4(),
+        { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
       ),
     );
     const newLastEnd = new Date(newTravelStart.getTime() - bufferMs);

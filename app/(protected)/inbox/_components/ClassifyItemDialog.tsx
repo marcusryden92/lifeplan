@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/Label";
 import { CategorySelect } from "@/components/categories/CategorySelect";
 import { DateTimePicker } from "@/components/utilities/time-picker/DateTimePicker";
 import type { Planner, Category } from "@/types/prisma";
-import type { ItemType } from "@/prisma/generated/client";
+import { ItemType } from "@/types/prisma";
 
 interface ClassifyItemDialogProps {
   open: boolean;
@@ -40,7 +40,7 @@ export function ClassifyItemDialog({
   onClassify,
   onDelete,
 }: ClassifyItemDialogProps) {
-  const [itemType, setItemType] = useState<ItemType>(item?.itemType ?? "task");
+  const [itemType, setItemType] = useState<ItemType>(item?.itemType ?? ItemType.task);
   const [duration, setDuration] = useState<number>(item?.duration ?? 30);
   const [deadline, setDeadline] = useState<Date | undefined>(
     item?.deadline ? new Date(item.deadline) : undefined
@@ -69,7 +69,7 @@ export function ClassifyItemDialog({
       itemType,
       duration,
       deadline: deadline?.toISOString() ?? null,
-      starts: itemType === "plan" ? (starts?.toISOString() ?? null) : null,
+      starts: itemType === ItemType.plan ? (starts?.toISOString() ?? null) : null,
       categoryId: categoryId ?? null,
     });
 
@@ -94,42 +94,42 @@ export function ClassifyItemDialog({
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  variant={itemType === "task" ? "default" : "outline"}
-                  onClick={() => setItemType("task")}
+                  variant={itemType === ItemType.task ? "default" : "outline"}
+                  onClick={() => setItemType(ItemType.task)}
                   className="flex-1"
                 >
                   Task
                 </Button>
                 <Button
                   type="button"
-                  variant={itemType === "plan" ? "default" : "outline"}
-                  onClick={() => setItemType("plan")}
+                  variant={itemType === ItemType.plan ? "default" : "outline"}
+                  onClick={() => setItemType(ItemType.plan)}
                   className="flex-1"
                 >
                   Plan
                 </Button>
                 <Button
                   type="button"
-                  variant={itemType === "goal" ? "default" : "outline"}
-                  onClick={() => setItemType("goal")}
+                  variant={itemType === ItemType.goal ? "default" : "outline"}
+                  onClick={() => setItemType(ItemType.goal)}
                   className="flex-1"
                 >
                   Goal
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground h-4">
-                {itemType === "task" &&
+                {itemType === ItemType.task &&
                   "A one-time item without a specific date/time"}
-                {itemType === "plan" &&
+                {itemType === ItemType.plan &&
                   "A scheduled appointment with a specific date/time"}
-                {itemType === "goal" &&
+                {itemType === ItemType.goal &&
                   "A larger objective with multiple subtasks"}
               </p>
             </div>
 
             {/* Duration (not for goals) */}
             <div
-              className={`flex flex-col gap-2 ${itemType === "goal" ? "invisible" : ""}`}
+              className={`flex flex-col gap-2 ${itemType === ItemType.goal ? "invisible" : ""}`}
             >
               <Label htmlFor="duration">Duration (minutes)</Label>
               <Input
@@ -143,12 +143,12 @@ export function ClassifyItemDialog({
 
             {/* Deadline (for tasks) / Scheduled Time (for plans) */}
             <div
-              className={`flex flex-col gap-2 ${itemType === "goal" ? "invisible" : ""}`}
+              className={`flex flex-col gap-2 ${itemType === ItemType.goal ? "invisible" : ""}`}
             >
               <Label>
-                {itemType === "plan" ? "Scheduled Time" : "Deadline (optional)"}
+                {itemType === ItemType.plan ? "Scheduled Time" : "Deadline (optional)"}
               </Label>
-              {itemType === "plan" ? (
+              {itemType === ItemType.plan ? (
                 <DateTimePicker date={starts} setDate={setStarts} />
               ) : (
                 <DateTimePicker date={deadline} setDate={setDeadline} />
@@ -188,7 +188,7 @@ export function ClassifyItemDialog({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={itemType === "plan" && !starts}>
+              <Button type="submit" disabled={itemType === ItemType.plan && !starts}>
                 Save
               </Button>
             </div>

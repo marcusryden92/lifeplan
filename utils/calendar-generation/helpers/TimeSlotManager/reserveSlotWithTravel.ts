@@ -1,4 +1,5 @@
 import { AvailableSlot, OccupiedSlot, TimeSlot, TravelSlot } from "../../models/TimeSlot";
+import { ItemType } from "@/types/prisma";
 import { isTravelSlot, createTravelSlot } from "../../utils/timeSlotUtils";
 import { TravelManager } from "../../core/TravelManager";
 import { SCHEDULING_CONFIG } from "../../constants";
@@ -12,7 +13,7 @@ export function reserveSlotWithTravel(
   start: Date,
   end: Date,
   eventId: string,
-  eventType: "task" | "goal" | "plan" | "template",
+  eventType: Exclude<ItemType, "travel" | "category">,
   taskLocationId: string | null,
   travelBefore: number,
   travelAfter: number,

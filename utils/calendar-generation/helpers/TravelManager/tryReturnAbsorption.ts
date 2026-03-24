@@ -42,6 +42,7 @@ export function tryReturnAbsorption(
         dLoc,
         "preliminary",
         uuidv4(),
+        { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
       ),
     );
     const availStart = new Date(travelEnd.getTime());
@@ -68,7 +69,7 @@ export function tryReturnAbsorption(
         dLoc,
         "preliminary",
         uuidv4(),
-        { insufficientTravel: true, requiredTravelMinutes: directMinutes },
+        { insufficientTravel: true, requiredTravelMinutes: directMinutes, categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
       ),
     );
   }

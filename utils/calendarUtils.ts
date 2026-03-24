@@ -6,7 +6,7 @@
  */
 
 import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";
-import { SimpleEvent } from "@/types/prisma";
+import { SimpleEvent, ItemType } from "@/types/prisma";
 import { EventInput } from "@fullcalendar/core/index.js";
 import { RRule, Weekday } from "rrule";
 import { dateTimeService } from "./calendar-generation/utils/dateTimeService";
@@ -66,8 +66,8 @@ export const transformEventsForFullCalendar = (
   events: SimpleEvent[]
 ): EventInput[] => {
   return events.map((event) => {
-    const isCategory = event.extendedProps?.itemType === "category";
-    const isTemplate = event.extendedProps?.itemType === "template";
+    const isCategory = event.extendedProps?.itemType === ItemType.category;
+    const isTemplate = event.extendedProps?.itemType === ItemType.template;
 
     return {
       id: event.id,

@@ -45,6 +45,7 @@ export function tryDoubleTransition(
       catLoc,
       "preliminary",
       uuidv4(),
+      { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
     ),
   );
 
@@ -57,6 +58,7 @@ export function tryDoubleTransition(
       nextLoc,
       "preliminary",
       uuidv4(),
+      { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
     ),
   );
 

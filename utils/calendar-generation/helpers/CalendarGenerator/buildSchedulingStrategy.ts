@@ -4,18 +4,18 @@
  * Builds the composite scheduling strategy with configured weights
  */
 
-import { CompositeStrategy, SchedulingStrategy } from "../../strategies/SchedulingStrategy";
+import {
+  CompositeStrategy,
+  SchedulingStrategy,
+} from "../../strategies/SchedulingStrategy";
 import { EarliestSlotStrategy } from "../../strategies/EarliestSlotStrategy";
 import { LocationGroupingStrategy } from "../../strategies/LocationGroupingStrategy";
 import { DEFAULT_STRATEGY_WEIGHTS } from "../../strategies/defaultStrategy";
-import {
-  TravelTimeEntry,
-  LocationGroupingScoresConfig,
-  LocationGroupingPenaltiesConfig,
-  StrategyConfig,
-} from "../../models/SchedulingModels";
+import { StrategyConfig } from "../../models/SchedulingModels";
 
-export function buildSchedulingStrategy(config?: StrategyConfig): CompositeStrategy {
+export function buildSchedulingStrategy(
+  config?: StrategyConfig,
+): CompositeStrategy {
   const strategies: Array<{ strategy: SchedulingStrategy; weight: number }> = [
     {
       strategy: new EarliestSlotStrategy(),
@@ -31,7 +31,7 @@ export function buildSchedulingStrategy(config?: StrategyConfig): CompositeStrat
       strategy: new LocationGroupingStrategy(
         config.travelTimeMatrix,
         config.locationGroupingScores,
-        config.locationGroupingPenalties
+        config.locationGroupingPenalties,
       ),
       weight:
         config?.strategyWeights?.locationGrouping ??

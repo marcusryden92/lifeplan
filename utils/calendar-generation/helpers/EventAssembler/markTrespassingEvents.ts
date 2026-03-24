@@ -1,4 +1,4 @@
-import { SimpleEvent } from "@/types/prisma";
+import { SimpleEvent, ItemType } from "@/types/prisma";
 import { RuntimeEventExtendedProps } from "@/types/ui";
 import {
   detectTrespassingEvents,
@@ -10,7 +10,7 @@ export function markTrespassingEvents(
   plannerLocationMap: Map<string, string | null>
 ): void {
   const intervals: IntervalWithId[] = events
-    .filter((e) => e.extendedProps?.itemType !== "travel")
+    .filter((e) => e.extendedProps?.itemType !== ItemType.travel)
     .map((e) => {
       const plannerId =
         (e.extendedProps as { eventId?: string })?.eventId || e.id;

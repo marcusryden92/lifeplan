@@ -1,6 +1,5 @@
 import { Prisma } from "@/prisma/generated/client";
-
-export type UserRole = Prisma.UserRoleGetPayload<undefined>;
+export { ItemType, UserRole } from "@/prisma/generated/client";
 
 // SimpleEvent with runtime fields added to extendedProps
 export type SimpleEvent = Omit<
@@ -32,7 +31,6 @@ export type EventTemplate = Prisma.EventTemplateGetPayload<undefined>;
 
 export type EventExtendedProps = Prisma.EventExtendedPropsGetPayload<undefined>;
 
-export type ItemType = Prisma.ItemTypeGetPayload<undefined>;
 
 export type Location = Prisma.LocationGetPayload<undefined>;
 

@@ -1,4 +1,4 @@
-import { Planner } from "@/types/prisma";
+import { Planner, ItemType } from "@/types/prisma";
 import { TIME_CONSTANTS } from "../../constants";
 import type { ValidationResult, ValidationError } from "../../core/CalendarValidator";
 
@@ -22,7 +22,7 @@ export function validatePlanner(planner: Planner): ValidationResult {
     errors.push({ field: "userId", message: "User ID is required" });
   }
 
-  if (planner.itemType !== "goal") {
+  if (planner.itemType !== ItemType.goal) {
     if (planner.duration === undefined || planner.duration === null) {
       errors.push({ field: "duration", message: "Duration is required" });
     } else if (planner.duration <= 0) {
@@ -68,7 +68,7 @@ export function validatePlanner(planner: Planner): ValidationResult {
     });
   }
 
-  if (planner.itemType === "plan") {
+  if (planner.itemType === ItemType.plan) {
     if (!planner.starts) {
       errors.push({
         field: "starts",

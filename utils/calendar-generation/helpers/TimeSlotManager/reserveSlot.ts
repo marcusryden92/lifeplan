@@ -1,5 +1,6 @@
 import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { occupySlot } from "../../utils/timeSlotUtils";
+import { ItemType } from "@/types/prisma";
 
 export function reserveSlot(
   availableSlots: AvailableSlot[],
@@ -7,7 +8,7 @@ export function reserveSlot(
   start: Date,
   end: Date,
   eventId: string,
-  eventType: "task" | "goal" | "plan" | "template",
+  eventType: Exclude<ItemType, "travel" | "category">,
   locationId?: string | null,
 ): boolean {
   const startTime = start.getTime();

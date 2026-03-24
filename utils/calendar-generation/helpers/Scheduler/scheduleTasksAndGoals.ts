@@ -1,4 +1,4 @@
-import { Planner, SimpleEvent } from "@/types/prisma";
+import { Planner, SimpleEvent, ItemType } from "@/types/prisma";
 import { CategoryPeriod } from "@/types/categoryTypes";
 import { Scheduler } from "../../core/Scheduler";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
@@ -50,7 +50,7 @@ export function scheduleTasksAndGoals(
     for (let i = candidates.length - 1; i >= 0; i--) {
       const item = candidates[i];
 
-      if (item.itemType === "task") {
+      if (item.itemType === ItemType.task) {
         const result = scheduleSingleTask(
           item,
           scheduledTaskIds,
@@ -65,7 +65,7 @@ export function scheduleTasksAndGoals(
         } else if (result.permanentFailure) {
           candidates.splice(i, 1);
         }
-      } else if (item.itemType === "goal") {
+      } else if (item.itemType === ItemType.goal) {
         const result = scheduleGoal(
           item,
           allPlanners,

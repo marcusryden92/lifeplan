@@ -1,4 +1,4 @@
-import { SimpleEvent } from "@/types/prisma";
+import { SimpleEvent, ItemType } from "@/types/prisma";
 import { OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { getAllTravelSlots } from "./getAllTravelSlots";
 
@@ -23,7 +23,7 @@ export function generateTravelEvents(
       extendedProps: {
         id: slot.eventId,
         eventId: slot.eventId,
-        itemType: "travel" as const,
+        itemType: ItemType.travel,
         parentId: null,
         completedEndTime: null,
         completedStartTime: null,

@@ -1,4 +1,4 @@
-import { SimpleEvent, Planner, EventTemplate } from "@/types/prisma";
+import { SimpleEvent, Planner, EventTemplate, ItemType } from "@/types/prisma";
 import { DateSelectArg, EventDropArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 import { EventImpl } from "@fullcalendar/core/internal";
@@ -25,7 +25,7 @@ export const handleSelect = (
       id: uuidv4(),
       title,
       parentId: null,
-      itemType: "plan",
+      itemType: ItemType.plan,
       isReady: true,
       duration,
       deadline: null,
@@ -259,7 +259,7 @@ export const handleClickDelete = (
   const updatedCalendar = calendar?.filter((e) => e.id !== event?.id);
 
   setTimeout(() => {
-    if (itemType === "goal") {
+    if (itemType === ItemType.goal) {
       deleteGoal({
         updateAll,
         taskId: event.id,

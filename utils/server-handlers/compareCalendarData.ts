@@ -5,6 +5,7 @@ import {
   SimpleEvent,
   EventTemplate,
   EventExtendedProps,
+  ItemType,
 } from "@/types/prisma";
 import { objectsAreEqual } from "../generalUtils";
 import { syncCalendarData } from "@/actions/calendar-actions/syncCalendarData";
@@ -41,8 +42,8 @@ export async function handleServerTransaction(
   const filterGeneratedEvents = (events: SimpleEvent[]) =>
     events.filter(
       (e) =>
-        e.extendedProps?.itemType !== "travel" &&
-        e.extendedProps?.itemType !== "template" &&
+        e.extendedProps?.itemType !== ItemType.travel &&
+        e.extendedProps?.itemType !== ItemType.template &&
         !(e.extendedProps && 'wrapperId' in e.extendedProps && e.extendedProps.wrapperId) // Category wrapper events have wrapperId
     );
 

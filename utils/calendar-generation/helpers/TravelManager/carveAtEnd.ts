@@ -29,6 +29,7 @@ export function carveAtEnd(
           nextLoc,
           "preliminary",
           uuidv4(),
+          { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
         ),
       );
       result.push({
@@ -64,6 +65,7 @@ export function carveAtEnd(
             nextLoc,
             "preliminary",
             uuidv4(),
+            { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
           ),
         );
       }
@@ -123,6 +125,8 @@ export function carveAtEnd(
             {
               insufficientTravel: true,
               requiredTravelMinutes: travelMinutes,
+              categoryId: slot.categoryId,
+              isStrictCategory: slot.isStrictCategory,
             },
           ),
         );

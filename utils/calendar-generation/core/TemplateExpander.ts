@@ -5,7 +5,7 @@
  * Pre-generates recurring template events for a date range using RRule.
  */
 
-import { EventTemplate, SimpleEvent } from "@/types/prisma";
+import { EventTemplate, SimpleEvent, ItemType } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { dateTimeService } from "../utils/dateTimeService";
 import { WEEKDAY_NAMES, TIME_CONSTANTS } from "../constants";
@@ -123,7 +123,7 @@ export class TemplateExpander {
       extendedProps: {
         id: uuidv4(),
         eventId: template.id,
-        itemType: "template",
+        itemType: ItemType.template,
         completedStartTime: null,
         completedEndTime: null,
         parentId: null,

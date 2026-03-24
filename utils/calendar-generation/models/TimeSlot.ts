@@ -1,3 +1,5 @@
+import { ItemType } from "@/types/prisma";
+
 type BaseSlot = {
   start: Date;
   end: Date;
@@ -15,18 +17,20 @@ export type AvailableSlot = BaseSlot & {
 export type OccupiedSlot = BaseSlot & {
   isAvailable: false;
   eventId: string;
-  eventType: "task" | "goal" | "plan" | "template";
+  eventType: Exclude<ItemType, "travel" | "category">;
 };
 
 export type TravelSlot = BaseSlot & {
   isAvailable: false;
   eventId: string;
-  eventType: "travel";
+  eventType: Extract<ItemType, "travel">;
   travelFromLocationId: string | null;
   travelToLocationId: string | null;
   travelType: "preliminary" | "inbound" | "outbound";
   insufficientTravel: boolean;
   requiredTravelMinutes: number;
+  categoryId?: string | null;
+  isStrictCategory?: boolean;
 };
 
 export type TimeSlot = AvailableSlot | OccupiedSlot | TravelSlot;

@@ -33,7 +33,8 @@
       "Bash(cp -r /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/core/TravelConverter /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/TravelConverter)",
       "Bash(grep -n \"from \"\"\\\\.\\\\.\" /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/CalendarGenerator/*.ts)",
       "Bash(grep -n \"from \"\"\\\\.\\\\.\" /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/Scheduler/*.ts)",
-      "Bash(grep -rn calendar-generation/helpers /c/Users/Marcus/Desktop/Lifeplan/ --include=*.ts)"
+      "Bash(grep -rn calendar-generation/helpers /c/Users/Marcus/Desktop/Lifeplan/ --include=*.ts)",
+      "Bash(git mv:*)"
     ]
   }
 }

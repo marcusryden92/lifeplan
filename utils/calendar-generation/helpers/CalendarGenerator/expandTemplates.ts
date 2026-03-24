@@ -4,7 +4,7 @@
  * Expands recurring template definitions into concrete time blocks
  */
 
-import { EventTemplate, SimpleEvent } from "@/types/prisma";
+import { EventTemplate, SimpleEvent, ItemType } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TemplateExpander } from "../../core/TemplateExpander";
 import { PerTemplateMask } from "../../models/TemplateModels";
@@ -74,7 +74,7 @@ export function expandTemplates(
   const largestTemplateGap = templateExpander.calculateLargestGap(templates);
 
   const filteredEvents = eventArray.filter(
-    (e) => e.extendedProps?.itemType !== "template",
+    (e) => e.extendedProps?.itemType !== ItemType.template,
   );
   filteredEvents.push(...recurringTemplateEvents);
 

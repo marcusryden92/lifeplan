@@ -22,6 +22,7 @@ export function carveAtStart(
         nextLoc,
         "preliminary",
         uuidv4(),
+        { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
       ),
     );
     const availableStartMs = travelEnd.getTime();
@@ -48,7 +49,7 @@ export function carveAtStart(
         nextLoc,
         "preliminary",
         uuidv4(),
-        { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
+        { insufficientTravel: true, requiredTravelMinutes: travelMinutes, categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
       ),
     );
   }

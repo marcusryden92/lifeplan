@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Planner } from "@/types/prisma";
+import { Planner, ItemType } from "@/types/prisma";
 import {
   getCompleteTaskTreeIds,
   getRootParentId,
@@ -28,7 +28,7 @@ export default function PrioritySelector({
       const task = prev.find((t) => t.id === taskId);
       if (!task) return prev;
 
-      if (task.itemType !== "goal") {
+      if (task.itemType !== ItemType.goal) {
         return prev.map((i) =>
           i.id === taskId ? { ...i, priority: newValue } : i
         );

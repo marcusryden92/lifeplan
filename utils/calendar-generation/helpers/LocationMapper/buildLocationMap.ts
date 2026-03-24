@@ -1,4 +1,4 @@
-import { Planner, EventTemplate } from "@/types/prisma";
+import { Planner, EventTemplate, ItemType } from "@/types/prisma";
 
 function findAncestorLocation(
   parentId: string | null,
@@ -51,7 +51,7 @@ function resolveLocation(
   plannerMap: Map<string, Planner>,
   categoryLocationMap: Map<string, string | null>
 ): string | null {
-  if (planner.itemType === "plan") {
+  if (planner.itemType === ItemType.plan) {
     return planner.locationId ?? null;
   }
 

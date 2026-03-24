@@ -134,16 +134,6 @@ export enum SchedulingFailureReason {
 }
 
 /**
- * Event type identifiers
- */
-export enum EventType {
-  TASK = "task",
-  GOAL = "goal",
-  PLAN = "plan",
-  TEMPLATE = "template",
-}
-
-/**
  * Default colors for calendar events
  */
 export const DEFAULT_COLORS = {

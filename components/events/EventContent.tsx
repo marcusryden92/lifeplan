@@ -17,6 +17,7 @@ import {
   handleClickDelete,
   handlePostponeTask,
 } from "@/utils/calendarEventHandlers";
+import { ItemType } from "@/types/prisma";
 
 interface EventContentProps {
   event: EventImpl;
@@ -112,8 +113,8 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
 
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 {!event.extendedProps.isTemplateItem &&
-                  (event.extendedProps.itemType === "goal" ||
-                    event.extendedProps.itemType === "task") && (
+                  (event.extendedProps.itemType === ItemType.goal ||
+                    event.extendedProps.itemType === ItemType.task) && (
                     <>
                       <button
                         onClick={onComplete}

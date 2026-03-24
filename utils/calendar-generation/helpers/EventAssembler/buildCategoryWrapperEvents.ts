@@ -1,4 +1,4 @@
-import { SimpleEvent } from "@/types/prisma";
+import { SimpleEvent, ItemType } from "@/types/prisma";
 import { RuntimeEventExtendedProps } from "@/types/ui";
 import { v4 as uuidv4 } from "uuid";
 import { CategoryPeriod } from "../../models/SchedulingModels";
@@ -21,7 +21,7 @@ export function buildCategoryWrapperEvents(
 
     const extendedProps: RuntimeEventExtendedProps = {
       id: uuidv4(),
-      itemType: "category" as const,
+      itemType: ItemType.category,
       eventId: "",
       parentId: null,
       completedStartTime: null,

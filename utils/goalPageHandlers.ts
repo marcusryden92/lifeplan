@@ -1,4 +1,4 @@
-import { Planner, SimpleEvent, Category } from "@/types/prisma";
+import { Planner, SimpleEvent, Category, ItemType } from "@/types/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
 
@@ -33,7 +33,7 @@ export function addSubtask({
       title: taskTitle,
       id: newId,
       parentId: task.id || null,
-      itemType: "goal",
+      itemType: ItemType.goal,
       isReady: true,
       duration: taskDuration < 15 ? 15 : taskDuration,
       deadline: null,
@@ -505,7 +505,7 @@ export function buildInheritedLocationMap(
 
   for (const planner of planners) {
     // Plan items always use their own location (no inheritance)
-    if (planner.itemType === "plan") continue;
+    if (planner.itemType === ItemType.plan) continue;
 
     // Walk up parent chain for an ancestor with a custom location
     const visited = new Set<string>();

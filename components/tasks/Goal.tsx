@@ -21,7 +21,7 @@ import RootTaskListWrapper from "./task-item-subcomponents/RootTaskListWrapper";
 import PrioritySelector from "@/components/utilities/PrioritySelector";
 
 // Local utilities
-import { Planner } from "@/types/prisma";
+import { Planner, ItemType } from "@/types/prisma";
 import { SimpleEvent } from "@/types/prisma";
 import { getSubtasksById } from "@/utils/goalPageHandlers";
 
@@ -264,7 +264,7 @@ const Goal = ({
                 >
                   <PencilIcon
                     className={`w-5 h-5 ${
-                      task.itemType === "goal" ? "text-black" : ""
+                      task.itemType === ItemType.goal ? "text-black" : ""
                     }`}
                   />
                 </button>
@@ -275,7 +275,7 @@ const Goal = ({
                 >
                   <TrashIcon
                     className={`w-5 h-5 ${
-                      task.itemType === "goal" ? "text-black" : ""
+                      task.itemType === ItemType.goal ? "text-black" : ""
                     }`}
                   />
                 </button>

@@ -1,30 +1,29 @@
 model SimpleEvent {
-  id             String   @id @default(cuid())
-  title          String
-  start          String
-  end            String
-  duration       Int?
-  userId         String
-  rrule          String?
+  id              String              @id @default(cuid())
+  title           String
+  start           String
+  end             String
+  duration        Int?
+  userId          String
+  rrule           String?
   backgroundColor String
-  borderColor    String
-  createdAt      String
-  updatedAt      String
-  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  extendedProps  EventExtendedProps?
+  borderColor     String
+  createdAt       String
+  updatedAt       String
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  extendedProps   EventExtendedProps?
 
   @@map("SimpleEvents")
 }
 
-
 model EventExtendedProps {
-  id                   String   @id @default(cuid())
-  itemType             ItemType
-  completedStartTime   String?
-  completedEndTime     String?
-  parentId             String?
-  eventId              String   @unique
-  event                SimpleEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id                 String      @id @default(cuid())
+  itemType           ItemType
+  completedStartTime String?
+  completedEndTime   String?
+  parentId           String?
+  eventId            String      @unique
+  event              SimpleEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@map("EventExtendedProps")
 }
@@ -44,9 +43,9 @@ model Planner {
   priority           Int
   userId             String
   color              String?
-  locationId         String?   // Optional FK to Location (null = "Anywhere")
+  locationId         String? // Optional FK to Location (null = "Anywhere")
   useParentLocation  Boolean   @default(false) // When true, use category location instead of item's own locationId
-  categoryId         String?   // Optional FK to Category for organization
+  categoryId         String? // Optional FK to Category for organization
   createdAt          String
   updatedAt          String
   user               User      @relation(fields: [userId], references: [id])
@@ -64,7 +63,7 @@ model EventTemplate {
   userId     String
   duration   Int
   color      String?
-  locationId String?     // Optional FK to Location (null = "Anywhere")
+  locationId String? // Optional FK to Location (null = "Anywhere")
   createdAt  String
   updatedAt  String
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -88,6 +87,4 @@ enum ItemType {
   plan
   goal
   template
-  travel
-  category
 }

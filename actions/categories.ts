@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
+import { ItemType } from "@/types/prisma";
 import type { Category } from "@/types/prisma";
 import { Prisma } from "@/prisma/generated/client";
 
@@ -399,7 +400,7 @@ export async function assignCategoryToPlanner(
 
   // For goals with a category that has a location, set useParentLocation
   // on descendants without custom locations so they inherit the category's location
-  if (planner.itemType === "goal" && categoryHasLocation) {
+  if (planner.itemType === ItemType.goal && categoryHasLocation) {
     const allPlanners = await db.planner.findMany({
       where: { userId: session.user.id },
     });
@@ -483,9 +484,9 @@ export async function fetchCategoryStats(): Promise<
     };
 
     current.total += stat._count;
-    if (stat.itemType === "goal") current.goals += stat._count;
-    if (stat.itemType === "task") current.tasks += stat._count;
-    if (stat.itemType === "plan") current.plans += stat._count;
+    if (stat.itemType === ItemType.goal) current.goals += stat._count;
+    if (stat.itemType === ItemType.task) current.tasks += stat._count;
+    if (stat.itemType === ItemType.plan) current.plans += stat._count;
 
     result.set(categoryId, current);
   }

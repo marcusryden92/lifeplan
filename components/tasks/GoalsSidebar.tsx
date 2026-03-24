@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { CardContent } from "@/components/ui/Card";
 import AddItemForm from "./AddItemForm";
 import { deleteGoal } from "@/utils/goalPageHandlers";
-import { Planner } from "@/types/prisma";
+import { Planner, ItemType } from "@/types/prisma";
 
 import { CarouselApi } from "@/components/ui/Carousel";
 
@@ -35,7 +35,7 @@ export default function GoalsSidebar({
   const [api] = carouselApi;
   const handleDeleteAll = useCallback(() => {
     const filteredArray = planner.filter(
-      (task) => task.itemType === "goal" && !task.parentId
+      (task) => task.itemType === ItemType.goal && !task.parentId
     );
 
     filteredArray.forEach((item) =>

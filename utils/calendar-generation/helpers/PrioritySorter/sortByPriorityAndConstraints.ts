@@ -1,4 +1,4 @@
-import { Planner } from "@/types/prisma";
+import { Planner, ItemType } from "@/types/prisma";
 import { calculateTaskUrgency } from "./calculateTaskUrgency";
 
 function hasCategoryConstraint(
@@ -10,7 +10,7 @@ function hasCategoryConstraint(
     plannerCategoryMap?.get(item.id) ?? item.categoryId;
   if (effectiveCategoryId !== null) return true;
 
-  if (item.itemType === "goal") {
+  if (item.itemType === ItemType.goal) {
     return hasChildWithCategoryConstraint(item.id, allPlanners, plannerCategoryMap);
   }
 

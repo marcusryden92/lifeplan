@@ -4,7 +4,7 @@
  * Prepares and sorts candidates for scheduling
  */
 
-import { Planner } from "@/types/prisma";
+import { Planner, ItemType } from "@/types/prisma";
 import { PrioritySorter } from "../../core/PrioritySorter";
 
 export function prepareCandidates(
@@ -15,8 +15,8 @@ export function prepareCandidates(
 ): Planner[] {
   let candidates = planners.filter(
     (item) =>
-      ((item.itemType === "goal" && !item.parentId && item.isReady) ||
-        item.itemType === "task") &&
+      ((item.itemType === ItemType.goal && !item.parentId && item.isReady) ||
+        item.itemType === ItemType.task) &&
       !memoizedEventIds.has(item.id)
   );
 

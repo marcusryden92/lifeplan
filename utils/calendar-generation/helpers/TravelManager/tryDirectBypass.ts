@@ -73,6 +73,7 @@ export function tryDirectBypass(
           bLoc,
           "preliminary",
           uuidv4(),
+          { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
         ),
       );
       const availEnd = new Date(travelStart.getTime());
@@ -99,7 +100,7 @@ export function tryDirectBypass(
           bLoc,
           "preliminary",
           uuidv4(),
-          { insufficientTravel: true, requiredTravelMinutes: directMinutes },
+          { insufficientTravel: true, requiredTravelMinutes: directMinutes, categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
         ),
       );
     }
@@ -120,6 +121,7 @@ export function tryDirectBypass(
           bLoc,
           "preliminary",
           uuidv4(),
+          { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
         ),
       );
       const newCatStart = new Date(travelEnd.getTime());
@@ -143,7 +145,7 @@ export function tryDirectBypass(
           bLoc,
           "preliminary",
           uuidv4(),
-          { insufficientTravel: true, requiredTravelMinutes: directMinutes },
+          { insufficientTravel: true, requiredTravelMinutes: directMinutes, categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
         ),
       );
     }
