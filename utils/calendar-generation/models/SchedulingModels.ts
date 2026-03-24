@@ -9,7 +9,7 @@ import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
 import { SchedulingFailureReason } from "../constants";
 import type { CategoryConstraint, CategoryPeriod } from "@/types/categoryTypes";
 export type { CategoryConstraint, CategoryPeriod };
-import { TimeSlot } from "./TimeSlot";
+import { AvailableSlot, TravelSlot } from "./TimeSlot";
 
 /**
  * Result of a scheduling operation
@@ -235,21 +235,21 @@ export interface CategoryPeriodsResult {
 }
 
 export interface FindValidSlotsResult {
-  validSlots: TimeSlot[];
-  fittingSlots: TimeSlot[];
+  validSlots: AvailableSlot[];
+  fittingSlots: AvailableSlot[];
   taskLocationId: string | null | undefined;
   constraintForTask: CategoryConstraint | undefined;
 }
 
 export interface SlotSelectionResult {
-  selectedSlot: TimeSlot;
+  selectedSlot: AvailableSlot;
   travelBefore: number;
   travelAfter: number;
   reusableTravelStart: Date | null;
   taskLocationId: string | null | undefined;
   absorbPrevTravelAfter: boolean;
   absorbedTravelStart: Date | null;
-  reclaimPrecedingGapTravel: TimeSlot | null;
+  reclaimPrecedingGapTravel: TravelSlot | null;
 }
 
 export interface ReservationResult {

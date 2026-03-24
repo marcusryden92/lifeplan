@@ -15,7 +15,7 @@ import {
   ScoredSlot,
   SlotSelectionResult,
 } from "../../models/SchedulingModels";
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot, TravelSlot } from "../../models/TimeSlot";
 import { SchedulingFailureReason } from "../../constants";
 
 /**
@@ -23,7 +23,7 @@ import { SchedulingFailureReason } from "../../constants";
  */
 function scoreSlots(
   task: Planner,
-  slots: TimeSlot[],
+  slots: AvailableSlot[],
   strategy: SchedulingStrategy,
   context: SchedulingContext,
 ): ScoredSlot[] {
@@ -51,8 +51,8 @@ function scoreSlots(
 
 export function selectBestSlot(
   task: Planner,
-  validSlots: TimeSlot[],
-  fittingSlots: TimeSlot[],
+  validSlots: AvailableSlot[],
+  fittingSlots: AvailableSlot[],
   taskLocationId: string | null | undefined,
   slotManager: TimeSlotManager,
   travelManager: TravelManager,
@@ -65,13 +65,13 @@ export function selectBestSlot(
   // Iterate through scored slots and find first one with enough capacity
   const bufferMinutes = slotManager.bufferTimeMinutes;
 
-  let selectedSlot: TimeSlot | null = null;
+  let selectedSlot: AvailableSlot | null = null;
   let travelBefore = 0;
   let travelAfter = 0;
   let selectedReusableTravelStart: Date | null = null;
   let selectedAbsorbPrevTravel = false;
   let selectedAbsorbedTravelStart: Date | null = null;
-  let selectedReclaimPrecedingGapTravel: TimeSlot | null = null;
+  let selectedReclaimPrecedingGapTravel: TravelSlot | null = null;
 
   for (const scoredSlot of scoredSlots) {
     // Find the original slot with location info
@@ -86,8 +86,8 @@ export function selectBestSlot(
     let needTravelAfter = 0;
 
     let canAbsorbPrevTravel = false;
-    let absorbableTravel: TimeSlot | null = null;
-    let reclaimPrecedingGapTravel: TimeSlot | null = null;
+    let absorbableTravel: TravelSlot | null = null;
+    let reclaimPrecedingGapTravel: TravelSlot | null = null;
 
     if (taskLocationId) {
       // Travel BEFORE: needed if prev location differs from task location

@@ -1,52 +1,37 @@
 import { SimpleEvent } from "@/types/prisma";
-import { TimeSlot } from "../../models/TimeSlot";
+import { OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { getAllTravelSlots } from "./getAllTravelSlots";
 
 export function generateTravelEvents(
-  occupiedSlots: TimeSlot[],
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
   userId: string
 ): SimpleEvent[] {
   const travelSlots = getAllTravelSlots(occupiedSlots);
   const now = new Date();
 
-  return travelSlots.map((slot: TimeSlot) => {
-    const eventId: string = slot.eventId ?? `travel-${slot.start.getTime()}`;
-    const isInsufficient: boolean = slot.insufficientTravel === true;
-    const requiredMinutes: number | null =
-      typeof slot.requiredTravelMinutes === "number"
-        ? slot.requiredTravelMinutes
-        : null;
-    const fromLocation: string | null =
-      typeof slot.travelFromLocationId === "string"
-        ? slot.travelFromLocationId
-        : null;
-    const toLocation: string | null =
-      typeof slot.travelToLocationId === "string"
-        ? slot.travelToLocationId
-        : null;
-
+  return travelSlots.map((slot: TravelSlot) => {
     return {
       userId,
-      id: eventId,
-      title: `Travel_${fromLocation ?? "unknown"}_${toLocation ?? "unknown"}`,
+      id: slot.eventId,
+      title: `Travel_${slot.travelFromLocationId ?? "unknown"}_${slot.travelToLocationId ?? "unknown"}`,
       start: slot.start.toISOString(),
       end: slot.end.toISOString(),
-      backgroundColor: isInsufficient ? "#F87171" : "#9CA3AF",
-      borderColor: isInsufficient ? "#DC2626" : "#6B7280",
+      backgroundColor: slot.insufficientTravel ? "#F87171" : "#9CA3AF",
+      borderColor: slot.insufficientTravel ? "#DC2626" : "#6B7280",
       duration: null,
       rrule: null,
       extendedProps: {
-        id: eventId,
-        eventId: eventId,
+        id: slot.eventId,
+        eventId: slot.eventId,
         itemType: "travel" as const,
         parentId: null,
         completedEndTime: null,
         completedStartTime: null,
-        fromLocationId: fromLocation,
-        toLocationId: toLocation,
+        fromLocationId: slot.travelFromLocationId,
+        toLocationId: slot.travelToLocationId,
         travelMinutes: slot.durationMinutes,
-        insufficientTravel: isInsufficient,
-        requiredTravelMinutes: requiredMinutes,
+        insufficientTravel: slot.insufficientTravel,
+        requiredTravelMinutes: slot.requiredTravelMinutes > 0 ? slot.requiredTravelMinutes : null,
       },
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),

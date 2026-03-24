@@ -6,7 +6,7 @@
  */
 
 import { SimpleEvent } from "@/types/prisma";
-import { TimeSlot } from "../models/TimeSlot";
+import { AvailableSlot, OccupiedSlot, TravelSlot } from "../models/TimeSlot";
 import { TimeSlotManager } from "./TimeSlotManager";
 import { TravelTimeEntry } from "../models/SchedulingModels";
 import {
@@ -35,8 +35,8 @@ export class TravelManager {
     this.travelTimeMatrix = travelTimeMatrix ?? null;
   }
 
-  private get availableSlots(): TimeSlot[] { return this.slotManager.availableSlots; }
-  private get occupiedSlots(): TimeSlot[] { return this.slotManager.occupiedSlots; }
+  private get availableSlots(): AvailableSlot[] { return this.slotManager.availableSlots; }
+  private get occupiedSlots(): (OccupiedSlot | TravelSlot)[] { return this.slotManager.occupiedSlots; }
 
   /**
    * Set the travel time matrix for location-aware scheduling
@@ -181,7 +181,7 @@ export class TravelManager {
    * Find a gap-travel slot that ends just before a given slot start.
    * Used to detect when a pre-carved return trip precedes a free slot.
    */
-  findPrecedingGapTravel(slotStart: Date): TimeSlot | null {
+  findPrecedingGapTravel(slotStart: Date): TravelSlot | null {
     return findPrecedingGapTravel(this.occupiedSlots, this.bufferTimeMinutes, slotStart);
   }
 
@@ -189,11 +189,11 @@ export class TravelManager {
    * Find an existing travel slot originating FROM a given location near a given time.
    * Used to detect when a previous task already created a travel-after that can be absorbed.
    */
-  findAdjacentTravelFrom(nearTime: Date, fromLocationId: string): TimeSlot | null {
+  findAdjacentTravelFrom(nearTime: Date, fromLocationId: string): TravelSlot | null {
     return findAdjacentTravelFrom(this.occupiedSlots, this.bufferTimeMinutes, nearTime, fromLocationId);
   }
 
-  getAllTravelSlots(): TimeSlot[] {
+  getAllTravelSlots(): TravelSlot[] {
     return getAllTravelSlots(this.occupiedSlots);
   }
 

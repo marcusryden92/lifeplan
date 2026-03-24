@@ -1,5 +1,5 @@
 import { CategoryPeriod } from "@/types/categoryTypes";
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot } from "../../models/TimeSlot";
 
 type CategoryBoundary = {
   boundaryMs: number;
@@ -36,16 +36,16 @@ function getAllBoundaries(
 }
 
 function splitSlot(
-  slot: TimeSlot,
+  slot: AvailableSlot,
   boundary: CategoryBoundary,
-): [TimeSlot | null, TimeSlot | null] {
+): [AvailableSlot | null, AvailableSlot | null] {
   const { boundaryMs, leaving, entering } = boundary;
   const beforeDuration = Math.floor(
     (boundaryMs - slot.start.getTime()) / 60000,
   );
   const afterDuration = Math.floor((slot.end.getTime() - boundaryMs) / 60000);
 
-  const before: TimeSlot | null =
+  const before: AvailableSlot | null =
     beforeDuration > 0
       ? {
           start: slot.start,
@@ -59,7 +59,7 @@ function splitSlot(
         }
       : null;
 
-  const after: TimeSlot | null =
+  const after: AvailableSlot | null =
     afterDuration > 0
       ? {
           start: new Date(boundaryMs),
@@ -77,26 +77,25 @@ function splitSlot(
 }
 
 function applySplitsForBoundary(
-  slots: TimeSlot[],
+  slots: AvailableSlot[],
   boundary: CategoryBoundary,
-): TimeSlot[] {
+): AvailableSlot[] {
   return slots.flatMap((slot) => {
     if (
-      !slot.isAvailable ||
       boundary.boundaryMs <= slot.start.getTime() ||
       boundary.boundaryMs >= slot.end.getTime()
     )
       return [slot];
     const [before, after] = splitSlot(slot, boundary);
-    return [before, after].filter(Boolean) as TimeSlot[];
+    return [before, after].filter(Boolean) as AvailableSlot[];
   });
 }
 
 // Assign category membership and fix boundary locations for slots abutting periods
 function assignMembership(
-  slot: TimeSlot,
+  slot: AvailableSlot,
   activePeriods: CategoryPeriod[],
-): TimeSlot {
+): AvailableSlot {
   const slotStartMs = slot.start.getTime();
   const slotEndMs = slot.end.getTime();
   const slotMidMs = (slotStartMs + slotEndMs) / 2;
@@ -133,10 +132,10 @@ function assignMembership(
 
 export function splitSlotsAtCategoryBoundaries(
   categoryPeriods: CategoryPeriod[],
-  slots: TimeSlot[],
+  slots: AvailableSlot[],
   rangeStart: Date,
   rangeEnd: Date,
-): TimeSlot[] {
+): AvailableSlot[] {
   const rangeStartMs = rangeStart.getTime();
   const rangeEndMs = rangeEnd.getTime();
 

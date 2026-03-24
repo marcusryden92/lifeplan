@@ -1,13 +1,13 @@
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { occupySlot } from "../../utils/timeSlotUtils";
 
 export function reserveSlot(
-  availableSlots: TimeSlot[],
-  occupiedSlots: TimeSlot[],
+  availableSlots: AvailableSlot[],
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
   start: Date,
   end: Date,
   eventId: string,
-  eventType: "task" | "goal" | "plan" | "template" | "travel",
+  eventType: "task" | "goal" | "plan" | "template",
   locationId?: string | null,
 ): boolean {
   const startTime = start.getTime();
@@ -15,7 +15,6 @@ export function reserveSlot(
 
   const slotIndex = availableSlots.findIndex(
     (slot) =>
-      slot.isAvailable &&
       slot.start.getTime() <= startTime &&
       slot.end.getTime() >= endTime,
   );
@@ -25,8 +24,8 @@ export function reserveSlot(
   const slot = availableSlots[slotIndex];
   const newSlots = occupySlot(slot, start, end, eventId, eventType, locationId);
 
-  availableSlots.splice(slotIndex, 1, ...newSlots.filter((s) => s.isAvailable));
-  occupiedSlots.push(...newSlots.filter((s) => !s.isAvailable));
+  availableSlots.splice(slotIndex, 1, ...newSlots.filter((s): s is AvailableSlot => s.isAvailable));
+  occupiedSlots.push(...newSlots.filter((s): s is OccupiedSlot => !s.isAvailable));
 
   return true;
 }

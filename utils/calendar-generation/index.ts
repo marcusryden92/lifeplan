@@ -30,7 +30,7 @@ export type {
   CalendarGenerationInput,
   DetailedSchedulingResult,
 } from "./models/SchedulingModels";
-export type { TimeSlot, TimeSlotBlock } from "./models/TimeSlot";
+export type { TimeSlot, AvailableSlot, OccupiedSlot, TravelSlot, TimeSlotBlock } from "./models/TimeSlot";
 export {
   getDurationMinutes,
   canFitDuration,

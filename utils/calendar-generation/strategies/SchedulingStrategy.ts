@@ -6,7 +6,7 @@
  */
 
 import { Planner } from "@/types/prisma";
-import { TimeSlot } from "../models/TimeSlot";
+import { AvailableSlot } from "../models/TimeSlot";
 import { SchedulingContext } from "../models/SchedulingModels";
 
 /**
@@ -25,7 +25,7 @@ export interface SchedulingStrategy {
    * @param context Additional scheduling context
    * @returns Score from 0.0 to 1.0 (higher is better)
    */
-  score(task: Planner, slot: TimeSlot, context: SchedulingContext): number;
+  score(task: Planner, slot: AvailableSlot, context: SchedulingContext): number;
 }
 
 /**
@@ -41,7 +41,7 @@ export class CompositeStrategy implements SchedulingStrategy {
     }>
   ) {}
 
-  score(task: Planner, slot: TimeSlot, context: SchedulingContext): number {
+  score(task: Planner, slot: AvailableSlot, context: SchedulingContext): number {
     let totalScore = 0;
     let totalWeight = 0;
 
@@ -59,7 +59,7 @@ export class CompositeStrategy implements SchedulingStrategy {
    */
   getDetailedScores(
     task: Planner,
-    slot: TimeSlot,
+    slot: AvailableSlot,
     context: SchedulingContext
   ): Record<string, number> {
     const scores: Record<string, number> = {};

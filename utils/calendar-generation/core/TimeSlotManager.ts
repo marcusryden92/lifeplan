@@ -1,8 +1,8 @@
-import { TimeSlot } from "../models/TimeSlot";
+import { AvailableSlot, OccupiedSlot, TravelSlot } from "../models/TimeSlot";
 
 export class TimeSlotManager {
-  availableSlots: TimeSlot[] = [];
-  occupiedSlots: TimeSlot[] = [];
+  availableSlots: AvailableSlot[] = [];
+  occupiedSlots: (OccupiedSlot | TravelSlot)[] = [];
   readonly bufferTimeMinutes: number;
   readonly currentDate: Date;
 

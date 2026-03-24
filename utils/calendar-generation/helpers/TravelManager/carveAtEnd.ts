@@ -1,18 +1,18 @@
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { createTravelSlot } from "../../utils/timeSlotUtils";
 import { v4 as uuidv4 } from "uuid";
 import { tryBleedBackward } from "./tryBleedBackward";
 
 export function carveAtEnd(
-  slot: TimeSlot,
-  slots: TimeSlot[],
+  slot: AvailableSlot,
+  slots: AvailableSlot[],
   slotIndex: number,
   prevLoc: string,
   nextLoc: string,
   travelMinutes: number,
   bufferTimeMinutes: number,
-  occupiedSlots: TimeSlot[],
-  result: TimeSlot[],
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  result: AvailableSlot[],
 ): void {
   const travelMs = travelMinutes * 60000;
   const bufferMs = bufferTimeMinutes * 60000;

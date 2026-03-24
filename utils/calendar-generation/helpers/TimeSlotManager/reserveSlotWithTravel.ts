@@ -1,12 +1,12 @@
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot, OccupiedSlot, TimeSlot, TravelSlot } from "../../models/TimeSlot";
 import { isTravelSlot, createTravelSlot } from "../../utils/timeSlotUtils";
 import { TravelManager } from "../../core/TravelManager";
 import { SCHEDULING_CONFIG } from "../../constants";
 import { v4 as uuidv4 } from "uuid";
 
 export function reserveSlotWithTravel(
-  availableSlots: TimeSlot[],
-  occupiedSlots: TimeSlot[],
+  availableSlots: AvailableSlot[],
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
   travelManager: TravelManager,
   bufferTimeMinutes: number,
   start: Date,
@@ -20,7 +20,7 @@ export function reserveSlotWithTravel(
   nextLocationId: string | null,
   reusableTravelStart?: Date | null,
   absorbPrevTravelAfter?: boolean,
-  reclaimPrecedingGapTravel?: TimeSlot | null,
+  reclaimPrecedingGapTravel?: TravelSlot | null,
 ): { success: boolean } {
   const bufferMs = bufferTimeMinutes * 60000;
 
@@ -35,7 +35,6 @@ export function reserveSlotWithTravel(
       ) {
         const travelEndTime = occ.end.getTime();
         for (const availSlot of availableSlots) {
-          if (!availSlot.isAvailable) continue;
           const timeDiff = Math.abs(availSlot.start.getTime() - travelEndTime);
           if (timeDiff <= searchWindowMs) {
             availSlot.start = occ.start;
@@ -60,7 +59,6 @@ export function reserveSlotWithTravel(
       const expectedSlotStart = gapTravel.end.getTime() + bufferMs;
       const searchWindowMs = bufferMs + 10 * 60 * 1000;
       for (const availSlot of availableSlots) {
-        if (!availSlot.isAvailable) continue;
         const diff = Math.abs(availSlot.start.getTime() - expectedSlotStart);
         if (diff <= searchWindowMs) {
           availSlot.start = gapTravel.start;
@@ -87,7 +85,6 @@ export function reserveSlotWithTravel(
 
   const slotIndex = availableSlots.findIndex(
     (slot) =>
-      slot.isAvailable &&
       slot.start.getTime() <= fullStart.getTime() &&
       slot.end.getTime() >= taskReserveEnd.getTime(),
   );
@@ -159,8 +156,6 @@ export function reserveSlotWithTravel(
     isAvailable: false,
     eventId,
     eventType,
-    prevLocationId: taskLocationId,
-    nextLocationId: taskLocationId,
   });
 
   let reclaimedTravelEnd: Date | null = null;
@@ -257,9 +252,9 @@ export function reserveSlotWithTravel(
     );
   }
 
-  availableSlots.splice(slotIndex, 1, ...newSlots.filter((s) => s.isAvailable));
+  availableSlots.splice(slotIndex, 1, ...newSlots.filter((s): s is AvailableSlot => s.isAvailable));
   occupiedSlots.push(
-    ...newSlots.filter((s) => !s.isAvailable),
+    ...newSlots.filter((s): s is OccupiedSlot | TravelSlot => !s.isAvailable),
   );
 
   return { success: true };

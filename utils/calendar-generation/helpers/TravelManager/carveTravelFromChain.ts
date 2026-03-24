@@ -1,5 +1,5 @@
 import { CategoryPeriod } from "@/types/categoryTypes";
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { TravelManager } from "../../core/TravelManager";
 import { tryDirectBypass } from "./tryDirectBypass";
 import { tryDoubleTransition } from "./tryDoubleTransition";
@@ -9,12 +9,12 @@ import { carveAtEnd } from "./carveAtEnd";
 
 export function carveTravelFromChain(
   categoryPeriods: CategoryPeriod[],
-  occupiedSlots: TimeSlot[],
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
   travelManager: TravelManager,
   bufferTimeMinutes: number,
-  slots: TimeSlot[],
-): TimeSlot[] {
-  const result: TimeSlot[] = [];
+  slots: AvailableSlot[],
+): AvailableSlot[] {
+  const result: AvailableSlot[] = [];
   const departureLocations = new Set<string>();
 
   let skipNextSlot = false;
@@ -24,11 +24,6 @@ export function carveTravelFromChain(
       continue;
     }
     const slot = slots[i];
-
-    if (!slot.isAvailable) {
-      result.push(slot);
-      continue;
-    }
 
     const prevLoc = slot.prevLocationId;
     const nextLoc = slot.nextLocationId;

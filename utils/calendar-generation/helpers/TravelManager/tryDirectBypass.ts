@@ -1,5 +1,5 @@
 import { CategoryPeriod } from "@/types/categoryTypes";
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { createTravelSlot } from "../../utils/timeSlotUtils";
 import { TravelManager } from "../../core/TravelManager";
 import { v4 as uuidv4 } from "uuid";
@@ -8,15 +8,15 @@ export function tryDirectBypass(
   categoryPeriods: CategoryPeriod[],
   travelManager: TravelManager,
   bufferTimeMinutes: number,
-  slot: TimeSlot,
-  nextSlot: TimeSlot | null,
-  slots: TimeSlot[],
+  slot: AvailableSlot,
+  nextSlot: AvailableSlot | null,
+  slots: AvailableSlot[],
   slotIndex: number,
   prevLoc: string,
   nextLoc: string,
   travelMinutes: number,
-  occupiedSlots: TimeSlot[],
-  result: TimeSlot[],
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  result: AvailableSlot[],
 ): { handled: boolean; skipNext?: boolean } {
   const catPeriodEnd = nextSlot?.categoryId
     ? categoryPeriods.find(
@@ -32,8 +32,7 @@ export function tryDirectBypass(
 
   if (
     !nextLocIsInsideCatB ||
-    !nextSlot?.isAvailable ||
-    !nextSlot.categoryId ||
+    !nextSlot?.categoryId ||
     nextSlot.start.getTime() !== slot.end.getTime() ||
     !nextSlot.nextLocationId ||
     nextSlot.nextLocationId === nextLoc

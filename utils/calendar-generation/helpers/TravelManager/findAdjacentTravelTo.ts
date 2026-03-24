@@ -1,8 +1,8 @@
-import { TimeSlot } from "../../models/TimeSlot";
+import { OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { isTravelSlot } from "../../utils/timeSlotUtils";
 
 export function findAdjacentTravelTo(
-  occupiedSlots: TimeSlot[],
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
   bufferTimeMinutes: number,
   nearTime: Date,
   toLocationId: string,

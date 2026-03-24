@@ -1,4 +1,4 @@
-import type { TimeSlot } from "../models/TimeSlot";
+import type { AvailableSlot, TimeSlot, TravelSlot } from "../models/TimeSlot";
 
 export function getDurationMinutes(slot: TimeSlot): number {
   return Math.floor((slot.end.getTime() - slot.start.getTime()) / (1000 * 60));
@@ -23,41 +23,95 @@ export function splitSlot(
     return [slot, null];
   }
 
-  const before: TimeSlot = {
-    start: slot.start,
-    end: splitTime,
-    durationMinutes: Math.floor(
-      (splitTime.getTime() - slot.start.getTime()) / (1000 * 60),
-    ),
-    isAvailable: slot.isAvailable,
-    eventId: slot.eventId,
-    eventType: slot.eventType,
-    categoryId: slot.categoryId,
-    isStrictCategory: slot.isStrictCategory,
-  };
+  const beforeDuration = Math.floor(
+    (splitTime.getTime() - slot.start.getTime()) / (1000 * 60),
+  );
+  const afterDuration = Math.floor(
+    (slot.end.getTime() - splitTime.getTime()) / (1000 * 60),
+  );
 
-  const after: TimeSlot = {
-    start: splitTime,
-    end: slot.end,
-    durationMinutes: Math.floor(
-      (slot.end.getTime() - splitTime.getTime()) / (1000 * 60),
-    ),
-    isAvailable: slot.isAvailable,
-    eventId: slot.eventId,
-    eventType: slot.eventType,
-    categoryId: slot.categoryId,
-    isStrictCategory: slot.isStrictCategory,
-  };
+  if (slot.isAvailable) {
+    return [
+      {
+        start: slot.start,
+        end: splitTime,
+        durationMinutes: beforeDuration,
+        isAvailable: true,
+        prevLocationId: slot.prevLocationId,
+        nextLocationId: slot.nextLocationId,
+        categoryId: slot.categoryId,
+        isStrictCategory: slot.isStrictCategory,
+      },
+      {
+        start: splitTime,
+        end: slot.end,
+        durationMinutes: afterDuration,
+        isAvailable: true,
+        prevLocationId: slot.prevLocationId,
+        nextLocationId: slot.nextLocationId,
+        categoryId: slot.categoryId,
+        isStrictCategory: slot.isStrictCategory,
+      },
+    ];
+  }
 
-  return [before, after];
+  if (slot.eventType === "travel") {
+    return [
+      {
+        start: slot.start,
+        end: splitTime,
+        durationMinutes: beforeDuration,
+        isAvailable: false,
+        eventId: slot.eventId,
+        eventType: "travel",
+        travelFromLocationId: slot.travelFromLocationId,
+        travelToLocationId: slot.travelToLocationId,
+        travelType: slot.travelType,
+        insufficientTravel: slot.insufficientTravel,
+        requiredTravelMinutes: slot.requiredTravelMinutes,
+      },
+      {
+        start: splitTime,
+        end: slot.end,
+        durationMinutes: afterDuration,
+        isAvailable: false,
+        eventId: slot.eventId,
+        eventType: "travel",
+        travelFromLocationId: slot.travelFromLocationId,
+        travelToLocationId: slot.travelToLocationId,
+        travelType: slot.travelType,
+        insufficientTravel: slot.insufficientTravel,
+        requiredTravelMinutes: slot.requiredTravelMinutes,
+      },
+    ];
+  }
+
+  return [
+    {
+      start: slot.start,
+      end: splitTime,
+      durationMinutes: beforeDuration,
+      isAvailable: false,
+      eventId: slot.eventId,
+      eventType: slot.eventType,
+    },
+    {
+      start: splitTime,
+      end: slot.end,
+      durationMinutes: afterDuration,
+      isAvailable: false,
+      eventId: slot.eventId,
+      eventType: slot.eventType,
+    },
+  ];
 }
 
 export function occupySlot(
-  slot: TimeSlot,
+  slot: AvailableSlot,
   start: Date,
   end: Date,
   eventId: string,
-  eventType: "task" | "goal" | "plan" | "template" | "travel",
+  eventType: "task" | "goal" | "plan" | "template",
   locationId?: string | null,
 ): TimeSlot[] {
   const result: TimeSlot[] = [];
@@ -119,7 +173,7 @@ export function createTravelSlot(
     insufficientTravel?: boolean;
     requiredTravelMinutes?: number;
   },
-): TimeSlot {
+): TravelSlot {
   return {
     start,
     end,
@@ -130,27 +184,24 @@ export function createTravelSlot(
     eventId,
     eventType: "travel",
     travelType,
-    prevLocationId: fromLocationId,
-    nextLocationId: toLocationId,
     travelFromLocationId: fromLocationId,
     travelToLocationId: toLocationId,
-    insufficientTravel: options?.insufficientTravel,
-    requiredTravelMinutes: options?.requiredTravelMinutes,
+    insufficientTravel: options?.insufficientTravel ?? false,
+    requiredTravelMinutes: options?.requiredTravelMinutes ?? 0,
   };
 }
 
-export function isTravelSlot(slot: TimeSlot): boolean {
-  return slot.eventType === "travel" && !slot.isAvailable;
+export function isTravelSlot(slot: TimeSlot): slot is TravelSlot {
+  return !slot.isAvailable && slot.eventType === "travel";
 }
 
-export function reclaimTravelSlot(travelSlot: TimeSlot): TimeSlot {
+export function reclaimTravelSlot(travelSlot: TravelSlot): AvailableSlot {
   return {
     start: travelSlot.start,
     end: travelSlot.end,
     durationMinutes: travelSlot.durationMinutes,
     isAvailable: true,
-    prevLocationId:
-      travelSlot.travelFromLocationId ?? travelSlot.prevLocationId,
-    nextLocationId: travelSlot.travelToLocationId ?? travelSlot.nextLocationId,
+    prevLocationId: travelSlot.travelFromLocationId,
+    nextLocationId: travelSlot.travelToLocationId,
   };
 }

@@ -10,7 +10,7 @@
  */
 
 import { Planner } from "@/types/prisma";
-import { TimeSlot } from "../models/TimeSlot";
+import { AvailableSlot } from "../models/TimeSlot";
 import { SchedulingContext } from "../models/SchedulingModels";
 import { SchedulingStrategy } from "./SchedulingStrategy";
 
@@ -26,7 +26,7 @@ export class EarliestSlotStrategy implements SchedulingStrategy {
    * @param context - Scheduling context with current date
    * @returns Score from 0.0 to 1.0 (higher = earlier = better)
    */
-  score(_task: Planner, slot: TimeSlot, context: SchedulingContext): number {
+  score(_task: Planner, slot: AvailableSlot, context: SchedulingContext): number {
     const now = context.currentDate;
     const slotStart = slot.start;
 

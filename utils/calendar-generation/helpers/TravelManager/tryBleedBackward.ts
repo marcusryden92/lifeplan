@@ -1,16 +1,16 @@
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { createTravelSlot } from "../../utils/timeSlotUtils";
 import { v4 as uuidv4 } from "uuid";
 
 export function tryBleedBackward(
-  slot: TimeSlot,
+  slot: AvailableSlot,
   prevLoc: string,
   nextLoc: string,
   travelMinutes: number,
   bufferMs: number,
   requireSlotCategoryId: boolean,
-  occupiedSlots: TimeSlot[],
-  result: TimeSlot[],
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  result: AvailableSlot[],
 ): boolean {
   const lastResult = result.length > 0 ? result[result.length - 1] : null;
   const newTravelEnd = new Date(slot.end.getTime() - bufferMs);
@@ -25,7 +25,10 @@ export function tryBleedBackward(
 
   if (!canBleed) return false;
 
-  if (!slot.categoryId && lastResult?.categoryId) {
+  // After canBleed check, lastResult is guaranteed to be an AvailableSlot
+  const lastAvail = lastResult as AvailableSlot;
+
+  if (!slot.categoryId && lastAvail.categoryId) {
     occupiedSlots.push(
       createTravelSlot(
         newTravelStart,
@@ -37,12 +40,12 @@ export function tryBleedBackward(
       ),
     );
     const newCatEnd = new Date(newTravelStart.getTime() - bufferMs);
-    if (newCatEnd.getTime() > lastResult.start.getTime()) {
+    if (newCatEnd.getTime() > lastAvail.start.getTime()) {
       result[result.length - 1] = {
-        ...lastResult,
+        ...lastAvail,
         end: newCatEnd,
         durationMinutes: Math.floor(
-          (newCatEnd.getTime() - lastResult.start.getTime()) / 60000,
+          (newCatEnd.getTime() - lastAvail.start.getTime()) / 60000,
         ),
       };
     } else {
@@ -63,12 +66,12 @@ export function tryBleedBackward(
       ),
     );
     const newLastEnd = new Date(newTravelStart.getTime() - bufferMs);
-    if (newLastEnd.getTime() > lastResult!.start.getTime()) {
+    if (newLastEnd.getTime() > lastAvail.start.getTime()) {
       result[result.length - 1] = {
-        ...lastResult!,
+        ...lastAvail,
         end: newLastEnd,
         durationMinutes: Math.floor(
-          (newLastEnd.getTime() - lastResult!.start.getTime()) / 60000,
+          (newLastEnd.getTime() - lastAvail.start.getTime()) / 60000,
         ),
       };
     } else {

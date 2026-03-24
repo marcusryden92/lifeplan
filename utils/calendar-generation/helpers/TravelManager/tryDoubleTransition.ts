@@ -1,5 +1,5 @@
 import { CategoryPeriod } from "@/types/categoryTypes";
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { createTravelSlot } from "../../utils/timeSlotUtils";
 import { TravelManager } from "../../core/TravelManager";
 import { v4 as uuidv4 } from "uuid";
@@ -7,11 +7,11 @@ import { v4 as uuidv4 } from "uuid";
 export function tryDoubleTransition(
   categoryPeriods: CategoryPeriod[],
   travelManager: TravelManager,
-  slot: TimeSlot,
+  slot: AvailableSlot,
   prevLoc: string,
   nextLoc: string,
-  occupiedSlots: TimeSlot[],
-  result: TimeSlot[],
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  result: AvailableSlot[],
 ): { handled: boolean; catLoc?: string } {
   const categoryPeriod = categoryPeriods.find(
     (p) => p.categoryId === slot.categoryId,

@@ -14,7 +14,7 @@
  */
 
 import { Planner } from "@/types/prisma";
-import { TimeSlot } from "../models/TimeSlot";
+import { AvailableSlot } from "../models/TimeSlot";
 import {
   TravelTimeEntry,
   LocationGroupingScoresConfig,
@@ -49,7 +49,7 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
     };
   }
 
-  score(task: Planner, slot: TimeSlot): number {
+  score(task: Planner, slot: AvailableSlot): number {
     const scores = this.scores;
     const penalties = this.penalties;
 

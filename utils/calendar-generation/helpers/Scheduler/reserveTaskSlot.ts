@@ -9,14 +9,14 @@ import { Planner } from "@/types/prisma";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
 import { TravelManager } from "../../core/TravelManager";
 import { SchedulingFailure, ReservationResult } from "../../models/SchedulingModels";
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot, TravelSlot } from "../../models/TimeSlot";
 import { SchedulingFailureReason } from "../../constants";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { reserveSlotWithTravel } from "../TimeSlotManager/reserveSlotWithTravel";
 
 export function reserveTaskSlot(
   task: Planner,
-  selectedSlot: TimeSlot,
+  selectedSlot: AvailableSlot,
   travelBefore: number,
   travelAfter: number,
   taskLocationId: string | null | undefined,
@@ -25,14 +25,14 @@ export function reserveTaskSlot(
   travelManager: TravelManager,
   absorbPrevTravelAfter: boolean = false,
   absorbedTravelStart: Date | null = null,
-  reclaimPrecedingGapTravel: TimeSlot | null = null,
+  reclaimPrecedingGapTravel: TravelSlot | null = null,
 ): ReservationResult | { failure: SchedulingFailure } {
   const bufferMinutes = slotManager.bufferTimeMinutes;
 
   // When reclaiming a preceding gap travel (e.g. Gamla Stan → Home), use the gap
   // travel's real origin as prevLocationId so travel-before is routed correctly.
   const effectivePrevLocationId = reclaimPrecedingGapTravel
-    ? reclaimPrecedingGapTravel.travelFromLocationId ?? selectedSlot.prevLocationId
+    ? (reclaimPrecedingGapTravel.travelFromLocationId ?? selectedSlot.prevLocationId)
     : selectedSlot.prevLocationId;
 
   // Calculate task times.

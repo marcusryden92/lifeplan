@@ -1,8 +1,8 @@
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot } from "../../models/TimeSlot";
 import { getDaySlots } from "./getDaySlots";
 
 export function getDayAvailableMinutes(
-  availableSlots: TimeSlot[],
+  availableSlots: AvailableSlot[],
   date: Date,
 ): number {
   const slots = getDaySlots(availableSlots, date);

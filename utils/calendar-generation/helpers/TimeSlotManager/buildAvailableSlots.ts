@@ -1,6 +1,5 @@
 import { Planner, SimpleEvent } from "@/types/prisma";
 import { CategoryPeriod } from "@/types/categoryTypes";
-import { TimeSlot } from "../../models/TimeSlot";
 import {
   eventsToIntervals,
   findGaps,
@@ -22,7 +21,7 @@ export function buildAvailableSlots(
   plannerLocationMap?: Map<string, string | null>,
   enableLogging?: boolean,
   endDateOverride?: Date,
-): TimeSlot[] {
+) {
   if (enableLogging) logInitialSlotContext(existingEvents);
 
   const numDays = daysNeededForPlans(planners, startDate);

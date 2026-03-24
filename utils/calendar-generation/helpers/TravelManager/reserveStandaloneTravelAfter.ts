@@ -1,10 +1,10 @@
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { createTravelSlot } from "../../utils/timeSlotUtils";
 import { v4 as uuidv4 } from "uuid";
 
 export function reserveStandaloneTravelAfter(
-  availableSlots: TimeSlot[],
-  occupiedSlots: TimeSlot[],
+  availableSlots: AvailableSlot[],
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
   bufferTimeMinutes: number,
   travelStart: Date,
   travelMinutes: number,
@@ -30,12 +30,11 @@ export function reserveStandaloneTravelAfter(
 
     for (let i = availableSlots.length - 1; i >= 0; i--) {
       const slot = availableSlots[i];
-      if (!slot.isAvailable) continue;
       const slotStartMs = slot.start.getTime();
       const slotEndMs = slot.end.getTime();
       if (slotEndMs <= travelStartMs || slotStartMs >= travelEndMs) continue;
 
-      const replacements: TimeSlot[] = [];
+      const replacements: AvailableSlot[] = [];
       if (slotStartMs < travelStartMs) {
         replacements.push({
           ...slot,
@@ -60,14 +59,13 @@ export function reserveStandaloneTravelAfter(
   const bufferMs = bufferTimeMinutes * 60000;
   const slotIndex = availableSlots.findIndex(
     (slot) =>
-      slot.isAvailable &&
       slot.start.getTime() - bufferMs <= travelStartMs &&
       slot.end.getTime() >= travelEndMs,
   );
   if (slotIndex === -1) return { success: false };
 
   const slot = availableSlots[slotIndex];
-  const newSlots: TimeSlot[] = [];
+  const newSlots: (AvailableSlot | TravelSlot)[] = [];
 
   if (travelStartMs > slot.start.getTime()) {
     newSlots.push({
@@ -93,8 +91,8 @@ export function reserveStandaloneTravelAfter(
     });
   }
 
-  availableSlots.splice(slotIndex, 1, ...newSlots.filter((s) => s.isAvailable));
-  occupiedSlots.push(...newSlots.filter((s) => !s.isAvailable));
+  availableSlots.splice(slotIndex, 1, ...newSlots.filter((s): s is AvailableSlot => s.isAvailable));
+  occupiedSlots.push(...newSlots.filter((s): s is TravelSlot => !s.isAvailable));
 
   return { success: true };
 }

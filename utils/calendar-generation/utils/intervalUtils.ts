@@ -6,7 +6,7 @@
  */
 
 import { SimpleEvent } from "@/types/prisma";
-import { TimeSlot } from "../models/TimeSlot";
+import { AvailableSlot } from "../models/TimeSlot";
 
 export interface Interval {
   start: Date;
@@ -239,7 +239,7 @@ export function findGaps(
   rangeStart: Date,
   rangeEnd: Date,
   startingLocation: string | null = null,
-): TimeSlot[] {
+): AvailableSlot[] {
   if (occupiedIntervals.length === 0) {
     const durationMinutes = Math.floor(
       (rangeEnd.getTime() - rangeStart.getTime()) / 60000,
@@ -257,7 +257,7 @@ export function findGaps(
   }
 
   const merged = mergeIntervals(occupiedIntervals);
-  const gaps: TimeSlot[] = [];
+  const gaps: AvailableSlot[] = [];
 
   if (merged[0].start > rangeStart) {
     const end = merged[0].start;
@@ -374,7 +374,7 @@ export function totalAvailableMinutes(gaps: Interval[]): number {
 export function findDailyGaps(
   date: Date,
   occupiedIntervals: Interval[],
-): TimeSlot[] {
+): AvailableSlot[] {
   const dayStart = new Date(date);
   dayStart.setHours(0, 0, 0, 0);
 

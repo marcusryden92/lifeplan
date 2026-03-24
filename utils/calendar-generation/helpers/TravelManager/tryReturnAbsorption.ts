@@ -1,21 +1,21 @@
-import { TimeSlot } from "../../models/TimeSlot";
+import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { createTravelSlot } from "../../utils/timeSlotUtils";
 import { TravelManager } from "../../core/TravelManager";
 import { v4 as uuidv4 } from "uuid";
 
 export function tryReturnAbsorption(
   travelManager: TravelManager,
-  slot: TimeSlot,
-  nextSlot: TimeSlot | null,
+  slot: AvailableSlot,
+  nextSlot: AvailableSlot | null,
   prevLoc: string,
   nextLoc: string,
   travelMinutes: number,
-  occupiedSlots: TimeSlot[],
-  result: TimeSlot[],
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  result: AvailableSlot[],
 ): { handled: boolean; skipNext?: boolean } {
   if (
     travelMinutes < slot.durationMinutes ||
-    !nextSlot?.isAvailable ||
+    !nextSlot ||
     nextSlot.categoryId ||
     nextSlot.start.getTime() !== slot.end.getTime() ||
     nextSlot.prevLocationId !== nextLoc ||
