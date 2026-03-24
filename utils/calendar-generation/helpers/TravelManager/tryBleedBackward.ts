@@ -26,7 +26,7 @@ export function tryBleedBackward(
   if (!canBleed) return false;
 
   // After canBleed check, lastResult is guaranteed to be an AvailableSlot
-  const lastAvail = lastResult as AvailableSlot;
+  const lastAvail = lastResult;
 
   if (!slot.categoryId && lastAvail.categoryId) {
     occupiedSlots.push(
@@ -37,7 +37,10 @@ export function tryBleedBackward(
         nextLoc,
         "preliminary",
         uuidv4(),
-        { categoryId: lastAvail.categoryId, isStrictCategory: lastAvail.isStrictCategory },
+        {
+          categoryId: lastAvail.categoryId,
+          isStrictCategory: lastAvail.isStrictCategory,
+        },
       ),
     );
     const newCatEnd = new Date(newTravelStart.getTime() - bufferMs);
@@ -64,7 +67,10 @@ export function tryBleedBackward(
         nextLoc,
         "preliminary",
         uuidv4(),
-        { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
+        {
+          categoryId: slot.categoryId,
+          isStrictCategory: slot.isStrictCategory,
+        },
       ),
     );
     const newLastEnd = new Date(newTravelStart.getTime() - bufferMs);

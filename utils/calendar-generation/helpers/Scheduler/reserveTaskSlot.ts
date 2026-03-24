@@ -8,7 +8,10 @@
 import { Planner } from "@/types/prisma";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
 import { TravelManager } from "../../core/TravelManager";
-import { SchedulingFailure, ReservationResult } from "../../models/SchedulingModels";
+import {
+  SchedulingFailure,
+  ReservationResult,
+} from "../../models/SchedulingModels";
 import { AvailableSlot, TravelSlot } from "../../models/TimeSlot";
 import { SchedulingFailureReason } from "../../constants";
 import { dateTimeService } from "../../utils/dateTimeService";
@@ -32,7 +35,8 @@ export function reserveTaskSlot(
   // When reclaiming a preceding gap travel (e.g. Gamla Stan → Home), use the gap
   // travel's real origin as prevLocationId so travel-before is routed correctly.
   const effectivePrevLocationId = reclaimPrecedingGapTravel
-    ? (reclaimPrecedingGapTravel.travelFromLocationId ?? selectedSlot.prevLocationId)
+    ? (reclaimPrecedingGapTravel.travelFromLocationId ??
+      selectedSlot.prevLocationId)
     : selectedSlot.prevLocationId;
 
   // Calculate task times.
@@ -53,9 +57,11 @@ export function reserveTaskSlot(
     const travelEnd = new Date(selectedSlot.start.getTime());
     const canPlaceOutside = travelManager.canPlaceStandaloneTravelBefore(
       travelEnd,
-      travelBefore
+      travelBefore,
     );
-    offsetToTaskStart = canPlaceOutside ? leadingBuffer : leadingBuffer + travelBefore + bufferMinutes;
+    offsetToTaskStart = canPlaceOutside
+      ? leadingBuffer
+      : leadingBuffer + travelBefore + bufferMinutes;
   }
 
   // When absorbing the previous task's travel-after, or reclaiming a preceding gap travel,
@@ -64,12 +70,9 @@ export function reserveTaskSlot(
 
   const taskStartDate = dateTimeService.addDuration(
     effectiveSlotStart,
-    offsetToTaskStart
+    offsetToTaskStart,
   );
-  const taskEndDate = dateTimeService.addDuration(
-    taskStartDate,
-    task.duration
-  );
+  const taskEndDate = dateTimeService.addDuration(taskStartDate, task.duration);
 
   // Reserve the slot with travel placement.
   // If placing travel-before outside, reserve it separately and omit travel-before inside.
@@ -91,12 +94,11 @@ export function reserveTaskSlot(
   const result = reserveSlotWithTravel(
     slotManager.availableSlots,
     slotManager.occupiedSlots,
-    travelManager,
     slotManager.bufferTimeMinutes,
     taskStartDate,
     taskEndDate,
     task.id,
-    task.itemType as "task" | "goal" | "plan" | "template",
+    task.plannerType,
     taskLocationId ?? null,
     effectiveTravelBefore,
     travelAfter,

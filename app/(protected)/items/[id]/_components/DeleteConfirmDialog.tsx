@@ -35,7 +35,7 @@ export function DeleteConfirmDialog({
           <AlertDialogTitle>Delete Item</AlertDialogTitle>
           <AlertDialogDescription>
             Are you sure you want to delete &ldquo;{item.title}&rdquo;?
-            {item.itemType === "goal" &&
+            {item.plannerType === "goal" &&
               subtasksLength > 0 &&
               ` This will also delete ${subtasksLength} subtask${subtasksLength !== 1 ? "s" : ""}.`}
           </AlertDialogDescription>

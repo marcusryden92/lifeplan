@@ -4,7 +4,7 @@
  * Resolves category wrapper ID and builds the SimpleEvent for a scheduled task.
  */
 
-import { Planner, SimpleEvent } from "@/types/prisma";
+import { Planner, SimpleEvent, EventType } from "@/types/prisma";
 import { SchedulingContext } from "../../models/SchedulingModels";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
@@ -13,7 +13,7 @@ export function buildTaskEvent(
   task: Planner,
   taskStartDate: Date,
   taskEndDate: Date,
-  context: SchedulingContext
+  context: SchedulingContext,
 ): SimpleEvent {
   const now = new Date();
 
@@ -35,7 +35,7 @@ export function buildTaskEvent(
       for (const slot of timeSlots) {
         if (slot.days.includes(dayOfWeek)) {
           const startTime = `${String(taskStartDate.getHours()).padStart(2, "0")}:${String(
-            taskStartDate.getMinutes()
+            taskStartDate.getMinutes(),
           ).padStart(2, "0")}`;
 
           if (startTime >= slot.startTime && startTime < slot.endTime) {
@@ -53,7 +53,8 @@ export function buildTaskEvent(
   const baseExtendedProps = {
     id: uuidv4(),
     eventId: task.id,
-    itemType: task.itemType,
+    plannerType: task.plannerType,
+    eventType: EventType.planner,
     completedEndTime: null,
     completedStartTime: null,
     parentId: task.parentId || null,

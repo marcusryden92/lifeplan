@@ -1,10 +1,10 @@
-import { SimpleEvent, ItemType } from "@/types/prisma";
+import { SimpleEvent, EventType } from "@/types/prisma";
 import { OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { getAllTravelSlots } from "./getAllTravelSlots";
 
 export function generateTravelEvents(
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
-  userId: string
+  userId: string,
 ): SimpleEvent[] {
   const travelSlots = getAllTravelSlots(occupiedSlots);
   const now = new Date();
@@ -23,7 +23,8 @@ export function generateTravelEvents(
       extendedProps: {
         id: slot.eventId,
         eventId: slot.eventId,
-        itemType: ItemType.travel,
+        PlannerType: null,
+        eventType: EventType.travel,
         parentId: null,
         completedEndTime: null,
         completedStartTime: null,
@@ -31,7 +32,8 @@ export function generateTravelEvents(
         toLocationId: slot.travelToLocationId,
         travelMinutes: slot.durationMinutes,
         insufficientTravel: slot.insufficientTravel,
-        requiredTravelMinutes: slot.requiredTravelMinutes > 0 ? slot.requiredTravelMinutes : null,
+        requiredTravelMinutes:
+          slot.requiredTravelMinutes > 0 ? slot.requiredTravelMinutes : null,
       },
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),

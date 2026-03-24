@@ -1,4 +1,4 @@
-import { ItemType } from "@/types/prisma";
+import { PlannerType, EventType } from "@/types/prisma";
 
 type BaseSlot = {
   start: Date;
@@ -17,13 +17,14 @@ export type AvailableSlot = BaseSlot & {
 export type OccupiedSlot = BaseSlot & {
   isAvailable: false;
   eventId: string;
-  eventType: Exclude<ItemType, "travel" | "category">;
+  plannerType: PlannerType;
+  eventType: Exclude<EventType, "travel">;
 };
 
 export type TravelSlot = BaseSlot & {
   isAvailable: false;
   eventId: string;
-  eventType: Extract<ItemType, "travel">;
+  eventType: Extract<EventType, "travel">;
   travelFromLocationId: string | null;
   travelToLocationId: string | null;
   travelType: "preliminary" | "inbound" | "outbound";

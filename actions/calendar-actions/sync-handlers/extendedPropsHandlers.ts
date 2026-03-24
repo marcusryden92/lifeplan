@@ -4,33 +4,35 @@ type Database = typeof import("@/lib/db").db;
 
 export function handleExtendedPropsChanges(
   db: Database,
-  databaseChanges: DatabaseChanges
+  databaseChanges: DatabaseChanges,
 ) {
   const operations = [];
 
   // CREATE
   if (databaseChanges.extendedProps.create.length) {
-    const cleanData: Prisma.EventExtendedPropsCreateManyInput[] = databaseChanges.extendedProps.create.map((props) => ({
-      id: props.id,
-      eventId: props.eventId,
-      itemType: props.itemType,
-      parentId: props.parentId,
-      completedStartTime: props.completedStartTime,
-      completedEndTime: props.completedEndTime,
-    }));
+    const cleanData: Prisma.EventExtendedPropsCreateManyInput[] =
+      databaseChanges.extendedProps.create.map((props) => ({
+        id: props.id,
+        eventId: props.eventId,
+        plannerType: props.plannerType,
+        eventType: props.eventType,
+        parentId: props.parentId,
+        completedStartTime: props.completedStartTime,
+        completedEndTime: props.completedEndTime,
+      }));
 
     operations.push(
       db.eventExtendedProps.createMany({
         data: cleanData,
         skipDuplicates: true,
-      })
+      }),
     );
   }
 
   // UPDATE
   for (const props of databaseChanges.extendedProps.update) {
     const updateData: Prisma.EventExtendedPropsUpdateInput = {
-      itemType: props.itemType,
+      plannerType: props.plannerType,
       parentId: props.parentId,
       completedStartTime: props.completedStartTime,
       completedEndTime: props.completedEndTime,
@@ -39,7 +41,8 @@ export function handleExtendedPropsChanges(
     const createData: Prisma.EventExtendedPropsCreateInput = {
       id: props.id,
       event: { connect: { id: props.eventId } },
-      itemType: props.itemType,
+      plannerType: props.plannerType,
+      eventType: props.eventType,
       parentId: props.parentId,
       completedStartTime: props.completedStartTime,
       completedEndTime: props.completedEndTime,
@@ -50,7 +53,7 @@ export function handleExtendedPropsChanges(
         where: { eventId: props.eventId },
         update: updateData,
         create: createData,
-      })
+      }),
     );
   }
 
@@ -61,7 +64,7 @@ export function handleExtendedPropsChanges(
         where: {
           id: { in: databaseChanges.extendedProps.destroy.map((p) => p.id) },
         },
-      })
+      }),
     );
   }
 

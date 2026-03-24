@@ -52,14 +52,14 @@ export default function ItemDetailPage() {
 
   // Get subtasks for goals
   const subtasks = useMemo(() => {
-    if (!item || item.itemType !== "goal") return [];
+    if (!item || item.plannerType !== "goal") return [];
     return getSubtasksById(planner, item.id);
   }, [planner, item]);
 
   // Calculate total duration
   const totalDuration = useMemo(() => {
     if (!item) return 0;
-    if (item.itemType === "goal") {
+    if (item.plannerType === "goal") {
       return totalSubtaskDuration(item.id, planner);
     }
     return item.duration;
@@ -71,7 +71,7 @@ export default function ItemDetailPage() {
     return categories.find((c) => c.id === item.categoryId);
   }, [item, categories]);
 
-  const categoryHasLocation = !!(category?.locationId);
+  const categoryHasLocation = !!category?.locationId;
 
   // Handlers
   const {
@@ -93,7 +93,15 @@ export default function ItemDetailPage() {
     confirmResetSubgoalLocations,
     applyLocationChange,
     closeCascadeDialog,
-  } = useItemHandlers(item, subtasks, planner, updatePlannerArray, updateAll, categoryHasLocation, categories);
+  } = useItemHandlers(
+    item,
+    subtasks,
+    planner,
+    updatePlannerArray,
+    updateAll,
+    categoryHasLocation,
+    categories,
+  );
 
   if (loading) {
     return (
@@ -160,7 +168,9 @@ export default function ItemDetailPage() {
                 onCategoryChange={handleCategoryChange}
                 onLocationChange={handleLocationChange}
                 onToggleLocationOverride={handleToggleLocationOverride}
-                onResetSubgoalLocations={() => setShowResetLocationsConfirm(true)}
+                onResetSubgoalLocations={() =>
+                  setShowResetLocationsConfirm(true)
+                }
                 onDateChange={handleDateChange}
               />
             </div>
@@ -198,10 +208,15 @@ export default function ItemDetailPage() {
               onClick={(e) => e.stopPropagation()}
             >
               <p className="text-sm text-gray-700 mb-4">
-                Reset all sub-goal locations to inherited? This will remove any custom location overrides.
+                Reset all sub-goal locations to inherited? This will remove any
+                custom location overrides.
               </p>
               <div className="flex gap-2 justify-end">
-                <Button variant="outline" size="sm" onClick={() => setShowResetLocationsConfirm(false)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowResetLocationsConfirm(false)}
+                >
                   Cancel
                 </Button>
                 <Button size="sm" onClick={confirmResetSubgoalLocations}>

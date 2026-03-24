@@ -65,12 +65,12 @@ Location: `utils/calendar-generation/core/CalendarGenerator.ts`
 ```typescript
 interface CalendarGenerationInput {
   userId: string;
-  weekStartDay: number;            // 0-6 (Sunday-Saturday)
-  templates: EventTemplate[];      // Recurring time blocks
-  planners: Planner[];             // Tasks, goals, and plans to schedule
+  weekStartDay: number; // 0-6 (Sunday-Saturday)
+  templates: EventTemplate[]; // Recurring time blocks
+  planners: Planner[]; // Tasks, goals, and plans to schedule
   previousCalendar: SimpleEvent[]; // Existing calendar events to preserve
   config?: CalendarGenerationConfig;
-  categories?: Category[];         // Categories with time constraints
+  categories?: Category[]; // Categories with time constraints
 }
 ```
 
@@ -93,16 +93,16 @@ CalendarGenerator delegates each phase to a dedicated subfunction. The orchestra
 
 ```typescript
 // Subfunctions imported by CalendarGenerator
-import { validateInput }             from "./CalendarGenerator/initialization/validateInput";
-import { buildInitialEventArray }    from "./CalendarGenerator/initialization/buildInitialEventArray";
-import { expandTemplates }           from "./CalendarGenerator/template-processing/expandTemplates";
-import { buildLocationMap }          from "./CalendarGenerator/slot-building/buildLocationMap";
-import { buildCategoryConstraints }  from "./CalendarGenerator/slot-building/buildCategoryConstraints";
-import { buildInitialSlots }         from "./CalendarGenerator/slot-building/buildInitialSlots";
-import { prepareSchedulingContext }  from "./CalendarGenerator/scheduling/prepareSchedulingContext";
-import { buildSchedulingStrategy }   from "./CalendarGenerator/scheduling/buildSchedulingStrategy";
-import { prepareCandidates }         from "./CalendarGenerator/scheduling/prepareCandidates";
-import { assembleFinalEvents }       from "./CalendarGenerator/finalization/assembleFinalEvents";
+import { validateInput } from "./CalendarGenerator/initialization/validateInput";
+import { buildInitialEventArray } from "./CalendarGenerator/initialization/buildInitialEventArray";
+import { expandTemplates } from "./CalendarGenerator/template-processing/expandTemplates";
+import { buildLocationMap } from "./CalendarGenerator/slot-building/buildLocationMap";
+import { buildCategoryConstraints } from "./CalendarGenerator/slot-building/buildCategoryConstraints";
+import { buildInitialSlots } from "./CalendarGenerator/slot-building/buildInitialSlots";
+import { prepareSchedulingContext } from "./CalendarGenerator/scheduling/prepareSchedulingContext";
+import { buildSchedulingStrategy } from "./CalendarGenerator/scheduling/buildSchedulingStrategy";
+import { prepareCandidates } from "./CalendarGenerator/scheduling/prepareCandidates";
+import { assembleFinalEvents } from "./CalendarGenerator/finalization/assembleFinalEvents";
 ```
 
 ### Phase 1: Validation
@@ -117,14 +117,17 @@ Checks that required fields exist, planners have durations, etc. Returns early w
 
 ```typescript
 const { eventArray, memoizedEventIds } = buildInitialEventArray(
-  input.userId, input.planners, input.previousCalendar, currentDate
+  input.userId,
+  input.planners,
+  input.previousCalendar,
+  currentDate,
 );
 ```
 
 Delegates to `EventAssembler` for three steps:
 
 1. **Memoized events** -- past events from `previousCalendar` that are preserved (excluding templates and travel, which are regenerated)
-2. **Plan events** -- fixed-time appointments (planners with `itemType === "plan"` and a `starts` field), converted directly to SimpleEvents
+2. **Plan events** -- fixed-time appointments (planners with `plannerType === "plan"` and a `starts` field), converted directly to SimpleEvents
 3. **Completed events** -- tasks with `completedStartTime` and `completedEndTime`, placed at their completed times
 
 `memoizedEventIds` tracks which planners are already placed so they won't be re-scheduled.
@@ -132,8 +135,20 @@ Delegates to `EventAssembler` for three steps:
 ### Phase 3: Expand Templates
 
 ```typescript
-const { recurringTemplateEvents, perTemplateMasks, largestTemplateGap, updatedMetrics } =
-  expandTemplates(input.userId, input.templates, this.weekStartDay, currentDate, maxDaysAhead, enableLogging, this.metrics);
+const {
+  recurringTemplateEvents,
+  perTemplateMasks,
+  largestTemplateGap,
+  updatedMetrics,
+} = expandTemplates(
+  input.userId,
+  input.templates,
+  this.weekStartDay,
+  currentDate,
+  maxDaysAhead,
+  enableLogging,
+  this.metrics,
+);
 ```
 
 1. `expandTemplates()` creates one SimpleEvent per template with an RRule for FullCalendar UI display
@@ -148,27 +163,31 @@ type PerTemplateMask = {
   title?: string;
   color?: string;
   locationId?: string | null;
-  occurrences: TemplateDayDef[];   // Sparse list of weekdays with times
-  startDateISO?: string;           // Anchor date for interval-based templates
-  intervalDays?: number;           // Repeat every N days
+  occurrences: TemplateDayDef[]; // Sparse list of weekdays with times
+  startDateISO?: string; // Anchor date for interval-based templates
+  intervalDays?: number; // Repeat every N days
 };
 
 type TemplateDayDef = {
-  day: number;                     // 0-6 (Sunday-Saturday)
+  day: number; // 0-6 (Sunday-Saturday)
   times: TemplateTimeWithExceptions[];
 };
 
 type TemplateTimeWithExceptions = {
-  startTime: string;               // "09:00"
-  endTime: string;                 // "17:00"
-  exceptions?: string[];           // ISO dates to skip
+  startTime: string; // "09:00"
+  endTime: string; // "17:00"
+  exceptions?: string[]; // ISO dates to skip
 };
 ```
 
 ### Phase 4: Build Location Map
 
 ```typescript
-const { locationMap, travelLocationMap } = buildLocationMap(input.planners, input.templates, input.categories || []);
+const { locationMap, travelLocationMap } = buildLocationMap(
+  input.planners,
+  input.templates,
+  input.categories || [],
+);
 ```
 
 Builds **two** separate location maps via `LocationMapper`:
@@ -179,6 +198,7 @@ Builds **two** separate location maps via `LocationMapper`:
 The reason for the split: a task can visually belong to a category with a default location, but should not generate travel events unless it has an explicit location assignment on the item or its ancestors. Category location is a soft organizational default, not a physical travel constraint.
 
 **Resolution order for each item:**
+
 1. Plan items always use their own `locationId` (no inheritance)
 2. If item has `useParentLocation=false` and owns a `locationId`: use it
 3. Walk up parent chain for nearest ancestor with a `locationId`
@@ -188,8 +208,16 @@ The reason for the split: a task can visually belong to a category with a defaul
 ### Phase 5: Build Category Constraints
 
 ```typescript
-const { categoryConstraintMap, categoryPeriodsStatic, wrapperPeriodsForManager } =
-  buildCategoryConstraints(input.categories, currentDate, this.weekStartDay, maxDaysAhead);
+const {
+  categoryConstraintMap,
+  categoryPeriodsStatic,
+  wrapperPeriodsForManager,
+} = buildCategoryConstraints(
+  input.categories,
+  currentDate,
+  this.weekStartDay,
+  maxDaysAhead,
+);
 ```
 
 Builds category constraint data used throughout scheduling:
@@ -204,8 +232,14 @@ Uses `buildCategoryConstraintMap()` and `generateCategorySlotPeriods()` from `bu
 
 ```typescript
 buildInitialSlots(
-  this.slotManager, currentDate, 2, filteredEvents, perTemplateMasks,
-  plannerLocationMap, wrapperPeriodsForManager, enableLogging
+  this.slotManager,
+  currentDate,
+  2,
+  filteredEvents,
+  perTemplateMasks,
+  plannerLocationMap,
+  wrapperPeriodsForManager,
+  enableLogging,
 );
 ```
 
@@ -214,6 +248,7 @@ buildInitialSlots(
 3. Calls `slotManager.buildDailySlots()` for 14 days (2 weeks)
 
 For each day, the SlotBuilder:
+
 - Starts with 24 hours available
 - Subtracts time blocked by templates (using masks)
 - Subtracts time blocked by existing events (plans, completed items)
@@ -226,8 +261,15 @@ For each day, the SlotBuilder:
 
 ```typescript
 const context = prepareSchedulingContext(
-  input.userId, currentDate, this.weekStartDay, input.planners,
-  filteredEvents, this.slotManager, this.metrics, categoryConstraintMap, plannerLocationMap
+  input.userId,
+  currentDate,
+  this.weekStartDay,
+  input.planners,
+  filteredEvents,
+  this.slotManager,
+  this.metrics,
+  categoryConstraintMap,
+  plannerLocationMap,
 );
 ```
 
@@ -245,13 +287,18 @@ const strategy = buildSchedulingStrategy({
 ```
 
 Creates a `CompositeStrategy` combining:
+
 - **EarliestSlotStrategy** (default weight: 1.0) -- prefers earlier slots
 - **LocationGroupingStrategy** (default weight: 0.2) -- minimizes travel, only added if travel time matrix is provided
 
 ### Phase 9: Prepare Candidates
 
 ```typescript
-const candidates = prepareCandidates(input.planners, memoizedEventIds, currentDate);
+const candidates = prepareCandidates(
+  input.planners,
+  memoizedEventIds,
+  currentDate,
+);
 ```
 
 Delegates to `PrioritySorter.sortByPriorityAndConstraints()`:
@@ -265,7 +312,7 @@ Delegates to `PrioritySorter.sortByPriorityAndConstraints()`:
 ```typescript
 function calculateTaskUrgency(task, context): number {
   if (!task.deadline) {
-    return task.priority * 0.3;   // No deadline = 30% of priority
+    return task.priority * 0.3; // No deadline = 30% of priority
   }
 
   const minutesUntilDeadline = (deadline - currentDate) / 60000;
@@ -285,10 +332,19 @@ function calculateTaskUrgency(task, context): number {
 
 ```typescript
 const scheduler = new Scheduler(this.slotManager, strategy, context);
-const orchestrator = new TaskSchedulingOrchestrator(this.slotManager, scheduler, this.weekStartDay);
+const orchestrator = new TaskSchedulingOrchestrator(
+  this.slotManager,
+  scheduler,
+  this.weekStartDay,
+);
 const schedulingResult = orchestrator.scheduleTasksAndGoals(
-  input.planners, candidates, memoizedEventIds, largestTemplateGap,
-  perTemplateMasks, context, plannerLocationMap
+  input.planners,
+  candidates,
+  memoizedEventIds,
+  largestTemplateGap,
+  perTemplateMasks,
+  context,
+  plannerLocationMap,
 );
 ```
 
@@ -298,7 +354,11 @@ The `TaskSchedulingOrchestrator` runs a week-by-week loop. See [TaskSchedulingOr
 
 ```typescript
 const allEvents = assembleFinalEvents(
-  input.userId, this.slotManager, context, categoryPeriodsStatic, plannerLocationMap
+  input.userId,
+  this.slotManager,
+  context,
+  categoryPeriodsStatic,
+  plannerLocationMap,
 );
 ```
 
@@ -359,8 +419,8 @@ Orchestrator (~378 lines) that delegates to five specialized helper classes:
 
 ```typescript
 class TimeSlotManager {
-  private availableSlots: Map<string, TimeSlot[]>;  // day key -> available slots
-  private occupiedSlots: Map<string, TimeSlot[]>;   // day key -> occupied slots
+  private availableSlots: Map<string, TimeSlot[]>; // day key -> available slots
+  private occupiedSlots: Map<string, TimeSlot[]>; // day key -> occupied slots
   private bufferTimeMinutes: number;
 
   // Helper instances
@@ -384,18 +444,18 @@ TimeSlotManager/
 
 **Key Methods:**
 
-| Method | Description |
-|--------|-------------|
-| `buildAvailableSlots(...)` | Builds available slots for a single day |
-| `buildDailySlots(...)` | Builds slots across multiple days |
+| Method                                                                   | Description                                             |
+| ------------------------------------------------------------------------ | ------------------------------------------------------- |
+| `buildAvailableSlots(...)`                                               | Builds available slots for a single day                 |
+| `buildDailySlots(...)`                                                   | Builds slots across multiple days                       |
 | `findAllFittingSlots(duration, afterDate, maxDays, categoryConstraint?)` | Returns all slots that can fit a task of given duration |
-| `reserveSlotWithTravel(...)` | Reserves a slot and places travel before/after |
-| `setCategoryPeriods(periods)` | Sets category time periods for boundary splitting |
-| `canPlaceStandaloneTravelBefore(travelEnd, minutes)` | Checks if travel can be placed outside a slot |
-| `reserveStandaloneTravelBefore/After(...)` | Places travel outside a task's slot |
-| `reserveInsufficientTravelBefore/After(...)` | Handles travel slots that don't have enough space |
-| `generateTravelEvents(userId)` | Converts stored travel slots to SimpleEvents |
-| `findAdjacentTravelTo(nearTime, toLocationId)` | Finds reusable travel going to a destination |
+| `reserveSlotWithTravel(...)`                                             | Reserves a slot and places travel before/after          |
+| `setCategoryPeriods(periods)`                                            | Sets category time periods for boundary splitting       |
+| `canPlaceStandaloneTravelBefore(travelEnd, minutes)`                     | Checks if travel can be placed outside a slot           |
+| `reserveStandaloneTravelBefore/After(...)`                               | Places travel outside a task's slot                     |
+| `reserveInsufficientTravelBefore/After(...)`                             | Handles travel slots that don't have enough space       |
+| `generateTravelEvents(userId)`                                           | Converts stored travel slots to SimpleEvents            |
+| `findAdjacentTravelTo(nearTime, toLocationId)`                           | Finds reusable travel going to a destination            |
 
 ### TemplateExpander
 
@@ -405,11 +465,11 @@ Converts `EventTemplate` records into usable formats.
 
 **Key Methods:**
 
-| Method | Description |
-|--------|-------------|
+| Method                                                   | Description                                                       |
+| -------------------------------------------------------- | ----------------------------------------------------------------- |
 | `expandTemplates(userId, templates, startDate, endDate)` | Creates one SimpleEvent per template with an RRule for recurrence |
-| `getPerTemplateMasks(templates)` | Creates compact masks for slot calculation |
-| `calculateLargestGap(templates)` | Finds the biggest continuous available window in a week |
+| `getPerTemplateMasks(templates)`                         | Creates compact masks for slot calculation                        |
+| `calculateLargestGap(templates)`                         | Finds the biggest continuous available window in a week           |
 
 Templates that cross midnight are split into two day definitions (e.g., "Sleep 22:00-06:00" becomes day N 22:00-24:00 and day N+1 00:00-06:00).
 
@@ -453,7 +513,7 @@ Scheduler/
 4. Verify capacity:
    - Base required: `task.duration + bufferMinutes`
    - Add travel-after cost: `effectiveTravelAfter + bufferMinutes` (if non-zero)
-   - Add travel-before cost: `needTravelBefore + bufferMinutes` only if it *cannot* be placed outside the slot
+   - Add travel-before cost: `needTravelBefore + bufferMinutes` only if it _cannot_ be placed outside the slot
    - Bonus capacity: if absorbing previous task's travel-after, that travel's duration is added to effective slot capacity
 5. Return the first slot where `slotDuration >= requiredInside`
 
@@ -653,7 +713,7 @@ interface SchedulingContext {
   userId: string;
   weekStartDay: number;
   allPlanners: Planner[];
-  scheduledEvents: SimpleEvent[];         // Mutable - events added here
+  scheduledEvents: SimpleEvent[]; // Mutable - events added here
   availableMinutesPerWeek: number;
   metrics: SchedulingMetrics;
   categoryConstraints?: Map<string, CategoryConstraint>;
@@ -667,7 +727,7 @@ interface SchedulingContext {
 interface SchedulingFailure {
   taskId: string;
   taskTitle: string;
-  reason: SchedulingFailureReason;  // TOO_LARGE | NO_SLOTS | INVALID_TASK | etc.
+  reason: SchedulingFailureReason; // TOO_LARGE | NO_SLOTS | INVALID_TASK | etc.
   details: string;
   context?: Record<string, unknown>;
 }
@@ -736,7 +796,7 @@ When scheduling a task at a different location than neighbors:
 [Next Event @ Location C]
 ```
 
-**Travel-before placement:** The Scheduler first checks if travel-before can be placed *outside* the slot (in the previous slot's free space via `canPlaceStandaloneTravelBefore`). Travel can start inside the buffer zone before a slot, not just within the slot's boundaries. If placement outside fails, falls back to including travel-before inside the slot.
+**Travel-before placement:** The Scheduler first checks if travel-before can be placed _outside_ the slot (in the previous slot's free space via `canPlaceStandaloneTravelBefore`). Travel can start inside the buffer zone before a slot, not just within the slot's boundaries. If placement outside fails, falls back to including travel-before inside the slot.
 
 **Travel shifting:** When a new task is added in the FREE SPACE, travel-after shifts forward to stay adjacent to the next event.
 
@@ -790,10 +850,12 @@ interface Category {
 ### How Categories Work
 
 1. **Time Slot Definition**: Categories can define specific time windows when their items should be scheduled
+
    - Example: "Work" category with weekday 9am-5pm slots
    - Example: "Exercise" category with Mon/Wed/Fri 6-7am slots
 
 2. **Strict vs Non-Strict Mode**:
+
    - **Strict (`isStrict: true`)**: Only items from this category can occupy the defined time slots. Other tasks will be blocked from these times.
    - **Non-Strict (`isStrict: false`)**: Category items are preferred but other items can fill empty space. More flexible scheduling.
 
@@ -1026,7 +1088,10 @@ for (const task of goalTasks) {
 **Reuse:** If existing travel already goes to the right destination, no new travel-after is needed:
 
 ```typescript
-const reusable = slotManager.findAdjacentTravelTo(slot.end, slot.nextLocationId);
+const reusable = slotManager.findAdjacentTravelTo(
+  slot.end,
+  slot.nextLocationId,
+);
 if (reusable) {
   effectiveTravelAfter = 0;
 }
@@ -1060,7 +1125,7 @@ Tasks with category constraints are scheduled first (via `PrioritySorter`) to en
 
 ### 8. Standalone Travel Placement
 
-Travel-before is preferentially placed *outside* the task's slot. The Scheduler checks via `canPlaceStandaloneTravelBefore` and only falls back to inside-slot placement when there's no room in the preceding slot.
+Travel-before is preferentially placed _outside_ the task's slot. The Scheduler checks via `canPlaceStandaloneTravelBefore` and only falls back to inside-slot placement when there's no room in the preceding slot.
 
 ---
 

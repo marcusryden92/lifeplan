@@ -17,22 +17,23 @@ model SimpleEvent {
 }
 
 model EventExtendedProps {
-  id                 String      @id @default(cuid())
-  itemType           ItemType
+  id                 String       @id @default(cuid())
+  plannerType        PlannerType?
+  eventType          EventType
   completedStartTime String?
   completedEndTime   String?
   parentId           String?
-  eventId            String      @unique
-  event              SimpleEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId            String       @unique
+  event              SimpleEvent  @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@map("EventExtendedProps")
 }
 
 model Planner {
-  id                 String    @id @default(uuid())
+  id                 String      @id @default(uuid())
   title              String
   parentId           String?
-  itemType           ItemType
+  plannerType        PlannerType
   isReady            Boolean?
   duration           Int
   deadline           String?
@@ -44,13 +45,13 @@ model Planner {
   userId             String
   color              String?
   locationId         String? // Optional FK to Location (null = "Anywhere")
-  useParentLocation  Boolean   @default(false) // When true, use category location instead of item's own locationId
+  useParentLocation  Boolean     @default(false) // When true, use category location instead of item's own locationId
   categoryId         String? // Optional FK to Category for organization
   createdAt          String
   updatedAt          String
-  user               User      @relation(fields: [userId], references: [id])
-  location           Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
-  category           Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  user               User        @relation(fields: [userId], references: [id])
+  location           Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  category           Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@map("Planners")
 }
@@ -82,9 +83,15 @@ enum WeekDayType {
   saturday
 }
 
-enum ItemType {
+enum PlannerType {
   task
   plan
   goal
+}
+
+enum EventType {
+  planner
   template
+  travel
+  category
 }

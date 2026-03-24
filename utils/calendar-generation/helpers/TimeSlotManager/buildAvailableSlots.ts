@@ -1,4 +1,4 @@
-import { Planner, SimpleEvent, ItemType } from "@/types/prisma";
+import { Planner, SimpleEvent, EventType } from "@/types/prisma";
 import { CategoryPeriod } from "@/types/categoryTypes";
 import {
   eventsToIntervals,
@@ -29,7 +29,7 @@ export function buildAvailableSlots(
     endDateOverride ?? dateTimeService.shiftDays(startDate, numDays);
 
   const relevantEvents = existingEvents.filter((event) => {
-    if (event.extendedProps?.itemType === ItemType.template) return false;
+    if (event.extendedProps?.eventType === EventType.template) return false;
 
     const eventStart = new Date(event.start);
     const eventEnd = new Date(event.end);
@@ -52,7 +52,7 @@ export function buildAvailableSlots(
   const lastEventBeforeRange = existingEvents
     .filter(
       (e) =>
-        e.extendedProps?.itemType !== ItemType.template &&
+        e.extendedProps?.eventType !== EventType.template &&
         new Date(e.end) <= startDate,
     )
     .sort((a, b) => new Date(b.end).getTime() - new Date(a.end).getTime())[0];
@@ -70,5 +70,10 @@ export function buildAvailableSlots(
 
   let slots = gaps;
 
-  return splitSlotsAtCategoryBoundaries(categoryPeriods, slots, startDate, endDate);
+  return splitSlotsAtCategoryBoundaries(
+    categoryPeriods,
+    slots,
+    startDate,
+    endDate,
+  );
 }

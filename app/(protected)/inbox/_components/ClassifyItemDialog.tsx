@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/Label";
 import { CategorySelect } from "@/components/categories/CategorySelect";
 import { DateTimePicker } from "@/components/utilities/time-picker/DateTimePicker";
 import type { Planner, Category } from "@/types/prisma";
-import { ItemType } from "@/types/prisma";
+import { PlannerType } from "@/types/prisma";
 
 interface ClassifyItemDialogProps {
   open: boolean;
@@ -23,7 +23,7 @@ interface ClassifyItemDialogProps {
   item: Planner | null;
   categories: Category[];
   onClassify: (data: {
-    itemType: ItemType;
+    plannerType: PlannerType;
     duration: number;
     deadline?: string | null;
     starts?: string | null;
@@ -40,21 +40,23 @@ export function ClassifyItemDialog({
   onClassify,
   onDelete,
 }: ClassifyItemDialogProps) {
-  const [itemType, setItemType] = useState<ItemType>(item?.itemType ?? ItemType.task);
+  const [plannerType, setPlannerType] = useState<PlannerType>(
+    item?.plannerType ?? PlannerType.task,
+  );
   const [duration, setDuration] = useState<number>(item?.duration ?? 30);
   const [deadline, setDeadline] = useState<Date | undefined>(
-    item?.deadline ? new Date(item.deadline) : undefined
+    item?.deadline ? new Date(item.deadline) : undefined,
   );
   const [starts, setStarts] = useState<Date | undefined>(
-    item?.starts ? new Date(item.starts) : undefined
+    item?.starts ? new Date(item.starts) : undefined,
   );
   const [categoryId, setCategoryId] = useState<string | undefined>(
-    item?.categoryId || undefined
+    item?.categoryId || undefined,
   );
 
   useEffect(() => {
     if (item) {
-      setItemType(item.itemType);
+      setPlannerType(item.plannerType);
       setDuration(item.duration ?? 30);
       setDeadline(item.deadline ? new Date(item.deadline) : undefined);
       setStarts(item.starts ? new Date(item.starts) : undefined);
@@ -66,10 +68,13 @@ export function ClassifyItemDialog({
     e.preventDefault();
 
     onClassify({
-      itemType,
+      plannerType,
       duration,
       deadline: deadline?.toISOString() ?? null,
-      starts: itemType === ItemType.plan ? (starts?.toISOString() ?? null) : null,
+      starts:
+        plannerType === PlannerType.plan
+          ? (starts?.toISOString() ?? null)
+          : null,
       categoryId: categoryId ?? null,
     });
 
@@ -94,42 +99,48 @@ export function ClassifyItemDialog({
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  variant={itemType === ItemType.task ? "default" : "outline"}
-                  onClick={() => setItemType(ItemType.task)}
+                  variant={
+                    plannerType === PlannerType.task ? "default" : "outline"
+                  }
+                  onClick={() => setPlannerType(PlannerType.task)}
                   className="flex-1"
                 >
                   Task
                 </Button>
                 <Button
                   type="button"
-                  variant={itemType === ItemType.plan ? "default" : "outline"}
-                  onClick={() => setItemType(ItemType.plan)}
+                  variant={
+                    plannerType === PlannerType.plan ? "default" : "outline"
+                  }
+                  onClick={() => setPlannerType(PlannerType.plan)}
                   className="flex-1"
                 >
                   Plan
                 </Button>
                 <Button
                   type="button"
-                  variant={itemType === ItemType.goal ? "default" : "outline"}
-                  onClick={() => setItemType(ItemType.goal)}
+                  variant={
+                    plannerType === PlannerType.goal ? "default" : "outline"
+                  }
+                  onClick={() => setPlannerType(PlannerType.goal)}
                   className="flex-1"
                 >
                   Goal
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground h-4">
-                {itemType === ItemType.task &&
+                {plannerType === PlannerType.task &&
                   "A one-time item without a specific date/time"}
-                {itemType === ItemType.plan &&
+                {plannerType === PlannerType.plan &&
                   "A scheduled appointment with a specific date/time"}
-                {itemType === ItemType.goal &&
+                {plannerType === PlannerType.goal &&
                   "A larger objective with multiple subtasks"}
               </p>
             </div>
 
             {/* Duration (not for goals) */}
             <div
-              className={`flex flex-col gap-2 ${itemType === ItemType.goal ? "invisible" : ""}`}
+              className={`flex flex-col gap-2 ${plannerType === PlannerType.goal ? "invisible" : ""}`}
             >
               <Label htmlFor="duration">Duration (minutes)</Label>
               <Input
@@ -143,12 +154,14 @@ export function ClassifyItemDialog({
 
             {/* Deadline (for tasks) / Scheduled Time (for plans) */}
             <div
-              className={`flex flex-col gap-2 ${itemType === ItemType.goal ? "invisible" : ""}`}
+              className={`flex flex-col gap-2 ${plannerType === PlannerType.goal ? "invisible" : ""}`}
             >
               <Label>
-                {itemType === ItemType.plan ? "Scheduled Time" : "Deadline (optional)"}
+                {plannerType === PlannerType.plan
+                  ? "Scheduled Time"
+                  : "Deadline (optional)"}
               </Label>
-              {itemType === ItemType.plan ? (
+              {plannerType === PlannerType.plan ? (
                 <DateTimePicker date={starts} setDate={setStarts} />
               ) : (
                 <DateTimePicker date={deadline} setDate={setDeadline} />
@@ -188,7 +201,10 @@ export function ClassifyItemDialog({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={itemType === ItemType.plan && !starts}>
+              <Button
+                type="submit"
+                disabled={plannerType === PlannerType.plan && !starts}
+              >
                 Save
               </Button>
             </div>

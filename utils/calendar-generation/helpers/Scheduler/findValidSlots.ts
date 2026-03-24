@@ -9,7 +9,6 @@ import { TimeSlotManager } from "../../core/TimeSlotManager";
 import {
   SchedulingContext,
   SchedulingFailure,
-  CategoryConstraint,
   FindValidSlotsResult,
 } from "../../models/SchedulingModels";
 import { SchedulingFailureReason } from "../../constants";
@@ -19,10 +18,9 @@ export function findValidSlots(
   task: Planner,
   slotManager: TimeSlotManager,
   context: SchedulingContext,
-  afterTime?: Date
+  afterTime?: Date,
 ): FindValidSlotsResult | { failure: SchedulingFailure } {
-  const taskLocationId =
-    context.plannerLocationMap?.get(task.id) ?? null;
+  const taskLocationId = context.plannerLocationMap?.get(task.id) ?? null;
 
   // Resolve effective category from parent chain via pre-built map
   const effectiveCategoryId =
@@ -40,7 +38,7 @@ export function findValidSlots(
     task.duration,
     afterTime || context.currentDate,
     undefined,
-    constraintForTask
+    constraintForTask,
   );
 
   if (fittingSlots.length === 0) {

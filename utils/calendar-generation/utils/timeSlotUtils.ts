@@ -1,5 +1,5 @@
 import type { AvailableSlot, TimeSlot, TravelSlot } from "../models/TimeSlot";
-import { ItemType } from "@/types/prisma";
+import { PlannerType, EventType } from "@/types/prisma";
 
 export function getDurationMinutes(slot: TimeSlot): number {
   return Math.floor((slot.end.getTime() - slot.start.getTime()) / (1000 * 60));
@@ -56,7 +56,7 @@ export function splitSlot(
     ];
   }
 
-  if (slot.eventType === ItemType.travel) {
+  if (slot.eventType === EventType.travel) {
     return [
       {
         start: slot.start,
@@ -64,7 +64,7 @@ export function splitSlot(
         durationMinutes: beforeDuration,
         isAvailable: false,
         eventId: slot.eventId,
-        eventType: ItemType.travel,
+        eventType: EventType.travel,
         travelFromLocationId: slot.travelFromLocationId,
         travelToLocationId: slot.travelToLocationId,
         travelType: slot.travelType,
@@ -79,7 +79,7 @@ export function splitSlot(
         durationMinutes: afterDuration,
         isAvailable: false,
         eventId: slot.eventId,
-        eventType: ItemType.travel,
+        eventType: EventType.travel,
         travelFromLocationId: slot.travelFromLocationId,
         travelToLocationId: slot.travelToLocationId,
         travelType: slot.travelType,
@@ -99,6 +99,7 @@ export function splitSlot(
       isAvailable: false,
       eventId: slot.eventId,
       eventType: slot.eventType,
+      plannerType: slot.plannerType,
     },
     {
       start: splitTime,
@@ -107,6 +108,7 @@ export function splitSlot(
       isAvailable: false,
       eventId: slot.eventId,
       eventType: slot.eventType,
+      plannerType: slot.plannerType,
     },
   ];
 }
@@ -116,7 +118,8 @@ export function occupySlot(
   start: Date,
   end: Date,
   eventId: string,
-  eventType: Exclude<ItemType, "travel" | "category">,
+  eventType: Exclude<EventType, "travel" | "category">,
+  plannerType: PlannerType,
   locationId?: string | null,
 ): TimeSlot[] {
   const result: TimeSlot[] = [];
@@ -147,6 +150,7 @@ export function occupySlot(
     isAvailable: false,
     eventId,
     eventType,
+    plannerType,
   });
 
   if (end < slot.end) {
@@ -189,7 +193,7 @@ export function createTravelSlot(
     ),
     isAvailable: false,
     eventId,
-    eventType: ItemType.travel,
+    eventType: EventType.travel,
     travelType,
     travelFromLocationId: fromLocationId,
     travelToLocationId: toLocationId,
@@ -201,7 +205,7 @@ export function createTravelSlot(
 }
 
 export function isTravelSlot(slot: TimeSlot): slot is TravelSlot {
-  return !slot.isAvailable && slot.eventType === ItemType.travel;
+  return !slot.isAvailable && slot.eventType === EventType.travel;
 }
 
 export function reclaimTravelSlot(travelSlot: TravelSlot): AvailableSlot {

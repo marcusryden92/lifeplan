@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/Label";
 import { CategorySelect } from "@/components/categories/CategorySelect";
 import { DateTimePicker } from "@/components/utilities/time-picker/DateTimePicker";
 import type { Category } from "@/types/prisma";
-import { ItemType } from "@/types/prisma";
+import { PlannerType } from "@/types/prisma";
 
 interface AddItemDialogProps {
   open: boolean;
@@ -23,7 +23,7 @@ interface AddItemDialogProps {
   categories: Category[];
   onAdd: (data: {
     title: string;
-    itemType: ItemType;
+    plannerType: PlannerType;
     duration: number;
     deadline?: string | null;
     starts?: string | null;
@@ -38,7 +38,7 @@ export function AddItemDialog({
   onAdd,
 }: AddItemDialogProps) {
   const [title, setTitle] = useState("");
-  const [itemType, setItemType] = useState<ItemType>(ItemType.task);
+  const [plannerType, setPlannerType] = useState<PlannerType>(PlannerType.task);
   const [duration, setDuration] = useState<number>(30);
   const [deadline, setDeadline] = useState<Date | undefined>();
   const [starts, setStarts] = useState<Date | undefined>();
@@ -49,10 +49,13 @@ export function AddItemDialog({
     if (!title.trim()) return;
     onAdd({
       title: title.trim(),
-      itemType,
+      plannerType,
       duration,
       deadline: deadline?.toISOString() ?? null,
-      starts: itemType === ItemType.plan ? (starts?.toISOString() ?? null) : null,
+      starts:
+        plannerType === PlannerType.plan
+          ? (starts?.toISOString() ?? null)
+          : null,
       categoryId: categoryId ?? null,
     });
     onOpenChange(false);
@@ -60,7 +63,7 @@ export function AddItemDialog({
 
   const resetForm = () => {
     setTitle("");
-    setItemType(ItemType.task);
+    setPlannerType(PlannerType.task);
     setDuration(30);
     setDeadline(undefined);
     setStarts(undefined);
@@ -102,42 +105,48 @@ export function AddItemDialog({
               <div className="flex gap-2">
                 <Button
                   type="button"
-                  variant={itemType === ItemType.task ? "default" : "outline"}
-                  onClick={() => setItemType(ItemType.task)}
+                  variant={
+                    plannerType === PlannerType.task ? "default" : "outline"
+                  }
+                  onClick={() => setPlannerType(PlannerType.task)}
                   className="flex-1"
                 >
                   Task
                 </Button>
                 <Button
                   type="button"
-                  variant={itemType === ItemType.plan ? "default" : "outline"}
-                  onClick={() => setItemType(ItemType.plan)}
+                  variant={
+                    plannerType === PlannerType.plan ? "default" : "outline"
+                  }
+                  onClick={() => setPlannerType(PlannerType.plan)}
                   className="flex-1"
                 >
                   Plan
                 </Button>
                 <Button
                   type="button"
-                  variant={itemType === ItemType.goal ? "default" : "outline"}
-                  onClick={() => setItemType(ItemType.goal)}
+                  variant={
+                    plannerType === PlannerType.goal ? "default" : "outline"
+                  }
+                  onClick={() => setPlannerType(PlannerType.goal)}
                   className="flex-1"
                 >
                   Goal
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground h-4">
-                {itemType === ItemType.task &&
+                {plannerType === PlannerType.task &&
                   "A one-time item without a specific date/time"}
-                {itemType === ItemType.plan &&
+                {plannerType === PlannerType.plan &&
                   "A scheduled appointment with a specific date/time"}
-                {itemType === ItemType.goal &&
+                {plannerType === PlannerType.goal &&
                   "A larger objective with multiple subtasks"}
               </p>
             </div>
 
             {/* Duration (not for goals) */}
             <div
-              className={`flex flex-col gap-2 ${itemType === ItemType.goal ? "invisible" : ""}`}
+              className={`flex flex-col gap-2 ${plannerType === PlannerType.goal ? "invisible" : ""}`}
             >
               <Label htmlFor="duration">Duration (minutes)</Label>
               <Input
@@ -151,12 +160,14 @@ export function AddItemDialog({
 
             {/* Deadline (for tasks) / Scheduled Time (for plans) */}
             <div
-              className={`flex flex-col gap-2 ${itemType === ItemType.goal ? "invisible" : ""}`}
+              className={`flex flex-col gap-2 ${plannerType === PlannerType.goal ? "invisible" : ""}`}
             >
               <Label>
-                {itemType === ItemType.plan ? "Scheduled Time" : "Deadline (optional)"}
+                {plannerType === PlannerType.plan
+                  ? "Scheduled Time"
+                  : "Deadline (optional)"}
               </Label>
-              {itemType === ItemType.plan ? (
+              {plannerType === PlannerType.plan ? (
                 <DateTimePicker date={starts} setDate={setStarts} />
               ) : (
                 <DateTimePicker date={deadline} setDate={setDeadline} />
@@ -182,7 +193,9 @@ export function AddItemDialog({
             </Button>
             <Button
               type="submit"
-              disabled={!title.trim() || (itemType === ItemType.plan && !starts)}
+              disabled={
+                !title.trim() || (plannerType === PlannerType.plan && !starts)
+              }
             >
               Add Item
             </Button>

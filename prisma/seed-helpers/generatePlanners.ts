@@ -272,7 +272,7 @@ export const generatePlanners = (userId: string): Planner[] => {
       id: data.id,
       title: data.title,
       parentId: data.parentId,
-      itemType: "goal" as const,
+      plannerType: "goal" as const,
       isReady: true,
       duration: data.duration,
       deadline: null,

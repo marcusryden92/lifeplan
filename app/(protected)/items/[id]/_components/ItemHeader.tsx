@@ -5,10 +5,7 @@ import { Clock, Trash2, Check, Edit2, X } from "lucide-react";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import {
-  Card,
-  CardHeader,
-} from "@/components/ui/Card";
+import { Card, CardHeader } from "@/components/ui/Card";
 import EventColorPicker from "@/components/events/EventColorPicker/EventColorPicker";
 import { formatMinutesToHours } from "@/utils/taskArrayUtils";
 import type { Planner, Category } from "@/types/prisma";
@@ -110,7 +107,7 @@ export function ItemHeader({
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            {item.itemType === "goal" && (
+            {item.plannerType === "goal" && (
               <Button
                 variant={item.isReady ? "default" : "outline"}
                 onClick={onToggleReady}

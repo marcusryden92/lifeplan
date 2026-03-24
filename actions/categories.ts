@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
-import { ItemType } from "@/types/prisma";
+import { PlannerType } from "@/types/prisma";
 import type { Category } from "@/types/prisma";
 import { Prisma } from "@/prisma/generated/client";
 
@@ -54,7 +54,7 @@ export async function fetchCategoryTree(): Promise<
  * Fetch a single category by ID
  */
 export async function fetchCategory(
-  categoryId: string
+  categoryId: string,
 ): Promise<Category | null> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -70,7 +70,7 @@ export async function fetchCategory(
  * Fetch a category with its children
  */
 export async function fetchCategoryWithChildren(
-  categoryId: string
+  categoryId: string,
 ): Promise<(Category & { children: Category[] }) | null> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -163,7 +163,7 @@ export async function updateCategory(
     timeSlots?: Prisma.InputJsonValue;
     isStrict?: boolean;
     locationId?: string | null;
-  }
+  },
 ): Promise<Category> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -208,7 +208,7 @@ export async function updateCategory(
  */
 export async function deleteCategory(
   categoryId: string,
-  reassignToId?: string | null
+  reassignToId?: string | null,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -267,7 +267,7 @@ export async function deleteCategory(
  */
 export async function moveCategory(
   categoryId: string,
-  newParentId: string | null
+  newParentId: string | null,
 ): Promise<Category> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -343,8 +343,8 @@ export async function reorderCategories(orderedIds: string[]): Promise<void> {
       db.category.updateMany({
         where: { id, userId: session.user.id },
         data: { sortOrder: index, updatedAt: now },
-      })
-    )
+      }),
+    ),
   );
 }
 
@@ -359,7 +359,7 @@ export async function reorderCategories(orderedIds: string[]): Promise<void> {
  */
 export async function assignCategoryToPlanner(
   plannerId: string,
-  categoryId: string | null
+  categoryId: string | null,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -384,11 +384,15 @@ export async function assignCategoryToPlanner(
 
   // Check if the new category has a location for useParentLocation inheritance
   const categoryHasLocation = categoryId
-    ? !!(await db.category.findUnique({ where: { id: categoryId }, select: { locationId: true } }))?.locationId
+    ? !!(
+        await db.category.findUnique({
+          where: { id: categoryId },
+          select: { locationId: true },
+        })
+      )?.locationId
     : false;
 
-  const shouldInheritLocation =
-    categoryHasLocation && !planner.locationId;
+  const shouldInheritLocation = categoryHasLocation && !planner.locationId;
 
   await db.planner.update({
     where: { id: plannerId },
@@ -400,7 +404,7 @@ export async function assignCategoryToPlanner(
 
   // For goals with a category that has a location, set useParentLocation
   // on descendants without custom locations so they inherit the category's location
-  if (planner.itemType === ItemType.goal && categoryHasLocation) {
+  if (planner.plannerType === PlannerType.goal && categoryHasLocation) {
     const allPlanners = await db.planner.findMany({
       where: { userId: session.user.id },
     });
@@ -425,7 +429,7 @@ export async function assignCategoryToPlanner(
  */
 export async function assignCategoryToMultiplePlanners(
   plannerIds: string[],
-  categoryId: string | null
+  categoryId: string | null,
 ): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -464,7 +468,7 @@ export async function fetchCategoryStats(): Promise<
   if (!session?.user?.id) throw new Error("Unauthorized");
 
   const stats = await db.planner.groupBy({
-    by: ["categoryId", "itemType"],
+    by: ["categoryId", "plannerType"],
     where: { userId: session.user.id },
     _count: true,
   });
@@ -484,9 +488,9 @@ export async function fetchCategoryStats(): Promise<
     };
 
     current.total += stat._count;
-    if (stat.itemType === ItemType.goal) current.goals += stat._count;
-    if (stat.itemType === ItemType.task) current.tasks += stat._count;
-    if (stat.itemType === ItemType.plan) current.plans += stat._count;
+    if (stat.plannerType === PlannerType.goal) current.goals += stat._count;
+    if (stat.plannerType === PlannerType.task) current.tasks += stat._count;
+    if (stat.plannerType === PlannerType.plan) current.plans += stat._count;
 
     result.set(categoryId, current);
   }

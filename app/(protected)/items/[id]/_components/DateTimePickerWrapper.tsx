@@ -12,14 +12,14 @@ export const DateTimePickerWrapper = memo(function DateTimePickerWrapper({
   onDateChange,
 }: DateTimePickerWrapperProps) {
   const initialDate = useMemo(() => {
-    if (item.itemType === "plan" && item.starts) {
+    if (item.plannerType === "plan" && item.starts) {
       return new Date(item.starts);
     }
     if (item.deadline) {
       return new Date(item.deadline);
     }
     return undefined;
-  }, [item.itemType, item.starts, item.deadline]);
+  }, [item.plannerType, item.starts, item.deadline]);
 
   const [date, setDate] = useState<Date | undefined>(initialDate);
 

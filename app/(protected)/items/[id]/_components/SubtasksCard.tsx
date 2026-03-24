@@ -22,19 +22,19 @@ interface SubtasksCardProps {
 export function SubtasksCard({ item, subtasksLength }: SubtasksCardProps) {
   return (
     <Card
-      className={`h-fit ${item.itemType !== "goal" ? "opacity-40 pointer-events-none" : ""}`}
+      className={`h-fit ${item.plannerType !== "goal" ? "opacity-40 pointer-events-none" : ""}`}
     >
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-lg">Subtasks</CardTitle>
             <CardDescription>
-              {item.itemType === "goal"
+              {item.plannerType === "goal"
                 ? "Break down this goal into actionable tasks"
                 : "Convert to a goal to add subtasks"}
             </CardDescription>
           </div>
-          {item.itemType === "goal" && (
+          {item.plannerType === "goal" && (
             <Badge variant="outline">
               {subtasksLength} subtask
               {subtasksLength !== 1 ? "s" : ""}
@@ -42,7 +42,7 @@ export function SubtasksCard({ item, subtasksLength }: SubtasksCardProps) {
           )}
         </div>
       </CardHeader>
-      {item.itemType === "goal" && (
+      {item.plannerType === "goal" && (
         <CardContent>
           {/* Subtask list using existing components */}
           <div className="mb-4">

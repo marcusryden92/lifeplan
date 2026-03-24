@@ -6,7 +6,7 @@
  */
 
 import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";
-import { SimpleEvent, ItemType } from "@/types/prisma";
+import { SimpleEvent, EventType } from "@/types/prisma";
 import { EventInput } from "@fullcalendar/core/index.js";
 import { RRule, Weekday } from "rrule";
 import { dateTimeService } from "./calendar-generation/utils/dateTimeService";
@@ -22,7 +22,7 @@ export const setTimeOnDate = (date: Date, time: string): Date =>
   dateTimeService.setTimeOnDate(date, time);
 
 export const getDateOfThisWeeksMonday = (
-  todaysDate: Date
+  todaysDate: Date,
 ): Date | undefined => {
   if (!todaysDate) {
     console.warn("todaysDate is undefined in getDateOfThisWeeksMonday.");
@@ -35,12 +35,12 @@ export const getDateOfThisWeeksMonday = (
 
 export const getWeekFirstDate = (
   weekStartDay: WeekDayIntegers,
-  todaysDate: Date
+  todaysDate: Date,
 ): Date => dateTimeService.getWeekFirstDate(todaysDate, weekStartDay);
 
 export const floorMinutes = (date: Date | string): number =>
   dateTimeService.floorToSeconds(
-    typeof date === "string" ? new Date(date) : date
+    typeof date === "string" ? new Date(date) : date,
   );
 
 export const getDuration = (start: Date | string, end: Date | string): number =>
@@ -63,11 +63,11 @@ export function getRRuleDayTypeFromIndex(day: number): Weekday {
 }
 
 export const transformEventsForFullCalendar = (
-  events: SimpleEvent[]
+  events: SimpleEvent[],
 ): EventInput[] => {
   return events.map((event) => {
-    const isCategory = event.extendedProps?.itemType === ItemType.category;
-    const isTemplate = event.extendedProps?.itemType === ItemType.template;
+    const isCategory = event.extendedProps?.eventType === EventType.category;
+    const isTemplate = event.extendedProps?.eventType === EventType.template;
 
     return {
       id: event.id,
@@ -94,11 +94,11 @@ export const transformEventsForFullCalendar = (
 export function getCalendarHeaderDateString(
   initialDate: Date,
   finalDate: Date,
-  monthArray: string[]
+  monthArray: string[],
 ): string {
   return dateTimeService.getCalendarHeaderDateString(
     initialDate,
     finalDate,
-    monthArray
+    monthArray,
   );
 }

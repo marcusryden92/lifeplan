@@ -1,17 +1,21 @@
-import { Planner, ItemType } from "@/types/prisma";
+import { Planner, PlannerType } from "@/types/prisma";
 import { calculateTaskUrgency } from "./calculateTaskUrgency";
 
 function hasCategoryConstraint(
   item: Planner,
   allPlanners: Planner[],
-  plannerCategoryMap?: Map<string, string | null>
+  plannerCategoryMap?: Map<string, string | null>,
 ): boolean {
   const effectiveCategoryId =
     plannerCategoryMap?.get(item.id) ?? item.categoryId;
   if (effectiveCategoryId !== null) return true;
 
-  if (item.itemType === ItemType.goal) {
-    return hasChildWithCategoryConstraint(item.id, allPlanners, plannerCategoryMap);
+  if (item.plannerType === PlannerType.goal) {
+    return hasChildWithCategoryConstraint(
+      item.id,
+      allPlanners,
+      plannerCategoryMap,
+    );
   }
 
   return false;
@@ -20,7 +24,7 @@ function hasCategoryConstraint(
 function hasChildWithCategoryConstraint(
   parentId: string,
   allPlanners: Planner[],
-  plannerCategoryMap?: Map<string, string | null>
+  plannerCategoryMap?: Map<string, string | null>,
 ): boolean {
   const children = allPlanners.filter((p) => p.parentId === parentId);
 
@@ -29,7 +33,9 @@ function hasChildWithCategoryConstraint(
       plannerCategoryMap?.get(child.id) ?? child.categoryId;
     if (effectiveCategoryId !== null) return true;
 
-    if (hasChildWithCategoryConstraint(child.id, allPlanners, plannerCategoryMap)) {
+    if (
+      hasChildWithCategoryConstraint(child.id, allPlanners, plannerCategoryMap)
+    ) {
       return true;
     }
   }
@@ -41,18 +47,15 @@ export function sortByPriorityAndConstraints(
   allPlanners: Planner[],
   goalsAndTasks: Planner[],
   currentDate: Date,
-  plannerCategoryMap?: Map<string, string | null>
+  plannerCategoryMap?: Map<string, string | null>,
 ): Planner[] {
-  const totalPlannerTime = allPlanners.reduce(
-    (acc, p) => acc + p.duration,
-    0
-  );
+  const totalPlannerTime = allPlanners.reduce((acc, p) => acc + p.duration, 0);
 
   const withUrgency = goalsAndTasks.map((item) => {
     const itemHasCategoryConstraint = hasCategoryConstraint(
       item,
       allPlanners,
-      plannerCategoryMap
+      plannerCategoryMap,
     );
 
     const urgencyScore = calculateTaskUrgency(item, {

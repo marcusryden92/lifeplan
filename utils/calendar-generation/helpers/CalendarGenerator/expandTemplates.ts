@@ -4,7 +4,7 @@
  * Expands recurring template definitions into concrete time blocks
  */
 
-import { EventTemplate, SimpleEvent, ItemType } from "@/types/prisma";
+import { EventTemplate, SimpleEvent, EventType } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TemplateExpander } from "../../core/TemplateExpander";
 import { PerTemplateMask } from "../../models/TemplateModels";
@@ -19,7 +19,7 @@ export function expandTemplates(
   currentDate: Date,
   maxDaysAhead: number,
   enableLogging: boolean,
-  metrics: SchedulingMetrics
+  metrics: SchedulingMetrics,
 ): {
   filteredEvents: SimpleEvent[];
   recurringTemplateEvents: SimpleEvent[];
@@ -37,7 +37,7 @@ export function expandTemplates(
     userId,
     templates,
     weekStart,
-    searchEndDate
+    searchEndDate,
   );
 
   // Debug logging
@@ -50,7 +50,7 @@ export function expandTemplates(
         return hour >= 9 && hour < 17;
       });
       console.log(
-        `Templates in work hours (9am-5pm): ${workHourTemplates.length}/${recurringTemplateEvents.length}`
+        `Templates in work hours (9am-5pm): ${workHourTemplates.length}/${recurringTemplateEvents.length}`,
       );
     }
   }
@@ -74,7 +74,7 @@ export function expandTemplates(
   const largestTemplateGap = templateExpander.calculateLargestGap(templates);
 
   const filteredEvents = eventArray.filter(
-    (e) => e.extendedProps?.itemType !== ItemType.template,
+    (e) => e.extendedProps?.eventType !== EventType.template,
   );
   filteredEvents.push(...recurringTemplateEvents);
 

@@ -5,12 +5,7 @@ import { Plus, LayoutList, LayoutGrid, FolderTree } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { Button } from "@/components/ui/Button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ItemCard } from "./_components/ItemCard";
 import { ItemFilters, FilterState } from "./_components/ItemFilters";
 import { AddItemDialog } from "./_components/AddItemDialog";
@@ -19,7 +14,7 @@ import { fetchLocations } from "@/actions/locations";
 import { getSubtasksById } from "@/utils/goalPageHandlers";
 import { getCategoryAndDescendants } from "@/utils/categoryUtils";
 import type { Planner, Category, Location } from "@/types/prisma";
-import type { ItemType } from "@/prisma/generated/client";
+import type { PlannerType } from "@/prisma/generated/client";
 
 type ViewMode = "list" | "grid" | "tree";
 
@@ -67,9 +62,9 @@ export default function ItemsPage() {
   const itemCounts = useMemo(() => {
     return {
       total: rootItems.length,
-      tasks: rootItems.filter((i) => i.itemType === "task").length,
-      plans: rootItems.filter((i) => i.itemType === "plan").length,
-      goals: rootItems.filter((i) => i.itemType === "goal").length,
+      tasks: rootItems.filter((i) => i.plannerType === "task").length,
+      plans: rootItems.filter((i) => i.plannerType === "plan").length,
+      goals: rootItems.filter((i) => i.plannerType === "goal").length,
     };
   }, [rootItems]);
 
@@ -81,13 +76,13 @@ export default function ItemsPage() {
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       result = result.filter((item) =>
-        item.title.toLowerCase().includes(searchLower)
+        item.title.toLowerCase().includes(searchLower),
       );
     }
 
     // Type filter
     if (filters.type !== "all") {
-      result = result.filter((item) => item.itemType === filters.type);
+      result = result.filter((item) => item.plannerType === filters.type);
     }
 
     // Category filter
@@ -95,8 +90,13 @@ export default function ItemsPage() {
       result = result.filter((item) => !item.categoryId);
     } else if (filters.categoryId !== "all") {
       // Include the selected category and all its subcategories
-      const categoryIds = getCategoryAndDescendants(filters.categoryId, categories);
-      result = result.filter((item) => item.categoryId && categoryIds.includes(item.categoryId));
+      const categoryIds = getCategoryAndDescendants(
+        filters.categoryId,
+        categories,
+      );
+      result = result.filter(
+        (item) => item.categoryId && categoryIds.includes(item.categoryId),
+      );
     }
 
     // Status filter
@@ -112,14 +112,20 @@ export default function ItemsPage() {
     result = [...result].sort((a, b) => {
       switch (filters.sort) {
         case "newest":
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
         case "oldest":
-          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
         case "deadline":
           if (!a.deadline && !b.deadline) return 0;
           if (!a.deadline) return 1;
           if (!b.deadline) return -1;
-          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+          return (
+            new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
+          );
         case "priority":
           return b.priority - a.priority;
         default:
@@ -158,7 +164,7 @@ export default function ItemsPage() {
   };
 
   const getSubtaskInfo = (item: Planner) => {
-    if (item.itemType !== "goal") return { count: 0, completed: 0 };
+    if (item.plannerType !== "goal") return { count: 0, completed: 0 };
     const subtasks = getSubtasksById(planner, item.id);
     const completed = subtasks.filter((s) => s.completedEndTime).length;
     return { count: subtasks.length, completed };
@@ -167,7 +173,7 @@ export default function ItemsPage() {
   const handleAddItem = useCallback(
     (data: {
       title: string;
-      itemType: ItemType;
+      plannerType: PlannerType;
       duration: number;
       deadline?: string | null;
       starts?: string | null;
@@ -176,14 +182,14 @@ export default function ItemsPage() {
       const newItem: Planner = {
         id: uuidv4(),
         title: data.title,
-        itemType: data.itemType,
+        plannerType: data.plannerType,
         duration: data.duration,
         deadline: data.deadline ?? null,
         starts: data.starts ?? null,
         categoryId: data.categoryId ?? null,
         parentId: null,
         priority: 1,
-        isReady: data.itemType !== "goal",
+        isReady: data.plannerType !== "goal",
         completedStartTime: null,
         completedEndTime: null,
         dependency: null,
@@ -196,7 +202,7 @@ export default function ItemsPage() {
       };
       updatePlannerArray([...planner, newItem]);
     },
-    [planner, updatePlannerArray]
+    [planner, updatePlannerArray],
   );
 
   if (loading) {
@@ -277,7 +283,9 @@ export default function ItemsPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">No items found</p>
-              {(filters.search || filters.type !== "all" || filters.categoryId !== "all") && (
+              {(filters.search ||
+                filters.type !== "all" ||
+                filters.categoryId !== "all") && (
                 <Button
                   variant="link"
                   onClick={() =>

@@ -1,19 +1,22 @@
-import { AvailableSlot, OccupiedSlot, TimeSlot, TravelSlot } from "../../models/TimeSlot";
-import { ItemType } from "@/types/prisma";
+import {
+  AvailableSlot,
+  OccupiedSlot,
+  TimeSlot,
+  TravelSlot,
+} from "../../models/TimeSlot";
+import { EventType, PlannerType } from "@/types/prisma";
 import { isTravelSlot, createTravelSlot } from "../../utils/timeSlotUtils";
-import { TravelManager } from "../../core/TravelManager";
 import { SCHEDULING_CONFIG } from "../../constants";
 import { v4 as uuidv4 } from "uuid";
 
 export function reserveSlotWithTravel(
   availableSlots: AvailableSlot[],
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
-  travelManager: TravelManager,
   bufferTimeMinutes: number,
   start: Date,
   end: Date,
   eventId: string,
-  eventType: Exclude<ItemType, "travel" | "category">,
+  plannerType: PlannerType,
   taskLocationId: string | null,
   travelBefore: number,
   travelAfter: number,
@@ -54,7 +57,9 @@ export function reserveSlotWithTravel(
 
   if (reclaimPrecedingGapTravel) {
     const gapTravel = reclaimPrecedingGapTravel;
-    const gapIdx = occupiedSlots.findIndex((s) => s.eventId === gapTravel.eventId);
+    const gapIdx = occupiedSlots.findIndex(
+      (s) => s.eventId === gapTravel.eventId,
+    );
     if (gapIdx !== -1) {
       occupiedSlots.splice(gapIdx, 1);
       const expectedSlotStart = gapTravel.end.getTime() + bufferMs;
@@ -109,7 +114,9 @@ export function reserveSlotWithTravel(
     newSlots.push({
       start: slot.start,
       end: fullStart,
-      durationMinutes: Math.floor((fullStart.getTime() - slot.start.getTime()) / 60000),
+      durationMinutes: Math.floor(
+        (fullStart.getTime() - slot.start.getTime()) / 60000,
+      ),
       isAvailable: true,
       prevLocationId: slot.prevLocationId,
       nextLocationId: taskLocationId ?? slot.nextLocationId,
@@ -126,10 +133,7 @@ export function reserveSlotWithTravel(
 
     for (let i = occupiedSlots.length - 1; i >= 0; i--) {
       const occ = occupiedSlots[i];
-      if (
-        isTravelSlot(occ) &&
-        occ.travelToLocationId === taskLocationId
-      ) {
+      if (isTravelSlot(occ) && occ.travelToLocationId === taskLocationId) {
         const travelEndTime = occ.end.getTime();
         if (Math.abs(travelEndTime - taskStartTime) < searchWindowMs) {
           removedTravelAfterEnd = new Date(occ.end.getTime());
@@ -156,7 +160,8 @@ export function reserveSlotWithTravel(
     durationMinutes: Math.floor((end.getTime() - start.getTime()) / 60000),
     isAvailable: false,
     eventId,
-    eventType,
+    plannerType,
+    eventType: EventType.planner,
   });
 
   let reclaimedTravelEnd: Date | null = null;
@@ -215,7 +220,9 @@ export function reserveSlotWithTravel(
     newSlots.push({
       start: freeSlotStart,
       end: freeSlotEnd,
-      durationMinutes: Math.floor((freeSlotEnd.getTime() - freeSlotStart.getTime()) / 60000),
+      durationMinutes: Math.floor(
+        (freeSlotEnd.getTime() - freeSlotStart.getTime()) / 60000,
+      ),
       isAvailable: true,
       prevLocationId: freeSlotPrevLocation,
       nextLocationId: slot.nextLocationId,
@@ -240,7 +247,13 @@ export function reserveSlotWithTravel(
     }
   }
 
-  if (travelAfter > 0 && travelAfterStart && travelAfterEnd && taskLocationId && nextLocationId) {
+  if (
+    travelAfter > 0 &&
+    travelAfterStart &&
+    travelAfterEnd &&
+    taskLocationId &&
+    nextLocationId
+  ) {
     newSlots.push(
       createTravelSlot(
         travelAfterStart,
@@ -253,7 +266,11 @@ export function reserveSlotWithTravel(
     );
   }
 
-  availableSlots.splice(slotIndex, 1, ...newSlots.filter((s): s is AvailableSlot => s.isAvailable));
+  availableSlots.splice(
+    slotIndex,
+    1,
+    ...newSlots.filter((s): s is AvailableSlot => s.isAvailable),
+  );
   occupiedSlots.push(
     ...newSlots.filter((s): s is OccupiedSlot | TravelSlot => !s.isAvailable),
   );

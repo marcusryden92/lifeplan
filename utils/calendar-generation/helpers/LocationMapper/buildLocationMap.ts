@@ -1,8 +1,8 @@
-import { Planner, EventTemplate, ItemType } from "@/types/prisma";
+import { Planner, EventTemplate, PlannerType } from "@/types/prisma";
 
 function findAncestorLocation(
   parentId: string | null,
-  plannerMap: Map<string, Planner>
+  plannerMap: Map<string, Planner>,
 ): string | null {
   const visited = new Set<string>();
   let currentId = parentId;
@@ -27,7 +27,7 @@ function findAncestorLocation(
 function resolveCategoryLocation(
   planner: Planner,
   plannerMap: Map<string, Planner>,
-  categoryLocationMap: Map<string, string | null>
+  categoryLocationMap: Map<string, string | null>,
 ): string | null {
   const visited = new Set<string>();
   let current: Planner | undefined = planner;
@@ -38,9 +38,7 @@ function resolveCategoryLocation(
     }
     if (visited.has(current.id)) break;
     visited.add(current.id);
-    current = current.parentId
-      ? plannerMap.get(current.parentId)
-      : undefined;
+    current = current.parentId ? plannerMap.get(current.parentId) : undefined;
   }
 
   return null;
@@ -49,9 +47,9 @@ function resolveCategoryLocation(
 function resolveLocation(
   planner: Planner,
   plannerMap: Map<string, Planner>,
-  categoryLocationMap: Map<string, string | null>
+  categoryLocationMap: Map<string, string | null>,
 ): string | null {
-  if (planner.itemType === ItemType.plan) {
+  if (planner.plannerType === PlannerType.plan) {
     return planner.locationId ?? null;
   }
 
@@ -69,12 +67,15 @@ export function buildLocationMap(
   planners: Planner[],
   templates: EventTemplate[],
   categoryLocationMap: Map<string, string | null>,
-  plannerMap: Map<string, Planner>
+  plannerMap: Map<string, Planner>,
 ): Map<string, string | null> {
   const locationMap = new Map<string, string | null>();
 
   for (const planner of planners) {
-    locationMap.set(planner.id, resolveLocation(planner, plannerMap, categoryLocationMap));
+    locationMap.set(
+      planner.id,
+      resolveLocation(planner, plannerMap, categoryLocationMap),
+    );
   }
 
   for (const template of templates) {

@@ -1,4 +1,4 @@
-import { Planner, SimpleEvent, Category, ItemType } from "@/types/prisma";
+import { Planner, SimpleEvent, Category, PlannerType } from "@/types/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
 
@@ -8,7 +8,7 @@ interface AddSubtaskInterface {
   userId?: string;
   planner: Planner[];
   updatePlannerArray: (
-    planner: Planner[] | ((prev: Planner[]) => Planner[])
+    planner: Planner[] | ((prev: Planner[]) => Planner[]),
   ) => void;
   task: Planner;
   taskDuration: number;
@@ -33,7 +33,7 @@ export function addSubtask({
       title: taskTitle,
       id: newId,
       parentId: task.id || null,
-      itemType: ItemType.goal,
+      plannerType: PlannerType.goal,
       isReady: true,
       duration: taskDuration < 15 ? 15 : taskDuration,
       deadline: null,
@@ -55,7 +55,7 @@ export function addSubtask({
     const updatedPlanner = updateDependenciesOnCreate(
       newPlanner,
       task.id,
-      newId
+      newId,
     );
 
     updatePlannerArray(updatedPlanner);
@@ -66,7 +66,7 @@ export function addSubtask({
 interface DeleteGoalInterface {
   updateAll: (
     arg: Planner[] | ((prev: Planner[]) => Planner[]),
-    manuallyUpdatedCalendar?: SimpleEvent[]
+    manuallyUpdatedCalendar?: SimpleEvent[],
   ) => void;
   taskId: string;
   parentId: string | null;
@@ -107,7 +107,7 @@ export function deleteGoal({
       if (rootSubtasks.length === 0) {
         // Update the root parent's isReady property
         newTaskArray = newTaskArray.map((t) =>
-          t.id === rootParent ? { ...t, isReady: false } : t
+          t.id === rootParent ? { ...t, isReady: false } : t,
         );
       }
     }
@@ -119,7 +119,7 @@ export function deleteGoal({
 interface DeleteGoalReturnArrayInterface {
   planner: Planner[];
   updatePlannerArray: (
-    planner: Planner[] | ((prev: Planner[]) => Planner[])
+    planner: Planner[] | ((prev: Planner[]) => Planner[]),
   ) => void;
   taskId: string;
   parentId?: string | undefined;
@@ -150,14 +150,14 @@ export function deleteGoal_ReturnArray({
 export function updateDependenciesOnCreate(
   newPlanner: Planner[],
   parentId: string,
-  newId: string
+  newId: string,
 ): Planner[] {
   // Create a copy of the planner to avoid direct mutation
   let updatedPlanner = [...newPlanner];
 
   // Get potential siblings
   const siblings: Planner[] = updatedPlanner.filter(
-    (task) => task.parentId === parentId && task.id !== newId
+    (task) => task.parentId === parentId && task.id !== newId,
   );
 
   // Check if the task is the first task of the first layer (the next one after root later), and if so return the unchanged planner
@@ -183,7 +183,7 @@ export function updateDependenciesOnCreate(
     // Get the whole bottom layer (actionable items) from this item
     const bottomLayer = getSortedTreeBottomLayer(
       updatedPlanner,
-      lastSiblingItem.id
+      lastSiblingItem.id,
     );
 
     const lastBottomLayerItem = bottomLayer[bottomLayer.length - 1];
@@ -242,7 +242,7 @@ export function updateDependenciesOnCreate(
 // CHECK IF GOAL IS READY
 export const checkGoalForCompletion = (
   planner: Planner[],
-  parentId: string
+  parentId: string,
 ): boolean => {
   const currentGoal = planner.find((t) => t.id === parentId); // Find current goal using parentId
   const subtasks = getSubtasksById(planner, parentId); // Get subtasks from the current goal's ID
@@ -267,7 +267,7 @@ export function getSubtasksById(planner: Planner[], id: string): Planner[] {
 
 export function getSortedTreeBottomLayer(
   planner: Planner[],
-  id: string
+  id: string,
 ): Planner[] {
   const subtasks = getTreeBottomLayer(planner, id);
   const sortedSubtasks = sortTasksByDependencies(planner, subtasks);
@@ -278,7 +278,7 @@ export function getSortedTreeBottomLayer(
 // GET GOAL ROOT PARENT
 export function getRootParentId(
   planner: Planner[],
-  id: string
+  id: string,
 ): string | undefined {
   // Find the task by its id
   const task = planner.find((task) => task.id === id);
@@ -299,7 +299,7 @@ export function getRootParentId(
 // SORT TASKS BY DEPENDENCIES
 export function sortTasksByDependencies(
   planner: Planner[],
-  tasksToSort: Planner[]
+  tasksToSort: Planner[],
 ): Planner[] {
   // Arrays to hold different categories of tasks
 
@@ -313,7 +313,7 @@ export function sortTasksByDependencies(
       // 2. Or if task has a dependency, but the dependency ID can't be found among the siblings or their children
       (task.dependency &&
         !tasksToSort.some((otherTask) =>
-          idsExistsInDependenciesOf(planner, otherTask.id, task.dependency)
+          idsExistsInDependenciesOf(planner, otherTask.id, task.dependency),
         ))
     ) {
       // 3. Get all the items from the tasksToSort array that are NOT the one we're working with
@@ -323,13 +323,13 @@ export function sortTasksByDependencies(
 
       // 4. Check if either of the siblings (or their descendants) are dependent on the current task
       const hasSiblingDependents = siblings.some((t) =>
-        idsExistsInDependenciesOf(planner, task.id, t.id)
+        idsExistsInDependenciesOf(planner, task.id, t.id),
       );
 
       // 5. Check if the current task (or it its descendants) are dependent on any of the siblings
       //    (shouldn't be the case for a root task, or parent of root task)
       const isDependentOnSiblings = siblings.some((t) =>
-        idsExistsInDependenciesOf(planner, t.id, task.id)
+        idsExistsInDependenciesOf(planner, t.id, task.id),
       );
 
       // 6. If the task has siblings, and is not dependent on any of them, return true!
@@ -352,7 +352,7 @@ export function sortTasksByDependencies(
 
     function setBottomIds(id: string) {
       currentTaskBottomLayerIds = getTreeBottomLayer(planner, id).map(
-        (task) => task.id
+        (task) => task.id,
       );
     }
 
@@ -383,7 +383,7 @@ export function sortTasksByDependencies(
               item.dependency?.includes(currentId) ||
               // Or any of the descendants of the current ID
               (item.dependency &&
-                currentTaskBottomLayerIds.includes(item.dependency))
+                currentTaskBottomLayerIds.includes(item.dependency)),
           );
 
           // If an item is found, and it hasn't yet been visited
@@ -432,13 +432,13 @@ export function getTaskTreeIds(planner: Planner[], id: string): string[] {
     (allIds: string[], task: Planner) => {
       return [...allIds, ...getTaskTreeIds(planner, task.id)];
     },
-    [id]
+    [id],
   ); // Include the current task's id in the result
 }
 
 export function getCompleteTaskTreeIds(
   planner: Planner[],
-  id: string
+  id: string,
 ): string[] {
   const task = planner.find((task) => task.id === id);
 
@@ -460,13 +460,13 @@ export function getGoalTree(planner: Planner[], id: string): Planner[] {
     (allTasks: Planner[], task: Planner) => {
       return [...allTasks, ...getGoalTree(planner, task.id)];
     },
-    [planner.find((task) => task.id === id)!] // Include the current task's object in the result
+    [planner.find((task) => task.id === id)!], // Include the current task's object in the result
   );
 }
 
 export function getEffectiveCategoryId(
   planner: Planner[],
-  id: string
+  id: string,
 ): string | null {
   const visited = new Set<string>();
   let currentId: string | null = id;
@@ -497,7 +497,7 @@ export interface InheritedLocationInfo {
 export function buildInheritedLocationMap(
   planners: Planner[],
   categories: Category[],
-  locations: { id: string; name: string }[]
+  locations: { id: string; name: string }[],
 ): Map<string, InheritedLocationInfo> {
   const result = new Map<string, InheritedLocationInfo>();
   const plannerMap = new Map(planners.map((p) => [p.id, p]));
@@ -505,7 +505,7 @@ export function buildInheritedLocationMap(
 
   for (const planner of planners) {
     // Plan items always use their own location (no inheritance)
-    if (planner.itemType === ItemType.plan) continue;
+    if (planner.plannerType === PlannerType.plan) continue;
 
     // Walk up parent chain for an ancestor with a custom location
     const visited = new Set<string>();
@@ -519,7 +519,10 @@ export function buildInheritedLocationMap(
       if (!parent) break;
       if (!parent.useParentLocation && parent.locationId) {
         const loc = findLocation(parent.locationId);
-        if (loc) { info = { locationName: loc.name, fromLabel: parent.title }; break; }
+        if (loc) {
+          info = { locationName: loc.name, fromLabel: parent.title };
+          break;
+        }
       }
       currentId = parent.parentId;
     }
@@ -545,7 +548,7 @@ export function buildInheritedLocationMap(
 export function idsExistsInDependenciesOf(
   planner: Planner[],
   mainTaskId: string | null,
-  dependenciesToCheckId: string | null
+  dependenciesToCheckId: string | null,
 ): boolean {
   // Make sure the function can run
   if (!planner || planner.length === 0 || !mainTaskId || !dependenciesToCheckId)
@@ -558,17 +561,17 @@ export function idsExistsInDependenciesOf(
   // Get all the dependencies from the tree to check
   const taskToCheckBottomLayer = getTreeBottomLayer(
     planner,
-    dependenciesToCheckId
+    dependenciesToCheckId,
   );
 
   const taskToCheckDependencies = taskToCheckBottomLayer.map(
-    (t) => t.dependency
+    (t) => t.dependency,
   );
 
   // Check the arrays against eachother to see if any id matches
   if (
     mainTaskBottomLayerIds.some((id) =>
-      taskToCheckDependencies.some((dep) => id === dep)
+      taskToCheckDependencies.some((dep) => id === dep),
     )
   )
     return true;

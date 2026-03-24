@@ -21,7 +21,7 @@ import RootTaskListWrapper from "./task-item-subcomponents/RootTaskListWrapper";
 import PrioritySelector from "@/components/utilities/PrioritySelector";
 
 // Local utilities
-import { Planner, ItemType } from "@/types/prisma";
+import { Planner, PlannerType } from "@/types/prisma";
 import { SimpleEvent } from "@/types/prisma";
 import { getSubtasksById } from "@/utils/goalPageHandlers";
 
@@ -44,7 +44,7 @@ type GoalProps = {
   task: Planner;
   updatePlannerArray: (
     arg: Planner[] | ((prev: Planner[]) => Planner[]),
-    manuallyUpdatedCalendar?: SimpleEvent[]
+    manuallyUpdatedCalendar?: SimpleEvent[],
   ) => void;
   handleDeleteTask: (taskId: string) => void;
   handleConfirmEdit: (taskId: string, newTitle: string) => void;
@@ -66,11 +66,11 @@ const Goal = ({
   const [displayEdit, setDisplayEdit] = useState<boolean>(false);
   const [editTitle, setEditTitle] = useState<string>(task.title);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(
-    task.deadline ? new Date(task.deadline) : undefined
+    task.deadline ? new Date(task.deadline) : undefined,
   );
   const [showCascadeConfirm, setShowCascadeConfirm] = useState<boolean>(false);
   const [pendingLocationId, setPendingLocationId] = useState<string | null>(
-    null
+    null,
   );
 
   const priority = task.priority ? Number(task.priority) : 5;
@@ -78,19 +78,19 @@ const Goal = ({
   const inheritedInfo = inheritedLocationMap.get(task.id);
 
   const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
-    () => !task.useParentLocation
+    () => !task.useParentLocation,
   );
 
   // Get subtasks
   const subtasks = useMemo(
     () => getSubtasksById(planner, task.id),
-    [planner, task.id]
+    [planner, task.id],
   );
 
   // Calculate total duration with memoization
   const totalDuration = useMemo(
     () => totalSubtaskDuration(task.id, planner),
-    [task.id, planner]
+    [task.id, planner],
   );
 
   // Update parent component when selectedDate changes
@@ -130,8 +130,8 @@ const Goal = ({
     await setUseParentLocation(task.id, newUseParent);
     updatePlannerArray((prev) =>
       prev.map((p) =>
-        p.id === task.id ? { ...p, useParentLocation: newUseParent } : p
-      )
+        p.id === task.id ? { ...p, useParentLocation: newUseParent } : p,
+      ),
     );
     setLocationOverrideEnabled(newOverrideEnabled);
   }, [locationOverrideEnabled, subtasks.length, task.id, updatePlannerArray]);
@@ -148,7 +148,7 @@ const Goal = ({
 
   const applyLocationChange = async (
     locationId: string | null,
-    cascade: boolean
+    cascade: boolean,
   ) => {
     try {
       const treeItems = getGoalTree(planner, task.id);
@@ -159,30 +159,30 @@ const Goal = ({
           await setUseParentLocationMultiple(treeIds, true);
           updatePlannerArray((prev) =>
             prev.map((p) =>
-              treeIds.includes(p.id) ? { ...p, useParentLocation: true } : p
-            )
+              treeIds.includes(p.id) ? { ...p, useParentLocation: true } : p,
+            ),
           );
         } else {
           await setUseParentLocation(task.id, true);
           updatePlannerArray((prev) =>
             prev.map((p) =>
-              p.id === task.id ? { ...p, useParentLocation: true } : p
-            )
+              p.id === task.id ? { ...p, useParentLocation: true } : p,
+            ),
           );
         }
       } else if (cascade) {
         await assignLocationToMultiplePlanners(treeIds, locationId);
         updatePlannerArray((prev) =>
           prev.map((p) =>
-            treeIds.includes(p.id) ? { ...p, locationId: locationId } : p
-          )
+            treeIds.includes(p.id) ? { ...p, locationId: locationId } : p,
+          ),
         );
       } else {
         await assignLocationToPlanner(task.id, locationId);
         updatePlannerArray((prev) =>
           prev.map((p) =>
-            p.id === task.id ? { ...p, locationId: locationId } : p
-          )
+            p.id === task.id ? { ...p, locationId: locationId } : p,
+          ),
         );
       }
     } catch (error) {
@@ -247,7 +247,9 @@ const Goal = ({
                   onChange={handleLocationChange}
                   compact
                   isOverridden={locationOverrideEnabled}
-                  onToggleOverride={inheritedInfo ? handleToggleLocationOverride : undefined}
+                  onToggleOverride={
+                    inheritedInfo ? handleToggleLocationOverride : undefined
+                  }
                   inheritedLocationName={inheritedInfo?.locationName}
                   inheritedFromLabel={inheritedInfo?.fromLabel}
                 />
@@ -264,7 +266,7 @@ const Goal = ({
                 >
                   <PencilIcon
                     className={`w-5 h-5 ${
-                      task.itemType === ItemType.goal ? "text-black" : ""
+                      task.plannerType === PlannerType.goal ? "text-black" : ""
                     }`}
                   />
                 </button>
@@ -275,7 +277,7 @@ const Goal = ({
                 >
                   <TrashIcon
                     className={`w-5 h-5 ${
-                      task.itemType === ItemType.goal ? "text-black" : ""
+                      task.plannerType === PlannerType.goal ? "text-black" : ""
                     }`}
                   />
                 </button>

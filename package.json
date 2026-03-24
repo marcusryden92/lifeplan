@@ -17,6 +17,7 @@
     "db:reset:dev": "docker compose -f docker-compose.dev.yml down --volumes && docker compose -f docker-compose.dev.yml up -d && pnpm exec wait-on tcp:localhost:5433 && prisma migrate deploy && prisma db seed",
     "prisma:migrate:dev": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:reset": "pnpm prisma db push --force-reset && pnpm prisma db seed",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio"
   },

@@ -54,7 +54,10 @@ export function InboxItem({
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
 
-  const config = (item.itemType in typeConfig) ? typeConfig[item.itemType as keyof typeof typeConfig] : typeConfig.task;
+  const config =
+    item.plannerType in typeConfig
+      ? typeConfig[item.plannerType as keyof typeof typeConfig]
+      : typeConfig.task;
   const Icon = config.icon;
 
   const handleSaveEdit = () => {
@@ -79,7 +82,9 @@ export function InboxItem({
   return (
     <div
       className={`flex items-center gap-3 p-3 rounded-lg border transition-colors hover:bg-gray-50 group ${
-        needsClassification ? "border-amber-200 bg-amber-50/50" : "border-gray-200"
+        needsClassification
+          ? "border-amber-200 bg-amber-50/50"
+          : "border-gray-200"
       }`}
     >
       {/* Type indicator */}

@@ -1,14 +1,15 @@
 import { Planner, SimpleEvent } from "@/types/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { taskIsCompleted } from "../../../taskHelpers";
+import { EventType } from "@/prisma/generated/client";
 
 export function buildCompletedEvents(
   userId: string,
   planners: Planner[],
-  memoizedEventIds: Set<string>
+  memoizedEventIds: Set<string>,
 ): SimpleEvent[] {
   const completedItems = planners.filter(
-    (task) => taskIsCompleted(task) && !memoizedEventIds.has(task.id)
+    (task) => taskIsCompleted(task) && !memoizedEventIds.has(task.id),
   );
 
   const now = new Date();
@@ -29,7 +30,8 @@ export function buildCompletedEvents(
         extendedProps: {
           id: uuidv4(),
           eventId: item.id,
-          itemType: item.itemType,
+          plannerType: item.plannerType,
+          eventType: EventType.planner,
           completedStartTime: item.completedStartTime,
           completedEndTime: item.completedEndTime,
           parentId: item.parentId ?? null,

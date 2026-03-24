@@ -1,13 +1,14 @@
-import { Planner, SimpleEvent, ItemType } from "@/types/prisma";
+import { Planner, SimpleEvent, PlannerType, EventType } from "@/types/prisma";
 import { v4 as uuidv4 } from "uuid";
 
 export function buildPlanEvents(
   userId: string,
   planners: Planner[],
-  memoizedEventIds: Set<string>
+  memoizedEventIds: Set<string>,
 ): SimpleEvent[] {
   const planItems = planners.filter(
-    (task) => task.itemType === ItemType.plan && !memoizedEventIds.has(task.id)
+    (task) =>
+      task.plannerType === PlannerType.plan && !memoizedEventIds.has(task.id),
   );
 
   const now = new Date();
@@ -16,7 +17,7 @@ export function buildPlanEvents(
   for (const plan of planItems) {
     if (plan.starts && plan.duration) {
       const end = new Date(
-        new Date(plan.starts).getTime() + plan.duration * 60000
+        new Date(plan.starts).getTime() + plan.duration * 60000,
       );
 
       events.push({
@@ -28,7 +29,8 @@ export function buildPlanEvents(
         extendedProps: {
           id: uuidv4(),
           eventId: plan.id,
-          itemType: ItemType.plan,
+          plannerType: PlannerType.plan,
+          eventType: EventType.planner,
           parentId: null,
           completedEndTime: null,
           completedStartTime: null,

@@ -1,16 +1,16 @@
-import { SimpleEvent, ItemType } from "@/types/prisma";
+import { SimpleEvent, EventType } from "@/types/prisma";
 
 export function assembleFinalEventList(
   scheduledEvents: SimpleEvent[],
   travelEvents: SimpleEvent[],
-  categoryWrapperEvents: SimpleEvent[]
+  categoryWrapperEvents: SimpleEvent[],
 ): SimpleEvent[] {
   const scheduledNonTemplateEvents = scheduledEvents.filter(
-    (e) => e.extendedProps?.itemType !== ItemType.template
+    (e) => e.extendedProps?.eventType !== EventType.template,
   );
 
   const templateEventsForUI = scheduledEvents.filter(
-    (e) => e.extendedProps?.itemType === ItemType.template
+    (e) => e.extendedProps?.eventType === EventType.template,
   );
 
   return [

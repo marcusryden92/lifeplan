@@ -187,7 +187,7 @@ lifeplan/
 
 ## Core Concepts
 
-### Item Types (ItemType enum)
+### Item Types (PlannerType enum)
 
 - **task** - Schedulable work item with duration
 - **plan** - Fixed-time appointment (has `starts` datetime)
@@ -205,7 +205,7 @@ Central model for all schedulable items:
   id: string;
   title: string;
   parentId?: string;      // For hierarchy (subtasks, goals)
-  itemType: ItemType;
+  plannerType: PlannerType;
   duration: number;       // Minutes
   deadline?: string;      // ISO date
   starts?: string;        // For plan items only
@@ -433,7 +433,7 @@ const logging = {
   templates: false,
   locations: false,
   strategySettings: false,
-  leanCalendar: false,  // Sorted events with location info
+  leanCalendar: false, // Sorted events with location info
 };
 ```
 

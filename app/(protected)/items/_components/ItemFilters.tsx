@@ -12,11 +12,11 @@ import {
   SelectItem,
 } from "@/components/ui/Select";
 import type { Category } from "@/types/prisma";
-import type { ItemType } from "@/prisma/generated/client";
+import type { PlannerType } from "@/prisma/generated/client";
 
 export type FilterState = {
   search: string;
-  type: ItemType | "all";
+  type: PlannerType | "all";
   categoryId: string; // Can be a category ID, "all", or "uncategorized"
   status: "all" | "ready" | "not-ready" | "completed";
   sort: "newest" | "oldest" | "deadline" | "priority";
@@ -85,7 +85,7 @@ export function ItemFilters({
         <Select
           value={filters.type}
           onValueChange={(v) => {
-            let next: FilterState["type"]; // ItemType | "all"
+            let next: FilterState["type"]; // PlannerType | "all"
             if (v === "all" || v === "task" || v === "plan" || v === "goal") {
               next = v;
             } else {

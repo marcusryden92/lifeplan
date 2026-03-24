@@ -47,8 +47,8 @@ export function PropertiesCard({
           <div className="flex gap-2">
             <Button
               type="button"
-              variant={item.itemType === "task" ? "default" : "outline"}
-              onClick={() => onUpdateField("itemType", "task")}
+              variant={item.plannerType === "task" ? "default" : "outline"}
+              onClick={() => onUpdateField("plannerType", "task")}
               className="flex-1"
               size="sm"
             >
@@ -56,8 +56,8 @@ export function PropertiesCard({
             </Button>
             <Button
               type="button"
-              variant={item.itemType === "plan" ? "default" : "outline"}
-              onClick={() => onUpdateField("itemType", "plan")}
+              variant={item.plannerType === "plan" ? "default" : "outline"}
+              onClick={() => onUpdateField("plannerType", "plan")}
               className="flex-1"
               size="sm"
             >
@@ -65,8 +65,8 @@ export function PropertiesCard({
             </Button>
             <Button
               type="button"
-              variant={item.itemType === "goal" ? "default" : "outline"}
-              onClick={() => onUpdateField("itemType", "goal")}
+              variant={item.plannerType === "goal" ? "default" : "outline"}
+              onClick={() => onUpdateField("plannerType", "goal")}
               className="flex-1"
               size="sm"
             >
@@ -114,11 +114,13 @@ export function PropertiesCard({
             value={item.locationId ?? null}
             onChange={onLocationChange}
             isOverridden={locationOverrideEnabled}
-            onToggleOverride={inheritedInfo ? onToggleLocationOverride : undefined}
+            onToggleOverride={
+              inheritedInfo ? onToggleLocationOverride : undefined
+            }
             inheritedLocationName={inheritedInfo?.locationName}
             inheritedFromLabel={inheritedInfo?.fromLabel}
           />
-          {item.itemType === "goal" && (
+          {item.plannerType === "goal" && (
             <Button
               type="button"
               variant="outline"
@@ -133,7 +135,7 @@ export function PropertiesCard({
         </div>
 
         {/* Duration (for non-goals) */}
-        {item.itemType !== "goal" && (
+        {item.plannerType !== "goal" && (
           <div className="space-y-2">
             <label className="text-sm font-medium">Duration (minutes)</label>
             <Input
@@ -148,7 +150,7 @@ export function PropertiesCard({
         )}
 
         {/* Deadline / Scheduled Time */}
-        {item.itemType === "plan" ? (
+        {item.plannerType === "plan" ? (
           <div className="flex flex-col space-y-2">
             <label className="text-sm font-medium">Scheduled Time</label>
             <DateTimePickerWrapper item={item} onDateChange={onDateChange} />

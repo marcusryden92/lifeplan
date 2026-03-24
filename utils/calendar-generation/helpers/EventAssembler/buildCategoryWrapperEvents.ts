@@ -1,11 +1,11 @@
-import { SimpleEvent, ItemType } from "@/types/prisma";
+import { SimpleEvent, EventType } from "@/types/prisma";
 import { RuntimeEventExtendedProps } from "@/types/ui";
 import { v4 as uuidv4 } from "uuid";
 import { CategoryPeriod } from "../../models/SchedulingModels";
 
 export function buildCategoryWrapperEvents(
   userId: string,
-  categoryPeriods: CategoryPeriod[]
+  categoryPeriods: CategoryPeriod[],
 ): SimpleEvent[] {
   const events: SimpleEvent[] = [];
 
@@ -21,7 +21,8 @@ export function buildCategoryWrapperEvents(
 
     const extendedProps: RuntimeEventExtendedProps = {
       id: uuidv4(),
-      itemType: ItemType.category,
+      plannerType: null,
+      eventType: EventType.category,
       eventId: "",
       parentId: null,
       completedStartTime: null,
@@ -37,7 +38,7 @@ export function buildCategoryWrapperEvents(
       start: period.start.toISOString(),
       end: period.end.toISOString(),
       duration: Math.floor(
-        (period.end.getTime() - period.start.getTime()) / 60000
+        (period.end.getTime() - period.start.getTime()) / 60000,
       ),
       userId: userId,
       rrule: null,

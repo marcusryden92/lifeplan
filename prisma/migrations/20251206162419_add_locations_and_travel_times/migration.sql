@@ -2,7 +2,7 @@
 CREATE TYPE "public"."TransportMode" AS ENUM ('DRIVING', 'TRANSIT', 'BICYCLING', 'WALKING');
 
 -- AlterEnum
-ALTER TYPE "public"."ItemType" ADD VALUE 'travel';
+ALTER TYPE "public"."PlannerType" ADD VALUE 'travel';
 
 -- AlterTable
 ALTER TABLE "public"."Planners" ADD COLUMN     "locationId" TEXT;

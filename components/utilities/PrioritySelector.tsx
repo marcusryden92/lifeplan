@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Planner, ItemType } from "@/types/prisma";
+import { Planner, PlannerType } from "@/types/prisma";
 import {
   getCompleteTaskTreeIds,
   getRootParentId,
@@ -28,9 +28,9 @@ export default function PrioritySelector({
       const task = prev.find((t) => t.id === taskId);
       if (!task) return prev;
 
-      if (task.itemType !== ItemType.goal) {
+      if (task.plannerType !== PlannerType.goal) {
         return prev.map((i) =>
-          i.id === taskId ? { ...i, priority: newValue } : i
+          i.id === taskId ? { ...i, priority: newValue } : i,
         );
       }
 
@@ -40,7 +40,7 @@ export default function PrioritySelector({
       const goalTreeIds = getCompleteTaskTreeIds(prev, rootParentId);
 
       return prev.map((i) =>
-        goalTreeIds.includes(i.id) ? { ...i, priority: newValue } : i
+        goalTreeIds.includes(i.id) ? { ...i, priority: newValue } : i,
       );
     });
   };

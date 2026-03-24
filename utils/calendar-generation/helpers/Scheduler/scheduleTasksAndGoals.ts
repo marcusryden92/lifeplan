@@ -1,4 +1,4 @@
-import { Planner, SimpleEvent, ItemType } from "@/types/prisma";
+import { Planner, SimpleEvent, PlannerType } from "@/types/prisma";
 import { CategoryPeriod } from "@/types/categoryTypes";
 import { Scheduler } from "../../core/Scheduler";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
@@ -27,7 +27,7 @@ export function scheduleTasksAndGoals(
   perTemplateMasks: PerTemplateMask[],
   context: SchedulingContext,
   plannerLocationMap: Map<string, string | null>,
-  categoryPeriods: CategoryPeriod[]
+  categoryPeriods: CategoryPeriod[],
 ): {
   success: boolean;
   newEvents: SimpleEvent[];
@@ -39,7 +39,7 @@ export function scheduleTasksAndGoals(
 
   let weekStart = dateTimeService.getWeekFirstDate(
     context.currentDate,
-    weekStartDay
+    weekStartDay,
   );
   let weeksSearched = 0;
 
@@ -50,13 +50,13 @@ export function scheduleTasksAndGoals(
     for (let i = candidates.length - 1; i >= 0; i--) {
       const item = candidates[i];
 
-      if (item.itemType === ItemType.task) {
+      if (item.plannerType === PlannerType.task) {
         const result = scheduleSingleTask(
           item,
           scheduledTaskIds,
           largestTemplateGap,
           failures,
-          scheduler
+          scheduler,
         );
 
         if (result.scheduled) {
@@ -65,7 +65,7 @@ export function scheduleTasksAndGoals(
         } else if (result.permanentFailure) {
           candidates.splice(i, 1);
         }
-      } else if (item.itemType === ItemType.goal) {
+      } else if (item.plannerType === PlannerType.goal) {
         const result = scheduleGoal(
           item,
           allPlanners,
@@ -74,7 +74,7 @@ export function scheduleTasksAndGoals(
           largestTemplateGap,
           failures,
           events,
-          scheduler
+          scheduler,
         );
 
         if (result.scheduled || result.permanentFailure) {

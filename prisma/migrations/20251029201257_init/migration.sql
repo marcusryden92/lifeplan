@@ -2,7 +2,7 @@
 CREATE TYPE "public"."WeekDayType" AS ENUM ('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
 
 -- CreateEnum
-CREATE TYPE "public"."ItemType" AS ENUM ('task', 'plan', 'goal', 'template');
+CREATE TYPE "public"."PlannerType" AS ENUM ('task', 'plan', 'goal', 'template');
 
 -- CreateEnum
 CREATE TYPE "public"."UserRole" AS ENUM ('ADMIN', 'USER');
@@ -27,7 +27,7 @@ CREATE TABLE "public"."SimpleEvents" (
 -- CreateTable
 CREATE TABLE "public"."EventExtendedProps" (
     "id" TEXT NOT NULL,
-    "itemType" "public"."ItemType" NOT NULL,
+    "plannerType" "public"."PlannerType" NOT NULL,
     "completedStartTime" TEXT,
     "completedEndTime" TEXT,
     "parentId" TEXT,
@@ -41,7 +41,7 @@ CREATE TABLE "public"."Planners" (
     "id" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "parentId" TEXT,
-    "itemType" "public"."ItemType" NOT NULL,
+    "plannerType" "public"."PlannerType" NOT NULL,
     "isReady" BOOLEAN,
     "duration" INTEGER NOT NULL,
     "deadline" TEXT,

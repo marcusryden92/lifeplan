@@ -44,7 +44,10 @@ type LogFlag =
 /**
  * Check if a specific logging flag is enabled
  */
-export function shouldLog(input: CalendarGenerationInput, flag: LogFlag): boolean {
+export function shouldLog(
+  input: CalendarGenerationInput,
+  flag: LogFlag,
+): boolean {
   const config = input.config;
   if (!config?.enableLogging || !config?.logging) return false;
   return !!config.logging[flag];
@@ -66,22 +69,22 @@ export function logInitialSlotContext(eventArray: SimpleEvent[]): void {
       title: e.title,
       start: new Date(e.start).toLocaleTimeString(),
       end: new Date(e.end).toLocaleTimeString(),
-      type: e.extendedProps?.itemType,
+      type: e.extendedProps?.plannerType,
     })),
     eventTypes: eventArray.reduce(
       (acc, e) => {
-        const type = e.extendedProps?.itemType || "unknown";
+        const type = e.extendedProps?.plannerType || "unknown";
         acc[type] = (acc[type] || 0) + 1;
         return acc;
       },
-      {} as Record<string, number>
+      {} as Record<string, number>,
     ),
   });
 }
 
 export function logCalendarDebugInfo(
   input: CalendarGenerationInput,
-  data: LoggingData
+  data: LoggingData,
 ): void {
   // Planners debug
   if (shouldLog(input, "planners")) {
@@ -102,8 +105,8 @@ export function logCalendarDebugInfo(
       JSON.stringify(
         Object.fromEntries(data.plannerLocationMap.entries()),
         null,
-        2
-      )
+        2,
+      ),
     );
   }
 
@@ -117,8 +120,8 @@ export function logCalendarDebugInfo(
           weight: s.weight,
         })),
         null,
-        2
-      )
+        2,
+      ),
     );
   }
 
@@ -137,7 +140,9 @@ export function logCalendarDebugInfo(
   // Template info debug
   if (shouldLog(input, "templateInfo")) {
     console.log("TEMPLATE INFO:");
-    console.log(`  Recurring events generated: ${data.recurringTemplateEvents.length}`);
+    console.log(
+      `  Recurring events generated: ${data.recurringTemplateEvents.length}`,
+    );
     console.log(`  Per-template masks: ${data.perTemplateMasks.length}`);
     console.log(`  Largest template gap: ${data.largestTemplateGap} minutes`);
   }
@@ -155,7 +160,7 @@ export function logCalendarDebugInfo(
       title: e.title,
       start: e.start,
       end: e.end,
-      type: e.extendedProps?.itemType,
+      type: e.extendedProps?.plannerType,
     }));
     console.log(JSON.stringify(leanEvents, null, 2));
   }

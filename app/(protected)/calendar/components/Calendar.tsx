@@ -31,7 +31,7 @@ import {
 } from "@/utils/template-handlers/templateEventHandlers";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { RuntimeEventExtendedProps } from "@/types/ui";
-import { ItemType } from "@/types/prisma";
+import { EventType } from "@/types/prisma";
 
 const EVENT_INTERACTION_ENABLED = true; // Constant to enable/disable event interaction
 
@@ -105,11 +105,11 @@ export default function Calendar({
         eventResize={(resizeInfo) => handleEventResize(updateAll, resizeInfo)}
         eventDrop={(dropInfo) => handleEventDrop(updatePlannerArray, dropInfo)}
         eventContent={({ event }: { event: EventImpl }) => {
-          const itemType = (
+          const eventType = (
             event.extendedProps as RuntimeEventExtendedProps | undefined
-          )?.itemType;
+          )?.eventType;
 
-          if (itemType === ItemType.category) {
+          if (eventType === EventType.category) {
             const ext = event.extendedProps as
               | RuntimeEventExtendedProps
               | undefined;
@@ -132,7 +132,7 @@ export default function Calendar({
             );
           }
 
-          if (itemType === ItemType.template) {
+          if (eventType === EventType.template) {
             return (
               <TemplateEventContent
                 event={event}
@@ -148,7 +148,7 @@ export default function Calendar({
             );
           }
 
-          if (itemType === ItemType.travel) {
+          if (eventType === EventType.travel) {
             return <TravelEventContent event={event} />;
           }
 

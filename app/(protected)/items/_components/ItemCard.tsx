@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import type { Planner, Category, Location } from "@/types/prisma";
-import { ItemType } from "@/types/prisma";
+import { PlannerType } from "@/types/prisma";
 
 interface ItemCardProps {
   item: Planner;
@@ -39,11 +39,16 @@ export function ItemCard({
   completedSubtasks = 0,
 }: ItemCardProps) {
   const router = useRouter();
-  const config = (item.itemType in typeConfig) ? typeConfig[item.itemType as keyof typeof typeConfig] : typeConfig.task;
+  const config =
+    item.plannerType in typeConfig
+      ? typeConfig[item.plannerType as keyof typeof typeConfig]
+      : typeConfig.task;
   const Icon = config.icon;
 
   const isOverdue =
-    item.deadline && new Date(item.deadline) < new Date() && !item.completedEndTime;
+    item.deadline &&
+    new Date(item.deadline) < new Date() &&
+    !item.completedEndTime;
 
   return (
     <button
@@ -111,7 +116,7 @@ export function ItemCard({
             )}
 
             {/* Subtask progress for goals */}
-            {item.itemType === ItemType.goal && subtaskCount > 0 && (
+            {item.plannerType === PlannerType.goal && subtaskCount > 0 && (
               <span className="flex items-center gap-1">
                 <Target className="w-3 h-3" />
                 {completedSubtasks}/{subtaskCount} subtasks

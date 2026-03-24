@@ -1,6 +1,9 @@
-import { Planner, ItemType } from "@/types/prisma";
+import { Planner, PlannerType } from "@/types/prisma";
 import { TIME_CONSTANTS } from "../../constants";
-import type { ValidationResult, ValidationError } from "../../core/CalendarValidator";
+import type {
+  ValidationResult,
+  ValidationError,
+} from "../../core/CalendarValidator";
 
 export function validatePlanner(planner: Planner): ValidationResult {
   const errors: ValidationError[] = [];
@@ -14,15 +17,15 @@ export function validatePlanner(planner: Planner): ValidationResult {
     errors.push({ field: "title", message: "Title is required" });
   }
 
-  if (!planner.itemType) {
-    errors.push({ field: "itemType", message: "Item type is required" });
+  if (!planner.plannerType) {
+    errors.push({ field: "plannerType", message: "Item type is required" });
   }
 
   if (!planner.userId) {
     errors.push({ field: "userId", message: "User ID is required" });
   }
 
-  if (planner.itemType !== ItemType.goal) {
+  if (planner.plannerType !== PlannerType.goal) {
     if (planner.duration === undefined || planner.duration === null) {
       errors.push({ field: "duration", message: "Duration is required" });
     } else if (planner.duration <= 0) {
@@ -33,7 +36,7 @@ export function validatePlanner(planner: Planner): ValidationResult {
       });
     } else if (planner.duration > TIME_CONSTANTS.MINUTES_PER_WEEK) {
       warnings.push(
-        `Task "${planner.title}" duration (${planner.duration} min) exceeds one week`
+        `Task "${planner.title}" duration (${planner.duration} min) exceeds one week`,
       );
     }
   } else {
@@ -42,7 +45,7 @@ export function validatePlanner(planner: Planner): ValidationResult {
       planner.duration > TIME_CONSTANTS.MINUTES_PER_WEEK
     ) {
       warnings.push(
-        `Goal "${planner.title}" duration (${planner.duration} min) exceeds one week`
+        `Goal "${planner.title}" duration (${planner.duration} min) exceeds one week`,
       );
     }
   }
@@ -68,7 +71,7 @@ export function validatePlanner(planner: Planner): ValidationResult {
     });
   }
 
-  if (planner.itemType === ItemType.plan) {
+  if (planner.plannerType === PlannerType.plan) {
     if (!planner.starts) {
       errors.push({
         field: "starts",

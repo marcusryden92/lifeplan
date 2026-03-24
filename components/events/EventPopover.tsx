@@ -23,7 +23,7 @@ import {
 } from "@/actions/locations";
 
 import { formatTime } from "@/utils/calendarUtils";
-import { ItemType } from "@/types/prisma";
+import { PlannerType } from "@/types/prisma";
 
 interface EventPopoverProps {
   event: EventImpl;
@@ -266,8 +266,8 @@ const EventPopover: React.FC<EventPopoverProps> = ({
           {/* Main action buttons */}
           <EventColorPicker taskId={event.id} />
           <div className="flex flex-wrap gap-2">
-            {event.extendedProps.itemType !== ItemType.task &&
-              event.extendedProps.itemType !== ItemType.goal && (
+            {event.extendedProps.plannerType !== PlannerType.task &&
+              event.extendedProps.plannerType !== PlannerType.goal && (
                 <button
                   onClick={onCopy}
                   className="flex items-center text-sm text-gray-700 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
@@ -288,8 +288,8 @@ const EventPopover: React.FC<EventPopoverProps> = ({
 
           {/* Status buttons - Only show if applicable */}
           {!event.extendedProps.isTemplateItem &&
-            (event.extendedProps.itemType === ItemType.goal ||
-              event.extendedProps.itemType === ItemType.task) && (
+            (event.extendedProps.plannerType === PlannerType.goal ||
+              event.extendedProps.plannerType === PlannerType.task) && (
               <div className="pt-2 border-t border-gray-100">
                 <div className="flex flex-wrap gap-2">
                   <button

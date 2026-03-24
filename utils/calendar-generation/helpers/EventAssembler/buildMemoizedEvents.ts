@@ -1,8 +1,8 @@
-import { SimpleEvent, ItemType } from "@/types/prisma";
+import { SimpleEvent, EventType } from "@/types/prisma";
 
 export function buildMemoizedEvents(
   previousCalendar: SimpleEvent[],
-  currentDate: Date
+  currentDate: Date,
 ): { events: SimpleEvent[]; eventIds: Set<string> } {
   const memoizedEventIds = new Set<string>();
   const events: SimpleEvent[] = [];
@@ -11,8 +11,8 @@ export function buildMemoizedEvents(
     const pastEvents = previousCalendar.filter(
       (e) =>
         currentDate > new Date(e.end) &&
-        e.extendedProps?.itemType !== ItemType.template &&
-        e.extendedProps?.itemType !== ItemType.travel
+        e.extendedProps?.eventType !== EventType.template &&
+        e.extendedProps?.eventType !== EventType.travel,
     );
     pastEvents.forEach((e) => memoizedEventIds.add(e.id));
     events.push(...pastEvents);

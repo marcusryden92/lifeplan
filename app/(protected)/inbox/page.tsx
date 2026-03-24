@@ -28,7 +28,7 @@ import { ClassifyItemDialog } from "./_components/ClassifyItemDialog";
 import * as categoryActions from "@/actions/categories";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import type { Planner, Category } from "@/types/prisma";
-import type { ItemType } from "@/prisma/generated/client";
+import type { PlannerType } from "@/prisma/generated/client";
 import { v4 as uuidv4 } from "uuid";
 
 const addItemSchema = z.object({
@@ -37,7 +37,8 @@ const addItemSchema = z.object({
 
 export default function InboxPage() {
   const router = useRouter();
-  const { userId, planner, updatePlannerArray, updateAll } = useCalendarProvider();
+  const { userId, planner, updatePlannerArray, updateAll } =
+    useCalendarProvider();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [classifyItem, setClassifyItem] = useState<Planner | null>(null);
@@ -67,14 +68,17 @@ export default function InboxPage() {
   // Get root-level items (not subtasks), sorted by creation date descending
   const inboxItems = planner
     .filter((item) => !item.parentId)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 
   // Items that need processing (no duration or unclassified)
   const unprocessedItems = inboxItems.filter(
-    (item) => !item.duration || item.duration === 0
+    (item) => !item.duration || item.duration === 0,
   );
   const processedItems = inboxItems.filter(
-    (item) => item.duration && item.duration > 0
+    (item) => item.duration && item.duration > 0,
   );
 
   const handleAddItem = useCallback(
@@ -84,7 +88,7 @@ export default function InboxPage() {
         id: uuidv4(),
         title: values.title.trim(),
         parentId: null,
-        itemType: "task",
+        plannerType: "task",
         isReady: false,
         duration: 0, // Unprocessed
         deadline: null,
@@ -106,30 +110,32 @@ export default function InboxPage() {
       form.reset();
       inputRef.current?.focus();
     },
-    [userId, updatePlannerArray, form]
+    [userId, updatePlannerArray, form],
   );
 
   const handleEditItem = useCallback(
     (id: string, title: string) => {
       updatePlannerArray((prev: Planner[]) =>
         prev.map((item) =>
-          item.id === id ? { ...item, title, updatedAt: new Date().toISOString() } : item
-        )
+          item.id === id
+            ? { ...item, title, updatedAt: new Date().toISOString() }
+            : item,
+        ),
       );
     },
-    [updatePlannerArray]
+    [updatePlannerArray],
   );
 
   const handleDeleteItem = useCallback(
     (id: string) => {
       deleteGoal({ updateAll, taskId: id, parentId: null });
     },
-    [updateAll]
+    [updateAll],
   );
 
   const handleClassifyItem = useCallback(
     (data: {
-      itemType: ItemType;
+      plannerType: PlannerType;
       duration: number;
       deadline?: string | null;
       starts?: string | null;
@@ -142,25 +148,25 @@ export default function InboxPage() {
           item.id === classifyItem.id
             ? {
                 ...item,
-                itemType: data.itemType,
+                plannerType: data.plannerType,
                 duration: data.duration,
                 deadline: data.deadline ?? null,
                 starts: data.starts ?? null,
                 categoryId: data.categoryId ?? null,
                 updatedAt: new Date().toISOString(),
               }
-            : item
-        )
+            : item,
+        ),
       );
 
       // If it's a goal, redirect to detail page to add subtasks
-      if (data.itemType === "goal") {
+      if (data.plannerType === "goal") {
         router.push(`/items/${classifyItem.id}`);
       }
 
       setClassifyItem(null);
     },
-    [classifyItem, updatePlannerArray, router]
+    [classifyItem, updatePlannerArray, router],
   );
 
   const getCategoryForItem = (item: Planner) => {
@@ -184,7 +190,8 @@ export default function InboxPage() {
         <div className="space-y-2 mb-8">
           <h1 className="my-6 text-3xl font-bold">Inbox</h1>
           <p className="text-muted-foreground">
-            Capture everything on your mind, then classify items as tasks, plans, or goals.
+            Capture everything on your mind, then classify items as tasks,
+            plans, or goals.
           </p>
         </div>
 
@@ -269,10 +276,7 @@ export default function InboxPage() {
                 </CardDescription>
               </div>
               {processedItems.length > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={() => router.push("/items")}
-                >
+                <Button variant="outline" onClick={() => router.push("/items")}>
                   View All Items
                 </Button>
               )}

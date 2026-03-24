@@ -5,7 +5,7 @@
  * Pre-generates recurring template events for a date range using RRule.
  */
 
-import { EventTemplate, SimpleEvent, ItemType } from "@/types/prisma";
+import { EventTemplate, SimpleEvent, EventType } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { dateTimeService } from "../utils/dateTimeService";
 import { WEEKDAY_NAMES, TIME_CONSTANTS } from "../constants";
@@ -91,12 +91,18 @@ export class TemplateExpander {
       eventDate,
       template.startTime,
     );
-    const endMinutes = (startDate.getHours() * 60 + startDate.getMinutes()) + template.duration;
+    const endMinutes =
+      startDate.getHours() * 60 + startDate.getMinutes() + template.duration;
     const endDayOffset = Math.floor(endMinutes / 1440);
     const endTimeMinutes = endMinutes % 1440;
     const endDate = new Date(eventDate);
     endDate.setDate(endDate.getDate() + endDayOffset);
-    endDate.setHours(Math.floor(endTimeMinutes / 60), endTimeMinutes % 60, 0, 0);
+    endDate.setHours(
+      Math.floor(endTimeMinutes / 60),
+      endTimeMinutes % 60,
+      0,
+      0,
+    );
 
     const rruleDay = this.getRRuleDayFromIndex(startDate.getDay());
 
@@ -123,7 +129,8 @@ export class TemplateExpander {
       extendedProps: {
         id: uuidv4(),
         eventId: template.id,
-        itemType: ItemType.template,
+        plannerType: null,
+        eventType: EventType.template,
         completedStartTime: null,
         completedEndTime: null,
         parentId: null,
@@ -206,13 +213,23 @@ export class TemplateExpander {
       .filter((mask) => mask.dayOfWeek === dayOfWeek)
       .map((mask) => {
         const start = new Date(dayStart);
-        start.setHours(Math.floor(mask.startMinutes / 60), mask.startMinutes % 60, 0, 0);
+        start.setHours(
+          Math.floor(mask.startMinutes / 60),
+          mask.startMinutes % 60,
+          0,
+          0,
+        );
 
         const endDayOffset = Math.floor(mask.endMinutes / 1440);
         const endTimeMinutes = mask.endMinutes % 1440;
         const end = new Date(dayStart);
         end.setDate(end.getDate() + endDayOffset);
-        end.setHours(Math.floor(endTimeMinutes / 60), endTimeMinutes % 60, 0, 0);
+        end.setHours(
+          Math.floor(endTimeMinutes / 60),
+          endTimeMinutes % 60,
+          0,
+          0,
+        );
 
         return { start, end };
       });
@@ -250,7 +267,11 @@ export class TemplateExpander {
     const masks: PerTemplateMask[] = [];
 
     for (const template of templates) {
-      if (!template.startDay || !template.startTime || template.duration === undefined) {
+      if (
+        !template.startDay ||
+        !template.startTime ||
+        template.duration === undefined
+      ) {
         continue;
       }
 
@@ -289,4 +310,3 @@ export class TemplateExpander {
     return masks;
   }
 }
-

@@ -5,5 +5,4 @@ export { splitSlotsAtCategoryBoundaries } from "./splitSlotsAtCategoryBoundaries
 export { findAllFittingSlots } from "./findAllFittingSlots";
 export { getDaySlots } from "./getDaySlots";
 export { getDayAvailableMinutes } from "./getDayAvailableMinutes";
-export { reserveSlot } from "./reserveSlot";
 export { reserveSlotWithTravel } from "./reserveSlotWithTravel";

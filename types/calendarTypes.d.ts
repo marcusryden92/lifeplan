@@ -15,7 +15,7 @@ export type WeekDayType =
 export interface TravelExtendedProps {
   id: string;
   eventId: string;
-  itemType: "travel";
+  plannerType: "travel";
   parentId: null;
   completedEndTime: null;
   completedStartTime: null;
