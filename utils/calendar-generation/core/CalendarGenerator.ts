@@ -158,16 +158,15 @@ export class CalendarGenerator {
     timeSlotManager.availableSlots.push(...builtSlots);
 
     // Phase 6b: Carve travel slots (separate pass after slot building)
-    if (plannerLocationMap) {
-      const carved = carveTravelFromChain(
-        categoryPeriods,
-        timeSlotManager.occupiedSlots,
-        travelManager,
-        this.bufferTimeMinutes,
-        timeSlotManager.availableSlots,
-      );
-      timeSlotManager.availableSlots = carved;
-    }
+    const carved = carveTravelFromChain(
+      !!plannerLocationMap,
+      categoryPeriods,
+      timeSlotManager.occupiedSlots,
+      travelManager,
+      this.bufferTimeMinutes,
+      timeSlotManager.availableSlots,
+    );
+    timeSlotManager.availableSlots = carved;
 
     // Phase 7: Build effective category map (resolves inheritance from parent chain)
     const plannerCategoryMap = buildPlannerCategoryMap(input.planners);

@@ -14,11 +14,15 @@ interface TravelTimeMatrixProps {
   onUpdateOverride: (
     travelTimeId: string,
     period: TimePeriod,
-    value: number | null
+    value: number | null,
   ) => Promise<void>;
 }
 
-const TIME_PERIODS: { value: TimePeriod; label: string; description: string }[] = [
+const TIME_PERIODS: {
+  value: TimePeriod;
+  label: string;
+  description: string;
+}[] = [
   { value: "rush", label: "Rush Hour", description: "7-9 AM, 5-7 PM weekdays" },
   { value: "regular", label: "Regular", description: "Other daytime hours" },
   { value: "night", label: "Night", description: "9 PM - 6 AM" },
@@ -39,7 +43,7 @@ export function TravelTimeMatrix({
 
   const getTravelTime = (
     fromId: string,
-    toId: string
+    toId: string,
   ): TravelTime | undefined => {
     return travelTimeMap.get(`${fromId}-${toId}`);
   };
@@ -47,9 +51,13 @@ export function TravelTimeMatrix({
   const getEffectiveTime = (travelTime: TravelTime): number => {
     switch (selectedPeriod) {
       case "rush":
-        return travelTime.customRushHourMinutes ?? travelTime.googleRushHourMinutes;
+        return (
+          travelTime.customRushHourMinutes ?? travelTime.googleRushHourMinutes
+        );
       case "regular":
-        return travelTime.customRegularMinutes ?? travelTime.googleRegularMinutes;
+        return (
+          travelTime.customRegularMinutes ?? travelTime.googleRegularMinutes
+        );
       case "night":
         return travelTime.customNightMinutes ?? travelTime.googleNightMinutes;
     }
@@ -91,7 +99,9 @@ export function TravelTimeMatrix({
       <div className="text-center py-8 text-muted-foreground">
         <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
         <p>No travel times fetched yet.</p>
-        <p className="text-sm">Click &quot;Fetch Travel Times&quot; to calculate travel times.</p>
+        <p className="text-sm">
+          Click &quot;Fetch Travel Times&quot; to calculate travel times.
+        </p>
       </div>
     );
   }
@@ -136,12 +146,12 @@ export function TravelTimeMatrix({
             </tr>
           </thead>
           <tbody>
-            {locations.map((fromLoc) => (
+            {locations.map((fromLocation) => (
               <tr key={fromLoc.id}>
                 <td className="border p-2 bg-muted font-medium">
                   {fromLoc.name}
                 </td>
-                {locations.map((toLoc) => {
+                {locations.map((toLocation) => {
                   if (fromLoc.id === toLoc.id) {
                     return (
                       <td

@@ -62,10 +62,10 @@ The key decision at each transition is **direction**: should travel go at the ST
 
 ```
 Travel at END:    [...available time...] [travel] → next-event @ nextLoc
-Travel at START:  prev-event @ prevLoc → [travel] [...available time...]
+Travel at START:  prev-event @ prevLocation → [travel] [...available time...]
 ```
 
-Direction is determined by `outgoingTransitions`, a `Set<string>` of `"fromLoc->toLoc"` pairs that grows as going-travel is carved. A gap is a **return trip** (travel at START) when the mirror of its `(prevLoc, nextLoc)` pair is already in the set — i.e., an earlier gap in the same day already had `outgoingTransitions.add("nextLoc->prevLoc")`. This implements the bracket model: going-travel at END, symmetric returning-travel at START.
+Direction is determined by `outgoingTransitions`, a `Set<string>` of `"fromLoc->toLoc"` pairs that grows as going-travel is carved. A gap is a **return trip** (travel at START) when the mirror of its `(prevLocation, nextLocation)` pair is already in the set — i.e., an earlier gap in the same day already had `outgoingTransitions.add("nextLoc->prevLoc")`. This implements the bracket model: going-travel at END, symmetric returning-travel at START.
 
 ```typescript
 const placeAtStart = outgoingTransitions.has(`${nextLoc}->${prevLoc}`);
@@ -75,11 +75,11 @@ if (!placeAtStart) outgoingTransitions.add(`${prevLoc}->${nextLoc}`);
 
 On top of this direction decision, there are four special-case branches that override the default behavior:
 
-**Case A — Adjacent category slot bypass (`catSlotTooSmall`):** When a pre-category slot transitions `prevLoc → catLoc`, and the immediately-following category slot transitions `catLoc → nextLoc`, but the category slot is smaller than the `catLoc → nextLoc` travel time — skip the intermediate catLoc stop and travel directly `prevLoc → nextLoc` from the end of the combined span. Records `prevLoc->nextLoc` as an outgoing transition.
+**Case A — Adjacent category slot bypass (`catSlotTooSmall`):** When a pre-category slot transitions `prevLocation → catLoc`, and the immediately-following category slot transitions `categoryLocation → nextLoc`, but the category slot is smaller than the `categoryLocation → nextLoc` travel time — skip the intermediate categoryLocation stop and travel directly `prevLocation → nextLoc` from the end of the combined span. Records `prevLoc->nextLoc` as an outgoing transition.
 
-**Case B — Combined span overflow (`combinedTooSmall`):** Same two-slot setup, but the combined span is too small for both hops — travel directly `prevLoc → nextLoc` from the start. Also records `prevLoc->nextLoc`.
+**Case B — Combined span overflow (`combinedTooSmall`):** Same two-slot setup, but the combined span is too small for both hops — travel directly `prevLocation → nextLoc` from the start. Also records `prevLoc->nextLoc`.
 
-**Case C — Double-transition inside a category:** A slot inside a category window has a foreign `prevLoc` AND a foreign `nextLoc`. Place return travel (prevLoc→catLoc) at start and departure travel (catLoc→nextLoc) at end if both fit; otherwise fall through to single merged travel. Records `catLoc->nextLoc` as an outgoing transition.
+**Case C — Double-transition inside a category:** A slot inside a category window has a foreign `prevLoc` AND a foreign `nextLoc`. Place return travel (prevLoc→categoryLocation) at start and departure travel (catLoc→nextLocation) at end if both fit; otherwise fall through to single merged travel. Records `catLoc->nextLoc` as an outgoing transition.
 
 **Case D — Last category slot return overflow (`placeAtStart && categoryId && travelMinutes >= durationMinutes`):** Returning from a foreign plan inside a category window, but the return travel fills the entire category slot. Skip the category stop, absorb the post-category slot, and travel directly to the final destination. This is a return trip — no outgoing transition is recorded.
 
@@ -119,7 +119,7 @@ Given a task, slot, and pre-calculated travel requirements:
 
 ### Where `reserveTaskSlot` does additional work
 
-Before calling `reserveSlotWithTravel`, `reserveTaskSlot.ts` also tries to place travel-before *outside* the selected slot (in the preceding gap):
+Before calling `reserveSlotWithTravel`, `reserveTaskSlot.ts` also tries to place travel-before _outside_ the selected slot (in the preceding gap):
 
 1. Calculate `travelEnd = slot.start - buffer`
 2. Call `canPlaceStandaloneTravelBefore(travelEnd, travelBefore)` — reads available slots to see if there's room in the buffer zone before the slot.
@@ -143,12 +143,12 @@ Converts `SimpleEvent[]` to `Interval[]`. Each interval's `locationId` comes fro
 Converts template masks to intervals. Each template's `locationId` comes directly from the mask (populated from `LocationMapper`).
 
 **Step 3 — `applyCategoriesToNullIntervals`:**
-For null-location events that fall entirely within a category period that has a location, assigns the category's location to the interval. This prevents "Anywhere" events inside a Work category from tunneling the prevLoc chain back to the home-location template before the work window.
+For null-location events that fall entirely within a category period that has a location, assigns the category's location to the interval. This prevents "Anywhere" events inside a Work category from tunneling the prevLocation chain back to the home-location template before the work window.
 
 **Step 4 — `findGaps`:**
 Merges occupied intervals and finds free time between them. For each gap, it walks backward through the merged intervals to find the nearest non-null `locationId` — that becomes `prevLocationId`. The immediately following interval's location (which may be `null`) becomes `nextLocationId`.
 
-**Note on `mergeIntervals` in `findGaps`:** Because gaps are found between *merged* intervals, overlapping events at the same location merge into one. This is correct for time accounting but loses per-event identity.
+**Note on `mergeIntervals` in `findGaps`:** Because gaps are found between _merged_ intervals, overlapping events at the same location merge into one. This is correct for time accounting but loses per-event identity.
 
 **Step 5 — `fixPostCategoryPrevLoc`:**
 Corrects slots whose `prevLocationId` is wrong because of null-location events after a category period. If a slot starts after a category period ends, and there's no non-null-location event between the period end and the slot start, the slot's `prevLocationId` is overridden to the category's location.
@@ -157,7 +157,7 @@ Corrects slots whose `prevLocationId` is wrong because of null-location events a
 Splits slots at category start/end times. At an "entering" boundary (category starts), the after-fragment gets `prevLocationId = catLoc`. At an "exiting" boundary (category ends), the before-fragment gets `nextLocationId = catLoc` (or the adjacent category's location if one starts at the same boundary).
 
 **Step 7 — `carveTravelFromChain`:**
-Consumes slots where `prevLoc !== nextLoc`, outputting travel occupied slots and shorter available slots. The surviving available slots get updated `prevLocationId` reflecting what location they now "follow" (e.g., after a `travel-at-start` slot, `prevLoc` is updated to `nextLoc`).
+Consumes slots where `prevLocation !== nextLoc`, outputting travel occupied slots and shorter available slots. The surviving available slots get updated `prevLocationId` reflecting what location they now "follow" (e.g., after a `travel-at-start` slot, `prevLoc` is updated to `nextLoc`).
 
 ### Note: `findGaps` returns `TimeSlot[]` directly
 
@@ -169,7 +169,7 @@ Consumes slots where `prevLoc !== nextLoc`, outputting travel occupied slots and
 
 ### Key fragility: `findGaps` `nextLocationId` can be `null`
 
-If the event *after* a gap has `locationId: null` (Anywhere), `nextLocationId` on the gap is `null`. `carveTravelFromChain` skips carving when either `prevLoc` or `nextLoc` is `null`. This is correct (can't calculate travel to "anywhere"), but it means a null-location template at the end of a work window can suppress travel carving for the return-home transition. `applyCategoriesToNullIntervals` is specifically designed to prevent this, but only for events that are entirely within a category period.
+If the event _after_ a gap has `locationId: null` (Anywhere), `nextLocationId` on the gap is `null`. `carveTravelFromChain` skips carving when either `prevLoc` or `nextLoc` is `null`. This is correct (can't calculate travel to "anywhere"), but it means a null-location template at the end of a work window can suppress travel carving for the return-home transition. `applyCategoriesToNullIntervals` is specifically designed to prevent this, but only for events that are entirely within a category period.
 
 ---
 
@@ -183,7 +183,7 @@ There are four distinct removal operations:
 
 **1. Full day rebuild:** `carveTravelFromChain` starts by filtering out all `travel-gap-*` and `travel-insufficient-*` from `occupiedSlots` for the day before adding new ones. This makes rebuilding idempotent.
 
-**2. Pre-carve conflict removal in `reserveSlotWithTravel`:** When placing a task, any existing travel going *to* `taskLocationId` that ends within `TRAVEL_SEARCH_WINDOW_MS` of the task start is removed. This handles the case where a gap previously had pre-carved travel, but the task now fills part of the gap.
+**2. Pre-carve conflict removal in `reserveSlotWithTravel`:** When placing a task, any existing travel going _to_ `taskLocationId` that ends within `TRAVEL_SEARCH_WINDOW_MS` of the task start is removed. This handles the case where a gap previously had pre-carved travel, but the task now fills part of the gap.
 
 **3. Travel-after replacement:** When placing a task with `travelAfter > 0`, any existing travel going to `nextLocationId` that ends within `TRAVEL_SEARCH_WINDOW_MS` of the slot's end is removed. This is the "travel shifts forward" pattern — if A→B→gap→C existed, and a new task fills part of the gap, the B→C travel needs to shift forward to start after the task.
 
@@ -203,18 +203,19 @@ There are four distinct removal operations:
 
 Travel slots use `eventId` string prefixes as a type system:
 
-| Prefix | Created by | Meaning |
-|--------|------------|---------|
-| `travel-gap-{slotStartMs}` | `carveTravelFromChain` | Pre-carved gap travel between fixed events |
-| `travel-insufficient-{slotStartMs}` | `carveTravelFromChain` or `reserveSlotWithTravel` | Travel needed but not enough space |
-| `travel-to-{taskId}` | `reserveSlotWithTravel` or `reserveStandaloneTravelBefore` | Travel before a specific task |
-| `travel-from-{taskId}` | `reserveSlotWithTravel` or `reserveStandaloneTravelAfter` | Travel after a specific task |
+| Prefix                              | Created by                                                 | Meaning                                    |
+| ----------------------------------- | ---------------------------------------------------------- | ------------------------------------------ |
+| `travel-gap-{slotStartMs}`          | `carveTravelFromChain`                                     | Pre-carved gap travel between fixed events |
+| `travel-insufficient-{slotStartMs}` | `carveTravelFromChain` or `reserveSlotWithTravel`          | Travel needed but not enough space         |
+| `travel-to-{taskId}`                | `reserveSlotWithTravel` or `reserveStandaloneTravelBefore` | Travel before a specific task              |
+| `travel-from-{taskId}`              | `reserveSlotWithTravel` or `reserveStandaloneTravelAfter`  | Travel after a specific task               |
 
 Code throughout the system checks these prefixes to distinguish pre-carved travel from dynamic task travel:
 
 ```typescript
-const isPreCarved = occ.eventId?.startsWith("travel-gap-") ||
-                    occ.eventId?.startsWith("travel-insufficient-");
+const isPreCarved =
+  occ.eventId?.startsWith("travel-gap-") ||
+  occ.eventId?.startsWith("travel-insufficient-");
 ```
 
 This prefix-based distinction is the mechanism that prevents dynamic task travel from being reclaimed during scheduling, while allowing pre-carved travel to be reclaimed when a same-location task fills the gap.
@@ -232,7 +233,8 @@ This creates several coordination points, each of which can go wrong:
 When `reserveSlotWithTravel` places travel-before, it removes any existing travel going to `taskLocationId` near the task start. This works when the pre-carved travel is exactly where expected.
 
 It can fail when:
-- The pre-carved travel has a different `travelToLocationId` than `taskLocationId` (e.g., travel was carve from templateLoc to catLoc, but the task going into the slot has a slightly different location resolution)
+
+- The pre-carved travel has a different `travelToLocationId` than `taskLocationId` (e.g., travel was carve from templateLocation to categoryLocation, but the task going into the slot has a slightly different location resolution)
 - Multiple tasks land near the same pre-carved travel, and the second task's removal window hits the first task's dynamic travel instead
 
 ### Coordination Point 2: Travel-after replacement
@@ -240,12 +242,13 @@ It can fail when:
 When a task is placed with `travelAfter > 0`, the system removes existing travel going to `nextLocationId` near `slot.end`. This is intended to replace a pre-carved gap→nextEvent travel with the new task→nextEvent travel.
 
 It can fail when:
+
 - `slot.end` (the available slot's end) doesn't coincide with the pre-carved travel's end (it shouldn't after buffers are applied)
 - The search window catches unrelated same-destination travel on the same day
 
 ### Coordination Point 3: Reclaiming pre-carve when task matches destination
 
-When a task at location X is placed in a slot whose `nextLocationId` is also X, the pre-carved travel leading from X to the next event should be unnecessary (the task is *already* at X, so the pre-carved travel was based on the previous template location, not the task's location). The system reclaims this by searching for `travel-gap-*` going to `nextLocationId` near `slot.end`.
+When a task at location X is placed in a slot whose `nextLocationId` is also X, the pre-carved travel leading from X to the next event should be unnecessary (the task is _already_ at X, so the pre-carved travel was based on the previous template location, not the task's location). The system reclaims this by searching for `travel-gap-*` going to `nextLocationId` near `slot.end`.
 
 This logic only triggers when `travelAfter = 0`, meaning it assumes that if the task matches the destination, no new travel-after is needed. But `travelAfter` is calculated before reservation — it could be 0 because the task matches `nextLocationId`, or it could be 0 because a reusable travel slot was found. These cases are conflated.
 
@@ -286,6 +289,7 @@ const slot = fittingSlots.find(
 ### 5. `freeSlotEnd` priority in `reserveSlotWithTravel`
 
 The free slot end after a task is determined by the first non-null of:
+
 1. `reclaimedTravelEnd` — pre-carve was reclaimed
 2. `removedTravelAfterEnd` — previous task's travel-after was removed
 3. `reusableTravelStart - buffer` — existing travel is reused
@@ -308,9 +312,9 @@ This works only if the available slot that was selected during `selectBestSlot` 
 
 ### 5. ~~Travel direction uses `dayHomeLoc` heuristic~~ **Fixed**
 
-The original `shouldPlaceTravelAtStart` method matched `nextLoc === dayHomeLoc` (the `prevLocationId` of the first available slot of the day) to detect return trips. This was fragile and not the intended bracket semantics.
+The original `shouldPlaceTravelAtStart` method matched `nextLocation === dayHomeLoc` (the `prevLocationId` of the first available slot of the day) to detect return trips. This was fragile and not the intended bracket semantics.
 
-Replaced with `outgoingTransitions: Set<string>`. A gap is classified as a return trip when the mirror of its `(prevLoc, nextLoc)` is already in the set, meaning the corresponding going-travel was carved earlier in the same day's chain. This is a structural check rather than a location-matching heuristic and correctly handles categories, multi-hop journeys, and bypass cases.
+Replaced with `outgoingTransitions: Set<string>`. A gap is classified as a return trip when the mirror of its `(prevLocation, nextLocation)` is already in the set, meaning the corresponding going-travel was carved earlier in the same day's chain. This is a structural check rather than a location-matching heuristic and correctly handles categories, multi-hop journeys, and bypass cases.
 
 ### 7. Two location maps with subtle different semantics
 
@@ -332,7 +336,7 @@ if (current.start <= last.end) {
 }
 ```
 
-If a Home template (06:00-08:00) and a Work template (08:00-17:00) are adjacent and merge, the merged interval has the Home location. The gap *after* 17:00 gets `prevLocationId = Home`, not `Work`. This would trigger spurious travel generation if the next event is at a non-Home location.
+If a Home template (06:00-08:00) and a Work template (08:00-17:00) are adjacent and merge, the merged interval has the Home location. The gap _after_ 17:00 gets `prevLocationId = Home`, not `Work`. This would trigger spurious travel generation if the next event is at a non-Home location.
 
 In practice, templates are designed to not overlap, so merging only happens at exact boundaries — but exact boundary merging means `current.start === last.end`, which satisfies `current.start <= last.end` and triggers the merge. The result depends on which template's interval appears first in the sorted order.
 
@@ -350,7 +354,7 @@ The slot builder handles this with the five special cases in `carveTravelFromCha
 [Category A @ Work 9-12] [Gap] [Category B @ Gym 13-17]
 ```
 
-The gap between A and B has `prevLoc = Work`, `nextLoc = Gym`. Normal "travel at end" would carve Work→Gym travel at the end of the gap. This is correct.
+The gap between A and B has `prevLocation = Work`, `nextLocation = Gym`. Normal "travel at end" would carve Work→Gym travel at the end of the gap. This is correct.
 
 ### Case: Plan inside a category window at a foreign location
 
@@ -359,7 +363,7 @@ The gap between A and B has `prevLoc = Work`, `nextLoc = Gym`. Normal "travel at
   [Plan @ Gym 11-12]  ← inside work window but foreign location
 ```
 
-The category slot before the plan has `prevLoc = Work`, `nextLoc = Gym`. The category slot after the plan has `prevLoc = Gym`, `nextLoc = Work`. `shouldPlaceTravelAtStart` fires for the after-slot (returning to work after Gym), placing return travel at the start.
+The category slot before the plan has `prevLocation = Work`, `nextLocation = Gym`. The category slot after the plan has `prevLocation = Gym`, `nextLocation = Work`. `shouldPlaceTravelAtStart` fires for the after-slot (returning to work after Gym), placing return travel at the start.
 
 ### Case: Plan inside a category window but the category slot is too small for return travel
 
@@ -373,7 +377,7 @@ This is a key source of complexity and a likely source of weirdness — the syst
 [Morning at Home] [Tiny gap] [Work 9-17] [Plan @ Gym 17-18]
 ```
 
-The tiny gap has `prevLoc = Home`, `nextLoc = Work`. But Work is immediately followed by Gym. The `catSlotTooSmall` check detects that the Work→Gym travel doesn't fit in the Work slot and collapses the Home→Work→Gym route into a direct Home→Gym travel.
+The tiny gap has `prevLocation = Home`, `nextLocation = Work`. But Work is immediately followed by Gym. The `catSlotTooSmall` check detects that the Work→Gym travel doesn't fit in the Work slot and collapses the Home→Work→Gym route into a direct Home→Gym travel.
 
 ---
 
@@ -399,7 +403,7 @@ leading buffer → fixPostCategoryPrevLoc
   |
   v
 splitSlotsAtCategoryBoundaries
-  (slots tagged with categoryId, prevLoc/nextLoc adjusted at boundaries)
+  (slots tagged with categoryId, prevLoc/nextLocation adjusted at boundaries)
   |
   v
 carveTravelFromChain  [COMPLEX — 5 special cases + direction logic]
@@ -417,7 +421,7 @@ mergeAdjacentSlots → availableSlots[dayKey]
   |      (optionally calls reserveStandaloneTravelBefore)
   |      calls reserveSlotWithTravel
   |        - removes conflicting pre-carved travel (travel-gap-* near task start)
-  |        - removes travel-after being shifted (travel-* near slot.end to nextLoc)
+  |        - removes travel-after being shifted (travel-* near slot.end to nextLocation)
   |        - optionally absorbs prev task's travel-from-* slot
   |        - optionally reclaims pre-carved travel at same-location destination
   |        - creates travel-to-{taskId} before task

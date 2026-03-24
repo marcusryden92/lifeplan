@@ -8,26 +8,30 @@ export function tryDoubleTransition(
   categoryPeriods: CategoryPeriod[],
   travelManager: TravelManager,
   slot: AvailableSlot,
-  prevLoc: string,
-  nextLoc: string,
+  prevLocation: string,
+  nextLocation: string,
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   result: AvailableSlot[],
-): { handled: boolean; catLoc?: string } {
+): { handled: boolean; categoryLocation?: string } {
   const categoryPeriod = categoryPeriods.find(
     (p) => p.categoryId === slot.categoryId,
   );
-  const catLoc = categoryPeriod?.locationId ?? null;
-  if (!catLoc || prevLoc === catLoc || nextLoc === catLoc)
+  const categoryLocation = categoryPeriod?.locationId ?? null;
+  if (
+    !categoryLocation ||
+    prevLocation === categoryLocation ||
+    nextLocation === categoryLocation
+  )
     return { handled: false };
 
   const travelBeforeMinutes = travelManager.getTravelTime(
-    prevLoc,
-    catLoc,
+    prevLocation,
+    categoryLocation,
     slot.start,
   );
   const travelAfterMinutes = travelManager.getTravelTime(
-    catLoc,
-    nextLoc,
+    categoryLocation,
+    nextLocation,
     slot.end,
   );
   const travelBeforeMs = travelBeforeMinutes * 60000;
@@ -41,8 +45,8 @@ export function tryDoubleTransition(
     createTravelSlot(
       slot.start,
       travelBeforeEnd,
-      prevLoc,
-      catLoc,
+      prevLocation,
+      categoryLocation,
       "preliminary",
       uuidv4(),
       { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
@@ -54,8 +58,8 @@ export function tryDoubleTransition(
     createTravelSlot(
       travelAfterStart,
       slot.end,
-      catLoc,
-      nextLoc,
+      categoryLocation,
+      nextLocation,
       "preliminary",
       uuidv4(),
       { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
@@ -72,11 +76,11 @@ export function tryDoubleTransition(
         (availEnd.getTime() - availStart.getTime()) / 60000,
       ),
       isAvailable: true,
-      prevLocationId: catLoc,
-      nextLocationId: catLoc,
+      prevLocationId: categoryLocation,
+      nextLocationId: categoryLocation,
       categoryId: slot.categoryId,
       isStrictCategory: slot.isStrictCategory,
     });
   }
-  return { handled: true, catLoc };
+  return { handled: true, categoryLocation };
 }

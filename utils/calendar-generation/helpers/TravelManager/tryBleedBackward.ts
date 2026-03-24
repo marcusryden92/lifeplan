@@ -4,8 +4,8 @@ import { v4 as uuidv4 } from "uuid";
 
 export function tryBleedBackward(
   slot: AvailableSlot,
-  prevLoc: string,
-  nextLoc: string,
+  prevLocation: string,
+  nextLocation: string,
   travelMinutes: number,
   bufferMs: number,
   requireSlotCategoryId: boolean,
@@ -33,8 +33,8 @@ export function tryBleedBackward(
       createTravelSlot(
         newTravelStart,
         newTravelEnd,
-        prevLoc,
-        nextLoc,
+        prevLocation,
+        nextLocation,
         "preliminary",
         uuidv4(),
         {
@@ -63,8 +63,8 @@ export function tryBleedBackward(
       createTravelSlot(
         newTravelStart,
         newTravelEnd,
-        prevLoc,
-        nextLoc,
+        prevLocation,
+        nextLocation,
         "preliminary",
         uuidv4(),
         {

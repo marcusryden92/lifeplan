@@ -7,8 +7,8 @@ export function tryReturnAbsorption(
   travelManager: TravelManager,
   slot: AvailableSlot,
   nextSlot: AvailableSlot | null,
-  prevLoc: string,
-  nextLoc: string,
+  prevLocation: string,
+  nextLocation: string,
   travelMinutes: number,
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   result: AvailableSlot[],
@@ -18,16 +18,16 @@ export function tryReturnAbsorption(
     !nextSlot ||
     nextSlot.categoryId ||
     nextSlot.start.getTime() !== slot.end.getTime() ||
-    nextSlot.prevLocationId !== nextLoc ||
+    nextSlot.prevLocationId !== nextLocation ||
     !nextSlot.nextLocationId
   ) {
     return { handled: false };
   }
 
-  const dLoc = nextSlot.nextLocationId;
+  const dLocation = nextSlot.nextLocationId;
   const directMinutes = travelManager.getTravelTime(
-    prevLoc,
-    dLoc,
+    prevLocation,
+    dLocation,
     slot.start,
   );
   const spanEnd = nextSlot.end;
@@ -38,11 +38,14 @@ export function tryReturnAbsorption(
       createTravelSlot(
         slot.start,
         travelEnd,
-        prevLoc,
-        dLoc,
+        prevLocation,
+        dLocation,
         "preliminary",
         uuidv4(),
-        { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
+        {
+          categoryId: slot.categoryId,
+          isStrictCategory: slot.isStrictCategory,
+        },
       ),
     );
     const availStart = new Date(travelEnd.getTime());
@@ -54,7 +57,7 @@ export function tryReturnAbsorption(
           (spanEnd.getTime() - availStart.getTime()) / 60000,
         ),
         isAvailable: true,
-        prevLocationId: dLoc,
+        prevLocationId: dLocation,
         nextLocationId: nextSlot.nextLocationId,
         categoryId: null,
         isStrictCategory: false,
@@ -65,11 +68,16 @@ export function tryReturnAbsorption(
       createTravelSlot(
         slot.start,
         spanEnd,
-        prevLoc,
-        dLoc,
+        prevLocation,
+        dLocation,
         "preliminary",
         uuidv4(),
-        { insufficientTravel: true, requiredTravelMinutes: directMinutes, categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
+        {
+          insufficientTravel: true,
+          requiredTravelMinutes: directMinutes,
+          categoryId: slot.categoryId,
+          isStrictCategory: slot.isStrictCategory,
+        },
       ),
     );
   }

@@ -34,29 +34,37 @@ export function findAllFittingSlots(
         const periodEnd = new Date(dayStart);
         periodEnd.setHours(endHour, endMin, 0, 0);
 
-        const intersectStart = slot.start > periodStart ? slot.start : periodStart;
+        const intersectStart =
+          slot.start > periodStart ? slot.start : periodStart;
         const intersectEnd = slot.end < periodEnd ? slot.end : periodEnd;
         if (intersectEnd <= intersectStart) continue;
 
-        const effectiveStart = intersectStart < afterDate ? afterDate : intersectStart;
+        const effectiveStart =
+          intersectStart < afterDate ? afterDate : intersectStart;
         if (intersectEnd <= effectiveStart) continue;
 
-        const effectiveMinutes = dateTimeService.getMinutesDifference(effectiveStart, intersectEnd);
+        const effectiveMinutes = dateTimeService.getMinutesDifference(
+          effectiveStart,
+          intersectEnd,
+        );
         if (effectiveMinutes >= baseRequiredMinutes) {
-          const categoryLoc = categoryConstraint.locationId ?? null;
+          const categoryLocation = categoryConstraint.locationId ?? null;
           fittingSlots.push({
             ...slot,
             start: effectiveStart,
             end: intersectEnd,
             durationMinutes: effectiveMinutes,
-            prevLocationId: slot.prevLocationId ?? categoryLoc,
-            nextLocationId: slot.nextLocationId ?? categoryLoc,
+            prevLocationId: slot.prevLocationId ?? categoryLocation,
+            nextLocationId: slot.nextLocationId ?? categoryLocation,
           });
         }
       }
     } else {
       const effectiveStart = slot.start < afterDate ? afterDate : slot.start;
-      const effectiveMinutes = dateTimeService.getMinutesDifference(effectiveStart, slot.end);
+      const effectiveMinutes = dateTimeService.getMinutesDifference(
+        effectiveStart,
+        slot.end,
+      );
 
       if (effectiveMinutes >= baseRequiredMinutes) {
         fittingSlots.push({

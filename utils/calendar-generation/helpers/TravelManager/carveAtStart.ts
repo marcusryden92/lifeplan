@@ -4,8 +4,8 @@ import { v4 as uuidv4 } from "uuid";
 
 export function carveAtStart(
   slot: AvailableSlot,
-  prevLoc: string,
-  nextLoc: string,
+  prevLocation: string,
+  nextLocation: string,
   travelMinutes: number,
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   result: AvailableSlot[],
@@ -18,11 +18,14 @@ export function carveAtStart(
       createTravelSlot(
         slot.start,
         travelEnd,
-        prevLoc,
-        nextLoc,
+        prevLocation,
+        nextLocation,
         "preliminary",
         uuidv4(),
-        { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
+        {
+          categoryId: slot.categoryId,
+          isStrictCategory: slot.isStrictCategory,
+        },
       ),
     );
     const availableStartMs = travelEnd.getTime();
@@ -34,7 +37,7 @@ export function carveAtStart(
           (slot.end.getTime() - availableStartMs) / 60000,
         ),
         isAvailable: true,
-        prevLocationId: nextLoc,
+        prevLocationId: nextLocation,
         nextLocationId: slot.nextLocationId,
         categoryId: slot.categoryId,
         isStrictCategory: slot.isStrictCategory,
@@ -45,11 +48,16 @@ export function carveAtStart(
       createTravelSlot(
         slot.start,
         slot.end,
-        prevLoc,
-        nextLoc,
+        prevLocation,
+        nextLocation,
         "preliminary",
         uuidv4(),
-        { insufficientTravel: true, requiredTravelMinutes: travelMinutes, categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
+        {
+          insufficientTravel: true,
+          requiredTravelMinutes: travelMinutes,
+          categoryId: slot.categoryId,
+          isStrictCategory: slot.isStrictCategory,
+        },
       ),
     );
   }

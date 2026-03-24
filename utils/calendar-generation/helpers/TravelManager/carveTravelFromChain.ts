@@ -8,12 +8,15 @@ import { carveAtStart } from "./carveAtStart";
 import { carveAtEnd } from "./carveAtEnd";
 
 export function carveTravelFromChain(
+  hasPlannerLocationMap: boolean,
   categoryPeriods: CategoryPeriod[],
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   travelManager: TravelManager,
   bufferTimeMinutes: number,
   slots: AvailableSlot[],
 ): AvailableSlot[] {
+  if (!hasPlannerLocationMap) return slots;
+
   const result: AvailableSlot[] = [];
   const departureLocations = new Set<string>();
 
@@ -25,9 +28,9 @@ export function carveTravelFromChain(
     }
     const slot = slots[i];
 
-    const prevLoc = slot.prevLocationId;
-    const nextLoc = slot.nextLocationId;
-    if (!prevLoc || !nextLoc || prevLoc === nextLoc) {
+    const prevLocation = slot.prevLocationId;
+    const nextLocation = slot.nextLocationId;
+    if (!prevLocation || !nextLocation || prevLocation === nextLocation) {
       result.push(slot);
       continue;
     }
@@ -36,10 +39,10 @@ export function carveTravelFromChain(
       continue;
     }
 
-    const placeAtStart = departureLocations.has(nextLoc);
+    const placeAtStart = departureLocations.has(nextLocation);
     const travelMinutes = travelManager.getTravelTime(
-      prevLoc,
-      nextLoc,
+      prevLocation,
+      nextLocation,
       placeAtStart ? slot.start : slot.end,
     );
     if (travelMinutes <= 0) {
@@ -58,14 +61,14 @@ export function carveTravelFromChain(
         nextSlot,
         slots,
         i,
-        prevLoc,
-        nextLoc,
+        prevLocation,
+        nextLocation,
         travelMinutes,
         occupiedSlots,
         result,
       );
       if (bypass.handled) {
-        departureLocations.add(prevLoc);
+        departureLocations.add(prevLocation);
         if (bypass.skipNext) skipNextSlot = true;
         continue;
       }
@@ -76,14 +79,14 @@ export function carveTravelFromChain(
         categoryPeriods,
         travelManager,
         slot,
-        prevLoc,
-        nextLoc,
+        prevLocation,
+        nextLocation,
         occupiedSlots,
         result,
       );
       if (dbl.handled) {
-        departureLocations.add(prevLoc);
-        if (dbl.catLoc) departureLocations.add(dbl.catLoc);
+        departureLocations.add(prevLocation);
+        if (dbl.categoryLocation) departureLocations.add(dbl.categoryLocation);
         continue;
       }
     }
@@ -93,25 +96,42 @@ export function carveTravelFromChain(
         travelManager,
         slot,
         nextSlot,
-        prevLoc,
-        nextLoc,
+        prevLocation,
+        nextLocation,
         travelMinutes,
         occupiedSlots,
         result,
       );
       if (absorb.handled) {
-        departureLocations.add(prevLoc);
+        departureLocations.add(prevLocation);
         if (absorb.skipNext) skipNextSlot = true;
         continue;
       }
     }
 
     if (placeAtStart) {
-      carveAtStart(slot, prevLoc, nextLoc, travelMinutes, occupiedSlots, result);
+      carveAtStart(
+        slot,
+        prevLocation,
+        nextLocation,
+        travelMinutes,
+        occupiedSlots,
+        result,
+      );
     } else {
-      carveAtEnd(slot, slots, i, prevLoc, nextLoc, travelMinutes, bufferTimeMinutes, occupiedSlots, result);
+      carveAtEnd(
+        slot,
+        slots,
+        i,
+        prevLocation,
+        nextLocation,
+        travelMinutes,
+        bufferTimeMinutes,
+        occupiedSlots,
+        result,
+      );
     }
-    departureLocations.add(prevLoc);
+    departureLocations.add(prevLocation);
   }
 
   return result;

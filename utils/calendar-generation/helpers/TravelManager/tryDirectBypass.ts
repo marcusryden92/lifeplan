@@ -12,8 +12,8 @@ export function tryDirectBypass(
   nextSlot: AvailableSlot | null,
   slots: AvailableSlot[],
   slotIndex: number,
-  prevLoc: string,
-  nextLoc: string,
+  prevLocation: string,
+  nextLocation: string,
   travelMinutes: number,
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   result: AvailableSlot[],
@@ -40,10 +40,10 @@ export function tryDirectBypass(
     return { handled: false };
   }
 
-  const bLoc = nextSlot.nextLocationId;
+  const bLocation = nextSlot.nextLocationId;
   const travelCatToB = travelManager.getTravelTime(
-    nextLoc,
-    bLoc,
+    nextLocation,
+    bLocation,
     nextSlot.end,
   );
   if (travelCatToB <= 0) return { handled: false };
@@ -59,8 +59,8 @@ export function tryDirectBypass(
 
   if (catSlotTooSmall) {
     const directMinutes = travelManager.getTravelTime(
-      prevLoc,
-      bLoc,
+      prevLocation,
+      bLocation,
       spanEnd,
     );
     const travelStart = new Date(spanEnd.getTime() - directMinutes * 60000);
@@ -69,11 +69,14 @@ export function tryDirectBypass(
         createTravelSlot(
           travelStart,
           spanEnd,
-          prevLoc,
-          bLoc,
+          prevLocation,
+          bLocation,
           "preliminary",
           uuidv4(),
-          { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
+          {
+            categoryId: slot.categoryId,
+            isStrictCategory: slot.isStrictCategory,
+          },
         ),
       );
       const availEnd = new Date(travelStart.getTime());
@@ -86,7 +89,7 @@ export function tryDirectBypass(
           ),
           isAvailable: true,
           prevLocationId: slot.prevLocationId,
-          nextLocationId: bLoc,
+          nextLocationId: bLocation,
           categoryId: slot.categoryId,
           isStrictCategory: slot.isStrictCategory,
         });
@@ -96,19 +99,24 @@ export function tryDirectBypass(
         createTravelSlot(
           slot.start,
           spanEnd,
-          prevLoc,
-          bLoc,
+          prevLocation,
+          bLocation,
           "preliminary",
           uuidv4(),
-          { insufficientTravel: true, requiredTravelMinutes: directMinutes, categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
+          {
+            insufficientTravel: true,
+            requiredTravelMinutes: directMinutes,
+            categoryId: slot.categoryId,
+            isStrictCategory: slot.isStrictCategory,
+          },
         ),
       );
     }
     return { handled: true, skipNext: true };
   } else {
     const directMinutes = travelManager.getTravelTime(
-      prevLoc,
-      bLoc,
+      prevLocation,
+      bLocation,
       slot.start,
     );
     const travelEnd = new Date(slot.start.getTime() + directMinutes * 60000);
@@ -117,11 +125,14 @@ export function tryDirectBypass(
         createTravelSlot(
           slot.start,
           travelEnd,
-          prevLoc,
-          bLoc,
+          prevLocation,
+          bLocation,
           "preliminary",
           uuidv4(),
-          { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
+          {
+            categoryId: slot.categoryId,
+            isStrictCategory: slot.isStrictCategory,
+          },
         ),
       );
       const newCatStart = new Date(travelEnd.getTime());
@@ -132,7 +143,7 @@ export function tryDirectBypass(
           durationMinutes: Math.floor(
             (spanEnd.getTime() - newCatStart.getTime()) / 60000,
           ),
-          prevLocationId: bLoc,
+          prevLocationId: bLocation,
         };
         return { handled: true, skipNext: false };
       }
@@ -141,11 +152,16 @@ export function tryDirectBypass(
         createTravelSlot(
           slot.start,
           spanEnd,
-          prevLoc,
-          bLoc,
+          prevLocation,
+          bLocation,
           "preliminary",
           uuidv4(),
-          { insufficientTravel: true, requiredTravelMinutes: directMinutes, categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
+          {
+            insufficientTravel: true,
+            requiredTravelMinutes: directMinutes,
+            categoryId: slot.categoryId,
+            isStrictCategory: slot.isStrictCategory,
+          },
         ),
       );
     }

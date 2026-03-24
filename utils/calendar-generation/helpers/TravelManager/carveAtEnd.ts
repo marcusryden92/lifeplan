@@ -7,8 +7,8 @@ export function carveAtEnd(
   slot: AvailableSlot,
   slots: AvailableSlot[],
   slotIndex: number,
-  prevLoc: string,
-  nextLoc: string,
+  prevLocation: string,
+  nextLocation: string,
   travelMinutes: number,
   bufferTimeMinutes: number,
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
@@ -25,11 +25,14 @@ export function carveAtEnd(
         createTravelSlot(
           travelStart,
           travelEnd,
-          prevLoc,
-          nextLoc,
+          prevLocation,
+          nextLocation,
           "preliminary",
           uuidv4(),
-          { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
+          {
+            categoryId: slot.categoryId,
+            isStrictCategory: slot.isStrictCategory,
+          },
         ),
       );
       result.push({
@@ -40,7 +43,7 @@ export function carveAtEnd(
         ),
         isAvailable: true,
         prevLocationId: slot.prevLocationId,
-        nextLocationId: nextLoc,
+        nextLocationId: nextLocation,
         categoryId: slot.categoryId,
         isStrictCategory: slot.isStrictCategory,
       });
@@ -48,8 +51,8 @@ export function carveAtEnd(
       if (
         !tryBleedBackward(
           slot,
-          prevLoc,
-          nextLoc,
+          prevLocation,
+          nextLocation,
           travelMinutes,
           bufferMs,
           false,
@@ -61,11 +64,14 @@ export function carveAtEnd(
           createTravelSlot(
             travelStart,
             travelEnd,
-            prevLoc,
-            nextLoc,
+            prevLocation,
+            nextLocation,
             "preliminary",
             uuidv4(),
-            { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
+            {
+              categoryId: slot.categoryId,
+              isStrictCategory: slot.isStrictCategory,
+            },
           ),
         );
       }
@@ -74,8 +80,8 @@ export function carveAtEnd(
     if (
       !tryBleedBackward(
         slot,
-        prevLoc,
-        nextLoc,
+        prevLocation,
+        nextLocation,
         travelMinutes,
         bufferMs,
         true,
@@ -96,8 +102,8 @@ export function carveAtEnd(
           createTravelSlot(
             slot.start,
             bleedEnd,
-            prevLoc,
-            nextLoc,
+            prevLocation,
+            nextLocation,
             "preliminary",
             uuidv4(),
           ),
@@ -110,7 +116,7 @@ export function carveAtEnd(
             durationMinutes: Math.floor(
               (nextSlot.end.getTime() - newCatStart.getTime()) / 60000,
             ),
-            prevLocationId: nextLoc,
+            prevLocationId: nextLocation,
           };
         }
       } else {
@@ -118,8 +124,8 @@ export function carveAtEnd(
           createTravelSlot(
             slot.start,
             slot.end,
-            prevLoc,
-            nextLoc,
+            prevLocation,
+            nextLocation,
             "preliminary",
             uuidv4(),
             {
