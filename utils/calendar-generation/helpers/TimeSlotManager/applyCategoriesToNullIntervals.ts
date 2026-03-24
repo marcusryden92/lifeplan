@@ -18,13 +18,13 @@ export function applyCategoriesToNullIntervals(
   if (dayPeriods.length === 0) return intervals;
 
   return intervals.map((interval) => {
-    if (interval.locationId !== null) return interval;
+    if (interval.startLocationId != null || interval.endLocationId != null) return interval;
     for (const period of dayPeriods) {
       if (
         interval.start.getTime() >= period.start.getTime() &&
         interval.end.getTime() <= period.end.getTime()
       ) {
-        return { ...interval, locationId: period.locationId };
+        return { ...interval, startLocationId: period.locationId, endLocationId: period.locationId };
       }
     }
     return interval;

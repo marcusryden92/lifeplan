@@ -11,9 +11,9 @@ import { TimeSlot } from "../models/TimeSlot";
 export interface Interval {
   start: Date;
   end: Date;
-  locationId?: string | null; // Location of the event occupying this interval
+  startLocationId: string | null;
+  endLocationId: string | null;
 }
-
 
 /**
  * Merge overlapping intervals into non-overlapping ranges
@@ -27,19 +27,19 @@ export function mergeIntervals(intervals: Interval[]): Interval[] {
     (a, b) => a.start.getTime() - b.start.getTime(),
   );
 
-  const merged: Interval[] = [sorted[0]];
+  const merged: Interval[] = [{ ...sorted[0] }];
 
   for (let i = 1; i < sorted.length; i++) {
-    const current = sorted[i];
-    const last = merged[merged.length - 1];
+    const candidate = sorted[i];
+    const accumulator = merged[merged.length - 1];
 
-    // If current interval overlaps with the last merged interval
-    if (current.start <= last.end) {
-      // Extend the last interval
-      last.end = new Date(Math.max(last.end.getTime(), current.end.getTime()));
+    if (candidate.start <= accumulator.end) {
+      if (candidate.end.getTime() > accumulator.end.getTime()) {
+        accumulator.end = candidate.end;
+        accumulator.endLocationId = candidate.endLocationId ?? null;
+      }
     } else {
-      // No overlap, add as new interval
-      merged.push(current);
+      merged.push({ ...candidate });
     }
   }
 
@@ -88,9 +88,9 @@ export function findLocationTransitions(
     // Only create transitions when locations differ
     // Skip if either location is null ("everywhere" - no travel needed)
     if (
-      current.locationId &&
-      next.locationId &&
-      current.locationId !== next.locationId
+      current.endLocationId &&
+      next.startLocationId &&
+      current.endLocationId !== next.startLocationId
     ) {
       const gapMs = next.start.getTime() - current.end.getTime();
       const gapMinutes = Math.floor(gapMs / 60000);
@@ -98,8 +98,8 @@ export function findLocationTransitions(
       transitions.push({
         fromEventEnd: current.end,
         toEventStart: next.start,
-        fromLocationId: current.locationId,
-        toLocationId: next.locationId,
+        fromLocationId: current.endLocationId,
+        toLocationId: next.startLocationId,
         gapMinutes,
         isTrespassing: gapMinutes <= 0,
       });
@@ -175,9 +175,9 @@ export function detectTrespassingEvents(
 
       // Skip if same location or either is null ("everywhere")
       if (
-        !eventA.locationId ||
-        !eventB.locationId ||
-        eventA.locationId === eventB.locationId
+        !eventA.startLocationId ||
+        !eventB.startLocationId ||
+        eventA.startLocationId === eventB.startLocationId
       ) {
         continue;
       }
@@ -238,16 +238,19 @@ export function findGaps(
   occupiedIntervals: Interval[],
   rangeStart: Date,
   rangeEnd: Date,
+  startingLocation: string | null = null,
 ): TimeSlot[] {
   if (occupiedIntervals.length === 0) {
-    const durationMinutes = Math.floor((rangeEnd.getTime() - rangeStart.getTime()) / 60000);
+    const durationMinutes = Math.floor(
+      (rangeEnd.getTime() - rangeStart.getTime()) / 60000,
+    );
     return [
       {
         start: rangeStart,
         end: rangeEnd,
         durationMinutes,
         isAvailable: true,
-        prevLocationId: null,
+        prevLocationId: startingLocation,
         nextLocationId: null,
       },
     ];
@@ -256,57 +259,48 @@ export function findGaps(
   const merged = mergeIntervals(occupiedIntervals);
   const gaps: TimeSlot[] = [];
 
-  // Check for gap before first interval
   if (merged[0].start > rangeStart) {
     const end = merged[0].start;
     gaps.push({
       start: rangeStart,
       end,
-      durationMinutes: Math.floor((end.getTime() - rangeStart.getTime()) / 60000),
+      durationMinutes: Math.floor(
+        (end.getTime() - rangeStart.getTime()) / 60000,
+      ),
       isAvailable: true,
-      prevLocationId: null,
-      nextLocationId: merged[0].locationId ?? null,
+      prevLocationId: startingLocation,
+      nextLocationId: merged[0].startLocationId,
     });
   }
 
-  // Check for gaps between intervals
   for (let i = 0; i < merged.length - 1; i++) {
     const gapStart = merged[i].end;
     const gapEnd = merged[i + 1].start;
 
     if (gapStart < gapEnd) {
-      // Walk backward to find the nearest located event (skip "anywhere" items with null location)
-      let prevLoc: string | null = null;
-      for (let j = i; j >= 0; j--) {
-        if (merged[j].locationId != null) { prevLoc = merged[j].locationId!; break; }
-      }
-
       gaps.push({
         start: gapStart,
         end: gapEnd,
-        durationMinutes: Math.floor((gapEnd.getTime() - gapStart.getTime()) / 60000),
+        durationMinutes: Math.floor(
+          (gapEnd.getTime() - gapStart.getTime()) / 60000,
+        ),
         isAvailable: true,
-        prevLocationId: prevLoc,
-        nextLocationId: merged[i + 1].locationId ?? null,
+        prevLocationId: merged[i].endLocationId,
+        nextLocationId: merged[i + 1].startLocationId,
       });
     }
   }
 
-  // Check for gap after last interval
   const lastInterval = merged[merged.length - 1];
   if (lastInterval.end < rangeEnd) {
-    // Walk backward to find the nearest located event
-    let prevLoc: string | null = null;
-    for (let j = merged.length - 1; j >= 0; j--) {
-      if (merged[j].locationId != null) { prevLoc = merged[j].locationId!; break; }
-    }
-
     gaps.push({
       start: lastInterval.end,
       end: rangeEnd,
-      durationMinutes: Math.floor((rangeEnd.getTime() - lastInterval.end.getTime()) / 60000),
+      durationMinutes: Math.floor(
+        (rangeEnd.getTime() - lastInterval.end.getTime()) / 60000,
+      ),
       isAvailable: true,
-      prevLocationId: prevLoc,
+      prevLocationId: lastInterval.endLocationId,
       nextLocationId: null,
     });
   }
@@ -328,7 +322,8 @@ export function eventsToIntervals(
     return {
       start: new Date(event.start),
       end: new Date(event.end),
-      locationId,
+      startLocationId: locationId,
+      endLocationId: locationId,
     };
   });
 }
@@ -374,31 +369,6 @@ export function totalAvailableMinutes(gaps: Interval[]): number {
 }
 
 /**
- * Split a day into hourly intervals for analysis
- */
-export function splitIntoHourlyIntervals(
-  dayStart: Date,
-  dayEnd: Date,
-): Interval[] {
-  const intervals: Interval[] = [];
-  const current = new Date(dayStart);
-
-  while (current < dayEnd) {
-    const intervalEnd = new Date(current);
-    intervalEnd.setHours(intervalEnd.getHours() + 1);
-
-    intervals.push({
-      start: new Date(current),
-      end: intervalEnd > dayEnd ? dayEnd : intervalEnd,
-    });
-
-    current.setHours(current.getHours() + 1);
-  }
-
-  return intervals;
-}
-
-/**
  * Find all gaps within a specific day
  */
 export function findDailyGaps(
@@ -441,7 +411,6 @@ export function getLargestGapMinutes(gaps: Interval[]): number {
   return (largest.end.getTime() - largest.start.getTime()) / (1000 * 60);
 }
 
-
 import type { PerTemplateMask } from "../models/TemplateModels";
 export type { PerTemplateMask };
 
@@ -455,7 +424,9 @@ export function masksToIntervals(
 ): Interval[] {
   const intervals: Interval[] = [];
   const msPerDay = 24 * 60 * 60 * 1000;
-  const numDays = Math.ceil((endDate.getTime() - startDate.getTime()) / msPerDay);
+  const numDays = Math.ceil(
+    (endDate.getTime() - startDate.getTime()) / msPerDay,
+  );
 
   for (let i = 0; i < numDays; i++) {
     const dayStart = new Date(startDate);
@@ -467,7 +438,12 @@ export function masksToIntervals(
       if (mask.dayOfWeek !== dayOfWeek) continue;
 
       const start = new Date(dayStart);
-      start.setHours(Math.floor(mask.startMinutes / 60), mask.startMinutes % 60, 0, 0);
+      start.setHours(
+        Math.floor(mask.startMinutes / 60),
+        mask.startMinutes % 60,
+        0,
+        0,
+      );
 
       const endDayOffset = Math.floor(mask.endMinutes / 1440);
       const endTimeMinutes = mask.endMinutes % 1440;
@@ -475,7 +451,12 @@ export function masksToIntervals(
       end.setDate(end.getDate() + endDayOffset);
       end.setHours(Math.floor(endTimeMinutes / 60), endTimeMinutes % 60, 0, 0);
 
-      intervals.push({ start, end, locationId: mask.locationId ?? null });
+      intervals.push({
+        start,
+        end,
+        startLocationId: mask.locationId ?? null,
+        endLocationId: mask.locationId ?? null,
+      });
     }
   }
 

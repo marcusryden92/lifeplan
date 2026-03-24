@@ -1,12 +1,13 @@
 import type { TimeSlot } from "../models/TimeSlot";
 
 export function getDurationMinutes(slot: TimeSlot): number {
-  return Math.floor(
-    (slot.end.getTime() - slot.start.getTime()) / (1000 * 60)
-  );
+  return Math.floor((slot.end.getTime() - slot.start.getTime()) / (1000 * 60));
 }
 
-export function canFitDuration(slot: TimeSlot, requiredMinutes: number): boolean {
+export function canFitDuration(
+  slot: TimeSlot,
+  requiredMinutes: number,
+): boolean {
   return slot.isAvailable && slot.durationMinutes >= requiredMinutes;
 }
 
@@ -14,38 +15,9 @@ export function doSlotsOverlap(slot1: TimeSlot, slot2: TimeSlot): boolean {
   return slot1.start < slot2.end && slot2.start < slot1.end;
 }
 
-export function mergeAdjacentSlots(slots: TimeSlot[]): TimeSlot[] {
-  if (slots.length === 0) return [];
-
-  const sorted = [...slots].sort(
-    (a, b) => a.start.getTime() - b.start.getTime()
-  );
-  const merged: TimeSlot[] = [sorted[0]];
-
-  for (let i = 1; i < sorted.length; i++) {
-    const current = sorted[i];
-    const last = merged[merged.length - 1];
-
-    if (
-      last.isAvailable &&
-      current.isAvailable &&
-      last.end.getTime() === current.start.getTime() &&
-      last.categoryId === current.categoryId
-    ) {
-      last.end = current.end;
-      last.durationMinutes = getDurationMinutes(last);
-      last.nextLocationId = current.nextLocationId;
-    } else {
-      merged.push(current);
-    }
-  }
-
-  return merged;
-}
-
 export function splitSlot(
   slot: TimeSlot,
-  splitTime: Date
+  splitTime: Date,
 ): [TimeSlot | null, TimeSlot | null] {
   if (splitTime <= slot.start || splitTime >= slot.end) {
     return [slot, null];
@@ -55,7 +27,7 @@ export function splitSlot(
     start: slot.start,
     end: splitTime,
     durationMinutes: Math.floor(
-      (splitTime.getTime() - slot.start.getTime()) / (1000 * 60)
+      (splitTime.getTime() - slot.start.getTime()) / (1000 * 60),
     ),
     isAvailable: slot.isAvailable,
     eventId: slot.eventId,
@@ -68,7 +40,7 @@ export function splitSlot(
     start: splitTime,
     end: slot.end,
     durationMinutes: Math.floor(
-      (slot.end.getTime() - splitTime.getTime()) / (1000 * 60)
+      (slot.end.getTime() - splitTime.getTime()) / (1000 * 60),
     ),
     isAvailable: slot.isAvailable,
     eventId: slot.eventId,
@@ -86,7 +58,7 @@ export function occupySlot(
   end: Date,
   eventId: string,
   eventType: "task" | "goal" | "plan" | "template" | "travel",
-  locationId?: string | null
+  locationId?: string | null,
 ): TimeSlot[] {
   const result: TimeSlot[] = [];
 
@@ -97,7 +69,7 @@ export function occupySlot(
       start: slot.start,
       end: start,
       durationMinutes: Math.floor(
-        (start.getTime() - slot.start.getTime()) / (1000 * 60)
+        (start.getTime() - slot.start.getTime()) / (1000 * 60),
       ),
       isAvailable: true,
       prevLocationId: slot.prevLocationId,
@@ -111,7 +83,7 @@ export function occupySlot(
     start,
     end,
     durationMinutes: Math.floor(
-      (end.getTime() - start.getTime()) / (1000 * 60)
+      (end.getTime() - start.getTime()) / (1000 * 60),
     ),
     isAvailable: false,
     eventId,
@@ -123,7 +95,7 @@ export function occupySlot(
       start: end,
       end: slot.end,
       durationMinutes: Math.floor(
-        (slot.end.getTime() - end.getTime()) / (1000 * 60)
+        (slot.end.getTime() - end.getTime()) / (1000 * 60),
       ),
       isAvailable: true,
       prevLocationId: afterSlotPrevLocation,
@@ -146,13 +118,13 @@ export function createTravelSlot(
   options?: {
     insufficientTravel?: boolean;
     requiredTravelMinutes?: number;
-  }
+  },
 ): TimeSlot {
   return {
     start,
     end,
     durationMinutes: Math.floor(
-      (end.getTime() - start.getTime()) / (1000 * 60)
+      (end.getTime() - start.getTime()) / (1000 * 60),
     ),
     isAvailable: false,
     eventId,
@@ -177,7 +149,8 @@ export function reclaimTravelSlot(travelSlot: TimeSlot): TimeSlot {
     end: travelSlot.end,
     durationMinutes: travelSlot.durationMinutes,
     isAvailable: true,
-    prevLocationId: travelSlot.travelFromLocationId ?? travelSlot.prevLocationId,
+    prevLocationId:
+      travelSlot.travelFromLocationId ?? travelSlot.prevLocationId,
     nextLocationId: travelSlot.travelToLocationId ?? travelSlot.nextLocationId,
   };
 }

@@ -1,7 +1,6 @@
 export { daysNeededForPlans } from "./daysNeededForPlans";
 export { buildAvailableSlots } from "./buildAvailableSlots";
 export { applyCategoriesToNullIntervals } from "./applyCategoriesToNullIntervals";
-export { fixPostCategoryPrevLoc } from "./fixPostCategoryPrevLoc";
 export { splitSlotsAtCategoryBoundaries } from "./splitSlotsAtCategoryBoundaries";
 export { findAllFittingSlots } from "./findAllFittingSlots";
 export { getDaySlots } from "./getDaySlots";

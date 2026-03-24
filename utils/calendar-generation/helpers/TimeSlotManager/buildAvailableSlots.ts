@@ -1,7 +1,6 @@
 import { Planner, SimpleEvent } from "@/types/prisma";
 import { CategoryPeriod } from "@/types/categoryTypes";
 import { TimeSlot } from "../../models/TimeSlot";
-import { mergeAdjacentSlots } from "../../utils/timeSlotUtils";
 import {
   eventsToIntervals,
   findGaps,
@@ -12,7 +11,6 @@ import { dateTimeService } from "../../utils/dateTimeService";
 import { logInitialSlotContext } from "../../utils/loggingUtils";
 import { daysNeededForPlans } from "./daysNeededForPlans";
 import { applyCategoriesToNullIntervals } from "./applyCategoriesToNullIntervals";
-import { fixPostCategoryPrevLoc } from "./fixPostCategoryPrevLoc";
 import { splitSlotsAtCategoryBoundaries } from "./splitSlotsAtCategoryBoundaries";
 
 export function buildAvailableSlots(
@@ -52,24 +50,26 @@ export function buildAvailableSlots(
     endDate,
   );
 
-  const gaps = findGaps(adjustedIntervals, startDate, endDate);
+  const lastEventBeforeRange = existingEvents
+    .filter(
+      (e) =>
+        e.extendedProps?.itemType !== "template" &&
+        new Date(e.end) <= startDate,
+    )
+    .sort((a, b) => new Date(b.end).getTime() - new Date(a.end).getTime())[0];
+
+  const startingLocation = lastEventBeforeRange
+    ? (plannerLocationMap?.get(lastEventBeforeRange.id) ?? null)
+    : null;
+
+  const gaps = findGaps(
+    adjustedIntervals,
+    startDate,
+    endDate,
+    startingLocation,
+  );
+
   let slots = gaps;
 
-  if (plannerLocationMap) {
-    slots = fixPostCategoryPrevLoc(
-      categoryPeriods,
-      slots,
-      adjustedIntervals,
-      startDate,
-      endDate,
-    );
-    slots = splitSlotsAtCategoryBoundaries(
-      categoryPeriods,
-      slots,
-      startDate,
-      endDate,
-    );
-  }
-
-  return mergeAdjacentSlots(slots);
+  return splitSlotsAtCategoryBoundaries(categoryPeriods, slots, startDate, endDate);
 }

@@ -19,7 +19,8 @@ export function markTrespassingEvents(
       return {
         start: new Date(e.start),
         end: new Date(e.end),
-        locationId,
+        startLocationId: locationId,
+        endLocationId: locationId,
         eventId: e.id,
       };
     });

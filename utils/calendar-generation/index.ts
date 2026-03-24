@@ -35,7 +35,6 @@ export {
   getDurationMinutes,
   canFitDuration,
   doSlotsOverlap,
-  mergeAdjacentSlots,
   splitSlot,
   occupySlot,
   createTravelSlot,
