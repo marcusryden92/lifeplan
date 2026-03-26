@@ -5,7 +5,7 @@ import { PerTemplateMask } from "../../models/TemplateModels";
 import { SchedulingContext } from "../../models/SchedulingModels";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { buildAvailableSlots } from "../TimeSlotManager/buildAvailableSlots";
-import { carveTravelFromChain } from "../TravelManager/carveTravelFromChain";
+import { preliminaryTravelPass } from "../TravelManager/preliminaryTravelPass";
 
 export function expandSlotsForNextWeek(
   weekStart: Date,
@@ -18,7 +18,7 @@ export function expandSlotsForNextWeek(
 ): void {
   const weekStartDate = dateTimeService.startOfDay(weekStart);
   const weekEndDate = dateTimeService.endOfDay(
-    dateTimeService.shiftDays(weekStart, 6)
+    dateTimeService.shiftDays(weekStart, 6),
   );
 
   const weekEvents = context.scheduledEvents.filter((e) => {
@@ -47,7 +47,8 @@ export function expandSlotsForNextWeek(
     weekEndDate,
   );
 
-  weekSlots = carveTravelFromChain(
+  weekSlots = preliminaryTravelPass(
+    !!plannerLocationMap,
     categoryPeriods,
     slotManager.occupiedSlots,
     travelManager,

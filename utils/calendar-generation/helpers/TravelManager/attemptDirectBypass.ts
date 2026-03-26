@@ -4,7 +4,21 @@ import { createTravelSlot } from "../../utils/timeSlotUtils";
 import { TravelManager } from "../../core/TravelManager";
 import { v4 as uuidv4 } from "uuid";
 
-export function tryDirectBypass(
+// Handles the case where two consecutive slots — a plain slot followed by a
+// category slot — don't have enough combined space to fit both the inbound
+// travel (prev→category) and the outbound travel (category→next) separately.
+// Instead of carving two travel events, it collapses them into a single direct
+// travel (prev→next), bypassing the category location entirely.
+//
+// Only fires when:
+//  - The current slot is not a category slot itself
+//  - The next slot IS a category slot that sits inside a larger category period
+//    (i.e. it isn't the last slot in the period, so the outgoing travel hasn't
+//    already been handled at the period boundary)
+//  - The two slots are contiguous
+//  - Either the category slot is too small to fit its own outgoing travel, or
+//    the combined space is too tight for both transitions
+export function attemptDirectBypass(
   categoryPeriods: CategoryPeriod[],
   travelManager: TravelManager,
   bufferTimeMinutes: number,
@@ -26,6 +40,9 @@ export function tryDirectBypass(
           p.end.getTime() >= nextSlot.end.getTime(),
       )?.end
     : undefined;
+
+  // Only act if the next slot is in the middle of a category period — if it's
+  // the last slot in the period, outgoing travel is handled by normal carving.
   const nextLocIsInsideCatB =
     catPeriodEnd !== undefined &&
     nextSlot!.end.getTime() < catPeriodEnd.getTime();
@@ -35,7 +52,7 @@ export function tryDirectBypass(
     !nextSlot?.categoryId ||
     nextSlot.start.getTime() !== slot.end.getTime() ||
     !nextSlot.nextLocationId ||
-    nextSlot.nextLocationId === nextLoc
+    nextSlot.nextLocationId === nextLocation
   ) {
     return { handled: false };
   }
@@ -58,6 +75,9 @@ export function tryDirectBypass(
   const spanEnd = nextSlot.end;
 
   if (catSlotTooSmall) {
+    // The category slot can't even fit its own outgoing travel — place the
+    // direct prev→next travel at the end of the combined span, leaving any
+    // remaining time before it as usable space in the first slot.
     const directMinutes = travelManager.getTravelTime(
       prevLocation,
       bLocation,
@@ -114,6 +134,9 @@ export function tryDirectBypass(
     }
     return { handled: true, skipNext: true };
   } else {
+    // Both slots together have enough space, but not enough to do two separate
+    // transitions cleanly. Place the direct prev→next travel at the start of
+    // the current slot and trim the category slot to start after it.
     const directMinutes = travelManager.getTravelTime(
       prevLocation,
       bLocation,
@@ -137,13 +160,16 @@ export function tryDirectBypass(
       );
       const newCatStart = new Date(travelEnd.getTime());
       if (newCatStart.getTime() < spanEnd.getTime()) {
+        // The remaining category slot is trimmed. Its prevLocationId stays as
+        // the category location (nextLocation) — tasks placed here are still
+        // at the category location even though we bypassed the inbound travel.
         slots[slotIndex + 1] = {
           ...nextSlot,
           start: newCatStart,
           durationMinutes: Math.floor(
             (spanEnd.getTime() - newCatStart.getTime()) / 60000,
           ),
-          prevLocationId: bLocation,
+          prevLocationId: nextLocation,
         };
         return { handled: true, skipNext: false };
       }

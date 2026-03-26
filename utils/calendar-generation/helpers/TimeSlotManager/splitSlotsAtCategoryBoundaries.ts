@@ -66,7 +66,7 @@ function splitSlot(
           end: slot.end,
           durationMinutes: afterDuration,
           isAvailable: true,
-          prevLocationId: leaving?.locationId ?? slot.prevLocationId,
+          prevLocationId: entering?.locationId ?? leaving?.locationId ?? slot.prevLocationId,
           nextLocationId: slot.nextLocationId,
           categoryId: entering?.categoryId ?? null,
           isStrictCategory: entering?.isStrict ?? false,

@@ -3,7 +3,7 @@ import { createTravelSlot } from "../../utils/timeSlotUtils";
 import { TravelManager } from "../../core/TravelManager";
 import { v4 as uuidv4 } from "uuid";
 
-export function tryReturnAbsorption(
+export function attemptReturnAbsorption(
   travelManager: TravelManager,
   slot: AvailableSlot,
   nextSlot: AvailableSlot | null,

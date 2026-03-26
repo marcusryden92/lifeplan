@@ -8,10 +8,9 @@ export { reserveInsufficientTravelAfter } from "./reserveInsufficientTravelAfter
 export { findAdjacentTravelTo } from "./findAdjacentTravelTo";
 export { findAdjacentTravelFrom } from "./findAdjacentTravelFrom";
 export { findPrecedingGapTravel } from "./findPrecedingGapTravel";
-export { carveTravelFromChain } from "./carveTravelFromChain";
-export { tryDirectBypass } from "./tryDirectBypass";
-export { tryDoubleTransition } from "./tryDoubleTransition";
-export { tryReturnAbsorption } from "./tryReturnAbsorption";
+export { preliminaryTravelPass } from "./preliminaryTravelPass";
+export { attemptDirectBypass } from "./attemptDirectBypass";
+export { attemptReturnAbsorption } from "./attemptReturnAbsorption";
 export { carveAtStart } from "./carveAtStart";
 export { carveAtEnd } from "./carveAtEnd";
 export { tryBleedBackward } from "./tryBleedBackward";

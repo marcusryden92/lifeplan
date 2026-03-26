@@ -29,8 +29,8 @@ import {
   prepareCandidates,
   assembleFinalEvents,
 } from "../helpers/CalendarGenerator";
-import { buildAvailableSlots } from "../helpers/TimeSlotManager/buildAvailableSlots";
-import { carveTravelFromChain } from "../helpers/TravelManager/carveTravelFromChain";
+import { buildAvailableSlots } from "../helpers/TimeSlotManager";
+import { preliminaryTravelPass } from "../helpers/TravelManager";
 
 export class CalendarGenerator {
   // Class instances
@@ -158,7 +158,7 @@ export class CalendarGenerator {
     timeSlotManager.availableSlots.push(...builtSlots);
 
     // Phase 6b: Carve travel slots (separate pass after slot building)
-    const carved = carveTravelFromChain(
+    const carved = preliminaryTravelPass(
       !!plannerLocationMap,
       categoryPeriods,
       timeSlotManager.occupiedSlots,
