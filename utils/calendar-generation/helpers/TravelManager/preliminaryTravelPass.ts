@@ -5,22 +5,28 @@ import { attemptDirectBypass } from "./attemptDirectBypass";
 import { attemptReturnAbsorption } from "./attemptReturnAbsorption";
 import { carveAtStart } from "./carveAtStart";
 import { carveAtEnd } from "./carveAtEnd";
+import { createTravelContextResolver, TravelContext } from "./legTracker";
 
-// Iterates all available slots in the timeline and carves travel events into
-// the boundaries between slots at different locations.
-//
-// Travel placement — start vs end:
-//   Outbound trips (first time travelling from A to B) get carved at the END
-//   of the departing slot, so available time before the departure is preserved.
-//
-//   Return trips (travelling back to a location already departed from) get
-//   carved at the START of the arriving slot, creating the inbound/outbound
-//   sandwich: [A→B travel][B time][B→A travel].
-//
-// Return detection uses an open-legs list. Each outbound travel registers an
-// open leg. When a mirror is found (B→A matches an open A→B), the leg is
-// consumed so it can't be matched again. This ensures that after a completed
-// round trip A→B→A, a new A→B is treated as a fresh outbound, not a return.
+type TravelContextResolver = (slot: AvailableSlot) => TravelContext | null;
+
+/**
+ * Iterates all available slots and carves travel events into boundaries between
+ * slots at different locations.
+ *
+ * Outbound trips (A→B, first visit) are carved at the END of the departing slot,
+ * preserving available time before departure.
+ *
+ * Return trips (B→A, back to a previously visited location) are carved at the
+ * START of the arriving slot, forming the sandwich: [A→B travel][B time][B→A travel].
+ *
+ * @param hasPlannerLocationMap - Skip the pass entirely if no location data exists.
+ * @param categoryPeriods - Category time boundaries, used for bypass decisions.
+ * @param occupiedSlots - Already-placed events; travel slots are appended here.
+ * @param travelManager - Provides travel durations between locations.
+ * @param bufferTimeMinutes - Minimum buffer to maintain around travel events.
+ * @param slots - Available slots to process.
+ * @returns Revised available slots with travel carved out.
+ */
 export function preliminaryTravelPass(
   hasPlannerLocationMap: boolean,
   categoryPeriods: CategoryPeriod[],
@@ -32,126 +38,68 @@ export function preliminaryTravelPass(
   if (!hasPlannerLocationMap) return slots;
 
   const result: AvailableSlot[] = [];
-
-  // Tracks outbound legs that haven't been matched by a return yet.
-  const openLegs: { from: string; to: string }[] = [];
-
-  const hasMirror = (from: string, to: string): boolean =>
-    openLegs.findLastIndex((t) => t.from === to && t.to === from) !== -1;
-
-  // For outbound trips, registers a new open leg.
-  // For return trips, consumes the matching open leg so it can't fire again.
-  const recordTravel = (from: string, to: string, isReturn: boolean) => {
-    if (isReturn) {
-      const idx = openLegs.findLastIndex((t) => t.from === to && t.to === from);
-      if (idx !== -1) openLegs.splice(idx, 1);
-    } else {
-      openLegs.push({ from, to });
-    }
-  };
-
+  const resolveTravel = createTravelContextResolver(travelManager);
   let skipNextSlot = false;
+
   for (let i = 0; i < slots.length; i++) {
-    if (skipNextSlot) {
-      skipNextSlot = false;
-      continue;
-    }
-
-    const slot = slots[i];
-    if (slot.durationMinutes <= 0) {
-      continue;
-    }
-
-    const prevLocation = slot.prevLocationId;
-    const nextLocation = slot.nextLocationId;
-    if (!prevLocation || !nextLocation || prevLocation === nextLocation) {
-      result.push(slot);
-      continue;
-    }
-
-    const placeAtStart = hasMirror(prevLocation, nextLocation);
-    const travelMinutes = travelManager.getTravelTime(
-      prevLocation,
-      nextLocation,
-      placeAtStart ? slot.start : slot.end,
-    );
-    if (travelMinutes <= 0) {
-      result.push(slot);
-      continue;
-    }
-
-    const nextSlot = i + 1 < slots.length ? slots[i + 1] : null;
-
-    // When the current slot is a plain outbound (not a return, not inside a
-    // category), check whether the adjacent category slot ahead is too cramped
-    // to fit both transitions separately. If so, collapse to a direct bypass.
-    if (!placeAtStart && !slot.categoryId) {
-      const bypass = attemptDirectBypass(
-        categoryPeriods,
-        travelManager,
-        bufferTimeMinutes,
-        slot,
-        nextSlot,
-        slots,
-        i,
-        prevLocation,
-        nextLocation,
-        travelMinutes,
-        occupiedSlots,
-        result,
-      );
-      if (bypass.handled) {
-        recordTravel(prevLocation, nextLocation, false);
-        if (bypass.skipNext) skipNextSlot = true;
-        continue;
-      }
-    }
-
-    // Return trip into a category slot — try to absorb the travel into the
-    // slot itself rather than carving a hard boundary.
-    if (placeAtStart && slot.categoryId) {
-      const absorb = attemptReturnAbsorption(
-        travelManager,
-        slot,
-        nextSlot,
-        prevLocation,
-        nextLocation,
-        travelMinutes,
-        occupiedSlots,
-        result,
-      );
-      if (absorb.handled) {
-        recordTravel(prevLocation, nextLocation, true);
-        if (absorb.skipNext) skipNextSlot = true;
-        continue;
-      }
-    }
-
-    // Standard carving: return trips get travel at the start, outbound at the end.
-    if (placeAtStart) {
-      carveAtStart(
-        slot,
-        prevLocation,
-        nextLocation,
-        travelMinutes,
-        occupiedSlots,
-        result,
-      );
-    } else {
-      carveAtEnd(
-        slot,
-        slots,
-        i,
-        prevLocation,
-        nextLocation,
-        travelMinutes,
-        bufferTimeMinutes,
-        occupiedSlots,
-        result,
-      );
-    }
-    recordTravel(prevLocation, nextLocation, placeAtStart);
+    if (skipNextSlot) { skipNextSlot = false; continue; }
+    skipNextSlot = processSlot(slots, i, resolveTravel, travelManager, categoryPeriods, occupiedSlots, bufferTimeMinutes, result);
   }
 
   return result;
+}
+
+function processSlot(
+  slots: AvailableSlot[],
+  i: number,
+  resolveTravel: TravelContextResolver,
+  travelManager: TravelManager,
+  categoryPeriods: CategoryPeriod[],
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  bufferTimeMinutes: number,
+  result: AvailableSlot[],
+): boolean {
+  const slot = slots[i];
+
+  // Skip zero-duration slots
+  if (slot.durationMinutes <= 0) return false;
+
+  // Resolve travel direction and duration; no travel means pass the slot through unchanged
+  const travel = resolveTravel(slot);
+  if (!travel) {
+    result.push(slot);
+    return false;
+  }
+
+  const { prevLocation, nextLocation, placeAtStart, travelMinutes } = travel;
+  const nextSlot = i + 1 < slots.length ? slots[i + 1] : null;
+
+  // Outbound into a category boundary — collapse both transitions into a direct bypass if the gap is too tight
+  if (!placeAtStart && !slot.categoryId) {
+    const bypass = attemptDirectBypass(
+      categoryPeriods, travelManager, bufferTimeMinutes,
+      slot, nextSlot, slots, i,
+      prevLocation, nextLocation, travelMinutes,
+      occupiedSlots, result,
+    );
+    if (bypass.handled) return bypass.skipNext ?? false;
+  }
+
+  // Return into a category slot — absorb travel into the slot rather than carving a hard boundary
+  if (placeAtStart && slot.categoryId) {
+    const absorb = attemptReturnAbsorption(
+      travelManager, slot, nextSlot,
+      prevLocation, nextLocation, travelMinutes,
+      occupiedSlots, result,
+    );
+    if (absorb.handled) return absorb.skipNext ?? false;
+  }
+
+  // Standard carve — outbound at end, return at start
+  if (placeAtStart) {
+    carveAtStart(slot, prevLocation, nextLocation, travelMinutes, occupiedSlots, result);
+  } else {
+    carveAtEnd(slot, slots, i, prevLocation, nextLocation, travelMinutes, bufferTimeMinutes, occupiedSlots, result);
+  }
+  return false;
 }

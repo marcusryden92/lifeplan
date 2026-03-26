@@ -146,15 +146,16 @@ export class CalendarGenerator {
     );
 
     // Phase 6a: Build available slots over the full scheduling timeline
-    const builtSlots = buildAvailableSlots(
-      input.planners,
-      currentDate,
-      filteredEvents,
-      perTemplateMasks,
+    const builtSlots = buildAvailableSlots({
+      planners: input.planners,
+      startDate: currentDate,
+      existingEvents: filteredEvents,
+      templateMasks: perTemplateMasks,
       categoryPeriods,
       plannerLocationMap,
       enableLogging,
-    );
+    });
+
     timeSlotManager.availableSlots.push(...builtSlots);
 
     // Phase 6b: Carve travel slots (separate pass after slot building)

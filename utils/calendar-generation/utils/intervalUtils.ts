@@ -274,8 +274,8 @@ export function findGaps(
   }
 
   for (let i = 0; i < merged.length - 1; i++) {
-    const gapStart = merged[i].end;
-    const gapEnd = merged[i + 1].start;
+    const gapStart = new Date(Math.max(merged[i].end.getTime(), rangeStart.getTime()));
+    const gapEnd = new Date(Math.min(merged[i + 1].start.getTime(), rangeEnd.getTime()));
 
     if (gapStart < gapEnd) {
       gaps.push({

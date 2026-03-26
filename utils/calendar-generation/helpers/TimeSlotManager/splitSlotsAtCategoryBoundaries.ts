@@ -66,7 +66,7 @@ function splitSlot(
           end: slot.end,
           durationMinutes: afterDuration,
           isAvailable: true,
-          prevLocationId: entering?.locationId ?? leaving?.locationId ?? slot.prevLocationId,
+          prevLocationId: leaving?.locationId ?? slot.prevLocationId,
           nextLocationId: slot.nextLocationId,
           categoryId: entering?.categoryId ?? null,
           isStrictCategory: entering?.isStrict ?? false,
@@ -113,7 +113,7 @@ function assignMembership(
 
     if (
       categoryId === undefined &&
-      slotMidMs >= periodStartMs &&
+      slotMidMs > periodStartMs &&
       slotMidMs < periodEndMs
     ) {
       categoryId = period.categoryId;
