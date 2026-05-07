@@ -5,9 +5,6 @@ import { attemptDirectBypass } from "./attemptDirectBypass";
 import { attemptReturnAbsorption } from "./attemptReturnAbsorption";
 import { carveAtStart } from "./carveAtStart";
 import { carveAtEnd } from "./carveAtEnd";
-import { createTravelContextResolver, TravelContext } from "./legTracker";
-
-type TravelContextResolver = (slot: AvailableSlot) => TravelContext | null;
 
 /**
  * Iterates all available slots and carves travel events into boundaries between
@@ -38,12 +35,22 @@ export function preliminaryTravelPass(
   if (!hasPlannerLocationMap) return slots;
 
   const result: AvailableSlot[] = [];
-  const resolveTravel = createTravelContextResolver(travelManager);
   let skipNextSlot = false;
 
   for (let i = 0; i < slots.length; i++) {
-    if (skipNextSlot) { skipNextSlot = false; continue; }
-    skipNextSlot = processSlot(slots, i, resolveTravel, travelManager, categoryPeriods, occupiedSlots, bufferTimeMinutes, result);
+    if (skipNextSlot) {
+      skipNextSlot = false;
+      continue;
+    }
+    skipNextSlot = processSlot(
+      slots,
+      i,
+      travelManager,
+      categoryPeriods,
+      occupiedSlots,
+      bufferTimeMinutes,
+      result,
+    );
   }
 
   return result;
@@ -52,7 +59,6 @@ export function preliminaryTravelPass(
 function processSlot(
   slots: AvailableSlot[],
   i: number,
-  resolveTravel: TravelContextResolver,
   travelManager: TravelManager,
   categoryPeriods: CategoryPeriod[],
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
@@ -65,7 +71,7 @@ function processSlot(
   if (slot.durationMinutes <= 0) return false;
 
   // Resolve travel direction and duration; no travel means pass the slot through unchanged
-  const travel = resolveTravel(slot);
+  const travel = travelManager.resolveTravel(slot);
   if (!travel) {
     result.push(slot);
     return false;
@@ -77,10 +83,18 @@ function processSlot(
   // Outbound into a category boundary — collapse both transitions into a direct bypass if the gap is too tight
   if (!placeAtStart && !slot.categoryId) {
     const bypass = attemptDirectBypass(
-      categoryPeriods, travelManager, bufferTimeMinutes,
-      slot, nextSlot, slots, i,
-      prevLocation, nextLocation, travelMinutes,
-      occupiedSlots, result,
+      categoryPeriods,
+      travelManager,
+      bufferTimeMinutes,
+      slot,
+      nextSlot,
+      slots,
+      i,
+      prevLocation,
+      nextLocation,
+      travelMinutes,
+      occupiedSlots,
+      result,
     );
     if (bypass.handled) return bypass.skipNext ?? false;
   }
@@ -88,18 +102,40 @@ function processSlot(
   // Return into a category slot — absorb travel into the slot rather than carving a hard boundary
   if (placeAtStart && slot.categoryId) {
     const absorb = attemptReturnAbsorption(
-      travelManager, slot, nextSlot,
-      prevLocation, nextLocation, travelMinutes,
-      occupiedSlots, result,
+      travelManager,
+      slot,
+      nextSlot,
+      prevLocation,
+      nextLocation,
+      travelMinutes,
+      occupiedSlots,
+      result,
     );
     if (absorb.handled) return absorb.skipNext ?? false;
   }
 
   // Standard carve — outbound at end, return at start
   if (placeAtStart) {
-    carveAtStart(slot, prevLocation, nextLocation, travelMinutes, occupiedSlots, result);
+    carveAtStart(
+      slot,
+      prevLocation,
+      nextLocation,
+      travelMinutes,
+      occupiedSlots,
+      result,
+    );
   } else {
-    carveAtEnd(slot, slots, i, prevLocation, nextLocation, travelMinutes, bufferTimeMinutes, occupiedSlots, result);
+    carveAtEnd(
+      slot,
+      slots,
+      i,
+      prevLocation,
+      nextLocation,
+      travelMinutes,
+      bufferTimeMinutes,
+      occupiedSlots,
+      result,
+    );
   }
   return false;
 }

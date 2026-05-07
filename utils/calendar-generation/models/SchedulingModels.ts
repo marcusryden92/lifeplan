@@ -121,6 +121,16 @@ export interface TravelTimeEntry {
 }
 
 /**
+ * Context for handling travel leg calculations
+ */
+export type TravelProcessingAction = {
+  prevLocation: string;
+  nextLocation: string;
+  placeAtStart: boolean;
+  travelMinutes: number;
+};
+
+/**
  * Granular logging configuration
  */
 export interface LoggingConfig {

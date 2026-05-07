@@ -8,7 +8,11 @@
 import { SimpleEvent } from "@/types/prisma";
 import { AvailableSlot, OccupiedSlot, TravelSlot } from "../models/TimeSlot";
 import { TimeSlotManager } from "./TimeSlotManager";
-import { TravelTimeEntry } from "../models/SchedulingModels";
+import {
+  TravelTimeEntry,
+  TravelProcessingAction,
+} from "../models/SchedulingModels";
+import { createLegTracker } from "../helpers/TravelManager/legTracker";
 import {
   setTravelTimeMatrix,
   getTravelTime,
@@ -26,6 +30,7 @@ import {
 
 export class TravelManager {
   private travelTimeMatrix: Map<string, TravelTimeEntry> | null = null;
+  private legTracker: ReturnType<typeof createLegTracker>;
 
   constructor(
     private slotManager: TimeSlotManager,
@@ -33,10 +38,44 @@ export class TravelManager {
     travelTimeMatrix?: Map<string, TravelTimeEntry>,
   ) {
     this.travelTimeMatrix = travelTimeMatrix ?? null;
+    this.legTracker = createLegTracker();
   }
 
-  private get availableSlots(): AvailableSlot[] { return this.slotManager.availableSlots; }
-  private get occupiedSlots(): (OccupiedSlot | TravelSlot)[] { return this.slotManager.occupiedSlots; }
+  private get availableSlots(): AvailableSlot[] {
+    return this.slotManager.availableSlots;
+  }
+  private get occupiedSlots(): (OccupiedSlot | TravelSlot)[] {
+    return this.slotManager.occupiedSlots;
+  }
+
+  /**
+   * Resolves travel direction and duration for a given slot transition.
+   * Stateful — leg tracking is shared across all calls on this instance.
+   * Call resetLegTracker() before starting a new pass.
+   */
+  resolveTravel(slot: AvailableSlot): TravelProcessingAction | null {
+    const { prevLocationId: prevLocation, nextLocationId: nextLocation } = slot;
+    if (!prevLocation || !nextLocation || prevLocation === nextLocation)
+      return null;
+
+    const placeAtStart = this.legTracker(prevLocation, nextLocation);
+    const travelMinutes = this.getTravelTime(
+      prevLocation,
+      nextLocation,
+      placeAtStart ? slot.start : slot.end,
+    );
+    if (travelMinutes <= 0) return null;
+
+    return { prevLocation, nextLocation, placeAtStart, travelMinutes };
+  }
+
+  /**
+   * Resets leg tracking state. Call before starting a new preliminary travel pass
+   * to ensure outbound legs from a previous pass don't bleed into the next.
+   */
+  resetLegTracker(): void {
+    this.legTracker = createLegTracker();
+  }
 
   /**
    * Set the travel time matrix for location-aware scheduling
@@ -54,7 +93,12 @@ export class TravelManager {
     toLocationId: string | null,
     timeOfDay: Date,
   ): number {
-    return getTravelTime(this.travelTimeMatrix, fromLocationId, toLocationId, timeOfDay);
+    return getTravelTime(
+      this.travelTimeMatrix,
+      fromLocationId,
+      toLocationId,
+      timeOfDay,
+    );
   }
 
   /**
@@ -174,7 +218,12 @@ export class TravelManager {
    * Used to determine if travel-after can be reused instead of reserving new space.
    */
   findAdjacentTravelTo(nearTime: Date, toLocationId: string): Date | null {
-    return findAdjacentTravelTo(this.occupiedSlots, this.bufferTimeMinutes, nearTime, toLocationId);
+    return findAdjacentTravelTo(
+      this.occupiedSlots,
+      this.bufferTimeMinutes,
+      nearTime,
+      toLocationId,
+    );
   }
 
   /**
@@ -182,15 +231,27 @@ export class TravelManager {
    * Used to detect when a pre-carved return trip precedes a free slot.
    */
   findPrecedingGapTravel(slotStart: Date): TravelSlot | null {
-    return findPrecedingGapTravel(this.occupiedSlots, this.bufferTimeMinutes, slotStart);
+    return findPrecedingGapTravel(
+      this.occupiedSlots,
+      this.bufferTimeMinutes,
+      slotStart,
+    );
   }
 
   /**
    * Find an existing travel slot originating FROM a given location near a given time.
    * Used to detect when a previous task already created a travel-after that can be absorbed.
    */
-  findAdjacentTravelFrom(nearTime: Date, fromLocationId: string): TravelSlot | null {
-    return findAdjacentTravelFrom(this.occupiedSlots, this.bufferTimeMinutes, nearTime, fromLocationId);
+  findAdjacentTravelFrom(
+    nearTime: Date,
+    fromLocationId: string,
+  ): TravelSlot | null {
+    return findAdjacentTravelFrom(
+      this.occupiedSlots,
+      this.bufferTimeMinutes,
+      nearTime,
+      fromLocationId,
+    );
   }
 
   getAllTravelSlots(): TravelSlot[] {
