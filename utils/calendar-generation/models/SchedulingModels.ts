@@ -126,7 +126,7 @@ export interface TravelTimeEntry {
 export type TravelProcessingAction = {
   prevLocation: string;
   nextLocation: string;
-  placeAtStart: boolean;
+  placeAtSlotStart: boolean;
   travelMinutes: number;
 };
 

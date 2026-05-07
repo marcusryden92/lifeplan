@@ -31,6 +31,7 @@ import {
 } from "../helpers/CalendarGenerator";
 import { buildAvailableSlots } from "../helpers/TimeSlotManager";
 import { preliminaryTravelPass } from "../helpers/TravelManager";
+import { setTimeOnDate } from "@/utils/calendarUtils";
 
 export class CalendarGenerator {
   // Class instances
@@ -148,7 +149,7 @@ export class CalendarGenerator {
     // Phase 6a: Build available slots over the full scheduling timeline
     const builtSlots = buildAvailableSlots({
       planners: input.planners,
-      startDate: currentDate,
+      startDate: setTimeOnDate(currentDate, "00:00"),
       existingEvents: filteredEvents,
       templateMasks: perTemplateMasks,
       categoryPeriods,

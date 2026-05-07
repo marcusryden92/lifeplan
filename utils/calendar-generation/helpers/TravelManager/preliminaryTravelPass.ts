@@ -77,11 +77,12 @@ function processSlot(
     return false;
   }
 
-  const { prevLocation, nextLocation, placeAtStart, travelMinutes } = travel;
+  const { prevLocation, nextLocation, placeAtSlotStart, travelMinutes } =
+    travel;
   const nextSlot = i + 1 < slots.length ? slots[i + 1] : null;
 
   // Outbound into a category boundary — collapse both transitions into a direct bypass if the gap is too tight
-  if (!placeAtStart && !slot.categoryId) {
+  if (!placeAtSlotStart && !slot.categoryId) {
     const bypass = attemptDirectBypass(
       categoryPeriods,
       travelManager,
@@ -100,7 +101,7 @@ function processSlot(
   }
 
   // Return into a category slot — absorb travel into the slot rather than carving a hard boundary
-  if (placeAtStart && slot.categoryId) {
+  if (placeAtSlotStart && slot.categoryId) {
     const absorb = attemptReturnAbsorption(
       travelManager,
       slot,
@@ -115,7 +116,7 @@ function processSlot(
   }
 
   // Standard carve — outbound at end, return at start
-  if (placeAtStart) {
+  if (placeAtSlotStart) {
     carveAtStart(
       slot,
       prevLocation,
