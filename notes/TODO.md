@@ -1,5 +1,7 @@
 - Implement rolling window in calendar generation (for category periods for instance)
 
+- Stupid handling of category timeSlots in database that requires a bunch of parsing
+
 - Calendar items not loading properly on initial load
 - Handling of category-items overlapping, or how and where to create them
   (Its own view? In template view? In categories like now?)

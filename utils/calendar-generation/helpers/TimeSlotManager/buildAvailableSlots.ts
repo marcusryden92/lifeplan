@@ -9,7 +9,7 @@ import { PerTemplateMask } from "../../models/TemplateModels";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { logInitialSlotContext } from "../../utils/loggingUtils";
 import { daysNeededForPlans } from "./daysNeededForPlans";
-import { applyCategoriesToNullIntervals } from "./applyCategoriesToNullIntervals";
+import { inheritLocationFromCategoryPeriods } from "./inheritLocationFromCategoryPeriods";
 import { splitSlotsAtCategoryBoundaries } from "./splitSlotsAtCategoryBoundaries";
 
 interface BuildSlotsOptions {
@@ -54,8 +54,9 @@ export function buildAvailableSlots({
 
   const occupiedIntervals = [...eventIntervals, ...templateIntervals];
 
-  // Apply category periods to intervals that have null categories
-  const adjustedIntervals = applyCategoriesToNullIntervals(
+  // Assign location to locationless intervals that fall
+  // within a category period that has a location
+  const adjustedIntervals = inheritLocationFromCategoryPeriods(
     categoryPeriods,
     occupiedIntervals,
     startDate,

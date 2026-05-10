@@ -1,7 +1,7 @@
 import { CategoryPeriod } from "@/types/categoryTypes";
 import { Interval } from "../../utils/intervalUtils";
 
-export function applyCategoriesToNullIntervals(
+export function inheritLocationFromCategoryPeriods(
   categoryPeriods: CategoryPeriod[],
   intervals: Interval[],
   dayStart: Date,

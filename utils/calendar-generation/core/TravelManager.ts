@@ -58,15 +58,15 @@ export class TravelManager {
     if (!prevLocation || !nextLocation || prevLocation === nextLocation)
       return null;
 
-    const placeAtStart = this.legTracker(prevLocation, nextLocation);
+    const placeAtSlotStart = this.legTracker(prevLocation, nextLocation);
     const travelMinutes = this.getTravelTime(
       prevLocation,
       nextLocation,
-      placeAtStart ? slot.start : slot.end,
+      placeAtSlotStart ? slot.start : slot.end,
     );
     if (travelMinutes <= 0) return null;
 
-    return { prevLocation, nextLocation, placeAtStart, travelMinutes };
+    return { prevLocation, nextLocation, placeAtSlotStart, travelMinutes };
   }
 
   /**

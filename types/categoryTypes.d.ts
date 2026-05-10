@@ -1,3 +1,5 @@
+import type { WeekDayIntegers } from "./calendarTypes";
+
 /**
  * Type definitions for category time constraints
  */
@@ -8,7 +10,7 @@
  */
 export interface CategoryTimeSlot {
   /** Days of the week (0=Sunday, 1=Monday, ... 6=Saturday) */
-  days: number[];
+  days: WeekDayIntegers[];
   /** Start time in HH:MM format (24-hour) */
   startTime: string;
   /** End time in HH:MM format (24-hour) */
@@ -62,5 +64,5 @@ export interface CategoryPeriod {
  * Helper to parse timeSlots JSON from Prisma
  */
 export function parseCategoryTimeSlots(
-  timeSlotsJson: unknown
+  timeSlotsJson: unknown,
 ): CategoryTimeSlot[] | null;
