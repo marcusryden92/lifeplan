@@ -23,8 +23,10 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
 
   const weekdays = days.slice(1, 6); // Monday - Friday
 
-  // Morning sleep (00:00 - 06:00) - All days except Friday
-  const morningSleepDays = days.filter((d) => d !== "friday");
+  // Morning sleep (00:00 - 06:00) - All days except Thursday and Friday
+  const morningSleepDays = days.filter(
+    (d) => d !== "thursday" && d !== "friday",
+  );
   for (const day of morningSleepDays) {
     templateArray.push({
       id: uuidv4(),
@@ -40,8 +42,10 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
     });
   }
 
-  // Evening sleep (21:00 - 00:00) - All days except Thursday
-  const eveningSleepDays = days.filter((d) => d !== "thursday");
+  // Evening sleep (21:00 - 00:00) - All days except Wednesday and Thursday
+  const eveningSleepDays = days.filter(
+    (d) => d !== "wednesday" && d !== "thursday",
+  );
   for (const day of eveningSleepDays) {
     templateArray.push({
       id: uuidv4(),
@@ -56,6 +60,20 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       updatedAt: timestamp,
     });
   }
+
+  // Late-night sleep (Thursday 03:00 - 06:00)
+  templateArray.push({
+    id: uuidv4(),
+    userId,
+    title: "Sleep",
+    startDay: "thursday" as WeekDayType,
+    startTime: "03:00",
+    duration: 180,
+    color: "#1D3557", // navy
+    locationId: LOCATION_IDS.HOME,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  });
 
   // Lunch break (12:00 - 13:00) - All days
   /*  for (let i = 0; i < days.length; i++) {
@@ -72,23 +90,6 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       updatedAt: timestamp,
     });
   } */
-
-  // Breakfast (06:00 - 06:30) - All days except Friday
-  const breakfastDays = days.filter((d) => d !== "friday");
-  for (const day of breakfastDays) {
-    templateArray.push({
-      id: uuidv4(),
-      userId,
-      title: "Breakfast",
-      startDay: day as WeekDayType,
-      startTime: "06:00",
-      duration: 30,
-      color: "#FFB703", // amber yellow
-      locationId: LOCATION_IDS.HOME,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-    });
-  }
 
   // Dinner (18:00 - 19:00) - All days
   /*  for (let i = 0; i < days.length; i++) {
@@ -172,47 +173,5 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
     });
   }
  */
-  // Cleaning (10:00 - 11:30) - Saturday
-  templateArray.push({
-    id: uuidv4(),
-    userId,
-    title: "House Cleaning",
-    startDay: "saturday" as WeekDayType,
-    startTime: "10:00",
-    duration: 90,
-    color: "#16A085", // teal green
-    locationId: LOCATION_IDS.HOME,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  });
-
-  // Laundry (14:00 - 15:30) - Sunday
-  templateArray.push({
-    id: uuidv4(),
-    userId,
-    title: "Laundry",
-    startDay: "sunday" as WeekDayType,
-    startTime: "14:00",
-    duration: 90,
-    color: "#20C997", // turquoise
-    locationId: LOCATION_IDS.HOME,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  });
-
-  // Grocery shopping (11:00 - 12:30) - Saturday
-  templateArray.push({
-    id: uuidv4(),
-    userId,
-    title: "Grocery Shopping",
-    startDay: "saturday" as WeekDayType,
-    startTime: "12:00",
-    duration: 90,
-    color: "#8E44AD", // deep purple
-    locationId: null, // No fixed location - could be any store
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  });
-
   return templateArray;
 };
