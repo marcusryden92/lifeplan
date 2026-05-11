@@ -2,7 +2,7 @@ import type { CategoryConstraint } from "@/types/categoryTypes";
 import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { createTravelSlot } from "../../utils/timeSlotUtils";
 import { TravelManager } from "../../core/TravelManager";
-import { hhmmToMinutes } from "../../utils/dateTimeService";
+import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
 import { v4 as uuidv4 } from "uuid";
 
 function getContainingPeriodEnd(
@@ -15,23 +15,15 @@ function getContainingPeriodEnd(
 
   const dayStart = new Date(slot.start);
   dayStart.setHours(0, 0, 0, 0);
-  const dow = dayStart.getDay();
   const slotStartMs = slot.start.getTime();
   const slotEndMs = slot.end.getTime();
 
   for (const catSlot of constraint.timeSlots) {
-    if (!catSlot.days.some((d) => d === dow)) continue;
+    const period = expandSlotForDay(catSlot, dayStart);
+    if (!period) continue;
 
-    const startMin = hhmmToMinutes(catSlot.startTime);
-    let endMin = hhmmToMinutes(catSlot.endTime);
-    if (endMin <= startMin) endMin += 24 * 60;
-
-    const periodStart = new Date(dayStart);
-    periodStart.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
-    const periodEnd = new Date(periodStart.getTime() + (endMin - startMin) * 60000);
-
-    if (periodStart.getTime() <= slotStartMs && periodEnd.getTime() >= slotEndMs)
-      return periodEnd;
+    if (period.start.getTime() <= slotStartMs && period.end.getTime() >= slotEndMs)
+      return period.end;
   }
 
   return undefined;

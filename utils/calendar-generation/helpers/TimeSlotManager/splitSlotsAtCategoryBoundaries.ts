@@ -1,6 +1,7 @@
 import type { CategoryConstraint } from "@/types/categoryTypes";
 import { AvailableSlot } from "../../models/TimeSlot";
 import { hhmmToMinutes } from "../../utils/dateTimeService";
+import { expandSlotForDay } from "./expandSlotForDay";
 
 type BoundaryPeriod = {
   categoryId: string;
@@ -28,8 +29,6 @@ function getAllBoundaries(
   day.setHours(0, 0, 0, 0);
 
   while (day.getTime() < rangeEndMs) {
-    const dow = day.getDay();
-
     for (const constraint of constraints) {
       const bp: BoundaryPeriod = {
         categoryId: constraint.id,
@@ -38,20 +37,11 @@ function getAllBoundaries(
       };
 
       for (const catSlot of constraint.timeSlots) {
-        if (!catSlot.days.some((d) => d === dow)) continue;
+        const period = expandSlotForDay(catSlot, day);
+        if (!period) continue;
 
-        const startMin = hhmmToMinutes(catSlot.startTime);
-        let endMin = hhmmToMinutes(catSlot.endTime);
-        if (endMin <= startMin) endMin += 24 * 60; // overnight
-
-        const periodStart = new Date(day);
-        periodStart.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
-        const periodEnd = new Date(
-          periodStart.getTime() + (endMin - startMin) * 60000,
-        );
-
-        const startMs = periodStart.getTime();
-        const endMs = periodEnd.getTime();
+        const startMs = period.start.getTime();
+        const endMs = period.end.getTime();
 
         if (startMs > rangeStartMs && startMs < rangeEndMs)
           enteringAt.set(startMs, bp);

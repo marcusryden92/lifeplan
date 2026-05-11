@@ -1,7 +1,7 @@
 import { SimpleEvent, EventType } from "@/types/prisma";
 import type { CategoryConstraint } from "@/types/categoryTypes";
 import { RuntimeEventExtendedProps } from "@/types/ui";
-import { hhmmToMinutes } from "../../utils/dateTimeService";
+import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
 import { TIME_CONSTANTS } from "../../constants";
 import { v4 as uuidv4 } from "uuid";
 
@@ -24,14 +24,6 @@ function expandPeriods(
 
   for (const constraint of constraints) {
     for (const slot of constraint.timeSlots) {
-      const startMin = hhmmToMinutes(slot.startTime);
-      let endMin = hhmmToMinutes(slot.endTime);
-      if (endMin <= startMin) endMin += 24 * 60;
-      const durationMs = (endMin - startMin) * 60000;
-
-      const slotStartHour = Math.floor(startMin / 60);
-      const slotStartMinute = startMin % 60;
-
       for (const dow of slot.days) {
         const searchBase = new Date(startDate);
         searchBase.setHours(0, 0, 0, 0);
@@ -39,14 +31,11 @@ function expandPeriods(
         searchBase.setDate(searchBase.getDate() + daysUntil);
 
         while (searchBase <= endDate) {
-          const periodStart = new Date(searchBase);
-          periodStart.setHours(slotStartHour, slotStartMinute, 0, 0);
-          const periodEnd = new Date(periodStart.getTime() + durationMs);
-
-          if (periodEnd > startDate && periodStart < endDate) {
+          const period = expandSlotForDay(slot, searchBase);
+          if (period && period.end > startDate && period.start < endDate) {
             periods.push({
-              start: periodStart,
-              end: periodEnd,
+              start: period.start,
+              end: period.end,
               categoryId: constraint.id,
               categoryName: constraint.name,
               categoryColor: constraint.color,

@@ -1,5 +1,6 @@
 export { daysNeededForPlans } from "./daysNeededForPlans";
 export { buildAvailableSlots } from "./buildAvailableSlots";
+export { expandSlotForDay } from "./expandSlotForDay";
 export { inheritLocationFromCategoryPeriods } from "./inheritLocationFromCategoryPeriods";
 export { splitSlotsAtCategoryBoundaries } from "./splitSlotsAtCategoryBoundaries";
 export { findAllFittingSlots } from "./findAllFittingSlots";
