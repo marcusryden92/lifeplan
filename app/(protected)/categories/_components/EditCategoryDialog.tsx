@@ -17,6 +17,7 @@ import { MapPin, ChevronDown, ChevronUp } from "lucide-react";
 import { LocationSelector } from "@/components/locations/LocationSelector";
 import { TimeSlotEditor } from "./TimeSlotEditor";
 import { CategoryTimeSlot } from "@/types/categoryTypes";
+import type { WeekDayIntegers } from "@/types/calendarTypes";
 import type { Category } from "@/types/prisma";
 
 interface EditCategoryDialogProps {
@@ -43,38 +44,21 @@ export function EditCategoryDialog({
   const [locationId, setLocationId] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Load category data when dialog opens
   useEffect(() => {
     if (category) {
       setName(category.name);
 
-      // Parse time slots if they exist
-      if (category.timeSlots) {
-        try {
-          const parsed =
-            typeof category.timeSlots === "string"
-              ? (JSON.parse(category.timeSlots) as unknown)
-              : category.timeSlots;
-          setTimeSlots(Array.isArray(parsed) ? parsed : []);
-        } catch {
-          setTimeSlots([]);
-        }
-      } else {
-        setTimeSlots([]);
-      }
+      const mappedSlots: CategoryTimeSlot[] = category.timeSlots.map((ts) => ({
+        days: ts.days as WeekDayIntegers[],
+        startTime: ts.startTime,
+        endTime: ts.endTime,
+      }));
+      setTimeSlots(mappedSlots);
 
       setIsStrict(category.isStrict || false);
       setLocationId(category.locationId || null);
 
-      // Show advanced options if category has time constraints
-      setShowAdvanced(
-        (category.timeSlots &&
-          (typeof category.timeSlots === "string"
-            ? category.timeSlots !== "[]" && category.timeSlots !== "null"
-            : Array.isArray(category.timeSlots) &&
-              category.timeSlots.length > 0)) ||
-          !!category.locationId
-      );
+      setShowAdvanced(mappedSlots.length > 0 || !!category.locationId);
     }
   }, [category]);
 

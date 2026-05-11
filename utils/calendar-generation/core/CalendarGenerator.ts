@@ -138,21 +138,19 @@ export class CalendarGenerator {
       input.categories || [],
     );
 
-    // Phase 5: Build category constraints and periods
-    const { categoryConstraintMap, categoryPeriods } = buildCategoryConstraints(
+    // Phase 5: Build category constraints
+    const { categoryConstraintMap, categoryConstraintsList } = buildCategoryConstraints(
       input.categories,
-      currentDate,
-      weekStartDay,
-      maxDaysAhead,
     );
 
     // Phase 6a: Build available slots over the full scheduling timeline
+    const schedulingStartDate = setTimeOnDate(currentDate, "00:00");
     const builtSlots = buildAvailableSlots({
       planners: input.planners,
-      startDate: setTimeOnDate(currentDate, "00:00"),
+      startDate: schedulingStartDate,
       existingEvents: filteredEvents,
       templateMasks: perTemplateMasks,
-      categoryPeriods,
+      categoryConstraints: categoryConstraintsList,
       plannerLocationMap,
       enableLogging,
     });
@@ -162,7 +160,7 @@ export class CalendarGenerator {
     // Phase 6b: Carve travel slots (separate pass after slot building)
     const carved = preliminaryTravelPass(
       !!plannerLocationMap,
-      categoryPeriods,
+      categoryConstraintsList,
       timeSlotManager.occupiedSlots,
       travelManager,
       this.bufferTimeMinutes,
@@ -210,15 +208,20 @@ export class CalendarGenerator {
       largestTemplateGap,
       perTemplateMasks,
       plannerLocationMap,
-      categoryPeriods,
+      categoryConstraintsList,
     );
 
     // Phase 11: Assemble final events
+    const schedulingEndDate = builtSlots.length > 0
+      ? new Date(Math.max(...builtSlots.map((s) => s.end.getTime())))
+      : schedulingStartDate;
     const allEvents = assembleFinalEvents(
       input.userId,
       travelManager,
       context,
-      categoryPeriods,
+      categoryConstraintsList,
+      schedulingStartDate,
+      schedulingEndDate,
       plannerLocationMap,
     );
 

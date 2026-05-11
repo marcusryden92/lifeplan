@@ -1,4 +1,4 @@
-import { CategoryPeriod } from "@/types/categoryTypes";
+import type { CategoryConstraint } from "@/types/categoryTypes";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
 import { TravelManager } from "../../core/TravelManager";
 import { PerTemplateMask } from "../../models/TemplateModels";
@@ -12,7 +12,7 @@ export function expandSlotsForNextWeek(
   context: SchedulingContext,
   perTemplateMasks: PerTemplateMask[],
   plannerLocationMap: Map<string, string | null>,
-  categoryPeriods: CategoryPeriod[],
+  categoryConstraints: CategoryConstraint[],
   slotManager: TimeSlotManager,
   travelManager: TravelManager,
 ): void {
@@ -36,20 +36,19 @@ export function expandSlotsForNextWeek(
     (s) => s.start.getTime() >= weekEndMs,
   );
 
-  let weekSlots = buildAvailableSlots(
-    context.allPlanners,
-    weekStartDate,
-    weekEvents,
-    perTemplateMasks,
-    categoryPeriods,
+  let weekSlots = buildAvailableSlots({
+    planners: context.allPlanners,
+    startDate: weekStartDate,
+    existingEvents: weekEvents,
+    templateMasks: perTemplateMasks,
+    categoryConstraints,
     plannerLocationMap,
-    false,
-    weekEndDate,
-  );
+    endDateOverride: weekEndDate,
+  });
 
   weekSlots = preliminaryTravelPass(
     !!plannerLocationMap,
-    categoryPeriods,
+    categoryConstraints,
     slotManager.occupiedSlots,
     travelManager,
     slotManager.bufferTimeMinutes,

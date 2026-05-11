@@ -1,38 +1,78 @@
-import { CategoryPeriod } from "@/types/categoryTypes";
+import type { CategoryConstraint } from "@/types/categoryTypes";
 import { AvailableSlot } from "../../models/TimeSlot";
+import { hhmmToMinutes } from "../../utils/dateTimeService";
+
+type BoundaryPeriod = {
+  categoryId: string;
+  locationId: string | null;
+  isStrict: boolean;
+};
 
 type CategoryBoundary = {
   boundaryMs: number;
-  leaving: CategoryPeriod | null; // category ending at this time
-  entering: CategoryPeriod | null; // category starting at this time
+  leaving: BoundaryPeriod | null; // category period ending here
+  entering: BoundaryPeriod | null; // category period starting here
 };
 
-// Collect all unique category boundaries within the range, merging coincident start/end
+// Compute all category boundaries within [rangeStartMs, rangeEndMs] by iterating
+// day-by-day and checking each constraint's time slots against that day.
 function getAllBoundaries(
-  activePeriods: CategoryPeriod[],
+  constraints: CategoryConstraint[],
   rangeStartMs: number,
   rangeEndMs: number,
 ): CategoryBoundary[] {
-  const boundaryMap = new Map<number, CategoryBoundary>();
+  const enteringAt = new Map<number, BoundaryPeriod>();
+  const leavingAt = new Map<number, BoundaryPeriod>();
 
-  const getOrCreate = (ms: number): CategoryBoundary => {
-    if (!boundaryMap.has(ms))
-      boundaryMap.set(ms, { boundaryMs: ms, leaving: null, entering: null });
-    return boundaryMap.get(ms)!;
-  };
+  const day = new Date(rangeStartMs);
+  day.setHours(0, 0, 0, 0);
 
-  for (const period of activePeriods) {
-    const startMs = period.start.getTime();
-    const endMs = period.end.getTime();
-    if (startMs > rangeStartMs && startMs < rangeEndMs)
-      getOrCreate(startMs).entering = period;
-    if (endMs > rangeStartMs && endMs < rangeEndMs)
-      getOrCreate(endMs).leaving = period;
+  while (day.getTime() < rangeEndMs) {
+    const dow = day.getDay();
+
+    for (const constraint of constraints) {
+      const bp: BoundaryPeriod = {
+        categoryId: constraint.id,
+        locationId: constraint.locationId ?? null,
+        isStrict: constraint.isStrict,
+      };
+
+      for (const catSlot of constraint.timeSlots) {
+        if (!catSlot.days.some((d) => d === dow)) continue;
+
+        const startMin = hhmmToMinutes(catSlot.startTime);
+        let endMin = hhmmToMinutes(catSlot.endTime);
+        if (endMin <= startMin) endMin += 24 * 60; // overnight
+
+        const periodStart = new Date(day);
+        periodStart.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
+        const periodEnd = new Date(
+          periodStart.getTime() + (endMin - startMin) * 60000,
+        );
+
+        const startMs = periodStart.getTime();
+        const endMs = periodEnd.getTime();
+
+        if (startMs > rangeStartMs && startMs < rangeEndMs)
+          enteringAt.set(startMs, bp);
+
+        if (endMs > rangeStartMs && endMs < rangeEndMs)
+          leavingAt.set(endMs, bp);
+      }
+    }
+
+    day.setDate(day.getDate() + 1);
   }
 
-  return Array.from(boundaryMap.values()).sort(
-    (a, b) => a.boundaryMs - b.boundaryMs,
-  );
+  const allMs = new Set([...enteringAt.keys(), ...leavingAt.keys()]);
+
+  return Array.from(allMs)
+    .sort((a, b) => a - b)
+    .map((ms) => ({
+      boundaryMs: ms,
+      entering: enteringAt.get(ms) ?? null,
+      leaving: leavingAt.get(ms) ?? null,
+    }));
 }
 
 function splitSlot(
@@ -91,10 +131,12 @@ function applySplitsForBoundary(
   });
 }
 
-// Assign category membership and fix boundary locations for slots abutting periods
+// Assign category membership and fix boundary locations for slots abutting periods.
+// Uses day-of-week + time-in-minutes comparison against constraints instead of
+// pre-expanded absolute period timestamps.
 function assignMembership(
   slot: AvailableSlot,
-  activePeriods: CategoryPeriod[],
+  constraints: CategoryConstraint[],
 ): AvailableSlot {
   const slotStartMs = slot.start.getTime();
   const slotEndMs = slot.end.getTime();
@@ -102,22 +144,41 @@ function assignMembership(
 
   let { prevLocationId, nextLocationId, categoryId, isStrictCategory } = slot;
 
-  for (const period of activePeriods) {
-    const periodStartMs = period.start.getTime();
-    const periodEndMs = period.end.getTime();
+  const midDate = new Date(slotMidMs);
+  const midDow = midDate.getDay();
+  const midMin = midDate.getHours() * 60 + midDate.getMinutes();
 
-    if (period.locationId) {
-      if (periodEndMs === slotStartMs) prevLocationId = period.locationId;
-      if (periodStartMs === slotEndMs) nextLocationId = period.locationId;
-    }
+  const startDate = new Date(slotStartMs);
+  const startDow = startDate.getDay();
+  const startMin = startDate.getHours() * 60 + startDate.getMinutes();
 
-    if (
-      categoryId === undefined &&
-      slotMidMs > periodStartMs &&
-      slotMidMs < periodEndMs
-    ) {
-      categoryId = period.categoryId;
-      isStrictCategory = period.isStrict;
+  const endDate = new Date(slotEndMs);
+  const endDow = endDate.getDay();
+  const endMin = endDate.getHours() * 60 + endDate.getMinutes();
+
+  for (const constraint of constraints) {
+    for (const catSlot of constraint.timeSlots) {
+      const csStart = hhmmToMinutes(catSlot.startTime);
+      let csEnd = hhmmToMinutes(catSlot.endTime);
+      if (csEnd <= csStart) csEnd += 24 * 60;
+
+      if (constraint.locationId) {
+        // A period ending exactly at slot start → this is the slot's prevLocation
+        if (catSlot.days.some((d) => d === startDow) && csEnd === startMin)
+          prevLocationId = constraint.locationId;
+
+        // A period starting exactly at slot end → this is the slot's nextLocation
+        if (catSlot.days.some((d) => d === endDow) && csStart === endMin)
+          nextLocationId = constraint.locationId;
+      }
+
+      // Midpoint falls inside this period → assign category membership
+      if (categoryId === undefined && catSlot.days.some((d) => d === midDow)) {
+        if (midMin > csStart && midMin < csEnd) {
+          categoryId = constraint.id;
+          isStrictCategory = constraint.isStrict;
+        }
+      }
     }
   }
 
@@ -131,29 +192,23 @@ function assignMembership(
 }
 
 export function splitSlotsAtCategoryBoundaries(
-  categoryPeriods: CategoryPeriod[],
+  constraints: CategoryConstraint[],
   slots: AvailableSlot[],
-  rangeStart: Date,
-  rangeEnd: Date,
 ): AvailableSlot[] {
-  const rangeStartMs = rangeStart.getTime();
-  const rangeEndMs = rangeEnd.getTime();
+  if (!constraints.length || !slots.length) return slots;
 
-  const activePeriods = categoryPeriods.filter(
-    (p) => p.start.getTime() < rangeEndMs && p.end.getTime() > rangeStartMs,
-  );
+  const rangeStartMs = Math.min(...slots.map((s) => s.start.getTime()));
+  const rangeEndMs = Math.max(...slots.map((s) => s.end.getTime()));
 
-  if (!activePeriods.length) return slots;
-
-  const boundaries = getAllBoundaries(activePeriods, rangeStartMs, rangeEndMs);
+  const boundaries = getAllBoundaries(constraints, rangeStartMs, rangeEndMs);
+  if (!boundaries.length) return slots;
 
   let result = slots;
-
   for (const boundary of boundaries) {
     result = applySplitsForBoundary(result, boundary);
   }
 
   return result.map((slot) =>
-    slot.isAvailable ? assignMembership(slot, activePeriods) : slot,
+    slot.isAvailable ? assignMembership(slot, constraints) : slot,
   );
 }

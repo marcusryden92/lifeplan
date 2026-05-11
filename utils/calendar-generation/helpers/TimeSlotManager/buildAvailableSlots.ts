@@ -1,5 +1,5 @@
 import { Planner, SimpleEvent, EventType } from "@/types/prisma";
-import { CategoryPeriod } from "@/types/categoryTypes";
+import type { CategoryConstraint } from "@/types/categoryTypes";
 import {
   eventsToIntervals,
   findGaps,
@@ -17,7 +17,7 @@ interface BuildSlotsOptions {
   startDate: Date;
   existingEvents: SimpleEvent[];
   templateMasks: PerTemplateMask[];
-  categoryPeriods: CategoryPeriod[];
+  categoryConstraints: CategoryConstraint[];
   plannerLocationMap?: Map<string, string | null>;
   enableLogging?: boolean;
   endDateOverride?: Date;
@@ -28,19 +28,17 @@ export function buildAvailableSlots({
   startDate,
   existingEvents,
   templateMasks,
-  categoryPeriods,
+  categoryConstraints,
   plannerLocationMap,
   enableLogging = false,
   endDateOverride,
 }: BuildSlotsOptions) {
   if (enableLogging) logInitialSlotContext(existingEvents);
 
-  // Determine end date
   const numDays = daysNeededForPlans(planners, startDate);
   const endDate =
     endDateOverride ?? dateTimeService.shiftDays(startDate, numDays);
 
-  // Filter out template events and events outside the date range
   const relevantEvents = existingEvents.filter((event) => {
     if (event.extendedProps?.eventType === EventType.template) return false;
     const eventStart = new Date(event.start);
@@ -48,22 +46,18 @@ export function buildAvailableSlots({
     return eventStart < endDate && eventEnd > startDate;
   });
 
-  // Convert events and template masks into intervals
   const eventIntervals = eventsToIntervals(relevantEvents, plannerLocationMap);
   const templateIntervals = masksToIntervals(templateMasks, startDate, endDate);
 
   const occupiedIntervals = [...eventIntervals, ...templateIntervals];
 
-  // Assign location to locationless intervals that fall
-  // within a category period that has a location
+  // Assign location to locationless intervals that fall within a category period
+  // that has a location. Checked day-by-day to avoid global period expansion.
   const adjustedIntervals = inheritLocationFromCategoryPeriods(
-    categoryPeriods,
+    categoryConstraints,
     occupiedIntervals,
-    startDate,
-    endDate,
   );
 
-  // Determine last known location before start date
   const lastEventBeforeRange = existingEvents
     .filter(
       (e) =>
@@ -76,7 +70,6 @@ export function buildAvailableSlots({
     ? (plannerLocationMap?.get(lastEventBeforeRange.id) ?? null)
     : null;
 
-  // Find gaps between occupied intervals
   const gaps = findGaps(
     adjustedIntervals,
     startDate,
@@ -84,11 +77,5 @@ export function buildAvailableSlots({
     startingLocation,
   );
 
-  // Split gaps by category boundaries
-  return splitSlotsAtCategoryBoundaries(
-    categoryPeriods,
-    gaps,
-    startDate,
-    endDate,
-  );
+  return splitSlotsAtCategoryBoundaries(categoryConstraints, gaps);
 }

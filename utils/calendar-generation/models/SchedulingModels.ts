@@ -7,8 +7,8 @@
 import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
 
 import { SchedulingFailureReason } from "../constants";
-import type { CategoryConstraint, CategoryPeriod } from "@/types/categoryTypes";
-export type { CategoryConstraint, CategoryPeriod };
+import type { CategoryConstraint } from "@/types/categoryTypes";
+export type { CategoryConstraint };
 import { AvailableSlot, TravelSlot } from "./TimeSlot";
 
 /**
@@ -241,7 +241,6 @@ export interface StrategyConfig {
 export interface CategoryPeriodsResult {
   categoryConstraintMap: Map<string, CategoryConstraint>;
   categoryConstraintsList: CategoryConstraint[];
-  categoryPeriods: CategoryPeriod[];
 }
 
 export interface FindValidSlotsResult {

@@ -5,10 +5,7 @@ model Category {
   color     String?    // Hex color for visual distinction
   sortOrder Int        @default(0)
 
-  // Time constraint slots - stored as JSON array of time slot objects
-  // Format: [{ days: [1,3,5], startTime: "08:00", endTime: "17:00" }, ...]
-  // days: 0=Sunday, 1=Monday, ... 6=Saturday
-  timeSlots Json?
+  timeSlots CategoryTimeSlot[]
 
   // Strict mode: when true, only items from this category can be in these time slots
   // When false, other items can fill empty space in the time slots
@@ -34,4 +31,17 @@ model Category {
   updatedAt String
 
   @@map("Categories")
+}
+
+model CategoryTimeSlot {
+  id         String   @id @default(uuid())
+  // Days of the week this slot applies to: 0=Sunday, 1=Monday, ... 6=Saturday
+  days       Int[]
+  startTime  String   // HH:MM (24-hour)
+  endTime    String   // HH:MM (24-hour); if <= startTime the slot spans midnight
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("CategoryTimeSlots")
 }

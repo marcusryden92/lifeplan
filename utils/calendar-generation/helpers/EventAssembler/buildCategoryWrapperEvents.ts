@@ -1,15 +1,78 @@
 import { SimpleEvent, EventType } from "@/types/prisma";
+import type { CategoryConstraint } from "@/types/categoryTypes";
 import { RuntimeEventExtendedProps } from "@/types/ui";
+import { hhmmToMinutes } from "../../utils/dateTimeService";
+import { TIME_CONSTANTS } from "../../constants";
 import { v4 as uuidv4 } from "uuid";
-import { CategoryPeriod } from "../../models/SchedulingModels";
+
+type CategoryPeriod = {
+  start: Date;
+  end: Date;
+  categoryId: string;
+  categoryName: string;
+  categoryColor: string | null | undefined;
+  isStrict: boolean;
+};
+
+function expandPeriods(
+  constraints: CategoryConstraint[],
+  startDate: Date,
+  endDate: Date,
+): CategoryPeriod[] {
+  const periods: CategoryPeriod[] = [];
+  const { MS_PER_WEEK } = TIME_CONSTANTS;
+
+  for (const constraint of constraints) {
+    for (const slot of constraint.timeSlots) {
+      const startMin = hhmmToMinutes(slot.startTime);
+      let endMin = hhmmToMinutes(slot.endTime);
+      if (endMin <= startMin) endMin += 24 * 60;
+      const durationMs = (endMin - startMin) * 60000;
+
+      const slotStartHour = Math.floor(startMin / 60);
+      const slotStartMinute = startMin % 60;
+
+      for (const dow of slot.days) {
+        const searchBase = new Date(startDate);
+        searchBase.setHours(0, 0, 0, 0);
+        const daysUntil = (dow - searchBase.getDay() + 7) % 7;
+        searchBase.setDate(searchBase.getDate() + daysUntil);
+
+        while (searchBase <= endDate) {
+          const periodStart = new Date(searchBase);
+          periodStart.setHours(slotStartHour, slotStartMinute, 0, 0);
+          const periodEnd = new Date(periodStart.getTime() + durationMs);
+
+          if (periodEnd > startDate && periodStart < endDate) {
+            periods.push({
+              start: periodStart,
+              end: periodEnd,
+              categoryId: constraint.id,
+              categoryName: constraint.name,
+              categoryColor: constraint.color,
+              isStrict: constraint.isStrict,
+            });
+          }
+
+          searchBase.setTime(searchBase.getTime() + MS_PER_WEEK);
+        }
+      }
+    }
+  }
+
+  return periods.sort((a, b) => a.start.getTime() - b.start.getTime());
+}
 
 export function buildCategoryWrapperEvents(
   userId: string,
-  categoryPeriods: CategoryPeriod[],
+  constraints: CategoryConstraint[],
+  startDate: Date,
+  endDate: Date,
 ): SimpleEvent[] {
+  const periods = expandPeriods(constraints, startDate, endDate);
   const events: SimpleEvent[] = [];
 
-  for (const period of categoryPeriods) {
+  for (const period of periods) {
     const startHours = String(period.start.getHours()).padStart(2, "0");
     const startMinutes = String(period.start.getMinutes()).padStart(2, "0");
     const endHours = String(period.end.getHours()).padStart(2, "0");

@@ -26,12 +26,11 @@ export async function fetchCalendarData(userId: string) {
       },
     });
 
-    // Fetch all categories for the user with timeSlots and location
     const categoriesRaw = await db.category.findMany({
       where: {
         userId: userId,
       },
-      include: { location: true },
+      include: { timeSlots: true, location: true },
     });
 
     // Serialize Date fields in location to avoid Redux non-serializable warnings

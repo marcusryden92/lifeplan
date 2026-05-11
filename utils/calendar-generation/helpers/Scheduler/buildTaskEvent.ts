@@ -33,7 +33,7 @@ export function buildTaskEvent(
       const timeSlots = constraint.timeSlots;
 
       for (const slot of timeSlots) {
-        if (slot.days.includes(dayOfWeek)) {
+        if (slot.days.some((d) => d === dayOfWeek)) {
           const startTime = `${String(taskStartDate.getHours()).padStart(2, "0")}:${String(
             taskStartDate.getMinutes(),
           ).padStart(2, "0")}`;

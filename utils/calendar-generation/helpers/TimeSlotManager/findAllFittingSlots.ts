@@ -24,7 +24,7 @@ export function findAllFittingSlots(
       const dayOfWeek = dayStart.getDay();
 
       for (const catSlot of categoryConstraint.timeSlots) {
-        if (!catSlot.days.includes(dayOfWeek)) continue;
+        if (!catSlot.days.some((d) => d === dayOfWeek)) continue;
 
         const [startHour, startMin] = catSlot.startTime.split(":").map(Number);
         const [endHour, endMin] = catSlot.endTime.split(":").map(Number);

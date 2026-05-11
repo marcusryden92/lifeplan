@@ -1,8 +1,41 @@
-import { CategoryPeriod } from "@/types/categoryTypes";
+import type { CategoryConstraint } from "@/types/categoryTypes";
 import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { createTravelSlot } from "../../utils/timeSlotUtils";
 import { TravelManager } from "../../core/TravelManager";
+import { hhmmToMinutes } from "../../utils/dateTimeService";
 import { v4 as uuidv4 } from "uuid";
+
+function getContainingPeriodEnd(
+  slot: AvailableSlot,
+  constraints: CategoryConstraint[],
+): Date | undefined {
+  if (!slot.categoryId) return undefined;
+  const constraint = constraints.find((c) => c.id === slot.categoryId);
+  if (!constraint) return undefined;
+
+  const dayStart = new Date(slot.start);
+  dayStart.setHours(0, 0, 0, 0);
+  const dow = dayStart.getDay();
+  const slotStartMs = slot.start.getTime();
+  const slotEndMs = slot.end.getTime();
+
+  for (const catSlot of constraint.timeSlots) {
+    if (!catSlot.days.some((d) => d === dow)) continue;
+
+    const startMin = hhmmToMinutes(catSlot.startTime);
+    let endMin = hhmmToMinutes(catSlot.endTime);
+    if (endMin <= startMin) endMin += 24 * 60;
+
+    const periodStart = new Date(dayStart);
+    periodStart.setHours(Math.floor(startMin / 60), startMin % 60, 0, 0);
+    const periodEnd = new Date(periodStart.getTime() + (endMin - startMin) * 60000);
+
+    if (periodStart.getTime() <= slotStartMs && periodEnd.getTime() >= slotEndMs)
+      return periodEnd;
+  }
+
+  return undefined;
+}
 
 // Handles the case where two consecutive slots — a plain slot followed by a
 // category slot — don't have enough combined space to fit both the inbound
@@ -19,7 +52,7 @@ import { v4 as uuidv4 } from "uuid";
 //  - Either the category slot is too small to fit its own outgoing travel, or
 //    the combined space is too tight for both transitions
 export function attemptDirectBypass(
-  categoryPeriods: CategoryPeriod[],
+  constraints: CategoryConstraint[],
   travelManager: TravelManager,
   bufferTimeMinutes: number,
   slot: AvailableSlot,
@@ -33,12 +66,7 @@ export function attemptDirectBypass(
   result: AvailableSlot[],
 ): { handled: boolean; skipNext?: boolean } {
   const catPeriodEnd = nextSlot?.categoryId
-    ? categoryPeriods.find(
-        (p) =>
-          p.categoryId === nextSlot.categoryId &&
-          p.start.getTime() <= nextSlot.start.getTime() &&
-          p.end.getTime() >= nextSlot.end.getTime(),
-      )?.end
+    ? getContainingPeriodEnd(nextSlot, constraints)
     : undefined;
 
   // Only act if the next slot is in the middle of a category period — if it's

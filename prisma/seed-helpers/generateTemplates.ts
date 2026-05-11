@@ -23,13 +23,14 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
 
   const weekdays = days.slice(1, 6); // Monday - Friday
 
-  // Morning sleep (00:00 - 06:00) - All days
-  for (let i = 0; i < days.length; i++) {
+  // Morning sleep (00:00 - 06:00) - All days except Friday
+  const morningSleepDays = days.filter((d) => d !== "friday");
+  for (const day of morningSleepDays) {
     templateArray.push({
       id: uuidv4(),
       userId,
       title: "Sleep",
-      startDay: days[i] as WeekDayType,
+      startDay: day as WeekDayType,
       startTime: "00:00",
       duration: 360,
       color: "#1D3557", // navy
@@ -39,13 +40,14 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
     });
   }
 
-  // Evening sleep (21:00 - 00:00) - All days
-  for (let i = 0; i < days.length; i++) {
+  // Evening sleep (21:00 - 00:00) - All days except Thursday
+  const eveningSleepDays = days.filter((d) => d !== "thursday");
+  for (const day of eveningSleepDays) {
     templateArray.push({
       id: uuidv4(),
       userId,
       title: "Sleep",
-      startDay: days[i] as WeekDayType,
+      startDay: day as WeekDayType,
       startTime: "21:00",
       duration: 180,
       color: "#1D3557", // navy
@@ -71,13 +73,14 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
     });
   } */
 
-  // Breakfast (07:00 - 07:30) - All days
-  for (let i = 0; i < days.length; i++) {
+  // Breakfast (06:00 - 06:30) - All days except Friday
+  const breakfastDays = days.filter((d) => d !== "friday");
+  for (const day of breakfastDays) {
     templateArray.push({
       id: uuidv4(),
       userId,
       title: "Breakfast",
-      startDay: days[i] as WeekDayType,
+      startDay: day as WeekDayType,
       startTime: "06:00",
       duration: 30,
       color: "#FFB703", // amber yellow

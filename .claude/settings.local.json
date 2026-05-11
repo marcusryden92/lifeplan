@@ -34,7 +34,9 @@
       "Bash(grep -n \"from \"\"\\\\.\\\\.\" /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/CalendarGenerator/*.ts)",
       "Bash(grep -n \"from \"\"\\\\.\\\\.\" /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/Scheduler/*.ts)",
       "Bash(grep -rn calendar-generation/helpers /c/Users/Marcus/Desktop/Lifeplan/ --include=*.ts)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\utils\\\\calendar-generation\\\\helpers\\\\TimeSlotManager\\\\\" | ForEach-Object { $_.Name })",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
     ]
   }
 }

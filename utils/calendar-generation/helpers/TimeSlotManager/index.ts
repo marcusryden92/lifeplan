@@ -1,6 +1,6 @@
 export { daysNeededForPlans } from "./daysNeededForPlans";
 export { buildAvailableSlots } from "./buildAvailableSlots";
-export { applyCategoriesToNullIntervals } from "./applyCategoriesToNullIntervals";
+export { inheritLocationFromCategoryPeriods } from "./inheritLocationFromCategoryPeriods";
 export { splitSlotsAtCategoryBoundaries } from "./splitSlotsAtCategoryBoundaries";
 export { findAllFittingSlots } from "./findAllFittingSlots";
 export { getDaySlots } from "./getDaySlots";

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/Label";
 import { Input } from "@/components/ui/Input";
 import { X, Plus } from "lucide-react";
 import { CategoryTimeSlot } from "@/types/categoryTypes";
+import type { WeekDayIntegers } from "@/types/calendarTypes";
 
 interface TimeSlotEditorProps {
   timeSlots: CategoryTimeSlot[];
@@ -23,7 +24,7 @@ const DAY_NAMES = [
 ];
 
 export function TimeSlotEditor({ timeSlots, onChange }: TimeSlotEditorProps) {
-  const [selectedDays, setSelectedDays] = useState<number[]>([]);
+  const [selectedDays, setSelectedDays] = useState<WeekDayIntegers[]>([]);
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +53,8 @@ export function TimeSlotEditor({ timeSlots, onChange }: TimeSlotEditorProps) {
     slotsByDay[parseInt(day)].sort((a, b) => a.start.localeCompare(b.start));
   });
 
-  const toggleDay = (day: number) => {
-    if (selectedDays.includes(day)) {
+  const toggleDay = (day: WeekDayIntegers) => {
+    if (selectedDays.some((d) => d === day)) {
       setSelectedDays(selectedDays.filter((d) => d !== day));
     } else {
       setSelectedDays([...selectedDays, day].sort((a, b) => a - b));
@@ -99,13 +100,12 @@ export function TimeSlotEditor({ timeSlots, onChange }: TimeSlotEditorProps) {
     setEndTime("17:00");
   };
 
-  const removeTimeSlot = (day: number, timeStart: string, timeEnd: string) => {
-    // Find all slots that contain this day
+  const removeTimeSlot = (day: WeekDayIntegers, timeStart: string, timeEnd: string) => {
     const updatedSlots: CategoryTimeSlot[] = [];
 
     timeSlots.forEach((slot) => {
       if (
-        slot.days.includes(day) &&
+        slot.days.some((d) => d === day) &&
         slot.startTime === timeStart &&
         slot.endTime === timeEnd
       ) {
@@ -154,9 +154,9 @@ export function TimeSlotEditor({ timeSlots, onChange }: TimeSlotEditorProps) {
                 <button
                   key={index}
                   type="button"
-                  onClick={() => toggleDay(index)}
+                  onClick={() => toggleDay(index as WeekDayIntegers)}
                   className={`px-1 py-2.5 text-[11px] font-medium rounded transition-colors whitespace-nowrap ${
-                    selectedDays.includes(index)
+                    selectedDays.some((d) => d === index)
                       ? "bg-blue-500 text-white"
                       : "bg-white border hover:bg-gray-50"
                   }`}
@@ -172,7 +172,7 @@ export function TimeSlotEditor({ timeSlots, onChange }: TimeSlotEditorProps) {
           {Object.keys(slotsByDay).length > 0 && (
             <div className="max-h-[180px] overflow-y-auto">
               <div className="grid grid-cols-7 gap-1.5">
-                {[0, 1, 2, 3, 4, 5, 6].map((day) => {
+                {([0, 1, 2, 3, 4, 5, 6] as WeekDayIntegers[]).map((day) => {
                   const slots = slotsByDay[day] || [];
 
                   return (

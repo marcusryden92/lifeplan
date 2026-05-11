@@ -1,4 +1,4 @@
-import { CategoryPeriod } from "@/types/categoryTypes";
+import type { CategoryConstraint } from "@/types/categoryTypes";
 import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { TravelManager } from "../../core/TravelManager";
 import { attemptDirectBypass } from "./attemptDirectBypass";
@@ -17,7 +17,7 @@ import { carveAtEnd } from "./carveAtEnd";
  * START of the arriving slot, forming the sandwich: [A→B travel][B time][B→A travel].
  *
  * @param hasPlannerLocationMap - Skip the pass entirely if no location data exists.
- * @param categoryPeriods - Category time boundaries, used for bypass decisions.
+ * @param categoryConstraints - Category time boundaries, used for bypass decisions.
  * @param occupiedSlots - Already-placed events; travel slots are appended here.
  * @param travelManager - Provides travel durations between locations.
  * @param bufferTimeMinutes - Minimum buffer to maintain around travel events.
@@ -26,7 +26,7 @@ import { carveAtEnd } from "./carveAtEnd";
  */
 export function preliminaryTravelPass(
   hasPlannerLocationMap: boolean,
-  categoryPeriods: CategoryPeriod[],
+  categoryConstraints: CategoryConstraint[],
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   travelManager: TravelManager,
   bufferTimeMinutes: number,
@@ -46,7 +46,7 @@ export function preliminaryTravelPass(
       slots,
       i,
       travelManager,
-      categoryPeriods,
+      categoryConstraints,
       occupiedSlots,
       bufferTimeMinutes,
       result,
@@ -60,7 +60,7 @@ function processSlot(
   slots: AvailableSlot[],
   i: number,
   travelManager: TravelManager,
-  categoryPeriods: CategoryPeriod[],
+  categoryConstraints: CategoryConstraint[],
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   bufferTimeMinutes: number,
   result: AvailableSlot[],
@@ -84,7 +84,7 @@ function processSlot(
   // Outbound into a category boundary — collapse both transitions into a direct bypass if the gap is too tight
   if (!placeAtSlotStart && !slot.categoryId) {
     const bypass = attemptDirectBypass(
-      categoryPeriods,
+      categoryConstraints,
       travelManager,
       bufferTimeMinutes,
       slot,

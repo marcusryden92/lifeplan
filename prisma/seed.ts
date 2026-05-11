@@ -52,9 +52,11 @@ async function main() {
   const travelTimes = generateTravelTimes(userId);
   await prisma.travelTime.createMany({ data: travelTimes });
 
-  // Seed categories (before planners, since planners reference them)
+  // Seed categories (createMany doesn't support nested relations, so use individual creates)
   const categories = generateCategories(userId);
-  await prisma.category.createMany({ data: categories });
+  for (const category of categories) {
+    await prisma.category.create({ data: category });
+  }
 
   // Seed event templates
   const templates = generateTemplates(userId);

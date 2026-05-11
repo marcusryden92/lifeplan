@@ -39,10 +39,14 @@ export type TravelTimeWithLocations = Prisma.TravelTimeGetPayload<{
   include: { fromLocation: true; toLocation: true };
 }>;
 
-export type Category = Prisma.CategoryGetPayload<undefined>;
+export type Category = Prisma.CategoryGetPayload<{
+  include: { timeSlots: true };
+}>;
+
+export type CategoryTimeSlot = Prisma.CategoryTimeSlotGetPayload<undefined>;
 
 export type CategoryWithChildren = Prisma.CategoryGetPayload<{
-  include: { children: true };
+  include: { children: true; timeSlots: true };
 }>;
 
 export type PlannerWithCategory = Prisma.PlannerGetPayload<{

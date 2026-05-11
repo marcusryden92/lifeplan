@@ -6,7 +6,7 @@
  */
 
 import { Planner, SimpleEvent } from "@/types/prisma";
-import { CategoryPeriod } from "@/types/categoryTypes";
+import { CategoryConstraint } from "@/types/categoryTypes";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "./TimeSlotManager";
 import { TravelManager } from "./TravelManager";
@@ -91,7 +91,7 @@ export class Scheduler {
     largestTemplateGap: number,
     perTemplateMasks: PerTemplateMask[],
     plannerLocationMap: Map<string, string | null>,
-    categoryPeriods: CategoryPeriod[],
+    categoryConstraints: CategoryConstraint[],
   ): { success: boolean; newEvents: SimpleEvent[]; failures: SchedulingFailure[] } {
     return scheduleTasksAndGoals(
       this.slotManager,
@@ -105,7 +105,7 @@ export class Scheduler {
       perTemplateMasks,
       this.context,
       plannerLocationMap,
-      categoryPeriods,
+      categoryConstraints,
     );
   }
 

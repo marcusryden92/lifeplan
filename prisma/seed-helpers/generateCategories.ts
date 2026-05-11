@@ -5,7 +5,9 @@ export const CATEGORY_IDS = {
   WORK: "seed-category-work",
 } as const;
 
-export const generateCategories = (userId: string): Prisma.CategoryCreateManyInput[] => {
+type CategorySeedInput = Prisma.CategoryCreateInput & { id: string };
+
+export const generateCategories = (userId: string): CategorySeedInput[] => {
   const timestamp = new Date().toISOString();
 
   return [
@@ -15,17 +17,23 @@ export const generateCategories = (userId: string): Prisma.CategoryCreateManyInp
       icon: null,
       color: null,
       sortOrder: 0,
-      timeSlots: [
-        {
-          days: [1, 2, 3, 4, 5],
-          startTime: "09:00",
-          endTime: "17:00",
-        },
-      ],
+      timeSlots: {
+        create: [
+          {
+            days: [1, 2, 3],
+            startTime: "09:00",
+            endTime: "17:00",
+          },
+          {
+            days: [4],
+            startTime: "20:00",
+            endTime: "04:00",
+          },
+        ],
+      },
       isStrict: true,
-      locationId: LOCATION_IDS.GAMLA_STAN,
-      parentId: null,
-      userId,
+      location: { connect: { id: LOCATION_IDS.GAMLA_STAN } },
+      user: { connect: { id: userId } },
       createdAt: timestamp,
       updatedAt: timestamp,
     },

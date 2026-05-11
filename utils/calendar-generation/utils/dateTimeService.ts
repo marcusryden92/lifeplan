@@ -302,3 +302,9 @@ export const dateTimeService = new DateTimeService();
 export function getMinuteDifference(date1: Date, date2: Date): number {
   return Math.floor(Math.abs(date2.getTime() - date1.getTime()) / (1000 * 60));
 }
+
+/** Convert a "HH:MM" string to total minutes since midnight. */
+export function hhmmToMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}

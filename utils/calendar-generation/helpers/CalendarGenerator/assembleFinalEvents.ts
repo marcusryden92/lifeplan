@@ -5,16 +5,19 @@
  */
 
 import { SimpleEvent } from "@/types/prisma";
+import type { CategoryConstraint } from "@/types/categoryTypes";
 import { TravelManager } from "../../core/TravelManager";
-import { SchedulingContext, CategoryPeriod } from "../../models/SchedulingModels";
+import { SchedulingContext } from "../../models/SchedulingModels";
 import { EventAssembler } from "../../core/EventAssembler";
 
 export function assembleFinalEvents(
   userId: string,
   travelManager: TravelManager,
   context: SchedulingContext,
-  categoryPeriodsStatic: CategoryPeriod[],
-  plannerLocationMap: Map<string, string | null>
+  categoryConstraintsList: CategoryConstraint[],
+  startDate: Date,
+  endDate: Date,
+  plannerLocationMap: Map<string, string | null>,
 ): SimpleEvent[] {
   // Generate travel events from stored travel slots
   const travelEvents = travelManager.generateTravelEvents(userId);
@@ -38,7 +41,9 @@ export function assembleFinalEvents(
   // Generate category wrapper events
   const categoryWrapperEvents = EventAssembler.buildCategoryWrapperEvents(
     userId,
-    categoryPeriodsStatic
+    categoryConstraintsList,
+    startDate,
+    endDate,
   );
 
   // Assemble final event list

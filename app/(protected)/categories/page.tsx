@@ -29,7 +29,6 @@ import * as categoryActions from "@/actions/categories";
 import { buildCategoryTree, CategoryNode } from "@/utils/categoryUtils";
 import type { Category } from "@/types/prisma";
 import type { CategoryTimeSlot } from "@/types/categoryTypes";
-import { Prisma } from "@/prisma/generated/client";
 
 type CategoryWithChildren = Category & {
   children: Category[];
@@ -139,10 +138,7 @@ export default function CategoriesPage() {
 
     try {
       setError(null);
-      await categoryActions.updateCategory(editingCategory.id, {
-        ...data,
-        timeSlots: data.timeSlots as Prisma.InputJsonValue | undefined,
-      });
+      await categoryActions.updateCategory(editingCategory.id, data);
       await loadCategories();
       setSuccessMessage("Category updated successfully!");
       setTimeout(() => setSuccessMessage(null), 3000);
