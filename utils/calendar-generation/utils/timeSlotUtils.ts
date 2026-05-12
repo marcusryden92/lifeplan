@@ -1,4 +1,9 @@
-import type { AvailableSlot, TimeSlot, TravelSlot } from "../models/TimeSlot";
+import type {
+  AvailableSlot,
+  OccupiedSlot,
+  TimeSlot,
+  TravelSlot,
+} from "../models/TimeSlot";
 import { PlannerType, EventType } from "@/types/prisma";
 
 export function getDurationMinutes(slot: TimeSlot): number {
@@ -206,6 +211,34 @@ export function createTravelSlot(
 
 export function isTravelSlot(slot: TimeSlot): slot is TravelSlot {
   return !slot.isAvailable && slot.eventType === EventType.travel;
+}
+
+export function pushInsufficientTravel(
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  spanStart: Date,
+  spanEnd: Date,
+  fromLocationId: string,
+  toLocationId: string,
+  requiredTravelMinutes: number,
+  context: { categoryId?: string | null; isStrictCategory?: boolean },
+  eventId: string,
+): void {
+  occupiedSlots.push(
+    createTravelSlot(
+      spanStart,
+      spanEnd,
+      fromLocationId,
+      toLocationId,
+      "preliminary",
+      eventId,
+      {
+        insufficientTravel: true,
+        requiredTravelMinutes,
+        categoryId: context.categoryId,
+        isStrictCategory: context.isStrictCategory,
+      },
+    ),
+  );
 }
 
 export function reclaimTravelSlot(travelSlot: TravelSlot): AvailableSlot {

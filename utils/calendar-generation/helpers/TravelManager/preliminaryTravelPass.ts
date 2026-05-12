@@ -1,28 +1,58 @@
 import type { CategoryConstraint } from "@/types/categoryTypes";
 import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { TravelManager } from "../../core/TravelManager";
-import { attemptDirectBypass } from "./attemptDirectBypass";
-import { attemptReturnAbsorption } from "./attemptReturnAbsorption";
-import { carveAtStart } from "./carveAtStart";
-import { carveAtEnd } from "./carveAtEnd";
+import { pushInsufficientTravel } from "../../utils/timeSlotUtils";
+import { v4 as uuidv4 } from "uuid";
+import {
+  placeTravelAtSlotEnd,
+  placeTravelAtSlotStart,
+} from "./travelPlacement";
+import {
+  tryShiftTravelBackward,
+  tryExtendForwardIntoCategory,
+} from "./travelExtension";
+import {
+  tryBypassOutboundCategoryLayover,
+  tryBypassReturnCategoryLayover,
+} from "./categoryLayoverBypass";
 
-/**
- * Iterates all available slots and carves travel events into boundaries between
- * slots at different locations.
+/* ============================================================================
+ *  preliminaryTravelPass — walks the day's slots and places travel events at
+ *  every location transition. For each slot, the dispatcher classifies the
+ *  transition (no transition / outbound / return) and runs the matching tree.
+ *  First leaf whose condition matches wins.
  *
- * Outbound trips (A→B, first visit) are carved at the END of the departing slot,
- * preserving available time before departure.
+ *  OUTBOUND (travel placed at slot END)
+ *    Next slot is a too-tight contiguous category heading onward to a 3rd loc
+ *      → BYPASS: one direct prev→destination across both slots
+ *    Travel < slot
+ *      → place at slot end, leftover at start
+ *    Travel == slot
+ *      Previous slot can absorb it
+ *        → shift travel backward into previous, freeing this slot
+ *      Otherwise
+ *        → place travel filling slot exactly
+ *    Travel > slot
+ *      Previous slot can absorb AND (this or previous is in a category)
+ *        → shift travel backward into previous
+ *      Next slot is a contiguous category
+ *        → extend travel forward into it
+ *      Otherwise
+ *        → mark slot as insufficient travel
  *
- * Return trips (B→A, back to a previously visited location) are carved at the
- * START of the arriving slot, forming the sandwich: [A→B travel][B time][B→A travel].
+ *  RETURN (travel placed at slot START)
+ *    Current is category, next non-category contiguous, return travel longer
+ *    than category slot
+ *      → BYPASS: one direct foreign→destination across both slots
+ *    Travel fits
+ *      → place at slot start, leftover at end
+ *    Travel doesn't fit
+ *      → mark slot as insufficient travel
  *
- * @param hasPlannerLocationMap - Skip the pass entirely if no location data exists.
- * @param categoryConstraints - Category time boundaries, used for bypass decisions.
- * @param occupiedSlots - Already-placed events; travel slots are appended here.
- * @param travelManager - Provides travel durations between locations.
- * @param bufferTimeMinutes - Minimum buffer to maintain around travel events.
- * @param slots - Available slots to process.
- * @returns Revised available slots with travel carved out.
+ *  Bypass logic: categoryLayoverBypass.ts.
+ *  Single-slot placement: travelPlacement.ts.
+ *  Stretching strategies: travelExtension.ts.
+ * ============================================================================
  */
 export function preliminaryTravelPass(
   hasPlannerLocationMap: boolean,
@@ -35,14 +65,9 @@ export function preliminaryTravelPass(
   if (!hasPlannerLocationMap) return slots;
 
   const result: AvailableSlot[] = [];
-  let skipNextSlot = false;
-
-  for (let i = 0; i < slots.length; i++) {
-    if (skipNextSlot) {
-      skipNextSlot = false;
-      continue;
-    }
-    skipNextSlot = processSlot(
+  let i = 0;
+  while (i < slots.length) {
+    i += processSlot(
       slots,
       i,
       travelManager,
@@ -52,91 +77,200 @@ export function preliminaryTravelPass(
       result,
     );
   }
-
   return result;
 }
 
 function processSlot(
   slots: AvailableSlot[],
-  i: number,
+  slotIndex: number,
   travelManager: TravelManager,
   categoryConstraints: CategoryConstraint[],
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   bufferTimeMinutes: number,
   result: AvailableSlot[],
-): boolean {
-  const slot = slots[i];
+): number {
+  const slot = slots[slotIndex];
+  if (slot.durationMinutes <= 0) return 1;
 
-  // Skip zero-duration slots
-  if (slot.durationMinutes <= 0) return false;
-
-  // Resolve travel direction and duration; no travel means pass the slot through unchanged
   const travel = travelManager.resolveTravel(slot);
   if (!travel) {
     result.push(slot);
-    return false;
+    return 1;
   }
 
-  const { prevLocation, nextLocation, placeAtSlotStart, travelMinutes } =
-    travel;
-  const nextSlot = i + 1 < slots.length ? slots[i + 1] : null;
+  return travel.placeAtSlotStart
+    ? handleReturn(
+        slots,
+        slotIndex,
+        travelManager,
+        travel.prevLocation,
+        travel.nextLocation,
+        travel.travelMinutes,
+        occupiedSlots,
+        result,
+      )
+    : handleOutbound(
+        slots,
+        slotIndex,
+        travelManager,
+        categoryConstraints,
+        bufferTimeMinutes,
+        travel.prevLocation,
+        travel.nextLocation,
+        travel.travelMinutes,
+        occupiedSlots,
+        result,
+      );
+}
 
-  // Outbound into a category boundary — collapse both transitions into a direct bypass if the gap is too tight
-  if (!placeAtSlotStart && !slot.categoryId) {
-    const bypass = attemptDirectBypass(
-      categoryConstraints,
-      travelManager,
-      bufferTimeMinutes,
+function handleOutbound(
+  slots: AvailableSlot[],
+  slotIndex: number,
+  travelManager: TravelManager,
+  categoryConstraints: CategoryConstraint[],
+  bufferTimeMinutes: number,
+  previousLocation: string,
+  nextLocation: string,
+  travelMinutes: number,
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  result: AvailableSlot[],
+): number {
+  const slot = slots[slotIndex];
+  const nextSlot = slots[slotIndex + 1] ?? null;
+  const bufferMilliseconds = bufferTimeMinutes * 60000;
+
+  // Next slot is a too-tight category layover → collapse into one direct hop.
+  const bypass = tryBypassOutboundCategoryLayover(
+    slot,
+    nextSlot,
+    slots,
+    slotIndex,
+    travelManager,
+    categoryConstraints,
+    bufferTimeMinutes,
+    previousLocation,
+    nextLocation,
+    travelMinutes,
+    occupiedSlots,
+    result,
+  );
+  if (bypass.handled) return bypass.slotsConsumed;
+
+  // Travel < slot → place at end, leftover at start.
+  if (travelMinutes < slot.durationMinutes) {
+    placeTravelAtSlotEnd(
       slot,
-      nextSlot,
-      slots,
-      i,
-      prevLocation,
+      previousLocation,
       nextLocation,
       travelMinutes,
       occupiedSlots,
       result,
     );
-    if (bypass.handled) return bypass.skipNext ?? false;
+    return 1;
   }
 
-  // Return into a category slot — absorb travel into the slot rather than carving a hard boundary
-  if (placeAtSlotStart && slot.categoryId) {
-    const absorb = attemptReturnAbsorption(
-      travelManager,
+  // Travel == slot → shift backward if we can (free win), else fill exactly.
+  if (travelMinutes === slot.durationMinutes) {
+    const shifted = tryShiftTravelBackward(
       slot,
-      nextSlot,
-      prevLocation,
+      previousLocation,
+      nextLocation,
+      travelMinutes,
+      bufferMilliseconds,
+      true,
+      occupiedSlots,
+      result,
+    );
+    if (shifted) return 1;
+
+    placeTravelAtSlotEnd(
+      slot,
+      previousLocation,
       nextLocation,
       travelMinutes,
       occupiedSlots,
       result,
     );
-    if (absorb.handled) return absorb.skipNext ?? false;
+    return 1;
   }
 
-  // Standard carve — outbound at end, return at start
-  if (placeAtSlotStart) {
-    carveAtStart(
-      slot,
-      prevLocation,
-      nextLocation,
-      travelMinutes,
-      occupiedSlots,
-      result,
-    );
-  } else {
-    carveAtEnd(
-      slot,
-      slots,
-      i,
-      prevLocation,
-      nextLocation,
-      travelMinutes,
-      bufferTimeMinutes,
-      occupiedSlots,
-      result,
-    );
-  }
-  return false;
+  // Travel > slot → try stretching into adjacent slots, else mark insufficient.
+
+  // Shift backward (restricted to category-related slots).
+  const shifted = tryShiftTravelBackward(
+    slot,
+    previousLocation,
+    nextLocation,
+    travelMinutes,
+    bufferMilliseconds,
+    false,
+    occupiedSlots,
+    result,
+  );
+  if (shifted) return 1;
+
+  // Extend forward into a contiguous next category slot.
+  const extendedForward = tryExtendForwardIntoCategory(
+    slot,
+    slots,
+    slotIndex,
+    previousLocation,
+    nextLocation,
+    travelMinutes,
+    bufferMilliseconds,
+    occupiedSlots,
+  );
+  if (extendedForward) return 1;
+
+  // Nothing fit — mark the slot insufficient (renders red on the calendar).
+  pushInsufficientTravel(
+    occupiedSlots,
+    slot.start,
+    slot.end,
+    previousLocation,
+    nextLocation,
+    travelMinutes,
+    slot,
+    uuidv4(),
+  );
+  return 1;
+}
+
+function handleReturn(
+  slots: AvailableSlot[],
+  slotIndex: number,
+  travelManager: TravelManager,
+  previousLocation: string,
+  nextLocation: string,
+  travelMinutes: number,
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  result: AvailableSlot[],
+): number {
+  const slot = slots[slotIndex];
+  const nextSlot = slots[slotIndex + 1] ?? null;
+
+  // Current category, return travel longer than category slot, non-cat after
+  // → collapse into one direct hop.
+  const bypass = tryBypassReturnCategoryLayover(
+    slot,
+    nextSlot,
+    travelManager,
+    previousLocation,
+    nextLocation,
+    travelMinutes,
+    occupiedSlots,
+    result,
+  );
+  if (bypass.handled) return bypass.slotsConsumed;
+
+  // Otherwise place at slot start (falls through to insufficient if it doesn't fit).
+  placeTravelAtSlotStart(
+    slot,
+    previousLocation,
+    nextLocation,
+    travelMinutes,
+    occupiedSlots,
+    result,
+  );
+  return 1;
 }

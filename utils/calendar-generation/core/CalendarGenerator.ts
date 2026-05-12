@@ -154,8 +154,8 @@ export class CalendarGenerator {
       enableLogging,
     });
 
-    // Phase 6b: Carve travel slots (separate pass after slot building)
-    const carved = preliminaryTravelPass(
+    // Phase 6b: Place travel slots (separate pass after slot building)
+    const slotsWithTravel = preliminaryTravelPass(
       !!plannerLocationMap,
       categoryConstraintsList,
       timeSlotManager.occupiedSlots,
@@ -165,10 +165,10 @@ export class CalendarGenerator {
     );
 
     // Phase 6c: Drop slots ending before "now" so the scheduler doesn't place
-    // tasks in the past. Travel events carved into those past slots remain in
+    // tasks in the past. Travel events placed into those past slots remain in
     // occupiedSlots — only the empty-space markers are pruned here.
     const nowMs = currentDate.getTime();
-    timeSlotManager.availableSlots = carved.filter(
+    timeSlotManager.availableSlots = slotsWithTravel.filter(
       (s) => s.end.getTime() > nowMs,
     );
 
