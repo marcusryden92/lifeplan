@@ -58,7 +58,7 @@ export class TravelManager {
     if (!prevLocation || !nextLocation || prevLocation === nextLocation)
       return null;
 
-    const placeAtSlotStart = this.legTracker(prevLocation, nextLocation);
+    const placeAtSlotStart = this.legTracker.track(prevLocation, nextLocation);
     const travelMinutes = this.getTravelTime(
       prevLocation,
       nextLocation,
@@ -69,12 +69,8 @@ export class TravelManager {
     return { prevLocation, nextLocation, placeAtSlotStart, travelMinutes };
   }
 
-  /**
-   * Resets leg tracking state. Call before starting a new preliminary travel pass
-   * to ensure outbound legs from a previous pass don't bleed into the next.
-   */
-  resetLegTracker(): void {
-    this.legTracker = createLegTracker();
+  resetLegTracker() {
+    this.legTracker.reset();
   }
 
   /**

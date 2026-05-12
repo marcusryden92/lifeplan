@@ -208,54 +208,53 @@ The reason for the split: a task can visually belong to a category with a defaul
 ### Phase 5: Build Category Constraints
 
 ```typescript
-const {
-  categoryConstraintMap,
-  categoryPeriodsStatic,
-  wrapperPeriodsForManager,
-} = buildCategoryConstraints(
-  input.categories,
-  currentDate,
-  this.weekStartDay,
-  maxDaysAhead,
-);
+const { categoryConstraintMap, categoryConstraintsList } =
+  buildCategoryConstraints(input.categories);
 ```
 
 Builds category constraint data used throughout scheduling:
 
-- `categoryConstraintMap` -- `Map<categoryId, CategoryConstraint>` for the Scheduler to look up time constraints
-- `categoryPeriodsStatic` -- concrete time periods (start/end dates) for category wrapper events on the calendar
-- `wrapperPeriodsForManager` -- periods with locations for the SlotBuilder to split slots at category boundaries
+- `categoryConstraintMap` -- `Map<categoryId, CategoryConstraint>` for the Scheduler to look up time constraints by `categoryId`
+- `categoryConstraintsList` -- the same constraints as an array, threaded through to slot building, the travel pass, and the event assembler
 
-Uses `buildCategoryConstraintMap()` and `generateCategorySlotPeriods()` from `buildCategoryConstraints.ts`.
+Each `CategoryConstraint` carries the recurring `timeSlots` rules (`{ days, startTime, endTime }`) — no pre-expansion into concrete dated periods happens here. Downstream consumers expand a rule for a specific day on demand via the `expandSlotForDay` helper.
 
 ### Phase 6: Build Initial Slots
 
 ```typescript
-buildInitialSlots(
-  this.slotManager,
-  currentDate,
-  2,
-  filteredEvents,
-  perTemplateMasks,
+// Phase 6a: Build available slots over the full scheduling timeline
+const builtSlots = buildAvailableSlots({
+  planners: input.planners,
+  startDate: setTimeOnDate(currentDate, "00:00"),
+  existingEvents: filteredEvents,
+  templateMasks: perTemplateMasks,
+  categoryConstraints: categoryConstraintsList,
   plannerLocationMap,
-  wrapperPeriodsForManager,
   enableLogging,
+});
+this.slotManager.availableSlots.push(...builtSlots);
+
+// Phase 6b: Carve travel slots in a separate pass after slot building
+const carved = preliminaryTravelPass(
+  !!plannerLocationMap,
+  categoryConstraintsList,
+  this.slotManager.occupiedSlots,
+  travelManager,
+  this.bufferTimeMinutes,
+  this.slotManager.availableSlots,
 );
+this.slotManager.availableSlots = carved;
 ```
 
-1. Clears any existing slots
-2. Sets category periods on the slot manager (for boundary splits)
-3. Calls `slotManager.buildDailySlots()` for 14 days (2 weeks)
+`buildAvailableSlots` operates over the full scheduling horizon in one call and:
 
-For each day, the SlotBuilder:
+- Filters existing events to those overlapping the scheduling range
+- Converts events and template masks to intervals (with locations)
+- Inherits category location into locationless intervals that fall inside a category period (`inheritLocationFromCategoryPeriods`)
+- Calls `findGaps` to compute the available time between occupied intervals
+- Splits the resulting gaps at category boundaries and tags each fragment with `categoryId` / `isStrictCategory` / location handoff (`splitSlotsAtCategoryBoundaries`)
 
-- Starts with 24 hours available
-- Subtracts time blocked by templates (using masks)
-- Subtracts time blocked by existing events (plans, completed items)
-- Splits slots at category boundaries (so category-constrained tasks fit precisely)
-- Creates travel slots where locations change
-- Applies buffer time between events
-- Merges adjacent available slots
+`preliminaryTravelPass` then walks the slot list and carves `TravelSlot` entries wherever `prevLocationId !== nextLocationId`, with special-case bypass logic for slots tight against category boundaries.
 
 ### Phase 7: Prepare Scheduling Context
 
@@ -355,12 +354,16 @@ The `TaskSchedulingOrchestrator` runs a week-by-week loop. See [TaskSchedulingOr
 ```typescript
 const allEvents = assembleFinalEvents(
   input.userId,
-  this.slotManager,
+  travelManager,
   context,
-  categoryPeriodsStatic,
+  categoryConstraintsList,
+  schedulingStartDate,
+  schedulingEndDate,
   plannerLocationMap,
 );
 ```
+
+The constraints + date range are forwarded to `EventAssembler.buildCategoryWrapperEvents`, which lazily expands the rules into concrete dated `CategoryPeriod` instances purely for rendering the calendar background blocks — those concrete period objects exist only here, not in the rest of the pipeline.
 
 Delegates to `EventAssembler` for:
 
@@ -450,7 +453,6 @@ TimeSlotManager/
 | `buildDailySlots(...)`                                                   | Builds slots across multiple days                       |
 | `findAllFittingSlots(duration, afterDate, maxDays, categoryConstraint?)` | Returns all slots that can fit a task of given duration |
 | `reserveSlotWithTravel(...)`                                             | Reserves a slot and places travel before/after          |
-| `setCategoryPeriods(periods)`                                            | Sets category time periods for boundary splitting       |
 | `canPlaceStandaloneTravelBefore(travelEnd, minutes)`                     | Checks if travel can be placed outside a slot           |
 | `reserveStandaloneTravelBefore/After(...)`                               | Places travel outside a task's slot                     |
 | `reserveInsufficientTravelBefore/After(...)`                             | Handles travel slots that don't have enough space       |
@@ -869,7 +871,7 @@ Categories affect the scheduling system in several concrete ways:
 
 1. **Constraint Map**: `buildCategoryConstraints()` generates a `Map<categoryId, CategoryConstraint>` that the `SchedulingContext` carries. When `findValidSlots()` looks for slots, it can filter by `categoryConstraint` to only return slots within the category's defined time windows.
 
-2. **Slot Boundary Splitting**: The `SlotBuilder` receives `wrapperPeriodsForManager` (category periods with locations) and splits available slots at category boundaries. This ensures category-constrained tasks fit precisely within their defined windows.
+2. **Slot Boundary Splitting**: `buildAvailableSlots` calls `splitSlotsAtCategoryBoundaries(categoryConstraintsList, gaps)`, which iterates day-by-day, lazily expands each constraint's recurring time-slot rules via `expandSlotForDay`, and splits the available slots at category start/end boundaries — tagging each fragment with its `categoryId`, `isStrictCategory`, and the right location handoff for travel calculation.
 
 3. **Priority Sorting**: `PrioritySorter.sortByPriorityAndConstraints()` gives precedence to tasks with category constraints (they're scheduled first). This ensures constrained tasks get their preferred time windows before unconstrained tasks fill them.
 
@@ -991,21 +993,23 @@ PHASE 4: BUILD LOCATION MAP  [buildLocationMap]
 PHASE 5: BUILD CATEGORY CONSTRAINTS  [buildCategoryConstraints]
   |
   +-- categoryConstraintMap for Scheduler
-  +-- categoryPeriodsStatic for wrapper events
-  +-- wrapperPeriodsForManager for slot boundary splits
+  +-- categoryConstraintsList passed downstream
+      (no pre-expansion; rules expanded per-day on demand)
   v
 
-PHASE 6: BUILD TIME SLOTS  [buildInitialSlots -> SlotBuilder]
+PHASE 6: BUILD TIME SLOTS
   |
-  +-- Set category periods on slot manager
-  +-- For each day (14 days):
-  |   +-- Convert events to intervals
-  |   +-- Convert masks to intervals
-  |   +-- Find gaps (available time)
-  |   +-- Split at category boundaries
-  |   +-- Apply buffers
-  |   +-- Create travel slots
-  +-- Store in availableSlots Map
+  +-- 6a: buildAvailableSlots (over full horizon)
+  |   +-- Events + masks -> intervals
+  |   +-- inheritLocationFromCategoryPeriods on null-location intervals
+  |   +-- findGaps -> available slots
+  |   +-- splitSlotsAtCategoryBoundaries (tag categoryId, fix location handoff)
+  |
+  +-- 6b: preliminaryTravelPass
+  |   +-- Walk slot chain, carve TravelSlots at location transitions
+  |   +-- Direct-bypass / return-absorption for slots tight against categories
+  |
+  +-- Store in slotManager.availableSlots
   v
 
 PHASE 7: PREPARE CONTEXT  [prepareSchedulingContext]

@@ -2,7 +2,7 @@
 // Each outbound A→B stays open until a matching return B→A is encountered,
 // at which point the leg is consumed so a subsequent A→B is treated as fresh.
 export function createLegTracker() {
-  const openLegs: { from: string; to: string }[] = [];
+  let openLegs: { from: string; to: string }[] = [];
 
   function findMirror(from: string, to: string): number {
     return openLegs.findLastIndex((t) => t.from === to && t.to === from);
@@ -19,5 +19,9 @@ export function createLegTracker() {
     return false;
   }
 
-  return track;
+  function reset() {
+    openLegs = [];
+  }
+
+  return { track, reset };
 }

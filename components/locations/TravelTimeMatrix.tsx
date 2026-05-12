@@ -146,12 +146,12 @@ export function TravelTimeMatrix({
             </tr>
           </thead>
           <tbody>
-            {locations.map((fromLocation) => (
+            {locations.map((fromLoc) => (
               <tr key={fromLoc.id}>
                 <td className="border p-2 bg-muted font-medium">
                   {fromLoc.name}
                 </td>
-                {locations.map((toLocation) => {
+                {locations.map((toLoc) => {
                   if (fromLoc.id === toLoc.id) {
                     return (
                       <td

@@ -42,7 +42,7 @@ These two phases need to coordinate. When a task fills a gap that Phase 1 alread
 ```
 1. eventsToIntervals()         — convert fixed events to intervals with locationId
 2. masksToIntervals()          — convert template masks to intervals with locationId
-3. applyCategoriesToNullIntervals() — assign category location to null-location events
+3. inheritLocationFromCategoryPeriods() — assign category location to null-location events
                                       that fall within a category window
 4. findGaps()                  — find free time between occupied intervals,
                                   returns TimeSlot[] directly with prevLocationId/nextLocationId
@@ -142,7 +142,7 @@ Converts `SimpleEvent[]` to `Interval[]`. Each interval's `locationId` comes fro
 **Step 2 — `masksToIntervals`:**
 Converts template masks to intervals. Each template's `locationId` comes directly from the mask (populated from `LocationMapper`).
 
-**Step 3 — `applyCategoriesToNullIntervals`:**
+**Step 3 — `inheritLocationFromCategoryPeriods`:**
 For null-location events that fall entirely within a category period that has a location, assigns the category's location to the interval. This prevents "Anywhere" events inside a Work category from tunneling the prevLocation chain back to the home-location template before the work window.
 
 **Step 4 — `findGaps`:**
@@ -169,7 +169,7 @@ Consumes slots where `prevLocation !== nextLoc`, outputting travel occupied slot
 
 ### Key fragility: `findGaps` `nextLocationId` can be `null`
 
-If the event _after_ a gap has `locationId: null` (Anywhere), `nextLocationId` on the gap is `null`. `carveTravelFromChain` skips carving when either `prevLoc` or `nextLoc` is `null`. This is correct (can't calculate travel to "anywhere"), but it means a null-location template at the end of a work window can suppress travel carving for the return-home transition. `applyCategoriesToNullIntervals` is specifically designed to prevent this, but only for events that are entirely within a category period.
+If the event _after_ a gap has `locationId: null` (Anywhere), `nextLocationId` on the gap is `null`. `carveTravelFromChain` skips carving when either `prevLoc` or `nextLoc` is `null`. This is correct (can't calculate travel to "anywhere"), but it means a null-location template at the end of a work window can suppress travel carving for the return-home transition. `inheritLocationFromCategoryPeriods` is specifically designed to prevent this, but only for events that are entirely within a category period.
 
 ---
 
@@ -323,7 +323,7 @@ Replaced with `outgoingTransitions: Set<string>`. A gap is classified as a retur
 
 The slot builder uses the full `locationMap` (with category fallback) for building the `prevLocationId`/`nextLocationId` chain. Task scheduling uses `travelLocationMap` (no category fallback) for deciding whether a task needs travel.
 
-This asymmetry is intentional — category location is "soft" and shouldn't force travel generation — but it means the location chain used for pre-carving can include category-location-derived entries that would never trigger dynamic travel generation. The `applyCategoriesToNullIntervals` function adds category locations to null-location events specifically because of this.
+This asymmetry is intentional — category location is "soft" and shouldn't force travel generation — but it means the location chain used for pre-carving can include category-location-derived entries that would never trigger dynamic travel generation. The `inheritLocationFromCategoryPeriods` function adds category locations to null-location events specifically because of this.
 
 ### 8. `mergeIntervals` loses location data on overlapping intervals
 
@@ -390,7 +390,7 @@ INPUT: fixed events (templates, plans, completed)
 eventsToIntervals + masksToIntervals
   |
   v
-applyCategoriesToNullIntervals
+inheritLocationFromCategoryPeriods
   (category location propagated into null-loc events inside windows)
   |
   v
