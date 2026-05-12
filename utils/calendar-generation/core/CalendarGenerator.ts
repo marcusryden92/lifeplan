@@ -189,7 +189,7 @@ export class CalendarGenerator {
       plannerCategoryMap,
     );
 
-    // Phase 9: Prepare candidates
+    // Phase 9: Prepare candidates (filter root goals, tasks and sort by priority)
     const candidates = prepareCandidates(
       input.planners,
       memoizedEventIds,
@@ -204,6 +204,7 @@ export class CalendarGenerator {
       strategy,
       context,
     );
+
     const schedulingResult = scheduler.scheduleTasksAndGoals(
       weekStartDay,
       input.planners,

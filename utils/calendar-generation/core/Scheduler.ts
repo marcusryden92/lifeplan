@@ -23,6 +23,10 @@ import { scheduleTasks } from "../helpers/Scheduler/scheduleTasks";
 import { scheduleTasksAndGoals } from "../helpers/Scheduler/scheduleTasksAndGoals";
 
 export class Scheduler {
+  private slotManager: TimeSlotManager;
+  private travelManager: TravelManager;
+  private strategy: SchedulingStrategy;
+  private context: SchedulingContext;
   private metrics: SchedulingMetrics = {
     tasksAttempted: 0,
     tasksScheduled: 0,
@@ -37,11 +41,16 @@ export class Scheduler {
   };
 
   constructor(
-    private slotManager: TimeSlotManager,
-    private travelManager: TravelManager,
-    private strategy: SchedulingStrategy,
-    private context: SchedulingContext,
-  ) {}
+    slotManager: TimeSlotManager,
+    travelManager: TravelManager,
+    strategy: SchedulingStrategy,
+    context: SchedulingContext,
+  ) {
+    this.slotManager = slotManager;
+    this.travelManager = travelManager;
+    this.strategy = strategy;
+    this.context = context;
+  }
 
   /**
    * Schedule a single task
@@ -92,7 +101,11 @@ export class Scheduler {
     perTemplateMasks: PerTemplateMask[],
     plannerLocationMap: Map<string, string | null>,
     categoryConstraints: CategoryConstraint[],
-  ): { success: boolean; newEvents: SimpleEvent[]; failures: SchedulingFailure[] } {
+  ): {
+    success: boolean;
+    newEvents: SimpleEvent[];
+    failures: SchedulingFailure[];
+  } {
     return scheduleTasksAndGoals(
       this.slotManager,
       this.travelManager,
