@@ -12,7 +12,8 @@ export function buildMemoizedEvents(
       (e) =>
         currentDate > new Date(e.end) &&
         e.extendedProps?.eventType !== EventType.template &&
-        e.extendedProps?.eventType !== EventType.travel,
+        e.extendedProps?.eventType !== EventType.travel &&
+        e.extendedProps?.eventType !== EventType.category,
     );
     pastEvents.forEach((e) => memoizedEventIds.add(e.id));
     events.push(...pastEvents);

@@ -139,9 +139,8 @@ export class CalendarGenerator {
     );
 
     // Phase 5: Build category constraints
-    const { categoryConstraintMap, categoryConstraintsList } = buildCategoryConstraints(
-      input.categories,
-    );
+    const { categoryConstraintMap, categoryConstraintsList } =
+      buildCategoryConstraints(input.categories);
 
     // Phase 6a: Build available slots over the full scheduling timeline
     const schedulingStartDate = setTimeOnDate(currentDate, "00:00");
@@ -155,8 +154,6 @@ export class CalendarGenerator {
       enableLogging,
     });
 
-    timeSlotManager.availableSlots.push(...builtSlots);
-
     // Phase 6b: Carve travel slots (separate pass after slot building)
     const carved = preliminaryTravelPass(
       !!plannerLocationMap,
@@ -164,9 +161,16 @@ export class CalendarGenerator {
       timeSlotManager.occupiedSlots,
       travelManager,
       this.bufferTimeMinutes,
-      timeSlotManager.availableSlots,
+      builtSlots,
     );
-    timeSlotManager.availableSlots = carved;
+
+    // Phase 6c: Drop slots ending before "now" so the scheduler doesn't place
+    // tasks in the past. Travel events carved into those past slots remain in
+    // occupiedSlots — only the empty-space markers are pruned here.
+    const nowMs = currentDate.getTime();
+    timeSlotManager.availableSlots = carved.filter(
+      (s) => s.end.getTime() > nowMs,
+    );
 
     // Phase 7: Build effective category map (resolves inheritance from parent chain)
     const plannerCategoryMap = buildPlannerCategoryMap(input.planners);
@@ -212,9 +216,10 @@ export class CalendarGenerator {
     );
 
     // Phase 11: Assemble final events
-    const schedulingEndDate = builtSlots.length > 0
-      ? new Date(Math.max(...builtSlots.map((s) => s.end.getTime())))
-      : schedulingStartDate;
+    const schedulingEndDate =
+      builtSlots.length > 0
+        ? new Date(Math.max(...builtSlots.map((s) => s.end.getTime())))
+        : schedulingStartDate;
     const allEvents = assembleFinalEvents(
       input.userId,
       travelManager,

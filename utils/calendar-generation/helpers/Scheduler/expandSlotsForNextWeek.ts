@@ -36,7 +36,7 @@ export function expandSlotsForNextWeek(
     (s) => s.start.getTime() >= weekEndMs,
   );
 
-  let weekSlots = buildAvailableSlots({
+  const initialSlots = buildAvailableSlots({
     planners: context.allPlanners,
     startDate: weekStartDate,
     existingEvents: weekEvents,
@@ -46,14 +46,17 @@ export function expandSlotsForNextWeek(
     endDateOverride: weekEndDate,
   });
 
-  weekSlots = preliminaryTravelPass(
+  const carvedSlots = preliminaryTravelPass(
     !!plannerLocationMap,
     categoryConstraints,
     slotManager.occupiedSlots,
     travelManager,
     slotManager.bufferTimeMinutes,
-    weekSlots,
+    initialSlots,
   );
+
+  const nowMs = context.currentDate.getTime();
+  const weekSlots = carvedSlots.filter((s) => s.end.getTime() > nowMs);
 
   slotManager.availableSlots.splice(
     0,
