@@ -47,6 +47,70 @@ export function placeTravelAtSlotEnd(
   }
 }
 
+/**
+ * Places a travel block centered on the boundary between this slot and the
+ * next slot. Used for cat-to-cat transitions at different locations: the
+ * travel straddles the boundary, half inside each category, so neither
+ * category loses its full tail/head to travel.
+ *
+ * Caller must verify centering fits (each half <= the corresponding slot's
+ * duration) before calling.
+ *
+ * Mutates `slots[slotIndex + 1]` to trim the next slot's start.
+ */
+export function placeTravelCenteredOnBoundary(
+  slot: AvailableSlot,
+  nextSlot: AvailableSlot,
+  slots: AvailableSlot[],
+  slotIndex: number,
+  previousLocation: string,
+  nextLocation: string,
+  travelMinutes: number,
+  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  result: AvailableSlot[],
+): void {
+  const halfMs = (travelMinutes * 60000) / 2;
+  const boundaryMs = slot.end.getTime();
+  const travelStart = new Date(boundaryMs - halfMs);
+  const travelEnd = new Date(boundaryMs + halfMs);
+
+  occupiedSlots.push(
+    createTravelSlot(
+      travelStart,
+      travelEnd,
+      previousLocation,
+      nextLocation,
+      "preliminary",
+      uuidv4(),
+      { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
+    ),
+  );
+
+  if (travelStart.getTime() > slot.start.getTime()) {
+    result.push({
+      start: slot.start,
+      end: travelStart,
+      durationMinutes: Math.floor(
+        (travelStart.getTime() - slot.start.getTime()) / 60000,
+      ),
+      isAvailable: true,
+      prevLocationId: slot.prevLocationId,
+      nextLocationId: previousLocation,
+      categoryId: slot.categoryId,
+      isStrictCategory: slot.isStrictCategory,
+    });
+  }
+
+  slots[slotIndex + 1] = {
+    ...nextSlot,
+    start: travelEnd,
+    durationMinutes: Math.floor(
+      (nextSlot.end.getTime() - travelEnd.getTime()) / 60000,
+    ),
+    prevLocationId: nextLocation,
+  };
+}
+
 export function placeTravelAtSlotStart(
   slot: AvailableSlot,
   previousLocation: string,

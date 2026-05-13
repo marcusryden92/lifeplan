@@ -7,10 +7,14 @@
 import { SimpleEvent } from "@/types/prisma";
 import type { CategoryConstraint } from "@/types/categoryTypes";
 import { TravelManager } from "../../core/TravelManager";
-import { SchedulingContext } from "../../models/SchedulingModels";
+import {
+  LoggingConfig,
+  SchedulingContext,
+} from "../../models/SchedulingModels";
 import { EventAssembler } from "../../core/EventAssembler";
 import { CategoryBoundaryTrespass } from "../TravelManager/categoryBoundaryTrespass";
 import { markCategoryBoundaryTrespasses } from "../EventAssembler/markCategoryBoundaryTrespasses";
+import { filterEventsByLogRange } from "../../utils/loggingUtils";
 
 export function assembleFinalEvents(
   userId: string,
@@ -21,13 +25,16 @@ export function assembleFinalEvents(
   endDate: Date,
   plannerLocationMap: Map<string, string | null>,
   categoryBoundaryTrespasses: CategoryBoundaryTrespass[] = [],
+  logging?: LoggingConfig,
 ): SimpleEvent[] {
   // Generate travel events from stored travel slots
   const travelEvents = travelManager.generateTravelEvents(userId);
 
-  // Debug: group travel events by date to spot duplicates
-  const travelByDate = new Map<string, typeof travelEvents>();
-  for (const te of travelEvents) {
+  // Debug: group travel events by date to spot duplicates. Respects the
+  // logging date range so noisy days can be filtered out.
+  const travelEventsForLog = filterEventsByLogRange(travelEvents, logging);
+  const travelByDate = new Map<string, typeof travelEventsForLog>();
+  for (const te of travelEventsForLog) {
     const dateKey = te.start.slice(0, 10);
     if (!travelByDate.has(dateKey)) travelByDate.set(dateKey, []);
     travelByDate.get(dateKey)!.push(te);

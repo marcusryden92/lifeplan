@@ -56,7 +56,11 @@ export function generateCalendar(
 
   const bufferTimeMinutes = opts.bufferTimeMinutes ?? 10;
 
-  // Logging configuration - set enableLogging to false to disable all logging
+  // Logging configuration - set enableLogging to false to disable all logging.
+  // dateRangeStart / dateRangeEnd limit event-based logs (finalEvents,
+  // leanCalendar, travelDebug, the [travel] dump in assembleFinalEvents) to
+  // items whose start falls within [dateRangeStart, dateRangeEnd]. Either bound
+  // can be null to leave that side open.
   const enableLogging = true;
   const logging = {
     metrics: false,
@@ -69,6 +73,8 @@ export function generateCalendar(
     strategySettings: false,
     finalEvents: false,
     leanCalendar: true,
+    dateRangeStart: new Date("2026-05-13") as Date | null,
+    dateRangeEnd: new Date("2026-05-16") as Date | null,
   };
 
   const result = new CalendarGenerator(weekStartDay, {

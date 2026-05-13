@@ -154,6 +154,16 @@ export interface LoggingConfig {
   strategySettings?: boolean;
   /** Log lean calendar (title, start, end, location) sorted by start */
   leanCalendar?: boolean;
+  /**
+   * Optional inclusive lower bound for event-based logs. Items whose start
+   * is before this date are excluded. null/undefined means "no lower bound".
+   */
+  dateRangeStart?: Date | null;
+  /**
+   * Optional inclusive upper bound for event-based logs. Items whose start
+   * is after this date are excluded. null/undefined means "no upper bound".
+   */
+  dateRangeEnd?: Date | null;
 }
 
 /**

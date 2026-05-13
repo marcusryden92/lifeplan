@@ -11,14 +11,15 @@ import { v4 as uuidv4 } from "uuid";
 /**
  * Shifts a travel block backward into the previous available slot in
  * `result`. The previous slot is shrunk (or removed) to make room and buffer.
- * Used by:
- *  - "Travel exactly fills slot" optimization (free try to preserve leftover)
- *  - "Travel exceeds slot" last resort
  *
- * `allowAcrossUnrelatedSlots` is the only parameter that distinguishes the
- * two use sites: the optimization may extend freely; the last resort refuses
- * when neither slot is part of a category, to avoid stretching travel across
- * unrelated regions.
+ * Refuses to shift into a category slot — category time is preserved; the
+ * trespass branch in the dispatcher handles "no room" for category cases.
+ *
+ * `allowAcrossUnrelatedSlots` distinguishes two use sites:
+ *  - "Travel exactly fills slot" optimization: extends freely (true)
+ *  - "Travel exceeds slot" last resort: refuses if THIS slot is also
+ *     non-category (false) — avoids stretching travel across unrelated
+ *     regions when neither side is in a category.
  *
  * Returns true if the travel was shifted, false otherwise.
  */
@@ -34,6 +35,7 @@ export function tryShiftTravelBackward(
 ): boolean {
   const previousSlot = result[result.length - 1] ?? null;
   if (!previousSlot?.isAvailable) return false;
+  if (previousSlot.categoryId) return false;
 
   const newTravelEnd = new Date(slot.end.getTime() - bufferMilliseconds);
   const newTravelStart = new Date(
@@ -45,16 +47,10 @@ export function tryShiftTravelBackward(
   const hasRoom = newTravelStart.getTime() >= previousSlot.start.getTime();
   if (!adjacent || !hasRoom) return false;
 
-  const inheritsPreviousCategory = !slot.categoryId && !!previousSlot.categoryId;
-  const bothNonCategory = !slot.categoryId && !previousSlot.categoryId;
-  if (bothNonCategory && !allowAcrossUnrelatedSlots) return false;
-
-  const travelContext = inheritsPreviousCategory
-    ? {
-        categoryId: previousSlot.categoryId,
-        isStrictCategory: previousSlot.isStrictCategory,
-      }
-    : { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory };
+  // previousSlot has no categoryId (guarded above). Refuse when THIS slot is
+  // also non-category and the caller didn't explicitly allow it, to avoid
+  // stretching travel across unrelated regions.
+  if (!slot.categoryId && !allowAcrossUnrelatedSlots) return false;
 
   occupiedSlots.push(
     createTravelSlot(
@@ -64,7 +60,7 @@ export function tryShiftTravelBackward(
       nextLocation,
       "preliminary",
       uuidv4(),
-      travelContext,
+      { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
     ),
   );
 

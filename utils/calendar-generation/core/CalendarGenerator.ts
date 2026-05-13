@@ -233,6 +233,7 @@ export class CalendarGenerator {
       schedulingEndDate,
       plannerLocationMap,
       categoryBoundaryTrespasses,
+      input.config?.logging,
     );
 
     // Update metrics

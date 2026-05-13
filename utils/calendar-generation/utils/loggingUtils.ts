@@ -8,6 +8,7 @@ import { SimpleEvent } from "@/types/prisma";
 import { PerTemplateMask } from "../models/TemplateModels";
 import {
   CalendarGenerationInput,
+  LoggingConfig,
   SchedulingFailure,
   SchedulingMetrics,
 } from "../models/SchedulingModels";
@@ -51,6 +52,27 @@ export function shouldLog(
   const config = input.config;
   if (!config?.enableLogging || !config?.logging) return false;
   return !!config.logging[flag];
+}
+
+/**
+ * Filters events to those whose start falls within the configured log date
+ * range. A null/undefined bound means "open on that side": only-start keeps
+ * everything from that date onward; only-end keeps everything up to that
+ * date; neither set is a no-op.
+ */
+export function filterEventsByLogRange<T extends { start: string | Date }>(
+  events: T[],
+  logging: LoggingConfig | undefined,
+): T[] {
+  const start = logging?.dateRangeStart ?? null;
+  const end = logging?.dateRangeEnd ?? null;
+  if (!start && !end) return events;
+  return events.filter((e) => {
+    const eventStart = new Date(e.start);
+    if (start && eventStart < start) return false;
+    if (end && eventStart > end) return false;
+    return true;
+  });
 }
 
 /**
@@ -147,16 +169,20 @@ export function logCalendarDebugInfo(
     console.log(`  Largest template gap: ${data.largestTemplateGap} minutes`);
   }
 
+  const logging = input.config?.logging;
+
   // Final events debug
   if (shouldLog(input, "finalEvents")) {
     console.log("FINAL EVENTS:");
-    console.log(JSON.stringify(data.allEvents, null, 2));
+    const filtered = filterEventsByLogRange(data.allEvents, logging);
+    console.log(JSON.stringify(filtered, null, 2));
   }
 
   // Lean calendar debug (simplified view)
   if (shouldLog(input, "leanCalendar")) {
     console.log("LEAN CALENDAR:");
-    const leanEvents = data.allEvents.map((e) => ({
+    const filtered = filterEventsByLogRange(data.allEvents, logging);
+    const leanEvents = filtered.map((e) => ({
       title: e.title,
       id: e.id,
       start: e.start,
@@ -169,10 +195,11 @@ export function logCalendarDebugInfo(
   // Travel debug
   if (shouldLog(input, "travelDebug")) {
     console.log("TRAVEL DEBUG:");
-    console.log(`  Travel events generated: ${data.travelEvents.length}`);
-    if (data.travelEvents.length > 0) {
+    const filtered = filterEventsByLogRange(data.travelEvents, logging);
+    console.log(`  Travel events generated: ${filtered.length}`);
+    if (filtered.length > 0) {
       console.log("  Travel events:");
-      data.travelEvents.forEach((te) => {
+      filtered.forEach((te) => {
         console.log(`    - ${te.title}: ${te.start} to ${te.end}`);
       });
     }

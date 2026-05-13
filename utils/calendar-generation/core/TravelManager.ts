@@ -52,13 +52,22 @@ export class TravelManager {
    * Resolves travel direction and duration for a given slot transition.
    * Stateful — leg tracking is shared across all calls on this instance.
    * Call resetLegTracker() before starting a new pass.
+   *
+   * Slots INSIDE a category always place travel at slot END (outbound). The
+   * category slot represents being AT the category's location; travel
+   * departs at the slot's end before the next thing. The legTracker bracket
+   * model is only meaningful for non-category slots (gaps between fixed
+   * events), where round-trip detection helps place travel correctly.
    */
   resolveTravel(slot: AvailableSlot): TravelProcessingAction | null {
     const { prevLocationId: prevLocation, nextLocationId: nextLocation } = slot;
     if (!prevLocation || !nextLocation || prevLocation === nextLocation)
       return null;
 
-    const placeAtSlotStart = this.legTracker.track(prevLocation, nextLocation);
+    const placeAtSlotStart = slot.categoryId
+      ? false
+      : this.legTracker.track(prevLocation, nextLocation);
+
     const travelMinutes = this.getTravelTime(
       prevLocation,
       nextLocation,

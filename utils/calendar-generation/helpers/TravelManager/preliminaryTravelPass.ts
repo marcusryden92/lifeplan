@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import {
   placeTravelAtSlotEnd,
   placeTravelAtSlotStart,
+  placeTravelCenteredOnBoundary,
 } from "./travelPlacement";
 import {
   tryShiftTravelBackward,
@@ -26,6 +27,9 @@ import { CategoryBoundaryTrespass } from "./categoryBoundaryTrespass";
  *  OUTBOUND (travel placed at slot END)
  *    Next slot is a too-tight contiguous category heading onward to a 3rd loc
  *      → BYPASS: one direct prev→destination across both slots
+ *    This slot AND next slot are both categories, contiguous, and each half
+ *    of the travel fits in its respective slot
+ *      → CENTER: place travel straddling the boundary, half in each category
  *    Travel < slot
  *      → place at slot end, leftover at start
  *    Travel == slot
@@ -162,6 +166,30 @@ function handleOutbound(
     result,
   );
   if (bypass.handled) return bypass.slotsConsumed;
+
+  // Cat-to-cat at different locations and a clean fit on both sides → center
+  // the travel on the boundary instead of consuming only the departing slot.
+  // Each half eats from one of the adjacent categories.
+  const canCenterOnBoundary =
+    !!slot.categoryId &&
+    !!nextSlot?.categoryId &&
+    nextSlot.start.getTime() === slot.end.getTime() &&
+    travelMinutes / 2 <= slot.durationMinutes &&
+    travelMinutes / 2 <= nextSlot.durationMinutes;
+  if (canCenterOnBoundary && nextSlot) {
+    placeTravelCenteredOnBoundary(
+      slot,
+      nextSlot,
+      slots,
+      slotIndex,
+      previousLocation,
+      nextLocation,
+      travelMinutes,
+      occupiedSlots,
+      result,
+    );
+    return 1;
+  }
 
   // Travel < slot → place at end, leftover at start.
   if (travelMinutes < slot.durationMinutes) {
