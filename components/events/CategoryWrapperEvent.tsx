@@ -1,6 +1,12 @@
 "use client";
 
 import React from "react";
+import {
+  TRESPASS_BACKGROUND_COLOR,
+  TRESPASS_BORDER_COLOR,
+  TRESPASS_BORDER_WIDTH,
+  getTrespassGradient,
+} from "./trespassBorderStyles";
 
 interface CategoryWrapperEventProps {
   categoryId: string;
@@ -19,9 +25,10 @@ interface CategoryWrapperEventProps {
  * Background event component for category time slots.
  * Items within the category are rendered as separate foreground events by FullCalendar.
  *
- * `trespassingStart` / `trespassingEnd` overlay a red border on the
- * corresponding side, indicating the travel pass found a too-tight transition
- * at that boundary (same visual language as overlap-trespass on regular events).
+ * Trespass styling (location conflicts surfaced by the travel pass):
+ *   - Red top/bottom border on whichever side trespasses.
+ *   - Background uses a red→base→red gradient at low alpha so the wrapper
+ *     interior signals the trespass without obscuring readability.
  */
 export function CategoryWrapperEvent({
   categoryId: _categoryId,
@@ -43,19 +50,30 @@ export function CategoryWrapperEvent({
     onHover?.(null, null);
   };
 
-  const backgroundColor = categoryColor
+  const baseBackground = categoryColor
     ? `${categoryColor}20`
     : "rgba(59, 130, 246, 0.12)";
+  const baseBorderColor = categoryColor || "#3b82f6";
+  const trespassPx = `${TRESPASS_BORDER_WIDTH}px`;
 
   return (
     <div
       className="relative w-full h-full"
       style={{
-        backgroundColor,
-        border: `1px ${isStrict ? "solid" : "dotted"} ${categoryColor || "#3b82f6"}`,
+        background: getTrespassGradient(
+          trespassingStart,
+          trespassingEnd,
+          baseBackground,
+          TRESPASS_BACKGROUND_COLOR,
+        ),
+        border: `1px ${isStrict ? "solid" : "dotted"} ${baseBorderColor}`,
         borderRadius: "4px",
-        ...(trespassingStart && { borderTop: "4px solid #DC2626" }),
-        ...(trespassingEnd && { borderBottom: "4px solid #DC2626" }),
+        ...(trespassingStart && {
+          borderTop: `${trespassPx} solid ${TRESPASS_BORDER_COLOR}`,
+        }),
+        ...(trespassingEnd && {
+          borderBottom: `${trespassPx} solid ${TRESPASS_BORDER_COLOR}`,
+        }),
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

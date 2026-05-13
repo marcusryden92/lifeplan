@@ -3,6 +3,12 @@ import { EventImpl } from "@fullcalendar/core/internal";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
+import {
+  TRESPASS_BACKGROUND_COLOR,
+  TRESPASS_BORDER_COLOR,
+  TRESPASS_BORDER_WIDTH,
+  getTrespassGradient,
+} from "./trespassBorderStyles";
 
 interface EventExtendedPropsWithTrespassing {
   trespassingStart?: boolean;
@@ -63,41 +69,39 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
   const endTime = new Date(event.end);
 
   // Check for trespassing indicators (overlapping events with different locations)
-  const extendedProps = event.extendedProps as EventExtendedPropsWithTrespassing;
+  const extendedProps =
+    event.extendedProps as EventExtendedPropsWithTrespassing;
   const trespassingStart = extendedProps?.trespassingStart ?? false;
   const trespassingEnd = extendedProps?.trespassingEnd ?? false;
-
-  // Build border styles - trespassing borders are red, indicating location conflicts
-  const getBorderStyles = (): React.CSSProperties => {
-    const styles: React.CSSProperties = {
-      borderLeft: userSettings.styles.calendar.event.borderLeft,
-    };
-
-    // In a week/day view, "start" is the top of the event, "end" is the bottom
-    if (trespassingStart) {
-      styles.borderTop = "4px solid #DC2626"; // Red top border
-    }
-    if (trespassingEnd) {
-      styles.borderBottom = "4px solid #DC2626"; // Red bottom border
-    }
-
-    return styles;
-  };
+  const eventBackgroundColor = isCompleted
+    ? userSettings.styles.events.completedColor
+    : event.backgroundColor;
+  const trespassPx = `${TRESPASS_BORDER_WIDTH}px`;
 
   return (
     <div
       ref={elementRef}
       style={{
+        position: "relative",
         display: "flex",
         flexDirection: "column",
         justifyContent: "space-between",
         height: "100%",
         padding: elementHeight < 20 ? "2px 8px" : "8px",
         borderRadius: userSettings.styles.events.borderRadius,
-        backgroundColor: isCompleted
-          ? userSettings.styles.events.completedColor
-          : event.backgroundColor,
-        ...getBorderStyles(),
+        background: getTrespassGradient(
+          trespassingStart,
+          trespassingEnd,
+          eventBackgroundColor,
+          TRESPASS_BACKGROUND_COLOR,
+        ),
+        borderLeft: userSettings.styles.calendar.event.borderLeft,
+        ...(trespassingStart && {
+          borderTop: `${trespassPx} solid ${TRESPASS_BORDER_COLOR}`,
+        }),
+        ...(trespassingEnd && {
+          borderBottom: `${trespassPx} solid ${TRESPASS_BORDER_COLOR}`,
+        }),
       }}
       onMouseEnter={() => setOnHover(true)}
       onMouseLeave={() => setOnHover(false)}

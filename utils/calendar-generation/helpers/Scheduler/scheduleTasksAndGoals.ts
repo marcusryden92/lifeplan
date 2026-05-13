@@ -43,7 +43,7 @@ export function scheduleTasksAndGoals(
   );
   let weeksSearched = 0;
 
-  while (
+  /* while (
     candidates.length > 0 &&
     weeksSearched < SCHEDULING_CONFIG.MAX_WEEKS_TO_SEARCH
   ) {
@@ -97,7 +97,7 @@ export function scheduleTasksAndGoals(
         travelManager,
       );
     }
-  }
+  } */
 
   return {
     success: failures.length === 0 && candidates.length === 0,
