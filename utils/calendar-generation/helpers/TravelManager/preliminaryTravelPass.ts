@@ -15,6 +15,7 @@ import {
   tryBypassOutboundCategoryLayover,
   tryBypassReturnCategoryLayover,
 } from "./categoryLayoverBypass";
+import { CategoryBoundaryTrespass } from "./categoryBoundaryTrespass";
 
 /* ============================================================================
  *  preliminaryTravelPass — walks the day's slots and places travel events at
@@ -61,6 +62,7 @@ export function preliminaryTravelPass(
   travelManager: TravelManager,
   bufferTimeMinutes: number,
   slots: AvailableSlot[],
+  categoryBoundaryTrespasses: CategoryBoundaryTrespass[] = [],
 ): AvailableSlot[] {
   if (!hasPlannerLocationMap) return slots;
 
@@ -75,6 +77,7 @@ export function preliminaryTravelPass(
       occupiedSlots,
       bufferTimeMinutes,
       result,
+      categoryBoundaryTrespasses,
     );
   }
   return result;
@@ -88,6 +91,7 @@ function processSlot(
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   bufferTimeMinutes: number,
   result: AvailableSlot[],
+  categoryBoundaryTrespasses: CategoryBoundaryTrespass[],
 ): number {
   const slot = slots[slotIndex];
   if (slot.durationMinutes <= 0) return 1;
@@ -108,6 +112,7 @@ function processSlot(
         travel.travelMinutes,
         occupiedSlots,
         result,
+        categoryBoundaryTrespasses,
       )
     : handleOutbound(
         slots,
@@ -120,6 +125,7 @@ function processSlot(
         travel.travelMinutes,
         occupiedSlots,
         result,
+        categoryBoundaryTrespasses,
       );
 }
 
@@ -134,6 +140,7 @@ function handleOutbound(
   travelMinutes: number,
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   result: AvailableSlot[],
+  categoryBoundaryTrespasses: CategoryBoundaryTrespass[],
 ): number {
   const slot = slots[slotIndex];
   const nextSlot = slots[slotIndex + 1] ?? null;
@@ -183,6 +190,19 @@ function handleOutbound(
     );
     if (shifted) return 1;
 
+    // Slot is a category and travel would consume it entirely → skip emit,
+    // record a boundary trespass so the wrapper's bottom border renders red.
+    if (slot.categoryId) {
+      categoryBoundaryTrespasses.push({
+        categoryId: slot.categoryId,
+        slotStart: slot.start,
+        slotEnd: slot.end,
+        boundary: "end",
+      });
+      result.push(slot);
+      return 1;
+    }
+
     placeTravelAtSlotEnd(
       slot,
       previousLocation,
@@ -222,6 +242,19 @@ function handleOutbound(
   );
   if (extendedForward) return 1;
 
+  // Slot is a category and travel doesn't fit anywhere → skip emit and mark
+  // the wrapper's bottom border red instead of consuming the slot.
+  if (slot.categoryId) {
+    categoryBoundaryTrespasses.push({
+      categoryId: slot.categoryId,
+      slotStart: slot.start,
+      slotEnd: slot.end,
+      boundary: "end",
+    });
+    result.push(slot);
+    return 1;
+  }
+
   // Nothing fit — mark the slot insufficient (renders red on the calendar).
   pushInsufficientTravel(
     occupiedSlots,
@@ -245,6 +278,7 @@ function handleReturn(
   travelMinutes: number,
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   result: AvailableSlot[],
+  categoryBoundaryTrespasses: CategoryBoundaryTrespass[],
 ): number {
   const slot = slots[slotIndex];
   const nextSlot = slots[slotIndex + 1] ?? null;
@@ -262,6 +296,19 @@ function handleReturn(
     result,
   );
   if (bypass.handled) return bypass.slotsConsumed;
+
+  // Slot is a category and return travel would consume it entirely → skip
+  // emit, record a boundary trespass so the wrapper's top border renders red.
+  if (slot.categoryId && travelMinutes >= slot.durationMinutes) {
+    categoryBoundaryTrespasses.push({
+      categoryId: slot.categoryId,
+      slotStart: slot.start,
+      slotEnd: slot.end,
+      boundary: "start",
+    });
+    result.push(slot);
+    return 1;
+  }
 
   // Otherwise place at slot start (falls through to insufficient if it doesn't fit).
   placeTravelAtSlotStart(

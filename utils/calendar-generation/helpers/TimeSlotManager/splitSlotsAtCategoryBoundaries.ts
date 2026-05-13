@@ -89,6 +89,14 @@ function splitSlot(
         }
       : null;
 
+  // After-fragment's prevLocationId:
+  //   - If a category is entering at the boundary, the after-fragment is
+  //     INSIDE it, so the starting location is the entering category's loc.
+  //   - Else if a category is leaving, we just exited it, so the starting
+  //     location is the leaving category's loc.
+  //   - Else inherit from the original slot.
+  // Order matters: entering wins because it represents where we are AT the
+  // start of the after-fragment, not where we WERE just before.
   const after: AvailableSlot | null =
     afterDuration > 0
       ? {
@@ -96,7 +104,10 @@ function splitSlot(
           end: slot.end,
           durationMinutes: afterDuration,
           isAvailable: true,
-          prevLocationId: leaving?.locationId ?? slot.prevLocationId,
+          prevLocationId:
+            entering?.locationId ??
+            leaving?.locationId ??
+            slot.prevLocationId,
           nextLocationId: slot.nextLocationId,
           categoryId: entering?.categoryId ?? null,
           isStrictCategory: entering?.isStrict ?? false,
@@ -146,6 +157,12 @@ function assignMembership(
   const endDow = endDate.getDay();
   const endMin = endDate.getHours() * 60 + endDate.getMinutes();
 
+  // Collect candidate locations for the boundary overrides, then apply with
+  // priority below (entering wins over leaving — same rule as splitSlot).
+  let enteringAtStartLoc: string | undefined;
+  let leavingAtStartLoc: string | undefined;
+  let enteringAtEndLoc: string | undefined;
+
   for (const constraint of constraints) {
     for (const catSlot of constraint.timeSlots) {
       const csStart = hhmmToMinutes(catSlot.startTime);
@@ -153,16 +170,20 @@ function assignMembership(
       if (csEnd <= csStart) csEnd += 24 * 60;
 
       if (constraint.locationId) {
-        // A period ending exactly at slot start → this is the slot's prevLocation
-        if (catSlot.days.some((d) => d === startDow) && csEnd === startMin)
-          prevLocationId = constraint.locationId;
-
-        // A period starting exactly at slot end → this is the slot's nextLocation
+        if (catSlot.days.some((d) => d === startDow)) {
+          // Period STARTS at slot start → slot is inside it, we just arrived.
+          if (csStart === startMin)
+            enteringAtStartLoc = constraint.locationId;
+          // Period ENDS at slot start → we just left it.
+          if (csEnd === startMin)
+            leavingAtStartLoc = constraint.locationId;
+        }
+        // Period STARTS at slot end → next slot is inside it.
         if (catSlot.days.some((d) => d === endDow) && csStart === endMin)
-          nextLocationId = constraint.locationId;
+          enteringAtEndLoc = constraint.locationId;
       }
 
-      // Midpoint falls inside this period → assign category membership
+      // Midpoint falls inside this period → assign category membership.
       if (categoryId === undefined && catSlot.days.some((d) => d === midDow)) {
         if (midMin > csStart && midMin < csEnd) {
           categoryId = constraint.id;
@@ -171,6 +192,10 @@ function assignMembership(
       }
     }
   }
+
+  prevLocationId =
+    enteringAtStartLoc ?? leavingAtStartLoc ?? prevLocationId;
+  nextLocationId = enteringAtEndLoc ?? nextLocationId;
 
   return {
     ...slot,

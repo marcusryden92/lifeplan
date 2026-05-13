@@ -116,6 +116,8 @@ export default function Calendar({
             const categoryId = ext?.categoryId || "";
             const isStrict = !!ext?.isStrict;
             const wrapperId = ext?.wrapperId || "";
+            const trespassingStart = !!ext?.trespassingStart;
+            const trespassingEnd = !!ext?.trespassingEnd;
             return (
               <CategoryWrapperEvent
                 categoryId={categoryId}
@@ -125,10 +127,10 @@ export default function Calendar({
                 start={event.start || new Date()}
                 end={event.end || new Date()}
                 wrapperId={wrapperId}
+                trespassingStart={trespassingStart}
+                trespassingEnd={trespassingEnd}
                 onHover={onCategoryHover}
-              >
-                {/* Children items will be rendered inside the wrapper */}
-              </CategoryWrapperEvent>
+              />
             );
           }
 

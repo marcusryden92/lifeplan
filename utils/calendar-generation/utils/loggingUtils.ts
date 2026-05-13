@@ -158,6 +158,7 @@ export function logCalendarDebugInfo(
     console.log("LEAN CALENDAR:");
     const leanEvents = data.allEvents.map((e) => ({
       title: e.title,
+      id: e.id,
       start: e.start,
       end: e.end,
       type: e.extendedProps?.plannerType,

@@ -10,12 +10,18 @@ interface CategoryWrapperEventProps {
   start: Date;
   end: Date;
   wrapperId: string;
+  trespassingStart?: boolean;
+  trespassingEnd?: boolean;
   onHover?: (categoryName: string | null, categoryColor: string | null) => void;
 }
 
 /**
  * Background event component for category time slots.
  * Items within the category are rendered as separate foreground events by FullCalendar.
+ *
+ * `trespassingStart` / `trespassingEnd` overlay a red border on the
+ * corresponding side, indicating the travel pass found a too-tight transition
+ * at that boundary (same visual language as overlap-trespass on regular events).
  */
 export function CategoryWrapperEvent({
   categoryId: _categoryId,
@@ -25,6 +31,8 @@ export function CategoryWrapperEvent({
   start: _start,
   end: _end,
   wrapperId: _wrapperId,
+  trespassingStart = false,
+  trespassingEnd = false,
   onHover,
 }: CategoryWrapperEventProps) {
   const handleMouseEnter = () => {
@@ -46,6 +54,8 @@ export function CategoryWrapperEvent({
         backgroundColor,
         border: `1px ${isStrict ? "solid" : "dotted"} ${categoryColor || "#3b82f6"}`,
         borderRadius: "4px",
+        ...(trespassingStart && { borderTop: "4px solid #DC2626" }),
+        ...(trespassingEnd && { borderBottom: "4px solid #DC2626" }),
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}

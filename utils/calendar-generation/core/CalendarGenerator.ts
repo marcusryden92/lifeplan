@@ -31,6 +31,7 @@ import {
 } from "../helpers/CalendarGenerator";
 import { buildAvailableSlots } from "../helpers/TimeSlotManager";
 import { preliminaryTravelPass } from "../helpers/TravelManager";
+import { CategoryBoundaryTrespass } from "../helpers/TravelManager/categoryBoundaryTrespass";
 import { setTimeOnDate } from "@/utils/calendarUtils";
 
 export class CalendarGenerator {
@@ -155,6 +156,7 @@ export class CalendarGenerator {
     });
 
     // Phase 6b: Place travel slots (separate pass after slot building)
+    const categoryBoundaryTrespasses: CategoryBoundaryTrespass[] = [];
     const slotsWithTravel = preliminaryTravelPass(
       !!plannerLocationMap,
       categoryConstraintsList,
@@ -162,6 +164,7 @@ export class CalendarGenerator {
       travelManager,
       this.bufferTimeMinutes,
       builtSlots,
+      categoryBoundaryTrespasses,
     );
 
     // Phase 6c: Drop slots ending before "now" so the scheduler doesn't place
@@ -229,6 +232,7 @@ export class CalendarGenerator {
       schedulingStartDate,
       schedulingEndDate,
       plannerLocationMap,
+      categoryBoundaryTrespasses,
     );
 
     // Update metrics

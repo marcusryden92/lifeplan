@@ -9,6 +9,8 @@ import type { CategoryConstraint } from "@/types/categoryTypes";
 import { TravelManager } from "../../core/TravelManager";
 import { SchedulingContext } from "../../models/SchedulingModels";
 import { EventAssembler } from "../../core/EventAssembler";
+import { CategoryBoundaryTrespass } from "../TravelManager/categoryBoundaryTrespass";
+import { markCategoryBoundaryTrespasses } from "../EventAssembler/markCategoryBoundaryTrespasses";
 
 export function assembleFinalEvents(
   userId: string,
@@ -18,6 +20,7 @@ export function assembleFinalEvents(
   startDate: Date,
   endDate: Date,
   plannerLocationMap: Map<string, string | null>,
+  categoryBoundaryTrespasses: CategoryBoundaryTrespass[] = [],
 ): SimpleEvent[] {
   // Generate travel events from stored travel slots
   const travelEvents = travelManager.generateTravelEvents(userId);
@@ -53,8 +56,12 @@ export function assembleFinalEvents(
     categoryWrapperEvents
   );
 
-  // Mark trespassing events
+  // Mark trespassing events (overlapping items with different locations)
   EventAssembler.markTrespassingEvents(allEvents, plannerLocationMap);
+
+  // Mark category wrapper events whose travel-pass placement would have
+  // consumed the entire wrapper — renders the wrapper's top/bottom red.
+  markCategoryBoundaryTrespasses(allEvents, categoryBoundaryTrespasses);
 
   return allEvents;
 }
