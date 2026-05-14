@@ -8,7 +8,7 @@
 import { SimpleEvent } from "@/types/prisma";
 import { AvailableSlot } from "../models/TimeSlot";
 
-export interface Interval {
+export interface OccupiedInterval {
   start: Date;
   end: Date;
   startLocationId: string | null;
@@ -19,7 +19,9 @@ export interface Interval {
  * Merge overlapping intervals into non-overlapping ranges
  * Useful for consolidating occupied time blocks
  */
-export function mergeIntervals(intervals: Interval[]): Interval[] {
+export function mergeIntervals(
+  intervals: OccupiedInterval[],
+): OccupiedInterval[] {
   if (intervals.length === 0) return [];
 
   // Sort by start time
@@ -27,7 +29,7 @@ export function mergeIntervals(intervals: Interval[]): Interval[] {
     (a, b) => a.start.getTime() - b.start.getTime(),
   );
 
-  const merged: Interval[] = [{ ...sorted[0] }];
+  const merged: OccupiedInterval[] = [{ ...sorted[0] }];
 
   for (let i = 1; i < sorted.length; i++) {
     const candidate = sorted[i];
@@ -70,7 +72,7 @@ export interface LocationTransition {
  * Does NOT merge intervals, so overlaps are preserved
  */
 export function findLocationTransitions(
-  intervals: Interval[],
+  intervals: OccupiedInterval[],
 ): LocationTransition[] {
   if (intervals.length <= 1) return [];
 
@@ -112,7 +114,7 @@ export function findLocationTransitions(
 /**
  * Extended interval with optional event ID for tracking
  */
-export interface IntervalWithId extends Interval {
+export interface IntervalWithId extends OccupiedInterval {
   eventId?: string;
 }
 
@@ -235,7 +237,7 @@ export function detectTrespassingEvents(
  * Returns available time slots with location context from adjacent events
  */
 export function findGaps(
-  occupiedIntervals: Interval[],
+  occupiedIntervals: OccupiedInterval[],
   rangeStart: Date,
   rangeEnd: Date,
   startingLocation: string | null = null,
@@ -259,6 +261,8 @@ export function findGaps(
   const merged = mergeIntervals(occupiedIntervals);
   const gaps: AvailableSlot[] = [];
 
+  // Check if there is a time gap between now() and the first interval
+  // - if so, make it a free slot
   if (merged[0].start > rangeStart) {
     const end = merged[0].start;
     gaps.push({
@@ -274,8 +278,14 @@ export function findGaps(
   }
 
   for (let i = 0; i < merged.length - 1; i++) {
-    const gapStart = new Date(Math.max(merged[i].end.getTime(), rangeStart.getTime()));
-    const gapEnd = new Date(Math.min(merged[i + 1].start.getTime(), rangeEnd.getTime()));
+    // Make sure that the slot doens't begin before,
+    // or extend past the time range
+    const gapStart = new Date(
+      Math.max(merged[i].end.getTime(), rangeStart.getTime()),
+    );
+    const gapEnd = new Date(
+      Math.min(merged[i + 1].start.getTime(), rangeEnd.getTime()),
+    );
 
     if (gapStart < gapEnd) {
       gaps.push({
@@ -316,7 +326,7 @@ export function findGaps(
 export function eventsToIntervals(
   events: SimpleEvent[],
   plannerLocationMap?: Map<string, string | null>,
-): Interval[] {
+): OccupiedInterval[] {
   return events.map((event) => {
     const locationId = plannerLocationMap?.get(event.id) ?? null;
     return {
@@ -332,7 +342,7 @@ export function eventsToIntervals(
  * Check if an interval can fit within a gap
  */
 export function canFitInGap(
-  gap: Interval,
+  gap: OccupiedInterval,
   durationMinutes: number,
   afterTime?: Date,
 ): boolean {
@@ -346,10 +356,10 @@ export function canFitInGap(
  * Find the first gap that can fit a duration
  */
 export function findFirstFittingGap(
-  gaps: Interval[],
+  gaps: OccupiedInterval[],
   durationMinutes: number,
   afterTime?: Date,
-): Interval | null {
+): OccupiedInterval | null {
   for (const gap of gaps) {
     if (canFitInGap(gap, durationMinutes, afterTime)) {
       return gap;
@@ -361,7 +371,7 @@ export function findFirstFittingGap(
 /**
  * Calculate total available minutes in gaps
  */
-export function totalAvailableMinutes(gaps: Interval[]): number {
+export function totalAvailableMinutes(gaps: OccupiedInterval[]): number {
   return gaps.reduce((total, gap) => {
     const minutes = (gap.end.getTime() - gap.start.getTime()) / (1000 * 60);
     return total + minutes;
@@ -373,7 +383,7 @@ export function totalAvailableMinutes(gaps: Interval[]): number {
  */
 export function findDailyGaps(
   date: Date,
-  occupiedIntervals: Interval[],
+  occupiedIntervals: OccupiedInterval[],
 ): AvailableSlot[] {
   const dayStart = new Date(date);
   dayStart.setHours(0, 0, 0, 0);
@@ -392,7 +402,9 @@ export function findDailyGaps(
 /**
  * Get the largest gap in a set of intervals
  */
-export function getLargestGap(gaps: Interval[]): Interval | null {
+export function getLargestGap(
+  gaps: OccupiedInterval[],
+): OccupiedInterval | null {
   if (gaps.length === 0) return null;
 
   return gaps.reduce((largest, current) => {
@@ -405,7 +417,7 @@ export function getLargestGap(gaps: Interval[]): Interval | null {
 /**
  * Calculate the size of the largest gap in minutes
  */
-export function getLargestGapMinutes(gaps: Interval[]): number {
+export function getLargestGapMinutes(gaps: OccupiedInterval[]): number {
   const largest = getLargestGap(gaps);
   if (!largest) return 0;
   return (largest.end.getTime() - largest.start.getTime()) / (1000 * 60);
@@ -421,8 +433,8 @@ export function masksToIntervals(
   masks: PerTemplateMask[],
   startDate: Date,
   endDate: Date,
-): Interval[] {
-  const intervals: Interval[] = [];
+): OccupiedInterval[] {
+  const intervals: OccupiedInterval[] = [];
   const msPerDay = 24 * 60 * 60 * 1000;
   const numDays = Math.ceil(
     (endDate.getTime() - startDate.getTime()) / msPerDay,

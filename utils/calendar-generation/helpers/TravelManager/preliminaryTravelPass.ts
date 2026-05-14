@@ -149,6 +149,11 @@ function handleOutbound(
   const slot = slots[slotIndex];
   const nextSlot = slots[slotIndex + 1] ?? null;
   const bufferMilliseconds = bufferTimeMinutes * 60000;
+  // Compare in milliseconds (travelMinutes can be fractional, slot.durationMinutes
+  // is floored — relying on the floored field misclassifies exact fits as overflows
+  // when travelMinutes has a sub-minute component).
+  const travelMs = Math.round(travelMinutes * 60000);
+  const slotMs = slot.end.getTime() - slot.start.getTime();
 
   // Next slot is a too-tight category layover → collapse into one direct hop.
   const bypass = tryBypassOutboundCategoryLayover(
@@ -170,12 +175,15 @@ function handleOutbound(
   // Cat-to-cat at different locations and a clean fit on both sides → center
   // the travel on the boundary instead of consuming only the departing slot.
   // Each half eats from one of the adjacent categories.
+  const nextSlotMs = nextSlot
+    ? nextSlot.end.getTime() - nextSlot.start.getTime()
+    : 0;
   const canCenterOnBoundary =
     !!slot.categoryId &&
     !!nextSlot?.categoryId &&
     nextSlot.start.getTime() === slot.end.getTime() &&
-    travelMinutes / 2 <= slot.durationMinutes &&
-    travelMinutes / 2 <= nextSlot.durationMinutes;
+    travelMs / 2 <= slotMs &&
+    travelMs / 2 <= nextSlotMs;
   if (canCenterOnBoundary && nextSlot) {
     placeTravelCenteredOnBoundary(
       slot,
@@ -192,7 +200,7 @@ function handleOutbound(
   }
 
   // Travel < slot → place at end, leftover at start.
-  if (travelMinutes < slot.durationMinutes) {
+  if (travelMs < slotMs) {
     placeTravelAtSlotEnd(
       slot,
       previousLocation,
@@ -205,7 +213,7 @@ function handleOutbound(
   }
 
   // Travel == slot → shift backward if we can (free win), else fill exactly.
-  if (travelMinutes === slot.durationMinutes) {
+  if (travelMs === slotMs) {
     const shifted = tryShiftTravelBackward(
       slot,
       previousLocation,
@@ -327,7 +335,9 @@ function handleReturn(
 
   // Slot is a category and return travel would consume it entirely → skip
   // emit, record a boundary trespass so the wrapper's top border renders red.
-  if (slot.categoryId && travelMinutes >= slot.durationMinutes) {
+  const travelMs = Math.round(travelMinutes * 60000);
+  const slotMs = slot.end.getTime() - slot.start.getTime();
+  if (slot.categoryId && travelMs >= slotMs) {
     categoryBoundaryTrespasses.push({
       categoryId: slot.categoryId,
       slotStart: slot.start,

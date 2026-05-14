@@ -11,7 +11,7 @@ export function buildInitialEventArray(
   userId: string,
   planners: Planner[],
   previousCalendar: SimpleEvent[],
-  currentDate: Date
+  currentDate: Date,
 ): {
   eventArray: SimpleEvent[];
   memoizedEventIds: Set<string>;
@@ -21,13 +21,14 @@ export function buildInitialEventArray(
   // Step 1: Memoized events (past events from previous calendar)
   const { events: memoizedEvents, eventIds: memoizedEventIds } =
     EventAssembler.buildMemoizedEvents(previousCalendar, currentDate);
+
   eventArray.push(...memoizedEvents);
 
   // Step 2: Plan items (fixed-time appointments)
   const planEvents = EventAssembler.buildPlanEvents(
     userId,
     planners,
-    memoizedEventIds
+    memoizedEventIds,
   );
   eventArray.push(...planEvents);
 
@@ -35,7 +36,7 @@ export function buildInitialEventArray(
   const completedEvents = EventAssembler.buildCompletedEvents(
     userId,
     planners,
-    memoizedEventIds
+    memoizedEventIds,
   );
   eventArray.push(...completedEvents);
 

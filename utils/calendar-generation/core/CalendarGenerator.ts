@@ -130,6 +130,7 @@ export class CalendarGenerator {
       enableLogging,
       this.metrics,
     );
+
     this.metrics = updatedMetrics;
 
     // Phase 4: Build location map

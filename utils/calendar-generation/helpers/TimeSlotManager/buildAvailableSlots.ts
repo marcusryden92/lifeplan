@@ -35,6 +35,7 @@ export function buildAvailableSlots({
 }: BuildSlotsOptions) {
   if (enableLogging) logInitialSlotContext(existingEvents);
 
+  // How many days (rounded up to whole weeks) until furthest away plan?
   const numDays = daysNeededForPlans(planners, startDate);
   const endDate =
     endDateOverride ?? dateTimeService.shiftDays(startDate, numDays);
