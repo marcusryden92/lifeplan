@@ -1,5 +1,4 @@
-import { SimpleEvent, EventType } from "@/types/prisma";
-import type { CategoryConstraint } from "@/types/categoryTypes";
+import { SimpleEvent, EventType, Category } from "@/types/prisma";
 import { RuntimeEventExtendedProps } from "@/types/ui";
 import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
 import { TIME_CONSTANTS } from "../../constants";
@@ -15,7 +14,7 @@ type CategoryPeriod = {
 };
 
 function expandPeriods(
-  constraints: CategoryConstraint[],
+  constraints: Category[],
   startDate: Date,
   endDate: Date,
 ): CategoryPeriod[] {
@@ -54,7 +53,7 @@ function expandPeriods(
 
 export function buildCategoryWrapperEvents(
   userId: string,
-  constraints: CategoryConstraint[],
+  constraints: Category[],
   startDate: Date,
   endDate: Date,
 ): SimpleEvent[] {

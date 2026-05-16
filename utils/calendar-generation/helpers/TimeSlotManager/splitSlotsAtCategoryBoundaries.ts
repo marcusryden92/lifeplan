@@ -1,4 +1,4 @@
-import type { CategoryConstraint } from "@/types/categoryTypes";
+import type { Category } from "@/types/prisma";
 import { AvailableSlot } from "../../models/TimeSlot";
 import { hhmmToMinutes } from "../../utils/dateTimeService";
 import { expandSlotForDay } from "./expandSlotForDay";
@@ -18,7 +18,7 @@ type CategoryBoundary = {
 // Compute all category boundaries within [rangeStartMs, rangeEndMs] by iterating
 // day-by-day and checking each constraint's time slots against that day.
 function getAllBoundaries(
-  constraints: CategoryConstraint[],
+  constraints: Category[],
   rangeStartMs: number,
   rangeEndMs: number,
 ): CategoryBoundary[] {
@@ -145,7 +145,7 @@ function applySplitsForBoundary(
 // pre-expanded absolute period timestamps.
 function assignMembership(
   slot: AvailableSlot,
-  constraints: CategoryConstraint[],
+  constraints: Category[],
 ): AvailableSlot {
   const slotStartMs = slot.start.getTime();
   const slotEndMs = slot.end.getTime();
@@ -217,7 +217,7 @@ function assignMembership(
 }
 
 export function splitSlotsAtCategoryBoundaries(
-  constraints: CategoryConstraint[],
+  constraints: Category[],
   slots: AvailableSlot[],
 ): AvailableSlot[] {
   if (!constraints.length || !slots.length) return slots;

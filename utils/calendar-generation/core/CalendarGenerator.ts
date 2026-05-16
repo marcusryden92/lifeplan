@@ -6,6 +6,7 @@
  */
 
 import { WeekDayIntegers } from "@/types/calendarTypes";
+import { Category } from "@/types/prisma";
 import { TimeSlotManager } from "./TimeSlotManager";
 import { TravelManager } from "./TravelManager";
 import { Scheduler } from "./Scheduler";
@@ -22,7 +23,6 @@ import {
   buildInitialEventArray,
   expandTemplates,
   buildLocationMap,
-  buildCategoryConstraints,
   buildPlannerCategoryMap,
   prepareSchedulingContext,
   buildSchedulingStrategy,
@@ -45,6 +45,7 @@ export class CalendarGenerator {
   private readonly maxDaysAhead: number;
   private readonly bufferTimeMinutes: number;
   private readonly enableLogging: boolean;
+  private readonly scheduledCategories: Category[];
 
   // Mutable state
   private metrics: SchedulingMetrics;
@@ -58,6 +59,9 @@ export class CalendarGenerator {
       input.config?.maxDaysAhead || SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH;
     this.bufferTimeMinutes = input.config?.bufferTimeMinutes ?? 0;
     this.enableLogging = input.config?.enableLogging ?? false;
+    this.scheduledCategories = (input.categories ?? []).filter(
+      (c) => c.timeSlots.length > 0,
+    );
 
     this.timeSlotManager = new TimeSlotManager(
       this.currentDate,
@@ -140,9 +144,7 @@ export class CalendarGenerator {
       input.categories || [],
     );
 
-    // Phase 5: Build category constraints
-    const { categoryConstraintMap, categoryConstraintsList } =
-      buildCategoryConstraints(input.categories);
+    const scheduledCategories = this.scheduledCategories;
 
     // Phase 6a: Build available slots over the full scheduling timeline
     const schedulingStartDate = setTimeOnDate(currentDate, "00:00");
@@ -151,7 +153,7 @@ export class CalendarGenerator {
       startDate: schedulingStartDate,
       existingEvents: filteredEvents,
       templateMasks: perTemplateMasks,
-      categoryConstraints: categoryConstraintsList,
+      categoryConstraints: scheduledCategories,
       plannerLocationMap,
       enableLogging,
     });
@@ -160,7 +162,7 @@ export class CalendarGenerator {
     const categoryBoundaryTrespasses: CategoryBoundaryTrespass[] = [];
     const slotsWithTravel = preliminaryTravelPass(
       !!plannerLocationMap,
-      categoryConstraintsList,
+      scheduledCategories,
       timeSlotManager.occupiedSlots,
       travelManager,
       this.bufferTimeMinutes,
@@ -188,7 +190,7 @@ export class CalendarGenerator {
       filteredEvents,
       timeSlotManager,
       this.metrics,
-      categoryConstraintMap,
+      scheduledCategories,
       plannerLocationMap,
       plannerCategoryMap,
     );
@@ -217,7 +219,7 @@ export class CalendarGenerator {
       largestTemplateGap,
       perTemplateMasks,
       plannerLocationMap,
-      categoryConstraintsList,
+      scheduledCategories,
     );
 
     // Phase 11: Assemble final events
@@ -229,7 +231,7 @@ export class CalendarGenerator {
       input.userId,
       travelManager,
       context,
-      categoryConstraintsList,
+      scheduledCategories,
       schedulingStartDate,
       schedulingEndDate,
       plannerLocationMap,

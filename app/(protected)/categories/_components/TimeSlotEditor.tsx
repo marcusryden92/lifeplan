@@ -5,12 +5,12 @@ import { Button } from "@/components/ui/Button";
 import { Label } from "@/components/ui/Label";
 import { Input } from "@/components/ui/Input";
 import { X, Plus } from "lucide-react";
-import { CategoryTimeSlot } from "@/types/categoryTypes";
+import { CategoryTimeWindow } from "@/types/categoryTypes";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 
 interface TimeSlotEditorProps {
-  timeSlots: CategoryTimeSlot[];
-  onChange: (slots: CategoryTimeSlot[]) => void;
+  timeSlots: CategoryTimeWindow[];
+  onChange: (slots: CategoryTimeWindow[]) => void;
 }
 
 const DAY_NAMES = [
@@ -88,7 +88,7 @@ export function TimeSlotEditor({ timeSlots, onChange }: TimeSlotEditorProps) {
     setError(null);
 
     // Create a new time slot with the selected days
-    const newSlot: CategoryTimeSlot = {
+    const newSlot: CategoryTimeWindow = {
       days: selectedDays,
       startTime,
       endTime,
@@ -101,7 +101,7 @@ export function TimeSlotEditor({ timeSlots, onChange }: TimeSlotEditorProps) {
   };
 
   const removeTimeSlot = (day: WeekDayIntegers, timeStart: string, timeEnd: string) => {
-    const updatedSlots: CategoryTimeSlot[] = [];
+    const updatedSlots: CategoryTimeWindow[] = [];
 
     timeSlots.forEach((slot) => {
       if (

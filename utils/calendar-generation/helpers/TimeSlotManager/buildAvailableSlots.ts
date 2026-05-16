@@ -1,5 +1,4 @@
-import { Planner, SimpleEvent, EventType } from "@/types/prisma";
-import type { CategoryConstraint } from "@/types/categoryTypes";
+import { Planner, SimpleEvent, EventType, Category } from "@/types/prisma";
 import {
   eventsToIntervals,
   findGaps,
@@ -17,7 +16,7 @@ interface BuildSlotsOptions {
   startDate: Date;
   existingEvents: SimpleEvent[];
   templateMasks: PerTemplateMask[];
-  categoryConstraints: CategoryConstraint[];
+  categoryConstraints: Category[];
   plannerLocationMap?: Map<string, string | null>;
   enableLogging?: boolean;
   endDateOverride?: Date;

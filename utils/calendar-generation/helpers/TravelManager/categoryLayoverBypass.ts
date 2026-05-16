@@ -1,4 +1,4 @@
-import type { CategoryConstraint } from "@/types/categoryTypes";
+import type { Category } from "@/types/prisma";
 import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { TravelManager } from "../../core/TravelManager";
 import {
@@ -27,7 +27,7 @@ export function tryBypassOutboundCategoryLayover(
   slots: AvailableSlot[],
   slotIndex: number,
   travelManager: TravelManager,
-  categoryConstraints: CategoryConstraint[],
+  categoryConstraints: Category[],
   bufferTimeMinutes: number,
   previousLocation: string,
   categoryLocation: string,
@@ -332,7 +332,7 @@ function emitDirectTravelAnchoredAtSpanStartWithLeftover(
 
 function findCategoryPeriodEnd(
   slot: AvailableSlot,
-  constraints: CategoryConstraint[],
+  constraints: Category[],
 ): Date | undefined {
   if (!slot.categoryId) return undefined;
   const constraint = constraints.find((c) => c.id === slot.categoryId);

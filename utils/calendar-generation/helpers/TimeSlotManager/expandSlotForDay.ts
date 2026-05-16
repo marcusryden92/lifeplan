@@ -1,4 +1,4 @@
-import type { CategoryTimeSlot } from "@/types/categoryTypes";
+import type { CategoryTimeSlot } from "@/types/prisma";
 import { hhmmToMinutes } from "../../utils/dateTimeService";
 
 // Resolve a recurring category time-slot rule into concrete bounds for a

@@ -132,7 +132,7 @@ lifeplan/
     │   │   │   ├── initialization/    # validateInput, buildInitialEventArray
     │   │   │   ├── template-processing/  # expandTemplates
     │   │   │   ├── slot-building/     # buildLocationMap, buildInitialSlots,
-    │   │   │   │                      # buildCategoryConstraints, buildPlannerCategoryMap
+    │   │   │   │                      # buildPlannerCategoryMap
     │   │   │   ├── scheduling/        # prepareSchedulingContext, buildSchedulingStrategy,
     │   │   │   │                      # prepareCandidates
     │   │   │   └── finalization/      # assembleFinalEvents

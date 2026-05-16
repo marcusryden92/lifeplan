@@ -1,5 +1,4 @@
-import { Planner, SimpleEvent, PlannerType } from "@/types/prisma";
-import { CategoryConstraint } from "@/types/categoryTypes";
+import { Planner, SimpleEvent, PlannerType, Category } from "@/types/prisma";
 import { Scheduler } from "../../core/Scheduler";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
 import { TravelManager } from "../../core/TravelManager";
@@ -27,7 +26,7 @@ export function scheduleTasksAndGoals(
   perTemplateMasks: PerTemplateMask[],
   context: SchedulingContext,
   plannerLocationMap: Map<string, string | null>,
-  categoryConstraints: CategoryConstraint[],
+  categoryConstraints: Category[],
 ): {
   success: boolean;
   newEvents: SimpleEvent[];

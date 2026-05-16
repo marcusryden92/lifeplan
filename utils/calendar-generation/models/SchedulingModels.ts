@@ -7,8 +7,6 @@
 import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
 
 import { SchedulingFailureReason } from "../constants";
-import type { CategoryConstraint } from "@/types/categoryTypes";
-export type { CategoryConstraint };
 import { AvailableSlot, TravelSlot } from "./TimeSlot";
 
 /**
@@ -86,7 +84,7 @@ export interface SchedulingContext {
   /** Scheduling metrics (mutable, updated during scheduling) */
   metrics: SchedulingMetrics;
   /** Category constraints for time-based scheduling */
-  categoryConstraints?: Map<string, CategoryConstraint>;
+  categoryConstraints?: Map<string, Category>;
   /** Effective planner -> location map */
   plannerLocationMap?: Map<string, string | null>;
   /** Effective planner -> categoryId map (resolved by walking up parent chain) */
@@ -248,16 +246,11 @@ export interface StrategyConfig {
   locationGroupingPenalties?: LocationGroupingPenaltiesConfig;
 }
 
-export interface CategoryPeriodsResult {
-  categoryConstraintMap: Map<string, CategoryConstraint>;
-  categoryConstraintsList: CategoryConstraint[];
-}
-
 export interface FindValidSlotsResult {
   validSlots: AvailableSlot[];
   fittingSlots: AvailableSlot[];
   taskLocationId: string | null | undefined;
-  constraintForTask: CategoryConstraint | undefined;
+  constraintForTask: Category | undefined;
 }
 
 export interface SlotSelectionResult {

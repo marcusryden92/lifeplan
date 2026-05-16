@@ -4,13 +4,12 @@
  * Prepares the context object for scheduling
  */
 
-import { Planner, SimpleEvent } from "@/types/prisma";
+import { Planner, SimpleEvent, Category } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
 import {
   SchedulingContext,
   SchedulingMetrics,
-  CategoryConstraint,
 } from "../../models/SchedulingModels";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { getDaySlots } from "../TimeSlotManager/getDaySlots";
@@ -23,7 +22,7 @@ export function prepareSchedulingContext(
   scheduledEvents: SimpleEvent[],
   timeSlotManager: TimeSlotManager,
   metrics: SchedulingMetrics,
-  categoryConstraints: Map<string, CategoryConstraint>,
+  scheduledCategories: Category[],
   plannerLocationMap: Map<string, string | null>,
   plannerCategoryMap: Map<string, string | null>,
 ): SchedulingContext {
@@ -36,6 +35,10 @@ export function prepareSchedulingContext(
     availableMinutesPerWeek += slots.reduce((t, s) => t + s.durationMinutes, 0);
   }
 
+  const categoryById = new Map<string, Category>(
+    scheduledCategories.map((c) => [c.id, c]),
+  );
+
   return {
     currentDate,
     userId,
@@ -44,7 +47,7 @@ export function prepareSchedulingContext(
     scheduledEvents,
     availableMinutesPerWeek,
     metrics,
-    categoryConstraints,
+    categoryConstraints: categoryById,
     plannerLocationMap,
     plannerCategoryMap,
   };

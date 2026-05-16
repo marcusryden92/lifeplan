@@ -97,7 +97,6 @@ import { validateInput } from "./CalendarGenerator/initialization/validateInput"
 import { buildInitialEventArray } from "./CalendarGenerator/initialization/buildInitialEventArray";
 import { expandTemplates } from "./CalendarGenerator/template-processing/expandTemplates";
 import { buildLocationMap } from "./CalendarGenerator/slot-building/buildLocationMap";
-import { buildCategoryConstraints } from "./CalendarGenerator/slot-building/buildCategoryConstraints";
 import { buildInitialSlots } from "./CalendarGenerator/slot-building/buildInitialSlots";
 import { prepareSchedulingContext } from "./CalendarGenerator/scheduling/prepareSchedulingContext";
 import { buildSchedulingStrategy } from "./CalendarGenerator/scheduling/buildSchedulingStrategy";
@@ -205,19 +204,13 @@ The reason for the split: a task can visually belong to a category with a defaul
 4. (`locationMap` only) Fall back to category location via `categoryId`
 5. Return `null` ("Anywhere")
 
-### Phase 5: Build Category Constraints
+### Phase 5: Filter Scheduled Categories
 
-```typescript
-const { categoryConstraintMap, categoryConstraintsList } =
-  buildCategoryConstraints(input.categories);
-```
+The `CalendarGenerator` constructor filters `input.categories` once and stores the result as `this.scheduledCategories: Category[]` — keeping only categories that have at least one `timeSlot` defined. This array is threaded through to slot building, the travel pass, and the event assembler.
 
-Builds category constraint data used throughout scheduling:
+A `Map<categoryId, Category>` is built lazily inside `prepareSchedulingContext` for the one consumer (`findValidSlots`) that needs id-based lookup; everywhere else, the array form is sufficient.
 
-- `categoryConstraintMap` -- `Map<categoryId, CategoryConstraint>` for the Scheduler to look up time constraints by `categoryId`
-- `categoryConstraintsList` -- the same constraints as an array, threaded through to slot building, the travel pass, and the event assembler
-
-Each `CategoryConstraint` carries the recurring `timeSlots` rules (`{ days, startTime, endTime }`) — no pre-expansion into concrete dated periods happens here. Downstream consumers expand a rule for a specific day on demand via the `expandSlotForDay` helper.
+Each `Category.timeSlots` entry carries the recurring rule (`{ days, startTime, endTime }`) — no pre-expansion into concrete dated periods happens here. Downstream consumers expand a rule for a specific day on demand via the `expandSlotForDay` helper.
 
 ### Phase 6: Build Initial Slots
 
@@ -404,7 +397,6 @@ CalendarGenerator/
 │   └── expandTemplates.ts         # Template expansion wrapper
 ├── slot-building/
 │   ├── buildLocationMap.ts        # Planner -> location lookup
-│   ├── buildCategoryConstraints.ts # Category constraint + period generation
 │   └── buildInitialSlots.ts       # Initial 2-week slot building
 ├── scheduling/
 │   ├── prepareSchedulingContext.ts # SchedulingContext creation
@@ -718,7 +710,7 @@ interface SchedulingContext {
   scheduledEvents: SimpleEvent[]; // Mutable - events added here
   availableMinutesPerWeek: number;
   metrics: SchedulingMetrics;
-  categoryConstraints?: Map<string, CategoryConstraint>;
+  categoryConstraints?: Map<string, Category>;
   plannerLocationMap?: Map<string, string | null>;
 }
 ```
@@ -735,17 +727,20 @@ interface SchedulingFailure {
 }
 ```
 
-### CategoryConstraint
+### Category (scheduling view)
+
+The engine uses the Prisma `Category` type directly (`Category = Prisma.CategoryGetPayload<{ include: { timeSlots: true } }>`). The fields the scheduling code actually reads:
 
 ```typescript
-interface CategoryConstraint {
+type Category = {
   id: string;
   name: string;
-  color?: string | null;
-  timeSlots: CategoryTimeSlot[];
+  color: string | null;
+  timeSlots: CategoryTimeSlot[];  // DB rows: { id, categoryId, days, startTime, endTime }
   isStrict: boolean;
-  locationId?: string | null;
-}
+  locationId: string | null;
+  // ...plus icon, sortOrder, parentId, userId, createdAt, updatedAt — unused by scheduling
+};
 ```
 
 ---
@@ -869,9 +864,9 @@ interface Category {
 
 Categories affect the scheduling system in several concrete ways:
 
-1. **Constraint Map**: `buildCategoryConstraints()` generates a `Map<categoryId, CategoryConstraint>` that the `SchedulingContext` carries. When `findValidSlots()` looks for slots, it can filter by `categoryConstraint` to only return slots within the category's defined time windows.
+1. **Constraint Map**: `prepareSchedulingContext` builds a `Map<categoryId, Category>` inline from `scheduledCategories` and stashes it on the `SchedulingContext`. When `findValidSlots()` looks for slots, it can filter by category to only return slots within the category's defined time windows.
 
-2. **Slot Boundary Splitting**: `buildAvailableSlots` calls `splitSlotsAtCategoryBoundaries(categoryConstraintsList, gaps)`, which iterates day-by-day, lazily expands each constraint's recurring time-slot rules via `expandSlotForDay`, and splits the available slots at category start/end boundaries — tagging each fragment with its `categoryId`, `isStrictCategory`, and the right location handoff for travel calculation.
+2. **Slot Boundary Splitting**: `buildAvailableSlots` calls `splitSlotsAtCategoryBoundaries(scheduledCategories, gaps)`, which iterates day-by-day, lazily expands each category's recurring time-slot rules via `expandSlotForDay`, and splits the available slots at category start/end boundaries — tagging each fragment with its `categoryId`, `isStrictCategory`, and the right location handoff for travel calculation.
 
 3. **Priority Sorting**: `PrioritySorter.sortByPriorityAndConstraints()` gives precedence to tasks with category constraints (they're scheduled first). This ensures constrained tasks get their preferred time windows before unconstrained tasks fill them.
 
@@ -990,10 +985,10 @@ PHASE 4: BUILD LOCATION MAP  [buildLocationMap]
   +-- Includes category location inheritance
   v
 
-PHASE 5: BUILD CATEGORY CONSTRAINTS  [buildCategoryConstraints]
+PHASE 5: FILTER SCHEDULED CATEGORIES  [CalendarGenerator constructor]
   |
-  +-- categoryConstraintMap for Scheduler
-  +-- categoryConstraintsList passed downstream
+  +-- scheduledCategories: Category[] (filtered for non-empty timeSlots)
+  +-- Map<categoryId, Category> built inline in prepareSchedulingContext
       (no pre-expansion; rules expanded per-day on demand)
   v
 

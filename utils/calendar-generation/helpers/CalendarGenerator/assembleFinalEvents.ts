@@ -4,8 +4,7 @@
  * Assembles all events into final calendar output
  */
 
-import { SimpleEvent } from "@/types/prisma";
-import type { CategoryConstraint } from "@/types/categoryTypes";
+import { SimpleEvent, Category } from "@/types/prisma";
 import { TravelManager } from "../../core/TravelManager";
 import {
   LoggingConfig,
@@ -20,7 +19,7 @@ export function assembleFinalEvents(
   userId: string,
   travelManager: TravelManager,
   context: SchedulingContext,
-  categoryConstraintsList: CategoryConstraint[],
+  scheduledCategories: Category[],
   startDate: Date,
   endDate: Date,
   plannerLocationMap: Map<string, string | null>,
@@ -51,7 +50,7 @@ export function assembleFinalEvents(
   // Generate category wrapper events
   const categoryWrapperEvents = EventAssembler.buildCategoryWrapperEvents(
     userId,
-    categoryConstraintsList,
+    scheduledCategories,
     startDate,
     endDate,
   );

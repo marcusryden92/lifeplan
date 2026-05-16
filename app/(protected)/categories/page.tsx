@@ -28,7 +28,7 @@ import { EditCategoryDialog } from "./_components/EditCategoryDialog";
 import * as categoryActions from "@/actions/categories";
 import { buildCategoryTree, CategoryNode } from "@/utils/categoryUtils";
 import type { Category } from "@/types/prisma";
-import type { CategoryTimeSlot } from "@/types/categoryTypes";
+import type { CategoryTimeWindow } from "@/types/categoryTypes";
 
 type CategoryWithChildren = Category & {
   children: Category[];
@@ -130,7 +130,7 @@ export default function CategoriesPage() {
 
   const handleSaveCategory = async (data: {
     name: string;
-    timeSlots?: CategoryTimeSlot[];
+    timeSlots?: CategoryTimeWindow[];
     isStrict?: boolean;
     locationId?: string | null;
   }) => {

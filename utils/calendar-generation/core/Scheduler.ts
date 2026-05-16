@@ -5,8 +5,7 @@
  * Delegates to specialized subfunctions for each phase.
  */
 
-import { Planner, SimpleEvent } from "@/types/prisma";
-import { CategoryConstraint } from "@/types/categoryTypes";
+import { Planner, SimpleEvent, Category } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "./TimeSlotManager";
 import { TravelManager } from "./TravelManager";
@@ -100,7 +99,7 @@ export class Scheduler {
     largestTemplateGap: number,
     perTemplateMasks: PerTemplateMask[],
     plannerLocationMap: Map<string, string | null>,
-    categoryConstraints: CategoryConstraint[],
+    categoryConstraints: Category[],
   ): {
     success: boolean;
     newEvents: SimpleEvent[];

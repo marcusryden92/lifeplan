@@ -2,7 +2,6 @@ export { validateInput } from "./validateInput";
 export { buildInitialEventArray } from "./buildInitialEventArray";
 export { expandTemplates } from "./expandTemplates";
 export { buildLocationMap } from "./buildLocationMap";
-export { buildCategoryConstraints } from "./buildCategoryConstraints";
 export { buildPlannerCategoryMap } from "./buildPlannerCategoryMap";
 export { prepareSchedulingContext } from "./prepareSchedulingContext";
 export { buildSchedulingStrategy } from "./buildSchedulingStrategy";

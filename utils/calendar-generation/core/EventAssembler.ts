@@ -1,5 +1,4 @@
-import { Planner, SimpleEvent } from "@/types/prisma";
-import type { CategoryConstraint } from "@/types/categoryTypes";
+import { Planner, SimpleEvent, Category } from "@/types/prisma";
 import {
   buildMemoizedEvents,
   buildPlanEvents,
@@ -35,7 +34,7 @@ export class EventAssembler {
 
   static buildCategoryWrapperEvents(
     userId: string,
-    constraints: CategoryConstraint[],
+    constraints: Category[],
     startDate: Date,
     endDate: Date,
   ): SimpleEvent[] {

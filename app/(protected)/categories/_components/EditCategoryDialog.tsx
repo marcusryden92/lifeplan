@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/Switch";
 import { MapPin, ChevronDown, ChevronUp } from "lucide-react";
 import { LocationSelector } from "@/components/locations/LocationSelector";
 import { TimeSlotEditor } from "./TimeSlotEditor";
-import { CategoryTimeSlot } from "@/types/categoryTypes";
+import { CategoryTimeWindow } from "@/types/categoryTypes";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 import type { Category } from "@/types/prisma";
 
@@ -25,7 +25,7 @@ interface EditCategoryDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (data: {
     name: string;
-    timeSlots?: CategoryTimeSlot[];
+    timeSlots?: CategoryTimeWindow[];
     isStrict?: boolean;
     locationId?: string | null;
   }) => void;
@@ -39,7 +39,7 @@ export function EditCategoryDialog({
   category,
 }: EditCategoryDialogProps) {
   const [name, setName] = useState("");
-  const [timeSlots, setTimeSlots] = useState<CategoryTimeSlot[]>([]);
+  const [timeSlots, setTimeSlots] = useState<CategoryTimeWindow[]>([]);
   const [isStrict, setIsStrict] = useState(false);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -48,7 +48,7 @@ export function EditCategoryDialog({
     if (category) {
       setName(category.name);
 
-      const mappedSlots: CategoryTimeSlot[] = category.timeSlots.map((ts) => ({
+      const mappedSlots: CategoryTimeWindow[] = category.timeSlots.map((ts) => ({
         days: ts.days as WeekDayIntegers[],
         startTime: ts.startTime,
         endTime: ts.endTime,

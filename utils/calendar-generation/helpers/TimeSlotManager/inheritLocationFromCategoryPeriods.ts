@@ -1,7 +1,4 @@
-import type {
-  CategoryConstraint,
-  CategoryTimeSlot,
-} from "@/types/categoryTypes";
+import type { Category, CategoryTimeSlot } from "@/types/prisma";
 import { OccupiedInterval } from "../../utils/intervalUtils";
 import { expandSlotForDay } from "./expandSlotForDay";
 
@@ -21,7 +18,7 @@ function intervalIsInsideSlot(
 }
 
 export function inheritLocationFromCategoryPeriods(
-  constraints: CategoryConstraint[],
+  constraints: Category[],
   intervals: OccupiedInterval[],
 ): OccupiedInterval[] {
   const locationConstraints = constraints.filter((c) => c.locationId != null);

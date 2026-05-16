@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/Switch";
 import { MapPin } from "lucide-react";
 import { LocationSelector } from "@/components/locations/LocationSelector";
 import { TimeSlotEditor } from "./TimeSlotEditor";
-import { CategoryTimeSlot } from "@/types/categoryTypes";
+import { CategoryTimeWindow } from "@/types/categoryTypes";
 
 const EMOJI_OPTIONS = [
   "💼",
@@ -67,7 +67,7 @@ interface AddCategoryDialogProps {
     icon?: string;
     color?: string;
     parentId?: string;
-    timeSlots?: CategoryTimeSlot[];
+    timeSlots?: CategoryTimeWindow[];
     isStrict?: boolean;
     locationId?: string | null;
   }) => void;
@@ -85,7 +85,7 @@ export function AddCategoryDialog({
   const [name, setName] = useState("");
   const [icon, setIcon] = useState<string | undefined>();
   const [color, setColor] = useState<string | undefined>();
-  const [timeSlots, setTimeSlots] = useState<CategoryTimeSlot[]>([]);
+  const [timeSlots, setTimeSlots] = useState<CategoryTimeWindow[]>([]);
   const [isStrict, setIsStrict] = useState(false);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);

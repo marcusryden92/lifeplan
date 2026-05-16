@@ -1,5 +1,5 @@
 import { AvailableSlot } from "../../models/TimeSlot";
-import { CategoryConstraint } from "../../models/SchedulingModels";
+import { Category } from "@/types/prisma";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../../constants";
 
@@ -9,7 +9,7 @@ export function findAllFittingSlots(
   durationMinutes: number,
   afterDate: Date,
   maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
-  categoryConstraint?: CategoryConstraint,
+  categoryConstraint?: Category,
 ): AvailableSlot[] {
   const fittingSlots: AvailableSlot[] = [];
   const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);

@@ -1,4 +1,4 @@
-import type { CategoryConstraint } from "@/types/categoryTypes";
+import type { Category } from "@/types/prisma";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
 import { TravelManager } from "../../core/TravelManager";
 import { PerTemplateMask } from "../../models/TemplateModels";
@@ -12,7 +12,7 @@ export function expandSlotsForNextWeek(
   context: SchedulingContext,
   perTemplateMasks: PerTemplateMask[],
   plannerLocationMap: Map<string, string | null>,
-  categoryConstraints: CategoryConstraint[],
+  categoryConstraints: Category[],
   slotManager: TimeSlotManager,
   travelManager: TravelManager,
 ): void {

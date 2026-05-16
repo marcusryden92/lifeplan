@@ -1,4 +1,4 @@
-import type { CategoryConstraint } from "@/types/categoryTypes";
+import type { Category } from "@/types/prisma";
 import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
 import { TravelManager } from "../../core/TravelManager";
 import { pushInsufficientTravel } from "../../utils/timeSlotUtils";
@@ -61,7 +61,7 @@ import { CategoryBoundaryTrespass } from "./categoryBoundaryTrespass";
  */
 export function preliminaryTravelPass(
   hasPlannerLocationMap: boolean,
-  categoryConstraints: CategoryConstraint[],
+  categoryConstraints: Category[],
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   travelManager: TravelManager,
   bufferTimeMinutes: number,
@@ -91,7 +91,7 @@ function processSlot(
   slots: AvailableSlot[],
   slotIndex: number,
   travelManager: TravelManager,
-  categoryConstraints: CategoryConstraint[],
+  categoryConstraints: Category[],
   occupiedSlots: (OccupiedSlot | TravelSlot)[],
   bufferTimeMinutes: number,
   result: AvailableSlot[],
@@ -137,7 +137,7 @@ function handleOutbound(
   slots: AvailableSlot[],
   slotIndex: number,
   travelManager: TravelManager,
-  categoryConstraints: CategoryConstraint[],
+  categoryConstraints: Category[],
   bufferTimeMinutes: number,
   previousLocation: string,
   nextLocation: string,
