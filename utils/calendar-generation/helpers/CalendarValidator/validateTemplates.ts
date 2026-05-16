@@ -20,22 +20,21 @@ function templatesOverlap(t1: EventTemplate, t2: EventTemplate): boolean {
 
 function findTemplateConflicts(templates: EventTemplate[]): string[] {
   const conflicts: string[] = [];
-  const byDay: Record<string, EventTemplate[]> = {};
+  const byDay = new Map<number, EventTemplate[]>();
 
   for (const template of templates) {
-    if (!template.startDay) continue;
-    if (!byDay[template.startDay]) {
-      byDay[template.startDay] = [];
-    }
-    byDay[template.startDay].push(template);
+    if (template.startDay === null || template.startDay === undefined) continue;
+    const bucket = byDay.get(template.startDay) ?? [];
+    bucket.push(template);
+    byDay.set(template.startDay, bucket);
   }
 
-  for (const [day, dayTemplates] of Object.entries(byDay)) {
+  for (const [day, dayTemplates] of byDay) {
     for (let i = 0; i < dayTemplates.length; i++) {
       for (let j = i + 1; j < dayTemplates.length; j++) {
         if (templatesOverlap(dayTemplates[i], dayTemplates[j])) {
           conflicts.push(
-            `Templates "${dayTemplates[i].title}" and "${dayTemplates[j].title}" overlap on ${day}`
+            `Templates "${dayTemplates[i].title}" and "${dayTemplates[j].title}" overlap on day ${day}`
           );
         }
       }

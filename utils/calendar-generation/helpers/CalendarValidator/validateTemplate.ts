@@ -14,7 +14,7 @@ export function validateTemplate(template: EventTemplate): ValidationResult {
     errors.push({ field: "title", message: "Title is required" });
   }
 
-  if (!template.startDay) {
+  if (template.startDay === null || template.startDay === undefined) {
     errors.push({ field: "startDay", message: "Start day is required" });
   }
 

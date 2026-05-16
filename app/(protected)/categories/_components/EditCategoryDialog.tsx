@@ -17,7 +17,6 @@ import { MapPin, ChevronDown, ChevronUp } from "lucide-react";
 import { LocationSelector } from "@/components/locations/LocationSelector";
 import { TimeSlotEditor } from "./TimeSlotEditor";
 import { CategoryTimeWindow } from "@/types/categoryTypes";
-import type { WeekDayIntegers } from "@/types/calendarTypes";
 import type { Category } from "@/types/prisma";
 
 interface EditCategoryDialogProps {
@@ -49,7 +48,7 @@ export function EditCategoryDialog({
       setName(category.name);
 
       const mappedSlots: CategoryTimeWindow[] = category.timeSlots.map((ts) => ({
-        days: ts.days as WeekDayIntegers[],
+        days: ts.days,
         startTime: ts.startTime,
         endTime: ts.endTime,
       }));

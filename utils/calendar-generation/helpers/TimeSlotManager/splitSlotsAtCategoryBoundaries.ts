@@ -228,12 +228,9 @@ export function splitSlotsAtCategoryBoundaries(
   const boundaries = getAllBoundaries(constraints, rangeStartMs, rangeEndMs);
   if (!boundaries.length) return slots;
 
-  let result = slots;
-  for (const boundary of boundaries) {
-    result = applySplitsForBoundary(result, boundary);
-  }
+  const splitSlots = boundaries.reduce(applySplitsForBoundary, slots);
 
-  return result.map((slot) =>
+  return splitSlots.map((slot) =>
     slot.isAvailable ? assignMembership(slot, constraints) : slot,
   );
 }

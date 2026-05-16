@@ -179,6 +179,37 @@ buildAvailableSlots()
                     entering: ConstraintInfo | null;
                 };
                 ```
-                
+
+            @ returns:
+            @ - CategoryBoundary[]
+
+        -> boundaries.reduce(applySplitsForBoundary, slots)
+
+            seed = slots, accumulator threads new array through each boundary
+
+            -> applySplitsForBoundary(slots, boundary)
+
+                slots.flatMap:
+                    - if boundary falls outside slot: keep slot as-is
+                    - else:
+
+                    -> splitSlot(slot, boundary)
+                        - compute beforeDuration / afterDuration from boundaryMs
+                        - build before-fragment (null if zero-length):
+                            categoryId  = leaving (we're inside the leaving cat)
+                            nextLocId   = entering ?? leaving ?? slot.next
+                        - build after-fragment (null if zero-length):
+                            categoryId  = entering (we're inside the entering cat)
+                            prevLocId   = entering ?? leaving ?? slot.prev
+                        - entering wins over leaving (where we ARE, not where we WERE)
+
+                    - drop nulls, return [before, after]
+
+            @ returns
+            @ - AvailableSlot[] with the boundary split applied
+              (becomes seed for the next boundary)
+
+        @ after all boundaries folded in
+        @ - AvailableSlot[] split at every category boundary in range
 
         

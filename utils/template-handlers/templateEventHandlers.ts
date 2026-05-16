@@ -2,14 +2,15 @@ import FullCalendar from "@fullcalendar/react";
 import { DateSelectArg, EventDropArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 import { EventTemplate } from "@/types/prisma";
+import { WeekDayIntegers } from "@/types/calendarTypes";
 import { calendarColors } from "@/data/calendarColors";
-
-import { getWeekdayFromDate } from "../calendarUtils";
 
 import { getTimeFromDate } from "../templateBuilderUtils";
 
 import { v4 as uuidv4 } from "uuid";
 import { EventImpl } from "@fullcalendar/core/internal";
+
+const dayOfWeek = (d: Date): WeekDayIntegers => d.getDay() as WeekDayIntegers;
 
 export const handleTemplateSelect = (
   userId: string | undefined,
@@ -20,7 +21,7 @@ export const handleTemplateSelect = (
   const { start, end } = selectInfo;
   const title = prompt("Enter event title:", "New Event");
 
-  const startDay = getWeekdayFromDate(start);
+  const startDay = dayOfWeek(start);
   const startTime = getTimeFromDate(start);
 
   if (userId && title && calendarRef.current) {
@@ -77,7 +78,7 @@ export const handleTemplateEventResize = (
 
       return {
         ...ev,
-        startDay: getWeekdayFromDate(startDate),
+        startDay: dayOfWeek(startDate),
         startTime: getTimeFromDate(startDate),
         duration,
         updatedAt: new Date().toISOString(),
@@ -112,7 +113,7 @@ export const handleTemplateEventDrop = (
 
       return {
         ...ev,
-        startDay: getWeekdayFromDate(startDate),
+        startDay: dayOfWeek(startDate),
         startTime: getTimeFromDate(startDate),
         duration,
         updatedAt: new Date().toISOString(),
@@ -146,7 +147,7 @@ export const handleTemplateEventCopy = (
     userId: userId,
     title: event.title,
     id: uuidv4(),
-    startDay: getWeekdayFromDate(startDate),
+    startDay: dayOfWeek(startDate),
     startTime: getTimeFromDate(startDate),
     duration,
     color: event.backgroundColor,

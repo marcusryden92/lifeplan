@@ -1,6 +1,8 @@
 "use server";
 import { db } from "@/lib/db";
 import { SimpleEvent, EventTemplate, Planner, Category } from "@/types/prisma";
+import { weekdayToInt } from "@/utils/calendarUtils";
+import type { WeekDayType } from "@/types/calendarTypes";
 
 // Fetches the raw data from the database
 export async function fetchCalendarData(userId: string) {
@@ -20,11 +22,16 @@ export async function fetchCalendarData(userId: string) {
       include: { extendedProps: true },
     });
 
-    const templatesItems: EventTemplate[] = await db.eventTemplate.findMany({
+    const templatesRaw = await db.eventTemplate.findMany({
       where: {
         userId: userId,
       },
     });
+    // Narrow startDay: DB enum string -> WeekDayIntegers for app code.
+    const templatesItems: EventTemplate[] = templatesRaw.map((t) => ({
+      ...t,
+      startDay: weekdayToInt(t.startDay),
+    }));
 
     const categoriesRaw = await db.category.findMany({
       where: {
@@ -33,9 +40,14 @@ export async function fetchCalendarData(userId: string) {
       include: { timeSlots: true, location: true },
     });
 
-    // Serialize Date fields in location to avoid Redux non-serializable warnings
-    const categories = categoriesRaw.map((cat) => ({
+    // Narrow timeSlots.days at the DB boundary and serialize location Dates
+    // to avoid Redux non-serializable warnings.
+    const categories: Category[] = categoriesRaw.map((cat) => ({
       ...cat,
+      timeSlots: cat.timeSlots.map((ts) => ({
+        ...ts,
+        days: ts.days.map((d) => weekdayToInt(d as WeekDayType)),
+      })),
       location: cat.location
         ? {
             ...cat.location,
@@ -51,7 +63,7 @@ export async function fetchCalendarData(userId: string) {
         planner: planner,
         calendar: calendarEvents,
         template: templatesItems,
-        categories: categories as Category[],
+        categories: categories,
       },
     };
   } catch (error) {

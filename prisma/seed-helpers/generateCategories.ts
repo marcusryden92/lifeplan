@@ -21,32 +21,32 @@ export const generateCategories = (userId: string): CategorySeedInput[] => {
       timeSlots: {
         create: [
           {
-            days: [1, 2],
+            days: ["monday", "tuesday"],
             startTime: "09:00",
             endTime: "17:00",
           },
           {
-            days: [3],
+            days: ["wednesday"],
             startTime: "20:00",
             endTime: "00:00",
           },
           {
-            days: [4],
+            days: ["thursday"],
             startTime: "20:00",
             endTime: "04:00",
           },
           {
-            days: [6],
+            days: ["saturday"],
             startTime: "09:00",
             endTime: "09:30",
           },
           {
-            days: [6],
+            days: ["saturday"],
             startTime: "10:00",
             endTime: "10:30",
           },
           {
-            days: [6],
+            days: ["saturday"],
             startTime: "12:00",
             endTime: "13:00",
           },
@@ -67,17 +67,17 @@ export const generateCategories = (userId: string): CategorySeedInput[] => {
       timeSlots: {
         create: [
           {
-            days: [4],
+            days: ["thursday"],
             startTime: "00:00",
             endTime: "02:00",
           },
           {
-            days: [6],
+            days: ["saturday"],
             startTime: "09:30",
             endTime: "10:00",
           },
           {
-            days: [6],
+            days: ["saturday"],
             startTime: "11:00",
             endTime: "12:00",
           },

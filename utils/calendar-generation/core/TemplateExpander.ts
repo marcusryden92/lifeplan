@@ -8,7 +8,7 @@
 import { EventTemplate, SimpleEvent, EventType } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { dateTimeService } from "../utils/dateTimeService";
-import { WEEKDAY_NAMES, TIME_CONSTANTS } from "../constants";
+import { TIME_CONSTANTS } from "../constants";
 import { RRule, Weekday } from "rrule";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
@@ -67,7 +67,8 @@ export class TemplateExpander {
     weekStartDate: Date,
   ): SimpleEvent | null {
     if (
-      !template.startDay ||
+      template.startDay === null ||
+      template.startDay === undefined ||
       !template.startTime ||
       template.duration === undefined
     ) {
@@ -75,15 +76,7 @@ export class TemplateExpander {
       return null;
     }
 
-    // Comment: Should WEEKDAY_NAMES be an enum?
-    // Calculate the day offset from week start
-    const startDayIndex = WEEKDAY_NAMES.indexOf(template.startDay);
-    if (startDayIndex === -1) {
-      console.error("Invalid start day:", template.startDay);
-      return null;
-    }
-
-    const dayOffset = (startDayIndex - this.weekStartDay + 7) % 7;
+    const dayOffset = (template.startDay - this.weekStartDay + 7) % 7;
     const eventDate = dateTimeService.shiftDays(weekStartDate, dayOffset);
 
     // Set the time
@@ -268,15 +261,13 @@ export class TemplateExpander {
 
     for (const template of templates) {
       if (
-        !template.startDay ||
+        template.startDay === null ||
+        template.startDay === undefined ||
         !template.startTime ||
         template.duration === undefined
       ) {
         continue;
       }
-
-      const startDayIndex = WEEKDAY_NAMES.indexOf(template.startDay);
-      if (startDayIndex === -1) continue;
 
       const [h, m] = template.startTime.split(":").map((s) => parseInt(s, 10));
       const startMinutes = h * 60 + m;
@@ -289,7 +280,7 @@ export class TemplateExpander {
         title: template.title,
         color: template.color as string,
         locationId: template.locationId ?? null,
-        dayOfWeek: startDayIndex,
+        dayOfWeek: template.startDay,
         startMinutes,
         endMinutes,
         startDateISO: (() => {

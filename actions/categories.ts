@@ -3,38 +3,64 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { PlannerType } from "@/types/prisma";
-import type { Category, CategoryTimeSlot } from "@/types/prisma";
+import type { Category } from "@/types/prisma";
+import type { WeekDayIntegers } from "@/types/calendarTypes";
+import { intToWeekday, weekdayToInt } from "@/utils/calendarUtils";
 
 // ============================================================================
 // Category CRUD Operations
 // ============================================================================
 
 type TimeSlotInput = {
-  days: number[];
+  days: WeekDayIntegers[];
   startTime: string;
   endTime: string;
 };
 
-export async function fetchCategories(): Promise<
-  (Category & { timeSlots: CategoryTimeSlot[] })[]
-> {
+// Conversion happens at the DB boundary: Prisma stores `days` as the
+// WeekDayType enum (strings); the rest of the app works with WeekDayIntegers.
+
+type RawTimeWindowRow = { days: string[]; [k: string]: unknown };
+
+function narrowTimeSlots<T extends RawTimeWindowRow>(
+  slots: T[],
+): (Omit<T, "days"> & { days: WeekDayIntegers[] })[] {
+  return slots.map((ts) => ({
+    ...ts,
+    days: ts.days.map((d) => weekdayToInt(d as Parameters<typeof weekdayToInt>[0])),
+  }));
+}
+
+function timeSlotsForWrite(slots: TimeSlotInput[]) {
+  return slots.map((ts) => ({
+    startTime: ts.startTime,
+    endTime: ts.endTime,
+    days: ts.days.map(intToWeekday),
+  }));
+}
+
+export async function fetchCategories(): Promise<Category[]> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
-  return db.category.findMany({
+  const rows = await db.category.findMany({
     where: { userId: session.user.id },
     include: { timeSlots: true },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
+  return rows.map((row) => ({
+    ...row,
+    timeSlots: narrowTimeSlots(row.timeSlots),
+  }));
 }
 
 export async function fetchCategoryTree(): Promise<
-  (Category & { timeSlots: CategoryTimeSlot[]; children: (Category & { timeSlots: CategoryTimeSlot[] })[] })[]
+  (Category & { children: Category[] })[]
 > {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
-  return db.category.findMany({
+  const rows = await db.category.findMany({
     where: {
       userId: session.user.id,
       parentId: null,
@@ -48,33 +74,37 @@ export async function fetchCategoryTree(): Promise<
     },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
+  return rows.map((row) => ({
+    ...row,
+    timeSlots: narrowTimeSlots(row.timeSlots),
+    children: row.children.map((c) => ({
+      ...c,
+      timeSlots: narrowTimeSlots(c.timeSlots),
+    })),
+  }));
 }
 
 export async function fetchCategory(
   categoryId: string,
-): Promise<(Category & { timeSlots: CategoryTimeSlot[] }) | null> {
+): Promise<Category | null> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
-  return db.category.findFirst({
+  const row = await db.category.findFirst({
     where: { id: categoryId, userId: session.user.id },
     include: { timeSlots: true },
   });
+  if (!row) return null;
+  return { ...row, timeSlots: narrowTimeSlots(row.timeSlots) };
 }
 
 export async function fetchCategoryWithChildren(
   categoryId: string,
-): Promise<
-  | (Category & {
-      timeSlots: CategoryTimeSlot[];
-      children: (Category & { timeSlots: CategoryTimeSlot[] })[];
-    })
-  | null
-> {
+): Promise<(Category & { children: Category[] }) | null> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
-  return db.category.findFirst({
+  const row = await db.category.findFirst({
     where: { id: categoryId, userId: session.user.id },
     include: {
       timeSlots: true,
@@ -84,6 +114,15 @@ export async function fetchCategoryWithChildren(
       },
     },
   });
+  if (!row) return null;
+  return {
+    ...row,
+    timeSlots: narrowTimeSlots(row.timeSlots),
+    children: row.children.map((c) => ({
+      ...c,
+      timeSlots: narrowTimeSlots(c.timeSlots),
+    })),
+  };
 }
 
 export async function createCategory(data: {
@@ -94,7 +133,7 @@ export async function createCategory(data: {
   timeSlots?: TimeSlotInput[];
   isStrict?: boolean;
   locationId?: string | null;
-}): Promise<Category & { timeSlots: CategoryTimeSlot[] }> {
+}): Promise<Category> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -122,7 +161,7 @@ export async function createCategory(data: {
 
   const now = new Date().toISOString();
 
-  return db.category.create({
+  const row = await db.category.create({
     data: {
       name: data.name,
       icon: data.icon,
@@ -135,11 +174,12 @@ export async function createCategory(data: {
       createdAt: now,
       updatedAt: now,
       timeSlots: {
-        create: data.timeSlots ?? [],
+        create: timeSlotsForWrite(data.timeSlots ?? []),
       },
     },
     include: { timeSlots: true },
   });
+  return { ...row, timeSlots: narrowTimeSlots(row.timeSlots) };
 }
 
 export async function updateCategory(
@@ -152,7 +192,7 @@ export async function updateCategory(
     isStrict?: boolean;
     locationId?: string | null;
   },
-): Promise<Category & { timeSlots: CategoryTimeSlot[] }> {
+): Promise<Category> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -169,7 +209,7 @@ export async function updateCategory(
     if (!location) throw new Error("Location not found");
   }
 
-  return db.category.update({
+  const row = await db.category.update({
     where: { id: categoryId },
     data: {
       name: data.name,
@@ -181,12 +221,13 @@ export async function updateCategory(
       ...(data.timeSlots !== undefined && {
         timeSlots: {
           deleteMany: {},
-          create: data.timeSlots,
+          create: timeSlotsForWrite(data.timeSlots),
         },
       }),
     },
     include: { timeSlots: true },
   });
+  return { ...row, timeSlots: narrowTimeSlots(row.timeSlots) };
 }
 
 export async function deleteCategory(
@@ -235,7 +276,7 @@ export async function deleteCategory(
 export async function moveCategory(
   categoryId: string,
   newParentId: string | null,
-): Promise<Category & { timeSlots: CategoryTimeSlot[] }> {
+): Promise<Category> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -271,7 +312,7 @@ export async function moveCategory(
     _max: { sortOrder: true },
   });
 
-  return db.category.update({
+  const row = await db.category.update({
     where: { id: categoryId },
     data: {
       parentId: newParentId,
@@ -280,6 +321,7 @@ export async function moveCategory(
     },
     include: { timeSlots: true },
   });
+  return { ...row, timeSlots: narrowTimeSlots(row.timeSlots) };
 }
 
 export async function reorderCategories(orderedIds: string[]): Promise<void> {
@@ -412,12 +454,12 @@ export async function fetchCategoryStats(): Promise<
 }
 
 export async function fetchCategoriesWithCounts(): Promise<
-  (Category & { timeSlots: CategoryTimeSlot[]; _count: { planners: number } })[]
+  (Category & { _count: { planners: number } })[]
 > {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
-  return db.category.findMany({
+  const rows = await db.category.findMany({
     where: { userId: session.user.id },
     include: {
       timeSlots: true,
@@ -425,4 +467,8 @@ export async function fetchCategoriesWithCounts(): Promise<
     },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
+  return rows.map((row) => ({
+    ...row,
+    timeSlots: narrowTimeSlots(row.timeSlots),
+  }));
 }

@@ -1,9 +1,9 @@
-import type { Category, CategoryTimeSlot } from "@/types/prisma";
+import type { Category, CategoryTimeWindow } from "@/types/prisma";
 import { OccupiedInterval } from "../../utils/intervalUtils";
 import { expandSlotForDay } from "./expandSlotForDay";
 
 function intervalIsInsideSlot(
-  catSlot: CategoryTimeSlot,
+  catSlot: CategoryTimeWindow,
   intervalStartMs: number,
   intervalEndMs: number,
   intervalDayStart: Date,

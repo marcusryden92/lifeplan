@@ -1,4 +1,5 @@
 import { Prisma } from "@/prisma/generated/client";
+import type { WeekDayIntegers } from "./calendarTypes";
 export { PlannerType, EventType, UserRole } from "@/prisma/generated/client";
 
 // SimpleEvent with runtime fields added to extendedProps
@@ -27,7 +28,10 @@ export type PlannerWithLocation = Prisma.PlannerGetPayload<{
   include: { location: true };
 }>;
 
-export type EventTemplate = Prisma.EventTemplateGetPayload<undefined>;
+type RawEventTemplate = Prisma.EventTemplateGetPayload<undefined>;
+export type EventTemplate = Omit<RawEventTemplate, "startDay"> & {
+  startDay: WeekDayIntegers;
+};
 
 export type EventExtendedProps = Prisma.EventExtendedPropsGetPayload<undefined>;
 
@@ -39,15 +43,26 @@ export type TravelTimeWithLocations = Prisma.TravelTimeGetPayload<{
   include: { fromLocation: true; toLocation: true };
 }>;
 
-export type Category = Prisma.CategoryGetPayload<{
-  include: { timeSlots: true };
-}>;
+type RawCategoryTimeWindow = Prisma.CategoryTimeWindowGetPayload<undefined>;
+export type CategoryTimeWindow = Omit<RawCategoryTimeWindow, "days"> & {
+  days: WeekDayIntegers[];
+};
 
-export type CategoryTimeSlot = Prisma.CategoryTimeSlotGetPayload<undefined>;
+type RawCategory = Prisma.CategoryGetPayload<{ include: { timeSlots: true } }>;
+export type Category = Omit<RawCategory, "timeSlots"> & {
+  timeSlots: CategoryTimeWindow[];
+};
 
-export type CategoryWithChildren = Prisma.CategoryGetPayload<{
+type RawCategoryWithChildren = Prisma.CategoryGetPayload<{
   include: { children: true; timeSlots: true };
 }>;
+export type CategoryWithChildren = Omit<
+  RawCategoryWithChildren,
+  "timeSlots" | "children"
+> & {
+  timeSlots: CategoryTimeWindow[];
+  children: Category[];
+};
 
 export type PlannerWithCategory = Prisma.PlannerGetPayload<{
   include: { category: true };

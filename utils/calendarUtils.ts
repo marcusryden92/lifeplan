@@ -15,6 +15,31 @@ import { dateTimeService } from "./calendar-generation/utils/dateTimeService";
 export const getWeekdayFromDate = (date: Date): WeekDayType =>
   dateTimeService.getWeekdayFromDate(date);
 
+const WEEKDAY_NAME_BY_INT: readonly WeekDayType[] = [
+  "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+];
+const WEEKDAY_INT_BY_NAME: Record<WeekDayType, WeekDayIntegers> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+};
+
+export const weekdayToInt = (d: WeekDayType): WeekDayIntegers =>
+  WEEKDAY_INT_BY_NAME[d];
+
+export const intToWeekday = (i: WeekDayIntegers): WeekDayType =>
+  WEEKDAY_NAME_BY_INT[i];
+
 export const shiftDate = (date: Date, days: number): Date =>
   dateTimeService.shiftDays(date, days);
 
