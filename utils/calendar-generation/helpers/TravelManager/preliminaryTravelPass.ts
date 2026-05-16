@@ -106,11 +106,13 @@ function processSlot(
     return 1;
   }
 
-  return travel.placeAtSlotStart
-    ? handleReturn(
+  return !travel.placeAtSlotStart
+    ? handleOutbound(
         slots,
         slotIndex,
         travelManager,
+        categories,
+        bufferTimeMinutes,
         travel.prevLocation,
         travel.nextLocation,
         travel.travelMinutes,
@@ -118,12 +120,10 @@ function processSlot(
         result,
         categoryBoundaryTrespasses,
       )
-    : handleOutbound(
+    : handleReturn(
         slots,
         slotIndex,
         travelManager,
-        categories,
-        bufferTimeMinutes,
         travel.prevLocation,
         travel.nextLocation,
         travel.travelMinutes,

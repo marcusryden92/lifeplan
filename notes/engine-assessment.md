@@ -212,4 +212,46 @@ buildAvailableSlots()
         @ after all boundaries folded in
         @ - AvailableSlot[] split at every category boundary in range
 
-        
+preliminaryTravelPass()
+    
+    for every AvailableSlot[]:
+
+        -> processSlot()
+
+            -> TravelManager
+
+                -> createLegTracker()
+                    - openLegs: {from, to}[]
+
+                    - track(from, to)
+                        - mirror found → splice, return true
+                        - chain start found → splice tail, return true
+                        - else → push, return false
+
+                    - reset()
+
+                    @ returns { track, reset }
+
+            
+                -> resolveTravel()
+                    - check if slot has a prev and next location and that they
+                      aren't the same
+                    - pass prev and next location into legTracker to check if
+                      travel should be placed at start or end of slot
+                    - get travel time from travel matrix
+
+                    @ return 
+
+                    ```typescript
+                    type TravelProcessingAction = {
+                        prevLocation: string;
+                        nextLocation: string;
+                        placeAtSlotStart: boolean;
+                        travelMinutes: number;
+                    };
+                    ```
+                
+        if placeAtSlotStart == false -> handleOutbound()
+        if placeAtSlotStart == true -> handleReturn()
+
+            -> handleOutbound()
