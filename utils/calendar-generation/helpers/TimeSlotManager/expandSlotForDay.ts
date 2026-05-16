@@ -5,14 +5,14 @@ import { hhmmToMinutes } from "../../utils/dateTimeService";
 // specific day. Returns null when the rule does not apply to that day-of-week.
 // Handles overnight slots (endTime <= startTime → period extends past midnight).
 export function expandSlotForDay(
-  catSlot: CategoryTimeSlot,
+  timeSlot: CategoryTimeSlot,
   dayStart: Date,
 ): { start: Date; end: Date } | null {
   const dow = dayStart.getDay();
-  if (!catSlot.days.some((d) => d === dow)) return null;
+  if (!timeSlot.days.some((d) => d === dow)) return null;
 
-  const startMin = hhmmToMinutes(catSlot.startTime);
-  let endMin = hhmmToMinutes(catSlot.endTime);
+  const startMin = hhmmToMinutes(timeSlot.startTime);
+  let endMin = hhmmToMinutes(timeSlot.endTime);
   if (endMin <= startMin) endMin += 24 * 60;
 
   const start = new Date(dayStart);

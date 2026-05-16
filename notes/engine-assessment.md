@@ -164,23 +164,54 @@ buildAvailableSlots()
 
     -> splitSlotsAtCategoryBoundaries()
 
-        ```typescript
-        type BoundaryPeriod = {
-            categoryId: string;
-            locationId: string | null;
-            isStrict: boolean;
-            };
-
-        type CategoryBoundary = {
-            boundaryMs: number;
-            leaving: BoundaryPeriod | null;
-            entering: BoundaryPeriod | null;
-            };
-        ```
-
         -> getAllBoundaries()
             - takes in CategoryConstraints
             - creates two Maps:
-                enteringAt: Map<number, BoundaryPeriod>
-                leavingAt:  Map<number, BoundaryPeriod>
+                enteringAt: Map<number, ConstraintInfo>
+                leavingAt:  Map<number, ConstraintInfo>
+
+            - get the current day at 00:00
+
+            - while loop that starts at current day and continues until
+              day is greater than range end
+
+              {
+
+                - loops every CategoryConstraint
+                    - create a category info object for that category (ConstraintInfo)
+
+                    ```typescript
+                    
+                        type ConstraintInfo = {
+                            categoryId: string;
+                            locationId: string | null;
+                            isStrict: boolean;
+                        };
+                    ```
+                    - loops each time slot of that CategoryConstraint
+                    
+                    -> expandSlotForDays()
+                        - convert the time slot from format hh:mm
+                          to a period: { start: Date; end: Date } for the current day
+
+                    - get unix ms for start
+                    - get unix ms for end
+
+                    - set enteringAt    <startMs, ConstraintInfo>
+                    - set leavingAt     <endMs, ConstraintInfo> 
+
+                    - increment day loop
+              }
+
+              - merge enteringAt and leavingAt to one array with 
+
+                ```typescript
+                type CategoryBoundary = {
+                    boundaryMs: number;
+                    leaving: ConstraintInfo | null;
+                    entering: ConstraintInfo | null;
+                };
+                ```
+                
+
         

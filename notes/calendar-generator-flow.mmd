@@ -1,0 +1,206 @@
+flowchart TD
+  %% Each subgraph is a container (class / module).
+  %% Function nodes live inside their container.
+  %% Every arrow = "what runs next" — follow the line top-to-bottom.
+  %% Repeated visits to the same function get a numeric suffix so the trace
+  %% stays unambiguous (#1, #2 ... are the same function, called again).
+
+  subgraph CG[CalendarGenerator]
+    gen([generate])
+  end
+
+  subgraph CV[CalendarValidator]
+    cv1[validateGenerationInput]
+  end
+
+  subgraph EA[EventAssembler]
+    ea1[buildMemoizedEvents]
+    ea2[buildPlanEvents]
+    ea3[buildCompletedEvents]
+    ea4[buildCategoryWrapperEvents]
+    ea5[assembleFinalEvents]
+    ea6[markTrespassingEvents]
+    ea7[markCategoryBoundaryTrespasses]
+  end
+
+  subgraph DT[dateTimeService]
+    dt1["getWeekFirstDate #1"]
+    dt2["shiftDays #1"]
+    dt3["getWeekFirstDate #2"]
+    dt4["shiftDays #2  (×7 days)"]
+    dt5["getWeekFirstDate #3"]
+  end
+
+  subgraph TE[TemplateExpander]
+    te1[expandTemplates]
+    te2[getPerTemplateMasks]
+    te3[calculateLargestGap]
+  end
+
+  subgraph LM[LocationMapper]
+    lm1[buildLocationMap]
+  end
+
+  subgraph TSM[TimeSlotManager  + helpers]
+    ts1[buildAvailableSlots]
+    ts2[inheritLocationFromCategoryPeriods]
+    ts3a["expandSlotForDay #1"]
+    ts4[splitSlotsAtCategoryBoundaries]
+    ts3b["expandSlotForDay #2"]
+    ts5["getDaySlots  (×7)"]
+    ts6[findAllFittingSlots]
+    ts7[reserveSlotWithTravel]
+    ts8["buildAvailableSlots #2  (next week)"]
+    ts3c["expandSlotForDay #3  (wrappers)"]
+  end
+
+  subgraph IU[intervalUtils]
+    iu1[eventsToIntervals]
+    iu2[masksToIntervals]
+    iu3[findGaps]
+    iu4[detectTrespassingEvents]
+  end
+
+  subgraph TM[TravelManager  + helpers]
+    tm1[preliminaryTravelPass]
+    tm2["getTravelTime #1"]
+    tm3[travelPlacement]
+    tm4[travelExtension]
+    tm5[categoryLayoverBypass]
+    tm6a["reserveStandaloneTravelBefore #1"]
+    tm7a["reserveStandaloneTravelAfter #1"]
+    tm8[reserveInsufficientTravelBefore]
+    tm9[reserveInsufficientTravelAfter]
+    tm10["getTravelTime #2"]
+    tm11[findAdjacentTravelTo]
+    tm6b["reserveStandaloneTravelBefore #2"]
+    tm7b["reserveStandaloneTravelAfter #2"]
+    tm12["getTravelTime #3"]
+    tm13["preliminaryTravelPass #2  (next week)"]
+    tm14[generateTravelEvents]
+  end
+
+  subgraph PS[PrioritySorter]
+    ps1[sortByPriorityAndConstraints]
+    ps2[calculateTaskUrgency]
+  end
+
+  subgraph SCH[Scheduler  + helpers]
+    sc1[scheduleTasksAndGoals]
+    sc2[scheduleSingleTask]
+    sc3[scheduleTask]
+    sc4[validateTask]
+    sc5[findValidSlots]
+    sc6[selectBestSlot]
+    sc7[reserveTaskSlot]
+    sc8[buildTaskEvent]
+    sc9[scheduleGoal]
+    sc10[expandSlotsForNextWeek]
+    sc11[getMetrics]
+  end
+
+  subgraph STR[Strategies]
+    st1[CompositeStrategy.score]
+    st2[EarliestSlotStrategy.score]
+    st3[LocationGroupingStrategy.score]
+  end
+
+  subgraph GTH[goalPageHandlers + taskHelpers]
+    gt1[getSortedTreeBottomLayer]
+    gt2[taskIsCompleted]
+  end
+
+  subgraph LOG[loggingUtils]
+    lg1[filterEventsByLogRange]
+    lg2[logCalendarDebugInfo]
+  end
+
+  %% ---------- The trace ----------
+
+  gen --> cv1
+  cv1 --> ea1
+  ea1 --> ea2
+  ea2 --> ea3
+  ea3 --> dt1
+  dt1 --> dt2
+  dt2 --> te1
+  te1 --> te2
+  te2 --> te3
+  te3 --> lm1
+  lm1 --> ts1
+
+  %% buildAvailableSlots body
+  ts1 --> iu1
+  iu1 --> iu2
+  iu2 --> ts2
+  ts2 --> ts3a
+  ts3a --> iu3
+  iu3 --> ts4
+  ts4 --> ts3b
+
+  %% preliminaryTravelPass body
+  ts3b --> tm1
+  tm1 --> tm2
+  tm2 --> tm3
+  tm3 --> tm4
+  tm4 --> tm5
+  tm5 --> tm6a
+  tm6a --> tm7a
+  tm7a --> tm8
+  tm8 --> tm9
+
+  %% prepareSchedulingContext (per-day slot collection)
+  tm9 --> dt3
+  dt3 --> dt4
+  dt4 --> ts5
+
+  %% prepareCandidates
+  ts5 --> ps1
+  ps1 --> ps2
+
+  %% scheduling loop entry
+  ps2 --> dt5
+  dt5 --> sc1
+  sc1 --> sc2
+  sc2 --> sc3
+
+  %% scheduleTask 5-phase pipeline (TASK path)
+  sc3 --> sc4
+  sc4 --> sc5
+  sc5 --> ts6
+  ts6 --> sc6
+  sc6 --> st1
+  st1 --> st2
+  st2 --> st3
+  st3 --> tm10
+  tm10 --> tm11
+  tm11 --> sc7
+  sc7 --> ts7
+  ts7 --> tm6b
+  tm6b --> tm7b
+  tm7b --> tm12
+  tm12 --> sc8
+
+  %% GOAL path branches off scheduleTask and rejoins at expandSlotsForNextWeek
+  sc3 -. "if candidate is GOAL" .-> sc9
+  sc9 --> gt1
+  gt1 --> gt2
+  gt2 -. "for each child task" .-> sc3
+
+  %% End-of-iteration: maybe advance a week, then exit loop
+  sc8 -. "candidates remain → next week" .-> sc10
+  sc10 --> ts8
+  ts8 --> tm13
+  tm13 -. "loop done" .-> tm14
+
+  %% Finalization
+  tm14 --> lg1
+  lg1 --> ea4
+  ea4 --> ts3c
+  ts3c --> ea5
+  ea5 --> ea6
+  ea6 --> iu4
+  iu4 --> ea7
+  ea7 --> sc11
+  sc11 --> lg2
+  lg2 --> done([return SchedulingResult])
