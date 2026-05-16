@@ -144,8 +144,6 @@ export class CalendarGenerator {
       input.categories || [],
     );
 
-    const scheduledCategories = this.scheduledCategories;
-
     // Phase 6a: Build available slots over the full scheduling timeline
     const schedulingStartDate = setTimeOnDate(currentDate, "00:00");
     const builtSlots = buildAvailableSlots({
@@ -153,7 +151,7 @@ export class CalendarGenerator {
       startDate: schedulingStartDate,
       existingEvents: filteredEvents,
       templateMasks: perTemplateMasks,
-      categoryConstraints: scheduledCategories,
+      categories: this.scheduledCategories,
       plannerLocationMap,
       enableLogging,
     });
@@ -162,7 +160,7 @@ export class CalendarGenerator {
     const categoryBoundaryTrespasses: CategoryBoundaryTrespass[] = [];
     const slotsWithTravel = preliminaryTravelPass(
       !!plannerLocationMap,
-      scheduledCategories,
+      this.scheduledCategories,
       timeSlotManager.occupiedSlots,
       travelManager,
       this.bufferTimeMinutes,
@@ -190,7 +188,7 @@ export class CalendarGenerator {
       filteredEvents,
       timeSlotManager,
       this.metrics,
-      scheduledCategories,
+      this.scheduledCategories,
       plannerLocationMap,
       plannerCategoryMap,
     );
@@ -219,7 +217,7 @@ export class CalendarGenerator {
       largestTemplateGap,
       perTemplateMasks,
       plannerLocationMap,
-      scheduledCategories,
+      this.scheduledCategories,
     );
 
     // Phase 11: Assemble final events
@@ -231,7 +229,7 @@ export class CalendarGenerator {
       input.userId,
       travelManager,
       context,
-      scheduledCategories,
+      this.scheduledCategories,
       schedulingStartDate,
       schedulingEndDate,
       plannerLocationMap,

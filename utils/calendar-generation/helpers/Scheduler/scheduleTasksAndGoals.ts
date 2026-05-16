@@ -26,7 +26,7 @@ export function scheduleTasksAndGoals(
   perTemplateMasks: PerTemplateMask[],
   context: SchedulingContext,
   plannerLocationMap: Map<string, string | null>,
-  categoryConstraints: Category[],
+  categories: Category[],
 ): {
   success: boolean;
   newEvents: SimpleEvent[];
@@ -91,7 +91,7 @@ export function scheduleTasksAndGoals(
         context,
         perTemplateMasks,
         plannerLocationMap,
-        categoryConstraints,
+        categories,
         slotManager,
         travelManager,
       );

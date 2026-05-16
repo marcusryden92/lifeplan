@@ -47,7 +47,7 @@ export function prepareSchedulingContext(
     scheduledEvents,
     availableMinutesPerWeek,
     metrics,
-    categoryConstraints: categoryById,
+    categories: categoryById,
     plannerLocationMap,
     plannerCategoryMap,
   };

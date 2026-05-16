@@ -23,8 +23,8 @@ export function buildTaskEvent(
   const effectiveCategoryId =
     context.plannerCategoryMap?.get(task.id) ?? task.categoryId;
 
-  if (effectiveCategoryId && context.categoryConstraints) {
-    const constraint = context.categoryConstraints.get(effectiveCategoryId);
+  if (effectiveCategoryId && context.categories) {
+    const constraint = context.categories.get(effectiveCategoryId);
 
     if (constraint && constraint.timeSlots.length > 0) {
       // Task is in a category with time constraints

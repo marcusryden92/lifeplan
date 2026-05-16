@@ -27,7 +27,7 @@ export function tryBypassOutboundCategoryLayover(
   slots: AvailableSlot[],
   slotIndex: number,
   travelManager: TravelManager,
-  categoryConstraints: Category[],
+  categories: Category[],
   bufferTimeMinutes: number,
   previousLocation: string,
   categoryLocation: string,
@@ -45,7 +45,7 @@ export function tryBypassOutboundCategoryLayover(
     return { handled: false, slotsConsumed: 0 };
   if (!nextSlot.nextLocationId || nextSlot.nextLocationId === categoryLocation)
     return { handled: false, slotsConsumed: 0 };
-  const categoryPeriodEnd = findCategoryPeriodEnd(nextSlot, categoryConstraints);
+  const categoryPeriodEnd = findCategoryPeriodEnd(nextSlot, categories);
   if (
     categoryPeriodEnd === undefined ||
     nextSlot.end.getTime() >= categoryPeriodEnd.getTime()

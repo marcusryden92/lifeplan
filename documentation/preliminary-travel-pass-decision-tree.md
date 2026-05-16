@@ -8,7 +8,7 @@ A reference for the dispatch and ladder logic in
 ```
 preliminaryTravelPass(
   hasPlannerLocationMap:      boolean,
-  categoryConstraints:        Category[],
+  categories:        Category[],
   occupiedSlots:              (OccupiedSlot | TravelSlot)[]      [MUTATED]
   travelManager:              TravelManager,
   bufferTimeMinutes:          number,

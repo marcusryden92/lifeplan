@@ -99,7 +99,7 @@ export class Scheduler {
     largestTemplateGap: number,
     perTemplateMasks: PerTemplateMask[],
     plannerLocationMap: Map<string, string | null>,
-    categoryConstraints: Category[],
+    categories: Category[],
   ): {
     success: boolean;
     newEvents: SimpleEvent[];
@@ -117,7 +117,7 @@ export class Scheduler {
       perTemplateMasks,
       this.context,
       plannerLocationMap,
-      categoryConstraints,
+      categories,
     );
   }
 

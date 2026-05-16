@@ -27,8 +27,8 @@ export function findValidSlots(
     context.plannerCategoryMap?.get(task.id) ?? task.categoryId;
 
   const constraintForTask =
-    effectiveCategoryId && context.categoryConstraints
-      ? context.categoryConstraints.get(effectiveCategoryId) || undefined
+    effectiveCategoryId && context.categories
+      ? context.categories.get(effectiveCategoryId) || undefined
       : undefined;
 
   // Find all slots that can fit the base requirement (duration + buffer)

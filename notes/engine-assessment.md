@@ -80,39 +80,6 @@ buildLocationMap()
 
     @ returns:
     @ - locationMap: Map<string, string | null>
-        
-buildCategoryConstraints()
-
-    -> buildCategoryConstraintMap()
-        - loop through every category
-        - create a CategoryConstraint:
-
-            ```typescript
-            interface CategoryConstraint {
-                id: string;
-                name: string;
-                color?: string | null;
-                isStrict: boolean;
-                locationId?: string | null;
-                    timeSlots: CategoryTimeSlot[];
-            };
-
-                    type CategoryTimeSlot {
-                        days: WeekDayIntegers[];
-                        startTime: string;
-                        endTime: string;
-                    };
-            ```
-
-        - add category id and category constraint to a map
-            
-        @ return the map: Map<string, CategoryConstraint>()
-
-    - categoryConstraintsList = Array.from(categoryConstraintMap.values())
-
-    @ returns:
-    @ - categoryConstraintMap: Map<string, CategoryConstraint>
-    @ - categoryConstraintsList: CategoryConstraint[]
 
 buildAvailableSlots()
     # Why are we already adding template events 
@@ -165,7 +132,7 @@ buildAvailableSlots()
     -> splitSlotsAtCategoryBoundaries()
 
         -> getAllBoundaries()
-            - takes in CategoryConstraints
+            - takes in categories
             - creates two Maps:
                 enteringAt: Map<number, ConstraintInfo>
                 leavingAt:  Map<number, ConstraintInfo>
@@ -177,7 +144,7 @@ buildAvailableSlots()
 
               {
 
-                - loops every CategoryConstraint
+                - loops every Category
                     - create a category info object for that category (ConstraintInfo)
 
                     ```typescript
@@ -188,10 +155,10 @@ buildAvailableSlots()
                             isStrict: boolean;
                         };
                     ```
-                    - loops each time slot of that CategoryConstraint
+                    - loops each time window of that Category
                     
                     -> expandSlotForDays()
-                        - convert the time slot from format hh:mm
+                        - convert the time window from format hh:mm
                           to a period: { start: Date; end: Date } for the current day
 
                     - get unix ms for start

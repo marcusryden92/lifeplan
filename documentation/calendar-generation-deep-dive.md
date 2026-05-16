@@ -221,7 +221,7 @@ const builtSlots = buildAvailableSlots({
   startDate: setTimeOnDate(currentDate, "00:00"),
   existingEvents: filteredEvents,
   templateMasks: perTemplateMasks,
-  categoryConstraints: categoryConstraintsList,
+  categories: categoriesList,
   plannerLocationMap,
   enableLogging,
 });
@@ -230,7 +230,7 @@ this.slotManager.availableSlots.push(...builtSlots);
 // Phase 6b: Carve travel slots in a separate pass after slot building
 const carved = preliminaryTravelPass(
   !!plannerLocationMap,
-  categoryConstraintsList,
+  categoriesList,
   this.slotManager.occupiedSlots,
   travelManager,
   this.bufferTimeMinutes,
@@ -349,7 +349,7 @@ const allEvents = assembleFinalEvents(
   input.userId,
   travelManager,
   context,
-  categoryConstraintsList,
+  categoriesList,
   schedulingStartDate,
   schedulingEndDate,
   plannerLocationMap,
@@ -710,7 +710,7 @@ interface SchedulingContext {
   scheduledEvents: SimpleEvent[]; // Mutable - events added here
   availableMinutesPerWeek: number;
   metrics: SchedulingMetrics;
-  categoryConstraints?: Map<string, Category>;
+  categories?: Map<string, Category>;
   plannerLocationMap?: Map<string, string | null>;
 }
 ```

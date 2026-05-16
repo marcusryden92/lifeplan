@@ -12,7 +12,7 @@ export function expandSlotsForNextWeek(
   context: SchedulingContext,
   perTemplateMasks: PerTemplateMask[],
   plannerLocationMap: Map<string, string | null>,
-  categoryConstraints: Category[],
+  categories: Category[],
   slotManager: TimeSlotManager,
   travelManager: TravelManager,
 ): void {
@@ -41,14 +41,14 @@ export function expandSlotsForNextWeek(
     startDate: weekStartDate,
     existingEvents: weekEvents,
     templateMasks: perTemplateMasks,
-    categoryConstraints,
+    categories,
     plannerLocationMap,
     endDateOverride: weekEndDate,
   });
 
   const slotsWithTravel = preliminaryTravelPass(
     !!plannerLocationMap,
-    categoryConstraints,
+    categories,
     slotManager.occupiedSlots,
     travelManager,
     slotManager.bufferTimeMinutes,

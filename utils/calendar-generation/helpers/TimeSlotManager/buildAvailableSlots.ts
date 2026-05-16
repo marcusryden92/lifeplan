@@ -16,7 +16,7 @@ interface BuildSlotsOptions {
   startDate: Date;
   existingEvents: SimpleEvent[];
   templateMasks: PerTemplateMask[];
-  categoryConstraints: Category[];
+  categories: Category[];
   plannerLocationMap?: Map<string, string | null>;
   enableLogging?: boolean;
   endDateOverride?: Date;
@@ -27,7 +27,7 @@ export function buildAvailableSlots({
   startDate,
   existingEvents,
   templateMasks,
-  categoryConstraints,
+  categories,
   plannerLocationMap,
   enableLogging = false,
   endDateOverride,
@@ -54,7 +54,7 @@ export function buildAvailableSlots({
   // Assign location to locationless intervals that fall within a category period
   // that has a location. Checked day-by-day to avoid global period expansion.
   const adjustedIntervals = inheritLocationFromCategoryPeriods(
-    categoryConstraints,
+    categories,
     occupiedIntervals,
   );
 
@@ -77,5 +77,5 @@ export function buildAvailableSlots({
     startingLocation,
   );
 
-  return splitSlotsAtCategoryBoundaries(categoryConstraints, gaps);
+  return splitSlotsAtCategoryBoundaries(categories, gaps);
 }
