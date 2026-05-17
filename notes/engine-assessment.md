@@ -255,3 +255,143 @@ preliminaryTravelPass()
         if placeAtSlotStart == true -> handleReturn()
 
             -> handleOutbound()
+
+                - get slot
+                - get nextSlot
+                - get bufferTime
+
+                - get travelMs
+                - get slotMs
+
+                -> tryBypassOutboundCategoryLayover()
+
+                    pattern: [non-cat] → [contiguous cat, mid-period, onward to 3rd loc]
+                             collapses prev → [cat] → next   into   prev → next
+
+                    - eligibility:
+                        - slot is not a category
+                        - nextSlot is a category, contiguous
+                        - nextSlot.nextLocationId exists and != categoryLocation
+                        - cat period extends past nextSlot.end
+                          (else normal placement handles outgoing
+                           at the period boundary)
+
+                    - decide — two independent triggers, either fires:
+                        - categorySlotCannotHoldOutgoing
+                            cat→destination travel > nextSlot duration
+                        - combinedSpanCannotHoldBoth
+                            toCat + buffer + catToDest > slot + nextSlot
+
+                    - emit anchor depends on which trigger fired:
+
+                        - category too small  → anchor at span END
+                            -> emitDirectTravelAnchoredAtSpanEnd()
+                                preserves leftover before travel
+                                consumes 2 slots
+                        
+                        - combined too tight  → anchor at span START
+                            -> emitDirectTravelAnchoredAtSpanStartTrimmingNext()
+                                trims next (cat) slot in place
+                                consumes 2 if travel reaches spanEnd, else 1
+
+                    @ returns { handled: boolean; slotsConsumed: number }
+
+                if bypass.handled → return slotsConsumed
+
+                - canCenterOnBoundary?
+                    - both this and next slot are categories
+                    - contiguous
+                    - travel/2 fits in each side
+
+                    -> placeTravelCenteredOnBoundary()
+                        - half before boundary, half after
+                        - leftover fragment before travel pushed if any
+                        - mutates next slot's start to travelEnd
+                    return 1
+
+                if travelMs < slotMs:
+                    -> placeTravelAtSlotEnd()
+                        - travel at slot.end - travelMs … slot.end
+                        - leftover at slot.start … travelStart (if any)
+
+                if travelMs == slotMs:
+                    -> tryShiftTravelBackward(allowAcrossUnrelatedSlots=true)
+                        free win — borrow buffer from previous result slot
+
+                        - previous slot must be available
+                        - allowAcrossUnrelated=true → ok to shift into a category
+                        - newTravelEnd   = slot.end - buffer
+                          newTravelStart = newTravelEnd - travelMs
+                        - need adjacency + room in previous slot
+                        - emit travel, shrink (or pop) previous slot
+
+                        if shifted → done
+
+                    - if slot is a category → trespass, don't consume:
+                        push CategoryBoundaryTrespass { boundary: "end" }
+                        push slot to result as-is
+                        (wrapper's bottom border renders red)
+
+                    - else fill slot exactly:
+                        -> placeTravelAtSlotEnd()
+
+                if travelMs > slotMs:
+                    -> tryShiftTravelBackward(allowAcrossUnrelatedSlots=false)
+                        last-resort variant — stricter:
+                        - refuses if previous slot is a category
+                          (don't consume cat time to fit oversized travel)
+                        - refuses if BOTH slot and previous are non-cat
+                          (don't stretch travel across unrelated regions)
+
+                        if shifted → done
+
+                    -> tryExtendForwardIntoCategory()
+                        - eligible: current non-cat, next is contiguous cat
+                        - emit travel from slot.start running past slot.end
+                        - trim nextSlot.start = travelEnd + buffer
+
+                        if extended → done
+
+                    - if slot is a category → trespass:
+                        push CategoryBoundaryTrespass { boundary: "end" }
+                        push slot to result as-is
+
+                    - else nothing fit:
+                        -> pushInsufficientTravel()
+                            marks slot insufficient (renders red on calendar)
+
+            -> handleReturn()
+
+                - get slot
+                - get nextSlot
+
+                -> tryBypassReturnCategoryLayover()
+
+                    pattern: [cat, returning from foreign] → [non-cat leaving cat-loc for 3rd loc]
+                             collapses foreign → [cat] → final   into   foreign → final
+
+                    - eligibility (tightness is implicit in the duration check):
+                        - slot is a category
+                        - returnTravelMinutes >= slot duration
+                        - nextSlot exists, non-category, contiguous
+                        - nextSlot.prevLocationId == categoryLocation
+                        - nextSlot.nextLocationId exists
+
+                    -> emitDirectTravelAnchoredAtSpanStartWithLeftover()
+                        - foreign → final anchored at slot.start
+                        - leftover at end → available time at destination
+
+                    @ returns { handled: true, slotsConsumed: 2 }
+
+                if bypass.handled → return slotsConsumed
+
+                - get travelMs, slotMs
+                - if slot is a category and travelMs >= slotMs → trespass:
+                    push CategoryBoundaryTrespass { boundary: "start" }
+                    push slot to result as-is
+
+                -> placeTravelAtSlotStart()
+                    - travel at slot.start … slot.start + travelMs
+                    - if doesn't fit → pushInsufficientTravel
+                    - leftover at travelEnd … slot.end (if any)
+
