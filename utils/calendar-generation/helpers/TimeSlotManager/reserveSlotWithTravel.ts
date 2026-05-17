@@ -1,6 +1,7 @@
 import {
   AvailableSlot,
   OccupiedSlot,
+  Slot,
   TimeSlot,
   TravelSlot,
 } from "../../models/TimeSlot";
@@ -10,8 +11,7 @@ import { SCHEDULING_CONFIG } from "../../constants";
 import { v4 as uuidv4 } from "uuid";
 
 export function reserveSlotWithTravel(
-  availableSlots: AvailableSlot[],
-  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  slots: Slot[],
   bufferTimeMinutes: number,
   start: Date,
   end: Date,
@@ -26,6 +26,16 @@ export function reserveSlotWithTravel(
   absorbPrevTravelAfter?: boolean,
   reclaimPrecedingGapTravel?: TravelSlot | null,
 ): { success: boolean } {
+  // Operate on local typed views of the unified slots array. Items are shared
+  // by reference, so in-place mutations propagate; only structural changes
+  // (splice/push) need a merge step at the end.
+  const availableSlots: AvailableSlot[] = slots.filter(
+    (s): s is AvailableSlot => s.type === "available",
+  );
+  const occupiedSlots: (OccupiedSlot | TravelSlot)[] = slots.filter(
+    (s): s is OccupiedSlot | TravelSlot => s.type !== "available",
+  );
+
   const bufferMs = bufferTimeMinutes * 60000;
 
   if (absorbPrevTravelAfter && taskLocationId) {
@@ -117,7 +127,7 @@ export function reserveSlotWithTravel(
       durationMinutes: Math.floor(
         (fullStart.getTime() - slot.start.getTime()) / 60000,
       ),
-      isAvailable: true,
+      type: "available",
       prevLocationId: slot.prevLocationId,
       nextLocationId: taskLocationId ?? slot.nextLocationId,
       categoryId: slot.categoryId,
@@ -158,7 +168,7 @@ export function reserveSlotWithTravel(
     start,
     end,
     durationMinutes: Math.floor((end.getTime() - start.getTime()) / 60000),
-    isAvailable: false,
+    type: "occupied",
     eventId,
     plannerType,
     eventType: EventType.planner,
@@ -223,7 +233,7 @@ export function reserveSlotWithTravel(
       durationMinutes: Math.floor(
         (freeSlotEnd.getTime() - freeSlotStart.getTime()) / 60000,
       ),
-      isAvailable: true,
+      type: "available",
       prevLocationId: freeSlotPrevLocation,
       nextLocationId: slot.nextLocationId,
       categoryId: slot.categoryId,
@@ -269,11 +279,20 @@ export function reserveSlotWithTravel(
   availableSlots.splice(
     slotIndex,
     1,
-    ...newSlots.filter((s): s is AvailableSlot => s.isAvailable),
+    ...newSlots.filter((s): s is AvailableSlot => s.type === "available"),
   );
   occupiedSlots.push(
-    ...newSlots.filter((s): s is OccupiedSlot | TravelSlot => !s.isAvailable),
+    ...newSlots.filter(
+      (s): s is OccupiedSlot | TravelSlot => s.type !== "available",
+    ),
   );
+
+  // Merge local views back into the unified slots array.
+  slots.length = 0;
+  const merged: Slot[] = [];
+  merged.push(...availableSlots, ...occupiedSlots);
+  merged.sort((a, b) => a.start.getTime() - b.start.getTime());
+  slots.push(...merged);
 
   return { success: true };
 }

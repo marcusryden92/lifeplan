@@ -1,17 +1,16 @@
-import { OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
-import { isTravelSlot } from "../../utils/timeSlotUtils";
+import { Slot } from "../../models/TimeSlot";
 
 export function findAdjacentTravelTo(
-  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  slots: Slot[],
   bufferTimeMinutes: number,
   nearTime: Date,
   toLocationId: string,
 ): Date | null {
   const searchWindowMs = bufferTimeMinutes * 60000 + 10 * 60 * 1000;
 
-  for (const slot of occupiedSlots) {
+  for (const slot of slots) {
     if (
-      isTravelSlot(slot) &&
+      slot.type === "travel" &&
       slot.travelToLocationId === toLocationId &&
       Math.abs(slot.start.getTime() - nearTime.getTime()) <= searchWindowMs
     ) {

@@ -6,7 +6,7 @@
  */
 
 import { SimpleEvent } from "@/types/prisma";
-import { AvailableSlot, OccupiedSlot, TravelSlot } from "../models/TimeSlot";
+import { AvailableSlot, Slot, TravelSlot } from "../models/TimeSlot";
 import { TimeSlotManager } from "./TimeSlotManager";
 import {
   TravelTimeEntry,
@@ -41,11 +41,9 @@ export class TravelManager {
     this.legTracker = createLegTracker();
   }
 
-  private get availableSlots(): AvailableSlot[] {
-    return this.slotManager.availableSlots;
-  }
-  private get occupiedSlots(): (OccupiedSlot | TravelSlot)[] {
-    return this.slotManager.occupiedSlots;
+  /** Mutable reference to the unified slots array. */
+  private get slots(): Slot[] {
+    return this.slotManager.slots;
   }
 
   /**
@@ -115,7 +113,7 @@ export class TravelManager {
     travelMinutes: number,
   ): boolean {
     return canPlaceStandaloneTravelBefore(
-      this.availableSlots,
+      this.slots,
       this.bufferTimeMinutes,
       travelEnd,
       travelMinutes,
@@ -137,8 +135,7 @@ export class TravelManager {
     force: boolean = false,
   ): { success: boolean } {
     return reserveStandaloneTravelBefore(
-      this.availableSlots,
-      this.occupiedSlots,
+      this.slots,
       this.bufferTimeMinutes,
       travelEnd,
       travelMinutes,
@@ -163,8 +160,7 @@ export class TravelManager {
     force: boolean = false,
   ): { success: boolean } {
     return reserveStandaloneTravelAfter(
-      this.availableSlots,
-      this.occupiedSlots,
+      this.slots,
       this.bufferTimeMinutes,
       travelStart,
       travelMinutes,
@@ -186,8 +182,7 @@ export class TravelManager {
     toLocationId: string,
   ): { success: boolean } {
     return reserveInsufficientTravelBefore(
-      this.availableSlots,
-      this.occupiedSlots,
+      this.slots,
       this.bufferTimeMinutes,
       travelEnd,
       requiredTravelMinutes,
@@ -208,8 +203,7 @@ export class TravelManager {
     toLocationId: string,
   ): { success: boolean } {
     return reserveInsufficientTravelAfter(
-      this.availableSlots,
-      this.occupiedSlots,
+      this.slots,
       this.bufferTimeMinutes,
       travelStart,
       requiredTravelMinutes,
@@ -224,7 +218,7 @@ export class TravelManager {
    */
   findAdjacentTravelTo(nearTime: Date, toLocationId: string): Date | null {
     return findAdjacentTravelTo(
-      this.occupiedSlots,
+      this.slots,
       this.bufferTimeMinutes,
       nearTime,
       toLocationId,
@@ -237,7 +231,7 @@ export class TravelManager {
    */
   findPrecedingGapTravel(slotStart: Date): TravelSlot | null {
     return findPrecedingGapTravel(
-      this.occupiedSlots,
+      this.slots,
       this.bufferTimeMinutes,
       slotStart,
     );
@@ -252,7 +246,7 @@ export class TravelManager {
     fromLocationId: string,
   ): TravelSlot | null {
     return findAdjacentTravelFrom(
-      this.occupiedSlots,
+      this.slots,
       this.bufferTimeMinutes,
       nearTime,
       fromLocationId,
@@ -260,10 +254,10 @@ export class TravelManager {
   }
 
   getAllTravelSlots(): TravelSlot[] {
-    return getAllTravelSlots(this.occupiedSlots);
+    return getAllTravelSlots(this.slots);
   }
 
   generateTravelEvents(userId: string): SimpleEvent[] {
-    return generateTravelEvents(this.occupiedSlots, userId);
+    return generateTravelEvents(this.slots, userId);
   }
 }

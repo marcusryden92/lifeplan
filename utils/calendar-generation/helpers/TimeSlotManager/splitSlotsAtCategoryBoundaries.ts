@@ -90,7 +90,7 @@ function splitSlot(
           start: slot.start,
           end: new Date(boundaryMs),
           durationMinutes: beforeDuration,
-          isAvailable: true,
+          type: "available",
           prevLocationId: slot.prevLocationId,
           nextLocationId:
             entering?.locationId ?? leaving?.locationId ?? slot.nextLocationId,
@@ -113,7 +113,7 @@ function splitSlot(
           start: new Date(boundaryMs),
           end: slot.end,
           durationMinutes: afterDuration,
-          isAvailable: true,
+          type: "available",
           prevLocationId:
             entering?.locationId ?? leaving?.locationId ?? slot.prevLocationId,
           nextLocationId: slot.nextLocationId,
@@ -231,6 +231,6 @@ export function splitSlotsAtCategoryBoundaries(
   const splitSlots = boundaries.reduce(applySplitsForBoundary, slots);
 
   return splitSlots.map((slot) =>
-    slot.isAvailable ? assignMembership(slot, constraints) : slot,
+    slot.type === "available" ? assignMembership(slot, constraints) : slot,
   );
 }

@@ -1,8 +1,13 @@
-import { AvailableSlot, OccupiedSlot, TravelSlot } from "../models/TimeSlot";
+import { Slot } from "../models/TimeSlot";
 
 export class TimeSlotManager {
-  availableSlots: AvailableSlot[] = [];
-  occupiedSlots: (OccupiedSlot | TravelSlot)[] = [];
+  /**
+   * Sorted unified storage for all slots — available, occupied, travel.
+   * Mutating helpers operate on this directly via splice. Filter by
+   * `slot.type` for kind-specific views.
+   */
+  slots: Slot[] = [];
+
   readonly bufferTimeMinutes: number;
   readonly currentDate: Date;
 
@@ -12,7 +17,6 @@ export class TimeSlotManager {
   }
 
   clear(): void {
-    this.availableSlots.length = 0;
-    this.occupiedSlots.length = 0;
+    this.slots.length = 0;
   }
 }

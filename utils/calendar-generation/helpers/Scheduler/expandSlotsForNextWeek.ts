@@ -3,6 +3,7 @@ import { TimeSlotManager } from "../../core/TimeSlotManager";
 import { TravelManager } from "../../core/TravelManager";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { SchedulingContext } from "../../models/SchedulingModels";
+import { Slot } from "../../models/TimeSlot";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { buildAvailableSlots } from "../TimeSlotManager/buildAvailableSlots";
 import { preliminaryTravelPass } from "../TravelManager/preliminaryTravelPass";
@@ -26,14 +27,13 @@ export function expandSlotsForNextWeek(
     return s >= weekStartDate && s <= weekEndDate;
   });
 
-  // Remove existing slots in this week's range and replace with freshly built ones
+  // Remove existing available slots in this week's range and replace with
+  // freshly built ones. Occupied/travel slots outside this range are kept.
   const weekStartMs = weekStartDate.getTime();
   const weekEndMs = weekEndDate.getTime();
-  const beforeWeek = slotManager.availableSlots.filter(
-    (s) => s.end.getTime() <= weekStartMs,
-  );
-  const afterWeek = slotManager.availableSlots.filter(
-    (s) => s.start.getTime() >= weekEndMs,
+  const slotsOutsideWeek: Slot[] = slotManager.slots.filter(
+    (s) =>
+      s.end.getTime() <= weekStartMs || s.start.getTime() >= weekEndMs,
   );
 
   const initialSlots = buildAvailableSlots({
@@ -46,28 +46,26 @@ export function expandSlotsForNextWeek(
     endDateOverride: weekEndDate,
   });
 
-  const slotsWithTravel = preliminaryTravelPass(
+  // Run travel pass on the week's slots in isolation, then merge back.
+  const weekSlots: Slot[] = [...initialSlots];
+  preliminaryTravelPass(
     !!plannerLocationMap,
     categories,
-    slotManager.occupiedSlots,
+    weekSlots,
     travelManager,
     slotManager.bufferTimeMinutes,
-    initialSlots,
   );
 
   const nowMs = context.currentDate.getTime();
-  const weekSlots = slotsWithTravel.filter((s) => s.end.getTime() > nowMs);
-
-  slotManager.availableSlots.splice(
-    0,
-    slotManager.availableSlots.length,
-    ...beforeWeek,
-    ...weekSlots,
-    ...afterWeek,
+  const survivingWeekSlots = weekSlots.filter(
+    (s) => s.type !== "available" || s.end.getTime() > nowMs,
   );
 
-  context.availableMinutesPerWeek = weekSlots.reduce(
-    (t, s) => t + s.durationMinutes,
-    0,
+  slotManager.slots = [...slotsOutsideWeek, ...survivingWeekSlots].sort(
+    (a, b) => a.start.getTime() - b.start.getTime(),
   );
+
+  context.availableMinutesPerWeek = survivingWeekSlots
+    .filter((s): s is Extract<Slot, { type: "available" }> => s.type === "available")
+    .reduce((t, s) => t + s.durationMinutes, 0);
 }

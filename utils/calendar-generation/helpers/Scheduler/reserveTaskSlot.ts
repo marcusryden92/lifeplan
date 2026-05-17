@@ -92,8 +92,7 @@ export function reserveTaskSlot(
   }
 
   const result = reserveSlotWithTravel(
-    slotManager.availableSlots,
-    slotManager.occupiedSlots,
+    slotManager.slots,
     slotManager.bufferTimeMinutes,
     taskStartDate,
     taskEndDate,

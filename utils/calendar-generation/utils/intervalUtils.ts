@@ -251,7 +251,7 @@ export function findGaps(
         start: rangeStart,
         end: rangeEnd,
         durationMinutes,
-        isAvailable: true,
+        type: "available",
         prevLocationId: startingLocation,
         nextLocationId: null,
       },
@@ -271,7 +271,7 @@ export function findGaps(
       durationMinutes: Math.floor(
         (end.getTime() - rangeStart.getTime()) / 60000,
       ),
-      isAvailable: true,
+      type: "available",
       prevLocationId: startingLocation,
       nextLocationId: merged[0].startLocationId,
     });
@@ -294,7 +294,7 @@ export function findGaps(
         durationMinutes: Math.floor(
           (gapEnd.getTime() - gapStart.getTime()) / 60000,
         ),
-        isAvailable: true,
+        type: "available",
         prevLocationId: merged[i].endLocationId,
         nextLocationId: merged[i + 1].startLocationId,
       });
@@ -309,7 +309,7 @@ export function findGaps(
       durationMinutes: Math.floor(
         (rangeEnd.getTime() - lastInterval.end.getTime()) / 60000,
       ),
-      isAvailable: true,
+      type: "available",
       prevLocationId: lastInterval.endLocationId,
       nextLocationId: null,
     });

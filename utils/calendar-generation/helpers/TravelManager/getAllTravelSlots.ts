@@ -1,6 +1,5 @@
-import { OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
-import { isTravelSlot } from "../../utils/timeSlotUtils";
+import { Slot, TravelSlot } from "../../models/TimeSlot";
 
-export function getAllTravelSlots(occupiedSlots: (OccupiedSlot | TravelSlot)[]): TravelSlot[] {
-  return occupiedSlots.filter(isTravelSlot);
+export function getAllTravelSlots(slots: Slot[]): TravelSlot[] {
+  return slots.filter((s): s is TravelSlot => s.type === "travel");
 }

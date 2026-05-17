@@ -33,7 +33,7 @@ export function findValidSlots(
 
   // Find all slots that can fit the base requirement (duration + buffer)
   const fittingSlots = findAllFittingSlots(
-    slotManager.availableSlots,
+    slotManager.slots,
     slotManager.bufferTimeMinutes,
     task.duration,
     afterTime || context.currentDate,

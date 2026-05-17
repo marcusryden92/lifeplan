@@ -1,12 +1,12 @@
 import { SimpleEvent, EventType } from "@/types/prisma";
-import { OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
+import { Slot, TravelSlot } from "../../models/TimeSlot";
 import { getAllTravelSlots } from "./getAllTravelSlots";
 
 export function generateTravelEvents(
-  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  slots: Slot[],
   userId: string,
 ): SimpleEvent[] {
-  const travelSlots = getAllTravelSlots(occupiedSlots);
+  const travelSlots = getAllTravelSlots(slots);
   const now = new Date();
 
   return travelSlots.map((slot: TravelSlot) => {

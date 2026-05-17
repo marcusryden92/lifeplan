@@ -31,7 +31,7 @@ export function prepareSchedulingContext(
   let availableMinutesPerWeek = 0;
   for (let i = 0; i < 7; i++) {
     const date = dateTimeService.shiftDays(weekStart, i);
-    const slots = getDaySlots(timeSlotManager.availableSlots, date);
+    const slots = getDaySlots(timeSlotManager.slots, date);
     availableMinutesPerWeek += slots.reduce((t, s) => t + s.durationMinutes, 0);
   }
 

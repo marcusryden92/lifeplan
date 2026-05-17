@@ -1,10 +1,10 @@
-import { AvailableSlot } from "../../models/TimeSlot";
+import { AvailableSlot, Slot } from "../../models/TimeSlot";
 import { Category } from "@/types/prisma";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../../constants";
 
 export function findAllFittingSlots(
-  availableSlots: AvailableSlot[],
+  slots: Slot[],
   bufferTimeMinutes: number,
   durationMinutes: number,
   afterDate: Date,
@@ -15,7 +15,8 @@ export function findAllFittingSlots(
   const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
   const baseRequiredMinutes = durationMinutes + 2 * bufferTimeMinutes;
 
-  for (const slot of availableSlots) {
+  for (const slot of slots) {
+    if (slot.type !== "available") continue;
     if (slot.end <= afterDate) continue;
     if (slot.start >= searchEndDate) break;
 

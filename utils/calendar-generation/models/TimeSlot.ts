@@ -6,8 +6,10 @@ type BaseSlot = {
   durationMinutes: number;
 };
 
+export type SlotType = "available" | "occupied" | "travel";
+
 export type AvailableSlot = BaseSlot & {
-  isAvailable: true;
+  type: "available";
   prevLocationId?: string | null;
   nextLocationId?: string | null;
   categoryId?: string | null;
@@ -15,14 +17,14 @@ export type AvailableSlot = BaseSlot & {
 };
 
 export type OccupiedSlot = BaseSlot & {
-  isAvailable: false;
+  type: "occupied";
   eventId: string;
   plannerType: PlannerType;
   eventType: Exclude<EventType, "travel">;
 };
 
 export type TravelSlot = BaseSlot & {
-  isAvailable: false;
+  type: "travel";
   eventId: string;
   eventType: Extract<EventType, "travel">;
   travelFromLocationId: string | null;
@@ -34,7 +36,8 @@ export type TravelSlot = BaseSlot & {
   isStrictCategory?: boolean;
 };
 
-export type TimeSlot = AvailableSlot | OccupiedSlot | TravelSlot;
+export type Slot = AvailableSlot | OccupiedSlot | TravelSlot;
+export type TimeSlot = Slot;
 
 export interface TimeSlotBlock {
   /** Start of the day */

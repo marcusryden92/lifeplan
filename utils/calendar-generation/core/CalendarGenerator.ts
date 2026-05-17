@@ -156,24 +156,25 @@ export class CalendarGenerator {
       enableLogging,
     });
 
-    // Phase 6b: Place travel slots (separate pass after slot building)
+    // Phase 6b: Place travel slots (separate pass after slot building).
+    // Load built slots into the manager's unified storage, then run the pass
+    // which mutates the slots array in place via splice.
+    timeSlotManager.slots = [...builtSlots];
     const categoryBoundaryTrespasses: CategoryBoundaryTrespass[] = [];
-    const slotsWithTravel = preliminaryTravelPass(
+    preliminaryTravelPass(
       !!plannerLocationMap,
       this.scheduledCategories,
-      timeSlotManager.occupiedSlots,
+      timeSlotManager.slots,
       travelManager,
       this.bufferTimeMinutes,
-      builtSlots,
       categoryBoundaryTrespasses,
     );
 
-    // Phase 6c: Drop slots ending before "now" so the scheduler doesn't place
-    // tasks in the past. Travel events placed into those past slots remain in
-    // occupiedSlots — only the empty-space markers are pruned here.
+    // Phase 6c: Drop available slots ending before "now" so the scheduler
+    // doesn't place tasks in the past. Travel/occupied slots stay regardless.
     const nowMs = currentDate.getTime();
-    timeSlotManager.availableSlots = slotsWithTravel.filter(
-      (s) => s.end.getTime() > nowMs,
+    timeSlotManager.slots = timeSlotManager.slots.filter(
+      (s) => s.type !== "available" || s.end.getTime() > nowMs,
     );
 
     // Phase 7: Build effective category map (resolves inheritance from parent chain)

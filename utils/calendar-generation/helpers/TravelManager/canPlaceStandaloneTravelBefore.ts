@@ -1,7 +1,7 @@
-import { AvailableSlot } from "../../models/TimeSlot";
+import { Slot } from "../../models/TimeSlot";
 
 export function canPlaceStandaloneTravelBefore(
-  availableSlots: AvailableSlot[],
+  slots: Slot[],
   bufferTimeMinutes: number,
   travelEnd: Date,
   travelMinutes: number,
@@ -12,9 +12,12 @@ export function canPlaceStandaloneTravelBefore(
   const travelStartMs = travelEndMs - travelMinutes * 60000;
   const bufferMs = bufferTimeMinutes * 60000;
 
-  return availableSlots.findIndex(
-    (slot) =>
-      slot.start.getTime() - bufferMs <= travelStartMs &&
-      slot.end.getTime() >= travelEndMs,
-  ) !== -1;
+  return (
+    slots.findIndex(
+      (slot) =>
+        slot.type === "available" &&
+        slot.start.getTime() - bufferMs <= travelStartMs &&
+        slot.end.getTime() >= travelEndMs,
+    ) !== -1
+  );
 }

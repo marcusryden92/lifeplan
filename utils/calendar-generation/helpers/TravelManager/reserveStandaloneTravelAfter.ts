@@ -1,10 +1,9 @@
-import { AvailableSlot, OccupiedSlot, TravelSlot } from "../../models/TimeSlot";
+import { AvailableSlot, Slot } from "../../models/TimeSlot";
 import { createTravelSlot } from "../../utils/timeSlotUtils";
 import { v4 as uuidv4 } from "uuid";
 
 export function reserveStandaloneTravelAfter(
-  availableSlots: AvailableSlot[],
-  occupiedSlots: (OccupiedSlot | TravelSlot)[],
+  slots: Slot[],
   bufferTimeMinutes: number,
   travelStart: Date,
   travelMinutes: number,
@@ -26,73 +25,80 @@ export function reserveStandaloneTravelAfter(
   );
 
   if (force) {
-    occupiedSlots.push(travelSlot);
-
-    for (let i = availableSlots.length - 1; i >= 0; i--) {
-      const slot = availableSlots[i];
-      const slotStartMs = slot.start.getTime();
-      const slotEndMs = slot.end.getTime();
-      if (slotEndMs <= travelStartMs || slotStartMs >= travelEndMs) continue;
+    for (let i = slots.length - 1; i >= 0; i--) {
+      const s = slots[i];
+      if (s.type !== "available") continue;
+      const sStartMs = s.start.getTime();
+      const sEndMs = s.end.getTime();
+      if (sEndMs <= travelStartMs || sStartMs >= travelEndMs) continue;
 
       const replacements: AvailableSlot[] = [];
-      if (slotStartMs < travelStartMs) {
+      if (sStartMs < travelStartMs) {
         replacements.push({
-          ...slot,
+          ...s,
           end: travelStart,
-          durationMinutes: Math.floor((travelStartMs - slotStartMs) / 60000),
+          durationMinutes: Math.floor((travelStartMs - sStartMs) / 60000),
         });
       }
-      if (slotEndMs > travelEndMs) {
+      if (sEndMs > travelEndMs) {
         replacements.push({
-          ...slot,
+          ...s,
           start: travelEnd,
-          durationMinutes: Math.floor((slotEndMs - travelEndMs) / 60000),
+          durationMinutes: Math.floor((sEndMs - travelEndMs) / 60000),
           prevLocationId: toLocationId,
         });
       }
-      availableSlots.splice(i, 1, ...replacements);
+      slots.splice(i, 1, ...replacements);
     }
-
+    insertSlotSorted(slots, travelSlot);
     return { success: true };
   }
 
   const bufferMs = bufferTimeMinutes * 60000;
-  const slotIndex = availableSlots.findIndex(
-    (slot) =>
-      slot.start.getTime() - bufferMs <= travelStartMs &&
-      slot.end.getTime() >= travelEndMs,
+  const slotIdx = slots.findIndex(
+    (s) =>
+      s.type === "available" &&
+      s.start.getTime() - bufferMs <= travelStartMs &&
+      s.end.getTime() >= travelEndMs,
   );
-  if (slotIndex === -1) return { success: false };
+  if (slotIdx === -1) return { success: false };
 
-  const slot = availableSlots[slotIndex];
-  const newSlots: (AvailableSlot | TravelSlot)[] = [];
+  const slot = slots[slotIdx] as AvailableSlot;
+  const replacements: Slot[] = [];
 
   if (travelStartMs > slot.start.getTime()) {
-    newSlots.push({
+    replacements.push({
       start: slot.start,
       end: travelStart,
-      durationMinutes: Math.floor((travelStartMs - slot.start.getTime()) / 60000),
-      isAvailable: true,
+      durationMinutes: Math.floor(
+        (travelStartMs - slot.start.getTime()) / 60000,
+      ),
+      type: "available",
       prevLocationId: slot.prevLocationId,
       nextLocationId: fromLocationId,
     });
   }
-
-  newSlots.push(travelSlot);
-
+  replacements.push(travelSlot);
   if (slot.end.getTime() > travelEndMs) {
-    newSlots.push({
+    replacements.push({
       start: travelEnd,
       end: slot.end,
       durationMinutes: Math.floor((slot.end.getTime() - travelEndMs) / 60000),
-      isAvailable: true,
+      type: "available",
       prevLocationId: toLocationId,
       nextLocationId: slot.nextLocationId,
     });
   }
-
-  availableSlots.splice(slotIndex, 1, ...newSlots.filter((s): s is AvailableSlot => s.isAvailable));
-  occupiedSlots.push(...newSlots.filter((s): s is TravelSlot => !s.isAvailable));
-
+  slots.splice(slotIdx, 1, ...replacements);
   return { success: true };
+}
+
+function insertSlotSorted(slots: Slot[], slot: Slot): void {
+  const targetMs = slot.start.getTime();
+  const idx = slots.findIndex((s) => s.start.getTime() > targetMs);
+  if (idx === -1) {
+    slots.push(slot);
+  } else {
+    slots.splice(idx, 0, slot);
+  }
 }

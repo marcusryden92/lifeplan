@@ -1,6 +1,5 @@
 import type {
   AvailableSlot,
-  OccupiedSlot,
   TimeSlot,
   TravelSlot,
 } from "../models/TimeSlot";
@@ -14,7 +13,7 @@ export function canFitDuration(
   slot: TimeSlot,
   requiredMinutes: number,
 ): boolean {
-  return slot.isAvailable && slot.durationMinutes >= requiredMinutes;
+  return slot.type === "available" && slot.durationMinutes >= requiredMinutes;
 }
 
 export function doSlotsOverlap(slot1: TimeSlot, slot2: TimeSlot): boolean {
@@ -36,13 +35,13 @@ export function splitSlot(
     (slot.end.getTime() - splitTime.getTime()) / (1000 * 60),
   );
 
-  if (slot.isAvailable) {
+  if (slot.type === "available") {
     return [
       {
         start: slot.start,
         end: splitTime,
         durationMinutes: beforeDuration,
-        isAvailable: true,
+        type: "available",
         prevLocationId: slot.prevLocationId,
         nextLocationId: slot.nextLocationId,
         categoryId: slot.categoryId,
@@ -52,7 +51,7 @@ export function splitSlot(
         start: splitTime,
         end: slot.end,
         durationMinutes: afterDuration,
-        isAvailable: true,
+        type: "available",
         prevLocationId: slot.prevLocationId,
         nextLocationId: slot.nextLocationId,
         categoryId: slot.categoryId,
@@ -67,7 +66,7 @@ export function splitSlot(
         start: slot.start,
         end: splitTime,
         durationMinutes: beforeDuration,
-        isAvailable: false,
+        type: "travel",
         eventId: slot.eventId,
         eventType: EventType.travel,
         travelFromLocationId: slot.travelFromLocationId,
@@ -82,7 +81,7 @@ export function splitSlot(
         start: splitTime,
         end: slot.end,
         durationMinutes: afterDuration,
-        isAvailable: false,
+        type: "travel",
         eventId: slot.eventId,
         eventType: EventType.travel,
         travelFromLocationId: slot.travelFromLocationId,
@@ -101,7 +100,7 @@ export function splitSlot(
       start: slot.start,
       end: splitTime,
       durationMinutes: beforeDuration,
-      isAvailable: false,
+      type: "occupied",
       eventId: slot.eventId,
       eventType: slot.eventType,
       plannerType: slot.plannerType,
@@ -110,7 +109,7 @@ export function splitSlot(
       start: splitTime,
       end: slot.end,
       durationMinutes: afterDuration,
-      isAvailable: false,
+      type: "occupied",
       eventId: slot.eventId,
       eventType: slot.eventType,
       plannerType: slot.plannerType,
@@ -138,7 +137,7 @@ export function occupySlot(
       durationMinutes: Math.floor(
         (start.getTime() - slot.start.getTime()) / (1000 * 60),
       ),
-      isAvailable: true,
+      type: "available",
       prevLocationId: slot.prevLocationId,
       nextLocationId: locationId ?? null,
       categoryId: slot.categoryId,
@@ -152,7 +151,7 @@ export function occupySlot(
     durationMinutes: Math.floor(
       (end.getTime() - start.getTime()) / (1000 * 60),
     ),
-    isAvailable: false,
+    type: "occupied",
     eventId,
     eventType,
     plannerType,
@@ -165,7 +164,7 @@ export function occupySlot(
       durationMinutes: Math.floor(
         (slot.end.getTime() - end.getTime()) / (1000 * 60),
       ),
-      isAvailable: true,
+      type: "available",
       prevLocationId: afterSlotPrevLocation,
       nextLocationId: slot.nextLocationId,
       categoryId: slot.categoryId,
@@ -196,7 +195,7 @@ export function createTravelSlot(
     durationMinutes: Math.floor(
       (end.getTime() - start.getTime()) / (1000 * 60),
     ),
-    isAvailable: false,
+    type: "travel",
     eventId,
     eventType: EventType.travel,
     travelType,
@@ -210,43 +209,16 @@ export function createTravelSlot(
 }
 
 export function isTravelSlot(slot: TimeSlot): slot is TravelSlot {
-  return !slot.isAvailable && slot.eventType === EventType.travel;
+  return slot.type === "travel";
 }
 
-export function pushInsufficientTravel(
-  occupiedSlots: (OccupiedSlot | TravelSlot)[],
-  spanStart: Date,
-  spanEnd: Date,
-  fromLocationId: string,
-  toLocationId: string,
-  requiredTravelMinutes: number,
-  context: { categoryId?: string | null; isStrictCategory?: boolean },
-  eventId: string,
-): void {
-  occupiedSlots.push(
-    createTravelSlot(
-      spanStart,
-      spanEnd,
-      fromLocationId,
-      toLocationId,
-      "preliminary",
-      eventId,
-      {
-        insufficientTravel: true,
-        requiredTravelMinutes,
-        categoryId: context.categoryId,
-        isStrictCategory: context.isStrictCategory,
-      },
-    ),
-  );
-}
 
 export function reclaimTravelSlot(travelSlot: TravelSlot): AvailableSlot {
   return {
     start: travelSlot.start,
     end: travelSlot.end,
     durationMinutes: travelSlot.durationMinutes,
-    isAvailable: true,
+    type: "available",
     prevLocationId: travelSlot.travelFromLocationId,
     nextLocationId: travelSlot.travelToLocationId,
     categoryId: travelSlot.categoryId,
