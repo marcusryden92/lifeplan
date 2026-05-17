@@ -9,6 +9,9 @@ Placement
     SlotEnd
 
     Current:
+            Current type: Occupied
+                -> Skip to next slot
+            Current type Travel (probably won't be the case since we're moving forwards)
             Current type: Available
                     Current size: large enough for travel
                             -> PlaceAtStart
@@ -59,50 +62,3 @@ Placement
                                             Prev, current and next are not large enough for travel
                                                 -> Absorb prev travel, fill all of them with new travel, mark travel as 'alert' (not large enough)
                                                 (Future: continue traversing the array forwards and backwards until enough space is found, or we hit an occupied slot, in which case place an 'alert' travel)
-                                            
-
-                            
-
-            Current type Occupied
-                -> Skip to next slot
-            Current type Travel (probably won't be the case since we're moving forwards)
-
-            Category
-                Uncategorized
-                Categorized
-            
-            Size
-                Large enough for travel
-                Not large enough for travel
-
-
-        Prev
-            Type
-                Available
-                Occupied
-                Travel
-
-            Category
-                Uncategorized
-                Categorized
-                    Same category as current
-                    Not same as current
-                        Same location
-                        Not same location
-            
-            Size
-                Current is large enough for travel
-                Current is not large enough
-                    Next has available space
-                        Travel can bleed symmetrically into prev and next
-                        Travel can not bleed symmetrically into prev and next
-                            Travel fits asymmetrically into prev + current + next
-                                Calculate the best ratio to fill up prev, current and next
-                            Travel does not fit asymmetrically into prev + current + next
-                    Next does not have available space
-                        Prev + current are large enough
-                        Prev + current not large enough
-                            Extend into prev-1?
-
-        
-        Next
