@@ -15,7 +15,7 @@ import {
   ScoredSlot,
   SlotSelectionResult,
 } from "../../models/SchedulingModels";
-import { AvailableSlot, TravelSlot } from "../../models/TimeSlot";
+import { PlaceableSlot, TravelSlot } from "../../models/TimeSlot";
 import { SchedulingFailureReason } from "../../constants";
 
 /**
@@ -23,7 +23,7 @@ import { SchedulingFailureReason } from "../../constants";
  */
 function scoreSlots(
   task: Planner,
-  slots: AvailableSlot[],
+  slots: PlaceableSlot[],
   strategy: SchedulingStrategy,
   context: SchedulingContext,
 ): ScoredSlot[] {
@@ -51,8 +51,8 @@ function scoreSlots(
 
 export function selectBestSlot(
   task: Planner,
-  validSlots: AvailableSlot[],
-  fittingSlots: AvailableSlot[],
+  validSlots: PlaceableSlot[],
+  fittingSlots: PlaceableSlot[],
   taskLocationId: string | null | undefined,
   slotManager: TimeSlotManager,
   travelManager: TravelManager,
@@ -65,7 +65,7 @@ export function selectBestSlot(
   // Iterate through scored slots and find first one with enough capacity
   const bufferMinutes = slotManager.bufferTimeMinutes;
 
-  let selectedSlot: AvailableSlot | null = null;
+  let selectedSlot: PlaceableSlot | null = null;
   let travelBefore = 0;
   let travelAfter = 0;
   let selectedReusableTravelStart: Date | null = null;
@@ -89,9 +89,18 @@ export function selectBestSlot(
     let absorbableTravel: TravelSlot | null = null;
     let reclaimPrecedingGapTravel: TravelSlot | null = null;
 
+    // For a CategorySlot, the task lands inside the category interior, so
+    // the user's effective location on both sides of the task is the
+    // category's currentLocationId. Entry/exit of the category itself is
+    // handled separately at the slot's edges.
+    const slotPrevLoc =
+      slot.type === "category" ? slot.currentLocationId : slot.prevLocationId;
+    const slotNextLoc =
+      slot.type === "category" ? slot.currentLocationId : slot.nextLocationId;
+
     if (taskLocationId) {
       // Travel BEFORE: needed if prev location differs from task location
-      if (slot.prevLocationId && slot.prevLocationId !== taskLocationId) {
+      if (slotPrevLoc && slotPrevLoc !== taskLocationId) {
         // Check if the prev location is actually a travel destination from a previous
         // task at OUR location. e.g., B4 (Uppsala) placed travel-after Uppsala->GamlaStan,
         // so the free slot has prevLocationId=GamlaStan. If B5 is also Uppsala, we can
@@ -125,7 +134,7 @@ export function selectBestSlot(
 
           if (!reclaimPrecedingGapTravel) {
             needTravelBefore = travelManager.getTravelTime(
-              slot.prevLocationId,
+              slotPrevLoc,
               taskLocationId,
               slot.start,
             );
@@ -134,10 +143,10 @@ export function selectBestSlot(
       }
 
       // Travel AFTER: needed if next location differs from task location
-      if (slot.nextLocationId && slot.nextLocationId !== taskLocationId) {
+      if (slotNextLoc && slotNextLoc !== taskLocationId) {
         needTravelAfter = travelManager.getTravelTime(
           taskLocationId,
-          slot.nextLocationId,
+          slotNextLoc,
           slot.start,
         );
       }
@@ -153,10 +162,10 @@ export function selectBestSlot(
     let effectiveTravelAfter = needTravelAfter;
     let reusableTravelStart: Date | null = null;
 
-    if (needTravelAfter > 0 && slot.nextLocationId) {
+    if (needTravelAfter > 0 && slotNextLoc) {
       reusableTravelStart = travelManager.findAdjacentTravelTo(
         slot.end,
-        slot.nextLocationId,
+        slotNextLoc,
       );
       if (reusableTravelStart) {
         effectiveTravelAfter = 0;
@@ -172,7 +181,7 @@ export function selectBestSlot(
       bufferMinutes +
       (effectiveTravelAfter > 0 ? effectiveTravelAfter : 0);
 
-    if (needTravelBefore > 0 && slot.prevLocationId && taskLocationId) {
+    if (needTravelBefore > 0 && slotPrevLoc && taskLocationId) {
       const travelEnd = new Date(slot.start.getTime());
       canPlaceTravelOutside = travelManager.canPlaceStandaloneTravelBefore(
         travelEnd,

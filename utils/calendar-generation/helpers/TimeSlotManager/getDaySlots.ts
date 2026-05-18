@@ -1,11 +1,15 @@
-import { AvailableSlot, Slot } from "../../models/TimeSlot";
+import { PlaceableSlot, Slot } from "../../models/TimeSlot";
 import { dateTimeService } from "../../utils/dateTimeService";
 
-export function getDaySlots(slots: Slot[], date: Date): AvailableSlot[] {
+// Return all slots a task could land in for a given day — free time
+// (AvailableSlot) and category interiors (CategorySlot).
+export function getDaySlots(slots: Slot[], date: Date): PlaceableSlot[] {
   const dayStart = dateTimeService.startOfDay(date);
   const dayEnd = dateTimeService.endOfDay(date);
   return slots.filter(
-    (slot): slot is AvailableSlot =>
-      slot.type === "available" && slot.start < dayEnd && slot.end > dayStart,
+    (slot): slot is PlaceableSlot =>
+      (slot.type === "available" || slot.type === "category") &&
+      slot.start < dayEnd &&
+      slot.end > dayStart,
   );
 }

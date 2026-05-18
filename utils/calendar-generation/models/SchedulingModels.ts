@@ -7,7 +7,7 @@
 import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
 
 import { SchedulingFailureReason } from "../constants";
-import { AvailableSlot, TravelSlot } from "./TimeSlot";
+import { PlaceableSlot, TravelSlot } from "./TimeSlot";
 
 /**
  * Result of a scheduling operation
@@ -247,14 +247,14 @@ export interface StrategyConfig {
 }
 
 export interface FindValidSlotsResult {
-  validSlots: AvailableSlot[];
-  fittingSlots: AvailableSlot[];
+  validSlots: PlaceableSlot[];
+  fittingSlots: PlaceableSlot[];
   taskLocationId: string | null | undefined;
   constraintForTask: Category | undefined;
 }
 
 export interface SlotSelectionResult {
-  selectedSlot: AvailableSlot;
+  selectedSlot: PlaceableSlot;
   travelBefore: number;
   travelAfter: number;
   reusableTravelStart: Date | null;

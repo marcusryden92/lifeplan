@@ -1,8 +1,16 @@
-import { AvailableSlot, Slot } from "../../models/TimeSlot";
+import { PlaceableSlot, Slot } from "../../models/TimeSlot";
 import { Category } from "@/types/prisma";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../../constants";
 
+// Find slots a task could be placed in, given duration + buffer.
+//
+// Category membership is now encoded directly on the slots:
+//   - Constrained task (categoryConstraint provided): only return CategorySlot
+//     fragments whose categoryId matches the constraint.
+//   - Unconstrained task: skip CategorySlot fragments that are strict (those
+//     belong to a category that excludes outsiders); free time and non-strict
+//     categories are fair game.
 export function findAllFittingSlots(
   slots: Slot[],
   bufferTimeMinutes: number,
@@ -10,70 +18,38 @@ export function findAllFittingSlots(
   afterDate: Date,
   maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
   categoryConstraint?: Category,
-): AvailableSlot[] {
-  const fittingSlots: AvailableSlot[] = [];
+): PlaceableSlot[] {
+  const fittingSlots: PlaceableSlot[] = [];
   const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
   const baseRequiredMinutes = durationMinutes + 2 * bufferTimeMinutes;
 
   for (const slot of slots) {
-    if (slot.type !== "available") continue;
+    if (slot.type !== "available" && slot.type !== "category") continue;
     if (slot.end <= afterDate) continue;
     if (slot.start >= searchEndDate) break;
 
-    if (categoryConstraint && categoryConstraint.timeSlots?.length) {
-      const dayStart = dateTimeService.startOfDay(slot.start);
-      const dayOfWeek = dayStart.getDay();
+    if (categoryConstraint) {
+      if (
+        slot.type !== "category" ||
+        slot.categoryId !== categoryConstraint.id
+      )
+        continue;
+    } else if (slot.type === "category" && slot.isStrictCategory) {
+      continue;
+    }
 
-      for (const catSlot of categoryConstraint.timeSlots) {
-        if (!catSlot.days.some((d) => d === dayOfWeek)) continue;
+    const effectiveStart = slot.start < afterDate ? afterDate : slot.start;
+    const effectiveMinutes = dateTimeService.getMinutesDifference(
+      effectiveStart,
+      slot.end,
+    );
 
-        const [startHour, startMin] = catSlot.startTime.split(":").map(Number);
-        const [endHour, endMin] = catSlot.endTime.split(":").map(Number);
-
-        const periodStart = new Date(dayStart);
-        periodStart.setHours(startHour, startMin, 0, 0);
-        const periodEnd = new Date(dayStart);
-        periodEnd.setHours(endHour, endMin, 0, 0);
-
-        const intersectStart =
-          slot.start > periodStart ? slot.start : periodStart;
-        const intersectEnd = slot.end < periodEnd ? slot.end : periodEnd;
-        if (intersectEnd <= intersectStart) continue;
-
-        const effectiveStart =
-          intersectStart < afterDate ? afterDate : intersectStart;
-        if (intersectEnd <= effectiveStart) continue;
-
-        const effectiveMinutes = dateTimeService.getMinutesDifference(
-          effectiveStart,
-          intersectEnd,
-        );
-        if (effectiveMinutes >= baseRequiredMinutes) {
-          const categoryLocation = categoryConstraint.locationId ?? null;
-          fittingSlots.push({
-            ...slot,
-            start: effectiveStart,
-            end: intersectEnd,
-            durationMinutes: effectiveMinutes,
-            prevLocationId: slot.prevLocationId ?? categoryLocation,
-            nextLocationId: slot.nextLocationId ?? categoryLocation,
-          });
-        }
-      }
-    } else {
-      const effectiveStart = slot.start < afterDate ? afterDate : slot.start;
-      const effectiveMinutes = dateTimeService.getMinutesDifference(
-        effectiveStart,
-        slot.end,
-      );
-
-      if (effectiveMinutes >= baseRequiredMinutes) {
-        fittingSlots.push({
-          ...slot,
-          start: effectiveStart,
-          durationMinutes: effectiveMinutes,
-        });
-      }
+    if (effectiveMinutes >= baseRequiredMinutes) {
+      fittingSlots.push({
+        ...slot,
+        start: effectiveStart,
+        durationMinutes: effectiveMinutes,
+      });
     }
   }
 

@@ -1,5 +1,7 @@
 import type {
   AvailableSlot,
+  CategorySlot,
+  PlaceableSlot,
   TimeSlot,
   TravelSlot,
 } from "../models/TimeSlot";
@@ -13,7 +15,10 @@ export function canFitDuration(
   slot: TimeSlot,
   requiredMinutes: number,
 ): boolean {
-  return slot.type === "available" && slot.durationMinutes >= requiredMinutes;
+  return (
+    (slot.type === "available" || slot.type === "category") &&
+    slot.durationMinutes >= requiredMinutes
+  );
 }
 
 export function doSlotsOverlap(slot1: TimeSlot, slot2: TimeSlot): boolean {
@@ -44,8 +49,6 @@ export function splitSlot(
         type: "available",
         prevLocationId: slot.prevLocationId,
         nextLocationId: slot.nextLocationId,
-        categoryId: slot.categoryId,
-        isStrictCategory: slot.isStrictCategory,
       },
       {
         start: splitTime,
@@ -54,13 +57,38 @@ export function splitSlot(
         type: "available",
         prevLocationId: slot.prevLocationId,
         nextLocationId: slot.nextLocationId,
+      },
+    ];
+  }
+
+  if (slot.type === "category") {
+    return [
+      {
+        start: slot.start,
+        end: splitTime,
+        durationMinutes: beforeDuration,
+        type: "category",
+        currentLocationId: slot.currentLocationId,
+        prevLocationId: slot.prevLocationId,
+        nextLocationId: slot.nextLocationId,
+        categoryId: slot.categoryId,
+        isStrictCategory: slot.isStrictCategory,
+      },
+      {
+        start: splitTime,
+        end: slot.end,
+        durationMinutes: afterDuration,
+        type: "category",
+        currentLocationId: slot.currentLocationId,
+        prevLocationId: slot.prevLocationId,
+        nextLocationId: slot.nextLocationId,
         categoryId: slot.categoryId,
         isStrictCategory: slot.isStrictCategory,
       },
     ];
   }
 
-  if (slot.eventType === EventType.travel) {
+  if (slot.type === "travel") {
     return [
       {
         start: slot.start,
@@ -117,8 +145,12 @@ export function splitSlot(
   ];
 }
 
+// Slice an occupied event out of a placeable slot, preserving the slot's
+// type (available vs. category) on the surrounding leftovers. Category
+// leftovers keep currentLocationId / categoryId so the dispatcher still sees
+// them as inside the category.
 export function occupySlot(
-  slot: AvailableSlot,
+  slot: PlaceableSlot,
   start: Date,
   end: Date,
   eventId: string,
@@ -128,21 +160,18 @@ export function occupySlot(
 ): TimeSlot[] {
   const result: TimeSlot[] = [];
 
-  const afterSlotPrevLocation = locationId ?? slot.prevLocationId;
+  const afterSlotPrevLocation = locationId ?? slot.prevLocationId ?? null;
 
   if (start > slot.start) {
-    result.push({
-      start: slot.start,
-      end: start,
-      durationMinutes: Math.floor(
-        (start.getTime() - slot.start.getTime()) / (1000 * 60),
+    result.push(
+      makePlaceableLeftover(
+        slot,
+        slot.start,
+        start,
+        slot.prevLocationId ?? null,
+        locationId ?? null,
       ),
-      type: "available",
-      prevLocationId: slot.prevLocationId,
-      nextLocationId: locationId ?? null,
-      categoryId: slot.categoryId,
-      isStrictCategory: slot.isStrictCategory,
-    });
+    );
   }
 
   result.push({
@@ -158,21 +187,51 @@ export function occupySlot(
   });
 
   if (end < slot.end) {
-    result.push({
-      start: end,
-      end: slot.end,
-      durationMinutes: Math.floor(
-        (slot.end.getTime() - end.getTime()) / (1000 * 60),
+    result.push(
+      makePlaceableLeftover(
+        slot,
+        end,
+        slot.end,
+        afterSlotPrevLocation,
+        slot.nextLocationId ?? null,
       ),
-      type: "available",
-      prevLocationId: afterSlotPrevLocation,
-      nextLocationId: slot.nextLocationId,
-      categoryId: slot.categoryId,
-      isStrictCategory: slot.isStrictCategory,
-    });
+    );
   }
 
   return result;
+}
+
+function makePlaceableLeftover(
+  source: PlaceableSlot,
+  start: Date,
+  end: Date,
+  prevLocationId: string | null,
+  nextLocationId: string | null,
+): AvailableSlot | CategorySlot {
+  const durationMinutes = Math.floor(
+    (end.getTime() - start.getTime()) / (1000 * 60),
+  );
+  if (source.type === "category") {
+    return {
+      start,
+      end,
+      durationMinutes,
+      type: "category",
+      currentLocationId: source.currentLocationId,
+      prevLocationId,
+      nextLocationId,
+      categoryId: source.categoryId,
+      isStrictCategory: source.isStrictCategory,
+    };
+  }
+  return {
+    start,
+    end,
+    durationMinutes,
+    type: "available",
+    prevLocationId,
+    nextLocationId,
+  };
 }
 
 export function createTravelSlot(
@@ -212,8 +271,25 @@ export function isTravelSlot(slot: TimeSlot): slot is TravelSlot {
   return slot.type === "travel";
 }
 
-
-export function reclaimTravelSlot(travelSlot: TravelSlot): AvailableSlot {
+// Convert a travel slot back to its placeable form. If the travel was carved
+// out of a category interior, the reclaimed slot stays a CategorySlot so the
+// dispatcher's category-edge logic remains consistent.
+export function reclaimTravelSlot(
+  travelSlot: TravelSlot,
+): AvailableSlot | CategorySlot {
+  if (travelSlot.categoryId) {
+    return {
+      start: travelSlot.start,
+      end: travelSlot.end,
+      durationMinutes: travelSlot.durationMinutes,
+      type: "category",
+      currentLocationId: null,
+      prevLocationId: travelSlot.travelFromLocationId,
+      nextLocationId: travelSlot.travelToLocationId,
+      categoryId: travelSlot.categoryId,
+      isStrictCategory: travelSlot.isStrictCategory ?? false,
+    };
+  }
   return {
     start: travelSlot.start,
     end: travelSlot.end,
@@ -221,7 +297,5 @@ export function reclaimTravelSlot(travelSlot: TravelSlot): AvailableSlot {
     type: "available",
     prevLocationId: travelSlot.travelFromLocationId,
     nextLocationId: travelSlot.travelToLocationId,
-    categoryId: travelSlot.categoryId,
-    isStrictCategory: travelSlot.isStrictCategory,
   };
 }

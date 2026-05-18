@@ -62,9 +62,7 @@ export class TravelManager {
     if (!prevLocation || !nextLocation || prevLocation === nextLocation)
       return null;
 
-    const placeAtSlotStart = slot.categoryId
-      ? false
-      : this.legTracker.track(prevLocation, nextLocation);
+    const placeAtSlotStart = this.legTracker.track(prevLocation, nextLocation);
 
     const travelMinutes = this.getTravelTime(
       prevLocation,

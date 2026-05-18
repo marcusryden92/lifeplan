@@ -14,7 +14,7 @@
  */
 
 import { Planner } from "@/types/prisma";
-import { AvailableSlot } from "../models/TimeSlot";
+import { PlaceableSlot } from "../models/TimeSlot";
 import {
   TravelTimeEntry,
   LocationGroupingScoresConfig,
@@ -49,7 +49,7 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
     };
   }
 
-  score(task: Planner, slot: AvailableSlot): number {
+  score(task: Planner, slot: PlaceableSlot): number {
     const scores = this.scores;
     const penalties = this.penalties;
 
@@ -59,8 +59,15 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
     }
 
     const taskLocation = task.locationId;
-    const prevLocation = slot.prevLocationId;
-    const nextLocation = slot.nextLocationId;
+    // For a CategorySlot, the task lands in the category interior — the user
+    // is at the category's location going in and coming out, so both neighbors
+    // are the category's currentLocationId. (Entry/exit travel into/out of
+    // the category is owned by the CategorySlot's edges, separate from the
+    // task placement itself.)
+    const prevLocation =
+      slot.type === "category" ? slot.currentLocationId : slot.prevLocationId;
+    const nextLocation =
+      slot.type === "category" ? slot.currentLocationId : slot.nextLocationId;
 
     // Check location matches
     const prevMatches = prevLocation === taskLocation;

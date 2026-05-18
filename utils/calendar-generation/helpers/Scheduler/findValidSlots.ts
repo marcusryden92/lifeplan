@@ -52,27 +52,13 @@ export function findValidSlots(
     };
   }
 
-  // Filter slots by category identity:
-  // - Categorized task: must be placed within its own category's window (slot.categoryId must match)
-  // - Uncategorized task: cannot be placed inside a strict category's window
-  const validSlots = fittingSlots.filter((slot) => {
-    if (effectiveCategoryId) {
-      return slot.categoryId === effectiveCategoryId;
-    } else {
-      return !slot.isStrictCategory;
-    }
-  });
-
-  if (validSlots.length === 0) {
-    return {
-      failure: {
-        taskId: task.id,
-        taskTitle: task.title,
-        reason: SchedulingFailureReason.NO_SLOTS,
-        details: `No available time slots found within category time constraints`,
-      },
-    };
-  }
-
-  return { validSlots, fittingSlots, taskLocationId, constraintForTask };
+  // findAllFittingSlots already filters by category membership via
+  // categoryConstraint; the post-filter from the old AvailableSlot model is no
+  // longer needed.
+  return {
+    validSlots: fittingSlots,
+    fittingSlots,
+    taskLocationId,
+    constraintForTask,
+  };
 }

@@ -6,14 +6,21 @@ type BaseSlot = {
   durationMinutes: number;
 };
 
-export type SlotType = "available" | "occupied" | "travel";
+export type SlotType = "available" | "category" | "occupied" | "travel";
 
 export type AvailableSlot = BaseSlot & {
   type: "available";
   prevLocationId?: string | null;
   nextLocationId?: string | null;
-  categoryId?: string | null;
-  isStrictCategory?: boolean;
+};
+
+export type CategorySlot = BaseSlot & {
+  type: "category";
+  currentLocationId: string | null;
+  prevLocationId: string | null;
+  nextLocationId: string | null;
+  categoryId: string;
+  isStrictCategory: boolean;
 };
 
 export type OccupiedSlot = BaseSlot & {
@@ -36,8 +43,11 @@ export type TravelSlot = BaseSlot & {
   isStrictCategory?: boolean;
 };
 
-export type Slot = AvailableSlot | OccupiedSlot | TravelSlot;
+export type Slot = AvailableSlot | CategorySlot | OccupiedSlot | TravelSlot;
 export type TimeSlot = Slot;
+
+// Slots that a task can land in — free time or category interior.
+export type PlaceableSlot = AvailableSlot | CategorySlot;
 
 export interface TimeSlotBlock {
   /** Start of the day */

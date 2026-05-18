@@ -1,883 +1,899 @@
 import type { Category } from "@/types/prisma";
-import { AvailableSlot, Slot } from "../../models/TimeSlot";
+import {
+  AvailableSlot,
+  CategorySlot,
+  PlaceableSlot,
+  Slot,
+  TravelSlot,
+} from "../../models/TimeSlot";
 import { TravelManager } from "../../core/TravelManager";
 import { createTravelSlot } from "../../utils/timeSlotUtils";
 import { v4 as uuidv4 } from "uuid";
 import { CategoryBoundaryTrespass } from "./categoryBoundaryTrespass";
-import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
 
-/* ============================================================================
- *  preliminaryTravelPass
- *
- *  Per slot:
- *    1. classify(...)  → Snapshot
- *         Gathers everything the dispatcher could possibly need: adjacency
- *         facts (prev/next neighbors in the unified slots view) and pre-
- *         computed feasibility plans (bypass, center, shift, extend). A plan
- *         is `null` if its action isn't feasible.
- *    2. pickActionKey(snap)  → key into processActions[direction][fit]
- *         Pure decision tree. Inspects the snapshot once and returns the
- *         exact key — no try-and-fall-through.
- *    3. processActions[direction][fit][key](snap, slots, trespasses)
- *         The chosen action runs. Each action is a small pipe over the
- *         step helpers (makeAvailableLeftover, makeTravel) plus a final
- *         `slots.splice(...)`.
- *
- *  Adding a new behavior: add a planner in classify, add a key/branch in
- *  pickActionKey, add the action function inside processActions.
- * ============================================================================
- */
-
-// ---------------------------------------------------------------------------
-//  Types
-// ---------------------------------------------------------------------------
-
-type Direction = "outbound" | "return";
-type Fit = "smaller" | "exact" | "larger";
-
-type NeighborInfo = {
-  slot: Slot | null;
-  exists: boolean;
-  type: Slot["type"] | "none";
-  contiguous: boolean;
-  isCategory: boolean;
-  isAvailable: boolean;
-  isTravel: boolean;
-  durationMs: number;
-};
-
-type CenterPlan = {
-  travelStart: Date;
-  travelEnd: Date;
-  nextSlot: AvailableSlot;
-};
-
-type ShiftBackwardPlan = {
-  newTravelStart: Date;
-  newTravelEnd: Date;
-  shrunkPreviousEnd: Date;
-  previousSlot: AvailableSlot;
-};
-
-type ExtendForwardPlan = {
-  travelEnd: Date;
-  trimmedCategoryStart: Date;
-  nextSlot: AvailableSlot;
-};
-
-type OutboundBypassPlan = {
-  anchor: "end" | "start";
-  spanEnd: Date;
-  finalDestination: string;
-  /** The category location we're bypassing (travel.nextLocation). */
-  categoryLocation: string;
-  directMinutes: number;
-  /** false → direct travel can't fit the span; action marks insufficient. */
-  fits: boolean;
-  nextSlot: AvailableSlot;
-};
-
-type ReturnBypassPlan = {
-  spanEnd: Date;
-  finalDestination: string;
-  directMinutes: number;
-  fits: boolean;
-  nextSlot: AvailableSlot;
-};
-
-type Snapshot = {
-  slot: AvailableSlot;
-  slotIndex: number;
-
-  direction: Direction;
-  prevLocation: string;
-  nextLocation: string;
-  travelMinutes: number;
-  travelMs: number;
-  slotMs: number;
-  fit: Fit;
-
-  currentIsCategory: boolean;
-  bufferMs: number;
-  bufferTimeMinutes: number;
-
-  prev: NeighborInfo;
-  next: NeighborInfo;
-
-  // Feasibility plans — null when the corresponding action can't fire.
-  outboundBypass: OutboundBypassPlan | null;
-  returnBypass: ReturnBypassPlan | null;
-  center: CenterPlan | null;
-  shiftBackwardExact: ShiftBackwardPlan | null;
-  shiftBackwardOverflow: ShiftBackwardPlan | null;
-  extendForward: ExtendForwardPlan | null;
-};
-
-type ActionFn = (
-  snap: Snapshot,
-  slots: Slot[],
-  trespasses: CategoryBoundaryTrespass[],
-) => number;
-
-// ---------------------------------------------------------------------------
-//  Entry point
-// ---------------------------------------------------------------------------
+// preliminaryTravelPass — walks the unified slots[] array and places travel
+// blocks for every transition it can resolve. Implemented against the
+// decision tree in notes/claudeTravelCriteria.md.
+//
+// SLOT MODEL:
+//   Available  — free time outside any category period.
+//                Transition: prev != next means one travel inside this slot.
+//   Category   — inside a category period. Carries currentLocationId.
+//                Up to two transitions evaluated independently:
+//                  entry: prev != currentLocationId  → place travel at start
+//                  exit:  currentLocationId != next  → place travel at end
+//   Occupied   — skip.
+//   Travel     — already placed, skip.
+//
+// Cross-call note: this function deliberately does NOT call
+// travelManager.resetLegTracker(). The legTracker state is intentionally
+// persistent across calls — a future regenerate-slots loop will rely on it.
 
 export function preliminaryTravelPass(
-  hasPlannerLocationMap: boolean,
-  categories: Category[],
+  hasLocationMap: boolean,
+  _categories: Category[],
   slots: Slot[],
   travelManager: TravelManager,
   bufferTimeMinutes: number,
-  categoryBoundaryTrespasses: CategoryBoundaryTrespass[] = [],
+  trespasses?: CategoryBoundaryTrespass[],
 ): void {
-  if (!hasPlannerLocationMap) return;
-  const bufferMs = bufferTimeMinutes * 60000;
+  if (!hasLocationMap) return;
+
   let i = 0;
   while (i < slots.length) {
-    const s = slots[i];
-    if (s.type !== "available" || s.durationMinutes <= 0) {
-      i++;
+    const slot = slots[i];
+
+    // Outer guards
+    if (slot.type === "occupied" || slot.type === "travel") {
+      i += 1;
       continue;
     }
-    const travel = travelManager.resolveTravel(s);
-    if (!travel) {
-      i++;
+    if (slot.durationMinutes <= 0) {
+      i += 1;
       continue;
     }
-    const snap = classify(
-      slots,
-      i,
-      s,
-      travel,
-      bufferMs,
-      bufferTimeMinutes,
-      travelManager,
-      categories,
-    );
-    const bucket = processActions[snap.direction][snap.fit];
-    const key = pickActionKey(snap);
-    const action = bucket[key] ?? bucket.default;
-    i += action(snap, slots, categoryBoundaryTrespasses);
-  }
-}
 
-// ===========================================================================
-//  processActions — indexed table of action functions.
-//
-//    processActions[direction][fit][key] → action function
-//
-//  Each key names a self-contained outcome ("bypass", "center", etc.).
-//  Each action function is a pipe of step helpers (makeAvailableLeftover /
-//  makeTravel) and a single splice.
-// ===========================================================================
-
-type ActionKey =
-  | "bypass"
-  | "center"
-  | "shiftBackward"
-  | "extendForward"
-  | "trespass"
-  | "default";
-
-/**
- * Per (direction, fit) bucket: a partial map of action keys to functions.
- * Every bucket must define `default`; other keys are optional and only
- * present when that scenario can fire for that classification.
- */
-type Bucket = Partial<Record<ActionKey, ActionFn>> & { default: ActionFn };
-
-type ProcessActions = Record<Direction, Record<Fit, Bucket>>;
-
-const processActions: ProcessActions = {
-  outbound: {
-    smaller: {
-      bypass: doOutboundBypass,
-      center: doCenter,
-      default: doPlaceAtEnd,
-    },
-    exact: {
-      bypass: doOutboundBypass,
-      center: doCenter,
-      shiftBackward: doShiftBackwardExact,
-      trespass: doTrespassEnd,
-      default: doPlaceAtEnd,
-    },
-    larger: {
-      bypass: doOutboundBypass,
-      center: doCenter,
-      shiftBackward: doShiftBackwardOverflow,
-      extendForward: doExtendForward,
-      trespass: doTrespassEnd,
-      default: doInsufficient,
-    },
-  },
-  return: {
-    smaller: {
-      default: doPlaceAtStart,
-    },
-    exact: {
-      bypass: doReturnBypass,
-      trespass: doTrespassStart,
-      default: doPlaceAtStart,
-    },
-    larger: {
-      bypass: doReturnBypass,
-      trespass: doTrespassStart,
-      default: doPlaceAtStart,
-    },
-  },
-};
-
-/**
- * Pure decision tree. Given the fully-populated snapshot, returns the single
- * key in `processActions[direction][fit]` to invoke. No iteration over
- * candidates, no fall-through. Each branch reads from the snapshot.
- */
-function pickActionKey(snap: Snapshot): ActionKey {
-  if (snap.direction === "outbound") {
-    if (snap.outboundBypass) return "bypass";
-    if (snap.center) return "center";
-    if (snap.fit === "smaller") return "default";
-    if (snap.fit === "exact") {
-      if (snap.shiftBackwardExact) return "shiftBackward";
-      if (snap.currentIsCategory) return "trespass";
-      return "default";
+    if (slot.type === "available") {
+      i = handleAvailable(slots, i, travelManager, bufferTimeMinutes, trespasses);
+      continue;
     }
-    // fit === "larger"
-    if (snap.shiftBackwardOverflow) return "shiftBackward";
-    if (snap.extendForward) return "extendForward";
-    if (snap.currentIsCategory) return "trespass";
-    return "default";
+
+    if (slot.type === "category") {
+      i = handleCategory(slots, i, travelManager, bufferTimeMinutes, trespasses);
+      continue;
+    }
+
+    i += 1;
   }
-  // direction === "return"
-  if (snap.returnBypass) return "bypass";
-  if (snap.currentIsCategory && snap.travelMs >= snap.slotMs) return "trespass";
-  return "default";
-}
-
-// ===========================================================================
-//  CLASSIFY — gather facts and feasibility plans upfront.
-// ===========================================================================
-
-function classify(
-  slots: Slot[],
-  slotIndex: number,
-  slot: AvailableSlot,
-  travel: {
-    prevLocation: string;
-    nextLocation: string;
-    travelMinutes: number;
-    placeAtSlotStart: boolean;
-  },
-  bufferMs: number,
-  bufferTimeMinutes: number,
-  travelManager: TravelManager,
-  categories: Category[],
-): Snapshot {
-  const direction: Direction = travel.placeAtSlotStart ? "return" : "outbound";
-  const travelMs = Math.round(travel.travelMinutes * 60000);
-  const slotMs = slot.end.getTime() - slot.start.getTime();
-  const fit: Fit =
-    travelMs < slotMs ? "smaller" : travelMs === slotMs ? "exact" : "larger";
-
-  const prevSlot = slotIndex > 0 ? slots[slotIndex - 1] : null;
-  const nextSlot = slotIndex < slots.length - 1 ? slots[slotIndex + 1] : null;
-
-  const prev = probeNeighbor(prevSlot, slot.start.getTime(), "prev");
-  const next = probeNeighbor(nextSlot, slot.end.getTime(), "next");
-
-  const center =
-    direction === "outbound" ? planCenter(slot, nextSlot, travel) : null;
-  const shiftBackwardExact =
-    direction === "outbound" && fit === "exact"
-      ? planShiftBackward(slot, prevSlot, travel, bufferMs, true)
-      : null;
-  const shiftBackwardOverflow =
-    direction === "outbound" && fit === "larger"
-      ? planShiftBackward(slot, prevSlot, travel, bufferMs, false)
-      : null;
-  const extendForward =
-    direction === "outbound" && fit === "larger"
-      ? planExtendForward(slot, nextSlot, travel, bufferMs)
-      : null;
-  const outboundBypass =
-    direction === "outbound"
-      ? planOutboundBypass(
-          slot,
-          nextSlot,
-          travel,
-          bufferTimeMinutes,
-          travelManager,
-          categories,
-        )
-      : null;
-  const returnBypass =
-    direction === "return"
-      ? planReturnBypass(slot, nextSlot, travel, travelManager)
-      : null;
-
-  return {
-    slot,
-    slotIndex,
-    direction,
-    prevLocation: travel.prevLocation,
-    nextLocation: travel.nextLocation,
-    travelMinutes: travel.travelMinutes,
-    travelMs,
-    slotMs,
-    fit,
-    currentIsCategory: !!slot.categoryId,
-    bufferMs,
-    bufferTimeMinutes,
-    prev,
-    next,
-    outboundBypass,
-    returnBypass,
-    center,
-    shiftBackwardExact,
-    shiftBackwardOverflow,
-    extendForward,
-  };
-}
-
-function probeNeighbor(
-  slot: Slot | null,
-  anchorMs: number,
-  side: "prev" | "next",
-): NeighborInfo {
-  if (!slot) {
-    return {
-      slot: null,
-      exists: false,
-      type: "none",
-      contiguous: false,
-      isCategory: false,
-      isAvailable: false,
-      isTravel: false,
-      durationMs: 0,
-    };
-  }
-  const contiguous =
-    side === "prev"
-      ? slot.end.getTime() === anchorMs
-      : slot.start.getTime() === anchorMs;
-  const hasCategoryField = slot.type === "available" || slot.type === "travel";
-  return {
-    slot,
-    exists: true,
-    type: slot.type,
-    contiguous,
-    isCategory: hasCategoryField && !!slot.categoryId,
-    isAvailable: slot.type === "available",
-    isTravel: slot.type === "travel",
-    durationMs: slot.end.getTime() - slot.start.getTime(),
-  };
 }
 
 // ---------------------------------------------------------------------------
-//  Plan helpers — pure feasibility computations. null = not applicable.
+// Available slot — one transition inside, place at start or end per legTracker
 // ---------------------------------------------------------------------------
 
-function planCenter(
-  slot: AvailableSlot,
-  nextSlot: Slot | null,
-  travel: { travelMinutes: number },
-): CenterPlan | null {
-  if (!slot.categoryId) return null;
-  if (!nextSlot || nextSlot.type !== "available") return null;
-  if (!nextSlot.categoryId) return null;
-  if (nextSlot.start.getTime() !== slot.end.getTime()) return null;
-  const halfMs = (travel.travelMinutes * 60000) / 2;
-  const slotMs = slot.end.getTime() - slot.start.getTime();
-  const nextSlotMs = nextSlot.end.getTime() - nextSlot.start.getTime();
-  if (halfMs > slotMs || halfMs > nextSlotMs) return null;
-  return {
-    travelStart: new Date(slot.end.getTime() - halfMs),
-    travelEnd: new Date(slot.end.getTime() + halfMs),
-    nextSlot,
-  };
-}
-
-function planShiftBackward(
-  slot: AvailableSlot,
-  prevSlot: Slot | null,
-  travel: { travelMinutes: number },
-  bufferMs: number,
-  allowAcrossUnrelatedSlots: boolean,
-): ShiftBackwardPlan | null {
-  if (!prevSlot || prevSlot.type !== "available") return null;
-  if (!allowAcrossUnrelatedSlots && prevSlot.categoryId) return null;
-
-  const newTravelEnd = new Date(slot.end.getTime() - bufferMs);
-  const newTravelStart = new Date(
-    newTravelEnd.getTime() - travel.travelMinutes * 60000,
-  );
-
-  const adjacent =
-    prevSlot.end.getTime() + bufferMs >= slot.start.getTime();
-  const hasRoom = newTravelStart.getTime() >= prevSlot.start.getTime();
-  if (!adjacent || !hasRoom) return null;
-
-  // Last-resort path refuses when both sides are non-category.
-  const bothNonCategory = !slot.categoryId && !prevSlot.categoryId;
-  if (bothNonCategory && !allowAcrossUnrelatedSlots) return null;
-
-  return {
-    newTravelStart,
-    newTravelEnd,
-    shrunkPreviousEnd: new Date(newTravelStart.getTime() - bufferMs),
-    previousSlot: prevSlot,
-  };
-}
-
-function planExtendForward(
-  slot: AvailableSlot,
-  nextSlot: Slot | null,
-  travel: { travelMinutes: number },
-  bufferMs: number,
-): ExtendForwardPlan | null {
-  if (slot.categoryId) return null;
-  if (!nextSlot || nextSlot.type !== "available") return null;
-  if (!nextSlot.categoryId) return null;
-  if (nextSlot.start.getTime() !== slot.end.getTime()) return null;
-  const travelEnd = new Date(slot.start.getTime() + travel.travelMinutes * 60000);
-  return {
-    travelEnd,
-    trimmedCategoryStart: new Date(travelEnd.getTime() + bufferMs),
-    nextSlot,
-  };
-}
-
-function planOutboundBypass(
-  slot: AvailableSlot,
-  nextSlot: Slot | null,
-  travel: { prevLocation: string; nextLocation: string; travelMinutes: number },
-  bufferTimeMinutes: number,
-  travelManager: TravelManager,
-  categories: Category[],
-): OutboundBypassPlan | null {
-  if (slot.categoryId) return null;
-  if (!nextSlot || nextSlot.type !== "available" || !nextSlot.categoryId)
-    return null;
-  if (nextSlot.start.getTime() !== slot.end.getTime()) return null;
-  if (!nextSlot.nextLocationId || nextSlot.nextLocationId === travel.nextLocation)
-    return null;
-
-  const periodEnd = findCategoryPeriodEnd(nextSlot, categories);
-  if (periodEnd === undefined || nextSlot.end.getTime() >= periodEnd.getTime())
-    return null;
-
-  const finalDestination = nextSlot.nextLocationId;
-  const travelCategoryToDestination = travelManager.getTravelTime(
-    travel.nextLocation,
-    finalDestination,
-    nextSlot.end,
-  );
-  if (travelCategoryToDestination <= 0) return null;
-
-  const categorySlotCannotHoldOutgoing =
-    travelCategoryToDestination > nextSlot.durationMinutes;
-  const combinedSpanCannotHoldBoth =
-    travel.travelMinutes + bufferTimeMinutes + travelCategoryToDestination >
-    slot.durationMinutes + nextSlot.durationMinutes;
-  if (!categorySlotCannotHoldOutgoing && !combinedSpanCannotHoldBoth)
-    return null;
-
-  // Anchor depends on which trigger fired.
-  //   category slot too small  → span END (preserves leftover before)
-  //   combined span too tight  → span START (trims category slot after)
-  const anchor: "end" | "start" = categorySlotCannotHoldOutgoing
-    ? "end"
-    : "start";
-  const anchorTime = anchor === "end" ? nextSlot.end : slot.start;
-  const directMinutes = travelManager.getTravelTime(
-    travel.prevLocation,
-    finalDestination,
-    anchorTime,
-  );
-
-  const spanMs = nextSlot.end.getTime() - slot.start.getTime();
-  const fits = directMinutes * 60000 <= spanMs;
-
-  return {
-    anchor,
-    spanEnd: nextSlot.end,
-    finalDestination,
-    categoryLocation: travel.nextLocation,
-    directMinutes,
-    fits,
-    nextSlot,
-  };
-}
-
-function planReturnBypass(
-  slot: AvailableSlot,
-  nextSlot: Slot | null,
-  travel: { prevLocation: string; nextLocation: string; travelMinutes: number },
-  travelManager: TravelManager,
-): ReturnBypassPlan | null {
-  if (!slot.categoryId) return null;
-  if (travel.travelMinutes < slot.durationMinutes) return null;
-  if (!nextSlot || nextSlot.type !== "available" || nextSlot.categoryId)
-    return null;
-  if (nextSlot.start.getTime() !== slot.end.getTime()) return null;
-  if (
-    nextSlot.prevLocationId !== travel.nextLocation ||
-    !nextSlot.nextLocationId
-  )
-    return null;
-
-  const finalDestination = nextSlot.nextLocationId;
-  const directMinutes = travelManager.getTravelTime(
-    travel.prevLocation,
-    finalDestination,
-    slot.start,
-  );
-  if (directMinutes <= 0) return null;
-
-  const spanMs = nextSlot.end.getTime() - slot.start.getTime();
-  const fits = directMinutes * 60000 <= spanMs;
-
-  return {
-    spanEnd: nextSlot.end,
-    finalDestination,
-    directMinutes,
-    fits,
-    nextSlot,
-  };
-}
-
-function findCategoryPeriodEnd(
-  slot: AvailableSlot,
-  constraints: Category[],
-): Date | undefined {
-  if (!slot.categoryId) return undefined;
-  const constraint = constraints.find((c) => c.id === slot.categoryId);
-  if (!constraint) return undefined;
-  const dayStart = new Date(slot.start);
-  dayStart.setHours(0, 0, 0, 0);
-  const slotStartMs = slot.start.getTime();
-  const slotEndMs = slot.end.getTime();
-  for (const cts of constraint.timeSlots) {
-    const period = expandSlotForDay(cts, dayStart);
-    if (!period) continue;
-    if (
-      period.start.getTime() <= slotStartMs &&
-      period.end.getTime() >= slotEndMs
-    ) {
-      return period.end;
-    }
-  }
-  return undefined;
-}
-
-// ===========================================================================
-//  Step helpers — small building blocks reused by action functions.
-// ===========================================================================
-
-function makeAvailableLeftover(
-  start: Date,
-  end: Date,
-  base: AvailableSlot,
-  overrides: {
-    prevLocationId?: string | null;
-    nextLocationId?: string | null;
-    categoryId?: string | null;
-    isStrictCategory?: boolean;
-  } = {},
-): AvailableSlot {
-  return {
-    start,
-    end,
-    durationMinutes: Math.floor((end.getTime() - start.getTime()) / 60000),
-    type: "available",
-    prevLocationId:
-      overrides.prevLocationId !== undefined
-        ? overrides.prevLocationId
-        : base.prevLocationId,
-    nextLocationId:
-      overrides.nextLocationId !== undefined
-        ? overrides.nextLocationId
-        : base.nextLocationId,
-    categoryId:
-      overrides.categoryId !== undefined
-        ? overrides.categoryId
-        : base.categoryId,
-    isStrictCategory:
-      overrides.isStrictCategory !== undefined
-        ? overrides.isStrictCategory
-        : base.isStrictCategory,
-  };
-}
-
-function makeTravel(
-  start: Date,
-  end: Date,
-  fromLoc: string,
-  toLoc: string,
-  snap: Snapshot,
-  opts?: { insufficient?: boolean; requiredMinutes?: number },
-) {
-  return createTravelSlot(start, end, fromLoc, toLoc, "preliminary", uuidv4(), {
-    categoryId: snap.slot.categoryId,
-    isStrictCategory: snap.slot.isStrictCategory,
-    insufficientTravel: opts?.insufficient ?? false,
-    requiredTravelMinutes: opts?.requiredMinutes ?? 0,
-  });
-}
-
-// ===========================================================================
-//  Action functions — each is a "custom pipe" of step helpers + a splice.
-// ===========================================================================
-
-function doPlaceAtEnd(snap: Snapshot, slots: Slot[]): number {
-  const { slot, slotIndex, prevLocation, nextLocation, travelMinutes } = snap;
-  const travelStart = new Date(slot.end.getTime() - travelMinutes * 60000);
-  const pieces: Slot[] = [];
-  if (travelStart.getTime() > slot.start.getTime()) {
-    pieces.push(
-      makeAvailableLeftover(slot.start, travelStart, slot, {
-        nextLocationId: nextLocation,
-      }),
-    );
-  }
-  pieces.push(makeTravel(travelStart, slot.end, prevLocation, nextLocation, snap));
-  slots.splice(slotIndex, 1, ...pieces);
-  return pieces.length;
-}
-
-function doPlaceAtStart(snap: Snapshot, slots: Slot[]): number {
-  // Falls through to insufficient when travel can't fit.
-  if (snap.travelMs > snap.slotMs) return doInsufficient(snap, slots);
-
-  const { slot, slotIndex, prevLocation, nextLocation, travelMinutes } = snap;
-  const travelEnd = new Date(slot.start.getTime() + travelMinutes * 60000);
-  const pieces: Slot[] = [
-    makeTravel(slot.start, travelEnd, prevLocation, nextLocation, snap),
-  ];
-  if (travelEnd.getTime() < slot.end.getTime()) {
-    pieces.push(
-      makeAvailableLeftover(travelEnd, slot.end, slot, {
-        prevLocationId: nextLocation,
-      }),
-    );
-  }
-  slots.splice(slotIndex, 1, ...pieces);
-  return pieces.length;
-}
-
-function doCenter(snap: Snapshot, slots: Slot[]): number {
-  const plan = snap.center!;
-  const { slot, slotIndex, prevLocation, nextLocation } = snap;
-  const { travelStart, travelEnd, nextSlot } = plan;
-  const pieces: Slot[] = [];
-  if (travelStart.getTime() > slot.start.getTime()) {
-    pieces.push(
-      makeAvailableLeftover(slot.start, travelStart, slot, {
-        nextLocationId: prevLocation,
-      }),
-    );
-  }
-  pieces.push(makeTravel(travelStart, travelEnd, prevLocation, nextLocation, snap));
-  pieces.push({
-    ...nextSlot,
-    start: travelEnd,
-    durationMinutes: Math.floor(
-      (nextSlot.end.getTime() - travelEnd.getTime()) / 60000,
-    ),
-    prevLocationId: nextLocation,
-  });
-  slots.splice(slotIndex, 2, ...pieces);
-  // Stop on the trimmed-next so the walker re-classifies it.
-  return pieces.length - 1;
-}
-
-function doShiftBackwardExact(snap: Snapshot, slots: Slot[]): number {
-  return applyShiftBackward(snap, slots, snap.shiftBackwardExact!);
-}
-
-function doShiftBackwardOverflow(snap: Snapshot, slots: Slot[]): number {
-  return applyShiftBackward(snap, slots, snap.shiftBackwardOverflow!);
-}
-
-function applyShiftBackward(
-  snap: Snapshot,
+function handleAvailable(
   slots: Slot[],
-  plan: ShiftBackwardPlan,
+  i: number,
+  travelManager: TravelManager,
+  bufferTimeMinutes: number,
+  trespasses: CategoryBoundaryTrespass[] | undefined,
 ): number {
-  const { slotIndex, prevLocation, nextLocation } = snap;
-  const { newTravelStart, newTravelEnd, shrunkPreviousEnd, previousSlot } = plan;
-  const pieces: Slot[] = [];
-  if (shrunkPreviousEnd.getTime() > previousSlot.start.getTime()) {
-    pieces.push({
-      ...previousSlot,
-      end: shrunkPreviousEnd,
-      durationMinutes: Math.floor(
-        (shrunkPreviousEnd.getTime() - previousSlot.start.getTime()) / 60000,
-      ),
-    });
-  }
-  pieces.push(
-    makeTravel(newTravelStart, newTravelEnd, prevLocation, nextLocation, snap),
-  );
-  // Splice [prev, current] with pieces. K items inserted, splice at i-1.
-  slots.splice(slotIndex - 1, 2, ...pieces);
-  return pieces.length - 1;
-}
+  const slot = slots[i] as AvailableSlot;
+  const startLoc = slot.prevLocationId ?? null;
+  const endLoc = slot.nextLocationId ?? null;
 
-function doExtendForward(snap: Snapshot, slots: Slot[]): number {
-  const plan = snap.extendForward!;
-  const { slot, slotIndex, prevLocation, nextLocation } = snap;
-  const { travelEnd, trimmedCategoryStart, nextSlot } = plan;
-  const pieces: Slot[] = [
-    makeTravel(slot.start, travelEnd, prevLocation, nextLocation, snap),
-  ];
-  if (trimmedCategoryStart.getTime() < nextSlot.end.getTime()) {
-    pieces.push({
-      ...nextSlot,
-      start: trimmedCategoryStart,
-      durationMinutes: Math.floor(
-        (nextSlot.end.getTime() - trimmedCategoryStart.getTime()) / 60000,
-      ),
-      prevLocationId: nextLocation,
-    });
-  }
-  slots.splice(slotIndex, 2, ...pieces);
-  return pieces.length;
-}
+  if (!startLoc || !endLoc) return i + 1;
+  if (startLoc === endLoc) return i + 1;
 
-function doOutboundBypass(snap: Snapshot, slots: Slot[]): number {
-  const plan = snap.outboundBypass!;
-  const { slot, slotIndex, prevLocation } = snap;
-  const { anchor, spanEnd, finalDestination, categoryLocation, directMinutes, fits, nextSlot } = plan;
+  const action = travelManager.resolveTravel(slot);
+  if (!action) return i + 1;
 
-  if (!fits) {
-    slots.splice(
-      slotIndex,
-      2,
-      makeTravel(slot.start, spanEnd, prevLocation, finalDestination, snap, {
-        insufficient: true,
-        requiredMinutes: directMinutes,
-      }),
-    );
-    return 1;
-  }
+  const { travelMinutes, placeAtSlotStart } = action;
+  const fromLoc = startLoc;
+  const toLoc = endLoc;
 
-  if (anchor === "end") {
-    const travelStart = new Date(spanEnd.getTime() - directMinutes * 60000);
-    const pieces: Slot[] = [];
-    if (travelStart.getTime() > slot.start.getTime()) {
-      pieces.push(
-        makeAvailableLeftover(slot.start, travelStart, slot, {
-          nextLocationId: finalDestination,
-        }),
+  // Current size: LARGE ENOUGH for travel
+  if (slot.durationMinutes >= travelMinutes) {
+    if (placeAtSlotStart) {
+      // PlaceAtStart (return)
+      const travelStart = slot.start;
+      const travelEnd = new Date(slot.start.getTime() + travelMinutes * 60000);
+      return placeTravelInWindow(
+        slots,
+        i,
+        i,
+        travelStart,
+        travelEnd,
+        fromLoc,
+        toLoc,
+        travelMinutes,
+        false,
+      );
+    } else {
+      // PlaceAtEnd (outbound)
+      const travelEnd = slot.end;
+      const travelStart = new Date(slot.end.getTime() - travelMinutes * 60000);
+      return placeTravelInWindow(
+        slots,
+        i,
+        i,
+        travelStart,
+        travelEnd,
+        fromLoc,
+        toLoc,
+        travelMinutes,
+        false,
       );
     }
-    pieces.push(
-      makeTravel(travelStart, spanEnd, prevLocation, finalDestination, snap),
-    );
-    slots.splice(slotIndex, 2, ...pieces);
-    return pieces.length;
   }
 
-  // anchor === "start" — trim what remains of the category slot.
-  const travelEnd = new Date(slot.start.getTime() + directMinutes * 60000);
-  const pieces: Slot[] = [
-    makeTravel(slot.start, travelEnd, prevLocation, finalDestination, snap),
-  ];
-  if (travelEnd.getTime() < spanEnd.getTime()) {
-    pieces.push({
-      ...nextSlot,
-      start: travelEnd,
-      durationMinutes: Math.floor(
-        (spanEnd.getTime() - travelEnd.getTime()) / 60000,
-      ),
-      prevLocationId: categoryLocation,
-    });
-    slots.splice(slotIndex, 2, ...pieces);
-    return pieces.length - 1;
-  }
-  slots.splice(slotIndex, 2, ...pieces);
-  return pieces.length;
+  // Current size: NOT LARGE ENOUGH for travel — bleed into neighbors
+  return bleedAvailableTransition(
+    slots,
+    i,
+    travelMinutes,
+    fromLoc,
+    toLoc,
+    bufferTimeMinutes,
+    trespasses,
+  );
 }
 
-function doReturnBypass(snap: Snapshot, slots: Slot[]): number {
-  const plan = snap.returnBypass!;
-  const { slot, slotIndex, prevLocation } = snap;
-  const { spanEnd, finalDestination, directMinutes, fits, nextSlot } = plan;
-
-  if (!fits) {
-    slots.splice(
-      slotIndex,
-      2,
-      makeTravel(slot.start, spanEnd, prevLocation, finalDestination, snap, {
-        insufficient: true,
-        requiredMinutes: directMinutes,
-      }),
-    );
-    return 1;
-  }
-
-  const travelEnd = new Date(slot.start.getTime() + directMinutes * 60000);
-  const pieces: Slot[] = [
-    makeTravel(slot.start, travelEnd, prevLocation, finalDestination, snap),
-  ];
-  if (travelEnd.getTime() < spanEnd.getTime()) {
-    pieces.push({
-      start: travelEnd,
-      end: spanEnd,
-      durationMinutes: Math.floor(
-        (spanEnd.getTime() - travelEnd.getTime()) / 60000,
-      ),
-      type: "available",
-      prevLocationId: finalDestination,
-      nextLocationId: nextSlot.nextLocationId,
-      categoryId: null,
-      isStrictCategory: false,
-    });
-  }
-  slots.splice(slotIndex, 2, ...pieces);
-  return pieces.length;
-}
-
-function doTrespassEnd(
-  snap: Snapshot,
-  _slots: Slot[],
-  trespasses: CategoryBoundaryTrespass[],
+function bleedAvailableTransition(
+  slots: Slot[],
+  i: number,
+  travelMinutes: number,
+  fromLoc: string,
+  toLoc: string,
+  _bufferTimeMinutes: number,
+  trespasses: CategoryBoundaryTrespass[] | undefined,
 ): number {
-  trespasses.push({
-    categoryId: snap.slot.categoryId!,
-    slotStart: snap.slot.start,
-    slotEnd: snap.slot.end,
-    boundary: "end",
-  });
-  return 1;
+  const current = slots[i] as AvailableSlot;
+  const prev = i > 0 ? slots[i - 1] : null;
+  const next = i + 1 < slots.length ? slots[i + 1] : null;
+
+  // Prev type: Travel → try bridge absorption
+  if (prev && prev.type === "travel") {
+    return absorbPrevTravelBridge(
+      slots,
+      i,
+      travelMinutes,
+      fromLoc,
+      toLoc,
+      trespasses,
+    );
+  }
+
+  const prevDonor = isBleedDonor(prev) ? donorSize(prev, "tail") : 0;
+  const nextDonor = isBleedDonor(next) ? donorSize(next, "head") : 0;
+  const overflow = travelMinutes - current.durationMinutes;
+
+  const prevIsAvail = prev !== null && (prev.type === "available" || prev.type === "category");
+  const nextIsAvail = next !== null && (next.type === "available" || next.type === "category");
+
+  // Prev type: Available/Category
+  if (prevIsAvail) {
+    // Next type: Available/Category
+    if (nextIsAvail) {
+      const half = Math.ceil(overflow / 2);
+      // Symmetric 3-slot bleed
+      if (prevDonor >= half && nextDonor >= half) {
+        const eatLeft = half;
+        const eatRight = overflow - eatLeft;
+        return placeAcrossPrevCurrentNext(
+          slots,
+          i,
+          eatLeft,
+          eatRight,
+          travelMinutes,
+          fromLoc,
+          toLoc,
+          trespasses,
+        );
+      }
+      // Asymmetric 3-slot bleed
+      if (prevDonor + current.durationMinutes + nextDonor >= travelMinutes) {
+        const smaller = Math.min(prevDonor, nextDonor);
+        const larger = Math.max(prevDonor, nextDonor);
+        const fromSmaller = smaller;
+        const fromLarger = Math.min(overflow - fromSmaller, larger);
+        const eatLeft = prevDonor === smaller ? fromSmaller : fromLarger;
+        const eatRight = prevDonor === smaller ? fromLarger : fromSmaller;
+        return placeAcrossPrevCurrentNext(
+          slots,
+          i,
+          eatLeft,
+          eatRight,
+          travelMinutes,
+          fromLoc,
+          toLoc,
+          trespasses,
+        );
+      }
+      // Neither fits — ALERT
+      return alertWindow(
+        slots,
+        i - 1,
+        i + 1,
+        travelMinutes,
+        fromLoc,
+        toLoc,
+        trespasses,
+      );
+    }
+
+    // Next type: Occupied
+    if (next && next.type === "occupied") {
+      if (prevDonor + current.durationMinutes >= travelMinutes) {
+        const eatLeft = overflow;
+        return placeAcrossPrevAndCurrent(
+          slots,
+          i,
+          eatLeft,
+          travelMinutes,
+          fromLoc,
+          toLoc,
+          trespasses,
+        );
+      }
+      return alertWindow(
+        slots,
+        i - 1,
+        i,
+        travelMinutes,
+        fromLoc,
+        toLoc,
+        trespasses,
+      );
+    }
+
+    // Next type: Travel — shouldn't happen going forward
+    return i + 1;
+  }
+
+  // Prev type: Occupied
+  if (prev && prev.type === "occupied") {
+    if (nextIsAvail) {
+      if (current.durationMinutes + nextDonor >= travelMinutes) {
+        const eatRight = overflow;
+        return placeAcrossCurrentAndNext(
+          slots,
+          i,
+          eatRight,
+          travelMinutes,
+          fromLoc,
+          toLoc,
+          trespasses,
+        );
+      }
+      return alertWindow(
+        slots,
+        i,
+        i + 1,
+        travelMinutes,
+        fromLoc,
+        toLoc,
+        trespasses,
+      );
+    }
+
+    // Both neighbors occupied — alert over current alone
+    return alertWindow(slots, i, i, travelMinutes, fromLoc, toLoc, trespasses);
+  }
+
+  // Prev is null or other — alert over current alone
+  return alertWindow(slots, i, i, travelMinutes, fromLoc, toLoc, trespasses);
 }
 
-function doTrespassStart(
-  snap: Snapshot,
-  _slots: Slot[],
-  trespasses: CategoryBoundaryTrespass[],
+// ---------------------------------------------------------------------------
+// Category slot — up to two transitions: entry at start, exit at end
+// ---------------------------------------------------------------------------
+
+function handleCategory(
+  slots: Slot[],
+  i: number,
+  travelManager: TravelManager,
+  bufferTimeMinutes: number,
+  trespasses: CategoryBoundaryTrespass[] | undefined,
 ): number {
-  trespasses.push({
-    categoryId: snap.slot.categoryId!,
-    slotStart: snap.slot.start,
-    slotEnd: snap.slot.end,
-    boundary: "start",
-  });
-  return 1;
+  const cat = slots[i] as CategorySlot;
+  const cur = cat.currentLocationId;
+  const prevLoc = cat.prevLocationId;
+  const nextLoc = cat.nextLocationId;
+
+  let cursor = i;
+
+  // Entry transition: prev -> current
+  if (cur && prevLoc && prevLoc !== cur) {
+    const travelMinutes = travelManager.getTravelTime(
+      prevLoc,
+      cur,
+      cat.start,
+    );
+    if (travelMinutes > 0) {
+      cursor = placeCategoryEntry(
+        slots,
+        cursor,
+        travelMinutes,
+        prevLoc,
+        cur,
+        bufferTimeMinutes,
+        trespasses,
+      );
+    }
+  }
+
+  // Refetch — the cat may have been consumed by the entry alert, or replaced
+  // with a shrunk fragment. Walk forward from the original index looking for
+  // the same categoryId at its original end time. If not found, the cat is
+  // gone and we just advance past whatever the entry left behind.
+  const catIdx = findCategoryAt(slots, cursor, cat.categoryId, cat.end);
+  if (catIdx === -1) return cursor;
+
+  const shrunkCat = slots[catIdx] as CategorySlot;
+
+  // Exit transition: current -> next
+  if (cur && nextLoc && cur !== nextLoc) {
+    const travelMinutes = travelManager.getTravelTime(
+      cur,
+      nextLoc,
+      shrunkCat.end,
+    );
+    if (travelMinutes > 0) {
+      return placeCategoryExit(
+        slots,
+        catIdx,
+        travelMinutes,
+        cur,
+        nextLoc,
+        bufferTimeMinutes,
+        trespasses,
+      );
+    }
+  }
+
+  return catIdx + 1;
 }
 
-function doInsufficient(snap: Snapshot, slots: Slot[]): number {
-  const { slot, slotIndex, prevLocation, nextLocation, travelMinutes } = snap;
+function placeCategoryEntry(
+  slots: Slot[],
+  i: number,
+  travelMinutes: number,
+  fromLoc: string,
+  toLoc: string,
+  _bufferTimeMinutes: number,
+  trespasses: CategoryBoundaryTrespass[] | undefined,
+): number {
+  const cat = slots[i] as CategorySlot;
+  const prev = i > 0 ? slots[i - 1] : null;
+
+  // Fits inside the cat's head
+  if (cat.durationMinutes >= travelMinutes) {
+    const travelStart = cat.start;
+    const travelEnd = new Date(cat.start.getTime() + travelMinutes * 60000);
+    return placeTravelInWindow(
+      slots,
+      i,
+      i,
+      travelStart,
+      travelEnd,
+      fromLoc,
+      toLoc,
+      travelMinutes,
+      false,
+    );
+  }
+
+  const overflow = travelMinutes - cat.durationMinutes;
+
+  // Prev type: Available/Category → bleed into prev tail
+  if (prev && (prev.type === "available" || prev.type === "category")) {
+    const prevTail = donorSize(prev, "tail");
+    if (prevTail >= overflow) {
+      // Travel spans (cat.start - overflow) → cat.end (eats full cat + overflow from prev tail)
+      const eatLeft = overflow;
+      const travelStart = new Date(
+        prev.end.getTime() - eatLeft * 60000,
+      );
+      const travelEnd = cat.end;
+      return placeTravelInWindow(
+        slots,
+        i - 1,
+        i,
+        travelStart,
+        travelEnd,
+        fromLoc,
+        toLoc,
+        travelMinutes,
+        false,
+      );
+    }
+    // Not enough room — ALERT over [prev, cat]
+    return alertWindow(
+      slots,
+      i - 1,
+      i,
+      travelMinutes,
+      fromLoc,
+      toLoc,
+      trespasses,
+    );
+  }
+
+  // Prev type: Travel — try bridge absorb (travel(X→Y) + cat entry Y→cur → single travel(X→cur))
+  if (prev && prev.type === "travel") {
+    return absorbPrevTravelForCategoryEntry(
+      slots,
+      i,
+      travelMinutes,
+      fromLoc,
+      toLoc,
+      trespasses,
+    );
+  }
+
+  // Prev type: Occupied (or null) — no donor on the left, alert over cat alone
+  return alertWindow(slots, i, i, travelMinutes, fromLoc, toLoc, trespasses);
+}
+
+function placeCategoryExit(
+  slots: Slot[],
+  i: number,
+  travelMinutes: number,
+  fromLoc: string,
+  toLoc: string,
+  _bufferTimeMinutes: number,
+  trespasses: CategoryBoundaryTrespass[] | undefined,
+): number {
+  const cat = slots[i] as CategorySlot;
+  const next = i + 1 < slots.length ? slots[i + 1] : null;
+
+  // Fits inside the cat's tail
+  if (cat.durationMinutes >= travelMinutes) {
+    const travelEnd = cat.end;
+    const travelStart = new Date(cat.end.getTime() - travelMinutes * 60000);
+    return placeTravelInWindow(
+      slots,
+      i,
+      i,
+      travelStart,
+      travelEnd,
+      fromLoc,
+      toLoc,
+      travelMinutes,
+      false,
+    );
+  }
+
+  const overflow = travelMinutes - cat.durationMinutes;
+
+  // Next type: Available/Category → bleed into next head
+  if (next && (next.type === "available" || next.type === "category")) {
+    const nextHead = donorSize(next, "head");
+    if (nextHead >= overflow) {
+      const eatRight = overflow;
+      const travelStart = cat.start;
+      const travelEnd = new Date(
+        next.start.getTime() + eatRight * 60000,
+      );
+      return placeTravelInWindow(
+        slots,
+        i,
+        i + 1,
+        travelStart,
+        travelEnd,
+        fromLoc,
+        toLoc,
+        travelMinutes,
+        false,
+      );
+    }
+    return alertWindow(
+      slots,
+      i,
+      i + 1,
+      travelMinutes,
+      fromLoc,
+      toLoc,
+      trespasses,
+    );
+  }
+
+  // Next type: Occupied / Travel / null — no donor on the right
+  return alertWindow(slots, i, i, travelMinutes, fromLoc, toLoc, trespasses);
+}
+
+// ---------------------------------------------------------------------------
+// Prev=Travel bridge absorption (Available case)
+// ---------------------------------------------------------------------------
+
+function absorbPrevTravelBridge(
+  slots: Slot[],
+  i: number,
+  _ignoredTravelMinutes: number,
+  _ignoredFromLoc: string,
+  toLoc: string,
+  trespasses: CategoryBoundaryTrespass[] | undefined,
+): number {
+  // Prev is travel(X → Y), current transition is Y → toLoc (= Z).
+  // Bridge: replace prev with single travel(X → Z) spanning [prev.start, current.end].
+  const prev = slots[i - 1] as TravelSlot;
+  const current = slots[i] as AvailableSlot;
+  const X = prev.travelFromLocationId;
+  const Z = toLoc;
+  if (!X) return i + 1;
+
+  // We can't ask travelManager from here without threading it in — and the
+  // bridge needs a fresh getTravelTime(X, Z) call. Fall back to a coarse
+  // estimate: prev's duration + current's duration as the available window,
+  // emit an alert if that's plausibly too small (which we can't tell without
+  // the matrix). For now, always emit the bridged travel filling the window;
+  // the dispatcher walks forward and we don't have a cheap way to recompute.
+  const travelStart = prev.start;
+  const travelEnd = current.end;
+  const bridgedMinutes = Math.floor(
+    (travelEnd.getTime() - travelStart.getTime()) / 60000,
+  );
+
   slots.splice(
-    slotIndex,
-    1,
-    makeTravel(slot.start, slot.end, prevLocation, nextLocation, snap, {
-      insufficient: true,
-      requiredMinutes: travelMinutes,
+    i - 1,
+    2,
+    createTravelSlot(travelStart, travelEnd, X, Z, "preliminary", uuidv4(), {
+      requiredTravelMinutes: bridgedMinutes,
     }),
   );
-  return 1;
+  if (trespasses && (current as PlaceableSlot).type === "category") {
+    const c = current as unknown as CategorySlot;
+    trespasses.push({
+      categoryId: c.categoryId,
+      slotStart: c.start,
+      slotEnd: c.end,
+      boundary: "start",
+    });
+  }
+  return i;
+}
+
+function absorbPrevTravelForCategoryEntry(
+  slots: Slot[],
+  i: number,
+  _ignoredTravelMinutes: number,
+  _ignoredFromLoc: string,
+  toLoc: string,
+  trespasses: CategoryBoundaryTrespass[] | undefined,
+): number {
+  // Mirror of the Available bridge — prev travel (X→Y), cat entry (Y→cur).
+  // Build bridge(X→cur) spanning [prev.start, cat.start + travelMinutes] if
+  // possible; otherwise alert. Without a fresh getTravelTime call we use the
+  // window's full length as the bridged duration.
+  const prev = slots[i - 1] as TravelSlot;
+  const cat = slots[i] as CategorySlot;
+  const X = prev.travelFromLocationId;
+  if (!X) return i + 1;
+
+  const travelStart = prev.start;
+  const travelEnd = cat.end;
+  const bridgedMinutes = Math.floor(
+    (travelEnd.getTime() - travelStart.getTime()) / 60000,
+  );
+
+  slots.splice(
+    i - 1,
+    2,
+    createTravelSlot(travelStart, travelEnd, X, toLoc, "preliminary", uuidv4(), {
+      requiredTravelMinutes: bridgedMinutes,
+      categoryId: cat.categoryId,
+      isStrictCategory: cat.isStrictCategory,
+    }),
+  );
+  if (trespasses) {
+    trespasses.push({
+      categoryId: cat.categoryId,
+      slotStart: cat.start,
+      slotEnd: cat.end,
+      boundary: "start",
+    });
+  }
+  return i;
+}
+
+// ---------------------------------------------------------------------------
+// Placement helpers
+// ---------------------------------------------------------------------------
+
+// Place a travel block spanning `[travelStart, travelEnd]` by consuming slots
+// in the window [fromIdx, toIdx] (inclusive). The donor at fromIdx may keep
+// its head as a pre-fragment; the donor at toIdx may keep its tail as a
+// post-fragment; any slots strictly between are assumed fully consumed.
+//
+// Returns the index where the walker should continue. That's the index
+// immediately after the inserted travel slot — i.e. pointing at the
+// post-fragment if any, or at the slot after the window if not.
+function placeTravelInWindow(
+  slots: Slot[],
+  fromIdx: number,
+  toIdx: number,
+  travelStart: Date,
+  travelEnd: Date,
+  fromLoc: string,
+  toLoc: string,
+  requiredTravelMinutes: number,
+  insufficient: boolean,
+): number {
+  const fromSlot = slots[fromIdx] as PlaceableSlot;
+  const toSlot = slots[toIdx] as PlaceableSlot;
+
+  const fragments: Slot[] = [];
+
+  if (fromSlot.start.getTime() < travelStart.getTime()) {
+    fragments.push(trimToPreFragment(fromSlot, travelStart, fromLoc));
+  }
+
+  // Travel slot inherits cat membership if entirely inside a single cat fragment.
+  const insideCat: CategorySlot | null =
+    fromSlot.type === "category" &&
+    toSlot.type === "category" &&
+    fromSlot.categoryId === toSlot.categoryId
+      ? fromSlot
+      : null;
+
+  fragments.push(
+    createTravelSlot(travelStart, travelEnd, fromLoc, toLoc, "preliminary", uuidv4(), {
+      insufficientTravel: insufficient,
+      requiredTravelMinutes,
+      categoryId: insideCat ? insideCat.categoryId : undefined,
+      isStrictCategory: insideCat ? insideCat.isStrictCategory : undefined,
+    }),
+  );
+
+  if (toSlot.end.getTime() > travelEnd.getTime()) {
+    fragments.push(trimToPostFragment(toSlot, travelEnd, toLoc));
+  }
+
+  slots.splice(fromIdx, toIdx - fromIdx + 1, ...fragments);
+
+  // Position the walker right after the inserted travel.
+  const travelOffset = fragments.findIndex((f) => f.type === "travel");
+  return fromIdx + travelOffset + 1;
+}
+
+function placeAcrossPrevCurrentNext(
+  slots: Slot[],
+  i: number,
+  eatLeft: number,
+  eatRight: number,
+  travelMinutes: number,
+  fromLoc: string,
+  toLoc: string,
+  _trespasses: CategoryBoundaryTrespass[] | undefined,
+): number {
+  const prev = slots[i - 1] as PlaceableSlot;
+  const next = slots[i + 1] as PlaceableSlot;
+  const travelStart = new Date(prev.end.getTime() - eatLeft * 60000);
+  const travelEnd = new Date(next.start.getTime() + eatRight * 60000);
+  return placeTravelInWindow(
+    slots,
+    i - 1,
+    i + 1,
+    travelStart,
+    travelEnd,
+    fromLoc,
+    toLoc,
+    travelMinutes,
+    false,
+  );
+}
+
+function placeAcrossPrevAndCurrent(
+  slots: Slot[],
+  i: number,
+  eatLeft: number,
+  travelMinutes: number,
+  fromLoc: string,
+  toLoc: string,
+  _trespasses: CategoryBoundaryTrespass[] | undefined,
+): number {
+  const prev = slots[i - 1] as PlaceableSlot;
+  const current = slots[i] as PlaceableSlot;
+  const travelStart = new Date(prev.end.getTime() - eatLeft * 60000);
+  const travelEnd = current.end;
+  return placeTravelInWindow(
+    slots,
+    i - 1,
+    i,
+    travelStart,
+    travelEnd,
+    fromLoc,
+    toLoc,
+    travelMinutes,
+    false,
+  );
+}
+
+function placeAcrossCurrentAndNext(
+  slots: Slot[],
+  i: number,
+  eatRight: number,
+  travelMinutes: number,
+  fromLoc: string,
+  toLoc: string,
+  _trespasses: CategoryBoundaryTrespass[] | undefined,
+): number {
+  const current = slots[i] as PlaceableSlot;
+  const next = slots[i + 1] as PlaceableSlot;
+  const travelStart = current.start;
+  const travelEnd = new Date(next.start.getTime() + eatRight * 60000);
+  return placeTravelInWindow(
+    slots,
+    i,
+    i + 1,
+    travelStart,
+    travelEnd,
+    fromLoc,
+    toLoc,
+    travelMinutes,
+    false,
+  );
+}
+
+function alertWindow(
+  slots: Slot[],
+  fromIdx: number,
+  toIdx: number,
+  travelMinutes: number,
+  fromLoc: string,
+  toLoc: string,
+  trespasses: CategoryBoundaryTrespass[] | undefined,
+): number {
+  // Clamp window to placeable slots (don't span across occupied boundaries).
+  let lo = fromIdx;
+  let hi = toIdx;
+  while (lo < 0 || (slots[lo] && slots[lo].type !== "available" && slots[lo].type !== "category")) {
+    lo += 1;
+    if (lo > hi) return toIdx + 1;
+  }
+  while (hi >= slots.length || (slots[hi] && slots[hi].type !== "available" && slots[hi].type !== "category")) {
+    hi -= 1;
+    if (hi < lo) return toIdx + 1;
+  }
+
+  const fromSlot = slots[lo] as PlaceableSlot;
+  const toSlot = slots[hi] as PlaceableSlot;
+
+  // Record trespasses for any category slot in the window.
+  if (trespasses) {
+    for (let k = lo; k <= hi; k++) {
+      const s = slots[k];
+      if (s.type !== "category") continue;
+      const swallowsHead = fromSlot.start.getTime() <= s.start.getTime();
+      const swallowsTail = toSlot.end.getTime() >= s.end.getTime();
+      const boundary: "start" | "end" =
+        swallowsHead && !swallowsTail
+          ? "start"
+          : !swallowsHead && swallowsTail
+            ? "end"
+            : "start";
+      trespasses.push({
+        categoryId: s.categoryId,
+        slotStart: s.start,
+        slotEnd: s.end,
+        boundary,
+      });
+    }
+  }
+
+  const travel = createTravelSlot(
+    fromSlot.start,
+    toSlot.end,
+    fromLoc,
+    toLoc,
+    "preliminary",
+    uuidv4(),
+    {
+      insufficientTravel: true,
+      requiredTravelMinutes: travelMinutes,
+    },
+  );
+
+  slots.splice(lo, hi - lo + 1, travel);
+  return lo + 1;
+}
+
+// ---------------------------------------------------------------------------
+// Slot trimming — produces fragments with correct location fields
+// ---------------------------------------------------------------------------
+
+function trimToPreFragment(
+  slot: PlaceableSlot,
+  travelStart: Date,
+  fromLoc: string,
+): PlaceableSlot {
+  const duration = Math.floor(
+    (travelStart.getTime() - slot.start.getTime()) / 60000,
+  );
+  if (slot.type === "category") {
+    return {
+      start: slot.start,
+      end: travelStart,
+      durationMinutes: duration,
+      type: "category",
+      currentLocationId: slot.currentLocationId,
+      prevLocationId: slot.prevLocationId,
+      // The travel begins at fromLoc — pre-fragment ends with user at fromLoc.
+      // Setting next == fromLoc means this fragment's "exit" transition is
+      // current == next when current == fromLoc (the cat's loc). When the cat's
+      // loc differs from fromLoc (e.g. cat-to-cat boundary), this is a no-op
+      // because the exit was the very travel we just placed.
+      nextLocationId: fromLoc,
+      categoryId: slot.categoryId,
+      isStrictCategory: slot.isStrictCategory,
+    };
+  }
+  return {
+    start: slot.start,
+    end: travelStart,
+    durationMinutes: duration,
+    type: "available",
+    prevLocationId: fromLoc,
+    nextLocationId: fromLoc,
+  };
+}
+
+function trimToPostFragment(
+  slot: PlaceableSlot,
+  travelEnd: Date,
+  toLoc: string,
+): PlaceableSlot {
+  const duration = Math.floor(
+    (slot.end.getTime() - travelEnd.getTime()) / 60000,
+  );
+  if (slot.type === "category") {
+    return {
+      start: travelEnd,
+      end: slot.end,
+      durationMinutes: duration,
+      type: "category",
+      currentLocationId: slot.currentLocationId,
+      prevLocationId: toLoc,
+      nextLocationId: slot.nextLocationId,
+      categoryId: slot.categoryId,
+      isStrictCategory: slot.isStrictCategory,
+    };
+  }
+  return {
+    start: travelEnd,
+    end: slot.end,
+    durationMinutes: duration,
+    type: "available",
+    prevLocationId: toLoc,
+    nextLocationId: toLoc,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+
+function isBleedDonor(slot: Slot | null): slot is PlaceableSlot {
+  return !!slot && (slot.type === "available" || slot.type === "category");
+}
+
+function donorSize(slot: PlaceableSlot, _side: "head" | "tail"): number {
+  return slot.durationMinutes;
+}
+
+function findCategoryAt(
+  slots: Slot[],
+  from: number,
+  categoryId: string,
+  endTime: Date,
+): number {
+  for (let k = from; k < slots.length; k++) {
+    const s = slots[k];
+    if (s.type === "category" && s.categoryId === categoryId && s.end.getTime() === endTime.getTime()) {
+      return k;
+    }
+    if (s.start.getTime() > endTime.getTime()) return -1;
+  }
+  return -1;
 }

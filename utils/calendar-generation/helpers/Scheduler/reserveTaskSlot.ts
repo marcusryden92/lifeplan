@@ -12,14 +12,14 @@ import {
   SchedulingFailure,
   ReservationResult,
 } from "../../models/SchedulingModels";
-import { AvailableSlot, TravelSlot } from "../../models/TimeSlot";
+import { PlaceableSlot, TravelSlot } from "../../models/TimeSlot";
 import { SchedulingFailureReason } from "../../constants";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { reserveSlotWithTravel } from "../TimeSlotManager/reserveSlotWithTravel";
 
 export function reserveTaskSlot(
   task: Planner,
-  selectedSlot: AvailableSlot,
+  selectedSlot: PlaceableSlot,
   travelBefore: number,
   travelAfter: number,
   taskLocationId: string | null | undefined,
@@ -32,12 +32,23 @@ export function reserveTaskSlot(
 ): ReservationResult | { failure: SchedulingFailure } {
   const bufferMinutes = slotManager.bufferTimeMinutes;
 
+  // For a CategorySlot, the task lands in the category interior — the user is
+  // at currentLocationId on both sides of the task. (Category entry/exit
+  // transitions live at the slot's edges and are handled separately.)
+  const slotPrevLoc =
+    selectedSlot.type === "category"
+      ? selectedSlot.currentLocationId
+      : selectedSlot.prevLocationId;
+  const slotNextLoc =
+    selectedSlot.type === "category"
+      ? selectedSlot.currentLocationId
+      : selectedSlot.nextLocationId;
+
   // When reclaiming a preceding gap travel (e.g. Gamla Stan → Home), use the gap
   // travel's real origin as prevLocationId so travel-before is routed correctly.
   const effectivePrevLocationId = reclaimPrecedingGapTravel
-    ? (reclaimPrecedingGapTravel.travelFromLocationId ??
-      selectedSlot.prevLocationId)
-    : selectedSlot.prevLocationId;
+    ? (reclaimPrecedingGapTravel.travelFromLocationId ?? slotPrevLoc ?? null)
+    : (slotPrevLoc ?? null);
 
   // Calculate task times.
   // Layout: [leading buffer] [travelBefore] [buffer] [task] [buffer] [travel-after] [buffer] [FREE]
@@ -101,8 +112,8 @@ export function reserveTaskSlot(
     taskLocationId ?? null,
     effectiveTravelBefore,
     travelAfter,
-    effectivePrevLocationId ?? null,
-    selectedSlot.nextLocationId ?? null,
+    effectivePrevLocationId,
+    slotNextLoc ?? null,
     reusableTravelStart,
     absorbPrevTravelAfter,
     reclaimPrecedingGapTravel,

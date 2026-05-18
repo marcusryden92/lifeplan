@@ -1,5 +1,6 @@
 import {
   AvailableSlot,
+  CategorySlot,
   OccupiedSlot,
   Slot,
   TimeSlot,
@@ -9,6 +10,44 @@ import { EventType, PlannerType } from "@/types/prisma";
 import { isTravelSlot, createTravelSlot } from "../../utils/timeSlotUtils";
 import { SCHEDULING_CONFIG } from "../../constants";
 import { v4 as uuidv4 } from "uuid";
+
+type PlaceableSlot = AvailableSlot | CategorySlot;
+
+// Build a leftover fragment after a task carves out the middle of a placeable
+// slot. Category leftovers keep their currentLocationId / categoryId so the
+// dispatcher still sees the fragment as inside the category.
+function makeLeftover(
+  source: PlaceableSlot,
+  start: Date,
+  end: Date,
+  prevLocationId: string | null,
+  nextLocationId: string | null,
+): PlaceableSlot {
+  const durationMinutes = Math.floor(
+    (end.getTime() - start.getTime()) / 60000,
+  );
+  if (source.type === "category") {
+    return {
+      start,
+      end,
+      durationMinutes,
+      type: "category",
+      currentLocationId: source.currentLocationId,
+      prevLocationId,
+      nextLocationId,
+      categoryId: source.categoryId,
+      isStrictCategory: source.isStrictCategory,
+    };
+  }
+  return {
+    start,
+    end,
+    durationMinutes,
+    type: "available",
+    prevLocationId,
+    nextLocationId,
+  };
+}
 
 export function reserveSlotWithTravel(
   slots: Slot[],
@@ -29,11 +68,12 @@ export function reserveSlotWithTravel(
   // Operate on local typed views of the unified slots array. Items are shared
   // by reference, so in-place mutations propagate; only structural changes
   // (splice/push) need a merge step at the end.
-  const availableSlots: AvailableSlot[] = slots.filter(
-    (s): s is AvailableSlot => s.type === "available",
+  const availableSlots: PlaceableSlot[] = slots.filter(
+    (s): s is PlaceableSlot => s.type === "available" || s.type === "category",
   );
   const occupiedSlots: (OccupiedSlot | TravelSlot)[] = slots.filter(
-    (s): s is OccupiedSlot | TravelSlot => s.type !== "available",
+    (s): s is OccupiedSlot | TravelSlot =>
+      s.type === "occupied" || s.type === "travel",
   );
 
   const bufferMs = bufferTimeMinutes * 60000;
@@ -121,18 +161,15 @@ export function reserveSlotWithTravel(
   }
 
   if (fullStart.getTime() > slot.start.getTime()) {
-    newSlots.push({
-      start: slot.start,
-      end: fullStart,
-      durationMinutes: Math.floor(
-        (fullStart.getTime() - slot.start.getTime()) / 60000,
+    newSlots.push(
+      makeLeftover(
+        slot,
+        slot.start,
+        fullStart,
+        slot.prevLocationId ?? null,
+        taskLocationId ?? slot.nextLocationId ?? null,
       ),
-      type: "available",
-      prevLocationId: slot.prevLocationId,
-      nextLocationId: taskLocationId ?? slot.nextLocationId,
-      categoryId: slot.categoryId,
-      isStrictCategory: slot.isStrictCategory,
-    });
+    );
   }
 
   let removedTravelAfterEnd: Date | null = null;
@@ -222,23 +259,20 @@ export function reserveSlotWithTravel(
     freeSlotEnd = slot.end;
   }
 
-  const freeSlotPrevLocation = travelAfterEnd
-    ? (nextLocationId ?? taskLocationId ?? slot.prevLocationId)
-    : (taskLocationId ?? slot.prevLocationId);
+  const freeSlotPrevLocation: string | null = travelAfterEnd
+    ? (nextLocationId ?? taskLocationId ?? slot.prevLocationId ?? null)
+    : (taskLocationId ?? slot.prevLocationId ?? null);
 
   if (freeSlotEnd.getTime() > freeSlotStart.getTime()) {
-    newSlots.push({
-      start: freeSlotStart,
-      end: freeSlotEnd,
-      durationMinutes: Math.floor(
-        (freeSlotEnd.getTime() - freeSlotStart.getTime()) / 60000,
+    newSlots.push(
+      makeLeftover(
+        slot,
+        freeSlotStart,
+        freeSlotEnd,
+        freeSlotPrevLocation,
+        slot.nextLocationId ?? null,
       ),
-      type: "available",
-      prevLocationId: freeSlotPrevLocation,
-      nextLocationId: slot.nextLocationId,
-      categoryId: slot.categoryId,
-      isStrictCategory: slot.isStrictCategory,
-    });
+    );
   }
 
   if (travelAfter > 0 && nextLocationId && travelAfterStart) {
@@ -279,11 +313,14 @@ export function reserveSlotWithTravel(
   availableSlots.splice(
     slotIndex,
     1,
-    ...newSlots.filter((s): s is AvailableSlot => s.type === "available"),
+    ...newSlots.filter(
+      (s): s is PlaceableSlot => s.type === "available" || s.type === "category",
+    ),
   );
   occupiedSlots.push(
     ...newSlots.filter(
-      (s): s is OccupiedSlot | TravelSlot => s.type !== "available",
+      (s): s is OccupiedSlot | TravelSlot =>
+        s.type === "occupied" || s.type === "travel",
     ),
   );
 
