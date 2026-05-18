@@ -204,8 +204,27 @@ function assignMembership(
     }
   }
 
-  prevLocationId = enteringAtStartLoc ?? leavingAtStartLoc ?? prevLocationId;
-  nextLocationId = enteringAtEndLoc ?? leavingAtEndLoc ?? nextLocationId;
+  // Only apply the boundary override when the slot's existing location is null
+  // or already matches the override. If the existing loc differs, it encodes a
+  // real transition from a non-cat neighbor (typically an occupied event
+  // directly abutting the cat period) — preserving it lets the dispatcher see
+  // the transition and place travel inside the cat slot. Otherwise the
+  // boundary-loc override would silently drop the transition.
+  const startOverride = enteringAtStartLoc ?? leavingAtStartLoc;
+  if (
+    startOverride &&
+    (prevLocationId == null || prevLocationId === startOverride)
+  ) {
+    prevLocationId = startOverride;
+  }
+
+  const endOverride = enteringAtEndLoc ?? leavingAtEndLoc;
+  if (
+    endOverride &&
+    (nextLocationId == null || nextLocationId === endOverride)
+  ) {
+    nextLocationId = endOverride;
+  }
 
   return {
     ...slot,
