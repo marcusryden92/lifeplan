@@ -14,8 +14,48 @@ Placement
             Current type Travel (probably won't be the case since we're moving forwards)
             Current type: Available
                     Current size: large enough for travel
+                        Current is uncategorized
                             -> PlaceAtStart
                             -> PlaceAtEnd
+                        Current is categorized
+                            Next type: Occupied
+                                -> PlaceAtStart
+                                -> PlaceAtEnd
+                            Next type: Available
+                                Next is categorized
+                                    Travel can bleed symmetrically across boundary (next > travel/2)
+                                        -> Place symmetrically across boundary 
+                                    Travel can not bleed symmetrically across boundary
+                                        -> Fill available space of next, remainder to current
+                                Next is uncategorized
+                                    Travel can fit entirely into next
+                                        -> Split next into A and B, where A is travel. Continue from B
+                                    Travel can not fit entirely into next
+                                        Next+1 type: Occupied
+                                            -> Place a travel from current to next+1, fill entire next and place remainder in current
+                                        Next+1 type: Available
+                                            Next+1 is uncategorized (not possible)
+                                            Next+1 is categorized
+                                                Next+1 is larger than (next - travel)/2
+                                                    -> Place travel between current and next+1 symmetrically across next, so that equal parts bleed into current and next+2
+                                                Next+1 is smaller than (next - travel)/2
+                                                    Next+2 same location as next+1
+                                                        -> Fill next+1 and next with a travel from current to next+1, bleed remainder into current
+                                                    Next+2 different location from next+1 
+                                                        Travel from current to next+2 < next+1
+                                                            -> Place travel in next+1 at slot end
+
+                                                        Travel from current to next+2 > next+1
+                                                            Travel current-next+2 <  next + next+1
+                                                                -> Fill next+2, remainder in next+1
+                                                            Travel current-next+2 >  next + next+1 && Travel current-next+2 < current + next + next+1
+                                                                -> Fill next+2 and next+1, remainder in current
+
+                                                            Travel current-next+2 < current + next + next+1
+                                                                Prev type: Occupied
+                                                                    Prev location 
+
+                                                            
                     Current size: not large enough for travel
                             Prev type: Available
                                 Next type: Available
