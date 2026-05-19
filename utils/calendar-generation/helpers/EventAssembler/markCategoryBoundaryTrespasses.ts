@@ -73,10 +73,16 @@ function stampWrappersByCategoryId(
     if (wrapperCategoryId !== categoryId) continue;
     const wrapperStartMs = new Date(wrapper.start).getTime();
     const wrapperEndMs = new Date(wrapper.end).getTime();
-    // Wrapper overlaps the travel slot's time range — this is the wrapper
-    // the travel consumed. Both boundaries get stamped.
-    if (travelStartMs < wrapperEndMs && travelEndMs > wrapperStartMs) {
+
+    // Stamp a boundary only when the travel's time range actually crosses
+    // that boundary. A travel landing in the middle of a wrapper consumes
+    // neither edge; a travel that begins before wrapper.start (or earlier)
+    // and ends within or past it consumes the start; symmetric logic for
+    // the end.
+    if (travelStartMs <= wrapperStartMs && travelEndMs > wrapperStartMs) {
       stampBorder(events, i, "start");
+    }
+    if (travelStartMs < wrapperEndMs && travelEndMs >= wrapperEndMs) {
       stampBorder(events, i, "end");
     }
   }

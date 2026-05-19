@@ -222,9 +222,18 @@ Current type: Category
             Travel can bleed symmetrically across boundary (each side > travel/2)
                 -> Place symmetrically across boundary
 
-            Travel can not bleed symmetrically across boundary
-                Combined current + next large enough for travel
-                    -> Fill available space of next, remainder to current
+            Travel can NOT bleed symmetrically across boundary
+                # Forced asymmetric placement squeezes one category to a
+                # sliver, which then cascades through the next handler and
+                # produces a chain of overlapping travels that obliterates
+                # the surrounding categories. Prefer trespass: skip the
+                # travel placement and mark trespass on both adjacent
+                # boundaries. The next handler chain operates on the
+                # un-squeezed categories so symmetric placements downstream
+                # stay clean.
+                -> Set trespassingEnd on current CategorySlot
+                -> Set trespassingStart on next CategorySlot
+                -> Skip placing the travel (the leg is untracked)
 
                 Combined current + next not large enough for travel
                     # Same shape as the user's window-expansion cascade

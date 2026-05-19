@@ -607,8 +607,9 @@ function spliceBleedPrev(
   prevConsumed: boolean,
   travelStart: Date,
 ): number {
-  // Replace [prev, current] with [shortened prev?, travel]. Track trespass
-  // if prev is a fully-consumed Category.
+  // Replace [prev, current] with [shortened prev?, travel]. Trespass only
+  // fires when the category interior is FULLY consumed — partial bleeds
+  // just shorten the category without marking a boundary.
   const replacements: Slot[] = [];
 
   if (!prevConsumed && (prev.type === "available" || prev.type === "category")) {
@@ -617,19 +618,6 @@ function spliceBleedPrev(
     );
   } else if (prevConsumed && prev.type === "category") {
     travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(prev.categoryId);
-  } else if (prev.type === "category" && !prevConsumed) {
-    // Partial consumption: mark trespass on the consumed boundary (prev's end).
-    // (Handled inside shortenPlaceableAtEnd via flag-aware logic — see below.)
-  }
-
-  // Partial-consumption trespass marker on prev category boundary
-  if (
-    !prevConsumed &&
-    prev.type === "category" &&
-    travel.travelFromLocationId !== prev.currentLocationId
-  ) {
-    const replaced = replacements[replacements.length - 1];
-    if (replaced && replaced.type === "category") replaced.trespassingEnd = true;
   }
 
   replacements.push(travel);
@@ -646,7 +634,8 @@ function spliceBleedNext(
   nextConsumed: boolean,
   travelEnd: Date,
 ): number {
-  // Replace [current, next] with [travel, shortened next?].
+  // Replace [current, next] with [travel, shortened next?]. Trespass only
+  // on full consumption (see spliceBleedPrev for rationale).
   const replacements: Slot[] = [travel];
 
   if (!nextConsumed && (next.type === "available" || next.type === "category")) {
@@ -657,17 +646,10 @@ function spliceBleedNext(
     travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(next.categoryId);
   }
 
-  if (
-    !nextConsumed &&
-    next.type === "category" &&
-    travel.travelToLocationId !== next.currentLocationId
-  ) {
-    const replaced = replacements[replacements.length - 1];
-    if (replaced && replaced.type === "category") replaced.trespassingStart = true;
-  }
-
   slots.splice(curIdx, nextIdx - curIdx + 1, ...replacements);
-  return curIdx + replacements.length;
+  // Travel is always at curIdx; walker lands on the shortened-next (if any)
+  // so a Category neighbor's exit edge can fire on the next iteration.
+  return curIdx + 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -732,10 +714,6 @@ function bleedAcrossPrevCurrentNext(
   const prevConsumed = bleedPrev >= prevDur;
   if (!prevConsumed && (prev.type === "available" || prev.type === "category")) {
     replacements.push(shortenPlaceableAtEnd(prev, travelStart, travel.travelFromLocationId));
-    if (prev.type === "category" && travel.travelFromLocationId !== prev.currentLocationId) {
-      const replaced = replacements[replacements.length - 1];
-      if (replaced && replaced.type === "category") replaced.trespassingEnd = true;
-    }
   } else if (prevConsumed && prev.type === "category") {
     travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(prev.categoryId);
   }
@@ -745,16 +723,15 @@ function bleedAcrossPrevCurrentNext(
   const nextConsumed = bleedNext >= nextDur;
   if (!nextConsumed && (next.type === "available" || next.type === "category")) {
     replacements.push(shortenPlaceableAtStart(next, travelEnd, travel.travelToLocationId));
-    if (next.type === "category" && travel.travelToLocationId !== next.currentLocationId) {
-      const replaced = replacements[replacements.length - 1];
-      if (replaced && replaced.type === "category") replaced.trespassingStart = true;
-    }
   } else if (nextConsumed && next.type === "category") {
     travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(next.categoryId);
   }
 
+  const travelIdx = replacements.indexOf(travel);
   slots.splice(i - 1, 3, ...replacements);
-  return i - 1 + replacements.length;
+  // Walker lands on the first slot AFTER the travel — typically the
+  // shortened-next so it can be processed on the next iteration.
+  return i - 1 + travelIdx + 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -1123,32 +1100,25 @@ function bleedAcrossCategoryBoundary(
   const curDur = current.durationMinutes;
   const nextDur = next.durationMinutes;
 
-  // Combined too small: both categories fully covered. Per the user's
-  // "two or three adjacent categories fully consumed" guidance, mark
-  // trespass flags on each affected boundary and do NOT emit a visible
-  // travel slot. The leg is untracked because no travel was placed.
-  if (T > curDur + nextDur) {
+  // If symmetric placement won't fit (one side would be fully consumed),
+  // prefer trespass over forced asymmetric placement. Forced asymmetric
+  // cascades through later handlers: the surviving sliver of the squeezed
+  // category gets eaten by the next transition, producing a chain of
+  // overlapping travels that visually obliterates the categories. Better
+  // to mark the boundary trespass and let the next handler operate on
+  // the unshortened categories. Combined-too-small (T > curDur + nextDur)
+  // falls into the same path.
+  const half = T / 2;
+  if (half >= curDur || half >= nextDur) {
     travelManager.untrackLeg(action.prevLocation, action.nextLocation);
     current.trespassingEnd = true;
     next.trespassingStart = true;
     return i + 1;
   }
 
-  // Symmetric bleed if both sides are large enough.
-  const half = T / 2;
-  let bleedCurrent: number;
-  let bleedNext: number;
-
-  if (half <= curDur && half <= nextDur) {
-    bleedCurrent = half;
-    bleedNext = half;
-  } else if (curDur < nextDur) {
-    bleedCurrent = curDur;
-    bleedNext = T - curDur;
-  } else {
-    bleedNext = nextDur;
-    bleedCurrent = T - nextDur;
-  }
+  // Symmetric bleed.
+  const bleedCurrent = half;
+  const bleedNext = half;
 
   const travelStart = new Date(current.end.getTime() - bleedCurrent * 60000);
   const travelEnd = new Date(next.start.getTime() + bleedNext * 60000);
@@ -1171,7 +1141,6 @@ function bleedAcrossCategoryBoundary(
       end: travelStart,
       durationMinutes: Math.floor((travelStart.getTime() - current.start.getTime()) / 60000),
       nextLocationId: current.currentLocationId,
-      trespassingEnd: bleedCurrent > 0 ? true : current.trespassingEnd,
       isFinal: undefined,
     });
   } else {
@@ -1187,14 +1156,16 @@ function bleedAcrossCategoryBoundary(
       start: travelEnd,
       durationMinutes: Math.floor((next.end.getTime() - travelEnd.getTime()) / 60000),
       prevLocationId: next.currentLocationId,
-      trespassingStart: bleedNext > 0 ? true : next.trespassingStart,
     });
   } else {
     travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(next.categoryId);
   }
 
+  const travelIdx = replacements.indexOf(travel);
   slots.splice(i, 2, ...replacements);
-  return i + replacements.length;
+  // Walker lands on the first slot AFTER the travel — typically the
+  // shortened-next category so its exit edge can fire on the next iteration.
+  return i + travelIdx + 1;
 }
 
 // ---------------------------------------------------------------------------
