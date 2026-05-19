@@ -73,6 +73,7 @@ export function splitSlot(
         nextLocationId: slot.nextLocationId,
         categoryId: slot.categoryId,
         isStrictCategory: slot.isStrictCategory,
+        trespassingStart: slot.trespassingStart,
       },
       {
         start: splitTime,
@@ -84,6 +85,7 @@ export function splitSlot(
         nextLocationId: slot.nextLocationId,
         categoryId: slot.categoryId,
         isStrictCategory: slot.isStrictCategory,
+        trespassingEnd: slot.trespassingEnd,
       },
     ];
   }
@@ -222,6 +224,16 @@ function makePlaceableLeftover(
       nextLocationId,
       categoryId: source.categoryId,
       isStrictCategory: source.isStrictCategory,
+      // Boundary flags only carry over to the fragment that still touches
+      // the original boundary.
+      trespassingStart:
+        start.getTime() === source.start.getTime()
+          ? source.trespassingStart
+          : undefined,
+      trespassingEnd:
+        end.getTime() === source.end.getTime()
+          ? source.trespassingEnd
+          : undefined,
     };
   }
   return {

@@ -1,24 +1,24 @@
 import { SimpleEvent, EventType } from "@/types/prisma";
 import { RuntimeEventExtendedProps } from "@/types/ui";
-import { CategoryBoundaryTrespass } from "../TravelManager/categoryBoundaryTrespass";
+import { CategorySlot, Slot } from "../../models/TimeSlot";
 
 /**
  * Stamps category wrapper events with red top/bottom borders when the travel
- * pass recorded a trespass at one of their boundaries (i.e. the travel into
- * or out of the wrapper would have consumed the whole period).
+ * pass marked a CategorySlot fragment as boundary-trespassed (i.e. the travel
+ * into or out of the wrapper would have consumed the slot's interior).
  *
- * Each marker is matched to the wrapper whose period CONTAINS the trespassing
- * slot. When a wrapper is marked, any adjacent wrapper sharing that boundary
- * timestamp is also marked on its opposite border — so both sides of a
- * too-tight category-to-category transition render red, mirroring the
- * existing `markTrespassingEvents` behaviour for overlapping plan items.
+ * Trespass markers live directly on the CategorySlot fragments
+ * (trespassingStart / trespassingEnd) — no side-channel. This function scans
+ * the slots array for fragments with either flag set, matches each to the
+ * wrapper whose period CONTAINS the fragment, and stamps the appropriate
+ * border. If an adjacent wrapper shares the boundary timestamp, its opposite
+ * border is also stamped — mirroring markTrespassingEvents for overlapping
+ * plan items.
  */
 export function markCategoryBoundaryTrespasses(
   events: SimpleEvent[],
-  trespasses: CategoryBoundaryTrespass[],
+  slots: Slot[],
 ): void {
-  if (trespasses.length === 0) return;
-
   const wrapperIndices: number[] = [];
   for (let i = 0; i < events.length; i++) {
     if (events[i].extendedProps?.eventType === EventType.category) {
@@ -27,56 +27,70 @@ export function markCategoryBoundaryTrespasses(
   }
   if (wrapperIndices.length === 0) return;
 
-  for (const trespass of trespasses) {
-    const containingIndex = findContainingWrapperIndex(
-      events,
-      wrapperIndices,
-      trespass,
-    );
-    if (containingIndex === -1) continue;
+  for (const slot of slots) {
+    if (slot.type !== "category") continue;
+    if (!slot.trespassingStart && !slot.trespassingEnd) continue;
 
-    stampBorder(events, containingIndex, trespass.boundary);
-
-    // Also stamp the adjacent wrapper on the opposite border if one starts/
-    // ends at exactly the same instant. Mirrors how markTrespassingEvents
-    // marks both sides of an overlapping pair.
-    const containingEvent = events[containingIndex];
-    const boundaryTimestamp =
-      trespass.boundary === "end"
-        ? new Date(containingEvent.end).getTime()
-        : new Date(containingEvent.start).getTime();
-
-    const adjacentIndex = findAdjacentWrapperIndex(
-      events,
-      wrapperIndices,
-      containingIndex,
-      boundaryTimestamp,
-      trespass.boundary,
-    );
-    if (adjacentIndex !== -1) {
-      stampBorder(
-        events,
-        adjacentIndex,
-        trespass.boundary === "end" ? "start" : "end",
-      );
+    if (slot.trespassingStart) {
+      stampMatchingWrappers(events, wrapperIndices, slot, "start");
     }
+    if (slot.trespassingEnd) {
+      stampMatchingWrappers(events, wrapperIndices, slot, "end");
+    }
+  }
+}
+
+function stampMatchingWrappers(
+  events: SimpleEvent[],
+  wrapperIndices: number[],
+  slot: CategorySlot,
+  boundary: "start" | "end",
+): void {
+  const containingIndex = findContainingWrapperIndex(
+    events,
+    wrapperIndices,
+    slot,
+  );
+  if (containingIndex === -1) return;
+
+  stampBorder(events, containingIndex, boundary);
+
+  const containingEvent = events[containingIndex];
+  const boundaryTimestamp =
+    boundary === "end"
+      ? new Date(containingEvent.end).getTime()
+      : new Date(containingEvent.start).getTime();
+
+  const adjacentIndex = findAdjacentWrapperIndex(
+    events,
+    wrapperIndices,
+    containingIndex,
+    boundaryTimestamp,
+    boundary,
+  );
+  if (adjacentIndex !== -1) {
+    stampBorder(
+      events,
+      adjacentIndex,
+      boundary === "end" ? "start" : "end",
+    );
   }
 }
 
 function findContainingWrapperIndex(
   events: SimpleEvent[],
   wrapperIndices: number[],
-  trespass: CategoryBoundaryTrespass,
+  slot: CategorySlot,
 ): number {
-  const slotStartMs = trespass.slotStart.getTime();
-  const slotEndMs = trespass.slotEnd.getTime();
+  const slotStartMs = slot.start.getTime();
+  const slotEndMs = slot.end.getTime();
 
   for (const i of wrapperIndices) {
     const wrapper = events[i];
     const wrapperCategoryId = (
       wrapper.extendedProps as RuntimeEventExtendedProps | undefined
     )?.categoryId;
-    if (wrapperCategoryId !== trespass.categoryId) continue;
+    if (wrapperCategoryId !== slot.categoryId) continue;
     const wrapperStartMs = new Date(wrapper.start).getTime();
     const wrapperEndMs = new Date(wrapper.end).getTime();
     if (wrapperStartMs <= slotStartMs && wrapperEndMs >= slotEndMs) {

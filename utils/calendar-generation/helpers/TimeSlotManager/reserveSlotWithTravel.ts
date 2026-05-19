@@ -37,6 +37,14 @@ function makeLeftover(
       nextLocationId,
       categoryId: source.categoryId,
       isStrictCategory: source.isStrictCategory,
+      trespassingStart:
+        start.getTime() === source.start.getTime()
+          ? source.trespassingStart
+          : undefined,
+      trespassingEnd:
+        end.getTime() === source.end.getTime()
+          ? source.trespassingEnd
+          : undefined,
     };
   }
   return {

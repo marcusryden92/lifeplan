@@ -31,7 +31,6 @@ import {
 } from "../helpers/CalendarGenerator";
 import { buildAvailableSlots } from "../helpers/TimeSlotManager";
 import { preliminaryTravelPass } from "../helpers/TravelManager";
-import { CategoryBoundaryTrespass } from "../helpers/TravelManager/categoryBoundaryTrespass";
 import { setTimeOnDate } from "@/utils/calendarUtils";
 
 export class CalendarGenerator {
@@ -158,16 +157,16 @@ export class CalendarGenerator {
 
     // Phase 6b: Place travel slots (separate pass after slot building).
     // Load built slots into the manager's unified storage, then run the pass
-    // which mutates the slots array in place via splice.
+    // which mutates the slots array in place via splice. Trespass markers
+    // are set directly on CategorySlot fragments and read downstream from
+    // the slot array — no side-channel.
     timeSlotManager.slots = [...builtSlots];
-    const categoryBoundaryTrespasses: CategoryBoundaryTrespass[] = [];
     preliminaryTravelPass(
       !!plannerLocationMap,
       this.scheduledCategories,
       timeSlotManager.slots,
       travelManager,
       this.bufferTimeMinutes,
-      categoryBoundaryTrespasses,
     );
 
     // Phase 6c: Drop available slots ending before "now" so the scheduler
@@ -234,7 +233,7 @@ export class CalendarGenerator {
       schedulingStartDate,
       schedulingEndDate,
       plannerLocationMap,
-      categoryBoundaryTrespasses,
+      timeSlotManager.slots,
       input.config?.logging,
     );
 

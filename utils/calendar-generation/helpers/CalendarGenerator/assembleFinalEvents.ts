@@ -11,7 +11,7 @@ import {
   SchedulingContext,
 } from "../../models/SchedulingModels";
 import { EventAssembler } from "../../core/EventAssembler";
-import { CategoryBoundaryTrespass } from "../TravelManager/categoryBoundaryTrespass";
+import { Slot } from "../../models/TimeSlot";
 import { markCategoryBoundaryTrespasses } from "../EventAssembler/markCategoryBoundaryTrespasses";
 import { filterEventsByLogRange } from "../../utils/loggingUtils";
 
@@ -23,7 +23,7 @@ export function assembleFinalEvents(
   startDate: Date,
   endDate: Date,
   plannerLocationMap: Map<string, string | null>,
-  categoryBoundaryTrespasses: CategoryBoundaryTrespass[] = [],
+  slots: Slot[],
   logging?: LoggingConfig,
 ): SimpleEvent[] {
   // Generate travel events from stored travel slots
@@ -67,7 +67,7 @@ export function assembleFinalEvents(
 
   // Mark category wrapper events whose travel-pass placement would have
   // consumed the entire wrapper — renders the wrapper's top/bottom red.
-  markCategoryBoundaryTrespasses(allEvents, categoryBoundaryTrespasses);
+  markCategoryBoundaryTrespasses(allEvents, slots);
 
   return allEvents;
 }

@@ -21,6 +21,11 @@ export type CategorySlot = BaseSlot & {
   nextLocationId: string | null;
   categoryId: string;
   isStrictCategory: boolean;
+  // Set by the travel pass when travel into/out of this category would have
+  // fully consumed the slot's interior. The wrapper event's top/bottom border
+  // is stamped red downstream; no visible travel slot is emitted.
+  trespassingStart?: boolean;
+  trespassingEnd?: boolean;
 };
 
 export type OccupiedSlot = BaseSlot & {
