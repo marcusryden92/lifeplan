@@ -37,6 +37,10 @@ export type OccupiedSlot = BaseSlot & {
   eventId: string;
   plannerType: PlannerType;
   eventType: Exclude<EventType, "travel">;
+  // The event's location. null = "Anywhere" — the user has no specific
+  // location during this slot, so adjacent transitions can propagate
+  // through it without being forced to start/end at this event.
+  locationId?: string | null;
 };
 
 export type TravelSlot = BaseSlot & {

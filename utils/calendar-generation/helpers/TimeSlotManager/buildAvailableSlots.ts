@@ -105,6 +105,7 @@ export function buildAvailableSlots({
       eventType:
         (event.extendedProps?.eventType as Exclude<EventType, "travel"> | undefined) ??
         EventType.planner,
+      locationId: plannerLocationMap?.get(event.id) ?? null,
     };
   });
 
@@ -122,6 +123,7 @@ export function buildAvailableSlots({
       // pick a placeholder.
       plannerType: PlannerType.plan,
       eventType: EventType.template,
+      locationId: interval.startLocationId,
     }),
   );
 
@@ -131,5 +133,58 @@ export function buildAvailableSlots({
     ...templateOccupiedSlots,
   ];
   allSlots.sort((a, b) => a.start.getTime() - b.start.getTime());
+  propagateAnywhereLocations(allSlots);
   return allSlots;
+}
+
+// When an Anywhere Occupied slot (locationId === null) sits between two
+// location-specific slots, propagate the surrounding locations through it
+// so adjacent Available / Category slots have honest prev/next fields.
+// Without this, the walker's outer guards see null and short-circuit,
+// dropping necessary travel placements.
+//
+// Forward pass: fill missing prev with the last known location.
+// Backward pass: fill missing next with the next known location.
+// Travels in slots[] should not appear yet (they're emitted by the
+// preliminaryTravelPass that runs later), but the function handles them
+// defensively in case the order changes.
+function propagateAnywhereLocations(slots: Slot[]): void {
+  let lastKnown: string | null = null;
+  for (const slot of slots) {
+    if (slot.type === "available") {
+      if (slot.prevLocationId == null && lastKnown != null) {
+        slot.prevLocationId = lastKnown;
+      }
+      if (slot.nextLocationId != null) lastKnown = slot.nextLocationId;
+    } else if (slot.type === "category") {
+      if (slot.prevLocationId == null && lastKnown != null) {
+        slot.prevLocationId = lastKnown;
+      }
+      if (slot.currentLocationId != null) lastKnown = slot.currentLocationId;
+    } else if (slot.type === "occupied") {
+      if (slot.locationId != null) lastKnown = slot.locationId;
+    } else if (slot.type === "travel") {
+      if (slot.travelToLocationId != null) lastKnown = slot.travelToLocationId;
+    }
+  }
+
+  lastKnown = null;
+  for (let i = slots.length - 1; i >= 0; i--) {
+    const slot = slots[i];
+    if (slot.type === "available") {
+      if (slot.nextLocationId == null && lastKnown != null) {
+        slot.nextLocationId = lastKnown;
+      }
+      if (slot.prevLocationId != null) lastKnown = slot.prevLocationId;
+    } else if (slot.type === "category") {
+      if (slot.nextLocationId == null && lastKnown != null) {
+        slot.nextLocationId = lastKnown;
+      }
+      if (slot.currentLocationId != null) lastKnown = slot.currentLocationId;
+    } else if (slot.type === "occupied") {
+      if (slot.locationId != null) lastKnown = slot.locationId;
+    } else if (slot.type === "travel") {
+      if (slot.travelFromLocationId != null) lastKnown = slot.travelFromLocationId;
+    }
+  }
 }

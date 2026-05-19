@@ -2,6 +2,7 @@ import { Category } from "@/types/prisma";
 import {
   AvailableSlot,
   CategorySlot,
+  OccupiedSlot,
   Slot,
   TravelSlot,
 } from "../../models/TimeSlot";
@@ -252,7 +253,27 @@ function handleCategoryEntryEdge(
     // Previous category's exit edge handled the transition.
     return i;
   } else if (prev.type === "occupied") {
-    // No prior slot to consult — fall through to placement.
+    // If the prev is at Anywhere (locationId == null), walk back through
+    // consecutive Anywhere Occupieds to look for a Travel that already
+    // brought the user to current's location. The transition would have
+    // been placed in the Available BEFORE the Anywhere event(s).
+    if (prev.locationId == null) {
+      let lookback = i - 2;
+      while (
+        lookback >= 0 &&
+        slots[lookback].type === "occupied" &&
+        (slots[lookback] as OccupiedSlot).locationId == null
+      ) {
+        lookback--;
+      }
+      if (lookback >= 0 && slots[lookback].type === "travel") {
+        const earlierTravel = slots[lookback] as TravelSlot;
+        if (earlierTravel.travelToLocationId === slot.currentLocationId) {
+          return i;
+        }
+      }
+    }
+    // Otherwise fall through to placement.
   }
 
   // Place the entry travel.
