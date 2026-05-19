@@ -6,7 +6,12 @@
  */
 
 import { SimpleEvent } from "@/types/prisma";
-import { AvailableSlot, Slot, TravelSlot } from "../models/TimeSlot";
+import {
+  AvailableSlot,
+  CategorySlot,
+  Slot,
+  TravelSlot,
+} from "../models/TimeSlot";
 import { TimeSlotManager } from "./TimeSlotManager";
 import {
   TravelTimeEntry,
@@ -72,6 +77,49 @@ export class TravelManager {
     if (travelMinutes <= 0) return null;
 
     return { prevLocation, nextLocation, placeAtSlotStart, travelMinutes };
+  }
+
+  /**
+   * Sibling of resolveTravel for CategorySlot edges. Entry edge transitions
+   * prev → currentLocationId (placed at slot HEAD). Exit edge transitions
+   * currentLocationId → next (placed at slot TAIL). Placement is fixed by
+   * the edge, so the legTracker.track return value is recorded for
+   * round-trip detection but doesn't affect where the travel lands —
+   * placeAtSlotStart simply mirrors the edge (true for entry, false for
+   * exit) so callers stay shape-compatible with resolveTravel's output.
+   */
+  resolveCategoryEdge(
+    slot: CategorySlot,
+    edge: "entry" | "exit",
+  ): TravelProcessingAction | null {
+    const from =
+      edge === "entry" ? slot.prevLocationId : slot.currentLocationId;
+    const to =
+      edge === "entry" ? slot.currentLocationId : slot.nextLocationId;
+    if (!from || !to || from === to) return null;
+
+    this.legTracker.track(from, to);
+
+    const referenceTime = edge === "entry" ? slot.start : slot.end;
+    const travelMinutes = this.getTravelTime(from, to, referenceTime);
+    if (travelMinutes <= 0) return null;
+
+    return {
+      prevLocation: from,
+      nextLocation: to,
+      placeAtSlotStart: edge === "entry",
+      travelMinutes,
+    };
+  }
+
+  /**
+   * Undo a previously tracked leg. Used by the dispatcher when absorbing
+   * a placed travel slot back into its adjacent Available — the open leg
+   * the original track() call opened needs to be removed so future
+   * round-trip detection isn't poisoned by stale history.
+   */
+  untrackLeg(from: string, to: string): void {
+    this.legTracker.untrack(from, to);
   }
 
   resetLegTracker() {

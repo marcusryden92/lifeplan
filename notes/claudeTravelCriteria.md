@@ -13,6 +13,16 @@ Global notes:
 - Null locations ("Anywhere") are treated as "no transition needed".
   The outer guards (prev != next, prev != current, current != next)
   evaluate to FALSE when either side is null.
+- Travel-slot marker terminology:
+    'alert' (red, insufficientTravel=true): the travel slot is shorter
+      than the travel actually needs — couldn't fit fully.
+    'overconstrained' (yellow): the travel slot fits the travel duration,
+      but the planner was forced into this routing (e.g. absorb-and-replan
+      that skips a category visit, or a wasted round trip). The user sees
+      yellow to flag "this was the only viable solution".
+    Both flags can coexist on the same travel slot.
+  Category trespass boundaries (red wrapper border) are independent of
+  both markers — they're set on the CategorySlot, not the travel slot.
 
 
 Current type: Occupied
@@ -263,13 +273,15 @@ Current type: Category
                     -> Place the new travel at the TAIL of current, ending at
                        next.start. Fill current's interior entirely; remainder
                        bleeds backward into the restored Available
+                    -> Mark the new travel as 'overconstrained' (yellow) —
+                       the planner was forced into this routing because the
+                       category at current cannot be reached
                     -> Set trespassingStart AND trespassingEnd on this
-                       CategorySlot (both wrapper borders render red — the
-                       category was never reached because travel goes straight
-                       through it)
+                       CategorySlot (red wrapper borders — the category was
+                       never reached because travel goes straight through it)
                     (If A->C duration exceeds current + restored Available
-                    combined, fill what's available and mark the travel as
-                    'alert'; trespass flags still apply)
+                    combined, also mark the travel as 'alert'; trespass flags
+                    and overconstrained still apply)
 
                 Prev type: Available (no backward Travel to absorb)
                     -> Fill category TAIL with travel, mark travel as 'alert'

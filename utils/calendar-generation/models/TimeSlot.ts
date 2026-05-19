@@ -42,8 +42,13 @@ export type TravelSlot = BaseSlot & {
   travelFromLocationId: string | null;
   travelToLocationId: string | null;
   travelType: "preliminary" | "inbound" | "outbound";
+  // Red marker: the slot is shorter than the travel actually needs.
   insufficientTravel: boolean;
   requiredTravelMinutes: number;
+  // Yellow marker: the slot fits the travel duration, but this routing was
+  // forced (absorb-and-replan that skips a category visit, wasted round
+  // trip, etc.). Co-exists with insufficientTravel when both apply.
+  overconstrained?: boolean;
   categoryId?: string | null;
   isStrictCategory?: boolean;
 };

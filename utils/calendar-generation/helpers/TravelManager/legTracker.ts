@@ -34,9 +34,27 @@ export function createLegTracker() {
     return false;
   }
 
+  // Undo the most recent track(from, to) call. Used by the dispatcher
+  // when absorbing a previously placed travel back into its adjacent
+  // Available — the leg that track() opened needs to be removed so
+  // future round-trip detection sees the correct history.
+  //
+  // Only undoes a leg that was OPENED (not consumed). If the original
+  // track() consumed a leg (returned true), we can't perfectly restore
+  // that state — the dispatcher shouldn't absorb a return-leg travel
+  // (the absorb pattern only fires for outbound placements).
+  function untrack(from: string, to: string): void {
+    for (let i = openLegs.length - 1; i >= 0; i--) {
+      if (openLegs[i].from === from && openLegs[i].to === to) {
+        openLegs.splice(i, 1);
+        return;
+      }
+    }
+  }
+
   function reset() {
     openLegs = [];
   }
 
-  return { track, reset };
+  return { track, untrack, reset };
 }
