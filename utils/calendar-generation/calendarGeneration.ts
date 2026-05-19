@@ -73,8 +73,8 @@ export function generateCalendar(
     strategySettings: false,
     finalEvents: false,
     leanCalendar: true,
-    dateRangeStart: new Date("2026-05-19") as Date | null,
-    dateRangeEnd: new Date("2026-05-20") as Date | null,
+    dateRangeStart: new Date("2026-05-23") as Date | null,
+    dateRangeEnd: new Date("2026-05-24") as Date | null,
   };
 
   const result = new CalendarGenerator(weekStartDay, {

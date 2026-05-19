@@ -84,43 +84,58 @@ function splitOneSlot(slot: AvailableSlot, periods: Period[]): Slot[] {
     const isLast = i === periods.length - 1;
 
     if (cursorMs < pStartMs) {
+      const gapMinutes = Math.floor((pStartMs - cursorMs) / 60000);
+      if (gapMinutes > 0) {
+        fragments.push({
+          start: new Date(cursorMs),
+          end: p.start,
+          durationMinutes: gapMinutes,
+          type: "available",
+          prevLocationId: entryLocationId,
+          nextLocationId: p.locationId,
+        });
+        entryLocationId = p.locationId;
+      }
+      // sub-minute gaps are dropped: the walker's bleed/cascade logic
+      // would otherwise consume entire neighbors to fill what's effectively
+      // zero free time, producing visually noisy travel placements. The
+      // next emitted fragment's prev stays at the previous slot's location
+      // so the dispatcher routes the transition through the category's
+      // entry edge instead.
+    }
+
+    const catMinutes = Math.floor((pEndMs - pStartMs) / 60000);
+    if (catMinutes > 0) {
+      const catNext = isLast ? slotNext : periods[i + 1].locationId;
       fragments.push({
-        start: new Date(cursorMs),
-        end: p.start,
-        durationMinutes: Math.floor((pStartMs - cursorMs) / 60000),
-        type: "available",
+        start: p.start,
+        end: p.end,
+        durationMinutes: catMinutes,
+        type: "category",
+        currentLocationId: p.locationId,
         prevLocationId: entryLocationId,
-        nextLocationId: p.locationId,
+        nextLocationId: catNext,
+        categoryId: p.categoryId,
+        isStrictCategory: p.isStrict,
       });
       entryLocationId = p.locationId;
     }
-
-    const catNext = isLast ? slotNext : periods[i + 1].locationId;
-    fragments.push({
-      start: p.start,
-      end: p.end,
-      durationMinutes: Math.floor((pEndMs - pStartMs) / 60000),
-      type: "category",
-      currentLocationId: p.locationId,
-      prevLocationId: entryLocationId,
-      nextLocationId: catNext,
-      categoryId: p.categoryId,
-      isStrictCategory: p.isStrict,
-    });
-    entryLocationId = p.locationId;
 
     cursorMs = pEndMs;
   }
 
   if (cursorMs < slotEndMs) {
-    fragments.push({
-      start: new Date(cursorMs),
-      end: slot.end,
-      durationMinutes: Math.floor((slotEndMs - cursorMs) / 60000),
-      type: "available",
-      prevLocationId: entryLocationId,
-      nextLocationId: slotNext,
-    });
+    const trailingMinutes = Math.floor((slotEndMs - cursorMs) / 60000);
+    if (trailingMinutes > 0) {
+      fragments.push({
+        start: new Date(cursorMs),
+        end: slot.end,
+        durationMinutes: trailingMinutes,
+        type: "available",
+        prevLocationId: entryLocationId,
+        nextLocationId: slotNext,
+      });
+    }
   }
 
   return fragments;

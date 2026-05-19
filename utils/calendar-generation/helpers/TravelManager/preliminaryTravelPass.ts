@@ -210,19 +210,31 @@ function handleCategoryEntryEdge(
 
   const prev = slots[i - 1];
 
-  // ---- Prev type: Travel ----
+  // Decide whether to skip (transition already handled) or place a new
+  // entry travel. We fall through to the placement block when the user
+  // is at slot.prevLocationId (not current) and needs a fresh travel
+  // from there to current.
+
   if (prev.type === "travel") {
     if (prev.travelToLocationId === slot.currentLocationId) {
+      // User is already at current location; no travel needed.
       return i;
     }
-    logInconsistency(
-      `Category entry edge: prev Travel destination ${prev.travelToLocationId} != current ${slot.currentLocationId}`,
-    );
-    return i;
-  }
-
-  // ---- Prev type: Available ----
-  if (prev.type === "available") {
+    if (prev.travelToLocationId !== slot.prevLocationId) {
+      // The prev Travel landed somewhere we don't expect. Log and skip.
+      logInconsistency(
+        `Category entry edge: prev Travel destination ${prev.travelToLocationId} doesn't match slot.prevLocationId ${slot.prevLocationId}`,
+      );
+      return i;
+    }
+    // Prev Travel was for a different transition that left the user at
+    // slot.prevLocationId. Fall through to place entry travel from there
+    // to current.
+  } else if (prev.type === "available") {
+    // Walker should have processed slots[i-1] already. The leading
+    // Available's transition might have placed Travel at slots[i-2]
+    // (placeAtSlotStart=true variant). If that Travel ends at current,
+    // the transition is already handled — skip.
     if (i >= 2) {
       const prevPrev = slots[i - 2];
       if (
@@ -236,27 +248,21 @@ function handleCategoryEntryEdge(
       "Category entry edge: prev Available without matching Travel at slots[i-2]",
     );
     return i;
-  }
-
-  // ---- Prev type: Category ----
-  if (prev.type === "category") {
+  } else if (prev.type === "category") {
+    // Previous category's exit edge handled the transition.
     return i;
+  } else if (prev.type === "occupied") {
+    // No prior slot to consult — fall through to placement.
   }
 
-  // ---- Prev type: Occupied (different location than current) ----
-  if (prev.type === "occupied") {
-    const action = travelManager.resolveCategoryEdge(slot, "entry");
-    if (!action) return i;
+  // Place the entry travel.
+  const action = travelManager.resolveCategoryEdge(slot, "entry");
+  if (!action) return i;
 
-    if (slot.durationMinutes >= action.travelMinutes) {
-      return placeTravelAtCategoryHead(slots, i, action);
-    }
-    return bypassCategoryCascade(slots, i, action, travelManager, bufferTimeMinutes);
+  if (slot.durationMinutes >= action.travelMinutes) {
+    return placeTravelAtCategoryHead(slots, i, action);
   }
-
-  // Unreachable: all Slot type variants are handled above.
-  logInconsistency("Category entry edge: unreachable prev case");
-  return i;
+  return bypassCategoryCascade(slots, i, action, travelManager, bufferTimeMinutes);
 }
 
 function handleCategoryExitEdge(
@@ -1042,10 +1048,13 @@ function bypassCategoryCascade(
   bufferTimeMinutes: number,
 ): number {
   void bufferTimeMinutes;
-  // Replace the category with a single Travel slot from prev->slots[i+1].
-  // Travel duration uses getTravelTime(prev.location, post-category location).
-  // The original resolveCategoryEdge leg (prev -> currentLocationId) is
-  // untracked because we're routing differently.
+  // Replace the category with a Travel slot from prev->slots[i+1]'s location.
+  // If the actual travel duration exceeds the category interior, extend
+  // forward through subsequent placeable slots (Available / Category) until
+  // either the full travel duration fits or we hit a hard stop (Occupied /
+  // Travel / end of slots). Categories consumed entirely or partially are
+  // recorded on the travel slot's consumedCategoryIds so the marker scanner
+  // can stamp the correct boundaries.
   travelManager.untrackLeg(action.prevLocation, action.nextLocation);
 
   const category = slots[i] as CategorySlot;
@@ -1064,24 +1073,84 @@ function bypassCategoryCascade(
   }
   travelManager.trackLeg(action.prevLocation, postCategoryLocation);
 
-  // Place travel filling the category interior. If newDuration > category
-  // duration, mark insufficient (future work: cascade into next+1).
+  // Walk forward from the category, consuming slots until newDuration is
+  // covered (full or partial) or a hard stop is hit.
+  let durationLeft = newDuration;
+  let consumeIdx = i;
+  const consumedCategoryIds: string[] = [];
+  let partialSplitTime: Date | null = null;
+  let hardStop = false;
+
+  while (consumeIdx < slots.length && durationLeft > 0) {
+    const slot = slots[consumeIdx];
+
+    if (slot.type === "occupied" || slot.type === "travel") {
+      hardStop = true;
+      break;
+    }
+
+    if (durationLeft >= slot.durationMinutes) {
+      if (slot.type === "category") consumedCategoryIds.push(slot.categoryId);
+      durationLeft -= slot.durationMinutes;
+      consumeIdx += 1;
+    } else {
+      partialSplitTime = new Date(
+        slot.start.getTime() + durationLeft * 60000,
+      );
+      if (slot.type === "category") consumedCategoryIds.push(slot.categoryId);
+      durationLeft = 0;
+      break;
+    }
+  }
+
+  // Determine travel end. If we couldn't fit the full duration, clamp to the
+  // hard-stop boundary and mark insufficient.
+  let travelEnd: Date;
+  let insufficient = false;
+  if (hardStop) {
+    travelEnd = slots[consumeIdx].start;
+    insufficient = true;
+  } else if (durationLeft > 0) {
+    // Ran out of slots before fitting full duration.
+    travelEnd =
+      consumeIdx > 0 ? slots[consumeIdx - 1].end : category.end;
+    insufficient = true;
+  } else if (partialSplitTime) {
+    travelEnd = partialSplitTime;
+  } else {
+    travelEnd = slots[consumeIdx - 1].end;
+  }
+
   const travel = createTravelSlot(
     category.start,
-    category.end,
+    travelEnd,
     action.prevLocation,
     postCategoryLocation,
     "preliminary",
     uuidv4(),
     {
-      insufficientTravel: newDuration > category.durationMinutes,
+      insufficientTravel: insufficient,
       requiredTravelMinutes: newDuration,
     },
   );
-  travel.consumedCategoryIds = [category.categoryId];
+  travel.consumedCategoryIds = consumedCategoryIds;
 
-  slots.splice(i, 1, travel);
-  return i + 1;
+  // Replace consumed slots with [travel, shortened-partial?].
+  const replacements: Slot[] = [travel];
+  let removeCount = consumeIdx - i;
+
+  if (partialSplitTime && consumeIdx < slots.length) {
+    const partial = slots[consumeIdx];
+    if (partial.type === "available" || partial.type === "category") {
+      replacements.push(
+        shortenPlaceableAtStart(partial, partialSplitTime, postCategoryLocation),
+      );
+      removeCount += 1;
+    }
+  }
+
+  slots.splice(i, removeCount, ...replacements);
+  return i + replacements.length;
 }
 
 // ---------------------------------------------------------------------------

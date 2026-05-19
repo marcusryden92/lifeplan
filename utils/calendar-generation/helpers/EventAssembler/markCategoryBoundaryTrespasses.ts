@@ -39,9 +39,13 @@ export function markCategoryBoundaryTrespasses(
     }
 
     if (slot.type === "travel" && slot.consumedCategoryIds?.length) {
-      // Travel slot fully replaced one or more category interiors. Stamp
-      // both boundaries on each matching wrapper (the category was never
-      // reached because the travel passed straight through).
+      // Travel slot consumed (fully or partially) some category interiors.
+      // Only stamp wrappers when the travel itself is in an alert state —
+      // either insufficient (couldn't fit, red) or overconstrained (forced
+      // routing, yellow). A clean bypass cascade with a properly-sized
+      // travel is intentional and shouldn't render trespass borders.
+      const isAlert = slot.insufficientTravel || slot.overconstrained;
+      if (!isAlert) continue;
       for (const categoryId of slot.consumedCategoryIds) {
         stampWrappersByCategoryId(
           events,
