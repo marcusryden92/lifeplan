@@ -72,7 +72,31 @@ Current type: Available
             Next type: Occupied
                 -> Fill current, schedule travel as 'alert'
 
+            Next type: Travel
+                Not reachable on a forward walk (slots[i+1] should not be a
+                Travel slot — the walker hasn't placed it yet)
+                    -> Log inconsistency
+
+            Next type: Category
+                # Same shape as Next type: Available per global note,
+                # with trespass marking if the category interior is fully
+                # consumed by the bleed.
+                Next and current large enough for travel
+                    -> Fill current, remainder to next (eating from category HEAD)
+                    (set trespassingStart on next CategorySlot if its interior
+                    is fully consumed)
+
+                Next and current not large enough for travel
+                    -> Fill both, schedule 'alert' travel
+                    (set trespassingStart on next CategorySlot if fully consumed)
+
         Prev type: Travel
+            # slots[i-1] is Travel directly, OR slots[i-2] is Travel across a
+            # transparent prev Available (placeAtSlotStart=true variant —
+            # walker placed travel at the leading Available's START so the
+            # transparent leftover sits at slots[i-1] and the Travel at i-2).
+            # Both shapes are recognized; the discovery looks past a
+            # transparent neighbor to find the absorbable Travel.
             Prev and current are large enough for travel
                 -> Absorb prev travel from A-B, and create a new travel instance from A-C
 
@@ -90,6 +114,32 @@ Current type: Available
                             -> Absorb prev travel, fill all of them with new travel, mark travel as 'alert' (not large enough)
 
                             (Future: continue traversing the array forwards and backwards until enough space is found, or we hit an occupied slot, in which case place an 'alert' travel)
+
+                Next type: Occupied
+                    # Backward-absorb routing: undo prev Travel, replan from
+                    # prev_travel.fromLocation to next.location, fitting the
+                    # new travel in (restored Available + current) at the
+                    # end of current.
+                    -> Absorb prev Travel back into its adjacent Available
+                       (merge them, undoing the earlier walker placement)
+                    -> Compute the new travel A->C, where A = prev Travel's
+                       fromLocation and C = next.location
+                    -> Place the new travel ending at next.start, filling
+                       current; remainder bleeds backward into the restored
+                       Available
+                    If A->C duration exceeds (current + restored Available)
+                        -> Fill what's available, mark travel as 'alert'
+                        (Future: traverse further backwards beyond prev+2)
+
+                Next type: Category
+                    # Same shape as Next type: Available per global note,
+                    # with trespass marking if next category's interior is
+                    # fully consumed by the bleed.
+
+                Next type: Travel
+                    Not reachable on a forward walk (slots[i+1] should not be
+                    a Travel slot — the walker hasn't placed it yet)
+                        -> Log inconsistency
 
 
 Current type: Category
@@ -195,9 +245,58 @@ Current type: Category
                 -> PlaceAtEnd (eats from category interior)
 
             Travel current->next does not fit in category TAIL
-                -> Fill category TAIL with travel, mark travel as 'alert'
-                   OR if the entire category interior is consumed: set
-                   trespassingEnd on this CategorySlot instead of emitting
-                   a visible travel slot
+                Prev type: Travel
+                # slots[i-1] directly, OR slots[i-2] across a transparent prev
+                # Available (placeAtSlotStart=true variant). In both shapes
+                # there's a recently placed travel we can undo.
+                    # Backward absorb-and-replan. Original walker plan was
+                    # "Travel A->B, then user at B during category, then
+                    # Travel B->C". We rewrite to "user stays at A through
+                    # the absorbed region, then a single Travel A->C fills
+                    # current and bleeds backward". The category at B is
+                    # never reached.
+                    -> Absorb the prev Travel back into its adjacent Available
+                       (merge them into a single Available slot, undoing the
+                       earlier walker placement)
+                    -> Compute the new travel A->C, where A = prev Travel's
+                       fromLocation and C = next.location
+                    -> Place the new travel at the TAIL of current, ending at
+                       next.start. Fill current's interior entirely; remainder
+                       bleeds backward into the restored Available
+                    -> Set trespassingStart AND trespassingEnd on this
+                       CategorySlot (both wrapper borders render red — the
+                       category was never reached because travel goes straight
+                       through it)
+                    (If A->C duration exceeds current + restored Available
+                    combined, fill what's available and mark the travel as
+                    'alert'; trespass flags still apply)
+
+                Prev type: Available (no backward Travel to absorb)
+                    -> Fill category TAIL with travel, mark travel as 'alert'
+                       OR if the entire category interior is consumed: set
+                       trespassingEnd on this CategorySlot instead of
+                       emitting a visible travel slot
+
+                Prev type: Occupied (no backward expansion possible)
+                    -> Fill category TAIL with travel, mark travel as 'alert'
+                       OR if the entire category interior is consumed: set
+                       trespassingEnd on this CategorySlot
+
+                Prev type: Category
+                    # No special cat-to-cat backward absorb. The earlier
+                    # category's exit edge already placed its own travel
+                    # (so in practice slots[i-1] becomes that Travel and
+                    # we route through the Prev type: Travel branch above).
+                    # If we somehow land here with prev still a Category,
+                    # the simple fallback applies:
+                    -> Fill category TAIL with travel, mark 'alert' OR if
+                       entire category interior is consumed: set
+                       trespassingEnd on this CategorySlot
+
                 (Future: traverse forwards beyond the occupied)
+
+        Next type: Travel
+            Not reachable on a forward walk (slots[i+1] should not be a
+            Travel slot — the walker hasn't placed it yet)
+                -> Log inconsistency
 ```
