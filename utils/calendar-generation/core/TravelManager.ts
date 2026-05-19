@@ -113,6 +113,17 @@ export class TravelManager {
   }
 
   /**
+   * Track a leg explicitly without going through resolveTravel /
+   * resolveCategoryEdge. Used by the dispatcher's absorb / replan paths
+   * where the leg to track isn't derivable from a single slot's prev/next.
+   * Returns true if this trip closes an open leg (return trip), false if
+   * it opens a new one.
+   */
+  trackLeg(from: string, to: string): boolean {
+    return this.legTracker.track(from, to);
+  }
+
+  /**
    * Undo a previously tracked leg. Used by the dispatcher when absorbing
    * a placed travel slot back into its adjacent Available — the open leg
    * the original track() call opened needs to be removed so future

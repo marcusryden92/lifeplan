@@ -45,6 +45,8 @@ function makeLeftover(
         end.getTime() === source.end.getTime()
           ? source.trespassingEnd
           : undefined,
+      isFinal:
+        end.getTime() === source.end.getTime() ? source.isFinal : undefined,
     };
   }
   return {

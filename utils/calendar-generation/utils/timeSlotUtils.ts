@@ -86,6 +86,7 @@ export function splitSlot(
         categoryId: slot.categoryId,
         isStrictCategory: slot.isStrictCategory,
         trespassingEnd: slot.trespassingEnd,
+        isFinal: slot.isFinal,
       },
     ];
   }
@@ -234,6 +235,10 @@ function makePlaceableLeftover(
         end.getTime() === source.end.getTime()
           ? source.trespassingEnd
           : undefined,
+      // isFinal applies to whichever fragment still ends at the original
+      // slot's end — that's the "tail" piece of a slot at the array's end.
+      isFinal:
+        end.getTime() === source.end.getTime() ? source.isFinal : undefined,
     };
   }
   return {
@@ -249,13 +254,14 @@ function makePlaceableLeftover(
 export function createTravelSlot(
   start: Date,
   end: Date,
-  fromLocationId: string,
-  toLocationId: string,
+  fromLocationId: string | null,
+  toLocationId: string | null,
   travelType: "preliminary" | "inbound" | "outbound",
   eventId: string,
   options?: {
     insufficientTravel?: boolean;
     requiredTravelMinutes?: number;
+    overconstrained?: boolean;
     categoryId?: string | null;
     isStrictCategory?: boolean;
   },
@@ -274,6 +280,7 @@ export function createTravelSlot(
     travelToLocationId: toLocationId,
     insufficientTravel: options?.insufficientTravel ?? false,
     requiredTravelMinutes: options?.requiredTravelMinutes ?? 0,
+    overconstrained: options?.overconstrained,
     categoryId: options?.categoryId,
     isStrictCategory: options?.isStrictCategory,
   };

@@ -26,6 +26,10 @@ export type CategorySlot = BaseSlot & {
   // is stamped red downstream; no visible travel slot is emitted.
   trespassingStart?: boolean;
   trespassingEnd?: boolean;
+  // Marker that this is the last slot in slots[] and the dispatcher's exit
+  // edge couldn't determine a destination. Signals the generator to
+  // re-expand templates and resume planning here on a future pass.
+  isFinal?: boolean;
 };
 
 export type OccupiedSlot = BaseSlot & {
@@ -49,6 +53,10 @@ export type TravelSlot = BaseSlot & {
   // forced (absorb-and-replan that skips a category visit, wasted round
   // trip, etc.). Co-exists with insufficientTravel when both apply.
   overconstrained?: boolean;
+  // IDs of CategorySlots this travel replaced (because it fully consumed
+  // their interior). The wrapper-marker scanner sets trespass flags on the
+  // matching wrappers downstream.
+  consumedCategoryIds?: string[];
   categoryId?: string | null;
   isStrictCategory?: boolean;
 };

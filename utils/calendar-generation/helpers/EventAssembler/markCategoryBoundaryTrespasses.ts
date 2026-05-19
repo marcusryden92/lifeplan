@@ -28,14 +28,56 @@ export function markCategoryBoundaryTrespasses(
   if (wrapperIndices.length === 0) return;
 
   for (const slot of slots) {
-    if (slot.type !== "category") continue;
-    if (!slot.trespassingStart && !slot.trespassingEnd) continue;
-
-    if (slot.trespassingStart) {
-      stampMatchingWrappers(events, wrapperIndices, slot, "start");
+    if (slot.type === "category") {
+      if (slot.trespassingStart) {
+        stampMatchingWrappers(events, wrapperIndices, slot, "start");
+      }
+      if (slot.trespassingEnd) {
+        stampMatchingWrappers(events, wrapperIndices, slot, "end");
+      }
+      continue;
     }
-    if (slot.trespassingEnd) {
-      stampMatchingWrappers(events, wrapperIndices, slot, "end");
+
+    if (slot.type === "travel" && slot.consumedCategoryIds?.length) {
+      // Travel slot fully replaced one or more category interiors. Stamp
+      // both boundaries on each matching wrapper (the category was never
+      // reached because the travel passed straight through).
+      for (const categoryId of slot.consumedCategoryIds) {
+        stampWrappersByCategoryId(
+          events,
+          wrapperIndices,
+          categoryId,
+          slot.start,
+          slot.end,
+        );
+      }
+    }
+  }
+}
+
+function stampWrappersByCategoryId(
+  events: SimpleEvent[],
+  wrapperIndices: number[],
+  categoryId: string,
+  travelStart: Date,
+  travelEnd: Date,
+): void {
+  const travelStartMs = travelStart.getTime();
+  const travelEndMs = travelEnd.getTime();
+
+  for (const i of wrapperIndices) {
+    const wrapper = events[i];
+    const wrapperCategoryId = (
+      wrapper.extendedProps as RuntimeEventExtendedProps | undefined
+    )?.categoryId;
+    if (wrapperCategoryId !== categoryId) continue;
+    const wrapperStartMs = new Date(wrapper.start).getTime();
+    const wrapperEndMs = new Date(wrapper.end).getTime();
+    // Wrapper overlaps the travel slot's time range — this is the wrapper
+    // the travel consumed. Both boundaries get stamped.
+    if (travelStartMs < wrapperEndMs && travelEndMs > wrapperStartMs) {
+      stampBorder(events, i, "start");
+      stampBorder(events, i, "end");
     }
   }
 }
