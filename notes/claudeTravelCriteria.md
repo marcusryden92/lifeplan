@@ -89,8 +89,26 @@ Current type: Available
                     -> Fill current, remainder to next
 
                 Next and current not large enough for travel
-                    -> Fill both, schedule 'alert' travel
-                    (Future: transverse forwards until travel filled or hit hard stop)
+                    # Forward cascade with iterative destination replanning
+                    # (forwardBypassCascade). Walks forward through subsequent
+                    # Available / Category slots accumulating duration. At each
+                    # step PAST the immediate next (which IS the original
+                    # destination), if the slot's location differs from the
+                    # current destination, REPLAN: untrack A->oldDest, compute
+                    # A->newLoc travel time, track A->newLoc, update destination.
+                    # Per spec: when newT > consumed (replanned travel needs
+                    # more than what's accumulated), end the travel at the
+                    # START of the new-destination slot, mark overconstrained.
+                    # That slot itself is preserved (not consumed), so the
+                    # walker's next iteration sees the user arriving at the
+                    # boundary. If newT <= consumed, the cascade exits cleanly
+                    # at slot.start anyway (partial split with 0 remaining).
+                    # Hard stop (Occupied / Travel / end) before enough
+                    # accumulated -> insufficientTravel.
+                    # Consumed Category interiors go into consumedCategoryIds
+                    # for the wrapper-marker scanner.
+                    -> Iteratively replan + cascade; end at new-destination
+                       boundary marked overconstrained when newT > consumed
 
             Next type: Occupied
                 -> Fill current, schedule travel as 'alert'
@@ -101,17 +119,16 @@ Current type: Available
                     -> Log inconsistency
 
             Next type: Category
-                # Same shape as Next type: Available per global note,
-                # with trespass marking if the category interior is fully
-                # consumed by the bleed.
+                # Same shape as Next type: Available (global note). The forward
+                # cascade applies its replan logic identically for Category
+                # neighbors: cat-interiors fully consumed go into
+                # consumedCategoryIds; entering a category whose location
+                # differs from the current destination triggers a replan.
                 Next and current large enough for travel
                     -> Fill current, remainder to next (eating from category HEAD)
-                    (set trespassingStart on next CategorySlot if its interior
-                    is fully consumed)
 
                 Next and current not large enough for travel
-                    -> Fill both, schedule 'alert' travel
-                    (set trespassingStart on next CategorySlot if fully consumed)
+                    -> Iteratively replan + cascade (see Available branch above)
 
         Prev type: Travel
             # slots[i-1] is Travel directly, OR slots[i-2] is Travel across a
