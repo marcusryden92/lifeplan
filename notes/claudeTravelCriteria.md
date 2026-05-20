@@ -63,8 +63,21 @@ Current type: Available
                     -> Fill current, remainder to prev
 
                 Prev and current not large enough for travel
-                    -> Fill both, schedule 'alert' travel
-                    (Future: transverse backwards until travel filled or hit hard stop)
+                    # Backward bypass cascade (backwardBypassCascade): walk
+                    # backward through slots looking for an earlier Category
+                    # whose location gives a travel distance that fits in the
+                    # accumulated span [anchor.end, current.end]. First fit wins.
+                    # Absorbed Travel slots in between are untracked; absorbed
+                    # Category interiors go into consumedCategoryIds.
+                    # Anywhere Occupieds (locationId == null) are pass-through;
+                    # location-pinned Occupieds are hard stops.
+                    # If the slot is larger than the actual travel (because an
+                    # intermediate category was skipped), marks overconstrained.
+                    Earlier Category anchor found and span fits
+                        -> Place travel from anchor -> next, mark overconstrained
+                           if span > actual travel duration
+                    No anchor fits
+                        -> Fill prev + current, schedule 'alert' travel
 
             Next type: Travel
                 I don't see how this could happen since we're moving forwards,
@@ -169,7 +182,12 @@ Current type: Category
                 -> Skip (already placed: by the walker on the leading Available,
                    or by an earlier category's exit edge in a category-to-category
                    boundary)
-            Travel destination != current
+            Travel destination == slot.prevLocationId (but != current)
+                # The prev Travel was for a different transition and left the
+                # user at prevLocationId, not current. Fall through to place
+                # a fresh entry travel from prevLocationId -> current.
+                -> Place entry travel (fall through to PlaceAtStart / bypass)
+            Travel destination != current AND != slot.prevLocationId
                 -> Log inconsistency
 
         Prev type: Available
@@ -190,20 +208,30 @@ Current type: Category
                handled this transition already)
 
         Prev type: Occupied (different location than current)
-            Travel prev->current fits in category HEAD
-                -> PlaceAtStart (eats from category interior)
+            Prev locationId == null (Anywhere event)
+                # Walk back through consecutive Anywhere Occupieds to find an
+                # earlier Travel that already brought the user to current's
+                # location. If found, skip — the transition is already placed.
+                Earlier Travel ending at current found
+                    -> Skip
+                No earlier Travel found
+                    -> Fall through to placement below
 
-            Travel prev->current does not fit in category HEAD
-                # Bypass: route a single travel directly from prev to slots[i+1],
-                # consuming the category interior. Cascade mirrors the
-                # "Current type: Available, not-large-enough, Prev type: Occupied,
-                # Next type: Available" subtree above, with substitutions:
-                #     current = this category interior
-                #     next    = slots[i+1]
-                # When the bypass fires, the exit edge below is a no-op because
-                # this slot is now Travel, not Category.
-                # Set trespassingStart on this CategorySlot for the boundary
-                # the bypass consumes.
+            Prev locationId != null (location-pinned event)
+                Travel prev->current fits in category HEAD
+                    -> PlaceAtStart (eats from category interior)
+
+                Travel prev->current does not fit in category HEAD
+                    # Bypass: route a single travel directly from prev to
+                    # slots[i+1]'s location, consuming the category interior
+                    # (bypassCategoryCascade). Walk forward through subsequent
+                    # placeable slots (Available / Category) until the full
+                    # travel duration fits or a hard stop (Occupied / Travel /
+                    # end of slots) is reached. Consumed Category interiors are
+                    # recorded in TravelSlot.consumedCategoryIds so the wrapper
+                    # marker scanner can stamp red boundaries on those slots.
+                    # When the bypass fires, the exit edge below is a no-op
+                    # because this slot is now Travel, not Category.
 
     Exit edge (current != next)
         no next (i = last, no slots[i+1])
@@ -268,29 +296,27 @@ Current type: Category
                 # slots[i-1] directly, OR slots[i-2] across a transparent prev
                 # Available (placeAtSlotStart=true variant). In both shapes
                 # there's a recently placed travel we can undo.
-                    # Backward absorb-and-replan. Original walker plan was
-                    # "Travel A->B, then user at B during category, then
-                    # Travel B->C". We rewrite to "user stays at A through
-                    # the absorbed region, then a single Travel A->C fills
-                    # current and bleeds backward". The category at B is
-                    # never reached.
+                    # Backward absorb-and-replan (absorbAndReplanThroughCategory).
+                    # Original walker plan was "Travel A->B, then user at B
+                    # during category, then Travel B->C". We rewrite to "user
+                    # stays at A through the absorbed region, then a single
+                    # Travel A->C fills current and bleeds backward". The
+                    # category at B is never reached.
                     -> Absorb the prev Travel back into its adjacent Available
-                       (merge them into a single Available slot, undoing the
-                       earlier walker placement)
+                       (merge them, undoing the earlier walker placement)
                     -> Compute the new travel A->C, where A = prev Travel's
                        fromLocation and C = next.location
                     -> Place the new travel at the TAIL of current, ending at
-                       next.start. Fill current's interior entirely; remainder
-                       bleeds backward into the restored Available
-                    -> Mark the new travel as 'overconstrained' (yellow) —
-                       the planner was forced into this routing because the
-                       category at current cannot be reached
-                    -> Set trespassingStart AND trespassingEnd on this
-                       CategorySlot (red wrapper borders — the category was
-                       never reached because travel goes straight through it)
+                       next.start. Fill current's interior; remainder bleeds
+                       backward into the restored Available
+                    -> Mark the new travel as 'overconstrained' (yellow)
+                    -> Record this CategorySlot's id in TravelSlot.consumedCategoryIds
+                       (the wrapper marker scanner stamps red borders on the
+                       corresponding wrapper event downstream — equivalent to
+                       setting trespassingStart AND trespassingEnd directly)
                     (If A->C duration exceeds current + restored Available
-                    combined, also mark the travel as 'alert'; trespass flags
-                    and overconstrained still apply)
+                    combined, also mark the travel as 'alert'; overconstrained
+                    still applies)
 
                 Prev type: Available (no backward Travel to absorb)
                     -> Fill category TAIL with travel, mark travel as 'alert'

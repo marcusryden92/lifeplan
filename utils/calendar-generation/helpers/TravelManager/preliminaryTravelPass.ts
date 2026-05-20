@@ -119,7 +119,7 @@ function handleAvailable(
       return bleedAcrossPrevCurrentNext(slots, i, action);
     }
     if (next?.type === "occupied") {
-      return bleedIntoPrev(slots, i, action);
+      return bleedIntoPrev(slots, i, action, travelManager);
     }
     if (next?.type === "travel") {
       travelManager.untrackLeg(action.prevLocation, action.nextLocation);
@@ -131,7 +131,7 @@ function handleAvailable(
   // ---- Prev type: Occupied ----
   if (prev?.type === "occupied") {
     if (next?.type === "available" || next?.type === "category") {
-      return bleedIntoNext(slots, i, action);
+      return bleedIntoNext(slots, i, action, travelManager);
     }
     if (next?.type === "occupied") {
       return fillCurrentWithAlert(slots, i, action);
@@ -149,7 +149,7 @@ function handleAvailable(
       return bleedAcrossPrevCurrentNext(slots, i, action);
     }
     if (next?.type === "occupied") {
-      return bleedIntoPrev(slots, i, action);
+      return bleedIntoPrev(slots, i, action, travelManager);
     }
     if (next?.type === "travel") {
       travelManager.untrackLeg(action.prevLocation, action.nextLocation);
@@ -555,16 +555,18 @@ function bleedIntoPrev(
   slots: Slot[],
   i: number,
   action: TravelProcessingAction,
+  travelManager: TravelManager,
 ): number {
-  return bleedSingleSide(slots, i, action, "prev");
+  return bleedSingleSide(slots, i, action, "prev", travelManager);
 }
 
 function bleedIntoNext(
   slots: Slot[],
   i: number,
   action: TravelProcessingAction,
+  travelManager: TravelManager,
 ): number {
-  return bleedSingleSide(slots, i, action, "next");
+  return bleedSingleSide(slots, i, action, "next", travelManager);
 }
 
 function bleedSingleSide(
@@ -572,6 +574,7 @@ function bleedSingleSide(
   i: number,
   action: TravelProcessingAction,
   side: "prev" | "next",
+  travelManager: TravelManager,
 ): number {
   const slot = slots[i] as AvailableSlot;
   const { prevLocation, nextLocation, travelMinutes } = action;
@@ -590,7 +593,17 @@ function bleedSingleSide(
 
   const neighborDur = neighbor.durationMinutes;
   const overflow = T - curDur;
-  const insufficient = overflow > neighborDur;
+  const wouldBeInsufficient = overflow > neighborDur;
+
+  // If a simple bleed into the immediate prev would be insufficient, try a
+  // backward cascade. Walk back through slots, looking for an earlier
+  // Category whose location lets the travel fit. This is the mirror of the
+  // forward bypass cascade.
+  if (wouldBeInsufficient && side === "prev") {
+    return backwardBypassCascade(slots, i, action, travelManager);
+  }
+
+  const insufficient = wouldBeInsufficient;
   const consumeFromNeighbor = insufficient ? neighborDur : overflow;
 
   // Geometry: travel always ends at slot.end (no legTracker rerouting here —
@@ -1172,6 +1185,156 @@ function bypassCategoryCascade(
 
   slots.splice(i, removeCount, ...replacements);
   return i + replacements.length;
+}
+
+// ---------------------------------------------------------------------------
+// Action: Available with next=Occupied — backward bypass cascade.
+// Mirror of bypassCategoryCascade. Walks backward looking for an earlier
+// Category whose location lets the travel fit in the accumulated span.
+// First-fit wins. Absorbed travels in between get untracked; absorbed
+// categories go into consumedCategoryIds. If the slot ends up bigger than
+// the actual travel duration, marks overconstrained.
+// ---------------------------------------------------------------------------
+
+function backwardBypassCascade(
+  slots: Slot[],
+  i: number,
+  action: TravelProcessingAction,
+  travelManager: TravelManager,
+): number {
+  const current = slots[i] as AvailableSlot;
+  const destination = action.nextLocation;
+  const slotEnd = current.end;
+
+  // We're going to replan with a different source. Untrack the original
+  // leg now; if no anchor fits, re-track and fall back below.
+  travelManager.untrackLeg(action.prevLocation, action.nextLocation);
+
+  let anchorIdx = i - 1;
+  while (anchorIdx >= 0) {
+    const anchor = slots[anchorIdx];
+
+    if (anchor.type === "occupied") {
+      // Anywhere Occupieds (locationId == null) are pass-through; any
+      // location-pinned Occupied is a hard stop for the cascade.
+      if (anchor.locationId != null) break;
+      anchorIdx--;
+      continue;
+    }
+
+    if (anchor.type === "travel" || anchor.type === "available") {
+      anchorIdx--;
+      continue;
+    }
+
+    if (anchor.type === "category") {
+      const anchorLocation = anchor.currentLocationId;
+      if (!anchorLocation || anchorLocation === destination) {
+        anchorIdx--;
+        continue;
+      }
+
+      const T = travelManager.getTravelTime(anchorLocation, destination, slotEnd);
+      if (T <= 0) {
+        anchorIdx--;
+        continue;
+      }
+
+      const slotStart = anchor.end;
+      const slotDuration = Math.floor(
+        (slotEnd.getTime() - slotStart.getTime()) / 60000,
+      );
+
+      if (slotDuration >= T) {
+        // Fit. Place travel.
+        const consumedCategoryIds: string[] = [];
+        for (let k = anchorIdx + 1; k <= i; k++) {
+          const s = slots[k];
+          if (s.type === "travel") {
+            if (s.travelFromLocationId && s.travelToLocationId) {
+              travelManager.untrackLeg(s.travelFromLocationId, s.travelToLocationId);
+            }
+          } else if (s.type === "category") {
+            consumedCategoryIds.push(s.categoryId);
+          }
+        }
+
+        travelManager.trackLeg(anchorLocation, destination);
+
+        const overconstrained = slotDuration > T;
+        const travel = createTravelSlot(
+          slotStart,
+          slotEnd,
+          anchorLocation,
+          destination,
+          "preliminary",
+          uuidv4(),
+          {
+            overconstrained,
+            requiredTravelMinutes: T,
+          },
+        );
+        travel.consumedCategoryIds = consumedCategoryIds;
+
+        const removeCount = i - anchorIdx;
+        slots.splice(anchorIdx + 1, removeCount, travel);
+        return anchorIdx + 2;
+      }
+    }
+
+    anchorIdx--;
+  }
+
+  // No anchor fits. Re-track and fall back to insufficient placement in
+  // [current + immediate prev] (the original behaviour).
+  travelManager.trackLeg(action.prevLocation, action.nextLocation);
+  return bleedSingleSideInsufficient(slots, i, action, "prev");
+}
+
+// Helper that replicates the original "insufficient single-side bleed"
+// placement — used as a fallback when the cascade can't find an anchor.
+function bleedSingleSideInsufficient(
+  slots: Slot[],
+  i: number,
+  action: TravelProcessingAction,
+  side: "prev" | "next",
+): number {
+  const slot = slots[i] as AvailableSlot;
+  const { prevLocation, nextLocation, travelMinutes } = action;
+  const neighborIdx = side === "prev" ? i - 1 : i + 1;
+  const neighbor = slots[neighborIdx];
+  if (
+    !neighbor ||
+    (neighbor.type !== "available" && neighbor.type !== "category")
+  ) {
+    return fillCurrentWithAlert(slots, i, action);
+  }
+  const neighborDur = neighbor.durationMinutes;
+  const consumeFromNeighbor = neighborDur;
+  let travelStart: Date;
+  let travelEnd: Date;
+  if (side === "prev") {
+    travelEnd = slot.end;
+    travelStart = new Date(
+      slot.start.getTime() - consumeFromNeighbor * 60000,
+    );
+  } else {
+    travelStart = slot.start;
+    travelEnd = new Date(slot.end.getTime() + consumeFromNeighbor * 60000);
+  }
+  const travel = createTravelSlot(
+    travelStart,
+    travelEnd,
+    prevLocation,
+    nextLocation,
+    "preliminary",
+    uuidv4(),
+    { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
+  );
+  if (side === "prev") {
+    return spliceBleedPrev(slots, i, neighborIdx, neighbor, travel, true, travelStart);
+  }
+  return spliceBleedNext(slots, i, neighborIdx, neighbor, travel, true, travelEnd);
 }
 
 // ---------------------------------------------------------------------------

@@ -9,6 +9,7 @@ interface TravelExtendedProps {
   travelMinutes?: number;
   requiredTravelMinutes?: number | null;
   insufficientTravel?: boolean;
+  overconstrained?: boolean;
   fromLocationId?: string | null;
   toLocationId?: string | null;
 }
@@ -48,6 +49,10 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   const travelMinutes = extendedProps?.travelMinutes;
   const requiredTravelMinutes = extendedProps?.requiredTravelMinutes;
   const insufficientTravel = extendedProps?.insufficientTravel ?? false;
+  const overconstrained = extendedProps?.overconstrained ?? false;
+  // Insufficient takes priority over overconstrained when both are set.
+  const showAlert = insufficientTravel;
+  const showOverconstrained = overconstrained && !insufficientTravel;
   const fromName = extendedProps?.fromLocationId
     ? locationNameMap.get(extendedProps.fromLocationId) ?? extendedProps.fromLocationId
     : null;
@@ -57,12 +62,29 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   const travelLabel =
     fromName && toName ? `${fromName} → ${toName}` : "Travel";
 
-  // Warning icon for insufficient travel
+  // Warning icon for insufficient travel (red)
   const WarningIcon = () => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 20 20"
       fill="#DC2626"
+      style={{ width: "14px", height: "14px", flexShrink: 0 }}
+    >
+      <path
+        fillRule="evenodd"
+        d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+
+  // Overconstrained icon (yellow) — same triangle, different fill, signals
+  // "forced routing": the slot is bigger than the actual travel needs.
+  const OverconstrainedIcon = () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 20 20"
+      fill="#D97706"
       style={{ width: "14px", height: "14px", flexShrink: 0 }}
     >
       <path
@@ -89,6 +111,12 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
     </svg>
   );
 
+  const borderLeftStyle = showAlert
+    ? `4px solid #DC2626`
+    : showOverconstrained
+    ? `4px solid #D97706`
+    : userSettings.styles.travel.event.borderLeft;
+
   return (
     <div
       ref={elementRef}
@@ -100,8 +128,8 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
         padding: elementHeight < 20 ? "2px 8px" : "8px",
         borderRadius: userSettings.styles.events.borderRadius,
         backgroundColor: event.backgroundColor,
-        borderLeft: userSettings.styles.travel.event.borderLeft,
-        opacity: insufficientTravel ? 0.95 : 0.85,
+        borderLeft: borderLeftStyle,
+        opacity: showAlert || showOverconstrained ? 0.95 : 0.85,
       }}
     >
       {/* Header row with title and time */}
@@ -116,14 +144,25 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
             gap: "4px",
           }}
         >
-          {insufficientTravel ? <WarningIcon /> : <TravelArrowIcon />}
+          {showAlert ? (
+            <WarningIcon />
+          ) : showOverconstrained ? (
+            <OverconstrainedIcon />
+          ) : (
+            <TravelArrowIcon />
+          )}
           {travelLabel}
           {travelMinutes !== undefined && elementHeight > 30 && (
             <span style={{ fontWeight: "normal", opacity: 0.8 }}>
               ({travelMinutes} min
-              {insufficientTravel && requiredTravelMinutes && (
+              {showAlert && requiredTravelMinutes && (
                 <span style={{ color: "#DC2626" }}>
                   /{requiredTravelMinutes} needed
+                </span>
+              )}
+              {showOverconstrained && requiredTravelMinutes && (
+                <span style={{ color: "#D97706" }}>
+                  /{requiredTravelMinutes} actual
                 </span>
               )}
               )

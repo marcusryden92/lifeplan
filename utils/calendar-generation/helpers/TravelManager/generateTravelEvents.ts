@@ -10,14 +10,27 @@ export function generateTravelEvents(
   const now = new Date();
 
   return travelSlots.map((slot: TravelSlot) => {
+    // Color priority: insufficient (red) outranks overconstrained (yellow);
+    // a travel that's both gets the red treatment since the harder failure
+    // wins. Default grey for clean placements.
+    let backgroundColor = "#9CA3AF";
+    let borderColor = "#6B7280";
+    if (slot.insufficientTravel) {
+      backgroundColor = "#F87171";
+      borderColor = "#DC2626";
+    } else if (slot.overconstrained) {
+      backgroundColor = "#FDE68A";
+      borderColor = "#D97706";
+    }
+
     return {
       userId,
       id: slot.eventId,
       title: `Travel_${slot.travelFromLocationId ?? "unknown"}_${slot.travelToLocationId ?? "unknown"}`,
       start: slot.start.toISOString(),
       end: slot.end.toISOString(),
-      backgroundColor: slot.insufficientTravel ? "#F87171" : "#9CA3AF",
-      borderColor: slot.insufficientTravel ? "#DC2626" : "#6B7280",
+      backgroundColor,
+      borderColor,
       duration: null,
       rrule: null,
       extendedProps: {
@@ -32,6 +45,7 @@ export function generateTravelEvents(
         toLocationId: slot.travelToLocationId,
         travelMinutes: slot.durationMinutes,
         insufficientTravel: slot.insufficientTravel,
+        overconstrained: slot.overconstrained ?? false,
         requiredTravelMinutes:
           slot.requiredTravelMinutes > 0 ? slot.requiredTravelMinutes : null,
       },
