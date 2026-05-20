@@ -880,6 +880,8 @@ function absorbAndBleedAcross(
   const travelStart = new Date(travelStartMs);
   const travelEnd = regionEnd;
 
+  // Geometric overconstrained: slot is always <= newDuration here, so the
+  // flag stays off. See absorbAndReplanThroughCategory for full rationale.
   const travel = createTravelSlot(
     travelStart,
     travelEnd,
@@ -890,7 +892,6 @@ function absorbAndBleedAcross(
     {
       insufficientTravel: insufficient,
       requiredTravelMinutes: newDuration,
-      overconstrained: true,
     },
   );
 
@@ -1037,6 +1038,12 @@ function absorbAndReplanThroughCategory(
   const travelStart = new Date(travelStartMs);
   const travelEnd = regionEnd;
 
+  // Geometric overconstrained: only flag when the travel slot is BIGGER than
+  // the actual travel duration (wasted space). This function's geometry
+  // never produces that — the slot is min(regionSize, newDuration) — so the
+  // flag stays off. Skipping the bypassed category is a natural consequence
+  // of the original walker placement being unworkable, not a forced bad
+  // routing the user needs to see flagged.
   const travel = createTravelSlot(
     travelStart,
     travelEnd,
@@ -1047,7 +1054,6 @@ function absorbAndReplanThroughCategory(
     {
       insufficientTravel: insufficient,
       requiredTravelMinutes: newDuration,
-      overconstrained: true,
     },
   );
   travel.consumedCategoryIds = [category.categoryId];
@@ -1084,109 +1090,189 @@ function bypassCategoryCascade(
   bufferTimeMinutes: number,
 ): number {
   void bufferTimeMinutes;
-  // Replace the category with a Travel slot from prev->slots[i+1]'s location.
-  // If the actual travel duration exceeds the category interior, extend
-  // forward through subsequent placeable slots (Available / Category) until
-  // either the full travel duration fits or we hit a hard stop (Occupied /
-  // Travel / end of slots). Categories consumed entirely or partially are
-  // recorded on the travel slot's consumedCategoryIds so the marker scanner
-  // can stamp the correct boundaries.
+  // The walker tried to enter Cat[i] with a travel from prev (Occupied) that
+  // doesn't fit in the cat HEAD. Bypass: route to the first pinned location
+  // AFTER the cat and walk forward. Replan iteratively at each Category we
+  // walk into — when crossing a location boundary, retarget the travel to
+  // that location and recheck fit. The cascade exits when the (possibly
+  // replanned) travel duration fits in the accumulated span: either entirely
+  // within consumed slots (end at slot.start, overconstrained), or with a
+  // partial split inside the current slot (bleed in). Hard stop or end of
+  // slots → insufficient.
   travelManager.untrackLeg(action.prevLocation, action.nextLocation);
 
   const category = slots[i] as CategorySlot;
-  const postCategoryLocation = nextSlotLocation(slots, i + 1);
-  if (!postCategoryLocation) {
+  const A = action.prevLocation;
+
+  let destination = nextPinnedLocation(slots, i + 1);
+  if (!destination) {
     return fillCategoryTailOrTrespass(slots, i, action, travelManager);
   }
-
-  const newDuration = travelManager.getTravelTime(
-    action.prevLocation,
-    postCategoryLocation,
-    category.end,
-  );
-  if (newDuration <= 0) {
+  let T = travelManager.getTravelTime(A, destination, category.end);
+  if (T <= 0) {
     return fillCategoryTailOrTrespass(slots, i, action, travelManager);
   }
-  travelManager.trackLeg(action.prevLocation, postCategoryLocation);
+  travelManager.trackLeg(A, destination);
 
-  // Walk forward from the category, consuming slots until newDuration is
-  // covered (full or partial) or a hard stop is hit.
-  let durationLeft = newDuration;
+  let consumed = 0;
   let consumeIdx = i;
   const consumedCategoryIds: string[] = [];
   let partialSplitTime: Date | null = null;
   let hardStop = false;
+  let endAtSlotStart = false;
+  let endSlotIdx = -1;
 
-  while (consumeIdx < slots.length && durationLeft > 0) {
+  while (consumeIdx < slots.length) {
     const slot = slots[consumeIdx];
 
     if (slot.type === "occupied" || slot.type === "travel") {
+      if (
+        consumeIdx > i &&
+        slot.type === "occupied" &&
+        slot.locationId &&
+        slot.locationId !== destination
+      ) {
+        const newT = travelManager.getTravelTime(
+          A,
+          slot.locationId,
+          category.end,
+        );
+        if (newT > 0) {
+          travelManager.untrackLeg(A, destination);
+          travelManager.trackLeg(A, slot.locationId);
+          destination = slot.locationId;
+          T = newT;
+        }
+      }
       hardStop = true;
       break;
     }
 
-    if (durationLeft >= slot.durationMinutes) {
-      if (slot.type === "category") consumedCategoryIds.push(slot.categoryId);
-      durationLeft -= slot.durationMinutes;
-      consumeIdx += 1;
-    } else {
-      partialSplitTime = new Date(
-        slot.start.getTime() + durationLeft * 60000,
-      );
-      if (slot.type === "category") consumedCategoryIds.push(slot.categoryId);
-      durationLeft = 0;
-      break;
+    // Only break/bleed at Category slots — Avails are transit space, not
+    // destinations the user wants to land in. At an Avail we always
+    // consume and continue cascading. At a Cat past the bypassed one,
+    // replan to its location if it differs from the running destination,
+    // then check fit.
+    if (consumeIdx > i && slot.type === "category") {
+      const slotLoc = slot.currentLocationId;
+      if (slotLoc && slotLoc !== destination) {
+        const newT = travelManager.getTravelTime(A, slotLoc, category.end);
+        if (newT > 0) {
+          travelManager.untrackLeg(A, destination);
+          travelManager.trackLeg(A, slotLoc);
+          destination = slotLoc;
+          T = newT;
+        }
+      }
+
+      if (T <= consumed) {
+        endAtSlotStart = true;
+        endSlotIdx = consumeIdx;
+        break;
+      }
+
+      const slotDur = slot.durationMinutes;
+      if (consumed + slotDur >= T) {
+        const remaining = T - consumed;
+        partialSplitTime = new Date(slot.start.getTime() + remaining * 60000);
+        if (remaining > 0) consumedCategoryIds.push(slot.categoryId);
+        consumed = T;
+        break;
+      }
     }
+
+    if (slot.type === "category") consumedCategoryIds.push(slot.categoryId);
+    consumed += slot.durationMinutes;
+    consumeIdx += 1;
   }
 
-  // Determine travel end. If we couldn't fit the full duration, clamp to the
-  // hard-stop boundary and mark insufficient.
   let travelEnd: Date;
   let insufficient = false;
-  if (hardStop) {
-    travelEnd = slots[consumeIdx].start;
-    insufficient = true;
-  } else if (durationLeft > 0) {
-    // Ran out of slots before fitting full duration.
-    travelEnd =
-      consumeIdx > 0 ? slots[consumeIdx - 1].end : category.end;
-    insufficient = true;
+
+  if (endAtSlotStart) {
+    travelEnd = slots[endSlotIdx].start;
+    insufficient = consumed < T;
   } else if (partialSplitTime) {
     travelEnd = partialSplitTime;
+  } else if (hardStop) {
+    travelEnd = slots[consumeIdx].start;
+    insufficient = consumed < T;
+  } else if (consumed < T) {
+    travelEnd = consumeIdx > i ? slots[consumeIdx - 1].end : category.end;
+    insufficient = true;
   } else {
-    travelEnd = slots[consumeIdx - 1].end;
+    travelEnd = consumeIdx > i ? slots[consumeIdx - 1].end : category.end;
   }
+
+  // Geometric overconstrained: only when the travel slot is bigger than the
+  // actual travel duration. Exact-fit bleed stays clean; insufficient never
+  // sets this flag.
+  const travelSlotMinutes = Math.floor(
+    (travelEnd.getTime() - category.start.getTime()) / 60000,
+  );
+  const overconstrained = !insufficient && travelSlotMinutes > T;
 
   const travel = createTravelSlot(
     category.start,
     travelEnd,
-    action.prevLocation,
-    postCategoryLocation,
+    A,
+    destination,
     "preliminary",
     uuidv4(),
     {
       insufficientTravel: insufficient,
-      requiredTravelMinutes: newDuration,
+      requiredTravelMinutes: insufficient ? T : 0,
+      overconstrained,
     },
   );
   travel.consumedCategoryIds = consumedCategoryIds;
 
-  // Replace consumed slots with [travel, shortened-partial?].
   const replacements: Slot[] = [travel];
-  let removeCount = consumeIdx - i;
-
-  if (partialSplitTime && consumeIdx < slots.length) {
+  let removeCount: number;
+  if (endAtSlotStart) {
+    removeCount = endSlotIdx - i;
+  } else if (partialSplitTime && consumeIdx < slots.length) {
     const partial = slots[consumeIdx];
     if (partial.type === "available" || partial.type === "category") {
       replacements.push(
-        shortenPlaceableAtStart(partial, partialSplitTime, postCategoryLocation),
+        shortenPlaceableAtStart(partial, partialSplitTime, destination),
       );
-      removeCount += 1;
+      removeCount = consumeIdx - i + 1;
+    } else {
+      removeCount = consumeIdx - i;
     }
+  } else {
+    removeCount = consumeIdx - i;
   }
 
   slots.splice(i, removeCount, ...replacements);
-  return i + replacements.length;
+  // Return i + 1 so the walker lands on slots[i+1] — either the preserved
+  // slot (endAtSlotStart / hard stop) or the shortened cat after bleed. In
+  // the bleed case, the shortened cat's exit edge needs to fire so a
+  // follow-up transition travel from the cat's location can be placed.
+  return i + 1;
+}
+
+// Find the first slot at or after startIdx that has a meaningful destination
+// location. Available slots return their nextLocationId (the location the
+// user is heading toward, not the location they're coming from — that would
+// be the just-bypassed cat). Category and Occupied slots return their own
+// location. Stops at the first hard-stop boundary.
+function nextPinnedLocation(slots: Slot[], startIdx: number): string | null {
+  for (let k = startIdx; k < slots.length; k++) {
+    const s = slots[k];
+    if (s.type === "category") return s.currentLocationId;
+    if (s.type === "occupied") {
+      if (s.locationId) return s.locationId;
+      continue;
+    }
+    if (s.type === "available") {
+      if (s.nextLocationId) return s.nextLocationId;
+      continue;
+    }
+    if (s.type === "travel") return s.travelToLocationId;
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -1349,19 +1435,24 @@ function bleedSingleSideInsufficient(
 // (untrack the old leg, compute and track the new one). Then check fit:
 //
 //   - T <= consumed:           replanned travel fits inside the already-
-//                              consumed slots. Fill that span as wasted
-//                              space, end exactly at this slot's start,
-//                              mark overconstrained. The slot itself is
-//                              preserved (cat_k.start endpoint).
+//                              consumed slots. End exactly at this slot's
+//                              start (slot itself preserved). The travel
+//                              slot spans the consumed region — if larger
+//                              than T, the geometric overconstrained flag
+//                              fires from the post-loop check.
 //   - consumed < T <= newCum:  bleed into this slot (partial split) and
-//                              the slot's leftover head is preserved.
+//                              the slot's leftover head is preserved. The
+//                              travel slot duration equals T exactly — no
+//                              wasted space, NOT overconstrained.
 //   - T > newCum:              consume this slot and cascade to the next.
 //
-// Replanning past cat1 ALWAYS marks overconstrained — the routing is forced.
+// `overconstrained` is computed geometrically AFTER placement: only when
+// the travel slot duration exceeds the actual travel duration T. Cascading
+// past cats with an exact-fit bleed isn't overconstrained — the slot fits.
 //
 // Hard stop (Occupied / Travel / end of slots): if the Occupied has a
 // location we haven't reached yet, replan once more straight to it. Then
-// place a travel up to slot.start with insufficient = (consumed < T).
+// place a travel up to slot.start; insufficient = (consumed < T).
 // ---------------------------------------------------------------------------
 
 function forwardBypassCascade(
@@ -1374,7 +1465,6 @@ function forwardBypassCascade(
   const A = action.prevLocation;
   let destination = action.nextLocation;
   let T = action.travelMinutes;
-  let overconstrained = false;
 
   let consumed = 0;
   let consumeIdx = i;
@@ -1395,8 +1485,7 @@ function forwardBypassCascade(
       // location, retarget the travel straight to it (per spec: "make a
       // travel directly from the initial event to the next Occupied
       // item"). The travelEnd lands at slot.start either way; the
-      // insufficient/overconstrained markers are decided below from
-      // consumed vs T.
+      // insufficient/overconstrained markers are decided below.
       if (
         consumeIdx > i + 1 &&
         slot.type === "occupied" &&
@@ -1413,54 +1502,48 @@ function forwardBypassCascade(
           travelManager.trackLeg(A, slot.locationId);
           destination = slot.locationId;
           T = newT;
-          overconstrained = true;
         }
       }
       hardStop = true;
       break;
     }
 
-    // Past the immediate next, we've bypassed at least cat1 — always
-    // overconstrained. Retarget the travel to this slot's location if it
-    // differs from the running destination, then test whether the replanned
-    // T fits inside the already-consumed span. If yes, fill the span as
-    // wasted space and end at this slot's start. Otherwise fall through:
-    // either (consumed + slotDur) >= T and we bleed into this slot, or we
-    // consume it and the loop continues to cascade further.
-    if (consumeIdx > i + 1) {
-      overconstrained = true;
-      const slotLoc = locationOfSlot(slot);
-      if (slotLoc && slotLoc !== destination) {
-        const newT = travelManager.getTravelTime(A, slotLoc, current.end);
-        if (newT > 0) {
-          travelManager.untrackLeg(A, destination);
-          travelManager.trackLeg(A, slotLoc);
-          destination = slotLoc;
-          T = newT;
+    // Only break/bleed at Category slots — Avails are transit space, not
+    // destinations the user wants to land in. Replan + break at consumeIdx
+    // > i+1 (past cat1, the original destination). Bleed allowed at i+1
+    // too (cat1 with original destination).
+    if (slot.type === "category") {
+      if (consumeIdx > i + 1) {
+        const slotLoc = slot.currentLocationId;
+        if (slotLoc && slotLoc !== destination) {
+          const newT = travelManager.getTravelTime(A, slotLoc, current.end);
+          if (newT > 0) {
+            travelManager.untrackLeg(A, destination);
+            travelManager.trackLeg(A, slotLoc);
+            destination = slotLoc;
+            T = newT;
+          }
+        }
+
+        if (T <= consumed) {
+          endAtSlotStart = true;
+          endSlotIdx = consumeIdx;
+          break;
         }
       }
 
-      if (T <= consumed) {
-        endAtSlotStart = true;
-        endSlotIdx = consumeIdx;
+      const slotDur = slot.durationMinutes;
+      if (consumed + slotDur >= T) {
+        const remaining = T - consumed;
+        partialSplitTime = new Date(slot.start.getTime() + remaining * 60000);
+        if (remaining > 0) consumedCategoryIds.push(slot.categoryId);
+        consumed = T;
         break;
       }
     }
 
-    const slotDur = slot.durationMinutes;
-
-    if (consumed + slotDur >= T) {
-      const remaining = T - consumed;
-      partialSplitTime = new Date(slot.start.getTime() + remaining * 60000);
-      if (slot.type === "category" && remaining > 0) {
-        consumedCategoryIds.push(slot.categoryId);
-      }
-      consumed = T;
-      break;
-    }
-
     if (slot.type === "category") consumedCategoryIds.push(slot.categoryId);
-    consumed += slotDur;
+    consumed += slot.durationMinutes;
     consumeIdx += 1;
   }
 
@@ -1469,16 +1552,11 @@ function forwardBypassCascade(
 
   if (endAtSlotStart) {
     travelEnd = slots[endSlotIdx].start;
-    // endAtSlotStart only fires when T <= consumed, so this is always
-    // overconstrained (wasted span) and never insufficient. Keep the
-    // expression for safety in case the break condition ever loosens.
     insufficient = consumed < T;
   } else if (partialSplitTime) {
     travelEnd = partialSplitTime;
   } else if (hardStop) {
     travelEnd = slots[consumeIdx].start;
-    // Replanned destination might fit inside the consumed span — then we
-    // fill the span as wasted overconstrained time, no insufficient marker.
     insufficient = consumed < T;
   } else if (consumed < T) {
     travelEnd = consumeIdx > i ? slots[consumeIdx - 1].end : current.end;
@@ -1486,6 +1564,14 @@ function forwardBypassCascade(
   } else {
     travelEnd = consumeIdx > i ? slots[consumeIdx - 1].end : current.end;
   }
+
+  // Geometric overconstrained: travel slot is bigger than the actual travel
+  // duration (wasted space). Exact-fit bleed cases produce slot == T and
+  // stay clean. Insufficient cases never set this flag.
+  const travelSlotMinutes = Math.floor(
+    (travelEnd.getTime() - current.start.getTime()) / 60000,
+  );
+  const overconstrained = !insufficient && travelSlotMinutes > T;
 
   const travel = createTravelSlot(
     current.start,
@@ -1506,10 +1592,7 @@ function forwardBypassCascade(
   let removeCount: number;
 
   if (endAtSlotStart) {
-    // The slot at endSlotIdx is preserved but its prev now points at the
-    // travel's new destination (which equals that slot's currentLocationId,
-    // so this is structurally a no-op for the location field — but we
-    // include the slot in the replacements unchanged via splice math).
+    // The slot at endSlotIdx is preserved.
     removeCount = endSlotIdx - i;
   } else if (partialSplitTime && consumeIdx < slots.length) {
     const partial = slots[consumeIdx];
@@ -1526,7 +1609,11 @@ function forwardBypassCascade(
   }
 
   slots.splice(i, removeCount, ...replacements);
-  return i + replacements.length;
+  // Return i + 1 so the walker lands on slots[i+1] — either the preserved
+  // slot (endAtSlotStart / hard stop) or the shortened cat after bleed.
+  // In the bleed case, the shortened cat's exit edge needs to fire so a
+  // follow-up transition travel from the cat's location can be placed.
+  return i + 1;
 }
 
 function locationOfSlot(slot: Slot): string | null {
@@ -1708,18 +1795,3 @@ function shortenPlaceableAtStart(
   };
 }
 
-function nextSlotLocation(slots: Slot[], idx: number): string | null {
-  const s = slots[idx];
-  if (!s) return null;
-  if (s.type === "occupied") {
-    // Occupied slots don't carry a location field directly; the dispatcher
-    // relies on adjacent placeable slots' prev/next. For bypass routing we
-    // approximate via the slot's eventId-paired location (not modeled here),
-    // so return null and let the caller fall through to the trespass path.
-    return null;
-  }
-  if (s.type === "available") return s.prevLocationId ?? s.nextLocationId ?? null;
-  if (s.type === "category") return s.currentLocationId;
-  if (s.type === "travel") return s.travelFromLocationId;
-  return null;
-}
