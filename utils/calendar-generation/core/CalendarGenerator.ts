@@ -166,7 +166,6 @@ export class CalendarGenerator {
       this.scheduledCategories,
       timeSlotManager.slots,
       travelManager,
-      this.bufferTimeMinutes,
     );
 
     // Phase 6c: Drop available slots ending before "now" so the scheduler

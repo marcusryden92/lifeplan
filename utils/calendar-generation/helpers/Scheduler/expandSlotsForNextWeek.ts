@@ -53,7 +53,6 @@ export function expandSlotsForNextWeek(
     categories,
     weekSlots,
     travelManager,
-    slotManager.bufferTimeMinutes,
   );
 
   const nowMs = context.currentDate.getTime();
