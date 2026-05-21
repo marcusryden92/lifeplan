@@ -3503,6 +3503,61 @@ function bleedAcrossCategoryBoundary(
     return i + 1;
   }
 
+  // Look ahead: if cat 3 (slots[i+2]) exists at cat 1's location AND a
+  // symmetric bleed across this boundary would leave cat 2 too small for
+  // its OWN cat 2 → cat 3 transition's bleed, jump cat 2 instead — the
+  // user is at cat 1.loc, would go to cat 2 at a different loc, then back
+  // to cat 3 at cat 1.loc; since cat 1 and cat 3 are at the same place,
+  // skipping cat 2 entirely is geometrically consistent (no travel needed)
+  // and avoids producing a tiny downstream cat that triggers a forward
+  // absorb that eats real work blocks.
+  const catThree = i + 2 < slots.length ? slots[i + 2] : null;
+  if (
+    catThree &&
+    catThree.type === "category" &&
+    catThree.currentLocationId === current.currentLocationId &&
+    next.currentLocationId &&
+    catThree.currentLocationId
+  ) {
+    const T_23 = travelManager.getTravelTime(
+      next.currentLocationId,
+      catThree.currentLocationId,
+      next.end,
+    );
+    if (T_23 > 0) {
+      const postBleedNext = nextDur - half;
+      const half_23 = T_23 / 2;
+      if (
+        half_23 >= postBleedNext ||
+        half_23 >= catThree.durationMinutes
+      ) {
+        travelManager.untrackLeg(action.prevLocation, action.nextLocation);
+        current.trespassingEnd = true;
+        next.trespassingStart = true;
+        next.trespassingEnd = true;
+        catThree.trespassingStart = true;
+        if (recorder) {
+          recorder.decision(
+            M.bleedAcrossCategoryBoundary.jumpCatTwo(
+              recorder.label(next),
+              postBleedNext,
+              half_23,
+            ),
+            2,
+          );
+          recorder.action(
+            M.bleedAcrossCategoryBoundary.jumpCatTwoAction(
+              recorder.label(current),
+              recorder.label(next),
+              recorder.label(catThree),
+            ),
+          );
+        }
+        return i + 2;
+      }
+    }
+  }
+
   // Symmetric bleed.
   const bleedCurrent = half;
   const bleedNext = half;

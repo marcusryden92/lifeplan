@@ -328,6 +328,18 @@ export const M = {
       `Symmetric bleed (${half}min each) ≥ a category — trespass boundary instead`,
     trespassAction: (currentLabel: string, nextLabel: string) =>
       `trespassed: [${currentLabel}.end, ${nextLabel}.start]`,
+    jumpCatTwo: (
+      nextLabel: string,
+      postBleedNext: number,
+      halfTwoThree: number,
+    ) =>
+      `Cat 3 at same location as Cat 1, and post-bleed ${nextLabel} (${postBleedNext}min) < half of cat 2→cat 3 travel (${halfTwoThree}min) — jump ${nextLabel} instead of bleeding`,
+    jumpCatTwoAction: (
+      currentLabel: string,
+      nextLabel: string,
+      catThreeLabel: string,
+    ) =>
+      `jumped ${nextLabel}: trespassed [${currentLabel}.end, ${nextLabel}.start] and [${nextLabel}.end, ${catThreeLabel}.start] — all three cats preserved at full size`,
     action: (
       bleedCurrent: number,
       currentConsumed: boolean,
