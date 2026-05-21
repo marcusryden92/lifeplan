@@ -104,6 +104,10 @@ export const M = {
       `Symmetric bleed (${half}min) ≥ current cat (${curDur}min) — try backward absorb (prev Travel at slots[${travelIdx}] = ${label})`,
     symmetricBleedFailsForwardCascade: (half: number, curDur: number) =>
       `Symmetric bleed (${half}min) ≥ current cat (${curDur}min), no useful backward absorb — forward cascade`,
+    symFailsTryBackwardCascade: (half: number, occupiedLabel: string) =>
+      `Symmetric bleed (${half}min) ≥ a category, and ${occupiedLabel} sits past Cat2 at a different location — try backward cascade`,
+    backwardCascadeFailed:
+      "absorbAndReplanBackward() found no anchor — fall through to existing strategy",
     noPrevTravel: "No prev Travel — fill category tail or trespass",
     nextIsTravelDecision:
       "Next = Travel (unexpected on forward walk) — untrack and skip",
@@ -322,10 +326,6 @@ export const M = {
   bleedAcrossCategoryBoundary: {
     trespassBoundary: (half: number) =>
       `Symmetric bleed (${half}min each) ≥ a category — trespass boundary instead`,
-    trespassBoundaryTryBackward: (half: number, occupiedLabel: string) =>
-      `Symmetric bleed (${half}min each) ≥ a category, and ${occupiedLabel} sits past Cat2 at a different location — try backward cascade before trespass`,
-    backwardCascadeFailed:
-      "absorbAndReplanBackward() found no anchor — fall back to trespass",
     trespassAction: (currentLabel: string, nextLabel: string) =>
       `trespassed: [${currentLabel}.end, ${nextLabel}.start]`,
     action: (

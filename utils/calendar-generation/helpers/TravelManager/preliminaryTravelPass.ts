@@ -448,14 +448,57 @@ function handleCategoryExitEdge(
       return i + 1;
     }
 
+    const half = action.travelMinutes / 2;
+    const symFails =
+      half >= slot.durationMinutes || half >= next.durationMinutes;
+
+    // Backward-cascade pre-check: when sym bleed would fail AND a located
+    // Occupied sits flush against cat2 at a different location, the user's
+    // real next fixed point is that Occupied. Try backward cascade first —
+    // re-target the natural travel toward the Occupied's location and
+    // absorb cat1+cat2 (and possibly more) into one slot. Falls back to
+    // the existing forward/symmetric strategies if no anchor fits.
+    if (symFails) {
+      const afterNext = i + 2 < slots.length ? slots[i + 2] : null;
+      if (
+        afterNext &&
+        afterNext.type === "occupied" &&
+        afterNext.locationId &&
+        afterNext.locationId !== next.currentLocationId &&
+        afterNext.start.getTime() === next.end.getTime()
+      ) {
+        if (recorder) {
+          recorder.decision(
+            M.handleCategoryExitEdge.symFailsTryBackwardCascade(
+              half,
+              recorder.label(afterNext),
+            ),
+            2,
+          );
+        }
+        const backwardResult = absorbAndReplanBackward(
+          slots,
+          i,
+          i + 2,
+          action,
+          travelManager,
+          recorder,
+        );
+        if (backwardResult !== null) return backwardResult;
+        recorder?.decision(
+          M.handleCategoryExitEdge.backwardCascadeFailed,
+          2,
+        );
+      }
+    }
+
     // When symmetric bleed would entirely consume the current cat, the cat
-    // is "skippable": prefer backward absorb when a prev Travel exists
+    // is "skippable": prefer forward absorb when a prev Travel exists
     // (replaces it with one longer travel that lands at a later candidate),
     // otherwise forward-cascade through cat[i] using bypassCategoryCascade.
     // The absorb function walks forward through every cat candidate and
     // picks natural-fit (earliest) or latest pre-fit, so the dispatcher
     // doesn't need to pre-check the immediate next cat anymore.
-    const half = action.travelMinutes / 2;
     if (half >= slot.durationMinutes) {
       const prevTravel = findPrevTravelForAvailable(slots, i);
       if (prevTravel) {
@@ -3334,41 +3377,6 @@ function bleedAcrossCategoryBoundary(
   // falls into the same path.
   const half = T / 2;
   if (half >= curDur || half >= nextDur) {
-    // Before trespassing: if a located Occupied sits flush against Cat2 at
-    // a different location, the user's real next fixed point is that
-    // Occupied. Attempt a backward cascade that ignores Cat2's location
-    // and plans straight toward the Occupied's location instead, absorbing
-    // Cat1+Cat2 (and possibly more) into one travel that lands at the
-    // Occupied. Falls back to trespass if no anchor fits.
-    const afterNext = i + 2 < slots.length ? slots[i + 2] : null;
-    if (
-      afterNext &&
-      afterNext.type === "occupied" &&
-      afterNext.locationId &&
-      afterNext.locationId !== next.currentLocationId &&
-      afterNext.start.getTime() === next.end.getTime()
-    ) {
-      if (recorder) {
-        recorder.decision(
-          M.bleedAcrossCategoryBoundary.trespassBoundaryTryBackward(
-            half,
-            recorder.label(afterNext),
-          ),
-          2,
-        );
-      }
-      const backwardResult = absorbAndReplanBackward(
-        slots,
-        i,
-        i + 2,
-        action,
-        travelManager,
-        recorder,
-      );
-      if (backwardResult !== null) return backwardResult;
-      recorder?.decision(M.bleedAcrossCategoryBoundary.backwardCascadeFailed, 2);
-    }
-
     travelManager.untrackLeg(action.prevLocation, action.nextLocation);
     current.trespassingEnd = true;
     next.trespassingStart = true;
