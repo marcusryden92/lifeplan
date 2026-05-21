@@ -8,7 +8,15 @@ import {
 } from "../../models/TimeSlot";
 import { TravelManager } from "../../core/TravelManager";
 import { TravelProcessingAction } from "../../models/SchedulingModels";
-import { createTravelSlot } from "../../utils/timeSlotUtils";
+import {
+  collectShardSources,
+  createTravelShards,
+  createTravelSlot,
+  findTravelShardSpan,
+  shardSourceFromAvailable,
+  shardSourceFromCategory,
+  type ShardSource,
+} from "../../utils/timeSlotUtils";
 import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
 import { TravelPassRecorder } from "./TravelPassRecorder";
 import { M } from "./travelPassMessages";
@@ -626,17 +634,30 @@ function findCascadeAnchor(
     }
 
     if (anchor.type === "travel") {
+      // Treat the whole shard span as one anchor: a logical travel may
+      // span multiple consecutive shards sharing a travelId. We evaluate
+      // against the span's earliest shard (origin) and skip past the
+      // whole span if it doesn't fit.
+      const span = findTravelShardSpan(slots, idx);
+      if (!span) {
+        idx--;
+        continue;
+      }
+      const spanHead = span.shards[0];
       if (recorder) {
         recorder.decision(
-          M.cascadeWalk.anchorTryAbsorbTravel(idx, recorder.label(anchor)),
+          M.cascadeWalk.anchorTryAbsorbTravel(
+            span.startIdx,
+            recorder.label(spanHead),
+          ),
           decisionDepth,
         );
       }
-      const A = anchor.travelFromLocationId;
+      const A = span.travelFromLocationId;
       if (A && A !== destination) {
         const TDirect = travelManager.getTravelTime(A, destination, regionEnd);
         if (TDirect > 0) {
-          const regionStart = anchor.start;
+          const regionStart = span.travelStart;
           const regionMinutes = Math.floor(
             (regionEnd.getTime() - regionStart.getTime()) / 60000,
           );
@@ -647,8 +668,8 @@ function findCascadeAnchor(
             );
             return {
               kind: "travel",
-              anchorIdx: idx,
-              anchor,
+              anchorIdx: span.startIdx,
+              anchor: spanHead,
               A,
               TDirect,
               regionStart,
@@ -661,8 +682,8 @@ function findCascadeAnchor(
           );
         }
       }
-      // Doesn't fit through this Travel; walk past it.
-      idx--;
+      // Doesn't fit through this travel span; walk past it entirely.
+      idx = span.startIdx - 1;
       continue;
     }
 
@@ -756,15 +777,36 @@ function findPrevTravelForAvailable(
 ): PrevTravelMatch | null {
   if (i < 1) return null;
   const immediate = slots[i - 1];
+
+  // Case 1: slots[i-1] is Travel (or last shard of a span). Span-aware:
+  // walk back to the span's first shard so absorb operations cover all
+  // shards belonging to one logical travel.
   if (immediate.type === "travel") {
+    const span = findTravelShardSpan(slots, i - 1);
+    if (!span) return null;
+    const firstShard = span.shards[0];
     const availableIndex =
-      i >= 2 && slots[i - 2].type === "available" ? i - 2 : null;
-    return { travel: immediate, travelIndex: i - 1, availableIndex };
+      span.startIdx > 0 && slots[span.startIdx - 1].type === "available"
+        ? span.startIdx - 1
+        : null;
+    return {
+      travel: firstShard,
+      travelIndex: span.startIdx,
+      availableIndex,
+    };
   }
+
+  // Case 2: slots[i-1] is Available leftover with Travel span behind it.
   if (immediate.type === "available" && i >= 2) {
     const before = slots[i - 2];
     if (before.type === "travel") {
-      return { travel: before, travelIndex: i - 2, availableIndex: i - 1 };
+      const span = findTravelShardSpan(slots, i - 2);
+      if (!span) return null;
+      return {
+        travel: span.shards[0],
+        travelIndex: span.startIdx,
+        availableIndex: i - 1,
+      };
     }
   }
   return null;
@@ -790,18 +832,17 @@ function placeTravelInCurrent(
     ? new Date(slot.start.getTime() + travelMinutes * 60000)
     : slot.end;
 
-  const travel = createTravelSlot(
-    travelStart,
-    travelEnd,
+  const shards = createTravelShards(
+    [shardSourceFromAvailable(slot, travelStart, travelEnd)],
+    uuidv4(),
     prevLocation,
     nextLocation,
     "preliminary",
-    uuidv4(),
   );
 
   const replacements: Slot[] = [];
   if (placeAtSlotStart) {
-    replacements.push(travel);
+    replacements.push(...shards);
     if (travelEnd.getTime() < slot.end.getTime()) {
       replacements.push(
         makeAvailableLeftover(
@@ -823,7 +864,7 @@ function placeTravelInCurrent(
         ),
       );
     }
-    replacements.push(travel);
+    replacements.push(...shards);
   }
 
   slots.splice(i, 1, ...replacements);
@@ -845,17 +886,16 @@ function placeTravelAtCategoryHead(
   const travelStart = slot.start;
   const travelEnd = new Date(travelStart.getTime() + travelMinutes * 60000);
 
-  const travel = createTravelSlot(
-    travelStart,
-    travelEnd,
+  const shards = createTravelShards(
+    [shardSourceFromCategory(slot, travelStart, travelEnd)],
+    uuidv4(),
     prevLocation,
     nextLocation,
     "preliminary",
-    uuidv4(),
     { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
   );
 
-  const replacements: Slot[] = [travel];
+  const replacements: Slot[] = [...shards];
   if (travelEnd.getTime() < slot.end.getTime()) {
     replacements.push({
       ...slot,
@@ -888,13 +928,12 @@ function placeTravelAtCategoryTail(
   const travelEnd = slot.end;
   const travelStart = new Date(travelEnd.getTime() - travelMinutes * 60000);
 
-  const travel = createTravelSlot(
-    travelStart,
-    travelEnd,
+  const shards = createTravelShards(
+    [shardSourceFromCategory(slot, travelStart, travelEnd)],
+    uuidv4(),
     prevLocation,
     nextLocation,
     "preliminary",
-    uuidv4(),
     { categoryId: slot.categoryId, isStrictCategory: slot.isStrictCategory },
   );
 
@@ -911,7 +950,7 @@ function placeTravelAtCategoryTail(
       isFinal: undefined,
     });
   }
-  replacements.push(travel);
+  replacements.push(...shards);
 
   slots.splice(i, 1, ...replacements);
   return i + replacements.length;
@@ -927,20 +966,19 @@ function fillCurrentWithAlert(
   action: TravelProcessingAction,
 ): number {
   const slot = slots[i] as AvailableSlot;
-  const travel = createTravelSlot(
-    slot.start,
-    slot.end,
+  const shards = createTravelShards(
+    [shardSourceFromAvailable(slot, slot.start, slot.end)],
+    uuidv4(),
     action.prevLocation,
     action.nextLocation,
     "preliminary",
-    uuidv4(),
     {
       insufficientTravel: true,
       requiredTravelMinutes: action.travelMinutes,
     },
   );
-  slots.splice(i, 1, travel);
-  return i + 1;
+  slots.splice(i, 1, ...shards);
+  return i + shards.length;
 }
 
 // ---------------------------------------------------------------------------
@@ -997,13 +1035,20 @@ function bleedIntoPrev(
   const travelEnd = slot.end;
   const travelStart = new Date(slot.start.getTime() - consumeFromPrev * 60000);
 
-  const travel = createTravelSlot(
-    travelStart,
-    travelEnd,
+  const sources: ShardSource[] = [];
+  if (prev.type === "available") {
+    sources.push(shardSourceFromAvailable(prev, travelStart, prev.end));
+  } else {
+    sources.push(shardSourceFromCategory(prev, travelStart, prev.end));
+  }
+  sources.push(shardSourceFromAvailable(slot, slot.start, slot.end));
+
+  const shards = createTravelShards(
+    sources,
+    uuidv4(),
     prevLocation,
     nextLocation,
     "preliminary",
-    uuidv4(),
     {
       insufficientTravel: false,
       requiredTravelMinutes: 0,
@@ -1021,7 +1066,7 @@ function bleedIntoPrev(
     i,
     prevIdx,
     prev,
-    travel,
+    shards,
     prevConsumed,
     travelStart,
   );
@@ -1066,16 +1111,23 @@ function bleedIntoNext(
   // Geometry: travel starts at slot.start (no legTracker rerouting here —
   // bleed just consumes time, doesn't pick a new route).
   const consumeFromNext = overflow;
-  const travelStart = slot.start;
   const travelEnd = new Date(slot.end.getTime() + consumeFromNext * 60000);
 
-  const travel = createTravelSlot(
-    travelStart,
-    travelEnd,
+  const sources: ShardSource[] = [
+    shardSourceFromAvailable(slot, slot.start, slot.end),
+  ];
+  if (next.type === "available") {
+    sources.push(shardSourceFromAvailable(next, next.start, travelEnd));
+  } else {
+    sources.push(shardSourceFromCategory(next, next.start, travelEnd));
+  }
+
+  const shards = createTravelShards(
+    sources,
+    uuidv4(),
     prevLocation,
     nextLocation,
     "preliminary",
-    uuidv4(),
     {
       insufficientTravel: false,
       requiredTravelMinutes: 0,
@@ -1093,7 +1145,7 @@ function bleedIntoNext(
     i,
     nextIdx,
     next,
-    travel,
+    shards,
     nextConsumed,
     travelEnd,
   );
@@ -1104,29 +1156,30 @@ function spliceBleedPrev(
   curIdx: number,
   prevIdx: number,
   prev: Slot,
-  travel: TravelSlot,
+  shards: TravelSlot[],
   prevConsumed: boolean,
   travelStart: Date,
 ): number {
-  // Replace [prev, current] with [shortened prev?, travel]. Trespass only
+  // Replace [prev, current] with [shortened prev?, ...shards]. Trespass only
   // fires when the category interior is FULLY consumed — partial bleeds
   // just shorten the category without marking a boundary.
   const replacements: Slot[] = [];
+  const firstShard = shards[0];
 
   if (
     !prevConsumed &&
     (prev.type === "available" || prev.type === "category")
   ) {
     replacements.push(
-      shortenPlaceableAtEnd(prev, travelStart, travel.travelFromLocationId),
+      shortenPlaceableAtEnd(prev, travelStart, firstShard.travelFromLocationId),
     );
   } else if (prevConsumed && prev.type === "category") {
-    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(
+    firstShard.consumedCategoryIds = (firstShard.consumedCategoryIds ?? []).concat(
       prev.categoryId,
     );
   }
 
-  replacements.push(travel);
+  replacements.push(...shards);
   slots.splice(prevIdx, curIdx - prevIdx + 1, ...replacements);
   return prevIdx + replacements.length;
 }
@@ -1136,31 +1189,32 @@ function spliceBleedNext(
   curIdx: number,
   nextIdx: number,
   next: Slot,
-  travel: TravelSlot,
+  shards: TravelSlot[],
   nextConsumed: boolean,
   travelEnd: Date,
 ): number {
-  // Replace [current, next] with [travel, shortened next?]. Trespass only
+  // Replace [current, next] with [...shards, shortened next?]. Trespass only
   // on full consumption (see spliceBleedPrev for rationale).
-  const replacements: Slot[] = [travel];
+  const replacements: Slot[] = [...shards];
+  const lastShard = shards[shards.length - 1];
 
   if (
     !nextConsumed &&
     (next.type === "available" || next.type === "category")
   ) {
     replacements.push(
-      shortenPlaceableAtStart(next, travelEnd, travel.travelToLocationId),
+      shortenPlaceableAtStart(next, travelEnd, lastShard.travelToLocationId),
     );
   } else if (nextConsumed && next.type === "category") {
-    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(
+    lastShard.consumedCategoryIds = (lastShard.consumedCategoryIds ?? []).concat(
       next.categoryId,
     );
   }
 
   slots.splice(curIdx, nextIdx - curIdx + 1, ...replacements);
-  // Travel is always at curIdx; walker lands on the shortened-next (if any)
-  // so a Category neighbor's exit edge can fire on the next iteration.
-  return curIdx + 1;
+  // Walker lands on the slot AFTER the last shard so a Category neighbor's
+  // exit edge can fire on the next iteration.
+  return curIdx + shards.length;
 }
 
 // ---------------------------------------------------------------------------
@@ -1207,13 +1261,26 @@ function bleedAcrossPrevCurrentNext(
   const travelStart = new Date(slot.start.getTime() - bleedPrev * 60000);
   const travelEnd = new Date(slot.end.getTime() + bleedNext * 60000);
 
-  const travel = createTravelSlot(
-    travelStart,
-    travelEnd,
+  // Three source pieces: prev's tail, current's whole, next's head.
+  const sources: ShardSource[] = [];
+  if (prev.type === "available") {
+    sources.push(shardSourceFromAvailable(prev, travelStart, prev.end));
+  } else if (prev.type === "category") {
+    sources.push(shardSourceFromCategory(prev, travelStart, prev.end));
+  }
+  sources.push(shardSourceFromAvailable(slot, slot.start, slot.end));
+  if (next.type === "available") {
+    sources.push(shardSourceFromAvailable(next, next.start, travelEnd));
+  } else if (next.type === "category") {
+    sources.push(shardSourceFromCategory(next, next.start, travelEnd));
+  }
+
+  const shards = createTravelShards(
+    sources,
+    uuidv4(),
     action.prevLocation,
     action.nextLocation,
     "preliminary",
-    uuidv4(),
     {
       insufficientTravel: insufficient,
       requiredTravelMinutes: insufficient ? T : 0,
@@ -1221,6 +1288,8 @@ function bleedAcrossPrevCurrentNext(
   );
 
   const replacements: Slot[] = [];
+  const firstShard = shards[0];
+  const lastShard = shards[shards.length - 1];
 
   const prevConsumed = bleedPrev >= prevDur;
   if (
@@ -1228,15 +1297,16 @@ function bleedAcrossPrevCurrentNext(
     (prev.type === "available" || prev.type === "category")
   ) {
     replacements.push(
-      shortenPlaceableAtEnd(prev, travelStart, travel.travelFromLocationId),
+      shortenPlaceableAtEnd(prev, travelStart, firstShard.travelFromLocationId),
     );
   } else if (prevConsumed && prev.type === "category") {
-    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(
-      prev.categoryId,
-    );
+    firstShard.consumedCategoryIds = (
+      firstShard.consumedCategoryIds ?? []
+    ).concat(prev.categoryId);
   }
 
-  replacements.push(travel);
+  const shardStartIdx = replacements.length;
+  replacements.push(...shards);
 
   const nextConsumed = bleedNext >= nextDur;
   if (
@@ -1244,19 +1314,18 @@ function bleedAcrossPrevCurrentNext(
     (next.type === "available" || next.type === "category")
   ) {
     replacements.push(
-      shortenPlaceableAtStart(next, travelEnd, travel.travelToLocationId),
+      shortenPlaceableAtStart(next, travelEnd, lastShard.travelToLocationId),
     );
   } else if (nextConsumed && next.type === "category") {
-    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(
-      next.categoryId,
-    );
+    lastShard.consumedCategoryIds = (
+      lastShard.consumedCategoryIds ?? []
+    ).concat(next.categoryId);
   }
 
-  const travelIdx = replacements.indexOf(travel);
   slots.splice(i - 1, 3, ...replacements);
-  // Walker lands on the first slot AFTER the travel — typically the
+  // Walker lands on the first slot AFTER the shards — typically the
   // shortened-next so it can be processed on the next iteration.
-  return i - 1 + travelIdx + 1;
+  return i - 1 + shardStartIdx + shards.length;
 }
 
 // ---------------------------------------------------------------------------
@@ -1288,13 +1357,12 @@ function fillCategoryTailOrTrespass(
   // Otherwise fill the category TAIL with an alert travel.
   const travelEnd = slot.end;
   const travelStart = new Date(travelEnd.getTime() - curDur * 60000);
-  const travel = createTravelSlot(
-    travelStart,
-    travelEnd,
+  const shards = createTravelShards(
+    [shardSourceFromCategory(slot, travelStart, travelEnd)],
+    uuidv4(),
     action.prevLocation,
     action.nextLocation,
     "preliminary",
-    uuidv4(),
     {
       insufficientTravel: true,
       requiredTravelMinutes: T,
@@ -1316,7 +1384,7 @@ function fillCategoryTailOrTrespass(
       isFinal: undefined,
     });
   }
-  replacements.push(travel);
+  replacements.push(...shards);
 
   slots.splice(i, 1, ...replacements);
   recorder?.action(M.fillCategoryTailOrTrespass.fillTailAction(curDur, T));
@@ -1390,13 +1458,16 @@ function absorbAndReplan(
 
   // Geometric overconstrained: slot is always <= newDuration here, so the
   // flag stays off. See absorbAndReplanThroughCategory for full rationale.
-  const travel = createTravelSlot(
-    travelStart,
-    travelEnd,
+  const firstIdx = prevTravel.availableIndex ?? prevTravel.travelIndex;
+  const removeCount = i - firstIdx + 1;
+  const absorbed = slots.slice(firstIdx, firstIdx + removeCount);
+  const shardSources = collectShardSources(absorbed, travelStart, travelEnd);
+  const shards = createTravelShards(
+    shardSources,
+    uuidv4(),
     A,
     C,
     "preliminary",
-    uuidv4(),
     {
       insufficientTravel: insufficient,
       requiredTravelMinutes: newDuration,
@@ -1414,11 +1485,8 @@ function absorbAndReplan(
       nextLocationId: A,
     });
   }
-  replacements.push(travel);
+  replacements.push(...shards);
 
-  const firstIdx = prevTravel.availableIndex ?? prevTravel.travelIndex;
-  const removeCount = i - firstIdx + 1;
-  const absorbed = slots.slice(firstIdx, firstIdx + removeCount);
   slots.splice(firstIdx, removeCount, ...replacements);
   if (recorder) {
     recorder.action(
@@ -1568,19 +1636,26 @@ function absorbAndReplanThroughCategory(
   // flag stays off. Skipping the bypassed category is a natural consequence
   // of the original walker placement being unworkable, not a forced bad
   // routing the user needs to see flagged.
-  const travel = createTravelSlot(
-    travelStart,
-    travelEnd,
+  const firstIdx = prevTravel.availableIndex ?? prevTravel.travelIndex;
+  const removeCount = i - firstIdx + 1;
+  const absorbed = slots.slice(firstIdx, firstIdx + removeCount);
+  const shardSources = collectShardSources(absorbed, travelStart, travelEnd);
+  const shards = createTravelShards(
+    shardSources,
+    uuidv4(),
     A,
     C,
     "preliminary",
-    uuidv4(),
     {
       insufficientTravel: insufficient,
       requiredTravelMinutes: newDuration,
     },
   );
-  travel.consumedCategoryIds = [category.categoryId];
+  if (shards.length > 0) {
+    shards[0].consumedCategoryIds = (
+      shards[0].consumedCategoryIds ?? []
+    ).concat(category.categoryId);
+  }
 
   const replacements: Slot[] = [];
   if (regionStartMs < travelStartMs) {
@@ -1593,12 +1668,9 @@ function absorbAndReplanThroughCategory(
       nextLocationId: A,
     });
   }
-  replacements.push(travel);
+  replacements.push(...shards);
 
   // Remove [prevAvailable?, prevTravel, ..., category] in one splice.
-  const firstIdx = prevTravel.availableIndex ?? prevTravel.travelIndex;
-  const removeCount = i - firstIdx + 1;
-  const absorbed = slots.slice(firstIdx, firstIdx + removeCount);
   slots.splice(firstIdx, removeCount, ...replacements);
   if (recorder) {
     recorder.action(
@@ -1834,31 +1906,12 @@ function bypassCategoryCascade(
   );
   const overconstrained = !insufficient && travelSlotMinutes > T;
 
-  const travel = createTravelSlot(
-    category.start,
-    travelEnd,
-    A,
-    destination,
-    "preliminary",
-    uuidv4(),
-    {
-      insufficientTravel: insufficient,
-      requiredTravelMinutes: insufficient ? T : 0,
-      overconstrained,
-    },
-  );
-  travel.consumedCategoryIds = consumedCategoryIds;
-
-  const replacements: Slot[] = [travel];
   let removeCount: number;
   if (endAtSlotStart) {
     removeCount = endSlotIdx - i;
   } else if (partialSplitTime && consumeIdx < slots.length) {
     const partial = slots[consumeIdx];
     if (partial.type === "available" || partial.type === "category") {
-      replacements.push(
-        shortenPlaceableAtStart(partial, partialSplitTime, destination),
-      );
       removeCount = consumeIdx - i + 1;
     } else {
       removeCount = consumeIdx - i;
@@ -1868,6 +1921,45 @@ function bypassCategoryCascade(
   }
 
   const absorbed = slots.slice(i, i + removeCount);
+  // For the partial-split case, exclude the slot we'll later restore as a
+  // shortened head — it's not consumed by the travel.
+  const absorbedForShards =
+    partialSplitTime && consumeIdx < slots.length
+      ? absorbed.slice(0, -1)
+      : absorbed;
+  const shardSources = collectShardSources(
+    absorbedForShards,
+    category.start,
+    travelEnd,
+  );
+  const shards = createTravelShards(
+    shardSources,
+    uuidv4(),
+    A,
+    destination,
+    "preliminary",
+    {
+      insufficientTravel: insufficient,
+      requiredTravelMinutes: insufficient ? T : 0,
+      overconstrained,
+    },
+  );
+  if (shards.length > 0) {
+    shards[0].consumedCategoryIds = (
+      shards[0].consumedCategoryIds ?? []
+    ).concat(consumedCategoryIds);
+  }
+
+  const replacements: Slot[] = [...shards];
+  if (partialSplitTime && consumeIdx < slots.length) {
+    const partial = slots[consumeIdx];
+    if (partial.type === "available" || partial.type === "category") {
+      replacements.push(
+        shortenPlaceableAtStart(partial, partialSplitTime, destination),
+      );
+    }
+  }
+
   slots.splice(i, removeCount, ...replacements);
   if (recorder) {
     recorder.action(
@@ -2021,15 +2113,21 @@ function applyTravelAnchorAbsorb(
   }
 
   const travelStart = new Date(regionEnd.getTime() - TDirect * 60000);
-  const travel = createTravelSlot(
-    travelStart,
-    regionEnd,
+  const removeCount = i - anchorIdx + 1;
+  const absorbed = slots.slice(anchorIdx, anchorIdx + removeCount);
+  const shardSources = collectShardSources(absorbed, travelStart, regionEnd);
+  const shards = createTravelShards(
+    shardSources,
+    uuidv4(),
     A,
     destination,
     "preliminary",
-    uuidv4(),
   );
-  travel.consumedCategoryIds = consumedCategoryIds;
+  if (shards.length > 0) {
+    shards[0].consumedCategoryIds = (
+      shards[0].consumedCategoryIds ?? []
+    ).concat(consumedCategoryIds);
+  }
 
   const replacements: Slot[] = [];
   if (regionStart.getTime() < travelStart.getTime()) {
@@ -2046,10 +2144,8 @@ function applyTravelAnchorAbsorb(
       nextLocationId: A,
     });
   }
-  replacements.push(travel);
+  replacements.push(...shards);
 
-  const removeCount = i - anchorIdx + 1;
-  const absorbed = slots.slice(anchorIdx, anchorIdx + removeCount);
   slots.splice(anchorIdx, removeCount, ...replacements);
   if (recorder) {
     recorder.action(actionMessage(absorbed.map((s) => recorder.label(s))));
@@ -2116,18 +2212,28 @@ function applyCategoryAnchorPlacement(
     overconstrained && proposedEnd.getTime() >= currentStart.getTime();
   const actualTravelEnd = canShrink ? proposedEnd : regionEnd;
 
-  const travel = createTravelSlot(
+  const removeCount = i - anchorIdx;
+  const absorbed = slots.slice(anchorIdx + 1, anchorIdx + 1 + removeCount);
+  const shardSources = collectShardSources(
+    absorbed,
     slotStart,
     actualTravelEnd,
+  );
+  const shards = createTravelShards(
+    shardSources,
+    uuidv4(),
     anchorLocation,
     destination,
     "preliminary",
-    uuidv4(),
     { overconstrained, requiredTravelMinutes: T },
   );
-  travel.consumedCategoryIds = consumedCategoryIds;
+  if (shards.length > 0) {
+    shards[0].consumedCategoryIds = (
+      shards[0].consumedCategoryIds ?? []
+    ).concat(consumedCategoryIds);
+  }
 
-  const replacements: Slot[] = [travel];
+  const replacements: Slot[] = [...shards];
   if (canShrink && actualTravelEnd.getTime() < regionEnd.getTime()) {
     // Preserve the tail as free time at the destination. The user has landed
     // and waits for whatever's next.
@@ -2143,8 +2249,6 @@ function applyCategoryAnchorPlacement(
     });
   }
 
-  const removeCount = i - anchorIdx;
-  const absorbed = slots.slice(anchorIdx + 1, anchorIdx + 1 + removeCount);
   slots.splice(anchorIdx + 1, removeCount, ...replacements);
   if (recorder) {
     recorder.action(
@@ -2230,13 +2334,28 @@ function bleedSingleSideInsufficient(
     travelStart = slot.start;
     travelEnd = new Date(slot.end.getTime() + consumeFromNeighbor * 60000);
   }
-  const travel = createTravelSlot(
-    travelStart,
-    travelEnd,
+  // Two source pieces: the neighbor (fully consumed) and the current Available.
+  const sources: ShardSource[] =
+    side === "prev"
+      ? [
+          neighbor.type === "available"
+            ? shardSourceFromAvailable(neighbor, travelStart, neighbor.end)
+            : shardSourceFromCategory(neighbor, travelStart, neighbor.end),
+          shardSourceFromAvailable(slot, slot.start, slot.end),
+        ]
+      : [
+          shardSourceFromAvailable(slot, slot.start, slot.end),
+          neighbor.type === "available"
+            ? shardSourceFromAvailable(neighbor, neighbor.start, travelEnd)
+            : shardSourceFromCategory(neighbor, neighbor.start, travelEnd),
+        ];
+
+  const shards = createTravelShards(
+    sources,
+    uuidv4(),
     prevLocation,
     nextLocation,
     "preliminary",
-    uuidv4(),
     { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
   );
   if (side === "prev") {
@@ -2245,7 +2364,7 @@ function bleedSingleSideInsufficient(
       i,
       neighborIdx,
       neighbor,
-      travel,
+      shards,
       true,
       travelStart,
     );
@@ -2255,7 +2374,7 @@ function bleedSingleSideInsufficient(
     i,
     neighborIdx,
     neighbor,
-    travel,
+    shards,
     true,
     travelEnd,
   );
@@ -2475,33 +2594,12 @@ function forwardBypassCascade(
   );
   const overconstrained = !insufficient && travelSlotMinutes > T;
 
-  const travel = createTravelSlot(
-    current.start,
-    travelEnd,
-    A,
-    destination,
-    "preliminary",
-    uuidv4(),
-    {
-      insufficientTravel: insufficient,
-      requiredTravelMinutes: insufficient ? T : 0,
-      overconstrained,
-    },
-  );
-  travel.consumedCategoryIds = consumedCategoryIds;
-
-  const replacements: Slot[] = [travel];
   let removeCount: number;
-
   if (endAtSlotStart) {
-    // The slot at endSlotIdx is preserved.
     removeCount = endSlotIdx - i;
   } else if (partialSplitTime && consumeIdx < slots.length) {
     const partial = slots[consumeIdx];
     if (partial.type === "available" || partial.type === "category") {
-      replacements.push(
-        shortenPlaceableAtStart(partial, partialSplitTime, destination),
-      );
       removeCount = consumeIdx - i + 1;
     } else {
       removeCount = consumeIdx - i;
@@ -2511,6 +2609,43 @@ function forwardBypassCascade(
   }
 
   const absorbed = slots.slice(i, i + removeCount);
+  const absorbedForShards =
+    partialSplitTime && consumeIdx < slots.length
+      ? absorbed.slice(0, -1)
+      : absorbed;
+  const shardSources = collectShardSources(
+    absorbedForShards,
+    current.start,
+    travelEnd,
+  );
+  const shards = createTravelShards(
+    shardSources,
+    uuidv4(),
+    A,
+    destination,
+    "preliminary",
+    {
+      insufficientTravel: insufficient,
+      requiredTravelMinutes: insufficient ? T : 0,
+      overconstrained,
+    },
+  );
+  if (shards.length > 0) {
+    shards[0].consumedCategoryIds = (
+      shards[0].consumedCategoryIds ?? []
+    ).concat(consumedCategoryIds);
+  }
+
+  const replacements: Slot[] = [...shards];
+  if (partialSplitTime && consumeIdx < slots.length) {
+    const partial = slots[consumeIdx];
+    if (partial.type === "available" || partial.type === "category") {
+      replacements.push(
+        shortenPlaceableAtStart(partial, partialSplitTime, destination),
+      );
+    }
+  }
+
   slots.splice(i, removeCount, ...replacements);
   if (recorder) {
     recorder.action(
@@ -2577,16 +2712,21 @@ function bleedAcrossCategoryBoundary(
   const travelStart = new Date(current.end.getTime() - bleedCurrent * 60000);
   const travelEnd = new Date(next.start.getTime() + bleedNext * 60000);
 
-  const travel = createTravelSlot(
-    travelStart,
-    travelEnd,
+  // Two source pieces: current's tail and next's head.
+  const shards = createTravelShards(
+    [
+      shardSourceFromCategory(current, travelStart, current.end),
+      shardSourceFromCategory(next, next.start, travelEnd),
+    ],
+    uuidv4(),
     action.prevLocation,
     action.nextLocation,
     "preliminary",
-    uuidv4(),
   );
 
   const replacements: Slot[] = [];
+  const firstShard = shards[0];
+  const lastShard = shards[shards.length - 1];
 
   const currentConsumed = bleedCurrent >= curDur;
   if (!currentConsumed) {
@@ -2600,12 +2740,13 @@ function bleedAcrossCategoryBoundary(
       isFinal: undefined,
     });
   } else {
-    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(
-      current.categoryId,
-    );
+    firstShard.consumedCategoryIds = (
+      firstShard.consumedCategoryIds ?? []
+    ).concat(current.categoryId);
   }
 
-  replacements.push(travel);
+  const shardStartIdx = replacements.length;
+  replacements.push(...shards);
 
   const nextConsumed = bleedNext >= nextDur;
   if (!nextConsumed) {
@@ -2618,12 +2759,11 @@ function bleedAcrossCategoryBoundary(
       prevLocationId: next.currentLocationId,
     });
   } else {
-    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(
-      next.categoryId,
-    );
+    lastShard.consumedCategoryIds = (
+      lastShard.consumedCategoryIds ?? []
+    ).concat(next.categoryId);
   }
 
-  const travelIdx = replacements.indexOf(travel);
   slots.splice(i, 2, ...replacements);
   if (recorder) {
     recorder.action(
@@ -2636,9 +2776,9 @@ function bleedAcrossCategoryBoundary(
       ),
     );
   }
-  // Walker lands on the first slot AFTER the travel — typically the
+  // Walker lands on the first slot AFTER the shards — typically the
   // shortened-next category so its exit edge can fire on the next iteration.
-  return i + travelIdx + 1;
+  return i + shardStartIdx + shards.length;
 }
 
 // ---------------------------------------------------------------------------

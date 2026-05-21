@@ -40,7 +40,14 @@ export {
   createTravelSlot,
   isTravelSlot,
   reclaimTravelSlot,
+  createTravelShards,
+  shardSourceFromAvailable,
+  shardSourceFromCategory,
+  collectShardSources,
+  findTravelShardSpan,
+  unplanTravel,
 } from "./utils/timeSlotUtils";
+export type { ShardSource, TravelShardSpan } from "./utils/timeSlotUtils";
 
 // Utilities
 export { dateTimeService, DateTimeService } from "./utils/dateTimeService";

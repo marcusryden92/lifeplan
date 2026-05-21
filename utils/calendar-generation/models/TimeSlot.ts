@@ -63,6 +63,31 @@ export type TravelSlot = BaseSlot & {
   consumedCategoryIds?: string[];
   categoryId?: string | null;
   isStrictCategory?: boolean;
+
+  // ---- Shard model -------------------------------------------------------
+  // A single logical travel can be split across N source slots it consumed
+  // (e.g. a bleed-across-prev-current-next produces three shards: one per
+  // eaten source piece). All shards of one logical travel share a travelId
+  // and render as a single travel block downstream.
+  //
+  // travelId is required on new placements; older single-slot travels that
+  // pre-date the shard model leave it undefined.
+  travelId?: string;
+  // The original slot type this shard was carved out of. "available" means
+  // the user had free time here; "category" means a category interior
+  // contributed time.
+  originalType?: "available" | "category";
+  // The boundaries of the source slot before splicing. Used by unplanTravel
+  // to restore the original fragment when this shard is removed.
+  originalSourceStart?: Date;
+  originalSourceEnd?: Date;
+  // For category shards only: identity of the source category fragment.
+  originalCategoryId?: string;
+  originalLocationId?: string | null;
+  originalIsStrictCategory?: boolean;
+  // For available shards only: the source's prev/next locations.
+  originalPrevLocationId?: string | null;
+  originalNextLocationId?: string | null;
 };
 
 export type Slot = AvailableSlot | CategorySlot | OccupiedSlot | TravelSlot;
