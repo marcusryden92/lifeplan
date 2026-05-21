@@ -1985,8 +1985,20 @@ function absorbAndReplanIntoNextCategory(
     }
 
     const slotDur = slot.durationMinutes;
-    const slotLoc =
-      slot.type === "category" ? slot.currentLocationId : slot.nextLocationId;
+    // An Available with prev != next is transit space for an upcoming
+    // transition, not an anchor destination — anchoring there would leave
+    // the travel ending at the Available.start, preserving the slot, when
+    // really the slot exists precisely to be absorbed by the travel. Only
+    // treat prev==next ("at A") Availables as candidate destinations;
+    // otherwise just consume the slot and keep walking.
+    let slotLoc: string | null = null;
+    if (slot.type === "category") {
+      slotLoc = slot.currentLocationId;
+    } else if (slot.type === "available") {
+      if (slot.prevLocationId && slot.prevLocationId === slot.nextLocationId) {
+        slotLoc = slot.prevLocationId;
+      }
+    }
 
     if (slotLoc) {
       const newT = travelManager.getTravelTime(A, slotLoc, slot.end);
