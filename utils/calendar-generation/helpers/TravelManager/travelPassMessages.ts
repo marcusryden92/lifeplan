@@ -95,6 +95,15 @@ export const M = {
     placeAtTailAction: "placeTravelAtCategoryTail()",
     prevTravelAbsorbReplan: (travelIdx: number, label: string) =>
       `Prev = Travel at slots[${travelIdx}] (${label}) — absorb + replan through category`,
+    symmetricBleedFailsTryAbsorb: (
+      half: number,
+      curDur: number,
+      travelIdx: number,
+      label: string,
+    ) =>
+      `Symmetric bleed (${half}min) ≥ current cat (${curDur}min) — try backward absorb (prev Travel at slots[${travelIdx}] = ${label})`,
+    symmetricBleedFailsForwardCascade: (half: number, curDur: number) =>
+      `Symmetric bleed (${half}min) ≥ current cat (${curDur}min), no useful backward absorb — forward cascade`,
     noPrevTravel: "No prev Travel — fill category tail or trespass",
     nextIsTravelDecision:
       "Next = Travel (unexpected on forward walk) — untrack and skip",
@@ -138,6 +147,13 @@ export const M = {
     fillCurrentWithAlertAction: "fillCurrentWithAlert()",
     noTravelTime:
       "A→C travel time unavailable — fallback to fillCurrentWithAlert()",
+    forwardExtension: (
+      regionMinutes: number,
+      newDuration: number,
+      slotType: string,
+      extension: number,
+    ) =>
+      `Region (${regionMinutes}min) < travel (${newDuration}min) — extend into next ${slotType} at C by ${extension}min`,
     action: (absorbedLabels: string[], insufficient: boolean) =>
       `absorbAndReplan(): absorbed [${absorbedLabels.join(", ")}], placed new A→C travel${insufficient ? " (insufficient)" : ""}`,
   },
@@ -151,30 +167,49 @@ export const M = {
       `absorbAndReplanThroughCategory(): absorbed [${absorbedLabels.join(", ")}], placed new A→C travel through category${insufficient ? " (insufficient)" : ""}`,
   },
 
+  absorbAndReplanIntoNextCategory: {
+    header:
+      "Cascade: absorbAndReplanIntoNextCategory() (current cat too small for symmetric bleed)",
+    missingLocations:
+      "Missing prev Travel origin — fallback to fillCategoryTailOrTrespass()",
+    noTravelTime:
+      "A→destination travel time unavailable — fallback to fillCategoryTailOrTrespass()",
+    noCandidate:
+      "No natural-fit or pre-fit candidate found — fall back to symmetric bleed",
+    naturalFit: (idx: number, dest: string, T: number) =>
+      `Chose natural-fit landing inside slots[${idx}] (A→${dest} = ${T}min, lands inside slot)`,
+    preFit: (idx: number, dest: string, T: number, consumed: number) =>
+      `Chose pre-fit at slots[${idx}].start (A→${dest} = ${T}min ≤ consumed ${consumed}min — overconstrained)`,
+    hardStop: (idx: number, dest: string, T: number) =>
+      `Hit hard stop at slots[${idx}] (target ${dest}, A→${dest} = ${T}min)`,
+    action: (
+      absorbedLabels: string[],
+      extendsIntoNext: boolean,
+      insufficient: boolean,
+    ) =>
+      `absorbAndReplanIntoNextCategory(): absorbed [${absorbedLabels.join(", ")}], placed A→destination travel${extendsIntoNext ? " (bleeds into landing cat)" : " (overconstrained at landing.start)"}${insufficient ? " (insufficient)" : ""}`,
+  },
+
   bypassCategoryCascade: {
     header: "Cascade: bypassCategoryCascade() (forward, category entry)",
     noPinnedDestination:
-      "No pinned destination after category — fallback to fillCategoryTailOrTrespass()",
+      "No pinned destination found and no landing — fallback to fillCategoryTailOrTrespass()",
     noTravelTime:
       "A→destination travel time unavailable — fallback to fillCategoryTailOrTrespass()",
-    initialDestination: (travelMinutes: number) =>
-      `Initial destination from nextPinnedLocation(): travel=${travelMinutes}min`,
     anchorHardStop: (idx: number, label: string) =>
       `anchor slots[${idx}] = ${label} → hard stop`,
     retargetOccupied: (newT: number) =>
       `retarget to Occupied's location, travel=${newT}min`,
-    anchorAbortAvailable: (idx: number, label: string) =>
-      `anchor slots[${idx}] = ${label} → abort cascade, trespass intermediate cats`,
-    trespassedAction: (labels: string[]) =>
-      `trespassed: [${labels.join(", ")}]`,
-    anchorRetarget: (idx: number, label: string, newT: number) =>
-      `anchor slots[${idx}] = ${label} → retarget, travel=${newT}min`,
+    skipAvailable: (idx: number) =>
+      `anchor slots[${idx}] = Available → skip (transit, never a landing)`,
+    evaluateCat: (idx: number, label: string, T: number) =>
+      `anchor slots[${idx}] = ${label} → evaluate (A→cat.loc = ${T}min)`,
     endAtSlotStart: (T: number, consumed: number, idx: number) =>
-      `T (${T}min) ≤ consumed (${consumed}min) — end at slots[${idx}].start`,
+      `T (${T}min) ≤ consumed (${consumed}min) — overconstrained ending at slots[${idx}].start`,
     partialSplit: (idx: number, remaining: number) =>
-      `partial split inside slots[${idx}] (consume ${remaining}min)`,
-    anchorConsume: (idx: number, label: string, slotDur: number) =>
-      `anchor slots[${idx}] = ${label} → consume (${slotDur}min) and continue`,
+      `T fits inside slots[${idx}] — bleed in (consume ${remaining}min)`,
+    overshootSkip: (idx: number, T: number, slotDur: number) =>
+      `T (${T}min) > consumed + slotDur (${slotDur}min) — overshoots cat, skip and continue`,
     action: (
       absorbedLabels: string[],
       insufficient: boolean,
@@ -196,6 +231,8 @@ export const M = {
       `direct A→destination (${TDirect}min) fits in region (${regionMinutes}min) ✓`,
     directDoesNotFit: (TDirect: number, regionMinutes: number) =>
       `direct A→destination (${TDirect}min) > region (${regionMinutes}min) ✗`,
+    extendIntoPrecedingAvailable: (extension: number, availableIdx: number) =>
+      `extending into preceding Available at slots[${availableIdx}] by ${extension}min — fits naturally`,
     anchorAbortAvailable: (idx: number, label: string) =>
       `anchor slots[${idx}] = ${label} → abort cascade, fall back`,
     anchorCategoryMatches: (idx: number, label: string) =>

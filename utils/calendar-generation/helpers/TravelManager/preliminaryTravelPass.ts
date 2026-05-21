@@ -447,6 +447,54 @@ function handleCategoryExitEdge(
       recorder?.decision(M.handleCategoryExitEdge.noActionFromResolve, 2);
       return i + 1;
     }
+
+    // When symmetric bleed would entirely consume the current cat, the cat
+    // is "skippable": prefer backward absorb when a prev Travel exists
+    // (replaces it with one longer travel that lands at a later candidate),
+    // otherwise forward-cascade through cat[i] using bypassCategoryCascade.
+    // The absorb function walks forward through every cat candidate and
+    // picks natural-fit (earliest) or latest pre-fit, so the dispatcher
+    // doesn't need to pre-check the immediate next cat anymore.
+    const half = action.travelMinutes / 2;
+    if (half >= slot.durationMinutes) {
+      const prevTravel = findPrevTravelForAvailable(slots, i);
+      if (prevTravel) {
+        if (recorder) {
+          recorder.decision(
+            M.handleCategoryExitEdge.symmetricBleedFailsTryAbsorb(
+              half,
+              slot.durationMinutes,
+              prevTravel.travelIndex,
+              recorder.label(prevTravel.travel),
+            ),
+            2,
+          );
+        }
+        return absorbAndReplanIntoNextCategory(
+          slots,
+          i,
+          action,
+          prevTravel,
+          travelManager,
+          recorder,
+        );
+      }
+      recorder?.decision(
+        M.handleCategoryExitEdge.symmetricBleedFailsForwardCascade(
+          half,
+          slot.durationMinutes,
+        ),
+        2,
+      );
+      return bypassCategoryCascade(
+        slots,
+        i,
+        action,
+        travelManager,
+        recorder,
+      );
+    }
+
     return bleedAcrossCategoryBoundary(
       slots,
       i,
@@ -572,6 +620,11 @@ type CascadeAnchorFit =
       TDirect: number;
       regionStart: Date;
       regionMinutes: number;
+      // When set, the absorbed region also includes the tail of the Available
+      // at this index — the cascade extended backward into it by exactly the
+      // missing minutes so the natural A→C travel fits. The placement helper
+      // shortens the Available's tail and includes it in the absorb splice.
+      precedingAvailableIdx?: number;
     }
   | {
       kind: "category";
@@ -680,6 +733,46 @@ function findCascadeAnchor(
             M.cascadeWalk.directDoesNotFit(TDirect, regionMinutes),
             decisionDepth + 1,
           );
+
+          // Doesn't fit by itself, but the slot before the travel span may
+          // be an Available whose tail is at A — eating a small piece of it
+          // can stretch the region just enough for the natural A→C travel.
+          // Only valid when Available.nextLocationId === A (the user lands
+          // at A by the end of the Available, so the eaten tail is cleanly
+          // "at A" already).
+          const before =
+            span.startIdx > 0 ? slots[span.startIdx - 1] : null;
+          if (
+            before &&
+            before.type === "available" &&
+            before.nextLocationId === A
+          ) {
+            const extensionNeeded = TDirect - regionMinutes;
+            if (
+              extensionNeeded > 0 &&
+              extensionNeeded <= before.durationMinutes
+            ) {
+              recorder?.decision(
+                M.cascadeWalk.extendIntoPrecedingAvailable(
+                  extensionNeeded,
+                  span.startIdx - 1,
+                ),
+                decisionDepth + 1,
+              );
+              return {
+                kind: "travel",
+                anchorIdx: span.startIdx,
+                anchor: spanHead,
+                A,
+                TDirect,
+                regionStart: new Date(
+                  before.end.getTime() - extensionNeeded * 60000,
+                ),
+                regionMinutes: TDirect,
+                precedingAvailableIdx: span.startIdx - 1,
+              };
+            }
+          }
         }
       }
       // Doesn't fit through this travel span; walk past it entirely.
@@ -1436,7 +1529,7 @@ function absorbAndReplan(
   }
   travelManager.trackLeg(A, C);
 
-  // Merge prev Available leftover and prev Travel into one extended Available.
+  // Merge prev Available leftover and prev Travel into one extended region.
   // Combined region runs from prevAvailable.start (if any, else prevTravel.start) to current.end.
   const prevAvailable =
     prevTravel.availableIndex !== null
@@ -1446,22 +1539,69 @@ function absorbAndReplan(
   const regionEnd = slot.end;
   const regionStartMs = regionStart.getTime();
   const regionEndMs = regionEnd.getTime();
+  const regionMinutes = Math.floor((regionEndMs - regionStartMs) / 60000);
 
-  // Place new Travel at the END of the region (filling current, bleeding back).
-  const travelStartMs = Math.max(
-    regionStartMs,
-    regionEndMs - newDuration * 60000,
-  );
-  const insufficient = regionEndMs - regionStartMs < newDuration * 60000;
-  const travelStart = new Date(travelStartMs);
-  const travelEnd = regionEnd;
+  // Decide the geometry:
+  // - regionMinutes >= newDuration: travel fits naturally inside the absorbed
+  //   region. Place at the tail; leftover head becomes Available at A.
+  // - regionMinutes < newDuration AND next slot is a placeable at C with
+  //   enough head room: extend the travel forward by the missing minutes.
+  //   The next slot survives as a shortened tail at C.
+  // - Otherwise: insufficient — fill the whole region with the travel.
+  let actualTravelStart: Date;
+  let actualTravelEnd: Date;
+  let insufficient: boolean;
+  let nextIsExtended = false;
 
-  // Geometric overconstrained: slot is always <= newDuration here, so the
-  // flag stays off. See absorbAndReplanThroughCategory for full rationale.
+  if (regionMinutes >= newDuration) {
+    actualTravelStart = new Date(regionEndMs - newDuration * 60000);
+    actualTravelEnd = regionEnd;
+    insufficient = false;
+  } else {
+    const extensionNeeded = newDuration - regionMinutes;
+    const next = i + 1 < slots.length ? slots[i + 1] : null;
+    const nextHeadLocation =
+      next?.type === "category"
+        ? next.currentLocationId
+        : next?.type === "available"
+          ? next.prevLocationId
+          : null;
+    const canExtend =
+      !!next &&
+      (next.type === "category" || next.type === "available") &&
+      nextHeadLocation === C &&
+      next.durationMinutes >= extensionNeeded;
+    if (canExtend && next) {
+      actualTravelStart = regionStart;
+      actualTravelEnd = new Date(
+        regionEnd.getTime() + extensionNeeded * 60000,
+      );
+      insufficient = false;
+      nextIsExtended = true;
+      recorder?.decision(
+        M.absorbAndReplan.forwardExtension(
+          regionMinutes,
+          newDuration,
+          next.type,
+          extensionNeeded,
+        ),
+        4,
+      );
+    } else {
+      actualTravelStart = regionStart;
+      actualTravelEnd = regionEnd;
+      insufficient = true;
+    }
+  }
+
   const firstIdx = prevTravel.availableIndex ?? prevTravel.travelIndex;
-  const removeCount = i - firstIdx + 1;
+  const removeCount = (nextIsExtended ? i + 2 : i + 1) - firstIdx;
   const absorbed = slots.slice(firstIdx, firstIdx + removeCount);
-  const shardSources = collectShardSources(absorbed, travelStart, travelEnd);
+  const shardSources = collectShardSources(
+    absorbed,
+    actualTravelStart,
+    actualTravelEnd,
+  );
   const shards = createTravelShards(
     shardSources,
     uuidv4(),
@@ -1475,17 +1615,27 @@ function absorbAndReplan(
   );
 
   const replacements: Slot[] = [];
-  if (regionStartMs < travelStartMs) {
+  if (regionStart.getTime() < actualTravelStart.getTime()) {
     replacements.push({
       type: "available",
       start: regionStart,
-      end: travelStart,
-      durationMinutes: Math.floor((travelStartMs - regionStartMs) / 60000),
+      end: actualTravelStart,
+      durationMinutes: Math.floor(
+        (actualTravelStart.getTime() - regionStart.getTime()) / 60000,
+      ),
       prevLocationId: prevAvailable?.prevLocationId ?? A,
       nextLocationId: A,
     });
   }
   replacements.push(...shards);
+  if (nextIsExtended) {
+    const nextSlot = absorbed[absorbed.length - 1];
+    if (nextSlot.type === "category" || nextSlot.type === "available") {
+      replacements.push(
+        shortenPlaceableAtStart(nextSlot, actualTravelEnd, C),
+      );
+    }
+  }
 
   slots.splice(firstIdx, removeCount, ...replacements);
   if (recorder) {
@@ -1496,7 +1646,12 @@ function absorbAndReplan(
       ),
     );
   }
-  return firstIdx + replacements.length;
+  // When we extend into the next slot, land the walker ON the shortened next
+  // so its own exit edge can fire (its prev now matches C, but its next is
+  // unchanged so a follow-up transition may still be needed).
+  return nextIsExtended
+    ? firstIdx + replacements.length - 1
+    : firstIdx + replacements.length;
 }
 
 // ---------------------------------------------------------------------------
@@ -1684,6 +1839,270 @@ function absorbAndReplanThroughCategory(
 }
 
 // ---------------------------------------------------------------------------
+// Action: Cat exit Next=Category but current cat too small for symmetric
+// bleed — backward absorb the prev Travel and replan as a single longer
+// travel from prev Travel's source location to the NEXT cat's location.
+// The new travel starts at baseRegionStart (= prev Travel's start, or the
+// leading Available's start if present) and ends at one of:
+//   - cat[i].end when newT exactly matches the region.
+//   - inside next cat (partial-split) when newT extends past cat[i].end.
+//   - next.end (insufficient) when newT overflows past next.
+// When newT is SHORTER than the existing region, we leave the placement
+// alone and fall back to symmetric bleed — replanning would just waste the
+// space the prev Travel already used productively.
+// ---------------------------------------------------------------------------
+
+function absorbAndReplanIntoNextCategory(
+  slots: Slot[],
+  i: number,
+  originalAction: TravelProcessingAction,
+  prevTravel: PrevTravelMatch,
+  travelManager: TravelManager,
+  recorder?: TravelPassRecorder,
+): number {
+  travelManager.untrackLeg(
+    originalAction.prevLocation,
+    originalAction.nextLocation,
+  );
+  const oldFrom = prevTravel.travel.travelFromLocationId;
+  const oldTo = prevTravel.travel.travelToLocationId;
+  if (oldFrom && oldTo) travelManager.untrackLeg(oldFrom, oldTo);
+
+  recorder?.decision(M.absorbAndReplanIntoNextCategory.header, 2);
+
+  const category = slots[i] as CategorySlot;
+  const A = prevTravel.travel.travelFromLocationId;
+
+  if (!A) {
+    recorder?.decision(M.absorbAndReplanIntoNextCategory.missingLocations, 3);
+    return fillCategoryTailOrTrespass(
+      slots,
+      i,
+      originalAction,
+      travelManager,
+      recorder,
+    );
+  }
+
+  const prevAvailable =
+    prevTravel.availableIndex !== null
+      ? (slots[prevTravel.availableIndex] as AvailableSlot)
+      : null;
+  const baseRegionStart = prevAvailable?.start ?? prevTravel.travel.start;
+  const firstIdx = prevTravel.availableIndex ?? prevTravel.travelIndex;
+
+  // Walk forward from cat[i+1]. At each Category or Available, evaluate
+  // newT from A to the slot's destination location (cat.currentLocationId
+  // or available.nextLocationId). Three cases:
+  //   - overflow (newT > consumed + slotDur): travel doesn't make sense to
+  //     this destination — skip, try next item.
+  //   - natural fit (consumed < newT ≤ consumed + slotDur): COMMIT — bleed
+  //     into slot, travel ends slot.start + (newT - consumed).
+  //   - pre-fit (newT ≤ consumed): COMMIT — overconstrained ending at
+  //     slot.start, slot survives intact.
+  // First fit wins (no "latest" override). Hard stop at Occupied/Travel.
+  let consumed = Math.floor(
+    (category.end.getTime() - baseRegionStart.getTime()) / 60000,
+  );
+  let consumeIdx = i + 1;
+  const consumedCategoryIds: string[] = [category.categoryId];
+  let chosen:
+    | {
+        idx: number;
+        slot: AvailableSlot | CategorySlot;
+        kind: "natural" | "preFit";
+        dest: string;
+        T: number;
+        travelEnd: Date;
+      }
+    | null = null;
+  let hardStop:
+    | { idx: number; dest: string | null; T: number }
+    | null = null;
+
+  while (consumeIdx < slots.length) {
+    const slot = slots[consumeIdx];
+
+    if (slot.type === "occupied" || slot.type === "travel") {
+      if (slot.type === "occupied" && slot.locationId) {
+        const hardT = travelManager.getTravelTime(
+          A,
+          slot.locationId,
+          category.end,
+        );
+        hardStop = {
+          idx: consumeIdx,
+          dest: hardT > 0 ? slot.locationId : null,
+          T: hardT > 0 ? hardT : 0,
+        };
+      } else {
+        hardStop = { idx: consumeIdx, dest: null, T: 0 };
+      }
+      break;
+    }
+
+    const slotDur = slot.durationMinutes;
+    const slotLoc =
+      slot.type === "category" ? slot.currentLocationId : slot.nextLocationId;
+
+    if (slotLoc) {
+      const newT = travelManager.getTravelTime(A, slotLoc, slot.end);
+      if (newT > 0) {
+        if (newT > consumed && newT <= consumed + slotDur) {
+          chosen = {
+            idx: consumeIdx,
+            slot,
+            kind: "natural",
+            dest: slotLoc,
+            T: newT,
+            travelEnd: new Date(
+              slot.start.getTime() + (newT - consumed) * 60000,
+            ),
+          };
+          break;
+        }
+        if (newT <= consumed) {
+          chosen = {
+            idx: consumeIdx,
+            slot,
+            kind: "preFit",
+            dest: slotLoc,
+            T: newT,
+            travelEnd: slot.start,
+          };
+          break;
+        }
+        // Else: newT > consumed + slotDur → overflow → fall through.
+      }
+    }
+
+    if (slot.type === "category") consumedCategoryIds.push(slot.categoryId);
+    consumed += slotDur;
+    consumeIdx += 1;
+  }
+
+  // Resolve final placement.
+  let destination: string;
+  let T: number;
+  let travelEnd: Date;
+  let removeCount: number;
+  let extendsIntoNext = false;
+  let insufficient = false;
+  let landingSurvivor: Slot | null = null;
+  const finalConsumedIds = [...consumedCategoryIds];
+
+  if (chosen) {
+    destination = chosen.dest;
+    T = chosen.T;
+    travelEnd = chosen.travelEnd;
+    if (chosen.kind === "natural") {
+      removeCount = chosen.idx - firstIdx + 1;
+      extendsIntoNext = true;
+      if (chosen.slot.type === "category") {
+        finalConsumedIds.push(chosen.slot.categoryId);
+      }
+      if (travelEnd.getTime() < chosen.slot.end.getTime()) {
+        landingSurvivor = shortenPlaceableAtStart(
+          chosen.slot,
+          travelEnd,
+          destination,
+        );
+      }
+      recorder?.decision(
+        M.absorbAndReplanIntoNextCategory.naturalFit(
+          chosen.idx,
+          chosen.dest,
+          chosen.T,
+        ),
+        3,
+      );
+    } else {
+      removeCount = chosen.idx - firstIdx;
+      recorder?.decision(
+        M.absorbAndReplanIntoNextCategory.preFit(
+          chosen.idx,
+          chosen.dest,
+          chosen.T,
+          consumed,
+        ),
+        3,
+      );
+    }
+  } else if (hardStop && hardStop.dest) {
+    destination = hardStop.dest;
+    T = hardStop.T;
+    travelEnd = slots[hardStop.idx].start;
+    removeCount = hardStop.idx - firstIdx;
+    insufficient = consumed < T;
+    recorder?.decision(
+      M.absorbAndReplanIntoNextCategory.hardStop(
+        hardStop.idx,
+        hardStop.dest,
+        T,
+      ),
+      3,
+    );
+  } else {
+    // No usable candidate. Re-track and fall back to symmetric bleed.
+    travelManager.trackLeg(
+      originalAction.prevLocation,
+      originalAction.nextLocation,
+    );
+    if (oldFrom && oldTo) travelManager.trackLeg(oldFrom, oldTo);
+    recorder?.decision(M.absorbAndReplanIntoNextCategory.noCandidate, 3);
+    return bleedAcrossCategoryBoundary(
+      slots,
+      i,
+      originalAction,
+      travelManager,
+      recorder,
+    );
+  }
+
+  travelManager.trackLeg(A, destination);
+
+  const travelSlotMinutes = Math.floor(
+    (travelEnd.getTime() - baseRegionStart.getTime()) / 60000,
+  );
+  const overconstrained = !insufficient && travelSlotMinutes > T;
+
+  const absorbed = slots.slice(firstIdx, firstIdx + removeCount);
+  const shardSources = collectShardSources(absorbed, baseRegionStart, travelEnd);
+  const shards = createTravelShards(
+    shardSources,
+    uuidv4(),
+    A,
+    destination,
+    "preliminary",
+    {
+      insufficientTravel: insufficient,
+      requiredTravelMinutes: insufficient ? T : 0,
+      overconstrained,
+    },
+  );
+  if (shards.length > 0) {
+    shards[0].consumedCategoryIds = (
+      shards[0].consumedCategoryIds ?? []
+    ).concat(finalConsumedIds);
+  }
+
+  const replacements: Slot[] = [...shards];
+  if (landingSurvivor) replacements.push(landingSurvivor);
+
+  slots.splice(firstIdx, removeCount, ...replacements);
+  if (recorder) {
+    recorder.action(
+      M.absorbAndReplanIntoNextCategory.action(
+        absorbed.map((s) => recorder.label(s)),
+        extendsIntoNext,
+        insufficient,
+      ),
+    );
+  }
+  return firstIdx + replacements.length;
+}
+
+// ---------------------------------------------------------------------------
 // Action: Category entry, Prev=Occupied, doesn't fit — bypass cascade
 // ---------------------------------------------------------------------------
 
@@ -1694,53 +2113,35 @@ function bypassCategoryCascade(
   travelManager: TravelManager,
   recorder?: TravelPassRecorder,
 ): number {
-  // The walker tried to enter Cat[i] with a travel from prev (Occupied) that
-  // doesn't fit in the cat HEAD. Bypass: route to the first pinned location
-  // AFTER the cat and walk forward. Replan iteratively at each Category we
-  // walk into — when crossing a location boundary, retarget the travel to
-  // that location and recheck fit. The cascade exits when the (possibly
-  // replanned) travel duration fits in the accumulated span: either entirely
-  // within consumed slots (end at slot.start, overconstrained), or with a
-  // partial split inside the current slot (bleed in). Hard stop or end of
-  // slots → insufficient.
+  // Cat[i] doesn't fit the travel from prev (Occupied) into it. Walk forward
+  // from cat[i+1] looking for a Category to land in. At each cat encountered,
+  // retarget the natural travel to that cat's currentLocationId and classify:
+  //   - T ≤ consumed: travel ends before this cat.start → overconstrained
+  //     ending at slots[idx].start (slot bigger than natural).
+  //   - T ≤ consumed + cat.dur: natural travel lands inside this cat → bleed
+  //     in (partial-split, natural-length travel).
+  //   - else (overshoot): cat is too far for natural travel → skip and keep
+  //     walking.
+  // Availables are transit space — never a landing site, always consumed past.
+  // Hard stop on Occupied/Travel; placed travel ends at hard-stop.start with
+  // the hard-stop's location as destination. End-of-slots without a landing
+  // falls back to fillCategoryTailOrTrespass().
   travelManager.untrackLeg(action.prevLocation, action.nextLocation);
   recorder?.decision(M.bypassCategoryCascade.header, 3);
 
   const category = slots[i] as CategorySlot;
   const A = action.prevLocation;
 
-  let destination = nextPinnedLocation(slots, i + 1);
-  if (!destination) {
-    recorder?.decision(M.bypassCategoryCascade.noPinnedDestination, 4);
-    return fillCategoryTailOrTrespass(
-      slots,
-      i,
-      action,
-      travelManager,
-      recorder,
-    );
-  }
-  let T = travelManager.getTravelTime(A, destination, category.end);
-  if (T <= 0) {
-    recorder?.decision(M.bypassCategoryCascade.noTravelTime, 4);
-    return fillCategoryTailOrTrespass(
-      slots,
-      i,
-      action,
-      travelManager,
-      recorder,
-    );
-  }
-  travelManager.trackLeg(A, destination);
-  recorder?.decision(M.bypassCategoryCascade.initialDestination(T), 4);
-
-  let consumed = 0;
-  let consumeIdx = i;
-  const consumedCategoryIds: string[] = [];
+  // Pre-absorb the bypassed cat. The loop processes slots[i+1..].
+  let consumed = category.durationMinutes;
+  let consumeIdx = i + 1;
+  const consumedCategoryIds: string[] = [category.categoryId];
   let partialSplitTime: Date | null = null;
   let hardStop = false;
   let endAtSlotStart = false;
   let endSlotIdx = -1;
+  let destination: string | null = null;
+  let T = 0;
 
   while (consumeIdx < slots.length) {
     const slot = slots[consumeIdx];
@@ -1755,20 +2156,13 @@ function bypassCategoryCascade(
           4,
         );
       }
-      if (
-        consumeIdx > i &&
-        slot.type === "occupied" &&
-        slot.locationId &&
-        slot.locationId !== destination
-      ) {
+      if (slot.type === "occupied" && slot.locationId) {
         const newT = travelManager.getTravelTime(
           A,
           slot.locationId,
           category.end,
         );
         if (newT > 0) {
-          travelManager.untrackLeg(A, destination);
-          travelManager.trackLeg(A, slot.locationId);
           destination = slot.locationId;
           T = newT;
           recorder?.decision(
@@ -1781,104 +2175,96 @@ function bypassCategoryCascade(
       break;
     }
 
-    // Abort the cascade if we'd cross an Available slot. The Available has
-    // its own natural transition (gs→home in the user's scenario) that the
-    // walker handles normally — stretching a forced bypass travel through
-    // free time just to "land" at a pinned location wastes the Available's
-    // capacity. Instead, trespass the boundaries of the consumed cats and
-    // let the trailing Available place its own travel.
-    if (consumeIdx > i && slot.type === "available") {
-      if (recorder) {
-        recorder.decision(
-          M.bypassCategoryCascade.anchorAbortAvailable(
-            consumeIdx,
-            recorder.label(slot),
-          ),
-          4,
-        );
-      }
-      travelManager.untrackLeg(A, destination);
-      const trespassed: string[] = [];
-      for (let k = i; k < consumeIdx; k++) {
-        const s = slots[k];
-        if (s.type !== "category") continue;
-        s.trespassingStart = true;
-        // Trespass-end applies to intermediate cats: the user "leaves"
-        // each cat without proper travel to enter the next. The last
-        // consumed cat transitions naturally into the Avail (whose prev
-        // matches the cat's location) so its end stays clean.
-        if (k < consumeIdx - 1) s.trespassingEnd = true;
-        trespassed.push(recorder?.label(s) ?? s.categoryId);
-      }
-      recorder?.action(M.bypassCategoryCascade.trespassedAction(trespassed));
-      return i;
-    }
-
-    // Only break/bleed at Category slots — Avails are transit space, not
-    // destinations the user wants to land in. At an Avail we always
-    // consume and continue cascading. At a Cat past the bypassed one,
-    // replan to its location if it differs from the running destination,
-    // then check fit.
-    if (consumeIdx > i && slot.type === "category") {
-      const slotLoc = slot.currentLocationId;
-      if (slotLoc && slotLoc !== destination) {
-        const newT = travelManager.getTravelTime(A, slotLoc, category.end);
-        if (newT > 0) {
-          travelManager.untrackLeg(A, destination);
-          travelManager.trackLeg(A, slotLoc);
-          destination = slotLoc;
-          T = newT;
-          if (recorder) {
-            recorder.decision(
-              M.bypassCategoryCascade.anchorRetarget(
-                consumeIdx,
-                recorder.label(slot),
-                newT,
-              ),
-              4,
-            );
-          }
+    // slot.type === "available" or "category" — evaluate as candidate
+    // destination using cat.currentLocationId or available.nextLocationId.
+    const slotDur = slot.durationMinutes;
+    const slotLoc =
+      slot.type === "category" ? slot.currentLocationId : slot.nextLocationId;
+    if (slotLoc) {
+      const newT = travelManager.getTravelTime(A, slotLoc, category.end);
+      if (newT > 0) {
+        destination = slotLoc;
+        T = newT;
+        if (recorder) {
+          recorder.decision(
+            M.bypassCategoryCascade.evaluateCat(
+              consumeIdx,
+              recorder.label(slot),
+              newT,
+            ),
+            4,
+          );
         }
-      }
 
-      if (T <= consumed) {
-        recorder?.decision(
-          M.bypassCategoryCascade.endAtSlotStart(T, consumed, consumeIdx),
-          5,
-        );
-        endAtSlotStart = true;
-        endSlotIdx = consumeIdx;
-        break;
-      }
+        if (T <= consumed) {
+          recorder?.decision(
+            M.bypassCategoryCascade.endAtSlotStart(T, consumed, consumeIdx),
+            5,
+          );
+          endAtSlotStart = true;
+          endSlotIdx = consumeIdx;
+          break;
+        }
 
-      const slotDur = slot.durationMinutes;
-      if (consumed + slotDur >= T) {
-        const remaining = T - consumed;
-        partialSplitTime = new Date(slot.start.getTime() + remaining * 60000);
-        if (remaining > 0) consumedCategoryIds.push(slot.categoryId);
-        consumed = T;
+        if (T <= consumed + slotDur) {
+          const remaining = T - consumed;
+          partialSplitTime = new Date(
+            slot.start.getTime() + remaining * 60000,
+          );
+          if (remaining > 0 && slot.type === "category") {
+            consumedCategoryIds.push(slot.categoryId);
+          }
+          consumed = T;
+          recorder?.decision(
+            M.bypassCategoryCascade.partialSplit(consumeIdx, remaining),
+            5,
+          );
+          break;
+        }
+
         recorder?.decision(
-          M.bypassCategoryCascade.partialSplit(consumeIdx, remaining),
+          M.bypassCategoryCascade.overshootSkip(consumeIdx, T, slotDur),
           5,
-        );
-        break;
-      }
-      if (recorder) {
-        recorder.decision(
-          M.bypassCategoryCascade.anchorConsume(
-            consumeIdx,
-            recorder.label(slot),
-            slotDur,
-          ),
-          4,
         );
       }
     }
 
     if (slot.type === "category") consumedCategoryIds.push(slot.categoryId);
-    consumed += slot.durationMinutes;
+    consumed += slotDur;
     consumeIdx += 1;
   }
+
+  // No destination set — we never landed at a Category, hard-stopped on a
+  // Travel slot, or hard-stopped on a location-less Occupied. Fall back to a
+  // pinned destination so we still place something with a coherent target.
+  if (destination === null) {
+    const fallback = nextPinnedLocation(slots, i + 1);
+    if (!fallback) {
+      recorder?.decision(M.bypassCategoryCascade.noPinnedDestination, 4);
+      return fillCategoryTailOrTrespass(
+        slots,
+        i,
+        action,
+        travelManager,
+        recorder,
+      );
+    }
+    destination = fallback;
+    T = travelManager.getTravelTime(A, destination, category.end);
+    if (T <= 0) {
+      recorder?.decision(M.bypassCategoryCascade.noTravelTime, 4);
+      return fillCategoryTailOrTrespass(
+        slots,
+        i,
+        action,
+        travelManager,
+        recorder,
+      );
+    }
+  }
+
+  // Track the final destination once.
+  travelManager.trackLeg(A, destination!);
 
   let travelEnd: Date;
   let insufficient = false;
@@ -1906,6 +2292,20 @@ function bypassCategoryCascade(
   );
   const overconstrained = !insufficient && travelSlotMinutes > T;
 
+  // Shrink an overconstrained travel only when the natural head fits inside
+  // the bypassed cat — that's the safe case where the leftover is just free
+  // time at A. If the natural start lands past cat[i].end the head crosses
+  // absorbed-cat boundaries; trimming there would replace real cat structure
+  // with a generic Available, so leave the slot at its full span instead.
+  const naturalTravelStart = overconstrained
+    ? new Date(travelEnd.getTime() - T * 60000)
+    : category.start;
+  const canShrink =
+    overconstrained &&
+    naturalTravelStart.getTime() > category.start.getTime() &&
+    naturalTravelStart.getTime() <= category.end.getTime();
+  const actualTravelStart = canShrink ? naturalTravelStart : category.start;
+
   let removeCount: number;
   if (endAtSlotStart) {
     removeCount = endSlotIdx - i;
@@ -1921,15 +2321,13 @@ function bypassCategoryCascade(
   }
 
   const absorbed = slots.slice(i, i + removeCount);
-  // For the partial-split case, exclude the slot we'll later restore as a
-  // shortened head — it's not consumed by the travel.
-  const absorbedForShards =
-    partialSplitTime && consumeIdx < slots.length
-      ? absorbed.slice(0, -1)
-      : absorbed;
+  // Pass the whole absorbed region (including the partial slot, if any) into
+  // collectShardSources(). The intersection with [travelStart, travelEnd]
+  // correctly picks up only the eaten portion of the partial slot — the
+  // surviving tail is added separately below via shortenPlaceableAtStart().
   const shardSources = collectShardSources(
-    absorbedForShards,
-    category.start,
+    absorbed,
+    actualTravelStart,
     travelEnd,
   );
   const shards = createTravelShards(
@@ -1950,7 +2348,22 @@ function bypassCategoryCascade(
     ).concat(consumedCategoryIds);
   }
 
-  const replacements: Slot[] = [...shards];
+  const replacements: Slot[] = [];
+  if (canShrink) {
+    // Preserve unused head time inside the bypassed category as free time
+    // at A. The user is at A until the travel actually needs to start.
+    replacements.push({
+      type: "available",
+      start: category.start,
+      end: actualTravelStart,
+      durationMinutes: Math.floor(
+        (actualTravelStart.getTime() - category.start.getTime()) / 60000,
+      ),
+      prevLocationId: A,
+      nextLocationId: A,
+    });
+  }
+  replacements.push(...shards);
   if (partialSplitTime && consumeIdx < slots.length) {
     const partial = slots[consumeIdx];
     if (partial.type === "available" || partial.type === "category") {
@@ -1970,11 +2383,10 @@ function bypassCategoryCascade(
       ),
     );
   }
-  // Return i + 1 so the walker lands on slots[i+1] — either the preserved
-  // slot (endAtSlotStart / hard stop) or the shortened cat after bleed. In
-  // the bleed case, the shortened cat's exit edge needs to fire so a
-  // follow-up transition travel from the cat's location can be placed.
-  return i + 1;
+  // Walker lands on the slot AFTER the shards — the partial's exit edge
+  // (if any) or the preserved slot (endAtSlotStart / hardStop).
+  const indexAfterShards = i + (canShrink ? 1 : 0) + shards.length;
+  return indexAfterShards;
 }
 
 // Find the first slot at or after startIdx that has a meaningful destination
@@ -2088,7 +2500,17 @@ function applyTravelAnchorAbsorb(
   recorder: TravelPassRecorder | undefined,
   actionMessage: (absorbedLabels: string[]) => string,
 ): number {
-  const { anchorIdx, anchor, A, TDirect, regionStart } = fit;
+  const { anchorIdx, anchor, A, TDirect, regionStart, precedingAvailableIdx } =
+    fit;
+  // When precedingAvailableIdx is set, the absorb extends one slot earlier:
+  // the Available's tail [regionStart, Available.end] is consumed by the
+  // travel; the head [Available.start, regionStart] survives as a shortened
+  // Available.
+  const absorbStartIdx = precedingAvailableIdx ?? anchorIdx;
+  const precedingAvailable =
+    precedingAvailableIdx !== undefined
+      ? (slots[precedingAvailableIdx] as AvailableSlot)
+      : null;
 
   // Untrack the absorbed travel's leg, track the new direct leg.
   if (anchor.travelFromLocationId && anchor.travelToLocationId) {
@@ -2113,8 +2535,8 @@ function applyTravelAnchorAbsorb(
   }
 
   const travelStart = new Date(regionEnd.getTime() - TDirect * 60000);
-  const removeCount = i - anchorIdx + 1;
-  const absorbed = slots.slice(anchorIdx, anchorIdx + removeCount);
+  const removeCount = i - absorbStartIdx + 1;
+  const absorbed = slots.slice(absorbStartIdx, absorbStartIdx + removeCount);
   const shardSources = collectShardSources(absorbed, travelStart, regionEnd);
   const shards = createTravelShards(
     shardSources,
@@ -2130,9 +2552,18 @@ function applyTravelAnchorAbsorb(
   }
 
   const replacements: Slot[] = [];
-  if (regionStart.getTime() < travelStart.getTime()) {
-    // Leftover free time at A before the merged travel. prev/next both point
-    // to A so the walker doesn't try to place another travel here.
+  if (precedingAvailable) {
+    // Shorten the original Available's tail (the head survives, the tail
+    // got eaten by the travel). Use shortenPlaceableAtEnd so the original
+    // prev is preserved; next becomes A (the travel that follows).
+    if (precedingAvailable.start.getTime() < travelStart.getTime()) {
+      replacements.push(
+        shortenPlaceableAtEnd(precedingAvailable, travelStart, A),
+      );
+    }
+  } else if (regionStart.getTime() < travelStart.getTime()) {
+    // Non-extended case: optional leading "at A" Available if the anchor's
+    // region was bigger than the natural travel.
     replacements.push({
       type: "available",
       start: regionStart,
@@ -2146,11 +2577,11 @@ function applyTravelAnchorAbsorb(
   }
   replacements.push(...shards);
 
-  slots.splice(anchorIdx, removeCount, ...replacements);
+  slots.splice(absorbStartIdx, removeCount, ...replacements);
   if (recorder) {
     recorder.action(actionMessage(absorbed.map((s) => recorder.label(s))));
   }
-  return anchorIdx + replacements.length;
+  return absorbStartIdx + replacements.length;
 }
 
 function applyCategoryAnchorPlacement(
@@ -2479,12 +2910,38 @@ function forwardBypassCascade(
       break;
     }
 
-    // Abort if we'd cross a later Available slot — its free time shouldn't
-    // be sacrificed to a forced cascade routing. Fall back to a simple
-    // insufficient placement that fills only the starting Avail; cats
-    // walked through stay untouched so their natural transitions still
-    // fire on subsequent walker iterations.
+    // Available encountered. Treat it as a soft anchor: if the natural
+    // travel fits within the cats already consumed plus a partial bite of
+    // this Available, take it — preserves the trailing portion of the
+    // Available as free time at the destination. Only abort when even
+    // consuming the whole Available wouldn't suffice; pushing further
+    // would just destroy more user free time without finding a natural
+    // fit.
     if (consumeIdx > i && slot.type === "available") {
+      if (T <= consumed) {
+        recorder?.decision(
+          M.forwardBypassCascade.endAtSlotStart(T, consumed, consumeIdx),
+          7,
+        );
+        endAtSlotStart = true;
+        endSlotIdx = consumeIdx;
+        break;
+      }
+
+      const slotDur = slot.durationMinutes;
+      if (consumed + slotDur >= T) {
+        const remaining = T - consumed;
+        partialSplitTime = new Date(slot.start.getTime() + remaining * 60000);
+        consumed = T;
+        recorder?.decision(
+          M.forwardBypassCascade.partialSplit(consumeIdx, remaining),
+          7,
+        );
+        break;
+      }
+
+      // Whole Available wouldn't suffice — abort and fall back to a
+      // localized insufficient placement on the starting Avail.
       if (recorder) {
         recorder.decision(
           M.forwardBypassCascade.anchorAbortAvailable(
@@ -2502,11 +2959,29 @@ function forwardBypassCascade(
     }
 
     // Only break/bleed at Category slots — Avails are transit space, not
-    // destinations the user wants to land in. Replan + break at consumeIdx
-    // > i+1 (past cat1, the original destination). Bleed allowed at i+1
-    // too (cat1 with original destination).
+    // destinations the user wants to land in. At a Cat past cat1:
+    //   1. Try partial-split at the CURRENT destination first — preserves
+    //      natural travel size and honors the user's planned destination.
+    //   2. Only retarget if partial-split doesn't fit at the current dest.
+    // Bleed at i+1 (cat1 itself) is always allowed at the original dest.
     if (slot.type === "category") {
+      const slotDur = slot.durationMinutes;
+
+      // Step 1: partial-split at current destination if it fits.
+      if (consumed < T && consumed + slotDur >= T) {
+        const remaining = T - consumed;
+        partialSplitTime = new Date(slot.start.getTime() + remaining * 60000);
+        if (remaining > 0) consumedCategoryIds.push(slot.categoryId);
+        consumed = T;
+        recorder?.decision(
+          M.forwardBypassCascade.partialSplit(consumeIdx, remaining),
+          7,
+        );
+        break;
+      }
+
       if (consumeIdx > i + 1) {
+        // Step 2: retarget if Cat's location differs.
         const slotLoc = slot.currentLocationId;
         if (slotLoc && slotLoc !== destination) {
           const newT = travelManager.getTravelTime(A, slotLoc, current.end);
@@ -2539,7 +3014,7 @@ function forwardBypassCascade(
         }
       }
 
-      const slotDur = slot.durationMinutes;
+      // Retarget may have produced a new T that fits here.
       if (consumed + slotDur >= T) {
         const remaining = T - consumed;
         partialSplitTime = new Date(slot.start.getTime() + remaining * 60000);
@@ -2594,6 +3069,18 @@ function forwardBypassCascade(
   );
   const overconstrained = !insufficient && travelSlotMinutes > T;
 
+  // Shrink an overconstrained travel to its natural duration, leaving the
+  // unused time at A as a leftover Available. Mirrors the shrink-and-tail
+  // logic in applyCategoryAnchorPlacement() — the travel stays marked
+  // overconstrained (the cascade still skipped intermediate cats), but the
+  // user reclaims the wasted time as free time at their starting location.
+  const naturalTravelStart = overconstrained
+    ? new Date(travelEnd.getTime() - T * 60000)
+    : current.start;
+  const canShrink =
+    overconstrained && naturalTravelStart.getTime() > current.start.getTime();
+  const actualTravelStart = canShrink ? naturalTravelStart : current.start;
+
   let removeCount: number;
   if (endAtSlotStart) {
     removeCount = endSlotIdx - i;
@@ -2609,13 +3096,13 @@ function forwardBypassCascade(
   }
 
   const absorbed = slots.slice(i, i + removeCount);
-  const absorbedForShards =
-    partialSplitTime && consumeIdx < slots.length
-      ? absorbed.slice(0, -1)
-      : absorbed;
+  // Pass the whole absorbed region into collectShardSources(); the
+  // intersection with [travelStart, travelEnd] correctly picks up only the
+  // eaten head of the partial slot (the surviving tail is added separately
+  // via shortenPlaceableAtStart()).
   const shardSources = collectShardSources(
-    absorbedForShards,
-    current.start,
+    absorbed,
+    actualTravelStart,
     travelEnd,
   );
   const shards = createTravelShards(
@@ -2636,7 +3123,21 @@ function forwardBypassCascade(
     ).concat(consumedCategoryIds);
   }
 
-  const replacements: Slot[] = [...shards];
+  const replacements: Slot[] = [];
+  if (canShrink) {
+    // Preserve unused time at A as free time before the travel starts.
+    replacements.push({
+      type: "available",
+      start: current.start,
+      end: actualTravelStart,
+      durationMinutes: Math.floor(
+        (actualTravelStart.getTime() - current.start.getTime()) / 60000,
+      ),
+      prevLocationId: A,
+      nextLocationId: A,
+    });
+  }
+  replacements.push(...shards);
   if (partialSplitTime && consumeIdx < slots.length) {
     const partial = slots[consumeIdx];
     if (partial.type === "available" || partial.type === "category") {
@@ -2656,11 +3157,12 @@ function forwardBypassCascade(
       ),
     );
   }
-  // Return i + 1 so the walker lands on slots[i+1] — either the preserved
-  // slot (endAtSlotStart / hard stop) or the shortened cat after bleed.
-  // In the bleed case, the shortened cat's exit edge needs to fire so a
-  // follow-up transition travel from the cat's location can be placed.
-  return i + 1;
+  // Walker lands on the slot AFTER the shards. With shrink, the leftover
+  // Available sits before the shards, then the shards, then the preserved
+  // slot (or shortened partial) follows. Skip past leftover + shards so the
+  // next iteration processes the partial's exit edge / preserved slot.
+  const indexAfterShards = i + (canShrink ? 1 : 0) + shards.length;
+  return indexAfterShards;
 }
 
 // ---------------------------------------------------------------------------
