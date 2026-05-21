@@ -1785,6 +1785,7 @@ function absorbAndReplanThroughCategory(
         C,
         category.end,
         travelManager,
+        categories,
         recorder,
         (labels) =>
           M.absorbAndReplanThroughCategoryCascade.travelAbsorbAction(labels),
@@ -2787,6 +2788,7 @@ function backwardBypassCascade(
       destination,
       slotEnd,
       travelManager,
+      categories,
       recorder,
       (labels) => M.backwardBypassCascade.travelAbsorbAction(labels),
     );
@@ -2821,6 +2823,7 @@ function applyTravelAnchorAbsorb(
   destination: string,
   regionEnd: Date,
   travelManager: TravelManager,
+  categories: Category[],
   recorder: TravelPassRecorder | undefined,
   actionMessage: (absorbedLabels: string[]) => string,
 ): number {
@@ -2858,7 +2861,26 @@ function applyTravelAnchorAbsorb(
     if (s.type === "category") consumedCategoryIds.push(s.categoryId);
   }
 
-  const travelStart = new Date(regionEnd.getTime() - TDirect * 60000);
+  const naturalTravelStart = new Date(regionEnd.getTime() - TDirect * 60000);
+  // Snap the natural start to a category wrapper boundary when it would
+  // otherwise fall inside a Cat. The user-facing rule: travel slots should
+  // begin at original-fabric boundaries, not at the middle of a logical cat.
+  // Skip snapping when the cascade extended into a preceding Available —
+  // that case was specifically chosen to make a natural fit possible, and
+  // promoting it to overconstrained would defeat the extension.
+  const travelStart = precedingAvailable
+    ? naturalTravelStart
+    : snapTravelStartToCatWrapper(
+        slots,
+        absorbStartIdx,
+        i,
+        naturalTravelStart,
+        regionStart,
+        categories,
+      );
+  const overconstrained =
+    travelStart.getTime() < naturalTravelStart.getTime();
+
   const removeCount = i - absorbStartIdx + 1;
   const absorbed = slots.slice(absorbStartIdx, absorbStartIdx + removeCount);
   const shardSources = collectShardSources(absorbed, travelStart, regionEnd);
@@ -2868,6 +2890,9 @@ function applyTravelAnchorAbsorb(
     A,
     destination,
     "preliminary",
+    overconstrained
+      ? { overconstrained: true, requiredTravelMinutes: TDirect }
+      : undefined,
   );
   if (shards.length > 0) {
     shards[0].consumedCategoryIds = (
@@ -2906,6 +2931,36 @@ function applyTravelAnchorAbsorb(
     recorder.action(actionMessage(absorbed.map((s) => recorder.label(s))));
   }
   return absorbStartIdx + replacements.length;
+}
+
+// When a natural travel start lands inside a Category slot, snap to the
+// Category's wrapper.start (the cat's original left boundary). This keeps
+// overconstrained/natural travel slot edges aligned with original-fabric
+// boundaries rather than cutting a cat in half.
+function snapTravelStartToCatWrapper(
+  slots: Slot[],
+  absorbStartIdx: number,
+  absorbEndIdx: number,
+  naturalStart: Date,
+  regionStart: Date,
+  categories: Category[],
+): Date {
+  const naturalMs = naturalStart.getTime();
+  const regionStartMs = regionStart.getTime();
+  for (let k = absorbStartIdx; k <= absorbEndIdx; k++) {
+    const s = slots[k];
+    if (s.type !== "category") continue;
+    if (
+      s.start.getTime() <= naturalMs &&
+      s.end.getTime() > naturalMs
+    ) {
+      const wrapper = findCategoryWrapper(s, categories);
+      const candidate = wrapper?.start ?? s.start;
+      if (candidate.getTime() >= regionStartMs) return candidate;
+      return new Date(regionStartMs);
+    }
+  }
+  return naturalStart;
 }
 
 function applyCategoryAnchorPlacement(
@@ -3039,6 +3094,14 @@ function findCategoryWrapperEnd(
   slot: CategorySlot,
   categories: Category[],
 ): Date | null {
+  const wrapper = findCategoryWrapper(slot, categories);
+  return wrapper?.end ?? null;
+}
+
+function findCategoryWrapper(
+  slot: CategorySlot,
+  categories: Category[],
+): { start: Date; end: Date } | null {
   const category = categories.find((c) => c.id === slot.categoryId) as
     | (Category & { timeSlots?: Parameters<typeof expandSlotForDay>[0][] })
     | undefined;
@@ -3054,7 +3117,7 @@ function findCategoryWrapperEnd(
       period.start.getTime() <= slot.start.getTime() &&
       period.end.getTime() >= slot.end.getTime()
     ) {
-      return period.end;
+      return { start: period.start, end: period.end };
     }
   }
   return null;
