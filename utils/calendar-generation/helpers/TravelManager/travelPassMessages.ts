@@ -183,8 +183,9 @@ export const M = {
       `bypassCategoryCascade(): absorbed [${absorbedLabels.join(", ")}], placed A→destination travel${insufficient ? " (insufficient)" : ""}${overconstrained ? " (overconstrained)" : ""}`,
   },
 
-  backwardBypassCascade: {
-    header: "Cascade: backwardBypassCascade() (walking i-1, i-2, ...)",
+  // Shared anchor-walk vocabulary used by every backward cascade
+  // (backwardBypassCascade, absorbAndReplanThroughCategory).
+  cascadeWalk: {
     anchorHardStopOccupied: (idx: number, label: string) =>
       `anchor slots[${idx}] = ${label} → hard stop (location-pinned Occupied)`,
     anchorAnywherePassThrough: (idx: number, label: string) =>
@@ -195,12 +196,8 @@ export const M = {
       `direct A→destination (${TDirect}min) fits in region (${regionMinutes}min) ✓`,
     directDoesNotFit: (TDirect: number, regionMinutes: number) =>
       `direct A→destination (${TDirect}min) > region (${regionMinutes}min) ✗`,
-    travelAbsorbAction: (absorbedLabels: string[]) =>
-      `backwardBypassCascade() (Travel absorb): absorbed [${absorbedLabels.join(", ")}], placed merged A→destination travel`,
-    noViableAbsorb: "no viable absorb — fallback bleed into prev",
-    fallbackPrevAction: "cascadeFallbackPrev() (insufficient)",
     anchorAbortAvailable: (idx: number, label: string) =>
-      `anchor slots[${idx}] = ${label} → abort cascade, fallback bleed into prev`,
+      `anchor slots[${idx}] = ${label} → abort cascade, fall back`,
     anchorCategoryMatches: (idx: number, label: string) =>
       `anchor slots[${idx}] = ${label} → location matches destination, skip`,
     anchorCategoryNoTravel: (idx: number, label: string) =>
@@ -219,9 +216,26 @@ export const M = {
       slotDuration: number,
     ) =>
       `anchor slots[${idx}] = ${label} → span ${slotDuration}min < ${T}min ✗ skip`,
+  },
+
+  backwardBypassCascade: {
+    header: "Cascade: backwardBypassCascade() (walking i-1, i-2, ...)",
+    travelAbsorbAction: (absorbedLabels: string[]) =>
+      `backwardBypassCascade() (Travel absorb): absorbed [${absorbedLabels.join(", ")}], placed merged A→destination travel`,
+    fallbackPrevAction: "cascadeFallbackPrev() (insufficient)",
     action: (absorbedLabels: string[], overconstrained: boolean) =>
       `backwardBypassCascade(): absorbed [${absorbedLabels.join(", ")}], placed anchor→destination travel${overconstrained ? " (overconstrained)" : ""}`,
     noAnchorFits: "No anchor fit — fallback bleed into prev",
+  },
+
+  absorbAndReplanThroughCategoryCascade: {
+    header:
+      "Cascade: absorbAndReplanThroughCategory() (walking i-1, i-2, ...)",
+    travelAbsorbAction: (absorbedLabels: string[]) =>
+      `absorbAndReplanThroughCategory() (Travel absorb): absorbed [${absorbedLabels.join(", ")}], placed merged A→destination travel`,
+    categoryAnchorAction: (absorbedLabels: string[], overconstrained: boolean) =>
+      `absorbAndReplanThroughCategory() (Category anchor): absorbed [${absorbedLabels.join(", ")}], placed anchor→destination travel${overconstrained ? " (overconstrained)" : ""}`,
+    noAnchorFits: "No anchor fit — fall back to 2-slot absorb with insufficient",
   },
 
   forwardBypassCascade: {
