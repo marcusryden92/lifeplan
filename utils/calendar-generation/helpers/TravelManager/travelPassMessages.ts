@@ -12,8 +12,6 @@
  * action taken.
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 export const M = {
   walker: {
     skipOccupiedOrTravel: (label: string) => `Current = ${label} → skip`,
