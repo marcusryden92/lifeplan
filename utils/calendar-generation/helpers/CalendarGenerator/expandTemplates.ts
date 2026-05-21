@@ -18,7 +18,7 @@ export function expandTemplates(
   weekStartDay: WeekDayIntegers,
   currentDate: Date,
   maxDaysAhead: number,
-  enableLogging: boolean,
+  logTemplateInfo: boolean,
   metrics: SchedulingMetrics,
 ): {
   filteredEvents: SimpleEvent[];
@@ -41,7 +41,7 @@ export function expandTemplates(
   );
 
   // Debug logging
-  if (enableLogging) {
+  if (logTemplateInfo) {
     console.log("Templates expanded:", recurringTemplateEvents.length);
     if (recurringTemplateEvents.length > 0) {
       const workHourTemplates = recurringTemplateEvents.filter((t) => {
@@ -58,7 +58,7 @@ export function expandTemplates(
   // Build per-template masks
   const perTemplateMasks = templateExpander.getPerTemplateMasks(templates);
 
-  if (enableLogging) {
+  if (logTemplateInfo) {
     console.log("Template masks:", {
       count: perTemplateMasks.length,
       masks: perTemplateMasks.map((m) => ({

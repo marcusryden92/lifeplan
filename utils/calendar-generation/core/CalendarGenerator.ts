@@ -134,7 +134,7 @@ export class CalendarGenerator {
       weekStartDay,
       currentDate,
       maxDaysAhead,
-      enableLogging,
+      enableLogging && !!input.config?.logging?.templateInfo,
       this.metrics,
     );
 

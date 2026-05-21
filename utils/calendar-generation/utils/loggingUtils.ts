@@ -237,7 +237,9 @@ function logPreliminaryTravelPass(recorder: TravelPassRecorder): void {
   }
 
   for (const [pass, passRecords] of byPass) {
-    console.log(`\n=== PRELIMINARY TRAVEL PASS: ${pass} (${passRecords.length} slots) ===`);
+    console.log(
+      `\n=== PRELIMINARY TRAVEL PASS: ${pass} (${passRecords.length} slots) ===`,
+    );
     for (const rec of passRecords) {
       const markers =
         rec.slot.markers.length > 0 ? ` {${rec.slot.markers.join(", ")}}` : "";
@@ -252,7 +254,7 @@ function logPreliminaryTravelPass(recorder: TravelPassRecorder): void {
         console.log(`  → ${a}`);
       }
       if (rec.endState.length > 0) {
-        console.log(`  End state (${rec.endState.length} slots in range):`);
+        console.log(`\n  End state (${rec.endState.length} slots in range):`);
         rec.endState.forEach((s, idx) => {
           const m = s.markers.length > 0 ? ` {${s.markers.join(", ")}}` : "";
           console.log(`    ${idx + 1}. ${s.label}${m}`);
