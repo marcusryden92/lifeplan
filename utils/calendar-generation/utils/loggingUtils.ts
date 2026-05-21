@@ -13,6 +13,10 @@ import {
   SchedulingMetrics,
 } from "../models/SchedulingModels";
 import { SchedulingStrategy } from "../strategies/SchedulingStrategy";
+import type {
+  SlotRecord,
+  TravelPassRecorder,
+} from "../helpers/TravelManager/TravelPassRecorder";
 
 export interface LoggingData {
   allEvents: SimpleEvent[];
@@ -28,6 +32,7 @@ export interface LoggingData {
     failures: SchedulingFailure[];
   };
   metrics: SchedulingMetrics;
+  travelPassRecorder?: TravelPassRecorder | null;
 }
 
 type LogFlag =
@@ -40,7 +45,8 @@ type LogFlag =
   | "templates"
   | "locations"
   | "strategySettings"
-  | "leanCalendar";
+  | "leanCalendar"
+  | "preliminaryTravelPass";
 
 /**
  * Check if a specific logging flag is enabled
@@ -202,6 +208,56 @@ export function logCalendarDebugInfo(
       filtered.forEach((te) => {
         console.log(`    - ${te.title}: ${te.start} to ${te.end}`);
       });
+    }
+  }
+
+  // Preliminary travel pass trail
+  if (shouldLog(input, "preliminaryTravelPass") && data.travelPassRecorder) {
+    logPreliminaryTravelPass(data.travelPassRecorder);
+  }
+}
+
+/**
+ * Pretty-print the per-slot decision/action trail captured by
+ * TravelPassRecorder. Records are grouped by pass label so multiple
+ * expandSlotsForNextWeek runs are visually separated.
+ */
+function logPreliminaryTravelPass(recorder: TravelPassRecorder): void {
+  const records = recorder.records;
+  if (records.length === 0) {
+    console.log("PRELIMINARY TRAVEL PASS: (no records in range)");
+    return;
+  }
+
+  const byPass = new Map<string, SlotRecord[]>();
+  for (const rec of records) {
+    const list = byPass.get(rec.pass) ?? [];
+    list.push(rec);
+    byPass.set(rec.pass, list);
+  }
+
+  for (const [pass, passRecords] of byPass) {
+    console.log(`\n=== PRELIMINARY TRAVEL PASS: ${pass} (${passRecords.length} slots) ===`);
+    for (const rec of passRecords) {
+      const markers =
+        rec.slot.markers.length > 0 ? ` {${rec.slot.markers.join(", ")}}` : "";
+      console.log(
+        `\n[iter ${rec.iterationIndex}] ${rec.slot.label}${markers}${rec.slot.id ? ` id=${rec.slot.id}` : ""}`,
+      );
+      for (const d of rec.decisions) {
+        const indent = "  ".repeat(d.depth + 1);
+        console.log(`${indent}${d.text}`);
+      }
+      for (const a of rec.actions) {
+        console.log(`  → ${a}`);
+      }
+      if (rec.endState.length > 0) {
+        console.log(`  End state (${rec.endState.length} slots in range):`);
+        rec.endState.forEach((s, idx) => {
+          const m = s.markers.length > 0 ? ` {${s.markers.join(", ")}}` : "";
+          console.log(`    ${idx + 1}. ${s.label}${m}`);
+        });
+      }
     }
   }
 }

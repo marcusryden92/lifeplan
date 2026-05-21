@@ -7,6 +7,7 @@ import { Slot } from "../../models/TimeSlot";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { buildAvailableSlots } from "../TimeSlotManager/buildAvailableSlots";
 import { preliminaryTravelPass } from "../TravelManager/preliminaryTravelPass";
+import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
 
 export function expandSlotsForNextWeek(
   weekStart: Date,
@@ -16,6 +17,7 @@ export function expandSlotsForNextWeek(
   categories: Category[],
   slotManager: TimeSlotManager,
   travelManager: TravelManager,
+  travelPassRecorder?: TravelPassRecorder,
 ): void {
   const weekStartDate = dateTimeService.startOfDay(weekStart);
   const weekEndDate = dateTimeService.endOfDay(
@@ -48,11 +50,18 @@ export function expandSlotsForNextWeek(
 
   // Run travel pass on the week's slots in isolation, then merge back.
   const weekSlots: Slot[] = [...initialSlots];
+  if (travelPassRecorder) {
+    const y = weekStartDate.getFullYear();
+    const m = String(weekStartDate.getMonth() + 1).padStart(2, "0");
+    const d = String(weekStartDate.getDate()).padStart(2, "0");
+    travelPassRecorder.startPass(`next-week@${y}-${m}-${d}`);
+  }
   preliminaryTravelPass(
     !!plannerLocationMap,
     categories,
     weekSlots,
     travelManager,
+    travelPassRecorder,
   );
 
   const nowMs = context.currentDate.getTime();

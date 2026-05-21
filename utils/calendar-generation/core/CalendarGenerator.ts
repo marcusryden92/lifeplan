@@ -30,7 +30,10 @@ import {
   assembleFinalEvents,
 } from "../helpers/CalendarGenerator";
 import { buildAvailableSlots } from "../helpers/TimeSlotManager";
-import { preliminaryTravelPass } from "../helpers/TravelManager";
+import {
+  preliminaryTravelPass,
+  TravelPassRecorder,
+} from "../helpers/TravelManager";
 import { setTimeOnDate } from "@/utils/calendarUtils";
 
 export class CalendarGenerator {
@@ -48,6 +51,7 @@ export class CalendarGenerator {
 
   // Mutable state
   private metrics: SchedulingMetrics;
+  private travelPassRecorder: TravelPassRecorder | null = null;
 
   constructor(
     private readonly weekStartDay: WeekDayIntegers,
@@ -161,11 +165,28 @@ export class CalendarGenerator {
     // are set directly on CategorySlot fragments and read downstream from
     // the slot array — no side-channel.
     timeSlotManager.slots = [...builtSlots];
+
+    const loggingConfig = input.config?.logging;
+    const travelPassRecorder = new TravelPassRecorder({
+      enabled: enableLogging && !!loggingConfig?.preliminaryTravelPass,
+      rangeStart: loggingConfig?.dateRangeStart ?? null,
+      rangeEnd: loggingConfig?.dateRangeEnd ?? null,
+      lookups: {
+        categoryById: new Map(this.scheduledCategories.map((c) => [c.id, c])),
+        eventTitleById: new Map(
+          filteredEvents.map((e) => [e.id, e.title]),
+        ),
+      },
+    });
+    this.travelPassRecorder = travelPassRecorder;
+
+    travelPassRecorder.startPass("preliminary");
     preliminaryTravelPass(
       !!plannerLocationMap,
       this.scheduledCategories,
       timeSlotManager.slots,
       travelManager,
+      travelPassRecorder,
     );
 
     // Phase 6c: Drop available slots ending before "now" so the scheduler
@@ -217,6 +238,7 @@ export class CalendarGenerator {
       perTemplateMasks,
       plannerLocationMap,
       this.scheduledCategories,
+      travelPassRecorder,
     );
 
     // Phase 11: Assemble final events
@@ -260,6 +282,7 @@ export class CalendarGenerator {
         strategies: [{ strategy, weight: 1.0 }],
         schedulingResult,
         metrics: this.metrics,
+        travelPassRecorder: this.travelPassRecorder,
       });
     }
 

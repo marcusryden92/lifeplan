@@ -20,6 +20,7 @@ import { PerTemplateMask } from "../models/TemplateModels";
 import { scheduleTask } from "../helpers/Scheduler/scheduleTask";
 import { scheduleTasks } from "../helpers/Scheduler/scheduleTasks";
 import { scheduleTasksAndGoals } from "../helpers/Scheduler/scheduleTasksAndGoals";
+import { TravelPassRecorder } from "../helpers/TravelManager/TravelPassRecorder";
 
 export class Scheduler {
   private slotManager: TimeSlotManager;
@@ -100,6 +101,7 @@ export class Scheduler {
     perTemplateMasks: PerTemplateMask[],
     plannerLocationMap: Map<string, string | null>,
     categories: Category[],
+    travelPassRecorder?: TravelPassRecorder,
   ): {
     success: boolean;
     newEvents: SimpleEvent[];
@@ -118,6 +120,7 @@ export class Scheduler {
       this.context,
       plannerLocationMap,
       categories,
+      travelPassRecorder,
     );
   }
 

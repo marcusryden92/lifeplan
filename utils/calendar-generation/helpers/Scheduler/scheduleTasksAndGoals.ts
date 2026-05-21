@@ -13,6 +13,7 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import { scheduleSingleTask } from "./scheduleSingleTask";
 import { scheduleGoal } from "./scheduleGoal";
 import { expandSlotsForNextWeek } from "./expandSlotsForNextWeek";
+import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
 
 export function scheduleTasksAndGoals(
   slotManager: TimeSlotManager,
@@ -27,6 +28,7 @@ export function scheduleTasksAndGoals(
   context: SchedulingContext,
   plannerLocationMap: Map<string, string | null>,
   categories: Category[],
+  travelPassRecorder?: TravelPassRecorder,
 ): {
   success: boolean;
   newEvents: SimpleEvent[];
@@ -94,6 +96,7 @@ export function scheduleTasksAndGoals(
         categories,
         slotManager,
         travelManager,
+        travelPassRecorder,
       );
     }
   } */
