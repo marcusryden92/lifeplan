@@ -2103,6 +2103,239 @@ function absorbAndReplanIntoNextCategory(
 }
 
 // ---------------------------------------------------------------------------
+// Action: Cat1 exit edge, Next=Category, symmetric bleed fails AND a
+// located Occupied sits right after Cat2 at a different location.
+//
+// Mirror of absorbAndReplanIntoNextCategory. Cat1+Cat2 are always absorbed
+// (Cat2 first, then Cat1) — Cat2 because the asymmetric "fill Cat2" placement
+// would land the user at Cat2.loc exactly when the Occupied at a different
+// location starts; Cat1 follows when natural T(Cat1.loc→Occupied.loc) doesn't
+// fit inside Cat2. Walk backward through earlier slots accumulating consumed
+// minutes, re-targeting the natural travel at each anchor's exit location.
+//
+// At each anchor candidate:
+//   - preFit   (newT ≤ consumed):       overconstrained. Travel slot spans
+//                                       the consumed region; actual T is
+//                                       smaller. Anchor slot preserved.
+//   - natural  (consumed < newT ≤ +dur): exact fit. Travel of size newT ends
+//                                       at regionEnd. Anchor slot's head
+//                                       preserved.
+//   - overflow (else):                  consume the whole anchor slot, walk
+//                                       back to slots[idx - 1].
+//
+// First-fit wins. Hard stop on located Occupied or end of array → return null
+// so the caller falls back to the existing trespass placement.
+//
+// Available anchors are only valid when prev==next==A (transit-at-A). Travel
+// anchors absorb the whole travel and switch origin to travel.from; the
+// preFit case at a Travel anchor would leave the user at travel.to at
+// travel.end while a new travel starts at travel.from from the same point —
+// no continuity, so we force overflow there.
+// ---------------------------------------------------------------------------
+
+function absorbAndReplanBackward(
+  slots: Slot[],
+  catIdx: number,
+  occupiedIdx: number,
+  originalAction: TravelProcessingAction,
+  travelManager: TravelManager,
+  recorder?: TravelPassRecorder,
+): number | null {
+  const cat1 = slots[catIdx] as CategorySlot;
+  const cat2 = slots[catIdx + 1] as CategorySlot;
+  const occupied = slots[occupiedIdx] as OccupiedSlot;
+  if (!occupied.locationId) return null;
+
+  const destination = occupied.locationId;
+  const regionEnd = occupied.start;
+
+  let consumed = cat2.durationMinutes;
+  let idx = catIdx;
+  let chosen:
+    | {
+        idx: number;
+        slot: Slot;
+        kind: "natural" | "preFit";
+        origin: string;
+        T: number;
+        travelStart: Date;
+      }
+    | null = null;
+  const absorbedTravelSlots: TravelSlot[] = [];
+
+  while (idx >= 0) {
+    const slot = slots[idx];
+
+    if (slot.type === "occupied") {
+      // Hard stop on any Occupied — even Anywhere ones — since crossing one
+      // means the user already had a fixed thing on the calendar and we
+      // shouldn't reroute around it.
+      break;
+    }
+
+    const slotDur = slot.durationMinutes;
+    let origin: string | null = null;
+    let isTravelAnchor = false;
+
+    if (slot.type === "category") {
+      origin = slot.currentLocationId;
+    } else if (slot.type === "available") {
+      if (slot.prevLocationId && slot.prevLocationId === slot.nextLocationId) {
+        origin = slot.prevLocationId;
+      }
+    } else if (slot.type === "travel") {
+      origin = slot.travelFromLocationId;
+      isTravelAnchor = true;
+    }
+
+    if (origin && origin !== destination) {
+      const newT = travelManager.getTravelTime(origin, destination, regionEnd);
+      if (newT > 0) {
+        // PreFit is invalid at a Travel anchor (would teleport the user
+        // from travel.to back to travel.from at the same instant). Force
+        // overflow there.
+        if (!isTravelAnchor && newT <= consumed) {
+          chosen = {
+            idx,
+            slot,
+            kind: "preFit",
+            origin,
+            T: newT,
+            travelStart: slot.end,
+          };
+          break;
+        }
+        if (newT > consumed && newT <= consumed + slotDur) {
+          chosen = {
+            idx,
+            slot,
+            kind: "natural",
+            origin,
+            T: newT,
+            travelStart: new Date(regionEnd.getTime() - newT * 60000),
+          };
+          break;
+        }
+      }
+    }
+
+    if (slot.type === "travel") {
+      absorbedTravelSlots.push(slot);
+    }
+    consumed += slotDur;
+    idx -= 1;
+  }
+
+  if (!chosen) return null;
+
+  travelManager.untrackLeg(
+    originalAction.prevLocation,
+    originalAction.nextLocation,
+  );
+  for (const t of absorbedTravelSlots) {
+    if (t.travelFromLocationId && t.travelToLocationId) {
+      travelManager.untrackLeg(t.travelFromLocationId, t.travelToLocationId);
+    }
+  }
+  if (chosen.slot.type === "travel") {
+    if (chosen.slot.travelFromLocationId && chosen.slot.travelToLocationId) {
+      travelManager.untrackLeg(
+        chosen.slot.travelFromLocationId,
+        chosen.slot.travelToLocationId,
+      );
+    }
+  }
+  travelManager.trackLeg(chosen.origin, destination);
+
+  const travelStart = chosen.travelStart;
+  const travelEnd = regionEnd;
+  const overconstrained = chosen.kind === "preFit";
+
+  let absorbStartIdx: number;
+  let removeCount: number;
+  const leadingReplacements: Slot[] = [];
+
+  if (chosen.kind === "natural") {
+    absorbStartIdx = chosen.idx;
+    removeCount = catIdx + 2 - chosen.idx;
+
+    if (chosen.slot.type === "available" || chosen.slot.type === "category") {
+      if (chosen.slot.start.getTime() < travelStart.getTime()) {
+        leadingReplacements.push(
+          shortenPlaceableAtEnd(chosen.slot, travelStart, chosen.origin),
+        );
+      }
+    } else if (chosen.slot.type === "travel") {
+      if (chosen.slot.start.getTime() < travelStart.getTime()) {
+        leadingReplacements.push(
+          makeAvailableLeftover(
+            chosen.slot.start,
+            travelStart,
+            chosen.origin,
+            chosen.origin,
+          ),
+        );
+      }
+    }
+  } else {
+    absorbStartIdx = chosen.idx + 1;
+    removeCount = catIdx + 1 - chosen.idx;
+  }
+
+  const absorbed = slots.slice(absorbStartIdx, absorbStartIdx + removeCount);
+
+  const consumedCategoryIds: string[] = [];
+  for (const s of absorbed) {
+    if (s.type === "category") consumedCategoryIds.push(s.categoryId);
+  }
+
+  const shardSources = collectShardSources(absorbed, travelStart, travelEnd);
+  const shards = createTravelShards(
+    shardSources,
+    uuidv4(),
+    chosen.origin,
+    destination,
+    "preliminary",
+    {
+      insufficientTravel: false,
+      requiredTravelMinutes: 0,
+      overconstrained,
+    },
+  );
+  if (shards.length > 0) {
+    shards[0].consumedCategoryIds = (
+      shards[0].consumedCategoryIds ?? []
+    ).concat(consumedCategoryIds);
+  }
+
+  const replacements: Slot[] = [...leadingReplacements, ...shards];
+
+  slots.splice(absorbStartIdx, removeCount, ...replacements);
+
+  if (recorder) {
+    recorder.decision(
+      M.absorbAndReplanBackward.committed(
+        chosen.idx,
+        recorder.label(chosen.slot),
+        chosen.origin,
+        chosen.T,
+        chosen.kind,
+      ),
+      3,
+    );
+    recorder.action(
+      M.absorbAndReplanBackward.action(
+        absorbed.map((s) => recorder.label(s)),
+        chosen.kind === "natural",
+        overconstrained,
+      ),
+    );
+  }
+
+  return absorbStartIdx + replacements.length;
+}
+
+// ---------------------------------------------------------------------------
 // Action: Category entry, Prev=Occupied, doesn't fit — bypass cascade
 // ---------------------------------------------------------------------------
 
@@ -3101,6 +3334,41 @@ function bleedAcrossCategoryBoundary(
   // falls into the same path.
   const half = T / 2;
   if (half >= curDur || half >= nextDur) {
+    // Before trespassing: if a located Occupied sits flush against Cat2 at
+    // a different location, the user's real next fixed point is that
+    // Occupied. Attempt a backward cascade that ignores Cat2's location
+    // and plans straight toward the Occupied's location instead, absorbing
+    // Cat1+Cat2 (and possibly more) into one travel that lands at the
+    // Occupied. Falls back to trespass if no anchor fits.
+    const afterNext = i + 2 < slots.length ? slots[i + 2] : null;
+    if (
+      afterNext &&
+      afterNext.type === "occupied" &&
+      afterNext.locationId &&
+      afterNext.locationId !== next.currentLocationId &&
+      afterNext.start.getTime() === next.end.getTime()
+    ) {
+      if (recorder) {
+        recorder.decision(
+          M.bleedAcrossCategoryBoundary.trespassBoundaryTryBackward(
+            half,
+            recorder.label(afterNext),
+          ),
+          2,
+        );
+      }
+      const backwardResult = absorbAndReplanBackward(
+        slots,
+        i,
+        i + 2,
+        action,
+        travelManager,
+        recorder,
+      );
+      if (backwardResult !== null) return backwardResult;
+      recorder?.decision(M.bleedAcrossCategoryBoundary.backwardCascadeFailed, 2);
+    }
+
     travelManager.untrackLeg(action.prevLocation, action.nextLocation);
     current.trespassingEnd = true;
     next.trespassingStart = true;

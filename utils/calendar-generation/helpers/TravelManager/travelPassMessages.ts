@@ -190,6 +190,25 @@ export const M = {
       `absorbAndReplanIntoNextCategory(): absorbed [${absorbedLabels.join(", ")}], placed A→destination travel${extendsIntoNext ? " (bleeds into landing cat)" : " (overconstrained at landing.start)"}${insufficient ? " (insufficient)" : ""}`,
   },
 
+  absorbAndReplanBackward: {
+    header:
+      "Cascade: absorbAndReplanBackward() (walking i, i-1, ..., destination = next-Occupied location)",
+    committed: (
+      idx: number,
+      label: string,
+      origin: string,
+      T: number,
+      kind: "natural" | "preFit",
+    ) =>
+      `Chose ${kind} anchor at slots[${idx}] = ${label} (origin=${origin}, ${origin}→destination = ${T}min)`,
+    action: (
+      absorbedLabels: string[],
+      extendsIntoAnchor: boolean,
+      overconstrained: boolean,
+    ) =>
+      `absorbAndReplanBackward(): absorbed [${absorbedLabels.join(", ")}], placed anchor→destination travel${extendsIntoAnchor ? " (bleeds into anchor tail)" : " (preFit at anchor.end)"}${overconstrained ? " (overconstrained)" : ""}`,
+  },
+
   bypassCategoryCascade: {
     header: "Cascade: bypassCategoryCascade() (forward, category entry)",
     noPinnedDestination:
@@ -303,6 +322,10 @@ export const M = {
   bleedAcrossCategoryBoundary: {
     trespassBoundary: (half: number) =>
       `Symmetric bleed (${half}min each) ≥ a category — trespass boundary instead`,
+    trespassBoundaryTryBackward: (half: number, occupiedLabel: string) =>
+      `Symmetric bleed (${half}min each) ≥ a category, and ${occupiedLabel} sits past Cat2 at a different location — try backward cascade before trespass`,
+    backwardCascadeFailed:
+      "absorbAndReplanBackward() found no anchor — fall back to trespass",
     trespassAction: (currentLabel: string, nextLabel: string) =>
       `trespassed: [${currentLabel}.end, ${nextLabel}.start]`,
     action: (
