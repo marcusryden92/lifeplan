@@ -2862,22 +2862,41 @@ function applyTravelAnchorAbsorb(
   }
 
   const naturalTravelStart = new Date(regionEnd.getTime() - TDirect * 60000);
-  // Snap the natural start to a category wrapper boundary when it would
-  // otherwise fall inside a Cat. The user-facing rule: travel slots should
-  // begin at original-fabric boundaries, not at the middle of a logical cat.
-  // Skip snapping when the cascade extended into a preceding Available —
-  // that case was specifically chosen to make a natural fit possible, and
-  // promoting it to overconstrained would defeat the extension.
+  // When the cascade absorbed a stretch of slots to find this anchor, the
+  // user's expectation is that the absorbed region becomes a single
+  // overconstrained travel slot — NOT a natural-size travel with a free
+  // Available leading into it. The Available leftover would imply the user
+  // has free time at A before traveling, which contradicts the fact that we
+  // just absorbed cats/travels representing scheduled activity in that
+  // region. So we fill the entire absorbed region with the new travel slot,
+  // marking overconstrained when it ends up bigger than the natural T.
+  //
+  // If the slot just before the absorb is a Category whose end was trimmed
+  // by an earlier bleed, restore it to its full wrapper so the travel slot's
+  // left edge sits on a natural-fabric boundary instead of the bleed seam.
+  //
+  // The preceding-Available extension case is left alone: the cascade
+  // extended into a prev Available specifically to make a natural fit
+  // possible (no absorbed cat/travel beyond what's needed for T), so the
+  // natural placement is the right answer there.
+  let bleedTrimmedPrevCat: { slot: CategorySlot; wrapperEnd: Date } | null =
+    null;
+  if (!precedingAvailable && absorbStartIdx > 0) {
+    const before = slots[absorbStartIdx - 1];
+    if (before.type === "category") {
+      const wrapperEnd = findCategoryWrapperEnd(before, categories);
+      if (wrapperEnd && wrapperEnd.getTime() > before.end.getTime()) {
+        bleedTrimmedPrevCat = { slot: before, wrapperEnd };
+      }
+    }
+  }
+  const effectiveRegionStart = bleedTrimmedPrevCat
+    ? bleedTrimmedPrevCat.wrapperEnd
+    : regionStart;
   const travelStart = precedingAvailable
     ? naturalTravelStart
-    : snapTravelStartToCatWrapper(
-        slots,
-        absorbStartIdx,
-        i,
-        naturalTravelStart,
-        regionStart,
-        categories,
-      );
+    : effectiveRegionStart;
+  void snapTravelStartToCatWrapper;
   const overconstrained =
     travelStart.getTime() < naturalTravelStart.getTime();
 
@@ -2925,6 +2944,16 @@ function applyTravelAnchorAbsorb(
     });
   }
   replacements.push(...shards);
+
+  if (bleedTrimmedPrevCat) {
+    const restored = bleedTrimmedPrevCat.slot;
+    restored.end = bleedTrimmedPrevCat.wrapperEnd;
+    restored.durationMinutes = Math.floor(
+      (restored.end.getTime() - restored.start.getTime()) / 60000,
+    );
+    restored.nextLocationId = restored.currentLocationId;
+    restored.trespassingEnd = undefined;
+  }
 
   slots.splice(absorbStartIdx, removeCount, ...replacements);
   if (recorder) {
