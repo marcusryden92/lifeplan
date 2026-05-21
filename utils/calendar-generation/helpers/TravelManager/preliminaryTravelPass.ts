@@ -519,6 +519,7 @@ function handleCategoryExitEdge(
           action,
           prevTravel,
           travelManager,
+          categories,
           recorder,
         );
       }
@@ -1901,6 +1902,7 @@ function absorbAndReplanIntoNextCategory(
   originalAction: TravelProcessingAction,
   prevTravel: PrevTravelMatch,
   travelManager: TravelManager,
+  categories: Category[],
   recorder?: TravelPassRecorder,
 ): number {
   travelManager.untrackLeg(
@@ -1931,8 +1933,30 @@ function absorbAndReplanIntoNextCategory(
     prevTravel.availableIndex !== null
       ? (slots[prevTravel.availableIndex] as AvailableSlot)
       : null;
-  const baseRegionStart = prevAvailable?.start ?? prevTravel.travel.start;
   const firstIdx = prevTravel.availableIndex ?? prevTravel.travelIndex;
+
+  // If the slot immediately before our absorb region is a Category whose end
+  // was trimmed by an earlier bleed (slot.end < wrapper.end), the new
+  // travel's left edge would otherwise sit on the bleed's seam instead of
+  // the cat's original boundary. Detect that here and shift baseRegionStart
+  // out to the wrapper end — the cat gets restored to its full duration
+  // before the splice, and the overconstrained travel that follows starts
+  // cleanly at the cat's natural boundary.
+  let bleedTrimmedPrevCat: { slot: CategorySlot; wrapperEnd: Date } | null =
+    null;
+  if (firstIdx > 0 && !prevAvailable) {
+    const before = slots[firstIdx - 1];
+    if (before.type === "category") {
+      const wrapperEnd = findCategoryWrapperEnd(before, categories);
+      if (wrapperEnd && wrapperEnd.getTime() > before.end.getTime()) {
+        bleedTrimmedPrevCat = { slot: before, wrapperEnd };
+      }
+    }
+  }
+
+  const baseRegionStart = bleedTrimmedPrevCat
+    ? bleedTrimmedPrevCat.wrapperEnd
+    : (prevAvailable?.start ?? prevTravel.travel.start);
 
   // Walk forward from cat[i+1]. At each Category or Available, evaluate
   // newT from A to the slot's destination location (cat.currentLocationId
@@ -2143,6 +2167,18 @@ function absorbAndReplanIntoNextCategory(
 
   const replacements: Slot[] = [...shards];
   if (landingSurvivor) replacements.push(landingSurvivor);
+
+  if (bleedTrimmedPrevCat) {
+    // Restore the bled-trimmed cat to its full wrapper end. The new travel
+    // starts exactly at this boundary (baseRegionStart = wrapperEnd above).
+    const restored = bleedTrimmedPrevCat.slot;
+    restored.end = bleedTrimmedPrevCat.wrapperEnd;
+    restored.durationMinutes = Math.floor(
+      (restored.end.getTime() - restored.start.getTime()) / 60000,
+    );
+    restored.nextLocationId = restored.currentLocationId;
+    restored.trespassingEnd = undefined;
+  }
 
   slots.splice(firstIdx, removeCount, ...replacements);
   if (recorder) {
