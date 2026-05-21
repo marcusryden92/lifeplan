@@ -146,10 +146,7 @@ function handleCategory(
 ): number {
   const afterEntry = handleCategoryEntryEdge(slots, i, travelManager);
 
-  if (
-    afterEntry >= slots.length ||
-    slots[afterEntry].type !== "category"
-  ) {
+  if (afterEntry >= slots.length || slots[afterEntry].type !== "category") {
     return afterEntry;
   }
 
@@ -305,7 +302,13 @@ function handleCategoryExitEdge(
     // either directly behind or one slot back across a transparent leftover.
     const prevTravel = findPrevTravelForAvailable(slots, i);
     if (prevTravel) {
-      return absorbAndReplanThroughCategory(slots, i, action, prevTravel, travelManager);
+      return absorbAndReplanThroughCategory(
+        slots,
+        i,
+        action,
+        prevTravel,
+        travelManager,
+      );
     }
 
     return fillCategoryTailOrTrespass(slots, i, action, travelManager);
@@ -314,7 +317,9 @@ function handleCategoryExitEdge(
   // ---- Next type: Travel ----
   if (next.type === "travel") {
     travelManager.untrackLeg(slot.currentLocationId, slot.nextLocationId);
-    logInconsistency("Category exit edge: Next=Travel — should not occur on forward walk");
+    logInconsistency(
+      "Category exit edge: Next=Travel — should not occur on forward walk",
+    );
     return i + 1;
   }
 
@@ -335,7 +340,10 @@ type PrevTravelMatch = {
 // Locate the prev Travel slot for the absorb-and-replan cascade. Handles
 // both placeAtSlotStart variants — the Travel may be at slots[i-1] directly,
 // or at slots[i-2] across a transparent prev Available leftover.
-function findPrevTravelForAvailable(slots: Slot[], i: number): PrevTravelMatch | null {
+function findPrevTravelForAvailable(
+  slots: Slot[],
+  i: number,
+): PrevTravelMatch | null {
   if (i < 1) return null;
   const immediate = slots[i - 1];
   if (immediate.type === "travel") {
@@ -362,7 +370,8 @@ function placeTravelInCurrent(
   action: TravelProcessingAction,
 ): number {
   const slot = slots[i] as AvailableSlot;
-  const { prevLocation, nextLocation, placeAtSlotStart, travelMinutes } = action;
+  const { prevLocation, nextLocation, placeAtSlotStart, travelMinutes } =
+    action;
 
   const travelStart = placeAtSlotStart
     ? slot.start
@@ -385,13 +394,23 @@ function placeTravelInCurrent(
     replacements.push(travel);
     if (travelEnd.getTime() < slot.end.getTime()) {
       replacements.push(
-        makeAvailableLeftover(travelEnd, slot.end, nextLocation, slot.nextLocationId ?? null),
+        makeAvailableLeftover(
+          travelEnd,
+          slot.end,
+          nextLocation,
+          slot.nextLocationId ?? null,
+        ),
       );
     }
   } else {
     if (slot.start.getTime() < travelStart.getTime()) {
       replacements.push(
-        makeAvailableLeftover(slot.start, travelStart, slot.prevLocationId ?? null, prevLocation),
+        makeAvailableLeftover(
+          slot.start,
+          travelStart,
+          slot.prevLocationId ?? null,
+          prevLocation,
+        ),
       );
     }
     replacements.push(travel);
@@ -431,7 +450,9 @@ function placeTravelAtCategoryHead(
     replacements.push({
       ...slot,
       start: travelEnd,
-      durationMinutes: Math.floor((slot.end.getTime() - travelEnd.getTime()) / 60000),
+      durationMinutes: Math.floor(
+        (slot.end.getTime() - travelEnd.getTime()) / 60000,
+      ),
       prevLocationId: slot.currentLocationId,
       trespassingStart: undefined,
     });
@@ -472,7 +493,9 @@ function placeTravelAtCategoryTail(
     replacements.push({
       ...slot,
       end: travelStart,
-      durationMinutes: Math.floor((travelStart.getTime() - slot.start.getTime()) / 60000),
+      durationMinutes: Math.floor(
+        (travelStart.getTime() - slot.start.getTime()) / 60000,
+      ),
       nextLocationId: slot.currentLocationId,
       trespassingEnd: undefined,
       isFinal: undefined,
@@ -563,7 +586,15 @@ function bleedIntoPrev(
   );
 
   const prevConsumed = consumeFromPrev >= prevDur;
-  return spliceBleedPrev(slots, i, prevIdx, prev, travel, prevConsumed, travelStart);
+  return spliceBleedPrev(
+    slots,
+    i,
+    prevIdx,
+    prev,
+    travel,
+    prevConsumed,
+    travelStart,
+  );
 }
 
 function bleedIntoNext(
@@ -614,7 +645,15 @@ function bleedIntoNext(
   );
 
   const nextConsumed = consumeFromNext >= nextDur;
-  return spliceBleedNext(slots, i, nextIdx, next, travel, nextConsumed, travelEnd);
+  return spliceBleedNext(
+    slots,
+    i,
+    nextIdx,
+    next,
+    travel,
+    nextConsumed,
+    travelEnd,
+  );
 }
 
 function spliceBleedPrev(
@@ -631,12 +670,17 @@ function spliceBleedPrev(
   // just shorten the category without marking a boundary.
   const replacements: Slot[] = [];
 
-  if (!prevConsumed && (prev.type === "available" || prev.type === "category")) {
+  if (
+    !prevConsumed &&
+    (prev.type === "available" || prev.type === "category")
+  ) {
     replacements.push(
       shortenPlaceableAtEnd(prev, travelStart, travel.travelFromLocationId),
     );
   } else if (prevConsumed && prev.type === "category") {
-    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(prev.categoryId);
+    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(
+      prev.categoryId,
+    );
   }
 
   replacements.push(travel);
@@ -657,12 +701,17 @@ function spliceBleedNext(
   // on full consumption (see spliceBleedPrev for rationale).
   const replacements: Slot[] = [travel];
 
-  if (!nextConsumed && (next.type === "available" || next.type === "category")) {
+  if (
+    !nextConsumed &&
+    (next.type === "available" || next.type === "category")
+  ) {
     replacements.push(
       shortenPlaceableAtStart(next, travelEnd, travel.travelToLocationId),
     );
   } else if (nextConsumed && next.type === "category") {
-    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(next.categoryId);
+    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(
+      next.categoryId,
+    );
   }
 
   slots.splice(curIdx, nextIdx - curIdx + 1, ...replacements);
@@ -731,19 +780,33 @@ function bleedAcrossPrevCurrentNext(
   const replacements: Slot[] = [];
 
   const prevConsumed = bleedPrev >= prevDur;
-  if (!prevConsumed && (prev.type === "available" || prev.type === "category")) {
-    replacements.push(shortenPlaceableAtEnd(prev, travelStart, travel.travelFromLocationId));
+  if (
+    !prevConsumed &&
+    (prev.type === "available" || prev.type === "category")
+  ) {
+    replacements.push(
+      shortenPlaceableAtEnd(prev, travelStart, travel.travelFromLocationId),
+    );
   } else if (prevConsumed && prev.type === "category") {
-    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(prev.categoryId);
+    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(
+      prev.categoryId,
+    );
   }
 
   replacements.push(travel);
 
   const nextConsumed = bleedNext >= nextDur;
-  if (!nextConsumed && (next.type === "available" || next.type === "category")) {
-    replacements.push(shortenPlaceableAtStart(next, travelEnd, travel.travelToLocationId));
+  if (
+    !nextConsumed &&
+    (next.type === "available" || next.type === "category")
+  ) {
+    replacements.push(
+      shortenPlaceableAtStart(next, travelEnd, travel.travelToLocationId),
+    );
   } else if (nextConsumed && next.type === "category") {
-    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(next.categoryId);
+    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(
+      next.categoryId,
+    );
   }
 
   const travelIdx = replacements.indexOf(travel);
@@ -797,7 +860,9 @@ function fillCategoryTailOrTrespass(
     replacements.push({
       ...slot,
       end: travelStart,
-      durationMinutes: Math.floor((travelStart.getTime() - slot.start.getTime()) / 60000),
+      durationMinutes: Math.floor(
+        (travelStart.getTime() - slot.start.getTime()) / 60000,
+      ),
       nextLocationId: slot.currentLocationId,
       trespassingEnd: undefined,
       isFinal: undefined,
@@ -825,7 +890,10 @@ function absorbAndReplan(
   travelManager: TravelManager,
 ): number {
   // Undo the resolveTravel-tracked leg and the prev Travel's leg.
-  travelManager.untrackLeg(originalAction.prevLocation, originalAction.nextLocation);
+  travelManager.untrackLeg(
+    originalAction.prevLocation,
+    originalAction.nextLocation,
+  );
   const oldFrom = prevTravel.travel.travelFromLocationId;
   const oldTo = prevTravel.travel.travelToLocationId;
   if (oldFrom && oldTo) travelManager.untrackLeg(oldFrom, oldTo);
@@ -852,7 +920,10 @@ function absorbAndReplan(
   const regionEndMs = regionEnd.getTime();
 
   // Place new Travel at the END of the region (filling current, bleeding back).
-  const travelStartMs = Math.max(regionStartMs, regionEndMs - newDuration * 60000);
+  const travelStartMs = Math.max(
+    regionStartMs,
+    regionEndMs - newDuration * 60000,
+  );
   const insufficient = regionEndMs - regionStartMs < newDuration * 60000;
   const travelStart = new Date(travelStartMs);
   const travelEnd = regionEnd;
@@ -904,7 +975,10 @@ function absorbAndReplanThroughCategory(
 ): number {
   // Undo the resolveCategoryEdge-tracked leg (B -> C) and the prev Travel's
   // leg (A -> B). Then plan A -> C.
-  travelManager.untrackLeg(originalAction.prevLocation, originalAction.nextLocation);
+  travelManager.untrackLeg(
+    originalAction.prevLocation,
+    originalAction.nextLocation,
+  );
   const oldFrom = prevTravel.travel.travelFromLocationId;
   const oldTo = prevTravel.travel.travelToLocationId;
   if (oldFrom && oldTo) travelManager.untrackLeg(oldFrom, oldTo);
@@ -931,7 +1005,10 @@ function absorbAndReplanThroughCategory(
   const regionStartMs = regionStart.getTime();
   const regionEndMs = regionEnd.getTime();
 
-  const travelStartMs = Math.max(regionStartMs, regionEndMs - newDuration * 60000);
+  const travelStartMs = Math.max(
+    regionStartMs,
+    regionEndMs - newDuration * 60000,
+  );
   const insufficient = regionEndMs - regionStartMs < newDuration * 60000;
   const travelStart = new Date(travelStartMs);
   const travelEnd = regionEnd;
@@ -1257,9 +1334,7 @@ function backwardBypassCascade(
               if (s.type === "category") consumedCategoryIds.push(s.categoryId);
             }
 
-            const travelStart = new Date(
-              slotEnd.getTime() - TDirect * 60000,
-            );
+            const travelStart = new Date(slotEnd.getTime() - TDirect * 60000);
             const travelEnd = slotEnd;
             const travel = createTravelSlot(
               travelStart,
@@ -1314,7 +1389,11 @@ function backwardBypassCascade(
         continue;
       }
 
-      const T = travelManager.getTravelTime(anchorLocation, destination, slotEnd);
+      const T = travelManager.getTravelTime(
+        anchorLocation,
+        destination,
+        slotEnd,
+      );
       if (T <= 0) {
         anchorIdx--;
         continue;
@@ -1329,7 +1408,7 @@ function backwardBypassCascade(
       const wrapperEnd = findCategoryWrapperEnd(anchor, categories);
       const useWrapperEnd =
         wrapperEnd !== null && wrapperEnd.getTime() > anchor.end.getTime();
-      const slotStart = useWrapperEnd ? wrapperEnd! : anchor.end;
+      const slotStart = useWrapperEnd ? wrapperEnd : anchor.end;
       const slotDuration = Math.floor(
         (slotEnd.getTime() - slotStart.getTime()) / 60000,
       );
@@ -1341,7 +1420,10 @@ function backwardBypassCascade(
           const s = slots[k];
           if (s.type === "travel") {
             if (s.travelFromLocationId && s.travelToLocationId) {
-              travelManager.untrackLeg(s.travelFromLocationId, s.travelToLocationId);
+              travelManager.untrackLeg(
+                s.travelFromLocationId,
+                s.travelToLocationId,
+              );
             }
           } else if (s.type === "category") {
             consumedCategoryIds.push(s.categoryId);
@@ -1357,7 +1439,7 @@ function backwardBypassCascade(
         if (useWrapperEnd) {
           anchor.end = wrapperEnd!;
           anchor.durationMinutes = Math.floor(
-            (wrapperEnd!.getTime() - anchor.start.getTime()) / 60000,
+            (wrapperEnd.getTime() - anchor.start.getTime()) / 60000,
           );
         }
 
@@ -1375,8 +1457,7 @@ function backwardBypassCascade(
           ? new Date(slotStart.getTime() + T * 60000)
           : slotEnd;
         const canShrink =
-          overconstrained &&
-          proposedEnd.getTime() >= current.start.getTime();
+          overconstrained && proposedEnd.getTime() >= current.start.getTime();
         const actualTravelEnd = canShrink ? proposedEnd : slotEnd;
 
         const travel = createTravelSlot(
@@ -1493,9 +1574,7 @@ function bleedSingleSideInsufficient(
   let travelEnd: Date;
   if (side === "prev") {
     travelEnd = slot.end;
-    travelStart = new Date(
-      slot.start.getTime() - consumeFromNeighbor * 60000,
-    );
+    travelStart = new Date(slot.start.getTime() - consumeFromNeighbor * 60000);
   } else {
     travelStart = slot.start;
     travelEnd = new Date(slot.end.getTime() + consumeFromNeighbor * 60000);
@@ -1510,9 +1589,25 @@ function bleedSingleSideInsufficient(
     { insufficientTravel: true, requiredTravelMinutes: travelMinutes },
   );
   if (side === "prev") {
-    return spliceBleedPrev(slots, i, neighborIdx, neighbor, travel, true, travelStart);
+    return spliceBleedPrev(
+      slots,
+      i,
+      neighborIdx,
+      neighbor,
+      travel,
+      true,
+      travelStart,
+    );
   }
-  return spliceBleedNext(slots, i, neighborIdx, neighbor, travel, true, travelEnd);
+  return spliceBleedNext(
+    slots,
+    i,
+    neighborIdx,
+    neighbor,
+    travel,
+    true,
+    travelEnd,
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -1772,12 +1867,16 @@ function bleedAcrossCategoryBoundary(
     replacements.push({
       ...current,
       end: travelStart,
-      durationMinutes: Math.floor((travelStart.getTime() - current.start.getTime()) / 60000),
+      durationMinutes: Math.floor(
+        (travelStart.getTime() - current.start.getTime()) / 60000,
+      ),
       nextLocationId: current.currentLocationId,
       isFinal: undefined,
     });
   } else {
-    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(current.categoryId);
+    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(
+      current.categoryId,
+    );
   }
 
   replacements.push(travel);
@@ -1787,11 +1886,15 @@ function bleedAcrossCategoryBoundary(
     replacements.push({
       ...next,
       start: travelEnd,
-      durationMinutes: Math.floor((next.end.getTime() - travelEnd.getTime()) / 60000),
+      durationMinutes: Math.floor(
+        (next.end.getTime() - travelEnd.getTime()) / 60000,
+      ),
       prevLocationId: next.currentLocationId,
     });
   } else {
-    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(next.categoryId);
+    travel.consumedCategoryIds = (travel.consumedCategoryIds ?? []).concat(
+      next.categoryId,
+    );
   }
 
   const travelIdx = replacements.indexOf(travel);
@@ -1848,7 +1951,9 @@ function shortenPlaceableAtEnd(
     return {
       ...source,
       end: newEnd,
-      durationMinutes: Math.floor((newEnd.getTime() - source.start.getTime()) / 60000),
+      durationMinutes: Math.floor(
+        (newEnd.getTime() - source.start.getTime()) / 60000,
+      ),
       nextLocationId: newNextLocationId,
       trespassingEnd: undefined,
       isFinal: undefined,
@@ -1857,7 +1962,9 @@ function shortenPlaceableAtEnd(
   return {
     ...source,
     end: newEnd,
-    durationMinutes: Math.floor((newEnd.getTime() - source.start.getTime()) / 60000),
+    durationMinutes: Math.floor(
+      (newEnd.getTime() - source.start.getTime()) / 60000,
+    ),
     nextLocationId: newNextLocationId,
   };
 }
@@ -1871,7 +1978,9 @@ function shortenPlaceableAtStart(
     return {
       ...source,
       start: newStart,
-      durationMinutes: Math.floor((source.end.getTime() - newStart.getTime()) / 60000),
+      durationMinutes: Math.floor(
+        (source.end.getTime() - newStart.getTime()) / 60000,
+      ),
       prevLocationId: newPrevLocationId,
       trespassingStart: undefined,
     };
@@ -1879,8 +1988,9 @@ function shortenPlaceableAtStart(
   return {
     ...source,
     start: newStart,
-    durationMinutes: Math.floor((source.end.getTime() - newStart.getTime()) / 60000),
+    durationMinutes: Math.floor(
+      (source.end.getTime() - newStart.getTime()) / 60000,
+    ),
     prevLocationId: newPrevLocationId,
   };
 }
-
