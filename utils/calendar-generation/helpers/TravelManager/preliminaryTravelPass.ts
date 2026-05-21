@@ -482,6 +482,7 @@ function handleCategoryExitEdge(
           i + 2,
           action,
           travelManager,
+          categories,
           recorder,
         );
         if (backwardResult !== null) return backwardResult;
@@ -2231,6 +2232,7 @@ function absorbAndReplanBackward(
   occupiedIdx: number,
   originalAction: TravelProcessingAction,
   travelManager: TravelManager,
+  categories: Category[],
   recorder?: TravelPassRecorder,
 ): number | null {
   const cat1 = slots[catIdx] as CategorySlot;
@@ -2339,7 +2341,27 @@ function absorbAndReplanBackward(
   }
   travelManager.trackLeg(chosen.origin, destination);
 
-  const travelStart = chosen.travelStart;
+  // If the preFit anchor is a Category whose end was trimmed by an earlier
+  // bleed, restore it to its wrapper end so the new travel slot's left
+  // edge sits on a natural-fabric boundary instead of the bleed seam.
+  let bleedTrimmedAnchor: { slot: CategorySlot; wrapperEnd: Date } | null =
+    null;
+  let travelStart: Date;
+  if (chosen.kind === "preFit" && chosen.slot.type === "category") {
+    const wrapper = findCategoryWrapperEnd(chosen.slot, categories);
+    if (
+      wrapper &&
+      wrapper.getTime() > chosen.slot.end.getTime() &&
+      wrapper.getTime() <= regionEnd.getTime()
+    ) {
+      bleedTrimmedAnchor = { slot: chosen.slot, wrapperEnd: wrapper };
+      travelStart = wrapper;
+    } else {
+      travelStart = chosen.travelStart;
+    }
+  } else {
+    travelStart = chosen.travelStart;
+  }
   const travelEnd = regionEnd;
   const overconstrained = chosen.kind === "preFit";
 
@@ -2401,6 +2423,16 @@ function absorbAndReplanBackward(
   }
 
   const replacements: Slot[] = [...leadingReplacements, ...shards];
+
+  if (bleedTrimmedAnchor) {
+    const restored = bleedTrimmedAnchor.slot;
+    restored.end = bleedTrimmedAnchor.wrapperEnd;
+    restored.durationMinutes = Math.floor(
+      (restored.end.getTime() - restored.start.getTime()) / 60000,
+    );
+    restored.nextLocationId = restored.currentLocationId;
+    restored.trespassingEnd = undefined;
+  }
 
   slots.splice(absorbStartIdx, removeCount, ...replacements);
 
@@ -3534,12 +3566,11 @@ function bleedAcrossCategoryBoundary(
 
   // Look ahead: if cat 3 (slots[i+2]) exists at cat 1's location AND a
   // symmetric bleed across this boundary would leave cat 2 too small for
-  // its OWN cat 2 → cat 3 transition's bleed, jump cat 2 instead — the
-  // user is at cat 1.loc, would go to cat 2 at a different loc, then back
-  // to cat 3 at cat 1.loc; since cat 1 and cat 3 are at the same place,
-  // skipping cat 2 entirely is geometrically consistent (no travel needed)
-  // and avoids producing a tiny downstream cat that triggers a forward
-  // absorb that eats real work blocks.
+  // its OWN cat 2 → cat 3 transition's bleed, replace cat 2 with an
+  // overconstrained zero-distance travel (cat 1.loc → cat 3.loc, same
+  // location). The user effectively stays at cat 1.loc through cat 2's
+  // time — the värmdö visit is dropped. Cats 1 and 3 keep their full
+  // original times.
   const catThree = i + 2 < slots.length ? slots[i + 2] : null;
   if (
     catThree &&
@@ -3561,10 +3592,21 @@ function bleedAcrossCategoryBoundary(
         half_23 >= catThree.durationMinutes
       ) {
         travelManager.untrackLeg(action.prevLocation, action.nextLocation);
-        current.trespassingEnd = true;
-        next.trespassingStart = true;
-        next.trespassingEnd = true;
-        catThree.trespassingStart = true;
+        const sameLoc = current.currentLocationId!;
+        const skipShards = createTravelShards(
+          [shardSourceFromCategory(next, next.start, next.end)],
+          uuidv4(),
+          sameLoc,
+          sameLoc,
+          "preliminary",
+          { overconstrained: true, requiredTravelMinutes: 0 },
+        );
+        if (skipShards.length > 0) {
+          skipShards[0].consumedCategoryIds = (
+            skipShards[0].consumedCategoryIds ?? []
+          ).concat(next.categoryId);
+        }
+        slots.splice(i + 1, 1, ...skipShards);
         if (recorder) {
           recorder.decision(
             M.bleedAcrossCategoryBoundary.jumpCatTwo(
@@ -3582,7 +3624,7 @@ function bleedAcrossCategoryBoundary(
             ),
           );
         }
-        return i + 2;
+        return i + 1 + skipShards.length;
       }
     }
   }

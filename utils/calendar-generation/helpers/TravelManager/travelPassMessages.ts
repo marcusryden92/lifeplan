@@ -339,7 +339,7 @@ export const M = {
       nextLabel: string,
       catThreeLabel: string,
     ) =>
-      `jumped ${nextLabel}: trespassed [${currentLabel}.end, ${nextLabel}.start] and [${nextLabel}.end, ${catThreeLabel}.start] — all three cats preserved at full size`,
+      `jumped ${nextLabel}: replaced with overconstrained 0-min travel (${currentLabel}.loc → ${catThreeLabel}.loc, same location) over ${nextLabel}'s span — ${currentLabel} and ${catThreeLabel} preserved at full size`,
     action: (
       bleedCurrent: number,
       currentConsumed: boolean,
