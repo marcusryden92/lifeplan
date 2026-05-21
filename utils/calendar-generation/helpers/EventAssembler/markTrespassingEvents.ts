@@ -10,7 +10,11 @@ export function markTrespassingEvents(
   plannerLocationMap: Map<string, string | null>,
 ): void {
   const intervals: IntervalWithId[] = events
-    .filter((e) => e.extendedProps?.eventType !== EventType.travel)
+    .filter(
+      (e) =>
+        e.extendedProps?.eventType !== EventType.travel &&
+        e.extendedProps?.eventType !== EventType.category,
+    )
     .map((e) => {
       const plannerId =
         (e.extendedProps as { eventId?: string })?.eventId || e.id;

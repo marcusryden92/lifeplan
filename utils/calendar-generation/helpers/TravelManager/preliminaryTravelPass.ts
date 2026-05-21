@@ -9,6 +9,7 @@ import {
 import { TravelManager } from "../../core/TravelManager";
 import { TravelProcessingAction } from "../../models/SchedulingModels";
 import { createTravelSlot } from "../../utils/timeSlotUtils";
+import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -33,7 +34,6 @@ export function preliminaryTravelPass(
   bufferTimeMinutes: number,
 ): void {
   if (!hasLocationMap) return;
-  void categories;
 
   let i = 0;
   while (i < slots.length) {
@@ -45,7 +45,7 @@ export function preliminaryTravelPass(
     }
 
     if (slot.type === "available") {
-      i = handleAvailable(slots, i, travelManager, bufferTimeMinutes);
+      i = handleAvailable(slots, i, travelManager, bufferTimeMinutes, categories);
       continue;
     }
 
@@ -67,6 +67,7 @@ function handleAvailable(
   i: number,
   travelManager: TravelManager,
   bufferTimeMinutes: number,
+  categories: Category[],
 ): number {
   const slot = slots[i] as AvailableSlot;
 
@@ -119,7 +120,7 @@ function handleAvailable(
       return bleedAcrossPrevCurrentNext(slots, i, action);
     }
     if (next?.type === "occupied") {
-      return bleedIntoPrev(slots, i, action, travelManager);
+      return bleedIntoPrev(slots, i, action, travelManager, categories);
     }
     if (next?.type === "travel") {
       travelManager.untrackLeg(action.prevLocation, action.nextLocation);
@@ -149,7 +150,7 @@ function handleAvailable(
       return bleedAcrossPrevCurrentNext(slots, i, action);
     }
     if (next?.type === "occupied") {
-      return bleedIntoPrev(slots, i, action, travelManager);
+      return bleedIntoPrev(slots, i, action, travelManager, categories);
     }
     if (next?.type === "travel") {
       travelManager.untrackLeg(action.prevLocation, action.nextLocation);
@@ -556,8 +557,9 @@ function bleedIntoPrev(
   i: number,
   action: TravelProcessingAction,
   travelManager: TravelManager,
+  categories: Category[],
 ): number {
-  return bleedSingleSide(slots, i, action, "prev", travelManager);
+  return bleedSingleSide(slots, i, action, "prev", travelManager, categories);
 }
 
 function bleedIntoNext(
@@ -566,7 +568,7 @@ function bleedIntoNext(
   action: TravelProcessingAction,
   travelManager: TravelManager,
 ): number {
-  return bleedSingleSide(slots, i, action, "next", travelManager);
+  return bleedSingleSide(slots, i, action, "next", travelManager, []);
 }
 
 function bleedSingleSide(
@@ -575,6 +577,7 @@ function bleedSingleSide(
   action: TravelProcessingAction,
   side: "prev" | "next",
   travelManager: TravelManager,
+  categories: Category[],
 ): number {
   const slot = slots[i] as AvailableSlot;
   const { prevLocation, nextLocation, travelMinutes } = action;
@@ -599,7 +602,7 @@ function bleedSingleSide(
   // direction through subsequent placeable slots instead of immediately
   // marking alert.
   if (wouldBeInsufficient && side === "prev") {
-    return backwardBypassCascade(slots, i, action, travelManager);
+    return backwardBypassCascade(slots, i, action, travelManager, categories);
   }
   if (wouldBeInsufficient && side === "next") {
     return forwardBypassCascade(slots, i, action, travelManager);
@@ -1148,6 +1151,27 @@ function bypassCategoryCascade(
       break;
     }
 
+    // Abort the cascade if we'd cross an Available slot. The Available has
+    // its own natural transition (gs→home in the user's scenario) that the
+    // walker handles normally — stretching a forced bypass travel through
+    // free time just to "land" at a pinned location wastes the Available's
+    // capacity. Instead, trespass the boundaries of the consumed cats and
+    // let the trailing Available place its own travel.
+    if (consumeIdx > i && slot.type === "available") {
+      travelManager.untrackLeg(A, destination);
+      for (let k = i; k < consumeIdx; k++) {
+        const s = slots[k];
+        if (s.type !== "category") continue;
+        s.trespassingStart = true;
+        // Trespass-end applies to intermediate cats: the user "leaves"
+        // each cat without proper travel to enter the next. The last
+        // consumed cat transitions naturally into the Avail (whose prev
+        // matches the cat's location) so its end stays clean.
+        if (k < consumeIdx - 1) s.trespassingEnd = true;
+      }
+      return i;
+    }
+
     // Only break/bleed at Category slots — Avails are transit space, not
     // destinations the user wants to land in. At an Avail we always
     // consume and continue cascading. At a Cat past the bypassed one,
@@ -1289,6 +1313,7 @@ function backwardBypassCascade(
   i: number,
   action: TravelProcessingAction,
   travelManager: TravelManager,
+  categories: Category[],
 ): number {
   const current = slots[i] as AvailableSlot;
   const destination = action.nextLocation;
@@ -1310,9 +1335,18 @@ function backwardBypassCascade(
       continue;
     }
 
-    if (anchor.type === "travel" || anchor.type === "available") {
+    if (anchor.type === "travel") {
       anchorIdx--;
       continue;
+    }
+
+    // Abort the cascade if we'd cross an earlier Available — any anchor
+    // further back would force the new travel to consume that Avail's
+    // free time. Fall back to a simple insufficient placement in the
+    // current Avail instead of sacrificing the upstream one.
+    if (anchor.type === "available") {
+      travelManager.trackLeg(action.prevLocation, action.nextLocation);
+      return bleedSingleSideInsufficient(slots, i, action, "prev");
     }
 
     if (anchor.type === "category") {
@@ -1328,7 +1362,16 @@ function backwardBypassCascade(
         continue;
       }
 
-      const slotStart = anchor.end;
+      // Snap the travel start to the anchor's WRAPPER end if the anchor
+      // is a sliver of a larger wrapper that was eaten by an adjacent
+      // travel we're about to absorb. Otherwise the new travel begins
+      // mid-wrapper (visually "halfway through the cat"), and the
+      // overconstrained semantic — "stretched between two clean item
+      // boundaries" — breaks down.
+      const wrapperEnd = findCategoryWrapperEnd(anchor, categories);
+      const useWrapperEnd =
+        wrapperEnd !== null && wrapperEnd.getTime() > anchor.end.getTime();
+      const slotStart = useWrapperEnd ? wrapperEnd! : anchor.end;
       const slotDuration = Math.floor(
         (slotEnd.getTime() - slotStart.getTime()) / 60000,
       );
@@ -1349,10 +1392,38 @@ function backwardBypassCascade(
 
         travelManager.trackLeg(anchorLocation, destination);
 
+        // Extend the anchor's end to its wrapper end so the travel
+        // starts at a clean boundary. The previously-consumed region
+        // (originally a partial-bleed travel) is gone from the slot
+        // array via the splice below.
+        if (useWrapperEnd) {
+          anchor.end = wrapperEnd!;
+          anchor.durationMinutes = Math.floor(
+            (wrapperEnd!.getTime() - anchor.start.getTime()) / 60000,
+          );
+        }
+
+        // Shrink the travel slot to its natural duration when it doesn't
+        // need the full span. The cats between anchor and current Avail
+        // get consumed (the cascade's reason for existing); the trailing
+        // portion of the current Avail is preserved as free time at the
+        // destination. The travel STAYS marked overconstrained — the
+        // cats are still being overridden, the marker communicates that.
+        // Only shrink when the natural-sized travel lands at or past the
+        // current Avail's start (so the leftover is cleanly an Avail
+        // tail, not a partial cat split).
         const overconstrained = slotDuration > T;
+        const proposedEnd = overconstrained
+          ? new Date(slotStart.getTime() + T * 60000)
+          : slotEnd;
+        const canShrink =
+          overconstrained &&
+          proposedEnd.getTime() >= current.start.getTime();
+        const actualTravelEnd = canShrink ? proposedEnd : slotEnd;
+
         const travel = createTravelSlot(
           slotStart,
-          slotEnd,
+          actualTravelEnd,
           anchorLocation,
           destination,
           "preliminary",
@@ -1364,9 +1435,27 @@ function backwardBypassCascade(
         );
         travel.consumedCategoryIds = consumedCategoryIds;
 
+        const replacements: Slot[] = [travel];
+        if (canShrink && actualTravelEnd.getTime() < current.end.getTime()) {
+          // Preserve the Avail tail. Update prev to the travel's
+          // destination since that's where the user lands. next stays
+          // the same — the original Avail's downstream target is
+          // unchanged.
+          replacements.push({
+            type: "available",
+            start: actualTravelEnd,
+            end: current.end,
+            durationMinutes: Math.floor(
+              (current.end.getTime() - actualTravelEnd.getTime()) / 60000,
+            ),
+            prevLocationId: destination,
+            nextLocationId: current.nextLocationId,
+          });
+        }
+
         const removeCount = i - anchorIdx;
-        slots.splice(anchorIdx + 1, removeCount, travel);
-        return anchorIdx + 2;
+        slots.splice(anchorIdx + 1, removeCount, ...replacements);
+        return anchorIdx + 1 + replacements.length;
       }
     }
 
@@ -1377,6 +1466,35 @@ function backwardBypassCascade(
   // [current + immediate prev] (the original behaviour).
   travelManager.trackLeg(action.prevLocation, action.nextLocation);
   return bleedSingleSideInsufficient(slots, i, action, "prev");
+}
+
+// Look up the wrapper end of a CategorySlot by matching against its
+// Category's recurring timeSlots for the slot's day. Returns null if no
+// matching wrapper period contains the slot (which can happen if the slot's
+// boundaries were clipped by a gap rather than the wrapper itself).
+function findCategoryWrapperEnd(
+  slot: CategorySlot,
+  categories: Category[],
+): Date | null {
+  const category = categories.find((c) => c.id === slot.categoryId) as
+    | (Category & { timeSlots?: Parameters<typeof expandSlotForDay>[0][] })
+    | undefined;
+  if (!category?.timeSlots) return null;
+
+  const day = new Date(slot.start);
+  day.setHours(0, 0, 0, 0);
+
+  for (const timeSlot of category.timeSlots) {
+    const period = expandSlotForDay(timeSlot, day);
+    if (!period) continue;
+    if (
+      period.start.getTime() <= slot.start.getTime() &&
+      period.end.getTime() >= slot.end.getTime()
+    ) {
+      return period.end;
+    }
+  }
+  return null;
 }
 
 // Helper that replicates the original "insufficient single-side bleed"
@@ -1506,6 +1624,17 @@ function forwardBypassCascade(
       }
       hardStop = true;
       break;
+    }
+
+    // Abort if we'd cross a later Available slot — its free time shouldn't
+    // be sacrificed to a forced cascade routing. Fall back to a simple
+    // insufficient placement that fills only the starting Avail; cats
+    // walked through stay untouched so their natural transitions still
+    // fire on subsequent walker iterations.
+    if (consumeIdx > i && slot.type === "available") {
+      travelManager.untrackLeg(A, destination);
+      travelManager.trackLeg(action.prevLocation, action.nextLocation);
+      return fillCurrentWithAlert(slots, i, action);
     }
 
     // Only break/bleed at Category slots — Avails are transit space, not

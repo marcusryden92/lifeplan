@@ -40,12 +40,13 @@ export function markCategoryBoundaryTrespasses(
 
     if (slot.type === "travel" && slot.consumedCategoryIds?.length) {
       // Travel slot consumed (fully or partially) some category interiors.
-      // Only stamp wrappers when the travel itself is in an alert state —
-      // either insufficient (couldn't fit, red) or overconstrained (forced
-      // routing, yellow). A clean bypass cascade with a properly-sized
-      // travel is intentional and shouldn't render trespass borders.
-      const isAlert = slot.insufficientTravel || slot.overconstrained;
-      if (!isAlert) continue;
+      // Only stamp wrappers when the travel failed to fit (insufficient,
+      // red) — the boundary stamps communicate "this cat was violated."
+      // Overconstrained travels are intentional overrides; the travel slot's
+      // own styling already communicates that, so stamping the underlying
+      // wrappers would just add visual noise on top of cats that the travel
+      // is already covering.
+      if (!slot.insufficientTravel) continue;
       for (const categoryId of slot.consumedCategoryIds) {
         stampWrappersByCategoryId(
           events,
