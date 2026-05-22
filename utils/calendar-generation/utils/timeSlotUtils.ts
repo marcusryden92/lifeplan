@@ -511,6 +511,124 @@ export function unplanTravel(slots: TimeSlot[], travelId: string): boolean {
   return removed;
 }
 
+/**
+ * Restore the portion of an absorbed slot region back to the original
+ * character of each absorbed slot, clipped to the [start, end] range.
+ *
+ * Used by cascades that place a shorter-than-region travel: the head and/or
+ * tail outside the new travel's geometry get reconstructed from their
+ * sources rather than collapsed into generic free time.
+ *
+ * Sources:
+ *   - Available slot in the absorb → Available fragment.
+ *   - Category slot in the absorb → Category fragment (preserves categoryId,
+ *     currentLocationId, isStrictCategory).
+ *   - Travel shard in the absorb → unpacks via originalType/originalSource*
+ *     metadata to the underlying Available or Category fragment.
+ *
+ * The fragments preserve their original prev/next pointers. Callers wiring
+ * the fragments into the slot array may need to override the outermost
+ * fragment's prev or next so the boundary with the new travel makes sense
+ * (typically setting head.last.next = travel.from, tail.first.prev =
+ * travel.to).
+ */
+export function restoreAbsorbedRange(
+  absorbed: TimeSlot[],
+  start: Date,
+  end: Date,
+): (AvailableSlot | CategorySlot)[] {
+  const out: (AvailableSlot | CategorySlot)[] = [];
+  const startMs = start.getTime();
+  const endMs = end.getTime();
+  for (const slot of absorbed) {
+    const pieceStartMs = Math.max(slot.start.getTime(), startMs);
+    const pieceEndMs = Math.min(slot.end.getTime(), endMs);
+    if (pieceStartMs >= pieceEndMs) continue;
+    const pieceStart = new Date(pieceStartMs);
+    const pieceEnd = new Date(pieceEndMs);
+    const fragment = buildRestoredFragment(slot, pieceStart, pieceEnd);
+    if (fragment) out.push(fragment);
+  }
+  return out;
+}
+
+function buildRestoredFragment(
+  slot: TimeSlot,
+  start: Date,
+  end: Date,
+): AvailableSlot | CategorySlot | null {
+  const duration = Math.floor((end.getTime() - start.getTime()) / 60000);
+  if (duration <= 0) return null;
+  if (slot.type === "available") {
+    return {
+      type: "available",
+      start,
+      end,
+      durationMinutes: duration,
+      prevLocationId: slot.prevLocationId ?? null,
+      nextLocationId: slot.nextLocationId ?? null,
+    };
+  }
+  if (slot.type === "category") {
+    return {
+      ...slot,
+      start,
+      end,
+      durationMinutes: duration,
+    };
+  }
+  if (slot.type === "travel") {
+    if (slot.originalType === "available") {
+      return {
+        type: "available",
+        start,
+        end,
+        durationMinutes: duration,
+        prevLocationId: slot.originalPrevLocationId ?? null,
+        nextLocationId: slot.originalNextLocationId ?? null,
+      };
+    }
+    if (slot.originalType === "category" && slot.originalCategoryId) {
+      return {
+        type: "category",
+        start,
+        end,
+        durationMinutes: duration,
+        currentLocationId: slot.originalLocationId ?? null,
+        prevLocationId: slot.originalLocationId ?? null,
+        nextLocationId: slot.originalLocationId ?? null,
+        categoryId: slot.originalCategoryId,
+        isStrictCategory: slot.originalIsStrictCategory ?? false,
+      };
+    }
+    // Legacy shard with no source metadata — best-effort reclaim to keep
+    // the timeline contiguous (no gaps in slots[]). The location pointers
+    // come from the travel's from/to which is a reasonable approximation.
+    if (slot.categoryId) {
+      return {
+        type: "category",
+        start,
+        end,
+        durationMinutes: duration,
+        currentLocationId: null,
+        prevLocationId: slot.travelFromLocationId,
+        nextLocationId: slot.travelToLocationId,
+        categoryId: slot.categoryId,
+        isStrictCategory: slot.isStrictCategory ?? false,
+      };
+    }
+    return {
+      type: "available",
+      start,
+      end,
+      durationMinutes: duration,
+      prevLocationId: slot.travelFromLocationId,
+      nextLocationId: slot.travelToLocationId,
+    };
+  }
+  return null;
+}
+
 function restoreShardSource(
   shard: TravelSlot,
 ): AvailableSlot | CategorySlot | null {

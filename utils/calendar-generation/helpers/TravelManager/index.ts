@@ -9,6 +9,7 @@ export { findAdjacentTravelTo } from "./findAdjacentTravelTo";
 export { findAdjacentTravelFrom } from "./findAdjacentTravelFrom";
 export { findPrecedingGapTravel } from "./findPrecedingGapTravel";
 export { preliminaryTravelPass } from "./preliminaryTravelPass";
+export { dropUnreachableCategoryVisits } from "./dropUnreachableCategoryVisits";
 export {
   TravelPassRecorder,
   type SlotRecord,

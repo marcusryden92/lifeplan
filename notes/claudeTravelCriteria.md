@@ -1,4 +1,19 @@
 ```text
+Pre-pass: unreachable category drop (dropUnreachableCategoryVisits)
+    Runs once before the main walker. Scans slots[] for three contiguous
+    Category slots [catA, catB, catC] where:
+        - catA.currentLocationId === catC.currentLocationId
+        - catB.currentLocationId differs from both
+        - catA <-> catB symmetric bleed fits
+        - After the bleed shortens catB, catB <-> catC symmetric bleed does
+          NOT fit
+    Replaces catB with a zero-distance overconstrained Travel slot at
+    catA's location, with catB.id on consumedCategoryIds. The user stays at
+    catA's location through catB's original time slot. The walker then
+    reaches the catA exit edge with catB already gone, so the cat-to-cat
+    boundary handling stays clean (symmetric bleed or trespass).
+
+
 For each slot in slots[], in order.
 
 Global notes:

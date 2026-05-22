@@ -39,7 +39,9 @@
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
       "Bash(echo \"EXIT: $?\")",
       "Bash(pnpm eslint *)",
-      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" -Recurse -Directory | Where-Object { $_.Name -match \"calendar-generation|TimeSlot\" } | Select-Object -First 20 | Format-List FullName)"
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" -Recurse -Directory | Where-Object { $_.Name -match \"calendar-generation|TimeSlot\" } | Select-Object -First 20 | Format-List FullName)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm type-check *)"
     ]
   }
 }
