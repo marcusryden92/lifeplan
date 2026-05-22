@@ -156,11 +156,17 @@ export function findRecentTravelBehind(
 
 export type AvailableCandidateMode = "always-next" | "transit-only";
 
+// The fit may land inside an Available, Category, OR a zero-distance Travel
+// sentinel (the marker the pre-pass leaves where it killed an unreachable
+// category). Sentinels are traversable because the user is statically at
+// that location through them.
+export type ForwardCandidateSlot = AvailableSlot | CategorySlot | TravelSlot;
+
 export type ForwardFitResult =
   | {
       kind: "naturalFit";
       idx: number;
-      slot: AvailableSlot | CategorySlot;
+      slot: ForwardCandidateSlot;
       destination: string;
       T: number;
       travelEnd: Date;
@@ -172,7 +178,7 @@ export type ForwardFitResult =
   | {
       kind: "preFit";
       idx: number;
-      slot: AvailableSlot | CategorySlot;
+      slot: ForwardCandidateSlot;
       destination: string;
       T: number;
       consumed: number;
@@ -199,44 +205,111 @@ export type ForwardFitResult =
 export type ForwardWalkEvent = {
   kind: "candidate";
   idx: number;
-  slot: AvailableSlot | CategorySlot;
+  slot: ForwardCandidateSlot;
   destination: string;
   T: number;
   fitKind: "naturalFit" | "preFit" | "overflow";
   consumed: number;
 };
 
-function resolveForwardCandidate(
-  slot: AvailableSlot | CategorySlot,
+// True for zero-distance Travel slots — they're sentinels for consumed cats
+// where the user stays at travelFromLocationId throughout. The cascade can
+// traverse them as if they were free time at that location.
+function isZeroDistanceSentinel(slot: Slot): boolean {
+  return (
+    slot.type === "travel" &&
+    slot.travelFromLocationId !== null &&
+    slot.travelFromLocationId === slot.travelToLocationId
+  );
+}
+
+// A candidate slot can have two landing targets:
+//   - preFitTarget: where the user is expected to BE at slot.start. The travel
+//     ends at slot.start and the slot survives intact.
+//   - naturalFitTarget: where the user ends up AFTER landing somewhere inside
+//     the slot. The slot's head [start, landing] is absorbed by the travel,
+//     its tail [landing, end] survives. Null when partial-split would leave
+//     an incoherent fragment (sentinels, where the marker is atomic).
+//
+// Category: both targets are the Category's own location. The Cat already
+// sits at the destination, so landing inside it leaves a coherent tail (user
+// at cat.location for the surviving cat.tail).
+//
+// Travel sentinel: only preFitTarget. Sentinels are dropped-cat markers; a
+// partial split would imply the dropped cat is partially un-dropped, which
+// is contradictory.
+//
+// Available "always-next": preFit lands at slot.start with the user at prev
+// (matches Available.prevLoc); naturalFit lands inside, with the user already
+// transitioned to next.
+//
+// Available "transit-only": only relevant when prev === next (the user is
+// sitting at one place); preFit/naturalFit both target that location.
+function resolveLandingTargets(
+  slot: ForwardCandidateSlot,
   mode: AvailableCandidateMode,
-): string | null {
-  if (slot.type === "category") return slot.currentLocationId;
-  if (mode === "always-next") return slot.nextLocationId ?? null;
-  if (slot.prevLocationId && slot.prevLocationId === slot.nextLocationId)
-    return slot.prevLocationId;
-  return null;
+): { preFitTarget: string | null; naturalFitTarget: string | null } {
+  if (slot.type === "category") {
+    return {
+      preFitTarget: slot.currentLocationId,
+      naturalFitTarget: slot.currentLocationId,
+    };
+  }
+  if (slot.type === "travel") {
+    // Zero-distance sentinel. Real travels never reach this helper — they're
+    // hard-stopped above.
+    return { preFitTarget: slot.travelFromLocationId, naturalFitTarget: null };
+  }
+  if (mode === "always-next") {
+    return {
+      preFitTarget: slot.prevLocationId ?? null,
+      naturalFitTarget: slot.nextLocationId ?? null,
+    };
+  }
+  if (slot.prevLocationId && slot.prevLocationId === slot.nextLocationId) {
+    return {
+      preFitTarget: slot.prevLocationId,
+      naturalFitTarget: slot.prevLocationId,
+    };
+  }
+  return { preFitTarget: null, naturalFitTarget: null };
 }
 
 export function walkForwardForFit(args: {
   slots: Slot[];
   startIdx: number;
-  initialConsumed: number;
+  // Absolute reference timestamp the walker uses to measure elapsed time at
+  // each candidate slot — consumedMs = slot.start - referenceStartTime. Using
+  // a fixed reference avoids drift from slot.durationMinutes flooring when
+  // timestamps have sub-minute precision (e.g. a 21.5-minute Category stored
+  // as durationMinutes=21 would otherwise undercount by 30 seconds and push
+  // travelEnd past the natural boundary).
+  referenceStartTime: Date;
   initialConsumedCategoryIds: string[];
   availableCandidateMode: AvailableCandidateMode;
   travelManager: TravelManager;
   origin: string;
-  referenceTime: (slot: AvailableSlot | CategorySlot) => Date;
+  referenceTime: (slot: ForwardCandidateSlot) => Date;
   hardStopReferenceTime: Date;
   onVisit?: (event: ForwardWalkEvent) => void;
 }): ForwardFitResult {
-  let consumed = args.initialConsumed;
   const consumedCategoryIds = [...args.initialConsumedCategoryIds];
+  const referenceMs = args.referenceStartTime.getTime();
   let idx = args.startIdx;
 
   while (idx < args.slots.length) {
     const slot = args.slots[idx];
+    const slotStartMs = slot.start.getTime();
+    const slotEndMs = slot.end.getTime();
+    const consumedMs = slotStartMs - referenceMs;
+    const consumedMinutes = Math.floor(consumedMs / 60000);
 
-    if (slot.type === "occupied" || slot.type === "travel") {
+    // Real hard stops: Occupied (any) and non-sentinel Travel (the walker
+    // placed it for a real transition; absorbing would invalidate that).
+    const isRealHardStop =
+      slot.type === "occupied" ||
+      (slot.type === "travel" && !isZeroDistanceSentinel(slot));
+    if (isRealHardStop) {
       let pinnedDestination: string | null = null;
       let pinnedT = 0;
       if (slot.type === "occupied" && slot.locationId) {
@@ -256,68 +329,149 @@ export function walkForwardForFit(args: {
         hardStopSlot: slot,
         pinnedDestination,
         pinnedT,
-        consumed,
+        consumed: consumedMinutes,
         consumedCategoryIds,
       };
     }
 
-    const slotLoc = resolveForwardCandidate(slot, args.availableCandidateMode);
-    const slotDur = slot.durationMinutes;
-    if (slotLoc) {
-      const newT = args.travelManager.getTravelTime(
-        args.origin,
-        slotLoc,
-        args.referenceTime(slot),
-      );
-      if (newT > 0) {
-        const fitKind: "naturalFit" | "preFit" | "overflow" =
-          newT <= consumed
-            ? "preFit"
-            : newT <= consumed + slotDur
-              ? "naturalFit"
-              : "overflow";
-        args.onVisit?.({
-          kind: "candidate",
-          idx,
-          slot,
-          destination: slotLoc,
-          T: newT,
-          fitKind,
-          consumed,
-        });
-        if (fitKind === "preFit") {
-          return {
-            kind: "preFit",
-            idx,
-            slot,
-            destination: slotLoc,
-            T: newT,
-            consumed,
-            consumedCategoryIds,
-          };
-        }
-        if (fitKind === "naturalFit") {
-          const remaining = newT - consumed;
-          return {
-            kind: "naturalFit",
-            idx,
-            slot,
-            destination: slotLoc,
-            T: newT,
-            travelEnd: new Date(slot.start.getTime() + remaining * 60000),
-            remaining,
-            consumed: newT,
-            consumedCategoryIds,
-          };
-        }
-        // overflow — fall through to consume.
-      }
+    const candidate = slot as ForwardCandidateSlot;
+    const { preFitTarget, naturalFitTarget } = resolveLandingTargets(
+      candidate,
+      args.availableCandidateMode,
+    );
+    const slotDurMs = slotEndMs - slotStartMs;
+    const refTime = args.referenceTime(candidate);
+
+    const T_pre = preFitTarget
+      ? args.travelManager.getTravelTime(args.origin, preFitTarget, refTime)
+      : 0;
+    const T_nat = naturalFitTarget
+      ? args.travelManager.getTravelTime(args.origin, naturalFitTarget, refTime)
+      : 0;
+    const T_pre_ms = T_pre * 60000;
+    const T_nat_ms = T_nat * 60000;
+
+    // preFit at preFitTarget — travel ends at slot.start with user at prev.
+    // Slot survives intact; cleanest landing.
+    if (preFitTarget && T_pre > 0 && T_pre_ms <= consumedMs) {
+      args.onVisit?.({
+        kind: "candidate",
+        idx,
+        slot: candidate,
+        destination: preFitTarget,
+        T: T_pre,
+        fitKind: "preFit",
+        consumed: consumedMinutes,
+      });
+      return {
+        kind: "preFit",
+        idx,
+        slot: candidate,
+        destination: preFitTarget,
+        T: T_pre,
+        consumed: consumedMinutes,
+        consumedCategoryIds,
+      };
     }
 
-    if (slot.type === "category") consumedCategoryIds.push(slot.categoryId);
-    consumed += slotDur;
+    // preFit at naturalFitTarget — for Available always-next when T(origin→prev)
+    // doesn't fit but T(origin→next) does. The slot's prev→next transition
+    // becomes redundant: the user arrives at next before slot.start. The
+    // surviving slot effectively becomes Available at next throughout.
+    if (
+      naturalFitTarget &&
+      naturalFitTarget !== preFitTarget &&
+      T_nat > 0 &&
+      T_nat_ms <= consumedMs
+    ) {
+      args.onVisit?.({
+        kind: "candidate",
+        idx,
+        slot: candidate,
+        destination: naturalFitTarget,
+        T: T_nat,
+        fitKind: "preFit",
+        consumed: consumedMinutes,
+      });
+      return {
+        kind: "preFit",
+        idx,
+        slot: candidate,
+        destination: naturalFitTarget,
+        T: T_nat,
+        consumed: consumedMinutes,
+        consumedCategoryIds,
+      };
+    }
+
+    // naturalFit at naturalFitTarget — travel lands inside slot at the user
+    // arriving at naturalFitTarget. Slot tail [landing, end] survives.
+    if (
+      naturalFitTarget &&
+      T_nat > 0 &&
+      T_nat_ms > consumedMs &&
+      T_nat_ms <= consumedMs + slotDurMs
+    ) {
+      const remainingMs = T_nat_ms - consumedMs;
+      const travelEnd = new Date(slotStartMs + remainingMs);
+      args.onVisit?.({
+        kind: "candidate",
+        idx,
+        slot: candidate,
+        destination: naturalFitTarget,
+        T: T_nat,
+        fitKind: "naturalFit",
+        consumed: consumedMinutes,
+      });
+      return {
+        kind: "naturalFit",
+        idx,
+        slot: candidate,
+        destination: naturalFitTarget,
+        T: T_nat,
+        travelEnd,
+        remaining: Math.floor(remainingMs / 60000),
+        consumed: T_nat,
+        consumedCategoryIds,
+      };
+    }
+
+    // Overflow: emit the visit event with whichever T we evaluated (prefer the
+    // naturalFit target since that's the user-facing "where would I land" T)
+    // and fall through to consume the slot.
+    const overflowTarget = naturalFitTarget ?? preFitTarget;
+    const overflowT = T_nat > 0 ? T_nat : T_pre;
+    if (overflowTarget && overflowT > 0) {
+      args.onVisit?.({
+        kind: "candidate",
+        idx,
+        slot: candidate,
+        destination: overflowTarget,
+        T: overflowT,
+        fitKind: "overflow",
+        consumed: consumedMinutes,
+      });
+    }
+
+    // Consume the slot: pull in its identity for the new travel's consumed
+    // list. Categories contribute their categoryId; zero-distance Travel
+    // sentinels contribute their already-recorded consumedCategoryIds. No
+    // consumed accumulator — the next iteration recomputes from referenceMs.
+    if (slot.type === "category") {
+      consumedCategoryIds.push(slot.categoryId);
+    } else if (slot.type === "travel" && slot.consumedCategoryIds) {
+      consumedCategoryIds.push(...slot.consumedCategoryIds);
+    }
     idx += 1;
   }
 
-  return { kind: "exhausted", consumed, consumedCategoryIds };
+  const lastSlotEndMs =
+    args.slots.length > 0
+      ? args.slots[args.slots.length - 1].end.getTime()
+      : referenceMs;
+  return {
+    kind: "exhausted",
+    consumed: Math.floor((lastSlotEndMs - referenceMs) / 60000),
+    consumedCategoryIds,
+  };
 }

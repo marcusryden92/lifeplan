@@ -1949,13 +1949,10 @@ function absorbAndReplanIntoNextCategory(
     ? bleedTrimmedPrevCat.wrapperEnd
     : (prevAvailable?.start ?? prevTravel.travel.start);
 
-  const initialConsumed = Math.floor(
-    (category.end.getTime() - baseRegionStart.getTime()) / 60000,
-  );
   const fit = walkForwardForFit({
     slots,
     startIdx: i + 1,
-    initialConsumed,
+    referenceStartTime: baseRegionStart,
     initialConsumedCategoryIds: [category.categoryId],
     availableCandidateMode: "transit-only",
     travelManager,
@@ -1983,9 +1980,12 @@ function absorbAndReplanIntoNextCategory(
     extendsIntoNext = true;
     if (fit.slot.type === "category") {
       finalConsumedIds.push(fit.slot.categoryId);
+    } else if (fit.slot.type === "travel" && fit.slot.consumedCategoryIds) {
+      // Zero-distance sentinel landing — transfer the consumed cats.
+      finalConsumedIds.push(...fit.slot.consumedCategoryIds);
     }
     if (travelEnd.getTime() < fit.slot.end.getTime()) {
-      landingSurvivor = shortenPlaceableAtStart(
+      landingSurvivor = buildLandingSurvivor(
         fit.slot,
         travelEnd,
         destination,
@@ -2039,21 +2039,33 @@ function absorbAndReplanIntoNextCategory(
 
   travelManager.trackLeg(A, destination);
 
-  // Always shrink to natural duration. The leftover head is "Available at A"
-  // (the user waits at A through the absorbed cats — they're consumed, not
-  // visited). Restoring cats at non-A locations in the head would teleport
-  // the user away from A mid-stream. Identity is preserved on the new
-  // travel's consumedCategoryIds.
+  // Shrink to natural, but don't shrink past the first absorbed Category-
+  // typed slot — see firstNonFreeAbsorbedStart. Any head leftover stays
+  // within the leading Available-like run (prev Available + prev Travel
+  // shard from Available source). Cats and sentinels in the absorb get
+  // fully covered by the new travel.
+  const absorbed = slots.slice(firstIdx, firstIdx + removeCount);
   const naturalTravelStart = new Date(travelEnd.getTime() - T * 60000);
-  const actualTravelStart = insufficient
-    ? baseRegionStart
-    : naturalTravelStart.getTime() > baseRegionStart.getTime()
-      ? naturalTravelStart
-      : baseRegionStart;
+  const safeShrinkBoundary = firstNonFreeAbsorbedStart(absorbed);
+  let actualTravelStart: Date;
+  let overconstrained = false;
+  if (insufficient) {
+    actualTravelStart = baseRegionStart;
+  } else if (
+    safeShrinkBoundary &&
+    naturalTravelStart.getTime() > safeShrinkBoundary.getTime()
+  ) {
+    actualTravelStart = safeShrinkBoundary;
+    overconstrained = true;
+  } else {
+    actualTravelStart =
+      naturalTravelStart.getTime() > baseRegionStart.getTime()
+        ? naturalTravelStart
+        : baseRegionStart;
+  }
   const headLeftover =
     !insufficient && actualTravelStart.getTime() > baseRegionStart.getTime();
 
-  const absorbed = slots.slice(firstIdx, firstIdx + removeCount);
   const shardSources = collectShardSources(
     absorbed,
     actualTravelStart,
@@ -2067,7 +2079,8 @@ function absorbAndReplanIntoNextCategory(
     "preliminary",
     {
       insufficientTravel: insufficient,
-      requiredTravelMinutes: insufficient ? T : 0,
+      requiredTravelMinutes: insufficient || overconstrained ? T : 0,
+      overconstrained: overconstrained || undefined,
     },
   );
   if (shards.length > 0) {
@@ -2078,7 +2091,8 @@ function absorbAndReplanIntoNextCategory(
 
   const replacements: Slot[] = [];
   if (headLeftover) {
-    // Free time at A spanning the absorbed cats' heads.
+    // Free time at A inside the leading Available-like run before the first
+    // absorbed cat.
     replacements.push({
       type: "available",
       start: baseRegionStart,
@@ -2404,7 +2418,7 @@ function bypassCategoryCascade(
   const fit = walkForwardForFit({
     slots,
     startIdx: i + 1,
-    initialConsumed: category.durationMinutes,
+    referenceStartTime: category.start,
     initialConsumedCategoryIds: [category.categoryId],
     availableCandidateMode: "always-next",
     travelManager,
@@ -2455,6 +2469,12 @@ function bypassCategoryCascade(
         travelEnd.getTime() > fit.slot.start.getTime()
       ) {
         consumedCategoryIds.push(fit.slot.categoryId);
+      } else if (
+        fit.slot.type === "travel" &&
+        fit.slot.consumedCategoryIds &&
+        travelEnd.getTime() > fit.slot.start.getTime()
+      ) {
+        consumedCategoryIds.push(...fit.slot.consumedCategoryIds);
       }
       removeCount = fit.idx - i + 1;
       recorder?.decision(
@@ -2535,19 +2555,32 @@ function bypassCategoryCascade(
   // Track the final destination once.
   travelManager.trackLeg(A, destination);
 
-  // Always shrink to natural duration. The leftover head is uniformly
-  // "Available at A" — the user is at A through the consumed cats; restoring
-  // them as their original location would teleport the user mid-stream.
-  // Their identity is preserved on the new travel's consumedCategoryIds list.
-  const naturalTravelStart = new Date(travelEnd.getTime() - T * 60000);
-  const actualTravelStart = insufficient
-    ? category.start
-    : naturalTravelStart.getTime() > category.start.getTime()
-      ? naturalTravelStart
-      : category.start;
-  const canShrink = !insufficient && actualTravelStart.getTime() > category.start.getTime();
-
+  // Shrink to natural, but not past the first absorbed Category — see
+  // firstNonFreeAbsorbedStart for the rationale. In bypass the absorb starts
+  // with the bypassed cat, so the snap boundary is typically category.start
+  // and the travel naturally lands there (no head leftover at A).
   const absorbed = slots.slice(i, i + removeCount);
+  const naturalTravelStart = new Date(travelEnd.getTime() - T * 60000);
+  const safeShrinkBoundary = firstNonFreeAbsorbedStart(absorbed);
+  let actualTravelStart: Date;
+  let overconstrained = false;
+  if (insufficient) {
+    actualTravelStart = category.start;
+  } else if (
+    safeShrinkBoundary &&
+    naturalTravelStart.getTime() > safeShrinkBoundary.getTime()
+  ) {
+    actualTravelStart = safeShrinkBoundary;
+    overconstrained = true;
+  } else {
+    actualTravelStart =
+      naturalTravelStart.getTime() > category.start.getTime()
+        ? naturalTravelStart
+        : category.start;
+  }
+  const canShrink =
+    !insufficient && actualTravelStart.getTime() > category.start.getTime();
+
   const shardSources = collectShardSources(
     absorbed,
     actualTravelStart,
@@ -2561,7 +2594,8 @@ function bypassCategoryCascade(
     "preliminary",
     {
       insufficientTravel: insufficient,
-      requiredTravelMinutes: insufficient ? T : 0,
+      requiredTravelMinutes: insufficient || overconstrained ? T : 0,
+      overconstrained: overconstrained || undefined,
     },
   );
   if (shards.length > 0) {
@@ -2572,7 +2606,9 @@ function bypassCategoryCascade(
 
   const replacements: Slot[] = [];
   if (canShrink) {
-    // Free time at A spanning the bypassed cats' heads — user waits at A.
+    // Free time at A in the leading Available region — happens only if a
+    // prev Available was part of the absorb. In the typical bypass shape
+    // (absorb starts at the cat) this branch doesn't fire.
     replacements.push({
       type: "available",
       start: category.start,
@@ -2587,7 +2623,7 @@ function bypassCategoryCascade(
   replacements.push(...shards);
   if (fit.kind === "naturalFit" && partialSplitTime) {
     replacements.push(
-      shortenPlaceableAtStart(fit.slot, partialSplitTime, destination),
+      buildLandingSurvivor(fit.slot, partialSplitTime, destination),
     );
   }
 
@@ -2597,7 +2633,7 @@ function bypassCategoryCascade(
       M.bypassCategoryCascade.action(
         absorbed.map((s) => recorder.label(s)),
         insufficient,
-        false,
+        overconstrained,
       ),
     );
   }
@@ -2745,18 +2781,9 @@ function applyTravelAnchorAbsorb(
   }
   travelManager.trackLeg(A, destination);
 
-  const consumedCategoryIds: string[] = [];
-  for (let k = anchorIdx + 1; k <= i; k++) {
-    const s = slots[k];
-    if (s.type === "category") consumedCategoryIds.push(s.categoryId);
-  }
-
-  // Always place the natural-sized travel at the tail of the absorbed
-  // region. Any leftover at the head gets restored from each absorbed
-  // slot's original character (Travel shards unpack via their originalType
-  // metadata; live Available/Category slots clip in place). The shard
-  // model exists precisely for this — the absorb isn't free to invent
-  // wasted travel time, it has to give the excess back.
+  // Place the natural-sized travel at the tail of the absorbed region, but
+  // snap the start back to a boundary that doesn't punch a Cat/sentinel
+  // interior — head restoration is atomic-per-Cat (no partial Cat fragments).
   const naturalTravelStart = new Date(regionEnd.getTime() - TDirect * 60000);
 
   // Recover the original-fabric boundary if the slot just before the
@@ -2772,18 +2799,60 @@ function applyTravelAnchorAbsorb(
   const earliestTravelStart = bleedTrimmedPrevCat
     ? bleedTrimmedPrevCat.wrapperEnd
     : slots[absorbStartIdx].start;
-  const travelStart =
-    naturalTravelStart.getTime() < earliestTravelStart.getTime()
-      ? earliestTravelStart
-      : naturalTravelStart;
-  // Only overconstrained when the bleed-trimmed cat forced the travel to
-  // start earlier than natural — there's no way to avoid wasting some
-  // travel slot length without leaving a hole.
-  const overconstrained =
-    travelStart.getTime() < naturalTravelStart.getTime();
 
   const removeCount = i - absorbStartIdx + 1;
   const absorbed = slots.slice(absorbStartIdx, absorbStartIdx + removeCount);
+
+  // Latest absorb-region boundary ≤ natural where head restoration only
+  // crosses Available-like spans. Falls back to absorbStart if natural is
+  // before the absorb, or to the slot.start of the Cat-like interior natural
+  // lands in (consume the whole Cat/sentinel rather than partial-restore).
+  const safeHeadBoundary =
+    latestSafeHeadRestoreBoundary(absorbed, naturalTravelStart) ??
+    slots[absorbStartIdx].start;
+  const travelStart =
+    safeHeadBoundary.getTime() < earliestTravelStart.getTime()
+      ? earliestTravelStart
+      : safeHeadBoundary;
+  // Overconstrained when the snap or the bleed-trimmed cat forced the
+  // travel to start earlier than its natural T-derived position.
+  const overconstrained =
+    travelStart.getTime() < naturalTravelStart.getTime();
+
+  // Collect consumedCategoryIds: only absorbed Cats / sentinels whose time
+  // region falls inside the travel span [travelStart, regionEnd]. Slots whose
+  // region sits in the head-restored zone [absorbStart, travelStart) keep
+  // their original character via head restoration (or via bleedTrimmedPrevCat
+  // wrapper restoration) — those Cats survive as live slots and must NOT be
+  // double-counted as consumed.
+  //
+  // For Travel-shard absorbed slots: pull both the shard's own consumed list
+  // (sentinel case) AND its originalCategoryId (Cat-fragment case). Deduped
+  // because a bled Cat can leave multiple fragments that all carry the same
+  // originalCategoryId.
+  const travelStartMs = travelStart.getTime();
+  const consumedSet = new Set<string>();
+  if (
+    anchor.consumedCategoryIds &&
+    anchor.start.getTime() >= travelStartMs
+  ) {
+    for (const id of anchor.consumedCategoryIds) consumedSet.add(id);
+  }
+  for (let k = anchorIdx + 1; k <= i; k++) {
+    const s = slots[k];
+    if (s.start.getTime() < travelStartMs) continue;
+    if (s.type === "category") {
+      consumedSet.add(s.categoryId);
+    } else if (s.type === "travel") {
+      if (s.consumedCategoryIds) {
+        for (const id of s.consumedCategoryIds) consumedSet.add(id);
+      }
+      if (s.originalType === "category" && s.originalCategoryId) {
+        consumedSet.add(s.originalCategoryId);
+      }
+    }
+  }
+  const consumedCategoryIds = [...consumedSet];
   const shardSources = collectShardSources(absorbed, travelStart, regionEnd);
   const shards = createTravelShards(
     shardSources,
@@ -2802,11 +2871,17 @@ function applyTravelAnchorAbsorb(
   }
 
   // Restore the head [absorbedStart, travelStart] from the absorbed slots'
-  // original characters. The last restored fragment's "next" is rewired to
-  // A so the boundary with the new Travel(A→C) makes sense.
+  // original characters. When a bleed-trimmed prev Category is being restored
+  // to its wrapper end, that prev cat already covers [absorbedStart,
+  // wrapperEnd]; the head restoration must start at wrapperEnd to avoid
+  // duplicating that region (the absorbed leading shards would otherwise
+  // restore back to the same Category fragment the prev cat now owns).
+  const headRestoreStart = bleedTrimmedPrevCat
+    ? bleedTrimmedPrevCat.wrapperEnd
+    : slots[absorbStartIdx].start;
   const headFragments = restoreAbsorbedRange(
     absorbed,
-    slots[absorbStartIdx].start,
+    headRestoreStart,
     travelStart,
   );
   if (headFragments.length > 0) {
@@ -3066,7 +3141,7 @@ function forwardBypassCascade(
   const fit = walkForwardForFit({
     slots,
     startIdx: i,
-    initialConsumed: 0,
+    referenceStartTime: current.start,
     initialConsumedCategoryIds: [],
     availableCandidateMode: "always-next",
     travelManager,
@@ -3095,8 +3170,14 @@ function forwardBypassCascade(
         travelEnd.getTime() > fit.slot.start.getTime()
       ) {
         consumedCategoryIds.push(fit.slot.categoryId);
+      } else if (
+        fit.slot.type === "travel" &&
+        fit.slot.consumedCategoryIds &&
+        travelEnd.getTime() > fit.slot.start.getTime()
+      ) {
+        consumedCategoryIds.push(...fit.slot.consumedCategoryIds);
       }
-      // Eat slots [i, fit.idx]; the landing slot survives via shortenAtStart.
+      // Eat slots [i, fit.idx]; the landing slot survives via buildLandingSurvivor.
       removeCount = fit.idx - i + 1;
       recorder?.decision(
         M.forwardBypassCascade.partialSplit(fit.idx, fit.remaining),
@@ -3149,19 +3230,31 @@ function forwardBypassCascade(
   // Track the final chosen leg before placement.
   travelManager.trackLeg(A, destination);
 
-  // Always shrink to natural duration. The leftover head is "Available at A" —
-  // the user waits at A through the consumed cats; restoring them as their
-  // original location would teleport the user away from A mid-stream.
+  // Shrink-to-natural is only safe within the leading run of Available-like
+  // slots at the absorb's head — the user's "free time at A" before any cat
+  // begins. If naturalStart lands inside a Category-typed slot (a real Cat
+  // or a zero-distance sentinel), snap the travel start to that slot's
+  // start so the head leftover doesn't masquerade as "at A" during the
+  // cat's time. The resulting slot is bigger than natural T → overconstrained.
+  const absorbed = slots.slice(i, i + removeCount);
   const naturalTravelStart = new Date(travelEnd.getTime() - T * 60000);
-  const actualTravelStart = insufficient
-    ? current.start
-    : naturalTravelStart.getTime() > current.start.getTime()
-      ? naturalTravelStart
-      : current.start;
+  const safeShrinkBoundary = firstNonFreeAbsorbedStart(absorbed);
+  let actualTravelStart: Date;
+  let overconstrained = false;
+  if (insufficient) {
+    actualTravelStart = current.start;
+  } else if (
+    safeShrinkBoundary &&
+    naturalTravelStart.getTime() > safeShrinkBoundary.getTime()
+  ) {
+    actualTravelStart = safeShrinkBoundary;
+    overconstrained = true;
+  } else {
+    actualTravelStart = naturalTravelStart;
+  }
   const canShrink =
     !insufficient && actualTravelStart.getTime() > current.start.getTime();
 
-  const absorbed = slots.slice(i, i + removeCount);
   const shardSources = collectShardSources(
     absorbed,
     actualTravelStart,
@@ -3175,7 +3268,8 @@ function forwardBypassCascade(
     "preliminary",
     {
       insufficientTravel: insufficient,
-      requiredTravelMinutes: insufficient ? T : 0,
+      requiredTravelMinutes: insufficient || overconstrained ? T : 0,
+      overconstrained: overconstrained || undefined,
     },
   );
   if (shards.length > 0) {
@@ -3200,7 +3294,7 @@ function forwardBypassCascade(
   replacements.push(...shards);
   if (fit.kind === "naturalFit" && partialSplitTime) {
     replacements.push(
-      shortenPlaceableAtStart(fit.slot, partialSplitTime, destination),
+      buildLandingSurvivor(fit.slot, partialSplitTime, destination),
     );
   }
 
@@ -3425,4 +3519,149 @@ function shortenPlaceableAtStart(
     ),
     prevLocationId: newPrevLocationId,
   };
+}
+
+// The cascade's "free time at A" head leftover can extend through Available
+// slots (and Travel shards carved out of Available sources) at the absorb's
+// head, but NOT into a real Category or a zero-distance sentinel — both
+// represent the user being scheduled at a non-A location, so a head leftover
+// landing inside them would falsely imply "at A during cat time." Returns
+// the start of the first such slot in absorbed, or null if the whole absorb
+// is free-time-like (no clamp needed).
+function firstNonFreeAbsorbedStart(absorbed: Slot[]): Date | null {
+  for (const slot of absorbed) {
+    if (slot.type === "available") continue;
+    if (slot.type === "travel" && slot.originalType === "available") continue;
+    return slot.start;
+  }
+  return null;
+}
+
+function isAvailableLike(slot: Slot): boolean {
+  if (slot.type === "available") return true;
+  if (slot.type === "travel" && slot.originalType === "available") return true;
+  return false;
+}
+
+// Logical category identity of a slot. Live Cats return their categoryId;
+// Travel shards from a Category source return the original categoryId from
+// their shard metadata. Returns null for anything else. Used to coalesce
+// fragments of the same original Cat (e.g. a Cat that got bled at both edges
+// leaves three pieces — leading shard, surviving middle Cat slot, trailing
+// shard — all carrying the same categoryId) so the safe-boundary scanner
+// treats them as one continuous original Cat rather than three separate slots.
+function logicalCategoryId(slot: Slot): string | null {
+  if (slot.type === "category") return slot.categoryId;
+  if (
+    slot.type === "travel" &&
+    slot.originalType === "category" &&
+    slot.originalCategoryId
+  ) {
+    return slot.originalCategoryId;
+  }
+  return null;
+}
+
+// Coalesce contiguous absorbed slots that belong to the same original logical
+// slot. Two slots merge when they're touching in time and share both Available-
+// like-ness AND categoryId (for Cats). This restores the pre-bleed fabric view
+// so the safe-boundary scanner sees the original Cat span, not the split
+// fragments that earlier passes carved out.
+type LogicalChunk = {
+  start: Date;
+  end: Date;
+  isAvailable: boolean;
+  catId: string | null;
+};
+
+function coalesceAbsorbed(absorbed: Slot[]): LogicalChunk[] {
+  const chunks: LogicalChunk[] = [];
+  for (const slot of absorbed) {
+    const isAvail = isAvailableLike(slot);
+    const catId = logicalCategoryId(slot);
+    const last = chunks[chunks.length - 1];
+    if (
+      last &&
+      last.end.getTime() === slot.start.getTime() &&
+      last.isAvailable === isAvail &&
+      last.catId === catId
+    ) {
+      last.end = slot.end;
+    } else {
+      chunks.push({
+        start: slot.start,
+        end: slot.end,
+        isAvailable: isAvail,
+        catId,
+      });
+    }
+  }
+  return chunks;
+}
+
+// Backward-cascade head-restoration safety rule. The natural travel start is
+// `regionEnd - T`. If that point lands strictly inside a Cat (or chain of
+// fragments belonging to the same original Cat), head restoration would carve
+// a partial-Cat fragment — invalid, because original Cats are atomic in
+// restoration. Returns the latest original-fabric boundary ≤ natural.
+//
+// Boundaries within Available-like spans are all safe (Available can be
+// partial-split). Boundaries WITHIN a Cat are forbidden — only the Cat's
+// logical start and end count. The coalescing step reconstructs the original
+// Cat span from any bled fragments so the scanner doesn't mistakenly treat a
+// fragment seam (e.g. 11:04 in a [11:00-12:00] Cat that was bled at 11:04)
+// as an original-fabric boundary.
+function latestSafeHeadRestoreBoundary(
+  absorbed: Slot[],
+  natural: Date,
+): Date | null {
+  if (absorbed.length === 0) return null;
+  const chunks = coalesceAbsorbed(absorbed);
+  const naturalMs = natural.getTime();
+  const absorbStartMs = chunks[0].start.getTime();
+  if (naturalMs <= absorbStartMs) return chunks[0].start;
+
+  let latestMs = absorbStartMs;
+  for (const chunk of chunks) {
+    const startMs = chunk.start.getTime();
+    const endMs = chunk.end.getTime();
+    if (startMs > naturalMs) break;
+    latestMs = Math.max(latestMs, startMs);
+    if (chunk.isAvailable) {
+      const cap = Math.min(endMs, naturalMs);
+      latestMs = Math.max(latestMs, cap);
+    } else if (endMs <= naturalMs) {
+      latestMs = Math.max(latestMs, endMs);
+    } else {
+      break;
+    }
+  }
+  return new Date(latestMs);
+}
+
+// Returns the surviving "tail" slot after a cascade's natural-fit travel
+// lands inside `landingSlot` at `splitTime`. For Available/Category landing
+// slots, that's a shortened-at-start version of the original. For a zero-
+// distance Travel sentinel landing, the sentinel's consumed cats have
+// already been transferred to the new travel above, so the leftover is
+// simply free time at the destination (the user is at destination from
+// splitTime until the sentinel's original end).
+function buildLandingSurvivor(
+  landingSlot: AvailableSlot | CategorySlot | TravelSlot,
+  splitTime: Date,
+  destinationLocation: string,
+): AvailableSlot | CategorySlot {
+  if (landingSlot.type === "travel") {
+    return {
+      type: "available",
+      start: splitTime,
+      end: landingSlot.end,
+      durationMinutes: Math.floor(
+        (landingSlot.end.getTime() - splitTime.getTime()) / 60000,
+      ),
+      prevLocationId: destinationLocation,
+      nextLocationId: destinationLocation,
+    };
+  }
+  return shortenPlaceableAtStart(landingSlot, splitTime, destinationLocation);
 }
