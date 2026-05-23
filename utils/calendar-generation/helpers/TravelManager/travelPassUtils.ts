@@ -16,6 +16,7 @@ import {
   TravelSlot,
 } from "../../models/TimeSlot";
 import { TravelManager } from "../../core/TravelManager";
+import { findTravelShardSpan } from "../../utils/timeSlotUtils";
 import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
 
 // ---------------------------------------------------------------------------
@@ -493,5 +494,283 @@ export function walkForwardForFit(args: {
     kind: "exhausted",
     consumed: Math.floor((lastSlotEndMs - referenceMs) / 60000),
     consumedCategoryIds,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Backward fit walk — the rigorous backward equivalent of walkForwardForFit.
+// Walks slots[walkStartIdx..0] backward looking for a slot whose location
+// yields a travel to `destination` that fits the accumulated minutes. Four
+// fit modes at each candidate:
+//
+//   - preFit   (T ≤ consumed):              travel ends at regionEnd, starts
+//                                           at the candidate's end. Candidate
+//                                           preserved.
+//   - naturalFit (consumed < T ≤ +slotDur): travel ends at regionEnd, starts
+//                                           inside the candidate. Candidate's
+//                                           head survives as a shortened
+//                                           version of itself. ONLY when the
+//                                           candidate is non-atomic.
+//   - overconstrained (atomic + interior):  the natural start lands inside
+//                                           an atomic candidate, so the
+//                                           travel must extend to the
+//                                           candidate's start, absorbing it
+//                                           wholly. Travel slot is bigger
+//                                           than T.
+//   - overflow:                             consume candidate wholly, walk
+//                                           back.
+//
+// Candidate types:
+//   - Live Category: origin = currentLocationId. Non-atomic; partial-eat
+//     trims the Cat's tail.
+//   - Live Available (transit-mode, prev == next): origin = prev. Non-atomic;
+//     partial-eat trims the Available's tail. Non-transit Availables aren't
+//     candidates — choosing one would erase the upstream transition.
+//   - Travel SPAN (every Travel slot is processed as part of its whole span,
+//     coalescing all shards sharing a travelId): origin = travelFromLocationId.
+//     ATOMIC. The user is in transit during a travel; partial-eating a span
+//     would mean half-travelling, which is incoherent. The walker consumes
+//     or preserves the whole span; never carves into it. This applies to
+//     real placement travels, bleed travels, AND zero-distance sentinels.
+//
+// Hard stop on Occupied. Exhausted if we walk past slots[0] without a fit.
+// ---------------------------------------------------------------------------
+
+export type BackwardCandidateSlot = AvailableSlot | CategorySlot | TravelSlot;
+
+export type BackwardFitResult =
+  | {
+      kind: "preFit";
+      idx: number;
+      slot: BackwardCandidateSlot;
+      origin: string;
+      T: number;
+      travelStart: Date;
+      consumed: number;
+      consumedCategoryIds: string[];
+    }
+  | {
+      kind: "naturalFit";
+      idx: number;
+      slot: BackwardCandidateSlot;
+      origin: string;
+      T: number;
+      travelStart: Date;
+      consumed: number;
+      consumedCategoryIds: string[];
+    }
+  | {
+      kind: "overconstrained";
+      idx: number;
+      slot: BackwardCandidateSlot;
+      origin: string;
+      T: number;
+      travelStart: Date;
+      consumed: number;
+      consumedCategoryIds: string[];
+    }
+  | {
+      kind: "hardStop";
+      idx: number;
+      hardStopSlot: Slot;
+      consumed: number;
+      consumedCategoryIds: string[];
+    }
+  | {
+      kind: "exhausted";
+      consumed: number;
+      consumedCategoryIds: string[];
+    };
+
+// Per-candidate view used by the walker. For a Travel slot the candidate
+// reflects the whole shard span (idx = span.startIdx, slotDur = span total).
+type BackwardCandidate = {
+  idx: number; // canonical idx (for Travel spans: startIdx of the leftmost shard)
+  slot: BackwardCandidateSlot; // representative slot (for Travel spans: first shard)
+  origin: string | null;
+  isAtomic: boolean;
+  slotDur: number;
+  slotStart: Date;
+  slotEnd: Date;
+  contributedCategoryIds: string[];
+  prevIdx: number; // next idx to visit after this candidate
+};
+
+function nextBackwardCandidate(
+  slots: Slot[],
+  idx: number,
+):
+  | { kind: "candidate"; value: BackwardCandidate }
+  | { kind: "hardStop"; slot: Slot }
+  | { kind: "skip"; prevIdx: number } {
+  const slot = slots[idx];
+
+  if (slot.type === "occupied") {
+    return { kind: "hardStop", slot };
+  }
+
+  if (slot.type === "travel") {
+    const span = findTravelShardSpan(slots, idx);
+    if (!span) return { kind: "skip", prevIdx: idx - 1 };
+    const spanEnd = span.shards[span.shards.length - 1].end;
+    const slotDur = Math.floor(
+      (spanEnd.getTime() - span.travelStart.getTime()) / 60000,
+    );
+    const catSet = new Set<string>();
+    for (const s of span.shards) {
+      if (s.consumedCategoryIds) {
+        for (const id of s.consumedCategoryIds) catSet.add(id);
+      }
+      if (s.originalType === "category" && s.originalCategoryId) {
+        catSet.add(s.originalCategoryId);
+      }
+    }
+    return {
+      kind: "candidate",
+      value: {
+        idx: span.startIdx,
+        slot: span.shards[0],
+        origin: span.travelFromLocationId,
+        isAtomic: true,
+        slotDur,
+        slotStart: span.travelStart,
+        slotEnd: spanEnd,
+        contributedCategoryIds: [...catSet],
+        prevIdx: span.startIdx - 1,
+      },
+    };
+  }
+
+  if (slot.type === "category") {
+    return {
+      kind: "candidate",
+      value: {
+        idx,
+        slot,
+        origin: slot.currentLocationId,
+        isAtomic: false,
+        slotDur: slot.durationMinutes,
+        slotStart: slot.start,
+        slotEnd: slot.end,
+        contributedCategoryIds: [slot.categoryId],
+        prevIdx: idx - 1,
+      },
+    };
+  }
+
+  // Available — only a candidate origin when prev == next (transit-mode).
+  const origin =
+    slot.prevLocationId && slot.prevLocationId === slot.nextLocationId
+      ? slot.prevLocationId
+      : null;
+  return {
+    kind: "candidate",
+    value: {
+      idx,
+      slot,
+      origin,
+      isAtomic: false,
+      slotDur: slot.durationMinutes,
+      slotStart: slot.start,
+      slotEnd: slot.end,
+      contributedCategoryIds: [],
+      prevIdx: idx - 1,
+    },
+  };
+}
+
+export function walkBackwardForFit(args: {
+  slots: Slot[];
+  walkStartIdx: number;
+  regionEnd: Date;
+  destination: string;
+  travelManager: TravelManager;
+  referenceTime: Date;
+}): BackwardFitResult {
+  let idx = args.walkStartIdx;
+  let consumed = 0;
+  const consumedCategoryIds = new Set<string>();
+  const regionEndMs = args.regionEnd.getTime();
+
+  while (idx >= 0) {
+    const step = nextBackwardCandidate(args.slots, idx);
+
+    if (step.kind === "hardStop") {
+      return {
+        kind: "hardStop",
+        idx,
+        hardStopSlot: step.slot,
+        consumed,
+        consumedCategoryIds: [...consumedCategoryIds],
+      };
+    }
+    if (step.kind === "skip") {
+      idx = step.prevIdx;
+      continue;
+    }
+
+    const cand = step.value;
+
+    if (cand.origin && cand.origin !== args.destination) {
+      const T = args.travelManager.getTravelTime(
+        cand.origin,
+        args.destination,
+        args.referenceTime,
+      );
+      if (T > 0) {
+        if (T <= consumed) {
+          return {
+            kind: "preFit",
+            idx: cand.idx,
+            slot: cand.slot,
+            origin: cand.origin,
+            T,
+            travelStart: cand.slotEnd,
+            consumed,
+            consumedCategoryIds: [...consumedCategoryIds],
+          };
+        }
+        if (T <= consumed + cand.slotDur) {
+          // Candidate is absorbed (partial in naturalFit, whole in
+          // overconstrained). Add its contributed cats to consumed.
+          const localConsumed = new Set(consumedCategoryIds);
+          for (const id of cand.contributedCategoryIds) localConsumed.add(id);
+          if (cand.isAtomic) {
+            return {
+              kind: "overconstrained",
+              idx: cand.idx,
+              slot: cand.slot,
+              origin: cand.origin,
+              T,
+              travelStart: cand.slotStart,
+              consumed,
+              consumedCategoryIds: [...localConsumed],
+            };
+          }
+          const travelStart = new Date(regionEndMs - T * 60000);
+          return {
+            kind: "naturalFit",
+            idx: cand.idx,
+            slot: cand.slot,
+            origin: cand.origin,
+            T,
+            travelStart,
+            consumed,
+            consumedCategoryIds: [...localConsumed],
+          };
+        }
+      }
+    }
+
+    // Overflow: consume candidate wholly, walk back.
+    consumed += cand.slotDur;
+    for (const id of cand.contributedCategoryIds) consumedCategoryIds.add(id);
+    idx = cand.prevIdx;
+  }
+
+  return {
+    kind: "exhausted",
+    consumed,
+    consumedCategoryIds: [...consumedCategoryIds],
   };
 }

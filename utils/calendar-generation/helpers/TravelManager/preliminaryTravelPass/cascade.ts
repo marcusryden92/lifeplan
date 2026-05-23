@@ -10,8 +10,6 @@ import { TravelProcessingAction } from "../../../models/SchedulingModels";
 import {
   collectShardSources,
   createTravelShards,
-  findTravelShardSpan,
-  restoreAbsorbedRange,
   shardSourceFromAvailable,
   shardSourceFromCategory,
   type ShardSource,
@@ -19,8 +17,9 @@ import {
 import { TravelPassRecorder } from "../TravelPassRecorder";
 import { M } from "../travelPassMessages";
 import {
+  BackwardFitResult,
   detectBleedRecovery,
-  findCategoryWrapperEnd,
+  walkBackwardForFit,
   walkForwardForFit,
 } from "../travelPassUtils";
 import { latestSafeBoundary } from "./fabric";
@@ -31,283 +30,11 @@ import {
 } from "./placement";
 import {
   buildLandingSurvivor,
+  shortenPlaceableAtEnd,
   spliceBleedNext,
   spliceBleedPrev,
 } from "./slotShape";
 import { v4 as uuidv4 } from "uuid";
-
-// ---------------------------------------------------------------------------
-// Cascade anchor walk — shared by backwardBypassCascade() and
-// absorbAndReplanThroughCategory(). Walks backward from startIdx looking for
-// an anchor whose location yields a direct A→destination travel that fits
-// in the absorbed region. Continues past any Travel anchor that doesn't fit
-// (the old behaviour was to abort, but a Category further back could still
-// yield a clean fit — taking it is strictly better than insufficient
-// fallback).
-//
-// Anchor rules:
-//   - location-pinned Occupied  → hard stop
-//   - Anywhere Occupied         → pass through, keep walking
-//   - Available                 → abort (caller falls back to insufficient
-//                                 placement; we won't sacrifice upstream
-//                                 free time for a forced routing)
-//   - Travel                    → candidate: A = travel.from. Region starts
-//                                 at travel.start. If fits, return fit;
-//                                 else keep walking past it.
-//   - Category                  → candidate: A = category.currentLocation.
-//                                 Region starts at category.end (or wrapper
-//                                 end). If fits, return fit; else skip.
-// ---------------------------------------------------------------------------
-
-export type CascadeAnchorFit =
-  | {
-      kind: "travel";
-      anchorIdx: number;
-      anchor: TravelSlot;
-      A: string;
-      TDirect: number;
-      regionStart: Date;
-      regionMinutes: number;
-      // When set, the absorbed region also includes the tail of the Available
-      // at this index — the cascade extended backward into it by exactly the
-      // missing minutes so the natural A→C travel fits. The placement helper
-      // shortens the Available's tail and includes it in the absorb splice.
-      precedingAvailableIdx?: number;
-    }
-  | {
-      kind: "category";
-      anchorIdx: number;
-      anchor: CategorySlot;
-      anchorLocation: string;
-      T: number;
-      slotStart: Date;
-      slotDuration: number;
-      useWrapperEnd: boolean;
-      wrapperEnd: Date | null;
-    };
-
-export type CascadeAnchorResult =
-  | CascadeAnchorFit
-  | { kind: "abort"; reason: "available" | "hardStop" | "exhausted" };
-
-export function findCascadeAnchor(
-  slots: Slot[],
-  startIdx: number,
-  regionEnd: Date,
-  destination: string,
-  travelManager: TravelManager,
-  categories: Category[],
-  recorder: TravelPassRecorder | undefined,
-  decisionDepth: number,
-): CascadeAnchorResult {
-  let idx = startIdx;
-  while (idx >= 0) {
-    const anchor = slots[idx];
-
-    if (anchor.type === "occupied") {
-      if (anchor.locationId != null) {
-        if (recorder) {
-          recorder.decision(
-            M.cascadeWalk.anchorHardStopOccupied(idx, recorder.label(anchor)),
-            decisionDepth,
-          );
-        }
-        return { kind: "abort", reason: "hardStop" };
-      }
-      if (recorder) {
-        recorder.decision(
-          M.cascadeWalk.anchorAnywherePassThrough(idx, recorder.label(anchor)),
-          decisionDepth,
-        );
-      }
-      idx--;
-      continue;
-    }
-
-    if (anchor.type === "available") {
-      if (recorder) {
-        recorder.decision(
-          M.cascadeWalk.anchorAbortAvailable(idx, recorder.label(anchor)),
-          decisionDepth,
-        );
-      }
-      return { kind: "abort", reason: "available" };
-    }
-
-    if (anchor.type === "travel") {
-      // Treat the whole shard span as one anchor: a logical travel may
-      // span multiple consecutive shards sharing a travelId. We evaluate
-      // against the span's earliest shard (origin) and skip past the
-      // whole span if it doesn't fit.
-      const span = findTravelShardSpan(slots, idx);
-      if (!span) {
-        idx--;
-        continue;
-      }
-      const spanHead = span.shards[0];
-      if (recorder) {
-        recorder.decision(
-          M.cascadeWalk.anchorTryAbsorbTravel(
-            span.startIdx,
-            recorder.label(spanHead),
-          ),
-          decisionDepth,
-        );
-      }
-      const A = span.travelFromLocationId;
-      if (A && A !== destination) {
-        const TDirect = travelManager.getTravelTime(A, destination, regionEnd);
-        if (TDirect > 0) {
-          const regionStart = span.travelStart;
-          const regionMinutes = Math.floor(
-            (regionEnd.getTime() - regionStart.getTime()) / 60000,
-          );
-          if (regionMinutes >= TDirect) {
-            recorder?.decision(
-              M.cascadeWalk.directFits(TDirect, regionMinutes),
-              decisionDepth + 1,
-            );
-            return {
-              kind: "travel",
-              anchorIdx: span.startIdx,
-              anchor: spanHead,
-              A,
-              TDirect,
-              regionStart,
-              regionMinutes,
-            };
-          }
-          recorder?.decision(
-            M.cascadeWalk.directDoesNotFit(TDirect, regionMinutes),
-            decisionDepth + 1,
-          );
-
-          // Doesn't fit by itself, but the slot before the travel span may
-          // be an Available whose tail is at A — eating a small piece of it
-          // can stretch the region just enough for the natural A→C travel.
-          // Only valid when Available.nextLocationId === A (the user lands
-          // at A by the end of the Available, so the eaten tail is cleanly
-          // "at A" already).
-          const before =
-            span.startIdx > 0 ? slots[span.startIdx - 1] : null;
-          if (
-            before &&
-            before.type === "available" &&
-            before.nextLocationId === A
-          ) {
-            const extensionNeeded = TDirect - regionMinutes;
-            if (
-              extensionNeeded > 0 &&
-              extensionNeeded <= before.durationMinutes
-            ) {
-              recorder?.decision(
-                M.cascadeWalk.extendIntoPrecedingAvailable(
-                  extensionNeeded,
-                  span.startIdx - 1,
-                ),
-                decisionDepth + 1,
-              );
-              return {
-                kind: "travel",
-                anchorIdx: span.startIdx,
-                anchor: spanHead,
-                A,
-                TDirect,
-                regionStart: new Date(
-                  before.end.getTime() - extensionNeeded * 60000,
-                ),
-                regionMinutes: TDirect,
-                precedingAvailableIdx: span.startIdx - 1,
-              };
-            }
-          }
-        }
-      }
-      // Doesn't fit through this travel span; walk past it entirely.
-      idx = span.startIdx - 1;
-      continue;
-    }
-
-    if (anchor.type === "category") {
-      const anchorLocation = anchor.currentLocationId;
-      if (!anchorLocation || anchorLocation === destination) {
-        if (recorder) {
-          recorder.decision(
-            M.cascadeWalk.anchorCategoryMatches(idx, recorder.label(anchor)),
-            decisionDepth,
-          );
-        }
-        idx--;
-        continue;
-      }
-
-      const T = travelManager.getTravelTime(
-        anchorLocation,
-        destination,
-        regionEnd,
-      );
-      if (T <= 0) {
-        if (recorder) {
-          recorder.decision(
-            M.cascadeWalk.anchorCategoryNoTravel(idx, recorder.label(anchor)),
-            decisionDepth,
-          );
-        }
-        idx--;
-        continue;
-      }
-
-      const wrapperEnd = findCategoryWrapperEnd(anchor, categories);
-      const useWrapperEnd =
-        wrapperEnd !== null && wrapperEnd.getTime() > anchor.end.getTime();
-      const slotStart = useWrapperEnd ? wrapperEnd : anchor.end;
-      const slotDuration = Math.floor(
-        (regionEnd.getTime() - slotStart.getTime()) / 60000,
-      );
-
-      if (slotDuration >= T) {
-        if (recorder) {
-          recorder.decision(
-            M.cascadeWalk.anchorCategoryFits(
-              idx,
-              recorder.label(anchor),
-              T,
-              slotDuration,
-            ),
-            decisionDepth,
-          );
-        }
-        return {
-          kind: "category",
-          anchorIdx: idx,
-          anchor,
-          anchorLocation,
-          T,
-          slotStart,
-          slotDuration,
-          useWrapperEnd,
-          wrapperEnd,
-        };
-      }
-
-      if (recorder) {
-        recorder.decision(
-          M.cascadeWalk.anchorCategoryDoesNotFit(
-            idx,
-            recorder.label(anchor),
-            T,
-            slotDuration,
-          ),
-          decisionDepth,
-        );
-      }
-    }
-
-    idx--;
-  }
-
-  return { kind: "abort", reason: "exhausted" };
-}
 
 // ---------------------------------------------------------------------------
 // Action: Category entry, Prev=Occupied, doesn't fit — bypass cascade
@@ -559,11 +286,10 @@ export function bypassCategoryCascade(
 
 // ---------------------------------------------------------------------------
 // Action: Available with next=Occupied — backward bypass cascade.
-// Mirror of bypassCategoryCascade. Walks backward looking for an earlier
-// Category whose location lets the travel fit in the accumulated span.
-// First-fit wins. Absorbed travels in between get untracked; absorbed
-// categories go into consumedCategoryIds. If the slot ends up bigger than
-// the actual travel duration, marks overconstrained.
+//
+// Uses walkBackwardForFit to find the latest legal travel start. The walker
+// returns one of preFit / naturalFit / overconstrained (success) or
+// hardStop / exhausted (no anchor — fall back to the insufficient bleed).
 // ---------------------------------------------------------------------------
 
 export function backwardBypassCascade(
@@ -576,333 +302,191 @@ export function backwardBypassCascade(
 ): number {
   const current = slots[i] as AvailableSlot;
   const destination = action.nextLocation;
-  const slotEnd = current.end;
+  const regionEnd = current.end;
 
-  // Untrack the original leg up front. If no anchor fits, cascadeFallbackPrev()
-  // re-tracks it before falling back.
+  // Untrack the original leg up front. If the walker can't find an anchor,
+  // we re-track it in the fallback path.
   travelManager.untrackLeg(action.prevLocation, action.nextLocation);
   recorder?.decision(M.backwardBypassCascade.header, 5);
 
-  const fit = findCascadeAnchor(
+  const fit = walkBackwardForFit({
     slots,
-    i - 1,
-    slotEnd,
+    walkStartIdx: i,
+    regionEnd,
     destination,
     travelManager,
-    categories,
-    recorder,
-    6,
-  );
+    referenceTime: regionEnd,
+  });
 
-  if (fit.kind === "abort") {
+  if (fit.kind === "hardStop" || fit.kind === "exhausted") {
     recorder?.decision(M.backwardBypassCascade.noAnchorFits, 6);
-    const result = cascadeFallbackPrev(slots, i, action, travelManager);
+    travelManager.trackLeg(action.prevLocation, action.nextLocation);
+    const result = bleedSingleSideInsufficient(slots, i, action, "prev");
     recorder?.action(M.backwardBypassCascade.fallbackPrevAction);
     return result;
   }
 
-  if (fit.kind === "travel") {
-    return applyTravelAnchorAbsorb(
-      slots,
-      i,
-      fit,
-      destination,
-      slotEnd,
-      travelManager,
-      categories,
-      recorder,
-      (labels) => M.backwardBypassCascade.travelAbsorbAction(labels),
-    );
-  }
-
-  // fit.kind === "category"
-  return applyCategoryAnchorPlacement(
+  return applyBackwardCascadeFit({
     slots,
-    i,
+    walkStartIdx: i,
     fit,
-    slotEnd,
+    regionEnd,
     destination,
-    current.nextLocationId ?? null,
     travelManager,
+    categories,
     recorder,
-    (labels, overconstrained) =>
+    actionMessage: (labels, overconstrained) =>
       M.backwardBypassCascade.action(labels, overconstrained),
-  );
+  });
 }
 
 // ---------------------------------------------------------------------------
-// Cascade placement helpers — shared by backwardBypassCascade() and
-// absorbAndReplanThroughCategory(). Splice the slot array given a fit, mark
-// the new travel, and emit an action line via the caller's message builder.
+// Backward cascade placement — shared by backwardBypassCascade,
+// absorbAndReplanThroughCategory's cascade branch, and absorbAndReplanBackward.
+//
+// Given a walker fit (preFit / naturalFit / overconstrained), splice the new
+// travel into the slots array. The placement geometry is fully determined by
+// the walker's output — no post-hoc snap or atomicity check needed.
+//
+//   - preFit: anchor preserved, travel = [anchor.end, regionEnd]. If the
+//     slot ends up bigger than T (because consumed > T), mark overconstrained.
+//   - naturalFit: anchor partial-eaten — head [anchor.start, travelStart]
+//     survives as a shortened version of the anchor. Travel = [travelStart,
+//     regionEnd].
+//   - overconstrained: anchor wholly absorbed, travel = [anchor.start,
+//     regionEnd]. Slot is bigger than T.
+//
+// The slot just before the absorb is checked for a bleed-trimmed Cat (its
+// end was clipped by an earlier bleed). If present, the cat's wrapper end is
+// restored to the original-fabric boundary; the new travel can't begin
+// before that wrapper end.
 // ---------------------------------------------------------------------------
 
-export function applyTravelAnchorAbsorb(
-  slots: Slot[],
-  i: number,
-  fit: Extract<CascadeAnchorFit, { kind: "travel" }>,
-  destination: string,
-  regionEnd: Date,
-  travelManager: TravelManager,
-  categories: Category[],
-  recorder: TravelPassRecorder | undefined,
-  actionMessage: (absorbedLabels: string[]) => string,
-): number {
-  const { anchorIdx, anchor, A, TDirect, precedingAvailableIdx } = fit;
-  // When precedingAvailableIdx is set, the absorb extends one slot earlier:
-  // the Available's tail [regionStart, Available.end] is consumed by the
-  // travel; the head [Available.start, regionStart] survives as a shortened
-  // Available.
-  const absorbStartIdx = precedingAvailableIdx ?? anchorIdx;
-  const precedingAvailable =
-    precedingAvailableIdx !== undefined
-      ? (slots[precedingAvailableIdx] as AvailableSlot)
-      : null;
+export function applyBackwardCascadeFit(args: {
+  slots: Slot[];
+  walkStartIdx: number;
+  fit: Extract<
+    BackwardFitResult,
+    { kind: "preFit" | "naturalFit" | "overconstrained" }
+  >;
+  regionEnd: Date;
+  destination: string;
+  travelManager: TravelManager;
+  categories: Category[];
+  recorder: TravelPassRecorder | undefined;
+  actionMessage: (absorbedLabels: string[], overconstrained: boolean) => string;
+}): number {
+  const {
+    slots,
+    walkStartIdx,
+    fit,
+    regionEnd,
+    destination,
+    travelManager,
+    categories,
+    recorder,
+  } = args;
 
-  // Untrack the absorbed travel's leg, track the new direct leg.
-  if (anchor.travelFromLocationId && anchor.travelToLocationId) {
-    travelManager.untrackLeg(
-      anchor.travelFromLocationId,
-      anchor.travelToLocationId,
-    );
-  }
-  // Untrack any other travel legs we're absorbing between anchor and i.
-  for (let k = anchorIdx + 1; k <= i; k++) {
+  // PreFit: anchor preserved. Absorb = (anchor+1 .. walkStartIdx).
+  // NaturalFit / overconstrained: anchor absorbed. Absorb = (anchor .. walkStartIdx).
+  const absorbStartIdx = fit.kind === "preFit" ? fit.idx + 1 : fit.idx;
+  const removeCount = walkStartIdx - absorbStartIdx + 1;
+
+  // Untrack absorbed travel legs.
+  for (let k = absorbStartIdx; k <= walkStartIdx; k++) {
     const s = slots[k];
-    if (s.type === "travel" && s.travelFromLocationId && s.travelToLocationId) {
+    if (
+      s.type === "travel" &&
+      s.travelFromLocationId &&
+      s.travelToLocationId
+    ) {
       travelManager.untrackLeg(s.travelFromLocationId, s.travelToLocationId);
     }
   }
-  travelManager.trackLeg(A, destination);
+  travelManager.trackLeg(fit.origin, destination);
 
-  // Place the natural-sized travel at the tail of the absorbed region, but
-  // snap the start back to a boundary that doesn't punch a Cat/sentinel
-  // interior — head restoration is atomic-per-Cat (no partial Cat fragments).
-  const naturalTravelStart = new Date(regionEnd.getTime() - TDirect * 60000);
-
-  // Recover the original-fabric boundary if the slot just before the absorb
-  // is a bleed-trimmed Category. headBoundary plays a dual role: it's both
-  // the floor for the new travel's start (we can't begin before the restored
-  // wrapper end) AND the start of head restoration (the prev-cat now owns
-  // [absorbStart, wrapperEnd], so absorbed shards in that region must not be
-  // re-emitted as fragments).
+  // Bleed-trimmed prev cat recovery. If the slot just before the absorb is
+  // a Cat whose end was trimmed by an earlier bleed, restore its wrapper end.
+  // The wrapper extension can push travelStart later than the walker chose,
+  // adding to overconstrained slack.
   const bleed = detectBleedRecovery(
-    !precedingAvailable && absorbStartIdx > 0
-      ? slots[absorbStartIdx - 1]
-      : undefined,
+    absorbStartIdx > 0 ? slots[absorbStartIdx - 1] : undefined,
     categories,
     slots[absorbStartIdx].start,
   );
-  const headBoundary = bleed.floor;
 
-  const removeCount = i - absorbStartIdx + 1;
-  const absorbed = slots.slice(absorbStartIdx, absorbStartIdx + removeCount);
-
-  // Latest absorb-region boundary ≤ natural where head restoration only
-  // crosses Available-like spans. Falls back to absorbStart if natural is
-  // before the absorb, or to the slot.start of the Cat-like interior natural
-  // lands in (consume the whole Cat/sentinel rather than partial-restore).
-  const safeHeadBoundary =
-    latestSafeBoundary(absorbed, naturalTravelStart) ??
-    slots[absorbStartIdx].start;
-  const travelStart =
-    safeHeadBoundary.getTime() < headBoundary.getTime()
-      ? headBoundary
-      : safeHeadBoundary;
-  // Overconstrained when the snap or the bleed-trimmed cat forced the
-  // travel to start earlier than its natural T-derived position.
-  const overconstrained =
-    travelStart.getTime() < naturalTravelStart.getTime();
-
-  // Collect consumedCategoryIds: only absorbed Cats / sentinels whose time
-  // region falls inside the travel span [travelStart, regionEnd]. Slots whose
-  // region sits in the head-restored zone [absorbStart, travelStart) keep
-  // their original character via head restoration (or via the bleed-trimmed
-  // prev cat's wrapper restoration) — those Cats survive as live slots and
-  // must NOT be double-counted as consumed.
-  //
-  // For Travel-shard absorbed slots: pull both the shard's own consumed list
-  // (sentinel case) AND its originalCategoryId (Cat-fragment case). Deduped
-  // because a bled Cat can leave multiple fragments that all carry the same
-  // originalCategoryId. The anchor (slots[anchorIdx]) is included so a Travel
-  // anchor that originated from a Cat source contributes its identity too.
-  const travelStartMs = travelStart.getTime();
-  const consumedSet = new Set<string>();
-  for (let k = anchorIdx; k <= i; k++) {
-    const s = slots[k];
-    if (s.start.getTime() < travelStartMs) continue;
-    if (s.type === "category") {
-      consumedSet.add(s.categoryId);
-    } else if (s.type === "travel") {
-      if (s.consumedCategoryIds) {
-        for (const id of s.consumedCategoryIds) consumedSet.add(id);
-      }
-      if (s.originalType === "category" && s.originalCategoryId) {
-        consumedSet.add(s.originalCategoryId);
-      }
-    }
+  let travelStart = fit.travelStart;
+  let overconstrained = fit.kind === "overconstrained";
+  if (travelStart.getTime() < bleed.floor.getTime()) {
+    travelStart = bleed.floor;
+    overconstrained = true;
   }
-  const consumedCategoryIds = [...consumedSet];
+
+  // Build partial survivor for naturalFit. The anchor's head [anchor.start,
+  // travelStart] becomes a shortened version of the anchor with next=origin.
+  // If bleed recovery pushed travelStart past the anchor's start, the head
+  // may be empty (or wholly inside the bleed wrapper) — no survivor.
+  const leadingReplacements: Slot[] = [];
+  if (
+    fit.kind === "naturalFit" &&
+    fit.slot.start.getTime() < travelStart.getTime() &&
+    bleed.floor.getTime() <= fit.slot.start.getTime()
+  ) {
+    const anchor = fit.slot;
+    if (anchor.type === "category" || anchor.type === "available") {
+      leadingReplacements.push(
+        shortenPlaceableAtEnd(anchor, travelStart, fit.origin),
+      );
+    }
+    // NaturalFit at a Travel anchor is impossible — Travel spans are atomic
+    // per the walker's classification, so they would have returned
+    // overconstrained instead.
+  }
+
+  const absorbed = slots.slice(absorbStartIdx, absorbStartIdx + removeCount);
   const shardSources = collectShardSources(absorbed, travelStart, regionEnd);
   const shards = createTravelShards(
     shardSources,
     uuidv4(),
-    A,
+    fit.origin,
     destination,
     "preliminary",
     overconstrained
-      ? { overconstrained: true, requiredTravelMinutes: TDirect }
+      ? { overconstrained: true, requiredTravelMinutes: fit.T }
       : undefined,
   );
   if (shards.length > 0) {
     shards[0].consumedCategoryIds = (
       shards[0].consumedCategoryIds ?? []
-    ).concat(consumedCategoryIds);
+    ).concat(fit.consumedCategoryIds);
   }
 
-  // Restore the head [headBoundary, travelStart] from the absorbed slots'
-  // original characters. The boundary is `headBoundary` from above — when a
-  // bleed-trimmed prev Category is restored to its wrapper end, that prev
-  // cat now owns [absorbedStart, wrapperEnd], so head restoration must start
-  // at wrapperEnd to avoid duplicating that region.
-  const headFragments = restoreAbsorbedRange(absorbed, headBoundary, travelStart);
-  if (headFragments.length > 0) {
-    const last = headFragments[headFragments.length - 1];
-    if (last.type === "available") last.nextLocationId = A;
-  }
-
-  const replacements: Slot[] = [...headFragments, ...shards];
+  const replacements: Slot[] = [...leadingReplacements, ...shards];
 
   bleed.restore();
 
   slots.splice(absorbStartIdx, removeCount, ...replacements);
-  if (recorder) {
-    recorder.action(actionMessage(absorbed.map((s) => recorder.label(s))));
-  }
-  return absorbStartIdx + replacements.length;
-}
 
-export function applyCategoryAnchorPlacement(
-  slots: Slot[],
-  i: number,
-  fit: Extract<CascadeAnchorFit, { kind: "category" }>,
-  regionEnd: Date,
-  destination: string,
-  tailNextLocation: string | null,
-  travelManager: TravelManager,
-  recorder: TravelPassRecorder | undefined,
-  actionMessage: (absorbedLabels: string[], overconstrained: boolean) => string,
-): number {
-  const {
-    anchorIdx,
-    anchor,
-    anchorLocation,
-    T,
-    slotStart,
-    useWrapperEnd,
-    wrapperEnd,
-  } = fit;
-
-  const consumedCategoryIds: string[] = [];
-  for (let k = anchorIdx + 1; k <= i; k++) {
-    const s = slots[k];
-    if (s.type === "travel") {
-      if (s.travelFromLocationId && s.travelToLocationId) {
-        travelManager.untrackLeg(
-          s.travelFromLocationId,
-          s.travelToLocationId,
-        );
-      }
-    } else if (s.type === "category") {
-      consumedCategoryIds.push(s.categoryId);
-    }
-  }
-  travelManager.trackLeg(anchorLocation, destination);
-
-  // Extend anchor's end to its wrapper end so the new travel starts at a
-  // clean boundary. The previously-eaten region is gone after the splice.
-  if (useWrapperEnd && wrapperEnd) {
-    anchor.end = wrapperEnd;
-    anchor.durationMinutes = Math.floor(
-      (wrapperEnd.getTime() - anchor.start.getTime()) / 60000,
-    );
-  }
-
-  // Always place the natural-sized travel at the head of the absorbed
-  // region. Any leftover at the tail gets restored from each absorbed
-  // slot's original character. The shard model exists for this — the
-  // absorb isn't free to invent wasted travel time.
-  const actualTravelEnd = new Date(slotStart.getTime() + T * 60000);
-
-  const removeCount = i - anchorIdx;
-  const absorbed = slots.slice(anchorIdx + 1, anchorIdx + 1 + removeCount);
-  const shardSources = collectShardSources(
-    absorbed,
-    slotStart,
-    actualTravelEnd,
-  );
-  const shards = createTravelShards(
-    shardSources,
-    uuidv4(),
-    anchorLocation,
-    destination,
-    "preliminary",
-    { requiredTravelMinutes: T },
-  );
-  if (shards.length > 0) {
-    shards[0].consumedCategoryIds = (
-      shards[0].consumedCategoryIds ?? []
-    ).concat(consumedCategoryIds);
-  }
-
-  // Restore the tail [actualTravelEnd, regionEnd] from absorbed slots'
-  // original characters. The first restored fragment's "prev" is rewired
-  // to destination so the boundary with the new Travel makes sense.
-  const tailFragments = restoreAbsorbedRange(
-    absorbed,
-    actualTravelEnd,
-    regionEnd,
-  );
-  if (tailFragments.length > 0) {
-    const first = tailFragments[0];
-    if (first.type === "available") {
-      first.prevLocationId = destination;
-      // Preserve the caller's hint for what follows the cascade region.
-      const last = tailFragments[tailFragments.length - 1];
-      if (last.type === "available") last.nextLocationId = tailNextLocation;
-    }
-  }
-
-  const replacements: Slot[] = [...shards, ...tailFragments];
-
-  slots.splice(anchorIdx + 1, removeCount, ...replacements);
   if (recorder) {
     recorder.action(
-      actionMessage(
+      args.actionMessage(
         absorbed.map((s) => recorder.label(s)),
-        false,
+        overconstrained,
       ),
     );
   }
-  return anchorIdx + 1 + replacements.length;
+
+  return absorbStartIdx + replacements.length;
 }
 
+// ---------------------------------------------------------------------------
 // Restore the original leg in the tracker (untracked at the top of
 // backwardBypassCascade) and place a localized insufficient travel that
 // only touches [current, immediate prev]. Called from every cascade exit
 // that doesn't place a new A->C travel — single place to keep the
 // untrack/retrack ledger balanced.
-function cascadeFallbackPrev(
-  slots: Slot[],
-  i: number,
-  action: TravelProcessingAction,
-  travelManager: TravelManager,
-): number {
-  travelManager.trackLeg(action.prevLocation, action.nextLocation);
-  return bleedSingleSideInsufficient(slots, i, action, "prev");
-}
+// ---------------------------------------------------------------------------
 
-// Helper that replicates the original "insufficient single-side bleed"
-// placement — used as a fallback when the cascade can't find an anchor.
 function bleedSingleSideInsufficient(
   slots: Slot[],
   i: number,
