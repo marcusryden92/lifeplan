@@ -62,9 +62,10 @@ export function restoreBleedTrimmedCat(trimmed: BleedTrimmedCat): void {
 
 // Result bundle for the detect→floor→restore pattern that every cascade absorb
 // uses to handle a bleed-trimmed Category sitting at the boundary of its
-// absorb region. `floor` is the earliest the new travel may start (wrapperEnd
-// when trimmed, otherwise the caller-provided default). `restore()` is a
-// no-op when nothing was trimmed; call it before the surrounding splice.
+// absorb region. `floor` is the earliest the new travel may start (the partial
+// restore target when trimmed, otherwise the caller-provided default).
+// `restore()` is a no-op when nothing was trimmed; call it before the
+// surrounding splice.
 export type BleedRecovery = {
   trimmed: BleedTrimmedCat | null;
   floor: Date;
@@ -75,22 +76,58 @@ export type BleedRecovery = {
  * Wraps the detect→compute-floor→restore pattern shared by every cascade
  * absorb. Pass the candidate slot to inspect (typically the slot just before
  * the absorb region, or the chosen backward anchor itself), the fallback
- * floor to use when the slot isn't a bleed-trimmed Category, and — for
- * backward cascades — an optional `maxWrapperEnd` so we never restore past
- * the absorb's far edge.
+ * floor to use when the slot isn't a bleed-trimmed Category, and:
+ *
+ *   - `maxWrapperEnd` — disables detection if the cat's wrapper would extend
+ *     past this point. Used by backward cascades to refuse a restore that
+ *     would reach beyond the absorb's far edge.
+ *
+ *   - `maxRestoreEnd` — caps the partial restore target. If a full wrapper
+ *     restore would push the new travel past this point (typically
+ *     `regionEnd - T`, the latest start that still meets natural T), the
+ *     restore is clipped here. The cat ends up partially restored — the
+ *     new travel then bleeds back into the remaining un-restored portion
+ *     of the cat as needed.
  */
 export function detectBleedRecovery(
   candidateSlot: Slot | undefined,
   categories: Category[],
   defaultFloor: Date,
   maxWrapperEnd?: Date,
+  maxRestoreEnd?: Date,
 ): BleedRecovery {
   const trimmed = detectBleedTrimmedCat(candidateSlot, categories, maxWrapperEnd);
+  if (!trimmed) {
+    return {
+      trimmed: null,
+      floor: defaultFloor,
+      restore: () => {},
+    };
+  }
+  // Partial restore target. Clamped between the current (trimmed) end and
+  // the wrapper end, with maxRestoreEnd capping the upper bound.
+  const wrapperEndMs = trimmed.wrapperEnd.getTime();
+  const currentEndMs = trimmed.slot.end.getTime();
+  const targetMs = maxRestoreEnd
+    ? Math.max(currentEndMs, Math.min(wrapperEndMs, maxRestoreEnd.getTime()))
+    : wrapperEndMs;
+  const restoreTarget = new Date(targetMs);
   return {
     trimmed,
-    floor: trimmed ? trimmed.wrapperEnd : defaultFloor,
+    floor: restoreTarget,
     restore: () => {
-      if (trimmed) restoreBleedTrimmedCat(trimmed);
+      const slot = trimmed.slot;
+      slot.end = restoreTarget;
+      slot.durationMinutes = Math.floor(
+        (slot.end.getTime() - slot.start.getTime()) / 60000,
+      );
+      slot.nextLocationId = slot.currentLocationId;
+      // Only clear the trespass marker on a full restore — a partial
+      // restore still leaves the cat short of its wrapper, so the
+      // boundary trespass remains meaningful.
+      if (targetMs >= wrapperEndMs) {
+        slot.trespassingEnd = undefined;
+      }
     },
   };
 }

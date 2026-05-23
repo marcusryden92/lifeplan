@@ -414,14 +414,13 @@ export function absorbAndReplanIntoNextCategory(
 
   travelManager.trackLeg(A, destination);
 
-  // Rigorous geometry. The user has been at A through prevAvailable (if
-  // present); the new travel starts at the same moment the original prev
-  // travel would have started — bleed.floor in the bleed-trimmed case,
-  // otherwise prev Travel's original start. It fills the absorbed region
-  // up to the walker's chosen boundary. The slot duration may exceed
-  // natural T (overconstrained — the user is "in transit" for longer than
-  // the trip itself takes) or fall short (insufficient — region too small
-  // for the trip).
+  // Forward cascade geometric rule (same as bypassCategoryCascade /
+  // forwardBypassCascade). prevAvailable (the leftover Available@A before
+  // prev Travel) is intentionally excluded from the absorb above, so it
+  // survives untouched. From the prev Travel's start onward, the user is
+  // in transit — the new travel fills the absorbed region up to the
+  // walker's boundary. The slot duration may exceed natural T
+  // (overconstrained) or fall short (insufficient).
   const travelEnd = boundary;
   const slotDurMs = travelEnd.getTime() - travelStart.getTime();
   const naturalDurMs = T * 60000;
@@ -553,7 +552,7 @@ export function absorbAndReplanBackward(
         recorder.label(fit.slot),
         fit.origin,
         fit.T,
-        fit.kind === "naturalFit" ? "natural" : "preFit",
+        fit.kind,
       ),
       3,
     );
@@ -571,7 +570,7 @@ export function absorbAndReplanBackward(
     actionMessage: (labels, overconstrained) =>
       M.absorbAndReplanBackward.action(
         labels,
-        fit.kind === "naturalFit",
+        fit.kind !== "preFit",
         overconstrained,
       ),
   });

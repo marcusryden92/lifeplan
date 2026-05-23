@@ -190,12 +190,11 @@ export function bypassCategoryCascade(
   // Track the final destination once.
   travelManager.trackLeg(A, destination);
 
-  // Rigorous geometry. The travel fills the entire absorbed region as one
-  // atomic transit. The user is in transit from absorb.start (= the moment
-  // they left A — typically end-of-Occupied) until they arrive at the
-  // boundary the walker chose. The slot's `requiredTravelMinutes` records
-  // the actual travel time T; the slot duration may be longer
-  // (overconstrained) or shorter (insufficient) than T.
+  // Forward cascade geometric rule: travel fills the entire absorbed region
+  // as one atomic transit. The user already left A at category.start
+  // (typically end-of-Occupied) — there's no "at A" time inside the absorb
+  // to preserve, so unlike the backward cascade there's no bleed-Available
+  // recovery here. (See applyBackwardCascadeFit for the contrast.)
   //
   //   travel.start = category.start                 (= absorb-region start)
   //   travel.end   = boundary                       (= region end)
@@ -205,10 +204,10 @@ export function bypassCategoryCascade(
   //                                        preFit/naturalFit guarantee
   //                                        slot.dur >= T)
   //
-  // For naturalFit specifically the walker landed inside the boundary
-  // slot's interior, so boundary = fit.travelEnd and slot.dur == T exactly
-  // (no overconstrained). The slot's surviving tail
-  // [boundary, fit.slot.end] is restored as the landing-slot survivor.
+  // For naturalFit the walker landed inside the boundary slot's interior,
+  // so boundary = fit.travelEnd and slot.dur == T exactly (no
+  // overconstrained). The slot's surviving tail [boundary, fit.slot.end]
+  // is restored as the landing-slot survivor.
   const travelStart = category.start;
   const travelEnd = boundary;
   const slotDurMs = travelEnd.getTime() - travelStart.getTime();
@@ -324,22 +323,40 @@ export function backwardBypassCascade(
 // Backward cascade placement — shared by backwardBypassCascade,
 // absorbAndReplanThroughCategory's cascade branch, and absorbAndReplanBackward.
 //
-// Given a walker fit (preFit / naturalFit / overconstrained), splice the new
-// travel into the slots array. The placement geometry is fully determined by
-// the walker's output — no post-hoc snap or atomicity check needed.
+// Geometric rule (single rule for every kind):
+//   travel.start = max(fit.travelStart, bleed.floor, effective bleed-Avail
+//                      recovery end)
+//   travel.end   = regionEnd
+//   overconstrained = travel.dur > T
 //
-//   - preFit: anchor preserved, travel = [anchor.end, regionEnd]. If the
-//     slot ends up bigger than T (because consumed > T), mark overconstrained.
-//   - naturalFit: anchor partial-eaten — head [anchor.start, travelStart]
-//     survives as a shortened version of the anchor. Travel = [travelStart,
-//     regionEnd].
-//   - overconstrained: anchor wholly absorbed, travel = [anchor.start,
-//     regionEnd]. Slot is bigger than T.
+// Each walker fit kind sets fit.travelStart according to the anchor:
+//   - preFit:          anchor preserved → fit.travelStart = anchor.end.
+//   - naturalFit:      anchor partial-eaten → fit.travelStart = regionEnd-T
+//                      (inside anchor; head [anchor.start, travelStart]
+//                      survives as a shortened anchor).
+//   - overconstrained: anchor (atomic) absorbed → fit.travelStart =
+//                      anchor.start.
 //
-// The slot just before the absorb is checked for a bleed-trimmed Cat (its
-// end was clipped by an earlier bleed). If present, the cat's wrapper end is
-// restored to the original-fabric boundary; the new travel can't begin
-// before that wrapper end.
+// Two additional adjustments push travel.start forward:
+//
+//   1. Bleed-trimmed prev cat recovery. If the slot immediately before the
+//      absorb is a Cat whose end was clipped by an earlier bleed, restore
+//      its wrapper end. travel.start can't begin before that.
+//
+//   2. Bleed-Available recovery. The absorbed region may contain Travel
+//      shards whose original source was an Available (created by an
+//      earlier bleed pass that expected the user to travel toward a
+//      destination this cascade is now reversing). Each such shard
+//      sitting contiguously at the current "at A" boundary is surfaced
+//      back as an Available@origin slot — it represents free time at the
+//      cascade origin, not in-transit time. The new travel starts past
+//      the last recovered Available.
+//
+// Why this asymmetry from the forward cascades. Forward cascades fill the
+// absorb region (travel.start = absorb.start) because the user has just
+// left A — there's no "at A" time inside the absorb to preserve. Backward
+// cascades preserve at-A time because the user IS at A throughout the
+// absorb until the new travel departs.
 // ---------------------------------------------------------------------------
 
 export function applyBackwardCascadeFit(args: {
@@ -389,13 +406,17 @@ export function applyBackwardCascadeFit(args: {
   }
   travelManager.trackLeg(fit.origin, destination);
 
-  // Bleed-trimmed prev cat recovery. If the slot just before the absorb is
-  // a Cat whose end was trimmed by an earlier bleed, restore its wrapper end.
-  // The wrapper extension can push travelStart later than the walker chose.
+  // Adjustment 1: bleed-trimmed prev cat recovery, capped at regionEnd-T so
+  // the restore never pushes travelStart past the latest point that still
+  // meets natural T. When the cap bites, the cat is partially restored and
+  // the new travel bleeds back into the remaining un-restored tail.
+  const maxRestoreEndMs = regionEnd.getTime() - fit.T * 60000;
   const bleed = detectBleedRecovery(
     absorbStartIdx > 0 ? slots[absorbStartIdx - 1] : undefined,
     categories,
     slots[absorbStartIdx].start,
+    undefined,
+    new Date(maxRestoreEndMs),
   );
 
   let travelStart = fit.travelStart;
@@ -407,6 +428,8 @@ export function applyBackwardCascadeFit(args: {
   // travelStart] becomes a shortened version of the anchor with next=origin.
   // If bleed recovery pushed travelStart past the anchor's start, the head
   // may be empty (or wholly inside the bleed wrapper) — no survivor.
+  // (NaturalFit at a Travel anchor is impossible — atomic Travel spans
+  // promote to overconstrained in the walker.)
   const leadingReplacements: Slot[] = [];
   if (
     fit.kind === "naturalFit" &&
@@ -419,29 +442,79 @@ export function applyBackwardCascadeFit(args: {
         shortenPlaceableAtEnd(anchor, travelStart, fit.origin),
       );
     }
-    // NaturalFit at a Travel anchor is impossible — Travel spans are atomic
-    // per the walker's classification, so they would have returned
-    // overconstrained instead.
   }
 
-  // Geometric overconstrained: the new travel slot duration vs natural T.
-  // Captures every case — preFit where T < consumed (the slot is wider than
-  // the trip), bleed recovery pushing travelStart later, and the walker's
-  // explicit "overconstrained" kind.
-  const slotDurMs = regionEnd.getTime() - travelStart.getTime();
+  const absorbed = slots.slice(absorbStartIdx, absorbStartIdx + removeCount);
+
+  // Adjustment 2: bleed-Available recovery. Travel shards in the absorb
+  // whose original source was an Available (created by an earlier bleed)
+  // represent free time at A, not in-transit time. Surface them back as
+  // Available@origin slots — but only if they sit contiguously at the
+  // current "at A" boundary. A non-contiguous bleed-Available can't be
+  // restored without tearing the slots array or claiming the user is at
+  // two places at once.
+  //
+  // Restoration is also CAPPED at `regionEnd - T` (same cap as Adjustment
+  // 1) so the new travel still covers at least its natural T. When the cap
+  // bites mid-shard, only the first portion is restored and the rest is
+  // absorbed by the travel ("bleeding into the recovered Available").
+  const bleedAvails: AvailableSlot[] = [];
+  let effectiveTravelStart = travelStart;
+  for (const slot of absorbed) {
+    if (slot.type !== "travel" || slot.originalType !== "available") continue;
+    if (slot.start.getTime() !== effectiveTravelStart.getTime()) continue;
+    const pieceEndMs = Math.min(
+      slot.end.getTime(),
+      regionEnd.getTime(),
+      maxRestoreEndMs,
+    );
+    if (slot.start.getTime() >= pieceEndMs) break;
+    bleedAvails.push({
+      type: "available",
+      start: slot.start,
+      end: new Date(pieceEndMs),
+      durationMinutes: Math.floor(
+        (pieceEndMs - slot.start.getTime()) / 60000,
+      ),
+      prevLocationId: fit.origin,
+      nextLocationId: fit.origin,
+    });
+    effectiveTravelStart = new Date(pieceEndMs);
+    if (effectiveTravelStart.getTime() >= maxRestoreEndMs) break;
+  }
+
+  // Geometric overconstrained / insufficient: travel duration vs natural T.
+  // The cap above prevents insufficient under normal walker returns, but
+  // we still compute the flag defensively in case future changes shift
+  // the budget arithmetic.
+  const slotDurMs = regionEnd.getTime() - effectiveTravelStart.getTime();
   const naturalDurMs = fit.T * 60000;
+  const insufficient = slotDurMs < naturalDurMs;
   const overconstrained = slotDurMs > naturalDurMs;
 
-  const absorbed = slots.slice(absorbStartIdx, absorbStartIdx + removeCount);
-  const shardSources = collectShardSources(absorbed, travelStart, regionEnd);
+  // Travel shards come from sources in [effectiveTravelStart, regionEnd].
+  // Extracted bleed-Availables are naturally excluded — they're outside this
+  // range because effectiveTravelStart was pushed past them above. Bleed
+  // shards we didn't extract (non-contiguous with the "at A" boundary) are
+  // intentionally still included: the user is in transit during those, so
+  // they belong to the new travel as Travel sources.
+  const shardSources = collectShardSources(
+    absorbed,
+    effectiveTravelStart,
+    regionEnd,
+  );
   const shards = createTravelShards(
     shardSources,
     uuidv4(),
     fit.origin,
     destination,
     "preliminary",
-    overconstrained
-      ? { overconstrained: true, requiredTravelMinutes: fit.T }
+    insufficient || overconstrained
+      ? {
+          insufficientTravel: insufficient,
+          requiredTravelMinutes: fit.T,
+          overconstrained: overconstrained || undefined,
+        }
       : undefined,
   );
   if (shards.length > 0) {
@@ -450,9 +523,20 @@ export function applyBackwardCascadeFit(args: {
     ).concat(fit.consumedCategoryIds);
   }
 
-  const replacements: Slot[] = [...leadingReplacements, ...shards];
+  const replacements: Slot[] = [
+    ...leadingReplacements,
+    ...bleedAvails,
+    ...shards,
+  ];
 
   bleed.restore();
+
+  // If every absorbed second turned out to be recoverable free time at A
+  // (shards.length === 0), the leg tracker still has the new A->C leg from
+  // trackLeg above. Untrack it — no travel actually happens here.
+  if (shards.length === 0) {
+    travelManager.untrackLeg(fit.origin, destination);
+  }
 
   slots.splice(absorbStartIdx, removeCount, ...replacements);
 
@@ -675,10 +759,9 @@ export function forwardBypassCascade(
   // Track the final chosen leg before placement.
   travelManager.trackLeg(A, destination);
 
-  // Rigorous geometry mirrors bypassCategoryCascade — the travel fills the
-  // entire absorbed region as one atomic transit. The user is in transit
-  // from current.start (= the moment they exited the previous slot at A)
-  // until they arrive at the boundary the walker chose:
+  // Forward cascade geometric rule (same as bypassCategoryCascade). The
+  // user already left A at current.start — no "at A" time to preserve, no
+  // bleed-Available recovery.
   //
   //   travel.start = current.start                  (= absorb-region start)
   //   travel.end   = boundary                       (= region end)

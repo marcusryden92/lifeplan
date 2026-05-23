@@ -183,7 +183,7 @@ export const M = {
     naturalFit: (idx: number, dest: string, T: number) =>
       `Chose natural-fit landing inside slots[${idx}] (A→${dest} = ${T}min, lands inside slot)`,
     preFit: (idx: number, dest: string, T: number, consumed: number) =>
-      `Chose pre-fit at slots[${idx}].start (A→${dest} = ${T}min ≤ consumed ${consumed}min — overconstrained)`,
+      `Chose pre-fit at slots[${idx}] (A→${dest} = ${T}min ≤ consumed ${consumed}min)`,
     hardStop: (idx: number, dest: string, T: number) =>
       `Hit hard stop at slots[${idx}] (target ${dest}, A→${dest} = ${T}min)`,
     action: (
@@ -202,15 +202,15 @@ export const M = {
       label: string,
       origin: string,
       T: number,
-      kind: "natural" | "preFit",
+      kind: "naturalFit" | "preFit" | "overconstrained",
     ) =>
       `Chose ${kind} anchor at slots[${idx}] = ${label} (origin=${origin}, ${origin}→destination = ${T}min)`,
     action: (
       absorbedLabels: string[],
-      extendsIntoAnchor: boolean,
+      anchorAbsorbed: boolean,
       overconstrained: boolean,
     ) =>
-      `absorbAndReplanBackward(): absorbed [${absorbedLabels.join(", ")}], placed anchor→destination travel${extendsIntoAnchor ? " (bleeds into anchor tail)" : " (preFit at anchor.end)"}${overconstrained ? " (overconstrained)" : ""}`,
+      `absorbAndReplanBackward(): absorbed [${absorbedLabels.join(", ")}], placed anchor→destination travel${anchorAbsorbed ? " (anchor absorbed)" : " (anchor preserved)"}${overconstrained ? " (overconstrained)" : ""}`,
   },
 
   bypassCategoryCascade: {
@@ -226,13 +226,13 @@ export const M = {
     skipAvailable: (idx: number) =>
       `anchor slots[${idx}] = Available → skip (transit, never a landing)`,
     evaluateCat: (idx: number, label: string, T: number) =>
-      `anchor slots[${idx}] = ${label} → evaluate (A→cat.loc = ${T}min)`,
+      `anchor slots[${idx}] = ${label} → evaluate (A→candidate = ${T}min)`,
     endAtSlotStart: (T: number, consumed: number, idx: number) =>
-      `T (${T}min) ≤ consumed (${consumed}min) — overconstrained ending at slots[${idx}].start`,
+      `preFit: T (${T}min) ≤ consumed (${consumed}min) — anchor slots[${idx}]`,
     partialSplit: (idx: number, remaining: number) =>
-      `T fits inside slots[${idx}] — bleed in (consume ${remaining}min)`,
+      `naturalFit inside slots[${idx}] — landing consumes ${remaining}min`,
     overshootSkip: (idx: number, T: number, slotDur: number) =>
-      `T (${T}min) > consumed + slotDur (${slotDur}min) — overshoots cat, skip and continue`,
+      `T (${T}min) > consumed + slotDur (${slotDur}min) — overshoots, consume and continue`,
     action: (
       absorbedLabels: string[],
       insufficient: boolean,
@@ -310,9 +310,9 @@ export const M = {
     anchorRetarget: (idx: number, label: string, newT: number) =>
       `anchor slots[${idx}] = ${label} → retarget, travel=${newT}min`,
     endAtSlotStart: (T: number, consumed: number, idx: number) =>
-      `T (${T}min) ≤ consumed (${consumed}min) — end at slots[${idx}].start`,
+      `preFit: T (${T}min) ≤ consumed (${consumed}min) — anchor slots[${idx}]`,
     partialSplit: (idx: number, remaining: number) =>
-      `partial split inside slots[${idx}] (consume ${remaining}min)`,
+      `naturalFit inside slots[${idx}] — landing consumes ${remaining}min`,
     anchorConsume: (idx: number, label: string, slotDur: number) =>
       `anchor slots[${idx}] = ${label} → consume (${slotDur}min) and continue`,
     action: (
