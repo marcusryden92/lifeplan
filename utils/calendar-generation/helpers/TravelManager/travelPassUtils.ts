@@ -719,6 +719,31 @@ export function walkBackwardForFit(args: {
       );
       if (T > 0) {
         if (T <= consumed) {
+          // A non-sentinel atomic anchor (a real Travel span going from A to
+          // some B != A) can't be a preFit-preserved anchor: preserving it
+          // would leave the user at B at spanEnd, but the new travel starts
+          // from A. Promote to overconstrained — absorb the whole span and
+          // start the new travel at spanStart, where the user was last
+          // genuinely at A. Sentinel spans (from == to) fall through to
+          // normal preFit since the user stays put throughout the span.
+          const isSentinel =
+            cand.slot.type === "travel" &&
+            cand.slot.travelFromLocationId !== null &&
+            cand.slot.travelFromLocationId === cand.slot.travelToLocationId;
+          if (cand.isAtomic && !isSentinel) {
+            const localConsumed = new Set(consumedCategoryIds);
+            for (const id of cand.contributedCategoryIds) localConsumed.add(id);
+            return {
+              kind: "overconstrained",
+              idx: cand.idx,
+              slot: cand.slot,
+              origin: cand.origin,
+              T,
+              travelStart: cand.slotStart,
+              consumed: consumed + cand.slotDur,
+              consumedCategoryIds: [...localConsumed],
+            };
+          }
           return {
             kind: "preFit",
             idx: cand.idx,

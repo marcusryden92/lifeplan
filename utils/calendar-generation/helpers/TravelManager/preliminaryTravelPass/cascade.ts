@@ -369,6 +369,10 @@ export function applyBackwardCascadeFit(args: {
 
   // PreFit: anchor preserved. Absorb = (anchor+1 .. walkStartIdx).
   // NaturalFit / overconstrained: anchor absorbed. Absorb = (anchor .. walkStartIdx).
+  // The walker promotes preFit at a non-sentinel Travel span to
+  // overconstrained, so we never see a preFit fit.slot of type "travel"
+  // here unless it's a zero-distance sentinel (where the whole span IS one
+  // logical slot at startIdx and there's no separate endIdx to worry about).
   const absorbStartIdx = fit.kind === "preFit" ? fit.idx + 1 : fit.idx;
   const removeCount = walkStartIdx - absorbStartIdx + 1;
 
@@ -387,8 +391,7 @@ export function applyBackwardCascadeFit(args: {
 
   // Bleed-trimmed prev cat recovery. If the slot just before the absorb is
   // a Cat whose end was trimmed by an earlier bleed, restore its wrapper end.
-  // The wrapper extension can push travelStart later than the walker chose,
-  // adding to overconstrained slack.
+  // The wrapper extension can push travelStart later than the walker chose.
   const bleed = detectBleedRecovery(
     absorbStartIdx > 0 ? slots[absorbStartIdx - 1] : undefined,
     categories,
@@ -396,10 +399,8 @@ export function applyBackwardCascadeFit(args: {
   );
 
   let travelStart = fit.travelStart;
-  let overconstrained = fit.kind === "overconstrained";
   if (travelStart.getTime() < bleed.floor.getTime()) {
     travelStart = bleed.floor;
-    overconstrained = true;
   }
 
   // Build partial survivor for naturalFit. The anchor's head [anchor.start,
@@ -422,6 +423,14 @@ export function applyBackwardCascadeFit(args: {
     // per the walker's classification, so they would have returned
     // overconstrained instead.
   }
+
+  // Geometric overconstrained: the new travel slot duration vs natural T.
+  // Captures every case — preFit where T < consumed (the slot is wider than
+  // the trip), bleed recovery pushing travelStart later, and the walker's
+  // explicit "overconstrained" kind.
+  const slotDurMs = regionEnd.getTime() - travelStart.getTime();
+  const naturalDurMs = fit.T * 60000;
+  const overconstrained = slotDurMs > naturalDurMs;
 
   const absorbed = slots.slice(absorbStartIdx, absorbStartIdx + removeCount);
   const shardSources = collectShardSources(absorbed, travelStart, regionEnd);
