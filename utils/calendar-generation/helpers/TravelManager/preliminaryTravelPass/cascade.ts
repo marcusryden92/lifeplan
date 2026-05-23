@@ -22,7 +22,6 @@ import {
   walkBackwardForFit,
   walkForwardForFit,
 } from "../travelPassUtils";
-import { latestSafeBoundary } from "./fabric";
 import { nextPinnedLocation } from "./lookups";
 import {
   fillCategoryTailOrTrespass,
@@ -91,30 +90,26 @@ export function bypassCategoryCascade(
       : undefined,
   });
 
-  const consumed = fit.consumed;
   const consumedCategoryIds = [...fit.consumedCategoryIds];
   let destination: string | null = null;
   let T = 0;
-  let travelEnd: Date;
-  let insufficient = false;
-  let partialSplitTime: Date | null = null;
+  let boundary: Date;
   let removeCount: number;
 
   switch (fit.kind) {
     case "naturalFit": {
       destination = fit.destination;
       T = fit.T;
-      travelEnd = fit.travelEnd;
-      partialSplitTime = fit.travelEnd;
+      boundary = fit.travelEnd;
       if (
         fit.slot.type === "category" &&
-        travelEnd.getTime() > fit.slot.start.getTime()
+        boundary.getTime() > fit.slot.start.getTime()
       ) {
         consumedCategoryIds.push(fit.slot.categoryId);
       } else if (
         fit.slot.type === "travel" &&
         fit.slot.consumedCategoryIds &&
-        travelEnd.getTime() > fit.slot.start.getTime()
+        boundary.getTime() > fit.slot.start.getTime()
       ) {
         consumedCategoryIds.push(...fit.slot.consumedCategoryIds);
       }
@@ -128,10 +123,10 @@ export function bypassCategoryCascade(
     case "preFit": {
       destination = fit.destination;
       T = fit.T;
-      travelEnd = fit.slot.start;
+      boundary = fit.slot.start;
       removeCount = fit.idx - i;
       recorder?.decision(
-        M.bypassCategoryCascade.endAtSlotStart(T, consumed, fit.idx),
+        M.bypassCategoryCascade.endAtSlotStart(T, fit.consumed, fit.idx),
         5,
       );
       break;
@@ -151,14 +146,13 @@ export function bypassCategoryCascade(
         T = fit.pinnedT;
         recorder?.decision(M.bypassCategoryCascade.retargetOccupied(T), 5);
       }
-      travelEnd = fit.hardStopSlot.start;
-      insufficient = consumed < T;
+      boundary = fit.hardStopSlot.start;
       removeCount = fit.idx - i;
       break;
     }
     case "exhausted": {
       const lastIdx = slots.length - 1;
-      travelEnd = lastIdx > i ? slots[lastIdx].end : category.end;
+      boundary = lastIdx > i ? slots[lastIdx].end : category.end;
       removeCount = slots.length - i;
       break;
     }
@@ -191,54 +185,52 @@ export function bypassCategoryCascade(
         recorder,
       );
     }
-    insufficient = consumed < T;
   }
 
   // Track the final destination once.
   travelManager.trackLeg(A, destination);
 
-  // Shrink to natural, but not past an absorbed Cat/sentinel interior —
-  // see latestSafeBoundary. In bypass the absorb starts with the bypassed
-  // cat, so the snap boundary is typically category.start and the travel
-  // naturally lands there (no head leftover at A).
-  const absorbed = slots.slice(i, i + removeCount);
-  const naturalTravelStart = new Date(travelEnd.getTime() - T * 60000);
-  const safeBoundary = latestSafeBoundary(absorbed, naturalTravelStart);
-  let actualTravelStart: Date;
-  let overconstrained = false;
-  if (insufficient) {
-    actualTravelStart = category.start;
-  } else if (
-    safeBoundary &&
-    safeBoundary.getTime() < naturalTravelStart.getTime()
-  ) {
-    actualTravelStart = safeBoundary;
-    overconstrained = true;
-  } else {
-    actualTravelStart =
-      naturalTravelStart.getTime() > category.start.getTime()
-        ? naturalTravelStart
-        : category.start;
-  }
-  const canShrink =
-    !insufficient && actualTravelStart.getTime() > category.start.getTime();
+  // Rigorous geometry. The travel fills the entire absorbed region as one
+  // atomic transit. The user is in transit from absorb.start (= the moment
+  // they left A — typically end-of-Occupied) until they arrive at the
+  // boundary the walker chose. The slot's `requiredTravelMinutes` records
+  // the actual travel time T; the slot duration may be longer
+  // (overconstrained) or shorter (insufficient) than T.
+  //
+  //   travel.start = category.start                 (= absorb-region start)
+  //   travel.end   = boundary                       (= region end)
+  //
+  //   overconstrained when slot.dur > T  (region wider than the trip)
+  //   insufficient    when slot.dur < T  (hardStop / exhausted only —
+  //                                        preFit/naturalFit guarantee
+  //                                        slot.dur >= T)
+  //
+  // For naturalFit specifically the walker landed inside the boundary
+  // slot's interior, so boundary = fit.travelEnd and slot.dur == T exactly
+  // (no overconstrained). The slot's surviving tail
+  // [boundary, fit.slot.end] is restored as the landing-slot survivor.
+  const travelStart = category.start;
+  const travelEnd = boundary;
+  const slotDurMs = travelEnd.getTime() - travelStart.getTime();
+  const naturalDurMs = T * 60000;
+  const insufficient = slotDurMs < naturalDurMs;
+  const overconstrained = slotDurMs > naturalDurMs;
 
-  const shardSources = collectShardSources(
-    absorbed,
-    actualTravelStart,
-    travelEnd,
-  );
+  const absorbed = slots.slice(i, i + removeCount);
+  const shardSources = collectShardSources(absorbed, travelStart, travelEnd);
   const shards = createTravelShards(
     shardSources,
     uuidv4(),
     A,
     destination,
     "preliminary",
-    {
-      insufficientTravel: insufficient,
-      requiredTravelMinutes: insufficient || overconstrained ? T : 0,
-      overconstrained: overconstrained || undefined,
-    },
+    insufficient || overconstrained
+      ? {
+          insufficientTravel: insufficient,
+          requiredTravelMinutes: T,
+          overconstrained: overconstrained || undefined,
+        }
+      : undefined,
   );
   if (shards.length > 0) {
     shards[0].consumedCategoryIds = (
@@ -246,26 +238,11 @@ export function bypassCategoryCascade(
     ).concat(consumedCategoryIds);
   }
 
-  const replacements: Slot[] = [];
-  if (canShrink) {
-    // Free time at A in the leading Available region — happens only if a
-    // prev Available was part of the absorb. In the typical bypass shape
-    // (absorb starts at the cat) this branch doesn't fire.
-    replacements.push({
-      type: "available",
-      start: category.start,
-      end: actualTravelStart,
-      durationMinutes: Math.floor(
-        (actualTravelStart.getTime() - category.start.getTime()) / 60000,
-      ),
-      prevLocationId: A,
-      nextLocationId: A,
-    });
-  }
-  replacements.push(...shards);
-  if (fit.kind === "naturalFit" && partialSplitTime) {
+  const replacements: Slot[] = [...shards];
+
+  if (fit.kind === "naturalFit") {
     replacements.push(
-      buildLandingSurvivor(fit.slot, partialSplitTime, destination),
+      buildLandingSurvivor(fit.slot, travelEnd, destination),
     );
   }
 
@@ -279,9 +256,12 @@ export function bypassCategoryCascade(
       ),
     );
   }
-  // Walker lands on the slot AFTER the shards — the partial's exit edge
-  // (if any) or the preserved slot (endAtSlotStart / hardStop).
-  return i + (canShrink ? 1 : 0) + shards.length;
+  // For naturalFit, land on the landing-slot survivor so its exit edge can
+  // fire. For preFit / hardStop / exhausted, land on the preserved boundary
+  // slot.
+  return fit.kind === "naturalFit"
+    ? i + replacements.length - 1
+    : i + replacements.length;
 }
 
 // ---------------------------------------------------------------------------
@@ -617,32 +597,27 @@ export function forwardBypassCascade(
 
   let destination = action.nextLocation;
   let T = action.travelMinutes;
-  let travelEnd: Date;
-  let insufficient = false;
-  const consumed = fit.consumed;
-  const consumedCategoryIds = [...fit.consumedCategoryIds];
-  let partialSplitTime: Date | null = null;
+  let boundary: Date;
   let removeCount: number;
+  const consumedCategoryIds = [...fit.consumedCategoryIds];
 
   switch (fit.kind) {
     case "naturalFit": {
       destination = fit.destination;
       T = fit.T;
-      travelEnd = fit.travelEnd;
-      partialSplitTime = fit.travelEnd;
+      boundary = fit.travelEnd;
       if (
         fit.slot.type === "category" &&
-        travelEnd.getTime() > fit.slot.start.getTime()
+        boundary.getTime() > fit.slot.start.getTime()
       ) {
         consumedCategoryIds.push(fit.slot.categoryId);
       } else if (
         fit.slot.type === "travel" &&
         fit.slot.consumedCategoryIds &&
-        travelEnd.getTime() > fit.slot.start.getTime()
+        boundary.getTime() > fit.slot.start.getTime()
       ) {
         consumedCategoryIds.push(...fit.slot.consumedCategoryIds);
       }
-      // Eat slots [i, fit.idx]; the landing slot survives via buildLandingSurvivor.
       removeCount = fit.idx - i + 1;
       recorder?.decision(
         M.forwardBypassCascade.partialSplit(fit.idx, fit.remaining),
@@ -653,11 +628,10 @@ export function forwardBypassCascade(
     case "preFit": {
       destination = fit.destination;
       T = fit.T;
-      travelEnd = fit.slot.start;
-      // Slot at fit.idx is preserved intact; eat slots [i, fit.idx).
+      boundary = fit.slot.start;
       removeCount = fit.idx - i;
       recorder?.decision(
-        M.forwardBypassCascade.endAtSlotStart(T, consumed, fit.idx),
+        M.forwardBypassCascade.endAtSlotStart(T, fit.consumed, fit.idx),
         7,
       );
       break;
@@ -677,16 +651,13 @@ export function forwardBypassCascade(
         T = fit.pinnedT;
         recorder?.decision(M.forwardBypassCascade.retargetOccupied(T), 7);
       }
-      travelEnd = fit.hardStopSlot.start;
-      insufficient = consumed < T;
-      // Hard-stop slot is preserved; eat slots [i, fit.idx).
+      boundary = fit.hardStopSlot.start;
       removeCount = fit.idx - i;
       break;
     }
     case "exhausted": {
       const lastIdx = slots.length - 1;
-      travelEnd = lastIdx > i ? slots[lastIdx].end : current.end;
-      insufficient = consumed < T;
+      boundary = lastIdx > i ? slots[lastIdx].end : current.end;
       removeCount = slots.length - i;
       break;
     }
@@ -695,46 +666,42 @@ export function forwardBypassCascade(
   // Track the final chosen leg before placement.
   travelManager.trackLeg(A, destination);
 
-  // Shrink-to-natural is only safe within Available-like spans of the
-  // absorb. If naturalStart lands inside a Cat (real or zero-distance
-  // sentinel), snap to the latest safe original-fabric boundary so the
-  // head leftover doesn't masquerade as "at A" during cat time. The
-  // resulting slot is bigger than natural T → overconstrained.
-  const absorbed = slots.slice(i, i + removeCount);
-  const naturalTravelStart = new Date(travelEnd.getTime() - T * 60000);
-  const safeBoundary = latestSafeBoundary(absorbed, naturalTravelStart);
-  let actualTravelStart: Date;
-  let overconstrained = false;
-  if (insufficient) {
-    actualTravelStart = current.start;
-  } else if (
-    safeBoundary &&
-    safeBoundary.getTime() < naturalTravelStart.getTime()
-  ) {
-    actualTravelStart = safeBoundary;
-    overconstrained = true;
-  } else {
-    actualTravelStart = naturalTravelStart;
-  }
-  const canShrink =
-    !insufficient && actualTravelStart.getTime() > current.start.getTime();
+  // Rigorous geometry mirrors bypassCategoryCascade — the travel fills the
+  // entire absorbed region as one atomic transit. The user is in transit
+  // from current.start (= the moment they exited the previous slot at A)
+  // until they arrive at the boundary the walker chose:
+  //
+  //   travel.start = current.start                  (= absorb-region start)
+  //   travel.end   = boundary                       (= region end)
+  //
+  //   overconstrained when slot.dur > T
+  //   insufficient    when slot.dur < T (hardStop / exhausted only)
+  //
+  // For naturalFit the boundary IS T after travelStart, so the slot
+  // duration matches T exactly; the landing slot's tail survives as the
+  // landing-slot survivor.
+  const travelStart = current.start;
+  const travelEnd = boundary;
+  const slotDurMs = travelEnd.getTime() - travelStart.getTime();
+  const naturalDurMs = T * 60000;
+  const insufficient = slotDurMs < naturalDurMs;
+  const overconstrained = slotDurMs > naturalDurMs;
 
-  const shardSources = collectShardSources(
-    absorbed,
-    actualTravelStart,
-    travelEnd,
-  );
+  const absorbed = slots.slice(i, i + removeCount);
+  const shardSources = collectShardSources(absorbed, travelStart, travelEnd);
   const shards = createTravelShards(
     shardSources,
     uuidv4(),
     A,
     destination,
     "preliminary",
-    {
-      insufficientTravel: insufficient,
-      requiredTravelMinutes: insufficient || overconstrained ? T : 0,
-      overconstrained: overconstrained || undefined,
-    },
+    insufficient || overconstrained
+      ? {
+          insufficientTravel: insufficient,
+          requiredTravelMinutes: T,
+          overconstrained: overconstrained || undefined,
+        }
+      : undefined,
   );
   if (shards.length > 0) {
     shards[0].consumedCategoryIds = (
@@ -742,23 +709,11 @@ export function forwardBypassCascade(
     ).concat(consumedCategoryIds);
   }
 
-  const replacements: Slot[] = [];
-  if (canShrink) {
-    replacements.push({
-      type: "available",
-      start: current.start,
-      end: actualTravelStart,
-      durationMinutes: Math.floor(
-        (actualTravelStart.getTime() - current.start.getTime()) / 60000,
-      ),
-      prevLocationId: A,
-      nextLocationId: A,
-    });
-  }
-  replacements.push(...shards);
-  if (fit.kind === "naturalFit" && partialSplitTime) {
+  const replacements: Slot[] = [...shards];
+
+  if (fit.kind === "naturalFit") {
     replacements.push(
-      buildLandingSurvivor(fit.slot, partialSplitTime, destination),
+      buildLandingSurvivor(fit.slot, travelEnd, destination),
     );
   }
 
@@ -768,10 +723,11 @@ export function forwardBypassCascade(
       M.forwardBypassCascade.action(
         absorbed.map((s) => recorder.label(s)),
         insufficient,
-        false,
+        overconstrained,
       ),
     );
   }
-  // Walker lands on the slot AFTER the shards.
-  return i + (canShrink ? 1 : 0) + shards.length;
+  return fit.kind === "naturalFit"
+    ? i + replacements.length - 1
+    : i + replacements.length;
 }

@@ -64,6 +64,13 @@ export function dropUnreachableCategoryVisits(
 
     if (shouldDropCatB(catA, catB, catC, travelManager)) {
       replaceCatBWithZeroDistanceTravel(slots, i + 1, catA, catB);
+      // catB is gone — the next pinned location after catA and the prev
+      // pinned location before catC are both catA's location (= catC's by
+      // construction). Without this, the cats keep stale references to
+      // catB's location and trip exit-edge / entry-edge consistency checks.
+      const sameLoc = catA.currentLocationId;
+      catA.nextLocationId = sameLoc;
+      catC.prevLocationId = sameLoc;
       // The replacement is a single travel slot at the same index; advance
       // past it. catC is now at i + 2 again.
       i += 1;

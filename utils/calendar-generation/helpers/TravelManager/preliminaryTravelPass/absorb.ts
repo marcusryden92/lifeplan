@@ -20,7 +20,6 @@ import {
 } from "../travelPassUtils";
 import { bleedAcrossCategoryBoundary } from "./bleed";
 import { applyBackwardCascadeFit } from "./cascade";
-import { latestSafeBoundary } from "./fabric";
 import { PrevTravelMatch } from "./lookups";
 import {
   fillCategoryTailOrTrespass,
@@ -317,27 +316,31 @@ export function absorbAndReplanIntoNextCategory(
     );
   }
 
+  // prevTravel.availableIndex points at a leftover Available@A sitting
+  // between the prev Travel and the user's earlier free time at A. It's
+  // already a "user stationary at A" slot (prev=next=A), so we leave it
+  // alone — the absorb starts at the prev Travel itself.
   const prevAvailable =
     prevTravel.availableIndex !== null
       ? (slots[prevTravel.availableIndex] as AvailableSlot)
       : null;
-  const firstIdx = prevTravel.availableIndex ?? prevTravel.travelIndex;
+  const firstIdx = prevTravel.travelIndex;
 
-  // If the slot immediately before our absorb region is a Category whose end
-  // was trimmed by an earlier bleed, recover the original-fabric boundary so
-  // the new overconstrained travel starts there instead of on the bleed seam.
-  const defaultBaseStart = prevAvailable?.start ?? prevTravel.travel.start;
+  // Bleed recovery: when there's no leftover Available@A between us and the
+  // prev cat, the prev cat may have been bleed-trimmed by an earlier pass.
+  // Restore its wrapper end so the new travel starts on the original-fabric
+  // boundary rather than the bleed seam.
   const bleed = detectBleedRecovery(
     !prevAvailable && firstIdx > 0 ? slots[firstIdx - 1] : undefined,
     categories,
-    defaultBaseStart,
+    prevTravel.travel.start,
   );
-  const baseRegionStart = bleed.floor;
+  const travelStart = bleed.floor;
 
   const fit = walkForwardForFit({
     slots,
     startIdx: i + 1,
-    referenceStartTime: baseRegionStart,
+    referenceStartTime: travelStart,
     initialConsumedCategoryIds: [category.categoryId],
     availableCandidateMode: "transit-only",
     travelManager,
@@ -346,35 +349,23 @@ export function absorbAndReplanIntoNextCategory(
     hardStopReferenceTime: category.end,
   });
 
-  const consumed = fit.consumed;
   const consumedCategoryIds = [...fit.consumedCategoryIds];
   let destination: string;
   let T: number;
-  let travelEnd: Date;
+  let boundary: Date;
   let removeCount: number;
   let extendsIntoNext = false;
-  let insufficient = false;
-  let landingSurvivor: Slot | null = null;
-  const finalConsumedIds = [...consumedCategoryIds];
 
   if (fit.kind === "naturalFit") {
     destination = fit.destination;
     T = fit.T;
-    travelEnd = fit.travelEnd;
+    boundary = fit.travelEnd;
     removeCount = fit.idx - firstIdx + 1;
     extendsIntoNext = true;
     if (fit.slot.type === "category") {
-      finalConsumedIds.push(fit.slot.categoryId);
+      consumedCategoryIds.push(fit.slot.categoryId);
     } else if (fit.slot.type === "travel" && fit.slot.consumedCategoryIds) {
-      // Zero-distance sentinel landing — transfer the consumed cats.
-      finalConsumedIds.push(...fit.slot.consumedCategoryIds);
-    }
-    if (travelEnd.getTime() < fit.slot.end.getTime()) {
-      landingSurvivor = buildLandingSurvivor(
-        fit.slot,
-        travelEnd,
-        destination,
-      );
+      consumedCategoryIds.push(...fit.slot.consumedCategoryIds);
     }
     recorder?.decision(
       M.absorbAndReplanIntoNextCategory.naturalFit(fit.idx, fit.destination, T),
@@ -383,23 +374,22 @@ export function absorbAndReplanIntoNextCategory(
   } else if (fit.kind === "preFit") {
     destination = fit.destination;
     T = fit.T;
-    travelEnd = fit.slot.start;
+    boundary = fit.slot.start;
     removeCount = fit.idx - firstIdx;
     recorder?.decision(
       M.absorbAndReplanIntoNextCategory.preFit(
         fit.idx,
         fit.destination,
         T,
-        consumed,
+        fit.consumed,
       ),
       3,
     );
   } else if (fit.kind === "hardStop" && fit.pinnedDestination) {
     destination = fit.pinnedDestination;
     T = fit.pinnedT;
-    travelEnd = fit.hardStopSlot.start;
+    boundary = fit.hardStopSlot.start;
     removeCount = fit.idx - firstIdx;
-    insufficient = consumed < T;
     recorder?.decision(
       M.absorbAndReplanIntoNextCategory.hardStop(fit.idx, destination, T),
       3,
@@ -424,72 +414,49 @@ export function absorbAndReplanIntoNextCategory(
 
   travelManager.trackLeg(A, destination);
 
-  // Shrink to natural, but don't shrink past an absorbed Cat/sentinel
-  // interior — see latestSafeBoundary. Any head leftover stays within
-  // Available-like runs at the absorb's head. Cats and sentinels in the
-  // absorb get fully covered by the new travel.
-  const absorbed = slots.slice(firstIdx, firstIdx + removeCount);
-  const naturalTravelStart = new Date(travelEnd.getTime() - T * 60000);
-  const safeBoundary = latestSafeBoundary(absorbed, naturalTravelStart);
-  let actualTravelStart: Date;
-  let overconstrained = false;
-  if (insufficient) {
-    actualTravelStart = baseRegionStart;
-  } else if (
-    safeBoundary &&
-    safeBoundary.getTime() < naturalTravelStart.getTime()
-  ) {
-    actualTravelStart = safeBoundary;
-    overconstrained = true;
-  } else {
-    actualTravelStart =
-      naturalTravelStart.getTime() > baseRegionStart.getTime()
-        ? naturalTravelStart
-        : baseRegionStart;
-  }
-  const headLeftover =
-    !insufficient && actualTravelStart.getTime() > baseRegionStart.getTime();
+  // Rigorous geometry. The user has been at A through prevAvailable (if
+  // present); the new travel starts at the same moment the original prev
+  // travel would have started — bleed.floor in the bleed-trimmed case,
+  // otherwise prev Travel's original start. It fills the absorbed region
+  // up to the walker's chosen boundary. The slot duration may exceed
+  // natural T (overconstrained — the user is "in transit" for longer than
+  // the trip itself takes) or fall short (insufficient — region too small
+  // for the trip).
+  const travelEnd = boundary;
+  const slotDurMs = travelEnd.getTime() - travelStart.getTime();
+  const naturalDurMs = T * 60000;
+  const insufficient = slotDurMs < naturalDurMs;
+  const overconstrained = slotDurMs > naturalDurMs;
 
-  const shardSources = collectShardSources(
-    absorbed,
-    actualTravelStart,
-    travelEnd,
-  );
+  const absorbed = slots.slice(firstIdx, firstIdx + removeCount);
+  const shardSources = collectShardSources(absorbed, travelStart, travelEnd);
   const shards = createTravelShards(
     shardSources,
     uuidv4(),
     A,
     destination,
     "preliminary",
-    {
-      insufficientTravel: insufficient,
-      requiredTravelMinutes: insufficient || overconstrained ? T : 0,
-      overconstrained: overconstrained || undefined,
-    },
+    insufficient || overconstrained
+      ? {
+          insufficientTravel: insufficient,
+          requiredTravelMinutes: T,
+          overconstrained: overconstrained || undefined,
+        }
+      : undefined,
   );
   if (shards.length > 0) {
     shards[0].consumedCategoryIds = (
       shards[0].consumedCategoryIds ?? []
-    ).concat(finalConsumedIds);
+    ).concat(consumedCategoryIds);
   }
 
-  const replacements: Slot[] = [];
-  if (headLeftover) {
-    // Free time at A inside the leading Available-like run before the first
-    // absorbed cat.
-    replacements.push({
-      type: "available",
-      start: baseRegionStart,
-      end: actualTravelStart,
-      durationMinutes: Math.floor(
-        (actualTravelStart.getTime() - baseRegionStart.getTime()) / 60000,
-      ),
-      prevLocationId: A,
-      nextLocationId: A,
-    });
+  const replacements: Slot[] = [...shards];
+
+  if (fit.kind === "naturalFit") {
+    replacements.push(
+      buildLandingSurvivor(fit.slot, travelEnd, destination),
+    );
   }
-  replacements.push(...shards);
-  if (landingSurvivor) replacements.push(landingSurvivor);
 
   bleed.restore();
 
@@ -503,7 +470,9 @@ export function absorbAndReplanIntoNextCategory(
       ),
     );
   }
-  return firstIdx + replacements.length;
+  return fit.kind === "naturalFit"
+    ? firstIdx + replacements.length - 1
+    : firstIdx + replacements.length;
 }
 
 // ---------------------------------------------------------------------------
