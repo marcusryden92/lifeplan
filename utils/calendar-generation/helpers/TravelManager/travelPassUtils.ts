@@ -59,6 +59,41 @@ export function restoreBleedTrimmedCat(trimmed: BleedTrimmedCat): void {
   slot.trespassingEnd = undefined;
 }
 
+// Result bundle for the detect→floor→restore pattern that every cascade absorb
+// uses to handle a bleed-trimmed Category sitting at the boundary of its
+// absorb region. `floor` is the earliest the new travel may start (wrapperEnd
+// when trimmed, otherwise the caller-provided default). `restore()` is a
+// no-op when nothing was trimmed; call it before the surrounding splice.
+export type BleedRecovery = {
+  trimmed: BleedTrimmedCat | null;
+  floor: Date;
+  restore: () => void;
+};
+
+/**
+ * Wraps the detect→compute-floor→restore pattern shared by every cascade
+ * absorb. Pass the candidate slot to inspect (typically the slot just before
+ * the absorb region, or the chosen backward anchor itself), the fallback
+ * floor to use when the slot isn't a bleed-trimmed Category, and — for
+ * backward cascades — an optional `maxWrapperEnd` so we never restore past
+ * the absorb's far edge.
+ */
+export function detectBleedRecovery(
+  candidateSlot: Slot | undefined,
+  categories: Category[],
+  defaultFloor: Date,
+  maxWrapperEnd?: Date,
+): BleedRecovery {
+  const trimmed = detectBleedTrimmedCat(candidateSlot, categories, maxWrapperEnd);
+  return {
+    trimmed,
+    floor: trimmed ? trimmed.wrapperEnd : defaultFloor,
+    restore: () => {
+      if (trimmed) restoreBleedTrimmedCat(trimmed);
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Category wrapper lookup
 // ---------------------------------------------------------------------------
@@ -351,57 +386,42 @@ export function walkForwardForFit(args: {
     const T_pre_ms = T_pre * 60000;
     const T_nat_ms = T_nat * 60000;
 
-    // preFit at preFitTarget — travel ends at slot.start with user at prev.
-    // Slot survives intact; cleanest landing.
-    if (preFitTarget && T_pre > 0 && T_pre_ms <= consumedMs) {
-      args.onVisit?.({
-        kind: "candidate",
-        idx,
-        slot: candidate,
-        destination: preFitTarget,
-        T: T_pre,
-        fitKind: "preFit",
-        consumed: consumedMinutes,
-      });
-      return {
-        kind: "preFit",
-        idx,
-        slot: candidate,
-        destination: preFitTarget,
-        T: T_pre,
-        consumed: consumedMinutes,
-        consumedCategoryIds,
-      };
+    // preFit: travel ends at slot.start with the slot surviving intact.
+    // Try each candidate target in order. preFitTarget is the primary
+    // (slot.prevLocationId for Available always-next; the cat's location for
+    // Category). naturalFitTarget — when different — is the "redirect"
+    // fallback for Available always-next where T(origin→prev) doesn't fit
+    // but T(origin→next) does; the slot's prev→next transition becomes
+    // redundant and the surviving slot is effectively Available at next
+    // throughout.
+    const preFitOptions: { target: string; T: number; Tms: number }[] = [];
+    if (preFitTarget && T_pre > 0) {
+      preFitOptions.push({ target: preFitTarget, T: T_pre, Tms: T_pre_ms });
     }
-
-    // preFit at naturalFitTarget — for Available always-next when T(origin→prev)
-    // doesn't fit but T(origin→next) does. The slot's prev→next transition
-    // becomes redundant: the user arrives at next before slot.start. The
-    // surviving slot effectively becomes Available at next throughout.
-    if (
-      naturalFitTarget &&
-      naturalFitTarget !== preFitTarget &&
-      T_nat > 0 &&
-      T_nat_ms <= consumedMs
-    ) {
-      args.onVisit?.({
-        kind: "candidate",
-        idx,
-        slot: candidate,
-        destination: naturalFitTarget,
-        T: T_nat,
-        fitKind: "preFit",
-        consumed: consumedMinutes,
-      });
-      return {
-        kind: "preFit",
-        idx,
-        slot: candidate,
-        destination: naturalFitTarget,
-        T: T_nat,
-        consumed: consumedMinutes,
-        consumedCategoryIds,
-      };
+    if (naturalFitTarget && naturalFitTarget !== preFitTarget && T_nat > 0) {
+      preFitOptions.push({ target: naturalFitTarget, T: T_nat, Tms: T_nat_ms });
+    }
+    for (const opt of preFitOptions) {
+      if (opt.Tms <= consumedMs) {
+        args.onVisit?.({
+          kind: "candidate",
+          idx,
+          slot: candidate,
+          destination: opt.target,
+          T: opt.T,
+          fitKind: "preFit",
+          consumed: consumedMinutes,
+        });
+        return {
+          kind: "preFit",
+          idx,
+          slot: candidate,
+          destination: opt.target,
+          T: opt.T,
+          consumed: consumedMinutes,
+          consumedCategoryIds,
+        };
+      }
     }
 
     // naturalFit at naturalFitTarget — travel lands inside slot at the user
