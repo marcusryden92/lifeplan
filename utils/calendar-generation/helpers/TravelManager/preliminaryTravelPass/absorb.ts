@@ -330,17 +330,25 @@ export function absorbAndReplanIntoNextCategory(
   // prev cat, the prev cat may have been bleed-trimmed by an earlier pass.
   // Restore its wrapper end so the new travel starts on the original-fabric
   // boundary rather than the bleed seam.
-  const bleed = detectBleedRecovery(
+  //
+  // First detection — uncapped. The walker uses bleed.floor as its reference
+  // time (= the earliest the new travel can start). The actual restore +
+  // travelStart used for placement are recomputed below with a cap, once
+  // the walker's T and boundary are known. Two-step pattern because the
+  // walker can't know the cap before it picks an anchor (chicken-and-egg
+  // on T), but the restore target shouldn't push travelStart past
+  // boundary-T (would produce insufficient travel).
+  const bleedForWalker = detectBleedRecovery(
     !prevAvailable && firstIdx > 0 ? slots[firstIdx - 1] : undefined,
     categories,
     prevTravel.travel.start,
   );
-  const travelStart = bleed.floor;
+  const walkerReferenceStart = bleedForWalker.floor;
 
   const fit = walkForwardForFit({
     slots,
     startIdx: i + 1,
-    referenceStartTime: travelStart,
+    referenceStartTime: walkerReferenceStart,
     initialConsumedCategoryIds: [category.categoryId],
     availableCandidateMode: "transit-only",
     travelManager,
@@ -419,8 +427,23 @@ export function absorbAndReplanIntoNextCategory(
   // prev Travel) is intentionally excluded from the absorb above, so it
   // survives untouched. From the prev Travel's start onward, the user is
   // in transit — the new travel fills the absorbed region up to the
-  // walker's boundary. The slot duration may exceed natural T
-  // (overconstrained) or fall short (insufficient).
+  // walker's boundary.
+  //
+  // Re-detect bleed with the cap now that T and boundary are known. The
+  // cap prevents a full wrapper restore from pushing travelStart past
+  // boundary-T (which would produce an insufficient travel). When the cap
+  // bites, the prev cat is partially restored and the new travel bleeds
+  // back into the un-restored portion — same invariant as
+  // applyBackwardCascadeFit.
+  const bleed = detectBleedRecovery(
+    !prevAvailable && firstIdx > 0 ? slots[firstIdx - 1] : undefined,
+    categories,
+    prevTravel.travel.start,
+    undefined,
+    new Date(boundary.getTime() - T * 60000),
+  );
+  const travelStart = bleed.floor;
+
   const travelEnd = boundary;
   const slotDurMs = travelEnd.getTime() - travelStart.getTime();
   const naturalDurMs = T * 60000;

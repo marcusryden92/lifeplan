@@ -324,8 +324,7 @@ export function backwardBypassCascade(
 // absorbAndReplanThroughCategory's cascade branch, and absorbAndReplanBackward.
 //
 // Geometric rule (single rule for every kind):
-//   travel.start = max(fit.travelStart, bleed.floor, effective bleed-Avail
-//                      recovery end)
+//   travel.start = max(fit.travelStart, bleed.floor, recovered-Avail end)
 //   travel.end   = regionEnd
 //   overconstrained = travel.dur > T
 //
@@ -339,18 +338,19 @@ export function backwardBypassCascade(
 //
 // Two additional adjustments push travel.start forward:
 //
-//   1. Bleed-trimmed prev cat recovery. If the slot immediately before the
-//      absorb is a Cat whose end was clipped by an earlier bleed, restore
-//      its wrapper end. travel.start can't begin before that.
+//   1. Bleed-trimmed prev cat recovery. If the slot immediately before
+//      the absorb is a Cat whose end was clipped by an earlier bleed
+//      pass, partially restore its wrapper end. travel.start can't begin
+//      before that. The restore target is capped at regionEnd - T so a
+//      full wrapper restore can't push the travel into insufficiency.
 //
-//   2. Bleed-Available recovery. The absorbed region may contain Travel
-//      shards whose original source was an Available (created by an
-//      earlier bleed pass that expected the user to travel toward a
+//   2. Absorbed-Available recovery. The absorbed region may contain
+//      Travel shards whose original source was an Available (created by
+//      an earlier bleed pass that expected the user to travel toward a
 //      destination this cascade is now reversing). Each such shard
 //      sitting contiguously at the current "at A" boundary is surfaced
 //      back as an Available@origin slot — it represents free time at the
-//      cascade origin, not in-transit time. The new travel starts past
-//      the last recovered Available.
+//      cascade origin, not in-transit time. Same cap as Adjustment 1.
 //
 // Why this asymmetry from the forward cascades. Forward cascades fill the
 // absorb region (travel.start = absorb.start) because the user has just
@@ -446,19 +446,19 @@ export function applyBackwardCascadeFit(args: {
 
   const absorbed = slots.slice(absorbStartIdx, absorbStartIdx + removeCount);
 
-  // Adjustment 2: bleed-Available recovery. Travel shards in the absorb
-  // whose original source was an Available (created by an earlier bleed)
-  // represent free time at A, not in-transit time. Surface them back as
-  // Available@origin slots — but only if they sit contiguously at the
-  // current "at A" boundary. A non-contiguous bleed-Available can't be
-  // restored without tearing the slots array or claiming the user is at
-  // two places at once.
+  // Adjustment 2: absorbed-Available recovery. Travel shards in the absorb
+  // whose original source was an Available (created by an earlier bleed
+  // pass) represent free time at A, not in-transit time. Surface them
+  // back as Available@origin slots — but only if they sit contiguously at
+  // the current "at A" boundary. A non-contiguous recovered Available
+  // can't be restored without tearing the slots array or claiming the
+  // user is at two places at once.
   //
   // Restoration is also CAPPED at `regionEnd - T` (same cap as Adjustment
   // 1) so the new travel still covers at least its natural T. When the cap
-  // bites mid-shard, only the first portion is restored and the rest is
+  // bites mid-shard, only the first portion is recovered and the rest is
   // absorbed by the travel ("bleeding into the recovered Available").
-  const bleedAvails: AvailableSlot[] = [];
+  const recoveredAvails: AvailableSlot[] = [];
   let effectiveTravelStart = travelStart;
   for (const slot of absorbed) {
     if (slot.type !== "travel" || slot.originalType !== "available") continue;
@@ -469,7 +469,7 @@ export function applyBackwardCascadeFit(args: {
       maxRestoreEndMs,
     );
     if (slot.start.getTime() >= pieceEndMs) break;
-    bleedAvails.push({
+    recoveredAvails.push({
       type: "available",
       start: slot.start,
       end: new Date(pieceEndMs),
@@ -525,7 +525,7 @@ export function applyBackwardCascadeFit(args: {
 
   const replacements: Slot[] = [
     ...leadingReplacements,
-    ...bleedAvails,
+    ...recoveredAvails,
     ...shards,
   ];
 
