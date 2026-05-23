@@ -1,12 +1,12 @@
-# preliminaryTravelPass — Decision Tree
+# staticEventTravelPass — Decision Tree
 
 A reference for the dispatch and ladder logic in
-[utils/calendar-generation/helpers/TravelManager/preliminaryTravelPass.ts](../utils/calendar-generation/helpers/TravelManager/preliminaryTravelPass.ts).
+[utils/calendar-generation/helpers/TravelManager/staticEventTravelPass.ts](../utils/calendar-generation/helpers/TravelManager/staticEventTravelPass.ts).
 
 ## Signature
 
 ```
-preliminaryTravelPass(
+staticEventTravelPass(
   hasPlannerLocationMap:      boolean,
   categories:        Category[],
   occupiedSlots:              (OccupiedSlot | TravelSlot)[]      [MUTATED]
@@ -26,7 +26,7 @@ preliminaryTravelPass(
 ## Top-level dispatch
 
 ```
-preliminaryTravelPass(slots, ...)
+staticEventTravelPass(slots, ...)
         │
         ▼
    hasPlannerLocationMap? ──NO──► return slots unchanged

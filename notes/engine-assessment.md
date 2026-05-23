@@ -212,7 +212,7 @@ buildAvailableSlots()
         @ after all boundaries folded in
         @ - AvailableSlot[] split at every category boundary in range
 
-preliminaryTravelPass()
+staticEventTravelPass()
     
     for every AvailableSlot[]:
 

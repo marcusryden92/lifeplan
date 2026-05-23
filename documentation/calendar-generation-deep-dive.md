@@ -228,7 +228,7 @@ const builtSlots = buildAvailableSlots({
 this.slotManager.availableSlots.push(...builtSlots);
 
 // Phase 6b: Carve travel slots in a separate pass after slot building
-const carved = preliminaryTravelPass(
+const carved = staticEventTravelPass(
   !!plannerLocationMap,
   categoriesList,
   this.slotManager.occupiedSlots,
@@ -247,7 +247,7 @@ this.slotManager.availableSlots = carved;
 - Calls `findGaps` to compute the available time between occupied intervals
 - Splits the resulting gaps at category boundaries and tags each fragment with `categoryId` / `isStrictCategory` / location handoff (`splitSlotsAtCategoryBoundaries`)
 
-`preliminaryTravelPass` then walks the slot list and carves `TravelSlot` entries wherever `prevLocationId !== nextLocationId`, with special-case bypass logic for slots tight against category boundaries.
+`staticEventTravelPass` then walks the slot list and carves `TravelSlot` entries wherever `prevLocationId !== nextLocationId`, with special-case bypass logic for slots tight against category boundaries.
 
 ### Phase 7: Prepare Scheduling Context
 
@@ -1000,7 +1000,7 @@ PHASE 6: BUILD TIME SLOTS
   |   +-- findGaps -> available slots
   |   +-- splitSlotsAtCategoryBoundaries (tag categoryId, fix location handoff)
   |
-  +-- 6b: preliminaryTravelPass
+  +-- 6b: staticEventTravelPass
   |   +-- Walk slot chain, carve TravelSlots at location transitions
   |   +-- Direct-bypass / return-absorption for slots tight against categories
   |

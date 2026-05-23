@@ -21,7 +21,7 @@ import { handleCategory } from "./handleCategory";
  * uses a while-loop and sets i to the handler's return value, so newly
  * inserted slots don't get re-processed.
  */
-export function preliminaryTravelPass(
+export function staticEventTravelPass(
   hasLocationMap: boolean,
   categories: Category[],
   slots: Slot[],
@@ -40,7 +40,10 @@ export function preliminaryTravelPass(
 
     if (slot.type === "occupied" || slot.type === "travel") {
       recorder?.beginSlot(slot);
-      recorder?.decision(M.walker.skipOccupiedOrTravel(recorder.label(slot)), 0);
+      recorder?.decision(
+        M.walker.skipOccupiedOrTravel(recorder.label(slot)),
+        0,
+      );
       recorder?.endSlot(slots);
       i += 1;
       continue;
@@ -109,6 +112,6 @@ function isBoundaryInsideTravel(slots: Slot[], boundary: Date): boolean {
 // failure mode is visible to whoever is iterating on the cascade rules.
 export function logInconsistency(message: string): void {
   if (process.env.NODE_ENV !== "production") {
-    console.warn(`[preliminaryTravelPass] ${message}`);
+    console.warn(`[staticEventTravelPass] ${message}`);
   }
 }

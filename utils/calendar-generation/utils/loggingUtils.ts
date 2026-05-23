@@ -46,7 +46,7 @@ type LogFlag =
   | "locations"
   | "strategySettings"
   | "leanCalendar"
-  | "preliminaryTravelPass";
+  | "staticEventTravelPass";
 
 /**
  * Check if a specific logging flag is enabled
@@ -212,8 +212,8 @@ export function logCalendarDebugInfo(
   }
 
   // Preliminary travel pass trail
-  if (shouldLog(input, "preliminaryTravelPass") && data.travelPassRecorder) {
-    logPreliminaryTravelPass(data.travelPassRecorder);
+  if (shouldLog(input, "staticEventTravelPass") && data.travelPassRecorder) {
+    logstaticEventTravelPass(data.travelPassRecorder);
   }
 }
 
@@ -222,7 +222,7 @@ export function logCalendarDebugInfo(
  * TravelPassRecorder. Records are grouped by pass label so multiple
  * expandSlotsForNextWeek runs are visually separated.
  */
-function logPreliminaryTravelPass(recorder: TravelPassRecorder): void {
+function logstaticEventTravelPass(recorder: TravelPassRecorder): void {
   const records = recorder.records;
   if (records.length === 0) {
     console.log("PRELIMINARY TRAVEL PASS: (no records in range)");

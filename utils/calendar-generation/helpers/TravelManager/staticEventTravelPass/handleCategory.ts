@@ -17,7 +17,7 @@ import {
   placeTravelAtCategoryHead,
   placeTravelAtCategoryTail,
 } from "./placement";
-import { logInconsistency } from "./walker";
+import { logInconsistency } from "./staticEventTravelPass";
 
 // ---------------------------------------------------------------------------
 // Current type: Category — Entry edge then Exit edge
@@ -244,10 +244,7 @@ function handleCategoryExitEdge(
           recorder,
         );
         if (backwardResult !== null) return backwardResult;
-        recorder?.decision(
-          M.handleCategoryExitEdge.backwardCascadeFailed,
-          2,
-        );
+        recorder?.decision(M.handleCategoryExitEdge.backwardCascadeFailed, 2);
       }
     }
 
@@ -289,13 +286,7 @@ function handleCategoryExitEdge(
         ),
         2,
       );
-      return bypassCategoryCascade(
-        slots,
-        i,
-        action,
-        travelManager,
-        recorder,
-      );
+      return bypassCategoryCascade(slots, i, action, travelManager, recorder);
     }
 
     return bleedAcrossCategoryBoundary(

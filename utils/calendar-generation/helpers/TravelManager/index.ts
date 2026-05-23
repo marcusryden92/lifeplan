@@ -8,7 +8,7 @@ export { reserveInsufficientTravelAfter } from "./reserveInsufficientTravelAfter
 export { findAdjacentTravelTo } from "./findAdjacentTravelTo";
 export { findAdjacentTravelFrom } from "./findAdjacentTravelFrom";
 export { findPrecedingGapTravel } from "./findPrecedingGapTravel";
-export { preliminaryTravelPass } from "./preliminaryTravelPass";
+export { staticEventTravelPass } from "./staticEventTravelPass";
 export { dropUnreachableCategoryVisits } from "./dropUnreachableCategoryVisits";
 export {
   TravelPassRecorder,

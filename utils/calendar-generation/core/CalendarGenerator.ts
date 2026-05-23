@@ -31,7 +31,7 @@ import {
 } from "../helpers/CalendarGenerator";
 import { buildAvailableSlots } from "../helpers/TimeSlotManager";
 import {
-  preliminaryTravelPass,
+  staticEventTravelPass,
   TravelPassRecorder,
 } from "../helpers/TravelManager";
 import { setTimeOnDate } from "@/utils/calendarUtils";
@@ -168,20 +168,18 @@ export class CalendarGenerator {
 
     const loggingConfig = input.config?.logging;
     const travelPassRecorder = new TravelPassRecorder({
-      enabled: enableLogging && !!loggingConfig?.preliminaryTravelPass,
+      enabled: enableLogging && !!loggingConfig?.staticEventTravelPass,
       rangeStart: loggingConfig?.dateRangeStart ?? null,
       rangeEnd: loggingConfig?.dateRangeEnd ?? null,
       lookups: {
         categoryById: new Map(this.scheduledCategories.map((c) => [c.id, c])),
-        eventTitleById: new Map(
-          filteredEvents.map((e) => [e.id, e.title]),
-        ),
+        eventTitleById: new Map(filteredEvents.map((e) => [e.id, e.title])),
       },
     });
     this.travelPassRecorder = travelPassRecorder;
 
     travelPassRecorder.startPass("preliminary");
-    preliminaryTravelPass(
+    staticEventTravelPass(
       !!plannerLocationMap,
       this.scheduledCategories,
       timeSlotManager.slots,

@@ -1,7 +1,7 @@
 /**
  * dropUnreachableCategoryVisits
  *
- * Pre-pass run before preliminaryTravelPass. Detects three contiguous
+ * Pre-pass run before staticEventTravelPass. Detects three contiguous
  * Category slots [catA, catB, catC] where:
  *
  *   - catA.currentLocationId === catC.currentLocationId
@@ -132,9 +132,9 @@ function replaceCatBWithZeroDistanceTravel(
     { overconstrained: true, requiredTravelMinutes: 0 },
   );
   if (shards.length > 0) {
-    shards[0].consumedCategoryIds = (shards[0].consumedCategoryIds ?? []).concat(
-      catB.categoryId,
-    );
+    shards[0].consumedCategoryIds = (
+      shards[0].consumedCategoryIds ?? []
+    ).concat(catB.categoryId);
   }
   slots.splice(catBIdx, 1, ...shards);
 }

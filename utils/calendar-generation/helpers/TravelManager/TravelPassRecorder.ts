@@ -1,7 +1,7 @@
 /**
  * TravelPassRecorder
  *
- * Accumulates a per-slot decision/action trail from preliminaryTravelPass
+ * Accumulates a per-slot decision/action trail from staticEventTravelPass
  * together with an end-state snapshot of the slot array after each iteration.
  *
  * Two filters apply at record time:
@@ -12,7 +12,7 @@
  *
  * The recorder is intentionally append-only: every call site is a one-liner
  * that pushes a string into the current record, and the records array is
- * dumped by logPreliminaryTravelPass at the end of CalendarGenerator.
+ * dumped by logstaticEventTravelPass at the end of CalendarGenerator.
  */
 
 import { Category } from "@/types/prisma";

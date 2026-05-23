@@ -10,11 +10,8 @@ import {
   bleedIntoPrev,
 } from "./bleed";
 import { findPrevTravelForAvailable } from "./lookups";
-import {
-  fillCurrentWithAlert,
-  placeTravelInCurrent,
-} from "./placement";
-import { logInconsistency } from "./walker";
+import { fillCurrentWithAlert, placeTravelInCurrent } from "./placement";
+import { logInconsistency } from "./staticEventTravelPass";
 
 // Classification of the two neighbors used by handleAvailable's dispatch.
 // "soft" = Available or Category (both can be bled into / across).

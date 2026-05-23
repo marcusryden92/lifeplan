@@ -103,8 +103,9 @@ export function buildAvailableSlots({
         (event.extendedProps?.plannerType as PlannerType | undefined) ??
         PlannerType.plan,
       eventType:
-        (event.extendedProps?.eventType as Exclude<EventType, "travel"> | undefined) ??
-        EventType.planner,
+        (event.extendedProps?.eventType as
+          | Exclude<EventType, "travel">
+          | undefined) ?? EventType.planner,
       locationId: plannerLocationMap?.get(event.id) ?? null,
     };
   });
@@ -146,7 +147,7 @@ export function buildAvailableSlots({
 // Forward pass: fill missing prev with the last known location.
 // Backward pass: fill missing next with the next known location.
 // Travels in slots[] should not appear yet (they're emitted by the
-// preliminaryTravelPass that runs later), but the function handles them
+// staticEventTravelPass that runs later), but the function handles them
 // defensively in case the order changes.
 function propagateAnywhereLocations(slots: Slot[]): void {
   let lastKnown: string | null = null;
@@ -184,7 +185,8 @@ function propagateAnywhereLocations(slots: Slot[]): void {
     } else if (slot.type === "occupied") {
       if (slot.locationId != null) lastKnown = slot.locationId;
     } else if (slot.type === "travel") {
-      if (slot.travelFromLocationId != null) lastKnown = slot.travelFromLocationId;
+      if (slot.travelFromLocationId != null)
+        lastKnown = slot.travelFromLocationId;
     }
   }
 }

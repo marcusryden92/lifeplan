@@ -6,7 +6,7 @@ import { SchedulingContext } from "../../models/SchedulingModels";
 import { Slot } from "../../models/TimeSlot";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { buildAvailableSlots } from "../TimeSlotManager/buildAvailableSlots";
-import { preliminaryTravelPass } from "../TravelManager/preliminaryTravelPass";
+import { staticEventTravelPass } from "../TravelManager/staticEventTravelPass";
 import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
 
 export function expandSlotsForNextWeek(
@@ -34,8 +34,7 @@ export function expandSlotsForNextWeek(
   const weekStartMs = weekStartDate.getTime();
   const weekEndMs = weekEndDate.getTime();
   const slotsOutsideWeek: Slot[] = slotManager.slots.filter(
-    (s) =>
-      s.end.getTime() <= weekStartMs || s.start.getTime() >= weekEndMs,
+    (s) => s.end.getTime() <= weekStartMs || s.start.getTime() >= weekEndMs,
   );
 
   const initialSlots = buildAvailableSlots({
@@ -56,7 +55,7 @@ export function expandSlotsForNextWeek(
     const d = String(weekStartDate.getDate()).padStart(2, "0");
     travelPassRecorder.startPass(`next-week@${y}-${m}-${d}`);
   }
-  preliminaryTravelPass(
+  staticEventTravelPass(
     !!plannerLocationMap,
     categories,
     weekSlots,
@@ -74,6 +73,8 @@ export function expandSlotsForNextWeek(
   );
 
   context.availableMinutesPerWeek = survivingWeekSlots
-    .filter((s): s is Extract<Slot, { type: "available" }> => s.type === "available")
+    .filter(
+      (s): s is Extract<Slot, { type: "available" }> => s.type === "available",
+    )
     .reduce((t, s) => t + s.durationMinutes, 0);
 }

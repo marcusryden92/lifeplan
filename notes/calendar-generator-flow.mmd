@@ -62,7 +62,7 @@ flowchart TD
   end
 
   subgraph TM[TravelManager  + helpers]
-    tm1[preliminaryTravelPass]
+    tm1[staticEventTravelPass]
     tm2["getTravelTime #1"]
     tm3[travelPlacement]
     tm4[travelExtension]
@@ -76,7 +76,7 @@ flowchart TD
     tm6b["reserveStandaloneTravelBefore #2"]
     tm7b["reserveStandaloneTravelAfter #2"]
     tm12["getTravelTime #3"]
-    tm13["preliminaryTravelPass #2  (next week)"]
+    tm13["staticEventTravelPass #2  (next week)"]
     tm14[generateTravelEvents]
   end
 
@@ -138,7 +138,7 @@ flowchart TD
   iu3 --> ts4
   ts4 --> ts3b
 
-  %% preliminaryTravelPass body
+  %% staticEventTravelPass body
   ts3b --> tm1
   tm1 --> tm2
   tm2 --> tm3

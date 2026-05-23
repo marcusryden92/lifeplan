@@ -1,14 +1,14 @@
 /**
  * travelPassMessages
  *
- * Phrasebook for the decision/action strings emitted by preliminaryTravelPass.
+ * Phrasebook for the decision/action strings emitted by staticEventTravelPass.
  * Centralising them here keeps the dispatch code readable and lets the log
  * vocabulary be tuned without touching the control flow. Each entry is either
  * a literal string or an arrow function that takes the interpolation args
  * needed at the call site.
  *
  * Organisation: one top-level key per source function in
- * preliminaryTravelPass.ts. Within each, keys describe the decision branch or
+ * staticEventTravelPass.ts. Within each, keys describe the decision branch or
  * action taken.
  */
 
@@ -289,13 +289,16 @@ export const M = {
   },
 
   absorbAndReplanThroughCategoryCascade: {
-    header:
-      "Cascade: absorbAndReplanThroughCategory() (walking i-1, i-2, ...)",
+    header: "Cascade: absorbAndReplanThroughCategory() (walking i-1, i-2, ...)",
     travelAbsorbAction: (absorbedLabels: string[]) =>
       `absorbAndReplanThroughCategory() (Travel absorb): absorbed [${absorbedLabels.join(", ")}], placed merged A→destination travel`,
-    categoryAnchorAction: (absorbedLabels: string[], overconstrained: boolean) =>
+    categoryAnchorAction: (
+      absorbedLabels: string[],
+      overconstrained: boolean,
+    ) =>
       `absorbAndReplanThroughCategory() (Category anchor): absorbed [${absorbedLabels.join(", ")}], placed anchor→destination travel${overconstrained ? " (overconstrained)" : ""}`,
-    noAnchorFits: "No anchor fit — fall back to 2-slot absorb with insufficient",
+    noAnchorFits:
+      "No anchor fit — fall back to 2-slot absorb with insufficient",
   },
 
   forwardBypassCascade: {

@@ -153,12 +153,12 @@ export interface LoggingConfig {
   /** Log lean calendar (title, start, end, location) sorted by start */
   leanCalendar?: boolean;
   /**
-   * Log a per-slot decision/action trail from preliminaryTravelPass plus an
+   * Log a per-slot decision/action trail from staticEventTravelPass plus an
    * end-state snapshot of the timespan after each iteration. Filtered by
    * dateRangeStart / dateRangeEnd. Use this to trace where a faulty travel
    * item came from and what got rearranged or absorbed at each step.
    */
-  preliminaryTravelPass?: boolean;
+  staticEventTravelPass?: boolean;
   /**
    * Optional inclusive lower bound for event-based logs. Items whose start
    * is before this date are excluded. null/undefined means "no lower bound".

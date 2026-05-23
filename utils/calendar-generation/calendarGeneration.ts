@@ -73,7 +73,7 @@ export function generateCalendar(
     strategySettings: false,
     finalEvents: false,
     leanCalendar: true,
-    preliminaryTravelPass: true,
+    staticEventTravelPass: true,
     dateRangeStart: new Date("2026-05-23T08:00") as Date | null,
     dateRangeEnd: new Date("2026-05-23T17:00") as Date | null,
   };
