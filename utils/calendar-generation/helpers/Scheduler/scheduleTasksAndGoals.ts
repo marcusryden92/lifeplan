@@ -8,22 +8,22 @@ import {
   SchedulingFailure,
 } from "../../models/SchedulingModels";
 import { SCHEDULING_CONFIG } from "../../constants";
-import { dateTimeService } from "../../utils/dateTimeService";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { scheduleSingleTask } from "./scheduleSingleTask";
 import { scheduleGoal } from "./scheduleGoal";
-import { expandSlotsForNextWeek } from "./expandSlotsForNextWeek";
+import { expandSlots } from "./expandSlots";
 import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
+import { largestCompatibleSlotForLargestTask } from "./capacityCheck";
 
 export function scheduleTasksAndGoals(
   slotManager: TimeSlotManager,
   travelManager: TravelManager,
   scheduler: Scheduler,
-  weekStartDay: WeekDayIntegers,
+  _weekStartDay: WeekDayIntegers,
   allPlanners: Planner[],
   candidates: Planner[],
   memoizedEventIds: Set<string>,
-  largestTemplateGap: number,
+  _largestTemplateGap: number,
   perTemplateMasks: PerTemplateMask[],
   context: SchedulingContext,
   plannerLocationMap: Map<string, string | null>,
@@ -38,16 +38,51 @@ export function scheduleTasksAndGoals(
   const failures: SchedulingFailure[] = [];
   const scheduledTaskIds = new Set<string>();
 
-  let weekStart = dateTimeService.getWeekFirstDate(
-    context.currentDate,
-    weekStartDay,
-  );
-  let weeksSearched = 0;
+  const plannerCategoryMap =
+    context.plannerCategoryMap ?? new Map<string, string | null>();
+  const capacityCache = new Map<string, number>();
+
+  let expansionsDone = 0;
 
   while (
     candidates.length > 0 &&
-    weeksSearched < SCHEDULING_CONFIG.MAX_WEEKS_TO_SEARCH
+    expansionsDone < SCHEDULING_CONFIG.MAX_WEEKS_TO_SEARCH
   ) {
+    // Proactive watermark: if either the available-slot count is below the
+    // threshold or the biggest remaining task can't fit any compatible slot,
+    // expand the horizon before burning iterations on guaranteed failures.
+    // The reactive expansion at the bottom still fires after a fully-failed
+    // pass, catching location/travel cases the watermark doesn't model.
+    const availableCount = slotManager.slots.filter(
+      (s) => s.type === "available",
+    ).length;
+    const biggestRemaining = candidates.reduce(
+      (m, c) => Math.max(m, c.duration),
+      0,
+    );
+    const biggestFit = largestCompatibleSlotForLargestTask(
+      candidates,
+      slotManager.slots,
+      plannerCategoryMap,
+    );
+
+    if (
+      availableCount < SCHEDULING_CONFIG.LOW_SLOT_WATERMARK ||
+      biggestFit < biggestRemaining
+    ) {
+      expansionsDone++;
+      expandSlots(
+        context,
+        perTemplateMasks,
+        plannerLocationMap,
+        categories,
+        slotManager,
+        travelManager,
+        travelPassRecorder,
+      );
+      continue;
+    }
+
     for (let i = candidates.length - 1; i >= 0; i--) {
       const item = candidates[i];
 
@@ -55,9 +90,13 @@ export function scheduleTasksAndGoals(
         const result = scheduleSingleTask(
           item,
           scheduledTaskIds,
-          largestTemplateGap,
           failures,
           scheduler,
+          perTemplateMasks,
+          categories,
+          plannerCategoryMap,
+          context.currentDate,
+          capacityCache,
         );
 
         if (result.scheduled) {
@@ -72,10 +111,14 @@ export function scheduleTasksAndGoals(
           allPlanners,
           scheduledTaskIds,
           memoizedEventIds,
-          largestTemplateGap,
           failures,
           events,
           scheduler,
+          perTemplateMasks,
+          categories,
+          plannerCategoryMap,
+          context.currentDate,
+          capacityCache,
         );
 
         if (result.scheduled || result.permanentFailure) {
@@ -85,11 +128,8 @@ export function scheduleTasksAndGoals(
     }
 
     if (candidates.length > 0) {
-      weeksSearched++;
-      weekStart = dateTimeService.shiftDays(weekStart, 7);
-
-      expandSlotsForNextWeek(
-        weekStart,
+      expansionsDone++;
+      expandSlots(
         context,
         perTemplateMasks,
         plannerLocationMap,

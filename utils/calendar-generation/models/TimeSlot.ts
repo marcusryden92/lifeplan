@@ -29,7 +29,7 @@ export type CategorySlot = BaseSlot & {
   // Pickup-point marker: identifies the latest category whose exit edge
   // the static pass deferred (because nothing reachable came after it).
   // Invariant: at most one slot in the array carries this flag at a time.
-  // expandSlotsForNextWeek finds the flagged slot, preserves everything up
+  // expandSlots finds the flagged slot, preserves everything up
   // to it, builds new slots beyond it, then re-runs the static pass with
   // startIdx set to this slot's index — so the deferred exit edge gets
   // planned against the new region without re-deciding upstream slots.

@@ -256,10 +256,15 @@ export class CalendarGenerator {
       travelPassRecorder,
     );
 
-    // Phase 11: Assemble final events
+    // Phase 11: Assemble final events.
+    // schedulingEndDate is computed from the CURRENT slot array (post-expansion),
+    // not the initial builtSlots — otherwise the category-wrapper render horizon
+    // freezes at the initial chunk while travels keep being generated for the
+    // expanded region, producing orphan travels with no surrounding wrappers.
+    const currentSlots = timeSlotManager.slots;
     const schedulingEndDate =
-      builtSlots.length > 0
-        ? new Date(Math.max(...builtSlots.map((s) => s.end.getTime())))
+      currentSlots.length > 0
+        ? new Date(Math.max(...currentSlots.map((s) => s.end.getTime())))
         : schedulingStartDate;
     const allEvents = assembleFinalEvents(
       input.userId,

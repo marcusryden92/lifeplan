@@ -143,58 +143,66 @@ export class TemplateExpander {
       return TIME_CONSTANTS.MINUTES_PER_WEEK;
     }
 
-    // Use masks directly to calculate the largest gap across a week
     const weekStart = dateTimeService.startOfDay(new Date());
     const masks = this.getPerTemplateMasks(templates);
 
     let largestGap = 0;
-
-    // Check each day of the week for gaps
     for (let d = 0; d < 7; d++) {
       const dayStart = dateTimeService.shiftDays(weekStart, d);
-      const dayEnd = dateTimeService.endOfDay(dayStart);
-
-      // Convert masks to intervals for this day
-      const intervals = this.masksToIntervalsForDay(masks, dayStart);
-
-      if (intervals.length === 0) {
-        // Entire day is available
-        const dayMinutes =
-          (dayEnd.getTime() - dayStart.getTime()) / (1000 * 60);
-        largestGap = Math.max(largestGap, dayMinutes);
-        continue;
+      const gaps = TemplateExpander.gapIntervalsForDay(masks, dayStart);
+      for (const gap of gaps) {
+        const len = (gap.end.getTime() - gap.start.getTime()) / 60000;
+        if (len > largestGap) largestGap = len;
       }
-
-      // Sort intervals by start time
-      intervals.sort((a, b) => a.start.getTime() - b.start.getTime());
-
-      // Gap before first interval
-      const firstGap =
-        (intervals[0].start.getTime() - dayStart.getTime()) / (1000 * 60);
-      largestGap = Math.max(largestGap, firstGap);
-
-      // Gaps between intervals
-      for (let i = 0; i < intervals.length - 1; i++) {
-        const gap =
-          (intervals[i + 1].start.getTime() - intervals[i].end.getTime()) /
-          (1000 * 60);
-        largestGap = Math.max(largestGap, gap);
-      }
-
-      // Gap after last interval
-      const lastGap =
-        (dayEnd.getTime() - intervals[intervals.length - 1].end.getTime()) /
-        (1000 * 60);
-      largestGap = Math.max(largestGap, lastGap);
     }
 
     return largestGap;
   }
 
   /**
-   * Convert masks to intervals for a specific day (helper for calculateLargestGap)
+   * Return the gap intervals (unoccupied stretches) for a single day, given
+   * the per-template masks. Static so capacity-check code can subtract
+   * strict-category windows from these gaps without holding a TemplateExpander
+   * instance.
    */
-  private masksToIntervalsForDay(
+  static gapIntervalsForDay(
+    masks: PerTemplateMask[],
+    date: Date,
+  ): Array<{ start: Date; end: Date }> {
+    const dayStart = dateTimeService.startOfDay(date);
+    const dayEnd = dateTimeService.endOfDay(date);
+
+    const occupied = TemplateExpander.masksToIntervalsForDay(masks, dayStart);
+
+    if (occupied.length === 0) {
+      return [{ start: dayStart, end: dayEnd }];
+    }
+
+    occupied.sort((a, b) => a.start.getTime() - b.start.getTime());
+
+    const gaps: Array<{ start: Date; end: Date }> = [];
+
+    if (occupied[0].start.getTime() > dayStart.getTime()) {
+      gaps.push({ start: dayStart, end: occupied[0].start });
+    }
+    for (let i = 0; i < occupied.length - 1; i++) {
+      if (occupied[i].end.getTime() < occupied[i + 1].start.getTime()) {
+        gaps.push({ start: occupied[i].end, end: occupied[i + 1].start });
+      }
+    }
+    const last = occupied[occupied.length - 1];
+    if (last.end.getTime() < dayEnd.getTime()) {
+      gaps.push({ start: last.end, end: dayEnd });
+    }
+
+    return gaps;
+  }
+
+  /**
+   * Convert masks to intervals for a specific day. Static so gapIntervalsForDay
+   * can call it without an instance.
+   */
+  private static masksToIntervalsForDay(
     masks: PerTemplateMask[],
     date: Date,
   ): Array<{ start: Date; end: Date }> {

@@ -230,7 +230,7 @@ export function logCalendarDebugInfo(
 /**
  * Pretty-print the per-slot decision/action trail captured by
  * TravelPassRecorder. Records are grouped by pass label so multiple
- * expandSlotsForNextWeek runs are visually separated.
+ * expandSlots runs are visually separated.
  */
 function logstaticEventTravelPass(recorder: TravelPassRecorder): void {
   const records = recorder.records;

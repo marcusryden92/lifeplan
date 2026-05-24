@@ -70,6 +70,21 @@ export const SCHEDULING_CONFIG = {
   TRAVEL_SEARCH_WINDOW_MS: 3 * 60 * 60 * 1000,
   /** Time window (ms) for adjacent travel search including tolerance (buffer + 10 min) */
   ADJACENT_TRAVEL_TOLERANCE_MS: 10 * 60 * 1000,
+  /**
+   * Fixed horizon for slot generation. The initial build covers this many
+   * days from the current date; each subsequent expansion appends another
+   * chunk of the same size from the isFinal pickup point. Plans further out
+   * are deliberately ignored until expansion reaches them, so a single
+   * Plan a year away doesn't balloon the initial slot array.
+   */
+  HORIZON_CHUNK_DAYS: 28,
+  /**
+   * Available-slot count threshold for proactive expansion. When the slot
+   * array drops below this many Available slots, scheduleTasksAndGoals
+   * triggers expandSlots before attempting the next candidate, instead of
+   * waiting for placement failures to fire the reactive backstop.
+   */
+  LOW_SLOT_WATERMARK: 100,
 } as const;
 
 /**

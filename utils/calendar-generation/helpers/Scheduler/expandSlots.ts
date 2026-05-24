@@ -3,20 +3,23 @@ import { TimeSlotManager } from "../../core/TimeSlotManager";
 import { TravelManager } from "../../core/TravelManager";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { SchedulingContext } from "../../models/SchedulingModels";
-import { Slot } from "../../models/TimeSlot";
+import { CategorySlot, Slot } from "../../models/TimeSlot";
 import { dateTimeService } from "../../utils/dateTimeService";
+import { SCHEDULING_CONFIG } from "../../constants";
 import { buildAvailableSlots } from "../TimeSlotManager/buildAvailableSlots";
 import { staticEventTravelPass } from "../TravelManager/staticEventTravelPass";
 import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
 
-// Extend the slot horizon to cover the requested week. Picks up from the
-// CategorySlot the previous static pass flagged isFinal — everything up
-// to and including that slot is preserved verbatim (so previously-finalized
-// decisions like consume-Fun-as-overconstrained survive), and buildAvailableSlots
-// fills in the region beyond. The static pass then resumes at the isFinal slot
-// so its deferred exit edge can finally be planned against the new region.
-export function expandSlotsForNextWeek(
-  weekStart: Date,
+// Extend the slot horizon by one fixed chunk (SCHEDULING_CONFIG.HORIZON_CHUNK_DAYS)
+// past the previous pickup point. Picks up from the CategorySlot the previous
+// static pass flagged isFinal — everything up to and including that slot is
+// preserved verbatim (so previously-finalized decisions survive), and
+// buildAvailableSlots fills in only the new region. The static pass then
+// resumes at the isFinal slot so its deferred exit edge can finally be
+// planned against the new region. Plans starting before pickup are already
+// in preservedSlots; plans starting beyond the chunk end are deferred until
+// a future expansion reaches them.
+export function expandSlots(
   context: SchedulingContext,
   perTemplateMasks: PerTemplateMask[],
   plannerLocationMap: Map<string, string | null>,
@@ -25,37 +28,30 @@ export function expandSlotsForNextWeek(
   travelManager: TravelManager,
   travelPassRecorder?: TravelPassRecorder,
 ): void {
-  const weekEndDate = dateTimeService.endOfDay(
-    dateTimeService.shiftDays(weekStart, 6),
-  );
-
   const pickupIdx = slotManager.slots.findIndex(
-    (s) => s.type === "category" && s.isFinal === true,
+    (s) => s.type === "category" && (s as CategorySlot).isFinal === true,
   );
 
-  // Pickup time = end of the previously-deferred category. Fallback to
-  // weekStart if no marker exists (initial-state inconsistency — the first
+  // Pickup time = end of the previously-deferred category. Fallback to today
+  // when no marker exists (initial-state inconsistency — the first
   // CalendarGenerator pass should have set one, but be defensive).
   const pickupTime =
     pickupIdx >= 0
       ? slotManager.slots[pickupIdx].end
-      : dateTimeService.startOfDay(weekStart);
+      : dateTimeService.startOfDay(context.currentDate);
 
-  // Preserve every slot that ends at or before the pickup. Anything past
-  // pickupTime (trailing Available/Occupied/Travel from the prior pass)
-  // gets rebuilt — its content is reproducible from planners + templates,
-  // and prior static-pass placements in that region were made without
-  // knowing what comes after, so they may be stale.
+  const chunkEnd = dateTimeService.endOfDay(
+    dateTimeService.shiftDays(pickupTime, SCHEDULING_CONFIG.HORIZON_CHUNK_DAYS - 1),
+  );
+
   const pickupMs = pickupTime.getTime();
   const preservedSlots: Slot[] = slotManager.slots.filter(
     (s) => s.end.getTime() <= pickupMs,
   );
 
-  // Events relevant for the rebuild: anything starting at/after pickup,
-  // up to the requested week's end.
   const expansionEvents = context.scheduledEvents.filter((e) => {
     const start = new Date(e.start);
-    return start.getTime() >= pickupMs && start <= weekEndDate;
+    return start.getTime() >= pickupMs && start <= chunkEnd;
   });
 
   const newSlots = buildAvailableSlots({
@@ -65,16 +61,16 @@ export function expandSlotsForNextWeek(
     templateMasks: perTemplateMasks,
     categories,
     plannerLocationMap,
-    endDateOverride: weekEndDate,
+    endDateOverride: chunkEnd,
   });
 
   const combinedSlots: Slot[] = [...preservedSlots, ...newSlots].sort(
     (a, b) => a.start.getTime() - b.start.getTime(),
   );
 
-  // Resume index: where the previously-flagged isFinal slot now sits in the
-  // combined array. With sorted-by-start ordering and pickupTime > pickupSlot.start,
-  // it stays at preservedSlots.length - 1.
+  // Resume index: the previously-flagged isFinal slot sits at the tail of
+  // preservedSlots (sorted-by-start ordering + pickupTime > pickupSlot.start
+  // keeps it there). When no marker existed, start the walker from 0.
   const resumeIdx = pickupIdx >= 0 ? preservedSlots.length - 1 : 0;
 
   if (travelPassRecorder) {
@@ -99,14 +95,16 @@ export function expandSlotsForNextWeek(
 
   slotManager.slots = surviving;
 
-  const weekStartMs = dateTimeService.startOfDay(weekStart).getTime();
-  const weekEndMs = weekEndDate.getTime();
+  // Track Available minutes inside the newly-expanded chunk for the proactive
+  // watermark in scheduleTasksAndGoals. Bounds are inclusive of pickupTime
+  // (everything we just generated).
+  const chunkEndMs = chunkEnd.getTime();
   context.availableMinutesPerWeek = surviving
     .filter(
       (s): s is Extract<Slot, { type: "available" }> =>
         s.type === "available" &&
-        s.start.getTime() >= weekStartMs &&
-        s.end.getTime() <= weekEndMs,
+        s.start.getTime() >= pickupMs &&
+        s.end.getTime() <= chunkEndMs,
     )
     .reduce((t, s) => t + s.durationMinutes, 0);
 }

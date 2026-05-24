@@ -77,7 +77,7 @@ export function staticEventTravelPass(
 }
 
 // Single-flag invariant: clear isFinal on every category in the array, then
-// set it on the last one. expandSlotsForNextWeek reads this to know where to
+// set it on the last one. expandSlots reads this to know where to
 // pick up — there must never be more than one pickup point at a time, and it
 // always points at the latest category whose exit edge had no reachable next
 // at the time it was processed.

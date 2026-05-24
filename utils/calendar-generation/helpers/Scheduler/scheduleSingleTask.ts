@@ -1,14 +1,20 @@
-import { Planner, SimpleEvent } from "@/types/prisma";
+import { Planner, SimpleEvent, Category } from "@/types/prisma";
 import { Scheduler } from "../../core/Scheduler";
 import { SchedulingFailure } from "../../models/SchedulingModels";
 import { SchedulingFailureReason } from "../../constants";
+import { PerTemplateMask } from "../../models/TemplateModels";
+import { maxEffectiveCapacityFor } from "./capacityCheck";
 
 export function scheduleSingleTask(
   task: Planner,
   scheduledTaskIds: Set<string>,
-  largestTemplateGap: number,
   failures: SchedulingFailure[],
-  scheduler: Scheduler
+  scheduler: Scheduler,
+  perTemplateMasks: PerTemplateMask[],
+  categories: Category[],
+  plannerCategoryMap: Map<string, string | null>,
+  currentDate: Date,
+  capacityCache: Map<string, number>,
 ): {
   scheduled: boolean;
   permanentFailure: boolean;
@@ -18,12 +24,21 @@ export function scheduleSingleTask(
     return { scheduled: true, permanentFailure: false };
   }
 
-  if (largestTemplateGap && task.duration > largestTemplateGap) {
+  const maxCapacity = maxEffectiveCapacityFor(
+    task,
+    perTemplateMasks,
+    categories,
+    plannerCategoryMap,
+    currentDate,
+    capacityCache,
+  );
+
+  if (task.duration > maxCapacity) {
     failures.push({
       taskId: task.id,
       taskTitle: task.title,
       reason: SchedulingFailureReason.TOO_LARGE,
-      details: `Task duration (${task.duration} min) exceeds largest template gap (${largestTemplateGap} min)`,
+      details: `Task duration (${task.duration} min) exceeds max effective capacity (${maxCapacity} min) given templates and category constraints`,
     });
     return { scheduled: false, permanentFailure: true };
   }
