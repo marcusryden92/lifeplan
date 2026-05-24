@@ -17,6 +17,8 @@ import { SchedulingFailureReason } from "../../constants";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { reserveSlotWithTravel } from "../TimeSlotManager/reserveSlotWithTravel";
 import type { TravelShardSpan } from "../../utils/timeSlotUtils";
+import type { SchedulerRecorder } from "./SchedulerRecorder";
+import { SM } from "./schedulerMessages";
 
 export function reserveTaskSlot(
   task: Planner,
@@ -30,6 +32,7 @@ export function reserveTaskSlot(
   absorbPrevTravelAfter: boolean = false,
   absorbedTravelStart: Date | null = null,
   reclaimPrecedingGapTravel: TravelShardSpan | null = null,
+  recorder?: SchedulerRecorder | null,
 ): ReservationResult | { failure: SchedulingFailure } {
   const bufferMinutes = slotManager.bufferTimeMinutes;
 
@@ -86,6 +89,16 @@ export function reserveTaskSlot(
   );
   const taskEndDate = dateTimeService.addDuration(taskStartDate, task.duration);
 
+  recorder?.decision(
+    SM.reserveTaskSlot.layout(
+      recorder.fmtDate(taskStartDate),
+      recorder.fmtDate(taskEndDate),
+      offsetToTaskStart,
+      recorder.fmtDate(effectiveSlotStart),
+    ),
+    1,
+  );
+
   // Reserve the slot with travel placement.
   // If placing travel-before outside, reserve it separately and omit travel-before inside.
   if (effectiveTravelBefore > 0 && effectivePrevLocationId && taskLocationId) {
@@ -99,6 +112,18 @@ export function reserveTaskSlot(
     if (placed.success) {
       // Travel-before placed outside; do not include it inside reserveSlotWithTravel
       effectiveTravelBefore = 0;
+      recorder?.action(
+        SM.reserveTaskSlot.standaloneTravelBeforePlaced(
+          recorder.locName(effectivePrevLocationId),
+          recorder.locName(taskLocationId),
+          travelBefore,
+        ),
+      );
+    } else {
+      recorder?.decision(
+        SM.reserveTaskSlot.standaloneTravelBeforeFailed,
+        2,
+      );
     }
     // Fallback handled by offsetToTaskStart above (travel placed inside the slot)
   }
@@ -118,6 +143,7 @@ export function reserveTaskSlot(
     reusableTravelStart,
     absorbPrevTravelAfter,
     reclaimPrecedingGapTravel,
+    recorder,
   );
 
   if (!result.success) {

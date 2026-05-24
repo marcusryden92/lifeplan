@@ -34,6 +34,7 @@ import {
   staticEventTravelPass,
   TravelPassRecorder,
 } from "../helpers/TravelManager";
+import { SchedulerRecorder } from "../helpers/Scheduler/SchedulerRecorder";
 import { setTimeOnDate } from "@/utils/calendarUtils";
 
 export class CalendarGenerator {
@@ -52,6 +53,7 @@ export class CalendarGenerator {
   // Mutable state
   private metrics: SchedulingMetrics;
   private travelPassRecorder: TravelPassRecorder | null = null;
+  private schedulerRecorder: SchedulerRecorder | null = null;
 
   constructor(
     private readonly weekStartDay: WeekDayIntegers,
@@ -197,6 +199,20 @@ export class CalendarGenerator {
     // Phase 7: Build effective category map (resolves inheritance from parent chain)
     const plannerCategoryMap = buildPlannerCategoryMap(input.planners);
 
+    // Build the dynamic scheduling recorder. Same filter pattern as
+    // travelPassRecorder — off by default, scoped to the configured date
+    // range. Each scheduleTask call appends a record.
+    const schedulerRecorder = new SchedulerRecorder({
+      enabled: enableLogging && !!loggingConfig?.dynamicScheduling,
+      rangeStart: loggingConfig?.dateRangeStart ?? null,
+      rangeEnd: loggingConfig?.dateRangeEnd ?? null,
+      lookups: {
+        categoryById: new Map(this.scheduledCategories.map((c) => [c.id, c])),
+        eventTitleById: new Map(filteredEvents.map((e) => [e.id, e.title])),
+      },
+    });
+    this.schedulerRecorder = schedulerRecorder;
+
     // Phase 8: Prepare scheduling context
     const context = prepareSchedulingContext(
       input.userId,
@@ -210,6 +226,7 @@ export class CalendarGenerator {
       plannerLocationMap,
       plannerCategoryMap,
     );
+    context.schedulerRecorder = schedulerRecorder;
 
     // Phase 9: Prepare candidates (filter root goals, tasks and sort by priority)
     const candidates = prepareCandidates(
@@ -281,6 +298,7 @@ export class CalendarGenerator {
         schedulingResult,
         metrics: this.metrics,
         travelPassRecorder: this.travelPassRecorder,
+        schedulerRecorder: this.schedulerRecorder,
       });
     }
 

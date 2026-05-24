@@ -9,6 +9,7 @@ import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
 import { SchedulingFailureReason } from "../constants";
 import { PlaceableSlot, TravelSlot } from "./TimeSlot";
 import type { TravelShardSpan } from "../utils/timeSlotUtils";
+import type { SchedulerRecorder } from "../helpers/Scheduler/SchedulerRecorder";
 
 /**
  * Result of a scheduling operation
@@ -90,6 +91,13 @@ export interface SchedulingContext {
   plannerLocationMap?: Map<string, string | null>;
   /** Effective planner -> categoryId map (resolved by walking up parent chain) */
   plannerCategoryMap?: Map<string, string | null>;
+  /**
+   * Optional per-task recorder for dynamic scheduling traces (mirrors the
+   * staticEventTravelPass recorder). When attached, every scheduleTask
+   * call appends a record describing the decision branching, actions
+   * taken, and resulting slot state. No-op when null/undefined.
+   */
+  schedulerRecorder?: SchedulerRecorder | null;
 }
 
 /**
@@ -160,6 +168,14 @@ export interface LoggingConfig {
    * item came from and what got rearranged or absorbed at each step.
    */
   staticEventTravelPass?: boolean;
+  /**
+   * Log a per-task decision/action trail from the dynamic scheduling pass
+   * (the phase that places task events into slots, including travel
+   * absorbing, gap reclaiming, and span removal). Same dateRangeStart /
+   * dateRangeEnd filter applies. Use this to trace why a dynamic task
+   * absorbed a travel it shouldn't have, or ended up in the wrong slot.
+   */
+  dynamicScheduling?: boolean;
   /**
    * Optional inclusive lower bound for event-based logs. Items whose start
    * is before this date are excluded. null/undefined means "no lower bound".

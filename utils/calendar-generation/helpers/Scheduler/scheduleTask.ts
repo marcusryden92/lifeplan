@@ -18,6 +18,7 @@ import { findValidSlots } from "./findValidSlots";
 import { selectBestSlot } from "./selectBestSlot";
 import { reserveTaskSlot } from "./reserveTaskSlot";
 import { buildTaskEvent } from "./buildTaskEvent";
+import { SM } from "./schedulerMessages";
 
 export function scheduleTask(
   task: Planner,
@@ -27,17 +28,55 @@ export function scheduleTask(
   context: SchedulingContext,
   afterTime?: Date,
 ): { success: boolean; event?: SimpleEvent; failure?: SchedulingFailure } {
+  const recorder = context.schedulerRecorder;
+  const taskLocationId = context.plannerLocationMap?.get(task.id) ?? null;
+  const categoryConstraintId =
+    context.plannerCategoryMap?.get(task.id) ?? task.categoryId ?? null;
+
+  recorder?.beginTask(task, taskLocationId, categoryConstraintId);
+  recorder?.decision(
+    SM.scheduleTask.begin(
+      task.title,
+      task.duration,
+      recorder.locName(taskLocationId),
+      recorder.categoryName(categoryConstraintId),
+    ),
+    0,
+  );
+
   // Phase 1: Validate task
   const validationError = validateTask(task);
   if (validationError) {
+    recorder?.decision(
+      SM.scheduleTask.validationFailed(validationError.reason),
+      1,
+    );
+    recorder?.setOutcome({
+      kind: "failed",
+      reason: validationError.reason,
+      details: validationError.details,
+    });
+    recorder?.endTask(slotManager.slots);
     return { success: false, failure: validationError };
   }
 
   // Phase 2: Find valid slots
   const slotsResult = findValidSlots(task, slotManager, context, afterTime);
   if ("failure" in slotsResult) {
+    recorder?.decision(SM.findValidSlots.noFittingSlots(task.duration), 1);
+    recorder?.setOutcome({
+      kind: "failed",
+      reason: slotsResult.failure.reason,
+      details: slotsResult.failure.details,
+    });
+    recorder?.endTask(slotManager.slots);
     return { success: false, failure: slotsResult.failure };
   }
+
+  recorder?.decision(
+    SM.findValidSlots.foundFittingSlots(slotsResult.fittingSlots.length),
+    1,
+  );
 
   // Phase 3: Select best slot with travel calculation
   const selectionResult = selectBestSlot(
@@ -51,6 +90,12 @@ export function scheduleTask(
     context,
   );
   if ("failure" in selectionResult) {
+    recorder?.setOutcome({
+      kind: "failed",
+      reason: selectionResult.failure.reason,
+      details: selectionResult.failure.details,
+    });
+    recorder?.endTask(slotManager.slots);
     return { success: false, failure: selectionResult.failure };
   }
 
@@ -67,8 +112,15 @@ export function scheduleTask(
     selectionResult.absorbPrevTravelAfter,
     selectionResult.absorbedTravelStart,
     selectionResult.reclaimPrecedingGapTravel,
+    recorder,
   );
   if ("failure" in reservationResult) {
+    recorder?.setOutcome({
+      kind: "failed",
+      reason: reservationResult.failure.reason,
+      details: reservationResult.failure.details,
+    });
+    recorder?.endTask(slotManager.slots);
     return { success: false, failure: reservationResult.failure };
   }
 
@@ -82,6 +134,13 @@ export function scheduleTask(
 
   // Add to scheduled events (travel events added later by CalendarGenerator)
   context.scheduledEvents.push(event);
+
+  recorder?.setOutcome({
+    kind: "scheduled",
+    start: reservationResult.taskStartDate,
+    end: reservationResult.taskEndDate,
+  });
+  recorder?.endTask(slotManager.slots);
 
   return { success: true, event };
 }

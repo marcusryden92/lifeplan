@@ -17,6 +17,10 @@ import type {
   SlotRecord,
   TravelPassRecorder,
 } from "../helpers/TravelManager/TravelPassRecorder";
+import type {
+  SchedulerRecorder,
+  TaskRecord,
+} from "../helpers/Scheduler/SchedulerRecorder";
 
 export interface LoggingData {
   allEvents: SimpleEvent[];
@@ -33,6 +37,7 @@ export interface LoggingData {
   };
   metrics: SchedulingMetrics;
   travelPassRecorder?: TravelPassRecorder | null;
+  schedulerRecorder?: SchedulerRecorder | null;
 }
 
 type LogFlag =
@@ -46,7 +51,8 @@ type LogFlag =
   | "locations"
   | "strategySettings"
   | "leanCalendar"
-  | "staticEventTravelPass";
+  | "staticEventTravelPass"
+  | "dynamicScheduling";
 
 /**
  * Check if a specific logging flag is enabled
@@ -215,6 +221,10 @@ export function logCalendarDebugInfo(
   if (shouldLog(input, "staticEventTravelPass") && data.travelPassRecorder) {
     logstaticEventTravelPass(data.travelPassRecorder);
   }
+
+  if (shouldLog(input, "dynamicScheduling") && data.schedulerRecorder) {
+    logDynamicScheduling(data.schedulerRecorder);
+  }
 }
 
 /**
@@ -260,6 +270,60 @@ function logstaticEventTravelPass(recorder: TravelPassRecorder): void {
           console.log(`    ${idx + 1}. ${s.label}${m}`);
         });
       }
+    }
+  }
+}
+
+/**
+ * Pretty-print the per-task decision/action trail captured by
+ * SchedulerRecorder. One record per task; in-range filter narrows the
+ * dump to tasks whose scheduled time (or any evaluated candidate) falls
+ * in [dateRangeStart, dateRangeEnd]. Failed tasks always print.
+ */
+function logDynamicScheduling(recorder: SchedulerRecorder): void {
+  const records: TaskRecord[] = recorder.records;
+  if (records.length === 0) {
+    console.log("DYNAMIC SCHEDULING: (no records in range)");
+    return;
+  }
+
+  console.log(
+    `\n=== DYNAMIC SCHEDULING (${records.length} task${records.length === 1 ? "" : "s"} in range) ===`,
+  );
+
+  for (const rec of records) {
+    const locLabel = rec.task.locationId ?? "Anywhere";
+    console.log(
+      `\n[task #${rec.iterationIndex}] "${rec.task.title}" (${rec.task.duration}min, location=${locLabel})`,
+    );
+    for (const d of rec.decisions) {
+      const indent = "  ".repeat(d.depth + 1);
+      console.log(`${indent}${d.text}`);
+    }
+    for (const a of rec.actions) {
+      console.log(`  → ${a}`);
+    }
+    if (rec.outcome) {
+      if (rec.outcome.kind === "scheduled") {
+        const start = rec.outcome.start;
+        const end = rec.outcome.end;
+        const pad = (n: number) => String(n).padStart(2, "0");
+        const fmt = (d: Date) =>
+          `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        console.log(`  ✓ Scheduled at ${fmt(start)}–${fmt(end)}`);
+      } else if (rec.outcome.kind === "failed") {
+        const details = rec.outcome.details ? ` — ${rec.outcome.details}` : "";
+        console.log(`  ✗ Failed: ${rec.outcome.reason}${details}`);
+      } else if (rec.outcome.kind === "skipped") {
+        console.log(`  · Skipped: ${rec.outcome.reason}`);
+      }
+    }
+    if (rec.endState.length > 0) {
+      console.log(`\n  End state (${rec.endState.length} slots in range):`);
+      rec.endState.forEach((s, idx) => {
+        const m = s.markers.length > 0 ? ` {${s.markers.join(", ")}}` : "";
+        console.log(`    ${idx + 1}. ${s.label}${m}`);
+      });
     }
   }
 }

@@ -9,6 +9,8 @@ import {
 import { EventType, PlannerType } from "@/types/prisma";
 import { isTravelSlot, createTravelSlot } from "../../utils/timeSlotUtils";
 import type { TravelShardSpan } from "../../utils/timeSlotUtils";
+import type { SchedulerRecorder } from "../Scheduler/SchedulerRecorder";
+import { SM } from "../Scheduler/schedulerMessages";
 import { SCHEDULING_CONFIG } from "../../constants";
 import { v4 as uuidv4 } from "uuid";
 
@@ -99,6 +101,7 @@ export function reserveSlotWithTravel(
   reusableTravelStart?: Date | null,
   absorbPrevTravelAfter?: boolean,
   reclaimPrecedingGapTravel?: TravelShardSpan | null,
+  recorder?: SchedulerRecorder | null,
 ): { success: boolean } {
   // Operate on local typed views of the unified slots array. Items are shared
   // by reference, so in-place mutations propagate; only structural changes
@@ -136,6 +139,13 @@ export function reserveSlotWithTravel(
                 (availSlot.end.getTime() - availSlot.start.getTime()) / 60000,
               );
               availSlot.prevLocationId = taskLocationId;
+              recorder?.action(
+                SM.reserveSlotWithTravel.absorbPrevTravelAfter(
+                  travelId,
+                  recorder.fmtDate(removed.spanStart),
+                  recorder.fmtDate(removed.spanEnd),
+                ),
+              );
             }
             break;
           }
@@ -151,6 +161,13 @@ export function reserveSlotWithTravel(
     // travelId). Findindex-by-eventId would only catch the first.
     const removed = removeTravelShards(occupiedSlots, gapSpan.travelId);
     if (removed) {
+      recorder?.action(
+        SM.reserveSlotWithTravel.reclaimGapTravel(
+          gapSpan.travelId,
+          recorder.fmtDate(removed.spanStart),
+          recorder.fmtDate(removed.spanEnd),
+        ),
+      );
       const expectedSlotStart = removed.spanEnd.getTime() + bufferMs;
       const searchWindowMs = bufferMs + 10 * 60 * 1000;
       for (const availSlot of availableSlots) {
@@ -185,6 +202,7 @@ export function reserveSlotWithTravel(
   );
 
   if (slotIndex === -1) {
+    recorder?.action(SM.reserveSlotWithTravel.splitSlotFailed);
     return { success: false };
   }
 
@@ -209,6 +227,14 @@ export function reserveSlotWithTravel(
         taskLocationId ?? slot.nextLocationId ?? null,
       ),
     );
+    if (recorder) {
+      recorder.action(
+        SM.reserveSlotWithTravel.placedHeadLeftover(
+          recorder.fmtDate(slot.start),
+          recorder.fmtDate(fullStart),
+        ),
+      );
+    }
   }
 
   let removedTravelAfterEnd: Date | null = null;
@@ -239,6 +265,13 @@ export function reserveSlotWithTravel(
           ) {
             removedTravelAfterEnd = removed.spanEnd;
           }
+          recorder?.action(
+            SM.reserveSlotWithTravel.removedInboundTravel(
+              travelId,
+              recorder.fmtDate(removed.spanStart),
+              recorder.fmtDate(removed.spanEnd),
+            ),
+          );
           madeProgress = true;
           break;
         }
@@ -255,6 +288,16 @@ export function reserveSlotWithTravel(
         uuidv4(),
       ),
     );
+    if (recorder) {
+      recorder.action(
+        SM.reserveSlotWithTravel.placedInboundTravel(
+          recorder.locName(prevLocationId),
+          recorder.locName(taskLocationId),
+          recorder.fmtDate(travelBeforeStart),
+          recorder.fmtDate(travelBeforeEnd),
+        ),
+      );
+    }
   }
 
   newSlots.push({
@@ -266,6 +309,14 @@ export function reserveSlotWithTravel(
     plannerType,
     eventType: EventType.planner,
   });
+  if (recorder) {
+    recorder.action(
+      SM.reserveSlotWithTravel.placedOccupied(
+        recorder.fmtDate(start),
+        recorder.fmtDate(end),
+      ),
+    );
+  }
 
   let reclaimedTravelEnd: Date | null = null;
   if (
@@ -296,6 +347,13 @@ export function reserveSlotWithTravel(
           const removed = removeTravelShards(occupiedSlots, travelId);
           if (removed) {
             reclaimedTravelEnd = removed.spanEnd;
+            recorder?.action(
+              SM.reserveSlotWithTravel.reclaimedTrailingTravel(
+                travelId,
+                recorder.fmtDate(removed.spanStart),
+                recorder.fmtDate(removed.spanEnd),
+              ),
+            );
           }
           break;
         }
@@ -335,6 +393,15 @@ export function reserveSlotWithTravel(
         slot.nextLocationId ?? null,
       ),
     );
+    if (recorder) {
+      recorder.action(
+        SM.reserveSlotWithTravel.placedFreeLeftover(
+          recorder.fmtDate(freeSlotStart),
+          recorder.fmtDate(freeSlotEnd),
+          recorder.locName(freeSlotPrevLocation),
+        ),
+      );
+    }
   }
 
   if (travelAfter > 0 && nextLocationId && travelAfterStart) {
@@ -354,7 +421,15 @@ export function reserveSlotWithTravel(
           continue;
         const travelId = occ.travelId ?? occ.eventId;
         if (!travelId) continue;
-        if (removeTravelShards(occupiedSlots, travelId)) {
+        const removed = removeTravelShards(occupiedSlots, travelId);
+        if (removed) {
+          recorder?.action(
+            SM.reserveSlotWithTravel.removedOutboundTravel(
+              travelId,
+              recorder.fmtDate(removed.spanStart),
+              recorder.fmtDate(removed.spanEnd),
+            ),
+          );
           madeProgress = true;
           break;
         }
@@ -379,6 +454,16 @@ export function reserveSlotWithTravel(
         uuidv4(),
       ),
     );
+    if (recorder) {
+      recorder.action(
+        SM.reserveSlotWithTravel.placedOutboundTravel(
+          recorder.locName(taskLocationId),
+          recorder.locName(nextLocationId),
+          recorder.fmtDate(travelAfterStart),
+          recorder.fmtDate(travelAfterEnd),
+        ),
+      );
+    }
   }
 
   availableSlots.splice(
