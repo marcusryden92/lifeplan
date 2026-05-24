@@ -43,7 +43,9 @@
       "Bash(pnpm exec *)",
       "Bash(pnpm type-check *)",
       "Bash(echo \"EXIT=$?\")",
-      "Bash(echo \"EXIT $?\")"
+      "Bash(echo \"EXIT $?\")",
+      "Bash(grep \"from.*timeSlotUtils\\\\|import.*timeSlotUtils\" utils/calendar-generation/helpers/TravelManager/staticEventTravelPass/*.ts)",
+      "Bash(grep \"from.*timeSlotUtils\\\\|import.*timeSlotUtils\" utils/calendar-generation/helpers/Scheduler/*.ts)"
     ]
   }
 }

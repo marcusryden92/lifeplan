@@ -325,36 +325,41 @@ export function reserveSlotWithTravel(
     nextLocationId &&
     taskLocationId === nextLocationId
   ) {
-    const slotEndTime = slot.end.getTime();
-    const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
+    // Removes a preliminary inbound travel that becomes redundant when the
+    // task is already at the destination. Guards: (1) the travel's first
+    // shard must start at slot.end + buffer within ADJACENT_TRAVEL_TOLERANCE
+    // — without this, a 3h-wide search grabs unrelated travels (e.g. the
+    // varmdo→gamla-stan return between Fun and a later Work category) and
+    // the freed leftover ends up overlapping intervening category slots.
+    // (2) skip self-travels (from===to) — those encode static-pass category
+    // trespass / no-op transit and shouldn't be treated as reclaimable.
+    const expectedTravelStartTime = slot.end.getTime() + bufferMs;
+    const adjacencyMs =
+      bufferMs + SCHEDULING_CONFIG.ADJACENT_TRAVEL_TOLERANCE_MS;
 
-    for (let i = occupiedSlots.length - 1; i >= 0; i--) {
-      const occ = occupiedSlots[i];
+    const seenTravelIds = new Set<string>();
+    for (const occ of occupiedSlots) {
+      if (!isTravelSlot(occ)) continue;
+      if (occ.travelToLocationId !== nextLocationId) continue;
+      if (occ.travelType !== "preliminary") continue;
+      if (occ.travelFromLocationId === occ.travelToLocationId) continue;
+      const travelId = occ.travelId ?? occ.eventId;
+      if (!travelId || seenTravelIds.has(travelId)) continue;
+      seenTravelIds.add(travelId);
+
       if (
-        isTravelSlot(occ) &&
-        occ.travelToLocationId === nextLocationId &&
-        occ.travelType === "preliminary"
+        Math.abs(occ.start.getTime() - expectedTravelStartTime) <= adjacencyMs
       ) {
-        const travelEndTime = occ.end.getTime();
-        if (
-          travelEndTime > slotEndTime &&
-          travelEndTime - slotEndTime < searchWindowMs
-        ) {
-          // Remove the whole multi-shard span so reclaimedTravelEnd
-          // reflects the logical travel's true end, not just the first
-          // matched shard's.
-          const travelId = occ.travelId ?? occ.eventId;
-          const removed = removeTravelShards(occupiedSlots, travelId);
-          if (removed) {
-            reclaimedTravelEnd = removed.spanEnd;
-            recorder?.action(
-              SM.reserveSlotWithTravel.reclaimedTrailingTravel(
-                travelId,
-                recorder.fmtDate(removed.spanStart),
-                recorder.fmtDate(removed.spanEnd),
-              ),
-            );
-          }
+        const removed = removeTravelShards(occupiedSlots, travelId);
+        if (removed) {
+          reclaimedTravelEnd = removed.spanEnd;
+          recorder?.action(
+            SM.reserveSlotWithTravel.reclaimedTrailingTravel(
+              travelId,
+              recorder.fmtDate(removed.spanStart),
+              recorder.fmtDate(removed.spanEnd),
+            ),
+          );
           break;
         }
       }
