@@ -8,8 +8,33 @@ import {
 } from "../../models/TimeSlot";
 import { EventType, PlannerType } from "@/types/prisma";
 import { isTravelSlot, createTravelSlot } from "../../utils/timeSlotUtils";
+import type { TravelShardSpan } from "../../utils/timeSlotUtils";
 import { SCHEDULING_CONFIG } from "../../constants";
 import { v4 as uuidv4 } from "uuid";
+
+// Remove every shard belonging to a logical travel (identified by travelId)
+// from a local filtered view. Returns the span's aggregate start/end so
+// callers can recompute the freed-up region. Use this anywhere the
+// scheduler "absorbs" or "reclaims" travel — splice(i, 1) only removes one
+// shard of a multi-shard span and leaves the rest orphaned.
+function removeTravelShards(
+  list: (OccupiedSlot | TravelSlot)[],
+  travelId: string,
+): { spanStart: Date; spanEnd: Date } | null {
+  let spanStart: Date | null = null;
+  let spanEnd: Date | null = null;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const s = list[i];
+    if (s.type !== "travel") continue;
+    const key = s.travelId ?? s.eventId;
+    if (key !== travelId) continue;
+    if (!spanEnd || s.end.getTime() > spanEnd.getTime()) spanEnd = s.end;
+    if (!spanStart || s.start.getTime() < spanStart.getTime())
+      spanStart = s.start;
+    list.splice(i, 1);
+  }
+  return spanStart && spanEnd ? { spanStart, spanEnd } : null;
+}
 
 type PlaceableSlot = AvailableSlot | CategorySlot;
 
@@ -73,7 +98,7 @@ export function reserveSlotWithTravel(
   nextLocationId: string | null,
   reusableTravelStart?: Date | null,
   absorbPrevTravelAfter?: boolean,
-  reclaimPrecedingGapTravel?: TravelSlot | null,
+  reclaimPrecedingGapTravel?: TravelShardSpan | null,
 ): { success: boolean } {
   // Operate on local typed views of the unified slots array. Items are shared
   // by reference, so in-place mutations propagate; only structural changes
@@ -101,12 +126,17 @@ export function reserveSlotWithTravel(
         for (const availSlot of availableSlots) {
           const timeDiff = Math.abs(availSlot.start.getTime() - travelEndTime);
           if (timeDiff <= searchWindowMs) {
-            availSlot.start = occ.start;
-            availSlot.durationMinutes = Math.floor(
-              (availSlot.end.getTime() - availSlot.start.getTime()) / 60000,
-            );
-            availSlot.prevLocationId = taskLocationId;
-            occupiedSlots.splice(i, 1);
+            // Remove the entire multi-shard span, not just the matched
+            // shard, then extend availSlot back to the span's true start.
+            const travelId = occ.travelId ?? occ.eventId;
+            const removed = removeTravelShards(occupiedSlots, travelId);
+            if (removed) {
+              availSlot.start = removed.spanStart;
+              availSlot.durationMinutes = Math.floor(
+                (availSlot.end.getTime() - availSlot.start.getTime()) / 60000,
+              );
+              availSlot.prevLocationId = taskLocationId;
+            }
             break;
           }
         }
@@ -116,23 +146,22 @@ export function reserveSlotWithTravel(
   }
 
   if (reclaimPrecedingGapTravel) {
-    const gapTravel = reclaimPrecedingGapTravel;
-    const gapIdx = occupiedSlots.findIndex(
-      (s) => s.eventId === gapTravel.eventId,
-    );
-    if (gapIdx !== -1) {
-      occupiedSlots.splice(gapIdx, 1);
-      const expectedSlotStart = gapTravel.end.getTime() + bufferMs;
+    const gapSpan = reclaimPrecedingGapTravel;
+    // Remove every shard of the gap travel (it's a multi-shard span by
+    // travelId). Findindex-by-eventId would only catch the first.
+    const removed = removeTravelShards(occupiedSlots, gapSpan.travelId);
+    if (removed) {
+      const expectedSlotStart = removed.spanEnd.getTime() + bufferMs;
       const searchWindowMs = bufferMs + 10 * 60 * 1000;
       for (const availSlot of availableSlots) {
         const diff = Math.abs(availSlot.start.getTime() - expectedSlotStart);
         if (diff <= searchWindowMs) {
-          availSlot.start = gapTravel.start;
+          availSlot.start = removed.spanStart;
           availSlot.durationMinutes = Math.floor(
             (availSlot.end.getTime() - availSlot.start.getTime()) / 60000,
           );
           availSlot.prevLocationId =
-            gapTravel.travelFromLocationId ?? availSlot.prevLocationId;
+            gapSpan.travelFromLocationId ?? availSlot.prevLocationId;
           break;
         }
       }
@@ -188,13 +217,30 @@ export function reserveSlotWithTravel(
     const taskStartTime = start.getTime();
     const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
 
-    for (let i = occupiedSlots.length - 1; i >= 0; i--) {
-      const occ = occupiedSlots[i];
-      if (isTravelSlot(occ) && occ.travelToLocationId === taskLocationId) {
-        const travelEndTime = occ.end.getTime();
-        if (Math.abs(travelEndTime - taskStartTime) < searchWindowMs) {
-          removedTravelAfterEnd = new Date(occ.end.getTime());
-          occupiedSlots.splice(i, 1);
+    // Find every pre-existing inbound travel (across distinct multi-shard
+    // spans) whose end sits near the task start, then remove each span
+    // wholesale. Iterate via while-restart since each removal mutates the
+    // list; in practice only one span matches in normal flow.
+    let madeProgress = true;
+    while (madeProgress) {
+      madeProgress = false;
+      for (const occ of occupiedSlots) {
+        if (!isTravelSlot(occ)) continue;
+        if (occ.travelToLocationId !== taskLocationId) continue;
+        if (Math.abs(occ.end.getTime() - taskStartTime) >= searchWindowMs)
+          continue;
+        const travelId = occ.travelId ?? occ.eventId;
+        if (!travelId) continue;
+        const removed = removeTravelShards(occupiedSlots, travelId);
+        if (removed) {
+          if (
+            !removedTravelAfterEnd ||
+            removed.spanEnd.getTime() > removedTravelAfterEnd.getTime()
+          ) {
+            removedTravelAfterEnd = removed.spanEnd;
+          }
+          madeProgress = true;
+          break;
         }
       }
     }
@@ -243,8 +289,14 @@ export function reserveSlotWithTravel(
           travelEndTime > slotEndTime &&
           travelEndTime - slotEndTime < searchWindowMs
         ) {
-          reclaimedTravelEnd = new Date(occ.end.getTime());
-          occupiedSlots.splice(i, 1);
+          // Remove the whole multi-shard span so reclaimedTravelEnd
+          // reflects the logical travel's true end, not just the first
+          // matched shard's.
+          const travelId = occ.travelId ?? occ.eventId;
+          const removed = removeTravelShards(occupiedSlots, travelId);
+          if (removed) {
+            reclaimedTravelEnd = removed.spanEnd;
+          }
           break;
         }
       }
@@ -289,14 +341,23 @@ export function reserveSlotWithTravel(
     const slotEndTime = slot.end.getTime();
     const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
 
-    for (let i = occupiedSlots.length - 1; i >= 0; i--) {
-      const occ = occupiedSlots[i];
-      if (
-        isTravelSlot(occ) &&
-        occ.travelToLocationId === nextLocationId &&
-        Math.abs(occ.end.getTime() - slotEndTime) < searchWindowMs
-      ) {
-        occupiedSlots.splice(i, 1);
+    // Remove every pre-existing outbound travel to nextLocationId whose
+    // end sits near the slot's end. Same while-restart pattern as the
+    // inbound cleanup above — handles distinct multi-shard spans.
+    let madeProgress = true;
+    while (madeProgress) {
+      madeProgress = false;
+      for (const occ of occupiedSlots) {
+        if (!isTravelSlot(occ)) continue;
+        if (occ.travelToLocationId !== nextLocationId) continue;
+        if (Math.abs(occ.end.getTime() - slotEndTime) >= searchWindowMs)
+          continue;
+        const travelId = occ.travelId ?? occ.eventId;
+        if (!travelId) continue;
+        if (removeTravelShards(occupiedSlots, travelId)) {
+          madeProgress = true;
+          break;
+        }
       }
     }
   }

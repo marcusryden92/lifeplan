@@ -17,6 +17,7 @@ import {
   TravelTimeEntry,
   TravelProcessingAction,
 } from "../models/SchedulingModels";
+import type { TravelShardSpan } from "../utils/timeSlotUtils";
 import { createLegTracker } from "../helpers/TravelManager/legTracker";
 import {
   setTravelTimeMatrix,
@@ -273,7 +274,10 @@ export class TravelManager {
    * Find an existing travel slot going to a destination near a given time.
    * Used to determine if travel-after can be reused instead of reserving new space.
    */
-  findAdjacentTravelTo(nearTime: Date, toLocationId: string): Date | null {
+  findAdjacentTravelTo(
+    nearTime: Date,
+    toLocationId: string,
+  ): TravelShardSpan | null {
     return findAdjacentTravelTo(
       this.slots,
       this.bufferTimeMinutes,
@@ -286,7 +290,7 @@ export class TravelManager {
    * Find a gap-travel slot that ends just before a given slot start.
    * Used to detect when a pre-carved return trip precedes a free slot.
    */
-  findPrecedingGapTravel(slotStart: Date): TravelSlot | null {
+  findPrecedingGapTravel(slotStart: Date): TravelShardSpan | null {
     return findPrecedingGapTravel(
       this.slots,
       this.bufferTimeMinutes,
@@ -301,7 +305,7 @@ export class TravelManager {
   findAdjacentTravelFrom(
     nearTime: Date,
     fromLocationId: string,
-  ): TravelSlot | null {
+  ): TravelShardSpan | null {
     return findAdjacentTravelFrom(
       this.slots,
       this.bufferTimeMinutes,

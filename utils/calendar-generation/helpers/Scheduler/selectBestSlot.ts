@@ -15,8 +15,9 @@ import {
   ScoredSlot,
   SlotSelectionResult,
 } from "../../models/SchedulingModels";
-import { PlaceableSlot, TravelSlot } from "../../models/TimeSlot";
+import { PlaceableSlot } from "../../models/TimeSlot";
 import { SchedulingFailureReason } from "../../constants";
+import type { TravelShardSpan } from "../../utils/timeSlotUtils";
 
 /**
  * Score time slots for a task using the strategy
@@ -71,7 +72,7 @@ export function selectBestSlot(
   let selectedReusableTravelStart: Date | null = null;
   let selectedAbsorbPrevTravel = false;
   let selectedAbsorbedTravelStart: Date | null = null;
-  let selectedReclaimPrecedingGapTravel: TravelSlot | null = null;
+  let selectedReclaimPrecedingGapTravel: TravelShardSpan | null = null;
 
   for (const scoredSlot of scoredSlots) {
     // Find the original slot with location info
@@ -86,8 +87,8 @@ export function selectBestSlot(
     let needTravelAfter = 0;
 
     let canAbsorbPrevTravel = false;
-    let absorbableTravel: TravelSlot | null = null;
-    let reclaimPrecedingGapTravel: TravelSlot | null = null;
+    let absorbableTravel: TravelShardSpan | null = null;
+    let reclaimPrecedingGapTravel: TravelShardSpan | null = null;
 
     // For a CategorySlot, the task lands inside the category interior, so
     // the user's effective location on both sides of the task is the
@@ -124,7 +125,7 @@ export function selectBestSlot(
             const directTravel = travelManager.getTravelTime(
               precedingGapTravel.travelFromLocationId,
               taskLocationId,
-              precedingGapTravel.start,
+              precedingGapTravel.travelStart,
             );
             if (directTravel > 0) {
               needTravelBefore = directTravel;
@@ -163,11 +164,15 @@ export function selectBestSlot(
     let reusableTravelStart: Date | null = null;
 
     if (needTravelAfter > 0 && slotNextLoc) {
-      reusableTravelStart = travelManager.findAdjacentTravelTo(
+      const reusableTravelSpan = travelManager.findAdjacentTravelTo(
         slot.end,
         slotNextLoc,
       );
-      if (reusableTravelStart) {
+      if (reusableTravelSpan) {
+        // Use the SPAN's start, not the single shard's — the freed-up
+        // region's downstream computation needs the logical travel's
+        // true start.
+        reusableTravelStart = reusableTravelSpan.travelStart;
         effectiveTravelAfter = 0;
       }
     }
@@ -193,16 +198,30 @@ export function selectBestSlot(
     }
 
     // When absorbing a previous task's travel-after, or reclaiming a preceding gap travel,
-    // the reclaimed travel space adds to the effective slot capacity.
+    // the reclaimed travel space adds to the effective slot capacity. Use the
+    // full multi-shard span duration (travelEnd - travelStart) so we count
+    // every shard, not just the matched one.
     let effectiveCapacity = slot.durationMinutes;
     let absorbedStart: Date | null = null;
     if (canAbsorbPrevTravel && absorbableTravel) {
-      effectiveCapacity += absorbableTravel.durationMinutes + bufferMinutes;
-      absorbedStart = new Date(absorbableTravel.start.getTime());
+      const spanDur = Math.floor(
+        (absorbableTravel.travelEnd.getTime() -
+          absorbableTravel.travelStart.getTime()) /
+          60000,
+      );
+      effectiveCapacity += spanDur + bufferMinutes;
+      absorbedStart = new Date(absorbableTravel.travelStart.getTime());
     } else if (reclaimPrecedingGapTravel) {
       // Expand capacity backward to include the gap travel window + the buffer between it and the slot
-      effectiveCapacity += reclaimPrecedingGapTravel.durationMinutes + bufferMinutes;
-      absorbedStart = new Date(reclaimPrecedingGapTravel.start.getTime());
+      const spanDur = Math.floor(
+        (reclaimPrecedingGapTravel.travelEnd.getTime() -
+          reclaimPrecedingGapTravel.travelStart.getTime()) /
+          60000,
+      );
+      effectiveCapacity += spanDur + bufferMinutes;
+      absorbedStart = new Date(
+        reclaimPrecedingGapTravel.travelStart.getTime(),
+      );
     }
 
     // Check if this slot has enough capacity

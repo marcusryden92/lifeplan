@@ -8,6 +8,7 @@ import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
 
 import { SchedulingFailureReason } from "../constants";
 import { PlaceableSlot, TravelSlot } from "./TimeSlot";
+import type { TravelShardSpan } from "../utils/timeSlotUtils";
 
 /**
  * Result of a scheduling operation
@@ -268,7 +269,7 @@ export interface SlotSelectionResult {
   taskLocationId: string | null | undefined;
   absorbPrevTravelAfter: boolean;
   absorbedTravelStart: Date | null;
-  reclaimPrecedingGapTravel: TravelSlot | null;
+  reclaimPrecedingGapTravel: TravelShardSpan | null;
 }
 
 export interface ReservationResult {

@@ -749,6 +749,44 @@ export function findTravelShardSpan(
   };
 }
 
+// Locate the travel span containing slots[idx] and remove every shard in it
+// from the array. Returns the resolved span (pre-removal) for callers that
+// need the span's aggregate geometry to compute downstream side effects
+// (e.g. recovering the freed time range). Returns null if slots[idx] isn't
+// a travel slot.
+//
+// Use this in scheduling code that wants to "absorb" or "reclaim" a logical
+// travel — splice(idx, 1) would only remove one shard of a multi-shard
+// travel, leaving the others orphaned.
+export function removeTravelSpanAt(
+  slots: TimeSlot[],
+  idx: number,
+): TravelShardSpan | null {
+  const span = findTravelShardSpan(slots, idx);
+  if (!span) return null;
+  slots.splice(span.startIdx, span.endIdx - span.startIdx + 1);
+  return span;
+}
+
+// Stale-index-safe removal. Use when a span was located earlier (e.g. by
+// the scheduler's selectBestSlot pass) but the slots array may have been
+// mutated in the interim. Looks up the span fresh by travelId and removes
+// it. Returns the resolved span (pre-removal) or null if no shard with
+// the given travelId is present.
+export function removeTravelSpanByTravelId(
+  slots: TimeSlot[],
+  travelId: string,
+): TravelShardSpan | null {
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    if (slot.type !== "travel") continue;
+    const key = slot.travelId ?? slot.eventId;
+    if (key !== travelId) continue;
+    return removeTravelSpanAt(slots, i);
+  }
+  return null;
+}
+
 export function isTravelSlot(slot: TimeSlot): slot is TravelSlot {
   return slot.type === "travel";
 }

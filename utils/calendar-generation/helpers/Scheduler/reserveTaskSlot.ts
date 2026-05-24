@@ -12,10 +12,11 @@ import {
   SchedulingFailure,
   ReservationResult,
 } from "../../models/SchedulingModels";
-import { PlaceableSlot, TravelSlot } from "../../models/TimeSlot";
+import { PlaceableSlot } from "../../models/TimeSlot";
 import { SchedulingFailureReason } from "../../constants";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { reserveSlotWithTravel } from "../TimeSlotManager/reserveSlotWithTravel";
+import type { TravelShardSpan } from "../../utils/timeSlotUtils";
 
 export function reserveTaskSlot(
   task: Planner,
@@ -28,7 +29,7 @@ export function reserveTaskSlot(
   travelManager: TravelManager,
   absorbPrevTravelAfter: boolean = false,
   absorbedTravelStart: Date | null = null,
-  reclaimPrecedingGapTravel: TravelSlot | null = null,
+  reclaimPrecedingGapTravel: TravelShardSpan | null = null,
 ): ReservationResult | { failure: SchedulingFailure } {
   const bufferMinutes = slotManager.bufferTimeMinutes;
 
