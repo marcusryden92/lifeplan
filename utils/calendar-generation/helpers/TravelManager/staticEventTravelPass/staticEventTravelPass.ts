@@ -1,5 +1,5 @@
 import { Category } from "@/types/prisma";
-import { Slot } from "../../../models/TimeSlot";
+import { CategorySlot, Slot } from "../../../models/TimeSlot";
 import { TravelManager } from "../../../core/TravelManager";
 import { dropUnreachableCategoryVisits } from "../dropUnreachableCategoryVisits";
 import { TravelPassRecorder } from "../TravelPassRecorder";
@@ -27,14 +27,18 @@ export function staticEventTravelPass(
   slots: Slot[],
   travelManager: TravelManager,
   recorder?: TravelPassRecorder,
+  startIdx: number = 0,
 ): void {
   if (!hasLocationMap) return;
 
-  // Pre-pass: drop unreachable category visits (the "jump cat 2" case) so the
-  // walker reaches each cat boundary with a clean three-cat shape.
-  dropUnreachableCategoryVisits(hasLocationMap, slots, travelManager);
+  // Pre-pass runs only on a full pass. On an incremental resume (startIdx > 0)
+  // the upstream region is already settled — re-running drop-unreachable on
+  // it could mutate previously-finalized decisions.
+  if (startIdx === 0) {
+    dropUnreachableCategoryVisits(hasLocationMap, slots, travelManager);
+  }
 
-  let i = 0;
+  let i = startIdx;
   while (i < slots.length) {
     const slot = slots[i];
 
@@ -67,6 +71,26 @@ export function staticEventTravelPass(
 
     recorder?.endSlot(slots);
     i += 1;
+  }
+
+  markLastCategoryAsFinal(slots);
+}
+
+// Single-flag invariant: clear isFinal on every category in the array, then
+// set it on the last one. expandSlotsForNextWeek reads this to know where to
+// pick up — there must never be more than one pickup point at a time, and it
+// always points at the latest category whose exit edge had no reachable next
+// at the time it was processed.
+function markLastCategoryAsFinal(slots: Slot[]): void {
+  let lastCategoryIdx = -1;
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    if (slot.type !== "category") continue;
+    (slot as CategorySlot).isFinal = undefined;
+    lastCategoryIdx = i;
+  }
+  if (lastCategoryIdx >= 0) {
+    (slots[lastCategoryIdx] as CategorySlot).isFinal = true;
   }
 }
 

@@ -9,6 +9,12 @@ import { buildAvailableSlots } from "../TimeSlotManager/buildAvailableSlots";
 import { staticEventTravelPass } from "../TravelManager/staticEventTravelPass";
 import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
 
+// Extend the slot horizon to cover the requested week. Picks up from the
+// CategorySlot the previous static pass flagged isFinal — everything up
+// to and including that slot is preserved verbatim (so previously-finalized
+// decisions like consume-Fun-as-overconstrained survive), and buildAvailableSlots
+// fills in the region beyond. The static pass then resumes at the isFinal slot
+// so its deferred exit edge can finally be planned against the new region.
 export function expandSlotsForNextWeek(
   weekStart: Date,
   context: SchedulingContext,
@@ -19,62 +25,88 @@ export function expandSlotsForNextWeek(
   travelManager: TravelManager,
   travelPassRecorder?: TravelPassRecorder,
 ): void {
-  const weekStartDate = dateTimeService.startOfDay(weekStart);
   const weekEndDate = dateTimeService.endOfDay(
     dateTimeService.shiftDays(weekStart, 6),
   );
 
-  const weekEvents = context.scheduledEvents.filter((e) => {
-    const s = new Date(e.start);
-    return s >= weekStartDate && s <= weekEndDate;
-  });
-
-  // Remove existing available slots in this week's range and replace with
-  // freshly built ones. Occupied/travel slots outside this range are kept.
-  const weekStartMs = weekStartDate.getTime();
-  const weekEndMs = weekEndDate.getTime();
-  const slotsOutsideWeek: Slot[] = slotManager.slots.filter(
-    (s) => s.end.getTime() <= weekStartMs || s.start.getTime() >= weekEndMs,
+  const pickupIdx = slotManager.slots.findIndex(
+    (s) => s.type === "category" && s.isFinal === true,
   );
 
-  const initialSlots = buildAvailableSlots({
+  // Pickup time = end of the previously-deferred category. Fallback to
+  // weekStart if no marker exists (initial-state inconsistency — the first
+  // CalendarGenerator pass should have set one, but be defensive).
+  const pickupTime =
+    pickupIdx >= 0
+      ? slotManager.slots[pickupIdx].end
+      : dateTimeService.startOfDay(weekStart);
+
+  // Preserve every slot that ends at or before the pickup. Anything past
+  // pickupTime (trailing Available/Occupied/Travel from the prior pass)
+  // gets rebuilt — its content is reproducible from planners + templates,
+  // and prior static-pass placements in that region were made without
+  // knowing what comes after, so they may be stale.
+  const pickupMs = pickupTime.getTime();
+  const preservedSlots: Slot[] = slotManager.slots.filter(
+    (s) => s.end.getTime() <= pickupMs,
+  );
+
+  // Events relevant for the rebuild: anything starting at/after pickup,
+  // up to the requested week's end.
+  const expansionEvents = context.scheduledEvents.filter((e) => {
+    const start = new Date(e.start);
+    return start.getTime() >= pickupMs && start <= weekEndDate;
+  });
+
+  const newSlots = buildAvailableSlots({
     planners: context.allPlanners,
-    startDate: weekStartDate,
-    existingEvents: weekEvents,
+    startDate: pickupTime,
+    existingEvents: expansionEvents,
     templateMasks: perTemplateMasks,
     categories,
     plannerLocationMap,
     endDateOverride: weekEndDate,
   });
 
-  // Run travel pass on the week's slots in isolation, then merge back.
-  const weekSlots: Slot[] = [...initialSlots];
+  const combinedSlots: Slot[] = [...preservedSlots, ...newSlots].sort(
+    (a, b) => a.start.getTime() - b.start.getTime(),
+  );
+
+  // Resume index: where the previously-flagged isFinal slot now sits in the
+  // combined array. With sorted-by-start ordering and pickupTime > pickupSlot.start,
+  // it stays at preservedSlots.length - 1.
+  const resumeIdx = pickupIdx >= 0 ? preservedSlots.length - 1 : 0;
+
   if (travelPassRecorder) {
-    const y = weekStartDate.getFullYear();
-    const m = String(weekStartDate.getMonth() + 1).padStart(2, "0");
-    const d = String(weekStartDate.getDate()).padStart(2, "0");
-    travelPassRecorder.startPass(`next-week@${y}-${m}-${d}`);
+    const y = pickupTime.getFullYear();
+    const m = String(pickupTime.getMonth() + 1).padStart(2, "0");
+    const d = String(pickupTime.getDate()).padStart(2, "0");
+    travelPassRecorder.startPass(`resume@${y}-${m}-${d}`);
   }
   staticEventTravelPass(
     !!plannerLocationMap,
     categories,
-    weekSlots,
+    combinedSlots,
     travelManager,
     travelPassRecorder,
+    resumeIdx,
   );
 
   const nowMs = context.currentDate.getTime();
-  const survivingWeekSlots = weekSlots.filter(
+  const surviving = combinedSlots.filter(
     (s) => s.type !== "available" || s.end.getTime() > nowMs,
   );
 
-  slotManager.slots = [...slotsOutsideWeek, ...survivingWeekSlots].sort(
-    (a, b) => a.start.getTime() - b.start.getTime(),
-  );
+  slotManager.slots = surviving;
 
-  context.availableMinutesPerWeek = survivingWeekSlots
+  const weekStartMs = dateTimeService.startOfDay(weekStart).getTime();
+  const weekEndMs = weekEndDate.getTime();
+  context.availableMinutesPerWeek = surviving
     .filter(
-      (s): s is Extract<Slot, { type: "available" }> => s.type === "available",
+      (s): s is Extract<Slot, { type: "available" }> =>
+        s.type === "available" &&
+        s.start.getTime() >= weekStartMs &&
+        s.end.getTime() <= weekEndMs,
     )
     .reduce((t, s) => t + s.durationMinutes, 0);
 }

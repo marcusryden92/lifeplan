@@ -55,6 +55,15 @@ function handleCategoryEntryEdge(
 ): number {
   const slot = slots[i] as CategorySlot;
 
+  // Incremental resume: this slot was processed on an earlier pass and is
+  // being re-entered only so its deferred exit edge can run against the
+  // newly-built region. Entry travel (if any) was already placed last time —
+  // skip entry to avoid re-placing it. The end-of-pass markLastCategoryAsFinal
+  // will clear this flag and move it to the new array-end category.
+  if (slot.isFinal) {
+    return i;
+  }
+
   // Outer guard: prev != current (null on either side = no transition).
   // Manual check so we don't track a leg we won't end up placing.
   if (
@@ -183,7 +192,9 @@ function handleCategoryExitEdge(
 
   // ---- no next (last slot) ----
   if (i + 1 >= slots.length) {
-    markCategoryFinal(slot);
+    // Defer planning the exit edge — there's nothing reachable to plan toward.
+    // The end-of-pass markLastCategoryAsFinal will flag this slot for future
+    // expansion to pick up from.
     recorder?.decision(M.handleCategoryExitEdge.lastSlotFinal, 1);
     recorder?.action(M.handleCategoryExitEdge.markFinalAction);
     return i + 1;
@@ -370,8 +381,4 @@ function handleCategoryExitEdge(
   logInconsistency("Category exit edge: unhandled next type");
   recorder?.decision(M.handleCategoryExitEdge.unhandledNext, 1);
   return i + 1;
-}
-
-function markCategoryFinal(slot: CategorySlot): void {
-  slot.isFinal = true;
 }
