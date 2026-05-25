@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { FolderTree, Plus } from "lucide-react";
+import { FolderTree, Plus, CalendarClock } from "lucide-react";
 import { setCategories as setCategoriesInRedux } from "@/redux/slices/calendarSlice";
 import { Button } from "@/components/ui/Button";
 import {
@@ -25,10 +25,10 @@ import {
 import { CategoryItem } from "./_components/CategoryItem";
 import { AddCategoryDialog } from "./_components/AddCategoryDialog";
 import { EditCategoryDialog } from "./_components/EditCategoryDialog";
+import { TimeWindowPlacementModal } from "./_components/TimeWindowPlacementModal";
 import * as categoryActions from "@/actions/categories";
 import { buildCategoryTree, CategoryNode } from "@/utils/categoryUtils";
 import type { Category } from "@/types/prisma";
-import type { CategoryTimeWindow } from "@/types/categoryTypes";
 
 type CategoryWithChildren = Category & {
   children: Category[];
@@ -50,6 +50,9 @@ export default function CategoriesPage() {
   // Edit dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+
+  // Time window placement modal
+  const [placementOpen, setPlacementOpen] = useState(false);
 
   // Delete confirmation
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -130,7 +133,6 @@ export default function CategoriesPage() {
 
   const handleSaveCategory = async (data: {
     name: string;
-    timeSlots?: CategoryTimeWindow[];
     isStrict?: boolean;
     locationId?: string | null;
   }) => {
@@ -258,10 +260,20 @@ export default function CategoriesPage() {
                   organize your items
                 </CardDescription>
               </div>
-              <Button onClick={() => openAddDialog()} className="gap-2">
-                <Plus className="w-4 h-4" />
-                Add Category
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setPlacementOpen(true)}
+                  className="gap-2"
+                >
+                  <CalendarClock className="w-4 h-4" />
+                  Configure Time Windows
+                </Button>
+                <Button onClick={() => openAddDialog()} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Add Category
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -345,6 +357,12 @@ export default function CategoriesPage() {
         onOpenChange={setEditDialogOpen}
         onSave={handleSaveCategory}
         category={editingCategory}
+      />
+
+      {/* Time Window Placement Modal */}
+      <TimeWindowPlacementModal
+        open={placementOpen}
+        onOpenChange={setPlacementOpen}
       />
 
       {/* Delete Confirmation Dialog */}

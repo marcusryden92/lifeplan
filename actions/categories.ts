@@ -5,17 +5,11 @@ import { db } from "@/lib/db";
 import { PlannerType } from "@/types/prisma";
 import type { Category } from "@/types/prisma";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
-import { intToWeekday, weekdayToInt } from "@/utils/calendarUtils";
+import { weekdayToInt } from "@/utils/calendarUtils";
 
 // ============================================================================
 // Category CRUD Operations
 // ============================================================================
-
-type TimeSlotInput = {
-  days: WeekDayIntegers[];
-  startTime: string;
-  endTime: string;
-};
 
 // Conversion happens at the DB boundary: Prisma stores `days` as the
 // WeekDayType enum (strings); the rest of the app works with WeekDayIntegers.
@@ -28,14 +22,6 @@ function narrowTimeSlots<T extends RawTimeWindowRow>(
   return slots.map((ts) => ({
     ...ts,
     days: ts.days.map((d) => weekdayToInt(d as Parameters<typeof weekdayToInt>[0])),
-  }));
-}
-
-function timeSlotsForWrite(slots: TimeSlotInput[]) {
-  return slots.map((ts) => ({
-    startTime: ts.startTime,
-    endTime: ts.endTime,
-    days: ts.days.map(intToWeekday),
   }));
 }
 
@@ -130,7 +116,6 @@ export async function createCategory(data: {
   icon?: string;
   color?: string;
   parentId?: string;
-  timeSlots?: TimeSlotInput[];
   isStrict?: boolean;
   locationId?: string | null;
 }): Promise<Category> {
@@ -173,9 +158,6 @@ export async function createCategory(data: {
       userId: session.user.id,
       createdAt: now,
       updatedAt: now,
-      timeSlots: {
-        create: timeSlotsForWrite(data.timeSlots ?? []),
-      },
     },
     include: { timeSlots: true },
   });
@@ -188,7 +170,6 @@ export async function updateCategory(
     name?: string;
     icon?: string | null;
     color?: string | null;
-    timeSlots?: TimeSlotInput[];
     isStrict?: boolean;
     locationId?: string | null;
   },
@@ -218,12 +199,6 @@ export async function updateCategory(
       isStrict: data.isStrict,
       locationId: data.locationId,
       updatedAt: new Date().toISOString(),
-      ...(data.timeSlots !== undefined && {
-        timeSlots: {
-          deleteMany: {},
-          create: timeSlotsForWrite(data.timeSlots),
-        },
-      }),
     },
     include: { timeSlots: true },
   });

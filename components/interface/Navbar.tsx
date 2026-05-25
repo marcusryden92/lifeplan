@@ -31,7 +31,7 @@ const links = [
 ];
 
 const itemLinks = [
-  { name: "Inbox", href: "/inbox", icon: <FaInbox className="h-5 w-5" /> },
+  { name: "Capture", href: "/inbox", icon: <FaInbox className="h-5 w-5" /> },
   {
     name: "Items",
     href: "/items",

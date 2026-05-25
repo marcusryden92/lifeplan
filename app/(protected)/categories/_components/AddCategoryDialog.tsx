@@ -15,8 +15,6 @@ import { Label } from "@/components/ui/Label";
 import { Switch } from "@/components/ui/Switch";
 import { MapPin } from "lucide-react";
 import { LocationSelector } from "@/components/locations/LocationSelector";
-import { TimeSlotEditor } from "./TimeSlotEditor";
-import { CategoryTimeWindow } from "@/types/categoryTypes";
 
 const EMOJI_OPTIONS = [
   "💼",
@@ -67,7 +65,6 @@ interface AddCategoryDialogProps {
     icon?: string;
     color?: string;
     parentId?: string;
-    timeSlots?: CategoryTimeWindow[];
     isStrict?: boolean;
     locationId?: string | null;
   }) => void;
@@ -85,7 +82,6 @@ export function AddCategoryDialog({
   const [name, setName] = useState("");
   const [icon, setIcon] = useState<string | undefined>();
   const [color, setColor] = useState<string | undefined>();
-  const [timeSlots, setTimeSlots] = useState<CategoryTimeWindow[]>([]);
   const [isStrict, setIsStrict] = useState(false);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -99,16 +95,13 @@ export function AddCategoryDialog({
       icon,
       color,
       parentId,
-      timeSlots: timeSlots.length > 0 ? timeSlots : undefined,
-      isStrict: timeSlots.length > 0 ? isStrict : undefined,
+      isStrict,
       locationId,
     });
 
-    // Reset form
     setName("");
     setIcon(undefined);
     setColor(undefined);
-    setTimeSlots([]);
     setIsStrict(false);
     setLocationId(null);
     setShowAdvanced(false);
@@ -118,7 +111,6 @@ export function AddCategoryDialog({
     setName("");
     setIcon(undefined);
     setColor(undefined);
-    setTimeSlots([]);
     setIsStrict(false);
     setLocationId(null);
     setShowAdvanced(false);
@@ -127,7 +119,7 @@ export function AddCategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col overflow-hidden">
         <form
           onSubmit={handleSubmit}
           className="flex flex-col h-full overflow-hidden"
@@ -194,7 +186,6 @@ export function AddCategoryDialog({
               </div>
             </div>
 
-            {/* Show/Hide Advanced Options */}
             <Button
               type="button"
               variant="outline"
@@ -206,7 +197,6 @@ export function AddCategoryDialog({
 
             {showAdvanced && (
               <div className="space-y-4 pt-2 border-t">
-                {/* Location Selector */}
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <MapPin className="w-4 h-4" />
@@ -222,28 +212,27 @@ export function AddCategoryDialog({
                   />
                 </div>
 
-                {/* Time Slots */}
-                <TimeSlotEditor timeSlots={timeSlots} onChange={setTimeSlots} />
-
-                {/* Strict Mode */}
-                {timeSlots.length > 0 && (
-                  <div className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="strict-mode">Strict Mode</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Only items from this category can be scheduled in these
-                        time slots
-                      </p>
-                    </div>
-                    <Switch
-                      id="strict-mode"
-                      checked={isStrict}
-                      onCheckedChange={setIsStrict}
-                    />
+                <div className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="strict-mode">Strict Mode</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Only items from this category can be scheduled in this
+                      category&apos;s time windows
+                    </p>
                   </div>
-                )}
+                  <Switch
+                    id="strict-mode"
+                    checked={isStrict}
+                    onCheckedChange={setIsStrict}
+                  />
+                </div>
               </div>
             )}
+
+            <p className="text-xs text-muted-foreground">
+              Time windows for this category are set from the Configure Time
+              Windows view on the categories page after creation.
+            </p>
           </div>
 
           <DialogFooter className="mt-4 flex-shrink-0">

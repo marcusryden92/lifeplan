@@ -55,7 +55,13 @@
       "PowerShell(pnpm tsc --noEmit 2>&1)",
       "PowerShell(pnpm tsc --noEmit; \"exit=$LASTEXITCODE\")",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\utils\\\\calendar-generation\\\\helpers\\\\Scheduler\\\\\" -Filter \"*.ts\" | Select-Object Name)",
-      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\utils\\\\calendar-generation\\\\helpers\\\\\" -Directory | Select-Object Name)"
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\utils\\\\calendar-generation\\\\helpers\\\\\" -Directory | Select-Object Name)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts\\)$\")",
+      "Bash(ls -la \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\\" | head -30)",
+      "Read(//c/Users/Marcus/Desktop/**)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('prisma', {}\\), indent=2\\)\\)\")",
+      "Bash(tasklist /FI \"IMAGENAME eq node.exe\")",
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue)"
     ]
   }
 }

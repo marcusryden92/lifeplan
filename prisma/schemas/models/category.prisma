@@ -40,8 +40,15 @@ model CategoryTimeWindow {
   startTime  String        // HH:MM (24-hour)
   endTime    String        // HH:MM (24-hour); if <= startTime the slot spans midnight
 
-  categoryId String
-  category   Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  // categoryId is nullable so the user can place windows on the calendar before
+  // deciding which category they belong to (drafted, unassigned windows).
+  categoryId String?
+  category   Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // userId is the direct owner. Required so unassigned windows (categoryId=null)
+  // are still scoped to a user.
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("CategoryTimeWindows")
 }

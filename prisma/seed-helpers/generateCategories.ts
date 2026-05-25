@@ -8,6 +8,21 @@ export const CATEGORY_IDS = {
 
 type CategorySeedInput = Prisma.CategoryCreateInput & { id: string };
 
+type SeedTimeWindow = {
+  days: ("sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday")[];
+  startTime: string;
+  endTime: string;
+};
+
+const withOwner = (
+  userId: string,
+  slots: SeedTimeWindow[],
+): Prisma.CategoryTimeWindowCreateWithoutCategoryInput[] =>
+  slots.map((slot) => ({
+    ...slot,
+    user: { connect: { id: userId } },
+  }));
+
 export const generateCategories = (userId: string): CategorySeedInput[] => {
   const timestamp = new Date().toISOString();
 
@@ -19,38 +34,14 @@ export const generateCategories = (userId: string): CategorySeedInput[] => {
       color: null,
       sortOrder: 0,
       timeSlots: {
-        create: [
-          {
-            days: ["monday", "tuesday"],
-            startTime: "09:00",
-            endTime: "17:00",
-          },
-          {
-            days: ["wednesday"],
-            startTime: "20:00",
-            endTime: "00:00",
-          },
-          {
-            days: ["thursday"],
-            startTime: "20:00",
-            endTime: "04:00",
-          },
-          {
-            days: ["saturday"],
-            startTime: "09:00",
-            endTime: "09:30",
-          },
-          {
-            days: ["saturday"],
-            startTime: "10:00",
-            endTime: "10:30",
-          },
-          {
-            days: ["saturday"],
-            startTime: "12:00",
-            endTime: "13:00",
-          },
-        ],
+        create: withOwner(userId, [
+          { days: ["monday", "tuesday"], startTime: "09:00", endTime: "17:00" },
+          { days: ["wednesday"], startTime: "20:00", endTime: "00:00" },
+          { days: ["thursday"], startTime: "20:00", endTime: "04:00" },
+          { days: ["saturday"], startTime: "09:00", endTime: "09:30" },
+          { days: ["saturday"], startTime: "10:00", endTime: "10:30" },
+          { days: ["saturday"], startTime: "12:00", endTime: "13:00" },
+        ]),
       },
       isStrict: true,
       location: { connect: { id: LOCATION_IDS.GAMLA_STAN } },
@@ -65,23 +56,11 @@ export const generateCategories = (userId: string): CategorySeedInput[] => {
       color: "#22c55e",
       sortOrder: 1,
       timeSlots: {
-        create: [
-          {
-            days: ["thursday"],
-            startTime: "00:00",
-            endTime: "02:00",
-          },
-          {
-            days: ["saturday"],
-            startTime: "09:30",
-            endTime: "10:00",
-          },
-          {
-            days: ["saturday"],
-            startTime: "11:00",
-            endTime: "12:00",
-          },
-        ],
+        create: withOwner(userId, [
+          { days: ["thursday"], startTime: "00:00", endTime: "02:00" },
+          { days: ["saturday"], startTime: "09:30", endTime: "10:00" },
+          { days: ["saturday"], startTime: "11:00", endTime: "12:00" },
+        ]),
       },
       isStrict: true,
       location: { connect: { id: LOCATION_IDS.VARMDO } },

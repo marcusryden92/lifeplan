@@ -15,8 +15,6 @@ import { Label } from "@/components/ui/Label";
 import { Switch } from "@/components/ui/Switch";
 import { MapPin, ChevronDown, ChevronUp } from "lucide-react";
 import { LocationSelector } from "@/components/locations/LocationSelector";
-import { TimeSlotEditor } from "./TimeSlotEditor";
-import { CategoryTimeWindow } from "@/types/categoryTypes";
 import type { Category } from "@/types/prisma";
 
 interface EditCategoryDialogProps {
@@ -24,7 +22,6 @@ interface EditCategoryDialogProps {
   onOpenChange: (open: boolean) => void;
   onSave: (data: {
     name: string;
-    timeSlots?: CategoryTimeWindow[];
     isStrict?: boolean;
     locationId?: string | null;
   }) => void;
@@ -38,7 +35,6 @@ export function EditCategoryDialog({
   category,
 }: EditCategoryDialogProps) {
   const [name, setName] = useState("");
-  const [timeSlots, setTimeSlots] = useState<CategoryTimeWindow[]>([]);
   const [isStrict, setIsStrict] = useState(false);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -46,18 +42,9 @@ export function EditCategoryDialog({
   useEffect(() => {
     if (category) {
       setName(category.name);
-
-      const mappedSlots: CategoryTimeWindow[] = category.timeSlots.map((ts) => ({
-        days: ts.days,
-        startTime: ts.startTime,
-        endTime: ts.endTime,
-      }));
-      setTimeSlots(mappedSlots);
-
       setIsStrict(category.isStrict || false);
       setLocationId(category.locationId || null);
-
-      setShowAdvanced(mappedSlots.length > 0 || !!category.locationId);
+      setShowAdvanced(!!category.locationId || category.isStrict);
     }
   }, [category]);
 
@@ -67,7 +54,6 @@ export function EditCategoryDialog({
 
     onSave({
       name: name.trim(),
-      timeSlots: timeSlots.length > 0 ? timeSlots : undefined,
       isStrict,
       locationId,
     });
@@ -77,7 +63,6 @@ export function EditCategoryDialog({
 
   const handleClose = () => {
     setName("");
-    setTimeSlots([]);
     setIsStrict(false);
     setLocationId(null);
     setShowAdvanced(false);
@@ -88,14 +73,17 @@ export function EditCategoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[800px] max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col overflow-hidden">
         <form
           onSubmit={handleSubmit}
           className="flex flex-col h-full overflow-hidden"
         >
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Edit Category</DialogTitle>
-            <DialogDescription>Update the category settings</DialogDescription>
+            <DialogDescription>
+              Update the category settings. Time windows are managed from the
+              Configure Time Windows view on the categories page.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4 overflow-y-auto flex-1 min-h-0">
@@ -110,7 +98,6 @@ export function EditCategoryDialog({
               />
             </div>
 
-            {/* Advanced Options Toggle */}
             <div>
               <Button
                 type="button"
@@ -128,7 +115,6 @@ export function EditCategoryDialog({
 
               {showAdvanced && (
                 <div className="mt-4 space-y-6 p-4 border rounded-md bg-gray-50/50">
-                  {/* Location Assignment */}
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-muted-foreground" />
@@ -144,29 +130,18 @@ export function EditCategoryDialog({
                     />
                   </div>
 
-                  {/* Time Constraints */}
-                  <div className="space-y-3">
-                    <TimeSlotEditor
-                      timeSlots={timeSlots}
-                      onChange={setTimeSlots}
+                  <div className="flex items-center justify-between p-3 border rounded-md bg-white">
+                    <div className="space-y-0.5">
+                      <Label>Strict Mode</Label>
+                      <p className="text-xs text-muted-foreground">
+                        No other items can be scheduled during this category&apos;s
+                        time windows
+                      </p>
+                    </div>
+                    <Switch
+                      checked={isStrict}
+                      onCheckedChange={setIsStrict}
                     />
-
-                    {/* Strict Mode Toggle */}
-                    {timeSlots.length > 0 && (
-                      <div className="flex items-center justify-between p-3 border rounded-md bg-white">
-                        <div className="space-y-0.5">
-                          <Label>Strict Mode</Label>
-                          <p className="text-xs text-muted-foreground">
-                            No other items can be scheduled during category time
-                            slots
-                          </p>
-                        </div>
-                        <Switch
-                          checked={isStrict}
-                          onCheckedChange={setIsStrict}
-                        />
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
