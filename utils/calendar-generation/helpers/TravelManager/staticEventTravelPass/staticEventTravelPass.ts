@@ -31,12 +31,14 @@ export function staticEventTravelPass(
 ): void {
   if (!hasLocationMap) return;
 
-  // Pre-pass runs only on a full pass. On an incremental resume (startIdx > 0)
-  // the upstream region is already settled — re-running drop-unreachable on
-  // it could mutate previously-finalized decisions.
-  if (startIdx === 0) {
-    dropUnreachableCategoryVisits(hasLocationMap, slots, travelManager);
-  }
+  // dropUnreachableCategoryVisits is run unconditionally — its trigger requires
+  // three adjacent CategorySlots in a specific [A, B, C] location pattern, and
+  // previously-replaced spots are now Travel slots, so it naturally no-ops on
+  // the upstream finalized region. Crucially it must run on the *new* region
+  // added by expansion, otherwise unreachable-Fun-between-Works in the new
+  // chunk never gets dropped and the bleed cascade ends up routing the user
+  // out to Fun's location with no return travel.
+  dropUnreachableCategoryVisits(hasLocationMap, slots, travelManager);
 
   let i = startIdx;
   while (i < slots.length) {
