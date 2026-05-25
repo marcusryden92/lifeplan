@@ -9,6 +9,7 @@ import { Planner } from "@/types/prisma";
 import { TimeSlotManager } from "../../core/TimeSlotManager";
 import { TravelManager } from "../../core/TravelManager";
 import {
+  SchedulingContext,
   SchedulingFailure,
   ReservationResult,
 } from "../../models/SchedulingModels";
@@ -17,7 +18,6 @@ import { SchedulingFailureReason } from "../../constants";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { reserveSlotWithTravel } from "../TimeSlotManager/reserveSlotWithTravel";
 import type { TravelShardSpan } from "../../utils/timeSlotUtils";
-import type { SchedulerRecorder } from "./SchedulerRecorder";
 import { SM } from "./schedulerMessages";
 
 export function reserveTaskSlot(
@@ -29,11 +29,12 @@ export function reserveTaskSlot(
   reusableTravelStart: Date | null,
   slotManager: TimeSlotManager,
   travelManager: TravelManager,
+  context: SchedulingContext,
   absorbPrevTravelAfter: boolean = false,
   absorbedTravelStart: Date | null = null,
   reclaimPrecedingGapTravel: TravelShardSpan | null = null,
-  recorder?: SchedulerRecorder | null,
 ): ReservationResult | { failure: SchedulingFailure } {
+  const recorder = context.schedulerRecorder;
   const bufferMinutes = slotManager.bufferTimeMinutes;
 
   // For a CategorySlot, the task lands in the category interior — the user is

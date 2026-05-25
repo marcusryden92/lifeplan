@@ -15,19 +15,18 @@
  * dumped by logstaticEventTravelPass at the end of CalendarGenerator.
  */
 
-import { Category } from "@/types/prisma";
 import { Slot } from "../../models/TimeSlot";
+import {
+  RecorderBase,
+  type DecisionLine,
+  type SlotSnapshot,
+} from "../../utils/RecorderBase";
 
-export type SlotSnapshot = {
-  label: string;
-  type: Slot["type"];
-  id: string | null;
-  start: Date;
-  end: Date;
-  markers: string[];
-};
-
-export type DecisionLine = { depth: number; text: string };
+export type { DecisionLine, SlotSnapshot } from "../../utils/RecorderBase";
+export type {
+  RecorderLookups,
+  RecorderOptions as TravelPassRecorderOptions,
+} from "../../utils/RecorderBase";
 
 export type SlotRecord = {
   pass: string;
@@ -38,47 +37,16 @@ export type SlotRecord = {
   endState: SlotSnapshot[];
 };
 
-export interface RecorderLookups {
-  categoryById?: Map<string, Category>;
-  locationNameById?: Map<string, string>;
-  eventTitleById?: Map<string, string>;
-}
-
-export interface TravelPassRecorderOptions {
-  enabled: boolean;
-  rangeStart: Date | null;
-  rangeEnd: Date | null;
-  lookups?: RecorderLookups;
-}
-
-export class TravelPassRecorder {
-  readonly enabled: boolean;
-  private readonly rangeStart: Date | null;
-  private readonly rangeEnd: Date | null;
-  private readonly lookups: RecorderLookups;
+export class TravelPassRecorder extends RecorderBase {
   private currentPass = "preliminary";
   private iterationCounter = 0;
   private current: SlotRecord | null = null;
   readonly records: SlotRecord[] = [];
 
-  constructor(opts: TravelPassRecorderOptions) {
-    this.enabled = opts.enabled;
-    this.rangeStart = opts.rangeStart;
-    this.rangeEnd = opts.rangeEnd;
-    this.lookups = opts.lookups ?? {};
-  }
-
   startPass(label: string): void {
     if (!this.enabled) return;
     this.currentPass = label;
     this.iterationCounter = 0;
-  }
-
-  inRange(slot: Slot): boolean {
-    if (!this.enabled) return false;
-    if (this.rangeStart && slot.end <= this.rangeStart) return false;
-    if (this.rangeEnd && slot.start >= this.rangeEnd) return false;
-    return true;
   }
 
   beginSlot(slot: Slot): void {
@@ -115,77 +83,5 @@ export class TravelPassRecorder {
       .map((s) => this.snapshot(s));
     this.records.push(this.current);
     this.current = null;
-  }
-
-  label(slot: Slot): string {
-    return this.snapshot(slot).label;
-  }
-
-  private snapshot(slot: Slot): SlotSnapshot {
-    const start = slot.start;
-    const end = slot.end;
-    let label: string;
-    let id: string | null = null;
-    const markers: string[] = [];
-
-    switch (slot.type) {
-      case "category": {
-        const name =
-          this.lookups.categoryById?.get(slot.categoryId)?.name ??
-          slot.categoryId;
-        label = `Category(${name}) [${this.fmt(start)}–${this.fmt(end)}]`;
-        id = slot.categoryId;
-        if (slot.trespassingStart) markers.push("trespassingStart");
-        if (slot.trespassingEnd) markers.push("trespassingEnd");
-        if (slot.isFinal) markers.push("isFinal");
-        break;
-      }
-      case "available": {
-        const prev = this.locName(slot.prevLocationId);
-        const next = this.locName(slot.nextLocationId);
-        label = `Available [${this.fmt(start)}–${this.fmt(end)}, prev=${prev}, next=${next}]`;
-        break;
-      }
-      case "occupied": {
-        const title = this.lookups.eventTitleById?.get(slot.eventId);
-        const name = title ?? `${slot.plannerType}/${slot.eventType}`;
-        label = `Occupied(${name}) [${this.fmt(start)}–${this.fmt(end)}]`;
-        id = slot.eventId;
-        break;
-      }
-      case "travel": {
-        const from = this.locName(slot.travelFromLocationId);
-        const to = this.locName(slot.travelToLocationId);
-        label = `Travel(${from}→${to}) [${this.fmt(start)}–${this.fmt(end)}]`;
-        id = slot.eventId;
-        if (slot.insufficientTravel) {
-          markers.push(
-            `insufficientTravel(needs ${slot.requiredTravelMinutes}min)`,
-          );
-        }
-        if (slot.overconstrained) markers.push("overconstrained");
-        if (slot.consumedCategoryIds && slot.consumedCategoryIds.length > 0) {
-          const names = slot.consumedCategoryIds
-            .map((cid) => this.lookups.categoryById?.get(cid)?.name ?? cid)
-            .join(", ");
-          markers.push(`consumed=[${names}]`);
-        }
-        break;
-      }
-    }
-
-    return { label, type: slot.type, id, start, end, markers };
-  }
-
-  private locName(id: string | null | undefined): string {
-    if (id == null) return "Anywhere";
-    return this.lookups.locationNameById?.get(id) ?? id;
-  }
-
-  private fmt(d: Date): string {
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const ms = d.getTime();
-    const day = new Date(ms);
-    return `${pad(day.getMonth() + 1)}-${pad(day.getDate())} ${pad(day.getHours())}:${pad(day.getMinutes())}`;
   }
 }

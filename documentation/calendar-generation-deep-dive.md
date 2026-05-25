@@ -731,7 +731,6 @@ interface SchedulingContext {
   weekStartDay: number;
   allPlanners: Planner[];
   scheduledEvents: SimpleEvent[]; // Mutable - events added here
-  availableMinutesPerWeek: number;
   metrics: SchedulingMetrics;
   categories?: Map<string, Category>;
   plannerLocationMap?: Map<string, string | null>;

@@ -7,3 +7,5 @@ export { findAllFittingSlots } from "./findAllFittingSlots";
 export { getDaySlots } from "./getDaySlots";
 export { getDayAvailableMinutes } from "./getDayAvailableMinutes";
 export { reserveSlotWithTravel } from "./reserveSlotWithTravel";
+export { dropPastAvailableSlots } from "./dropPastAvailableSlots";
+export { deriveSchedulingHorizon } from "./deriveSchedulingHorizon";

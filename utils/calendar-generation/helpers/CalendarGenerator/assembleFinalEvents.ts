@@ -12,7 +12,7 @@ import {
 } from "../../models/SchedulingModels";
 import { EventAssembler } from "../../core/EventAssembler";
 import { Slot } from "../../models/TimeSlot";
-import { markCategoryBoundaryTrespasses } from "../EventAssembler/markCategoryBoundaryTrespasses";
+import { stampCategoryWrapperBorders } from "../EventAssembler/stampCategoryWrapperBorders";
 import { filterEventsByLogRange } from "../../utils/loggingUtils";
 
 export function assembleFinalEvents(
@@ -29,21 +29,23 @@ export function assembleFinalEvents(
   // Generate travel events from stored travel slots
   const travelEvents = travelManager.generateTravelEvents(userId);
 
-  // Debug: group travel events by date to spot duplicates. Respects the
-  // logging date range so noisy days can be filtered out.
-  const travelEventsForLog = filterEventsByLogRange(travelEvents, logging);
-  const travelByDate = new Map<string, typeof travelEventsForLog>();
-  for (const te of travelEventsForLog) {
-    const dateKey = te.start.slice(0, 10);
-    if (!travelByDate.has(dateKey)) travelByDate.set(dateKey, []);
-    travelByDate.get(dateKey)!.push(te);
-  }
-  for (const [date, travels] of [...travelByDate.entries()].sort()) {
-    console.log(`[travel] ${date}:`);
-    for (const t of travels.sort((a, b) => a.start.localeCompare(b.start))) {
-      const from = t.extendedProps?.fromLocationId ?? "?";
-      const to = t.extendedProps?.toLocationId ?? "?";
-      console.log(`  ${t.start.slice(11, 16)}-${t.end.slice(11, 16)} ${from} → ${to}`);
+  if (logging?.travelDebug) {
+    // Group travel events by date to spot duplicates. Respects the logging
+    // date range so noisy days can be filtered out.
+    const travelEventsForLog = filterEventsByLogRange(travelEvents, logging);
+    const travelByDate = new Map<string, typeof travelEventsForLog>();
+    for (const te of travelEventsForLog) {
+      const dateKey = te.start.slice(0, 10);
+      if (!travelByDate.has(dateKey)) travelByDate.set(dateKey, []);
+      travelByDate.get(dateKey)!.push(te);
+    }
+    for (const [date, travels] of [...travelByDate.entries()].sort()) {
+      console.log(`[travel] ${date}:`);
+      for (const t of travels.sort((a, b) => a.start.localeCompare(b.start))) {
+        const from = t.extendedProps?.fromLocationId ?? "?";
+        const to = t.extendedProps?.toLocationId ?? "?";
+        console.log(`  ${t.start.slice(11, 16)}-${t.end.slice(11, 16)} ${from} → ${to}`);
+      }
     }
   }
 
@@ -67,7 +69,7 @@ export function assembleFinalEvents(
 
   // Mark category wrapper events whose travel-pass placement would have
   // consumed the entire wrapper — renders the wrapper's top/bottom red.
-  markCategoryBoundaryTrespasses(allEvents, slots);
+  stampCategoryWrapperBorders(allEvents, slots);
 
   return allEvents;
 }

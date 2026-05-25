@@ -3,5 +3,5 @@ export { buildPlanEvents } from "./buildPlanEvents";
 export { buildCompletedEvents } from "./buildCompletedEvents";
 export { buildCategoryWrapperEvents } from "./buildCategoryWrapperEvents";
 export { markTrespassingEvents } from "./markTrespassingEvents";
-export { markCategoryBoundaryTrespasses } from "./markCategoryBoundaryTrespasses";
+export { stampCategoryWrapperBorders } from "./stampCategoryWrapperBorders";
 export { assembleFinalEventList } from "./assembleFinalEventList";

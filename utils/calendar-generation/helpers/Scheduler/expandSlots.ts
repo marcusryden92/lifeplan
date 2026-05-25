@@ -7,6 +7,7 @@ import { CategorySlot, Slot } from "../../models/TimeSlot";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../../constants";
 import { buildAvailableSlots } from "../TimeSlotManager/buildAvailableSlots";
+import { dropPastAvailableSlots } from "../TimeSlotManager/dropPastAvailableSlots";
 import { staticEventTravelPass } from "../TravelManager/staticEventTravelPass";
 import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
 
@@ -35,6 +36,8 @@ function outgoingLocationOf(slot: Slot): string | null {
 // planned against the new region. Plans starting before pickup are already
 // in preservedSlots; plans starting beyond the chunk end are deferred until
 // a future expansion reaches them.
+export type ExpansionReason = "watermark" | "fallback";
+
 export function expandSlots(
   context: SchedulingContext,
   perTemplateMasks: PerTemplateMask[],
@@ -42,6 +45,7 @@ export function expandSlots(
   categories: Category[],
   slotManager: TimeSlotManager,
   travelManager: TravelManager,
+  reason: ExpansionReason,
   travelPassRecorder?: TravelPassRecorder,
 ): void {
   const pickupIdx = slotManager.slots.findIndex(
@@ -139,7 +143,7 @@ export function expandSlots(
     const y = pickupTime.getFullYear();
     const m = String(pickupTime.getMonth() + 1).padStart(2, "0");
     const d = String(pickupTime.getDate()).padStart(2, "0");
-    travelPassRecorder.startPass(`resume@${y}-${m}-${d}`);
+    travelPassRecorder.startPass(`resume(${reason})@${y}-${m}-${d}`);
   }
   staticEventTravelPass(
     !!plannerLocationMap,
@@ -150,23 +154,5 @@ export function expandSlots(
     resumeIdx,
   );
 
-  const nowMs = context.currentDate.getTime();
-  const surviving = combinedSlots.filter(
-    (s) => s.type !== "available" || s.end.getTime() > nowMs,
-  );
-
-  slotManager.slots = surviving;
-
-  // Track Available minutes inside the newly-expanded chunk for the proactive
-  // watermark in scheduleTasksAndGoals. Bounds are inclusive of pickupTime
-  // (everything we just generated).
-  const chunkEndMs = chunkEnd.getTime();
-  context.availableMinutesPerWeek = surviving
-    .filter(
-      (s): s is Extract<Slot, { type: "available" }> =>
-        s.type === "available" &&
-        s.start.getTime() >= pickupMs &&
-        s.end.getTime() <= chunkEndMs,
-    )
-    .reduce((t, s) => t + s.durationMinutes, 0);
+  slotManager.slots = dropPastAvailableSlots(combinedSlots, context.currentDate);
 }

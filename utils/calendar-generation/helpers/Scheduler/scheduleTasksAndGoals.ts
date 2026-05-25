@@ -1,15 +1,9 @@
 import { Planner, SimpleEvent, PlannerType, Category } from "@/types/prisma";
 import { Scheduler } from "../../core/Scheduler";
-import { TimeSlotManager } from "../../core/TimeSlotManager";
-import { TravelManager } from "../../core/TravelManager";
 import { PerTemplateMask } from "../../models/TemplateModels";
-import {
-  SchedulingContext,
-  SchedulingFailure,
-} from "../../models/SchedulingModels";
+import { SchedulingFailure } from "../../models/SchedulingModels";
 import { Slot } from "../../models/TimeSlot";
 import { SCHEDULING_CONFIG } from "../../constants";
-import { WeekDayIntegers } from "@/types/calendarTypes";
 import { scheduleSingleTask } from "./scheduleSingleTask";
 import { scheduleGoal } from "./scheduleGoal";
 import { expandSlots } from "./expandSlots";
@@ -17,16 +11,11 @@ import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
 import { largestCompatibleSlotForLargestTask } from "./capacityCheck";
 
 export function scheduleTasksAndGoals(
-  slotManager: TimeSlotManager,
-  travelManager: TravelManager,
   scheduler: Scheduler,
-  _weekStartDay: WeekDayIntegers,
   allPlanners: Planner[],
   candidates: Planner[],
   memoizedEventIds: Set<string>,
-  _largestTemplateGap: number,
   perTemplateMasks: PerTemplateMask[],
-  context: SchedulingContext,
   plannerLocationMap: Map<string, string | null>,
   categories: Category[],
   travelPassRecorder?: TravelPassRecorder,
@@ -35,6 +24,7 @@ export function scheduleTasksAndGoals(
   newEvents: SimpleEvent[];
   failures: SchedulingFailure[];
 } {
+  const { slotManager, travelManager, context } = scheduler;
   const events: SimpleEvent[] = [];
   const failures: SchedulingFailure[] = [];
   const scheduledTaskIds = new Set<string>();
@@ -89,6 +79,7 @@ export function scheduleTasksAndGoals(
         categories,
         slotManager,
         travelManager,
+        "watermark",
         travelPassRecorder,
       );
       continue;
@@ -147,6 +138,7 @@ export function scheduleTasksAndGoals(
         categories,
         slotManager,
         travelManager,
+        "fallback",
         travelPassRecorder,
       );
     }

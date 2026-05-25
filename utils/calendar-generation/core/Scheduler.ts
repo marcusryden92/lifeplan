@@ -6,7 +6,6 @@
  */
 
 import { Planner, SimpleEvent, Category } from "@/types/prisma";
-import { WeekDayIntegers } from "@/types/calendarTypes";
 import { TimeSlotManager } from "./TimeSlotManager";
 import { TravelManager } from "./TravelManager";
 import { SchedulingStrategy } from "../strategies/SchedulingStrategy";
@@ -23,10 +22,10 @@ import { scheduleTasksAndGoals } from "../helpers/Scheduler/scheduleTasksAndGoal
 import { TravelPassRecorder } from "../helpers/TravelManager/TravelPassRecorder";
 
 export class Scheduler {
-  private slotManager: TimeSlotManager;
-  private travelManager: TravelManager;
-  private strategy: SchedulingStrategy;
-  private context: SchedulingContext;
+  public readonly slotManager: TimeSlotManager;
+  public readonly travelManager: TravelManager;
+  public readonly strategy: SchedulingStrategy;
+  public readonly context: SchedulingContext;
   private metrics: SchedulingMetrics = {
     tasksAttempted: 0,
     tasksScheduled: 0,
@@ -93,11 +92,9 @@ export class Scheduler {
   }
 
   scheduleTasksAndGoals(
-    weekStartDay: WeekDayIntegers,
     allPlanners: Planner[],
     candidates: Planner[],
     memoizedEventIds: Set<string>,
-    largestTemplateGap: number,
     perTemplateMasks: PerTemplateMask[],
     plannerLocationMap: Map<string, string | null>,
     categories: Category[],
@@ -108,16 +105,11 @@ export class Scheduler {
     failures: SchedulingFailure[];
   } {
     return scheduleTasksAndGoals(
-      this.slotManager,
-      this.travelManager,
       this,
-      weekStartDay,
       allPlanners,
       candidates,
       memoizedEventIds,
-      largestTemplateGap,
       perTemplateMasks,
-      this.context,
       plannerLocationMap,
       categories,
       travelPassRecorder,

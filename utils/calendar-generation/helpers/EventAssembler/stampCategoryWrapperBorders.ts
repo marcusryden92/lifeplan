@@ -15,7 +15,7 @@ import { CategorySlot, Slot } from "../../models/TimeSlot";
  * border is also stamped — mirroring markTrespassingEvents for overlapping
  * plan items.
  */
-export function markCategoryBoundaryTrespasses(
+export function stampCategoryWrapperBorders(
   events: SimpleEvent[],
   slots: Slot[],
 ): void {

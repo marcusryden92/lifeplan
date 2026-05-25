@@ -109,10 +109,10 @@ export function scheduleTask(
     selectionResult.reusableTravelStart,
     slotManager,
     travelManager,
+    context,
     selectionResult.absorbPrevTravelAfter,
     selectionResult.absorbedTravelStart,
     selectionResult.reclaimPrecedingGapTravel,
-    recorder,
   );
   if ("failure" in reservationResult) {
     recorder?.setOutcome({

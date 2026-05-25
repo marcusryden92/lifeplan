@@ -29,7 +29,11 @@ import {
   prepareCandidates,
   assembleFinalEvents,
 } from "../helpers/CalendarGenerator";
-import { buildAvailableSlots } from "../helpers/TimeSlotManager";
+import {
+  buildAvailableSlots,
+  dropPastAvailableSlots,
+  deriveSchedulingHorizon,
+} from "../helpers/TimeSlotManager";
 import {
   staticEventTravelPass,
   TravelPassRecorder,
@@ -142,12 +146,17 @@ export class CalendarGenerator {
 
     this.metrics = updatedMetrics;
 
-    // Phase 4: Build location map
+    // Phase 4: Build location map + effective category map (planner -> categoryId
+    // resolved by walking up the parent chain). Both are read-only derivations
+    // off the planners + categories and have no dependency on the slot array
+    // or the travel pass — they belong here, next to each other, before the
+    // slot pipeline kicks in.
     const plannerLocationMap = buildLocationMap(
       input.planners,
       input.templates,
       input.categories || [],
     );
+    const plannerCategoryMap = buildPlannerCategoryMap(input.planners);
 
     // Phase 6a: Build available slots over the full scheduling timeline
     const schedulingStartDate = setTimeOnDate(currentDate, "00:00");
@@ -190,16 +199,13 @@ export class CalendarGenerator {
     );
 
     // Phase 6c: Drop available slots ending before "now" so the scheduler
-    // doesn't place tasks in the past. Travel/occupied slots stay regardless.
-    const nowMs = currentDate.getTime();
-    timeSlotManager.slots = timeSlotManager.slots.filter(
-      (s) => s.type !== "available" || s.end.getTime() > nowMs,
+    // doesn't place tasks in the past.
+    timeSlotManager.slots = dropPastAvailableSlots(
+      timeSlotManager.slots,
+      currentDate,
     );
 
-    // Phase 7: Build effective category map (resolves inheritance from parent chain)
-    const plannerCategoryMap = buildPlannerCategoryMap(input.planners);
-
-    // Build the dynamic scheduling recorder. Same filter pattern as
+    // Phase 7: Build the dynamic scheduling recorder. Same filter pattern as
     // travelPassRecorder — off by default, scoped to the configured date
     // range. Each scheduleTask call appends a record.
     const schedulerRecorder = new SchedulerRecorder({
@@ -220,13 +226,12 @@ export class CalendarGenerator {
       weekStartDay,
       input.planners,
       filteredEvents,
-      timeSlotManager,
       this.metrics,
       this.scheduledCategories,
       plannerLocationMap,
       plannerCategoryMap,
+      schedulerRecorder,
     );
-    context.schedulerRecorder = schedulerRecorder;
 
     // Phase 9: Prepare candidates (filter root goals, tasks and sort by priority)
     const candidates = prepareCandidates(
@@ -245,11 +250,9 @@ export class CalendarGenerator {
     );
 
     const schedulingResult = scheduler.scheduleTasksAndGoals(
-      weekStartDay,
       input.planners,
       candidates,
       memoizedEventIds,
-      largestTemplateGap,
       perTemplateMasks,
       plannerLocationMap,
       this.scheduledCategories,
@@ -257,15 +260,10 @@ export class CalendarGenerator {
     );
 
     // Phase 11: Assemble final events.
-    // schedulingEndDate is computed from the CURRENT slot array (post-expansion),
-    // not the initial builtSlots — otherwise the category-wrapper render horizon
-    // freezes at the initial chunk while travels keep being generated for the
-    // expanded region, producing orphan travels with no surrounding wrappers.
-    const currentSlots = timeSlotManager.slots;
-    const schedulingEndDate =
-      currentSlots.length > 0
-        ? new Date(Math.max(...currentSlots.map((s) => s.end.getTime())))
-        : schedulingStartDate;
+    const schedulingEndDate = deriveSchedulingHorizon(
+      timeSlotManager.slots,
+      schedulingStartDate,
+    );
     const allEvents = assembleFinalEvents(
       input.userId,
       travelManager,
