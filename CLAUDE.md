@@ -248,13 +248,37 @@ Categories provide organizational structure with time-based scheduling constrain
 
 ### Scheduling System
 
-The calendar generation uses a **strategy-based architecture**:
+The calendar generation uses a **strategy-based architecture** with **incremental horizon expansion**:
 
 1. **CalendarGenerator** - Orchestrates the process
 2. **TimeSlotManager** - Manages available time slots
 3. **TemplateExpander** - Expands recurring templates
 4. **Scheduler** - Places tasks using strategies
 5. **CompositeStrategy** - Combines multiple weighted strategies
+
+#### Incremental Expansion
+
+The slot horizon is bounded — initial build covers `SCHEDULING_CONFIG.HORIZON_CHUNK_DAYS` (28 days), not whatever distant Plans the user has on the calendar. As the scheduler exhausts slots, `expandSlots` extends another chunk past the previous pickup point.
+
+Three pieces make this work:
+
+- **`isFinal` marker on the last Category** — set at the end of every `staticEventTravelPass` by `markLastCategoryAsFinal`. It's the pickup point for the next expansion: everything ending at or before `isFinal.end` is preserved verbatim; everything past is rebuilt.
+- **`expandSlots`** at `helpers/Scheduler/expandSlots.ts` — finds the isFinal slot, preserves everything up to it (including the static pass's earlier decisions on those slots), rebuilds the new chunk via `buildAvailableSlots` with `startingLocationOverride` set to the preserved Cat's location (so the seam Available's `prev` is honest), then re-runs the static pass starting at `resumeIdx = isFinal slot's index`. Replays `legTracker` state from preserved Travels so round-trip detection works at the seam (skipping self-travels and deduping multi-shard travels by `travelId`).
+- **Proactive expansion watermark** in `scheduleTasksAndGoals` — before each candidate pass, checks `availableCount < LOW_SLOT_WATERMARK` OR `largestCompatibleSlotForLargestTask < biggestRemainingTask`. Trips expansion before the reactive try-fail-expand cycle burns iterations. The reactive backstop still fires after a fully-failed pass.
+
+#### Placement Buffer
+
+`SCHEDULING_CONFIG.PLACEMENT_BUFFER_DAYS` (3 days) of room is left at the trailing edge of the horizon — dynamic tasks aren't placed in that range. Gives the next expansion's seam re-decision empty space to work in.
+
+#### Capacity-Aware TOO_LARGE Check
+
+`helpers/Scheduler/capacityCheck.ts` exposes `maxEffectiveCapacityFor(task, ...)` — the largest single duration a task could ever fit in a clean week, accounting for:
+
+1. Templates carving the day into gap intervals.
+2. **Strict categories** with a different categoryId subtract from any gap they overlap (the task can never use them).
+3. **If the task is categorized**, the largest single window in its own category is a hard ceiling.
+
+`scheduleSingleTask` and `scheduleGoal` call this at task entry; if `task.duration > maxCapacity`, the task is marked `TOO_LARGE` immediately instead of burning iterations.
 
 See `documentation/calendar-generation-deep-dive.md` for a detailed walkthrough.
 
@@ -300,6 +324,17 @@ DEFAULT_LOCATION_GROUPING_PENALTIES = {
   maxDoubleTravelPenalty: 0.03,
   singleTravelPenaltyDivisor: 600, // travelMinutes / divisor = penalty
   doubleTravelPenaltyDivisor: 400,
+};
+```
+
+#### Expansion Configuration (constants.ts)
+
+```typescript
+SCHEDULING_CONFIG = {
+  HORIZON_CHUNK_DAYS: 28,       // Initial build + every expansion chunk
+  LOW_SLOT_WATERMARK: 100,      // Available-slot count triggering proactive expansion
+  PLACEMENT_BUFFER_DAYS: 3,     // Tail buffer where dynamic placement is suppressed
+  // ...
 };
 ```
 
@@ -433,11 +468,15 @@ const logging = {
   templates: false,
   locations: false,
   strategySettings: false,
-  leanCalendar: false, // Sorted events with location info
+  leanCalendar: false,           // Sorted events with location info
+  staticEventTravelPass: false,  // Per-slot decision/action trail (TravelPassRecorder)
+  dynamicScheduling: false,      // Per-task decision/action trail (SchedulerRecorder)
+  dateRangeStart: null,          // Optional Date — narrows event-based dumps to a range
+  dateRangeEnd: null,            // ditto
 };
 ```
 
-Set `enableLogging = true` and flip individual flags to get specific dumps.
+Set `enableLogging = true` and flip individual flags to get specific dumps. The `staticEventTravelPass` flag dumps the decision trail of every static-pass run (preliminary and each `resume@<date>` expansion); the `dynamicScheduling` flag dumps the trail of every dynamic task placement. Both honor `dateRangeStart`/`dateRangeEnd` to focus on a specific day or week.
 
 ---
 
@@ -445,8 +484,14 @@ Set `enableLogging = true` and flip individual flags to get specific dumps.
 
 - **Travel Time & Location Management** - Location-aware scheduling with travel time injection between events at different locations
 - **Category System** - Hierarchical task organization with time-based scheduling constraints (strict/non-strict modes)
+- **Incremental Slot Horizon** - Bounded initial build (`HORIZON_CHUNK_DAYS`), expanded chunk-by-chunk from the `isFinal` pickup point. Plans far in the future no longer balloon the initial slot array.
+- **Capacity-Aware TOO_LARGE Detection** - Task entry checks whether the task can ever fit given templates + strict-category subtraction + per-category window ceiling, instead of comparing only to the raw template gap.
+- **Proactive Expansion Watermark** - Expansion triggers before placement attempts when the largest remaining task can't fit any compatible slot, complementing the reactive try-fail-expand backstop.
+- **Tail Placement Buffer** - Dynamic placement leaves the trailing `PLACEMENT_BUFFER_DAYS` of the horizon empty so the next expansion's static-pass resume has clean room to re-decide travels at the seam.
 
 ## Active Feature Plans
 
-- Further refinement of category-based scheduling strategies
-- Enhanced user preferences for strategy weight customization
+- Cross-slot straddling for dynamic placement (a 1.5hr task using Available + adjacent non-strict Category with travel cost) — deferred; requires multi-slot reservation in the scheduler.
+- Splitting the Plan-driven horizon from scheduler-anchor knowledge (Plans as point anchors instead of horizon drivers).
+- Further refinement of category-based scheduling strategies.
+- Enhanced user preferences for strategy weight customization.

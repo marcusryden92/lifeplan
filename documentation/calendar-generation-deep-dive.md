@@ -152,7 +152,9 @@ const {
 
 1. `expandTemplates()` creates one SimpleEvent per template with an RRule for FullCalendar UI display
 2. `getPerTemplateMasks()` creates compact "masks" for slot calculation -- a pattern describing which days/times each template blocks
-3. `calculateLargestGap()` finds the biggest continuous free window in a typical week, used to pre-reject tasks that can never fit
+3. `calculateLargestGap()` finds the biggest continuous free window in a typical week (legacy field; the entry-time too-large check now uses `maxEffectiveCapacityFor` in `helpers/Scheduler/capacityCheck.ts`, which additionally subtracts strict-category windows and applies a per-category window ceiling)
+
+Also exposes a static `TemplateExpander.gapIntervalsForDay(masks, date)` helper that returns the day's gap intervals — used by the capacity-check module to compute per-task effective gaps.
 
 **Template Mask Structure:**
 
@@ -323,22 +325,27 @@ function calculateTaskUrgency(task, context): number {
 ### Phase 10: Schedule Tasks and Goals
 
 ```typescript
-const scheduler = new Scheduler(this.slotManager, strategy, context);
-const orchestrator = new TaskSchedulingOrchestrator(
-  this.slotManager,
-  scheduler,
-  this.weekStartDay,
+const scheduler = new Scheduler(
+  timeSlotManager,
+  travelManager,
+  strategy,
+  context,
 );
-const schedulingResult = orchestrator.scheduleTasksAndGoals(
+
+const schedulingResult = scheduler.scheduleTasksAndGoals(
+  weekStartDay,
   input.planners,
   candidates,
   memoizedEventIds,
-  largestTemplateGap,
+  largestTemplateGap,           // kept for diagnostics; capacity check uses maxEffectiveCapacityFor
   perTemplateMasks,
-  context,
   plannerLocationMap,
+  this.scheduledCategories,
+  travelPassRecorder,
 );
 ```
+
+The scheduler internally calls `scheduleTasksAndGoals` (in `helpers/Scheduler/`), which runs the candidate-pass loop with bounded horizon + incremental expansion. See the "Scheduling Loop (scheduleTasksAndGoals)" section under Core Classes for the loop's structure.
 
 The `TaskSchedulingOrchestrator` runs a week-by-week loop. See [TaskSchedulingOrchestrator](#taskschedulingorchestrator) for details.
 
@@ -511,35 +518,51 @@ Scheduler/
    - Bonus capacity: if absorbing previous task's travel-after, that travel's duration is added to effective slot capacity
 5. Return the first slot where `slotDuration >= requiredInside`
 
-### TaskSchedulingOrchestrator
+### Scheduling Loop (scheduleTasksAndGoals)
 
-Location: `utils/calendar-generation/helpers/scheduling/TaskSchedulingOrchestrator.ts`
+Location: `utils/calendar-generation/helpers/Scheduler/scheduleTasksAndGoals.ts`
 
-Manages the week-by-week scheduling loop (~249 lines). This is the core scheduling loop that the CalendarGenerator delegates to.
+Manages the candidate-pass scheduling loop with bounded horizon and incremental expansion. Replaces the older `TaskSchedulingOrchestrator` class.
 
 **The scheduling loop:**
 
 ```
-while candidates remain AND weeksSearched < MAX_WEEKS_TO_SEARCH:
+while candidates remain AND expansionsDone < MAX_WEEKS_TO_SEARCH:
+    Publish per-iteration context state:
+        - context.placementCutoffDate = computePlacementCutoff(slots)
+          (= max placeable-slot end - PLACEMENT_BUFFER_DAYS;
+          findAllFittingSlots and the watermark both honor it)
+
+    Proactive watermark check (before attempting any candidate):
+        - availableCount = count of Available slots in slot array
+        - biggestRemaining = max candidate.duration
+        - biggestFit = largestCompatibleSlotForLargestTask(...)
+        if availableCount < LOW_SLOT_WATERMARK OR biggestFit < biggestRemaining:
+            expandSlots(...); expansionsDone++; continue
+
     for each candidate (iterating backwards for safe removal):
         if TASK:
-            - Check if already scheduled (skip)
-            - Size check vs largestTemplateGap (permanent failure if too large)
+            - Skip if already scheduled
+            - Check task.duration > maxEffectiveCapacityFor(task, ...)
+              (category-aware TOO_LARGE — strict-category subtraction + per-category
+              window ceiling; permanent failure if exceeded)
             - Call scheduler.scheduleTask(task)
             - On success: record event, remove from candidates
-            - On NO_SLOTS: keep in candidates (retry next week)
-            - On other failure: permanent failure, remove from candidates
+            - On NO_SLOTS: keep in candidates (retry after expansion)
+            - On other failure: permanent failure, remove
 
         if GOAL:
             - Get child tasks via getSortedTreeBottomLayer()
-            - Filter out completed and already-scheduled tasks
-            - Schedule each child task sequentially (each must come after the previous)
-            - On NO_SLOTS for any child: break, retry whole goal next week
+            - Filter out completed / already-scheduled
+            - Per-child capacity check (same maxEffectiveCapacityFor)
+            - Schedule each child sequentially (each must come after the previous)
+            - On NO_SLOTS for any child: break, retry whole goal after expansion
 
-    if candidates remain:
-        weeksSearched++
-        Build slots for the next week via slotManager.buildDailySlots()
+    if candidates remain (reactive backstop):
+        expandSlots(...); expansionsDone++
 ```
+
+`expandSlots` (in `helpers/Scheduler/expandSlots.ts`) finds the `isFinal`-flagged CategorySlot, preserves everything ending at or before its end, calls `buildAvailableSlots` for the new chunk with `startingLocationOverride` set to the preserved Cat's location, replays `legTracker` state from preserved Travels (skipping self-travels and deduping multi-shard travels by `travelId`), and re-runs `staticEventTravelPass` starting at the resumed Cat's index. The end-of-pass `markLastCategoryAsFinal` moves the marker to the new last Category.
 
 ---
 
@@ -1098,13 +1121,18 @@ if (reusable) {
 
 **Absorption:** If the previous task shares the same location, its outbound travel-after can be reclaimed. `selectBestSlot` detects this and sets `canAbsorbPrevTravel=true`. When `SlotReserver` executes, it removes that travel slot and expands the available window backward, so the absorbed travel minutes become usable capacity for the current task's slot.
 
-### 4. Week Expansion
+### 4. Incremental Horizon Expansion
 
-If no slots found in current week, the system expands:
+The initial slot horizon is bounded at `SCHEDULING_CONFIG.HORIZON_CHUNK_DAYS` (28 days). When the scheduler runs short of slots, `expandSlots` extends another chunk past the previous pickup point. Two triggers:
 
-- Builds slots for next week
-- Continues trying candidates
-- Stops after MAX_WEEKS_TO_SEARCH (constant from `constants.ts`)
+- **Proactive watermark**: before each candidate pass, if `availableCount < LOW_SLOT_WATERMARK` OR the biggest remaining task can't fit any compatible slot.
+- **Reactive backstop**: after a full failed pass, if any candidates remain.
+
+The pickup point is the `isFinal`-flagged CategorySlot set at the end of the previous static pass. Preserved slots keep their decisions; only the region past pickup is rebuilt. `legTracker` state is replayed from preserved Travels so round-trip detection works at the seam. The static pass resumes at the isFinal Cat's index — its deferred exit edge now sees the new region and plans the appropriate travel.
+
+A trailing `PLACEMENT_BUFFER_DAYS` of the horizon is off-limits to dynamic placement, so the next expansion's resume has clean room to re-decide travels at the seam.
+
+Stops after `MAX_WEEKS_TO_SEARCH` expansions.
 
 ### 5. Memoization
 
@@ -1143,4 +1171,11 @@ config: {
 }
 ```
 
-Check `loggingUtils.ts` for all available logging options. The `LoggingConfig` interface defines: `metrics`, `failures`, `finalEvents`, `travelDebug`, `templateInfo`, `planners`, `templates`, `locations`, `strategySettings`, `leanCalendar`.
+Check `loggingUtils.ts` for all available logging options. The `LoggingConfig` interface defines: `metrics`, `failures`, `finalEvents`, `travelDebug`, `templateInfo`, `planners`, `templates`, `locations`, `strategySettings`, `leanCalendar`, `staticEventTravelPass`, `dynamicScheduling`, `dateRangeStart`, `dateRangeEnd`.
+
+Two structured recorder traces are most useful for debugging slot/travel issues:
+
+- **`staticEventTravelPass`** dumps the per-slot decision/action trail from every static-pass run. Each iteration shows the slot being processed, the decision branches taken, the action emitted, and the slot-array end state. Multi-pass runs (initial preliminary + each expansion `resume@<date>`) are grouped by pass label.
+- **`dynamicScheduling`** dumps the per-task decision/action trail from `scheduleTask`. Each task shows the candidate slots evaluated, capacity checks, location/travel logic, the placement, and the resulting end state.
+
+Both honor `dateRangeStart`/`dateRangeEnd` to focus on a single day or week. Failed tasks always log regardless of range (failures often happen because nothing fit in the desired window, which is exactly the case you want to see).

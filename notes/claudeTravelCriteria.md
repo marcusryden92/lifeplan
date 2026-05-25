@@ -1,6 +1,8 @@
 ```text
 Pre-pass: unreachable category drop (dropUnreachableCategoryVisits)
-    Runs once before the main walker. Scans slots[] for three contiguous
+    Runs at the start of every static pass (initial preliminary pass + every
+    expansion's resume pass — same call site, gated only by the hasLocationMap
+    flag, NOT by startIdx). Scans the WHOLE slots[] array for three contiguous
     Category slots [catA, catB, catC] where:
         - catA.currentLocationId === catC.currentLocationId
         - catB.currentLocationId differs from both
@@ -13,8 +15,38 @@ Pre-pass: unreachable category drop (dropUnreachableCategoryVisits)
     reaches the catA exit edge with catB already gone, so the cat-to-cat
     boundary handling stays clean (symmetric bleed or trespass).
 
+    Idempotent on already-processed regions: the trigger requires three
+    adjacent Category slots, and previously-replaced positions are now Travel
+    slots, so the check naturally no-ops over them. The mutation of
+    catA.nextLocationId / catC.prevLocationId only fires when shouldDropCatB
+    fires, which itself requires a new fresh triple — so re-running across
+    the seam between preserved + new regions is safe.
 
-For each slot in slots[], in order.
+
+Pass entry: legTracker state synchronization
+    Before the walker starts (in expandSlots), the legTracker is reset and
+    replayed from preserved Travel slots so round-trip detection works at
+    the seam:
+        travelManager.resetLegTracker()
+        For each TravelSlot in preservedSlots (in order):
+            - Skip if from === to (self-travels from
+              dropUnreachableCategoryVisits aren't tracked by the walker —
+              they were never resolveTravel'd)
+            - Dedupe by travelId (multi-shard travels share one logical leg;
+              the walker tracked it once when first placed, not per-shard)
+            - travelManager.trackLeg(from, to)
+    Without this replay, the resume pass starts with an empty tracker; the
+    walker skips preserved Travel slots without calling track(), so a
+    return-trip Available in the new region (e.g. gamla-stan→home after
+    the isFinal Work cat) finds no mirror in openLegs and gets classified
+    as outbound — landing PlaceAtEnd instead of PlaceAtStart, then flipping
+    every same-pair travel downstream.
+
+
+For each slot in slots[startIdx..], in order. startIdx defaults to 0 for the
+initial preliminary pass; expansion's resume pass passes startIdx = the
+isFinal Category's index in the combined array, so the walker re-runs that
+category's deferred exit edge against the newly-built region.
 
 Global notes:
 - "Category" is bleed-able like "Available" for travel placement. Wherever
@@ -206,6 +238,16 @@ Current type: Category
     # itself only does work when no adjacent Available exists to absorb it.
 
     Entry edge (prev != current)
+        slot.isFinal === true (incremental resume only)
+            # The walker is re-entering a category whose exit edge was
+            # deferred on the previous pass (it was the array-end Category
+            # then; expansion has now appended a new region beyond it).
+            # The entry travel for this slot was already placed by the
+            # earlier pass — re-running it would double-place or
+            # double-track legs. Skip entry entirely; the exit edge below
+            # is the only reason this slot is being revisited.
+            -> Skip entry edge (return i, fall through to exit edge)
+
         no prev (i = 0, no slots[i-1])
             -> Skip (assume the user is at current location)
 
@@ -267,8 +309,14 @@ Current type: Category
 
     Exit edge (current != next)
         no next (i = last, no slots[i+1])
-            -> Mark slot as 'final' so the generator knows to re-expand templates
-               and resume here. Skip exit travel for now.
+            # Defer the exit edge — there's nothing reachable to plan toward.
+            # No travel placement, no leg tracking, no marker set here directly.
+            # The end-of-pass markLastCategoryAsFinal walker (see below) will
+            # find the truly-last Category in slots[] and set isFinal on it,
+            # clearing the flag from every other Category to enforce the
+            # single-flag invariant. expansion's expandSlots reads this flag
+            # to know where to pick up.
+            -> Defer (return i + 1, no mutation)
 
         Next type: Available
             -> Defer (walker will handle slots[i+1] under
@@ -378,4 +426,21 @@ Current type: Category
             Not reachable on a forward walk (slots[i+1] should not be a
             Travel slot — the walker hasn't placed it yet)
                 -> Log inconsistency
+
+
+Post-pass: single-isFinal invariant (markLastCategoryAsFinal)
+    Runs after the walker loop exits, on every static pass.
+        - Walk slots[] forward, clearing slot.isFinal on every CategorySlot
+        - Track the index of the last CategorySlot encountered
+        - If any Category exists, set isFinal = true on that last one
+    Invariant: at most one slot in the array carries isFinal at a time. The
+    flag is the pickup-point marker that expandSlots reads to know where to
+    resume; without the clear step, the array could accumulate stale markers
+    from prior passes and corrupt the resume index.
+
+    Fragmentation propagation: when reserveSlotWithTravel splits an isFinal
+    CategorySlot to insert a task, the makeLeftover helper preserves isFinal
+    on whichever fragment ends at the source's end (i.e. the trailing
+    leftover). So dynamic placements inside the last category don't lose the
+    marker.
 ```
