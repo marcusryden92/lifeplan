@@ -12,6 +12,8 @@ model User {
   SimpleEvent           SimpleEvent[]
   twoFactorConfirmation TwoFactorConfirmation?
   accounts              Account[]
+  locations             Location[]
+  categories            Category[]
 
   @@map("users")
 }

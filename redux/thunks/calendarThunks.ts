@@ -1,9 +1,10 @@
-import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
+import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { AppDispatch } from "../store";
 import { RootState } from "../store";
 import calendarSlice from "../slices/calendarSlice";
+import { travelTimeArrayToMap } from "../slices/schedulingSettingsSlice";
 
 type CalendarPayload = {
   planner?: Planner[] | ((prev: Planner[]) => Planner[]);
@@ -37,8 +38,12 @@ export const updateAllCalendarStates =
     const currentPlanner: Planner[] = state.calendar.planner;
     const calendar: SimpleEvent[] = state.calendar.calendar;
     const template: EventTemplate[] = state.calendar.template;
+    const categories: Category[] = state.calendar.categories;
     const bufferTimeMinutes: number =
       state.schedulingSettings.bufferTimeMinutes;
+    const enableTravelEvents: boolean =
+      state.schedulingSettings.enableTravelEvents;
+    const travelTimeMatrix = state.schedulingSettings.travelTimeMatrix;
 
     const newPlanner = updates.planner
       ? processInput(updates.planner, currentPlanner)
@@ -50,19 +55,28 @@ export const updateAllCalendarStates =
       ? processInput(updates.template, template)
       : template;
 
+    // Convert serialized array to Map for calendar generation
+    const travelTimeMap = travelTimeArrayToMap(travelTimeMatrix);
+
     const newCalendar = generateCalendar(
       userId,
       weekStartDay,
       newTemplate,
       newPlanner,
       newCalendarInput,
-      bufferTimeMinutes
+      {
+        bufferTimeMinutes,
+        travelTimeMatrix: travelTimeMap ?? undefined,
+        injectTravelEvents: enableTravelEvents,
+        categories,
+      }
     );
 
     const calendarData = {
       planner: newPlanner,
       calendar: newCalendar,
       template: newTemplate,
+      categories,
     };
 
     dispatch(calendarSlice.actions.updateCalendarArrayData(calendarData));

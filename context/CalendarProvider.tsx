@@ -13,7 +13,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { RootState } from "@/redux/store";
 
-import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
+import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
 import type { UserSettings } from "@/types/userTypes";
@@ -21,6 +21,7 @@ import type { UserSettings } from "@/types/userTypes";
 import useCalendarStateActions from "@/hooks/useCalendarStateActions";
 import useManuallyRefreshCalendar from "@/hooks/useManuallyRefreshCalendar";
 import useCalendarServerSync from "@/hooks/useCalendarServerSync";
+import { buildInheritedLocationMap, InheritedLocationInfo } from "@/utils/goalPageHandlers";
 
 type CalendarContextType = {
   userId: string;
@@ -29,6 +30,7 @@ type CalendarContextType = {
   planner: Planner[];
   calendar: SimpleEvent[];
   template: EventTemplate[];
+  categories: Category[];
   updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>;
   updateCalendarArray: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
   updateTemplateArray: React.Dispatch<React.SetStateAction<EventTemplate[]>>;
@@ -38,6 +40,7 @@ type CalendarContextType = {
     template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
   ) => void;
   manuallyRefreshCalendar: () => void;
+  inheritedLocationMap: Map<string, InheritedLocationInfo>;
 };
 
 const CalendarContext = createContext<CalendarContextType | null>(null);
@@ -55,16 +58,17 @@ export default function CalendarProvider({
   const userSettings = {
     styles: {
       events: {
-        borderRadius: "8px",
+        borderRadius: "0",
         completedColor: "#0ebf7e",
         errorColor: "#ef4444",
       },
       template: { event: { borderLeft: "4px solid black" } },
       calendar: { event: { borderLeft: "4px solid #ADD8E6" } },
+      travel: { event: { borderLeft: "5px solid #70757F" } },
     },
   };
 
-  const { planner, calendar, template } = useMemo(
+  const { planner, calendar, template, categories } = useMemo(
     () => calendarState,
     [calendarState]
   );
@@ -88,6 +92,9 @@ export default function CalendarProvider({
   const bufferTimeMinutes = useSelector(
     (state: RootState) => state.schedulingSettings.bufferTimeMinutes
   );
+  const locations = useSelector(
+    (state: RootState) => state.schedulingSettings.locations
+  );
   const isInitialMount = useRef(true);
 
   // Regenerate calendar when bufferTimeMinutes changes (preserves current event positions)
@@ -104,6 +111,11 @@ export default function CalendarProvider({
 
   useFetchCalendarData(userId, initializeState);
 
+  const inheritedLocationMap = useMemo(
+    () => buildInheritedLocationMap(planner, categories, locations),
+    [planner, categories, locations]
+  );
+
   if (!userId) return null;
 
   const value = {
@@ -113,11 +125,13 @@ export default function CalendarProvider({
     planner,
     calendar,
     template,
+    categories,
     updatePlannerArray,
     updateCalendarArray,
     updateTemplateArray,
     updateAll,
     manuallyRefreshCalendar,
+    inheritedLocationMap,
   };
 
   return (

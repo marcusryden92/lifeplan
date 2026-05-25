@@ -48,6 +48,8 @@ export const DraggableContextProvider = ({
   useEffect(() => {
     function resetDisplayDragBox() {
       setDisplayDragBox(false);
+      // Always clear drag selection guard on mouseup
+      document.body.classList.remove("lp-dragging");
     }
 
     document.addEventListener("mouseup", resetDisplayDragBox);
@@ -56,6 +58,19 @@ export const DraggableContextProvider = ({
       document.removeEventListener("mouseup", resetDisplayDragBox);
     };
   }, []);
+
+  // When the drag box is visible, ensure text selection is disabled globally
+  useEffect(() => {
+    if (displayDragBox) {
+      document.body.classList.add("lp-dragging");
+    } else {
+      document.body.classList.remove("lp-dragging");
+    }
+
+    return () => {
+      document.body.classList.remove("lp-dragging");
+    };
+  }, [displayDragBox]);
 
   // Context value with hover and click state setters
   const value: DraggableContextType = {

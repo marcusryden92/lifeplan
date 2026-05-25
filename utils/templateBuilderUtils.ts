@@ -2,7 +2,7 @@ import { shiftDate } from "@/utils/calendarUtils";
 import { setTimeOnDate } from "@/utils/calendarUtils";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { calendarColors } from "@/data/calendarColors";
-import { getWeekFirstDate } from "@/utils/calendarUtils";
+import { getWeekFirstDate, intToWeekday } from "@/utils/calendarUtils";
 
 import { EventTemplate } from "@/types/prisma";
 import { EventInput } from "@fullcalendar/core";
@@ -21,17 +21,6 @@ export function populateTemplateCalendar(
   const eventArray: EventInput[] = [];
   const todaysDate = new Date(2024, 0, 1);
 
-  // Days of the week starting from Sunday (index 0)
-  const daysFromSunday = [
-    "sunday", // index 0
-    "monday", // index 1
-    "tuesday", // index 2
-    "wednesday", // index 3
-    "thursday", // index 4
-    "friday", // index 5
-    "saturday", // index 6
-  ];
-
   // Get the first date of the week based on the weekStartDay
   const thisWeeksFirstDate: Date | undefined = getWeekFirstDate(
     weekStartDay,
@@ -41,7 +30,8 @@ export function populateTemplateCalendar(
   template.forEach((event) => {
     if (
       !event ||
-      !event.startDay ||
+      event.startDay === null ||
+      event.startDay === undefined ||
       !event.startTime ||
       event.duration === undefined
     ) {
@@ -49,24 +39,13 @@ export function populateTemplateCalendar(
       return;
     }
 
-    let newStartDate: Date;
-    if (event.startDay) {
-      const startDayIndex = daysFromSunday.indexOf(event.startDay);
-      if (startDayIndex === -1) {
-        console.error("Invalid start day provided.", event.startDay);
-        return;
-      }
+    // event.startDay is already a WeekDayIntegers (0=Sunday) matching this loop's
+    // indexing — no string lookup needed.
+    const startDayOffset = (event.startDay - weekStartDay + 7) % 7;
+    let newStartDate: Date = shiftDate(thisWeeksFirstDate, startDayOffset);
 
-      // Calculate the offset from the weekStartDay
-      const startDayOffset = (startDayIndex - weekStartDay + 7) % 7;
-      newStartDate = shiftDate(thisWeeksFirstDate, startDayOffset);
-
-      if (event.startTime) {
-        newStartDate = setTimeOnDate(newStartDate, event.startTime);
-      }
-    } else {
-      console.error("Event start details are missing.", event);
-      return;
+    if (event.startTime) {
+      newStartDate = setTimeOnDate(newStartDate, event.startTime);
     }
 
     // Calculate end date based on duration
@@ -84,7 +63,7 @@ export function populateTemplateCalendar(
       backgroundColor: (event.color as string) || calendarColors[0],
       borderColor: "transparent",
       duration: null,
-      extendedProps: { isTemplateItem: true },
+      extendedProps: { isTemplateItem: true, locationId: event.locationId },
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     });
@@ -134,15 +113,18 @@ export function findLargestGap(events: EventTemplate[]): number | undefined {
 
   if (events.length === 1) return minutesInWeek - events[0].duration;
 
-  // Convert each event's start time to minutes from the week start and calculate the end time
+  // Convert each event's start time to minutes from the week start and calculate the end time.
+  // event.startDay is WeekDayIntegers — convert to the string form expected by the helper.
   const eventTimes = events
-    .map((event) => ({
-      start: convertToMinutesFromWeekStart(event.startDay, event.startTime),
-      end: convertToMinutesFromWeekStart(event.startDay, event.startTime)
-        ? convertToMinutesFromWeekStart(event.startDay, event.startTime)! +
-          event.duration
-        : null,
-    }))
+    .map((event) => {
+      const dayStr =
+        event.startDay === null || event.startDay === undefined
+          ? undefined
+          : intToWeekday(event.startDay);
+      const start = convertToMinutesFromWeekStart(dayStr, event.startTime);
+      const end = start !== null ? start + event.duration : null;
+      return { start, end };
+    })
     .filter((event) => event.start !== null && event.end !== null); // Filter out invalid events
 
   // Sort events by their start time

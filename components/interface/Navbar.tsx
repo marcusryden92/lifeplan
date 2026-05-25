@@ -4,14 +4,14 @@ import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/Button";
 import clsx from "clsx";
 import {
-  FaPlus,
+  FaInbox,
+  FaList,
+  FaFolderOpen,
   FaCog,
   FaPowerOff,
   FaCalendar,
-  FaClipboardList,
-  FaFlag,
-  FaBullseye,
   FaClock,
+  FaMapMarker,
 } from "react-icons/fa";
 import { MdViewWeek } from "react-icons/md";
 
@@ -30,27 +30,17 @@ const links = [
   },
 ];
 
-const createLinks = [
-  { name: "Create", href: "/create", icon: <FaPlus className="h-5 w-5" /> },
+const itemLinks = [
+  { name: "Inbox", href: "/inbox", icon: <FaInbox className="h-5 w-5" /> },
   {
-    name: "Tasks",
-    href: "/tasks",
-    icon: <FaClipboardList className="h-5 w-5" />,
+    name: "Items",
+    href: "/items",
+    icon: <FaList className="h-5 w-5" />,
   },
   {
-    name: "Plans",
-    href: "/plans",
-    icon: <FaClock className="h-5 w-5" />,
-  },
-  {
-    name: "Goals",
-    href: "/goals",
-    icon: <FaFlag className="h-5 w-5" />,
-  },
-  {
-    name: "Refine Goals",
-    href: "/refine",
-    icon: <FaBullseye className="h-5 w-5" />,
+    name: "Categories",
+    href: "/categories",
+    icon: <FaFolderOpen className="h-5 w-5" />,
   },
 ];
 
@@ -60,7 +50,7 @@ export const Navbar = () => {
   return (
     <nav className={styles.navbar}>
       <section className={styles.titleContainer}>
-        <h1>Lifeplan.</h1>
+        <h1>Reticulate.</h1>
       </section>
       <div className="mb-4" />
       <div className="flex lg:h-full lg:flex-col  justify-between gap-2">
@@ -79,7 +69,7 @@ export const Navbar = () => {
                   "flex h-[38px] gap-2 rounded-xl p-3 text-sm font-medium",
                   pathname === href
                     ? "bg-gray-800 text-white"
-                    : "hover:bg-gray-100"
+                    : "hover:bg-gray-100",
                 )}
               >
                 {icon} <span className="hidden lg:block">{name}</span>
@@ -90,11 +80,15 @@ export const Navbar = () => {
         <div className="mt-2 mb-2 border-b " />
 
         <div className="flex lg:flex-col gap-2">
-          {[...createLinks].map(({ name, href, icon }) => (
+          {[...itemLinks].map(({ name, href, icon }) => (
             <Button
               key={href}
               asChild
-              variant={pathname === href ? "default" : "outline"}
+              variant={
+                pathname === href || pathname.startsWith(href + "/")
+                  ? "default"
+                  : "outline"
+              }
               size="sm"
               className="justify-start"
             >
@@ -102,9 +96,9 @@ export const Navbar = () => {
                 href={href}
                 className={clsx(
                   "flex h-[38px] gap-2 rounded-xl p-3 text-sm font-medium",
-                  pathname === href
+                  pathname === href || pathname.startsWith(href + "/")
                     ? "bg-gray-800 text-white"
-                    : "hover:bg-gray-100"
+                    : "hover:bg-gray-100",
                 )}
               >
                 {icon} <span className="hidden lg:block">{name}</span>
@@ -126,11 +120,31 @@ export const Navbar = () => {
                 "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium",
                 pathname === "/strategy"
                   ? "bg-gray-800 text-white"
-                  : "hover:bg-gray-100"
+                  : "hover:bg-gray-100",
               )}
             >
               <FaClock className="h-5 w-5" />
               <span className="hidden lg:block">Strategy</span>
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            variant={pathname === "/locations" ? "default" : "outline"}
+            className="justify-start"
+            size="sm"
+          >
+            <Link
+              href="/locations"
+              className={clsx(
+                "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium",
+                pathname === "/locations"
+                  ? "bg-gray-800 text-white"
+                  : "hover:bg-gray-100",
+              )}
+            >
+              <FaMapMarker className="h-5 w-5" />
+              <span className="hidden lg:block">Locations</span>
             </Link>
           </Button>
         </div>
@@ -148,7 +162,7 @@ export const Navbar = () => {
                 "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium",
                 pathname === "/settings"
                   ? "bg-gray-800 text-white"
-                  : "hover:bg-gray-100"
+                  : "hover:bg-gray-100",
               )}
             >
               <FaCog className="h-5 w-5" />{" "}
@@ -160,7 +174,7 @@ export const Navbar = () => {
             <div
               className={clsx(
                 "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium cursor-pointer",
-                "hover:text-red-500 hover:border-red-500 hover:border-2 hover:bg-transparent"
+                "hover:text-red-500 hover:border-red-500 hover:border-2 hover:bg-transparent",
               )}
               onClick={() => signOut()}
             >

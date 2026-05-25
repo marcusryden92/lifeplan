@@ -11,6 +11,8 @@ import luxonPlugin from "@fullcalendar/luxon";
 
 import EventContent from "@/components/events/EventContent";
 import TemplateEventContent from "@/components/events/TemplateEventContent";
+import TravelEventContent from "@/components/events/TravelEventContent";
+import { CategoryWrapperEvent } from "@/components/events/CategoryWrapperEvent";
 
 import type { EventInput } from "@fullcalendar/core/index.js";
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -28,15 +30,24 @@ import {
   handleTemplateEventEdit,
 } from "@/utils/template-handlers/templateEventHandlers";
 import { EventImpl } from "@fullcalendar/core/internal";
+import { RuntimeEventExtendedProps } from "@/types/ui";
+import { EventType } from "@/types/prisma";
 
 const EVENT_INTERACTION_ENABLED = true; // Constant to enable/disable event interaction
 
 interface CalendarProps {
   fullCalendarEvents?: EventInput[] | undefined;
   initialDate: Date;
+  onCategoryHover?: (
+    categoryName: string | null,
+    categoryColor: string | null,
+  ) => void;
 }
 
-export default function Calendar({ initialDate }: CalendarProps) {
+export default function Calendar({
+  initialDate,
+  onCategoryHover,
+}: CalendarProps) {
   const {
     userId,
     calendar,
@@ -47,11 +58,9 @@ export default function Calendar({ initialDate }: CalendarProps) {
 
   /* Transform SimpleEvent calendar to EventInput for FullCalendar */
   const fullCalendarEvents: EventInput[] = useMemo(() => {
-    const newCal: EventInput[] = calendar
-      ? transformEventsForFullCalendar(calendar)
-      : [];
-
-    return newCal;
+    return calendar ? transformEventsForFullCalendar(calendar) : [];
+    // Note: Category wrappers are now background events, and items with categoryWrapperId
+    // are rendered as regular foreground events on top of them
   }, [calendar]);
 
   return (
@@ -71,6 +80,7 @@ export default function Calendar({ initialDate }: CalendarProps) {
         initialView="timeGridWeek"
         scrollTime={"05:00:00"}
         allDaySlot={false}
+        snapDuration={"00:00:01"}
         firstDay={1}
         nowIndicator={true}
         height={"100%"}
@@ -84,6 +94,7 @@ export default function Calendar({ initialDate }: CalendarProps) {
           minute: "2-digit",
           hour12: false,
         }}
+        eventOrder={"-duration,start"}
         editable={EVENT_INTERACTION_ENABLED}
         eventResizableFromStart={EVENT_INTERACTION_ENABLED}
         selectable={EVENT_INTERACTION_ENABLED}
@@ -94,13 +105,37 @@ export default function Calendar({ initialDate }: CalendarProps) {
         eventResize={(resizeInfo) => handleEventResize(updateAll, resizeInfo)}
         eventDrop={(dropInfo) => handleEventDrop(updatePlannerArray, dropInfo)}
         eventContent={({ event }: { event: EventImpl }) => {
-          const isTemplateItem = event.extendedProps.itemType === "template";
+          const eventType = (
+            event.extendedProps as RuntimeEventExtendedProps | undefined
+          )?.eventType;
 
-          return (
-            event &&
-            (!isTemplateItem ? (
-              <EventContent event={event} />
-            ) : (
+          if (eventType === EventType.category) {
+            const ext = event.extendedProps as
+              | RuntimeEventExtendedProps
+              | undefined;
+            const categoryId = ext?.categoryId || "";
+            const isStrict = !!ext?.isStrict;
+            const wrapperId = ext?.wrapperId || "";
+            const trespassingStart = !!ext?.trespassingStart;
+            const trespassingEnd = !!ext?.trespassingEnd;
+            return (
+              <CategoryWrapperEvent
+                categoryId={categoryId}
+                categoryName={event.title}
+                categoryColor={event.backgroundColor}
+                isStrict={isStrict}
+                start={event.start || new Date()}
+                end={event.end || new Date()}
+                wrapperId={wrapperId}
+                trespassingStart={trespassingStart}
+                trespassingEnd={trespassingEnd}
+                onHover={onCategoryHover}
+              />
+            );
+          }
+
+          if (eventType === EventType.template) {
+            return (
               <TemplateEventContent
                 event={event}
                 onEditTitle={handleTemplateEventEdit}
@@ -112,8 +147,14 @@ export default function Calendar({ initialDate }: CalendarProps) {
                 }
                 disableInteraction
               />
-            ))
-          );
+            );
+          }
+
+          if (eventType === EventType.travel) {
+            return <TravelEventContent event={event} />;
+          }
+
+          return <EventContent event={event} />;
         }}
       />
     </>

@@ -1,5 +1,5 @@
-// EventPopover.tsx
-import { useRef, useEffect, useState } from "react";
+// TemplateEventPopover.tsx
+import { useRef, useEffect, useState, useMemo } from "react";
 import {
   XMarkIcon,
   PencilIcon,
@@ -11,6 +11,9 @@ import { createPortal } from "react-dom";
 import { EventImpl } from "@fullcalendar/core/internal";
 import TemplateEventColorPicker from "./EventColorPicker/TemplateEventColorPicker";
 import { formatTime } from "@/utils/calendarUtils";
+import { useCalendarProvider } from "@/context/CalendarProvider";
+import { LocationSelector } from "@/components/locations/LocationSelector";
+import { assignLocationToTemplate } from "@/actions/locations";
 
 interface TemplateEventPopoverProps {
   event: EventImpl;
@@ -40,6 +43,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
   onCopy,
   onDelete,
 }) => {
+  const { template, updateTemplateArray } = useCalendarProvider();
   const popoverRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const [position, setPosition] = useState<Position>({ top: 0, left: 0 });
@@ -48,6 +52,26 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
   const [dragOffset, setDragOffset] = useState<Position>({ top: 0, left: 0 });
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState<string>(event.title || "");
+
+  // Get the template item to find its locationId
+  const templateItem = useMemo(
+    () => template.find((t) => t.id === event.id),
+    [template, event.id]
+  );
+
+  const handleLocationChange = async (locationId: string | null) => {
+    try {
+      await assignLocationToTemplate(event.id, locationId);
+      // Update local state
+      updateTemplateArray((prev) =>
+        prev.map((t) =>
+          t.id === event.id ? { ...t, locationId: locationId } : t
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update template location:", error);
+    }
+  };
 
   // Popover dimensions
   const POPOVER_WIDTH = 280; // Slightly wider for better aesthetics
@@ -93,21 +117,47 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
     };
   }, [isDragging, dragOffset]);
 
+  // Check if an element is inside a Radix UI portal (Select, Dialog, etc.)
+  const isInsideRadixPortal = (element: Element | null): boolean => {
+    let current = element;
+    while (current) {
+      if (
+        current.hasAttribute?.("data-radix-popper-content-wrapper") ||
+        current.hasAttribute?.("data-radix-select-content") ||
+        current.hasAttribute?.("data-radix-menu-content") ||
+        current.hasAttribute?.("data-radix-dialog-content") ||
+        current.getAttribute?.("role") === "listbox" ||
+        current.getAttribute?.("data-state") === "open"
+      ) {
+        return true;
+      }
+      current = current.parentElement;
+    }
+    return false;
+  };
+
   // Close popover when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(event.target as Node)
-      ) {
-        // Save title changes if we're currently editing
-        if (isEditingTitle && onEdit) {
-          onEdit(titleValue);
-        }
+      const target = event.target as Element;
 
-        // Then close the popover
-        onClose();
+      // Ignore clicks inside the popover
+      if (popoverRef.current && popoverRef.current.contains(target)) {
+        return;
       }
+
+      // Ignore clicks on Radix portals (e.g., Select dropdown)
+      if (isInsideRadixPortal(target)) {
+        return;
+      }
+
+      // Save title changes if we're currently editing
+      if (isEditingTitle && onEdit) {
+        onEdit(titleValue);
+      }
+
+      // Then close the popover
+      onClose();
     };
 
     // Close popover on escape key
@@ -303,6 +353,17 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
             {formatTime(startTime)} - {formatTime(endTime)}
           </span>
         </div>
+
+        {/* Location selector */}
+        {templateItem && (
+          <div className="mb-4">
+            <LocationSelector
+              value={templateItem.locationId ?? null}
+              onChange={handleLocationChange}
+              className="w-full"
+            />
+          </div>
+        )}
 
         {/* Actions - Notion-style minimal buttons */}
         <div className="space-y-2">

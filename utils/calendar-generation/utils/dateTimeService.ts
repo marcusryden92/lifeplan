@@ -284,7 +284,27 @@ export class DateTimeService {
   doRangesOverlap(start1: Date, end1: Date, start2: Date, end2: Date): boolean {
     return start1 < end2 && start2 < end1;
   }
+
+  /**
+   * Get a unique YYYY-MM-DD key for a date (used for day-keyed slot maps)
+   */
+  getDayKey(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
 }
 
 // Export singleton instance
 export const dateTimeService = new DateTimeService();
+
+export function getMinuteDifference(date1: Date, date2: Date): number {
+  return Math.floor(Math.abs(date2.getTime() - date1.getTime()) / (1000 * 60));
+}
+
+/** Convert a "HH:MM" string to total minutes since midnight. */
+export function hhmmToMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}

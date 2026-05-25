@@ -17,6 +17,7 @@ import {
   handleClickDelete,
   handlePostponeTask,
 } from "@/utils/calendarEventHandlers";
+import { PlannerType } from "@/types/prisma";
 
 interface EventContentProps {
   event: EventImpl;
@@ -24,7 +25,7 @@ interface EventContentProps {
 
 const EventContent: React.FC<EventContentProps> = ({ event }) => {
   const { planner, updateAll, calendar, userSettings } = useCalendarProvider();
-  const { itemType, parentId, completedStartTime, completedEndTime } =
+  const { plannerType, parentId, completedStartTime, completedEndTime } =
     event.extendedProps;
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
@@ -33,7 +34,7 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
   const [eventRect, setEventRect] = useState<DOMRect | null>(null);
   const [onHover, setOnHover] = useState<boolean>(false);
   const [isCompleted, setIsCompleted] = useState<boolean>(
-    !!(completedStartTime && completedEndTime) || false
+    !!(completedStartTime && completedEndTime) || false,
   );
 
   if (!event.start || !event.end) return null;
@@ -54,10 +55,10 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
       elementRef,
       calendar,
       updateAll,
-      itemType as string,
+      plannerType as string,
       (parentId as string) ?? null,
       red,
-      setShowPopover
+      setShowPopover,
     );
   };
 
@@ -70,7 +71,7 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
       planner,
       calendar,
       updateAll,
-      green
+      green,
     );
   };
 
@@ -112,8 +113,8 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
 
               <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 {!event.extendedProps.isTemplateItem &&
-                  (event.extendedProps.itemType === "goal" ||
-                    event.extendedProps.itemType === "task") && (
+                  (event.extendedProps.plannerType === PlannerType.goal ||
+                    event.extendedProps.plannerType === PlannerType.task) && (
                     <>
                       <button
                         onClick={onComplete}

@@ -1,0 +1,1 @@
+export { staticEventTravelPass } from "./staticEventTravelPass";

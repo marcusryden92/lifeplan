@@ -1,4 +1,9 @@
-import { SimpleEvent, Planner, EventTemplate } from "@/types/prisma";
+import {
+  SimpleEvent,
+  Planner,
+  EventTemplate,
+  PlannerType,
+} from "@/types/prisma";
 import { DateSelectArg, EventDropArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 import { EventImpl } from "@fullcalendar/core/internal";
@@ -12,7 +17,7 @@ import { assert } from "./assert/assert";
 export const handleSelect = (
   userId: string | undefined,
   updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
-  selectInfo: DateSelectArg
+  selectInfo: DateSelectArg,
 ) => {
   const { start, end } = selectInfo;
   const title = prompt("Enter event title:", "New Event");
@@ -25,7 +30,7 @@ export const handleSelect = (
       id: uuidv4(),
       title,
       parentId: null,
-      itemType: "plan",
+      plannerType: PlannerType.plan,
       isReady: true,
       duration,
       deadline: null,
@@ -36,6 +41,9 @@ export const handleSelect = (
       completedEndTime: null,
       userId,
       color: "black",
+      locationId: null,
+      useParentLocation: false,
+      categoryId: null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };
@@ -48,9 +56,9 @@ export const handleEventResize = (
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
     calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
-    template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
+    template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
   ) => void,
-  resizeInfo: EventResizeStartArg
+  resizeInfo: EventResizeStartArg,
 ) => {
   const { event } = resizeInfo;
 
@@ -64,7 +72,7 @@ export const handleEventResize = (
   updateAll(
     (prevPlanner) =>
       prevPlanner.map((p) =>
-        p.id === event.id ? { ...p, duration: getDuration(start, end) } : p
+        p.id === event.id ? { ...p, duration: getDuration(start, end) } : p,
       ),
     (prevEvents) =>
       prevEvents.map((ev) =>
@@ -74,14 +82,14 @@ export const handleEventResize = (
               start: event.start ? event.start.toISOString() : ev.start,
               end: event.end ? event.end.toISOString() : ev.end,
             }
-          : ev
-      )
+          : ev,
+      ),
   );
 };
 
 export const handleEventDrop = (
   updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
-  dropInfo: EventDropArg
+  dropInfo: EventDropArg,
 ) => {
   const { event } = dropInfo;
 
@@ -92,8 +100,8 @@ export const handleEventDrop = (
             ...ev,
             starts: event.start?.toISOString() || ev.starts,
           }
-        : ev
-    )
+        : ev,
+    ),
   );
 };
 
@@ -102,14 +110,14 @@ export const handleEventCopy = (
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
     calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
-    template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
-  ) => void
+    template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
+  ) => void,
 ) => {
   assert(event, "Event undefined in handleEventCopy");
   assert(event.start, "Event.start undefined in handleEventCopy");
   assert(event.end, "Event.end undefined in handleEventCopy");
 
-  if (event.extendedProps.ItemType === "goal")
+  if (event.extendedProps.PlannerType === "goal")
     throw new Error("Can't copy goal in handleEventCopy");
 
   const now = new Date().toISOString();
@@ -140,8 +148,8 @@ export const handleUpdateTitle = (
   calendar: SimpleEvent[],
   updateAll: (
     arg: Planner[] | ((prev: Planner[]) => Planner[]),
-    manuallyUpdatedCalendar?: SimpleEvent[]
-  ) => void
+    manuallyUpdatedCalendar?: SimpleEvent[],
+  ) => void,
 ) => {
   const updatedEvents = calendar?.map((calEvent) => {
     if (calEvent.id === taskId) {
@@ -158,7 +166,7 @@ export const handleUpdateTitle = (
         return { ...item, title };
       }
       return item;
-    })
+    }),
   );
 
   setTitle(title);
@@ -173,9 +181,9 @@ export const handleClickCompleteTask = (
   calendar: SimpleEvent[],
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
-    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[])
+    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
   ) => void,
-  green = "#0ebf7e"
+  green = "#0ebf7e",
 ) => {
   const element = elementRef.current;
   if (!event || !element) return;
@@ -198,9 +206,9 @@ export const handleClickCompleteTask = (
         prev.map((item) =>
           item.id === event.id
             ? { ...item, completedStartTime: null, completedEndTime: null }
-            : item
+            : item,
         ),
-      (prev) => prev.filter((e) => e.id !== event.id)
+      (prev) => prev.filter((e) => e.id !== event.id),
     );
   } else {
     setIsCompleted(true);
@@ -208,13 +216,13 @@ export const handleClickCompleteTask = (
       const result = getPlannerAndCalendarForCompletedTask(
         planner,
         calendar,
-        event
+        event,
       );
       if (result) {
         const { manuallyUpdatedTaskArray, manuallyUpdatedCalendar } = result;
         updateAll(
           (prev) => manuallyUpdatedTaskArray || prev,
-          manuallyUpdatedCalendar
+          manuallyUpdatedCalendar,
         );
       }
     }, 500);
@@ -226,8 +234,8 @@ export const handlePostponeTask = (
   calendar: SimpleEvent[],
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
-    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[])
-  ) => void
+    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
+  ) => void,
 ) => {
   const updatedCalendar = calendar?.filter((e) => e.id !== event.id);
   if (updatedCalendar) updateAll((prev) => prev, updatedCalendar);
@@ -239,12 +247,12 @@ export const handleClickDelete = (
   calendar: SimpleEvent[],
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
-    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[])
+    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
   ) => void,
-  itemType: string,
+  plannerType: string,
   parentId: string | null,
   red = "#ef4444",
-  setShowPopover?: React.Dispatch<React.SetStateAction<boolean>>
+  setShowPopover?: React.Dispatch<React.SetStateAction<boolean>>,
 ) => {
   const element = elementRef.current;
 
@@ -256,7 +264,7 @@ export const handleClickDelete = (
   const updatedCalendar = calendar?.filter((e) => e.id !== event?.id);
 
   setTimeout(() => {
-    if (itemType === "goal") {
+    if (plannerType === PlannerType.goal) {
       deleteGoal({
         updateAll,
         taskId: event.id,
@@ -266,7 +274,7 @@ export const handleClickDelete = (
     } else {
       updateAll(
         (prev) => prev.filter((t) => t.id !== event.id),
-        (prev) => prev.filter((t) => t.id !== event.id)
+        (prev) => prev.filter((t) => t.id !== event.id),
       );
     }
   }, 500);
@@ -278,7 +286,7 @@ export const handleDoubleClick = (
   e: React.MouseEvent,
   elementRef: React.RefObject<HTMLDivElement>,
   setEventRect: React.Dispatch<React.SetStateAction<DOMRect | null>>,
-  setShowPopover: React.Dispatch<React.SetStateAction<boolean>>
+  setShowPopover: React.Dispatch<React.SetStateAction<boolean>>,
 ) => {
   e.stopPropagation();
 

@@ -106,6 +106,20 @@ export default function DraggableItem({
       onMouseLeave={handleMouseLeave}
       onMouseDown={(e) => {
         e.stopPropagation();
+
+        const target = e.target as HTMLElement;
+        const isEditable =
+          target.closest(
+            'input, textarea, select, button, [contenteditable="true"], [data-allow-select="true"]'
+          ) !== null;
+
+        if (!isEditable) {
+          // Prevent text selection kickoff on drag start
+          e.preventDefault();
+          // Add drag selection guard immediately on mousedown
+          document.body.classList.add("lp-dragging");
+        }
+
         setCurrentlyClickedItem({
           taskId,
           taskTitle,

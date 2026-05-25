@@ -14,10 +14,16 @@ import useClickOutside from "@/hooks/useClickOutside";
 import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
 import useTitleEditor from "@/hooks/useTitleEditor";
 import { handleEventCopy } from "@/utils/calendarEventHandlers";
-import React from "react";
+import React, { useMemo, useState, useCallback, useEffect } from "react";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { LocationSelector } from "@/components/locations/LocationSelector";
+import {
+  assignLocationToPlanner,
+  setUseParentLocation,
+} from "@/actions/locations";
 
 import { formatTime } from "@/utils/calendarUtils";
+import { PlannerType } from "@/types/prisma";
 
 interface EventPopoverProps {
   event: EventImpl;
@@ -46,7 +52,64 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   onPostpone,
   setShowPopover,
 }) => {
-  const { updateAll } = useCalendarProvider();
+  const { updateAll, planner, updatePlannerArray, inheritedLocationMap } =
+    useCalendarProvider();
+
+  const plannerItem = useMemo(
+    () => planner.find((p) => p.id === event.id),
+    [planner, event.id],
+  );
+
+  const inheritedInfo = plannerItem
+    ? inheritedLocationMap.get(plannerItem.id)
+    : undefined;
+  const categoryHasLocation = !!inheritedInfo;
+
+  const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
+    () => !categoryHasLocation || !plannerItem?.useParentLocation,
+  );
+
+  useEffect(() => {
+    setLocationOverrideEnabled(
+      !categoryHasLocation || !plannerItem?.useParentLocation,
+    );
+  }, [categoryHasLocation, plannerItem?.useParentLocation]);
+
+  const handleLocationChange = async (locationId: string | null) => {
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === event.id ? { ...p, locationId: locationId } : p,
+      ),
+    );
+    try {
+      await assignLocationToPlanner(event.id, locationId);
+    } catch (error) {
+      console.error("Failed to update location:", error);
+    }
+  };
+
+  const handleToggleLocationOverride = useCallback(async () => {
+    if (!plannerItem || !categoryHasLocation) return;
+
+    const newOverrideEnabled = !locationOverrideEnabled;
+    const newUseParent = !newOverrideEnabled;
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === plannerItem.id ? { ...p, useParentLocation: newUseParent } : p,
+      ),
+    );
+    setLocationOverrideEnabled(newOverrideEnabled);
+    try {
+      await setUseParentLocation(plannerItem.id, newUseParent);
+    } catch (error) {
+      console.error("Failed to toggle location override:", error);
+    }
+  }, [
+    plannerItem,
+    categoryHasLocation,
+    locationOverrideEnabled,
+    updatePlannerArray,
+  ]);
 
   // Popover dimensions
   const POPOVER_WIDTH = 280;
@@ -182,13 +245,29 @@ const EventPopover: React.FC<EventPopoverProps> = ({
           </span>
         </div>
 
+        {/* Location selector - for plans, tasks, and goals */}
+        {plannerItem && (
+          <div className="mb-4">
+            <LocationSelector
+              value={plannerItem.locationId ?? null}
+              onChange={handleLocationChange}
+              isOverridden={locationOverrideEnabled}
+              onToggleOverride={
+                inheritedInfo ? handleToggleLocationOverride : undefined
+              }
+              inheritedLocationName={inheritedInfo?.locationName}
+              inheritedFromLabel={inheritedInfo?.fromLabel}
+            />
+          </div>
+        )}
+
         {/* Actions - Notion-style minimal buttons */}
         <div className="space-y-2">
           {/* Main action buttons */}
           <EventColorPicker taskId={event.id} />
           <div className="flex flex-wrap gap-2">
-            {event.extendedProps.itemType !== "task" &&
-              event.extendedProps.itemType !== "goal" && (
+            {event.extendedProps.plannerType !== PlannerType.task &&
+              event.extendedProps.plannerType !== PlannerType.goal && (
                 <button
                   onClick={onCopy}
                   className="flex items-center text-sm text-gray-700 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
@@ -209,8 +288,8 @@ const EventPopover: React.FC<EventPopoverProps> = ({
 
           {/* Status buttons - Only show if applicable */}
           {!event.extendedProps.isTemplateItem &&
-            (event.extendedProps.itemType === "goal" ||
-              event.extendedProps.itemType === "task") && (
+            (event.extendedProps.plannerType === PlannerType.goal ||
+              event.extendedProps.plannerType === PlannerType.task) && (
               <div className="pt-2 border-t border-gray-100">
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -244,7 +323,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };
 

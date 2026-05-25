@@ -8,3 +8,28 @@ export type WeekDayType =
   | "thursday" // index 4
   | "friday" // index 5
   | "saturday"; // index 6
+
+/**
+ * Extended props for travel events (runtime-only, not persisted to database)
+ */
+export interface TravelExtendedProps {
+  id: string;
+  eventId: string;
+  plannerType: "travel";
+  parentId: null;
+  completedEndTime: null;
+  completedStartTime: null;
+  fromLocationId: string | null;
+  toLocationId: string | null;
+  travelMinutes: number;
+  insufficientTravel: boolean;
+  requiredTravelMinutes: number | null;
+}
+
+/**
+ * Extended props with trespassing indicators (added at runtime for display)
+ */
+export interface TrespassingExtendedProps {
+  trespassingStart?: boolean;
+  trespassingEnd?: boolean;
+}

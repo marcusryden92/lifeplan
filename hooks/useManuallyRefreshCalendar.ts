@@ -7,10 +7,15 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 import { taskIsCompleted } from "@/utils/taskHelpers";
 
-import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
+import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
 import { AppDispatch, RootState } from "@/redux/store";
 import calendarSlice from "@/redux/slices/calendarSlice";
 import { useSelector } from "react-redux";
+import {
+  travelTimeArrayToMap,
+  type SerializedTravelTimeEntry,
+  type DebugStrategyConfig,
+} from "@/redux/slices/schedulingSettingsSlice";
 
 const useManuallyRefreshCalendar = (
   userId: string | undefined,
@@ -18,21 +23,79 @@ const useManuallyRefreshCalendar = (
     planner: Planner[];
     calendar: SimpleEvent[];
     template: EventTemplate[];
+    categories: Category[];
   },
   weekStartDay: WeekDayIntegers,
   dispatch: AppDispatch
 ) => {
-  const { planner, calendar, template } = calendarState;
+  const { planner, calendar, template, categories } = calendarState;
   const bufferTimeMinutes = useSelector(
     (state: RootState) => state.schedulingSettings.bufferTimeMinutes
   );
+  const enableTravelEvents = useSelector(
+    (state: RootState) => state.schedulingSettings.enableTravelEvents
+  );
+  const travelTimeMatrix = useSelector(
+    (state: RootState) => state.schedulingSettings.travelTimeMatrix
+  );
+  const debugStrategyConfig = useSelector(
+    (state: RootState) => state.schedulingSettings.debugStrategyConfig
+  );
 
   // Store latest values in refs so callback doesn't need to depend on them
-  const stateRef = useRef({ userId, planner, calendar, template, weekStartDay, bufferTimeMinutes, dispatch });
-  stateRef.current = { userId, planner, calendar, template, weekStartDay, bufferTimeMinutes, dispatch };
+  const stateRef = useRef<{
+    userId: string | undefined;
+    planner: Planner[];
+    calendar: SimpleEvent[];
+    template: EventTemplate[];
+    categories: Category[];
+    weekStartDay: WeekDayIntegers;
+    bufferTimeMinutes: number;
+    enableTravelEvents: boolean;
+    travelTimeMatrix: SerializedTravelTimeEntry[] | null;
+    debugStrategyConfig: DebugStrategyConfig;
+    dispatch: AppDispatch;
+  }>({
+    userId,
+    planner,
+    calendar,
+    template,
+    categories,
+    weekStartDay,
+    bufferTimeMinutes,
+    enableTravelEvents,
+    travelTimeMatrix,
+    debugStrategyConfig,
+    dispatch,
+  });
+  stateRef.current = {
+    userId,
+    planner,
+    calendar,
+    template,
+    categories,
+    weekStartDay,
+    bufferTimeMinutes,
+    enableTravelEvents,
+    travelTimeMatrix,
+    debugStrategyConfig,
+    dispatch,
+  };
 
   const manuallyRefreshCalendar = useCallback(() => {
-    const { userId, planner, calendar, template, weekStartDay, bufferTimeMinutes, dispatch } = stateRef.current;
+    const {
+      userId,
+      planner,
+      calendar,
+      template,
+      categories,
+      weekStartDay,
+      bufferTimeMinutes,
+      enableTravelEvents,
+      travelTimeMatrix,
+      debugStrategyConfig,
+      dispatch,
+    } = stateRef.current;
 
     if (!userId) throw new Error("Id missing in manuallyRefreshCalendar");
 
@@ -48,13 +111,25 @@ const useManuallyRefreshCalendar = (
             !overdueIds.has(e.id) && floorMinutes(new Date(e.start)) < now
         ) || [];
 
+      // Convert serialized array to Map for calendar generation
+      const travelTimeMap = travelTimeArrayToMap(travelTimeMatrix);
+
       const newCalendar = generateCalendar(
         userId,
         weekStartDay,
         template,
         planner,
         filteredCalendar,
-        bufferTimeMinutes
+        {
+          bufferTimeMinutes,
+          travelTimeMatrix: travelTimeMap ?? undefined,
+          injectTravelEvents: enableTravelEvents,
+          strategyWeights: debugStrategyConfig.weights,
+          locationGroupingScores: debugStrategyConfig.locationGrouping.scores,
+          locationGroupingPenalties:
+            debugStrategyConfig.locationGrouping.penalties,
+          categories,
+        }
       );
 
       // Use updateAll to bypass the thunk's regeneration
@@ -64,6 +139,7 @@ const useManuallyRefreshCalendar = (
           planner,
           calendar: newCalendar,
           template,
+          categories,
         })
       );
     }

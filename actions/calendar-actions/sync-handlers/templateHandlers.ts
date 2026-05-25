@@ -1,5 +1,15 @@
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
+import { intToWeekday } from "@/utils/calendarUtils";
+import type { EventTemplate } from "@/types/prisma";
 type Database = typeof import("@/lib/db").db;
+
+// App holds startDay as WeekDayIntegers; DB expects the WeekDayType enum string.
+function templateForWrite(template: EventTemplate) {
+  return {
+    ...template,
+    startDay: intToWeekday(template.startDay),
+  };
+}
 
 export function handleTemplateChanges(
   db: Database,
@@ -14,7 +24,7 @@ export function handleTemplateChanges(
     operations.push(
       db.eventTemplate.createMany({
         data: databaseChanges.template.create.map((template) => ({
-          ...template,
+          ...templateForWrite(template),
           userId,
         })),
         skipDuplicates: true,
@@ -27,7 +37,7 @@ export function handleTemplateChanges(
     operations.push(
       db.eventTemplate.update({
         where: { id: template.id },
-        data: { ...template, userId, updatedAt },
+        data: { ...templateForWrite(template), userId, updatedAt },
       })
     );
   }

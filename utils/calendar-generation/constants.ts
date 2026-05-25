@@ -66,6 +66,33 @@ export const SCHEDULING_CONFIG = {
   MIN_SLOT_SIZE: 5,
   /** Buffer time between events in minutes */
   BUFFER_TIME_MINUTES: 0,
+  /** Time window (ms) for matching adjacent travel slots (3 hours) */
+  TRAVEL_SEARCH_WINDOW_MS: 3 * 60 * 60 * 1000,
+  /** Time window (ms) for adjacent travel search including tolerance (buffer + 10 min) */
+  ADJACENT_TRAVEL_TOLERANCE_MS: 10 * 60 * 1000,
+  /**
+   * Fixed horizon for slot generation. The initial build covers this many
+   * days from the current date; each subsequent expansion appends another
+   * chunk of the same size from the isFinal pickup point. Plans further out
+   * are deliberately ignored until expansion reaches them, so a single
+   * Plan a year away doesn't balloon the initial slot array.
+   */
+  HORIZON_CHUNK_DAYS: 28,
+  /**
+   * Available-slot count threshold for proactive expansion. When the slot
+   * array drops below this many Available slots, scheduleTasksAndGoals
+   * triggers expandSlots before attempting the next candidate, instead of
+   * waiting for placement failures to fire the reactive backstop.
+   */
+  LOW_SLOT_WATERMARK: 100,
+  /**
+   * Tail buffer (days) at the trailing edge of the slot horizon where dynamic
+   * placement is suppressed. The slot finder filters out slots starting past
+   * (last placeable slot end - this many days). The buffer gives the next
+   * expansion's static-pass resume room to re-decide travel placement at the
+   * seam without colliding with already-placed dynamic events.
+   */
+  PLACEMENT_BUFFER_DAYS: 3,
 } as const;
 
 /**
@@ -87,16 +114,28 @@ export const URGENCY_CONFIG = {
   URGENCY_SCALE_MAX: 1.0,
 } as const;
 
+// NOTE: Strategy weights and scoring configs have been moved to:
+// utils/calendar-generation/strategies/defaultStrategy.ts
+// This allows for future user customization of strategy parameters.
+
 /**
- * Strategy weights for multi-strategy scheduling
+ * Location and travel time configuration
  */
-export const STRATEGY_WEIGHTS = {
-  /** Weight for urgency-based scheduling */
-  URGENCY_WEIGHT: 1.0,
-  /** Weight for dependency-aware scheduling */
-  DEPENDENCY_WEIGHT: 0.8,
-  /** Weight for energy/time-of-day optimization */
-  ENERGY_WEIGHT: 0.5,
+export const LOCATION_CONFIG = {
+  /** Maximum number of locations a user can save */
+  MAX_LOCATIONS: 10,
+  /** Rush hour morning start (7 AM) */
+  RUSH_HOUR_MORNING_START: 7,
+  /** Rush hour morning end (9 AM) */
+  RUSH_HOUR_MORNING_END: 9,
+  /** Rush hour evening start (5 PM) */
+  RUSH_HOUR_EVENING_START: 17,
+  /** Rush hour evening end (7 PM) */
+  RUSH_HOUR_EVENING_END: 19,
+  /** Night time start (9 PM) */
+  NIGHT_START: 21,
+  /** Night time end (6 AM) */
+  NIGHT_END: 6,
 } as const;
 
 /**
@@ -115,16 +154,6 @@ export enum SchedulingFailureReason {
   INVALID_TASK = "INVALID_TASK",
   /** Template generation failed */
   TEMPLATE_ERROR = "TEMPLATE_ERROR",
-}
-
-/**
- * Event type identifiers
- */
-export enum EventType {
-  TASK = "task",
-  GOAL = "goal",
-  PLAN = "plan",
-  TEMPLATE = "template",
 }
 
 /**

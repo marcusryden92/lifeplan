@@ -1,23 +1,68 @@
-## Start Local Server
+# LifePlan
 
-pnpm run dev
+A personal scheduling and task management application that automatically generates optimized calendar schedules from tasks, goals, and recurring templates.
 
-## Prisma Database
+## What It Does
 
-# Generate Prisma Client (update types and client code)
+- Define tasks with durations, deadlines, and priorities
+- Organize tasks into goals with hierarchical subtask structures
+- Set up recurring weekly templates (work blocks, sleep, routines)
+- Assign locations to tasks for travel-aware scheduling
+- Group tasks into categories with time-based constraints
+- Automatically generate a weekly calendar that places everything optimally
 
-pnpm run prisma generate
+The scheduling engine considers task urgency, location proximity, category time windows, and travel time between locations to produce a schedule that minimizes wasted time and respects all constraints.
 
-# Apply migrations to dev server
+## Stack
 
-pnpm run prisma migrate dev --name example_name
-pnpm run prisma migrate deploy
+- **Frontend:** Next.js 14 (App Router), React 18, TypeScript
+- **UI:** shadcn/ui, Radix UI, Tailwind CSS, FullCalendar
+- **State:** Redux Toolkit, React Context
+- **Backend:** Next.js Server Actions, Prisma ORM, PostgreSQL
+- **Auth:** NextAuth v5
+
+## Getting Started
+
+```bash
+# Install dependencies
+pnpm install
+
+# Set up environment variables
+cp .env.example .env
+# Fill in DATABASE_URL, NEXTAUTH_SECRET, OAuth credentials, etc.
+
+# Push schema to database
+pnpm prisma generate
+pnpm prisma db push
+
+# Seed with test data (optional)
+pnpm prisma db seed
+
+# Start development server
+pnpm dev
+```
 
 ## Local Postgres Workflow
 
-- `pnpm run db:start` spins up Dockerized Postgres for development.
-- `pnpm run db:stop` shuts it down.
-- `pnpm run db:seed` runs the Prisma seed script with `.env.development.local` loaded (use it whenever you need baseline data).
-- `pnpm run prisma:migrate:deploy` applies migrations against the Docker database with `.env.development.local`.
-- `pnpm run db:reset:dev` wipes the Docker volume, restarts Postgres, runs pending migrations, and then re-seeds with `pnpm db:seed`.
-- `pnpm run db:studio` runs Prisma studio to view the database in the browser.
+```bash
+pnpm db:start                  # Spin up Dockerized Postgres
+pnpm db:stop                   # Shut it down
+pnpm db:seed                   # Run seed script
+pnpm prisma:migrate:deploy     # Apply migrations
+pnpm db:reset:dev              # Wipe, restart, migrate, and re-seed
+pnpm db:studio                 # Open Prisma Studio in browser
+```
+
+## Project Structure
+
+- `app/` - Next.js routes and pages
+- `actions/` - Server actions for all data operations
+- `components/` - React components
+- `utils/calendar-generation/` - The scheduling engine (see `docs/calendar-generation.md`)
+- `prisma/` - Database schema and seed data
+- `redux/` - Client-side state management
+
+## Documentation
+
+- [CLAUDE.md](CLAUDE.md) - Full project reference for AI assistants
+- [docs/calendar-generation.md](docs/calendar-generation.md) - Deep dive into the scheduling engine

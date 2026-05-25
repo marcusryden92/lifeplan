@@ -1,24 +1,104 @@
-/**
- * TimeSlot Model
- *
- * Represents an available or occupied time slot in the calendar.
- * Used for efficient scheduling without minute-by-minute iteration.
- */
+import { PlannerType, EventType } from "@/types/prisma";
 
-export interface TimeSlot {
-  /** Start time of the slot */
+type BaseSlot = {
   start: Date;
-  /** End time of the slot */
   end: Date;
-  /** Duration in minutes */
   durationMinutes: number;
-  /** Whether this slot is available for scheduling */
-  isAvailable: boolean;
-  /** ID of the event occupying this slot (if any) */
-  eventId?: string;
-  /** Type of event occupying this slot (if any) */
-  eventType?: "task" | "goal" | "plan" | "template";
-}
+};
+
+export type SlotType = "available" | "category" | "occupied" | "travel";
+
+export type AvailableSlot = BaseSlot & {
+  type: "available";
+  prevLocationId?: string | null;
+  nextLocationId?: string | null;
+};
+
+export type CategorySlot = BaseSlot & {
+  type: "category";
+  currentLocationId: string | null;
+  prevLocationId: string | null;
+  nextLocationId: string | null;
+  categoryId: string;
+  isStrictCategory: boolean;
+  // Set by the travel pass when travel into/out of this category would have
+  // fully consumed the slot's interior. The wrapper event's top/bottom border
+  // is stamped red downstream; no visible travel slot is emitted.
+  trespassingStart?: boolean;
+  trespassingEnd?: boolean;
+  // Pickup-point marker: identifies the latest category whose exit edge
+  // the static pass deferred (because nothing reachable came after it).
+  // Invariant: at most one slot in the array carries this flag at a time.
+  // expandSlots finds the flagged slot, preserves everything up
+  // to it, builds new slots beyond it, then re-runs the static pass with
+  // startIdx set to this slot's index — so the deferred exit edge gets
+  // planned against the new region without re-deciding upstream slots.
+  isFinal?: boolean;
+};
+
+export type OccupiedSlot = BaseSlot & {
+  type: "occupied";
+  eventId: string;
+  plannerType: PlannerType;
+  eventType: Exclude<EventType, "travel">;
+  // The event's location. null = "Anywhere" — the user has no specific
+  // location during this slot, so adjacent transitions can propagate
+  // through it without being forced to start/end at this event.
+  locationId?: string | null;
+};
+
+export type TravelSlot = BaseSlot & {
+  type: "travel";
+  eventId: string;
+  eventType: Extract<EventType, "travel">;
+  travelFromLocationId: string | null;
+  travelToLocationId: string | null;
+  travelType: "preliminary" | "inbound" | "outbound";
+  // Red marker: the slot is shorter than the travel actually needs.
+  insufficientTravel: boolean;
+  requiredTravelMinutes: number;
+  // Yellow marker: the slot fits the travel duration, but this routing was
+  // forced (absorb-and-replan that skips a category visit, wasted round
+  // trip, etc.). Co-exists with insufficientTravel when both apply.
+  overconstrained?: boolean;
+  // IDs of CategorySlots this travel replaced (because it fully consumed
+  // their interior). The wrapper-marker scanner sets trespass flags on the
+  // matching wrappers downstream.
+  consumedCategoryIds?: string[];
+  categoryId?: string | null;
+  isStrictCategory?: boolean;
+
+  // ---- Shard model -------------------------------------------------------
+  // A single logical travel can be split across N source slots it consumed
+  // (e.g. a bleed-across-prev-current-next produces three shards: one per
+  // eaten source piece). All shards of one logical travel share a travelId
+  // and render as a single travel block downstream.
+  //
+  // travelId is required on new placements; older single-slot travels that
+  // pre-date the shard model leave it undefined.
+  travelId?: string;
+  // The original slot type this shard was carved out of. "available" means
+  // the user had free time here; "category" means a category interior
+  // contributed time.
+  originalType?: "available" | "category";
+  // The boundaries of the source slot before splicing. Used by unplanTravel
+  // to restore the original fragment when this shard is removed.
+  originalSourceStart?: Date;
+  originalSourceEnd?: Date;
+  // For category shards only: identity of the source category fragment.
+  originalCategoryId?: string;
+  originalLocationId?: string | null;
+  originalIsStrictCategory?: boolean;
+  // For available shards only: the source's prev/next locations.
+  originalPrevLocationId?: string | null;
+  originalNextLocationId?: string | null;
+};
+
+export type Slot = AvailableSlot | CategorySlot | OccupiedSlot | TravelSlot;
+export type TimeSlot = Slot;
+
+// Slots that a task can land in — free time or category interior.
+export type PlaceableSlot = AvailableSlot | CategorySlot;
 
 export interface TimeSlotBlock {
   /** Start of the day */
@@ -26,151 +106,5 @@ export interface TimeSlotBlock {
   /** All slots for this day */
   slots: TimeSlot[];
   /** Quick lookup for available slots */
-  availableSlots: TimeSlot[];
-}
-
-/**
- * Helper functions for TimeSlot operations
- */
-export class TimeSlotUtils {
-  /**
-   * Calculate duration of a time slot in minutes
-   */
-  static getDurationMinutes(slot: TimeSlot): number {
-    return Math.floor(
-      (slot.end.getTime() - slot.start.getTime()) / (1000 * 60)
-    );
-  }
-
-  /**
-   * Check if a time slot can fit a task
-   */
-  static canFitDuration(slot: TimeSlot, requiredMinutes: number): boolean {
-    return slot.isAvailable && slot.durationMinutes >= requiredMinutes;
-  }
-
-  /**
-   * Check if two time slots overlap
-   */
-  static doSlotsOverlap(slot1: TimeSlot, slot2: TimeSlot): boolean {
-    return slot1.start < slot2.end && slot2.start < slot1.end;
-  }
-
-  /**
-   * Merge adjacent available time slots
-   */
-  static mergeAdjacentSlots(slots: TimeSlot[]): TimeSlot[] {
-    if (slots.length === 0) return [];
-
-    const sorted = [...slots].sort(
-      (a, b) => a.start.getTime() - b.start.getTime()
-    );
-    const merged: TimeSlot[] = [sorted[0]];
-
-    for (let i = 1; i < sorted.length; i++) {
-      const current = sorted[i];
-      const last = merged[merged.length - 1];
-
-      // If slots are adjacent and both available, merge them
-      if (
-        last.isAvailable &&
-        current.isAvailable &&
-        last.end.getTime() === current.start.getTime()
-      ) {
-        last.end = current.end;
-        last.durationMinutes = TimeSlotUtils.getDurationMinutes(last);
-      } else {
-        merged.push(current);
-      }
-    }
-
-    return merged;
-  }
-
-  /**
-   * Split a time slot at a specific time
-   */
-  static splitSlot(
-    slot: TimeSlot,
-    splitTime: Date
-  ): [TimeSlot | null, TimeSlot | null] {
-    if (splitTime <= slot.start || splitTime >= slot.end) {
-      return [slot, null];
-    }
-
-    const before: TimeSlot = {
-      start: slot.start,
-      end: splitTime,
-      durationMinutes: Math.floor(
-        (splitTime.getTime() - slot.start.getTime()) / (1000 * 60)
-      ),
-      isAvailable: slot.isAvailable,
-      eventId: slot.eventId,
-      eventType: slot.eventType,
-    };
-
-    const after: TimeSlot = {
-      start: splitTime,
-      end: slot.end,
-      durationMinutes: Math.floor(
-        (slot.end.getTime() - splitTime.getTime()) / (1000 * 60)
-      ),
-      isAvailable: slot.isAvailable,
-      eventId: slot.eventId,
-      eventType: slot.eventType,
-    };
-
-    return [before, after];
-  }
-
-  /**
-   * Create an occupied slot from an existing available slot
-   */
-  static occupySlot(
-    slot: TimeSlot,
-    start: Date,
-    end: Date,
-    eventId: string,
-    eventType: "task" | "goal" | "plan" | "template"
-  ): TimeSlot[] {
-    const result: TimeSlot[] = [];
-
-    // Add slot before the occupied time
-    if (start > slot.start) {
-      result.push({
-        start: slot.start,
-        end: start,
-        durationMinutes: Math.floor(
-          (start.getTime() - slot.start.getTime()) / (1000 * 60)
-        ),
-        isAvailable: true,
-      });
-    }
-
-    // Add the occupied slot
-    result.push({
-      start,
-      end,
-      durationMinutes: Math.floor(
-        (end.getTime() - start.getTime()) / (1000 * 60)
-      ),
-      isAvailable: false,
-      eventId,
-      eventType,
-    });
-
-    // Add slot after the occupied time
-    if (end < slot.end) {
-      result.push({
-        start: end,
-        end: slot.end,
-        durationMinutes: Math.floor(
-          (slot.end.getTime() - end.getTime()) / (1000 * 60)
-        ),
-        isAvailable: true,
-      });
-    }
-
-    return result;
-  }
+  availableSlots: AvailableSlot[];
 }

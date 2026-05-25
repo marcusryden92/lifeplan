@@ -83,7 +83,7 @@ function getDateOfThisWeeksMonday(todaysDate: Date): Date {
 function calculatePlanStartTime(
   mondayDate: Date,
   dayOffset: number,
-  startTime: string
+  startTime: string,
 ): string {
   const [hours, minutes] = startTime.split(":").map(Number);
   const planDate = new Date(mondayDate);
@@ -105,14 +105,14 @@ export const generatePlans = (userId: string): Planner[] => {
     const starts = calculatePlanStartTime(
       mondayDate,
       data.dayOffset,
-      data.startTime
+      data.startTime,
     );
 
     return {
       id: uuidv4(),
       title: data.title,
       parentId: null,
-      itemType: "plan" as const,
+      plannerType: "plan" as const,
       isReady: true,
       duration: data.duration,
       deadline: null,
@@ -123,6 +123,9 @@ export const generatePlans = (userId: string): Planner[] => {
       priority: 5,
       userId,
       color: data.color,
+      locationId: null,
+      useParentLocation: false,
+      categoryId: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     };

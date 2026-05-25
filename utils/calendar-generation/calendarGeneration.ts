@@ -6,9 +6,30 @@
  */
 
 import { WeekDayIntegers } from "@/types/calendarTypes";
-import { Planner, EventTemplate, SimpleEvent } from "@/types/prisma";
+import { Planner, EventTemplate, SimpleEvent, Category } from "@/types/prisma";
 import { CalendarGenerator } from "./core/CalendarGenerator";
 import { SCHEDULING_CONFIG } from "./constants";
+import type {
+  TravelTimeEntry,
+  LocationGroupingScoresConfig,
+  LocationGroupingPenaltiesConfig,
+} from "./models/SchedulingModels";
+
+/**
+ * Options for calendar generation
+ */
+export interface GenerateCalendarOptions {
+  bufferTimeMinutes?: number;
+  travelTimeMatrix?: Map<string, TravelTimeEntry>;
+  injectTravelEvents?: boolean;
+  strategyWeights?: {
+    earliestSlot?: number;
+    locationGrouping?: number;
+  };
+  locationGroupingScores?: LocationGroupingScoresConfig;
+  locationGroupingPenalties?: LocationGroupingPenaltiesConfig;
+  categories?: Category[];
+}
 
 /**
  * Generate calendar events from planners and templates
@@ -18,7 +39,7 @@ import { SCHEDULING_CONFIG } from "./constants";
  * @param template - Event templates (recurring scheduled blocks)
  * @param planner - Planner items (tasks, goals, plans)
  * @param prevCalendar - Previous calendar events to preserve
- * @param bufferTimeMinutes - Optional buffer time between items (default: 10)
+ * @param options - Optional configuration (bufferTimeMinutes, travelTimeMatrix, injectTravelEvents)
  * @returns Array of calendar events
  */
 export function generateCalendar(
@@ -27,51 +48,56 @@ export function generateCalendar(
   template: EventTemplate[],
   planner: Planner[],
   prevCalendar: SimpleEvent[],
-  bufferTimeMinutes: number = 10
+  options: GenerateCalendarOptions | number = {},
 ): SimpleEvent[] {
-  // Use the new CalendarGenerator
-  const generator = new CalendarGenerator(weekStartDay);
+  // Handle backwards compatibility - if a number is passed, treat it as bufferTimeMinutes
+  const opts: GenerateCalendarOptions =
+    typeof options === "number" ? { bufferTimeMinutes: options } : options;
 
-  const enableLogging = false;
+  const bufferTimeMinutes = opts.bufferTimeMinutes ?? 10;
 
-  const result = generator.generate({
+  // Logging configuration - set enableLogging to false to disable all logging.
+  // dateRangeStart / dateRangeEnd limit event-based logs (finalEvents,
+  // leanCalendar, travelDebug, the [travel] dump in assembleFinalEvents) to
+  // items whose start falls within [dateRangeStart, dateRangeEnd]. Either bound
+  // can be null to leave that side open.
+  const enableLogging = true;
+  const logging = {
+    metrics: false,
+    failures: false,
+    travelDebug: false,
+    templateInfo: false,
+    planners: false,
+    templates: false,
+    locations: false,
+    strategySettings: false,
+    finalEvents: false,
+    leanCalendar: true,
+    staticEventTravelPass: true,
+    dynamicScheduling: true,
+    dateRangeStart: new Date("2026-06-21") as Date | null,
+    dateRangeEnd: new Date("2026-06-22") as Date | null,
+  };
+
+  const result = new CalendarGenerator(weekStartDay, {
     userId,
     weekStartDay,
     templates: template,
     planners: planner,
     previousCalendar: prevCalendar,
+    categories: opts.categories,
     config: {
       maxDaysAhead: SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
       enableLogging,
+      logging,
       bufferTimeMinutes,
+      travelTimeMatrix: opts.travelTimeMatrix,
+      injectTravelEvents: opts.injectTravelEvents,
+      strategyWeights: opts.strategyWeights,
+      locationGroupingScores: opts.locationGroupingScores,
+      locationGroupingPenalties: opts.locationGroupingPenalties,
     },
-  });
-
-  // Log detailed info when enableLogging is true
-  if (enableLogging) {
-    console.log("Calendar Generation Metrics:", result.metrics);
-    console.log("Templates passed:", template?.length || 0);
-    console.log(
-      "Template events generated:",
-      result.metrics.templateEventsGenerated
-    );
-    console.log("Total events returned:", result.events.length);
-    console.log(
-      "Template events in result:",
-      result.events.filter((e) => e.extendedProps?.itemType === "template")
-        .length
-    );
-    if (result.failures.length > 0) {
-      console.warn("Scheduling Failures:", result.failures);
-      console.table(
-        result.failures.map((f) => ({
-          task: f.taskTitle,
-          reason: f.reason,
-          details: f.details,
-        }))
-      );
-    }
-  }
+  }).generate();
 
   return result.events;
 }

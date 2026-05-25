@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import calendarSlice from "@/redux/slices/calendarSlice";
-import { Planner } from "@/types/prisma";
+import { Planner, Category } from "@/types/prisma";
 import { SimpleEvent } from "@/types/prisma";
 import { EventTemplate } from "@/types/prisma";
 import { fetchCalendarData } from "@/actions/calendar-actions/fetchCalendarData";
@@ -13,6 +13,7 @@ interface Data {
   planner: Planner[];
   calendar: SimpleEvent[];
   template: EventTemplate[];
+  categories: Category[];
 }
 
 export function useFetchCalendarData(
@@ -20,7 +21,8 @@ export function useFetchCalendarData(
   initializeState: (
     planner: Planner[],
     calendar: SimpleEvent[],
-    template: EventTemplate[]
+    template: EventTemplate[],
+    categories: Category[]
   ) => void
 ) {
   const dispatch = useDispatch<AppDispatch>();
@@ -40,19 +42,19 @@ export function useFetchCalendarData(
 
         if (!response.data) return null;
 
-        const { planner, calendar, template } = response.data;
-        const newData = { planner, calendar, template };
+        const { planner, calendar, template, categories } = response.data;
+        const newData = { planner, calendar, template, categories };
 
         setData(newData);
 
-        const calendarData = {
-          planner: newData.planner,
-          calendar: newData.calendar,
-          template: newData.template,
-        };
-
-        dispatch(calendarSlice.actions.updateCalendarArrayData(calendarData));
-        initializeState(newData.planner, newData.calendar, newData.template);
+        // Dispatch to Redux
+        dispatch(calendarSlice.actions.updateCalendarArrayData(newData));
+        initializeState(
+          newData.planner,
+          newData.calendar,
+          newData.template,
+          newData.categories
+        );
       } catch (err) {
         setError(err as Error);
       } finally {

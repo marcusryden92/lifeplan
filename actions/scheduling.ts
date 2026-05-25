@@ -20,6 +20,76 @@ export async function fetchUserSchedulingPreferences() {
   return prefs ?? null;
 }
 
+/**
+ * Fetch all user scheduling data at once (preferences + travel times + locations)
+ * Called once at login to populate Redux store
+ */
+export async function fetchAllSchedulingData(): Promise<{
+  preferences: {
+    bufferTimeMinutes: number;
+    defaultTransportMode: string;
+  };
+  travelTimes: Array<{
+    key: string;
+    fromLocationId: string;
+    toLocationId: string;
+    rushHourMinutes: number;
+    regularMinutes: number;
+    nightMinutes: number;
+  }>;
+  locations: Array<{
+    id: string;
+    name: string;
+    address: string;
+    placeId: string;
+  }>;
+}> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  // Fetch user preferences
+  const prefs = await db.userSchedulingPreferences.findUnique({
+    where: { userId: session.user.id },
+  });
+
+  const defaultTransportMode = prefs?.defaultTransportMode ?? "DRIVING";
+
+  // Fetch locations and travel times in parallel
+  const [locations, travelTimes] = await Promise.all([
+    db.location.findMany({
+      where: { userId: session.user.id },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, address: true, placeId: true },
+    }),
+    db.travelTime.findMany({
+      where: {
+        userId: session.user.id,
+        transportMode: defaultTransportMode,
+      },
+    }),
+  ]);
+
+  // Convert travel times to serializable format with effective values
+  // Key format must match TimeSlotManager.getTravelTime: "fromId->toId"
+  const travelTimeMatrix = travelTimes.map((tt) => ({
+    key: `${tt.fromLocationId}->${tt.toLocationId}`,
+    fromLocationId: tt.fromLocationId,
+    toLocationId: tt.toLocationId,
+    rushHourMinutes: tt.customRushHourMinutes ?? tt.googleRushHourMinutes,
+    regularMinutes: tt.customRegularMinutes ?? tt.googleRegularMinutes,
+    nightMinutes: tt.customNightMinutes ?? tt.googleNightMinutes,
+  }));
+
+  return {
+    preferences: {
+      bufferTimeMinutes: prefs?.bufferTimeMinutes ?? 10,
+      defaultTransportMode,
+    },
+    travelTimes: travelTimeMatrix,
+    locations,
+  };
+}
+
 export async function updateUserSchedulingPreferences(data: {
   bufferTimeMinutes: number;
 }) {

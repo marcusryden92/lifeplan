@@ -10,14 +10,13 @@ export { generateCalendar } from "./calendarGeneration";
 // Core classes (for advanced usage)
 export { CalendarGenerator } from "./core/CalendarGenerator";
 export { TimeSlotManager } from "./core/TimeSlotManager";
-export { TemplateExpander } from "./core/TemplateExpander";
 export { Scheduler } from "./core/Scheduler";
 
 // Strategies
-export { UrgencyStrategy } from "./strategies/UrgencyStrategy";
-export { EarliestSlotStrategy } from "./strategies/EarliestSlotStrategy";
 export { CompositeStrategy } from "./strategies/SchedulingStrategy";
 export type { SchedulingStrategy } from "./strategies/SchedulingStrategy";
+export { LocationGroupingStrategy } from "./strategies/LocationGroupingStrategy";
+export { EarliestSlotStrategy } from "./strategies/EarliestSlotStrategy";
 
 // Models and types
 export type {
@@ -30,16 +29,38 @@ export type {
   CalendarGenerationInput,
   DetailedSchedulingResult,
 } from "./models/SchedulingModels";
-export type { TimeSlot, TimeSlotBlock } from "./models/TimeSlot";
-export { TimeSlotUtils } from "./models/TimeSlot";
+export type { TimeSlot, AvailableSlot, OccupiedSlot, TravelSlot, TimeSlotBlock } from "./models/TimeSlot";
+export {
+  getDurationMinutes,
+  canFitDuration,
+  doSlotsOverlap,
+  splitSlot,
+  occupySlot,
+  createTravelSlot,
+  isTravelSlot,
+  reclaimTravelSlot,
+  createTravelShards,
+  shardSourceFromAvailable,
+  shardSourceFromCategory,
+  collectShardSources,
+  findTravelShardSpan,
+  unplanTravel,
+} from "./utils/timeSlotUtils";
+export type { ShardSource, TravelShardSpan } from "./utils/timeSlotUtils";
 
 // Utilities
 export { dateTimeService, DateTimeService } from "./utils/dateTimeService";
-export { CalendarValidator } from "./utils/validationUtils";
+export {
+  validatePlanner,
+  validateTemplate,
+  validatePlanners,
+  validateTemplates,
+  validateGenerationInput,
+} from "./helpers/CalendarValidator";
 export type {
   ValidationResult,
   ValidationError,
-} from "./utils/validationUtils";
+} from "./helpers/CalendarValidator";
 export * from "./utils/intervalUtils";
 
 // Constants

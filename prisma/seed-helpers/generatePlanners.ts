@@ -1,4 +1,6 @@
 import { Planner } from "../generated/client";
+import { LOCATION_IDS } from "./generateLocations";
+import { CATEGORY_IDS } from "./generateCategories";
 
 /**
  * Simplified planner data structure - only specify the essential fields.
@@ -11,6 +13,8 @@ export interface SimplePlannerData {
   duration: number;
   color: string;
   dependency?: string | null;
+  locationId?: string | null;
+  categoryId?: string | null;
 }
 
 /**
@@ -18,13 +22,15 @@ export interface SimplePlannerData {
  * Three main goal hierarchies: A, B, and C with their respective subgoals.
  */
 export const plannerSeedData: SimplePlannerData[] = [
-  // Goal A hierarchy
+  // Goal A hierarchy - No specific location, Work category
   {
     id: "a2d8280b-0362-4fc1-8947-4db30233e47a",
     title: "A",
     parentId: null,
     duration: 5,
     color: "#6C5CE7",
+    locationId: null,
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "414c5e8d-2e48-44c5-911d-df2522da1465",
@@ -89,13 +95,14 @@ export const plannerSeedData: SimplePlannerData[] = [
     dependency: "3ac9edae-5a09-49be-ac16-940a05047a18",
   },
 
-  // Goal B hierarchy
+  // Goal B hierarchy - Work category (location inherited from category)
   {
     id: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
     title: "B",
     parentId: null,
     duration: 5,
     color: "#8E44AD",
+    categoryId: CATEGORY_IDS.WORK,
   },
   {
     id: "7f8665a1-a476-412f-83ad-71fd21158372",
@@ -153,13 +160,14 @@ export const plannerSeedData: SimplePlannerData[] = [
     dependency: "e908862a-8b2a-4b06-9f5f-b2695101994e",
   },
 
-  // Goal C hierarchy
+  // Goal C hierarchy - Home location
   {
     id: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
     title: "C",
     parentId: null,
     duration: 5,
     color: "#457B9D",
+    locationId: LOCATION_IDS.HOME,
   },
   {
     id: "0fcae948-e489-44ed-92fc-cd03a42e2f5f",
@@ -208,32 +216,78 @@ export const plannerSeedData: SimplePlannerData[] = [
     color: "#457B9D",
     dependency: "333e37fd-55c9-44f2-8947-107d01980b65",
   },
+
+  // Goal D hierarchy - Gym location (no category, no root location — children override)
+  {
+    id: "3f2588fe-0190-4e58-baf9-a7045cad9d96",
+    title: "D",
+    parentId: null,
+    duration: 5,
+    color: "#E63946",
+    locationId: null,
+  },
+  {
+    id: "bbc700de-9a5d-460d-9f95-6c21cf164981",
+    title: "D",
+    parentId: "3f2588fe-0190-4e58-baf9-a7045cad9d96",
+    duration: 15,
+    color: "#E63946",
+  },
+  {
+    id: "3c039ae5-e3a3-4a71-8dd9-3ad194578ff8",
+    title: "D1",
+    parentId: "bbc700de-9a5d-460d-9f95-6c21cf164981",
+    duration: 45,
+    color: "#E63946",
+    locationId: LOCATION_IDS.GYM,
+  },
+  {
+    id: "0b616a44-3f21-4787-bc3f-0d59ea5976dc",
+    title: "D2",
+    parentId: "bbc700de-9a5d-460d-9f95-6c21cf164981",
+    duration: 45,
+    color: "#E63946",
+    dependency: "3c039ae5-e3a3-4a71-8dd9-3ad194578ff8",
+    locationId: LOCATION_IDS.GYM,
+  },
 ];
 
 /**
  * Generates full Planner objects from simplified seed data.
  * This centralizes the planner creation logic, so changes to the Planner model
  * only need to be updated here.
+ *
+ * Note: categoryId is only set on root items that specify it directly.
+ * Descendants inherit their effective category at scheduling time via
+ * buildPlannerCategoryMap which walks up the parent chain.
  */
 export const generatePlanners = (userId: string): Planner[] => {
   const timestamp = new Date().toISOString();
 
-  return plannerSeedData.map((data) => ({
-    id: data.id,
-    title: data.title,
-    parentId: data.parentId,
-    itemType: "goal" as const,
-    isReady: true,
-    duration: data.duration,
-    deadline: null,
-    starts: null,
-    dependency: data.dependency ?? null,
-    completedStartTime: null,
-    completedEndTime: null,
-    priority: 5,
-    userId,
-    color: data.color,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  }));
+  return plannerSeedData.map((data) => {
+    const isChild = data.parentId !== null;
+    const hasCustomLocation = !!data.locationId;
+
+    return {
+      id: data.id,
+      title: data.title,
+      parentId: data.parentId,
+      plannerType: "goal" as const,
+      isReady: true,
+      duration: data.duration,
+      deadline: null,
+      starts: null,
+      dependency: data.dependency ?? null,
+      completedStartTime: null,
+      completedEndTime: null,
+      priority: 5,
+      userId,
+      color: data.color,
+      locationId: data.locationId ?? null,
+      useParentLocation: isChild && !hasCustomLocation,
+      categoryId: data.categoryId ?? null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+  });
 };

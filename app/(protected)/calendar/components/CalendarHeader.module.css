@@ -1,12 +1,10 @@
 .headerContainer {
   display: flex;
   width: 100%;
-  align-items: flex-end;
+  align-items: flex-start;
   min-height: 80px;
   height: 80px;
-  padding-left: 2rem;
-  padding-right: 2rem;
-  padding-bottom: 1rem;
+  padding: 1rem 2rem;
   justify-content: space-between;
   background-color: white;
   border-top: 1px solid #d1d5db;

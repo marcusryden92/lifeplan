@@ -16,7 +16,7 @@ interface OnSubmitProps {
   setEditTitle: (title: string) => void;
   form: { reset: () => void };
   updatePlannerArray: (
-    planner: Planner[] | ((prev: Planner[]) => Planner[])
+    planner: Planner[] | ((prev: Planner[]) => Planner[]),
   ) => void;
   setDefaultInfluence?: boolean | undefined;
   type?: "task" | "plan" | "goal" | null;
@@ -38,8 +38,8 @@ export const onSubmit = ({
   if (editIndex !== null) {
     updatePlannerArray((prevTasks) =>
       prevTasks.map((task, index) =>
-        index === editIndex ? { ...task, title: editTitle } : task
-      )
+        index === editIndex ? { ...task, title: editTitle } : task,
+      ),
     );
     setEditIndex(null);
     setEditTitle("");
@@ -51,7 +51,7 @@ export const onSubmit = ({
       title: values.title,
       id: uuidv4(),
       parentId: null,
-      itemType: type || "goal",
+      plannerType: type || "goal",
       isReady: true,
       duration: 5,
       deadline: null,
@@ -61,6 +61,9 @@ export const onSubmit = ({
       completedEndTime: null,
       priority: 5,
       color: calendarColors[0],
+      locationId: null,
+      useParentLocation: false,
+      categoryId: null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };
@@ -73,7 +76,7 @@ export const onSubmit = ({
 
 interface DeleteTaskProps {
   updatePlannerArray: (
-    planner: Planner[] | ((prev: Planner[]) => Planner[])
+    planner: Planner[] | ((prev: Planner[]) => Planner[]),
   ) => void;
   editIndex: number | null;
   setEditIndex: React.Dispatch<React.SetStateAction<number | null>>;
@@ -82,7 +85,12 @@ interface DeleteTaskProps {
 
 export const deleteTask = (
   index: number,
-  { updatePlannerArray, editIndex, setEditIndex, setEditTitle }: DeleteTaskProps
+  {
+    updatePlannerArray,
+    editIndex,
+    setEditIndex,
+    setEditTitle,
+  }: DeleteTaskProps,
 ) => {
   updatePlannerArray((prevTasks) => prevTasks.filter((_, i) => i !== index));
   if (editIndex === index) {
@@ -95,7 +103,7 @@ export const deleteTask = (
 
 interface DeleteAllProps {
   updatePlannerArray: (
-    planner: Planner[] | ((prev: Planner[]) => Planner[])
+    planner: Planner[] | ((prev: Planner[]) => Planner[]),
   ) => void;
   filter?: Planner[]; // Replace `any` with your actual task type if necessary
 }
@@ -110,8 +118,8 @@ export const deleteAll = ({ updatePlannerArray, filter }: DeleteAllProps) => {
   // Otherwise, filter out tasks that match the filter array
   updatePlannerArray((prevTaskArray) =>
     prevTaskArray.filter(
-      (task) => !filter.some((filteredTask) => filteredTask.id === task.id)
-    )
+      (task) => !filter.some((filteredTask) => filteredTask.id === task.id),
+    ),
   );
 };
 
@@ -140,7 +148,7 @@ interface ConfirmEditProps {
   editIndex: number | null;
   editTitle: string;
   updatePlannerArray: (
-    planner: Planner[] | ((prev: Planner[]) => Planner[])
+    planner: Planner[] | ((prev: Planner[]) => Planner[]),
   ) => void;
   setEditIndex: React.Dispatch<React.SetStateAction<number | null>>;
   setEditTitle: React.Dispatch<React.SetStateAction<string>>;
@@ -161,7 +169,7 @@ export const confirmEdit = ({
           return { ...task, title: editTitle };
         }
         return task;
-      })
+      }),
     );
     setEditIndex(null);
     setEditTitle("");
@@ -173,7 +181,7 @@ interface editByIdProps {
   editDuration: number | null;
   editId: string;
   updatePlannerArray: (
-    planner: Planner[] | ((prev: Planner[]) => Planner[])
+    planner: Planner[] | ((prev: Planner[]) => Planner[]),
   ) => void;
 }
 
@@ -193,6 +201,6 @@ export const editById = ({
         };
       }
       return task;
-    })
+    }),
   );
 };

@@ -1,0 +1,47 @@
+model Category {
+  id        String     @id @default(uuid())
+  name      String
+  icon      String?    // Emoji or icon identifier
+  color     String?    // Hex color for visual distinction
+  sortOrder Int        @default(0)
+
+  timeSlots CategoryTimeWindow[]
+
+  // Strict mode: when true, only items from this category can be in these time slots
+  // When false, other items can fill empty space in the time slots
+  isStrict  Boolean    @default(false)
+
+  // Optional location for this category (items without location inherit this)
+  locationId String?
+  location   Location?  @relation(fields: [locationId], references: [id], onDelete: SetNull)
+
+  // Self-referential hierarchy (subcategories)
+  parentId  String?
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Category[] @relation("CategoryHierarchy")
+
+  // User ownership
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Items in this category (back-reference)
+  planners  Planner[]
+
+  createdAt String     @default(dbgenerated("NOW()::text"))
+  updatedAt String
+
+  @@map("Categories")
+}
+
+model CategoryTimeWindow {
+  id         String        @id @default(uuid())
+  // Days of the week this slot applies to (enum: sunday..saturday, ordered to match JS Date.getDay())
+  days       WeekDayType[]
+  startTime  String        // HH:MM (24-hour)
+  endTime    String        // HH:MM (24-hour); if <= startTime the slot spans midnight
+
+  categoryId String
+  category   Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("CategoryTimeWindows")
+}

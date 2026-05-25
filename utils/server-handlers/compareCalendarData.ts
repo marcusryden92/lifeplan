@@ -5,6 +5,7 @@ import {
   SimpleEvent,
   EventTemplate,
   EventExtendedProps,
+  EventType,
 } from "@/types/prisma";
 import { objectsAreEqual } from "../generalUtils";
 import { syncCalendarData } from "@/actions/calendar-actions/syncCalendarData";
@@ -34,18 +35,61 @@ export async function handleServerTransaction(
   calendar: SimpleEvent[],
   previousCalendar: { current: SimpleEvent[] },
   template?: EventTemplate[],
-  previousTemplate?: { current: EventTemplate[] }
+  previousTemplate?: { current: EventTemplate[] },
 ) {
-  const databaseChanges = compareData(
-    planner,
-    previousPlanner,
-    calendar,
-    previousCalendar,
-    template,
-    previousTemplate
+  // Filter out generated events (travel, template, category wrappers) BEFORE serialization
+  // These are dynamically generated and should never be persisted to database
+  const filterGeneratedEvents = (events: SimpleEvent[]) =>
+    events.filter(
+      (e) =>
+        e.extendedProps?.eventType !== EventType.travel &&
+        e.extendedProps?.eventType !== EventType.template &&
+        !(
+          e.extendedProps &&
+          "wrapperId" in e.extendedProps &&
+          e.extendedProps.wrapperId
+        ), // Category wrapper events have wrapperId
+    );
+
+  const filteredCalendar = filterGeneratedEvents(calendar);
+  const filteredPreviousCalendar = filterGeneratedEvents(
+    previousCalendar.current,
   );
 
-  const response = syncCalendarData(userId, databaseChanges);
+  // Serialize inputs to remove any Date objects or non-serializable data
+  const serializedPlanner = JSON.parse(JSON.stringify(planner)) as Planner[];
+  const serializedPreviousPlanner = {
+    current: JSON.parse(JSON.stringify(previousPlanner.current)) as Planner[],
+  };
+  const serializedCalendar = JSON.parse(
+    JSON.stringify(filteredCalendar),
+  ) as SimpleEvent[];
+  const serializedPreviousCalendar = {
+    current: JSON.parse(
+      JSON.stringify(filteredPreviousCalendar),
+    ) as SimpleEvent[],
+  };
+  const serializedTemplate = template
+    ? (JSON.parse(JSON.stringify(template)) as EventTemplate[])
+    : undefined;
+  const serializedPreviousTemplate = previousTemplate
+    ? {
+        current: JSON.parse(
+          JSON.stringify(previousTemplate.current),
+        ) as EventTemplate[],
+      }
+    : undefined;
+
+  const databaseChanges = compareData(
+    serializedPlanner,
+    serializedPreviousPlanner,
+    serializedCalendar,
+    serializedPreviousCalendar,
+    serializedTemplate,
+    serializedPreviousTemplate,
+  );
+
+  const response = await syncCalendarData(userId, databaseChanges);
 
   return response;
 }
@@ -56,7 +100,7 @@ export function compareData(
   calendar: SimpleEvent[],
   previousCalendar: { current: SimpleEvent[] },
   template?: EventTemplate[],
-  previousTemplate?: { current: EventTemplate[] }
+  previousTemplate?: { current: EventTemplate[] },
 ) {
   const databaseChanges: DatabaseChanges = {
     planner: { create: [], update: [], destroy: [] },
@@ -88,8 +132,13 @@ export function compareData(
   });
 
   // Check calendar changes
+  // Note: Generated events (travel, template, category wrappers) are already filtered out
+  // in handleServerTransaction before this function is called
   const prevCal: SimpleEvent[] = [...previousCalendar.current];
-  const calendarMap = new Map(calendar.map((event) => [event.id, event]));
+  const filteredCalendar = [...calendar];
+  const calendarMap = new Map(
+    filteredCalendar.map((event) => [event.id, event]),
+  );
   const prevCalMap = new Map(prevCal.map((event) => [event.id, event]));
 
   // Find events to create or update
@@ -140,10 +189,10 @@ export function compareData(
   if (template && previousTemplate) {
     const prevTemp: EventTemplate[] = [...previousTemplate.current];
     const templateMap = new Map(
-      template.map((template) => [template.id, template])
+      template.map((template) => [template.id, template]),
     );
     const prevTempMap = new Map(
-      prevTemp.map((template) => [template.id, template])
+      prevTemp.map((template) => [template.id, template]),
     );
 
     // Find templates to create or update
