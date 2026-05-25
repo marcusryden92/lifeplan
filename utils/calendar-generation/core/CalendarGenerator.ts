@@ -162,7 +162,6 @@ export class CalendarGenerator {
     // Phase 6a: Build available slots over the full scheduling timeline
     const schedulingStartDate = setTimeOnDate(currentDate, "00:00");
     const builtSlots = buildAvailableSlots({
-      planners: input.planners,
       startDate: schedulingStartDate,
       existingEvents: filteredEvents,
       templateMasks: perTemplateMasks,

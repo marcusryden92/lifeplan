@@ -89,7 +89,6 @@ export function expandSlots(
     : undefined;
 
   const newSlots = buildAvailableSlots({
-    planners: context.allPlanners,
     startDate: pickupTime,
     existingEvents: expansionEvents,
     templateMasks: perTemplateMasks,

@@ -1,6 +1,5 @@
 import { SimpleEvent, EventType } from "@/types/prisma";
 import { Slot, TravelSlot } from "../../models/TimeSlot";
-import { getAllTravelSlots } from "./getAllTravelSlots";
 
 // Merge shards of one logical travel into a single rendered event. Shards
 // share a travelId and are contiguous in the slot array; we collapse them
@@ -53,7 +52,9 @@ export function generateTravelEvents(
   slots: Slot[],
   userId: string,
 ): SimpleEvent[] {
-  const travelSlots = mergeShardsIntoLogicalTravels(getAllTravelSlots(slots));
+  const travelSlots = mergeShardsIntoLogicalTravels(
+    slots.filter((s): s is TravelSlot => s.type === "travel"),
+  );
   const now = new Date();
 
   return travelSlots.map((slot: TravelSlot) => {

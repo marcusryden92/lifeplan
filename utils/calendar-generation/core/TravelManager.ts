@@ -20,7 +20,6 @@ import {
 import type { TravelShardSpan } from "../utils/timeSlotUtils";
 import { createLegTracker } from "../helpers/TravelManager/legTracker";
 import {
-  setTravelTimeMatrix,
   getTravelTime,
   canPlaceStandaloneTravelBefore,
   reserveStandaloneTravelBefore,
@@ -30,7 +29,6 @@ import {
   findAdjacentTravelTo,
   findAdjacentTravelFrom,
   findPrecedingGapTravel,
-  getAllTravelSlots,
   generateTravelEvents,
 } from "../helpers/TravelManager";
 
@@ -142,7 +140,7 @@ export class TravelManager {
    * Set the travel time matrix for location-aware scheduling
    */
   setTravelTimeMatrix(matrix: Map<string, TravelTimeEntry> | null): void {
-    this.travelTimeMatrix = setTravelTimeMatrix(this.travelTimeMatrix, matrix);
+    this.travelTimeMatrix = matrix;
   }
 
   /**
@@ -315,7 +313,7 @@ export class TravelManager {
   }
 
   getAllTravelSlots(): TravelSlot[] {
-    return getAllTravelSlots(this.slots);
+    return this.slots.filter((s): s is TravelSlot => s.type === "travel");
   }
 
   generateTravelEvents(userId: string): SimpleEvent[] {

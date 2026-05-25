@@ -1,11 +1,12 @@
-export { daysNeededForPlans } from "./daysNeededForPlans";
 export { buildAvailableSlots } from "./buildAvailableSlots";
 export { expandSlotForDay } from "./expandSlotForDay";
 export { inheritLocationFromCategoryPeriods } from "./inheritLocationFromCategoryPeriods";
 export { splitSlotsAtCategoryBoundaries } from "./splitSlotsAtCategoryBoundaries";
 export { findAllFittingSlots } from "./findAllFittingSlots";
-export { getDaySlots } from "./getDaySlots";
-export { getDayAvailableMinutes } from "./getDayAvailableMinutes";
+export {
+  getDaySlots,
+  getDayAvailableMinutes,
+} from "./getDayAvailableMinutes";
 export { reserveSlotWithTravel } from "./reserveSlotWithTravel";
 export { dropPastAvailableSlots } from "./dropPastAvailableSlots";
 export { deriveSchedulingHorizon } from "./deriveSchedulingHorizon";

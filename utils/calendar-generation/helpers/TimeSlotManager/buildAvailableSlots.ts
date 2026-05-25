@@ -1,5 +1,4 @@
 import {
-  Planner,
   SimpleEvent,
   EventType,
   PlannerType,
@@ -14,12 +13,11 @@ import { PerTemplateMask } from "../../models/TemplateModels";
 import { OccupiedSlot, Slot } from "../../models/TimeSlot";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { logInitialSlotContext } from "../../utils/loggingUtils";
-import { daysNeededForPlans } from "./daysNeededForPlans";
+import { SCHEDULING_CONFIG } from "../../constants";
 import { inheritLocationFromCategoryPeriods } from "./inheritLocationFromCategoryPeriods";
 import { splitSlotsAtCategoryBoundaries } from "./splitSlotsAtCategoryBoundaries";
 
 interface BuildSlotsOptions {
-  planners: Planner[];
   startDate: Date;
   existingEvents: SimpleEvent[];
   templateMasks: PerTemplateMask[];
@@ -35,7 +33,6 @@ interface BuildSlotsOptions {
 }
 
 export function buildAvailableSlots({
-  planners,
   startDate,
   existingEvents,
   templateMasks,
@@ -47,10 +44,11 @@ export function buildAvailableSlots({
 }: BuildSlotsOptions) {
   if (enableLogging) logInitialSlotContext(existingEvents);
 
-  // How many days (rounded up to whole weeks) until furthest away plan?
-  const numDays = daysNeededForPlans(planners, startDate);
+  // Initial slot build always covers a fixed horizon chunk; Plans further
+  // out are picked up by expansion when it reaches their dates.
   const endDate =
-    endDateOverride ?? dateTimeService.shiftDays(startDate, numDays);
+    endDateOverride ??
+    dateTimeService.shiftDays(startDate, SCHEDULING_CONFIG.HORIZON_CHUNK_DAYS);
 
   const relevantEvents = existingEvents.filter((event) => {
     if (event.extendedProps?.eventType === EventType.template) return false;
