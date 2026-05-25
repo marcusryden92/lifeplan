@@ -5,7 +5,11 @@
  */
 
 import { Planner, SimpleEvent } from "@/types/prisma";
-import { EventAssembler } from "../../core/EventAssembler";
+import {
+  buildMemoizedEvents,
+  buildPlanEvents,
+  buildCompletedEvents,
+} from "../EventAssembler";
 
 export function buildInitialEventArray(
   userId: string,
@@ -18,22 +22,15 @@ export function buildInitialEventArray(
 } {
   const eventArray: SimpleEvent[] = [];
 
-  // Step 1: Memoized events (past events from previous calendar)
   const { events: memoizedEvents, eventIds: memoizedEventIds } =
-    EventAssembler.buildMemoizedEvents(previousCalendar, currentDate);
+    buildMemoizedEvents(previousCalendar, currentDate);
 
   eventArray.push(...memoizedEvents);
 
-  // Step 2: Plan items (fixed-time appointments)
-  const planEvents = EventAssembler.buildPlanEvents(
-    userId,
-    planners,
-    memoizedEventIds,
-  );
+  const planEvents = buildPlanEvents(userId, planners, memoizedEventIds);
   eventArray.push(...planEvents);
 
-  // Step 3: Completed items
-  const completedEvents = EventAssembler.buildCompletedEvents(
+  const completedEvents = buildCompletedEvents(
     userId,
     planners,
     memoizedEventIds,

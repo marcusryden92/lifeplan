@@ -1,7 +1,7 @@
 import { Planner, Category } from "@/types/prisma";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { Slot } from "../../models/TimeSlot";
-import { TemplateExpander } from "../../core/TemplateExpander";
+import { gapIntervalsForDay } from "../TemplateExpander/gapIntervalsForDay";
 import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
 import { dateTimeService } from "../../utils/dateTimeService";
 
@@ -93,7 +93,7 @@ export function maxEffectiveCapacityFor(
 
   for (let d = 0; d < 7; d++) {
     const dayStart = dateTimeService.shiftDays(weekStart, d);
-    const gaps = TemplateExpander.gapIntervalsForDay(perTemplateMasks, dayStart);
+    const gaps = gapIntervalsForDay(perTemplateMasks, dayStart);
 
     const exclusions: Array<{ start: Date; end: Date }> = [];
     for (const cat of categories) {

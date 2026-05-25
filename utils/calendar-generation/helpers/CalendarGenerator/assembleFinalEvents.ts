@@ -10,8 +10,12 @@ import {
   LoggingConfig,
   SchedulingContext,
 } from "../../models/SchedulingModels";
-import { EventAssembler } from "../../core/EventAssembler";
 import { Slot } from "../../models/TimeSlot";
+import {
+  buildCategoryWrapperEvents,
+  markTrespassingEvents,
+  assembleFinalEventList,
+} from "../EventAssembler";
 import { stampCategoryWrapperBorders } from "../EventAssembler/stampCategoryWrapperBorders";
 import { filterEventsByLogRange } from "../../utils/loggingUtils";
 
@@ -26,7 +30,6 @@ export function assembleFinalEvents(
   slots: Slot[],
   logging?: LoggingConfig,
 ): SimpleEvent[] {
-  // Generate travel events from stored travel slots
   const travelEvents = travelManager.generateTravelEvents(userId);
 
   if (logging?.travelDebug) {
@@ -49,23 +52,20 @@ export function assembleFinalEvents(
     }
   }
 
-  // Generate category wrapper events
-  const categoryWrapperEvents = EventAssembler.buildCategoryWrapperEvents(
+  const categoryWrapperEvents = buildCategoryWrapperEvents(
     userId,
     scheduledCategories,
     startDate,
     endDate,
   );
 
-  // Assemble final event list
-  const allEvents = EventAssembler.assembleFinalEvents(
+  const allEvents = assembleFinalEventList(
     context.scheduledEvents,
     travelEvents,
-    categoryWrapperEvents
+    categoryWrapperEvents,
   );
 
-  // Mark trespassing events (overlapping items with different locations)
-  EventAssembler.markTrespassingEvents(allEvents, plannerLocationMap);
+  markTrespassingEvents(allEvents, plannerLocationMap);
 
   // Mark category wrapper events whose travel-pass placement would have
   // consumed the entire wrapper — renders the wrapper's top/bottom red.

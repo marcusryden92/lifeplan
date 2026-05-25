@@ -5,7 +5,7 @@
  */
 
 import { Planner, PlannerType } from "@/types/prisma";
-import { PrioritySorter } from "../../core/PrioritySorter";
+import { sortByPriorityAndConstraints } from "../PrioritySorter";
 
 export function prepareCandidates(
   planners: Planner[],
@@ -13,7 +13,7 @@ export function prepareCandidates(
   currentDate: Date,
   plannerCategoryMap?: Map<string, string | null>,
 ): Planner[] {
-  let candidates = planners.filter(
+  const candidates = planners.filter(
     (item) =>
       ((item.plannerType === PlannerType.goal &&
         !item.parentId &&
@@ -22,12 +22,10 @@ export function prepareCandidates(
       !memoizedEventIds.has(item.id),
   );
 
-  candidates = PrioritySorter.sortByPriorityAndConstraints(
+  return sortByPriorityAndConstraints(
     planners,
     candidates,
     currentDate,
     plannerCategoryMap,
   );
-
-  return candidates;
 }

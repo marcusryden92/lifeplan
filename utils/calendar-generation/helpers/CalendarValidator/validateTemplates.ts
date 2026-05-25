@@ -1,5 +1,5 @@
 import { EventTemplate } from "@/types/prisma";
-import type { ValidationResult, ValidationError } from "../../core/CalendarValidator";
+import type { ValidationResult, ValidationError } from "./types";
 import { validateTemplate } from "./validateTemplate";
 
 function timeToMinutes(timeString: string): number {

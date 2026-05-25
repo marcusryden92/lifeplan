@@ -1,5 +1,5 @@
 import { Planner, EventTemplate, SimpleEvent } from "@/types/prisma";
-import type { ValidationResult, ValidationError } from "../../core/CalendarValidator";
+import type { ValidationResult, ValidationError } from "./types";
 import { validatePlanners } from "./validatePlanners";
 import { validateTemplates } from "./validateTemplates";
 

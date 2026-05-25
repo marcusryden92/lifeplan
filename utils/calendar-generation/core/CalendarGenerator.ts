@@ -17,7 +17,6 @@ import {
   SchedulingMetrics,
 } from "../models/SchedulingModels";
 import { SCHEDULING_CONFIG } from "../constants";
-import { logCalendarDebugInfo } from "../utils/loggingUtils";
 import {
   validateInput,
   buildInitialEventArray,
@@ -28,6 +27,8 @@ import {
   buildSchedulingStrategy,
   prepareCandidates,
   assembleFinalEvents,
+  buildLoggingLookups,
+  emitDebugLog,
 } from "../helpers/CalendarGenerator";
 import {
   buildAvailableSlots,
@@ -178,14 +179,15 @@ export class CalendarGenerator {
     timeSlotManager.slots = [...builtSlots];
 
     const loggingConfig = input.config?.logging;
+    const loggingLookups = buildLoggingLookups(
+      this.scheduledCategories,
+      filteredEvents,
+    );
     const travelPassRecorder = new TravelPassRecorder({
       enabled: enableLogging && !!loggingConfig?.staticEventTravelPass,
       rangeStart: loggingConfig?.dateRangeStart ?? null,
       rangeEnd: loggingConfig?.dateRangeEnd ?? null,
-      lookups: {
-        categoryById: new Map(this.scheduledCategories.map((c) => [c.id, c])),
-        eventTitleById: new Map(filteredEvents.map((e) => [e.id, e.title])),
-      },
+      lookups: loggingLookups,
     });
     this.travelPassRecorder = travelPassRecorder;
 
@@ -212,10 +214,7 @@ export class CalendarGenerator {
       enabled: enableLogging && !!loggingConfig?.dynamicScheduling,
       rangeStart: loggingConfig?.dateRangeStart ?? null,
       rangeEnd: loggingConfig?.dateRangeEnd ?? null,
-      lookups: {
-        categoryById: new Map(this.scheduledCategories.map((c) => [c.id, c])),
-        eventTitleById: new Map(filteredEvents.map((e) => [e.id, e.title])),
-      },
+      lookups: loggingLookups,
     });
     this.schedulerRecorder = schedulerRecorder;
 
@@ -287,17 +286,14 @@ export class CalendarGenerator {
     this.metrics.averageSchedulingTimeMs =
       schedulerMetrics.averageSchedulingTimeMs;
 
-    // Debug logging
     if (enableLogging) {
-      const travelEvents = travelManager.generateTravelEvents(input.userId);
-      logCalendarDebugInfo(input, {
+      emitDebugLog(input, travelManager, {
         allEvents,
-        travelEvents,
         recurringTemplateEvents,
         perTemplateMasks,
         largestTemplateGap,
         plannerLocationMap,
-        strategies: [{ strategy, weight: 1.0 }],
+        strategy,
         schedulingResult,
         metrics: this.metrics,
         travelPassRecorder: this.travelPassRecorder,

@@ -45,7 +45,16 @@
       "Bash(echo \"EXIT=$?\")",
       "Bash(echo \"EXIT $?\")",
       "Bash(grep \"from.*timeSlotUtils\\\\|import.*timeSlotUtils\" utils/calendar-generation/helpers/TravelManager/staticEventTravelPass/*.ts)",
-      "Bash(grep \"from.*timeSlotUtils\\\\|import.*timeSlotUtils\" utils/calendar-generation/helpers/Scheduler/*.ts)"
+      "Bash(grep \"from.*timeSlotUtils\\\\|import.*timeSlotUtils\" utils/calendar-generation/helpers/Scheduler/*.ts)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\utils\\\\calendar-generation\\\\core\\\\CalendarGenerator\" -Recurse -Filter \"*.ts\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\utils\\\\calendar-generation\\\\core\" -Recurse -Name -Include \"*.ts\")",
+      "Bash(Select-Object -First 50)",
+      "Bash(cd /c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation && find . -type f -name \"*.ts\" | sort)",
+      "Read(//c/c/Users/Marcus/Desktop/Lifeplan/utils/**)",
+      "PowerShell(pnpm tsc --noEmit 2>&1)",
+      "PowerShell(pnpm tsc --noEmit; \"exit=$LASTEXITCODE\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\utils\\\\calendar-generation\\\\helpers\\\\Scheduler\\\\\" -Filter \"*.ts\" | Select-Object Name)"
     ]
   }
 }

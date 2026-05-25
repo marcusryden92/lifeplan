@@ -6,10 +6,14 @@
 
 import { EventTemplate, SimpleEvent, EventType } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
-import { TemplateExpander } from "../../core/TemplateExpander";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { SchedulingMetrics } from "../../models/SchedulingModels";
+import {
+  expandTemplates as expandTemplatesImpl,
+  getPerTemplateMasks,
+  calculateLargestGap,
+} from "../TemplateExpander";
 
 export function expandTemplates(
   userId: string,
@@ -17,7 +21,7 @@ export function expandTemplates(
   templates: EventTemplate[],
   weekStartDay: WeekDayIntegers,
   currentDate: Date,
-  maxDaysAhead: number,
+  _maxDaysAhead: number,
   logTemplateInfo: boolean,
   metrics: SchedulingMetrics,
 ): {
@@ -27,20 +31,16 @@ export function expandTemplates(
   largestTemplateGap: number;
   updatedMetrics: SchedulingMetrics;
 } {
-  const templateExpander = new TemplateExpander(weekStartDay);
-
   const templateStart = performance.now();
   const weekStart = dateTimeService.getWeekFirstDate(currentDate, weekStartDay);
-  const searchEndDate = dateTimeService.shiftDays(weekStart, maxDaysAhead);
 
-  const recurringTemplateEvents = templateExpander.expandTemplates(
+  const { events: recurringTemplateEvents, failureCount } = expandTemplatesImpl(
     userId,
     templates,
     weekStart,
-    searchEndDate,
+    weekStartDay,
   );
 
-  // Debug logging
   if (logTemplateInfo) {
     console.log("Templates expanded:", recurringTemplateEvents.length);
     if (recurringTemplateEvents.length > 0) {
@@ -55,8 +55,7 @@ export function expandTemplates(
     }
   }
 
-  // Build per-template masks
-  const perTemplateMasks = templateExpander.getPerTemplateMasks(templates);
+  const perTemplateMasks = getPerTemplateMasks(templates);
 
   if (logTemplateInfo) {
     console.log("Template masks:", {
@@ -71,7 +70,7 @@ export function expandTemplates(
   }
 
   const templateEnd = performance.now();
-  const largestTemplateGap = templateExpander.calculateLargestGap(templates);
+  const largestTemplateGap = calculateLargestGap(templates);
 
   const filteredEvents = eventArray.filter(
     (e) => e.extendedProps?.eventType !== EventType.template,
@@ -87,7 +86,7 @@ export function expandTemplates(
       ...metrics,
       templateExpansionTimeMs: templateEnd - templateStart,
       templateEventsGenerated: recurringTemplateEvents.length,
-      templatesFailed: templateExpander.getTemplateFailureCount(),
+      templatesFailed: failureCount,
     },
   };
 }

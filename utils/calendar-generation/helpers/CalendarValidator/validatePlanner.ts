@@ -1,9 +1,6 @@
 import { Planner, PlannerType } from "@/types/prisma";
 import { TIME_CONSTANTS } from "../../constants";
-import type {
-  ValidationResult,
-  ValidationError,
-} from "../../core/CalendarValidator";
+import type { ValidationResult, ValidationError } from "./types";
 
 export function validatePlanner(planner: Planner): ValidationResult {
   const errors: ValidationError[] = [];

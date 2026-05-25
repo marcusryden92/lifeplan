@@ -5,12 +5,21 @@
  */
 
 import { Planner, EventTemplate, Category } from "@/types/prisma";
-import { LocationMapper } from "../../core/LocationMapper";
+import { buildLocationMap as buildLocationMapImpl } from "../LocationMapper";
+
 export function buildLocationMap(
   planners: Planner[],
   templates: EventTemplate[],
-  categories: Category[]
+  categories: Category[],
 ): Map<string, string | null> {
-  const locationMapper = new LocationMapper(categories);
-  return locationMapper.buildLocationMap(planners, templates);
+  const categoryLocationMap = new Map<string, string | null>(
+    categories.map((c) => [c.id, c.locationId ?? null]),
+  );
+  const plannerMap = new Map(planners.map((p) => [p.id, p]));
+  return buildLocationMapImpl(
+    planners,
+    templates,
+    categoryLocationMap,
+    plannerMap,
+  );
 }

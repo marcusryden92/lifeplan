@@ -4,7 +4,7 @@
  * Validates calendar generation input and returns validation result
  */
 
-import { CalendarValidator } from "../../core/CalendarValidator";
+import { validateGenerationInput } from "../CalendarValidator";
 import { CalendarGenerationInput, SchedulingFailure } from "../../models/SchedulingModels";
 import { SchedulingFailureReason } from "../../constants";
 
@@ -13,7 +13,7 @@ export function validateInput(input: CalendarGenerationInput): {
   failures: SchedulingFailure[];
   hasWarnings: boolean;
 } {
-  const validation = CalendarValidator.validateGenerationInput({
+  const validation = validateGenerationInput({
     userId: input.userId,
     weekStartDay: input.weekStartDay,
     templates: input.templates,

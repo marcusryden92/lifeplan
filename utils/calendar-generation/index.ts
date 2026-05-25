@@ -10,7 +10,6 @@ export { generateCalendar } from "./calendarGeneration";
 // Core classes (for advanced usage)
 export { CalendarGenerator } from "./core/CalendarGenerator";
 export { TimeSlotManager } from "./core/TimeSlotManager";
-export { TemplateExpander } from "./core/TemplateExpander";
 export { Scheduler } from "./core/Scheduler";
 
 // Strategies
@@ -51,11 +50,17 @@ export type { ShardSource, TravelShardSpan } from "./utils/timeSlotUtils";
 
 // Utilities
 export { dateTimeService, DateTimeService } from "./utils/dateTimeService";
-export { CalendarValidator } from "./core/CalendarValidator";
+export {
+  validatePlanner,
+  validateTemplate,
+  validatePlanners,
+  validateTemplates,
+  validateGenerationInput,
+} from "./helpers/CalendarValidator";
 export type {
   ValidationResult,
   ValidationError,
-} from "./core/CalendarValidator";
+} from "./helpers/CalendarValidator";
 export * from "./utils/intervalUtils";
 
 // Constants

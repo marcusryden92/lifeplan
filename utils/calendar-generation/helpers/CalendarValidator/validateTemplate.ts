@@ -1,6 +1,6 @@
 import { EventTemplate } from "@/types/prisma";
 import { TIME_CONSTANTS } from "../../constants";
-import type { ValidationResult, ValidationError } from "../../core/CalendarValidator";
+import type { ValidationResult, ValidationError } from "./types";
 
 export function validateTemplate(template: EventTemplate): ValidationResult {
   const errors: ValidationError[] = [];

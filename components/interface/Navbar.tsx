@@ -50,7 +50,7 @@ export const Navbar = () => {
   return (
     <nav className={styles.navbar}>
       <section className={styles.titleContainer}>
-        <h1>Lifeplan.</h1>
+        <h1>Reticulate.</h1>
       </section>
       <div className="mb-4" />
       <div className="flex lg:h-full lg:flex-col  justify-between gap-2">
@@ -69,7 +69,7 @@ export const Navbar = () => {
                   "flex h-[38px] gap-2 rounded-xl p-3 text-sm font-medium",
                   pathname === href
                     ? "bg-gray-800 text-white"
-                    : "hover:bg-gray-100"
+                    : "hover:bg-gray-100",
                 )}
               >
                 {icon} <span className="hidden lg:block">{name}</span>
@@ -84,7 +84,11 @@ export const Navbar = () => {
             <Button
               key={href}
               asChild
-              variant={pathname === href || pathname.startsWith(href + "/") ? "default" : "outline"}
+              variant={
+                pathname === href || pathname.startsWith(href + "/")
+                  ? "default"
+                  : "outline"
+              }
               size="sm"
               className="justify-start"
             >
@@ -94,7 +98,7 @@ export const Navbar = () => {
                   "flex h-[38px] gap-2 rounded-xl p-3 text-sm font-medium",
                   pathname === href || pathname.startsWith(href + "/")
                     ? "bg-gray-800 text-white"
-                    : "hover:bg-gray-100"
+                    : "hover:bg-gray-100",
                 )}
               >
                 {icon} <span className="hidden lg:block">{name}</span>
@@ -116,7 +120,7 @@ export const Navbar = () => {
                 "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium",
                 pathname === "/strategy"
                   ? "bg-gray-800 text-white"
-                  : "hover:bg-gray-100"
+                  : "hover:bg-gray-100",
               )}
             >
               <FaClock className="h-5 w-5" />
@@ -136,7 +140,7 @@ export const Navbar = () => {
                 "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium",
                 pathname === "/locations"
                   ? "bg-gray-800 text-white"
-                  : "hover:bg-gray-100"
+                  : "hover:bg-gray-100",
               )}
             >
               <FaMapMarker className="h-5 w-5" />
@@ -158,7 +162,7 @@ export const Navbar = () => {
                 "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium",
                 pathname === "/settings"
                   ? "bg-gray-800 text-white"
-                  : "hover:bg-gray-100"
+                  : "hover:bg-gray-100",
               )}
             >
               <FaCog className="h-5 w-5" />{" "}
@@ -170,7 +174,7 @@ export const Navbar = () => {
             <div
               className={clsx(
                 "flex h-[38px] items-center gap-2 rounded-xl text-sm font-medium cursor-pointer",
-                "hover:text-red-500 hover:border-red-500 hover:border-2 hover:bg-transparent"
+                "hover:text-red-500 hover:border-red-500 hover:border-2 hover:bg-transparent",
               )}
               onClick={() => signOut()}
             >

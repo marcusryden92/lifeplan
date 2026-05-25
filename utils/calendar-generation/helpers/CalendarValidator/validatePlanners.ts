@@ -1,5 +1,5 @@
 import { Planner } from "@/types/prisma";
-import type { ValidationResult, ValidationError } from "../../core/CalendarValidator";
+import type { ValidationResult, ValidationError } from "./types";
 import { validatePlanner } from "./validatePlanner";
 
 export function validatePlanners(planners: Planner[]): ValidationResult {
