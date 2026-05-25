@@ -88,7 +88,7 @@ function markLastCategoryAsFinal(slots: Slot[]): void {
   for (let i = 0; i < slots.length; i++) {
     const slot = slots[i];
     if (slot.type !== "category") continue;
-    (slot as CategorySlot).isFinal = undefined;
+    slot.isFinal = undefined;
     lastCategoryIdx = i;
   }
   if (lastCategoryIdx >= 0) {

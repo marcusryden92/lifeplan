@@ -7,7 +7,7 @@
 import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
 
 import { SchedulingFailureReason } from "../constants";
-import { PlaceableSlot, TravelSlot } from "./TimeSlot";
+import { PlaceableSlot } from "./TimeSlot";
 import type { TravelShardSpan } from "../utils/timeSlotUtils";
 import type { SchedulerRecorder } from "../helpers/Scheduler/SchedulerRecorder";
 

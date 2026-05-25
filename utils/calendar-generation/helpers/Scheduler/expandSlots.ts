@@ -3,7 +3,7 @@ import { TimeSlotManager } from "../../core/TimeSlotManager";
 import { TravelManager } from "../../core/TravelManager";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { SchedulingContext } from "../../models/SchedulingModels";
-import { CategorySlot, Slot } from "../../models/TimeSlot";
+import { Slot } from "../../models/TimeSlot";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../../constants";
 import { buildAvailableSlots } from "../TimeSlotManager/buildAvailableSlots";
@@ -49,7 +49,7 @@ export function expandSlots(
   travelPassRecorder?: TravelPassRecorder,
 ): void {
   const pickupIdx = slotManager.slots.findIndex(
-    (s) => s.type === "category" && (s as CategorySlot).isFinal === true,
+    (s) => s.type === "category" && s.isFinal === true,
   );
 
   // Pickup time = end of the previously-deferred category. Fallback to today
@@ -61,7 +61,10 @@ export function expandSlots(
       : dateTimeService.startOfDay(context.currentDate);
 
   const chunkEnd = dateTimeService.endOfDay(
-    dateTimeService.shiftDays(pickupTime, SCHEDULING_CONFIG.HORIZON_CHUNK_DAYS - 1),
+    dateTimeService.shiftDays(
+      pickupTime,
+      SCHEDULING_CONFIG.HORIZON_CHUNK_DAYS - 1,
+    ),
   );
 
   const pickupMs = pickupTime.getTime();
@@ -153,5 +156,8 @@ export function expandSlots(
     resumeIdx,
   );
 
-  slotManager.slots = dropPastAvailableSlots(combinedSlots, context.currentDate);
+  slotManager.slots = dropPastAvailableSlots(
+    combinedSlots,
+    context.currentDate,
+  );
 }

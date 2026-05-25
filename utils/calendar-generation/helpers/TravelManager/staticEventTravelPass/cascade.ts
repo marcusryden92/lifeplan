@@ -1,10 +1,5 @@
 import { Category } from "@/types/prisma";
-import {
-  AvailableSlot,
-  CategorySlot,
-  Slot,
-  TravelSlot,
-} from "../../../models/TimeSlot";
+import { AvailableSlot, CategorySlot, Slot } from "../../../models/TimeSlot";
 import { TravelManager } from "../../../core/TravelManager";
 import { TravelProcessingAction } from "../../../models/SchedulingModels";
 import {
@@ -23,10 +18,7 @@ import {
   walkForwardForFit,
 } from "../travelPassUtils";
 import { nextPinnedLocation } from "./lookups";
-import {
-  fillCategoryTailOrTrespass,
-  fillCurrentWithAlert,
-} from "./placement";
+import { fillCategoryTailOrTrespass, fillCurrentWithAlert } from "./placement";
 import {
   buildLandingSurvivor,
   shortenPlaceableAtEnd,
@@ -240,9 +232,7 @@ export function bypassCategoryCascade(
   const replacements: Slot[] = [...shards];
 
   if (fit.kind === "naturalFit") {
-    replacements.push(
-      buildLandingSurvivor(fit.slot, travelEnd, destination),
-    );
+    replacements.push(buildLandingSurvivor(fit.slot, travelEnd, destination));
   }
 
   slots.splice(i, removeCount, ...replacements);
@@ -396,11 +386,7 @@ export function applyBackwardCascadeFit(args: {
   // Untrack absorbed travel legs.
   for (let k = absorbStartIdx; k <= walkStartIdx; k++) {
     const s = slots[k];
-    if (
-      s.type === "travel" &&
-      s.travelFromLocationId &&
-      s.travelToLocationId
-    ) {
+    if (s.type === "travel" && s.travelFromLocationId && s.travelToLocationId) {
       travelManager.untrackLeg(s.travelFromLocationId, s.travelToLocationId);
     }
   }
@@ -473,9 +459,7 @@ export function applyBackwardCascadeFit(args: {
       type: "available",
       start: slot.start,
       end: new Date(pieceEndMs),
-      durationMinutes: Math.floor(
-        (pieceEndMs - slot.start.getTime()) / 60000,
-      ),
+      durationMinutes: Math.floor((pieceEndMs - slot.start.getTime()) / 60000),
       prevLocationId: fit.origin,
       nextLocationId: fit.origin,
     });
@@ -804,9 +788,7 @@ export function forwardBypassCascade(
   const replacements: Slot[] = [...shards];
 
   if (fit.kind === "naturalFit") {
-    replacements.push(
-      buildLandingSurvivor(fit.slot, travelEnd, destination),
-    );
+    replacements.push(buildLandingSurvivor(fit.slot, travelEnd, destination));
   }
 
   slots.splice(i, removeCount, ...replacements);
