@@ -98,6 +98,14 @@ export interface SchedulingContext {
    * taken, and resulting slot state. No-op when null/undefined.
    */
   schedulerRecorder?: SchedulerRecorder | null;
+  /**
+   * Tail-buffer cutoff: dynamic placement is suppressed for slots starting
+   * after this date. Set per-iteration by scheduleTasksAndGoals from
+   * SCHEDULING_CONFIG.PLACEMENT_BUFFER_DAYS, so the next expansion's
+   * static-pass resume has empty room at the seam to re-decide travel
+   * placement without colliding with already-placed dynamic events.
+   */
+  placementCutoffDate?: Date | null;
 }
 
 /**

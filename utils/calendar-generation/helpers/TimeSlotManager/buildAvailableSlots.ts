@@ -27,6 +27,11 @@ interface BuildSlotsOptions {
   plannerLocationMap?: Map<string, string | null>;
   enableLogging?: boolean;
   endDateOverride?: Date;
+  // Override for the user's location at startDate. When set, takes precedence
+  // over the lastEventBeforeRange inference below. expandSlots passes this so
+  // a region rebuilt past an isFinal Cat picks up at the Cat's location
+  // instead of defaulting to surrounding template locations.
+  startingLocationOverride?: string | null;
 }
 
 export function buildAvailableSlots({
@@ -38,6 +43,7 @@ export function buildAvailableSlots({
   plannerLocationMap,
   enableLogging = false,
   endDateOverride,
+  startingLocationOverride,
 }: BuildSlotsOptions) {
   if (enableLogging) logInitialSlotContext(existingEvents);
 
@@ -54,8 +60,18 @@ export function buildAvailableSlots({
   });
 
   const eventIntervals = eventsToIntervals(relevantEvents, plannerLocationMap);
-  const templateIntervals = masksToIntervals(templateMasks, startDate, endDate);
-
+  // masksToIntervals emits every mask whose day-of-week matches a day in the
+  // range, including masks whose end falls before startDate (e.g. the morning
+  // Sleep on the pickup day when expansion picks up mid-day). Drop those — they
+  // would poison both findGaps (becoming merged[0] and overriding our
+  // startingLocation hint) and templateOccupiedSlots emission below (creating
+  // duplicates with whatever preserved slots the caller already has).
+  const startDateMs = startDate.getTime();
+  const templateIntervals = masksToIntervals(
+    templateMasks,
+    startDate,
+    endDate,
+  ).filter((i) => i.end.getTime() > startDateMs);
   const occupiedIntervals = [...eventIntervals, ...templateIntervals];
 
   // Assign location to locationless intervals that fall within a category period
@@ -73,9 +89,12 @@ export function buildAvailableSlots({
     )
     .sort((a, b) => new Date(b.end).getTime() - new Date(a.end).getTime())[0];
 
-  const startingLocation = lastEventBeforeRange
-    ? (plannerLocationMap?.get(lastEventBeforeRange.id) ?? null)
-    : null;
+  const startingLocation =
+    startingLocationOverride !== undefined
+      ? startingLocationOverride
+      : lastEventBeforeRange
+        ? (plannerLocationMap?.get(lastEventBeforeRange.id) ?? null)
+        : null;
 
   const gaps = findGaps(
     adjustedIntervals,

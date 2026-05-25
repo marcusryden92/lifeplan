@@ -7,6 +7,7 @@ import {
   SchedulingContext,
   SchedulingFailure,
 } from "../../models/SchedulingModels";
+import { Slot } from "../../models/TimeSlot";
 import { SCHEDULING_CONFIG } from "../../constants";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { scheduleSingleTask } from "./scheduleSingleTask";
@@ -48,6 +49,15 @@ export function scheduleTasksAndGoals(
     candidates.length > 0 &&
     expansionsDone < SCHEDULING_CONFIG.MAX_WEEKS_TO_SEARCH
   ) {
+    // Compute and publish the tail-buffer cutoff for this iteration. Anything
+    // starting at or after this date is off-limits to dynamic placement, so
+    // the next expansion's static-pass resume has empty room at the seam.
+    // Anchor: the latest end among placeable slots (Available + Category).
+    // Trailing nightly-template Occupieds are intentionally excluded, else
+    // the cutoff would always sit at midnight and the buffer would never
+    // shrink the placement window.
+    context.placementCutoffDate = computePlacementCutoff(slotManager.slots);
+
     // Proactive watermark: if either the available-slot count is below the
     // threshold or the biggest remaining task can't fit any compatible slot,
     // expand the horizon before burning iterations on guaranteed failures.
@@ -64,6 +74,7 @@ export function scheduleTasksAndGoals(
       candidates,
       slotManager.slots,
       plannerCategoryMap,
+      context.placementCutoffDate,
     );
 
     if (
@@ -146,4 +157,22 @@ export function scheduleTasksAndGoals(
     newEvents: events,
     failures,
   };
+}
+
+// Tail-buffer cutoff: dynamic placement is suppressed at and after this date.
+// Anchor = max end among placeable slots (Available + Category) - buffer days.
+// Excludes Travel/Occupied so trailing nightly templates don't pin the anchor
+// at midnight, which would leave no buffer behind the actual placement region.
+function computePlacementCutoff(slots: Slot[]): Date | null {
+  let lastPlaceableEndMs = 0;
+  for (const s of slots) {
+    if (s.type !== "available" && s.type !== "category") continue;
+    const endMs = s.end.getTime();
+    if (endMs > lastPlaceableEndMs) lastPlaceableEndMs = endMs;
+  }
+  if (lastPlaceableEndMs === 0) return null;
+  return new Date(
+    lastPlaceableEndMs -
+      SCHEDULING_CONFIG.PLACEMENT_BUFFER_DAYS * 24 * 60 * 60 * 1000,
+  );
 }

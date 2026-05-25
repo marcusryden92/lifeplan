@@ -125,10 +125,15 @@ export function maxEffectiveCapacityFor(
 // uncategorized task → Available + non-strict-category slots. Used by the
 // proactive expansion watermark in scheduleTasksAndGoals to decide whether to
 // extend the horizon before attempting the next placement.
+// placementCutoffDate (tail buffer) is respected the same way findAllFittingSlots
+// honors it, so the watermark agrees with what the scheduler will actually
+// see — otherwise the watermark could report "we have room" while every fit
+// lies inside the buffer zone.
 export function largestCompatibleSlotForLargestTask(
   candidates: Planner[],
   slots: Slot[],
   plannerCategoryMap: Map<string, string | null>,
+  placementCutoffDate?: Date | null,
 ): number {
   if (candidates.length === 0) return 0;
 
@@ -139,10 +144,12 @@ export function largestCompatibleSlotForLargestTask(
   if (!biggest) return 0;
 
   const taskCategoryId = plannerCategoryMap.get(biggest.id) ?? null;
+  const cutoffMs = placementCutoffDate?.getTime();
 
   let largest = 0;
   for (const slot of slots) {
     if (slot.type !== "available" && slot.type !== "category") continue;
+    if (cutoffMs !== undefined && slot.start.getTime() >= cutoffMs) break;
     if (taskCategoryId) {
       if (slot.type !== "category" || slot.categoryId !== taskCategoryId) {
         continue;

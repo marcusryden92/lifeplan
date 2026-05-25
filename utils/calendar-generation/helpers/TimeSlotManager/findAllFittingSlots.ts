@@ -18,15 +18,21 @@ export function findAllFittingSlots(
   afterDate: Date,
   maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
   categoryConstraint?: Category,
+  placementCutoffDate?: Date | null,
 ): PlaceableSlot[] {
   const fittingSlots: PlaceableSlot[] = [];
   const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
   const baseRequiredMinutes = durationMinutes + 2 * bufferTimeMinutes;
+  const cutoffMs = placementCutoffDate?.getTime();
 
   for (const slot of slots) {
     if (slot.type !== "available" && slot.type !== "category") continue;
     if (slot.end <= afterDate) continue;
     if (slot.start >= searchEndDate) break;
+    // Tail buffer: skip slots whose start is past the placement cutoff. The
+    // cutoff is "(last placeable slot end) - PLACEMENT_BUFFER_DAYS", computed
+    // per-iteration by scheduleTasksAndGoals.
+    if (cutoffMs !== undefined && slot.start.getTime() >= cutoffMs) break;
 
     if (categoryConstraint) {
       if (

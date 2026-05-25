@@ -75,8 +75,8 @@ export function generateCalendar(
     leanCalendar: true,
     staticEventTravelPass: true,
     dynamicScheduling: true,
-    dateRangeStart: new Date("2026-08-08") as Date | null,
-    dateRangeEnd: new Date("2026-08-09") as Date | null,
+    dateRangeStart: new Date("2026-06-21") as Date | null,
+    dateRangeEnd: new Date("2026-06-22") as Date | null,
   };
 
   const result = new CalendarGenerator(weekStartDay, {

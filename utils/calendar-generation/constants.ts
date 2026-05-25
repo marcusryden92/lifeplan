@@ -85,6 +85,14 @@ export const SCHEDULING_CONFIG = {
    * waiting for placement failures to fire the reactive backstop.
    */
   LOW_SLOT_WATERMARK: 100,
+  /**
+   * Tail buffer (days) at the trailing edge of the slot horizon where dynamic
+   * placement is suppressed. The slot finder filters out slots starting past
+   * (last placeable slot end - this many days). The buffer gives the next
+   * expansion's static-pass resume room to re-decide travel placement at the
+   * seam without colliding with already-placed dynamic events.
+   */
+  PLACEMENT_BUFFER_DAYS: 3,
 } as const;
 
 /**

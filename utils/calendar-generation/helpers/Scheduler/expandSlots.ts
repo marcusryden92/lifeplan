@@ -10,6 +10,22 @@ import { buildAvailableSlots } from "../TimeSlotManager/buildAvailableSlots";
 import { staticEventTravelPass } from "../TravelManager/staticEventTravelPass";
 import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
 
+// The user's "outgoing" location at the end of a slot — where they are when
+// the next slot begins. Used to bridge the seam between preserved slots and
+// freshly-built slots when expanding the horizon.
+function outgoingLocationOf(slot: Slot): string | null {
+  switch (slot.type) {
+    case "category":
+      return slot.currentLocationId;
+    case "available":
+      return slot.nextLocationId ?? null;
+    case "travel":
+      return slot.travelToLocationId;
+    case "occupied":
+      return slot.locationId ?? null;
+  }
+}
+
 // Extend the slot horizon by one fixed chunk (SCHEDULING_CONFIG.HORIZON_CHUNK_DAYS)
 // past the previous pickup point. Picks up from the CategorySlot the previous
 // static pass flagged isFinal — everything up to and including that slot is
@@ -54,6 +70,20 @@ export function expandSlots(
     return start.getTime() >= pickupMs && start <= chunkEnd;
   });
 
+  // The user's location at pickupTime is the outgoing location of the last
+  // preserved slot. Without this, buildAvailableSlots' startingLocation
+  // defaults to the nearest event in expansionEvents (typically a template
+  // at home), and the first new Available gets prev=home — overwriting the
+  // continuity from a preserved Cat at a different location and causing the
+  // static pass to skip the Cat→Home travel placement.
+  const lastPreserved =
+    preservedSlots.length > 0
+      ? preservedSlots[preservedSlots.length - 1]
+      : null;
+  const startingLocationOverride = lastPreserved
+    ? outgoingLocationOf(lastPreserved)
+    : undefined;
+
   const newSlots = buildAvailableSlots({
     planners: context.allPlanners,
     startDate: pickupTime,
@@ -62,6 +92,7 @@ export function expandSlots(
     categories,
     plannerLocationMap,
     endDateOverride: chunkEnd,
+    startingLocationOverride,
   });
 
   const combinedSlots: Slot[] = [...preservedSlots, ...newSlots].sort(
@@ -72,6 +103,37 @@ export function expandSlots(
   // preservedSlots (sorted-by-start ordering + pickupTime > pickupSlot.start
   // keeps it there). When no marker existed, start the walker from 0.
   const resumeIdx = pickupIdx >= 0 ? preservedSlots.length - 1 : 0;
+
+  // Replay legTracker state from preserved Travel slots before the resume
+  // walks. Without this, the resume pass starts with an empty tracker; the
+  // walker visits preserved Travels but only "skips" them (no track() call),
+  // so a return trip in the new region (e.g. gamla-stan→home Available right
+  // after the isFinal Cat) has no mirror to close, gets classified as
+  // outbound, and lands as PlaceAtEnd instead of PlaceAtStart — flipping
+  // every subsequent same-pair travel to the wrong end of its Available.
+  // Walker semantics the replay must mirror: legTracker.track() is only
+  // called from resolveTravel / resolveCategoryEdge, both of which short-
+  // circuit when from === to. Self-travel TravelSlots (e.g. gamla-stan →
+  // gamla-stan with consumed=[Fun] produced by dropUnreachableCategoryVisits)
+  // exist in the slot array but were never tracked. Multi-shard travels
+  // share a travelId and were tracked exactly once when first placed; the
+  // shard-emit step doesn't re-track. So the replay needs to skip self-
+  // travels and dedupe by travelId — without this, we overcount and stale
+  // entries in openLegs hijack mirror/chain matches in the new region,
+  // flipping subsequent PlaceAtStart decisions to PlaceAtEnd.
+  travelManager.resetLegTracker();
+  const seenTravelIds = new Set<string>();
+  for (const s of preservedSlots) {
+    if (s.type !== "travel") continue;
+    if (!s.travelFromLocationId || !s.travelToLocationId) continue;
+    if (s.travelFromLocationId === s.travelToLocationId) continue;
+    const id = s.travelId ?? s.eventId;
+    if (id) {
+      if (seenTravelIds.has(id)) continue;
+      seenTravelIds.add(id);
+    }
+    travelManager.trackLeg(s.travelFromLocationId, s.travelToLocationId);
+  }
 
   if (travelPassRecorder) {
     const y = pickupTime.getFullYear();

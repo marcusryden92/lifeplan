@@ -39,6 +39,7 @@ export function findValidSlots(
     afterTime || context.currentDate,
     undefined,
     constraintForTask,
+    context.placementCutoffDate,
   );
 
   if (fittingSlots.length === 0) {
