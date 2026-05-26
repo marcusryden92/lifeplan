@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useLayoutEffect, useMemo, useCallback } from "react";
 import { Plus, LayoutList, LayoutGrid, FolderTree } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -35,7 +35,7 @@ export default function ItemsPage() {
   });
 
   // Load categories and locations
-  useEffect(() => {
+  useLayoutEffect(() => {
     const loadData = async () => {
       try {
         const [cats, locs] = await Promise.all([

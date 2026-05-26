@@ -24,11 +24,41 @@ interface ItemCardProps {
 }
 
 const typeConfig = {
-  task: { icon: CheckSquare, color: "bg-amber-500", label: "Task" },
-  plan: { icon: CalendarClock, color: "bg-blue-500", label: "Plan" },
-  goal: { icon: Target, color: "bg-purple-500", label: "Goal" },
-  template: { icon: Calendar, color: "bg-gray-500", label: "Template" },
-  travel: { icon: Clock, color: "bg-green-500", label: "Travel" },
+  task: {
+    icon: CheckSquare,
+    text: "text-[#c89b4a]",
+    badge:
+      "bg-[#c89b4a]/15 text-[#c89b4a] hover:bg-[#c89b4a]/15 border-transparent",
+    label: "Task",
+  },
+  plan: {
+    icon: CalendarClock,
+    text: "text-[#5d8eaa]",
+    badge:
+      "bg-[#5d8eaa]/15 text-[#5d8eaa] hover:bg-[#5d8eaa]/15 border-transparent",
+    label: "Plan",
+  },
+  goal: {
+    icon: Target,
+    text: "text-[#9077b3]",
+    badge:
+      "bg-[#9077b3]/15 text-[#9077b3] hover:bg-[#9077b3]/15 border-transparent",
+    label: "Goal",
+  },
+  template: {
+    icon: Calendar,
+    text: "text-[#94a3ad]",
+    badge:
+      "bg-[#94a3ad]/15 text-[#94a3ad] hover:bg-[#94a3ad]/15 border-transparent",
+    label: "Template",
+  },
+  travel: {
+    icon: Clock,
+    text: "text-[#6f9b81]",
+    badge:
+      "bg-[#6f9b81]/15 text-[#6f9b81] hover:bg-[#6f9b81]/15 border-transparent",
+    label: "Travel",
+  },
 } as const;
 
 export function ItemCard({
@@ -43,8 +73,6 @@ export function ItemCard({
     item.plannerType in typeConfig
       ? typeConfig[item.plannerType as keyof typeof typeConfig]
       : typeConfig.task;
-  const Icon = config.icon;
-
   const isOverdue =
     item.deadline &&
     new Date(item.deadline) < new Date() &&
@@ -53,31 +81,28 @@ export function ItemCard({
   return (
     <button
       onClick={() => router.push(`/items/${item.id}`)}
-      className="w-full text-left p-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all bg-white group"
+      className="w-full text-left p-2 pl-4 rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all bg-white group"
     >
       <div className="flex items-start gap-3">
-        {/* Type icon */}
-        <div className={`p-2 rounded-lg ${config.color} mt-0.5`}>
-          <Icon className="w-4 h-4 text-white" />
-        </div>
-
         {/* Content */}
         <div className="flex-1 min-w-0">
-          {/* Category breadcrumb */}
-          {category && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-              {category.icon && <span>{category.icon}</span>}
-              <span>{category.name}</span>
-            </div>
-          )}
-
           {/* Title */}
-          <h3 className="font-medium text-gray-900 truncate pr-4">
-            {item.title}
-          </h3>
+          <div className="flex items-center gap-2 min-w-0">
+            <Badge className={config.badge}>{config.label}</Badge>
+            <span className="font-medium text-gray-900 truncate min-w-0">
+              {item.title}
+            </span>
+          </div>
 
           {/* Meta info */}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {/* Category breadcrumb */}
+            {category && (
+              <span className="flex items-center gap-1">
+                {category.icon && <span>{category.icon}</span>}
+                <span>{category.name}</span>
+              </span>
+            )}
             {/* Duration */}
             {item.duration > 0 && (
               <span className="flex items-center gap-1">
@@ -126,7 +151,7 @@ export function ItemCard({
         </div>
 
         {/* Status badges */}
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex items-center self-stretch gap-1">
           {item.isReady && (
             <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
               Ready
@@ -137,7 +162,7 @@ export function ItemCard({
               Completed
             </Badge>
           )}
-          <ChevronRight className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
+          <ChevronRight className="w-4 h-4 text-gray-400 transition-opacity" />
         </div>
       </div>
     </button>
