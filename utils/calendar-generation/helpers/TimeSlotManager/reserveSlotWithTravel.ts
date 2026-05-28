@@ -99,7 +99,7 @@ export function reserveSlotWithTravel(
   prevLocationId: string | null,
   nextLocationId: string | null,
   reusableTravelStart?: Date | null,
-  absorbPrevTravelAfter?: boolean,
+  absorbableTravel?: TravelShardSpan | null,
   reclaimPrecedingGapTravel?: TravelShardSpan | null,
   recorder?: SchedulerRecorder | null,
 ): { success: boolean } {
@@ -116,49 +116,58 @@ export function reserveSlotWithTravel(
 
   const bufferMs = bufferTimeMinutes * 60000;
 
-  if (absorbPrevTravelAfter && taskLocationId) {
-    const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
-    for (let i = occupiedSlots.length - 1; i >= 0; i--) {
-      const occ = occupiedSlots[i];
-      if (
-        isTravelSlot(occ) &&
-        occ.travelFromLocationId === taskLocationId &&
-        occ.travelType === "outbound"
-      ) {
-        const travelEndTime = occ.end.getTime();
-        for (const availSlot of availableSlots) {
-          const timeDiff = Math.abs(availSlot.start.getTime() - travelEndTime);
-          if (timeDiff <= searchWindowMs) {
-            // Remove the entire multi-shard span, not just the matched
-            // shard, then extend availSlot back to the span's true start.
-            const travelId = occ.travelId ?? occ.eventId;
-            const removed = removeTravelShards(occupiedSlots, travelId);
-            if (removed) {
-              availSlot.start = removed.spanStart;
-              availSlot.durationMinutes = Math.floor(
-                (availSlot.end.getTime() - availSlot.start.getTime()) / 60000,
-              );
-              availSlot.prevLocationId = taskLocationId;
-              recorder?.action(
-                SM.reserveSlotWithTravel.absorbPrevTravelAfter(
-                  travelId,
-                  recorder.fmtDate(removed.spanStart),
-                  recorder.fmtDate(removed.spanEnd),
-                ),
-              );
-            }
-            break;
-          }
-        }
-        break;
+  // Helper: extend the availSlot that abuts a removed travel back to the
+  // travel's start. The availSlot is identified by exact-start match against
+  // the travel's end (slots are placed flush). Guards against producing a
+  // malformed slot if the math somehow inverts the bounds.
+  function extendAvailSlotBackOverRemovedTravel(
+    removedSpanStart: Date,
+    removedSpanEnd: Date,
+    newPrevLocationId: string | null,
+  ): boolean {
+    for (const availSlot of availableSlots) {
+      if (availSlot.start.getTime() !== removedSpanEnd.getTime()) continue;
+      if (removedSpanStart.getTime() >= availSlot.end.getTime()) return false;
+      availSlot.start = removedSpanStart;
+      availSlot.durationMinutes = Math.floor(
+        (availSlot.end.getTime() - availSlot.start.getTime()) / 60000,
+      );
+      if (newPrevLocationId !== null) {
+        availSlot.prevLocationId = newPrevLocationId;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  if (absorbableTravel && taskLocationId) {
+    // We already know the exact travel to absorb from selectBestSlot — no
+    // heuristic re-search. Remove every shard by travelId, then extend the
+    // abutting availSlot back over the freed region.
+    const removed = removeTravelShards(
+      occupiedSlots,
+      absorbableTravel.travelId,
+    );
+    if (removed) {
+      const ok = extendAvailSlotBackOverRemovedTravel(
+        removed.spanStart,
+        removed.spanEnd,
+        taskLocationId,
+      );
+      if (ok) {
+        recorder?.action(
+          SM.reserveSlotWithTravel.absorbPrevTravelAfter(
+            absorbableTravel.travelId,
+            recorder.fmtDate(removed.spanStart),
+            recorder.fmtDate(removed.spanEnd),
+          ),
+        );
       }
     }
   }
 
   if (reclaimPrecedingGapTravel) {
     const gapSpan = reclaimPrecedingGapTravel;
-    // Remove every shard of the gap travel (it's a multi-shard span by
-    // travelId). Findindex-by-eventId would only catch the first.
     const removed = removeTravelShards(occupiedSlots, gapSpan.travelId);
     if (removed) {
       recorder?.action(
@@ -168,32 +177,25 @@ export function reserveSlotWithTravel(
           recorder.fmtDate(removed.spanEnd),
         ),
       );
-      const expectedSlotStart = removed.spanEnd.getTime() + bufferMs;
-      const searchWindowMs = bufferMs + 10 * 60 * 1000;
-      for (const availSlot of availableSlots) {
-        const diff = Math.abs(availSlot.start.getTime() - expectedSlotStart);
-        if (diff <= searchWindowMs) {
-          availSlot.start = removed.spanStart;
-          availSlot.durationMinutes = Math.floor(
-            (availSlot.end.getTime() - availSlot.start.getTime()) / 60000,
-          );
-          availSlot.prevLocationId =
-            gapSpan.travelFromLocationId ?? availSlot.prevLocationId;
-          break;
-        }
-      }
+      extendAvailSlotBackOverRemovedTravel(
+        removed.spanStart,
+        removed.spanEnd,
+        gapSpan.travelFromLocationId ?? null,
+      );
     }
   }
 
-  const travelBeforeEnd =
-    travelBefore > 0 ? new Date(start.getTime() - bufferMs) : start;
+  // Travel is flush with its owning task — no buffer between them. The
+  // single buffer that separates this unit from the next placement lives
+  // at the tail of the reserved footprint.
+  const travelBeforeEnd = start;
   const travelBeforeStart =
-    travelBefore > 0
-      ? new Date(travelBeforeEnd.getTime() - travelBefore * 60000)
-      : start;
+    travelBefore > 0 ? new Date(start.getTime() - travelBefore * 60000) : start;
 
   const fullStart = travelBefore > 0 ? travelBeforeStart : start;
-  const taskReserveEnd = new Date(end.getTime() + bufferMs);
+  const taskReserveEnd = new Date(
+    end.getTime() + travelAfter * 60000 + bufferMs,
+  );
 
   const slotIndex = availableSlots.findIndex(
     (slot) =>
@@ -213,8 +215,8 @@ export function reserveSlotWithTravel(
   let travelAfterStart: Date | null = null;
 
   if (travelAfter > 0 && nextLocationId) {
-    travelAfterStart = new Date(end.getTime() + bufferMs);
-    travelAfterEnd = new Date(travelAfterStart.getTime() + travelAfter * 60000);
+    travelAfterStart = end;
+    travelAfterEnd = new Date(end.getTime() + travelAfter * 60000);
   }
 
   if (fullStart.getTime() > slot.start.getTime()) {
@@ -240,42 +242,37 @@ export function reserveSlotWithTravel(
   let removedTravelAfterEnd: Date | null = null;
 
   if (travelBefore > 0 && prevLocationId && taskLocationId) {
+    // Pre-existing travels to taskLocationId that end exactly at the task's
+    // start are stale (static-pass preliminaries or prior-task travel-afters
+    // pointing at this destination). Collect their travelIds by exact-position
+    // match — slots are placed flush, so anything legitimately adjacent ends
+    // exactly here. Multi-shard handled naturally because only the last shard
+    // ends at task.start, and removeTravelShards then removes all shards by ID.
     const taskStartTime = start.getTime();
-    const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
-
-    // Find every pre-existing inbound travel (across distinct multi-shard
-    // spans) whose end sits near the task start, then remove each span
-    // wholesale. Iterate via while-restart since each removal mutates the
-    // list; in practice only one span matches in normal flow.
-    let madeProgress = true;
-    while (madeProgress) {
-      madeProgress = false;
-      for (const occ of occupiedSlots) {
-        if (!isTravelSlot(occ)) continue;
-        if (occ.travelToLocationId !== taskLocationId) continue;
-        if (Math.abs(occ.end.getTime() - taskStartTime) >= searchWindowMs)
-          continue;
-        const travelId = occ.travelId ?? occ.eventId;
-        if (!travelId) continue;
-        const removed = removeTravelShards(occupiedSlots, travelId);
-        if (removed) {
-          if (
-            !removedTravelAfterEnd ||
-            removed.spanEnd.getTime() > removedTravelAfterEnd.getTime()
-          ) {
-            removedTravelAfterEnd = removed.spanEnd;
-          }
-          recorder?.action(
-            SM.reserveSlotWithTravel.removedInboundTravel(
-              travelId,
-              recorder.fmtDate(removed.spanStart),
-              recorder.fmtDate(removed.spanEnd),
-            ),
-          );
-          madeProgress = true;
-          break;
-        }
+    const inboundIdsToRemove = new Set<string>();
+    for (const occ of occupiedSlots) {
+      if (!isTravelSlot(occ)) continue;
+      if (occ.travelToLocationId !== taskLocationId) continue;
+      if (occ.end.getTime() !== taskStartTime) continue;
+      const travelId = occ.travelId ?? occ.eventId;
+      if (travelId) inboundIdsToRemove.add(travelId);
+    }
+    for (const travelId of inboundIdsToRemove) {
+      const removed = removeTravelShards(occupiedSlots, travelId);
+      if (!removed) continue;
+      if (
+        !removedTravelAfterEnd ||
+        removed.spanEnd.getTime() > removedTravelAfterEnd.getTime()
+      ) {
+        removedTravelAfterEnd = removed.spanEnd;
       }
+      recorder?.action(
+        SM.reserveSlotWithTravel.removedInboundTravel(
+          travelId,
+          recorder.fmtDate(removed.spanStart),
+          recorder.fmtDate(removed.spanEnd),
+        ),
+      );
     }
 
     newSlots.push(
@@ -366,12 +363,13 @@ export function reserveSlotWithTravel(
     }
   }
 
-  let freeSlotStart: Date;
-  if (travelAfterEnd) {
-    freeSlotStart = travelAfterEnd;
-  } else {
-    freeSlotStart = end;
-  }
+  // Buffer is enforced per-placement relative to slot boundaries (leading
+  // via offsetToTaskStart, trailing via taskReserveEnd). The leftover-tail
+  // starts flush with the unit's end; the next placement landing here will
+  // own its own leading buffer, which provides exactly one buffer of
+  // separation from this unit.
+  const unitEnd = travelAfterEnd ?? end;
+  const freeSlotStart = unitEnd;
 
   let freeSlotEnd: Date;
   if (reclaimedTravelEnd) {
@@ -410,35 +408,29 @@ export function reserveSlotWithTravel(
   }
 
   if (travelAfter > 0 && nextLocationId && travelAfterStart) {
+    // Mirror of the inbound cleanup: pre-existing travels to nextLocationId
+    // that end exactly at the matched slot's end are stale (preliminaries
+    // pointing at whatever's right after our slot). Collect by travelId via
+    // exact-position match; removeTravelShards handles multi-shard cleanup.
     const slotEndTime = slot.end.getTime();
-    const searchWindowMs = SCHEDULING_CONFIG.TRAVEL_SEARCH_WINDOW_MS;
-
-    // Remove every pre-existing outbound travel to nextLocationId whose
-    // end sits near the slot's end. Same while-restart pattern as the
-    // inbound cleanup above — handles distinct multi-shard spans.
-    let madeProgress = true;
-    while (madeProgress) {
-      madeProgress = false;
-      for (const occ of occupiedSlots) {
-        if (!isTravelSlot(occ)) continue;
-        if (occ.travelToLocationId !== nextLocationId) continue;
-        if (Math.abs(occ.end.getTime() - slotEndTime) >= searchWindowMs)
-          continue;
-        const travelId = occ.travelId ?? occ.eventId;
-        if (!travelId) continue;
-        const removed = removeTravelShards(occupiedSlots, travelId);
-        if (removed) {
-          recorder?.action(
-            SM.reserveSlotWithTravel.removedOutboundTravel(
-              travelId,
-              recorder.fmtDate(removed.spanStart),
-              recorder.fmtDate(removed.spanEnd),
-            ),
-          );
-          madeProgress = true;
-          break;
-        }
-      }
+    const outboundIdsToRemove = new Set<string>();
+    for (const occ of occupiedSlots) {
+      if (!isTravelSlot(occ)) continue;
+      if (occ.travelToLocationId !== nextLocationId) continue;
+      if (occ.end.getTime() !== slotEndTime) continue;
+      const travelId = occ.travelId ?? occ.eventId;
+      if (travelId) outboundIdsToRemove.add(travelId);
+    }
+    for (const travelId of outboundIdsToRemove) {
+      const removed = removeTravelShards(occupiedSlots, travelId);
+      if (!removed) continue;
+      recorder?.action(
+        SM.reserveSlotWithTravel.removedOutboundTravel(
+          travelId,
+          recorder.fmtDate(removed.spanStart),
+          recorder.fmtDate(removed.spanEnd),
+        ),
+      );
     }
   }
 

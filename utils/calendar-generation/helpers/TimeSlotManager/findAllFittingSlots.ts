@@ -22,7 +22,11 @@ export function findAllFittingSlots(
 ): PlaceableSlot[] {
   const fittingSlots: PlaceableSlot[] = [];
   const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
-  const baseRequiredMinutes = durationMinutes + 2 * bufferTimeMinutes;
+  // Lenient pre-filter: slots need room for the task plus at minimum one
+  // trailing buffer. The leading buffer may not be needed (when travel-
+  // before is placed standalone in an earlier slot), so the precise
+  // capacity check happens per-candidate in selectBestSlot.
+  const baseRequiredMinutes = durationMinutes + bufferTimeMinutes;
   const cutoffMs = placementCutoffDate?.getTime();
 
   for (const slot of slots) {

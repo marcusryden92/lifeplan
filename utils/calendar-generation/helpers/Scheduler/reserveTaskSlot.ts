@@ -30,8 +30,7 @@ export function reserveTaskSlot(
   slotManager: TimeSlotManager,
   travelManager: TravelManager,
   context: SchedulingContext,
-  absorbPrevTravelAfter: boolean = false,
-  absorbedTravelStart: Date | null = null,
+  absorbableTravel: TravelShardSpan | null = null,
   reclaimPrecedingGapTravel: TravelShardSpan | null = null,
 ): ReservationResult | { failure: SchedulingFailure } {
   const recorder = context.schedulerRecorder;
@@ -56,33 +55,35 @@ export function reserveTaskSlot(
     : (slotPrevLoc ?? null);
 
   // Calculate task times.
-  // Layout: [leading buffer] [travelBefore] [buffer] [task] [buffer] [travel-after] [buffer] [FREE]
-  // slot.start = eventEnd (no pre-baked buffer). The leading buffer is added here so
-  // the task starts at eventEnd + bufferMinutes (or eventEnd + buffer + travel + buffer).
-  // Absorb cases (absorbPrevTravelAfter) already have a buffer baked into absorbedTravelStart.
+  // Layouts:
+  //   travel inside:  [slot.start] [leading buf] [travel-before] [task] [travel-after] [trailing buf] [slot.end]
+  //   travel outside: [...earlier slot...travel-before][slot.start = task] [travel-after] [trailing buf] [slot.end]
+  //   no travel:      [slot.start] [leading buf] [task] [trailing buf] [slot.end]
+  // Travel is flush with the task. The leading buffer only applies at this
+  // slot's level when travel-before is NOT placed standalone — otherwise
+  // the standalone travel's end provides the leading boundary, and the
+  // task lands flush with it.
 
-  // Leading buffer: skipped only when absorbing a previous task's travel-after,
-  // because absorbedTravelStart is already positioned past that buffer.
-  const leadingBuffer = absorbPrevTravelAfter ? 0 : bufferMinutes;
-
-  let offsetToTaskStart = leadingBuffer;
+  let offsetToTaskStart = bufferMinutes;
   let effectiveTravelBefore = travelBefore;
 
   if (travelBefore > 0) {
-    // travelEnd = slot.start = eventEnd (standalone travel ends here, task starts after buffer)
+    // travelEnd = slot.start = eventEnd (standalone travel ends here)
     const travelEnd = new Date(selectedSlot.start.getTime());
     const canPlaceOutside = travelManager.canPlaceStandaloneTravelBefore(
       travelEnd,
       travelBefore,
     );
-    offsetToTaskStart = canPlaceOutside
-      ? leadingBuffer
-      : leadingBuffer + travelBefore + bufferMinutes;
+    offsetToTaskStart = canPlaceOutside ? 0 : bufferMinutes + travelBefore;
   }
 
-  // When absorbing the previous task's travel-after, or reclaiming a preceding gap travel,
-  // start at the reclaimed position instead of the free slot start.
-  const effectiveSlotStart = absorbedTravelStart ?? selectedSlot.start;
+  // When absorbing the previous task's travel-after, or reclaiming a preceding
+  // gap travel, start at the absorbed/reclaimed position instead of the free
+  // slot's nominal start (the slot will be back-extended in reserveSlotWithTravel).
+  const effectiveSlotStart =
+    absorbableTravel?.travelStart ??
+    reclaimPrecedingGapTravel?.travelStart ??
+    selectedSlot.start;
 
   const taskStartDate = dateTimeService.addDuration(
     effectiveSlotStart,
@@ -142,7 +143,7 @@ export function reserveTaskSlot(
     effectivePrevLocationId,
     slotNextLoc ?? null,
     reusableTravelStart,
-    absorbPrevTravelAfter,
+    absorbableTravel,
     reclaimPrecedingGapTravel,
     recorder,
   );

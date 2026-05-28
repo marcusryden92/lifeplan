@@ -75,8 +75,7 @@ export function selectBestSlot(
   let travelBefore = 0;
   let travelAfter = 0;
   let selectedReusableTravelStart: Date | null = null;
-  let selectedAbsorbPrevTravel = false;
-  let selectedAbsorbedTravelStart: Date | null = null;
+  let selectedAbsorbableTravel: TravelShardSpan | null = null;
   let selectedReclaimPrecedingGapTravel: TravelShardSpan | null = null;
 
   let candidateIdx = 0;
@@ -235,10 +234,11 @@ export function selectBestSlot(
     }
 
     // Calculate required inside-slot time.
-    // Layout: [leading buffer] [task] [trailing buffer] [travel-after] [buffer]
-    // The leading buffer is no longer pre-baked into slot.start; it's accounted for here.
-    // If travel-before can be placed outside, it is excluded from inside-slot requirement.
-    // Absorb cases provide their own leading context (no extra buffer needed).
+    // Layout: [leading buffer] [travel-before] [task] [travel-after] [trailing buffer]
+    // Travel is flush with its owning task. A buffer separates the unit
+    // from both slot boundaries; between two consecutive placements in the
+    // same slot only the second unit's leading buffer applies, so the gap
+    // is exactly one bufferMs.
 
     // Check if existing travel to the destination can be reused
     let effectiveTravelAfter = needTravelAfter;
@@ -266,13 +266,14 @@ export function selectBestSlot(
     }
 
     let canPlaceTravelOutside = false;
-    // Leading buffer is only needed when not absorbing (absorb start already has a buffer from prior task)
-    const leadingBuffer = canAbsorbPrevTravel ? 0 : bufferMinutes;
+    // Baseline: task + travel-after + trailing buffer. Leading buffer is
+    // added below unless travel-before is placed standalone (in which case
+    // the standalone travel's end provides the leading boundary, so no
+    // extra buffer at this slot's level).
     let requiredInside =
-      leadingBuffer +
       task.duration +
-      bufferMinutes +
-      (effectiveTravelAfter > 0 ? effectiveTravelAfter : 0);
+      (effectiveTravelAfter > 0 ? effectiveTravelAfter : 0) +
+      bufferMinutes;
 
     if (needTravelBefore > 0 && slotPrevLoc && taskLocationId) {
       const travelEnd = new Date(slot.start.getTime());
@@ -281,7 +282,8 @@ export function selectBestSlot(
         needTravelBefore,
       );
       if (!canPlaceTravelOutside) {
-        requiredInside += needTravelBefore + bufferMinutes;
+        // Travel inside the slot, flush with task: buffer goes BEFORE travel.
+        requiredInside += bufferMinutes + needTravelBefore;
         recorder?.decision(
           SM.selectBestSlot.travelBeforeInsideRequired(needTravelBefore),
           3,
@@ -292,6 +294,9 @@ export function selectBestSlot(
           3,
         );
       }
+    } else {
+      // No travel-before: task is the leading thing; apply leading buffer.
+      requiredInside += bufferMinutes;
     }
 
     // When absorbing a previous task's travel-after, or reclaiming a preceding gap travel,
@@ -299,26 +304,21 @@ export function selectBestSlot(
     // full multi-shard span duration (travelEnd - travelStart) so we count
     // every shard, not just the matched one.
     let effectiveCapacity = slot.durationMinutes;
-    let absorbedStart: Date | null = null;
     if (canAbsorbPrevTravel && absorbableTravel) {
       const spanDur = Math.floor(
         (absorbableTravel.travelEnd.getTime() -
           absorbableTravel.travelStart.getTime()) /
           60000,
       );
-      effectiveCapacity += spanDur + bufferMinutes;
-      absorbedStart = new Date(absorbableTravel.travelStart.getTime());
+      effectiveCapacity += spanDur;
     } else if (reclaimPrecedingGapTravel) {
-      // Expand capacity backward to include the gap travel window + the buffer between it and the slot
+      // Expand capacity backward to include the gap travel window.
       const spanDur = Math.floor(
         (reclaimPrecedingGapTravel.travelEnd.getTime() -
           reclaimPrecedingGapTravel.travelStart.getTime()) /
           60000,
       );
-      effectiveCapacity += spanDur + bufferMinutes;
-      absorbedStart = new Date(
-        reclaimPrecedingGapTravel.travelStart.getTime(),
-      );
+      effectiveCapacity += spanDur;
     }
 
     // Check if this slot has enough capacity
@@ -331,8 +331,7 @@ export function selectBestSlot(
       travelBefore = needTravelBefore;
       travelAfter = effectiveTravelAfter;
       selectedReusableTravelStart = reusableTravelStart;
-      selectedAbsorbPrevTravel = canAbsorbPrevTravel;
-      selectedAbsorbedTravelStart = absorbedStart;
+      selectedAbsorbableTravel = canAbsorbPrevTravel ? absorbableTravel : null;
       selectedReclaimPrecedingGapTravel = reclaimPrecedingGapTravel;
       break;
     }
@@ -360,8 +359,7 @@ export function selectBestSlot(
     travelAfter,
     reusableTravelStart: selectedReusableTravelStart,
     taskLocationId,
-    absorbPrevTravelAfter: selectedAbsorbPrevTravel,
-    absorbedTravelStart: selectedAbsorbedTravelStart,
+    absorbableTravel: selectedAbsorbableTravel,
     reclaimPrecedingGapTravel: selectedReclaimPrecedingGapTravel,
   };
 }

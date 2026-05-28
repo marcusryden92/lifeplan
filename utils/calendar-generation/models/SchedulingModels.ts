@@ -289,8 +289,13 @@ export interface SlotSelectionResult {
   travelAfter: number;
   reusableTravelStart: Date | null;
   taskLocationId: string | null | undefined;
-  absorbPrevTravelAfter: boolean;
-  absorbedTravelStart: Date | null;
+  /**
+   * The full span of the outbound travel from a prior unit that this
+   * placement will absorb (remove and back-extend into). Null when no
+   * absorb applies. Carries the travelId so downstream removal is by
+   * identity, not by heuristic time search.
+   */
+  absorbableTravel: TravelShardSpan | null;
   reclaimPrecedingGapTravel: TravelShardSpan | null;
 }
 
