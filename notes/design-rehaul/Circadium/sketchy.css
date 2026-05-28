@@ -1,0 +1,269 @@
+/* Circadium wireframes — low-fi sketchy aesthetic */
+
+:root {
+  --paper: #f5f1e8;
+  --paper-2: #ede8db;
+  --ink: #1c1a17;
+  --ink-soft: #3a3833;
+  --pencil: #6e6b64;
+  --pencil-light: #a6a39b;
+  --pencil-faint: #d4d0c4;
+  --red-ink: #b73a2a;
+  --red-ink-faint: #e8c5bf;
+  --highlight: #f0e25a;
+  --highlight-soft: #f6ecae;
+}
+
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;700&family=Patrick+Hand&family=Kalam:wght@300;400;700&family=Special+Elite&display=swap');
+
+/* sketchy wobbly border-radius helpers */
+.wob       { border-radius: 8px 12px 6px 10px / 10px 6px 12px 8px; }
+.wob-sm    { border-radius: 5px 7px 4px 6px / 6px 4px 7px 5px; }
+.wob-lg    { border-radius: 14px 18px 12px 16px / 16px 12px 18px 14px; }
+.wob-pill  { border-radius: 40px 38px 42px 36px / 18px 22px 18px 20px; }
+
+/* primary fonts */
+.sk-hand        { font-family: 'Patrick Hand', cursive; }
+.sk-script      { font-family: 'Caveat', cursive; }
+.sk-mono        { font-family: 'Special Elite', monospace; }
+.sk-loose       { font-family: 'Kalam', cursive; font-weight: 300; }
+
+/* base wireframe surface */
+.sk-page {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Patrick Hand', cursive;
+  font-size: 17px;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* paper texture (subtle) */
+.sk-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(0,0,0,0.018) 1px, transparent 1.5px),
+    radial-gradient(circle at 70% 60%, rgba(0,0,0,0.014) 1px, transparent 1.5px),
+    radial-gradient(circle at 40% 80%, rgba(0,0,0,0.018) 1px, transparent 1.5px);
+  background-size: 80px 80px, 110px 110px, 90px 90px;
+  pointer-events: none;
+  z-index: 0;
+}
+.sk-page > * { position: relative; z-index: 1; }
+
+/* ink strokes */
+.sk-stroke      { border: 2px solid var(--ink); }
+.sk-stroke-thin { border: 1.5px solid var(--ink); }
+.sk-stroke-soft { border: 1.5px solid var(--pencil); }
+.sk-stroke-faint{ border: 1.5px dashed var(--pencil-light); }
+
+/* boxes */
+.sk-box {
+  border: 2px solid var(--ink);
+  border-radius: 8px 12px 6px 10px / 10px 6px 12px 8px;
+  background: var(--paper);
+  padding: 14px 16px;
+}
+.sk-box.tight { padding: 8px 10px; }
+.sk-box.filled { background: var(--paper-2); }
+.sk-box.dark { background: var(--ink); color: var(--paper); }
+
+/* labels & badges */
+.sk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 13px;
+  padding: 3px 10px 2px;
+  border: 1.5px solid var(--ink);
+  border-radius: 12px 14px 12px 10px / 12px 10px 14px 12px;
+  background: var(--paper);
+  white-space: nowrap;
+  line-height: 1;
+}
+.sk-badge.red  { background: var(--red-ink); color: var(--paper); border-color: var(--red-ink); }
+.sk-badge.dark { background: var(--ink); color: var(--paper); }
+.sk-badge.dim  { color: var(--pencil); border-color: var(--pencil); }
+.sk-badge.yel  { background: var(--highlight); }
+
+/* annotation callouts */
+.sk-anno {
+  font-family: 'Caveat', cursive;
+  color: var(--red-ink);
+  font-size: 22px;
+  line-height: 1.05;
+  position: absolute;
+}
+.sk-anno-line {
+  position: absolute;
+  border-top: 1.5px solid var(--red-ink);
+}
+
+/* simple icon-ish glyph for low-fi placeholders */
+.sk-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  font-family: 'Caveat', cursive;
+  font-size: 15px;
+  line-height: 1;
+}
+.sk-glyph.sq { border-radius: 4px; }
+
+/* small hand-arrow */
+.sk-arrow {
+  font-family: 'Caveat', cursive;
+  color: var(--red-ink);
+  font-size: 28px;
+  line-height: 1;
+}
+
+/* hatch fill, for "strict" category windows or busy time */
+.sk-hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0,
+    transparent 5px,
+    rgba(28,26,23,0.35) 5px,
+    rgba(28,26,23,0.35) 6.5px
+  );
+}
+.sk-hatch-soft {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0,
+    transparent 8px,
+    rgba(28,26,23,0.16) 8px,
+    rgba(28,26,23,0.16) 9.5px
+  );
+}
+.sk-dots {
+  background-image: radial-gradient(circle, rgba(28,26,23,0.25) 1.2px, transparent 1.5px);
+  background-size: 10px 10px;
+}
+
+/* hand-checkbox */
+.sk-check {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--ink);
+  display: inline-block;
+  border-radius: 3px 5px 3px 4px / 4px 3px 5px 3px;
+  position: relative;
+  flex-shrink: 0;
+}
+.sk-check.on::after {
+  content: '✓';
+  position: absolute;
+  top: -8px;
+  left: -1px;
+  font-family: 'Caveat', cursive;
+  font-size: 22px;
+  color: var(--red-ink);
+  line-height: 1;
+}
+
+/* fake text lines (low-fi placeholder) */
+.sk-line {
+  background: var(--pencil-light);
+  height: 8px;
+  border-radius: 4px;
+  display: block;
+}
+.sk-line.dark { background: var(--ink-soft); }
+.sk-line.soft { background: var(--pencil-faint); }
+
+/* category color swatch (sketchy) */
+.sk-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--ink);
+  border-radius: 4px 5px 3px 4px / 5px 3px 4px 5px;
+  background: var(--paper-2);
+  flex-shrink: 0;
+}
+
+/* page header inside an artboard */
+.sk-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 22px;
+  border-bottom: 2px solid var(--ink);
+  background: var(--paper);
+}
+
+.sk-logo {
+  font-family: 'Caveat', cursive;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* scroll-suggesting shadow at edges (subtle) */
+.sk-fade-b {
+  position: relative;
+}
+.sk-fade-b::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 30px;
+  background: linear-gradient(to top, var(--paper), transparent);
+  pointer-events: none;
+}
+
+/* full-bleed artboard reset */
+.sk-board {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* tiny helpers */
+.sk-row { display: flex; align-items: center; }
+.sk-col { display: flex; flex-direction: column; }
+.sk-grow { flex: 1; }
+.sk-mono-tag {
+  font-family: 'Special Elite', monospace;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  color: var(--pencil);
+  text-transform: uppercase;
+}
+
+/* annotation pill - sits on the canvas next to a board */
+.sk-note {
+  font-family: 'Caveat', cursive;
+  color: var(--red-ink);
+  font-size: 19px;
+  line-height: 1.15;
+  max-width: 220px;
+}
+
+/* hand-drawn underline */
+.sk-underline {
+  position: relative;
+  display: inline-block;
+}
+.sk-underline::after {
+  content: '';
+  position: absolute;
+  left: -4px; right: -4px; bottom: -6px;
+  height: 6px;
+  border: 1.5px solid var(--red-ink);
+  border-top: none;
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+}

@@ -1,0 +1,41 @@
+/* themes-base.css — shared resets, font imports, canvas helpers */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;0,6..72,700;1,6..72,400;1,6..72,500;1,6..72,600&family=Hubot+Sans:wght@400;500;600;700&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600&display=swap');
+
+* {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: 'Geist', -apple-system, sans-serif;
+  background: #18181b;
+}
+
+#root { height: 100%; }
+
+/* ----- theme scope ----- */
+.tc {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+/* utility: numeric tabular for clocks/durations */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* hide scrollbar but keep scroll */
+.noscroll::-webkit-scrollbar { display: none; }
+.noscroll { scrollbar-width: none; }
+
+/* base button focus ring */
+button { font-family: inherit; cursor: pointer; }
