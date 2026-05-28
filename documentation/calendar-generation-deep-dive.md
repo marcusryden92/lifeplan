@@ -14,7 +14,7 @@ This document explains the complete flow of the calendar generation system. It c
    - [TimeSlotManager](#timeslotmanager)
    - [TemplateExpander](#templateexpander)
    - [Scheduler](#scheduler)
-   - [TaskSchedulingOrchestrator](#taskschedulingorchestrator)
+   - [Scheduling Loop (scheduleTasksAndGoals)](#scheduling-loop-scheduletasksandgoals)
 5. [Strategy System](#strategy-system)
 6. [Data Models](#data-models)
 7. [Travel Time System](#travel-time-system)
@@ -45,13 +45,15 @@ CalendarGenerator (orchestrator)
     └── Scheduler (places tasks into slots using strategies)
 ```
 
-**Helper Classes:**
+**Helper modules (all under `helpers/<Name>/`, plain functions):**
 
 ```
-TaskSchedulingOrchestrator   Week-by-week scheduling loop
-EventAssembler               Builds events (memoized, plan, completed, category, final assembly)
-PrioritySorter               Sorts candidates by urgency and category constraints
-LocationMapper               Builds planner -> location lookup map
+scheduleTasksAndGoals  Candidate-pass loop with bounded horizon + incremental expansion
+EventAssembler         Builds events (memoized, plan, completed, category wrappers, final list, trespass marking, border stamping)
+PrioritySorter         Sorts candidates by urgency and category constraints
+LocationMapper         Builds planner -> location lookup map
+CalendarValidator      Input validation
+TemplateExpander       Template -> SimpleEvents + per-template masks + per-day gap intervals
 ```
 
 ---
@@ -89,19 +91,21 @@ interface SchedulingResult {
 
 ## Step-by-Step Execution Flow
 
-CalendarGenerator delegates each phase to a dedicated subfunction. The orchestrator itself is ~255 lines and calls these imports:
+`CalendarGenerator.generate()` (~330 lines) delegates each phase to a function in `helpers/CalendarGenerator/`. The helpers are all flat — no nested subdirectories. Roughly:
 
 ```typescript
-// Subfunctions imported by CalendarGenerator
-import { validateInput } from "./CalendarGenerator/initialization/validateInput";
-import { buildInitialEventArray } from "./CalendarGenerator/initialization/buildInitialEventArray";
-import { expandTemplates } from "./CalendarGenerator/template-processing/expandTemplates";
-import { buildLocationMap } from "./CalendarGenerator/slot-building/buildLocationMap";
-import { buildInitialSlots } from "./CalendarGenerator/slot-building/buildInitialSlots";
-import { prepareSchedulingContext } from "./CalendarGenerator/scheduling/prepareSchedulingContext";
-import { buildSchedulingStrategy } from "./CalendarGenerator/scheduling/buildSchedulingStrategy";
-import { prepareCandidates } from "./CalendarGenerator/scheduling/prepareCandidates";
-import { assembleFinalEvents } from "./CalendarGenerator/finalization/assembleFinalEvents";
+// utils/calendar-generation/helpers/CalendarGenerator/
+import { validateInput } from "./validateInput";
+import { buildInitialEventArray } from "./buildInitialEventArray";
+import { expandTemplates } from "./expandTemplates";
+import { buildLocationMap } from "./buildLocationMap";
+import { buildPlannerCategoryMap } from "./buildPlannerCategoryMap";
+import { prepareSchedulingContext } from "./prepareSchedulingContext";
+import { buildSchedulingStrategy } from "./buildSchedulingStrategy";
+import { prepareCandidates } from "./prepareCandidates";
+import { assembleFinalEvents } from "./assembleFinalEvents";
+import { buildLoggingLookups } from "./buildLoggingLookups";
+import { emitDebugLog } from "./emitDebugLog";
 ```
 
 ### Phase 1: Validation
@@ -301,7 +305,7 @@ Delegates to `PrioritySorter.sortByPriorityAndConstraints()`:
 2. Excludes already-memoized items
 3. Sorts by: category-constrained items first, then by urgency score (highest first)
 
-**Urgency Calculation** (from `sortPlannersByPriority.ts`):
+**Urgency Calculation** (private helper inside `helpers/PrioritySorter/sortByPriorityAndConstraints.ts`):
 
 ```typescript
 function calculateTaskUrgency(task, context): number {
@@ -345,9 +349,7 @@ const schedulingResult = scheduler.scheduleTasksAndGoals(
 );
 ```
 
-The scheduler internally calls `scheduleTasksAndGoals` (in `helpers/Scheduler/`), which runs the candidate-pass loop with bounded horizon + incremental expansion. See the "Scheduling Loop (scheduleTasksAndGoals)" section under Core Classes for the loop's structure.
-
-The `TaskSchedulingOrchestrator` runs a week-by-week loop. See [TaskSchedulingOrchestrator](#taskschedulingorchestrator) for details.
+The scheduler internally calls `scheduleTasksAndGoals` (in `helpers/Scheduler/`), which runs the candidate-pass loop with bounded horizon + incremental expansion. See the "Scheduling Loop (scheduleTasksAndGoals)" section below for the loop's structure.
 
 ### Phase 11: Assemble Final Events
 
@@ -367,7 +369,7 @@ The constraints + date range are forwarded to `EventAssembler.buildCategoryWrapp
 
 Delegates to `EventAssembler` for:
 
-1. **Travel events** -- converts travel slots stored during scheduling into SimpleEvents via `TravelConverter`
+1. **Travel events** -- `travelManager.generateTravelEvents(userId)` merges multi-shard `TravelSlot`s into one `SimpleEvent` per logical travel
 2. **Category wrapper events** -- creates background events for category time periods (visual indicators on the calendar)
 3. **Final assembly** -- combines scheduled events, travel events, and category wrappers
 4. **Trespassing detection** -- marks overlapping events at different locations (physically impossible conflicts)
@@ -391,118 +393,100 @@ return {
 
 Location: `utils/calendar-generation/core/CalendarGenerator.ts`
 
-Lightweight orchestrator (~255 lines) that delegates each phase to imported subfunctions. Has no private methods for scheduling logic -- everything is modularized.
+Lightweight orchestrator (~330 lines) that holds the lifecycle state (`TimeSlotManager`, `TravelManager`, `CompositeStrategy`, metrics, both recorders) and delegates each phase to a function in `helpers/CalendarGenerator/`. All helpers are flat — no nested subdirectories.
 
-**Subfunction directory structure:**
+**Helper files (`helpers/CalendarGenerator/*.ts`):**
 
-```
-CalendarGenerator/
-├── initialization/
-│   ├── validateInput.ts           # Input validation
-│   └── buildInitialEventArray.ts  # Memoized + plan + completed events
-├── template-processing/
-│   └── expandTemplates.ts         # Template expansion wrapper
-├── slot-building/
-│   ├── buildLocationMap.ts        # Planner -> location lookup
-│   └── buildInitialSlots.ts       # Initial 2-week slot building
-├── scheduling/
-│   ├── prepareSchedulingContext.ts # SchedulingContext creation
-│   ├── buildSchedulingStrategy.ts # CompositeStrategy assembly
-│   └── prepareCandidates.ts       # Candidate filtering + priority sorting
-└── finalization/
-    └── assembleFinalEvents.ts     # Travel events + category wrappers + trespassing
-```
+| File                          | Purpose                                                                         |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| `validateInput.ts`            | Wraps `helpers/CalendarValidator/validateGenerationInput` and shapes failures   |
+| `buildInitialEventArray.ts`   | Memoized + plan + completed events from `helpers/EventAssembler/`               |
+| `expandTemplates.ts`          | Template expansion via `helpers/TemplateExpander/` (returns events + masks + gap) |
+| `buildLocationMap.ts`         | Planner/template → location resolution                                          |
+| `buildPlannerCategoryMap.ts`  | Memoized planner → categoryId via parent-chain walk                             |
+| `prepareSchedulingContext.ts` | Builds the `SchedulingContext` object                                           |
+| `buildSchedulingStrategy.ts`  | Wires up the `CompositeStrategy`                                                |
+| `prepareCandidates.ts`        | Filters root goals + tasks, sorts via `helpers/PrioritySorter`                  |
+| `assembleFinalEvents.ts`      | Travel events + category wrappers + trespass marking + border stamping          |
+| `buildLoggingLookups.ts`      | Builds `{ categoryById, eventTitleById }` shared by both recorders              |
+| `emitDebugLog.ts`              | Final debug-log payload + `logCalendarDebugInfo` call                           |
 
 ### TimeSlotManager
 
 Location: `utils/calendar-generation/core/TimeSlotManager.ts`
 
-Orchestrator (~378 lines) that delegates to five specialized helper classes:
+Minimal class (~22 lines) — really just a holder for the canonical mutable `slots` array plus `bufferTimeMinutes` and `currentDate`. Slots are a sorted, contiguous array of `Slot` (`AvailableSlot | OccupiedSlot | CategorySlot | TravelSlot`); helpers operate on it directly by reference.
 
 ```typescript
-class TimeSlotManager {
-  private availableSlots: Map<string, TimeSlot[]>; // day key -> available slots
-  private occupiedSlots: Map<string, TimeSlot[]>; // day key -> occupied slots
-  private bufferTimeMinutes: number;
-
-  // Helper instances
-  private travelManager: TravelManager;
-  private slotBuilder: SlotBuilder;
-  private slotFinder: SlotFinder;
-  private slotReserver: SlotReserver;
+export class TimeSlotManager {
+  slots: Slot[] = [];
+  readonly bufferTimeMinutes: number;
+  readonly currentDate: Date;
+  clear(): void { this.slots.length = 0; }
 }
 ```
 
-**Helper class directory structure:**
+All slot-building / fitting / reserving logic lives in `helpers/TimeSlotManager/*.ts` as plain functions that take the `slots: Slot[]` array (or a `TimeSlotManager` instance for access to `bufferTimeMinutes`) as an argument:
 
-```
-TimeSlotManager/
-├── builder/    SlotBuilder      - Builds available slots from events and templates
-├── converter/  TravelConverter  - Converts travel slots to SimpleEvents
-├── finder/     SlotFinder       - Finds slots that fit tasks with constraints
-├── reserver/   SlotReserver     - Reserves slots and manages travel placement
-└── travel/     TravelManager    - Travel time calculations and standalone travel reservation
-```
+| File                                       | Purpose                                                                   |
+| ------------------------------------------ | ------------------------------------------------------------------------- |
+| `buildAvailableSlots.ts`                   | Initial slot generation: events → intervals → gaps → category-tagged fragments. Includes `propagateAnywhereLocations` for null-location handoff |
+| `splitSlotsAtCategoryBoundaries.ts`        | Splits gaps at category start/end and tags fragments with `categoryId` / `isStrictCategory` |
+| `inheritLocationFromCategoryPeriods.ts`    | Inherits category location into null-location intervals that fall inside a category period |
+| `expandSlotForDay.ts`                      | Expands a single recurring category timeSlot rule to a concrete dated period for one day |
+| `findAllFittingSlots.ts`                   | Returns slots big enough for `duration + bufferMs`; optionally filtered by category   |
+| `reserveSlotWithTravel.ts`                 | The big one — splits the chosen availSlot, places task + travels, handles absorb / reclaim / inbound+outbound removal |
+| `dropPastAvailableSlots.ts`                | Filters out Available slots ending before `now` (Travels/Occupied/Category kept) |
+| `deriveSchedulingHorizon.ts`               | Inferred horizon end for finalization                                     |
+| `getDayAvailableMinutes.ts`                | (with internal `getDaySlots`) Quick metric used by debugging              |
 
-**Key Methods:**
-
-| Method                                                                   | Description                                             |
-| ------------------------------------------------------------------------ | ------------------------------------------------------- |
-| `buildAvailableSlots(...)`                                               | Builds available slots for a single day                 |
-| `buildDailySlots(...)`                                                   | Builds slots across multiple days                       |
-| `findAllFittingSlots(duration, afterDate, maxDays, categoryConstraint?)` | Returns all slots that can fit a task of given duration |
-| `reserveSlotWithTravel(...)`                                             | Reserves a slot and places travel before/after          |
-| `canPlaceStandaloneTravelBefore(travelEnd, minutes)`                     | Checks if travel can be placed outside a slot           |
-| `reserveStandaloneTravelBefore/After(...)`                               | Places travel outside a task's slot                     |
-| `reserveInsufficientTravelBefore/After(...)`                             | Handles travel slots that don't have enough space       |
-| `generateTravelEvents(userId)`                                           | Converts stored travel slots to SimpleEvents            |
-| `findAdjacentTravelTo(nearTime, toLocationId)`                           | Finds reusable travel going to a destination            |
+Travel-related helpers (`canPlaceStandaloneTravelBefore`, `reserveStandaloneTravelBefore/After`, `reserveInsufficientTravel{Before,After}`, `findAdjacentTravel{From,To,PrecedingGap}`, `generateTravelEvents`, `dropUnreachableCategoryVisits`, `staticEventTravelPass`) live under `helpers/TravelManager/` instead and are accessed through the `TravelManager` class facade in `core/`.
 
 ### TemplateExpander
 
-Location: `utils/calendar-generation/core/TemplateExpander.ts`
+Location: `utils/calendar-generation/helpers/TemplateExpander/`
 
-Converts `EventTemplate` records into usable formats.
+Module of plain functions (no class). Used by `helpers/CalendarGenerator/expandTemplates.ts` and `helpers/Scheduler/capacityCheck.ts`.
 
-**Key Methods:**
+| Function                                                 | Purpose                                                                       |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `expandTemplates(userId, templates, startDate, weekStartDay)` | Returns `{ events, failureCount }` — one RRule-bearing SimpleEvent per template   |
+| `getPerTemplateMasks(templates)`                         | Compact day-of-week / startMinutes / endMinutes masks for slot calculation    |
+| `calculateLargestGap(templates)`                         | Largest gap in a clean week, used as a coarse diagnostic                      |
+| `gapIntervalsForDay(masks, date)`                        | Day's gap intervals — used by `capacityCheck.maxEffectiveCapacityFor` to compute per-task ceilings |
 
-| Method                                                   | Description                                                       |
-| -------------------------------------------------------- | ----------------------------------------------------------------- |
-| `expandTemplates(userId, templates, startDate, endDate)` | Creates one SimpleEvent per template with an RRule for recurrence |
-| `getPerTemplateMasks(templates)`                         | Creates compact masks for slot calculation                        |
-| `calculateLargestGap(templates)`                         | Finds the biggest continuous available window in a week           |
-
-Templates that cross midnight are split into two day definitions (e.g., "Sleep 22:00-06:00" becomes day N 22:00-24:00 and day N+1 00:00-06:00).
+Templates that cross midnight are split into two intervals when the masks are constructed (e.g., "Sleep 22:00-06:00" becomes day N 22:00-24:00 and day N+1 00:00-06:00).
 
 ### Scheduler
 
 Location: `utils/calendar-generation/core/Scheduler.ts`
 
-Core scheduling engine (~117 lines) that places tasks into time slots using strategies. Tracks metrics (tasks attempted, scheduled, failed, timing).
+Core scheduling engine (~160 lines) that places tasks into time slots using strategies. Holds the per-pass metrics (tasks attempted, scheduled, failed, average time).
 
-The `scheduleTask()` method delegates to a 5-phase pipeline:
+The `scheduleTask()` instance method delegates to the 5-phase pipeline in `helpers/Scheduler/scheduleTask.ts`:
 
 ```
 validateTask -> findValidSlots -> selectBestSlot -> reserveTaskSlot -> buildTaskEvent
 ```
 
-**Subfunction directory structure:**
+**Helper files (`helpers/Scheduler/*.ts`), flat:**
 
-```
-Scheduler/
-├── validation/
-│   └── validateTask.ts       # Checks task has valid duration
-├── slot-selection/
-│   ├── findValidSlots.ts     # Gets all fitting slots, optionally filtered by category constraint
-│   └── selectBestSlot.ts     # Scores slots with strategy, calculates travel, picks best
-├── reservation/
-│   └── reserveTaskSlot.ts    # Reserves the selected slot with travel
-├── event-creation/
-│   └── buildTaskEvent.ts     # Creates the SimpleEvent output
-└── scheduling/
-    ├── scheduleTask.ts       # Orchestrates the 5-phase pipeline
-    └── scheduleTasks.ts      # Batch scheduling of multiple tasks
-```
+| File                            | Purpose                                                                          |
+| ------------------------------- | -------------------------------------------------------------------------------- |
+| `validateTask.ts`               | Duration sanity check                                                            |
+| `findValidSlots.ts`             | Calls `findAllFittingSlots` with the right category constraint                   |
+| `selectBestSlot.ts`             | Scores slots with the strategy, calculates travel-before / -after, decides absorb / reclaim, picks the first candidate with enough effective capacity. Returns a `SlotSelectionResult` with `absorbableTravel: TravelShardSpan \| null` and `reclaimPrecedingGapTravel: TravelShardSpan \| null` |
+| `reserveTaskSlot.ts`            | Computes `effectiveSlotStart` (from `absorbableTravel.travelStart` / `reclaimPrecedingGapTravel.travelStart` / `selectedSlot.start`) and `offsetToTaskStart` (per the buffer model), tries standalone travel-before, calls `reserveSlotWithTravel` |
+| `buildTaskEvent.ts`             | Builds the `SimpleEvent` output                                                  |
+| `scheduleTask.ts`               | The 5-phase pipeline itself                                                      |
+| `scheduleTasks.ts`              | Batch scheduling (not currently called by the main flow)                         |
+| `scheduleTasksAndGoals.ts`      | The candidate-pass loop with horizon expansion (see "Scheduling Loop" below)     |
+| `scheduleSingleTask.ts`         | Goal-/task-dispatcher used by `scheduleTasksAndGoals` (early `TOO_LARGE` check)  |
+| `scheduleGoal.ts`               | Per-child loop for goals, threading `goalAfterTime` through subtasks             |
+| `expandSlots.ts`                | Horizon expansion at the `isFinal` pickup point — preserves earlier decisions, rebuilds the new chunk, re-runs static pass with `legTracker` replay |
+| `capacityCheck.ts`              | `maxEffectiveCapacityFor(task, ...)` (TOO_LARGE early-out) and `largestCompatibleSlotForLargestTask` (watermark check) |
+| `SchedulerRecorder.ts`          | Per-task decision/action trail recorder                                          |
+| `schedulerMessages.ts`          | Centralized message strings for the recorder                                     |
 
 **Slot Selection Detail** (from `selectBestSlot.ts`):
 
@@ -522,7 +506,7 @@ Scheduler/
 
 Location: `utils/calendar-generation/helpers/Scheduler/scheduleTasksAndGoals.ts`
 
-Manages the candidate-pass scheduling loop with bounded horizon and incremental expansion. Replaces the older `TaskSchedulingOrchestrator` class.
+Manages the candidate-pass scheduling loop with bounded horizon and incremental expansion.
 
 **The scheduling loop:**
 
@@ -697,30 +681,83 @@ The location grouping weight is intentionally low (0.2) to act as a tie-breaker 
 
 ## Data Models
 
-### TimeSlot
+### Slot Model
 
 Location: `utils/calendar-generation/models/TimeSlot.ts`
 
-```typescript
-interface TimeSlot {
-  start: Date;
-  end: Date;
-  durationMinutes: number;
-  isAvailable: boolean;
-  eventId?: string;
-  eventType?: "task" | "goal" | "plan" | "template" | "travel";
-  prevLocationId?: string | null;
-  nextLocationId?: string | null;
+`Slot` is a **sealed discriminated union** of four shapes, distinguished by `type`. The canonical slots array is `Slot[]`, sorted by start, contiguous (no gaps), non-overlapping. Helpers operate on it directly by reference and a final sort happens at the end of each `reserveSlotWithTravel` call.
 
-  // Travel-specific fields
-  travelFromLocationId?: string | null;
-  travelToLocationId?: string | null;
-  insufficientTravel?: boolean;
-  requiredTravelMinutes?: number;
+```typescript
+type Slot = AvailableSlot | OccupiedSlot | CategorySlot | TravelSlot;
+type PlaceableSlot = AvailableSlot | CategorySlot;  // slots a task can land in
+
+interface AvailableSlot {
+  type: "available";
+  start: Date; end: Date; durationMinutes: number;
+  prevLocationId: string | null;   // location user is at when slot starts
+  nextLocationId: string | null;   // location user is heading to when slot ends
+}
+
+interface OccupiedSlot {
+  type: "occupied";
+  start: Date; end: Date; durationMinutes: number;
+  eventId: string;
+  plannerType: PlannerType;        // plan / template / goal / task
+  eventType: EventType;            // planner | template
+  locationId?: string | null;      // present only for static-pass-built Occupieds
+}
+
+interface CategorySlot {
+  type: "category";
+  start: Date; end: Date; durationMinutes: number;
+  categoryId: string;
+  isStrictCategory: boolean;
+  currentLocationId: string | null; // user's location while inside this category fragment
+  prevLocationId: string | null;
+  nextLocationId: string | null;
+  // Optional state markers — only present on fragments that touch the original boundary
+  trespassingStart?: boolean;       // travel-pass had to consume the category's head
+  trespassingEnd?: boolean;         // travel-pass had to consume the category's tail
+  isFinal?: boolean;                // pickup point for the next horizon expansion
+}
+
+interface TravelSlot {
+  type: "travel";
+  start: Date; end: Date; durationMinutes: number;
+  eventId: string;                  // legacy single-shard identifier
+  travelId?: string;                // multi-shard identifier — all shards of one logical travel share this
+  eventType: EventType.travel;
+  travelType: "preliminary" | "inbound" | "outbound";
+  travelFromLocationId: string | null;
+  travelToLocationId: string | null;
+  insufficientTravel: boolean;
+  requiredTravelMinutes: number;
+  // Shard provenance (for unplan / restore-absorbed-range)
+  originalType?: "available" | "category";
+  originalSourceStart?: Date; originalSourceEnd?: Date;
+  // ...one set of fields per originalType
+  // Category fragment context (when travel was carved out of a category)
+  categoryId?: string | null; isStrictCategory?: boolean;
 }
 ```
 
-`TimeSlotUtils` provides static helpers: `getDurationMinutes`, `canFitDuration`, `doSlotsOverlap`, `mergeAdjacentSlots`, `splitSlot`, `occupySlot`, `createTravelSlot`, `isTravelSlot`, `reclaimTravelSlot`.
+**Multi-shard travels.** A single logical travel can span multiple slot fragments (e.g. a bleed-across-prev-current-next eats portions of three source slots). Each fragment is a `TravelSlot` with the same `travelId`. Helpers in `utils/timeSlotUtils.ts` work with the *span* abstraction instead of individual shards: `findTravelShardSpan` walks contiguous shards by `travelId`, `removeTravelSpanAt` / `removeTravelSpanByTravelId` remove every shard atomically, `unplanTravel` removes shards *and* restores the underlying Available/Category source.
+
+**`TravelShardSpan`** is the value-typed handle the scheduler passes around to identify a logical travel:
+
+```typescript
+type TravelShardSpan = {
+  travelId: string;
+  startIdx: number; endIdx: number; shards: TravelSlot[];
+  travelStart: Date; travelEnd: Date;       // aggregate geometry
+  travelFromLocationId: string | null;
+  travelToLocationId: string | null;
+};
+```
+
+This is what flows through `SlotSelectionResult.absorbableTravel` and `SlotSelectionResult.reclaimPrecedingGapTravel` — the id is the source of truth for which travel to remove; the geometry is used to anchor the adjacent-availSlot lookup.
+
+**Utility module:** `utils/timeSlotUtils.ts` exposes `getDurationMinutes`, `canFitDuration`, `doSlotsOverlap`, `splitSlot`, `occupySlot`, `createTravelSlot`, `createTravelShards`, `shardSourceFromAvailable / FromCategory`, `collectShardSources`, `findTravelShardSpan`, `removeTravelSpanAt`, `removeTravelSpanByTravelId`, `isTravelSlot`, `reclaimTravelSlot`, `unplanTravel`, `restoreAbsorbedRange`.
 
 ### SchedulingContext
 
@@ -730,10 +767,27 @@ interface SchedulingContext {
   userId: string;
   weekStartDay: number;
   allPlanners: Planner[];
-  scheduledEvents: SimpleEvent[]; // Mutable - events added here
-  metrics: SchedulingMetrics;
-  categories?: Map<string, Category>;
+  scheduledEvents: SimpleEvent[];        // Mutable — events added here as tasks are placed
+  metrics: SchedulingMetrics;            // Mutable — updated during scheduling
+  categories?: Map<string, Category>;    // Built lazily inside prepareSchedulingContext
   plannerLocationMap?: Map<string, string | null>;
+  plannerCategoryMap?: Map<string, string | null>;  // Resolved via parent-chain walk
+  schedulerRecorder?: SchedulerRecorder | null;
+  placementCutoffDate?: Date | null;     // Set per-iteration; suppresses placement in the tail PLACEMENT_BUFFER_DAYS
+}
+```
+
+### SlotSelectionResult
+
+```typescript
+interface SlotSelectionResult {
+  selectedSlot: PlaceableSlot;
+  travelBefore: number;
+  travelAfter: number;
+  reusableTravelStart: Date | null;
+  taskLocationId: string | null | undefined;
+  absorbableTravel: TravelShardSpan | null;        // Identity-based — used by reserveSlotWithTravel
+  reclaimPrecedingGapTravel: TravelShardSpan | null;
 }
 ```
 
@@ -800,36 +854,29 @@ getTravelTime(fromLocationId, toLocationId, timeOfDay): number {
 }
 ```
 
-### Travel Slot Layout
+### Travel Slot Layout (Dynamic Placement)
 
-When scheduling a task at a different location than neighbors:
+Per the buffer model, a dynamic placement occupies a flush `[travel-before, task, travel-after]` unit inside its slot, with a leading + trailing buffer between the unit and each slot boundary:
 
 ```
-[Previous Event @ Location A]
-[TRAVEL: A -> B] (travel-before)
-[BUFFER]
-[TASK @ Location B]
-[BUFFER]
-[FREE SPACE]
-[TRAVEL: B -> C] (travel-after, anchored to end)
-[Next Event @ Location C]
+[slot.start] [leading buf] [TRAVEL A→B] [TASK @ B] [TRAVEL B→C] [trailing buf] [slot.end]
 ```
 
-**Travel-before placement:** The Scheduler first checks if travel-before can be placed _outside_ the slot (in the previous slot's free space via `canPlaceStandaloneTravelBefore`). Travel can start inside the buffer zone before a slot, not just within the slot's boundaries. If placement outside fails, falls back to including travel-before inside the slot.
+No buffer between travel and task. The leftover-tail starts flush at the unit's trailing edge (`travelAfterEnd`, or `task.end` if no travel-after); the next placement in that leftover owns its own leading buffer, so consecutive units are separated by exactly one `bufferMs` gap (and recursion preserves the trailing-buffer rule).
 
-**Travel shifting:** When a new task is added in the FREE SPACE, travel-after shifts forward to stay adjacent to the next event.
+**Standalone travel-before:** if `canPlaceStandaloneTravelBefore` finds room for travel-before in an earlier slot ending at `selectedSlot.start`, the standalone travel is reserved there, `effectiveTravelBefore = 0`, and the task lands flush at `slot.start` (the standalone travel's end is the leading boundary — no buffer is added at this slot's level).
 
-**Travel reuse:** If existing travel already goes to the right destination (checked via `findAdjacentTravelTo`), it's reused and no new travel space is reserved. The search window for adjacency is `bufferTime + 10 minutes` to allow some tolerance.
+**Travel reuse (after).** `findAdjacentTravelTo(slot.end, slotNextLoc)` looks for a `TravelShardSpan` whose `travelEnd` equals `slot.end` exactly. If found, `effectiveTravelAfter = 0` and the leftover-tail ends at the reused travel's start.
 
-**Insufficient travel:** When there isn't enough space for the full required travel time, `reserveInsufficientTravelBefore/After` creates a travel slot marked with `insufficientTravel: true` and `requiredTravelMinutes` for the originally needed duration. These render in red on the calendar.
+**Absorb-prev-travel (id-based).** When the previous unit's outbound travel can be absorbed (same-location adjacency, `selectBestSlot` calls `findAdjacentTravelFrom`), the `TravelShardSpan` flows through `SlotSelectionResult.absorbableTravel`. `reserveSlotWithTravel` removes the span by `travelId` via `removeTravelShards`, then extends the abutting `availSlot` back over the freed region (matched by exact-position: `availSlot.start === removed.spanEnd`, with a guard against producing a malformed slot).
 
-**Travel-before conflict removal:** When reserving a slot, `SlotReserver` automatically removes any existing travel going to the same destination that ends near the task's start time (within the search window). This handles the case where a task fills a gap that was previously bridged by travel.
+**Reclaim preceding gap travel (id-based).** When a static-pass return-trip can be bypassed, the gap travel's `TravelShardSpan` flows through `SlotSelectionResult.reclaimPrecedingGapTravel` and the same pattern applies — remove by `travelId`, extend the abutting `availSlot` back, set `prevLocationId` to the gap travel's origin.
 
-**Previous travel absorption:** If a same-location task is scheduled adjacent to the current task's slot, and the previous task already has travel-after going away from that shared location, the `SlotReserver` can absorb (reclaim) that travel slot. This frees up the space and is reflected as additional effective capacity in slot selection.
+**Inbound / outbound travel removal:** when placing a fresh travel-before / travel-after, any pre-existing travel whose `end` equals `task.start` (inbound) or `slot.end` (outbound) and whose `travelToLocationId` matches is collected by `travelId` into a `Set` and then removed via `removeTravelShards`. Exact-position match, no tolerance window. Multi-shard handled naturally because we only need to find one shard of a span to identify it.
 
-**Pre-carved vs dynamic travel:** `SlotReserver` distinguishes travel created during slot-building (pre-carved category/gap travel, named `travel-gap-*` or `travel-insufficient-*`) from travel placed during task scheduling. When reclaiming absorbed travel, only pre-carved travel is removed — dynamic task-to-task travel is preserved.
+**Insufficient travel:** when there isn't enough space for the full required travel time, `reserveInsufficientTravelBefore/After` creates a travel slot marked with `insufficientTravel: true` and `requiredTravelMinutes` for the originally needed duration. These render in red on the calendar.
 
-**Force mode:** `reserveStandaloneTravelBefore/After` has a `force` parameter used for category-boundary travel. In force mode, travel is placed at full duration even if it overlaps available slots, and those overlapping slots are marked unavailable.
+**Force mode:** `reserveStandaloneTravelBefore/After` accepts a `force` parameter used for category-boundary travel by the static pass. In force mode, travel is placed at full duration even if it overlaps available slots, and those overlapping slots are trimmed/marked accordingly.
 
 ### "Anywhere" Tasks
 
@@ -957,10 +1004,11 @@ Returns start/end of a day.
 **`setTimeOnDate(date, timeString)`**
 Sets a time string like "09:00" on a date.
 
-### sortPlannersByPriority.ts
+### helpers/PrioritySorter/sortByPriorityAndConstraints.ts
 
-**`calculateTaskUrgency(task, context)`**
-Computes urgency score based on deadline proximity using a sigmoid curve.
+`sortByPriorityAndConstraints(allPlanners, goalsAndTasks, currentDate, plannerCategoryMap?)` — the public sort. Internally:
+- `hasCategoryConstraint(item, allPlanners, plannerCategoryMap?)` — true if the item (or any descendant for goals) has an effective categoryId
+- `calculateTaskUrgency(task, context)` — sigmoid-based urgency score over deadline proximity, scaled by `priority`
 
 ### goalPageHandlers.ts
 
@@ -1045,23 +1093,30 @@ PHASE 9: PREPARE CANDIDATES  [prepareCandidates -> PrioritySorter]
   +-- Sort: category-constrained first, then by urgency
   v
 
-PHASE 10: SCHEDULING LOOP  [TaskSchedulingOrchestrator]
+PHASE 10: SCHEDULING LOOP  [scheduleTasksAndGoals]
   |
-  +-- For each week until done:
-  |   +-- For each candidate:
-  |   |   +-- If TASK:
-  |   |   |   +-- Size check (vs largestGap)
-  |   |   |   +-- Scheduler.scheduleTask():
-  |   |   |       +-- validateTask
-  |   |   |       +-- findValidSlots (+ category filter)
-  |   |   |       +-- selectBestSlot (score + travel calc)
-  |   |   |       +-- reserveTaskSlot
-  |   |   |       +-- buildTaskEvent
-  |   |   +-- If GOAL:
-  |   |       +-- Get child tasks in dependency order
-  |   |       +-- Schedule each sequentially
-  |   +-- If candidates remain:
-  |       +-- Expand slots to next week
+  +-- Per-iteration: publish context.placementCutoffDate (max placeable end - PLACEMENT_BUFFER_DAYS)
+  +-- Proactive watermark: if availableCount < LOW_SLOT_WATERMARK
+  |   OR biggestCompatibleSlot < biggestRemainingTask:
+  |       expandSlots(...); continue
+  +-- For each candidate (back-to-front for safe removal):
+  |   +-- If TASK:
+  |   |   +-- Capacity check: task.duration > maxEffectiveCapacityFor(...) -> permanent TOO_LARGE
+  |   |   +-- Scheduler.scheduleTask():
+  |   |       +-- validateTask
+  |   |       +-- findValidSlots (+ category filter, placementCutoffDate)
+  |   |       +-- selectBestSlot (score + travel calc + absorb/reclaim decisions)
+  |   |       +-- reserveTaskSlot
+  |   |       +-- buildTaskEvent
+  |   |   +-- success: record event, remove from candidates
+  |   |   +-- NO_SLOTS: keep in candidates, retry after expansion
+  |   |   +-- other failure: permanent, remove
+  |   +-- If GOAL:
+  |       +-- getSortedTreeBottomLayer() -> leaf tasks in dep order
+  |       +-- Per-child capacity check
+  |       +-- Schedule each sequentially (afterTime chained between children)
+  |       +-- NO_SLOTS for any child: break, retry whole goal after expansion
+  +-- Reactive backstop: if candidates remain, expandSlots and loop
   v
 
 PHASE 11: ASSEMBLE FINAL EVENTS  [assembleFinalEvents -> EventAssembler]
@@ -1106,19 +1161,17 @@ for (const task of goalTasks) {
 
 ### 3. Travel Reuse and Absorption
 
-**Reuse:** If existing travel already goes to the right destination, no new travel-after is needed:
+**Reuse:** If existing travel already goes to the right destination, no new travel-after is created:
 
 ```typescript
-const reusable = slotManager.findAdjacentTravelTo(
-  slot.end,
-  slot.nextLocationId,
-);
+const reusable = travelManager.findAdjacentTravelTo(slot.end, slot.nextLocationId);
 if (reusable) {
   effectiveTravelAfter = 0;
+  // reusable is a TravelShardSpan; its travelStart caps the leftover-tail
 }
 ```
 
-**Absorption:** If the previous task shares the same location, its outbound travel-after can be reclaimed. `selectBestSlot` detects this and sets `canAbsorbPrevTravel=true`. When `SlotReserver` executes, it removes that travel slot and expands the available window backward, so the absorbed travel minutes become usable capacity for the current task's slot.
+**Absorption:** if the previous unit's outbound travel goes away from this task's location, it can be reclaimed. `selectBestSlot` calls `findAdjacentTravelFrom`, gets back a `TravelShardSpan`, and stores it as `absorbableTravel` in `SlotSelectionResult`. `reserveSlotWithTravel` then removes every shard by `travelId` (`removeTravelShards(occupiedSlots, absorbableTravel.travelId)`) and back-extends the abutting availSlot — identified by exact-position match against `removed.spanEnd`. The freed travel duration becomes usable capacity (`selectBestSlot` adds `spanDur` to `effectiveCapacity` when sizing the candidate).
 
 ### 4. Incremental Horizon Expansion
 
@@ -1139,11 +1192,13 @@ Events from `previousCalendar` that are past and non-template/non-travel are pre
 
 ### 6. Buffer Time Layout
 
-Buffers separate items, not surround them:
+A dynamic placement enforces a single buffer between the unit and each slot boundary. Travel is flush with the task (no buffer between them). The unit owns its leading + trailing buffers:
 
 ```
-[TRAVEL] [BUFFER] [TASK] [BUFFER] [FREE] [TRAVEL]
+[slot.start] [leading buf] [TRAVEL] [TASK] [TRAVEL] [trailing buf] [slot.end]
 ```
+
+When two placements end up in the same slot (via the leftover-tail), the second placement's leading buffer is the *only* buffer between them — no double-counting. Static placements (plans, templates, category-wrapper travel) are flush with their owning event and don't participate in the buffer model.
 
 ### 7. Category-Constrained Task Priority
 

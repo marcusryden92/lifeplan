@@ -121,39 +121,26 @@ lifeplan/
 └── utils/
     ├── calendar-generation/      # Core scheduling engine
     │   ├── calendarGeneration.ts      # Public entry point (backward-compatible)
-    │   ├── calendarGenerationHelpers.ts
-    │   ├── weekTemplateGeneration.ts
     │   ├── constants.ts               # All configuration constants
     │   ├── index.ts                   # Public API exports
     │   │
-    │   ├── core/                      # Orchestrator classes + subfunctions
-    │   │   ├── CalendarGenerator.ts   # Main orchestrator (~260 lines)
-    │   │   ├── CalendarGenerator/     # Subfunctions by phase
-    │   │   │   ├── initialization/    # validateInput, buildInitialEventArray
-    │   │   │   ├── template-processing/  # expandTemplates
-    │   │   │   ├── slot-building/     # buildLocationMap, buildInitialSlots,
-    │   │   │   │                      # buildPlannerCategoryMap
-    │   │   │   ├── scheduling/        # prepareSchedulingContext, buildSchedulingStrategy,
-    │   │   │   │                      # prepareCandidates
-    │   │   │   └── finalization/      # assembleFinalEvents
-    │   │   │
-    │   │   ├── Scheduler.ts           # Task placement orchestrator (~117 lines)
-    │   │   ├── Scheduler/             # Subfunctions by phase
-    │   │   │   ├── validation/        # validateTask
-    │   │   │   ├── slot-selection/    # findValidSlots, selectBestSlot
-    │   │   │   ├── reservation/       # reserveTaskSlot
-    │   │   │   ├── event-creation/    # buildTaskEvent
-    │   │   │   └── scheduling/        # scheduleTask, scheduleTasks
-    │   │   │
-    │   │   ├── TimeSlotManager.ts     # Slot management orchestrator (~385 lines)
-    │   │   ├── TimeSlotManager/       # Subfunctions by domain
-    │   │   │   ├── travel/            # TravelManager
-    │   │   │   ├── converter/         # TravelConverter
-    │   │   │   ├── builder/           # SlotBuilder
-    │   │   │   ├── finder/            # SlotFinder
-    │   │   │   └── reserver/          # SlotReserver
-    │   │   │
-    │   │   └── TemplateExpander.ts    # Recurring template expansion
+    │   ├── core/                      # Stateful classes (kept as classes because they own real state)
+    │   │   ├── CalendarGenerator.ts   # Main orchestrator (~330 lines)
+    │   │   ├── Scheduler.ts           # Task placement + per-pass metrics (~160 lines)
+    │   │   ├── TimeSlotManager.ts     # Thin holder for the mutable slots array (~22 lines)
+    │   │   └── TravelManager.ts       # Travel-time lookup + legTracker state (~325 lines)
+    │   │
+    │   ├── helpers/                   # Function modules grouped by module name
+    │   │   ├── CalendarGenerator/     # One file per generation phase (validateInput, expandTemplates, buildLocationMap, prepareSchedulingContext, prepareCandidates, assembleFinalEvents, buildLoggingLookups, emitDebugLog, etc.)
+    │   │   ├── CalendarValidator/     # Input validation (validatePlanner+validatePlanners, validateTemplate+validateTemplates, validateGenerationInput) + shared types.ts
+    │   │   ├── EventAssembler/        # SimpleEvent builders (memoized / plan / completed / category wrappers, trespass marking, final list assembly)
+    │   │   ├── LocationMapper/        # Planner -> location resolution (own + parent chain + category fallback)
+    │   │   ├── PrioritySorter/        # sortByPriorityAndConstraints (urgency calc inlined as a private helper)
+    │   │   ├── Scheduler/             # 5-phase pipeline (validateTask, findValidSlots, selectBestSlot, reserveTaskSlot, buildTaskEvent) + scheduleTasksAndGoals loop + expandSlots + capacityCheck + SchedulerRecorder + schedulerMessages
+    │   │   ├── TemplateExpander/      # expandTemplates / getPerTemplateMasks / calculateLargestGap / gapIntervalsForDay
+    │   │   ├── TimeSlotManager/       # buildAvailableSlots + slot-shape helpers (splitSlotsAtCategoryBoundaries, inheritLocationFromCategoryPeriods, expandSlotForDay) + findAllFittingSlots + reserveSlotWithTravel + dropPastAvailableSlots + deriveSchedulingHorizon + getDayAvailableMinutes (with getDaySlots)
+    │   │   └── TravelManager/         # getTravelTime + canPlaceStandaloneTravelBefore + reserveStandaloneTravelBefore/After + reserveInsufficientTravel (Before+After) + findAdjacentTravels (From/To/PrecedingGap) + dropUnreachableCategoryVisits + generateTravelEvents + legTracker + TravelPassRecorder + travelPassMessages + travelPassUtils
+    │   │       └── staticEventTravelPass/  # The travel-placement state machine (handleAvailable, handleCategory, absorb, bleed, cascade, placement, slotShape, lookups, staticEventTravelPass)
     │   │
     │   ├── strategies/
     │   │   ├── SchedulingStrategy.ts  # Base interface + CompositeStrategy
@@ -162,22 +149,16 @@ lifeplan/
     │   │   └── LocationGroupingStrategy.ts
     │   │
     │   ├── models/
-    │   │   ├── SchedulingModels.ts    # Core interfaces
-    │   │   └── TimeSlot.ts
-    │   │
-    │   ├── helpers/
-    │   │   ├── events/                # EventAssembler
-    │   │   ├── location/              # LocationMapper
-    │   │   └── scheduling/            # PrioritySorter, TaskSchedulingOrchestrator
-    │   │
-    │   ├── calendar-logic-helpers/
-    │   │   └── sortPlannersByPriority.ts
+    │   │   ├── SchedulingModels.ts    # SchedulingContext, SlotSelectionResult, failure types, etc.
+    │   │   ├── TemplateModels.ts      # PerTemplateMask
+    │   │   └── TimeSlot.ts            # Sealed discriminated union: AvailableSlot | OccupiedSlot | CategorySlot | TravelSlot
     │   │
     │   └── utils/
+    │       ├── RecorderBase.ts        # Shared base for TravelPassRecorder + SchedulerRecorder
     │       ├── dateTimeService.ts     # Centralized date utilities
-    │       ├── validationUtils.ts     # Input validation
-    │       ├── loggingUtils.ts        # Debug logging
-    │       └── intervalUtils.ts
+    │       ├── intervalUtils.ts       # findGaps, eventsToIntervals, masksToIntervals
+    │       ├── loggingUtils.ts        # logCalendarDebugInfo + filterEventsByLogRange
+    │       └── timeSlotUtils.ts       # Shard model + TravelShardSpan + removeTravelSpan{At,ByTravelId} + reclaimTravelSlot + restoreAbsorbedRange
     │
     ├── goalPageHandlers.ts            # Goal tree utilities
     └── taskHelpers.ts                 # Task utility functions
@@ -250,11 +231,12 @@ Categories provide organizational structure with time-based scheduling constrain
 
 The calendar generation uses a **strategy-based architecture** with **incremental horizon expansion**:
 
-1. **CalendarGenerator** - Orchestrates the process
-2. **TimeSlotManager** - Manages available time slots
-3. **TemplateExpander** - Expands recurring templates
-4. **Scheduler** - Places tasks using strategies
-5. **CompositeStrategy** - Combines multiple weighted strategies
+1. **CalendarGenerator** (`core/CalendarGenerator.ts`) — orchestrates the 11 phases
+2. **TimeSlotManager** (`core/TimeSlotManager.ts`) — a thin holder for the canonical mutable `slots` array; the actual building/finding/reserving lives in `helpers/TimeSlotManager/`
+3. **Scheduler** (`core/Scheduler.ts`) — places tasks using strategies; per-task metrics
+4. **TravelManager** (`core/TravelManager.ts`) — travel-time lookups, leg tracking for round-trip detection
+5. **CompositeStrategy** (`strategies/SchedulingStrategy.ts`) — combines multiple weighted strategies
+6. **Template expansion** is now a module of plain functions under `helpers/TemplateExpander/` (no class)
 
 #### Incremental Expansion
 
@@ -269,6 +251,24 @@ Three pieces make this work:
 #### Placement Buffer
 
 `SCHEDULING_CONFIG.PLACEMENT_BUFFER_DAYS` (3 days) of room is left at the trailing edge of the horizon — dynamic tasks aren't placed in that range. Gives the next expansion's seam re-decision empty space to work in.
+
+#### Buffer & Travel Placement (Dynamic Tasks)
+
+Dynamic placement enforces a single buffer between every unit and each slot boundary it touches. The unit footprint is `[travel-before, task, travel-after]` with **travel flush against the task** (no buffer between them). Inside each slot:
+
+```
+[slot.start] [leading buffer] [travel-before] [task] [travel-after] [trailing buffer] [slot.end]
+```
+
+When `selectBestSlot` discovers that travel-before fits standalone in an earlier slot (`canPlaceStandaloneTravelBefore`), the standalone travel's end becomes the leading boundary and the task lands flush at `slot.start` (no leading buffer in this slot — the buffer is owned by the earlier slot). When no travel-before is needed at all, the leading buffer still applies.
+
+Leftover slots are created flush with the unit's edges (no `+bufferMs` offset). The recursive "each placement owns its own leading + trailing buffer" rule gives exactly one buffer of separation between consecutive dynamic placements in the same slot, without double-counting.
+
+Static placements (plans, templates, category-wrapper travel) are always flush with their owning event — the buffer model only applies to dynamic tasks.
+
+#### Absorb / Reclaim (Identity-Based)
+
+When a dynamic placement can reuse the travel-after of a same-location prior task ("absorb"), or bypass a static-pass return-trip ("reclaim preceding gap travel"), the relevant `TravelShardSpan` flows through `SlotSelectionResult` (`absorbableTravel` / `reclaimPrecedingGapTravel`) from `selectBestSlot` into `reserveSlotWithTravel`. Removal is by `travelId` (via `removeTravelShards`), not by heuristic time search. The adjacent `availSlot` is identified by exact-position match (`availSlot.start === removed.spanEnd`) with a guard against producing a malformed slot. The same pattern applies to inbound/outbound travel removal — pre-existing travels are matched by exact end-position (`occ.end === task.start` for inbound, `occ.end === slot.end` for outbound) rather than by tolerance window.
 
 #### Capacity-Aware TOO_LARGE Check
 
@@ -287,10 +287,12 @@ See `documentation/calendar-generation-deep-dive.md` for a detailed walkthrough.
 ```typescript
 interface SchedulingStrategy {
   readonly name: string;
-  score(task: Planner, slot: TimeSlot, context: SchedulingContext): number;
+  score(task: Planner, slot: PlaceableSlot, context: SchedulingContext): number;
   // Returns 0.0 to 1.0 (higher = better fit)
 }
 ```
+
+`PlaceableSlot = AvailableSlot | CategorySlot` — strategies are only ever asked to score slots a task could actually land in.
 
 #### Current Strategies
 
