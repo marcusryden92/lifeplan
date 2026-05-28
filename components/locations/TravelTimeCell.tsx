@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { RotateCcw } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import {

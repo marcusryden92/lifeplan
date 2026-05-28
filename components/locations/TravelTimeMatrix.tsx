@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Clock } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { TravelTimeCell } from "./TravelTimeCell";
 import type { Location, TravelTime } from "@/types/prisma";
 

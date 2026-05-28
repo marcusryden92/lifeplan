@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { FolderTree, Plus, CalendarClock } from "lucide-react";
 import { setCategories as setCategoriesInRedux } from "@/redux/slices/calendarSlice";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import {
   Card,
   CardContent,

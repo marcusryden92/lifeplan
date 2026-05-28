@@ -2,7 +2,7 @@
 
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { useSearchParams } from "next/navigation";
 
 import { signIn } from "next-auth/react";

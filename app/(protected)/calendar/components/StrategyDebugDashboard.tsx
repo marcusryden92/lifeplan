@@ -8,7 +8,7 @@ import {
   resetStrategyConfig,
 } from "@/redux/slices/schedulingSettingsSlice";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { Slider } from "@/components/ui/Slider";
 import { Label } from "@/components/ui/Label";
 import { Checkbox } from "@/components/ui/Checkbox";

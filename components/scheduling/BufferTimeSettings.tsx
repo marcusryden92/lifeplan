@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { Clock, Save } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import {

@@ -22,7 +22,7 @@ import { FormError } from "@/components/ui/FormError";
 import { FormSuccess } from "@/components/ui/FormSuccess";
 
 import { CardWrapper } from "./CardWrapper";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { login } from "@/actions/login";
 
 interface LoginResponse {

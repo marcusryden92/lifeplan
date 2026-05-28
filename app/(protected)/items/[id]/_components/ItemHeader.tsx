@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Clock, Trash2, Check, Edit2, X } from "lucide-react";
 import { CheckCircledIcon } from "@radix-ui/react-icons";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { Input } from "@/components/ui/Input";
 import { Card, CardHeader } from "@/components/ui/Card";
 import EventColorPicker from "@/components/events/EventColorPicker/EventColorPicker";

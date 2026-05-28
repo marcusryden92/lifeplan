@@ -4,7 +4,7 @@ import { useState, useLayoutEffect, useMemo, useCallback } from "react";
 import { Plus, LayoutList, LayoutGrid, FolderTree } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { ItemCard } from "./_components/ItemCard";
 import { ItemFilters, FilterState } from "./_components/ItemFilters";

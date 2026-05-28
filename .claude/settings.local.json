@@ -63,7 +63,18 @@
       "Bash(tasklist /FI \"IMAGENAME eq node.exe\")",
       "PowerShell(Get-Process node -ErrorAction SilentlyContinue)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" -Recurse -Depth 2)",
-      "Bash(Select-Object Name, FullName)"
+      "Bash(Select-Object Name, FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" -Directory)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\notes\\\\design-rehaul\\\\\" -Recurse -Force | Select-Object FullName | ConvertTo-Csv -NoTypeInformation | Select-Object -Skip 1)",
+      "Bash(pnpm add *)",
+      "Bash(curl -L -o \"c:/Users/Marcus/Desktop/Lifeplan/public/fonts/hubot-sans/Hubot-Sans.woff2\" \"https://github.com/github/hubot-sans/raw/main/fonts/woff2/Hubot-Sans.woff2\" -w \"HTTP %{http_code}, size %{size_download}\\\\n\" -s)",
+      "Bash(ls .next/)",
+      "Bash(rm -rf .next/)",
+      "Bash(tasklist)",
+      "Bash(xargs sed -i -E 's|from \\([\"\\\\x27]\\)@/components/ui/Button\\([\"\\\\x27]\\)|from \\\\1@/components/ui/Button.legacy\\\\2|g')",
+      "Bash(xargs sed -i 's|\"@/components/ui/Button\"|\"@/components/ui/Button.legacy\"|g')",
+      "Bash(xargs sed -i -e 's|@/lib/lumen|@/lib/theme|g' -e 's|LumenVars|ThemeVars|g')",
+      "Bash(xargs sed -i 's|@/components/lumen|@/components/ui|g')"
     ]
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { LoginButton } from "@/components/auth/LoginButton";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { useState } from "react";
 import styles from "./page.module.css";
 

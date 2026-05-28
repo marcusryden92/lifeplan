@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { MapPin, Plus, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import {
   Card,
   CardContent,

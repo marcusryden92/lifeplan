@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { DraggableContextProvider } from "@/components/draggable/DraggableContext";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import * as categoryActions from "@/actions/categories";
 import { getSubtasksById } from "@/utils/goalPageHandlers";
 import { totalSubtaskDuration } from "@/utils/taskArrayUtils";

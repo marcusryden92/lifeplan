@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { shiftDate } from "@/utils/calendarUtils";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { ChevronRightIcon, ChevronLeftIcon } from "lucide-react";
 
 import { getCalendarHeaderDateString } from "@/utils/calendarUtils";

@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/Dialog";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import type { Category } from "@/types/prisma";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 import {

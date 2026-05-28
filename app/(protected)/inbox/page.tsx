@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Inbox, Plus, Sparkles } from "lucide-react";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { Input } from "@/components/ui/Input";
 import {
   Card,

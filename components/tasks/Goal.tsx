@@ -12,7 +12,7 @@ import {
 import { CheckCircledIcon } from "@radix-ui/react-icons";
 
 import { Input } from "@/components/ui/Input";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { DateTimePicker } from "@/components/utilities/time-picker/DateTimePicker";
 
 import AddSubtask from "./task-item-subcomponents/AddSubtask";

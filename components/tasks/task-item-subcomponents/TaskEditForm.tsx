@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 
 // Components
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { Input } from "@/components/ui/Input";
 
 // Definitions

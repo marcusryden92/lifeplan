@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { MapPin, Search, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/Label";
 import {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MapPin, Pencil, Trash2, Check, X } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { Input } from "@/components/ui/Input";
 import {
   AlertDialog,

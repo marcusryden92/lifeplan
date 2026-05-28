@@ -1,5 +1,5 @@
 // Components
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 
 // Icons
 import { TrashIcon, PencilIcon } from "@heroicons/react/24/outline";

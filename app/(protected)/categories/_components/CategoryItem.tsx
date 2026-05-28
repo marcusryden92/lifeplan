@@ -9,7 +9,7 @@ import {
   Plus,
   Settings,
 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button.legacy";
 import { Input } from "@/components/ui/Input";
 import type { Category } from "@/types/prisma";
 
