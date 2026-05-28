@@ -61,7 +61,9 @@
       "Read(//c/Users/Marcus/Desktop/**)",
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('prisma', {}\\), indent=2\\)\\)\")",
       "Bash(tasklist /FI \"IMAGENAME eq node.exe\")",
-      "PowerShell(Get-Process node -ErrorAction SilentlyContinue)"
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" -Recurse -Depth 2)",
+      "Bash(Select-Object Name, FullName)"
     ]
   }
 }
