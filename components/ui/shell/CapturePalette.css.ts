@@ -1,0 +1,108 @@
+import { style, keyframes } from "@vanilla-extract/css";
+import { vars } from "@/lib/theme";
+
+const MOBILE = "screen and (max-width: 767px)";
+
+const fadeIn = keyframes({
+  from: { opacity: 0 },
+  to: { opacity: 1 },
+});
+
+const slideUp = keyframes({
+  from: { opacity: 0, transform: "translateY(8px) scale(0.98)" },
+  to: { opacity: 1, transform: "translateY(0) scale(1)" },
+});
+
+const sheetUp = keyframes({
+  from: { transform: "translateY(100%)" },
+  to: { transform: "translateY(0)" },
+});
+
+export const overlay = style({
+  position: "fixed",
+  inset: 0,
+  background: "rgba(10, 8, 20, 0.42)",
+  backdropFilter: "blur(8px)",
+  WebkitBackdropFilter: "blur(8px)",
+  zIndex: 50,
+  animationName: fadeIn,
+  animationDuration: "0.16s",
+  animationTimingFunction: "ease",
+});
+
+export const dialog = style({
+  position: "fixed",
+  zIndex: 51,
+  top: "20%",
+  left: "50%",
+  transform: "translateX(-50%)",
+  width: "min(560px, calc(100vw - 32px))",
+  background: vars.glass.bgDeep,
+  backdropFilter: "blur(28px) saturate(180%)",
+  WebkitBackdropFilter: "blur(28px) saturate(180%)",
+  border: `1px solid ${vars.glass.stroke}`,
+  borderRadius: 22,
+  boxShadow: vars.shadow.panel,
+  padding: "18px 20px 20px",
+  display: "flex",
+  flexDirection: "column",
+  gap: 12,
+  animationName: slideUp,
+  animationDuration: "0.18s",
+  animationTimingFunction: "ease",
+  "@media": {
+    [MOBILE]: {
+      top: "auto",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      transform: "none",
+      width: "100%",
+      borderRadius: "22px 22px 0 0",
+      animationName: sheetUp,
+      animationDuration: "0.20s",
+    },
+  },
+});
+
+export const header = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
+});
+
+export const input = style({
+  fontFamily: vars.font.ui,
+  fontSize: 16,
+  fontWeight: 500,
+  color: vars.ink,
+  width: "100%",
+  padding: "10px 0",
+  background: "transparent",
+  border: "none",
+  borderBottom: `1px solid ${vars.rule}`,
+  outline: "none",
+  selectors: {
+    "&::placeholder": { color: vars.muted },
+    "&:focus": { borderBottomColor: vars.ink },
+  },
+});
+
+export const hintsRow = style({
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  flexWrap: "wrap",
+});
+
+export const kbd = style({
+  fontFamily: vars.font.ui,
+  fontSize: 10.5,
+  fontWeight: 600,
+  color: vars.inkSoft,
+  background: vars.glass.bgSoft,
+  border: `1px solid ${vars.rule}`,
+  borderRadius: 6,
+  padding: "2px 6px",
+});

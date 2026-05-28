@@ -13,6 +13,17 @@ export { StatusTag } from "./StatusTag";
 export { ThemeProvider, useTheme } from "./ThemeProvider";
 export type { ThemeName } from "./ThemeProvider";
 export { useResolvedCategoryColor } from "./useResolvedCategoryColor";
+export {
+  AppShell,
+  Sidebar,
+  MobileTabs,
+  CapturePalette,
+  CaptureProvider,
+  useCapture,
+  NAV_ITEMS,
+  MOBILE_TABS,
+} from "./shell";
+export type { NavItem } from "./shell";
 
 export {
   vars,
