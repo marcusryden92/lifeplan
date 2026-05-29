@@ -1,9 +1,10 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/lib/theme";
-
-const TRANSITION = "0.2s ease";
-const THEME =
-  "background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, fill 0.2s ease, stroke 0.2s ease";
+import {
+  vars,
+  collapseTransition,
+  buttonTransition,
+  DURATIONS,
+} from "@/lib/theme";
 
 export const sidebar = style({
   flexShrink: 0,
@@ -18,7 +19,7 @@ export const sidebar = style({
   position: "relative",
   zIndex: 2,
   width: 208,
-  transition: `width ${TRANSITION}, ${THEME}`,
+  transition: collapseTransition,
   selectors: {
     '&[data-collapsed="true"]': {
       width: 60,
@@ -54,7 +55,7 @@ export const brandText = style({
   paddingLeft: 12,
   boxSizing: "border-box",
   overflow: "hidden",
-  transition: `max-width ${TRANSITION}, opacity ${TRANSITION}, ${THEME}`,
+  transition: collapseTransition,
   selectors: {
     '[data-collapsed="true"] &': {
       maxWidth: 0,
@@ -80,7 +81,7 @@ export const navItem = style({
   whiteSpace: "nowrap",
   textDecoration: "none",
   flexShrink: 0,
-  transition: `background ${TRANSITION}, color ${TRANSITION}, border-color ${TRANSITION}, box-shadow ${TRANSITION}`,
+  transition: buttonTransition,
   selectors: {
     "&:hover": {
       background: vars.glass.bgSoft,
@@ -116,7 +117,7 @@ export const navLabel = style({
   maxWidth: "100%",
   paddingLeft: 12,
   boxSizing: "border-box",
-  transition: `max-width ${TRANSITION}, opacity ${TRANSITION}, ${THEME}`,
+  transition: collapseTransition,
   selectors: {
     '[data-collapsed="true"] &': {
       maxWidth: 0,
@@ -158,7 +159,7 @@ export const footerText = style({
   maxWidth: "100%",
   paddingLeft: 12,
   boxSizing: "border-box",
-  transition: `max-width ${TRANSITION}, opacity ${TRANSITION}, ${THEME}`,
+  transition: collapseTransition,
   selectors: {
     '[data-collapsed="true"] &': {
       maxWidth: 0,
@@ -179,7 +180,7 @@ export const collapseChevronIcon = style({
   alignItems: "center",
   justifyContent: "center",
   lineHeight: 1,
-  transition: `transform ${TRANSITION}`,
+  transition: `transform ${DURATIONS.collapse}s ease`,
   selectors: {
     '[data-collapsed="true"] &': {
       transform: "rotate(180deg)",

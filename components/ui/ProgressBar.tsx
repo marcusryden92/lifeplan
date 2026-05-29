@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from "react";
-import { progressTrack, categoryGradient } from "@/lib/theme";
+import { progressTrack, categoryGradient, progressTransition } from "@/lib/theme";
 
 type Props = HTMLAttributes<HTMLDivElement> & {
   value: number;
@@ -42,7 +42,7 @@ export const ProgressBar = forwardRef<HTMLDivElement, Props>(
             height: "100%",
             background: categoryGradient(color),
             borderRadius: 999,
-            transition: "width .25s ease",
+            transition: progressTransition,
           }}
         />
         {ticks?.map((t) => {

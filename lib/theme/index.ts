@@ -1,4 +1,11 @@
-export { themeTransition, TRANSITION_SPEED } from "./global.css";
+export {
+  DURATIONS,
+  themeTransition,
+  buttonTransition,
+  collapseTransition,
+  progressTransition,
+  TRANSITION_SPEED,
+} from "./transitions";
 
 export { vars } from "./tokens.css";
 export type { ThemeVars } from "./tokens.css";

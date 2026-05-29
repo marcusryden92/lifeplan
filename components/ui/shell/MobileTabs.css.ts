@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/lib/theme";
+import { vars, buttonTransition } from "@/lib/theme";
 
 export const tabBar = style({
   position: "fixed",
@@ -79,8 +79,7 @@ export const captureButton = style({
   placeItems: "center",
   marginTop: -28,
   boxShadow: `0 8px 24px ${vars.status.error}55, inset 0 1px 0 rgba(255,255,255,0.18)`,
-  transition:
-    "transform .12s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease",
+  transition: buttonTransition,
   selectors: {
     "&:active": { transform: "scale(0.96)" },
   },

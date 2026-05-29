@@ -1,6 +1,6 @@
 import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "./tokens.css";
-import { themeTransition } from "./global.css";
+import { themeTransition, buttonTransition } from "./transitions";
 
 export const glass = recipe({
   base: {
@@ -49,8 +49,7 @@ export const pillBtn = recipe({
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-    transition:
-      "background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .12s ease, fill .15s ease, stroke .15s ease",
+    transition: buttonTransition,
     selectors: {
       "&:active": { transform: "scale(0.98)" },
       "&:disabled": { opacity: 0.5, cursor: "not-allowed" },

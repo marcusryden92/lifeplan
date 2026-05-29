@@ -1,5 +1,5 @@
 import { style, keyframes } from "@vanilla-extract/css";
-import { vars } from "@/lib/theme";
+import { vars, DURATIONS } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -26,7 +26,7 @@ export const overlay = style({
   WebkitBackdropFilter: "blur(8px)",
   zIndex: 50,
   animationName: fadeIn,
-  animationDuration: "0.16s",
+  animationDuration: `${DURATIONS.modal}s`,
   animationTimingFunction: "ease",
 });
 
@@ -48,7 +48,7 @@ export const dialog = style({
   flexDirection: "column",
   gap: 12,
   animationName: slideUp,
-  animationDuration: "0.18s",
+  animationDuration: `${DURATIONS.modal}s`,
   animationTimingFunction: "ease",
   "@media": {
     [MOBILE]: {
@@ -60,7 +60,7 @@ export const dialog = style({
       width: "100%",
       borderRadius: "22px 22px 0 0",
       animationName: sheetUp,
-      animationDuration: "0.20s",
+      animationDuration: `${DURATIONS.modal}s`,
     },
   },
 });
