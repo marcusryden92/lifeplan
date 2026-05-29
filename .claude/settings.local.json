@@ -74,7 +74,9 @@
       "Bash(xargs sed -i -E 's|from \\([\"\\\\x27]\\)@/components/ui/Button\\([\"\\\\x27]\\)|from \\\\1@/components/ui/Button.legacy\\\\2|g')",
       "Bash(xargs sed -i 's|\"@/components/ui/Button\"|\"@/components/ui/Button.legacy\"|g')",
       "Bash(xargs sed -i -e 's|@/lib/lumen|@/lib/theme|g' -e 's|LumenVars|ThemeVars|g')",
-      "Bash(xargs sed -i 's|@/components/lumen|@/components/ui|g')"
+      "Bash(xargs sed -i 's|@/components/lumen|@/components/ui|g')",
+      "PowerShell(pnpm exec eslint 'app/\\(circadium\\)/dashboard/page.css.ts' 2>&1)",
+      "PowerShell($out = pnpm exec eslint './app/\\(circadium\\)/dashboard/page.tsx' './app/\\(circadium\\)/dashboard/page.css.ts' './app/\\(circadium\\)/_mock/dashboard.ts' './app/\\(circadium\\)/layout.tsx' 2>&1; \"EXIT: $LASTEXITCODE\"; $out)"
     ]
   }
 }

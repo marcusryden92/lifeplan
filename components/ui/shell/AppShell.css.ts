@@ -5,11 +5,13 @@ const MOBILE = "screen and (max-width: 767px)";
 const DESKTOP = "screen and (min-width: 768px)";
 
 export const bezelFrame = style({
-  width: "100%",
-  minHeight: "100vh",
+  width: "100vw",
+  height: "100vh",
+  boxSizing: "border-box",
   background: vars.bezel,
   padding: 10,
   display: "flex",
+  overflow: "hidden",
   transition: themeTransition,
   "@media": {
     [MOBILE]: { padding: 0 },
@@ -22,17 +24,17 @@ export const canvas = style({
   fontFamily: vars.font.ui,
   borderRadius: 30,
   flex: 1,
+  minWidth: 0,
+  minHeight: 0,
   position: "relative",
   overflow: "hidden",
   isolation: "isolate",
   display: "flex",
   flexDirection: "column",
-  minHeight: "calc(100vh - 20px)",
   transition: themeTransition,
   "@media": {
     [MOBILE]: {
       borderRadius: 0,
-      minHeight: "100vh",
     },
   },
 });
@@ -50,7 +52,8 @@ export const mainColumn = style({
   display: "flex",
   flexDirection: "column",
   minWidth: 0,
-  overflow: "auto",
+  minHeight: 0,
+  overflow: "hidden",
   "@media": {
     [MOBILE]: {
       paddingBottom: 72,
