@@ -111,22 +111,6 @@ export function Sidebar({ userName = "Marcus", userInitial = "M" }: Props) {
       <button
         type="button"
         className={navItem}
-        onClick={toggle}
-        title={dark ? "Light mode" : "Dark mode"}
-      >
-        <span className={navGlyph}>
-          {dark ? (
-            <Sun size={20} strokeWidth={2} aria-hidden />
-          ) : (
-            <Moon size={20} strokeWidth={2} aria-hidden />
-          )}
-        </span>
-        <span className={navLabel}>{dark ? "Light mode" : "Dark mode"}</span>
-      </button>
-
-      <button
-        type="button"
-        className={navItem}
         onClick={() => setCollapsed((c) => !c)}
         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -138,6 +122,22 @@ export function Sidebar({ userName = "Marcus", userInitial = "M" }: Props) {
           </span>
         </span>
         <span className={navLabel}>Collapse</span>
+      </button>
+
+      <button
+        type="button"
+        className={navItem}
+        onClick={toggle}
+        title={dark ? "Light mode" : "Dark mode"}
+      >
+        <span className={navGlyph}>
+          {dark ? (
+            <Sun size={20} strokeWidth={2} aria-hidden />
+          ) : (
+            <Moon size={20} strokeWidth={2} aria-hidden />
+          )}
+        </span>
+        <span className={navLabel}>{dark ? "Light mode" : "Dark mode"}</span>
       </button>
 
       <div className={footerRow}>

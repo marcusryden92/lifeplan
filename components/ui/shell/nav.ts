@@ -1,5 +1,5 @@
 import {
-  Sunrise,
+  Home,
   Calendar,
   Plus,
   Library,
@@ -18,7 +18,7 @@ export type NavItem = {
 };
 
 export const NAV_ITEMS: NavItem[] = [
-  { key: "today", label: "Today", icon: Sunrise, href: "/today", kind: "route" },
+  { key: "dashboard", label: "Dashboard", icon: Home, href: "/dashboard", kind: "route" },
   { key: "calendar", label: "Calendar", icon: Calendar, href: "/calendar", kind: "route" },
   { key: "capture", label: "Capture", icon: Plus, href: null, kind: "capture" },
   { key: "library", label: "Library", icon: Library, href: "/library", kind: "route" },
@@ -34,7 +34,7 @@ export type MobileTab = {
 };
 
 export const MOBILE_TABS: MobileTab[] = [
-  { key: "today", label: "Today", icon: Sunrise, href: "/today" },
+  { key: "dashboard", label: "Dashboard", icon: Home, href: "/dashboard" },
   { key: "library", label: "Library", icon: Library, href: "/library" },
   { key: "capture", label: "Capture", icon: Plus, href: null },
   { key: "calendar", label: "Calendar", icon: Calendar, href: "/calendar" },
