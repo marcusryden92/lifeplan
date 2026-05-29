@@ -59,14 +59,14 @@ export default function DashboardPage() {
 
   return (
     <div className={page}>
-      {/* <Masthead>
+      <Masthead>
         <Caption>Vol. 2026</Caption>
         <Caption>Iss. 148</Caption>
         <Caption>{TODAY.date}</Caption>
         <span style={{ flex: 1 }} />
         <Caption>⌘K capture</Caption>
         <Caption style={{ color: vars.ink }}>Marcus P.</Caption>
-      </Masthead> */}
+      </Masthead>
 
       <div className={headerRow}>
         <div>
