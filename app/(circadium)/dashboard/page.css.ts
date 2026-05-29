@@ -8,6 +8,12 @@ export const page = style({
   flexDirection: "column",
   flex: 1,
   minHeight: 0,
+  "@media": {
+    [MOBILE]: {
+      flex: "0 0 auto",
+      minHeight: "auto",
+    },
+  },
 });
 
 export const headerRow = style({
@@ -84,20 +90,44 @@ export const gridWrap = style({
       gridTemplateColumns: "1fr",
       padding: "0 16px 24px",
       gap: 14,
+      flex: "0 0 auto",
+      minHeight: "auto",
     },
   },
 });
 
 export const leftCard = style({
+  background: vars.glass.bg,
+  border: `1px solid ${vars.glass.stroke}`,
+  boxShadow: vars.shadow.panel,
+  borderRadius: 22,
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
   overflow: "hidden",
+  transition: themeTransition,
+  "@media": {
+    [MOBILE]: {
+      minHeight: "auto",
+      overflow: "visible",
+    },
+  },
 });
 
 export const leftCardHeader = style({
+  position: "sticky",
+  top: 0,
+  zIndex: 1,
   padding: "16px 20px",
-  borderBottom: `1px solid ${vars.rule}`,
+  borderTopLeftRadius: 22,
+  borderTopRightRadius: 22,
+  borderBottom: `1px solid ${vars.glass.stroke}`,
+  background: vars.glass.bgDeep,
+  backdropFilter: "blur(28px) saturate(180%)",
+  WebkitBackdropFilter: "blur(28px) saturate(180%)",
+  boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
+  transform: "translateZ(0)",
+  willChange: "backdrop-filter",
   display: "flex",
   alignItems: "baseline",
   justifyContent: "space-between",
@@ -118,8 +148,21 @@ export const leftCardTitle = style({
 export const agendaList = style({
   flex: 1,
   overflow: "auto",
-  padding: "8px 12px 12px",
-  scrollbarWidth: "thin",
+  isolation: "isolate",
+  scrollbarWidth: "none",
+  selectors: {
+    "&::-webkit-scrollbar": { display: "none" },
+  },
+  "@media": {
+    [MOBILE]: {
+      flex: "0 0 auto",
+      overflow: "visible",
+    },
+  },
+});
+
+export const agendaRows = style({
+  padding: "12px 12px 12px",
 });
 
 export const agendaRow = style({
@@ -231,6 +274,10 @@ export const rightCol = style({
   flexDirection: "column",
   gap: 14,
   minHeight: 0,
+  scrollbarWidth: "none",
+  selectors: {
+    "&::-webkit-scrollbar": { display: "none" },
+  },
 });
 
 export const goalsCard = style({
@@ -239,6 +286,12 @@ export const goalsCard = style({
   minHeight: 0,
   display: "flex",
   flexDirection: "column",
+  "@media": {
+    [MOBILE]: {
+      flex: "0 0 auto",
+      minHeight: "auto",
+    },
+  },
 });
 
 export const goalsHeader = style({

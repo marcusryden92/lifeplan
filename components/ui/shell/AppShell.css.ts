@@ -56,7 +56,9 @@ export const mainColumn = style({
   overflow: "hidden",
   "@media": {
     [MOBILE]: {
-      paddingBottom: 72,
+      paddingBottom: 96,
+      overflow: "auto",
+      WebkitOverflowScrolling: "touch",
     },
   },
 });

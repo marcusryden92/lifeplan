@@ -26,6 +26,7 @@ import {
   leftCardHeader,
   leftCardTitle,
   agendaList,
+  agendaRows,
   agendaRow,
   agendaRowNow,
   agendaTimeCol,
@@ -58,14 +59,14 @@ export default function DashboardPage() {
 
   return (
     <div className={page}>
-      <Masthead>
+      {/* <Masthead>
         <Caption>Vol. 2026</Caption>
         <Caption>Iss. 148</Caption>
         <Caption>{TODAY.date}</Caption>
         <span style={{ flex: 1 }} />
         <Caption>⌘K capture</Caption>
         <Caption style={{ color: vars.ink }}>Marcus P.</Caption>
-      </Masthead>
+      </Masthead> */}
 
       <div className={headerRow}>
         <div>
@@ -88,74 +89,76 @@ export default function DashboardPage() {
       </div>
 
       <div className={gridWrap}>
-        <Glass radius="lg" className={leftCard}>
-          <div className={leftCardHeader}>
-            <div>
-              <h2 className={leftCardTitle}>What to do today</h2>
-              <Caption style={{ marginTop: 4, display: "inline-block" }}>
-                scheduler order · 6 items · 4h 40m
-              </Caption>
-            </div>
-            <Link href="/calendar">
-              <Button variant="glass" size="sm">
-                Full week →
-              </Button>
-            </Link>
-          </div>
-
+        <div className={leftCard}>
           <div className={agendaList}>
-            {TODAY.agenda.map((e, i) => {
-              return (
-                <div
-                  key={i}
-                  className={`${agendaRow} ${e.now ? agendaRowNow : ""}`}
-                >
-                  <div className={agendaTimeCol}>
-                    <div
-                      className={`${agendaTime} ${e.now ? agendaTimeNow : ""}`}
-                    >
-                      {e.now ? "NOW" : e.time}
-                    </div>
-                    <div className={agendaDur}>{e.dur}</div>
-                  </div>
+            <div className={leftCardHeader}>
+              <div>
+                <h2 className={leftCardTitle}>What to do today</h2>
+                <Caption style={{ marginTop: 4, display: "inline-block" }}>
+                  scheduler order · 6 items · 4h 40m
+                </Caption>
+              </div>
+              <Link href="/calendar">
+                <Button variant="glass" size="sm">
+                  Full week →
+                </Button>
+              </Link>
+            </div>
 
-                  <div>
-                    <div
-                      className={`${agendaTitle} ${
-                        e.travel ? agendaTitleTravel : ""
-                      }`}
-                    >
-                      {e.title}
-                    </div>
-                    {!e.travel && (
-                      <div className={agendaMeta}>
-                        {e.area && e.col && (
-                          <CategoryBadge color={areaColor[e.col]}>
-                            {e.area}
-                          </CategoryBadge>
-                        )}
-                        {e.where && <Caption>{e.where}</Caption>}
-                        {e.kind === "plan" && (
-                          <Caption className={agendaMetaDimmer}>
-                            · fixed
-                          </Caption>
-                        )}
-                        {e.warn && <span className={agendaWarn}>LATE</span>}
-                        {e.overdue && (
-                          <span className={agendaOverdue}>OVERDUE</span>
-                        )}
+            <div className={agendaRows}>
+              {TODAY.agenda.map((e, i) => {
+                return (
+                  <div
+                    key={i}
+                    className={`${agendaRow} ${e.now ? agendaRowNow : ""}`}
+                  >
+                    <div className={agendaTimeCol}>
+                      <div
+                        className={`${agendaTime} ${e.now ? agendaTimeNow : ""}`}
+                      >
+                        {e.now ? "NOW" : e.time}
                       </div>
-                    )}
-                  </div>
+                      <div className={agendaDur}>{e.dur}</div>
+                    </div>
 
-                  <span className={agendaChevron} aria-hidden>
-                    <ChevronRight size={16} strokeWidth={2} />
-                  </span>
-                </div>
-              );
-            })}
+                    <div>
+                      <div
+                        className={`${agendaTitle} ${
+                          e.travel ? agendaTitleTravel : ""
+                        }`}
+                      >
+                        {e.title}
+                      </div>
+                      {!e.travel && (
+                        <div className={agendaMeta}>
+                          {e.area && e.col && (
+                            <CategoryBadge color={areaColor[e.col]}>
+                              {e.area}
+                            </CategoryBadge>
+                          )}
+                          {e.where && <Caption>{e.where}</Caption>}
+                          {e.kind === "plan" && (
+                            <Caption className={agendaMetaDimmer}>
+                              · fixed
+                            </Caption>
+                          )}
+                          {e.warn && <span className={agendaWarn}>LATE</span>}
+                          {e.overdue && (
+                            <span className={agendaOverdue}>OVERDUE</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <span className={agendaChevron} aria-hidden>
+                      <ChevronRight size={16} strokeWidth={2} />
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </Glass>
+        </div>
 
         <div className={rightCol}>
           <Glass radius="lg" className={goalsCard}>
