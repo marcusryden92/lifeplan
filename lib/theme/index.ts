@@ -1,3 +1,5 @@
+export { themeTransition, TRANSITION_SPEED } from "./global.css";
+
 export { vars } from "./tokens.css";
 export type { ThemeVars } from "./tokens.css";
 export { lumenLight, lumenDark } from "./themes.css";

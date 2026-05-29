@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/lib/theme";
+import { vars, themeTransition } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 const DESKTOP = "screen and (min-width: 768px)";
@@ -10,6 +10,7 @@ export const bezelFrame = style({
   background: vars.bezel,
   padding: 10,
   display: "flex",
+  transition: themeTransition,
   "@media": {
     [MOBILE]: { padding: 0 },
   },
@@ -27,6 +28,7 @@ export const canvas = style({
   display: "flex",
   flexDirection: "column",
   minHeight: "calc(100vh - 20px)",
+  transition: themeTransition,
   "@media": {
     [MOBILE]: {
       borderRadius: 0,

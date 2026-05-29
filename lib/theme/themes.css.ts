@@ -3,7 +3,7 @@ import { vars } from "./tokens.css";
 
 export const lumenLight = createTheme(vars, {
   paper: "#fdfaf8",
-  bezel: "#e4dad0",
+  bezel: "#dbd5cf",
   ink: "#16142a",
   inkSoft: "#3c3a52",
   muted: "#7a7890",

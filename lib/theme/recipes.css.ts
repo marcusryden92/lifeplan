@@ -1,5 +1,6 @@
 import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "./tokens.css";
+import { themeTransition } from "./global.css";
 
 export const glass = recipe({
   base: {
@@ -8,6 +9,7 @@ export const glass = recipe({
     border: `1px solid ${vars.glass.stroke}`,
     boxShadow: vars.shadow.panel,
     background: vars.glass.bg,
+    transition: themeTransition,
   },
   variants: {
     fill: {
@@ -47,7 +49,8 @@ export const pillBtn = recipe({
     display: "inline-flex",
     alignItems: "center",
     gap: 8,
-    transition: "background .15s ease, color .15s ease, transform .12s ease",
+    transition:
+      "background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .12s ease, fill .15s ease, stroke .15s ease",
     selectors: {
       "&:active": { transform: "scale(0.98)" },
       "&:disabled": { opacity: 0.5, cursor: "not-allowed" },
@@ -106,6 +109,7 @@ export const badge = recipe({
     alignItems: "center",
     gap: 6,
     whiteSpace: "nowrap",
+    transition: themeTransition,
   },
   variants: {
     tone: {

@@ -3,26 +3,25 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ChevronLeft, Moon, Sun } from "lucide-react";
 import { useTheme } from "../ThemeProvider";
 import { useCapture } from "./CaptureContext";
 import { NAV_ITEMS } from "./nav";
 import {
   sidebar,
-  sidebarWidth,
   brand,
-  brandCollapsed,
+  brandLogo,
+  brandText,
   navItem,
   navItemActive,
-  navItemCollapsed,
   navGlyph,
   navLabel,
   spacer,
   footerRow,
-  footerRowCollapsed,
   avatar,
   footerText,
   footerName,
-  collapseChevron,
+  collapseChevronIcon,
 } from "./Sidebar.css";
 import { caption } from "@/lib/theme";
 
@@ -57,23 +56,13 @@ export function Sidebar({ userName = "Marcus", userInitial = "M" }: Props) {
 
   return (
     <aside
-      className={`${sidebar} ${collapsed ? sidebarWidth.collapsed : sidebarWidth.expanded}`}
+      className={sidebar}
+      data-collapsed={collapsed}
       aria-label="Main navigation"
     >
-      <button
-        type="button"
-        className={collapseChevron}
-        onClick={() => setCollapsed((c) => !c)}
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        {collapsed ? "›" : "‹"}
-      </button>
-
-      <div
-        className={`${brand} ${collapsed ? brandCollapsed : ""}`}
-        title="Circadium"
-      >
-        {collapsed ? "c" : "circadium"}
+      <div className={brand} title="Circadium">
+        <span className={brandLogo} aria-hidden />
+        <span className={brandText}>Circadium</span>
       </div>
 
       {NAV_ITEMS.map((item) => {
@@ -81,7 +70,9 @@ export function Sidebar({ userName = "Marcus", userInitial = "M" }: Props) {
           item.kind === "route" && item.href
             ? pathname === item.href || pathname.startsWith(`${item.href}/`)
             : false;
-        const className = `${navItem} ${isActive ? navItemActive : ""} ${collapsed ? navItemCollapsed : ""}`;
+        const className = `${navItem} ${isActive ? navItemActive : ""}`;
+
+        const Icon = item.icon;
 
         if (item.kind === "capture") {
           return (
@@ -92,8 +83,10 @@ export function Sidebar({ userName = "Marcus", userInitial = "M" }: Props) {
               onClick={() => setCaptureOpen(true)}
               title="Capture (⌘K)"
             >
-              <span className={navGlyph}>{item.glyph}</span>
-              {!collapsed && <span className={navLabel}>{item.label}</span>}
+              <span className={navGlyph}>
+                <Icon size={20} strokeWidth={2} aria-hidden />
+              </span>
+              <span className={navLabel}>{item.label}</span>
             </button>
           );
         }
@@ -105,8 +98,10 @@ export function Sidebar({ userName = "Marcus", userInitial = "M" }: Props) {
             className={className}
             title={item.label}
           >
-            <span className={navGlyph}>{item.glyph}</span>
-            {!collapsed && <span className={navLabel}>{item.label}</span>}
+            <span className={navGlyph}>
+              <Icon size={20} strokeWidth={2} aria-hidden />
+            </span>
+            <span className={navLabel}>{item.label}</span>
           </Link>
         );
       })}
@@ -115,28 +110,46 @@ export function Sidebar({ userName = "Marcus", userInitial = "M" }: Props) {
 
       <button
         type="button"
-        className={`${navItem} ${collapsed ? navItemCollapsed : ""}`}
+        className={navItem}
         onClick={toggle}
         title={dark ? "Light mode" : "Dark mode"}
       >
-        <span className={navGlyph}>{dark ? "☀" : "☾"}</span>
-        {!collapsed && (
-          <span className={navLabel}>{dark ? "Light mode" : "Dark mode"}</span>
-        )}
+        <span className={navGlyph}>
+          {dark ? (
+            <Sun size={20} strokeWidth={2} aria-hidden />
+          ) : (
+            <Moon size={20} strokeWidth={2} aria-hidden />
+          )}
+        </span>
+        <span className={navLabel}>{dark ? "Light mode" : "Dark mode"}</span>
       </button>
 
-      <div className={`${footerRow} ${collapsed ? footerRowCollapsed : ""}`}>
+      <button
+        type="button"
+        className={navItem}
+        onClick={() => setCollapsed((c) => !c)}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-expanded={!collapsed}
+      >
+        <span className={navGlyph}>
+          <span className={collapseChevronIcon} aria-hidden>
+            <ChevronLeft size={20} strokeWidth={2} />
+          </span>
+        </span>
+        <span className={navLabel}>Collapse</span>
+      </button>
+
+      <div className={footerRow}>
         <div className={avatar} aria-hidden>
           {userInitial}
         </div>
-        {!collapsed && (
-          <div className={footerText}>
-            <div className={footerName}>{userName}</div>
-            <span className={caption} style={{ fontSize: 9.5 }}>
-              Beta member
-            </span>
-          </div>
-        )}
+        <div className={footerText}>
+          <div className={footerName}>{userName}</div>
+          <span className={caption} style={{ fontSize: 9.5 }}>
+            Beta member
+          </span>
+        </div>
       </div>
     </aside>
   );

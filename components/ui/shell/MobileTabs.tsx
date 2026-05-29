@@ -21,6 +21,7 @@ export function MobileTabs() {
   return (
     <nav className={tabBar} aria-label="Primary navigation">
       {MOBILE_TABS.map((item) => {
+        const Icon = item.icon;
         if (item.key === "capture") {
           return (
             <div key={item.key} className={captureTabWrapper}>
@@ -30,7 +31,7 @@ export function MobileTabs() {
                 onClick={() => setCaptureOpen(true)}
                 aria-label="Capture"
               >
-                {item.glyph}
+                <Icon size={26} strokeWidth={2.5} aria-hidden />
               </button>
             </div>
           );
@@ -44,7 +45,9 @@ export function MobileTabs() {
             className={`${tab} ${isActive ? tabActive : ""}`}
             aria-current={isActive ? "page" : undefined}
           >
-            <span className={tabGlyph}>{item.glyph}</span>
+            <span className={tabGlyph}>
+              <Icon size={20} strokeWidth={2} aria-hidden />
+            </span>
             <span>{item.label}</span>
             {isActive && <span aria-hidden className={tabUnderline} />}
           </Link>

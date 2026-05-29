@@ -1,5 +1,9 @@
-import { style, styleVariants } from "@vanilla-extract/css";
+import { style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme";
+
+const TRANSITION = "0.2s ease";
+const THEME =
+  "background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, fill 0.2s ease, stroke 0.2s ease";
 
 export const sidebar = style({
   flexShrink: 0,
@@ -7,45 +11,63 @@ export const sidebar = style({
   background: vars.glass.bg,
   backdropFilter: "blur(28px) saturate(180%)",
   WebkitBackdropFilter: "blur(28px) saturate(180%)",
-  padding: "20px 14px",
+  padding: "10px",
   display: "flex",
   flexDirection: "column",
   gap: 4,
   position: "relative",
   zIndex: 2,
-  transition: "width .18s ease",
-});
-
-export const sidebarWidth = styleVariants({
-  expanded: { width: 208 },
-  collapsed: { width: 60 },
+  width: 208,
+  transition: `width ${TRANSITION}, ${THEME}`,
+  selectors: {
+    '&[data-collapsed="true"]': {
+      width: 60,
+    },
+  },
 });
 
 export const brand = style({
-  padding: "4px 10px 18px",
+  padding: "4px 5px 18px",
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+});
+
+export const brandLogo = style({
+  width: 30,
+  height: 30,
+  borderRadius: 999,
+  background: vars.ink,
+  flexShrink: 0,
+});
+
+export const brandText = style({
   fontFamily: vars.font.display,
   fontSize: 19,
   fontWeight: 500,
   letterSpacing: "-0.03em",
   color: vars.ink,
-  whiteSpace: "nowrap",
+  flex: 1,
+  minWidth: 0,
+  maxWidth: "100%",
+  paddingLeft: 12,
+  boxSizing: "border-box",
   overflow: "hidden",
-});
-
-export const brandCollapsed = style({
-  padding: "4px 0 18px",
-  justifyContent: "center",
+  transition: `max-width ${TRANSITION}, opacity ${TRANSITION}, ${THEME}`,
+  selectors: {
+    '[data-collapsed="true"] &': {
+      maxWidth: 0,
+      opacity: 0,
+    },
+  },
 });
 
 export const navItem = style({
   height: 38,
-  padding: "0 12px",
+  padding: "0 4px",
   display: "flex",
   alignItems: "center",
-  gap: 12,
   borderRadius: 999,
   textAlign: "left",
   background: "transparent",
@@ -57,20 +79,14 @@ export const navItem = style({
   cursor: "pointer",
   whiteSpace: "nowrap",
   textDecoration: "none",
-  transition: "background .15s ease, color .15s ease",
   flexShrink: 0,
+  transition: `background ${TRANSITION}, color ${TRANSITION}, border-color ${TRANSITION}, box-shadow ${TRANSITION}`,
   selectors: {
     "&:hover": {
       background: vars.glass.bgSoft,
       color: vars.ink,
     },
   },
-});
-
-export const navItemCollapsed = style({
-  padding: 0,
-  justifyContent: "center",
-  gap: 0,
 });
 
 export const navItemActive = style({
@@ -82,31 +98,41 @@ export const navItemActive = style({
 });
 
 export const navGlyph = style({
-  width: 14,
-  textAlign: "center",
-  fontSize: 13,
+  width: 30,
+  height: 30,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 20,
+  lineHeight: 1,
   flexShrink: 0,
 });
 
 export const navLabel = style({
   overflow: "hidden",
   textOverflow: "ellipsis",
+  flex: 1,
+  minWidth: 0,
+  maxWidth: "100%",
+  paddingLeft: 12,
+  boxSizing: "border-box",
+  transition: `max-width ${TRANSITION}, opacity ${TRANSITION}, ${THEME}`,
+  selectors: {
+    '[data-collapsed="true"] &': {
+      maxWidth: 0,
+      opacity: 0,
+    },
+  },
 });
 
 export const spacer = style({ flex: 1 });
 
 export const footerRow = style({
-  padding: "12px 12px 4px",
+  padding: "12px 5px 4px",
   borderTop: `1px solid ${vars.rule}`,
   display: "flex",
   alignItems: "center",
-  gap: 10,
   marginTop: 8,
-});
-
-export const footerRowCollapsed = style({
-  padding: "12px 0 4px",
-  justifyContent: "center",
 });
 
 export const avatar = style({
@@ -127,6 +153,18 @@ export const footerText = style({
   lineHeight: 1.1,
   overflow: "hidden",
   whiteSpace: "nowrap",
+  flex: 1,
+  minWidth: 0,
+  maxWidth: "100%",
+  paddingLeft: 12,
+  boxSizing: "border-box",
+  transition: `max-width ${TRANSITION}, opacity ${TRANSITION}, ${THEME}`,
+  selectors: {
+    '[data-collapsed="true"] &': {
+      maxWidth: 0,
+      opacity: 0,
+    },
+  },
 });
 
 export const footerName = style({
@@ -136,23 +174,15 @@ export const footerName = style({
   fontFamily: vars.font.ui,
 });
 
-export const collapseChevron = style({
-  position: "absolute",
-  right: -10,
-  top: 28,
-  width: 20,
-  height: 20,
-  borderRadius: 999,
-  background: vars.glass.bgDeep,
-  border: `1px solid ${vars.glass.stroke}`,
-  color: vars.inkSoft,
-  display: "grid",
-  placeItems: "center",
-  fontSize: 11,
-  cursor: "pointer",
-  zIndex: 3,
-  boxShadow: vars.shadow.panelSm,
+export const collapseChevronIcon = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  lineHeight: 1,
+  transition: `transform ${TRANSITION}`,
   selectors: {
-    "&:hover": { color: vars.ink },
+    '[data-collapsed="true"] &': {
+      transform: "rotate(180deg)",
+    },
   },
 });
