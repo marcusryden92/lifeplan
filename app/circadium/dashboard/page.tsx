@@ -65,12 +65,12 @@ export default function DashboardPage() {
         <Caption>{TODAY.date}</Caption>
         <span style={{ flex: 1 }} />
         <Caption>⌘K capture</Caption>
-        <Caption style={{ color: vars.ink }}>Marcus P.</Caption>
+        <Caption style={{ color: vars.ink }}>Marcus R</Caption>
       </Masthead>
 
       <div className={headerRow}>
         <div>
-          <h1 className={greeting}>{TODAY.greeting}.</h1>
+          <h1 className={greeting}>{TODAY.greeting}</h1>
           <div className={summaryLine}>
             <span className={summaryStrong}>6</span> things on today ·{" "}
             <span className={summaryStrong}>4h 40m</span> planned ·{" "}
@@ -90,21 +90,20 @@ export default function DashboardPage() {
 
       <div className={gridWrap}>
         <div className={leftCard}>
-          <div className={agendaList}>
-            <div className={leftCardHeader}>
-              <div>
-                <h2 className={leftCardTitle}>What to do today</h2>
-                <Caption style={{ marginTop: 4, display: "inline-block" }}>
-                  scheduler order · 6 items · 4h 40m
-                </Caption>
-              </div>
-              <Link href="/calendar">
-                <Button variant="glass" size="sm">
-                  Full week →
-                </Button>
-              </Link>
+          <div className={leftCardHeader}>
+            <div>
+              <h2 className={leftCardTitle}>What to do today</h2>
+              <Caption style={{ marginTop: 4, display: "inline-block" }}>
+                scheduler order · 6 items · 4h 40m
+              </Caption>
             </div>
-
+            <Link href="/calendar">
+              <Button variant="glass" size="sm">
+                Full week →
+              </Button>
+            </Link>
+          </div>
+          <div className={agendaList}>
             <div className={agendaRows}>
               {TODAY.agenda.map((e, i) => {
                 return (

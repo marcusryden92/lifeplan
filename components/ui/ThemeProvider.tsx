@@ -62,6 +62,16 @@ export function ThemeProvider({
     }
   }, [dark, hydrated]);
 
+  useEffect(() => {
+    const body = document.body;
+    const next = dark ? lumenDark : lumenLight;
+    body.classList.remove(lumenLight, lumenDark);
+    body.classList.add(next);
+    return () => {
+      body.classList.remove(next);
+    };
+  }, [dark]);
+
   const toggle = useCallback(() => setDark((d) => !d), []);
   const setTheme = useCallback(
     (t: ThemeName) => setDark(t === "dark"),

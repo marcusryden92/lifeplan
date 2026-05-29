@@ -1,12 +1,6 @@
 // TemplateEventPopover.tsx
-import { useRef, useEffect, useState, useMemo } from "react";
-import {
-  XMarkIcon,
-  PencilIcon,
-  TrashIcon,
-  DocumentDuplicateIcon,
-  ClockIcon,
-} from "@heroicons/react/24/outline";
+import React, { useRef, useEffect, useState, useMemo } from "react";
+import { X, Pencil, Trash2, Copy, Clock } from "lucide-react";
 import { createPortal } from "react-dom";
 import { EventImpl } from "@fullcalendar/core/internal";
 import TemplateEventColorPicker from "./EventColorPicker/TemplateEventColorPicker";
@@ -14,6 +8,7 @@ import { formatTime } from "@/utils/calendarUtils";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { LocationSelector } from "@/components/locations/LocationSelector";
 import { assignLocationToTemplate } from "@/actions/locations";
+import { vars } from "@/lib/theme";
 
 interface TemplateEventPopoverProps {
   event: EventImpl;
@@ -277,120 +272,218 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
     }
   };
 
-  // Use portal to render the popover at the root level of the DOM
   return createPortal(
     <div
       ref={popoverRef}
-      className="fixed bg-white bg-opacity-90 backdrop-blur-md shadow-lg rounded-md z-50 overflow-hidden"
-      style={{
-        top: `${position.top}px`,
-        left: `${position.left}px`,
-        width: `${POPOVER_WIDTH}px`,
-        border: "1px solid #EAEAEA",
-        maxWidth: "calc(100vw - 20px)",
-        maxHeight: "calc(100vh - 20px)",
-        height: "300px",
-        overflowY: "auto",
-        visibility: isPositioned ? "visible" : "hidden",
-        cursor: isDragging ? "grabbing" : "auto",
-        boxShadow:
-          "0 2px 6px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04)",
-      }}
-      onMouseDown={handleMouseDown}
-    >
-      {/* Header - Notion-style clean header */}
-      <div
-        className="flex justify-between items-center popover-header p-3"
         style={{
-          cursor: isDragging ? "grabbing" : "grab",
-          borderBottom: "1px solid #EAEAEA",
+          position: "fixed",
+          top: `${position.top}px`,
+          left: `${position.left}px`,
+          width: `${POPOVER_WIDTH}px`,
+          maxWidth: "calc(100vw - 20px)",
+          maxHeight: "calc(100vh - 20px)",
+          zIndex: 50,
+          background: vars.glass.bgDeep,
+          backdropFilter: "blur(28px) saturate(180%)",
+          WebkitBackdropFilter: "blur(28px) saturate(180%)",
+          border: `1px solid ${vars.glass.stroke}`,
+          borderRadius: 18,
+          boxShadow: vars.shadow.panel,
+          overflow: "hidden",
+          fontFamily: vars.font.ui,
+          color: vars.ink,
+          visibility: isPositioned ? "visible" : "hidden",
+          cursor: isDragging ? "grabbing" : "auto",
         }}
+        onMouseDown={handleMouseDown}
       >
-        {isEditingTitle ? (
-          <input
-            ref={titleInputRef}
-            type="text"
-            value={titleValue}
-            onChange={(e) => setTitleValue(e.target.value)}
-            onBlur={handleTitleSave}
-            onKeyDown={handleTitleKeyDown}
-            className="font-medium text-gray-800 bg-gray-50 px-1 py-0.5 rounded border border-gray-300 focus:ring-2 focus:ring-sky-500 focus:border-transparent focus:outline-none w-full"
-            autoFocus
-          />
-        ) : (
-          <div
-            className="flex items-center cursor-text group w-full"
-            onClick={() => setIsEditingTitle(true)}
-          >
-            <h3 className="font-medium text-gray-800 truncate max-w-xs group-hover:text-sky-600">
-              {titleValue}
-            </h3>
-            <button
-              className="ml-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsEditingTitle(true);
+        <div
+          className="popover-header"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            padding: "12px 14px",
+            borderBottom: `1px solid ${vars.rule}`,
+            cursor: isDragging ? "grabbing" : "grab",
+          }}
+        >
+          {isEditingTitle ? (
+            <input
+              ref={titleInputRef}
+              type="text"
+              value={titleValue}
+              onChange={(e) => setTitleValue(e.target.value)}
+              onBlur={handleTitleSave}
+              onKeyDown={handleTitleKeyDown}
+              autoFocus
+              style={{
+                flex: 1,
+                fontFamily: vars.font.display,
+                fontSize: 16,
+                fontWeight: 500,
+                letterSpacing: "-0.02em",
+                color: vars.ink,
+                background: vars.glass.bgSoft,
+                border: `1px solid ${vars.rule}`,
+                borderRadius: 6,
+                padding: "4px 8px",
+                outline: "none",
+              }}
+            />
+          ) : (
+            <div
+              onClick={() => setIsEditingTitle(true)}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                cursor: "text",
               }}
             >
-              <PencilIcon className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded p-0.5 transition-colors"
-          aria-label="Close"
-        >
-          <XMarkIcon className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Content - Notion-style minimal content */}
-      <div className="p-4">
-        <div className="flex items-center text-sm text-gray-600 mb-4">
-          <ClockIcon className="h-4 w-4 mr-2 text-gray-400" />
-          <span>
-            {formatTime(startTime)} - {formatTime(endTime)}
-          </span>
+              <h3
+                style={{
+                  margin: 0,
+                  fontFamily: vars.font.display,
+                  fontSize: 17,
+                  fontWeight: 500,
+                  letterSpacing: "-0.02em",
+                  color: vars.ink,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
+                {titleValue}
+              </h3>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsEditingTitle(true);
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 4,
+                  borderRadius: 6,
+                  border: "none",
+                  background: "transparent",
+                  color: vars.muted,
+                  cursor: "pointer",
+                }}
+                aria-label="Edit title"
+              >
+                <Pencil size={14} strokeWidth={2} />
+              </button>
+            </div>
+          )}
+          <button
+            onClick={onClose}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 4,
+              borderRadius: 6,
+              border: "none",
+              background: "transparent",
+              color: vars.muted,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+            aria-label="Close"
+          >
+            <X size={16} strokeWidth={2} />
+          </button>
         </div>
 
-        {/* Location selector */}
-        {templateItem && (
-          <div className="mb-4">
-            <LocationSelector
-              value={templateItem.locationId ?? null}
-              onChange={handleLocationChange}
-              className="w-full"
-            />
+        <div style={{ padding: "14px 16px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 14,
+              fontSize: 12.5,
+              color: vars.inkSoft,
+              fontFamily: vars.font.ui,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            <Clock size={13} strokeWidth={2} aria-hidden style={{ color: vars.muted }} />
+            <span>
+              {formatTime(startTime)} – {formatTime(endTime)}
+            </span>
           </div>
-        )}
 
-        {/* Actions - Notion-style minimal buttons */}
-        <div className="space-y-2">
-          {/* Main action buttons */}
-          <TemplateEventColorPicker templateId={event.id} />
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={onCopy}
-              className="flex items-center text-sm text-gray-700 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
-            >
-              <DocumentDuplicateIcon className="h-4 w-4 mr-1.5 text-gray-500" />
-              Duplicate
-            </button>
+          {templateItem && (
+            <div style={{ marginBottom: 14 }}>
+              <LocationSelector
+                value={templateItem.locationId ?? null}
+                onChange={handleLocationChange}
+                className="w-full"
+              />
+            </div>
+          )}
 
-            <button
-              onClick={onDelete}
-              className="flex items-center text-sm text-gray-700 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
-            >
-              <TrashIcon className="h-4 w-4 mr-1.5 text-gray-500" />
-              Delete
-            </button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <TemplateEventColorPicker templateId={event.id} />
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              <TplPopoverAction
+                onClick={onCopy}
+                icon={<Copy size={13} strokeWidth={2} />}
+                label="Duplicate"
+              />
+              <TplPopoverAction
+                onClick={onDelete}
+                icon={<Trash2 size={13} strokeWidth={2} />}
+                label="Delete"
+              />
+            </div>
           </div>
         </div>
-      </div>
-    </div>,
-    document.body
+      </div>,
+    document.body,
   );
 };
+
+function TplPopoverAction({
+  onClick,
+  icon,
+  label,
+}: {
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "5px 10px",
+        borderRadius: 999,
+        border: `1px solid ${vars.glass.stroke}`,
+        background: vars.glass.bgDeep,
+        color: vars.ink,
+        fontFamily: vars.font.ui,
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: "pointer",
+      }}
+    >
+      <span style={{ display: "inline-flex", color: vars.muted }}>{icon}</span>
+      {label}
+    </button>
+  );
+}
 
 export default TemplateEventPopover;

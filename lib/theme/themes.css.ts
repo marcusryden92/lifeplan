@@ -10,18 +10,18 @@ export const lumenLight = createTheme(vars, {
   rule: "rgba(22,20,42,0.12)",
 
   glass: {
-    bg: "rgba(255,255,255,0.42)",
-    bgDeep: "rgba(255,255,255,0.58)",
-    bgSoft: "rgba(255,255,255,0.25)",
-    stroke: "rgba(255,255,255,0.72)",
-    hi: "rgba(255,255,255,0.85)",
+    bg: "rgba(255,255,255,0.28)",
+    bgDeep: "rgba(255,255,255,0.40)",
+    bgSoft: "rgba(255,255,255,0.16)",
+    stroke: "rgba(22,20,42,0.14)",
+    hi: "rgba(255,255,255,0.55)",
   },
 
   shadow: {
     panel:
-      "0 14px 40px rgba(40,30,60,0.10), inset 0 1px 0 rgba(255,255,255,0.85)",
+      "0 14px 40px rgba(40,30,60,0.10), inset 0 1px 0 rgba(255,255,255,0.55)",
     panelSm:
-      "0 6px 20px rgba(40,30,60,0.08), inset 0 1px 0 rgba(255,255,255,0.7)",
+      "0 6px 20px rgba(40,30,60,0.08), inset 0 1px 0 rgba(255,255,255,0.45)",
   },
 
   noise: {

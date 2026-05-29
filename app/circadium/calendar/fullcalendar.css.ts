@@ -93,8 +93,7 @@ globalStyle(`${ROOT} .fc-timegrid-event-harness`, {
 
 globalStyle(`${ROOT} .fc-event`, {
   border: "none !important",
-  borderRadius: "8px !important",
-  padding: "2px 6px !important",
+  borderRadius: "6px !important",
   fontFamily: vars.font.ui,
   fontSize: 11.5,
   fontWeight: 600,
@@ -140,11 +139,33 @@ globalStyle(`${ROOT} .fc-timegrid-now-indicator-arrow`, {
 globalStyle(`${ROOT} .fc-scroller`, {
   overflow: "auto !important",
   scrollbarWidth: "none",
+  scrollbarGutter: "auto",
 });
 
 globalStyle(`${ROOT} .fc-scroller::-webkit-scrollbar`, {
-  display: "none",
+  width: 0,
+  height: 0,
+  background: "transparent",
 });
+
+globalStyle(`${ROOT} .fc-scroller::-webkit-scrollbar-thumb`, {
+  background: "transparent",
+});
+
+globalStyle(
+  [
+    `${ROOT} .fc-scrollgrid-sync-table`,
+    `${ROOT} table.fc-col-header`,
+    `${ROOT} .fc-timegrid-body`,
+    `${ROOT} .fc-timegrid-slots`,
+    `${ROOT} .fc-timegrid-slots > table`,
+    `${ROOT} .fc-timegrid-cols`,
+    `${ROOT} .fc-timegrid-cols > table`,
+  ].join(", "),
+  {
+    width: "100% !important",
+  },
+);
 
 globalStyle(`${ROOT} .fc-timegrid-daygrid-day-top`, {
   display: "none",

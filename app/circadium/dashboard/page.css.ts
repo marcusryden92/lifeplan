@@ -97,6 +97,7 @@ export const gridWrap = style({
 });
 
 export const leftCard = style({
+  position: "relative",
   background: vars.glass.bg,
   border: `1px solid ${vars.glass.stroke}`,
   boxShadow: vars.shadow.panel,
@@ -115,9 +116,11 @@ export const leftCard = style({
 });
 
 export const leftCardHeader = style({
-  position: "sticky",
+  position: "absolute",
   top: 0,
-  zIndex: 1,
+  left: 0,
+  right: 0,
+  zIndex: 2,
   padding: "16px 20px",
   borderTopLeftRadius: 22,
   borderTopRightRadius: 22,
@@ -133,6 +136,12 @@ export const leftCardHeader = style({
   justifyContent: "space-between",
   gap: 12,
   transition: themeTransition,
+  "@media": {
+    [MOBILE]: {
+      position: "relative",
+      top: "auto",
+    },
+  },
 });
 
 export const leftCardTitle = style({
@@ -149,20 +158,28 @@ export const agendaList = style({
   flex: 1,
   overflow: "auto",
   isolation: "isolate",
-  scrollbarWidth: "none",
+  marginTop: 78,
+  marginBottom: 8,
   selectors: {
-    "&::-webkit-scrollbar": { display: "none" },
+    "&::-webkit-scrollbar": {
+      width: 7,
+    },
+    "&::-webkit-scrollbar-thumb": {
+      borderWidth: 1,
+    },
   },
   "@media": {
     [MOBILE]: {
       flex: "0 0 auto",
       overflow: "visible",
+      marginTop: 0,
+      marginBottom: 0,
     },
   },
 });
 
 export const agendaRows = style({
-  padding: "12px 12px 12px",
+  padding: "22px 12px 24px",
 });
 
 export const agendaRow = style({
@@ -274,10 +291,6 @@ export const rightCol = style({
   flexDirection: "column",
   gap: 14,
   minHeight: 0,
-  scrollbarWidth: "none",
-  selectors: {
-    "&::-webkit-scrollbar": { display: "none" },
-  },
 });
 
 export const goalsCard = style({

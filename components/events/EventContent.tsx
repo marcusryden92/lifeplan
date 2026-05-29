@@ -1,9 +1,5 @@
 // EventContent.tsx
-import {
-  CheckIcon,
-  ArrowRightIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
+import { Check, ArrowRight, Trash2 } from "lucide-react";
 
 import { useRef, useState } from "react";
 
@@ -103,35 +99,42 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
           >
             <>
               <div
-                className="m-1 ml-0"
                 style={{ display: "flex", justifyContent: "flex-end" }}
               >
-                <button onClick={onDelete}>
-                  <TrashIcon height="1rem" width="1rem" />
+                <button
+                  onClick={onDelete}
+                  style={{ display: "inline-flex", padding: 2, color: "inherit" }}
+                  aria-label="Delete"
+                >
+                  <Trash2 size={14} strokeWidth={2} />
                 </button>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
                 {!event.extendedProps.isTemplateItem &&
                   (event.extendedProps.plannerType === PlannerType.goal ||
                     event.extendedProps.plannerType === PlannerType.task) && (
                     <>
                       <button
                         onClick={onComplete}
-                        style={{ marginLeft: "10px" }}
+                        style={{ display: "inline-flex", padding: 2, color: "inherit" }}
+                        aria-label="Complete"
                       >
-                        <CheckIcon height="1rem" width="1rem" />
+                        <Check size={14} strokeWidth={2.2} />
                       </button>
 
                       <button
                         disabled={!displayPostponeButton}
                         onClick={onPostpone}
                         style={{
-                          marginLeft: "10px",
-                          opacity: displayPostponeButton ? "100%" : "50%",
+                          display: "inline-flex",
+                          padding: 2,
+                          color: "inherit",
+                          opacity: displayPostponeButton ? 1 : 0.5,
                         }}
+                        aria-label="Postpone"
                       >
-                        <ArrowRightIcon height="1rem" width="1rem" />
+                        <ArrowRight size={14} strokeWidth={2} />
                       </button>
                     </>
                   )}

@@ -141,16 +141,6 @@ export const engineList = style({
   flexDirection: "column",
   gap: 10,
   minHeight: 0,
-  overflow: "auto",
-  scrollbarWidth: "none",
-  selectors: {
-    "&::-webkit-scrollbar": { display: "none" },
-  },
-  "@media": {
-    [MOBILE]: {
-      overflow: "visible",
-    },
-  },
 });
 
 export const engineCard = style({

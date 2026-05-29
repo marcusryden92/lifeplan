@@ -1,11 +1,4 @@
-import {
-  XMarkIcon,
-  PencilIcon,
-  TrashIcon,
-  DocumentDuplicateIcon,
-  CheckIcon,
-  ClockIcon,
-} from "@heroicons/react/24/outline";
+import { X, Pencil, Trash2, Copy, Check, Clock } from "lucide-react";
 import { createPortal } from "react-dom";
 import EventColorPicker from "./EventColorPicker/EventColorPicker";
 import { EventImpl } from "@fullcalendar/core/internal";
@@ -21,9 +14,9 @@ import {
   assignLocationToPlanner,
   setUseParentLocation,
 } from "@/actions/locations";
-
 import { formatTime } from "@/utils/calendarUtils";
 import { PlannerType } from "@/types/prisma";
+import { vars } from "@/lib/theme";
 
 interface EventPopoverProps {
   event: EventImpl;
@@ -38,6 +31,9 @@ interface EventPopoverProps {
   onPostpone: () => void;
   setShowPopover: React.Dispatch<React.SetStateAction<boolean>>;
 }
+
+const POPOVER_WIDTH = 320;
+const POPOVER_HEIGHT = 340;
 
 const EventPopover: React.FC<EventPopoverProps> = ({
   event,
@@ -111,11 +107,6 @@ const EventPopover: React.FC<EventPopoverProps> = ({
     updatePlannerArray,
   ]);
 
-  // Popover dimensions
-  const POPOVER_WIDTH = 280;
-  const POPOVER_HEIGHT = 300;
-
-  // Custom hooks
   const { position, isPositioned, isDragging, popoverRef, handleMouseDown } =
     usePopoverPosition({
       eventRect,
@@ -137,7 +128,6 @@ const EventPopover: React.FC<EventPopoverProps> = ({
     event: event,
   });
 
-  // Handle click outside - save title if editing, then close
   useClickOutside({
     ref: popoverRef,
     onClickOutside: () => {
@@ -148,7 +138,6 @@ const EventPopover: React.FC<EventPopoverProps> = ({
     },
   });
 
-  // Handle keyboard shortcuts
   useKeyboardShortcuts({
     shortcuts: {
       Escape: isEditing ? handleCancel : onClose,
@@ -156,7 +145,6 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   });
 
   const handleHeaderMouseDown = (e: React.MouseEvent) => {
-    // Don't allow dragging when editing title
     if (!isEditing) {
       handleMouseDown(e);
     }
@@ -167,164 +155,259 @@ const EventPopover: React.FC<EventPopoverProps> = ({
     handleEventCopy(event, updateAll);
   };
 
-  // Use portal to render the popover at the root level of the DOM
+  const showStatusActions =
+    !event.extendedProps.isTemplateItem &&
+    (event.extendedProps.plannerType === PlannerType.goal ||
+      event.extendedProps.plannerType === PlannerType.task);
+
   return createPortal(
     <div
       ref={popoverRef}
-      className="fixed bg-white bg-opacity-90 backdrop-blur-md shadow-lg rounded-md z-50 overflow-hidden"
-      style={{
-        top: `${position.top}px`,
-        left: `${position.left}px`,
-        width: `${POPOVER_WIDTH}px`,
-        border: "1px solid #EAEAEA",
-        maxWidth: "calc(100vw - 20px)",
-        maxHeight: "calc(100vh - 20px)",
-        height: "300px",
-        overflowY: "auto",
-        visibility: isPositioned ? "visible" : "hidden",
-        cursor: isDragging ? "grabbing" : "auto",
-        boxShadow:
-          "0 2px 6px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.04)",
-      }}
-      onMouseDown={handleHeaderMouseDown}
-    >
-      {/* Header - Notion-style clean header */}
-      <div
-        className="flex justify-between items-center popover-header p-3"
         style={{
-          cursor: isDragging ? "grabbing" : "grab",
-          borderBottom: "1px solid #EAEAEA",
+          position: "fixed",
+          top: `${position.top}px`,
+          left: `${position.left}px`,
+          width: `${POPOVER_WIDTH}px`,
+          maxWidth: "calc(100vw - 20px)",
+          maxHeight: "calc(100vh - 20px)",
+          zIndex: 50,
+          background: vars.glass.bgDeep,
+          backdropFilter: "blur(28px) saturate(180%)",
+          WebkitBackdropFilter: "blur(28px) saturate(180%)",
+          border: `1px solid ${vars.glass.stroke}`,
+          borderRadius: 18,
+          boxShadow: vars.shadow.panel,
+          overflow: "hidden",
+          fontFamily: vars.font.ui,
+          color: vars.ink,
+          visibility: isPositioned ? "visible" : "hidden",
+          cursor: isDragging ? "grabbing" : "auto",
         }}
+        onMouseDown={handleHeaderMouseDown}
       >
-        {isEditing ? (
-          <input
-            ref={inputRef}
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            className="font-medium text-gray-800 bg-gray-50 px-1 py-0.5 rounded border border-gray-300 focus:ring-2 focus:ring-sky-500 focus:border-transparent focus:outline-none w-full"
-          />
-        ) : (
-          <div
-            className="flex items-center cursor-text group w-full"
-            onClick={startEditing}
-          >
-            <h3 className="font-medium text-gray-800 truncate max-w-xs group-hover:text-sky-600">
-              {title}
-            </h3>
-            {
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 10,
+            padding: "12px 14px",
+            borderBottom: `1px solid ${vars.rule}`,
+            cursor: isDragging ? "grabbing" : "grab",
+          }}
+        >
+          {isEditing ? (
+            <input
+              ref={inputRef}
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              style={{
+                flex: 1,
+                fontFamily: vars.font.display,
+                fontSize: 16,
+                fontWeight: 500,
+                letterSpacing: "-0.02em",
+                color: vars.ink,
+                background: vars.glass.bgSoft,
+                border: `1px solid ${vars.rule}`,
+                borderRadius: 6,
+                padding: "4px 8px",
+                outline: "none",
+              }}
+            />
+          ) : (
+            <div
+              onClick={startEditing}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                cursor: "text",
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  fontFamily: vars.font.display,
+                  fontSize: 17,
+                  fontWeight: 500,
+                  letterSpacing: "-0.02em",
+                  color: vars.ink,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
+                {title}
+              </h3>
               <button
-                className="ml-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={(e) => {
                   e.stopPropagation();
                   startEditing();
                 }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 4,
+                  borderRadius: 6,
+                  border: "none",
+                  background: "transparent",
+                  color: vars.muted,
+                  cursor: "pointer",
+                }}
+                aria-label="Edit title"
               >
-                <PencilIcon className="h-4 w-4" />
+                <Pencil size={14} strokeWidth={2} />
               </button>
-            }
-          </div>
-        )}
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded p-0.5 transition-colors"
-          aria-label="Close"
-        >
-          <XMarkIcon className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* Content - Notion-style minimal content */}
-      <div className="p-4">
-        <div className="flex items-center text-sm text-gray-600 mb-4">
-          <ClockIcon className="h-4 w-4 mr-2 text-gray-400" />
-          <span>
-            {formatTime(startTime)} - {formatTime(endTime)}
-          </span>
+            </div>
+          )}
+          <button
+            onClick={onClose}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 4,
+              borderRadius: 6,
+              border: "none",
+              background: "transparent",
+              color: vars.muted,
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+            aria-label="Close"
+          >
+            <X size={16} strokeWidth={2} />
+          </button>
         </div>
 
-        {/* Location selector - for plans, tasks, and goals */}
-        {plannerItem && (
-          <div className="mb-4">
-            <LocationSelector
-              value={plannerItem.locationId ?? null}
-              onChange={handleLocationChange}
-              isOverridden={locationOverrideEnabled}
-              onToggleOverride={
-                inheritedInfo ? handleToggleLocationOverride : undefined
-              }
-              inheritedLocationName={inheritedInfo?.locationName}
-              inheritedFromLabel={inheritedInfo?.fromLabel}
-            />
-          </div>
-        )}
-
-        {/* Actions - Notion-style minimal buttons */}
-        <div className="space-y-2">
-          {/* Main action buttons */}
-          <EventColorPicker taskId={event.id} />
-          <div className="flex flex-wrap gap-2">
-            {event.extendedProps.plannerType !== PlannerType.task &&
-              event.extendedProps.plannerType !== PlannerType.goal && (
-                <button
-                  onClick={onCopy}
-                  className="flex items-center text-sm text-gray-700 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
-                >
-                  <DocumentDuplicateIcon className="h-4 w-4 mr-1.5 text-gray-500" />
-                  Duplicate
-                </button>
-              )}
-
-            <button
-              onClick={onDelete}
-              className="flex items-center text-sm text-gray-700 hover:bg-gray-100 px-2 py-1 rounded transition-colors"
-            >
-              <TrashIcon className="h-4 w-4 mr-1.5 text-gray-500" />
-              Delete
-            </button>
+        <div style={{ padding: "14px 16px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 14,
+              fontSize: 12.5,
+              color: vars.inkSoft,
+              fontFamily: vars.font.ui,
+              fontVariantNumeric: "tabular-nums",
+            }}
+          >
+            <Clock size={13} strokeWidth={2} aria-hidden style={{ color: vars.muted }} />
+            <span>
+              {formatTime(startTime)} – {formatTime(endTime)}
+            </span>
           </div>
 
-          {/* Status buttons - Only show if applicable */}
-          {!event.extendedProps.isTemplateItem &&
-            (event.extendedProps.plannerType === PlannerType.goal ||
-              event.extendedProps.plannerType === PlannerType.task) && (
-              <div className="pt-2 border-t border-gray-100">
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={onComplete}
-                    className={`flex items-center text-sm px-2 py-1 rounded transition-colors ${
-                      isCompleted
-                        ? "bg-gray-100 text-gray-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    <CheckIcon
-                      className={`h-4 w-4 mr-1.5 ${
-                        isCompleted ? "text-green-500" : "text-gray-500"
-                      }`}
+          {plannerItem && (
+            <div style={{ marginBottom: 14 }}>
+              <LocationSelector
+                value={plannerItem.locationId ?? null}
+                onChange={handleLocationChange}
+                isOverridden={locationOverrideEnabled}
+                onToggleOverride={
+                  inheritedInfo ? handleToggleLocationOverride : undefined
+                }
+                inheritedLocationName={inheritedInfo?.locationName}
+                inheritedFromLabel={inheritedInfo?.fromLabel}
+              />
+            </div>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <EventColorPicker taskId={event.id} />
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {event.extendedProps.plannerType !== PlannerType.task &&
+                event.extendedProps.plannerType !== PlannerType.goal && (
+                  <PopoverAction onClick={onCopy} icon={<Copy size={13} strokeWidth={2} />} label="Duplicate" />
+                )}
+              <PopoverAction
+                onClick={onDelete}
+                icon={<Trash2 size={13} strokeWidth={2} />}
+                label="Delete"
+              />
+            </div>
+
+            {showStatusActions && (
+              <div
+                style={{
+                  paddingTop: 10,
+                  borderTop: `1px solid ${vars.rule}`,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                }}
+              >
+                <PopoverAction
+                  onClick={onComplete}
+                  icon={
+                    <Check
+                      size={13}
+                      strokeWidth={2.2}
+                      style={{
+                        color: isCompleted ? vars.accent.done : vars.muted,
+                      }}
                     />
-                    {isCompleted ? "Completed" : "Mark complete"}
-                  </button>
-
-                  {displayPostponeButton && (
-                    <button
-                      onClick={onPostpone}
-                      className="flex items-center text-sm bg-gray-100 text-gray-700 px-2 py-1 rounded transition-colors"
-                    >
-                      <ClockIcon className="h-4 w-4 mr-1.5 text-gray-500" />
-                      Postpone
-                    </button>
-                  )}
-                </div>
+                  }
+                  label={isCompleted ? "Completed" : "Mark complete"}
+                />
+                {displayPostponeButton && (
+                  <PopoverAction
+                    onClick={onPostpone}
+                    icon={<Clock size={13} strokeWidth={2} />}
+                    label="Postpone"
+                  />
+                )}
               </div>
             )}
+          </div>
         </div>
-      </div>
-    </div>,
+      </div>,
     document.body,
   );
 };
+
+function PopoverAction({
+  onClick,
+  icon,
+  label,
+}: {
+  onClick: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "5px 10px",
+        borderRadius: 999,
+        border: `1px solid ${vars.glass.stroke}`,
+        background: vars.glass.bgDeep,
+        color: vars.ink,
+        fontFamily: vars.font.ui,
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: "pointer",
+      }}
+    >
+      <span style={{ display: "inline-flex", color: vars.muted }}>{icon}</span>
+      {label}
+    </button>
+  );
+}
 
 export default EventPopover;

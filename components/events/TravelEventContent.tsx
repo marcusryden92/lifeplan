@@ -1,9 +1,10 @@
 import React, { useRef, useState, useLayoutEffect, useMemo } from "react";
 import { EventImpl } from "@fullcalendar/core/internal";
-import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useSelector } from "react-redux";
+import { AlertTriangle, ChevronRight } from "lucide-react";
 import { RootState } from "@/redux/store";
 import { formatTime } from "@/utils/calendarUtils";
+import { vars } from "@/lib/theme";
 
 interface TravelExtendedProps {
   travelMinutes?: number;
@@ -19,9 +20,8 @@ interface TravelEventContentProps {
 }
 
 const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
-  const { userSettings } = useCalendarProvider();
   const locations = useSelector(
-    (state: RootState) => state.schedulingSettings.locations
+    (state: RootState) => state.schedulingSettings.locations,
   );
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
@@ -50,72 +50,24 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   const requiredTravelMinutes = extendedProps?.requiredTravelMinutes;
   const insufficientTravel = extendedProps?.insufficientTravel ?? false;
   const overconstrained = extendedProps?.overconstrained ?? false;
-  // Insufficient takes priority over overconstrained when both are set.
   const showAlert = insufficientTravel;
   const showOverconstrained = overconstrained && !insufficientTravel;
   const fromName = extendedProps?.fromLocationId
-    ? locationNameMap.get(extendedProps.fromLocationId) ?? extendedProps.fromLocationId
+    ? locationNameMap.get(extendedProps.fromLocationId) ??
+      extendedProps.fromLocationId
     : null;
   const toName = extendedProps?.toLocationId
-    ? locationNameMap.get(extendedProps.toLocationId) ?? extendedProps.toLocationId
+    ? locationNameMap.get(extendedProps.toLocationId) ??
+      extendedProps.toLocationId
     : null;
-  const travelLabel =
-    fromName && toName ? `${fromName} → ${toName}` : "Travel";
+  const travelLabel = fromName && toName ? `${fromName} → ${toName}` : "Travel";
 
-  // Warning icon for insufficient travel (red)
-  const WarningIcon = () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="#DC2626"
-      style={{ width: "14px", height: "14px", flexShrink: 0 }}
-    >
-      <path
-        fillRule="evenodd"
-        d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-
-  // Overconstrained icon (yellow) — same triangle, different fill, signals
-  // "forced routing": the slot is bigger than the actual travel needs.
-  const OverconstrainedIcon = () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="#D97706"
-      style={{ width: "14px", height: "14px", flexShrink: 0 }}
-    >
-      <path
-        fillRule="evenodd"
-        d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-
-  // Travel arrow icon
-  const TravelArrowIcon = () => (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      style={{ width: "12px", height: "12px" }}
-    >
-      <path
-        fillRule="evenodd"
-        d="M8.22 5.22a.75.75 0 0 1 1.06 0l4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.75.75 0 0 1-1.06-1.06L11.94 10 8.22 6.28a.75.75 0 0 1 0-1.06Z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-
-  const borderLeftStyle = showAlert
-    ? `4px solid #DC2626`
+  const compact = elementHeight < 28;
+  const alertColor = showAlert
+    ? vars.status.error
     : showOverconstrained
-    ? `4px solid #D97706`
-    : userSettings.styles.travel.event.borderLeft;
+      ? vars.status.warning
+      : null;
 
   return (
     <div
@@ -125,61 +77,114 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
         flexDirection: "column",
         justifyContent: "space-between",
         height: "100%",
-        padding: elementHeight < 20 ? "2px 8px" : "8px",
-        borderRadius: userSettings.styles.events.borderRadius,
-        backgroundColor: event.backgroundColor,
-        borderLeft: borderLeftStyle,
-        opacity: showAlert || showOverconstrained ? 0.95 : 0.85,
+        padding: compact ? "2px 8px" : "6px 10px",
+        borderRadius: 8,
+        background: `color-mix(in srgb, ${vars.ink} 6%, transparent)`,
+        border: `1px dashed ${
+          alertColor
+            ? `color-mix(in srgb, ${alertColor} 60%, transparent)`
+            : `color-mix(in srgb, ${vars.ink} 22%, transparent)`
+        }`,
+        fontFamily: vars.font.ui,
+        color: vars.muted,
       }}
     >
-      {/* Header row with title and time */}
-      <span className="flex flex-col gap-2 justify-between">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 6,
+        }}
+      >
         <span
           style={{
-            marginBottom: "auto",
-            fontSize: elementHeight > 20 ? "0.7rem" : "0.5rem",
-            fontWeight: "bold",
+            fontSize: compact ? 10 : 11.5,
+            fontWeight: 500,
+            fontStyle: alertColor ? "normal" : "italic",
             display: "flex",
             alignItems: "center",
-            gap: "4px",
+            gap: 6,
+            flex: 1,
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
-          {showAlert ? (
-            <WarningIcon />
-          ) : showOverconstrained ? (
-            <OverconstrainedIcon />
+          {alertColor ? (
+            <AlertTriangle
+              size={12}
+              strokeWidth={2.2}
+              style={{ flexShrink: 0, color: alertColor }}
+              aria-hidden
+            />
           ) : (
-            <TravelArrowIcon />
+            <ChevronRight
+              size={12}
+              strokeWidth={2}
+              style={{ flexShrink: 0, opacity: 0.6 }}
+              aria-hidden
+            />
           )}
-          {travelLabel}
-          {travelMinutes !== undefined && elementHeight > 30 && (
-            <span style={{ fontWeight: "normal", opacity: 0.8 }}>
-              ({travelMinutes} min
-              {showAlert && requiredTravelMinutes && (
-                <span style={{ color: "#DC2626" }}>
-                  /{requiredTravelMinutes} needed
-                </span>
-              )}
-              {showOverconstrained && requiredTravelMinutes && (
-                <span style={{ color: "#D97706" }}>
-                  /{requiredTravelMinutes} actual
-                </span>
-              )}
-              )
+          <span
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {travelLabel}
+            {travelMinutes !== undefined && elementHeight > 36 && (
+              <span
+                style={{
+                  fontWeight: 500,
+                  opacity: 0.78,
+                  marginLeft: 6,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                ({travelMinutes}m
+                {showAlert &&
+                  requiredTravelMinutes !== null &&
+                  requiredTravelMinutes !== undefined && (
+                    <span style={{ color: alertColor ?? undefined }}>
+                      {" "}
+                      /{requiredTravelMinutes} needed
+                    </span>
+                  )}
+                {showOverconstrained &&
+                  requiredTravelMinutes !== null &&
+                  requiredTravelMinutes !== undefined && (
+                    <span style={{ color: alertColor ?? undefined }}>
+                      {" "}
+                      /{requiredTravelMinutes} actual
+                    </span>
+                  )}
+                )
+              </span>
+            )}
+          </span>
+        </span>
+        {!compact && (
+          <span
+            style={{
+              display: "flex",
+              gap: 4,
+              fontSize: 10,
+              fontWeight: 500,
+              fontVariantNumeric: "tabular-nums",
+              opacity: 0.7,
+              flexShrink: 0,
+            }}
+          >
+            <span>{formatTime(startTime)}</span>
+            <span aria-hidden style={{ opacity: 0.6 }}>
+              –
             </span>
-          )}
-        </span>
-        <span
-          className="flex gap-2"
-          style={{
-            fontSize: elementHeight > 20 ? "0.7rem" : "0.5rem",
-            fontWeight: "bold",
-          }}
-        >
-          <span>{formatTime(startTime)}</span>
-          <span>{formatTime(endTime)}</span>
-        </span>
-      </span>
+            <span>{formatTime(endTime)}</span>
+          </span>
+        )}
+      </div>
     </div>
   );
 };

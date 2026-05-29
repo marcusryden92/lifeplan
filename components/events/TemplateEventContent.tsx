@@ -1,4 +1,4 @@
-import { DocumentDuplicateIcon, TrashIcon } from "@heroicons/react/24/outline";
+import { Copy, Trash2 } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -84,14 +84,22 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
             }}
           >
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button onClick={handleClickDelete}>
-                <TrashIcon height="1rem" width="1rem" />
+              <button
+                onClick={handleClickDelete}
+                style={{ display: "inline-flex", padding: 2, color: "inherit" }}
+                aria-label="Delete"
+              >
+                <Trash2 size={14} strokeWidth={2} />
               </button>
             </div>
 
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button onClick={onCopy}>
-                <DocumentDuplicateIcon height="1rem" width="1rem" />
+              <button
+                onClick={onCopy}
+                style={{ display: "inline-flex", padding: 2, color: "inherit" }}
+                aria-label="Duplicate"
+              >
+                <Copy size={14} strokeWidth={2} />
               </button>
             </div>
           </div>
