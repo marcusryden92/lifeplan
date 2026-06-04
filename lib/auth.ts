@@ -1,5 +1,5 @@
-import { auth } from "@/auth";
-import { UserRole } from "@/prisma/generated/client";
+﻿import { auth } from "@/auth";
+import { UserRole } from "@/lib/generated/db-client";
 
 export const currentUser = async () => {
   const session = await auth();

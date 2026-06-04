@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -28,7 +28,7 @@ import { ClassifyItemDialog } from "./_components/ClassifyItemDialog";
 import * as categoryActions from "@/actions/categories";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import type { Planner, Category } from "@/types/prisma";
-import type { PlannerType } from "@/prisma/generated/client";
+import type { PlannerType } from "@/lib/generated/db-client";
 import { v4 as uuidv4 } from "uuid";
 
 const addItemSchema = z.object({

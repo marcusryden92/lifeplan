@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Calendar, Clock, Battery, Target } from "lucide-react";
@@ -16,7 +16,7 @@ import type {
   TaskTypeEnum,
   PriorityLevel,
   EnergyLevel,
-} from "@/prisma/generated/client";
+} from "@/lib/generated/db-client";
 import {
   Card,
   CardContent,
@@ -49,13 +49,13 @@ const DAYS_OF_WEEK = [
 ];
 
 const TASK_TYPES = [
-  { value: "EXERCISE", label: "Exercise", icon: "🏃" },
-  { value: "DEEP_WORK", label: "Deep Work", icon: "🧠" },
-  { value: "ADMIN", label: "Administrative", icon: "📝" },
-  { value: "MEETING", label: "Meeting", icon: "👥" },
-  { value: "CREATIVE", label: "Creative Work", icon: "🎨" },
-  { value: "ROUTINE", label: "Routine/Habit", icon: "🔄" },
-  { value: "SOCIAL", label: "Social", icon: "🤝" },
+  { value: "EXERCISE", label: "Exercise", icon: "ðŸƒ" },
+  { value: "DEEP_WORK", label: "Deep Work", icon: "ðŸ§ " },
+  { value: "ADMIN", label: "Administrative", icon: "ðŸ“" },
+  { value: "MEETING", label: "Meeting", icon: "ðŸ‘¥" },
+  { value: "CREATIVE", label: "Creative Work", icon: "ðŸŽ¨" },
+  { value: "ROUTINE", label: "Routine/Habit", icon: "ðŸ”„" },
+  { value: "SOCIAL", label: "Social", icon: "ðŸ¤" },
 ];
 
 const PRIORITY_LEVELS = [

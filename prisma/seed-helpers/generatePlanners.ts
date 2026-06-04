@@ -1,4 +1,4 @@
-import { Planner } from "../generated/client";
+﻿import { Planner } from "@/lib/generated/db-client";
 import { LOCATION_IDS } from "./generateLocations";
 import { CATEGORY_IDS } from "./generateCategories";
 
@@ -217,7 +217,7 @@ export const plannerSeedData: SimplePlannerData[] = [
     dependency: "333e37fd-55c9-44f2-8947-107d01980b65",
   },
 
-  // Goal D hierarchy - Gym location (no category, no root location — children override)
+  // Goal D hierarchy - Gym location (no category, no root location â€” children override)
   {
     id: "3f2588fe-0190-4e58-baf9-a7045cad9d96",
     title: "D",

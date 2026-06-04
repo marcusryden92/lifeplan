@@ -1,4 +1,4 @@
-import { Prisma } from "../generated/client";
+﻿import { Prisma } from "@/lib/generated/db-client";
 import { LOCATION_IDS } from "./generateLocations";
 
 export const CATEGORY_IDS = {
@@ -8,7 +8,7 @@ export const CATEGORY_IDS = {
 
 type CategorySeedInput = Prisma.CategoryCreateInput & { id: string };
 
-// 0=Sunday, 1=Monday, ... 6=Saturday — matches JS Date.getDay() and what's
+// 0=Sunday, 1=Monday, ... 6=Saturday â€” matches JS Date.getDay() and what's
 // stored in CategoryTimeWindow.day.
 type SeedTimeWindow = {
   day: 0 | 1 | 2 | 3 | 4 | 5 | 6;

@@ -1,12 +1,12 @@
-"use server";
+﻿"use server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import type {
   TaskTypeEnum,
   PriorityLevel,
   EnergyLevel,
-} from "@/prisma/generated/client";
-import type { Prisma } from "@/prisma/generated/client";
+} from "@/lib/generated/db-client";
+import type { Prisma } from "@/lib/generated/db-client";
 
 // User Scheduling Preferences
 export async function fetchUserSchedulingPreferences() {

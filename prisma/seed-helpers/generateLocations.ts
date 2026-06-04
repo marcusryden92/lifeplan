@@ -1,4 +1,4 @@
-import { Location, TravelTime } from "../generated/client";
+﻿import { Location, TravelTime } from "@/lib/generated/db-client";
 
 // Fixed IDs so we can reference them in other seed files
 export const LOCATION_IDS = {
@@ -18,7 +18,7 @@ export const generateLocations = (userId: string): Omit<Location, "createdAt" | 
       id: LOCATION_IDS.HOME,
       userId,
       name: "Home",
-      address: "Gillevägen 3, 131 33 Nacka, Sweden",
+      address: "GillevÃ¤gen 3, 131 33 Nacka, Sweden",
       placeId: "ChIJPUGkuDx5X0YRwDXn1hCYtSA",
       lat: 59.3107,
       lng: 18.1234,
@@ -53,8 +53,8 @@ export const generateLocations = (userId: string): Omit<Location, "createdAt" | 
     {
       id: LOCATION_IDS.VARMDO,
       userId,
-      name: "Värmdö",
-      address: "Gustavsbergsvägen, 134 39 Gustavsberg, Sweden",
+      name: "VÃ¤rmdÃ¶",
+      address: "GustavsbergsvÃ¤gen, 134 39 Gustavsberg, Sweden",
       placeId: "ChIJ1w_BRrWBX0YRF_OeZRu1Gnk",
       lat: 59.3267,
       lng: 18.3950,
@@ -106,7 +106,7 @@ export const generateTravelTimes = (userId: string): Omit<TravelTime, "id" | "cr
       customNightMinutes: null,
       userId,
     },
-    // Home -> Värmdö
+    // Home -> VÃ¤rmdÃ¶
     {
       fromLocationId: LOCATION_IDS.HOME,
       toLocationId: LOCATION_IDS.VARMDO,
@@ -158,7 +158,7 @@ export const generateTravelTimes = (userId: string): Omit<TravelTime, "id" | "cr
       customNightMinutes: null,
       userId,
     },
-    // Uppsala -> Värmdö
+    // Uppsala -> VÃ¤rmdÃ¶
     {
       fromLocationId: LOCATION_IDS.WORK,
       toLocationId: LOCATION_IDS.VARMDO,
@@ -210,7 +210,7 @@ export const generateTravelTimes = (userId: string): Omit<TravelTime, "id" | "cr
       customNightMinutes: null,
       userId,
     },
-    // Gym -> Värmdö
+    // Gym -> VÃ¤rmdÃ¶
     {
       fromLocationId: LOCATION_IDS.GYM,
       toLocationId: LOCATION_IDS.VARMDO,
@@ -262,7 +262,7 @@ export const generateTravelTimes = (userId: string): Omit<TravelTime, "id" | "cr
       customNightMinutes: null,
       userId,
     },
-    // Gamla Stan -> Värmdö
+    // Gamla Stan -> VÃ¤rmdÃ¶
     {
       fromLocationId: LOCATION_IDS.GAMLA_STAN,
       toLocationId: LOCATION_IDS.VARMDO,
@@ -275,7 +275,7 @@ export const generateTravelTimes = (userId: string): Omit<TravelTime, "id" | "cr
       customNightMinutes: null,
       userId,
     },
-    // Värmdö -> Home
+    // VÃ¤rmdÃ¶ -> Home
     {
       fromLocationId: LOCATION_IDS.VARMDO,
       toLocationId: LOCATION_IDS.HOME,
@@ -288,7 +288,7 @@ export const generateTravelTimes = (userId: string): Omit<TravelTime, "id" | "cr
       customNightMinutes: null,
       userId,
     },
-    // Värmdö -> Uppsala
+    // VÃ¤rmdÃ¶ -> Uppsala
     {
       fromLocationId: LOCATION_IDS.VARMDO,
       toLocationId: LOCATION_IDS.WORK,
@@ -301,7 +301,7 @@ export const generateTravelTimes = (userId: string): Omit<TravelTime, "id" | "cr
       customNightMinutes: null,
       userId,
     },
-    // Värmdö -> Gym
+    // VÃ¤rmdÃ¶ -> Gym
     {
       fromLocationId: LOCATION_IDS.VARMDO,
       toLocationId: LOCATION_IDS.GYM,
@@ -314,7 +314,7 @@ export const generateTravelTimes = (userId: string): Omit<TravelTime, "id" | "cr
       customNightMinutes: null,
       userId,
     },
-    // Värmdö -> Gamla Stan
+    // VÃ¤rmdÃ¶ -> Gamla Stan
     {
       fromLocationId: LOCATION_IDS.VARMDO,
       toLocationId: LOCATION_IDS.GAMLA_STAN,

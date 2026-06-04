@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Google Maps API Integration
  *
  * Utilities for Places API (New) and Distance Matrix API.
@@ -7,7 +7,7 @@
  * All functions are server-side only to protect API key.
  */
 
-import { TransportMode } from "@/prisma/generated/client";
+import { TransportMode } from "@/lib/generated/db-client";
 
 // Types for our application
 export interface PlacePrediction {
@@ -344,7 +344,7 @@ export async function getTravelTimesAllPeriods(
 
 /**
  * Calculate travel times between a new location and all existing locations
- * Skips self-referential pairs (A → A)
+ * Skips self-referential pairs (A â†’ A)
  *
  * @param newLocation - The newly added location
  * @param existingLocations - Array of existing locations
@@ -359,12 +359,12 @@ export async function calculateTravelTimesForNewLocation(
   const results: TravelTimeBatchResult[] = [];
 
   // Calculate travel times between new location and each existing location
-  // Need both directions: new → existing AND existing → new
+  // Need both directions: new â†’ existing AND existing â†’ new
   for (const existing of existingLocations) {
     // Skip if same location (shouldn't happen, but safety check)
     if (existing.id === newLocation.id) continue;
 
-    // New → Existing
+    // New â†’ Existing
     const toExisting = await getTravelTimesAllPeriods(
       { lat: newLocation.lat, lng: newLocation.lng },
       { lat: existing.lat, lng: existing.lng },
@@ -377,7 +377,7 @@ export async function calculateTravelTimesForNewLocation(
       ...toExisting,
     });
 
-    // Existing → New
+    // Existing â†’ New
     const fromExisting = await getTravelTimesAllPeriods(
       { lat: existing.lat, lng: existing.lng },
       { lat: newLocation.lat, lng: newLocation.lng },

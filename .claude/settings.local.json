@@ -78,7 +78,24 @@
       "PowerShell(pnpm exec eslint 'app/\\(circadium\\)/dashboard/page.css.ts' 2>&1)",
       "PowerShell($out = pnpm exec eslint './app/\\(circadium\\)/dashboard/page.tsx' './app/\\(circadium\\)/dashboard/page.css.ts' './app/\\(circadium\\)/_mock/dashboard.ts' './app/\\(circadium\\)/layout.tsx' 2>&1; \"EXIT: $LASTEXITCODE\"; $out)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" -Directory)",
-      "Bash(Select-Object Name)"
+      "Bash(Select-Object Name)",
+      "Bash(pnpm view *)",
+      "Bash(where node *)",
+      "Bash(nvm --version)",
+      "Bash(volta --version)",
+      "Bash(fnm --version)",
+      "PowerShell(Get-Command nvm,fnm,volta -ErrorAction SilentlyContinue)",
+      "PowerShell(winget --version)",
+      "PowerShell(winget search OpenJS.NodeJS.LTS --exact 2>&1)",
+      "PowerShell(winget search OpenJS.NodeJS.LTS --exact --accept-source-agreements 2>&1)",
+      "PowerShell(winget show OpenJS.NodeJS.LTS --versions 2>&1)",
+      "PowerShell(winget install OpenJS.NodeJS.LTS --accept-source-agreements --accept-package-agreements --silent 2>&1)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\('Path','Machine'\\) + ';' + [System.Environment]::GetEnvironmentVariable\\('Path','User'\\); & \"C:\\\\Program Files\\\\nodejs\\\\node.exe\" --version; node --version)",
+      "PowerShell(Remove-Item -LiteralPath 'prisma\\\\generated' -Recurse -Force -Confirm:$false)",
+      "PowerShell(pnpm prisma generate 2>&1)",
+      "Bash(curl -sL https://registry.npmjs.org/@auth/prisma-adapter/-/prisma-adapter-2.11.2.tgz)",
+      "Bash(tar -xzO package/index.js)",
+      "Bash(timeout 60 pnpm dev)"
     ]
   }
 }

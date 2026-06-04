@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/Input";
@@ -12,7 +12,7 @@ import {
   SelectItem,
 } from "@/components/ui/Select";
 import type { Category } from "@/types/prisma";
-import type { PlannerType } from "@/prisma/generated/client";
+import type { PlannerType } from "@/lib/generated/db-client";
 
 export type FilterState = {
   search: string;

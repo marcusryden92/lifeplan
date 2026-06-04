@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useLayoutEffect, useMemo, useCallback } from "react";
 import { Plus, LayoutList, LayoutGrid, FolderTree } from "lucide-react";
@@ -14,7 +14,7 @@ import { fetchLocations } from "@/actions/locations";
 import { getSubtasksById } from "@/utils/goalPageHandlers";
 import { getCategoryAndDescendants } from "@/utils/categoryUtils";
 import type { Planner, Category, Location } from "@/types/prisma";
-import type { PlannerType } from "@/prisma/generated/client";
+import type { PlannerType } from "@/lib/generated/db-client";
 
 type ViewMode = "list" | "grid" | "tree";
 

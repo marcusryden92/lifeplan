@@ -1,5 +1,5 @@
-import bcrypt from "bcryptjs";
-import { PrismaClient, UserRole } from "./generated/client";
+﻿import bcrypt from "bcryptjs";
+import { PrismaClient, UserRole } from "@/lib/generated/db-client";
 import { generateTemplates } from "./seed-helpers/generateTemplates";
 import {
   generatePlanners,
@@ -70,7 +70,7 @@ async function main() {
   /*  const plans = generatePlans(userId);
   await prisma.planner.createMany({ data: plans }); */
 
-  console.log("✓ Seeding completed successfully");
+  console.log("âœ“ Seeding completed successfully");
   console.log(`  - User: admin@lifeplan.com`);
   console.log(`  - Locations: ${locations.length}`);
   console.log(`  - Travel times: ${travelTimes.length}`);

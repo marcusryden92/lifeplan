@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
@@ -23,7 +23,7 @@ import { AddLocationDialog } from "@/components/locations/AddLocationDialog";
 import { TravelTimeMatrix } from "@/components/locations/TravelTimeMatrix";
 import * as locationActions from "@/actions/locations";
 import type { Location, TravelTime } from "@/types/prisma";
-import type { TransportMode } from "@/prisma/generated/client";
+import type { TransportMode } from "@/lib/generated/db-client";
 import { setLocations as setLocationsInRedux } from "@/redux/slices/schedulingSettingsSlice";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 
