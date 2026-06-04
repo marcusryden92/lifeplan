@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, RotateCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  RotateCw,
+  Settings,
+} from "lucide-react";
 import { format } from "date-fns";
 import {
   Glass,
@@ -26,6 +32,7 @@ import {
   mainGrid,
   calendarCard,
   engineCol,
+  engineContainer,
   engineHeader,
   engineHeaderRow,
   engineTitle,
@@ -38,7 +45,14 @@ import {
   engineCardTitle,
   engineCardBody,
   fcWrap,
+  dayHeaderStack,
+  dayHeaderLabel,
+  dayHeaderLabelToday,
+  dayHeaderNum,
+  dayHeaderNumToday,
 } from "./page.css";
+
+const CONSOLE_COLLAPSE_KEY = "circadium.engine.collapsed";
 
 function toneColor(tone: EngineTone) {
   switch (tone) {
@@ -54,11 +68,54 @@ function toneColor(tone: EngineTone) {
   }
 }
 
+const TONE_SEVERITY: Record<EngineTone, number> = {
+  fail: 3,
+  warn: 2,
+  info: 1,
+  done: 0,
+};
+
+function worstUnresolved(): EngineTone | null {
+  let worst: EngineTone | null = null;
+  for (const m of ENGINE_MSGS) {
+    if (m.tone === "fail" || m.tone === "warn") {
+      if (!worst || TONE_SEVERITY[m.tone] > TONE_SEVERITY[worst]) {
+        worst = m.tone;
+      }
+    }
+  }
+  return worst;
+}
+
 export default function CalendarPage() {
   const { weekStartDay, manuallyRefreshCalendar } = useCalendarProvider();
   const [initialDate, setInitialDate] = useState<Date>(() =>
     getWeekFirstDate(weekStartDay, new Date()),
   );
+  const [consoleCollapsed, setConsoleCollapsed] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem(CONSOLE_COLLAPSE_KEY);
+      if (stored === "1") setConsoleCollapsed(true);
+    } catch {}
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      window.localStorage.setItem(
+        CONSOLE_COLLAPSE_KEY,
+        consoleCollapsed ? "1" : "0",
+      );
+    } catch {}
+  }, [consoleCollapsed, hydrated]);
+
+  const toggleConsole = () => setConsoleCollapsed((c) => !c);
+
+  const alertTone = worstUnresolved();
 
   const finalDate = shiftDate(initialDate, 6);
   const range = `${format(initialDate, "MMM d")} – ${format(finalDate, "MMM d")}`;
@@ -69,7 +126,7 @@ export default function CalendarPage() {
     setInitialDate(getWeekFirstDate(weekStartDay, new Date()));
 
   return (
-    <div className={page}>
+    <div className={page} data-console-collapsed={consoleCollapsed}>
       <Masthead>
         <Caption>Vol. 2026</Caption>
         <Caption>Iss. 148</Caption>
@@ -114,55 +171,110 @@ export default function CalendarPage() {
             <RotateCw size={13} strokeWidth={2.4} />
             Regenerate
           </Button>
+          <Button
+            variant="glass"
+            size="sm"
+            onClick={toggleConsole}
+            aria-pressed={!consoleCollapsed}
+            aria-label={
+              consoleCollapsed
+                ? "Open engine console"
+                : "Collapse engine console"
+            }
+            title={
+              consoleCollapsed
+                ? "Open engine console"
+                : "Collapse engine console"
+            }
+          >
+            {alertTone ? (
+              <AlertCircle
+                size={14}
+                strokeWidth={2.4}
+                style={{ color: toneColor(alertTone) }}
+              />
+            ) : (
+              <Settings size={13} strokeWidth={2} />
+            )}
+            Engine
+          </Button>
         </div>
       </div>
 
       <div className={mainGrid}>
         <div className={calendarCard}>
           <div className={`${fcWrap} lumen-calendar`}>
-            <Calendar initialDate={initialDate} />
+            <Calendar
+              initialDate={initialDate}
+              dayHeaderContent={(arg) => (
+                <div className={dayHeaderStack}>
+                  <span
+                    className={`${dayHeaderLabel} ${
+                      arg.isToday ? dayHeaderLabelToday : ""
+                    }`}
+                  >
+                    {format(arg.date, "EEE")}
+                  </span>
+                  <span
+                    className={`${dayHeaderNum} ${
+                      arg.isToday ? dayHeaderNumToday : ""
+                    }`}
+                  >
+                    {arg.date.getDate()}
+                  </span>
+                </div>
+              )}
+            />
           </div>
         </div>
 
         <div className={engineCol}>
-          <Glass radius="lg" className={engineHeader}>
-            <div className={engineHeaderRow}>
-              <ConicDot size={10} />
-              <span className={engineTitle}>Engine</span>
-              <Caption className={engineSpacer}>
-                last run · {ENGINE_SUMMARY.lastRun}
-              </Caption>
+          <Glass radius="lg" className={engineContainer}>
+            <div className={engineHeader}>
+              <div className={engineHeaderRow}>
+                <ConicDot size={10} />
+                <span className={engineTitle}>Engine</span>
+                <Caption className={engineSpacer}>
+                  last run · {ENGINE_SUMMARY.lastRun}
+                </Caption>
+              </div>
+              <div className={engineSummary}>
+                {ENGINE_SUMMARY.failCount} fail · {ENGINE_SUMMARY.warnCount}{" "}
+                warn · {ENGINE_SUMMARY.placedCount} placed across the week
+              </div>
             </div>
-            <div className={engineSummary}>
-              {ENGINE_SUMMARY.failCount} fail · {ENGINE_SUMMARY.warnCount} warn ·{" "}
-              {ENGINE_SUMMARY.placedCount} placed across the week
+
+            <div className={engineList}>
+              {ENGINE_MSGS.map((m, i) => {
+                const tc = toneColor(m.tone);
+                const showFix = m.tone === "fail" || m.tone === "warn";
+                return (
+                  <div
+                    key={i}
+                    className={engineCard}
+                    style={{
+                      borderColor: `color-mix(in srgb, ${tc} 60%, transparent)`,
+                    }}
+                  >
+                    <div className={engineCardHead}>
+                      <span className={engineTag} style={{ background: tc }}>
+                        {m.tag}
+                      </span>
+                      <span className={engineCardTitle}>{m.title}</span>
+                    </div>
+                    <div className={engineCardBody}>{m.body}</div>
+                    {showFix && (
+                      <div style={{ marginTop: 8 }}>
+                        <Button variant="glass" size="sm">
+                          See fixes →
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </Glass>
-
-          <div className={engineList}>
-            {ENGINE_MSGS.map((m, i) => {
-              const tc = toneColor(m.tone);
-              const showFix = m.tone === "fail" || m.tone === "warn";
-              return (
-                <Glass key={i} radius="lg" className={engineCard}>
-                  <div className={engineCardHead}>
-                    <span className={engineTag} style={{ background: tc }}>
-                      {m.tag}
-                    </span>
-                    <span className={engineCardTitle}>{m.title}</span>
-                  </div>
-                  <div className={engineCardBody}>{m.body}</div>
-                  {showFix && (
-                    <div style={{ marginTop: 8 }}>
-                      <Button variant="glass" size="sm">
-                        See fixes →
-                      </Button>
-                    </div>
-                  )}
-                </Glass>
-              );
-            })}
-          </div>
         </div>
       </div>
     </div>

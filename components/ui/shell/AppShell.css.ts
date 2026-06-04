@@ -2,14 +2,13 @@ import { style } from "@vanilla-extract/css";
 import { vars, themeTransition } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
-const DESKTOP = "screen and (min-width: 768px)";
 
 export const bezelFrame = style({
   width: "100vw",
   height: "100vh",
   boxSizing: "border-box",
   background: vars.bezel,
-  padding: 10,
+  padding: 5,
   display: "flex",
   overflow: "hidden",
   transition: themeTransition,

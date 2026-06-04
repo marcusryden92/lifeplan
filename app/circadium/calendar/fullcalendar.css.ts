@@ -42,19 +42,10 @@ globalStyle(`${ROOT} .fc-col-header-cell`, {
 });
 
 globalStyle(`${ROOT} .fc-col-header-cell-cushion`, {
-  fontFamily: vars.font.ui,
-  fontWeight: 600,
-  fontSize: 10.5,
-  letterSpacing: "0.1em",
-  textTransform: "uppercase",
-  color: vars.inkSoft,
-  padding: "10px 4px !important",
   textDecoration: "none",
-  transition: themeTransition,
-});
-
-globalStyle(`${ROOT} .fc-day-today .fc-col-header-cell-cushion`, {
-  color: `${vars.accent.now} !important`,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
 });
 
 globalStyle(`${ROOT} .fc-timegrid-axis-cushion`, {
@@ -93,7 +84,7 @@ globalStyle(`${ROOT} .fc-timegrid-event-harness`, {
 
 globalStyle(`${ROOT} .fc-event`, {
   border: "none !important",
-  borderRadius: "6px !important",
+  borderRadius: "0 !important",
   fontFamily: vars.font.ui,
   fontSize: 11.5,
   fontWeight: 600,

@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, themeTransition, collapseTransition, DURATIONS } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -17,10 +17,10 @@ export const page = style({
 });
 
 export const subHeader = style({
-  padding: "20px 28px 18px",
   display: "flex",
   alignItems: "baseline",
   gap: 12,
+  padding: "20px 28px 18px",
   flexShrink: 0,
   "@media": {
     [MOBILE]: {
@@ -31,6 +31,10 @@ export const subHeader = style({
   },
 });
 
+export const calendarHeaderRow = style({
+  display: "contents",
+});
+
 export const rangeTitle = style({
   fontFamily: vars.font.display,
   fontSize: 32,
@@ -39,10 +43,49 @@ export const rangeTitle = style({
   color: vars.ink,
   lineHeight: 1,
   margin: 0,
+  minWidth: 240,
+  fontVariantNumeric: "tabular-nums",
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { fontSize: 24 },
+    [MOBILE]: { fontSize: 24, minWidth: "auto" },
   },
+});
+
+export const dayHeaderStack = style({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: 1,
+  padding: "4px 0",
+});
+
+export const dayHeaderLabel = style({
+  fontFamily: vars.font.ui,
+  fontSize: 9.5,
+  fontWeight: 600,
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  color: vars.muted,
+  transition: themeTransition,
+});
+
+export const dayHeaderNum = style({
+  fontFamily: vars.font.display,
+  fontSize: 22,
+  fontWeight: 500,
+  letterSpacing: "-0.03em",
+  lineHeight: 1,
+  color: vars.ink,
+  fontVariantNumeric: "tabular-nums",
+  transition: themeTransition,
+});
+
+export const dayHeaderNumToday = style({
+  color: vars.accent.now,
+});
+
+export const dayHeaderLabelToday = style({
+  color: vars.accent.now,
 });
 
 export const navCluster = style({
@@ -63,11 +106,17 @@ export const actionCluster = style({
 
 export const mainGrid = style({
   display: "grid",
-  gridTemplateColumns: "1fr 340px",
+  gridTemplateColumns: "1fr auto",
   gap: 16,
   padding: "0 28px 28px",
   flex: 1,
   minHeight: 0,
+  transition: `gap ${DURATIONS.collapse}s ease`,
+  selectors: {
+    [`${page}[data-console-collapsed="true"] &`]: {
+      gap: 0,
+    },
+  },
   "@media": {
     [MOBILE]: {
       gridTemplateColumns: "1fr",
@@ -97,15 +146,39 @@ export const calendarCard = style({
 });
 
 export const engineCol = style({
+  width: 340,
   display: "flex",
   flexDirection: "column",
-  gap: 12,
   minHeight: 0,
+  minWidth: 0,
+  overflow: "hidden",
+  opacity: 1,
+  transition: collapseTransition,
+  selectors: {
+    [`${page}[data-console-collapsed="true"] &`]: {
+      width: 0,
+      opacity: 0,
+      pointerEvents: "none",
+    },
+  },
+});
+
+export const engineContainer = style({
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
+  minHeight: 0,
+  padding: "16px 18px",
+  width: 340,
+  minWidth: 340,
+  boxSizing: "border-box",
 });
 
 export const engineHeader = style({
-  padding: "14px 18px",
+  padding: "0 0 14px",
   flexShrink: 0,
+  borderBottom: `1px solid ${vars.rule}`,
+  marginBottom: 14,
 });
 
 export const engineHeaderRow = style({
@@ -141,10 +214,15 @@ export const engineList = style({
   flexDirection: "column",
   gap: 10,
   minHeight: 0,
+  flex: 1,
 });
 
 export const engineCard = style({
-  padding: "12px 14px",
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: `1px solid ${vars.rule}`,
+  background: "transparent",
+  transition: themeTransition,
 });
 
 export const engineCardHead = style({

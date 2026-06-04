@@ -42,16 +42,19 @@ export function CategoryWrapperEvent({
 
   const accent = categoryColor || vars.accent.primary;
   const stripeColor = `color-mix(in srgb, ${accent} 28%, transparent)`;
-  const borderColor = `color-mix(in srgb, ${accent} 45%, transparent)`;
   const trespassPx = `${TRESPASS_BORDER_WIDTH}px`;
 
   return (
     <div
       className="relative w-full h-full"
       style={{
-        background: `repeating-linear-gradient(45deg, transparent 0 4px, ${stripeColor} 4px 5px)`,
-        border: `1px ${isStrict ? "solid" : "dashed"} ${borderColor}`,
-        borderRadius: 6,
+        background: `repeating-linear-gradient(45deg, transparent 0 ${
+          isStrict ? "4px" : "6px"
+        }, ${stripeColor} ${isStrict ? "4px" : "6px"} ${
+          isStrict ? "5.5px" : "7.5px"
+        })`,
+        border: "none",
+        borderRadius: 0,
         ...(trespassingStart && {
           borderTop: `${trespassPx} solid ${TRESPASS_BORDER_COLOR}`,
         }),

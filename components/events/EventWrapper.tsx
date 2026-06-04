@@ -70,8 +70,8 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
   const trespassPx = `${TRESPASS_BORDER_WIDTH}px`;
 
   const compact = elementHeight < 28;
-  const glassFill = `color-mix(in srgb, ${tint} 80%, transparent)`;
-  const glassStroke = `color-mix(in srgb, ${tint} 55%, transparent)`;
+  const glassFill = `color-mix(in srgb, ${tint} 55%, transparent)`;
+  const glassStroke = `color-mix(in srgb, ${tint} 70%, transparent)`;
 
   return (
     <div

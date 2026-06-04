@@ -53,12 +53,12 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   const showAlert = insufficientTravel;
   const showOverconstrained = overconstrained && !insufficientTravel;
   const fromName = extendedProps?.fromLocationId
-    ? locationNameMap.get(extendedProps.fromLocationId) ??
-      extendedProps.fromLocationId
+    ? (locationNameMap.get(extendedProps.fromLocationId) ??
+      extendedProps.fromLocationId)
     : null;
   const toName = extendedProps?.toLocationId
-    ? locationNameMap.get(extendedProps.toLocationId) ??
-      extendedProps.toLocationId
+    ? (locationNameMap.get(extendedProps.toLocationId) ??
+      extendedProps.toLocationId)
     : null;
   const travelLabel = fromName && toName ? `${fromName} → ${toName}` : "Travel";
 
@@ -79,14 +79,16 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
         height: "100%",
         padding: compact ? "2px 8px" : "6px 10px",
         borderRadius: 8,
-        background: `color-mix(in srgb, ${vars.ink} 6%, transparent)`,
-        border: `1px dashed ${
+        background: alertColor
+          ? `color-mix(in srgb, ${alertColor} 30%, transparent)`
+          : `color-mix(in srgb, ${vars.ink} 30%, transparent)`,
+        border: `1px solid ${
           alertColor
-            ? `color-mix(in srgb, ${alertColor} 60%, transparent)`
-            : `color-mix(in srgb, ${vars.ink} 22%, transparent)`
+            ? `color-mix(in srgb, ${alertColor} 70%, transparent)`
+            : `color-mix(in srgb, ${vars.ink} 55%, transparent)`
         }`,
         fontFamily: vars.font.ui,
-        color: vars.muted,
+        color: alertColor ?? vars.inkSoft,
       }}
     >
       <div

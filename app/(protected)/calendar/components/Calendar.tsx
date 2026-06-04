@@ -42,11 +42,13 @@ interface CalendarProps {
     categoryName: string | null,
     categoryColor: string | null,
   ) => void;
+  dayHeaderContent?: React.ComponentProps<typeof FullCalendar>["dayHeaderContent"];
 }
 
 export default function Calendar({
   initialDate,
   onCategoryHover,
+  dayHeaderContent,
 }: CalendarProps) {
   const {
     userId,
@@ -95,6 +97,7 @@ export default function Calendar({
           hour12: false,
         }}
         eventOrder={"-duration,start"}
+        dayHeaderContent={dayHeaderContent}
         editable={EVENT_INTERACTION_ENABLED}
         eventResizableFromStart={EVENT_INTERACTION_ENABLED}
         selectable={EVENT_INTERACTION_ENABLED}
