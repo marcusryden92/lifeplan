@@ -2,7 +2,7 @@
 import { db } from "@/lib/db";
 import { SimpleEvent, EventTemplate, Planner, Category } from "@/types/prisma";
 import { weekdayToInt } from "@/utils/calendarUtils";
-import type { WeekDayType } from "@/types/calendarTypes";
+import type { WeekDayType, WeekDayIntegers } from "@/types/calendarTypes";
 
 // Fetches the raw data from the database
 export async function fetchCalendarData(userId: string) {
@@ -40,13 +40,13 @@ export async function fetchCalendarData(userId: string) {
       include: { timeSlots: true, location: true },
     });
 
-    // Narrow timeSlots.days at the DB boundary and serialize location Dates
+    // Narrow timeSlots.day at the DB boundary and serialize location Dates
     // to avoid Redux non-serializable warnings.
     const categories: Category[] = categoriesRaw.map((cat) => ({
       ...cat,
       timeSlots: cat.timeSlots.map((ts) => ({
         ...ts,
-        days: ts.days.map((d) => weekdayToInt(d as WeekDayType)),
+        day: ts.day as WeekDayIntegers,
       })),
       location: cat.location
         ? {

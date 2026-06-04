@@ -27,24 +27,16 @@ function toMinutes(hhmm: string): number {
 function expandToDayRanges(
   window: CategoryTimeWindow,
 ): Array<{ day: WeekDayIntegers; startMin: number; endMin: number }> {
-  const out: Array<{
-    day: WeekDayIntegers;
-    startMin: number;
-    endMin: number;
-  }> = [];
   const startMin = toMinutes(window.startTime);
   const endMin = toMinutes(window.endTime);
   const spansMidnight = endMin <= startMin;
 
-  for (const day of window.days) {
-    if (spansMidnight) {
-      out.push({ day, startMin, endMin: 1440 });
-      const nextDay = ((day + 1) % 7) as WeekDayIntegers;
-      if (endMin > 0) out.push({ day: nextDay, startMin: 0, endMin });
-    } else {
-      out.push({ day, startMin, endMin });
-    }
+  if (!spansMidnight) {
+    return [{ day: window.day, startMin, endMin }];
   }
+  const out = [{ day: window.day, startMin, endMin: 1440 }];
+  const nextDay = ((window.day + 1) % 7) as WeekDayIntegers;
+  if (endMin > 0) out.push({ day: nextDay, startMin: 0, endMin });
   return out;
 }
 

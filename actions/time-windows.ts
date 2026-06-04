@@ -3,12 +3,11 @@
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
-import { intToWeekday, weekdayToInt } from "@/utils/calendarUtils";
 import { findOverlap } from "@/utils/category-constraints/overlapCheck";
 
 export interface TimeWindowRecord {
   id: string;
-  days: WeekDayIntegers[];
+  day: WeekDayIntegers;
   startTime: string;
   endTime: string;
   categoryId: string | null;
@@ -16,7 +15,7 @@ export interface TimeWindowRecord {
 
 type RawTimeWindowRow = {
   id: string;
-  days: string[];
+  day: number;
   startTime: string;
   endTime: string;
   categoryId: string | null;
@@ -25,9 +24,7 @@ type RawTimeWindowRow = {
 function narrowTimeWindow(row: RawTimeWindowRow): TimeWindowRecord {
   return {
     id: row.id,
-    days: row.days.map((d) =>
-      weekdayToInt(d as Parameters<typeof weekdayToInt>[0]),
-    ),
+    day: row.day as WeekDayIntegers,
     startTime: row.startTime,
     endTime: row.endTime,
     categoryId: row.categoryId,
@@ -46,7 +43,7 @@ export async function fetchAllTimeWindows(): Promise<TimeWindowRecord[]> {
 
 async function assertNoOverlap(
   userId: string,
-  candidate: { days: WeekDayIntegers[]; startTime: string; endTime: string },
+  candidate: { day: WeekDayIntegers; startTime: string; endTime: string },
   excludeWindowId: string | null,
 ): Promise<void> {
   const rows = await db.categoryTimeWindow.findMany({
@@ -62,9 +59,7 @@ async function assertNoOverlap(
     label: row.category?.name ?? "unassigned window",
     timeSlots: [
       {
-        days: row.days.map((d) =>
-          weekdayToInt(d as Parameters<typeof weekdayToInt>[0]),
-        ),
+        day: row.day as WeekDayIntegers,
         startTime: row.startTime,
         endTime: row.endTime,
       },
@@ -80,7 +75,7 @@ async function assertNoOverlap(
 }
 
 export async function createTimeWindow(data: {
-  days: WeekDayIntegers[];
+  day: WeekDayIntegers;
   startTime: string;
   endTime: string;
   categoryId?: string | null;
@@ -99,7 +94,7 @@ export async function createTimeWindow(data: {
 
   const row = await db.categoryTimeWindow.create({
     data: {
-      days: data.days.map(intToWeekday),
+      day: data.day,
       startTime: data.startTime,
       endTime: data.endTime,
       categoryId: data.categoryId ?? null,
@@ -112,7 +107,7 @@ export async function createTimeWindow(data: {
 export async function updateTimeWindow(
   windowId: string,
   data: {
-    days?: WeekDayIntegers[];
+    day?: WeekDayIntegers;
     startTime?: string;
     endTime?: string;
     categoryId?: string | null;
@@ -134,19 +129,15 @@ export async function updateTimeWindow(
   }
 
   const timeFieldsChanged =
-    data.days !== undefined ||
+    data.day !== undefined ||
     data.startTime !== undefined ||
     data.endTime !== undefined;
 
   if (timeFieldsChanged) {
-    const nextDays = data.days ??
-      existing.days.map((d) =>
-        weekdayToInt(d as Parameters<typeof weekdayToInt>[0]),
-      );
     await assertNoOverlap(
       session.user.id,
       {
-        days: nextDays,
+        day: data.day ?? (existing.day as WeekDayIntegers),
         startTime: data.startTime ?? existing.startTime,
         endTime: data.endTime ?? existing.endTime,
       },
@@ -157,9 +148,7 @@ export async function updateTimeWindow(
   const row = await db.categoryTimeWindow.update({
     where: { id: windowId },
     data: {
-      ...(data.days !== undefined && {
-        days: data.days.map(intToWeekday),
-      }),
+      ...(data.day !== undefined && { day: data.day }),
       ...(data.startTime !== undefined && { startTime: data.startTime }),
       ...(data.endTime !== undefined && { endTime: data.endTime }),
       ...(data.categoryId !== undefined && { categoryId: data.categoryId }),

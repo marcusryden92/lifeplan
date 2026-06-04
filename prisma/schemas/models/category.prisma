@@ -35,8 +35,9 @@ model Category {
 
 model CategoryTimeWindow {
   id         String        @id @default(uuid())
-  // Days of the week this slot applies to (enum: sunday..saturday, ordered to match JS Date.getDay())
-  days       WeekDayType[]
+  // Day of the week this window applies to (0=Sunday ... 6=Saturday, matches JS Date.getDay()).
+  // One row per weekly occurrence: a Mon/Wed/Fri pattern is three rows.
+  day        Int
   startTime  String        // HH:MM (24-hour)
   endTime    String        // HH:MM (24-hour); if <= startTime the slot spans midnight
 

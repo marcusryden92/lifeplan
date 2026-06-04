@@ -9,7 +9,7 @@ export function expandSlotForDay(
   dayStart: Date,
 ): { start: Date; end: Date } | null {
   const dow = dayStart.getDay();
-  if (!timeSlot.days.some((d) => d === dow)) return null;
+  if (timeSlot.day !== dow) return null;
 
   const startMin = hhmmToMinutes(timeSlot.startTime);
   let endMin = hhmmToMinutes(timeSlot.endTime);

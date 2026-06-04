@@ -44,8 +44,8 @@ export type TravelTimeWithLocations = Prisma.TravelTimeGetPayload<{
 }>;
 
 type RawCategoryTimeWindow = Prisma.CategoryTimeWindowGetPayload<undefined>;
-export type CategoryTimeWindow = Omit<RawCategoryTimeWindow, "days"> & {
-  days: WeekDayIntegers[];
+export type CategoryTimeWindow = Omit<RawCategoryTimeWindow, "day"> & {
+  day: WeekDayIntegers;
 };
 
 type RawCategory = Prisma.CategoryGetPayload<{ include: { timeSlots: true } }>;

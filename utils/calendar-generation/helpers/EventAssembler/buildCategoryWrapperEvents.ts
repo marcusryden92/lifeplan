@@ -23,27 +23,25 @@ function expandPeriods(
 
   for (const constraint of constraints) {
     for (const slot of constraint.timeSlots) {
-      for (const dow of slot.days) {
-        const searchBase = new Date(startDate);
-        searchBase.setHours(0, 0, 0, 0);
-        const daysUntil = (dow - searchBase.getDay() + 7) % 7;
-        searchBase.setDate(searchBase.getDate() + daysUntil);
+      const searchBase = new Date(startDate);
+      searchBase.setHours(0, 0, 0, 0);
+      const daysUntil = (slot.day - searchBase.getDay() + 7) % 7;
+      searchBase.setDate(searchBase.getDate() + daysUntil);
 
-        while (searchBase <= endDate) {
-          const period = expandSlotForDay(slot, searchBase);
-          if (period && period.end > startDate && period.start < endDate) {
-            periods.push({
-              start: period.start,
-              end: period.end,
-              categoryId: constraint.id,
-              categoryName: constraint.name,
-              categoryColor: constraint.color,
-              isStrict: constraint.isStrict,
-            });
-          }
-
-          searchBase.setTime(searchBase.getTime() + MS_PER_WEEK);
+      while (searchBase <= endDate) {
+        const period = expandSlotForDay(slot, searchBase);
+        if (period && period.end > startDate && period.start < endDate) {
+          periods.push({
+            start: period.start,
+            end: period.end,
+            categoryId: constraint.id,
+            categoryName: constraint.name,
+            categoryColor: constraint.color,
+            isStrict: constraint.isStrict,
+          });
         }
+
+        searchBase.setTime(searchBase.getTime() + MS_PER_WEEK);
       }
     }
   }

@@ -8,8 +8,10 @@ export const CATEGORY_IDS = {
 
 type CategorySeedInput = Prisma.CategoryCreateInput & { id: string };
 
+// 0=Sunday, 1=Monday, ... 6=Saturday — matches JS Date.getDay() and what's
+// stored in CategoryTimeWindow.day.
 type SeedTimeWindow = {
-  days: ("sunday" | "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday")[];
+  day: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   startTime: string;
   endTime: string;
 };
@@ -35,12 +37,13 @@ export const generateCategories = (userId: string): CategorySeedInput[] => {
       sortOrder: 0,
       timeSlots: {
         create: withOwner(userId, [
-          { days: ["monday", "tuesday"], startTime: "09:00", endTime: "17:00" },
-          { days: ["wednesday"], startTime: "20:00", endTime: "00:00" },
-          { days: ["thursday"], startTime: "20:00", endTime: "04:00" },
-          { days: ["saturday"], startTime: "09:00", endTime: "09:30" },
-          { days: ["saturday"], startTime: "10:00", endTime: "10:30" },
-          { days: ["saturday"], startTime: "12:00", endTime: "13:00" },
+          { day: 1, startTime: "09:00", endTime: "17:00" },
+          { day: 2, startTime: "09:00", endTime: "17:00" },
+          { day: 3, startTime: "20:00", endTime: "00:00" },
+          { day: 4, startTime: "20:00", endTime: "04:00" },
+          { day: 6, startTime: "09:00", endTime: "09:30" },
+          { day: 6, startTime: "10:00", endTime: "10:30" },
+          { day: 6, startTime: "12:00", endTime: "13:00" },
         ]),
       },
       isStrict: true,
@@ -57,9 +60,9 @@ export const generateCategories = (userId: string): CategorySeedInput[] => {
       sortOrder: 1,
       timeSlots: {
         create: withOwner(userId, [
-          { days: ["thursday"], startTime: "00:00", endTime: "02:00" },
-          { days: ["saturday"], startTime: "09:30", endTime: "10:00" },
-          { days: ["saturday"], startTime: "11:00", endTime: "12:00" },
+          { day: 4, startTime: "00:00", endTime: "02:00" },
+          { day: 6, startTime: "09:30", endTime: "10:00" },
+          { day: 6, startTime: "11:00", endTime: "12:00" },
         ]),
       },
       isStrict: true,

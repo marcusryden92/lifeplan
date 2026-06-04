@@ -104,6 +104,14 @@ export const actionCluster = style({
   flexShrink: 0,
 });
 
+export const calendarRegion = style({
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+  flex: 1,
+  minHeight: 0,
+});
+
 export const mainGrid = style({
   display: "grid",
   gridTemplateColumns: "1fr auto",

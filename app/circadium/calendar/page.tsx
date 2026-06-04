@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   AlertCircle,
+  CalendarCog,
   ChevronLeft,
   ChevronRight,
   RotateCw,
@@ -13,14 +14,18 @@ import {
   Glass,
   Caption,
   Button,
-  Masthead,
   ConicDot,
   vars,
 } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { getWeekFirstDate, shiftDate } from "@/utils/calendarUtils";
 import Calendar from "@/app/(protected)/calendar/components/Calendar";
-import { ENGINE_MSGS, ENGINE_SUMMARY, type EngineTone } from "../_mock/calendar";
+import {
+  ENGINE_MSGS,
+  ENGINE_SUMMARY,
+  type EngineTone,
+} from "../_mock/calendar";
+import { WeekPlanModal } from "./_components/WeekPlanModal";
 import "./fullcalendar.css";
 import {
   page,
@@ -29,6 +34,7 @@ import {
   navCluster,
   spacer,
   actionCluster,
+  calendarRegion,
   mainGrid,
   calendarCard,
   engineCol,
@@ -94,6 +100,7 @@ export default function CalendarPage() {
   );
   const [consoleCollapsed, setConsoleCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -127,155 +134,159 @@ export default function CalendarPage() {
 
   return (
     <div className={page} data-console-collapsed={consoleCollapsed}>
-      <Masthead>
-        <Caption>Vol. 2026</Caption>
-        <Caption>Iss. 148</Caption>
-        <Caption>{range}</Caption>
-        <span style={{ flex: 1 }} />
-        <Caption>⌘K capture</Caption>
-        <Caption style={{ color: vars.ink }}>Marcus P.</Caption>
-      </Masthead>
-
-      <div className={subHeader}>
-        <h1 className={rangeTitle}>{range}</h1>
-        <div className={navCluster}>
-          <Button
-            variant="glass"
-            size="sm"
-            onClick={goPrev}
-            aria-label="Previous week"
-          >
-            <ChevronLeft size={14} strokeWidth={2} />
-          </Button>
-          <Button variant="glass" size="sm" onClick={goToday}>
-            Today
-          </Button>
-          <Button
-            variant="glass"
-            size="sm"
-            onClick={goNext}
-            aria-label="Next week"
-          >
-            <ChevronRight size={14} strokeWidth={2} />
-          </Button>
-        </div>
-        <span className={spacer} />
-        <div className={actionCluster}>
-          <Button variant="glass" size="sm">
-            Filters · all
-          </Button>
-          <Button variant="glass" size="sm">
-            Week ▾
-          </Button>
-          <Button variant="solid" size="sm" onClick={manuallyRefreshCalendar}>
-            <RotateCw size={13} strokeWidth={2.4} />
-            Regenerate
-          </Button>
-          <Button
-            variant="glass"
-            size="sm"
-            onClick={toggleConsole}
-            aria-pressed={!consoleCollapsed}
-            aria-label={
-              consoleCollapsed
-                ? "Open engine console"
-                : "Collapse engine console"
-            }
-            title={
-              consoleCollapsed
-                ? "Open engine console"
-                : "Collapse engine console"
-            }
-          >
-            {alertTone ? (
-              <AlertCircle
-                size={14}
-                strokeWidth={2.4}
-                style={{ color: toneColor(alertTone) }}
-              />
-            ) : (
-              <Settings size={13} strokeWidth={2} />
-            )}
-            Engine
-          </Button>
-        </div>
-      </div>
-
-      <div className={mainGrid}>
-        <div className={calendarCard}>
-          <div className={`${fcWrap} lumen-calendar`}>
-            <Calendar
-              initialDate={initialDate}
-              dayHeaderContent={(arg) => (
-                <div className={dayHeaderStack}>
-                  <span
-                    className={`${dayHeaderLabel} ${
-                      arg.isToday ? dayHeaderLabelToday : ""
-                    }`}
-                  >
-                    {format(arg.date, "EEE")}
-                  </span>
-                  <span
-                    className={`${dayHeaderNum} ${
-                      arg.isToday ? dayHeaderNumToday : ""
-                    }`}
-                  >
-                    {arg.date.getDate()}
-                  </span>
-                </div>
+      <div className={calendarRegion}>
+        <div className={subHeader}>
+          <h1 className={rangeTitle}>{range}</h1>
+          <div className={navCluster}>
+            <Button
+              variant="glass"
+              size="sm"
+              onClick={goPrev}
+              aria-label="Previous week"
+            >
+              <ChevronLeft size={14} strokeWidth={2} />
+            </Button>
+            <Button variant="glass" size="sm" onClick={goToday}>
+              Today
+            </Button>
+            <Button
+              variant="glass"
+              size="sm"
+              onClick={goNext}
+              aria-label="Next week"
+            >
+              <ChevronRight size={14} strokeWidth={2} />
+            </Button>
+          </div>
+          <span className={spacer} />
+          <div className={actionCluster}>
+            <Button variant="glass" size="sm">
+              Filters · all
+            </Button>
+            <Button variant="glass" size="sm">
+              Week ▾
+            </Button>
+            <Button
+              variant="glass"
+              size="sm"
+              onClick={() => setPlanOpen(true)}
+              aria-label="Edit week templates and category windows"
+            >
+              <CalendarCog size={13} strokeWidth={2.2} />
+              Plan week
+            </Button>
+            <Button variant="solid" size="sm" onClick={manuallyRefreshCalendar}>
+              <RotateCw size={13} strokeWidth={2.4} />
+              Regenerate
+            </Button>
+            <Button
+              variant="glass"
+              size="sm"
+              onClick={toggleConsole}
+              aria-pressed={!consoleCollapsed}
+              aria-label={
+                consoleCollapsed
+                  ? "Open engine console"
+                  : "Collapse engine console"
+              }
+              title={
+                consoleCollapsed
+                  ? "Open engine console"
+                  : "Collapse engine console"
+              }
+            >
+              {alertTone ? (
+                <AlertCircle
+                  size={14}
+                  strokeWidth={2.4}
+                  style={{ color: toneColor(alertTone) }}
+                />
+              ) : (
+                <Settings size={13} strokeWidth={2} />
               )}
-            />
+              Engine
+            </Button>
           </div>
         </div>
 
-        <div className={engineCol}>
-          <Glass radius="lg" className={engineContainer}>
-            <div className={engineHeader}>
-              <div className={engineHeaderRow}>
-                <ConicDot size={10} />
-                <span className={engineTitle}>Engine</span>
-                <Caption className={engineSpacer}>
-                  last run · {ENGINE_SUMMARY.lastRun}
-                </Caption>
-              </div>
-              <div className={engineSummary}>
-                {ENGINE_SUMMARY.failCount} fail · {ENGINE_SUMMARY.warnCount}{" "}
-                warn · {ENGINE_SUMMARY.placedCount} placed across the week
-              </div>
-            </div>
-
-            <div className={engineList}>
-              {ENGINE_MSGS.map((m, i) => {
-                const tc = toneColor(m.tone);
-                const showFix = m.tone === "fail" || m.tone === "warn";
-                return (
-                  <div
-                    key={i}
-                    className={engineCard}
-                    style={{
-                      borderColor: `color-mix(in srgb, ${tc} 60%, transparent)`,
-                    }}
-                  >
-                    <div className={engineCardHead}>
-                      <span className={engineTag} style={{ background: tc }}>
-                        {m.tag}
-                      </span>
-                      <span className={engineCardTitle}>{m.title}</span>
-                    </div>
-                    <div className={engineCardBody}>{m.body}</div>
-                    {showFix && (
-                      <div style={{ marginTop: 8 }}>
-                        <Button variant="glass" size="sm">
-                          See fixes →
-                        </Button>
-                      </div>
-                    )}
+        <div className={mainGrid}>
+          <div className={calendarCard}>
+            <div className={`${fcWrap} lumen-calendar`}>
+              <Calendar
+                initialDate={initialDate}
+                dayHeaderContent={(arg) => (
+                  <div className={dayHeaderStack}>
+                    <span
+                      className={`${dayHeaderLabel} ${
+                        arg.isToday ? dayHeaderLabelToday : ""
+                      }`}
+                    >
+                      {format(arg.date, "EEE")}
+                    </span>
+                    <span
+                      className={`${dayHeaderNum} ${
+                        arg.isToday ? dayHeaderNumToday : ""
+                      }`}
+                    >
+                      {arg.date.getDate()}
+                    </span>
                   </div>
-                );
-              })}
+                )}
+              />
             </div>
-          </Glass>
+          </div>
+
+          <div className={engineCol}>
+            <Glass radius="lg" className={engineContainer}>
+              <div className={engineHeader}>
+                <div className={engineHeaderRow}>
+                  <ConicDot size={10} />
+                  <span className={engineTitle}>Engine</span>
+                  <Caption className={engineSpacer}>
+                    last run · {ENGINE_SUMMARY.lastRun}
+                  </Caption>
+                </div>
+                <div className={engineSummary}>
+                  {ENGINE_SUMMARY.failCount} fail · {ENGINE_SUMMARY.warnCount}{" "}
+                  warn · {ENGINE_SUMMARY.placedCount} placed across the week
+                </div>
+              </div>
+
+              <div className={engineList}>
+                {ENGINE_MSGS.map((m, i) => {
+                  const tc = toneColor(m.tone);
+                  const showFix = m.tone === "fail" || m.tone === "warn";
+                  return (
+                    <div
+                      key={i}
+                      className={engineCard}
+                      style={{
+                        borderColor: `color-mix(in srgb, ${tc} 60%, transparent)`,
+                      }}
+                    >
+                      <div className={engineCardHead}>
+                        <span className={engineTag} style={{ background: tc }}>
+                          {m.tag}
+                        </span>
+                        <span className={engineCardTitle}>{m.title}</span>
+                      </div>
+                      <div className={engineCardBody}>{m.body}</div>
+                      {showFix && (
+                        <div style={{ marginTop: 8 }}>
+                          <Button variant="glass" size="sm">
+                            See fixes →
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </Glass>
+          </div>
         </div>
+
+        <WeekPlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
       </div>
     </div>
   );

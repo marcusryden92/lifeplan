@@ -5,23 +5,19 @@ import { db } from "@/lib/db";
 import { PlannerType } from "@/types/prisma";
 import type { Category } from "@/types/prisma";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
-import { weekdayToInt } from "@/utils/calendarUtils";
 
 // ============================================================================
 // Category CRUD Operations
 // ============================================================================
 
-// Conversion happens at the DB boundary: Prisma stores `days` as the
-// WeekDayType enum (strings); the rest of the app works with WeekDayIntegers.
-
-type RawTimeWindowRow = { days: string[]; [k: string]: unknown };
+type RawTimeWindowRow = { day: number; [k: string]: unknown };
 
 function narrowTimeSlots<T extends RawTimeWindowRow>(
   slots: T[],
-): (Omit<T, "days"> & { days: WeekDayIntegers[] })[] {
+): (Omit<T, "day"> & { day: WeekDayIntegers })[] {
   return slots.map((ts) => ({
     ...ts,
-    days: ts.days.map((d) => weekdayToInt(d as Parameters<typeof weekdayToInt>[0])),
+    day: ts.day as WeekDayIntegers,
   }));
 }
 

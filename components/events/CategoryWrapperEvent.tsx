@@ -42,6 +42,7 @@ export function CategoryWrapperEvent({
 
   const accent = categoryColor || vars.accent.primary;
   const stripeColor = `color-mix(in srgb, ${accent} 28%, transparent)`;
+  const fillTint = `color-mix(in srgb, ${accent} 12%, transparent)`;
   const trespassPx = `${TRESPASS_BORDER_WIDTH}px`;
 
   return (
@@ -52,7 +53,7 @@ export function CategoryWrapperEvent({
           isStrict ? "4px" : "6px"
         }, ${stripeColor} ${isStrict ? "4px" : "6px"} ${
           isStrict ? "5.5px" : "7.5px"
-        })`,
+        }), ${fillTint}`,
         border: "none",
         borderRadius: 0,
         ...(trespassingStart && {

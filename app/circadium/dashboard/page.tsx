@@ -6,10 +6,8 @@ import {
   Glass,
   Caption,
   Button,
-  Masthead,
   CategoryBadge,
   CategoryDot,
-  vars,
   useCapture,
 } from "@/components/ui";
 import { TODAY, areaColor } from "../_mock/dashboard";
@@ -59,15 +57,6 @@ export default function DashboardPage() {
 
   return (
     <div className={page}>
-      <Masthead>
-        <Caption>Vol. 2026</Caption>
-        <Caption>Iss. 148</Caption>
-        <Caption>{TODAY.date}</Caption>
-        <span style={{ flex: 1 }} />
-        <Caption>⌘K capture</Caption>
-        <Caption style={{ color: vars.ink }}>Marcus R</Caption>
-      </Masthead>
-
       <div className={headerRow}>
         <div>
           <h1 className={greeting}>{TODAY.greeting}</h1>
