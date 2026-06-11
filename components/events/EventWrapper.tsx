@@ -70,8 +70,8 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
   const trespassPx = `${TRESPASS_BORDER_WIDTH}px`;
 
   const compact = elementHeight < 28;
-  const glassFill = `color-mix(in srgb, ${tint} 55%, transparent)`;
-  const glassStroke = `color-mix(in srgb, ${tint} 70%, transparent)`;
+  const glassFill = `color-mix(in srgb, ${tint} 94%, transparent)`;
+  const glassStroke = tint;
 
   return (
     <div
@@ -91,7 +91,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
         boxShadow: showPopover
           ? `0 8px 20px color-mix(in srgb, ${vars.ink} 24%, transparent), inset 0 1px 0 rgba(255,255,255,0.32)`
           : `inset 0 1px 0 rgba(255,255,255,0.28)`,
-        color: vars.ink,
+        color: "#fff",
         fontFamily: vars.font.ui,
         ...(trespassingStart && {
           borderTop: `${trespassPx} solid ${TRESPASS_BORDER_COLOR}`,
@@ -121,7 +121,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
             fontWeight: 600,
             letterSpacing: "-0.005em",
             lineHeight: 1.25,
-            color: vars.ink,
+            color: "#fff",
             flex: 1,
             minWidth: 0,
             overflow: "hidden",
@@ -139,7 +139,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
               fontSize: 10,
               fontWeight: 600,
               fontVariantNumeric: "tabular-nums",
-              color: vars.inkSoft,
+              color: "rgba(255,255,255,0.82)",
               flexShrink: 0,
             }}
           >

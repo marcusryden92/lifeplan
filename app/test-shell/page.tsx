@@ -34,17 +34,15 @@ export default function TestShellPage() {
       >
         <header>
           <Caption>good morning</Caption>
-          <h1
-            className={display.hero}
-            style={{ margin: 0, marginTop: 4 }}
-          >
+          <h1 className={display.hero} style={{ margin: 0, marginTop: 4 }}>
             Good morning, Marcus
           </h1>
           <p
             className={text.body}
             style={{ color: vars.inkSoft, marginTop: 6 }}
           >
-            6 things on today · 4h 40m planned work · 1 overdue · 4 in inbox to triage.
+            6 things on today · 4h 40m planned work · 1 overdue · 4 in inbox to
+            triage.
           </p>
         </header>
 
@@ -127,9 +125,7 @@ export default function TestShellPage() {
                 })}
               >
                 <ConicDot size={16} />
-                <span className={text.bodyLg}>
-                  ✦ Draft this week's goals
-                </span>
+                <span className={text.bodyLg}>✦ Draft this week's goals</span>
               </div>
               <Button variant="glass" size="sm">
                 start session →

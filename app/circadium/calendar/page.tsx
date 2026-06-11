@@ -10,13 +10,7 @@ import {
   Settings,
 } from "lucide-react";
 import { format } from "date-fns";
-import {
-  Glass,
-  Caption,
-  Button,
-  ConicDot,
-  vars,
-} from "@/components/ui";
+import { Glass, Caption, Button, ConicDot, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { getWeekFirstDate, shiftDate } from "@/utils/calendarUtils";
 import Calendar from "@/app/(protected)/calendar/components/Calendar";
@@ -237,7 +231,7 @@ export default function CalendarPage() {
           </div>
 
           <div className={engineCol}>
-            <Glass radius="lg" className={engineContainer}>
+            <div className={engineContainer}>
               <div className={engineHeader}>
                 <div className={engineHeaderRow}>
                   <ConicDot size={10} />
@@ -282,7 +276,7 @@ export default function CalendarPage() {
                   );
                 })}
               </div>
-            </Glass>
+            </div>
           </div>
         </div>
 

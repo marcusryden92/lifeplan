@@ -49,7 +49,7 @@ export type StatItem = {
 
 export const TODAY = {
   date: "Thursday, May 28",
-  greeting: "Good morning, Marcus",
+  greeting: "Good  morning, Marcus",
   agenda: [
     {
       time: "09:00",

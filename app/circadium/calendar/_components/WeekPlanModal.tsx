@@ -36,6 +36,7 @@ import type { TimeWindowRecord } from "@/actions/time-windows";
 import {
   overlay,
   modal,
+  MODAL_FADE_MS,
   banner,
   editingLabel,
   modeToggle,
@@ -59,6 +60,7 @@ import {
   field,
   fieldLabel,
   fieldInput,
+  fieldStatic,
   swatchRow,
   swatchChip,
   categoryRow,
@@ -133,6 +135,13 @@ function durationMinutes(start: Date, end: Date): number {
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map((v) => parseInt(v, 10));
   return h * 60 + m;
+}
+
+function addMinutesToHHMM(hhmm: string, addMinutes: number): string {
+  const total = timeToMinutes(hhmm) + addMinutes;
+  const h = Math.floor(total / 60) % 24;
+  const m = ((total % 60) + 60) % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
 function templateToEvent(
@@ -225,6 +234,25 @@ export function WeekPlanModal({ open, onClose }: WeekPlanModalProps) {
   const { userId, template, categories, updateTemplateArray } =
     useCalendarProvider();
   const calendarRef = useRef<FullCalendar>(null);
+
+  // Defer unmount on close so the fade-out animation plays. `shouldRender`
+  // controls mount; `dataState` flips on the next frame to drive the CSS
+  // transition both directions.
+  const [shouldRender, setShouldRender] = useState(open);
+  const [dataState, setDataState] = useState<"open" | "closed">(
+    open ? "open" : "closed",
+  );
+
+  useEffect(() => {
+    if (open) {
+      setShouldRender(true);
+      const id = requestAnimationFrame(() => setDataState("open"));
+      return () => cancelAnimationFrame(id);
+    }
+    setDataState("closed");
+    const t = setTimeout(() => setShouldRender(false), MODAL_FADE_MS);
+    return () => clearTimeout(t);
+  }, [open]);
 
   const [mode, setMode] = useState<Mode>("templates");
   const [saving, setSaving] = useState(false);
@@ -628,15 +656,19 @@ export function WeekPlanModal({ open, onClose }: WeekPlanModalProps) {
     onClose();
   };
 
-  if (!open) return null;
+  if (!shouldRender) return null;
 
   const tplCount = tplsWorking.length;
   const winCount = winsWorking.length;
 
   return (
-    <div className={overlay} onMouseDown={(e) => {
-      if (e.target === e.currentTarget) cancel();
-    }}>
+    <div
+      className={overlay}
+      data-state={dataState}
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) cancel();
+      }}
+    >
       <div className={modal}>
         <div className={banner}>
           <span className={editingLabel}>editing</span>
@@ -676,7 +708,7 @@ export function WeekPlanModal({ open, onClose }: WeekPlanModalProps) {
           </span>
           <span className={bannerSpacer} />
           <Button variant="glass" size="sm" onClick={cancel} disabled={saving}>
-            Cancel
+            {changeCount === 0 ? "Back" : "Cancel"}
           </Button>
           <Button
             variant="solid"
@@ -784,6 +816,8 @@ export function WeekPlanModal({ open, onClose }: WeekPlanModalProps) {
                   eventContent={({ event, timeText }) => {
                     const ext = event.extendedProps as {
                       kind: "template" | "window";
+                      templateId?: string;
+                      windowId?: string;
                       color: string;
                       active: boolean;
                       assigned?: boolean;
@@ -796,12 +830,21 @@ export function WeekPlanModal({ open, onClose }: WeekPlanModalProps) {
                             : `color-mix(in srgb, ${vars.ink} 8%, transparent)`
                         }`
                       : ext.color;
+                    const isSelected =
+                      selected !== null &&
+                      ((selected.kind === "templates" &&
+                        ext.kind === "template" &&
+                        ext.templateId === selected.id) ||
+                        (selected.kind === "windows" &&
+                          ext.kind === "window" &&
+                          ext.windowId === selected.id));
                     return (
                       <div
                         className={eventBox}
                         data-kind={ext.kind}
                         data-assigned={ext.assigned ? "true" : "false"}
                         data-inactive={ext.active ? "false" : "true"}
+                        data-selected={isSelected ? "true" : "false"}
                         style={{ background: bg }}
                       >
                         <div className={eventTitle}>{event.title}</div>
@@ -879,25 +922,13 @@ function TemplateEditor({
       <div className={fieldGrid}>
         <div className={field}>
           <span className={fieldLabel}>start</span>
-          <input
-            type="time"
-            className={fieldInput}
-            value={template.startTime}
-            onChange={(e) => onUpdate({ startTime: e.target.value })}
-          />
+          <span className={fieldStatic}>{template.startTime}</span>
         </div>
         <div className={field}>
-          <span className={fieldLabel}>duration (min)</span>
-          <input
-            type="number"
-            min={5}
-            step={5}
-            className={fieldInput}
-            value={template.duration}
-            onChange={(e) =>
-              onUpdate({ duration: parseInt(e.target.value, 10) || 0 })
-            }
-          />
+          <span className={fieldLabel}>end</span>
+          <span className={fieldStatic}>
+            {addMinutesToHHMM(template.startTime, template.duration)}
+          </span>
         </div>
       </div>
 
@@ -966,31 +997,11 @@ function WindowEditor({
       <div className={fieldGrid}>
         <div className={field}>
           <span className={fieldLabel}>start</span>
-          <input
-            type="time"
-            className={fieldInput}
-            value={win.startTime}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (timeToMinutes(v) < timeToMinutes(win.endTime)) {
-                onUpdate({ startTime: v });
-              }
-            }}
-          />
+          <span className={fieldStatic}>{win.startTime}</span>
         </div>
         <div className={field}>
           <span className={fieldLabel}>end</span>
-          <input
-            type="time"
-            className={fieldInput}
-            value={win.endTime === "23:59" ? "23:59" : win.endTime}
-            onChange={(e) => {
-              const v = e.target.value;
-              if (timeToMinutes(v) > timeToMinutes(win.startTime)) {
-                onUpdate({ endTime: v });
-              }
-            }}
-          />
+          <span className={fieldStatic}>{win.endTime}</span>
         </div>
       </div>
 

@@ -2,8 +2,8 @@ import { createTheme } from "@vanilla-extract/css";
 import { vars } from "./tokens.css";
 
 export const lumenLight = createTheme(vars, {
-  paper: "#fdfaf8",
-  bezel: "#dbd5cf",
+  paper: "#edeae5",
+  bezel: "#c8bfb6",
   ink: "#16142a",
   inkSoft: "#3c3a52",
   muted: "#7a7890",
@@ -77,8 +77,7 @@ export const lumenDark = createTheme(vars, {
   },
 
   shadow: {
-    panel:
-      "0 14px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(230,232,236,0.14)",
+    panel: "0 14px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(230,232,236,0.14)",
     panelSm:
       "0 6px 20px rgba(0,0,0,0.40), inset 0 1px 0 rgba(230,232,236,0.12)",
   },

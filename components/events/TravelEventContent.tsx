@@ -80,15 +80,11 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
         padding: compact ? "2px 8px" : "6px 10px",
         borderRadius: 8,
         background: alertColor
-          ? `color-mix(in srgb, ${alertColor} 30%, transparent)`
-          : `color-mix(in srgb, ${vars.ink} 30%, transparent)`,
-        border: `1px solid ${
-          alertColor
-            ? `color-mix(in srgb, ${alertColor} 70%, transparent)`
-            : `color-mix(in srgb, ${vars.ink} 55%, transparent)`
-        }`,
+          ? `color-mix(in srgb, ${alertColor} 78%, transparent)`
+          : `color-mix(in srgb, ${vars.ink} 92%, transparent)`,
+        border: `1px solid ${alertColor ?? vars.ink}`,
         fontFamily: vars.font.ui,
-        color: alertColor ?? vars.inkSoft,
+        color: "#fff",
       }}
     >
       <div
@@ -117,7 +113,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
             <AlertTriangle
               size={12}
               strokeWidth={2.2}
-              style={{ flexShrink: 0, color: alertColor }}
+              style={{ flexShrink: 0 }}
               aria-hidden
             />
           ) : (
@@ -149,7 +145,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
                 {showAlert &&
                   requiredTravelMinutes !== null &&
                   requiredTravelMinutes !== undefined && (
-                    <span style={{ color: alertColor ?? undefined }}>
+                    <span>
                       {" "}
                       /{requiredTravelMinutes} needed
                     </span>
@@ -157,7 +153,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
                 {showOverconstrained &&
                   requiredTravelMinutes !== null &&
                   requiredTravelMinutes !== undefined && (
-                    <span style={{ color: alertColor ?? undefined }}>
+                    <span>
                       {" "}
                       /{requiredTravelMinutes} actual
                     </span>

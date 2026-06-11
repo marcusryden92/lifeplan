@@ -1,22 +1,21 @@
-import { style, globalStyle, keyframes } from "@vanilla-extract/css";
-import { vars, themeTransition, DURATIONS } from "@/lib/theme";
+import { style, globalStyle } from "@vanilla-extract/css";
+import { vars, themeTransition } from "@/lib/theme";
 
-const fadeIn = keyframes({
-  from: { opacity: 0 },
-  to: { opacity: 1 },
-});
-
-const slideUp = keyframes({
-  from: { opacity: 0, transform: "translateY(12px) scale(0.99)" },
-  to: { opacity: 1, transform: "translateY(0) scale(1)" },
-});
+// Modal fade duration in ms — used by both CSS transition and the JS unmount timer.
+export const MODAL_FADE_MS = 220;
 
 export const overlay = style({
   position: "absolute",
   inset: 0,
   zIndex: 10,
   display: "flex",
-  animation: `${fadeIn} ${DURATIONS.collapse}s ease`,
+  opacity: 0,
+  transition: `opacity ${MODAL_FADE_MS}ms ease`,
+  selectors: {
+    "&[data-state='open']": {
+      opacity: 1,
+    },
+  },
 });
 
 export const modal = style({
@@ -28,8 +27,15 @@ export const modal = style({
   overflow: "hidden",
   padding: 0,
   background: vars.paper,
-  transition: themeTransition,
-  animation: `${slideUp} ${DURATIONS.collapse}s ease`,
+  opacity: 0,
+  transform: "translateY(8px) scale(0.995)",
+  transition: `${themeTransition}, opacity ${MODAL_FADE_MS}ms ease, transform ${MODAL_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
+  selectors: {
+    [`${overlay}[data-state='open'] &`]: {
+      opacity: 1,
+      transform: "translateY(0) scale(1)",
+    },
+  },
 });
 
 export const banner = style({
@@ -261,6 +267,16 @@ export const fieldInput = style({
       borderColor: `color-mix(in srgb, ${vars.accent.primary} 60%, ${vars.rule})`,
     },
   },
+});
+
+export const fieldStatic = style({
+  padding: "6px 0",
+  fontFamily: vars.font.ui,
+  fontSize: 13.5,
+  fontWeight: 500,
+  color: vars.ink,
+  fontVariantNumeric: "tabular-nums",
+  transition: themeTransition,
 });
 
 export const dayPicker = style({
@@ -619,7 +635,9 @@ export const eventBox = style({
   overflow: "hidden",
   borderRadius: 4,
   position: "relative",
-  transition: themeTransition,
+  outline: "1.5px solid transparent",
+  outlineOffset: -1,
+  transition: `opacity ${MODAL_FADE_MS}ms ease, filter ${MODAL_FADE_MS}ms ease, outline-color 150ms ease, ${themeTransition}`,
   selectors: {
     "&[data-kind='template']": {
       color: "#fff",
@@ -631,6 +649,9 @@ export const eventBox = style({
       opacity: 0.22,
       filter: "saturate(0.7)",
       pointerEvents: "none",
+    },
+    "&[data-selected='true']": {
+      outlineColor: vars.status.error,
     },
   },
 });
