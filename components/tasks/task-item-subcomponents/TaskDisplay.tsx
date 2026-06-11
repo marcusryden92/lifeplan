@@ -1,9 +1,13 @@
-// Definitions
+"use client";
+
 import { TaskDisplayProps } from "@/lib/taskItem";
 
-// Components
 import DebugInfo from "./DebugInfo";
 import TaskEditDeleteButtons from "./TaskEditDeleteButtons";
+import {
+  taskTitle,
+  taskTitleFocused,
+} from "@/components/tasks/lumenTasks.css";
 
 export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   task,
@@ -13,19 +17,15 @@ export const TaskDisplay: React.FC<TaskDisplayProps> = ({
   devMode,
 }) => {
   return (
-    <div className="flex pl-2 space-x-2 items-center">
-      {/* Task title */}
-
+    <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0 }}>
       <span
-        className={`min-w-10 truncate ${itemIsFocused && " text-sky-400 "}`}
+        className={`${taskTitle} ${itemIsFocused ? taskTitleFocused : ""}`}
       >
         {task.title}
       </span>
 
-      {/* Display debug info if devMode is active */}
       <DebugInfo task={task} devMode={devMode} />
 
-      {/* Buttons to toggle edit display, or delete task */}
       <TaskEditDeleteButtons
         task={task}
         itemIsFocused={itemIsFocused}

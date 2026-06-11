@@ -1,19 +1,22 @@
-// React and Hooks
+"use client";
+
 import { useState, useRef, createRef } from "react";
+import { Plus } from "lucide-react";
 
-// Icons and components
-import { HiOutlinePlus } from "react-icons/hi";
-import { Input } from "@/components/ui/Input";
-
-// Definitions
 import { AddSubtaskProps } from "@/lib/taskItem";
 import type { Planner } from "@/types/prisma";
 
-// Context
 import { useCalendarProvider } from "@/context/CalendarProvider";
-
-// Utility Functions
 import { addSubtask } from "@/utils/goalPageHandlers";
+import {
+  addRowRoot,
+  addRowInline,
+  addRowForm,
+  editInput,
+  editDurationInput,
+  iconBtn,
+  iconBtnVisible,
+} from "@/components/tasks/lumenTasks.css";
 
 const AddSubtask: React.FC<AddSubtaskProps> = ({
   task,
@@ -21,7 +24,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
   isMainParent,
 }) => {
   const [taskDuration, setTaskDuration] = useState<number | undefined>(
-    undefined
+    undefined,
   );
   const [taskTitle, setTaskTitle] = useState<string>("");
 
@@ -58,7 +61,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
 
   const handleKeyDown = (
     event: React.KeyboardEvent<HTMLInputElement>,
-    task: Planner
+    task: Planner,
   ) => {
     if (event.key === "Enter" && parentId) {
       event.preventDefault();
@@ -69,37 +72,34 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
   };
 
   return (
-    <div
-      className={`mx-1 ${
-        isMainParent ? "pt-4 border-t border-neutral-400 border-opacity-30" : ""
-      }`}
-    >
-      <div className="flex gap-2 items-center justify-end flex-shrink">
-        <Input
+    <div className={isMainParent ? addRowRoot : addRowInline}>
+      <div className={addRowForm}>
+        <input
+          ref={getRef(parentId ?? undefined)}
+          className={editInput}
           value={taskTitle}
           onChange={(e) => setTaskTitle(e.target.value)}
-          className={`bg-gray-20 bg-opacity-25 ${
-            !isMainParent ? "max-w-[10rem]" : ""
-          } border-gray-400 m-0 text-sm h-6 `}
-          ref={getRef(parentId ?? undefined)}
           placeholder="New subtask name"
+          style={isMainParent ? undefined : { maxWidth: 180 }}
         />
-        <Input
+        <input
+          ref={durationRef}
+          className={editDurationInput}
           value={taskDuration || ""}
           onChange={(e) => setTaskDuration(Number(e.target.value))}
           placeholder="min"
-          className="w-14 h-6 text-sm py-0 text-black border-gray-400"
           type="number"
           pattern="[0-9]*"
-          ref={durationRef}
           onKeyDown={(e) => handleKeyDown(e, task)}
         />
         <button
+          type="button"
           disabled={!taskTitle}
-          className={`${!taskTitle ? "opacity-50 pointer-events-none" : ""}`}
           onClick={() => handleAddSubtask(task)}
+          className={`${iconBtn} ${iconBtnVisible}`}
+          aria-label="Add subtask"
         >
-          <HiOutlinePlus className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
+          <Plus size={14} strokeWidth={2.4} />
         </button>
       </div>
     </div>

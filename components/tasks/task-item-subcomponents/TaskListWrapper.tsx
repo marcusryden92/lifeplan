@@ -1,9 +1,13 @@
 "use client";
 
 import React from "react";
-
 import { TaskListWrapperProps } from "@/lib/taskItem";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
+import {
+  nested,
+  nestedFocused,
+  nestedDragged,
+} from "@/components/tasks/lumenTasks.css";
 
 const TaskListWrapper: React.FC<TaskListWrapperProps> = ({
   taskId,
@@ -14,30 +18,26 @@ const TaskListWrapper: React.FC<TaskListWrapperProps> = ({
   children,
 }) => {
   const { displayDragBox, currentlyClickedItem } = useDraggableContext();
+
+  if (subtasksLength === 0) return null;
+
+  const isBeingDragged =
+    taskId === currentlyClickedItem?.taskId && displayDragBox;
+
+  const indentClass = parentId
+    ? `${nested} ${isBeingDragged ? nestedDragged : itemIsFocused ? nestedFocused : ""}`
+    : "";
+
   return (
-    <>
-      {subtasksLength > 0 && (
-        <div
-          style={{
-            height: subtasksMinimized ? "0px" : "auto",
-            transition: "height ease 1000ms",
-          }}
-          className={`overflow-hidden ${
-            parentId
-              ? `pl-5 ${
-                  taskId === currentlyClickedItem?.taskId && displayDragBox
-                    ? "border-l-2 border-opacity-0"
-                    : itemIsFocused
-                    ? "border-l-2 border-sky-400"
-                    : "border-l-2 border-gray-200"
-                }`
-              : ""
-          }`}
-        >
-          {children}
-        </div>
-      )}
-    </>
+    <div
+      className={indentClass}
+      style={{
+        height: subtasksMinimized ? 0 : "auto",
+        transition: "height 220ms ease",
+      }}
+    >
+      {children}
+    </div>
   );
 };
 

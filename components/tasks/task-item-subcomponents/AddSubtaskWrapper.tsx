@@ -1,14 +1,13 @@
 "use client";
 
-// Icons
-import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
-import { HiOutlinePlus } from "react-icons/hi";
-
-// Definitions
+import { Plus, RotateCcw } from "lucide-react";
 import { AddSubtaskWrapperProps } from "@/lib/taskItem";
-
-// Components
 import AddSubtask from "./AddSubtask";
+import {
+  addSubtaskTrigger,
+  iconBtn,
+  iconBtnVisible,
+} from "@/components/tasks/lumenTasks.css";
 
 const AddSubtaskWrapper: React.FC<AddSubtaskWrapperProps> = ({
   task,
@@ -21,35 +20,29 @@ const AddSubtaskWrapper: React.FC<AddSubtaskWrapperProps> = ({
   if (!itemIsFocused || displayEdit) return null;
 
   return displayAddSubtask ? (
-    // Add subtask form
-    <div className="flex items-center">
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
       <AddSubtask
         task={task}
         parentId={task.id}
         subtasksLength={subtasks.length}
       />
       <button
-        onClick={() => {
-          setDisplayAddSubtask(false);
-        }}
+        type="button"
+        onClick={() => setDisplayAddSubtask(false)}
+        className={`${iconBtn} ${iconBtnVisible}`}
+        aria-label="Cancel"
       >
-        <ArrowUturnLeftIcon
-          className={`w-5 h-5 text-gray-300  ${
-            itemIsFocused ? "text-opacity-100" : "text-opacity-0"
-          } hover:text-gray-500`}
-        />
+        <RotateCcw size={13} strokeWidth={2.2} />
       </button>
     </div>
   ) : (
-    // Toggle buttom for displaying form
     <button
-      className="flex items-center text-gray-300 hover:text-gray-500"
-      onClick={() => {
-        setDisplayAddSubtask(true);
-      }}
+      type="button"
+      className={addSubtaskTrigger}
+      onClick={() => setDisplayAddSubtask(true)}
     >
+      <Plus size={12} strokeWidth={2.4} />
       Add subtask
-      <HiOutlinePlus className={`w-6 h-6 mr-5 ml-2 bg-none `} />
     </button>
   );
 };

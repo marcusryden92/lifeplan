@@ -6,6 +6,10 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import { totalSubtaskDuration } from "@/utils/taskArrayUtils";
 
 import { DurationDisplayProps } from "@/lib/taskItem";
+import {
+  durationText,
+  durationTextFocused,
+} from "@/components/tasks/lumenTasks.css";
 
 const DurationDisplay: React.FC<DurationDisplayProps> = ({
   task,
@@ -14,7 +18,7 @@ const DurationDisplay: React.FC<DurationDisplayProps> = ({
 }) => {
   const { planner } = useCalendarProvider();
   const [totalTaskDuration, setTotalTaskDuration] = useState(
-    totalSubtaskDuration(task.id, planner)
+    totalSubtaskDuration(task.id, planner),
   );
 
   useEffect(() => {
@@ -22,14 +26,13 @@ const DurationDisplay: React.FC<DurationDisplayProps> = ({
   }, [planner, task.id]);
 
   return (
-    <div className="flex text-sm text-black pl-2 pr-4  flex-shrink-0 items-start justify-end space-x-2">
-      <div className={`${itemIsFocused && "text-sky-500"}`}>
-        {formatMinutesToHours(
-          subtasksLength === 0 ? task.duration || 0 : totalTaskDuration
-        )}
-        {}
-      </div>
-    </div>
+    <span
+      className={`${durationText} ${itemIsFocused ? durationTextFocused : ""}`}
+    >
+      {formatMinutesToHours(
+        subtasksLength === 0 ? task.duration || 0 : totalTaskDuration,
+      )}
+    </span>
   );
 };
 

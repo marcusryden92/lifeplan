@@ -1,7 +1,10 @@
 import React from "react";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
+import {
+  dragDisableWrap,
+  dragDisableWrapDragged,
+} from "@/components/tasks/lumenTasks.css";
 
-// Disables the TaskList if the parent is being dragged
 export default function DragDisableListWrapper({
   children,
   taskId,
@@ -10,14 +13,10 @@ export default function DragDisableListWrapper({
   taskId: string;
 }) {
   const { currentlyClickedItem, displayDragBox } = useDraggableContext();
+  const dragged =
+    taskId === currentlyClickedItem?.taskId && displayDragBox;
   return (
-    <div
-      className={
-        taskId === currentlyClickedItem?.taskId && displayDragBox
-          ? `flex-grow rounded-sm pointer-events-none bg-gray-200 opacity-40`
-          : "flex-grow rounded-sm"
-      }
-    >
+    <div className={`${dragDisableWrap} ${dragged ? dragDisableWrapDragged : ""}`}>
       {children}
     </div>
   );

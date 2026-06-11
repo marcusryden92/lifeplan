@@ -1,22 +1,17 @@
 "use client";
 
 import React, { useState } from "react";
-
-// Components
-import { Button } from "@/components/ui/Button.legacy";
-import { Input } from "@/components/ui/Input";
-
-// Definitions
+import { Check, RotateCcw } from "lucide-react";
 import { TaskEditFormProps } from "@/lib/taskItem";
-
-// Icons
-import { ArrowUturnLeftIcon, CheckIcon } from "@heroicons/react/24/outline";
-
-// Utils
 import { editById } from "@/utils/creationPagesFunctions";
-
-// Data context
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import {
+  editForm,
+  editInput,
+  editDurationInput,
+  iconBtn,
+  iconBtnVisible,
+} from "@/components/tasks/lumenTasks.css";
 
 const TaskEditForm: React.FC<TaskEditFormProps> = ({
   task,
@@ -27,9 +22,7 @@ const TaskEditForm: React.FC<TaskEditFormProps> = ({
   const { updatePlannerArray } = useCalendarProvider();
 
   const [editTitle, setEditTitle] = useState<string>(task.title);
-  const [editDuration, setEditDuration] = useState<number | null>(
-    task.duration
-  );
+  const [editDuration, setEditDuration] = useState<number | null>(task.duration);
 
   const handleConfirmEdit = () => {
     editById({
@@ -40,47 +33,45 @@ const TaskEditForm: React.FC<TaskEditFormProps> = ({
     });
     setDisplayEdit(false);
   };
+
   return (
-    <div className="flex items-center space-x-2">
-      {/* Edit title */}
-      <Input
+    <div className={editForm}>
+      <input
+        className={editInput}
         value={editTitle}
         onChange={(e) => setEditTitle(e.target.value)}
-        className={`bg-gray-200 bg-opacity-25 border-none m-0 text-sm h-auto`}
+        autoFocus
       />
       {subtasks.length === 0 && (
-        /* Edit duration */
-        <Input
+        <input
+          className={editDurationInput}
           defaultValue={task.duration ?? undefined}
           onChange={(e) => setEditDuration(Number(e.target.value))}
           placeholder={task.duration?.toString() || "min"}
-          className="w-14 h-7 text-sm"
           type="number"
           pattern="[0-9]*"
         />
       )}
-      {/* Confirm edit */}
-      <Button size="xs" variant="invisible" onClick={handleConfirmEdit}>
-        <CheckIcon className="w-6 h-6 p-0 bg-none text-sky-500 hover:opacity-50" />
-      </Button>
-
-      {/* Cancel edit */}
-      <Button
+      <button
+        type="button"
+        onClick={handleConfirmEdit}
+        className={`${iconBtn} ${iconBtnVisible}`}
+        aria-label="Save"
+      >
+        <Check size={14} strokeWidth={2.4} />
+      </button>
+      <button
+        type="button"
         disabled={!itemIsFocused}
-        size="xs"
-        variant="invisible"
         onClick={() => {
           setDisplayEdit(false);
           setEditTitle(task.title);
         }}
-        className="px-0"
+        className={`${iconBtn} ${iconBtnVisible}`}
+        aria-label="Cancel"
       >
-        <ArrowUturnLeftIcon
-          className={`w-5 h-5 text-gray-300  ${
-            itemIsFocused ? "text-opacity-100" : "text-opacity-0"
-          } hover:text-gray-500`}
-        />
-      </Button>
+        <RotateCcw size={13} strokeWidth={2.2} />
+      </button>
     </div>
   );
 };

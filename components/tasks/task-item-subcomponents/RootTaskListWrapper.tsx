@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { rootList } from "@/components/tasks/lumenTasks.css";
 
 const RootTaskListWrapper = ({
   subtasksLength,
@@ -9,21 +10,8 @@ const RootTaskListWrapper = ({
   subtasksLength: number;
   children: React.ReactNode;
 }) => {
-  return (
-    <>
-      {subtasksLength > 0 && (
-        <div
-          style={{
-            height: "auto",
-            transition: "height ease 1000ms",
-          }}
-          className={`overflow-x-hidden overflow-y-auto flex-1`}
-        >
-          {children}
-        </div>
-      )}
-    </>
-  );
+  if (subtasksLength === 0) return null;
+  return <div className={rootList}>{children}</div>;
 };
 
 export default RootTaskListWrapper;

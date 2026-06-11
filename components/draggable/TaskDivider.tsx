@@ -1,12 +1,12 @@
-import React from "react";
-
-import { useState } from "react";
+import React, { useState } from "react";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 
 import { moveToEdge } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/moveToEdge";
 import { Planner } from "@/types/prisma";
-
-import styles from "./TaskDivider.module.css";
+import {
+  dropDivider,
+  dropDividerActive,
+} from "@/components/tasks/lumenTasks.css";
 
 interface TaskDividerProps {
   planner: Planner[];
@@ -41,13 +41,15 @@ const TaskDivider: React.FC<TaskDividerProps> = ({
     setCurrentlyClickedItem(null);
   };
 
+  const active = currentlyClickedItem && displayDragBox;
+
   return (
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onMouseUp={handleDragEnd}
-      className={`w-full h-2 ${currentlyClickedItem && displayDragBox && styles.hoverEffect}`}
-    ></div>
+      className={`${dropDivider} ${active ? dropDividerActive : ""}`}
+    />
   );
 };
 

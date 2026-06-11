@@ -1,18 +1,16 @@
-// Components
-import { Button } from "@/components/ui/Button.legacy";
+"use client";
 
-// Icons
-import { TrashIcon, PencilIcon } from "@heroicons/react/24/outline";
 import React from "react";
-
-// Data context
+import { Pencil, Trash2 } from "lucide-react";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-
-// Utils
 import { deleteGoal } from "@/utils/goalPageHandlers";
-
-// Definitions
 import { TaskEditDeleteButtonsProps } from "@/lib/taskItem";
+import {
+  iconRow,
+  iconBtn,
+  iconBtnVisible,
+  iconBtnDanger,
+} from "@/components/tasks/lumenTasks.css";
 
 const TaskEditDeleteButtons: React.FC<TaskEditDeleteButtonsProps> = ({
   task,
@@ -30,38 +28,28 @@ const TaskEditDeleteButtons: React.FC<TaskEditDeleteButtonsProps> = ({
   };
 
   return (
-    <div className="flex items-center space-x-2">
-      {/* Toggle edit field */}
-      <Button
+    <div className={iconRow}>
+      <button
+        type="button"
         disabled={!itemIsFocused}
-        size="xs"
-        variant="invisible"
         onClick={() => {
           setDisplayEdit(true);
           setDisplayAddSubtask(false);
         }}
-        className="px-0"
+        className={`${iconBtn} ${itemIsFocused ? iconBtnVisible : ""}`}
+        aria-label="Edit subtask"
       >
-        <PencilIcon
-          className={`w-5 h-5 text-gray-300  ${
-            itemIsFocused ? "text-opacity-100" : "text-opacity-0"
-          } hover:text-gray-500`}
-        />
-      </Button>
-      {/* Delete task */}
-      <Button
+        <Pencil size={13} strokeWidth={2.2} />
+      </button>
+      <button
+        type="button"
         disabled={!itemIsFocused}
-        size="xs"
-        variant="invisible"
         onClick={handleDelete}
-        className="px-0"
+        className={`${iconBtn} ${iconBtnDanger} ${itemIsFocused ? iconBtnVisible : ""}`}
+        aria-label="Delete subtask"
       >
-        <TrashIcon
-          className={`w-5 h-5 text-gray-300  ${
-            itemIsFocused ? "text-opacity-100" : "text-opacity-0"
-          } hover:text-gray-500`}
-        />
-      </Button>
+        <Trash2 size={13} strokeWidth={2.2} />
+      </button>
     </div>
   );
 };

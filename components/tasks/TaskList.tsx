@@ -11,50 +11,36 @@ import {
   sortTasksByDependencies,
 } from "@/utils/goalPageHandlers";
 import { Planner } from "@/types/prisma";
+import { sublist } from "./lumenTasks.css";
 
 const TaskList: React.FC<TaskListProps> = React.memo(({ id, subtasks }) => {
   const { planner, updatePlannerArray } = useCalendarProvider();
 
-  // State to handle sorted tasks
   const [sortedTasks, setSortedTasks] = useState<Planner[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const fetchData = () => {
-      const subtasksToUse = subtasks || getSubtasksById(planner, id);
-      if (!subtasksToUse.length) {
-        setLoading(false);
-        return;
-      }
-
-      const thisTask = getTaskById(planner, id);
-      if (!thisTask) {
-        setLoading(false);
-        return;
-      }
-
-      const sorted = sortTasksByDependencies(planner, subtasksToUse);
-      setSortedTasks(sorted);
+    const subtasksToUse = subtasks || getSubtasksById(planner, id);
+    if (!subtasksToUse.length) {
+      setSortedTasks([]);
       setLoading(false);
-    };
+      return;
+    }
 
-    fetchData();
+    const thisTask = getTaskById(planner, id);
+    if (!thisTask) {
+      setLoading(false);
+      return;
+    }
+
+    setSortedTasks(sortTasksByDependencies(planner, subtasksToUse));
+    setLoading(false);
   }, [id, subtasks, planner]);
 
-  if (loading) {
-    return <div className="p-4 text-neutral-300 italic ">Loading...</div>; // Optional: show loading state while waiting for async operation
-  }
-
-  /* if (!sortedTasks.length) {
-    return null; // Return early if no sorted tasks
-  } */
+  if (loading) return null;
 
   return (
-    <div
-      className={`flex flex-col justify-start flex-grow w-full ${
-        subtasks && subtasks.length > 0 && "mb-2"
-      }`}
-    >
+    <div className={sublist}>
       {sortedTasks.length > 0 && (
         <>
           {sortedTasks.map((task) => (
