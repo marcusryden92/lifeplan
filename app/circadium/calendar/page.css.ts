@@ -124,6 +124,9 @@ export const mainGrid = style({
     [`${page}[data-console-collapsed="true"] &`]: {
       gap: 0,
     },
+    [`${page}[data-no-transitions="true"] &`]: {
+      transition: "none",
+    },
   },
   "@media": {
     [MOBILE]: {
@@ -167,6 +170,9 @@ export const engineCol = style({
       width: 0,
       opacity: 0,
       pointerEvents: "none",
+    },
+    [`${page}[data-no-transitions="true"] &`]: {
+      transition: "none",
     },
   },
 });

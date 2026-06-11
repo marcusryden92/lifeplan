@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import {
   AlertCircle,
   CalendarCog,
@@ -10,7 +10,7 @@ import {
   Settings,
 } from "lucide-react";
 import { format } from "date-fns";
-import { Glass, Caption, Button, ConicDot, vars } from "@/components/ui";
+import { Caption, Button, ConicDot, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { getWeekFirstDate, shiftDate } from "@/utils/calendarUtils";
 import Calendar from "@/app/(protected)/calendar/components/Calendar";
@@ -94,17 +94,22 @@ export default function CalendarPage() {
   );
   const [consoleCollapsed, setConsoleCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  // Suppresses the engineCol transition during the first frame so syncing
+  // collapsed state from localStorage doesn't animate width 340 → 0 on mount.
+  const [transitionsReady, setTransitionsReady] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     try {
       const stored = window.localStorage.getItem(CONSOLE_COLLAPSE_KEY);
       if (stored === "1") setConsoleCollapsed(true);
     } catch {}
     setHydrated(true);
+    const id = requestAnimationFrame(() => setTransitionsReady(true));
+    return () => cancelAnimationFrame(id);
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!hydrated) return;
     try {
       window.localStorage.setItem(
@@ -127,7 +132,11 @@ export default function CalendarPage() {
     setInitialDate(getWeekFirstDate(weekStartDay, new Date()));
 
   return (
-    <div className={page} data-console-collapsed={consoleCollapsed}>
+    <div
+      className={page}
+      data-console-collapsed={consoleCollapsed}
+      data-no-transitions={transitionsReady ? undefined : "true"}
+    >
       <div className={calendarRegion}>
         <div className={subHeader}>
           <h1 className={rangeTitle}>{range}</h1>
