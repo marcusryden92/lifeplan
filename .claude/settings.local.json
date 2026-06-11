@@ -96,7 +96,8 @@
       "Bash(curl -sL https://registry.npmjs.org/@auth/prisma-adapter/-/prisma-adapter-2.11.2.tgz)",
       "Bash(tar -xzO package/index.js)",
       "Bash(timeout 60 pnpm dev)",
-      "Bash(echo \"exit: $?\")"
+      "Bash(echo \"exit: $?\")",
+      "Bash(npx prisma *)"
     ]
   }
 }

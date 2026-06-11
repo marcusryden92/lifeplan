@@ -520,7 +520,7 @@ export default function LibraryPage() {
                       ? categoryIndex.get(item.categoryId)
                       : undefined
                   }
-                  onClick={() => router.push(`/items/${item.id}`)}
+                  onClick={() => router.push(`/circadium/items/${item.id}`)}
                   now={now}
                 />
               ))}

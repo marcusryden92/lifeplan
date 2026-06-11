@@ -49,6 +49,26 @@ export function totalSubtaskDuration(id: string, planner: Planner[]): number {
   return totalDuration; // Return the accumulated total duration
 }
 
+export function completedSubtaskDuration(
+  id: string,
+  planner: Planner[]
+): number {
+  const task = planner.find((t) => t.id === id);
+  if (!task) return 0;
+
+  const subtasks = getSubtasksById(planner, id);
+
+  if (subtasks.length === 0) {
+    return task.completedEndTime ? task.duration || 0 : 0;
+  }
+
+  let total = 0;
+  for (const subtask of subtasks) {
+    total += completedSubtaskDuration(subtask.id, planner);
+  }
+  return total;
+}
+
 export const formatMinutesToHours = (totalMinutes: number): string => {
   if (totalMinutes < 60) {
     return `${totalMinutes} min`;
