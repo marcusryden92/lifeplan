@@ -95,7 +95,8 @@
       "PowerShell(pnpm prisma generate 2>&1)",
       "Bash(curl -sL https://registry.npmjs.org/@auth/prisma-adapter/-/prisma-adapter-2.11.2.tgz)",
       "Bash(tar -xzO package/index.js)",
-      "Bash(timeout 60 pnpm dev)"
+      "Bash(timeout 60 pnpm dev)",
+      "Bash(echo \"exit: $?\")"
     ]
   }
 }
