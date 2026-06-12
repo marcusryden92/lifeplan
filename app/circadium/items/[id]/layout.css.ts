@@ -14,14 +14,12 @@ export const page = style({
 export const innerWrap = style({
   display: "flex",
   flexDirection: "column",
-  padding: "16px 28px 36px",
-  maxWidth: 1240,
+  padding: "20px 28px 28px",
   width: "100%",
-  margin: "0 auto",
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: { padding: "12px 16px 28px" },
+    [MOBILE]: { padding: "16px 16px 24px" },
   },
 });
 
@@ -66,26 +64,35 @@ export const titleBlock = style({
   },
 });
 
+// Shared geometry so display ↔ edit doesn't push following content.
+const TITLE_FONT = 56;
+const TITLE_LINE_HEIGHT = 56; // px — explicit, not multiplier
+const TITLE_BORDER = 2;
+
 export const title = style({
   fontFamily: vars.font.display,
-  fontSize: 56,
+  fontSize: TITLE_FONT,
   fontWeight: 500,
   letterSpacing: "-0.045em",
-  lineHeight: 0.98,
+  lineHeight: `${TITLE_LINE_HEIGHT}px`,
   color: vars.ink,
   margin: 0,
+  padding: 0,
+  display: "block",
+  boxSizing: "content-box",
+  borderBottom: `${TITLE_BORDER}px solid transparent`,
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { fontSize: 38 },
+    [MOBILE]: { fontSize: 38, lineHeight: "38px" },
   },
 });
 
 export const titleEditInput = style({
   fontFamily: vars.font.display,
-  fontSize: 56,
+  fontSize: TITLE_FONT,
   fontWeight: 500,
   letterSpacing: "-0.045em",
-  lineHeight: 0.98,
+  lineHeight: `${TITLE_LINE_HEIGHT}px`,
   color: vars.ink,
   background: "transparent",
   border: "none",
@@ -93,10 +100,13 @@ export const titleEditInput = style({
   padding: 0,
   margin: 0,
   width: "100%",
-  borderBottom: `2px solid ${vars.accent.primary}`,
+  display: "block",
+  boxSizing: "content-box",
+  height: TITLE_LINE_HEIGHT,
+  borderBottom: `${TITLE_BORDER}px solid ${vars.accent.primary}`,
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { fontSize: 38 },
+    [MOBILE]: { fontSize: 38, lineHeight: "38px", height: 38 },
   },
 });
 
@@ -112,13 +122,49 @@ export const editableTitleWrap = style({
   minWidth: 0,
 });
 
+export const titleHoverRow = style({
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  minWidth: 0,
+});
+
+export const renamePencil = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 30,
+  height: 30,
+  borderRadius: 999,
+  border: "none",
+  background: "transparent",
+  color: vars.muted,
+  cursor: "pointer",
+  opacity: 0,
+  flexShrink: 0,
+  transition: "opacity 120ms ease, color 120ms ease, background-color 120ms ease",
+  selectors: {
+    [`${titleHoverRow}:hover &`]: { opacity: 1 },
+    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+  },
+});
+
 export const headActions = style({
   display: "flex",
-  gap: 8,
+  gap: 16,
   flexShrink: 0,
   alignItems: "center",
 });
 
+export const headActionsCluster = style({
+  display: "flex",
+  gap: 8,
+  alignItems: "center",
+});
+
 export const tabBodyWrap = style({
-  marginTop: 22,
+  display: "flex",
+  flexDirection: "column",
+  flex: 1,
+  minHeight: 0,
 });

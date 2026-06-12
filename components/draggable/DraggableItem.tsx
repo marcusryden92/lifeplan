@@ -7,6 +7,7 @@ import {
   draggableHover,
   draggableGrabbing,
   draggableDropTarget,
+  draggableSelected,
 } from "@/components/tasks/lumenTasks.css";
 
 export default function DraggableItem({
@@ -22,7 +23,6 @@ export default function DraggableItem({
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const { planner, updatePlannerArray } = useCalendarProvider();
-  const { setFocusedTask } = useDraggableContext();
 
   const {
     currentlyHoveredItem,
@@ -30,6 +30,7 @@ export default function DraggableItem({
     currentlyClickedItem,
     setCurrentlyClickedItem,
     displayDragBox,
+    focusedTask,
   } = useDraggableContext();
 
   const handleMouseEnter = useCallback(
@@ -67,7 +68,6 @@ export default function DraggableItem({
       currentlyHoveredItem,
     });
 
-    setFocusedTask(currentlyClickedItem.taskId);
     setCurrentlyClickedItem(null);
     setCurrentlyHoveredItem(null);
   }, [
@@ -86,11 +86,13 @@ export default function DraggableItem({
     currentlyHoveredItem === taskId &&
     currentlyClickedItem?.parentId !== taskId;
 
+  const isSelected = focusedTask === taskId;
   const cls = [
     draggable,
     draggableHover,
     isGrabbing ? draggableGrabbing : "",
     isDropTarget ? draggableDropTarget : "",
+    isSelected && !isGrabbing ? draggableSelected : "",
     className ?? "",
   ]
     .filter(Boolean)

@@ -24,7 +24,6 @@ const TaskDivider: React.FC<TaskDividerProps> = ({
   const { currentlyClickedItem, setCurrentlyClickedItem, displayDragBox } =
     useDraggableContext();
   const [isHovered, setIsHovered] = useState<boolean>(false);
-  const { setFocusedTask } = useDraggableContext();
 
   const handleDragEnd = () => {
     if (!currentlyClickedItem || !isHovered || !displayDragBox) return;
@@ -37,7 +36,6 @@ const TaskDivider: React.FC<TaskDividerProps> = ({
       mouseLocationInItem,
     });
 
-    setFocusedTask(currentlyClickedItem.taskId);
     setCurrentlyClickedItem(null);
   };
 

@@ -27,9 +27,11 @@ export const sublist = style({
 });
 
 export const nested = style({
-  paddingLeft: 18,
+  // marginLeft aligns this list's left border with the parent row's chevron
+  // icon center: grip (22) + grip marginRight (2) + chevron half-width (11) = 35.
+  marginLeft: 35,
+  paddingLeft: 12,
   borderLeft: `1px solid ${vars.rule}`,
-  marginLeft: 7,
   overflow: "hidden",
   transition: `border-color ${themeTransition}, padding 220ms ease`,
 });
@@ -55,7 +57,7 @@ export const itemRowWithSubtasks = style({
 
 export const draggable = style({
   display: "flex",
-  alignItems: "flex-start",
+  alignItems: "center",
   width: "100%",
   borderRadius: 8,
   cursor: "pointer",
@@ -80,13 +82,16 @@ export const draggableDropTarget = style({
   borderColor: `color-mix(in srgb, ${vars.accent.now} 65%, transparent)`,
 });
 
+export const draggableSelected = style({
+  background: `color-mix(in srgb, ${vars.accent.now} 10%, transparent)`,
+});
+
 export const chevronBtn = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
   width: 22,
-  height: 30,
-  marginTop: 2,
+  height: 26,
   marginRight: 2,
   border: "none",
   background: "transparent",
@@ -112,8 +117,7 @@ export const gripBtn = style({
   alignItems: "center",
   justifyContent: "center",
   width: 22,
-  height: 30,
-  marginTop: 2,
+  height: 26,
   marginRight: 2,
   border: "none",
   background: "transparent",
@@ -158,9 +162,29 @@ export const headerRowDragged = style({
 export const headerInner = style({
   display: "flex",
   alignItems: "center",
-  gap: 14,
+  gap: 8,
   flex: 1,
   minWidth: 0,
+});
+
+export const addChildBtn = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 20,
+  height: 20,
+  borderRadius: 6,
+  border: "none",
+  background: "transparent",
+  color: vars.muted,
+  cursor: "pointer",
+  opacity: 0,
+  transition: `opacity 120ms ease, color 120ms ease, background-color 120ms ease`,
+  flexShrink: 0,
+  selectors: {
+    [`${draggable}:hover &`]: { opacity: 1 },
+    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+  },
 });
 
 export const headerInnerDim = style({
@@ -305,6 +329,7 @@ export const addSubtaskTrigger = style({
 
 export const addRowRoot = style({
   paddingTop: 16,
+  paddingRight: 14,
   marginTop: 8,
   borderTop: `1px solid ${vars.rule}`,
   transition: themeTransition,

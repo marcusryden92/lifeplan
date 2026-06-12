@@ -68,6 +68,15 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
           taskId={task.id}
           parentId={task.parentId ?? undefined}
         >
+          <span
+            className={gripBtn}
+            onMouseDown={startDrag}
+            aria-label="Drag to reorder"
+            role="button"
+          >
+            <GripVertical size={16} strokeWidth={2} />
+          </span>
+
           <button
             type="button"
             disabled={!hasSubtasks}
@@ -92,15 +101,6 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
               <ChevronDown size={14} strokeWidth={2.4} />
             )}
           </button>
-
-          <span
-            className={gripBtn}
-            onMouseDown={startDrag}
-            aria-label="Drag to reorder"
-            role="button"
-          >
-            <GripVertical size={16} strokeWidth={2} />
-          </span>
 
           <TaskHeader
             task={task}

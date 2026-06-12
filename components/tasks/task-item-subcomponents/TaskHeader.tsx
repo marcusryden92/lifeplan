@@ -1,29 +1,24 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useEffect } from "react";
+import { Plus } from "lucide-react";
 
 import TaskDisplay from "./TaskDisplay";
 import { TaskHeaderProps } from "@/lib/taskItem";
-import TaskEditForm from "./TaskEditForm";
-import AddSubtaskWrapper from "./AddSubtaskWrapper";
 import DurationDisplay from "./DurationDisplay";
 
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
-import { LocationSelector } from "@/components/locations/LocationSelector";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import {
-  assignLocationToPlanner,
-  assignLocationToMultiplePlanners,
-  setUseParentLocation,
-  setUseParentLocationMultiple,
-} from "@/actions/locations";
-import { getGoalTree } from "@/utils/goalPageHandlers";
+import { addSubtask } from "@/utils/goalPageHandlers";
 import {
   headerRow,
   headerRowDragged,
   headerInner,
   headerInnerDim,
+  addChildBtn,
 } from "@/components/tasks/lumenTasks.css";
+
+export const NEW_SUBTASK_TITLE = "New subtask";
 
 export const TaskHeader = ({
   task,
@@ -34,134 +29,31 @@ export const TaskHeader = ({
   setFocusedTask,
   devMode,
 }: TaskHeaderProps) => {
-  const [displayEdit, setDisplayEdit] = useState<boolean>(false);
-  const [displayAddSubtask, setDisplayAddSubtask] = useState<boolean>(false);
-  const [showCascadeConfirm, setShowCascadeConfirm] = useState<boolean>(false);
-  const [pendingLocationId, setPendingLocationId] = useState<string | null>(
-    null,
-  );
-  const headerRef = useRef<HTMLDivElement | null>(null);
-
   const { currentlyClickedItem, displayDragBox } = useDraggableContext();
-  const { planner, updatePlannerArray, inheritedLocationMap } =
-    useCalendarProvider();
-
-  const hasChildren = subtasks.length > 0;
-  const inheritedInfo = inheritedLocationMap.get(task.id);
-
-  const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
-    () => !task.useParentLocation,
-  );
-
-  useEffect(() => {
-    setLocationOverrideEnabled(!task.useParentLocation);
-  }, [task.useParentLocation]);
-
-  const handleToggleLocationOverride = useCallback(async () => {
-    const newOverrideEnabled = !locationOverrideEnabled;
-
-    if (!newOverrideEnabled && hasChildren) {
-      setPendingLocationId(null);
-      setShowCascadeConfirm(true);
-      setLocationOverrideEnabled(false);
-      return;
-    }
-
-    const newUseParent = !newOverrideEnabled;
-    await setUseParentLocation(task.id, newUseParent);
-    updatePlannerArray((prev) =>
-      prev.map((p) =>
-        p.id === task.id ? { ...p, useParentLocation: newUseParent } : p,
-      ),
-    );
-    setLocationOverrideEnabled(newOverrideEnabled);
-  }, [locationOverrideEnabled, hasChildren, task.id, updatePlannerArray]);
-
-  const handleLocationChange = async (locationId: string | null) => {
-    if (hasChildren) {
-      setPendingLocationId(locationId);
-      setShowCascadeConfirm(true);
-      return;
-    }
-    await applyLocationChange(locationId, false);
-  };
-
-  const applyLocationChange = async (
-    locationId: string | null,
-    cascade: boolean,
-  ) => {
-    try {
-      const treeItems = getGoalTree(planner, task.id);
-      const treeIds = treeItems.map((item) => item.id);
-
-      if (locationId === null && !locationOverrideEnabled) {
-        if (cascade) {
-          await setUseParentLocationMultiple(treeIds, true);
-          updatePlannerArray((prev) =>
-            prev.map((p) =>
-              treeIds.includes(p.id) ? { ...p, useParentLocation: true } : p,
-            ),
-          );
-        } else {
-          await setUseParentLocation(task.id, true);
-          updatePlannerArray((prev) =>
-            prev.map((p) =>
-              p.id === task.id ? { ...p, useParentLocation: true } : p,
-            ),
-          );
-        }
-      } else if (cascade) {
-        await assignLocationToMultiplePlanners(treeIds, locationId);
-        updatePlannerArray((prev) =>
-          prev.map((p) =>
-            treeIds.includes(p.id) ? { ...p, locationId } : p,
-          ),
-        );
-      } else {
-        await assignLocationToPlanner(task.id, locationId);
-        updatePlannerArray((prev) =>
-          prev.map((p) => (p.id === task.id ? { ...p, locationId } : p)),
-        );
-      }
-    } catch (error) {
-      console.error("Failed to update location:", error);
-    } finally {
-      setShowCascadeConfirm(false);
-      setPendingLocationId(null);
-    }
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        headerRef.current &&
-        !headerRef.current.contains(event.target as Node)
-      ) {
-        setItemIsFocused(false);
-        setFocusedTask(null);
-      }
-    };
-
-    if (itemIsFocused) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [itemIsFocused]);
+  const { planner, updatePlannerArray, userId } = useCalendarProvider();
+  void devMode;
 
   const handleSetFocusedTask = () => {
     if (!(focusedTask === task.id)) setFocusedTask(task.id);
   };
 
-  useEffect(() => {
-    setItemIsFocused(task.id === focusedTask);
-  }, [focusedTask, task.id]);
+  const handleAddChild = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newId = addSubtask({
+      userId,
+      planner,
+      updatePlannerArray,
+      task,
+      taskDuration: 15,
+      taskTitle: NEW_SUBTASK_TITLE,
+      resetTaskState: () => {},
+    });
+    if (newId) setFocusedTask(newId);
+  };
 
   useEffect(() => {
-    if (!itemIsFocused) setDisplayEdit(false);
-  });
+    setItemIsFocused(task.id === focusedTask);
+  }, [focusedTask, task.id, setItemIsFocused]);
 
   if (!task.parentId) return null;
 
@@ -171,95 +63,27 @@ export const TaskHeader = ({
 
   return (
     <div
-      ref={headerRef}
       className={`${headerRow} ${draggedSelf ? headerRowDragged : ""}`}
       onClick={handleSetFocusedTask}
     >
       <div className={`${headerInner} ${dimInner ? headerInnerDim : ""}`}>
-        {displayEdit ? (
-          <TaskEditForm
-            task={task}
-            subtasks={subtasks}
-            setDisplayEdit={setDisplayEdit}
-            itemIsFocused={itemIsFocused}
-          />
-        ) : (
-          <TaskDisplay
-            task={task}
-            itemIsFocused={itemIsFocused}
-            setDisplayEdit={setDisplayEdit}
-            setDisplayAddSubtask={setDisplayAddSubtask}
-            devMode={devMode}
-          />
-        )}
-
-        {itemIsFocused && !displayEdit && (
-          <div onClick={(e) => e.stopPropagation()}>
-            <LocationSelector
-              value={task.locationId ?? null}
-              onChange={handleLocationChange}
-              compact
-              isOverridden={locationOverrideEnabled}
-              onToggleOverride={
-                inheritedInfo ? handleToggleLocationOverride : undefined
-              }
-              inheritedLocationName={inheritedInfo?.locationName}
-              inheritedFromLabel={inheritedInfo?.fromLabel}
-            />
-          </div>
-        )}
-
-        <AddSubtaskWrapper
-          task={task}
-          subtasks={subtasks}
-          displayAddSubtask={displayAddSubtask}
-          setDisplayAddSubtask={setDisplayAddSubtask}
-          itemIsFocused={itemIsFocused}
-          displayEdit={displayEdit}
-        />
+        <TaskDisplay task={task} itemIsFocused={itemIsFocused} />
+        <button
+          type="button"
+          className={addChildBtn}
+          onClick={handleAddChild}
+          onMouseDown={(e) => e.stopPropagation()}
+          aria-label="Add subtask"
+        >
+          <Plus size={14} strokeWidth={2.4} />
+        </button>
       </div>
 
-      {showCascadeConfirm && (
-        <div
-          className="fixed inset-0 bg-black/30 flex items-center justify-center z-50"
-          onClick={(e) => {
-            e.stopPropagation();
-            setShowCascadeConfirm(false);
-            setPendingLocationId(null);
-          }}
-        >
-          <div
-            className="bg-white rounded-lg p-4 shadow-lg max-w-sm mx-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="text-sm text-gray-700 mb-4">
-              Apply this location to all child items?
-            </p>
-            <div className="flex gap-2 justify-end">
-              <button
-                className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded"
-                onClick={() => applyLocationChange(pendingLocationId, false)}
-              >
-                This item only
-              </button>
-              <button
-                className="px-3 py-1.5 text-sm text-white bg-sky-500 hover:bg-sky-600 rounded"
-                onClick={() => applyLocationChange(pendingLocationId, true)}
-              >
-                All children
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {!displayEdit && (
-        <DurationDisplay
-          task={task}
-          itemIsFocused={itemIsFocused}
-          subtasksLength={subtasks.length}
-        />
-      )}
+      <DurationDisplay
+        task={task}
+        itemIsFocused={itemIsFocused}
+        subtasksLength={subtasks.length}
+      />
     </div>
   );
 };

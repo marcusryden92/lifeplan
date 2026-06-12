@@ -26,41 +26,51 @@ export const cardSectionTitle = style({
   transition: themeTransition,
 });
 
-export const nextCard = style({
-  borderRadius: 20,
-  padding: "18px 20px",
-  boxShadow: vars.shadow.panelSm,
-  transition: themeTransition,
+export const nextCardHeaderRow = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 8,
+  marginBottom: 8,
 });
 
-export const nextCardLabel = style({
-  display: "inline-block",
+export const nextCardLink = style({
+  fontFamily: vars.font.ui,
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: "0.04em",
+  textTransform: "uppercase",
+  color: vars.muted,
+  textDecoration: "none",
+  transition: themeTransition,
+  selectors: {
+    "&:hover": { color: vars.ink },
+  },
 });
 
 export const nextCardTitle = style({
   fontFamily: vars.font.display,
-  fontSize: 24,
+  fontSize: 18,
   fontWeight: 500,
-  letterSpacing: "-0.03em",
-  marginTop: 6,
+  letterSpacing: "-0.02em",
   color: vars.ink,
   fontVariantNumeric: "tabular-nums",
   transition: themeTransition,
 });
 
 export const nextCardSub = style({
-  fontSize: 13,
+  fontSize: 12.5,
   color: vars.inkSoft,
-  marginTop: 4,
+  marginTop: 2,
   fontFamily: vars.font.ui,
   fontWeight: 500,
   transition: themeTransition,
 });
 
-export const nextCardActions = style({
-  display: "flex",
-  gap: 8,
-  marginTop: 14,
+export const nextCardBody = style({
+  // Reserves room for title (~22px) + marginTop (2) + sub (~17px) so the
+  // empty "Not scheduled yet" state takes the same vertical space.
+  minHeight: 42,
 });
 
 export const helperSuggestion = style({

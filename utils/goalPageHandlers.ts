@@ -24,7 +24,7 @@ export function addSubtask({
   taskDuration,
   taskTitle,
   resetTaskState,
-}: AddSubtaskInterface) {
+}: AddSubtaskInterface): string | undefined {
   const newId = uuidv4();
   const now = new Date();
 
@@ -60,7 +60,9 @@ export function addSubtask({
 
     updatePlannerArray(updatedPlanner);
     resetTaskState();
+    return newId;
   }
+  return undefined;
 }
 
 interface DeleteGoalInterface {
@@ -407,6 +409,18 @@ export function sortTasksByDependencies(
 
   // Add all root tasks and their dependents to the sorted array
   if (rootTask) addTaskWithDependents(rootTask);
+
+  // Fallback: when tasks have no dependency relationships between them (the
+  // common case for fresh subtasks), no rootTask is found and sortedArray stays
+  // empty. Return the input order so downstream rendering/move logic can still
+  // operate. Also append any tasks that weren't reached by the dependency walk.
+  if (sortedArray.length === 0) return tasksToSort;
+  if (sortedArray.length < tasksToSort.length) {
+    const visited = new Set(sortedArray.map((t) => t.id));
+    for (const t of tasksToSort) {
+      if (!visited.has(t.id)) sortedArray.push(t);
+    }
+  }
 
   return sortedArray;
 }

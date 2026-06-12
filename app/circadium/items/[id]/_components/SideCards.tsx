@@ -3,16 +3,16 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Button, Caption, ConicDot } from "@/components/ui";
+import { Caption, ConicDot } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useItem } from "./ItemContext";
 import {
   card,
-  nextCard,
-  nextCardLabel,
+  nextCardHeaderRow,
+  nextCardLink,
   nextCardTitle,
   nextCardSub,
-  nextCardActions,
+  nextCardBody,
   cardHeaderRow,
   cardSectionTitle,
   helperPill,
@@ -24,7 +24,7 @@ import {
 const AI_ACTIONS = ["estimate", "split", "tighten", "add taper"];
 
 export function NextOnCalendarCard() {
-  const { item, category } = useItem();
+  const { item } = useItem();
   const { calendar } = useCalendarProvider();
 
   const next = useMemo(() => {
@@ -45,46 +45,34 @@ export function NextOnCalendarCard() {
     return candidates[0];
   }, [calendar, item.id, item.plannerType]);
 
-  const accent = category?.color ?? "var(--lumen-accent-primary, #3b82f6)";
-
-  if (!next) {
-    return (
-      <div className={card}>
-        <div className={cardHeaderRow}>
-          <span className={cardSectionTitle}>Next on calendar</span>
-        </div>
-        <Caption>Not scheduled yet.</Caption>
-      </div>
-    );
-  }
-
-  const start = new Date(next.start);
-  const end = new Date(next.end);
-  const durationMin = Math.round((end.getTime() - start.getTime()) / 60000);
-
   return (
-    <div
-      className={nextCard}
-      style={{
-        background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${accent} 38%, transparent)`,
-      }}
-    >
-      <span className={nextCardLabel}>
-        <Caption>Next on calendar</Caption>
-      </span>
-      <div className={nextCardTitle}>
-        {format(start, "EEE")} · {format(start, "HH:mm")}
-      </div>
-      <div className={nextCardSub}>
-        {next.title} · {durationMin}m
-      </div>
-      <div className={nextCardActions}>
-        <Link href="/circadium/calendar">
-          <Button variant="glass" size="sm">
-            View calendar
-          </Button>
+    <div className={card}>
+      <div className={nextCardHeaderRow}>
+        <span className={cardSectionTitle}>Next on calendar</span>
+        <Link href="/circadium/calendar" className={nextCardLink}>
+          View calendar →
         </Link>
+      </div>
+      <div className={nextCardBody}>
+        {next ? (
+          <>
+            <div className={nextCardTitle}>
+              {format(new Date(next.start), "EEE")} ·{" "}
+              {format(new Date(next.start), "HH:mm")}
+            </div>
+            <div className={nextCardSub}>
+              {next.title} ·{" "}
+              {Math.round(
+                (new Date(next.end).getTime() -
+                  new Date(next.start).getTime()) /
+                  60000,
+              )}
+              m
+            </div>
+          </>
+        ) : (
+          <Caption>Not scheduled yet.</Caption>
+        )}
       </div>
     </div>
   );
@@ -126,17 +114,3 @@ export function EngineNotesCard() {
   );
 }
 
-export function WhyTheseSubtasksCard() {
-  const { item } = useItem();
-  if (item.plannerType !== "goal") return null;
-  return (
-    <div className={card}>
-      <Caption>Why these subtasks</Caption>
-      <div className={whyText}>
-        Once the subtask breakdown is settled, the engine will surface its
-        reasoning here — sequencing decisions, dependency hints, and any
-        re-shuffles caused by deadline pressure.
-      </div>
-    </div>
-  );
-}

@@ -63,16 +63,36 @@ export const fieldValue = style({
 });
 
 export const typePicker = style({
-  display: "inline-flex",
+  position: "relative",
+  display: "inline-grid",
+  gridTemplateColumns: "1fr 1fr 1fr",
   padding: 3,
   borderRadius: 999,
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.glass.stroke}`,
-  gap: 2,
+  background: `color-mix(in srgb, ${vars.ink} 6%, transparent)`,
+  border: `1px solid ${vars.rule}`,
   alignSelf: "flex-start",
 });
 
+export const typePickerThumb = style({
+  position: "absolute",
+  top: 3,
+  bottom: 3,
+  left: 3,
+  width: "calc(33.333% - 2px)",
+  borderRadius: 999,
+  background: vars.ink,
+  transition: "transform 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
+  zIndex: 0,
+  selectors: {
+    "&[data-position='1']": { transform: "translateX(100%)" },
+    "&[data-position='2']": { transform: "translateX(200%)" },
+  },
+});
+
 export const typePickerBtn = style({
+  position: "relative",
+  zIndex: 1,
+  appearance: "none",
   border: "none",
   background: "transparent",
   padding: "5px 14px",
@@ -84,27 +104,29 @@ export const typePickerBtn = style({
   letterSpacing: "0.06em",
   textTransform: "uppercase",
   color: vars.muted,
-  transition: themeTransition,
-});
-
-export const typePickerBtnActive = style({
-  background: vars.ink,
-  color: vars.paper,
+  transition: "color 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
+  selectors: {
+    "&[data-active='true']": { color: vars.paper },
+    "&:hover:not([data-active='true'])": { color: vars.ink },
+  },
 });
 
 export const priorityRow = style({
   display: "flex",
   gap: 3,
+  flexWrap: "nowrap",
 });
 
 export const priorityPill = style({
-  flex: 1,
+  flex: "0 0 auto",
+  width: 22,
+  height: 22,
   border: `1px solid ${vars.glass.stroke}`,
   background: "transparent",
-  padding: "5px 0",
-  borderRadius: 6,
+  padding: 0,
+  borderRadius: "50%",
   cursor: "pointer",
-  fontSize: 11.5,
+  fontSize: 11,
   fontFamily: vars.font.ui,
   fontWeight: 700,
   color: vars.inkSoft,
@@ -192,5 +214,27 @@ export const overrideToggle = style({
 });
 
 export const inheritedHint = style({
-  marginTop: -2,
+  fontFamily: vars.font.ui,
+  fontSize: 11,
+  fontWeight: 500,
+  color: vars.muted,
+  // Allows the hint to wrap inside the place cell when the category name is
+  // long, instead of overflowing into the column on the right.
+  minWidth: 0,
+  overflowWrap: "anywhere",
+});
+
+// Pulls ghost-size-sm buttons flush-left under the field grid by negating the
+// button's internal left padding (pillBtn sm = padding: 6px 14px).
+export const flushLeftBtn = style({
+  marginLeft: -14,
+});
+
+export const deleteRow = style({
+  display: "flex",
+  justifyContent: "flex-start",
+  marginTop: 20,
+  paddingTop: 16,
+  borderTop: `1px solid ${vars.rule}`,
+  transition: themeTransition,
 });

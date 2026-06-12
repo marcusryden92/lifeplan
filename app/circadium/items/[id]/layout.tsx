@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Trash2, Check, Pencil } from "lucide-react";
+import { ArrowLeft, Check, Pencil } from "lucide-react";
 import { Button, Caption } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { DraggableContextProvider } from "@/components/draggable/DraggableContext";
@@ -35,6 +35,8 @@ import {
   titleEditInput,
   titleClickable,
   editableTitleWrap,
+  titleHoverRow,
+  renamePencil,
   headActions,
   tabBodyWrap,
 } from "./layout.css";
@@ -239,47 +241,49 @@ export default function ItemDetailLayout({
                     onKeyDown={onTitleKey}
                   />
                 ) : (
-                  <h1
-                    className={`${titleStyle} ${titleClickable}`}
-                    onClick={beginEditTitle}
-                    title="Click to rename"
-                  >
-                    {item.title}
-                  </h1>
+                  <div className={titleHoverRow}>
+                    <h1
+                      className={`${titleStyle} ${titleClickable}`}
+                      onClick={beginEditTitle}
+                      title="Click to rename"
+                    >
+                      {item.title}
+                    </h1>
+                    <button
+                      type="button"
+                      className={renamePencil}
+                      onClick={beginEditTitle}
+                      aria-label="Rename"
+                    >
+                      <Pencil size={16} strokeWidth={2} />
+                    </button>
+                  </div>
                 )}
               </div>
 
               <div className={headActions}>
-                {!editingTitle && (
-                  <Button
-                    variant="glass"
-                    size="sm"
-                    onClick={beginEditTitle}
-                  >
-                    <Pencil size={12} strokeWidth={2.2} />
-                    Rename
-                  </Button>
-                )}
                 {isGoal && (
                   <Button
                     variant={item.isReady ? "solid" : "glass"}
                     size="sm"
                     onClick={handleToggleReady}
                     disabled={subtasks.length === 0}
+                    style={{
+                      minWidth: 124,
+                      justifyContent: "center",
+                      ...(item.isReady
+                        ? {
+                            background: "#34d399",
+                            borderColor: "#34d399",
+                            color: "#fff",
+                          }
+                        : {}),
+                    }}
                   >
                     <Check size={12} strokeWidth={2.4} />
                     {item.isReady ? "Ready" : "Mark ready"}
                   </Button>
                 )}
-                <Button
-                  variant="glass"
-                  size="sm"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  aria-label="Delete item"
-                >
-                  <Trash2 size={12} strokeWidth={2.2} />
-                  Delete
-                </Button>
               </div>
             </div>
 

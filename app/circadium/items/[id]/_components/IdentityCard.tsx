@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, type ChangeEvent } from "react";
-import { MapPin, RotateCcw } from "lucide-react";
+import { MapPin, RotateCcw, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { Caption, Button, CategoryBadge } from "@/components/ui";
 import { useSelector } from "react-redux";
@@ -20,8 +20,8 @@ import {
   fieldLabel,
   fieldValue,
   typePicker,
+  typePickerThumb,
   typePickerBtn,
-  typePickerBtnActive,
   priorityRow,
   priorityPill,
   priorityPillActive,
@@ -30,6 +30,8 @@ import {
   inheritedHint,
   placeRow,
   overrideToggle,
+  deleteRow,
+  flushLeftBtn,
 } from "./IdentityCard.css";
 
 export function IdentityCard() {
@@ -47,6 +49,7 @@ export function IdentityCard() {
     toggleLocationOverride,
     changeDate,
     requestResetSubgoalLocations,
+    requestDelete,
   } = useItem();
 
   const locations = useSelector(
@@ -124,13 +127,23 @@ export function IdentityCard() {
           <div className={fieldStack}>
             <span className={fieldLabel}>Type</span>
             <div className={typePicker}>
+              <span
+                className={typePickerThumb}
+                data-position={
+                  item.plannerType === "task"
+                    ? "0"
+                    : item.plannerType === "plan"
+                      ? "1"
+                      : "2"
+                }
+                aria-hidden="true"
+              />
               {(["task", "plan", "goal"] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
-                  className={`${typePickerBtn} ${
-                    item.plannerType === t ? typePickerBtnActive : ""
-                  }`}
+                  className={typePickerBtn}
+                  data-active={item.plannerType === t}
                   onClick={() => setPlannerType(t as PlannerType)}
                 >
                   {t}
@@ -179,26 +192,31 @@ export function IdentityCard() {
             </div>
           </div>
 
-          {/* Duration */}
+          {/* Deadline / Scheduled */}
           <div className={fieldStack}>
             <span className={fieldLabel}>
-              {isGoal ? "Rolled-up duration" : "Duration (min)"}
+              {isPlan ? "Scheduled" : "Deadline"}
             </span>
-            {isGoal ? (
-              <span className={fieldValue}>
-                {formatMinutesToHours(totalDuration)}
-              </span>
-            ) : (
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: 4 }}
+            >
               <input
-                className={numberInput}
-                type="number"
-                min={1}
-                value={item.duration}
-                onChange={(e) =>
-                  updateField("duration", Number(e.target.value))
-                }
+                type="datetime-local"
+                className={dateInput}
+                value={dateValue}
+                onChange={onDateInputChange}
               />
-            )}
+              {(item.deadline || item.starts) && (
+                <Caption>
+                  {format(
+                    new Date(
+                      (isPlan ? item.starts : item.deadline) as string,
+                    ),
+                    "EEE MMM d · HH:mm",
+                  )}
+                </Caption>
+              )}
+            </div>
           </div>
 
           {/* Place */}
@@ -244,54 +262,65 @@ export function IdentityCard() {
                   {locationOverrideEnabled ? "Override" : "Inherited"}
                 </button>
               )}
-            </div>
-            {categoryHasLocation && !locationOverrideEnabled && (
-              <Caption className={inheritedHint}>
-                from {category?.name}
-              </Caption>
-            )}
-            {isGoal && (
-              <div style={{ marginTop: 6 }}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={requestResetSubgoalLocations}
-                >
-                  <RotateCcw size={11} strokeWidth={2.2} />
-                  Reset sub-goal places
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Deadline / Scheduled */}
-          <div className={fieldStack}>
-            <span className={fieldLabel}>
-              {isPlan ? "Scheduled" : "Deadline"}
-            </span>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: 4 }}
-            >
-              <input
-                type="datetime-local"
-                className={dateInput}
-                value={dateValue}
-                onChange={onDateInputChange}
-              />
-              {(item.deadline || item.starts) && (
-                <Caption>
-                  {format(
-                    new Date(
-                      (isPlan ? item.starts : item.deadline) as string,
-                    ),
-                    "EEE MMM d · HH:mm",
-                  )}
-                </Caption>
+              {categoryHasLocation && !locationOverrideEnabled && (
+                <span className={inheritedHint}>from {category?.name}</span>
               )}
             </div>
+            <div
+              style={{
+                marginTop: 6,
+                visibility: isGoal ? "visible" : "hidden",
+              }}
+              aria-hidden={!isGoal}
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={requestResetSubgoalLocations}
+                disabled={!isGoal}
+                className={flushLeftBtn}
+              >
+                <RotateCcw size={11} strokeWidth={2.2} />
+                Reset sub-goal places
+              </Button>
+            </div>
+          </div>
+
+          {/* Duration */}
+          <div className={fieldStack}>
+            <span className={fieldLabel}>
+              {isGoal ? "Rolled-up duration" : "Duration (min)"}
+            </span>
+            {isGoal ? (
+              <span className={fieldValue}>
+                {formatMinutesToHours(totalDuration)}
+              </span>
+            ) : (
+              <input
+                className={numberInput}
+                type="number"
+                min={1}
+                value={item.duration}
+                onChange={(e) =>
+                  updateField("duration", Number(e.target.value))
+                }
+              />
+            )}
           </div>
         </div>
 
+        <div className={deleteRow}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={requestDelete}
+            aria-label="Delete item"
+            className={flushLeftBtn}
+          >
+            <Trash2 size={12} strokeWidth={2.2} />
+            Delete item
+          </Button>
+        </div>
       </div>
     </div>
   );
