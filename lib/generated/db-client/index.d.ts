@@ -7390,6 +7390,7 @@ export namespace Prisma {
     icon: string | null
     color: string | null
     sortOrder: number | null
+    useTimeWindows: boolean | null
     isStrict: boolean | null
     locationId: string | null
     parentId: string | null
@@ -7404,6 +7405,7 @@ export namespace Prisma {
     icon: string | null
     color: string | null
     sortOrder: number | null
+    useTimeWindows: boolean | null
     isStrict: boolean | null
     locationId: string | null
     parentId: string | null
@@ -7418,6 +7420,7 @@ export namespace Prisma {
     icon: number
     color: number
     sortOrder: number
+    useTimeWindows: number
     isStrict: number
     locationId: number
     parentId: number
@@ -7442,6 +7445,7 @@ export namespace Prisma {
     icon?: true
     color?: true
     sortOrder?: true
+    useTimeWindows?: true
     isStrict?: true
     locationId?: true
     parentId?: true
@@ -7456,6 +7460,7 @@ export namespace Prisma {
     icon?: true
     color?: true
     sortOrder?: true
+    useTimeWindows?: true
     isStrict?: true
     locationId?: true
     parentId?: true
@@ -7470,6 +7475,7 @@ export namespace Prisma {
     icon?: true
     color?: true
     sortOrder?: true
+    useTimeWindows?: true
     isStrict?: true
     locationId?: true
     parentId?: true
@@ -7571,6 +7577,7 @@ export namespace Prisma {
     icon: string | null
     color: string | null
     sortOrder: number
+    useTimeWindows: boolean
     isStrict: boolean
     locationId: string | null
     parentId: string | null
@@ -7604,6 +7611,7 @@ export namespace Prisma {
     icon?: boolean
     color?: boolean
     sortOrder?: boolean
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: boolean
     parentId?: boolean
@@ -7625,6 +7633,7 @@ export namespace Prisma {
     icon?: boolean
     color?: boolean
     sortOrder?: boolean
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: boolean
     parentId?: boolean
@@ -7642,6 +7651,7 @@ export namespace Prisma {
     icon?: boolean
     color?: boolean
     sortOrder?: boolean
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: boolean
     parentId?: boolean
@@ -7659,6 +7669,7 @@ export namespace Prisma {
     icon?: boolean
     color?: boolean
     sortOrder?: boolean
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: boolean
     parentId?: boolean
@@ -7667,7 +7678,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type CategoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "icon" | "color" | "sortOrder" | "isStrict" | "locationId" | "parentId" | "userId" | "createdAt" | "updatedAt", ExtArgs["result"]["category"]>
+  export type CategoryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "name" | "icon" | "color" | "sortOrder" | "useTimeWindows" | "isStrict" | "locationId" | "parentId" | "userId" | "createdAt" | "updatedAt", ExtArgs["result"]["category"]>
   export type CategoryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     timeSlots?: boolean | Category$timeSlotsArgs<ExtArgs>
     location?: boolean | Category$locationArgs<ExtArgs>
@@ -7704,6 +7715,7 @@ export namespace Prisma {
       icon: string | null
       color: string | null
       sortOrder: number
+      useTimeWindows: boolean
       isStrict: boolean
       locationId: string | null
       parentId: string | null
@@ -8144,6 +8156,7 @@ export namespace Prisma {
     readonly icon: FieldRef<"Category", 'String'>
     readonly color: FieldRef<"Category", 'String'>
     readonly sortOrder: FieldRef<"Category", 'Int'>
+    readonly useTimeWindows: FieldRef<"Category", 'Boolean'>
     readonly isStrict: FieldRef<"Category", 'Boolean'>
     readonly locationId: FieldRef<"Category", 'String'>
     readonly parentId: FieldRef<"Category", 'String'>
@@ -21051,6 +21064,7 @@ export namespace Prisma {
     icon: 'icon',
     color: 'color',
     sortOrder: 'sortOrder',
+    useTimeWindows: 'useTimeWindows',
     isStrict: 'isStrict',
     locationId: 'locationId',
     parentId: 'parentId',
@@ -21795,6 +21809,7 @@ export namespace Prisma {
     icon?: StringNullableFilter<"Category"> | string | null
     color?: StringNullableFilter<"Category"> | string | null
     sortOrder?: IntFilter<"Category"> | number
+    useTimeWindows?: BoolFilter<"Category"> | boolean
     isStrict?: BoolFilter<"Category"> | boolean
     locationId?: StringNullableFilter<"Category"> | string | null
     parentId?: StringNullableFilter<"Category"> | string | null
@@ -21815,6 +21830,7 @@ export namespace Prisma {
     icon?: SortOrderInput | SortOrder
     color?: SortOrderInput | SortOrder
     sortOrder?: SortOrder
+    useTimeWindows?: SortOrder
     isStrict?: SortOrder
     locationId?: SortOrderInput | SortOrder
     parentId?: SortOrderInput | SortOrder
@@ -21838,6 +21854,7 @@ export namespace Prisma {
     icon?: StringNullableFilter<"Category"> | string | null
     color?: StringNullableFilter<"Category"> | string | null
     sortOrder?: IntFilter<"Category"> | number
+    useTimeWindows?: BoolFilter<"Category"> | boolean
     isStrict?: BoolFilter<"Category"> | boolean
     locationId?: StringNullableFilter<"Category"> | string | null
     parentId?: StringNullableFilter<"Category"> | string | null
@@ -21858,6 +21875,7 @@ export namespace Prisma {
     icon?: SortOrderInput | SortOrder
     color?: SortOrderInput | SortOrder
     sortOrder?: SortOrder
+    useTimeWindows?: SortOrder
     isStrict?: SortOrder
     locationId?: SortOrderInput | SortOrder
     parentId?: SortOrderInput | SortOrder
@@ -21880,6 +21898,7 @@ export namespace Prisma {
     icon?: StringNullableWithAggregatesFilter<"Category"> | string | null
     color?: StringNullableWithAggregatesFilter<"Category"> | string | null
     sortOrder?: IntWithAggregatesFilter<"Category"> | number
+    useTimeWindows?: BoolWithAggregatesFilter<"Category"> | boolean
     isStrict?: BoolWithAggregatesFilter<"Category"> | boolean
     locationId?: StringNullableWithAggregatesFilter<"Category"> | string | null
     parentId?: StringNullableWithAggregatesFilter<"Category"> | string | null
@@ -23069,6 +23088,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     createdAt?: string
     updatedAt: string
@@ -23086,6 +23106,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: string | null
     parentId?: string | null
@@ -23103,6 +23124,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: StringFieldUpdateOperationsInput | string
     updatedAt?: StringFieldUpdateOperationsInput | string
@@ -23120,6 +23142,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     locationId?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -23137,6 +23160,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: string | null
     parentId?: string | null
@@ -23151,6 +23175,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: StringFieldUpdateOperationsInput | string
     updatedAt?: StringFieldUpdateOperationsInput | string
@@ -23162,6 +23187,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     locationId?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -24475,6 +24501,7 @@ export namespace Prisma {
     icon?: SortOrder
     color?: SortOrder
     sortOrder?: SortOrder
+    useTimeWindows?: SortOrder
     isStrict?: SortOrder
     locationId?: SortOrder
     parentId?: SortOrder
@@ -24493,6 +24520,7 @@ export namespace Prisma {
     icon?: SortOrder
     color?: SortOrder
     sortOrder?: SortOrder
+    useTimeWindows?: SortOrder
     isStrict?: SortOrder
     locationId?: SortOrder
     parentId?: SortOrder
@@ -24507,6 +24535,7 @@ export namespace Prisma {
     icon?: SortOrder
     color?: SortOrder
     sortOrder?: SortOrder
+    useTimeWindows?: SortOrder
     isStrict?: SortOrder
     locationId?: SortOrder
     parentId?: SortOrder
@@ -26896,6 +26925,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     createdAt?: string
     updatedAt: string
@@ -26912,6 +26942,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: string | null
     parentId?: string | null
@@ -27034,6 +27065,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: StringFieldUpdateOperationsInput | string
     updatedAt?: StringFieldUpdateOperationsInput | string
@@ -27050,6 +27082,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     locationId?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -27297,6 +27330,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     createdAt?: string
     updatedAt: string
@@ -27313,6 +27347,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: string | null
     parentId?: string | null
@@ -27334,6 +27369,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     createdAt?: string
     updatedAt: string
@@ -27350,6 +27386,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: string | null
     userId: string
@@ -27551,6 +27588,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: StringFieldUpdateOperationsInput | string
     updatedAt?: StringFieldUpdateOperationsInput | string
@@ -27567,6 +27605,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     locationId?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -27602,6 +27641,7 @@ export namespace Prisma {
     icon?: StringNullableFilter<"Category"> | string | null
     color?: StringNullableFilter<"Category"> | string | null
     sortOrder?: IntFilter<"Category"> | number
+    useTimeWindows?: BoolFilter<"Category"> | boolean
     isStrict?: BoolFilter<"Category"> | boolean
     locationId?: StringNullableFilter<"Category"> | string | null
     parentId?: StringNullableFilter<"Category"> | string | null
@@ -27704,6 +27744,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     createdAt?: string
     updatedAt: string
@@ -27720,6 +27761,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: string | null
     parentId?: string | null
@@ -27793,6 +27835,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: StringFieldUpdateOperationsInput | string
     updatedAt?: StringFieldUpdateOperationsInput | string
@@ -27809,6 +27852,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     locationId?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -28079,6 +28123,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     createdAt?: string
     updatedAt: string
@@ -28095,6 +28140,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     parentId?: string | null
     userId: string
@@ -28660,6 +28706,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     createdAt?: string
     updatedAt: string
@@ -28676,6 +28723,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: string | null
     parentId?: string | null
@@ -29093,6 +29141,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: string | null
     userId: string
@@ -29151,6 +29200,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: StringFieldUpdateOperationsInput | string
     updatedAt?: StringFieldUpdateOperationsInput | string
@@ -29167,6 +29217,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     locationId?: NullableStringFieldUpdateOperationsInput | string | null
     userId?: StringFieldUpdateOperationsInput | string
@@ -29183,6 +29234,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     locationId?: NullableStringFieldUpdateOperationsInput | string | null
     userId?: StringFieldUpdateOperationsInput | string
@@ -29322,6 +29374,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     parentId?: string | null
     userId: string
@@ -29524,6 +29577,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: StringFieldUpdateOperationsInput | string
     updatedAt?: StringFieldUpdateOperationsInput | string
@@ -29540,6 +29594,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
     userId?: StringFieldUpdateOperationsInput | string
@@ -29556,6 +29611,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
     userId?: StringFieldUpdateOperationsInput | string
@@ -29640,6 +29696,7 @@ export namespace Prisma {
     icon?: string | null
     color?: string | null
     sortOrder?: number
+    useTimeWindows?: boolean
     isStrict?: boolean
     locationId?: string | null
     parentId?: string | null
@@ -29886,6 +29943,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: StringFieldUpdateOperationsInput | string
     updatedAt?: StringFieldUpdateOperationsInput | string
@@ -29902,6 +29960,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     locationId?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -29918,6 +29977,7 @@ export namespace Prisma {
     icon?: NullableStringFieldUpdateOperationsInput | string | null
     color?: NullableStringFieldUpdateOperationsInput | string | null
     sortOrder?: IntFieldUpdateOperationsInput | number
+    useTimeWindows?: BoolFieldUpdateOperationsInput | boolean
     isStrict?: BoolFieldUpdateOperationsInput | boolean
     locationId?: NullableStringFieldUpdateOperationsInput | string | null
     parentId?: NullableStringFieldUpdateOperationsInput | string | null

@@ -650,6 +650,12 @@ export const eventBox = style({
       filter: "saturate(0.7)",
       pointerEvents: "none",
     },
+    // Windows belonging to non-focused categories, dimmed but still clickable
+    // when the modal is opened from a per-area context (Life Areas page).
+    "&[data-defocused='true']": {
+      opacity: 0.32,
+      filter: "saturate(0.6)",
+    },
     "&[data-selected='true']": {
       outlineColor: vars.status.error,
     },

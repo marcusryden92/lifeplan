@@ -69,8 +69,13 @@ export class CalendarGenerator {
       input.config?.maxDaysAhead || SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH;
     this.bufferTimeMinutes = input.config?.bufferTimeMinutes ?? 0;
     this.enableLogging = input.config?.enableLogging ?? false;
+    // A category enters the scheduler only when it both opts into windows
+    // (useTimeWindows) and actually has at least one window. Either condition
+    // failing means the category is purely for classification — its location
+    // inheritance still applies (via input.categories elsewhere), but its
+    // windows / strictness do not constrain scheduling.
     this.scheduledCategories = (input.categories ?? []).filter(
-      (c) => c.timeSlots.length > 0,
+      (c) => c.useTimeWindows && c.timeSlots.length > 0,
     );
 
     this.timeSlotManager = new TimeSlotManager(

@@ -43,10 +43,10 @@ export default function ItemOverviewPage() {
               <span className={progressMetaStrong}>
                 {completedSubtasks} of {totalSubtasks} subtasks
               </span>
-              {" · "}
+              {"  ·  "}
               {formatMinutesToHours(completedDuration)} out of{" "}
               {formatMinutesToHours(totalDuration)}
-              {" · "}
+              {"  ·  "}
               <span className={progressMetaStrong}>{pct}%</span>
             </div>
             <div className={progressTrack}>

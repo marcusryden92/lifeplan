@@ -38,8 +38,23 @@ const calendarSlice = createSlice({
     setCategories: (state, action: PayloadAction<Category[]>) => {
       state.categories = action.payload;
     },
+    // Insert-or-replace by id. Used by optimistic updates so the caller doesn't
+    // have to snapshot the whole array and replay it after the server confirms.
+    upsertCategory: (state, action: PayloadAction<Category>) => {
+      const idx = state.categories.findIndex((c) => c.id === action.payload.id);
+      if (idx === -1) state.categories.push(action.payload);
+      else state.categories[idx] = action.payload;
+    },
+    removeCategory: (state, action: PayloadAction<string>) => {
+      state.categories = state.categories.filter((c) => c.id !== action.payload);
+    },
   },
 });
 
-export const { updateCalendarArrayData, setCategories } = calendarSlice.actions;
+export const {
+  updateCalendarArrayData,
+  setCategories,
+  upsertCategory,
+  removeCategory,
+} = calendarSlice.actions;
 export default calendarSlice;

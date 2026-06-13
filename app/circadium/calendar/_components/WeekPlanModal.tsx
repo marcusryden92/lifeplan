@@ -79,6 +79,10 @@ type Mode = "templates" | "windows";
 interface WeekPlanModalProps {
   open: boolean;
   onClose: () => void;
+  initialMode?: Mode;
+  // When set, opens in windows mode with all other categories' windows
+  // visually muted so the focused area's windows stand out.
+  focusedCategoryId?: string | null;
 }
 
 const REFERENCE_WEEK_DATE = new Date(2024, 0, 1);
@@ -176,6 +180,7 @@ function windowToEvent(
   weekStart: Date,
   categoryById: Map<string, Category>,
   active: boolean,
+  focused: boolean,
 ): EventInput {
   const category = win.categoryId ? categoryById.get(win.categoryId) : null;
   const color = category?.color || UNASSIGNED_COLOR;
@@ -205,6 +210,7 @@ function windowToEvent(
       color,
       active,
       assigned: !!win.categoryId,
+      focused,
     },
   };
 }
@@ -230,7 +236,12 @@ function startDayAsInt(tpl: EventTemplate): WeekDayIntegers {
   return 1;
 }
 
-export function WeekPlanModal({ open, onClose }: WeekPlanModalProps) {
+export function WeekPlanModal({
+  open,
+  onClose,
+  initialMode = "templates",
+  focusedCategoryId = null,
+}: WeekPlanModalProps) {
   const { userId, template, categories, updateTemplateArray } =
     useCalendarProvider();
   const calendarRef = useRef<FullCalendar>(null);
@@ -254,7 +265,11 @@ export function WeekPlanModal({ open, onClose }: WeekPlanModalProps) {
     return () => clearTimeout(t);
   }, [open]);
 
-  const [mode, setMode] = useState<Mode>("templates");
+  const [mode, setMode] = useState<Mode>(initialMode);
+
+  useEffect(() => {
+    if (open) setMode(initialMode);
+  }, [open, initialMode]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -307,10 +322,14 @@ export function WeekPlanModal({ open, onClose }: WeekPlanModalProps) {
       out.push(templateToEvent(tpl, weekStart, mode === "templates"));
     }
     for (const win of winsWorking) {
-      out.push(windowToEvent(win, weekStart, categoryById, mode === "windows"));
+      const focused =
+        focusedCategoryId === null || win.categoryId === focusedCategoryId;
+      out.push(
+        windowToEvent(win, weekStart, categoryById, mode === "windows", focused),
+      );
     }
     return out;
-  }, [tplsWorking, winsWorking, weekStart, categoryById, mode]);
+  }, [tplsWorking, winsWorking, weekStart, categoryById, mode, focusedCategoryId]);
 
   // Selection helpers
   const selectedTemplate = useMemo(
@@ -821,6 +840,7 @@ export function WeekPlanModal({ open, onClose }: WeekPlanModalProps) {
                       color: string;
                       active: boolean;
                       assigned?: boolean;
+                      focused?: boolean;
                     };
                     const isWindow = ext.kind === "window";
                     const bg = isWindow
@@ -845,6 +865,11 @@ export function WeekPlanModal({ open, onClose }: WeekPlanModalProps) {
                         data-assigned={ext.assigned ? "true" : "false"}
                         data-inactive={ext.active ? "false" : "true"}
                         data-selected={isSelected ? "true" : "false"}
+                        data-defocused={
+                          ext.kind === "window" && ext.focused === false
+                            ? "true"
+                            : "false"
+                        }
                         style={{ background: bg }}
                       >
                         <div className={eventTitle}>{event.title}</div>

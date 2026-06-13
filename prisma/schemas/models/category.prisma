@@ -7,6 +7,10 @@ model Category {
 
   timeSlots CategoryTimeWindow[]
 
+  // When false, the category is used purely for classification — its time windows
+  // (if any) are ignored by the scheduler and items in it schedule freely.
+  useTimeWindows Boolean @default(true)
+
   // Strict mode: when true, only items from this category can be in these time slots
   // When false, other items can fill empty space in the time slots
   isStrict  Boolean    @default(false)

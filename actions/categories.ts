@@ -113,6 +113,7 @@ export async function createCategory(data: {
   color?: string;
   parentId?: string;
   isStrict?: boolean;
+  useTimeWindows?: boolean;
   locationId?: string | null;
 }): Promise<Category> {
   const session = await auth();
@@ -149,6 +150,7 @@ export async function createCategory(data: {
       color: data.color,
       parentId: data.parentId,
       isStrict: data.isStrict ?? false,
+      useTimeWindows: data.useTimeWindows ?? false,
       locationId: data.locationId ?? null,
       sortOrder: (maxSortOrder._max.sortOrder ?? -1) + 1,
       userId: session.user.id,
@@ -167,6 +169,7 @@ export async function updateCategory(
     icon?: string | null;
     color?: string | null;
     isStrict?: boolean;
+    useTimeWindows?: boolean;
     locationId?: string | null;
   },
 ): Promise<Category> {
@@ -193,6 +196,7 @@ export async function updateCategory(
       icon: data.icon,
       color: data.color,
       isStrict: data.isStrict,
+      useTimeWindows: data.useTimeWindows,
       locationId: data.locationId,
       updatedAt: new Date().toISOString(),
     },

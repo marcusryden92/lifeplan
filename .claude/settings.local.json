@@ -97,7 +97,8 @@
       "Bash(tar -xzO package/index.js)",
       "Bash(timeout 60 pnpm dev)",
       "Bash(echo \"exit: $?\")",
-      "Bash(npx prisma *)"
+      "Bash(npx prisma *)",
+      "PowerShell(Move-Item -Path \"app/circadium/areas\" -Destination \"app/circadium/life-areas\")"
     ]
   }
 }
