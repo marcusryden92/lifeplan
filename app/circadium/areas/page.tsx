@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { v4 as uuidv4 } from "uuid";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -10,7 +11,6 @@ import {
   removeCategory,
 } from "@/redux/slices/calendarSlice";
 import type { AppDispatch, RootState } from "@/redux/store";
-import * as categoryActions from "@/actions/categories";
 import {
   buildCategoryTree,
   getCategoryAndDescendants,
@@ -37,9 +37,9 @@ import {
   railRowNoDot,
   railRowLabel,
   railRowCount,
+  railRowAddChild,
   treeChevron,
   treeChevronSpacer,
-  railFooter,
   mainCard,
   emptyMain,
   errorBanner,
@@ -94,190 +94,75 @@ export default function AreasPage() {
     [categories, selected],
   );
 
-  // Same shape as useCalendarServerSync's 300ms debounce: optimistic dispatch
-  // is instant, server write fires once the user stops fiddling. Keyed by
-  // (categoryId, field) so flipping color doesn't cancel a pending strict
-  // write and vice versa.
-  //
-  // We intentionally do NOT re-dispatch the server response on success. The
-  // optimistic value is the user's intent; overwriting it with a stale server
-  // reply that arrives after a newer click would flick the UI back to the
-  // older value. On failure we refetch the canonical row so the UI re-syncs.
-  const SERVER_DEBOUNCE_MS = 300;
-  const writeTimersRef = useRef(
-    new Map<string, ReturnType<typeof setTimeout>>(),
-  );
-
-  useEffect(
-    () => () => {
-      for (const t of writeTimersRef.current.values()) clearTimeout(t);
-      writeTimersRef.current.clear();
-    },
-    [],
-  );
-
-  const scheduleWrite = (
-    categoryId: string,
-    field: string,
-    serverCall: () => Promise<Category>,
-    errorLabel: string,
-  ) => {
-    const key = `${categoryId}:${field}`;
-    const existing = writeTimersRef.current.get(key);
-    if (existing) clearTimeout(existing);
-
-    const timer = setTimeout(() => {
-      writeTimersRef.current.delete(key);
-      serverCall().catch(async (err) => {
-        setError(err instanceof Error ? err.message : errorLabel);
-        try {
-          const real = await categoryActions.fetchCategory(categoryId);
-          if (real) dispatch(upsertCategory(real));
-        } catch {
-          // Recovery fetch failed too — leave the optimistic value alone and
-          // let the user see the error banner.
-        }
-      });
-    }, SERVER_DEBOUNCE_MS);
-
-    writeTimersRef.current.set(key, timer);
-  };
-
-  const handleRename = (name: string) => {
+  // All mutations are pure Redux dispatches. useCalendarServerSync watches
+  // state.calendar.categories, diffs against its prev-ref, and 300ms after
+  // the user stops fiddling sends one batched sync transaction. No direct
+  // server-action calls from this component.
+  const replace = (next: Partial<Category>) => {
     if (!selected) return;
-    dispatch(upsertCategory({ ...selected, name }));
-    setError(null);
-    scheduleWrite(
-      selected.id,
-      "name",
-      () => categoryActions.updateCategory(selected.id, { name }),
-      "Failed to rename",
-    );
+    dispatch(upsertCategory({ ...selected, ...next }));
   };
 
-  const handleChangeColor = (color: string) => {
-    if (!selected) return;
-    dispatch(upsertCategory({ ...selected, color }));
-    setError(null);
-    scheduleWrite(
-      selected.id,
-      "color",
-      () => categoryActions.updateCategory(selected.id, { color }),
-      "Failed to update color",
-    );
-  };
+  const handleRename = (name: string) => replace({ name });
+  const handleChangeColor = (color: string) => replace({ color });
+  const handleChangeLocation = (locationId: string | null) =>
+    replace({ locationId });
+  const handleToggleStrict = () =>
+    selected && replace({ isStrict: !selected.isStrict });
+  const handleToggleUseTimeWindows = () =>
+    selected && replace({ useTimeWindows: !selected.useTimeWindows });
 
+  // Reparenting recomputes sortOrder client-side (append to the new sibling
+  // group) so we don't need a separate moveCategory server action.
   const handleChangeParent = (parentId: string | null) => {
     if (!selected) return;
-    dispatch(upsertCategory({ ...selected, parentId }));
-    setError(null);
-    scheduleWrite(
-      selected.id,
-      "parentId",
-      () => categoryActions.moveCategory(selected.id, parentId),
-      "Failed to move area",
-    );
-  };
-
-  const handleChangeLocation = (locationId: string | null) => {
-    if (!selected) return;
-    dispatch(upsertCategory({ ...selected, locationId }));
-    setError(null);
-    scheduleWrite(
-      selected.id,
-      "locationId",
-      () => categoryActions.updateCategory(selected.id, { locationId }),
-      "Failed to update location",
-    );
-  };
-
-  const handleToggleStrict = () => {
-    if (!selected) return;
-    const next = !selected.isStrict;
-    dispatch(upsertCategory({ ...selected, isStrict: next }));
-    setError(null);
-    scheduleWrite(
-      selected.id,
-      "isStrict",
-      () => categoryActions.updateCategory(selected.id, { isStrict: next }),
-      "Failed to toggle strict",
-    );
-  };
-
-  const handleToggleUseTimeWindows = () => {
-    if (!selected) return;
-    const next = !selected.useTimeWindows;
-    dispatch(upsertCategory({ ...selected, useTimeWindows: next }));
-    setError(null);
-    scheduleWrite(
-      selected.id,
-      "useTimeWindows",
-      () =>
-        categoryActions.updateCategory(selected.id, { useTimeWindows: next }),
-      "Failed to toggle time windows",
-    );
+    const siblingMax = categories
+      .filter((c) => c.parentId === parentId && c.id !== selected.id)
+      .reduce((max, c) => Math.max(max, c.sortOrder), -1);
+    replace({ parentId, sortOrder: siblingMax + 1 });
   };
 
   const handleConfirmDelete = () => {
     if (!deletingId) return;
-    const victim = categories.find((c) => c.id === deletingId);
-    if (!victim) {
-      setDeletingId(null);
-      return;
-    }
-    setError(null);
-    dispatch(removeCategory(deletingId));
     if (effectiveSelectedId === deletingId) {
       const remaining = categories.filter((c) => c.id !== deletingId);
       setSelectedId(remaining.find((c) => !c.parentId)?.id ?? null);
     }
+    dispatch(removeCategory(deletingId));
     setDeletingId(null);
-    categoryActions.deleteCategory(victim.id).catch((err) => {
-      dispatch(upsertCategory(victim));
-      setError(err instanceof Error ? err.message : "Failed to delete area");
-    });
   };
 
-  const handleCreate = () => {
-    setError(null);
+  const handleCreate = (parentId: string | null = null) => {
     const swatch = SWATCH_PALETTE[categories.length % SWATCH_PALETTE.length];
-    // Provisional shape that satisfies the Category contract well enough for
-    // rendering; the server returns the canonical row (real id, timestamps) and
-    // we swap it in. Using a temp id lets us re-key on success without losing
-    // the selection.
-    const tempId = `tmp-${Date.now()}`;
+    const id = uuidv4();
     const now = new Date().toISOString();
-    const provisional: Category = {
-      id: tempId,
-      name: "New area",
+    // Sub-areas append to the end of their sibling group; top-level uses the
+    // total category count as a reasonable tail position. Either way the sync
+    // sends the sortOrder along, so the tree renders in the expected slot
+    // without a separate moveCategory round-trip.
+    const siblingMax = categories
+      .filter((c) => c.parentId === parentId)
+      .reduce((max, c) => Math.max(max, c.sortOrder), -1);
+    const created: Category = {
+      id,
+      name: parentId ? "New sub-category" : "New category",
       icon: null,
       color: swatch,
-      sortOrder: categories.length,
+      sortOrder: siblingMax + 1,
       isStrict: false,
       useTimeWindows: false,
       locationId: null,
-      parentId: null,
+      parentId,
       userId: "",
       timeSlots: [],
       createdAt: now,
       updatedAt: now,
     };
-    dispatch(upsertCategory(provisional));
-    setSelectedId(tempId);
-
-    categoryActions
-      .createCategory({ name: provisional.name, color: swatch })
-      .then((created) => {
-        // Replace the temp row with the real one. Selection follows.
-        dispatch(removeCategory(tempId));
-        dispatch(upsertCategory(created));
-        setSelectedId((prev) => (prev === tempId ? created.id : prev));
-      })
-      .catch((err) => {
-        dispatch(removeCategory(tempId));
-        setSelectedId((prev) => (prev === tempId ? null : prev));
-        setError(err instanceof Error ? err.message : "Failed to create area");
-      });
+    dispatch(upsertCategory(created));
+    setSelectedId(id);
+    if (parentId) {
+      setExpanded((prev) => new Set(prev).add(parentId));
+    }
   };
 
   const toggleExpand = (id: string) => {
@@ -290,22 +175,22 @@ export default function AreasPage() {
   };
 
   const deletingName = deletingId
-    ? categories.find((c) => c.id === deletingId)?.name ?? "this area"
+    ? categories.find((c) => c.id === deletingId)?.name ?? "this category"
     : "";
 
   return (
     <div className={page}>
       <div className={subHeader}>
-        <h1 className={pageTitle}>Life Areas</h1>
+        <h1 className={pageTitle}>Categories</h1>
         <span className={titleSummary}>
-          {categories.length} area{categories.length === 1 ? "" : "s"} ·{" "}
+          {categories.length} categor{categories.length === 1 ? "y" : "ies"} ·{" "}
           {planner.filter((i) => !i.parentId && i.categoryId).length} categorized
         </span>
         <span className={spacer} />
         <div className={actionCluster}>
-          <Button variant="solid" size="sm" onClick={handleCreate}>
+          <Button variant="solid" size="sm" onClick={() => handleCreate()}>
             <Plus size={13} strokeWidth={2.4} />
-            New area
+            New category
           </Button>
         </div>
       </div>
@@ -314,7 +199,7 @@ export default function AreasPage() {
 
       <div className={mainGrid}>
         <aside className={rail}>
-          <div className={railHead}>Areas</div>
+          <div className={railHead}>Categories</div>
           <div className={railBody}>
             {tree.length === 0 ? (
               <div
@@ -324,7 +209,7 @@ export default function AreasPage() {
                   color: "var(--muted)",
                 }}
               >
-                No areas yet — create one.
+                No categories yet — create one.
               </div>
             ) : (
               tree.map((node) => (
@@ -337,20 +222,10 @@ export default function AreasPage() {
                   selectedId={effectiveSelectedId}
                   onSelect={setSelectedId}
                   counts={itemCounts}
+                  onAddChild={(parentId) => handleCreate(parentId)}
                 />
               ))
             )}
-          </div>
-          <div className={railFooter}>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCreate}
-              style={{ width: "100%", justifyContent: "flex-start" }}
-            >
-              <Plus size={12} strokeWidth={2.2} />
-              New top-level area
-            </Button>
           </div>
         </aside>
 
@@ -375,7 +250,7 @@ export default function AreasPage() {
             />
           ) : (
             <div className={emptyMain}>
-              Pick an area from the left, or create a new one to begin.
+              Pick a category from the left, or create a new one to begin.
             </div>
           )}
         </section>
@@ -390,14 +265,14 @@ export default function AreasPage() {
 
       <LumenConfirmModal
         open={!!deletingId}
-        title="Delete area?"
+        title="Delete category?"
         tone="danger"
         confirmLabel="Delete"
         body={
           <>
             <p style={{ margin: 0 }}>
               Delete &ldquo;{deletingName}&rdquo;? This also deletes all
-              sub-areas. Items in this area become uncategorized.
+              sub-categories. Items in this category become uncategorized.
             </p>
           </>
         }
@@ -416,6 +291,7 @@ function TreeNode({
   selectedId,
   onSelect,
   counts,
+  onAddChild,
 }: {
   node: CategoryNode;
   depth: number;
@@ -424,6 +300,7 @@ function TreeNode({
   selectedId: string | null;
   onSelect: (id: string) => void;
   counts: Map<string, number>;
+  onAddChild: (parentId: string) => void;
 }) {
   const hasChildren = node.children.length > 0;
   const isOpen = expanded.has(node.id);
@@ -462,6 +339,20 @@ function TreeNode({
         )}
         <span className={railRowLabel}>{node.name}</span>
         <span className={railRowCount}>{count}</span>
+        {/* span (not button) because the row itself is already a button —
+            nested buttons are invalid. role + tabIndex preserve a11y. */}
+        <span
+          role="button"
+          tabIndex={-1}
+          className={railRowAddChild}
+          aria-label={`Add sub-category to ${node.name}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddChild(node.id);
+          }}
+        >
+          <Plus size={11} strokeWidth={2.4} />
+        </span>
       </button>
       {hasChildren &&
         isOpen &&
@@ -475,6 +366,7 @@ function TreeNode({
             selectedId={selectedId}
             onSelect={onSelect}
             counts={counts}
+            onAddChild={onAddChild}
           />
         ))}
     </>

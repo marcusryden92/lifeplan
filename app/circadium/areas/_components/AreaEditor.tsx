@@ -147,7 +147,7 @@ export function AreaEditor({
   const summary = [
     `${itemCount} item${itemCount === 1 ? "" : "s"}`,
     subAreas.length > 0
-      ? `${subAreas.length} sub-area${subAreas.length === 1 ? "" : "s"}`
+      ? `${subAreas.length} sub-categor${subAreas.length === 1 ? "y" : "ies"}`
       : null,
     category.isStrict ? "strict" : null,
   ]
@@ -178,7 +178,7 @@ export function AreaEditor({
                 e.currentTarget.blur();
               }
             }}
-            aria-label="Area name"
+            aria-label="Category name"
           />
           <div className={headerSummary}>{summary}</div>
         </div>
@@ -187,7 +187,7 @@ export function AreaEditor({
             variant="ghost"
             size="sm"
             onClick={onDelete}
-            aria-label="Delete area"
+            aria-label="Delete category"
           >
             <Trash2 size={12} strokeWidth={2.2} />
             Delete
@@ -215,12 +215,12 @@ export function AreaEditor({
             </div>
           </div>
           <div className={fieldStack}>
-            <span className={fieldLabel}>Parent area</span>
+            <span className={fieldLabel}>Parent category</span>
             <LumenDropdown
               value={category.parentId ?? null}
               options={parentOptions}
               onChange={(v) => onChangeParent(v)}
-              ariaLabel="Parent area"
+              ariaLabel="Parent category"
             />
           </div>
         </div>
@@ -252,7 +252,7 @@ export function AreaEditor({
             ariaLabel="Default location"
           />
           <div className={sectionHelp}>
-            Items in this area inherit this location unless overridden.
+            Items in this category inherit this location unless overridden.
           </div>
         </div>
         <div className={section}>
@@ -274,8 +274,8 @@ export function AreaEditor({
           </div>
           <div className={sectionHelp}>
             {category.useTimeWindows
-              ? "Items in this area schedule into the weekly windows below."
-              : "Items in this area schedule freely — this area is for classification only."}
+              ? "Items in this category schedule into the weekly windows below."
+              : "Items in this category schedule freely — it's used for classification only."}
           </div>
         </div>
       </div>
@@ -325,7 +325,7 @@ export function AreaEditor({
         <div className={section}>
           <div className={sectionTitle}>Time windows</div>
           <div className={classificationNote}>
-            This area doesn&apos;t use time-window scheduling. Items in it
+            This category doesn&apos;t use time-window scheduling. Items in it
             schedule wherever there&apos;s capacity. Turn on{" "}
             <strong>Uses time windows</strong> to add weekly windows or strict
             mode.
@@ -336,7 +336,7 @@ export function AreaEditor({
       {subAreas.length > 0 && (
         <div className={section}>
           <div className={sectionTitle}>
-            Sub-areas · {subAreas.length}
+            Sub-categories · {subAreas.length}
           </div>
           <div className={subAreasList}>
             {subAreas.map((s) => {

@@ -107,7 +107,11 @@ export default function CalendarProvider({
     updateAll();
   }, [bufferTimeMinutes, updateAll, userId]);
 
-  const initializeState = useCalendarServerSync(userId, calendarState);
+  const syncState = useMemo(
+    () => ({ ...calendarState, locations }),
+    [calendarState, locations],
+  );
+  const { initializeState } = useCalendarServerSync(userId, syncState);
 
   useFetchCalendarData(userId, initializeState);
 

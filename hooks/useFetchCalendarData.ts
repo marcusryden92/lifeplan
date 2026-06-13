@@ -22,8 +22,8 @@ export function useFetchCalendarData(
     planner: Planner[],
     calendar: SimpleEvent[],
     template: EventTemplate[],
-    categories: Category[]
-  ) => void
+    categories: Category[],
+  ) => void,
 ) {
   const dispatch = useDispatch<AppDispatch>();
   const [data, setData] = useState<Data | null>(null);
@@ -53,7 +53,7 @@ export function useFetchCalendarData(
           newData.planner,
           newData.calendar,
           newData.template,
-          newData.categories
+          newData.categories,
         );
       } catch (err) {
         setError(err as Error);

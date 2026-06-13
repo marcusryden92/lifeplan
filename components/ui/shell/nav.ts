@@ -41,8 +41,8 @@ export const NAV_ITEMS: NavItem[] = [
     kind: "route",
   },
   {
-    key: "life-areas",
-    label: "Life Areas",
+    key: "categories",
+    label: "Categories",
     icon: Layers,
     href: "/circadium/areas",
     kind: "route",

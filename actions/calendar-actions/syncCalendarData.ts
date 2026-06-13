@@ -6,6 +6,8 @@ import { handlePlannerChanges } from "./sync-handlers/plannerHandlers";
 import { handleCalendarChanges } from "./sync-handlers/calendarHandlers";
 import { handleExtendedPropsChanges } from "./sync-handlers/extendedPropsHandlers";
 import { handleTemplateChanges } from "./sync-handlers/templateHandlers";
+import { handleCategoryChanges } from "./sync-handlers/categoryHandlers";
+import { handleLocationChanges } from "./sync-handlers/locationHandlers";
 
 export async function syncCalendarData(
   userId: string,
@@ -20,6 +22,8 @@ export async function syncCalendarData(
       ...handleCalendarChanges(db, userId, databaseChanges, updatedAt),
       ...handleExtendedPropsChanges(db, databaseChanges),
       ...handleTemplateChanges(db, userId, databaseChanges, updatedAt),
+      ...handleCategoryChanges(db, userId, databaseChanges, updatedAt),
+      ...handleLocationChanges(db, userId, databaseChanges),
     ];
 
     console.log("📊 Sync operations:", {

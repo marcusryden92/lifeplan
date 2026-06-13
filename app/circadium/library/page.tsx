@@ -325,7 +325,7 @@ export default function LibraryPage() {
       <div className={subHeader}>
         <h1 className={pageTitle}>Library</h1>
         <span className={titleSummary}>
-          {planner.length} items · {categories.length} life areas
+          {planner.length} items · {categories.length} categor{categories.length === 1 ? "y" : "ies"}
         </span>
         <span className={spacer} />
         <div className={actionCluster}>
@@ -380,7 +380,7 @@ export default function LibraryPage() {
           </div>
 
           <div className={railSection}>
-            <div className={railSectionHead}>Life areas</div>
+            <div className={railSectionHead}>Categories</div>
             {categoryTree.length === 0 ? (
               <div style={{ padding: "8px", fontSize: 12.5, color: "var(--muted)" }}>
                 <Caption>No areas yet</Caption>

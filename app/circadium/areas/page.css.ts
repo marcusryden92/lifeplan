@@ -184,6 +184,28 @@ export const railRowCount = style({
   transition: themeTransition,
 });
 
+export const railRowAddChild = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 18,
+  height: 18,
+  borderRadius: 5,
+  border: "none",
+  background: "transparent",
+  color: vars.muted,
+  cursor: "pointer",
+  opacity: 0,
+  transition: "opacity 120ms ease, color 120ms ease, background-color 120ms ease",
+  flexShrink: 0,
+  padding: 0,
+  selectors: {
+    [`${railRow}:hover &`]: { opacity: 1 },
+    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+    "&:focus-visible": { opacity: 1, outline: `1px solid ${vars.accent.primary}` },
+  },
+});
+
 export const treeChevron = style({
   display: "inline-flex",
   width: 14,

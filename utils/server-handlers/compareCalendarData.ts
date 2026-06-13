@@ -6,7 +6,9 @@ import {
   EventTemplate,
   EventExtendedProps,
   EventType,
+  Category,
 } from "@/types/prisma";
+import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import { objectsAreEqual } from "../generalUtils";
 import { syncCalendarData } from "@/actions/calendar-actions/syncCalendarData";
 
@@ -20,12 +22,20 @@ type PlannerChange = Planner;
 type CalendarChange = Omit<SimpleEvent, "extendedProps">;
 type TemplateChange = EventTemplate;
 type ExtendedPropsChange = EventExtendedProps;
+// timeSlots is a related table, excluded from the diff — those rows are
+// managed by actions/time-windows.ts directly.
+type CategoryChange = Omit<Category, "timeSlots">;
+// Only the editable own-row fields. address/lat/lng/placeId are server-
+// authoritative (Google Places) and never flow back from the client.
+type LocationChange = SerializedLocation;
 
 export type DatabaseChanges = {
   planner: ChangeGroup<PlannerChange>;
   calendar: ChangeGroup<CalendarChange>;
   template: ChangeGroup<TemplateChange>;
   extendedProps: ChangeGroup<ExtendedPropsChange>;
+  category: ChangeGroup<CategoryChange>;
+  location: ChangeGroup<LocationChange>;
 };
 
 export async function handleServerTransaction(
@@ -36,6 +46,10 @@ export async function handleServerTransaction(
   previousCalendar: { current: SimpleEvent[] },
   template?: EventTemplate[],
   previousTemplate?: { current: EventTemplate[] },
+  categories?: Category[],
+  previousCategories?: { current: Category[] },
+  locations?: SerializedLocation[],
+  previousLocations?: { current: SerializedLocation[] },
 ) {
   // Filter out generated events (travel, template, category wrappers) BEFORE serialization
   // These are dynamically generated and should never be persisted to database
@@ -80,6 +94,27 @@ export async function handleServerTransaction(
       }
     : undefined;
 
+  const serializedCategories = categories
+    ? (JSON.parse(JSON.stringify(categories)) as Category[])
+    : undefined;
+  const serializedPreviousCategories = previousCategories
+    ? {
+        current: JSON.parse(
+          JSON.stringify(previousCategories.current),
+        ) as Category[],
+      }
+    : undefined;
+  const serializedLocations = locations
+    ? (JSON.parse(JSON.stringify(locations)) as SerializedLocation[])
+    : undefined;
+  const serializedPreviousLocations = previousLocations
+    ? {
+        current: JSON.parse(
+          JSON.stringify(previousLocations.current),
+        ) as SerializedLocation[],
+      }
+    : undefined;
+
   const databaseChanges = compareData(
     serializedPlanner,
     serializedPreviousPlanner,
@@ -87,6 +122,10 @@ export async function handleServerTransaction(
     serializedPreviousCalendar,
     serializedTemplate,
     serializedPreviousTemplate,
+    serializedCategories,
+    serializedPreviousCategories,
+    serializedLocations,
+    serializedPreviousLocations,
   );
 
   const response = await syncCalendarData(userId, databaseChanges);
@@ -101,12 +140,18 @@ export function compareData(
   previousCalendar: { current: SimpleEvent[] },
   template?: EventTemplate[],
   previousTemplate?: { current: EventTemplate[] },
+  categories?: Category[],
+  previousCategories?: { current: Category[] },
+  locations?: SerializedLocation[],
+  previousLocations?: { current: SerializedLocation[] },
 ) {
   const databaseChanges: DatabaseChanges = {
     planner: { create: [], update: [], destroy: [] },
     calendar: { create: [], update: [], destroy: [] },
     template: { create: [], update: [], destroy: [] },
     extendedProps: { create: [], update: [], destroy: [] },
+    category: { create: [], update: [], destroy: [] },
+    location: { create: [], update: [], destroy: [] },
   };
 
   // Check planner changes
@@ -209,6 +254,58 @@ export function compareData(
     prevTempMap.forEach((template) => {
       if (!templateMap.has(template.id)) {
         databaseChanges.template.destroy.push(template);
+      }
+    });
+  }
+
+  // Categories. timeSlots are a related table — strip before diffing so a
+  // change to a window doesn't look like a category update.
+  if (categories && previousCategories) {
+    const stripTimeSlots = (c: Category) => {
+      const { timeSlots: _timeSlots, ...rest } = c;
+      return rest;
+    };
+    const currentByCategory = new Map(
+      categories.map((c) => [c.id, stripTimeSlots(c)]),
+    );
+    const prevByCategory = new Map(
+      previousCategories.current.map((c) => [c.id, stripTimeSlots(c)]),
+    );
+    currentByCategory.forEach((cat, id) => {
+      const prev = prevByCategory.get(id);
+      if (!prev) {
+        databaseChanges.category.create.push(cat);
+      } else if (!objectsAreEqual(prev, cat)) {
+        databaseChanges.category.update.push(cat);
+      }
+    });
+    prevByCategory.forEach((cat, id) => {
+      if (!currentByCategory.has(id)) {
+        databaseChanges.category.destroy.push(cat);
+      }
+    });
+  }
+
+  // Locations. Only update + destroy flow through here — create needs a
+  // Google Places lookup and stays as a direct server action.
+  if (locations && previousLocations) {
+    const currentByLoc = new Map(locations.map((l) => [l.id, l]));
+    const prevByLoc = new Map(
+      previousLocations.current.map((l) => [l.id, l]),
+    );
+    currentByLoc.forEach((loc, id) => {
+      const prev = prevByLoc.get(id);
+      if (!prev) {
+        // Skip — direct createLocation owns this path.
+        return;
+      }
+      if (!objectsAreEqual(prev, loc)) {
+        databaseChanges.location.update.push(loc);
+      }
+    });
+    prevByLoc.forEach((loc, id) => {
+      if (!currentByLoc.has(id)) {
+        databaseChanges.location.destroy.push(loc);
       }
     });
   }
