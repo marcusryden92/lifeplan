@@ -9,9 +9,14 @@ export const card = style({
 });
 
 export const cardHeader = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
   padding: "12px 0",
   borderBottom: `1px solid ${vars.rule}`,
   transition: themeTransition,
+  flexWrap: "wrap",
 });
 
 export const cardTitle = style({
@@ -68,8 +73,8 @@ export const typePicker = style({
   gridTemplateColumns: "1fr 1fr 1fr",
   padding: 3,
   borderRadius: 999,
-  background: `color-mix(in srgb, ${vars.ink} 6%, transparent)`,
-  border: `1px solid ${vars.rule}`,
+  background: vars.glass.bgSoft,
+  border: `1px solid ${vars.glass.stroke}`,
   alignSelf: "flex-start",
 });
 
@@ -113,20 +118,20 @@ export const typePickerBtn = style({
 
 export const priorityRow = style({
   display: "flex",
-  gap: 3,
+  gap: 4,
   flexWrap: "nowrap",
 });
 
 export const priorityPill = style({
   flex: "0 0 auto",
-  width: 22,
-  height: 22,
+  width: 28,
+  height: 28,
   border: `1px solid ${vars.glass.stroke}`,
   background: "transparent",
   padding: 0,
   borderRadius: "50%",
   cursor: "pointer",
-  fontSize: 11,
+  fontSize: 12.5,
   fontFamily: vars.font.ui,
   fontWeight: 700,
   color: vars.inkSoft,

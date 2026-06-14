@@ -1,5 +1,14 @@
-import { style } from "@vanilla-extract/css";
+import { style, keyframes } from "@vanilla-extract/css";
 import { vars, themeTransition } from "@/lib/theme";
+
+// Quick-shake when a locked completion checkbox is clicked. Subtle horizontal
+// jiggle paired with a red flash on the circle gives the user immediate "no"
+// feedback without making the row look broken.
+const completeLockedShake = keyframes({
+  "0%, 100%": { transform: "translateX(0)" },
+  "20%, 60%": { transform: "translateX(-3px)" },
+  "40%, 80%": { transform: "translateX(3px)" },
+});
 
 export const rootList = style({
   display: "flex",
@@ -84,6 +93,68 @@ export const draggableDropTarget = style({
 
 export const draggableSelected = style({
   background: `color-mix(in srgb, ${vars.accent.now} 10%, transparent)`,
+});
+
+// Note: short explicit transition rather than themeTransition (1s) — completion
+// state flips on click and needs to feel immediate, not crossfaded.
+const COMPLETE_TRANSITION =
+  "background-color 120ms ease, border-color 120ms ease, color 120ms ease";
+
+export const completeBtn = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 22,
+  height: 26,
+  marginRight: 2,
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  borderRadius: 6,
+  padding: 0,
+  color: vars.muted,
+  transition: COMPLETE_TRANSITION,
+  selectors: {
+    "&:hover": {
+      color: vars.ink,
+      background: vars.glass.bgSoft,
+    },
+    "&[data-shake='true']": {
+      animation: `${completeLockedShake} 0.4s ease-in-out`,
+    },
+    "&[data-locked='true']": {
+      cursor: "not-allowed",
+    },
+  },
+});
+
+export const completeCircle = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 16,
+  height: 16,
+  borderRadius: 999,
+  border: `1.5px solid currentColor`,
+  background: "transparent",
+  transition: COMPLETE_TRANSITION,
+  selectors: {
+    [`${completeBtn}[data-completed="true"] &`]: {
+      background: vars.status.success,
+      borderColor: vars.status.success,
+      color: vars.paper,
+    },
+    [`${completeBtn}[data-shake='true'] &`]: {
+      borderColor: vars.status.error,
+      color: vars.status.error,
+    },
+  },
+});
+
+export const taskTitleCompleted = style({
+  color: vars.muted,
+  textDecoration: "line-through",
+  textDecorationThickness: 1.5,
 });
 
 export const chevronBtn = style({

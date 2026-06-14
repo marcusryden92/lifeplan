@@ -14,12 +14,12 @@ export const page = style({
 export const innerWrap = style({
   display: "flex",
   flexDirection: "column",
-  padding: "20px 28px 28px",
+  padding: "20px 56px 28px",
   width: "100%",
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: { padding: "16px 16px 24px" },
+    [MOBILE]: { padding: "16px 32px 24px" },
   },
 });
 
@@ -133,8 +133,10 @@ export const renamePencil = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
+  alignSelf: "flex-start",
   width: 30,
   height: 30,
+  marginTop: 4,
   borderRadius: 999,
   border: "none",
   background: "transparent",

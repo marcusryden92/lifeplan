@@ -2,21 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { tabsStrip, tab, tabActive, tabCount } from "./ItemTabs.css";
+import {
+  tabsStrip,
+  tab,
+  tabActive,
+  tabCount,
+  tabDisabled,
+} from "./ItemTabs.css";
 
 interface Tab {
   key: string;
   label: string;
   href: string;
   count?: number;
+  disabled?: boolean;
 }
 
 interface ItemTabsProps {
   itemId: string;
   subtaskCount: number;
+  subtasksEnabled: boolean;
 }
 
-export function ItemTabs({ itemId, subtaskCount }: ItemTabsProps) {
+export function ItemTabs({
+  itemId,
+  subtaskCount,
+  subtasksEnabled,
+}: ItemTabsProps) {
   const pathname = usePathname();
   const base = `/circadium/items/${itemId}`;
 
@@ -28,6 +40,7 @@ export function ItemTabs({ itemId, subtaskCount }: ItemTabsProps) {
       label: "Subtasks",
       href: `${base}/subtasks`,
       count: subtaskCount,
+      disabled: !subtasksEnabled,
     },
     { key: "activity", label: "Activity", href: `${base}/activity` },
   ];
@@ -39,13 +52,32 @@ export function ItemTabs({ itemId, subtaskCount }: ItemTabsProps) {
           t.href === base
             ? pathname === base || pathname === `${base}/`
             : pathname === t.href || pathname.startsWith(`${t.href}/`);
+        const className = `${tab} ${isActive ? tabActive : ""} ${
+          t.disabled ? tabDisabled : ""
+        }`;
+        if (t.disabled) {
+          return (
+            <span
+              key={t.key}
+              role="tab"
+              aria-selected={false}
+              aria-disabled
+              className={className}
+            >
+              <span>{t.label}</span>
+              {typeof t.count === "number" && (
+                <span className={tabCount}>{t.count}</span>
+              )}
+            </span>
+          );
+        }
         return (
           <Link
             key={t.key}
             href={t.href}
             role="tab"
             aria-selected={isActive}
-            className={`${tab} ${isActive ? tabActive : ""}`}
+            className={className}
           >
             <span>{t.label}</span>
             {typeof t.count === "number" && (

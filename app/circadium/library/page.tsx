@@ -68,8 +68,8 @@ import {
   emptyState,
   emptyStateTitle,
   segmentedControl,
+  segmentedThumb,
   segmentedButton,
-  segmentedButtonActive,
 } from "./page.css";
 
 type SmartView =
@@ -171,6 +171,51 @@ function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+// Animated sliding-thumb segmented control. Matches the type picker in the
+// item detail view: ink-fill thumb translates to the active index, button
+// text fades from muted -> paper.
+function Segmented<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: ReadonlyArray<{ key: T; label: string }>;
+  value: T;
+  onChange: (v: T) => void;
+}) {
+  const n = options.length;
+  const activeIdx = Math.max(
+    0,
+    options.findIndex((o) => o.key === value),
+  );
+  return (
+    <div
+      className={segmentedControl}
+      style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}
+    >
+      <span
+        className={segmentedThumb}
+        aria-hidden
+        style={{
+          width: `calc(${100 / n}% - ${6 / n}px)`,
+          transform: `translateX(${activeIdx * 100}%)`,
+        }}
+      />
+      {options.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          className={segmentedButton}
+          data-active={o.key === value}
+          onClick={() => onChange(o.key)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export default function LibraryPage() {
@@ -430,62 +475,39 @@ export default function LibraryPage() {
 
           <div className={filterStrip}>
             <div className={filterRow}>
-              <div className={segmentedControl}>
-                {(["all", "task", "plan", "goal"] as const).map((t) => (
-                  <button
-                    key={t}
-                    className={`${segmentedButton} ${
-                      typeFilter === t ? segmentedButtonActive : ""
-                    }`}
-                    onClick={() => setTypeFilter(t)}
-                  >
-                    {t === "all" ? "All" : t}
-                  </button>
-                ))}
-              </div>
+              <Segmented<TypeFilter>
+                value={typeFilter}
+                onChange={setTypeFilter}
+                options={[
+                  { key: "all", label: "All" },
+                  { key: "task", label: "Task" },
+                  { key: "plan", label: "Plan" },
+                  { key: "goal", label: "Goal" },
+                ]}
+              />
 
-              <div className={segmentedControl}>
-                {(
-                  [
-                    ["all", "All"],
-                    ["ready", "Ready"],
-                    ["not-ready", "Draft"],
-                    ["completed", "Done"],
-                  ] as const
-                ).map(([key, label]) => (
-                  <button
-                    key={key}
-                    className={`${segmentedButton} ${
-                      statusFilter === key ? segmentedButtonActive : ""
-                    }`}
-                    onClick={() => setStatusFilter(key)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <Segmented<StatusFilter>
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={[
+                  { key: "all", label: "All" },
+                  { key: "ready", label: "Ready" },
+                  { key: "not-ready", label: "Draft" },
+                  { key: "completed", label: "Done" },
+                ]}
+              />
 
               <span className={spacer} />
 
-              <div className={segmentedControl}>
-                {(
-                  [
-                    ["newest", "Newest"],
-                    ["deadline", "Deadline"],
-                    ["priority", "Priority"],
-                  ] as const
-                ).map(([key, label]) => (
-                  <button
-                    key={key}
-                    className={`${segmentedButton} ${
-                      sortKey === key ? segmentedButtonActive : ""
-                    }`}
-                    onClick={() => setSortKey(key)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+              <Segmented<SortKey>
+                value={sortKey}
+                onChange={setSortKey}
+                options={[
+                  { key: "newest", label: "Newest" },
+                  { key: "deadline", label: "Deadline" },
+                  { key: "priority", label: "Priority" },
+                ]}
+              />
             </div>
 
             <div className={filterRow}>

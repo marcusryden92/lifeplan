@@ -33,6 +33,14 @@ export function useItemHandlers(
   const [pendingLocationId, setPendingLocationId] = useState<string | null>(
     null,
   );
+  // Discriminator so applyLocationChange / cancel know whether the cascade
+  // dialog was triggered by changing the location (place dropdown) or by
+  // toggling the override off. Previously this was inferred from a pre-flipped
+  // locationOverrideEnabled — which meant a cancel left the visual toggle in
+  // the wrong state.
+  const [pendingKind, setPendingKind] = useState<
+    "location-change" | "override-off" | null
+  >(null);
   const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
     () => !categoryHasLocation || !item?.useParentLocation,
   );
@@ -141,6 +149,7 @@ export function useItemHandlers(
       if (!item) return;
 
       if (item.plannerType === "goal" && subtasks.length > 0) {
+        setPendingKind("location-change");
         setPendingLocationId(locationId);
         setShowCascadeConfirm(true);
         return;
@@ -160,7 +169,7 @@ export function useItemHandlers(
         const treeItems = getGoalTree(planner, item.id);
         const treeIds = treeItems.map((i) => i.id);
 
-        if (locationId === null && !locationOverrideEnabled) {
+        if (pendingKind === "override-off") {
           // Toggling override OFF — set useParentLocation=true, preserve locationId
           if (cascade) {
             await setUseParentLocationMultiple(treeIds, true);
@@ -173,6 +182,8 @@ export function useItemHandlers(
             await setUseParentLocation(item.id, true);
             handleUpdateField("useParentLocation", true);
           }
+          // Now safe to flip the visual toggle — the data has been written.
+          setLocationOverrideEnabled(false);
         } else if (cascade) {
           await assignLocationToMultiplePlanners(treeIds, locationId);
           updatePlannerArray((prev) =>
@@ -189,6 +200,7 @@ export function useItemHandlers(
       } finally {
         setShowCascadeConfirm(false);
         setPendingLocationId(null);
+        setPendingKind(null);
       }
     },
     [
@@ -196,7 +208,7 @@ export function useItemHandlers(
       planner,
       updatePlannerArray,
       handleUpdateField,
-      locationOverrideEnabled,
+      pendingKind,
     ],
   );
 
@@ -210,9 +222,12 @@ export function useItemHandlers(
       item.plannerType === "goal" &&
       subtasks.length > 0
     ) {
+      // Don't flip locationOverrideEnabled here — the toggle stays visually
+      // "Override" until the cascade dialog confirms, so cancelling leaves it
+      // in the correct state. The flip happens inside applyLocationChange.
+      setPendingKind("override-off");
       setPendingLocationId(null);
       setShowCascadeConfirm(true);
-      setLocationOverrideEnabled(false);
       return;
     }
 
@@ -270,6 +285,7 @@ export function useItemHandlers(
     closeCascadeDialog: () => {
       setShowCascadeConfirm(false);
       setPendingLocationId(null);
+      setPendingKind(null);
     },
   };
 }

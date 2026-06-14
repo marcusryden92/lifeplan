@@ -38,10 +38,11 @@ export const dropdownChevron = style({
 });
 
 export const dropdownMenu = style({
-  position: "absolute",
-  top: "calc(100% + 6px)",
-  left: 0,
-  minWidth: "100%",
+  // Positioned via JS (fixed-coordinates from the trigger's bounding rect) so
+  // the menu can be portaled to document.body and escape any ancestor's
+  // overflow/clipping (e.g. the EditDrawer's overflow:auto). left/top get
+  // overridden inline by the component.
+  position: "fixed",
   maxWidth: 280,
   maxHeight: 280,
   overflow: "auto",
@@ -49,7 +50,7 @@ export const dropdownMenu = style({
   border: `1px solid ${vars.glass.stroke}`,
   borderRadius: 12,
   boxShadow: vars.shadow.panel,
-  zIndex: 50,
+  zIndex: 100,
   padding: 4,
   display: "flex",
   flexDirection: "column",

@@ -1,5 +1,11 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { style, keyframes } from "@vanilla-extract/css";
+import { vars, themeTransition, lumenDark } from "@/lib/theme";
+
+const lockedShake = keyframes({
+  "0%, 100%": { transform: "translateX(0)" },
+  "20%, 60%": { transform: "translateX(-3px)" },
+  "40%, 80%": { transform: "translateX(3px)" },
+});
 
 export const drawer = style({
   display: "flex",
@@ -130,17 +136,101 @@ export const dateInput = style({
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
   borderRadius: 8,
-  padding: "8px 12px",
+  padding: "8px 36px 8px 12px",
   fontFamily: vars.font.ui,
   fontSize: 13,
   color: vars.ink,
   outline: "none",
   fontVariantNumeric: "tabular-nums",
-  colorScheme: "light dark",
+  width: "100%",
+  colorScheme: "light",
   transition: themeTransition,
   selectors: {
     "&:focus": { borderColor: vars.accent.primary },
+    [`.${lumenDark} &`]: { colorScheme: "dark" },
   },
+});
+
+export const dateInputWrap = style({
+  position: "relative",
+  display: "block",
+});
+
+export const dateClearBtn = style({
+  position: "absolute",
+  top: "50%",
+  right: 6,
+  transform: "translateY(-50%)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 22,
+  height: 22,
+  borderRadius: 999,
+  border: "none",
+  background: "transparent",
+  color: vars.muted,
+  cursor: "pointer",
+  padding: 0,
+  transition: themeTransition,
+  selectors: {
+    "&:hover": {
+      color: vars.ink,
+      background: vars.glass.bgSoft,
+    },
+    "&:focus-visible": {
+      outline: `1px solid ${vars.accent.primary}`,
+    },
+  },
+});
+
+export const completeHeader = style({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+});
+
+export const completeCheckbox = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 16,
+  height: 16,
+  borderRadius: 999,
+  border: `1.5px solid ${vars.muted}`,
+  background: "transparent",
+  color: vars.muted,
+  cursor: "pointer",
+  padding: 0,
+  // Snappier than the 1s themeTransition so click feedback feels immediate.
+  transition:
+    "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
+  selectors: {
+    "&[data-completed='true']": {
+      background: vars.status.success,
+      borderColor: vars.status.success,
+      color: vars.paper,
+    },
+    "&:hover": {
+      borderColor: vars.ink,
+    },
+    "&[data-completed='true']:hover": {
+      borderColor: vars.status.success,
+      filter: "brightness(0.95)",
+    },
+    "&[data-locked='true']": { cursor: "not-allowed" },
+    "&[data-shake='true']": {
+      animation: `${lockedShake} 0.4s ease-in-out`,
+      borderColor: vars.status.error,
+      color: vars.status.error,
+      background: "transparent",
+    },
+  },
+});
+
+export const dateInputFaded = style({
+  opacity: 0.4,
+  transition: "opacity 160ms ease",
 });
 
 export const drawerFooter = style({

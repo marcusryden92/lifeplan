@@ -404,31 +404,50 @@ export const emptyStateTitle = style({
   transition: themeTransition,
 });
 
+// Segmented control matches the type picker in the item detail view: an
+// animated ink-fill thumb slides between options, button text fades from
+// muted -> paper. Grid layout gives every option equal width regardless of
+// label length so the thumb's `translateX(N * 100%)` math stays simple.
 export const segmentedControl = style({
-  display: "inline-flex",
+  position: "relative",
+  display: "inline-grid",
   padding: 3,
   borderRadius: 999,
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
-  gap: 2,
+});
+
+export const segmentedThumb = style({
+  position: "absolute",
+  top: 3,
+  bottom: 3,
+  left: 3,
+  borderRadius: 999,
+  background: vars.ink,
+  transition:
+    "transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), width 0.22s ease",
+  zIndex: 0,
 });
 
 export const segmentedButton = style({
+  position: "relative",
+  zIndex: 1,
+  appearance: "none",
   border: "none",
   background: "transparent",
-  padding: "5px 12px",
+  padding: "5px 14px",
   borderRadius: 999,
   cursor: "pointer",
-  fontSize: 11.5,
+  fontSize: 11,
   fontFamily: vars.font.ui,
-  fontWeight: 600,
-  letterSpacing: "0.04em",
+  fontWeight: 700,
+  letterSpacing: "0.06em",
   textTransform: "uppercase",
   color: vars.muted,
-  transition: themeTransition,
+  transition: "color 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
+  selectors: {
+    "&[data-active='true']": { color: vars.paper },
+    "&:hover:not([data-active='true'])": { color: vars.ink },
+  },
 });
 
-export const segmentedButtonActive = style({
-  background: vars.ink,
-  color: vars.paper,
-});

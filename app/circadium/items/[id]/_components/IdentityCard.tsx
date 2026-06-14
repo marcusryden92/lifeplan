@@ -121,7 +121,22 @@ export function IdentityCard() {
   return (
     <div className={card}>
       <div className={cardHeader}>
-        <span className={cardTitle}>Identity</span>
+        <span className={cardTitle}>Priority</span>
+        <div className={priorityRow}>
+          {Array.from({ length: 11 }).map((_, p) => (
+            <button
+              key={p}
+              type="button"
+              className={`${priorityPill} ${
+                item.priority === p ? priorityPillActive : ""
+              }`}
+              onClick={() => updateField("priority", p)}
+              aria-label={`Priority ${p}`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
       </div>
       <div className={cardBody}>
         <div className={fieldGrid}>
@@ -174,26 +189,6 @@ export function IdentityCard() {
             />
           </div>
 
-          {/* Priority */}
-          <div className={fieldStack}>
-            <span className={fieldLabel}>Priority</span>
-            <div className={priorityRow}>
-              {Array.from({ length: 11 }).map((_, p) => (
-                <button
-                  key={p}
-                  type="button"
-                  className={`${priorityPill} ${
-                    item.priority === p ? priorityPillActive : ""
-                  }`}
-                  onClick={() => updateField("priority", p)}
-                  aria-label={`Priority ${p}`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Deadline / Scheduled */}
           <div className={fieldStack}>
             <span className={fieldLabel}>
@@ -240,6 +235,28 @@ export function IdentityCard() {
                   : " "}
               </Caption>
             </div>
+          </div>
+
+          {/* Duration */}
+          <div className={fieldStack}>
+            <span className={fieldLabel}>
+              {isGoal ? "Rolled-up duration" : "Duration (min)"}
+            </span>
+            {isGoal ? (
+              <span className={fieldValue}>
+                {formatMinutesToHours(totalDuration)}
+              </span>
+            ) : (
+              <input
+                className={numberInput}
+                type="number"
+                min={1}
+                value={item.duration}
+                onChange={(e) =>
+                  updateField("duration", Number(e.target.value))
+                }
+              />
+            )}
           </div>
 
           {/* Place */}
@@ -307,28 +324,6 @@ export function IdentityCard() {
                 Reset sub-goal places
               </Button>
             </div>
-          </div>
-
-          {/* Duration */}
-          <div className={fieldStack}>
-            <span className={fieldLabel}>
-              {isGoal ? "Rolled-up duration" : "Duration (min)"}
-            </span>
-            {isGoal ? (
-              <span className={fieldValue}>
-                {formatMinutesToHours(totalDuration)}
-              </span>
-            ) : (
-              <input
-                className={numberInput}
-                type="number"
-                min={1}
-                value={item.duration}
-                onChange={(e) =>
-                  updateField("duration", Number(e.target.value))
-                }
-              />
-            )}
           </div>
         </div>
 

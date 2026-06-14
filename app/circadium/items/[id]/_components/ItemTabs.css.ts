@@ -41,3 +41,10 @@ export const tabCount = style({
   fontSize: 11.5,
   fontVariantNumeric: "tabular-nums",
 });
+
+export const tabDisabled = style({
+  color: vars.muted,
+  opacity: 0.45,
+  cursor: "not-allowed",
+  pointerEvents: "none",
+});

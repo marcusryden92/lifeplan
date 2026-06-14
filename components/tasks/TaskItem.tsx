@@ -4,7 +4,7 @@ import React, { useState, useCallback } from "react";
 import {
   ChevronRight,
   ChevronDown,
-  Circle,
+  Check,
   GripVertical,
 } from "lucide-react";
 
@@ -15,7 +15,9 @@ import TaskListWrapper from "./task-item-subcomponents/TaskListWrapper";
 import TaskHeader from "./task-item-subcomponents/TaskHeader";
 import DraggableItem from "@/components/draggable/DraggableItem";
 
-import { getSubtasksById } from "@/utils/goalPageHandlers";
+import { getRootParentId, getSubtasksById } from "@/utils/goalPageHandlers";
+import { toggleSubtaskCompletion } from "@/utils/goal-handlers/subtaskCompletion";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 import DragDisableListWrapper from "@/components/draggable/DragDisableListWrapper";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import {
@@ -23,18 +25,47 @@ import {
   itemRowWithSubtasks,
   chevronBtn,
   chevronBtnFocused,
+  completeBtn,
+  completeCircle,
   gripBtn,
 } from "./lumenTasks.css";
 
 const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
   const [itemIsFocused, setItemIsFocused] = useState<boolean>(false);
   const [subtasksMinimized, setSubtasksMinimized] = useState<boolean>(false);
+  const [shakeLocked, setShakeLocked] = useState(false);
   const { focusedTask, setFocusedTask, setCurrentlyClickedItem } =
     useDraggableContext();
+  const { updatePlannerArray } = useCalendarProvider();
 
   const subtasks = getSubtasksById(planner, task.id);
   const devMode = false;
   const hasSubtasks = subtasks.length > 0;
+  const isCompleted = !!task.completedEndTime;
+
+  // Subtask completion is gated on the root item being ready, so users can't
+  // start checking off work before the goal has been finalized.
+  const rootId = getRootParentId(planner, task.id);
+  const rootItem = rootId ? planner.find((p) => p.id === rootId) : undefined;
+  const completionLocked = rootItem ? !rootItem.isReady : false;
+
+  const handleToggleComplete = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (completionLocked) {
+        // Trigger the shake-and-red-flash animation. Re-entry while still
+        // shaking is a no-op so the animation doesn't restart mid-flight.
+        setShakeLocked((s) => {
+          if (s) return s;
+          window.setTimeout(() => setShakeLocked(false), 420);
+          return true;
+        });
+        return;
+      }
+      updatePlannerArray((prev) => toggleSubtaskCompletion(prev, task.id));
+    },
+    [task.id, updatePlannerArray, completionLocked],
+  );
 
   const startDrag = useCallback(
     (e: React.MouseEvent) => {
@@ -77,30 +108,46 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
             <GripVertical size={16} strokeWidth={2} />
           </span>
 
-          <button
-            type="button"
-            disabled={!hasSubtasks}
-            className={`${chevronBtn} ${itemIsFocused ? chevronBtnFocused : ""}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setSubtasksMinimized((prev) => !prev);
-            }}
-            aria-label={
-              hasSubtasks
-                ? subtasksMinimized
-                  ? "Expand subtasks"
-                  : "Collapse subtasks"
-                : undefined
-            }
-          >
-            {!hasSubtasks ? (
-              <Circle size={6} strokeWidth={0} fill="currentColor" />
-            ) : subtasksMinimized ? (
-              <ChevronRight size={14} strokeWidth={2.4} />
-            ) : (
-              <ChevronDown size={14} strokeWidth={2.4} />
-            )}
-          </button>
+          {hasSubtasks ? (
+            <button
+              type="button"
+              className={`${chevronBtn} ${itemIsFocused ? chevronBtnFocused : ""}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSubtasksMinimized((prev) => !prev);
+              }}
+              aria-label={
+                subtasksMinimized ? "Expand subtasks" : "Collapse subtasks"
+              }
+            >
+              {subtasksMinimized ? (
+                <ChevronRight size={14} strokeWidth={2.4} />
+              ) : (
+                <ChevronDown size={14} strokeWidth={2.4} />
+              )}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={completeBtn}
+              data-completed={isCompleted ? "true" : "false"}
+              data-locked={completionLocked ? "true" : "false"}
+              data-shake={shakeLocked ? "true" : "false"}
+              onClick={handleToggleComplete}
+              onMouseDown={(e) => e.stopPropagation()}
+              aria-label={isCompleted ? "Mark incomplete" : "Mark complete"}
+              aria-pressed={isCompleted}
+              title={
+                completionLocked
+                  ? "Mark the goal ready before completing subtasks"
+                  : undefined
+              }
+            >
+              <span className={completeCircle} aria-hidden>
+                {isCompleted && <Check size={10} strokeWidth={3} />}
+              </span>
+            </button>
+          )}
 
           <TaskHeader
             task={task}

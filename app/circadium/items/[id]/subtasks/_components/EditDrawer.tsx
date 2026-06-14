@@ -18,6 +18,12 @@ import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import { assignLocationToPlanner } from "@/actions/locations";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { NEW_SUBTASK_TITLE } from "@/components/tasks/task-item-subcomponents/TaskHeader";
+import {
+  setSubtaskCompletedAt,
+  toggleSubtaskCompletion,
+} from "@/utils/goal-handlers/subtaskCompletion";
+import { getRootParentId, getSubtasksById } from "@/utils/goalPageHandlers";
+import { Check } from "lucide-react";
 import { LumenDropdown } from "@/app/circadium/items/[id]/_components/LumenDropdown";
 import { LumenConfirmModal } from "@/app/circadium/items/[id]/_components/LumenConfirmModal";
 
@@ -34,6 +40,11 @@ import {
   stepperBtn,
   stepperValue,
   dateInput,
+  dateInputWrap,
+  dateClearBtn,
+  dateInputFaded,
+  completeHeader,
+  completeCheckbox,
   drawerFooter,
 } from "./EditDrawer.css";
 
@@ -48,6 +59,20 @@ export function EditDrawer() {
     () => (focusedTask ? planner.find((p) => p.id === focusedTask) : undefined),
     [planner, focusedTask],
   );
+
+  const isLeaf = useMemo(
+    () => (task ? getSubtasksById(planner, task.id).length === 0 : false),
+    [planner, task],
+  );
+
+  // Gate completion on the root item being ready (mirrors TaskItem.tsx).
+  const completionLocked = useMemo(() => {
+    if (!task) return false;
+    const rootId = getRootParentId(planner, task.id);
+    if (!rootId) return false;
+    const root = planner.find((p) => p.id === rootId);
+    return root ? !root.isReady : false;
+  }, [planner, task]);
 
   const [titleDraft, setTitleDraft] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -110,8 +135,7 @@ export function EditDrawer() {
     setDuration(Math.max(0, v));
   };
 
-  const onDateInput = (e: ChangeEvent<HTMLInputElement>) => {
-    const iso = e.target.value ? new Date(e.target.value).toISOString() : null;
+  const setDeadline = (iso: string | null) => {
     updatePlannerArray((prev) =>
       prev.map((p) =>
         p.id === task.id
@@ -124,6 +148,9 @@ export function EditDrawer() {
       ),
     );
   };
+
+  const onDateInput = (e: ChangeEvent<HTMLInputElement>) =>
+    setDeadline(e.target.value ? new Date(e.target.value).toISOString() : null);
 
   const onLocationChange = async (locationId: string | null) => {
     await assignLocationToPlanner(task.id, locationId);
@@ -138,6 +165,41 @@ export function EditDrawer() {
     const pad = (n: number) => String(n).padStart(2, "0");
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   })();
+
+  const completedValue = (() => {
+    if (!task.completedEndTime) return "";
+    const d = new Date(task.completedEndTime);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  })();
+
+  const onCompletedAtChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (completionLocked) {
+      flashShake();
+      return;
+    }
+    const iso = e.target.value ? new Date(e.target.value).toISOString() : null;
+    updatePlannerArray((prev) => setSubtaskCompletedAt(prev, task.id, iso));
+  };
+
+  const [shakeLocked, setShakeLocked] = useState(false);
+  const flashShake = () => {
+    setShakeLocked((s) => {
+      if (s) return s;
+      window.setTimeout(() => setShakeLocked(false), 420);
+      return true;
+    });
+  };
+
+  const toggleCompletion = () => {
+    if (completionLocked) {
+      flashShake();
+      return;
+    }
+    updatePlannerArray((prev) => toggleSubtaskCompletion(prev, task.id));
+  };
+
+  const isCompleted = !!task.completedEndTime;
 
   const locationOptions = [
     { value: null, label: <Caption>Anywhere</Caption> },
@@ -217,21 +279,6 @@ export function EditDrawer() {
         </div>
 
         <div className={fieldStack}>
-          <span className={fieldLabel}>Deadline</span>
-          <input
-            type="datetime-local"
-            className={dateInput}
-            value={dateValue}
-            onChange={onDateInput}
-          />
-          {task.deadline && (
-            <Caption>
-              {format(new Date(task.deadline), "EEE MMM d · HH:mm")}
-            </Caption>
-          )}
-        </div>
-
-        <div className={fieldStack}>
           <span className={fieldLabel}>Location</span>
           <LumenDropdown
             value={task.locationId ?? null}
@@ -256,6 +303,76 @@ export function EditDrawer() {
             ariaLabel="Location"
           />
         </div>
+
+        <div className={fieldStack}>
+          <span className={fieldLabel}>Deadline</span>
+          <div className={dateInputWrap}>
+            <input
+              type="datetime-local"
+              className={dateInput}
+              value={dateValue}
+              onChange={onDateInput}
+            />
+            {dateValue && (
+              <button
+                type="button"
+                className={dateClearBtn}
+                onClick={() => setDeadline(null)}
+                aria-label="Clear deadline"
+              >
+                <X size={12} strokeWidth={2.4} />
+              </button>
+            )}
+          </div>
+          {task.deadline && (
+            <Caption>
+              {format(new Date(task.deadline), "EEE MMM d · HH:mm")}
+            </Caption>
+          )}
+        </div>
+
+        {isLeaf && (
+          <div className={fieldStack}>
+            <div className={completeHeader}>
+              <button
+                type="button"
+                className={completeCheckbox}
+                data-completed={isCompleted ? "true" : "false"}
+                data-locked={completionLocked ? "true" : "false"}
+                data-shake={shakeLocked ? "true" : "false"}
+                onClick={toggleCompletion}
+                aria-pressed={isCompleted}
+                aria-label={isCompleted ? "Mark incomplete" : "Mark complete"}
+                title={
+                  completionLocked
+                    ? "Mark the goal ready before completing subtasks"
+                    : undefined
+                }
+              >
+                {isCompleted && <Check size={10} strokeWidth={3} />}
+              </button>
+              <span className={fieldLabel}>Completed at</span>
+            </div>
+            <input
+              type="datetime-local"
+              className={`${dateInput} ${
+                isCompleted && !completionLocked ? "" : dateInputFaded
+              }`}
+              value={completedValue}
+              onChange={onCompletedAtChange}
+              title={
+                completionLocked
+                  ? "Mark the goal ready before completing subtasks"
+                  : undefined
+              }
+            />
+            {task.completedEndTime && (
+              <Caption>
+                {format(new Date(task.completedEndTime), "EEE MMM d · HH:mm")}
+              </Caption>
+            )}
+          </div>
+        )}
       </div>
 
       <div className={drawerFooter}>

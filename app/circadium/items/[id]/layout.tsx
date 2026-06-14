@@ -3,17 +3,18 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type KeyboardEvent,
   type ReactNode,
 } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, Check, Pencil } from "lucide-react";
+import { ArrowLeft, Check, SquarePen } from "lucide-react";
 import { Button, Caption } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { DraggableContextProvider } from "@/components/draggable/DraggableContext";
 import * as categoryActions from "@/actions/categories";
-import { getSubtasksById } from "@/utils/goalPageHandlers";
+import { getSubtasksById, getTaskTreeIds } from "@/utils/goalPageHandlers";
 import {
   completedSubtaskDuration,
   totalSubtaskDuration,
@@ -141,6 +142,20 @@ export default function ItemDetailLayout({
       ? Math.round((completedDuration / totalDuration) * 100)
       : 0;
 
+  // Transient hint shown under the Ready button — only set when the user
+  // attempts a blocked toggle. Declared up here so the hook order stays stable
+  // across the early returns below.
+  const [readyMessage, setReadyMessage] = useState<string | null>(null);
+  const readyMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  useEffect(
+    () => () => {
+      if (readyMessageTimerRef.current) clearTimeout(readyMessageTimerRef.current);
+    },
+    [],
+  );
+
   if (loadingCategories) {
     return (
       <div className={page}>
@@ -189,20 +204,52 @@ export default function ItemDetailLayout({
 
   const isGoal = item.plannerType === "goal";
 
-  // Prerequisites for marking a goal ready. Listed in display order; the hint
-  // under the button joins them with "and".
+  // Prerequisites for marking a goal ready.
   const readyBlockers: string[] = [];
   if (isGoal) {
     if (subtasks.length === 0) readyBlockers.push("at least one subtask");
     if (!item.deadline) readyBlockers.push("a deadline");
   }
   const canMarkReady = readyBlockers.length === 0;
-  const readyBlockerMessage =
-    readyBlockers.length === 0
-      ? null
-      : readyBlockers.length === 1
-        ? `Needs ${readyBlockers[0]}.`
-        : `Needs ${readyBlockers.slice(0, -1).join(", ")} and ${readyBlockers[readyBlockers.length - 1]}.`;
+
+  // Block un-readying when the item already has completed work — either the
+  // root itself or anything in its subtree.
+  const hasCompletedActivity = (() => {
+    if (item.completedEndTime) return true;
+    if (isGoal) {
+      const treeIds = new Set(getTaskTreeIds(planner, item.id));
+      return planner.some(
+        (p) => treeIds.has(p.id) && p.id !== item.id && !!p.completedEndTime,
+      );
+    }
+    return false;
+  })();
+
+  // The button itself is never disabled; clicking a blocked action surfaces
+  // the reason via flashReadyMessage instead of going inert.
+  const flashReadyMessage = (msg: string) => {
+    if (readyMessageTimerRef.current) clearTimeout(readyMessageTimerRef.current);
+    setReadyMessage(msg);
+    readyMessageTimerRef.current = setTimeout(() => setReadyMessage(null), 3500);
+  };
+
+  const onReadyClick = () => {
+    if (!item.isReady && !canMarkReady) {
+      const msg =
+        readyBlockers.length === 1
+          ? `Needs ${readyBlockers[0]}.`
+          : `Needs ${readyBlockers.slice(0, -1).join(", ")} and ${readyBlockers[readyBlockers.length - 1]}.`;
+      flashReadyMessage(msg);
+      return;
+    }
+    if (item.isReady && hasCompletedActivity) {
+      flashReadyMessage("Has completed work — cannot un-ready.");
+      return;
+    }
+    if (readyMessageTimerRef.current) clearTimeout(readyMessageTimerRef.current);
+    setReadyMessage(null);
+    handleToggleReady();
+  };
 
   return (
     <DraggableContextProvider>
@@ -272,7 +319,7 @@ export default function ItemDetailLayout({
                       onClick={beginEditTitle}
                       aria-label="Rename"
                     >
-                      <Pencil size={16} strokeWidth={2} />
+                      <SquarePen size={16} strokeWidth={2} />
                     </button>
                   </div>
                 )}
@@ -284,11 +331,12 @@ export default function ItemDetailLayout({
                     <Button
                       variant={item.isReady ? "solid" : "glass"}
                       size="sm"
-                      onClick={handleToggleReady}
-                      disabled={!item.isReady && !canMarkReady}
+                      onClick={onReadyClick}
                       style={{
                         minWidth: 124,
                         justifyContent: "center",
+                        transition:
+                          "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
                         ...(item.isReady
                           ? {
                               background: "#34d399",
@@ -301,15 +349,19 @@ export default function ItemDetailLayout({
                       <Check size={12} strokeWidth={2.4} />
                       {item.isReady ? "Ready" : "Mark ready"}
                     </Button>
-                    {!item.isReady && readyBlockerMessage && (
-                      <div className={readyHint}>{readyBlockerMessage}</div>
+                    {readyMessage && (
+                      <div className={readyHint}>{readyMessage}</div>
                     )}
                   </div>
                 )}
               </div>
             </div>
 
-            <ItemTabs itemId={item.id} subtaskCount={totalSubtasks} />
+            <ItemTabs
+              itemId={item.id}
+              subtaskCount={totalSubtasks}
+              subtasksEnabled={isGoal}
+            />
 
             <div className={tabBodyWrap}>{children}</div>
           </div>
@@ -340,11 +392,20 @@ export default function ItemDetailLayout({
             title="Apply to subtasks?"
             body="Apply this location change to all subtasks of this goal, or just to this item?"
             confirmLabel="All subtasks"
-            cancelLabel="This item only"
-            onCancel={() => {
-              applyLocationChange(pendingLocationId, false);
-              closeCascadeDialog();
-            }}
+            cancelLabel="Cancel"
+            extraActions={
+              <Button
+                variant="glass"
+                size="sm"
+                onClick={() => {
+                  applyLocationChange(pendingLocationId, false);
+                  closeCascadeDialog();
+                }}
+              >
+                This item only
+              </Button>
+            }
+            onCancel={closeCascadeDialog}
             onConfirm={() => {
               applyLocationChange(pendingLocationId, true);
               closeCascadeDialog();
