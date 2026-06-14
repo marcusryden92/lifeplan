@@ -98,7 +98,8 @@
       "Bash(timeout 60 pnpm dev)",
       "Bash(echo \"exit: $?\")",
       "Bash(npx prisma *)",
-      "PowerShell(Move-Item -Path \"app/circadium/areas\" -Destination \"app/circadium/life-areas\")"
+      "PowerShell(Move-Item -Path \"app/circadium/areas\" -Destination \"app/circadium/life-areas\")",
+      "Bash(pnpm next *)"
     ]
   }
 }

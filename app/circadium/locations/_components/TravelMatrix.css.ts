@@ -1,0 +1,171 @@
+import { style, globalStyle } from "@vanilla-extract/css";
+import { vars, themeTransition } from "@/lib/theme";
+
+export const matrixWrap = style({
+  border: `1px solid ${vars.glass.stroke}`,
+  borderRadius: 10,
+  overflow: "auto",
+  background: vars.glass.bgSoft,
+  transition: themeTransition,
+});
+
+export const matrixTable = style({
+  borderCollapse: "separate",
+  borderSpacing: 0,
+  width: "100%",
+  fontFamily: vars.font.ui,
+  fontSize: 12,
+  color: vars.ink,
+});
+
+export const headerCell = style({
+  padding: "10px 12px",
+  borderBottom: `1px solid ${vars.glass.stroke}`,
+  background: vars.glass.bgSoft,
+  fontWeight: 600,
+  textAlign: "left",
+  verticalAlign: "top",
+  minWidth: 96,
+  fontSize: 12,
+  color: vars.ink,
+  position: "sticky",
+  top: 0,
+  zIndex: 2,
+  transition: themeTransition,
+});
+
+export const cornerCell = style([
+  headerCell,
+  {
+    borderRight: `1px solid ${vars.glass.stroke}`,
+    fontSize: 9.5,
+    letterSpacing: "0.14em",
+    textTransform: "uppercase",
+    color: vars.muted,
+    fontWeight: 600,
+    position: "sticky",
+    left: 0,
+    zIndex: 3,
+  },
+]);
+
+export const headerCellInner = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+});
+
+export const rowHeaderCell = style({
+  padding: "10px 12px",
+  borderTop: `1px solid ${vars.glass.stroke}`,
+  borderRight: `1px solid ${vars.glass.stroke}`,
+  background: vars.glass.bgSoft,
+  fontWeight: 600,
+  textAlign: "left",
+  verticalAlign: "top",
+  position: "sticky",
+  left: 0,
+  zIndex: 1,
+  transition: themeTransition,
+});
+
+export const cell = style({
+  padding: 0,
+  borderTop: `1px solid ${vars.glass.stroke}`,
+  verticalAlign: "stretch",
+  transition: themeTransition,
+});
+
+export const cellButton = style({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: 2,
+  width: "100%",
+  height: "100%",
+  padding: "8px 12px",
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  fontFamily: vars.font.ui,
+  fontVariantNumeric: "tabular-nums",
+  textAlign: "left",
+  color: vars.ink,
+  transition: "background-color 120ms ease",
+  selectors: {
+    "&:hover": { background: vars.glass.bgDeep },
+  },
+});
+
+export const cellSelf = style({
+  padding: "8px 12px",
+  color: vars.muted,
+  background: vars.glass.bgSoft,
+  textAlign: "center",
+  fontSize: 12,
+});
+
+export const periodRow = style({
+  display: "inline-flex",
+  alignItems: "baseline",
+  gap: 6,
+  lineHeight: 1.2,
+});
+
+export const periodValue = style({
+  fontWeight: 700,
+  fontSize: 12.5,
+  fontVariantNumeric: "tabular-nums",
+});
+
+export const periodValueRush = style({ color: vars.status.error });
+export const periodValueRegular = style({ color: vars.ink });
+export const periodValueNight = style({ color: vars.muted });
+
+export const periodLabel = style({
+  fontSize: 9.5,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: vars.muted,
+  fontWeight: 600,
+});
+
+export const customTag = style({
+  marginTop: 4,
+  fontSize: 9,
+  letterSpacing: "0.14em",
+  fontWeight: 700,
+  color: vars.status.warning,
+});
+
+globalStyle(`${cell}[data-custom="true"] > button`, {
+  background: `color-mix(in srgb, ${vars.status.warning} 12%, transparent)`,
+});
+
+globalStyle(`${cell}[data-custom="true"] > button:hover`, {
+  background: `color-mix(in srgb, ${vars.status.warning} 20%, transparent)`,
+});
+
+export const missingBlock = style({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-start",
+  gap: 2,
+});
+
+export const missingLabel = style({
+  fontSize: 10,
+  letterSpacing: "0.1em",
+  textTransform: "uppercase",
+  color: vars.status.error,
+  fontWeight: 700,
+});
+
+export const missingHint = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 3,
+  fontSize: 10,
+  color: vars.muted,
+  fontWeight: 500,
+});

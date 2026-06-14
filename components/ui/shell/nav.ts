@@ -48,10 +48,10 @@ export const NAV_ITEMS: NavItem[] = [
     kind: "route",
   },
   {
-    key: "places",
-    label: "Places",
+    key: "locations",
+    label: "Locations",
     icon: MapPin,
-    href: "/circadium/places",
+    href: "/circadium/locations",
     kind: "route",
   },
 ];
