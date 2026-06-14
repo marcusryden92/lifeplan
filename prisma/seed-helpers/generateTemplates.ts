@@ -1,5 +1,5 @@
-﻿import { EventTemplate } from "@/lib/generated/db-client";
-import { WeekDayType } from "@/types/calendarTypes";
+﻿import { EventTemplate } from "../../lib/generated/db-client";
+import { WeekDayType } from "../../types/calendarTypes";
 import { v4 as uuidv4 } from "uuid";
 import { LOCATION_IDS } from "./generateLocations";
 

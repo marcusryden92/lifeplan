@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+import { style, globalStyle } from "@vanilla-extract/css";
 import { vars, themeTransition } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
@@ -182,6 +182,26 @@ export const railRowCount = style({
   color: vars.muted,
   fontWeight: 500,
   transition: themeTransition,
+});
+
+// Drop-target visualization on the tree rows. "before"/"after" draw a 2px
+// accent line at the top/bottom of the row; "into" highlights the row body to
+// signal it'll become the drop target's parent.
+globalStyle(`${railRow}[data-dragging="true"]`, {
+  opacity: 0.4,
+});
+
+globalStyle(`${railRow}[data-drag-over="before"]`, {
+  boxShadow: `inset 0 2px 0 0 ${vars.accent.primary}`,
+});
+
+globalStyle(`${railRow}[data-drag-over="after"]`, {
+  boxShadow: `inset 0 -2px 0 0 ${vars.accent.primary}`,
+});
+
+globalStyle(`${railRow}[data-drag-over="into"]`, {
+  background: vars.glass.bgDeep,
+  borderColor: vars.accent.primary,
 });
 
 export const railRowAddChild = style({

@@ -57,6 +57,14 @@ export default function AreasPage() {
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [windowsOpen, setWindowsOpen] = useState(false);
+  // Native HTML5 drag state. draggedId tracks the source; dragOver tracks
+  // which row + which third of it the pointer is currently over so the
+  // TreeNode can paint the right indicator.
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<{
+    id: string;
+    zone: "before" | "after" | "into";
+  } | null>(null);
 
   const tree = useMemo(() => buildCategoryTree(categories), [categories]);
 
@@ -130,6 +138,60 @@ export default function AreasPage() {
     }
     dispatch(removeCategory(deletingId));
     setDeletingId(null);
+  };
+
+  // Drag-and-drop: reorder siblings or reparent. Dropping onto the middle of
+  // a row makes the dragged a child of the target; top/bottom thirds insert
+  // it as a sibling before/after. Affected siblings are renumbered densely
+  // (0..N-1) and dispatched — the sync layer batches them into one server
+  // transaction. Cycle prevention: refuse to drop a category onto any of its
+  // own descendants.
+  const handleDrop = (
+    targetId: string,
+    zone: "before" | "after" | "into",
+  ) => {
+    const sourceId = draggedId;
+    setDraggedId(null);
+    setDragOver(null);
+    if (!sourceId || sourceId === targetId) return;
+
+    const descendants = new Set(getCategoryAndDescendants(sourceId, categories));
+    if (descendants.has(targetId)) return;
+
+    const dragged = categories.find((c) => c.id === sourceId);
+    const target = categories.find((c) => c.id === targetId);
+    if (!dragged || !target) return;
+
+    const newParentId = zone === "into" ? target.id : target.parentId;
+    const newSiblings = categories
+      .filter((c) => c.parentId === newParentId && c.id !== sourceId)
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+
+    let insertIdx: number;
+    if (zone === "into") {
+      insertIdx = newSiblings.length;
+    } else {
+      const targetIdx = newSiblings.findIndex((s) => s.id === targetId);
+      insertIdx = zone === "before" ? targetIdx : targetIdx + 1;
+    }
+
+    const moved: Category = {
+      ...dragged,
+      parentId: newParentId,
+      sortOrder: insertIdx,
+    };
+    newSiblings.splice(insertIdx, 0, moved);
+
+    for (let i = 0; i < newSiblings.length; i++) {
+      const sib = newSiblings[i];
+      if (sib.id === sourceId || sib.sortOrder !== i) {
+        dispatch(upsertCategory({ ...sib, sortOrder: i }));
+      }
+    }
+
+    if (zone === "into") {
+      setExpanded((prev) => new Set(prev).add(targetId));
+    }
   };
 
   const handleCreate = (parentId: string | null = null) => {
@@ -223,6 +285,11 @@ export default function AreasPage() {
                   onSelect={setSelectedId}
                   counts={itemCounts}
                   onAddChild={(parentId) => handleCreate(parentId)}
+                  draggedId={draggedId}
+                  setDraggedId={setDraggedId}
+                  dragOver={dragOver}
+                  setDragOver={setDragOver}
+                  onDrop={handleDrop}
                 />
               ))
             )}
@@ -283,6 +350,24 @@ export default function AreasPage() {
   );
 }
 
+type DragZone = "before" | "after" | "into";
+
+// Transparent 1x1 GIF used as a custom drag image so the browser doesn't paint
+// the default ghost screenshot of the row. The source row's data-dragging
+// styling already signals which row is being moved.
+const TRANSPARENT_DRAG_IMAGE: HTMLImageElement | null = (() => {
+  if (typeof document === "undefined") return null;
+  const img = new Image();
+  img.src =
+    "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+  return img;
+})();
+
+// Fixed-pixel reorder zones at the top and bottom of each row. Anywhere in
+// between is the "into" (reparent) zone. Fixed pixels keep reordering hittable
+// even on short rows where percentage-based thirds would be ~10px each.
+const EDGE_ZONE_PX = 12;
+
 function TreeNode({
   node,
   depth,
@@ -292,6 +377,11 @@ function TreeNode({
   onSelect,
   counts,
   onAddChild,
+  draggedId,
+  setDraggedId,
+  dragOver,
+  setDragOver,
+  onDrop,
 }: {
   node: CategoryNode;
   depth: number;
@@ -301,11 +391,18 @@ function TreeNode({
   onSelect: (id: string) => void;
   counts: Map<string, number>;
   onAddChild: (parentId: string) => void;
+  draggedId: string | null;
+  setDraggedId: (id: string | null) => void;
+  dragOver: { id: string; zone: DragZone } | null;
+  setDragOver: (s: { id: string; zone: DragZone } | null) => void;
+  onDrop: (targetId: string, zone: DragZone) => void;
 }) {
   const hasChildren = node.children.length > 0;
   const isOpen = expanded.has(node.id);
   const active = selectedId === node.id;
   const count = counts.get(node.id) ?? 0;
+  const isDragging = draggedId === node.id;
+  const isDragTarget = dragOver?.id === node.id;
 
   return (
     <>
@@ -314,6 +411,57 @@ function TreeNode({
         className={`${railRow} ${active ? railRowActive : ""}`}
         onClick={() => onSelect(node.id)}
         style={{ paddingLeft: 8 + depth * 14 }}
+        draggable
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "move";
+          // Firefox requires data on the transfer object or the drag doesn't
+          // initiate. The id itself is unused — actual source comes from
+          // draggedId state.
+          e.dataTransfer.setData("text/plain", node.id);
+          if (TRANSPARENT_DRAG_IMAGE) {
+            e.dataTransfer.setDragImage(TRANSPARENT_DRAG_IMAGE, 0, 0);
+          }
+          setDraggedId(node.id);
+        }}
+        onDragEnd={() => {
+          setDraggedId(null);
+          setDragOver(null);
+        }}
+        onDragOver={(e) => {
+          if (!draggedId) return;
+          // Always preventDefault + set dropEffect so the cursor stays as
+          // "move" rather than flickering to "not-allowed" when crossing
+          // rows. Self and cycle-creating drops are no-ops in onDrop.
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          if (draggedId === node.id) {
+            if (dragOver?.id === node.id) setDragOver(null);
+            return;
+          }
+          const rect = e.currentTarget.getBoundingClientRect();
+          const y = e.clientY - rect.top;
+          let zone: DragZone;
+          if (y < EDGE_ZONE_PX) zone = "before";
+          else if (y > rect.height - EDGE_ZONE_PX) zone = "after";
+          else zone = "into";
+          if (dragOver?.id !== node.id || dragOver.zone !== zone) {
+            setDragOver({ id: node.id, zone });
+          }
+        }}
+        onDragLeave={(e) => {
+          // Only clear when actually leaving the row, not when crossing into a
+          // descendant element of the row.
+          const next = e.relatedTarget as Node | null;
+          if (next && e.currentTarget.contains(next)) return;
+          if (dragOver?.id === node.id) setDragOver(null);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (!draggedId || draggedId === node.id || !dragOver) return;
+          onDrop(node.id, dragOver.zone);
+        }}
+        data-dragging={isDragging ? "true" : "false"}
+        data-drag-over={isDragTarget ? dragOver.zone : undefined}
       >
         {hasChildren ? (
           <span
@@ -367,6 +515,11 @@ function TreeNode({
             onSelect={onSelect}
             counts={counts}
             onAddChild={onAddChild}
+            draggedId={draggedId}
+            setDraggedId={setDraggedId}
+            dragOver={dragOver}
+            setDragOver={setDragOver}
+            onDrop={onDrop}
           />
         ))}
     </>

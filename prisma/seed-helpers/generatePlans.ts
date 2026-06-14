@@ -1,4 +1,4 @@
-﻿import { Planner } from "@/lib/generated/db-client";
+﻿import { Planner } from "../../lib/generated/db-client";
 import { v4 as uuidv4 } from "uuid";
 
 /**

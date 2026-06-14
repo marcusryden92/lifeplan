@@ -1,5 +1,9 @@
-﻿import bcrypt from "bcryptjs";
-import { PrismaClient, UserRole } from "@/lib/generated/db-client";
+﻿import * as dotenv from "dotenv";
+dotenv.config();
+
+import bcrypt from "bcryptjs";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient, UserRole } from "../lib/generated/db-client";
 import { generateTemplates } from "./seed-helpers/generateTemplates";
 import {
   generatePlanners,
@@ -14,7 +18,14 @@ import {
 } from "./seed-helpers/generateLocations";
 import { generateCategories } from "./seed-helpers/generateCategories";
 
-const prisma = new PrismaClient();
+// Prisma 7 requires a driver adapter at construction time. Matches the
+// pattern used by lib/db.ts so the seed talks to the DB the same way the app
+// does. DIRECT_URL is preferred (bypasses pooling for bulk writes), falling
+// back to DATABASE_URL.
+const adapter = new PrismaPg({
+  connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL,
+});
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const userId = "1";

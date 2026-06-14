@@ -2,8 +2,9 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "module": "CommonJS",
-    "moduleResolution": "node16",
-    "esModuleInterop": true
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "rootDir": ".."
   },
-  "include": ["./seed.ts"]
+  "include": ["./seed.ts", "./seed-helpers/**/*"]
 }
