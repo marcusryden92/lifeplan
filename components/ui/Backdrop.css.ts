@@ -46,7 +46,7 @@ export const pinstripeDark = style([
 
 // Blob peaks pushed further from paper + higher alpha so the highlight is
 // clearly visible in both modes.
-const blobLightColor = "rgba(255,255,255,1)"; // peak ≈ #faf7f4 on #dcd8d2
+const blobLightColor = "rgba(255,255,255,0.75)";
 const blobDarkColor = "rgba(45,48,54,0.5)"; // peak ≈ #292c32 on #12141a
 
 const blobImage = (color: string) =>

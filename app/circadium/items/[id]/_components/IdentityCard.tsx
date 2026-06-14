@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, type ChangeEvent } from "react";
-import { MapPin, RotateCcw, Trash2 } from "lucide-react";
+import { MapPin, RotateCcw, Trash2, X } from "lucide-react";
 import { format } from "date-fns";
 import { Caption, Button, CategoryBadge } from "@/components/ui";
 import { useSelector } from "react-redux";
@@ -27,6 +27,8 @@ import {
   priorityPillActive,
   numberInput,
   dateInput,
+  dateInputWrap,
+  dateClearBtn,
   inheritedHint,
   placeRow,
   overrideToggle,
@@ -200,22 +202,43 @@ export function IdentityCard() {
             <div
               style={{ display: "flex", flexDirection: "column", gap: 4 }}
             >
-              <input
-                type="datetime-local"
-                className={dateInput}
-                value={dateValue}
-                onChange={onDateInputChange}
-              />
-              {(item.deadline || item.starts) && (
-                <Caption>
-                  {format(
-                    new Date(
-                      (isPlan ? item.starts : item.deadline) as string,
-                    ),
-                    "EEE MMM d · HH:mm",
-                  )}
-                </Caption>
-              )}
+              <div className={dateInputWrap}>
+                <input
+                  type="datetime-local"
+                  className={dateInput}
+                  value={dateValue}
+                  onChange={onDateInputChange}
+                />
+                {dateValue && (
+                  <button
+                    type="button"
+                    className={dateClearBtn}
+                    onClick={() => changeDate(undefined)}
+                    aria-label={isPlan ? "Clear scheduled time" : "Clear deadline"}
+                  >
+                    <X size={12} strokeWidth={2.4} />
+                  </button>
+                )}
+              </div>
+              {/* Always rendered so toggling a date doesn't reflow the column.
+                  Falls back to a non-breaking space + hidden visibility when
+                  the date is empty. */}
+              <Caption
+                style={
+                  item.deadline || item.starts
+                    ? undefined
+                    : { visibility: "hidden" }
+                }
+              >
+                {item.deadline || item.starts
+                  ? format(
+                      new Date(
+                        (isPlan ? item.starts : item.deadline) as string,
+                      ),
+                      "EEE MMM d · HH:mm",
+                    )
+                  : " "}
+              </Caption>
             </div>
           </div>
 

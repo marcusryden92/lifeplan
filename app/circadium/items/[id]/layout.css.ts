@@ -153,7 +153,26 @@ export const headActions = style({
   display: "flex",
   gap: 16,
   flexShrink: 0,
-  alignItems: "center",
+  alignItems: "flex-end",
+});
+
+export const readyCluster = style({
+  position: "relative",
+  minWidth: 124,
+});
+
+export const readyHint = style({
+  position: "absolute",
+  top: "calc(100% + 6px)",
+  left: 0,
+  right: 0,
+  fontFamily: vars.font.ui,
+  fontSize: 10.5,
+  lineHeight: 1.35,
+  color: vars.muted,
+  textAlign: "center",
+  fontWeight: 500,
+  letterSpacing: "0.02em",
 });
 
 export const headActionsCluster = style({

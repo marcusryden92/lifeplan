@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
-import { Button } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   upsertCategory,
@@ -25,12 +24,12 @@ import {
   subHeader,
   pageTitle,
   titleSummary,
-  spacer,
-  actionCluster,
   mainGrid,
   rail,
   railHead,
   railBody,
+  railFooter,
+  railNewButton,
   railRow,
   railRowActive,
   railRowDot,
@@ -248,13 +247,6 @@ export default function AreasPage() {
           {categories.length} categor{categories.length === 1 ? "y" : "ies"} ·{" "}
           {planner.filter((i) => !i.parentId && i.categoryId).length} categorized
         </span>
-        <span className={spacer} />
-        <div className={actionCluster}>
-          <Button variant="solid" size="sm" onClick={() => handleCreate()}>
-            <Plus size={13} strokeWidth={2.4} />
-            New category
-          </Button>
-        </div>
       </div>
 
       {error && <div className={errorBanner}>{error}</div>}
@@ -293,6 +285,16 @@ export default function AreasPage() {
                 />
               ))
             )}
+          </div>
+          <div className={railFooter}>
+            <button
+              type="button"
+              className={railNewButton}
+              onClick={() => handleCreate()}
+            >
+              <Plus size={13} strokeWidth={2.4} />
+              New category
+            </button>
           </div>
         </aside>
 

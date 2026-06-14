@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, themeTransition, lumenDark } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -167,18 +167,57 @@ export const dateInput = style({
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
   borderRadius: 10,
-  padding: "8px 12px",
+  padding: "8px 36px 8px 12px",
   fontFamily: vars.font.ui,
   fontSize: 13,
   color: vars.ink,
   outline: "none",
   fontVariantNumeric: "tabular-nums",
   width: "100%",
-  colorScheme: "light dark",
+  // colorScheme drives the browser-rendered datetime picker icon. Tie it to
+  // our theme so the icon contrasts with the input background instead of
+  // following the OS preference.
+  colorScheme: "light",
   transition: themeTransition,
   selectors: {
     "&:focus": {
       borderColor: vars.accent.primary,
+    },
+    [`.${lumenDark} &`]: {
+      colorScheme: "dark",
+    },
+  },
+});
+
+export const dateInputWrap = style({
+  position: "relative",
+  display: "block",
+});
+
+export const dateClearBtn = style({
+  position: "absolute",
+  top: "50%",
+  right: 6,
+  transform: "translateY(-50%)",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 22,
+  height: 22,
+  borderRadius: 999,
+  border: "none",
+  background: "transparent",
+  color: vars.muted,
+  cursor: "pointer",
+  padding: 0,
+  transition: themeTransition,
+  selectors: {
+    "&:hover": {
+      color: vars.ink,
+      background: vars.glass.bgSoft,
+    },
+    "&:focus-visible": {
+      outline: `1px solid ${vars.accent.primary}`,
     },
   },
 });

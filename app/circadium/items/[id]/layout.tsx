@@ -38,6 +38,8 @@ import {
   titleHoverRow,
   renamePencil,
   headActions,
+  readyCluster,
+  readyHint,
   tabBodyWrap,
 } from "./layout.css";
 
@@ -187,6 +189,21 @@ export default function ItemDetailLayout({
 
   const isGoal = item.plannerType === "goal";
 
+  // Prerequisites for marking a goal ready. Listed in display order; the hint
+  // under the button joins them with "and".
+  const readyBlockers: string[] = [];
+  if (isGoal) {
+    if (subtasks.length === 0) readyBlockers.push("at least one subtask");
+    if (!item.deadline) readyBlockers.push("a deadline");
+  }
+  const canMarkReady = readyBlockers.length === 0;
+  const readyBlockerMessage =
+    readyBlockers.length === 0
+      ? null
+      : readyBlockers.length === 1
+        ? `Needs ${readyBlockers[0]}.`
+        : `Needs ${readyBlockers.slice(0, -1).join(", ")} and ${readyBlockers[readyBlockers.length - 1]}.`;
+
   return (
     <DraggableContextProvider>
       <ItemProvider
@@ -263,26 +280,31 @@ export default function ItemDetailLayout({
 
               <div className={headActions}>
                 {isGoal && (
-                  <Button
-                    variant={item.isReady ? "solid" : "glass"}
-                    size="sm"
-                    onClick={handleToggleReady}
-                    disabled={subtasks.length === 0}
-                    style={{
-                      minWidth: 124,
-                      justifyContent: "center",
-                      ...(item.isReady
-                        ? {
-                            background: "#34d399",
-                            borderColor: "#34d399",
-                            color: "#fff",
-                          }
-                        : {}),
-                    }}
-                  >
-                    <Check size={12} strokeWidth={2.4} />
-                    {item.isReady ? "Ready" : "Mark ready"}
-                  </Button>
+                  <div className={readyCluster}>
+                    <Button
+                      variant={item.isReady ? "solid" : "glass"}
+                      size="sm"
+                      onClick={handleToggleReady}
+                      disabled={!item.isReady && !canMarkReady}
+                      style={{
+                        minWidth: 124,
+                        justifyContent: "center",
+                        ...(item.isReady
+                          ? {
+                              background: "#34d399",
+                              borderColor: "#34d399",
+                              color: "#fff",
+                            }
+                          : {}),
+                      }}
+                    >
+                      <Check size={12} strokeWidth={2.4} />
+                      {item.isReady ? "Ready" : "Mark ready"}
+                    </Button>
+                    {!item.isReady && readyBlockerMessage && (
+                      <div className={readyHint}>{readyBlockerMessage}</div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

@@ -50,6 +50,7 @@ import {
   treeNoColor,
   mainCard,
   filterStrip,
+  filterRow,
   searchWrap,
   searchInput,
   breadcrumb,
@@ -320,6 +321,12 @@ export default function LibraryPage() {
     return categoryIndex.get(selection.id)?.name ?? "Category";
   })();
 
+  const breadcrumbCrumbs: string[] = (() => {
+    if (selection.kind === "all") return ["All items"];
+    if (selection.kind === "view") return [selectionLabel];
+    return breadcrumbPath.map((c) => c.name);
+  })();
+
   return (
     <div className={page}>
       <div className={subHeader}>
@@ -403,92 +410,94 @@ export default function LibraryPage() {
         </aside>
 
         <section className={mainCard}>
-          {selection.kind === "category" && breadcrumbPath.length > 0 && (
-            <div className={breadcrumb}>
-              <span>Library</span>
-              {breadcrumbPath.map((c, i) => {
-                const isLast = i === breadcrumbPath.length - 1;
-                return (
-                  <span
-                    key={c.id}
-                    style={{ display: "inline-flex", gap: 8, alignItems: "center" }}
-                  >
-                    <span className={breadcrumbSep}>›</span>
-                    <span className={isLast ? breadcrumbCurrent : undefined}>
-                      {c.name}
-                    </span>
+          <div className={breadcrumb}>
+            <span>Library</span>
+            {breadcrumbCrumbs.map((label, i) => {
+              const isLast = i === breadcrumbCrumbs.length - 1;
+              return (
+                <span
+                  key={i}
+                  style={{ display: "inline-flex", gap: 8, alignItems: "center" }}
+                >
+                  <span className={breadcrumbSep}>›</span>
+                  <span className={isLast ? breadcrumbCurrent : undefined}>
+                    {label}
                   </span>
-                );
-              })}
-            </div>
-          )}
+                </span>
+              );
+            })}
+          </div>
 
           <div className={filterStrip}>
-            <div className={searchWrap}>
-              <Search size={13} strokeWidth={2} style={{ color: "var(--muted)" }} />
-              <input
-                className={searchInput}
-                placeholder={`Search ${selectionLabel.toLowerCase()}…`}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+            <div className={filterRow}>
+              <div className={segmentedControl}>
+                {(["all", "task", "plan", "goal"] as const).map((t) => (
+                  <button
+                    key={t}
+                    className={`${segmentedButton} ${
+                      typeFilter === t ? segmentedButtonActive : ""
+                    }`}
+                    onClick={() => setTypeFilter(t)}
+                  >
+                    {t === "all" ? "All" : t}
+                  </button>
+                ))}
+              </div>
+
+              <div className={segmentedControl}>
+                {(
+                  [
+                    ["all", "All"],
+                    ["ready", "Ready"],
+                    ["not-ready", "Draft"],
+                    ["completed", "Done"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    className={`${segmentedButton} ${
+                      statusFilter === key ? segmentedButtonActive : ""
+                    }`}
+                    onClick={() => setStatusFilter(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <span className={spacer} />
+
+              <div className={segmentedControl}>
+                {(
+                  [
+                    ["newest", "Newest"],
+                    ["deadline", "Deadline"],
+                    ["priority", "Priority"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <button
+                    key={key}
+                    className={`${segmentedButton} ${
+                      sortKey === key ? segmentedButtonActive : ""
+                    }`}
+                    onClick={() => setSortKey(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className={segmentedControl}>
-              {(["all", "task", "plan", "goal"] as const).map((t) => (
-                <button
-                  key={t}
-                  className={`${segmentedButton} ${
-                    typeFilter === t ? segmentedButtonActive : ""
-                  }`}
-                  onClick={() => setTypeFilter(t)}
-                >
-                  {t === "all" ? "All" : t}
-                </button>
-              ))}
-            </div>
-
-            <div className={segmentedControl}>
-              {(
-                [
-                  ["all", "All"],
-                  ["ready", "Ready"],
-                  ["not-ready", "Draft"],
-                  ["completed", "Done"],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  className={`${segmentedButton} ${
-                    statusFilter === key ? segmentedButtonActive : ""
-                  }`}
-                  onClick={() => setStatusFilter(key)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            <span className={spacer} />
-
-            <div className={segmentedControl}>
-              {(
-                [
-                  ["newest", "Newest"],
-                  ["deadline", "Deadline"],
-                  ["priority", "Priority"],
-                ] as const
-              ).map(([key, label]) => (
-                <button
-                  key={key}
-                  className={`${segmentedButton} ${
-                    sortKey === key ? segmentedButtonActive : ""
-                  }`}
-                  onClick={() => setSortKey(key)}
-                >
-                  {label}
-                </button>
-              ))}
+            <div className={filterRow}>
+              <div className={searchWrap}>
+                <Search size={13} strokeWidth={2} style={{ color: "var(--muted)" }} />
+                <input
+                  className={searchInput}
+                  placeholder={`Search ${selectionLabel.toLowerCase()}…`}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 

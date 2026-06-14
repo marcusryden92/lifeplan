@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+import { style, globalStyle } from "@vanilla-extract/css";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -47,4 +47,11 @@ export const legacyCardDisabled = style({
 
 export const cardBody = style({
   padding: "12px 0 16px",
+});
+
+// When the subtask list wrapper renders null (no subtasks), AddSubtask is the
+// only child — pin it to the bottom so the empty space sits above it rather
+// than below.
+globalStyle(`${cardBody} > :only-child`, {
+  marginTop: "auto",
 });

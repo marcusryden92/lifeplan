@@ -4,6 +4,7 @@ import { vars, themeTransition } from "@/lib/theme";
 const MOBILE = "screen and (max-width: 767px)";
 
 export const page = style({
+  position: "relative",
   display: "flex",
   flexDirection: "column",
   flex: 1,
@@ -249,10 +250,38 @@ export const treeChevronSpacer = style({
 });
 
 export const railFooter = style({
+  flexShrink: 0,
   marginTop: 8,
   paddingTop: 8,
+  paddingLeft: 4,
+  paddingRight: 4,
   borderTop: `1px solid ${vars.rule}`,
   transition: themeTransition,
+});
+
+export const railNewButton = style({
+  width: "100%",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
+  padding: "8px 10px",
+  borderRadius: 8,
+  border: `1px dashed ${vars.rule}`,
+  background: "transparent",
+  color: vars.muted,
+  fontFamily: vars.font.ui,
+  fontSize: 12.5,
+  fontWeight: 600,
+  cursor: "pointer",
+  transition: themeTransition,
+  selectors: {
+    "&:hover": {
+      color: vars.ink,
+      borderColor: vars.glass.stroke,
+      background: vars.glass.bgSoft,
+    },
+  },
 });
 
 export const mainCard = style([

@@ -25,6 +25,7 @@ export const modal = style({
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
+  isolation: "isolate",
   padding: 0,
   background: vars.paper,
   opacity: 0,
@@ -39,6 +40,8 @@ export const modal = style({
 });
 
 export const banner = style({
+  position: "relative",
+  zIndex: 1,
   flexShrink: 0,
   display: "flex",
   alignItems: "center",
@@ -122,6 +125,8 @@ export const bannerSummary = style({
 export const bannerSpacer = style({ flex: 1 });
 
 export const body = style({
+  position: "relative",
+  zIndex: 1,
   flex: 1,
   display: "flex",
   minHeight: 0,
@@ -467,6 +472,8 @@ export const listItemSub = style({
 });
 
 export const errorBanner = style({
+  position: "relative",
+  zIndex: 1,
   margin: "0 18px 12px",
   padding: "10px 14px",
   borderRadius: 10,

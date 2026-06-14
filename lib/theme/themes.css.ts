@@ -2,7 +2,7 @@ import { createTheme } from "@vanilla-extract/css";
 import { vars } from "./tokens.css";
 
 export const lumenLight = createTheme(vars, {
-  paper: "#edeae5",
+  paper: "#f2efea",
   bezel: "#c8bfb6",
   ink: "#16142a",
   inkSoft: "#3c3a52",

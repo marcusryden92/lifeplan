@@ -21,7 +21,7 @@ import type { EventResizeDoneArg } from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
 import { X } from "lucide-react";
 
-import { Button, vars } from "@/components/ui";
+import { Button, Backdrop, Grain, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { Category, EventTemplate } from "@/types/prisma";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
@@ -689,6 +689,8 @@ export function WeekPlanModal({
       }}
     >
       <div className={modal}>
+        <Backdrop variant="blob" />
+        <Grain />
         <div className={banner}>
           <span className={editingLabel}>editing</span>
           <div className={modeToggle}>

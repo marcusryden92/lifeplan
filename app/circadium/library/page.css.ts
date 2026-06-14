@@ -232,11 +232,17 @@ export const mainCard = style([
 
 export const filterStrip = style({
   display: "flex",
-  alignItems: "center",
-  gap: 8,
+  flexDirection: "column",
+  gap: 10,
   padding: "14px 0",
   borderBottom: `1px solid ${vars.rule}`,
   flexShrink: 0,
+});
+
+export const filterRow = style({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
   flexWrap: "wrap",
 });
 
@@ -244,10 +250,11 @@ export const searchWrap = style({
   display: "flex",
   alignItems: "center",
   gap: 6,
-  padding: "5px 10px",
+  padding: "6px 12px",
   borderRadius: 999,
   border: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bgSoft,
+  flex: 1,
   minWidth: 220,
   transition: themeTransition,
 });
