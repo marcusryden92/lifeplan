@@ -18,9 +18,9 @@ export const loaderTrack = recipe({
   },
   variants: {
     size: {
-      sm: { width: 80, height: 5 },
-      md: { width: 120, height: 10 },
-      lg: { width: 160, height: 15 },
+      sm: { width: 80, height: 3 },
+      md: { width: 120, height: 6 },
+      lg: { width: 160, height: 9 },
     },
   },
   defaultVariants: { size: "md" },
