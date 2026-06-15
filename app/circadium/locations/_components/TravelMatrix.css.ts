@@ -23,6 +23,19 @@ export const matrixTable = style({
 const TRACE_TRANSITION =
   "background-color 200ms cubic-bezier(0.4, 0, 0.2, 1)";
 
+// Headers tint via a ::before overlay (instead of swapping background-color
+// directly) so the element's own bg-color keeps the slow themeTransition for
+// light/dark swaps. The overlay's opacity is what animates at trace speed.
+const HEADER_OVERLAY_BASE = {
+  content: '""',
+  position: "absolute",
+  inset: 0,
+  background: vars.ink,
+  opacity: 0,
+  pointerEvents: "none",
+  transition: "opacity 200ms cubic-bezier(0.4, 0, 0.2, 1)",
+} as const;
+
 export const headerCell = style({
   padding: "10px 12px",
   borderBottom: `1px solid ${vars.glass.stroke}`,
@@ -36,9 +49,11 @@ export const headerCell = style({
   position: "sticky",
   top: 0,
   zIndex: 2,
-  // Override themeTransition for background-color so trace hover doesn't take
-  // a full second to fade in/out. Other theme-driven props keep slow timing.
-  transition: `${TRACE_TRANSITION}, color 1s ease, border-color 1s ease, box-shadow 1s ease`,
+  transition: themeTransition,
+  selectors: {
+    "&::before": HEADER_OVERLAY_BASE,
+    "&[data-trace='trail']::before": { opacity: 0.08 },
+  },
 });
 
 export const cornerCell = style([
@@ -61,6 +76,10 @@ export const headerCellInner = style({
   alignItems: "center",
   justifyContent: "center",
   gap: 5,
+  // Lifted above the header's ::before trace overlay so the text isn't
+  // painted underneath the tint.
+  position: "relative",
+  zIndex: 1,
 });
 
 export const rowHeaderCell = style({
@@ -74,7 +93,11 @@ export const rowHeaderCell = style({
   position: "sticky",
   left: 0,
   zIndex: 1,
-  transition: `${TRACE_TRANSITION}, color 1s ease, border-color 1s ease, box-shadow 1s ease`,
+  transition: themeTransition,
+  selectors: {
+    "&::before": HEADER_OVERLAY_BASE,
+    "&[data-trace='trail']::before": { opacity: 0.08 },
+  },
 });
 
 export const cell = style({
@@ -191,16 +214,6 @@ globalStyle(`${cell}[data-trace="active"] > *`, {
 globalStyle(`${cell}[data-trace="trail"] > *`, {
   background: `color-mix(in srgb, ${vars.ink} 7%, transparent)`,
 });
-
-// Headers paint their own background-color directly so the sticky paper fill
-// stays opaque; tint with a paper-mixed solid color so scrolling content
-// still can't bleed through.
-globalStyle(
-  `${headerCell}[data-trace="trail"], ${rowHeaderCell}[data-trace="trail"]`,
-  {
-    background: `color-mix(in srgb, ${vars.paper}, ${vars.ink} 8%)`,
-  },
-);
 
 export const missingBlock = style({
   display: "flex",

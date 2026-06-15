@@ -421,10 +421,6 @@ export default function LocationsPage() {
     <div className={page}>
       <div className={subHeader}>
         <h1 className={pageTitle}>Locations</h1>
-        <span className={titleSummary}>
-          {locations.length} of {MAX_LOCATIONS} saved
-          {locations.length >= 2 && " · travel times between every pair"}
-        </span>
         {error && <div className={errorBanner}>{error}</div>}
         {success && !error && (
           <div className={successBanner}>{success}</div>
