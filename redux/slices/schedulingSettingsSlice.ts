@@ -133,6 +133,17 @@ const schedulingSettingsSlice = createSlice({
     setLocations: (state, action: PayloadAction<SerializedLocation[]>) => {
       state.locations = action.payload;
     },
+    upsertLocation: (state, action: PayloadAction<SerializedLocation>) => {
+      const idx = state.locations.findIndex((l) => l.id === action.payload.id);
+      if (idx === -1) {
+        state.locations.push(action.payload);
+      } else {
+        state.locations[idx] = action.payload;
+      }
+    },
+    removeLocation: (state, action: PayloadAction<string>) => {
+      state.locations = state.locations.filter((l) => l.id !== action.payload);
+    },
     // Debug strategy config reducers
     setDebugDashboardEnabled: (state, action: PayloadAction<boolean>) => {
       state.debugDashboardEnabled = action.payload;
@@ -173,6 +184,8 @@ export const {
   setEnableTravelEvents,
   setTravelTimeMatrix,
   setLocations,
+  upsertLocation,
+  removeLocation,
   setDebugDashboardEnabled,
   setStrategyWeights,
   setLocationGroupingScores,

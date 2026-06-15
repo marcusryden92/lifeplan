@@ -57,43 +57,58 @@ export const headActions = style({
   gap: 8,
   flexShrink: 0,
   flexWrap: "wrap",
+  // marginLeft: auto keeps the cluster right-aligned even when the parent
+  // subHeader wraps it onto its own row — without it, a wrapped row reverts
+  // to the left edge and the title sits visually orphaned.
+  marginLeft: "auto",
 });
 
-export const transportSeg = style({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 2,
-  padding: 2,
+// Matches the segmented control in the library filter strip: a relatively
+// positioned pill with an absolute ink thumb that slides between options.
+export const segmentedControl = style({
+  position: "relative",
+  display: "inline-grid",
+  padding: 3,
   borderRadius: 999,
-  border: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bgSoft,
-  transition: themeTransition,
+  border: `1px solid ${vars.glass.stroke}`,
 });
 
-export const transportSegBtn = style({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 5,
-  padding: "5px 11px",
+export const segmentedThumb = style({
+  position: "absolute",
+  top: 3,
+  bottom: 3,
+  left: 3,
   borderRadius: 999,
+  background: vars.ink,
+  transition:
+    "transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), width 0.22s ease",
+  zIndex: 0,
+});
+
+export const segmentedButton = style({
+  position: "relative",
+  zIndex: 1,
+  appearance: "none",
   border: "none",
   background: "transparent",
-  color: vars.muted,
+  padding: "5px 14px",
+  borderRadius: 999,
   cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 5,
+  fontSize: 11,
   fontFamily: vars.font.ui,
-  fontSize: 12,
-  fontWeight: 600,
-  transition: "background-color 120ms ease, color 120ms ease",
+  fontWeight: 700,
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
+  color: vars.muted,
+  transition: "color 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
   selectors: {
-    "&:hover": { color: vars.ink },
-  },
-});
-
-export const transportSegBtnActive = style({
-  background: vars.ink,
-  color: vars.paper,
-  selectors: {
-    "&:hover": { color: vars.paper },
+    "&[data-active='true']": { color: vars.paper },
+    "&:hover:not([data-active='true'])": { color: vars.ink },
   },
 });
 
@@ -204,11 +219,6 @@ export const railRow = style({
   },
 });
 
-export const railRowActive = style({
-  background: vars.glass.bgDeep,
-  borderColor: vars.glass.stroke,
-});
-
 export const railRowPin = style({
   display: "inline-flex",
   alignItems: "center",
@@ -272,50 +282,6 @@ export const railRowTagDot = style({
   height: 6,
   borderRadius: 999,
   flexShrink: 0,
-});
-
-export const railRowActions = style({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 2,
-  opacity: 0,
-  transition: "opacity 120ms ease",
-  flexShrink: 0,
-  marginTop: 1,
-  selectors: {
-    [`${railRow}:hover &, ${railRow}:focus-within &`]: { opacity: 1 },
-  },
-});
-
-export const railIconBtn = style({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 22,
-  height: 22,
-  borderRadius: 5,
-  border: "none",
-  background: "transparent",
-  color: vars.muted,
-  cursor: "pointer",
-  transition: "color 120ms ease, background-color 120ms ease",
-  padding: 0,
-  selectors: {
-    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
-  },
-});
-
-export const railRowInput = style({
-  fontFamily: vars.font.ui,
-  fontSize: 13.5,
-  fontWeight: 600,
-  color: vars.ink,
-  background: "transparent",
-  border: "none",
-  borderBottom: `1px solid ${vars.accent.primary}`,
-  outline: "none",
-  padding: "1px 0",
-  width: "100%",
 });
 
 export const railFooter = style({

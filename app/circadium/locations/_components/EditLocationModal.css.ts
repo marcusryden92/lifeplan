@@ -206,9 +206,17 @@ export const selectedHint = style({
   fontWeight: 600,
 });
 
-export const fieldHelp = style({
-  fontSize: 11,
-  color: vars.muted,
+export const cascadeNote = style({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 6,
+  padding: "8px 10px",
+  borderRadius: 8,
+  background: `color-mix(in srgb, ${vars.status.warning} 14%, transparent)`,
+  border: `1px solid ${vars.status.warning}`,
+  color: vars.status.warning,
+  fontSize: 11.5,
+  fontFamily: vars.font.ui,
 });
 
 export const errorBlock = style({
@@ -227,6 +235,8 @@ export const footer = style({
   justifyContent: "flex-end",
   marginTop: 4,
 });
+
+export const dangerSlot = style({ marginRight: "auto" });
 
 const spinKeyframe = keyframes({
   to: { transform: "translateY(-50%) rotate(360deg)" },

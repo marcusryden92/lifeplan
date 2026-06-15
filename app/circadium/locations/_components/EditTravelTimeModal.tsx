@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui";
-import type { TravelTime, Location } from "@/types/prisma";
+import type { TravelTime } from "@/types/prisma";
+import type { TransportMode } from "@/lib/generated/db-client";
+
+// The modal only displays the name of each endpoint, so it accepts any shape
+// that carries an id + name (full Prisma Location or the narrower Redux row).
+type EndpointLocation = { id: string; name: string };
 import {
   MODAL_FADE_MS,
   overlay,
@@ -23,11 +28,15 @@ import {
 
 type Period = "rush" | "regular" | "night";
 
+// Same set as the matrix uses. Modes outside this set show a single value.
+const TIME_VARYING_MODES = new Set<TransportMode>(["DRIVING", "TRANSIT"]);
+
 interface EditTravelTimeModalProps {
   open: boolean;
   travelTime: TravelTime | null;
-  fromLocation: Location | null;
-  toLocation: Location | null;
+  fromLocation: EndpointLocation | null;
+  toLocation: EndpointLocation | null;
+  transportMode: TransportMode;
   onClose: () => void;
   onSave: (
     travelTimeId: string,
@@ -44,6 +53,7 @@ export function EditTravelTimeModal({
   travelTime,
   fromLocation,
   toLocation,
+  transportMode,
   onClose,
   onSave,
 }: EditTravelTimeModalProps) {
@@ -89,6 +99,8 @@ export function EditTravelTimeModal({
 
   if (!shouldRender || !travelTime) return null;
 
+  const isTimeVarying = TIME_VARYING_MODES.has(transportMode);
+
   const parse = (s: string): number | null => {
     const n = Number.parseInt(s, 10);
     return Number.isFinite(n) && n >= 0 ? n : null;
@@ -108,20 +120,33 @@ export function EditTravelTimeModal({
   const handleSave = async () => {
     setSaving(true);
     try {
-      await onSave(travelTime.id, {
-        customRushHourMinutes: overrideFor(
-          rushDraft,
-          travelTime.googleRushHourMinutes,
-        ),
-        customRegularMinutes: overrideFor(
-          regDraft,
-          travelTime.googleRegularMinutes,
-        ),
-        customNightMinutes: overrideFor(
-          nightDraft,
-          travelTime.googleNightMinutes,
-        ),
-      });
+      if (isTimeVarying) {
+        await onSave(travelTime.id, {
+          customRushHourMinutes: overrideFor(
+            rushDraft,
+            travelTime.googleRushHourMinutes,
+          ),
+          customRegularMinutes: overrideFor(
+            regDraft,
+            travelTime.googleRegularMinutes,
+          ),
+          customNightMinutes: overrideFor(
+            nightDraft,
+            travelTime.googleNightMinutes,
+          ),
+        });
+      } else {
+        // Single-value modes (bike, walk) — the one input drives all three
+        // custom fields so the data shape stays consistent across modes.
+        const n = parse(regDraft);
+        const override =
+          n === null || n === travelTime.googleRegularMinutes ? null : n;
+        await onSave(travelTime.id, {
+          customRushHourMinutes: override,
+          customRegularMinutes: override,
+          customNightMinutes: override,
+        });
+      }
       onClose();
     } finally {
       setSaving(false);
@@ -145,32 +170,46 @@ export function EditTravelTimeModal({
     setDraft: (s: string) => void;
     googleValue: number;
     hasCustom: boolean;
-  }[] = [
-    {
-      key: "rush",
-      label: "Rush",
-      draft: rushDraft,
-      setDraft: setRushDraft,
-      googleValue: travelTime.googleRushHourMinutes,
-      hasCustom: travelTime.customRushHourMinutes !== null,
-    },
-    {
-      key: "regular",
-      label: "Regular",
-      draft: regDraft,
-      setDraft: setRegDraft,
-      googleValue: travelTime.googleRegularMinutes,
-      hasCustom: travelTime.customRegularMinutes !== null,
-    },
-    {
-      key: "night",
-      label: "Night",
-      draft: nightDraft,
-      setDraft: setNightDraft,
-      googleValue: travelTime.googleNightMinutes,
-      hasCustom: travelTime.customNightMinutes !== null,
-    },
-  ];
+  }[] = isTimeVarying
+    ? [
+        {
+          key: "rush",
+          label: "Rush",
+          draft: rushDraft,
+          setDraft: setRushDraft,
+          googleValue: travelTime.googleRushHourMinutes,
+          hasCustom: travelTime.customRushHourMinutes !== null,
+        },
+        {
+          key: "regular",
+          label: "Regular",
+          draft: regDraft,
+          setDraft: setRegDraft,
+          googleValue: travelTime.googleRegularMinutes,
+          hasCustom: travelTime.customRegularMinutes !== null,
+        },
+        {
+          key: "night",
+          label: "Night",
+          draft: nightDraft,
+          setDraft: setNightDraft,
+          googleValue: travelTime.googleNightMinutes,
+          hasCustom: travelTime.customNightMinutes !== null,
+        },
+      ]
+    : [
+        {
+          key: "regular",
+          label: "Minutes",
+          draft: regDraft,
+          setDraft: setRegDraft,
+          googleValue: travelTime.googleRegularMinutes,
+          hasCustom:
+            travelTime.customRegularMinutes !== null ||
+            travelTime.customRushHourMinutes !== null ||
+            travelTime.customNightMinutes !== null,
+        },
+      ];
 
   return (
     <div
@@ -186,8 +225,9 @@ export function EditTravelTimeModal({
             {fromLocation?.name ?? "From"} → {toLocation?.name ?? "To"}
           </h2>
           <span className={subtitle}>
-            Travel time in minutes. Override any period; clear to revert to
-            Google&apos;s value.
+            {isTimeVarying
+              ? "Travel time in minutes. Override any period; clear to revert to Google's value."
+              : "Travel time in minutes. This mode doesn't vary by time of day."}
           </span>
         </div>
 

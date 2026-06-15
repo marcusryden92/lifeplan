@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Search, Loader2, MapPin } from "lucide-react";
+import { Loader2, MapPin, Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui";
 import * as locationActions from "@/actions/locations";
+import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import {
   MODAL_FADE_MS,
   overlay,
@@ -23,11 +24,12 @@ import {
   predictionMain,
   predictionSub,
   selectedHint,
-  fieldHelp,
+  cascadeNote,
   errorBlock,
   footer,
+  dangerSlot,
   spinning,
-} from "./AddLocationModal.css";
+} from "./EditLocationModal.css";
 
 interface Prediction {
   placeId: string;
@@ -36,13 +38,27 @@ interface Prediction {
   secondaryText: string;
 }
 
-interface AddLocationModalProps {
-  open: boolean;
-  onClose: () => void;
-  onAdd: (name: string, placeId: string, sessionToken?: string) => Promise<void>;
+export interface EditLocationDraft {
+  name: string;
+  placeId?: string;
+  sessionToken?: string;
 }
 
-export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps) {
+interface EditLocationModalProps {
+  open: boolean;
+  location: SerializedLocation | null;
+  onClose: () => void;
+  onSave: (draft: EditLocationDraft) => Promise<void>;
+  onRequestDelete: () => void;
+}
+
+export function EditLocationModal({
+  open,
+  location,
+  onClose,
+  onSave,
+  onRequestDelete,
+}: EditLocationModalProps) {
   const [shouldRender, setShouldRender] = useState(open);
   const [dataState, setDataState] = useState<"open" | "closed">(
     open ? "open" : "closed",
@@ -62,33 +78,46 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
   const [predictionList, setPredictionList] = useState<Prediction[]>([]);
-  const [selected, setSelected] = useState<Prediction | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<Prediction | null>(null);
   const [searching, setSearching] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Snapshot of the address shown when the modal opened. Any edit that ends
+  // up matching this string is treated as "no change" and the search stays
+  // quiet.
+  const originalAddressRef = useRef("");
 
-  // Reset all draft state when the modal re-opens; Google Places session token
-  // is regenerated so autocomplete suggestions are billed as a fresh session.
+  // Reset draft state on (re)open. Session token regenerates so the
+  // autocomplete suggestions are billed against a fresh session if the
+  // user actually switches the place.
   useEffect(() => {
-    if (!open) return;
-    setName("");
-    setQuery("");
+    if (!open || !location) return;
+    const addr = location.address || "";
+    setName(location.name);
+    setQuery(addr);
+    originalAddressRef.current = addr;
     setPredictionList([]);
-    setSelected(null);
+    setSelectedPlace(null);
     setError(null);
     setSearching(false);
     setSaving(false);
+    setSessionToken(null);
     locationActions
       .createSessionToken()
       .then(setSessionToken)
       .catch(() => setSessionToken(null));
-  }, [open]);
+  }, [open, location]);
 
   useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    if (!query || query.length < 2 || selected) {
+    if (
+      !query ||
+      query.length < 2 ||
+      query === originalAddressRef.current ||
+      selectedPlace
+    ) {
       setPredictionList([]);
       return;
     }
@@ -109,20 +138,27 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
-  }, [query, sessionToken, selected]);
+  }, [query, sessionToken, selectedPlace]);
 
-  if (!shouldRender) return null;
+  if (!shouldRender || !location) return null;
 
   const handleSelect = (p: Prediction) => {
-    setSelected(p);
+    setSelectedPlace(p);
     setQuery(p.description);
     setPredictionList([]);
-    if (!name) setName(p.mainText);
   };
 
+  const nameChanged = name.trim() !== "" && name.trim() !== location.name;
+  // Picking the prediction for the same place (e.g. typing the original
+  // address back into autocomplete) isn't a real change. Compare against the
+  // current placeId so re-confirming doesn't trigger a cascade.
+  const placeChanged =
+    !!selectedPlace && selectedPlace.placeId !== location.placeId;
+  const canSave = nameChanged || placeChanged;
+
   const handleSubmit = async () => {
-    if (!selected) {
-      setError("Pick a place from the search results.");
+    if (!canSave) {
+      onClose();
       return;
     }
     if (!name.trim()) {
@@ -132,9 +168,13 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
     try {
       setSaving(true);
       setError(null);
-      await onAdd(name.trim(), selected.placeId, sessionToken ?? undefined);
+      await onSave({
+        name: name.trim(),
+        placeId: placeChanged ? selectedPlace?.placeId : undefined,
+        sessionToken: placeChanged ? sessionToken ?? undefined : undefined,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add location");
+      setError(err instanceof Error ? err.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -150,10 +190,11 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
     >
       <div className={modal}>
         <div className={header}>
-          <h2 className={title}>Add location</h2>
+          <h2 className={title}>Edit location</h2>
           <span className={subtitle}>
-            Give it a friendly name like &ldquo;Home&rdquo; or &ldquo;Office&rdquo;
-            and pick an address.
+            Rename it or point it at a different address. Changing the address
+            drops the travel times to and from this location so they get
+            re-fetched.
           </span>
         </div>
 
@@ -168,27 +209,26 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
             autoFocus
             onChange={(e) => setName(e.target.value)}
           />
-          <span className={fieldHelp}>
-            A short label you&apos;ll recognize when picking it on tasks and
-            categories.
-          </span>
         </div>
 
         <div className={fieldStack}>
           <span className={fieldLabel}>Address</span>
           <div className={searchWrap}>
             <span className={searchIcon}>
-              <Search size={13} strokeWidth={2.2} />
+              <MapPin size={13} strokeWidth={2} />
             </span>
             <input
               className={textInput}
-              placeholder="Start typing an address…"
+              placeholder="Search for an address…"
               value={query}
               autoComplete="off"
               onChange={(e) => {
                 setQuery(e.target.value);
-                if (selected && e.target.value !== selected.description) {
-                  setSelected(null);
+                if (
+                  selectedPlace &&
+                  e.target.value !== selectedPlace.description
+                ) {
+                  setSelectedPlace(null);
                 }
               }}
             />
@@ -197,7 +237,7 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
                 <Loader2 size={14} strokeWidth={2.2} />
               </span>
             )}
-            {predictionList.length > 0 && !selected && (
+            {predictionList.length > 0 && !selectedPlace && (
               <div className={predictions}>
                 {predictionList.map((p) => (
                   <button
@@ -213,17 +253,30 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
               </div>
             )}
           </div>
-          {selected && (
-            <span className={selectedHint}>
-              <MapPin size={11} strokeWidth={2.2} />
-              Place selected
-            </span>
+          {placeChanged && (
+            <>
+              <span className={selectedHint}>
+                <MapPin size={11} strokeWidth={2.2} />
+                New place selected
+              </span>
+              <div className={cascadeNote}>
+                <AlertTriangle size={12} strokeWidth={2.2} />
+                Saving will drop every travel time touching this location. You
+                can refetch from the matrix.
+              </div>
+            </>
           )}
         </div>
 
         {error && <div className={errorBlock}>{error}</div>}
 
         <div className={footer}>
+          <span className={dangerSlot}>
+            <Button variant="glass" size="sm" onClick={onRequestDelete}>
+              <Trash2 size={12} strokeWidth={2.2} />
+              Delete
+            </Button>
+          </span>
           <Button variant="glass" size="sm" onClick={onClose}>
             Cancel
           </Button>
@@ -231,9 +284,9 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
             variant="solid"
             size="sm"
             onClick={handleSubmit}
-            disabled={saving || !selected || !name.trim()}
+            disabled={saving || !name.trim() || !canSave}
           >
-            {saving ? "Adding…" : "Add location"}
+            {saving ? "Saving…" : "Save"}
           </Button>
         </div>
       </div>

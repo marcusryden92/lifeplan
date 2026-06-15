@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import {
   Car,
   Train,
@@ -10,16 +10,15 @@ import {
   MapPin,
   Plus,
   RefreshCw,
-  Pencil,
-  Trash2,
-  Check,
-  X,
+  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import * as locationActions from "@/actions/locations";
+import type { RootState } from "@/redux/store";
 import {
-  setLocations as setLocationsInRedux,
+  upsertLocation,
+  removeLocation,
   type SerializedLocation,
 } from "@/redux/slices/schedulingSettingsSlice";
 import type { Location, TravelTime } from "@/types/prisma";
@@ -29,15 +28,19 @@ import { TravelMatrix } from "./_components/TravelMatrix";
 import { AddLocationModal } from "./_components/AddLocationModal";
 import { EditTravelTimeModal } from "./_components/EditTravelTimeModal";
 import {
+  EditLocationModal,
+  type EditLocationDraft,
+} from "./_components/EditLocationModal";
+import {
   page,
   subHeader,
   pageTitle,
   titleSummary,
   spacer,
   headActions,
-  transportSeg,
-  transportSegBtn,
-  transportSegBtnActive,
+  segmentedControl,
+  segmentedThumb,
+  segmentedButton,
   successBanner,
   errorBanner,
   mainGrid,
@@ -47,7 +50,6 @@ import {
   railFooter,
   railNote,
   railRow,
-  railRowActive,
   railRowPin,
   railRowMeta,
   railRowName,
@@ -55,9 +57,6 @@ import {
   railRowTags,
   railRowTag,
   railRowTagDot,
-  railRowActions,
-  railIconBtn,
-  railRowInput,
   railNewButton,
   matrixPane,
   matrixHead,
@@ -75,32 +74,53 @@ import {
 
 const MAX_LOCATIONS = 10;
 
-const TRANSPORT_MODES: {
-  value: TransportMode;
+const TRANSPORT_MODES: ReadonlyArray<{
+  key: TransportMode;
   label: string;
-  Icon: typeof Car;
-}[] = [
-  { value: "DRIVING", label: "Driving", Icon: Car },
-  { value: "TRANSIT", label: "Transit", Icon: Train },
-  { value: "BICYCLING", label: "Bike", Icon: Bike },
-  { value: "WALKING", label: "Walk", Icon: Footprints },
+  Icon: LucideIcon;
+}> = [
+  { key: "DRIVING", label: "Driving", Icon: Car },
+  { key: "TRANSIT", label: "Transit", Icon: Train },
+  { key: "BICYCLING", label: "Bike", Icon: Bike },
+  { key: "WALKING", label: "Walk", Icon: Footprints },
 ];
 
+// Helper: narrow a Prisma Location to the serialized shape Redux holds.
+const serialize = (loc: Location): SerializedLocation => ({
+  id: loc.id,
+  name: loc.name,
+  address: loc.address ?? "",
+  placeId: loc.placeId,
+});
+
 export default function LocationsPage() {
+  // NOTE: this page does NOT refetch locations on mount. UserProvider already
+  // loads them on auth via fetchAllSchedulingData and pushes them into Redux.
+  // A page-level dispatch raced with useCalendarServerSync's diff hook and
+  // could cascade-delete locations on the server if the racing fetch ever
+  // returned an empty list. Trust Redux as the source of truth.
   const dispatch = useDispatch();
   const { categories } = useCalendarProvider();
 
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [travelTimes, setTravelTimes] = useState<TravelTime[]>([]);
+  // Locations are the source of truth in Redux so this screen's optimistic
+  // mutations are immediately visible to every other screen that selects
+  // from state.schedulingSettings.locations.
+  const locations = useSelector(
+    (state: RootState) => state.schedulingSettings.locations,
+  );
+
+  // All travel times across every transport mode are kept in memory; the
+  // matrix filters by the active mode in a memo so toggling between
+  // driving/transit/bike/walk is instant instead of a server roundtrip.
+  const [allTravelTimes, setAllTravelTimes] = useState<TravelTime[]>([]);
   const [transportMode, setTransportMode] = useState<TransportMode>("DRIVING");
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [editingNameId, setEditingNameId] = useState<string | null>(null);
-  const [nameDraft, setNameDraft] = useState("");
+  const [editingLocation, setEditingLocation] =
+    useState<SerializedLocation | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [addOpen, setAddOpen] = useState(false);
@@ -114,34 +134,21 @@ export default function LocationsPage() {
     setTimeout(() => setSuccess(null), 3000);
   };
 
-  const syncReduxLocations = (next: Location[]) => {
-    const serialized: SerializedLocation[] = next.map((loc) => ({
-      id: loc.id,
-      name: loc.name,
-      address: loc.address ?? "",
-      placeId: loc.placeId,
-    }));
-    dispatch(setLocationsInRedux(serialized));
-  };
-
-  // Initial load: locations + default transport mode. Travel-times load reacts
-  // to the transport mode separately so the user's first interaction with the
-  // top toggle pulls fresh data without flicker.
+  // Initial load: travel times for all modes + default transport. Locations
+  // come from Redux via UserProvider so they aren't fetched here.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         setLoading(true);
         setError(null);
-        const [locs, defaultMode] = await Promise.all([
-          locationActions.fetchLocations(),
+        const [allTimes, defaultMode] = await Promise.all([
+          locationActions.fetchTravelTimes(),
           locationActions.getDefaultTransportMode(),
         ]);
         if (cancelled) return;
-        setLocations(locs);
+        setAllTravelTimes(allTimes);
         setTransportMode(defaultMode);
-        syncReduxLocations(locs);
-        if (locs.length > 0) setSelectedId(locs[0].id);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load");
@@ -156,20 +163,10 @@ export default function LocationsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const times = await locationActions.fetchTravelTimesByMode(transportMode);
-        if (!cancelled) setTravelTimes(times);
-      } catch (err) {
-        if (!cancelled) console.error("Failed to load travel times", err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [transportMode]);
+  const travelTimes = useMemo(
+    () => allTravelTimes.filter((tt) => tt.transportMode === transportMode),
+    [allTravelTimes, transportMode],
+  );
 
   const categoryDefaultsByLocation = useMemo(() => {
     const map = new Map<string, { name: string; color: string | null }[]>();
@@ -181,6 +178,9 @@ export default function LocationsPage() {
     }
     return map;
   }, [categories]);
+
+  const isTimeVaryingMode =
+    transportMode === "DRIVING" || transportMode === "TRANSIT";
 
   const hasCustomOverride = travelTimes.some(
     (tt) =>
@@ -212,6 +212,9 @@ export default function LocationsPage() {
     }
   };
 
+  // Add is server-first because the row's id is server-generated. The
+  // returned row goes straight into Redux so the rest of the app sees the
+  // new location without a separate sync step.
   const handleAdd = async (
     name: string,
     placeId: string,
@@ -224,10 +227,7 @@ export default function LocationsPage() {
         placeId,
         sessionToken,
       });
-      const next = [...locations, created];
-      setLocations(next);
-      syncReduxLocations(next);
-      setSelectedId(created.id);
+      dispatch(upsertLocation(serialize(created)));
       flashSuccess(`Added "${name}".`);
       setAddOpen(false);
     } catch (err) {
@@ -236,43 +236,72 @@ export default function LocationsPage() {
     }
   };
 
-  const handleRename = async (id: string, name: string) => {
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setEditingNameId(null);
-      return;
-    }
+  // Edit flows are optimistic — the Redux dispatch happens before the server
+  // round-trip so the rail updates instantly. On failure we restore the
+  // original snapshot and surface the error.
+  const handleSaveEdit = async (draft: EditLocationDraft) => {
+    if (!editingLocation) return;
+    const original = editingLocation;
+    const trimmedName = draft.name.trim();
+
+    const optimistic: SerializedLocation = {
+      ...original,
+      name: trimmedName,
+    };
+    dispatch(upsertLocation(optimistic));
+    setEditingLocation(null);
+
     try {
-      const updated = await locationActions.updateLocationName(id, trimmed);
-      const next = locations.map((l) => (l.id === id ? updated : l));
-      setLocations(next);
-      syncReduxLocations(next);
-      setEditingNameId(null);
+      const updated = await locationActions.updateLocation(original.id, {
+        name: trimmedName !== original.name ? trimmedName : undefined,
+        placeId: draft.placeId,
+        sessionToken: draft.sessionToken,
+      });
+      dispatch(upsertLocation(serialize(updated)));
+      if (draft.placeId && draft.placeId !== original.placeId) {
+        // updateLocation deletes affected travel times server-side so the
+        // matrix re-fetches them; drop them client-side to match.
+        setAllTravelTimes((prev) =>
+          prev.filter(
+            (tt) =>
+              tt.fromLocationId !== updated.id &&
+              tt.toLocationId !== updated.id,
+          ),
+        );
+      }
+      flashSuccess("Location updated.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to rename");
+      dispatch(upsertLocation(original));
+      setError(err instanceof Error ? err.message : "Failed to update");
     }
   };
 
   const handleDelete = async () => {
     if (!deletingId) return;
+    const original = locations.find((l) => l.id === deletingId);
+    if (!original) return;
+    const deletedId = deletingId;
+    const droppedTravels = allTravelTimes.filter(
+      (tt) =>
+        tt.fromLocationId === deletedId || tt.toLocationId === deletedId,
+    );
+
+    dispatch(removeLocation(deletedId));
+    setAllTravelTimes((prev) =>
+      prev.filter(
+        (tt) =>
+          tt.fromLocationId !== deletedId && tt.toLocationId !== deletedId,
+      ),
+    );
+    setDeletingId(null);
+    setEditingLocation(null);
+
     try {
-      setError(null);
-      await locationActions.deleteLocation(deletingId);
-      const next = locations.filter((l) => l.id !== deletingId);
-      setLocations(next);
-      syncReduxLocations(next);
-      setTravelTimes((prev) =>
-        prev.filter(
-          (tt) =>
-            tt.fromLocationId !== deletingId && tt.toLocationId !== deletingId,
-        ),
-      );
-      if (selectedId === deletingId) {
-        setSelectedId(next[0]?.id ?? null);
-      }
+      await locationActions.deleteLocation(deletedId);
       flashSuccess("Location deleted.");
-      setDeletingId(null);
     } catch (err) {
+      dispatch(upsertLocation(original));
+      setAllTravelTimes((prev) => [...prev, ...droppedTravels]);
       setError(err instanceof Error ? err.message : "Failed to delete");
     }
   };
@@ -287,8 +316,8 @@ export default function LocationsPage() {
       setError(null);
       const result =
         await locationActions.fetchMissingTravelTimes(transportMode);
-      const fresh = await locationActions.fetchTravelTimesByMode(transportMode);
-      setTravelTimes(fresh);
+      const fresh = await locationActions.fetchTravelTimes();
+      setAllTravelTimes(fresh);
       flashSuccess(
         result.fetched > 0
           ? `Fetched ${result.fetched} travel time${result.fetched > 1 ? "s" : ""}.`
@@ -313,8 +342,8 @@ export default function LocationsPage() {
       setError(null);
       const result =
         await locationActions.refreshAllTravelTimes(transportMode);
-      const fresh = await locationActions.fetchTravelTimesByMode(transportMode);
-      setTravelTimes(fresh);
+      const fresh = await locationActions.fetchTravelTimes();
+      setAllTravelTimes(fresh);
       flashSuccess(`Refreshed ${result.updated} travel times.`);
     } catch (err) {
       setError(
@@ -338,7 +367,7 @@ export default function LocationsPage() {
         travelTimeId,
         overrides,
       );
-      setTravelTimes((prev) =>
+      setAllTravelTimes((prev) =>
         prev.map((tt) => (tt.id === travelTimeId ? updated : tt)),
       );
     } catch (err) {
@@ -364,8 +393,8 @@ export default function LocationsPage() {
             locationActions.clearTravelTimeOverrides(tt.id),
           ),
       );
-      const fresh = await locationActions.fetchTravelTimesByMode(transportMode);
-      setTravelTimes(fresh);
+      const fresh = await locationActions.fetchTravelTimes();
+      setAllTravelTimes(fresh);
       flashSuccess("All overrides cleared.");
     } catch (err) {
       setError(
@@ -397,20 +426,10 @@ export default function LocationsPage() {
         </span>
         <span className={spacer} />
         <div className={headActions}>
-          <div className={transportSeg}>
-            {TRANSPORT_MODES.map(({ value, label, Icon }) => (
-              <button
-                key={value}
-                type="button"
-                className={`${transportSegBtn} ${value === transportMode ? transportSegBtnActive : ""}`}
-                onClick={() => handleTransportChange(value)}
-                title={label}
-              >
-                <Icon size={12} strokeWidth={2.2} />
-                {label}
-              </button>
-            ))}
-          </div>
+          <TransportModeSegmented
+            value={transportMode}
+            onChange={handleTransportChange}
+          />
           <Button
             variant="glass"
             size="sm"
@@ -428,15 +447,6 @@ export default function LocationsPage() {
           >
             <RefreshCw size={12} strokeWidth={2.2} />
             Refresh all
-          </Button>
-          <Button
-            variant="solid"
-            size="sm"
-            onClick={() => setAddOpen(true)}
-            disabled={locations.length >= MAX_LOCATIONS}
-          >
-            <Plus size={12} strokeWidth={2.4} />
-            Add location
           </Button>
         </div>
       </div>
@@ -460,41 +470,22 @@ export default function LocationsPage() {
               </div>
             ) : (
               locations.map((loc) => {
-                const active = loc.id === selectedId;
                 const tags = categoryDefaultsByLocation.get(loc.id) ?? [];
-                const isEditing = editingNameId === loc.id;
                 return (
                   <button
                     key={loc.id}
                     type="button"
-                    className={`${railRow} ${active ? railRowActive : ""}`}
-                    onClick={() => setSelectedId(loc.id)}
+                    className={railRow}
+                    onClick={() => setEditingLocation(loc)}
+                    aria-label={`Edit ${loc.name}`}
                   >
                     <span className={railRowPin}>
                       <MapPin size={13} strokeWidth={2.2} />
                     </span>
                     <span className={railRowMeta}>
-                      {isEditing ? (
-                        <input
-                          className={railRowInput}
-                          value={nameDraft}
-                          autoFocus
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => setNameDraft(e.target.value)}
-                          onBlur={() => handleRename(loc.id, nameDraft)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              handleRename(loc.id, nameDraft);
-                            }
-                            if (e.key === "Escape") setEditingNameId(null);
-                          }}
-                        />
-                      ) : (
-                        <span className={railRowName}>{loc.name}</span>
-                      )}
+                      <span className={railRowName}>{loc.name}</span>
                       <span className={railRowAddress}>
-                        {loc.address ?? loc.placeId}
+                        {loc.address || loc.placeId}
                       </span>
                       {tags.length > 0 && (
                         <span className={railRowTags}>
@@ -510,64 +501,6 @@ export default function LocationsPage() {
                             </span>
                           ))}
                         </span>
-                      )}
-                    </span>
-                    <span className={railRowActions}>
-                      {isEditing ? (
-                        <>
-                          <span
-                            role="button"
-                            tabIndex={-1}
-                            className={railIconBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRename(loc.id, nameDraft);
-                            }}
-                            aria-label="Save name"
-                          >
-                            <Check size={12} strokeWidth={2.4} />
-                          </span>
-                          <span
-                            role="button"
-                            tabIndex={-1}
-                            className={railIconBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingNameId(null);
-                            }}
-                            aria-label="Cancel"
-                          >
-                            <X size={12} strokeWidth={2.4} />
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <span
-                            role="button"
-                            tabIndex={-1}
-                            className={railIconBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingNameId(loc.id);
-                              setNameDraft(loc.name);
-                            }}
-                            aria-label={`Rename ${loc.name}`}
-                          >
-                            <Pencil size={12} strokeWidth={2.2} />
-                          </span>
-                          <span
-                            role="button"
-                            tabIndex={-1}
-                            className={railIconBtn}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeletingId(loc.id);
-                            }}
-                            aria-label={`Delete ${loc.name}`}
-                          >
-                            <Trash2 size={12} strokeWidth={2.2} />
-                          </span>
-                        </>
                       )}
                     </span>
                   </button>
@@ -598,22 +531,26 @@ export default function LocationsPage() {
           <div className={matrixHead}>
             <h2 className={matrixTitle}>Travel matrix</h2>
             <span className={matrixSubtitle}>
-              from row · to column · 3 time-of-day values
+              {isTimeVaryingMode
+                ? "from row · to column · 3 time-of-day values"
+                : "from row · to column · minutes (constant)"}
             </span>
-            <span className={matrixLegend}>
-              <span>
-                <span className={`${legendDot} ${legendDotRush}`} />
-                rush
+            {isTimeVaryingMode && (
+              <span className={matrixLegend}>
+                <span>
+                  <span className={`${legendDot} ${legendDotRush}`} />
+                  rush
+                </span>
+                <span>
+                  <span className={`${legendDot} ${legendDotRegular}`} />
+                  regular
+                </span>
+                <span>
+                  <span className={`${legendDot} ${legendDotNight}`} />
+                  night
+                </span>
               </span>
-              <span>
-                <span className={`${legendDot} ${legendDotRegular}`} />
-                regular
-              </span>
-              <span>
-                <span className={`${legendDot} ${legendDotNight}`} />
-                night
-              </span>
-            </span>
+            )}
           </div>
 
           {locations.length < 2 ? (
@@ -638,6 +575,7 @@ export default function LocationsPage() {
               <TravelMatrix
                 locations={locations}
                 travelTimes={travelTimes}
+                transportMode={transportMode}
                 onEditPair={(from, to) => setEditPair({ from, to })}
                 onFetchMissing={handleFetchMissing}
               />
@@ -667,11 +605,22 @@ export default function LocationsPage() {
         onAdd={handleAdd}
       />
 
+      <EditLocationModal
+        open={!!editingLocation}
+        location={editingLocation}
+        onClose={() => setEditingLocation(null)}
+        onSave={handleSaveEdit}
+        onRequestDelete={() => {
+          if (editingLocation) setDeletingId(editingLocation.id);
+        }}
+      />
+
       <EditTravelTimeModal
         open={!!editPair}
         travelTime={selectedTravelTime}
         fromLocation={editFromLocation}
         toLocation={editToLocation}
+        transportMode={transportMode}
         onClose={() => setEditPair(null)}
         onSave={handleSaveOverrides}
       />
@@ -708,6 +657,49 @@ export default function LocationsPage() {
         onCancel={() => setConfirmClearAll(false)}
         onConfirm={handleClearAllOverrides}
       />
+    </div>
+  );
+}
+
+// Sliding-thumb segmented control identical to the library filter strip's
+// pattern. Kept local since this is the only segment list on the page.
+function TransportModeSegmented({
+  value,
+  onChange,
+}: {
+  value: TransportMode;
+  onChange: (next: TransportMode) => void;
+}) {
+  const n = TRANSPORT_MODES.length;
+  const activeIdx = Math.max(
+    0,
+    TRANSPORT_MODES.findIndex((o) => o.key === value),
+  );
+  return (
+    <div
+      className={segmentedControl}
+      style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}
+    >
+      <span
+        className={segmentedThumb}
+        aria-hidden
+        style={{
+          width: `calc(${100 / n}% - ${6 / n}px)`,
+          transform: `translateX(${activeIdx * 100}%)`,
+        }}
+      />
+      {TRANSPORT_MODES.map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          className={segmentedButton}
+          data-active={o.key === value}
+          onClick={() => onChange(o.key)}
+        >
+          <o.Icon size={11} strokeWidth={2.4} />
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }

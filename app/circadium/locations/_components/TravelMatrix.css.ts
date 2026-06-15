@@ -76,13 +76,19 @@ export const cell = style({
   transition: themeTransition,
 });
 
+// All cells share this min-height so toggling between time-varying modes
+// (3 stacked values) and single-value modes (1 number) doesn't reflow rows.
+const CELL_MIN_HEIGHT = 78;
+
 export const cellButton = style({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
+  justifyContent: "center",
   gap: 2,
   width: "100%",
   height: "100%",
+  minHeight: CELL_MIN_HEIGHT,
   padding: "8px 12px",
   background: "transparent",
   border: "none",
@@ -98,6 +104,10 @@ export const cellButton = style({
 });
 
 export const cellSelf = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: CELL_MIN_HEIGHT,
   padding: "8px 12px",
   color: vars.muted,
   background: vars.glass.bgSoft,
@@ -121,6 +131,30 @@ export const periodValue = style({
 export const periodValueRush = style({ color: vars.status.error });
 export const periodValueRegular = style({ color: vars.ink });
 export const periodValueNight = style({ color: vars.muted });
+
+export const singleValue = style({
+  display: "flex",
+  alignItems: "baseline",
+  justifyContent: "center",
+  gap: 5,
+  width: "100%",
+  lineHeight: 1.2,
+});
+
+export const singleValueNumber = style({
+  fontWeight: 700,
+  fontSize: 16,
+  color: vars.ink,
+  fontVariantNumeric: "tabular-nums",
+});
+
+export const singleValueUnit = style({
+  fontSize: 10.5,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: vars.muted,
+  fontWeight: 600,
+});
 
 export const periodLabel = style({
   fontSize: 9.5,

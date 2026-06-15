@@ -134,6 +134,79 @@ export async function updateLocationName(
 }
 
 /**
+ * Update a location's name and/or place. If placeId changes, the row's
+ * address, lat, and lng are refetched from Google and every travel time
+ * touching this location is deleted so the matrix re-fetches them on demand.
+ */
+export async function updateLocation(
+  locationId: string,
+  data: { name?: string; placeId?: string; sessionToken?: string },
+): Promise<Location> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const location = await db.location.findFirst({
+    where: { id: locationId, userId: session.user.id },
+  });
+
+  if (!location) {
+    throw new Error("Location not found");
+  }
+
+  const placeChanged = !!data.placeId && data.placeId !== location.placeId;
+
+  const updates: {
+    name?: string;
+    address?: string;
+    placeId?: string;
+    lat?: number;
+    lng?: number;
+  } = {};
+  if (data.name !== undefined) updates.name = data.name;
+
+  if (placeChanged) {
+    // Reject if this placeId is already used by another of the user's
+    // locations — the unique index on (userId, placeId) would throw an
+    // opaque error otherwise.
+    const dupe = await db.location.findUnique({
+      where: {
+        userId_placeId: {
+          userId: session.user.id,
+          placeId: data.placeId!,
+        },
+      },
+    });
+    if (dupe && dupe.id !== locationId) {
+      throw new Error("Another location already uses this place");
+    }
+    const details = await getPlaceDetails(data.placeId!, data.sessionToken);
+    updates.address = details.formattedAddress;
+    updates.placeId = data.placeId!;
+    updates.lat = details.lat;
+    updates.lng = details.lng;
+  }
+
+  const updated = await db.location.update({
+    where: { id: locationId },
+    data: updates,
+  });
+
+  if (placeChanged) {
+    await db.travelTime.deleteMany({
+      where: {
+        userId: session.user.id,
+        OR: [
+          { fromLocationId: locationId },
+          { toLocationId: locationId },
+        ],
+      },
+    });
+  }
+
+  return updated;
+}
+
+/**
  * Delete a location and all associated travel times
  */
 export async function deleteLocation(locationId: string): Promise<void> {

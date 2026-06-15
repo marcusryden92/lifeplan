@@ -1,7 +1,12 @@
 "use client";
 
 import { MapPin, RefreshCw } from "lucide-react";
-import type { Location, TravelTime } from "@/types/prisma";
+import type { TravelTime } from "@/types/prisma";
+import type { TransportMode } from "@/lib/generated/db-client";
+
+// Only id + name are needed for the matrix, so the prop accepts the narrower
+// SerializedLocation shape kept in Redux as well as the full Prisma Location.
+type MatrixLocation = { id: string; name: string };
 import {
   matrixWrap,
   matrixTable,
@@ -22,21 +27,31 @@ import {
   missingBlock,
   missingLabel,
   missingHint,
+  singleValue,
+  singleValueNumber,
+  singleValueUnit,
 } from "./TravelMatrix.css";
 
 interface TravelMatrixProps {
-  locations: Location[];
+  locations: MatrixLocation[];
   travelTimes: TravelTime[];
+  transportMode: TransportMode;
   onEditPair: (fromId: string, toId: string) => void;
   onFetchMissing: () => void;
 }
 
+// Time-of-day variance only matters for traffic-bound modes. Bike and walk
+// have a single value, so the cell collapses to one number.
+const TIME_VARYING_MODES = new Set<TransportMode>(["DRIVING", "TRANSIT"]);
+
 export function TravelMatrix({
   locations,
   travelTimes,
+  transportMode,
   onEditPair,
   onFetchMissing,
 }: TravelMatrixProps) {
+  const isTimeVarying = TIME_VARYING_MODES.has(transportMode);
   const lookup = new Map<string, TravelTime>();
   for (const tt of travelTimes) {
     lookup.set(`${tt.fromLocationId}->${tt.toLocationId}`, tt);
@@ -71,7 +86,7 @@ export function TravelMatrix({
                 if (from.id === to.id) {
                   return (
                     <td key={to.id} className={cell}>
-                      <div className={cellSelf}>—</div>
+                      <div className={cellSelf}>/</div>
                     </td>
                   );
                 }
@@ -99,7 +114,8 @@ export function TravelMatrix({
                   );
                 }
 
-                const rush = tt.customRushHourMinutes ?? tt.googleRushHourMinutes;
+                const rush =
+                  tt.customRushHourMinutes ?? tt.googleRushHourMinutes;
                 const reg = tt.customRegularMinutes ?? tt.googleRegularMinutes;
                 const night = tt.customNightMinutes ?? tt.googleNightMinutes;
                 const hasCustom =
@@ -118,31 +134,42 @@ export function TravelMatrix({
                       className={cellButton}
                       onClick={() => onEditPair(from.id, to.id)}
                     >
-                      <span className={periodRow}>
-                        <span
-                          className={`${periodValue} ${periodValueRush}`}
-                        >
-                          {rush}
+                      {isTimeVarying ? (
+                        <>
+                          <span className={periodRow}>
+                            <span
+                              className={`${periodValue} ${periodValueRush}`}
+                            >
+                              {rush}
+                            </span>
+                            <span className={periodLabel}>rush</span>
+                          </span>
+                          <span className={periodRow}>
+                            <span
+                              className={`${periodValue} ${periodValueRegular}`}
+                            >
+                              {reg}
+                            </span>
+                            <span className={periodLabel}>reg</span>
+                          </span>
+                          <span className={periodRow}>
+                            <span
+                              className={`${periodValue} ${periodValueNight}`}
+                            >
+                              {night}
+                            </span>
+                            <span className={periodLabel}>night</span>
+                          </span>
+                        </>
+                      ) : (
+                        <span className={singleValue}>
+                          <span className={singleValueNumber}>{reg}</span>
+                          <span className={singleValueUnit}>min</span>
                         </span>
-                        <span className={periodLabel}>rush</span>
-                      </span>
-                      <span className={periodRow}>
-                        <span
-                          className={`${periodValue} ${periodValueRegular}`}
-                        >
-                          {reg}
-                        </span>
-                        <span className={periodLabel}>reg</span>
-                      </span>
-                      <span className={periodRow}>
-                        <span
-                          className={`${periodValue} ${periodValueNight}`}
-                        >
-                          {night}
-                        </span>
-                        <span className={periodLabel}>night</span>
-                      </span>
-                      {hasCustom && <span className={customTag}>· CUSTOM ·</span>}
+                      )}
+                      {hasCustom && (
+                        <span className={customTag}>· CUSTOM ·</span>
+                      )}
                     </button>
                   </td>
                 );
