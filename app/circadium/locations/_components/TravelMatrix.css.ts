@@ -21,10 +21,10 @@ export const matrixTable = style({
 export const headerCell = style({
   padding: "10px 12px",
   borderBottom: `1px solid ${vars.glass.stroke}`,
-  background: vars.glass.bgSoft,
+  background: vars.paper,
   fontWeight: 600,
-  textAlign: "left",
-  verticalAlign: "top",
+  textAlign: "center",
+  verticalAlign: "middle",
   minWidth: 96,
   fontSize: 12,
   color: vars.ink,
@@ -52,6 +52,7 @@ export const cornerCell = style([
 export const headerCellInner = style({
   display: "inline-flex",
   alignItems: "center",
+  justifyContent: "center",
   gap: 5,
 });
 
@@ -59,10 +60,10 @@ export const rowHeaderCell = style({
   padding: "10px 12px",
   borderTop: `1px solid ${vars.glass.stroke}`,
   borderRight: `1px solid ${vars.glass.stroke}`,
-  background: vars.glass.bgSoft,
+  background: vars.paper,
   fontWeight: 600,
-  textAlign: "left",
-  verticalAlign: "top",
+  textAlign: "center",
+  verticalAlign: "middle",
   position: "sticky",
   left: 0,
   zIndex: 1,

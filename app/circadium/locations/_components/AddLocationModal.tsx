@@ -24,6 +24,8 @@ import {
   predictionSub,
   selectedHint,
   fieldHelp,
+  placeMessageSlot,
+  errorSlot,
   errorBlock,
   footer,
   spinning,
@@ -213,15 +215,19 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
               </div>
             )}
           </div>
-          {selected && (
-            <span className={selectedHint}>
-              <MapPin size={11} strokeWidth={2.2} />
-              Place selected
-            </span>
-          )}
+          <div className={placeMessageSlot}>
+            {selected && (
+              <span className={selectedHint}>
+                <MapPin size={11} strokeWidth={2.2} />
+                Place selected
+              </span>
+            )}
+          </div>
         </div>
 
-        {error && <div className={errorBlock}>{error}</div>}
+        <div className={errorSlot}>
+          {error && <div className={errorBlock}>{error}</div>}
+        </div>
 
         <div className={footer}>
           <Button variant="glass" size="sm" onClick={onClose}>

@@ -112,13 +112,17 @@ export const segmentedButton = style({
   },
 });
 
+// Inline status pill that sits in the subHeader between titleSummary and the
+// action cluster. Translucent tinted background; the surrounding flex layout
+// keeps the action cluster right-aligned whether the banner is present or not.
 export const banner = style({
-  margin: "0 28px 12px",
-  padding: "8px 12px",
-  borderRadius: 10,
-  fontSize: 12.5,
+  padding: "5px 12px",
+  borderRadius: 999,
+  fontSize: 11.5,
   fontFamily: vars.font.ui,
   fontWeight: 500,
+  whiteSpace: "nowrap",
+  flexShrink: 0,
   transition: themeTransition,
 });
 

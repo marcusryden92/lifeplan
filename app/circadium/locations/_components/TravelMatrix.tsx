@@ -138,19 +138,19 @@ export function TravelMatrix({
                         <>
                           <span className={periodRow}>
                             <span
-                              className={`${periodValue} ${periodValueRush}`}
-                            >
-                              {rush}
-                            </span>
-                            <span className={periodLabel}>rush</span>
-                          </span>
-                          <span className={periodRow}>
-                            <span
                               className={`${periodValue} ${periodValueRegular}`}
                             >
                               {reg}
                             </span>
                             <span className={periodLabel}>reg</span>
+                          </span>
+                          <span className={periodRow}>
+                            <span
+                              className={`${periodValue} ${periodValueRush}`}
+                            >
+                              {rush}
+                            </span>
+                            <span className={periodLabel}>rush</span>
                           </span>
                           <span className={periodRow}>
                             <span

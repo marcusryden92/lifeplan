@@ -25,6 +25,8 @@ import {
   predictionSub,
   selectedHint,
   cascadeNote,
+  placeMessageSlot,
+  errorSlot,
   errorBlock,
   footer,
   dangerSlot,
@@ -253,22 +255,26 @@ export function EditLocationModal({
               </div>
             )}
           </div>
-          {placeChanged && (
-            <>
-              <span className={selectedHint}>
-                <MapPin size={11} strokeWidth={2.2} />
-                New place selected
-              </span>
-              <div className={cascadeNote}>
-                <AlertTriangle size={12} strokeWidth={2.2} />
-                Saving will drop every travel time touching this location. You
-                can refetch from the matrix.
-              </div>
-            </>
-          )}
+          <div className={placeMessageSlot}>
+            {placeChanged && (
+              <>
+                <span className={selectedHint}>
+                  <MapPin size={11} strokeWidth={2.2} />
+                  New place selected
+                </span>
+                <div className={cascadeNote}>
+                  <AlertTriangle size={12} strokeWidth={2.2} />
+                  Saving will drop every travel time touching this location.
+                  You can refetch from the matrix.
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        {error && <div className={errorBlock}>{error}</div>}
+        <div className={errorSlot}>
+          {error && <div className={errorBlock}>{error}</div>}
+        </div>
 
         <div className={footer}>
           <span className={dangerSlot}>

@@ -219,6 +219,19 @@ export const cascadeNote = style({
   fontFamily: vars.font.ui,
 });
 
+// Reserved-height containers so conditional messages don't shift surrounding
+// content when they appear. Heights match the visible-state intrinsic size.
+export const placeMessageSlot = style({
+  minHeight: 68,
+  display: "flex",
+  flexDirection: "column",
+  gap: 6,
+});
+
+export const errorSlot = style({
+  minHeight: 36,
+});
+
 export const errorBlock = style({
   padding: "8px 12px",
   borderRadius: 8,

@@ -211,6 +211,16 @@ export const fieldHelp = style({
   color: vars.muted,
 });
 
+// Reserved-height containers so conditional messages don't shift surrounding
+// content when they appear.
+export const placeMessageSlot = style({
+  minHeight: 18,
+});
+
+export const errorSlot = style({
+  minHeight: 36,
+});
+
 export const errorBlock = style({
   padding: "8px 12px",
   borderRadius: 8,

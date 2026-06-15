@@ -424,6 +424,10 @@ export default function LocationsPage() {
           {locations.length} of {MAX_LOCATIONS} saved
           {locations.length >= 2 && " · travel times between every pair"}
         </span>
+        {error && <div className={errorBanner}>{error}</div>}
+        {success && !error && (
+          <div className={successBanner}>{success}</div>
+        )}
         <span className={spacer} />
         <div className={headActions}>
           <TransportModeSegmented
@@ -450,9 +454,6 @@ export default function LocationsPage() {
           </Button>
         </div>
       </div>
-
-      {error && <div className={errorBanner}>{error}</div>}
-      {success && <div className={successBanner}>{success}</div>}
 
       <div className={mainGrid}>
         <aside className={rail}>
@@ -538,12 +539,12 @@ export default function LocationsPage() {
             {isTimeVaryingMode && (
               <span className={matrixLegend}>
                 <span>
-                  <span className={`${legendDot} ${legendDotRush}`} />
-                  rush
-                </span>
-                <span>
                   <span className={`${legendDot} ${legendDotRegular}`} />
                   regular
+                </span>
+                <span>
+                  <span className={`${legendDot} ${legendDotRush}`} />
+                  rush
                 </span>
                 <span>
                   <span className={`${legendDot} ${legendDotNight}`} />
@@ -596,6 +597,7 @@ export default function LocationsPage() {
               </div>
             </>
           )}
+
         </section>
       </div>
 
