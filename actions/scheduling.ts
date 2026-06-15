@@ -5,8 +5,10 @@ import type {
   TaskTypeEnum,
   PriorityLevel,
   EnergyLevel,
+  TransportMode,
 } from "@/lib/generated/db-client";
 import type { Prisma } from "@/lib/generated/db-client";
+import type { SerializedTravelTime } from "@/redux/slices/schedulingSettingsSlice";
 
 // User Scheduling Preferences
 export async function fetchUserSchedulingPreferences() {
@@ -27,7 +29,7 @@ export async function fetchUserSchedulingPreferences() {
 export async function fetchAllSchedulingData(): Promise<{
   preferences: {
     bufferTimeMinutes: number;
-    defaultTransportMode: string;
+    defaultTransportMode: TransportMode;
   };
   travelTimes: Array<{
     key: string;
@@ -37,6 +39,9 @@ export async function fetchAllSchedulingData(): Promise<{
     regularMinutes: number;
     nightMinutes: number;
   }>;
+  // Full TravelTime rows, every transport mode — source of truth for the
+  // Locations UI. The engine-shaped travelTimes above is derived from these.
+  allTravelTimes: SerializedTravelTime[];
   locations: Array<{
     id: string;
     name: string;
@@ -54,7 +59,7 @@ export async function fetchAllSchedulingData(): Promise<{
 
   const defaultTransportMode = prefs?.defaultTransportMode ?? "DRIVING";
 
-  // Fetch locations and travel times in parallel
+  // Fetch locations and all-mode travel times in parallel
   const [locations, travelTimes] = await Promise.all([
     db.location.findMany({
       where: { userId: session.user.id },
@@ -62,23 +67,35 @@ export async function fetchAllSchedulingData(): Promise<{
       select: { id: true, name: true, address: true, placeId: true },
     }),
     db.travelTime.findMany({
-      where: {
-        userId: session.user.id,
-        transportMode: defaultTransportMode,
-      },
+      where: { userId: session.user.id },
     }),
   ]);
 
-  // Convert travel times to serializable format with effective values
-  // Key format must match TimeSlotManager.getTravelTime: "fromId->toId"
-  const travelTimeMatrix = travelTimes.map((tt) => ({
-    key: `${tt.fromLocationId}->${tt.toLocationId}`,
+  const allTravelTimes: SerializedTravelTime[] = travelTimes.map((tt) => ({
+    id: tt.id,
     fromLocationId: tt.fromLocationId,
     toLocationId: tt.toLocationId,
-    rushHourMinutes: tt.customRushHourMinutes ?? tt.googleRushHourMinutes,
-    regularMinutes: tt.customRegularMinutes ?? tt.googleRegularMinutes,
-    nightMinutes: tt.customNightMinutes ?? tt.googleNightMinutes,
+    transportMode: tt.transportMode,
+    googleRushHourMinutes: tt.googleRushHourMinutes,
+    googleRegularMinutes: tt.googleRegularMinutes,
+    googleNightMinutes: tt.googleNightMinutes,
+    customRushHourMinutes: tt.customRushHourMinutes,
+    customRegularMinutes: tt.customRegularMinutes,
+    customNightMinutes: tt.customNightMinutes,
   }));
+
+  // Engine-shaped subset for the default mode. Key format must match
+  // TimeSlotManager.getTravelTime: "fromId->toId".
+  const travelTimeMatrix = allTravelTimes
+    .filter((tt) => tt.transportMode === defaultTransportMode)
+    .map((tt) => ({
+      key: `${tt.fromLocationId}->${tt.toLocationId}`,
+      fromLocationId: tt.fromLocationId,
+      toLocationId: tt.toLocationId,
+      rushHourMinutes: tt.customRushHourMinutes ?? tt.googleRushHourMinutes,
+      regularMinutes: tt.customRegularMinutes ?? tt.googleRegularMinutes,
+      nightMinutes: tt.customNightMinutes ?? tt.googleNightMinutes,
+    }));
 
   return {
     preferences: {
@@ -86,6 +103,7 @@ export async function fetchAllSchedulingData(): Promise<{
       defaultTransportMode,
     },
     travelTimes: travelTimeMatrix,
+    allTravelTimes,
     locations,
   };
 }

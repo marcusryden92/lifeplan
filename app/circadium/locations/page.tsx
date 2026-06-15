@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   Car,
@@ -12,14 +12,19 @@ import {
   RefreshCw,
   type LucideIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, Loader } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import * as locationActions from "@/actions/locations";
 import type { RootState } from "@/redux/store";
 import {
   upsertLocation,
   removeLocation,
+  setAllTravelTimes,
+  upsertTravelTime,
+  removeTravelTimesByLocationId,
+  setDefaultTransportMode,
   type SerializedLocation,
+  type SerializedTravelTime,
 } from "@/redux/slices/schedulingSettingsSlice";
 import type { Location, TravelTime } from "@/types/prisma";
 import type { TransportMode } from "@/lib/generated/db-client";
@@ -35,7 +40,6 @@ import {
   page,
   subHeader,
   pageTitle,
-  titleSummary,
   spacer,
   headActions,
   segmentedControl,
@@ -94,6 +98,19 @@ const serialize = (loc: Location): SerializedLocation => ({
   placeId: loc.placeId,
 });
 
+const serializeTravel = (tt: TravelTime): SerializedTravelTime => ({
+  id: tt.id,
+  fromLocationId: tt.fromLocationId,
+  toLocationId: tt.toLocationId,
+  transportMode: tt.transportMode,
+  googleRushHourMinutes: tt.googleRushHourMinutes,
+  googleRegularMinutes: tt.googleRegularMinutes,
+  googleNightMinutes: tt.googleNightMinutes,
+  customRushHourMinutes: tt.customRushHourMinutes,
+  customRegularMinutes: tt.customRegularMinutes,
+  customNightMinutes: tt.customNightMinutes,
+});
+
 export default function LocationsPage() {
   // NOTE: this page does NOT refetch locations on mount. UserProvider already
   // loads them on auth via fetchAllSchedulingData and pushes them into Redux.
@@ -103,19 +120,23 @@ export default function LocationsPage() {
   const dispatch = useDispatch();
   const { categories } = useCalendarProvider();
 
-  // Locations are the source of truth in Redux so this screen's optimistic
-  // mutations are immediately visible to every other screen that selects
-  // from state.schedulingSettings.locations.
+  // Every piece of location/travel-time state lives in Redux so this screen
+  // only mounts the UI — UserProvider loads the data once on auth and
+  // mutations below dispatch through Redux. Tab-switching this page no
+  // longer triggers a server fetch.
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
   );
+  const allTravelTimes = useSelector(
+    (state: RootState) => state.schedulingSettings.allTravelTimes,
+  );
+  const transportMode = useSelector(
+    (state: RootState) => state.schedulingSettings.defaultTransportMode,
+  );
+  const isLoaded = useSelector(
+    (state: RootState) => state.schedulingSettings.isLoaded,
+  );
 
-  // All travel times across every transport mode are kept in memory; the
-  // matrix filters by the active mode in a memo so toggling between
-  // driving/transit/bike/walk is instant instead of a server roundtrip.
-  const [allTravelTimes, setAllTravelTimes] = useState<TravelTime[]>([]);
-  const [transportMode, setTransportMode] = useState<TransportMode>("DRIVING");
-  const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -134,35 +155,6 @@ export default function LocationsPage() {
     setSuccess(msg);
     setTimeout(() => setSuccess(null), 3000);
   };
-
-  // Initial load: travel times for all modes + default transport. Locations
-  // come from Redux via UserProvider so they aren't fetched here.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const [allTimes, defaultMode] = await Promise.all([
-          locationActions.fetchTravelTimes(),
-          locationActions.getDefaultTransportMode(),
-        ]);
-        if (cancelled) return;
-        setAllTravelTimes(allTimes);
-        setTransportMode(defaultMode);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const travelTimes = useMemo(
     () => allTravelTimes.filter((tt) => tt.transportMode === transportMode),
@@ -191,24 +183,26 @@ export default function LocationsPage() {
   );
 
   const selectedTravelTime = editPair
-    ? travelTimes.find(
+    ? (travelTimes.find(
         (tt) =>
           tt.fromLocationId === editPair.from &&
           tt.toLocationId === editPair.to,
-      ) ?? null
+      ) ?? null)
     : null;
   const editFromLocation = editPair
-    ? locations.find((l) => l.id === editPair.from) ?? null
+    ? (locations.find((l) => l.id === editPair.from) ?? null)
     : null;
   const editToLocation = editPair
-    ? locations.find((l) => l.id === editPair.to) ?? null
+    ? (locations.find((l) => l.id === editPair.to) ?? null)
     : null;
 
   const handleTransportChange = async (mode: TransportMode) => {
-    setTransportMode(mode);
+    const previous = transportMode;
+    dispatch(setDefaultTransportMode(mode));
     try {
       await locationActions.updateDefaultTransportMode(mode);
     } catch (err) {
+      dispatch(setDefaultTransportMode(previous));
       console.error("Failed to persist transport mode", err);
     }
   };
@@ -260,15 +254,9 @@ export default function LocationsPage() {
       });
       dispatch(upsertLocation(serialize(updated)));
       if (draft.placeId && draft.placeId !== original.placeId) {
-        // updateLocation deletes affected travel times server-side so the
-        // matrix re-fetches them; drop them client-side to match.
-        setAllTravelTimes((prev) =>
-          prev.filter(
-            (tt) =>
-              tt.fromLocationId !== updated.id &&
-              tt.toLocationId !== updated.id,
-          ),
-        );
+        // updateLocation deletes affected travel times server-side; mirror
+        // that in Redux so the matrix shows them as missing immediately.
+        dispatch(removeTravelTimesByLocationId(updated.id));
       }
       flashSuccess("Location updated.");
     } catch (err) {
@@ -283,17 +271,11 @@ export default function LocationsPage() {
     if (!original) return;
     const deletedId = deletingId;
     const droppedTravels = allTravelTimes.filter(
-      (tt) =>
-        tt.fromLocationId === deletedId || tt.toLocationId === deletedId,
+      (tt) => tt.fromLocationId === deletedId || tt.toLocationId === deletedId,
     );
 
     dispatch(removeLocation(deletedId));
-    setAllTravelTimes((prev) =>
-      prev.filter(
-        (tt) =>
-          tt.fromLocationId !== deletedId && tt.toLocationId !== deletedId,
-      ),
-    );
+    dispatch(removeTravelTimesByLocationId(deletedId));
     setDeletingId(null);
     setEditingLocation(null);
 
@@ -302,7 +284,8 @@ export default function LocationsPage() {
       flashSuccess("Location deleted.");
     } catch (err) {
       dispatch(upsertLocation(original));
-      setAllTravelTimes((prev) => [...prev, ...droppedTravels]);
+      // Restore the dropped travel times one by one so the matrix re-populates.
+      droppedTravels.forEach((tt) => dispatch(upsertTravelTime(tt)));
       setError(err instanceof Error ? err.message : "Failed to delete");
     }
   };
@@ -318,7 +301,7 @@ export default function LocationsPage() {
       const result =
         await locationActions.fetchMissingTravelTimes(transportMode);
       const fresh = await locationActions.fetchTravelTimes();
-      setAllTravelTimes(fresh);
+      dispatch(setAllTravelTimes(fresh.map(serializeTravel)));
       flashSuccess(
         result.fetched > 0
           ? `Fetched ${result.fetched} travel time${result.fetched > 1 ? "s" : ""}.`
@@ -341,10 +324,9 @@ export default function LocationsPage() {
     try {
       setWorking(true);
       setError(null);
-      const result =
-        await locationActions.refreshAllTravelTimes(transportMode);
+      const result = await locationActions.refreshAllTravelTimes(transportMode);
       const fresh = await locationActions.fetchTravelTimes();
-      setAllTravelTimes(fresh);
+      dispatch(setAllTravelTimes(fresh.map(serializeTravel)));
       flashSuccess(`Refreshed ${result.updated} travel times.`);
     } catch (err) {
       setError(
@@ -368,13 +350,9 @@ export default function LocationsPage() {
         travelTimeId,
         overrides,
       );
-      setAllTravelTimes((prev) =>
-        prev.map((tt) => (tt.id === travelTimeId ? updated : tt)),
-      );
+      dispatch(upsertTravelTime(serializeTravel(updated)));
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save overrides",
-      );
+      setError(err instanceof Error ? err.message : "Failed to save overrides");
     }
   };
 
@@ -390,12 +368,10 @@ export default function LocationsPage() {
               tt.customRegularMinutes !== null ||
               tt.customNightMinutes !== null,
           )
-          .map((tt) =>
-            locationActions.clearTravelTimeOverrides(tt.id),
-          ),
+          .map((tt) => locationActions.clearTravelTimeOverrides(tt.id)),
       );
       const fresh = await locationActions.fetchTravelTimes();
-      setAllTravelTimes(fresh);
+      dispatch(setAllTravelTimes(fresh.map(serializeTravel)));
       flashSuccess("All overrides cleared.");
     } catch (err) {
       setError(
@@ -406,12 +382,23 @@ export default function LocationsPage() {
     }
   };
 
-  if (loading) {
+  if (!isLoaded) {
     return (
       <div className={page}>
         <div className={subHeader}>
           <h1 className={pageTitle}>Locations</h1>
-          <span className={titleSummary}>Loading…</span>
+        </div>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 28px 28px",
+            marginBottom: "50px",
+          }}
+        >
+          <Loader size="md" label="Loading locations" />
         </div>
       </div>
     );
@@ -422,9 +409,7 @@ export default function LocationsPage() {
       <div className={subHeader}>
         <h1 className={pageTitle}>Locations</h1>
         {error && <div className={errorBanner}>{error}</div>}
-        {success && !error && (
-          <div className={successBanner}>{success}</div>
-        )}
+        {success && !error && <div className={successBanner}>{success}</div>}
         <span className={spacer} />
         <div className={headActions}>
           <TransportModeSegmented
@@ -594,7 +579,6 @@ export default function LocationsPage() {
               </div>
             </>
           )}
-
         </section>
       </div>
 
@@ -632,7 +616,8 @@ export default function LocationsPage() {
         body={
           <p style={{ margin: 0 }}>
             Delete &ldquo;
-            {locations.find((l) => l.id === deletingId)?.name ?? "this location"}
+            {locations.find((l) => l.id === deletingId)?.name ??
+              "this location"}
             &rdquo;? This will also remove all travel times to and from it.
             Items and categories that point at it will fall back to
             &ldquo;Anywhere&rdquo;.

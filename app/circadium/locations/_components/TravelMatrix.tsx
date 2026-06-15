@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { MapPin, RefreshCw } from "lucide-react";
-import type { TravelTime } from "@/types/prisma";
 import type { TransportMode } from "@/lib/generated/db-client";
+import type { SerializedTravelTime } from "@/redux/slices/schedulingSettingsSlice";
 
 // Only id + name are needed for the matrix, so the prop accepts the narrower
 // SerializedLocation shape kept in Redux as well as the full Prisma Location.
@@ -34,7 +34,7 @@ import {
 
 interface TravelMatrixProps {
   locations: MatrixLocation[];
-  travelTimes: TravelTime[];
+  travelTimes: SerializedTravelTime[];
   transportMode: TransportMode;
   onEditPair: (fromId: string, toId: string) => void;
   onFetchMissing: () => void;
@@ -52,7 +52,7 @@ export function TravelMatrix({
   onFetchMissing,
 }: TravelMatrixProps) {
   const isTimeVarying = TIME_VARYING_MODES.has(transportMode);
-  const lookup = new Map<string, TravelTime>();
+  const lookup = new Map<string, SerializedTravelTime>();
   for (const tt of travelTimes) {
     lookup.set(`${tt.fromLocationId}->${tt.toLocationId}`, tt);
   }

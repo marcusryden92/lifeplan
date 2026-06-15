@@ -7,6 +7,8 @@ import { setUser } from "@/redux/slices/userSlice";
 import {
   setSchedulingSettings,
   setTravelTimeMatrix,
+  setAllTravelTimes,
+  setDefaultTransportMode,
   setLocations,
 } from "@/redux/slices/schedulingSettingsSlice";
 import { fetchAllSchedulingData } from "@/actions/scheduling";
@@ -24,19 +26,16 @@ export default function UserProvider({ children }: { children: ReactNode }) {
 
       // Load user's scheduling settings, travel times, and locations
       fetchAllSchedulingData().then((data) => {
-        // Set scheduling preferences
         dispatch(
           setSchedulingSettings({
             bufferTimeMinutes: data.preferences.bufferTimeMinutes,
           })
         );
-
-        // Store travel times as serializable array (converted to Map when needed)
+        dispatch(setDefaultTransportMode(data.preferences.defaultTransportMode));
         if (data.travelTimes.length > 0) {
           dispatch(setTravelTimeMatrix(data.travelTimes));
         }
-
-        // Store locations
+        dispatch(setAllTravelTimes(data.allTravelTimes));
         dispatch(setLocations(data.locations));
       });
     }

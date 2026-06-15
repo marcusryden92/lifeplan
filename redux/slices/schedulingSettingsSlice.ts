@@ -1,4 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import type { TransportMode } from "@/lib/generated/db-client";
 import type { TravelTimeEntry } from "@/utils/calendar-generation/models/SchedulingModels";
 import {
   DEFAULT_STRATEGY_WEIGHTS,
@@ -21,6 +22,22 @@ export type SerializedLocation = {
   name: string;
   address: string;
   placeId: string;
+};
+
+// Full row shape the Locations UI needs (every mode, with custom overrides).
+// Distinct from SerializedTravelTimeEntry, which is the engine-shaped subset
+// derived from the user's default mode only.
+export type SerializedTravelTime = {
+  id: string;
+  fromLocationId: string;
+  toLocationId: string;
+  transportMode: TransportMode;
+  googleRushHourMinutes: number;
+  googleRegularMinutes: number;
+  googleNightMinutes: number;
+  customRushHourMinutes: number | null;
+  customRegularMinutes: number | null;
+  customNightMinutes: number | null;
 };
 
 // Strategy configuration types (mutable versions of the readonly defaults)
@@ -59,6 +76,11 @@ export type SchedulingSettings = {
   enableTravelEvents: boolean;
   // Store as array for Redux serialization - convert to Map when needed
   travelTimeMatrix: SerializedTravelTimeEntry[] | null;
+  // Full TravelTime rows, every transport mode. The Locations UI reads/writes
+  // through this; the engine-shaped travelTimeMatrix above is the derived
+  // single-mode subset.
+  allTravelTimes: SerializedTravelTime[];
+  defaultTransportMode: TransportMode;
   locations: SerializedLocation[];
   isLoaded: boolean;
   // Debug strategy configuration
@@ -70,6 +92,8 @@ const initialState: SchedulingSettings = {
   bufferTimeMinutes: 10, // Default value
   enableTravelEvents: false, // Travel events disabled by default
   travelTimeMatrix: null,
+  allTravelTimes: [],
+  defaultTransportMode: "DRIVING",
   locations: [],
   isLoaded: false,
   // Initialize with defaults from defaultStrategy.ts
@@ -144,6 +168,35 @@ const schedulingSettingsSlice = createSlice({
     removeLocation: (state, action: PayloadAction<string>) => {
       state.locations = state.locations.filter((l) => l.id !== action.payload);
     },
+    setAllTravelTimes: (
+      state,
+      action: PayloadAction<SerializedTravelTime[]>,
+    ) => {
+      state.allTravelTimes = action.payload;
+    },
+    upsertTravelTime: (state, action: PayloadAction<SerializedTravelTime>) => {
+      const idx = state.allTravelTimes.findIndex(
+        (tt) => tt.id === action.payload.id,
+      );
+      if (idx === -1) state.allTravelTimes.push(action.payload);
+      else state.allTravelTimes[idx] = action.payload;
+    },
+    removeTravelTimesByLocationId: (
+      state,
+      action: PayloadAction<string>,
+    ) => {
+      state.allTravelTimes = state.allTravelTimes.filter(
+        (tt) =>
+          tt.fromLocationId !== action.payload &&
+          tt.toLocationId !== action.payload,
+      );
+    },
+    setDefaultTransportMode: (
+      state,
+      action: PayloadAction<TransportMode>,
+    ) => {
+      state.defaultTransportMode = action.payload;
+    },
     // Debug strategy config reducers
     setDebugDashboardEnabled: (state, action: PayloadAction<boolean>) => {
       state.debugDashboardEnabled = action.payload;
@@ -186,6 +239,10 @@ export const {
   setLocations,
   upsertLocation,
   removeLocation,
+  setAllTravelTimes,
+  upsertTravelTime,
+  removeTravelTimesByLocationId,
+  setDefaultTransportMode,
   setDebugDashboardEnabled,
   setStrategyWeights,
   setLocationGroupingScores,

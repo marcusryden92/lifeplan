@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui";
-import type { TravelTime } from "@/types/prisma";
 import type { TransportMode } from "@/lib/generated/db-client";
+import type { SerializedTravelTime } from "@/redux/slices/schedulingSettingsSlice";
 
 // The modal only displays the name of each endpoint, so it accepts any shape
 // that carries an id + name (full Prisma Location or the narrower Redux row).
@@ -33,7 +33,7 @@ const TIME_VARYING_MODES = new Set<TransportMode>(["DRIVING", "TRANSIT"]);
 
 interface EditTravelTimeModalProps {
   open: boolean;
-  travelTime: TravelTime | null;
+  travelTime: SerializedTravelTime | null;
   fromLocation: EndpointLocation | null;
   toLocation: EndpointLocation | null;
   transportMode: TransportMode;
