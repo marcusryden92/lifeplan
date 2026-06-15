@@ -49,6 +49,7 @@ export function useFetchCalendarData(
 
         // Dispatch to Redux
         dispatch(calendarSlice.actions.updateCalendarArrayData(newData));
+        dispatch(calendarSlice.actions.markCalendarLoaded());
         initializeState(
           newData.planner,
           newData.calendar,

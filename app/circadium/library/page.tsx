@@ -19,8 +19,10 @@ import {
   Folder,
   MapPin,
 } from "lucide-react";
-import { Button, Caption, TypeBadge } from "@/components/ui";
+import { useSelector } from "react-redux";
+import { Button, Caption, Loader, TypeBadge } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import type { RootState } from "@/redux/store";
 import {
   buildCategoryTree,
   getCategoryAndDescendants,
@@ -150,9 +152,7 @@ function isInSmartView(item: Planner, view: SmartView, now: Date): boolean {
   }
 }
 
-function typeBadgeTone(
-  type: string,
-): "type" | "info" | "done" | "neutral" {
+function typeBadgeTone(type: string): "type" | "info" | "done" | "neutral" {
   switch (type) {
     case "goal":
       return "done";
@@ -221,6 +221,7 @@ function Segmented<T extends string>({
 export default function LibraryPage() {
   const router = useRouter();
   const { planner, categories } = useCalendarProvider();
+  const isLoaded = useSelector((state: RootState) => state.calendar.isLoaded);
   const now = useMemo(() => new Date(), []);
 
   const [selection, setSelection] = useState<Selection>({ kind: "all" });
@@ -377,7 +378,8 @@ export default function LibraryPage() {
       <div className={subHeader}>
         <h1 className={pageTitle}>Library</h1>
         <span className={titleSummary}>
-          {planner.length} items · {categories.length} categor{categories.length === 1 ? "y" : "ies"}
+          {planner.length} items · {categories.length} categor
+          {categories.length === 1 ? "y" : "ies"}
         </span>
         <span className={spacer} />
         <div className={actionCluster}>
@@ -411,9 +413,7 @@ export default function LibraryPage() {
                 <button
                   key={v.key}
                   className={`${railRow} ${active ? railRowActive : ""}`}
-                  onClick={() =>
-                    setSelection({ kind: "view", view: v.key })
-                  }
+                  onClick={() => setSelection({ kind: "view", view: v.key })}
                 >
                   <span className={railRowIcon}>
                     <Icon size={13} strokeWidth={2} />
@@ -434,7 +434,13 @@ export default function LibraryPage() {
           <div className={railSection}>
             <div className={railSectionHead}>Categories</div>
             {categoryTree.length === 0 ? (
-              <div style={{ padding: "8px", fontSize: 12.5, color: "var(--muted)" }}>
+              <div
+                style={{
+                  padding: "8px",
+                  fontSize: 12.5,
+                  color: "var(--muted)",
+                }}
+              >
                 <Caption>No areas yet</Caption>
               </div>
             ) : (
@@ -462,7 +468,11 @@ export default function LibraryPage() {
               return (
                 <span
                   key={i}
-                  style={{ display: "inline-flex", gap: 8, alignItems: "center" }}
+                  style={{
+                    display: "inline-flex",
+                    gap: 8,
+                    alignItems: "center",
+                  }}
                 >
                   <span className={breadcrumbSep}>›</span>
                   <span className={isLast ? breadcrumbCurrent : undefined}>
@@ -512,7 +522,11 @@ export default function LibraryPage() {
 
             <div className={filterRow}>
               <div className={searchWrap}>
-                <Search size={13} strokeWidth={2} style={{ color: "var(--muted)" }} />
+                <Search
+                  size={13}
+                  strokeWidth={2}
+                  style={{ color: "var(--muted)" }}
+                />
                 <input
                   className={searchInput}
                   placeholder={`Search ${selectionLabel.toLowerCase()}…`}
@@ -523,7 +537,19 @@ export default function LibraryPage() {
             </div>
           </div>
 
-          {filteredItems.length === 0 ? (
+          {!isLoaded ? (
+            <div
+              className={emptyState}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: "200px",
+              }}
+            >
+              <Loader size="md" label="Loading items" />
+            </div>
+          ) : filteredItems.length === 0 ? (
             <div className={emptyState}>
               <div className={emptyStateTitle}>Nothing here yet</div>
               <div>
@@ -610,17 +636,15 @@ function TreeNode({
           <span className={treeChevronSpacer} />
         )}
         {node.color ? (
-          <span
-            className={treeColorDot}
-            style={{ background: node.color }}
-          />
+          <span className={treeColorDot} style={{ background: node.color }} />
         ) : (
           <span className={treeNoColor} />
         )}
         <span className={railRowLabel}>{node.name}</span>
         <span className={railRowCount}>{count}</span>
       </button>
-      {hasChildren && isOpen &&
+      {hasChildren &&
+        isOpen &&
         node.children.map((child) => (
           <TreeNode
             key={child.id}
@@ -688,7 +712,13 @@ function ItemRow({
                 }}
               />
             )}
-            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+            <span
+              style={{
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
               {category.name}
             </span>
           </>

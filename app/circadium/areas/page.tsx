@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { Loader } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   upsertCategory,
@@ -49,6 +50,9 @@ export default function AreasPage() {
   const { planner, categories } = useCalendarProvider();
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
+  );
+  const isLoaded = useSelector(
+    (state: RootState) => state.calendar.isLoaded,
   );
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -255,7 +259,20 @@ export default function AreasPage() {
         <aside className={rail}>
           <div className={railHead}>Categories</div>
           <div className={railBody}>
-            {tree.length === 0 ? (
+            {!isLoaded ? (
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "16px 8px",
+                }}
+              >
+                <Loader size="md" label="Loading categories" />
+              </div>
+            ) : tree.length === 0 ? (
               <div
                 style={{
                   padding: "12px 8px",
@@ -299,7 +316,11 @@ export default function AreasPage() {
         </aside>
 
         <section className={mainCard}>
-          {selected ? (
+          {!isLoaded ? (
+            <div className={emptyMain}>
+              <Loader size="md" label="Loading categories" />
+            </div>
+          ) : selected ? (
             <AreaEditor
               category={selected}
               categories={categories}

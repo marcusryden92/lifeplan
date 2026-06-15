@@ -10,7 +10,7 @@ import {
 } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Check, SquarePen } from "lucide-react";
-import { Button, Caption } from "@/components/ui";
+import { Button, Caption, Loader } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { DraggableContextProvider } from "@/components/draggable/DraggableContext";
 import * as categoryActions from "@/actions/categories";
@@ -159,8 +159,16 @@ export default function ItemDetailLayout({
   if (loadingCategories) {
     return (
       <div className={page}>
-        <div className={innerWrap}>
-          <Caption>Loading…</Caption>
+        <div
+          className={innerWrap}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            minHeight: 240,
+          }}
+        >
+          <Loader size="md" label="Loading item" />
         </div>
       </div>
     );

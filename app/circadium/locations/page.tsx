@@ -540,6 +540,10 @@ export default function LocationsPage() {
             <div className={matrixEmpty}>
               <div>Add at least 2 locations to see the travel matrix.</div>
             </div>
+          ) : working ? (
+            <div className={matrixEmpty}>
+              <Loader size="md" label="Refreshing travel times" />
+            </div>
           ) : travelTimes.length === 0 ? (
             <div className={matrixEmpty}>
               <div>No travel times yet for {transportMode.toLowerCase()}.</div>

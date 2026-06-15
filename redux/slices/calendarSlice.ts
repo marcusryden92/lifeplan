@@ -6,6 +6,10 @@ type CalendarData = {
   calendar: SimpleEvent[];
   template: EventTemplate[];
   categories: Category[];
+  // Flipped to true once useFetchCalendarData seeds the slice. Pages gate
+  // their empty-state UI on this so a fresh load doesn't briefly read as
+  // "no items" / "no categories" before the fetch returns.
+  isLoaded: boolean;
 };
 
 const initialState: CalendarData = {
@@ -13,6 +17,7 @@ const initialState: CalendarData = {
   calendar: [],
   template: [],
   categories: [],
+  isLoaded: false,
 };
 
 const calendarSlice = createSlice({
@@ -35,6 +40,13 @@ const calendarSlice = createSlice({
         state.categories = action.payload.categories;
       }
     },
+    // Dedicated flag-flip — kept out of updateCalendarArrayData because that
+    // reducer also fires from updateAllCalendarStates (which runs from a
+    // bufferTimeMinutes useEffect with empty arrays before the initial fetch
+    // resolves). Only useFetchCalendarData should call this.
+    markCalendarLoaded: (state) => {
+      state.isLoaded = true;
+    },
     setCategories: (state, action: PayloadAction<Category[]>) => {
       state.categories = action.payload;
     },
@@ -53,6 +65,7 @@ const calendarSlice = createSlice({
 
 export const {
   updateCalendarArrayData,
+  markCalendarLoaded,
   setCategories,
   upsertCategory,
   removeCategory,
