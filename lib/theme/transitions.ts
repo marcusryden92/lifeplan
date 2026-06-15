@@ -2,7 +2,7 @@
 // Tweak any value here to retune that category of motion across the app.
 export const DURATIONS = {
   // Light/dark color, border, shadow swaps.
-  theme: 1,
+  theme: 0.3,
 
   // Button hover/state changes (color shifts when entering/leaving hover).
   buttonState: 1,

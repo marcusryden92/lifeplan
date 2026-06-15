@@ -187,6 +187,11 @@ export const predictionRow = style({
   },
 });
 
+export const predictionRowActive = style({
+  background: vars.glass.bgDeep,
+  boxShadow: `inset 3px 0 0 ${vars.ink}`,
+});
+
 export const predictionMain = style({
   fontSize: 13,
   fontWeight: 600,

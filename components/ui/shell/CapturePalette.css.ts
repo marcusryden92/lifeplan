@@ -34,8 +34,10 @@ export const dialog = style({
   position: "fixed",
   zIndex: 51,
   top: "20%",
-  left: "50%",
-  transform: "translateX(-50%)",
+  left: 0,
+  right: 0,
+  marginLeft: "auto",
+  marginRight: "auto",
   width: "min(560px, calc(100vw - 32px))",
   background: vars.glass.bgDeep,
   backdropFilter: "blur(28px) saturate(180%)",
@@ -56,7 +58,8 @@ export const dialog = style({
       bottom: 0,
       left: 0,
       right: 0,
-      transform: "none",
+      marginLeft: 0,
+      marginRight: 0,
       width: "100%",
       borderRadius: "22px 22px 0 0",
       animationName: sheetUp,
@@ -97,6 +100,10 @@ export const hintsRow = style({
 });
 
 export const kbd = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: 18,
   fontFamily: vars.font.ui,
   fontSize: 10.5,
   fontWeight: 600,

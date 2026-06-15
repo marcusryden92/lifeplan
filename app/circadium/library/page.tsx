@@ -16,8 +16,6 @@ import {
   Flag,
   CheckCircle2,
   Layers,
-  Folder,
-  MapPin,
 } from "lucide-react";
 import { useSelector } from "react-redux";
 import { Button, Caption, Loader, TypeBadge } from "@/components/ui";

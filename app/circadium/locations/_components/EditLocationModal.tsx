@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Loader2, MapPin, Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui";
 import * as locationActions from "@/actions/locations";
+import { useListKeyboardNav } from "@/hooks/useListKeyboardNav";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import {
   MODAL_FADE_MS,
@@ -21,6 +22,7 @@ import {
   plainInput,
   predictions,
   predictionRow,
+  predictionRowActive,
   predictionMain,
   predictionSub,
   selectedHint,
@@ -142,13 +144,19 @@ export function EditLocationModal({
     };
   }, [query, sessionToken, selectedPlace]);
 
-  if (!shouldRender || !location) return null;
-
   const handleSelect = (p: Prediction) => {
     setSelectedPlace(p);
     setQuery(p.description);
     setPredictionList([]);
   };
+
+  const predictionsVisible = predictionList.length > 0 && !selectedPlace;
+  const keyboardNav = useListKeyboardNav<Prediction>(
+    predictionsVisible ? predictionList : [],
+    handleSelect,
+  );
+
+  if (!shouldRender || !location) return null;
 
   const nameChanged = name.trim() !== "" && name.trim() !== location.name;
   // Picking the prediction for the same place (e.g. typing the original
@@ -233,19 +241,24 @@ export function EditLocationModal({
                   setSelectedPlace(null);
                 }
               }}
+              onKeyDown={keyboardNav.onKeyDown}
             />
             {searching && (
               <span className={`${searchSpinner} ${spinning}`}>
                 <Loader2 size={14} strokeWidth={2.2} />
               </span>
             )}
-            {predictionList.length > 0 && !selectedPlace && (
-              <div className={predictions}>
-                {predictionList.map((p) => (
+            {predictionsVisible && (
+              <div className={predictions} ref={keyboardNav.containerRef}>
+                {predictionList.map((p, i) => (
                   <button
                     key={p.placeId}
                     type="button"
-                    className={predictionRow}
+                    data-knav-index={i}
+                    className={`${predictionRow} ${
+                      keyboardNav.activeIndex === i ? predictionRowActive : ""
+                    }`}
+                    onMouseEnter={() => keyboardNav.setActiveIndex(i)}
                     onClick={() => handleSelect(p)}
                   >
                     <span className={predictionMain}>{p.mainText}</span>

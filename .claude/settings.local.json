@@ -99,7 +99,8 @@
       "Bash(echo \"exit: $?\")",
       "Bash(npx prisma *)",
       "PowerShell(Move-Item -Path \"app/circadium/areas\" -Destination \"app/circadium/life-areas\")",
-      "Bash(pnpm next *)"
+      "Bash(pnpm next *)",
+      "Bash(echo \"EXIT:$?\")"
     ]
   }
 }

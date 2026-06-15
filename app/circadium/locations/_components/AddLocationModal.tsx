@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Search, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui";
 import * as locationActions from "@/actions/locations";
+import { useListKeyboardNav } from "@/hooks/useListKeyboardNav";
 import {
   MODAL_FADE_MS,
   overlay,
@@ -20,6 +21,7 @@ import {
   plainInput,
   predictions,
   predictionRow,
+  predictionRowActive,
   predictionMain,
   predictionSub,
   selectedHint,
@@ -113,14 +115,20 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
     };
   }, [query, sessionToken, selected]);
 
-  if (!shouldRender) return null;
-
   const handleSelect = (p: Prediction) => {
     setSelected(p);
     setQuery(p.description);
     setPredictionList([]);
     if (!name) setName(p.mainText);
   };
+
+  const predictionsVisible = predictionList.length > 0 && !selected;
+  const keyboardNav = useListKeyboardNav<Prediction>(
+    predictionsVisible ? predictionList : [],
+    handleSelect,
+  );
+
+  if (!shouldRender) return null;
 
   const handleSubmit = async () => {
     if (!selected) {
@@ -193,19 +201,24 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
                   setSelected(null);
                 }
               }}
+              onKeyDown={keyboardNav.onKeyDown}
             />
             {searching && (
               <span className={`${searchSpinner} ${spinning}`}>
                 <Loader2 size={14} strokeWidth={2.2} />
               </span>
             )}
-            {predictionList.length > 0 && !selected && (
-              <div className={predictions}>
-                {predictionList.map((p) => (
+            {predictionsVisible && (
+              <div className={predictions} ref={keyboardNav.containerRef}>
+                {predictionList.map((p, i) => (
                   <button
                     key={p.placeId}
                     type="button"
-                    className={predictionRow}
+                    data-knav-index={i}
+                    className={`${predictionRow} ${
+                      keyboardNav.activeIndex === i ? predictionRowActive : ""
+                    }`}
+                    onMouseEnter={() => keyboardNav.setActiveIndex(i)}
                     onClick={() => handleSelect(p)}
                   >
                     <span className={predictionMain}>{p.mainText}</span>

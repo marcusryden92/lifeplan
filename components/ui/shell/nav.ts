@@ -14,7 +14,7 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   href: string | null;
-  kind: "route" | "capture";
+  kind: "route";
 };
 
 export const NAV_ITEMS: NavItem[] = [
@@ -32,7 +32,13 @@ export const NAV_ITEMS: NavItem[] = [
     href: "/circadium/calendar",
     kind: "route",
   },
-  { key: "capture", label: "Capture", icon: Plus, href: null, kind: "capture" },
+  {
+    key: "capture",
+    label: "Capture",
+    icon: Plus,
+    href: "/circadium/capture",
+    kind: "route",
+  },
   {
     key: "library",
     label: "Library",
