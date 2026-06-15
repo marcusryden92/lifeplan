@@ -431,6 +431,11 @@ export const matrixFooter = style({
   transition: themeTransition,
 });
 
+export const amberKeyword = style({
+  color: vars.status.warning,
+  fontWeight: 700,
+});
+
 export const matrixFooterAction = style({
   background: "transparent",
   border: "none",

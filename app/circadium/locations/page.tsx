@@ -70,6 +70,7 @@ import {
   matrixEmpty,
   matrixFooter,
   matrixFooterAction,
+  amberKeyword,
 } from "./page.css";
 
 const MAX_LOCATIONS = 10;
@@ -582,8 +583,8 @@ export default function LocationsPage() {
               />
               <div className={matrixFooter}>
                 <span>
-                  Cells tinted amber are custom overrides; click any cell to
-                  edit all three periods.
+                  Cells tinted <span className={amberKeyword}>amber</span> are
+                  custom overrides; click any cell to edit all three periods.
                 </span>
                 <span style={{ flex: 1 }} />
                 <button

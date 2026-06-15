@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { MapPin, RefreshCw } from "lucide-react";
 import type { TravelTime } from "@/types/prisma";
 import type { TransportMode } from "@/lib/generated/db-client";
@@ -23,7 +24,6 @@ import {
   periodValueRegular,
   periodValueNight,
   periodLabel,
-  customTag,
   missingBlock,
   missingLabel,
   missingHint,
@@ -57,14 +57,45 @@ export function TravelMatrix({
     lookup.set(`${tt.fromLocationId}->${tt.toLocationId}`, tt);
   }
 
+  // Crosshair hover trace — tracked by array index so "to the left" and
+  // "above" are well-defined relative to the rendered table order.
+  const [hovered, setHovered] = useState<{
+    fromIdx: number;
+    toIdx: number;
+  } | null>(null);
+
+  // Cells light up at one of two intensities. The hovered cell is "active";
+  // the row leading back to its row-header and the column leading up to its
+  // column-header are "trail".
+  const cellTrace = (
+    fromIdx: number,
+    toIdx: number,
+  ): "active" | "trail" | undefined => {
+    if (!hovered) return undefined;
+    if (fromIdx === hovered.fromIdx && toIdx === hovered.toIdx) return "active";
+    if (fromIdx === hovered.fromIdx && toIdx < hovered.toIdx) return "trail";
+    if (toIdx === hovered.toIdx && fromIdx < hovered.fromIdx) return "trail";
+    return undefined;
+  };
+
+  const colHeaderTrace = (toIdx: number): "trail" | undefined =>
+    hovered?.toIdx === toIdx ? "trail" : undefined;
+
+  const rowHeaderTrace = (fromIdx: number): "trail" | undefined =>
+    hovered?.fromIdx === fromIdx ? "trail" : undefined;
+
   return (
-    <div className={matrixWrap}>
+    <div className={matrixWrap} onMouseLeave={() => setHovered(null)}>
       <table className={matrixTable}>
         <thead>
           <tr>
             <th className={cornerCell}>from / to</th>
-            {locations.map((loc) => (
-              <th key={loc.id} className={headerCell}>
+            {locations.map((loc, toIdx) => (
+              <th
+                key={loc.id}
+                className={headerCell}
+                data-trace={colHeaderTrace(toIdx)}
+              >
                 <span className={headerCellInner}>
                   <MapPin size={11} strokeWidth={2} />
                   {loc.name}
@@ -74,18 +105,26 @@ export function TravelMatrix({
           </tr>
         </thead>
         <tbody>
-          {locations.map((from) => (
+          {locations.map((from, fromIdx) => (
             <tr key={from.id}>
-              <th className={rowHeaderCell}>
+              <th
+                className={rowHeaderCell}
+                data-trace={rowHeaderTrace(fromIdx)}
+              >
                 <span className={headerCellInner}>
                   <MapPin size={11} strokeWidth={2} />
                   {from.name}
                 </span>
               </th>
-              {locations.map((to) => {
+              {locations.map((to, toIdx) => {
                 if (from.id === to.id) {
                   return (
-                    <td key={to.id} className={cell}>
+                    <td
+                      key={to.id}
+                      className={cell}
+                      data-trace={cellTrace(fromIdx, toIdx)}
+                      onMouseEnter={() => setHovered({ fromIdx, toIdx })}
+                    >
                       <div className={cellSelf}>/</div>
                     </td>
                   );
@@ -95,7 +134,12 @@ export function TravelMatrix({
 
                 if (!tt) {
                   return (
-                    <td key={to.id} className={cell}>
+                    <td
+                      key={to.id}
+                      className={cell}
+                      data-trace={cellTrace(fromIdx, toIdx)}
+                      onMouseEnter={() => setHovered({ fromIdx, toIdx })}
+                    >
                       <button
                         type="button"
                         className={cellButton}
@@ -128,6 +172,8 @@ export function TravelMatrix({
                     key={to.id}
                     className={cell}
                     data-custom={hasCustom ? "true" : "false"}
+                    data-trace={cellTrace(fromIdx, toIdx)}
+                    onMouseEnter={() => setHovered({ fromIdx, toIdx })}
                   >
                     <button
                       type="button"
@@ -166,9 +212,6 @@ export function TravelMatrix({
                           <span className={singleValueNumber}>{reg}</span>
                           <span className={singleValueUnit}>min</span>
                         </span>
-                      )}
-                      {hasCustom && (
-                        <span className={customTag}>· CUSTOM ·</span>
                       )}
                     </button>
                   </td>

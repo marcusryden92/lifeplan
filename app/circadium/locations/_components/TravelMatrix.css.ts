@@ -18,6 +18,11 @@ export const matrixTable = style({
   color: vars.ink,
 });
 
+// Trace highlight motion — fast enough to track a cursor moving across the
+// matrix without lag, but with a touch of easing so it doesn't snap.
+const TRACE_TRANSITION =
+  "background-color 200ms cubic-bezier(0.4, 0, 0.2, 1)";
+
 export const headerCell = style({
   padding: "10px 12px",
   borderBottom: `1px solid ${vars.glass.stroke}`,
@@ -31,7 +36,9 @@ export const headerCell = style({
   position: "sticky",
   top: 0,
   zIndex: 2,
-  transition: themeTransition,
+  // Override themeTransition for background-color so trace hover doesn't take
+  // a full second to fade in/out. Other theme-driven props keep slow timing.
+  transition: `${TRACE_TRANSITION}, color 1s ease, border-color 1s ease, box-shadow 1s ease`,
 });
 
 export const cornerCell = style([
@@ -67,7 +74,7 @@ export const rowHeaderCell = style({
   position: "sticky",
   left: 0,
   zIndex: 1,
-  transition: themeTransition,
+  transition: `${TRACE_TRANSITION}, color 1s ease, border-color 1s ease, box-shadow 1s ease`,
 });
 
 export const cell = style({
@@ -114,6 +121,7 @@ export const cellSelf = style({
   background: vars.glass.bgSoft,
   textAlign: "center",
   fontSize: 12,
+  transition: TRACE_TRANSITION,
 });
 
 export const periodRow = style({
@@ -165,14 +173,6 @@ export const periodLabel = style({
   fontWeight: 600,
 });
 
-export const customTag = style({
-  marginTop: 4,
-  fontSize: 9,
-  letterSpacing: "0.14em",
-  fontWeight: 700,
-  color: vars.status.warning,
-});
-
 globalStyle(`${cell}[data-custom="true"] > button`, {
   background: `color-mix(in srgb, ${vars.status.warning} 12%, transparent)`,
 });
@@ -180,6 +180,27 @@ globalStyle(`${cell}[data-custom="true"] > button`, {
 globalStyle(`${cell}[data-custom="true"] > button:hover`, {
   background: `color-mix(in srgb, ${vars.status.warning} 20%, transparent)`,
 });
+
+// Crosshair trace — hovered cell ("active") and the row/column lead-in cells
+// + their headers ("trail"). Applied to the inner button OR self-div via the
+// universal child selector so both render the same way.
+globalStyle(`${cell}[data-trace="active"] > *`, {
+  background: `color-mix(in srgb, ${vars.ink} 14%, transparent)`,
+});
+
+globalStyle(`${cell}[data-trace="trail"] > *`, {
+  background: `color-mix(in srgb, ${vars.ink} 7%, transparent)`,
+});
+
+// Headers paint their own background-color directly so the sticky paper fill
+// stays opaque; tint with a paper-mixed solid color so scrolling content
+// still can't bleed through.
+globalStyle(
+  `${headerCell}[data-trace="trail"], ${rowHeaderCell}[data-trace="trail"]`,
+  {
+    background: `color-mix(in srgb, ${vars.paper}, ${vars.ink} 8%)`,
+  },
+);
 
 export const missingBlock = style({
   display: "flex",
