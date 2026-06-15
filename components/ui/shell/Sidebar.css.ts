@@ -130,10 +130,75 @@ export const spacer = style({ flex: 1 });
 
 export const footerRow = style({
   padding: "12px 5px 4px",
+  // Reset button borders explicitly per side so the top divider survives — a
+  // shorthand `border: "none"` would clobber the borderTop set below.
+  borderRight: "none",
+  borderBottom: "none",
+  borderLeft: "none",
   borderTop: `1px solid ${vars.rule}`,
   display: "flex",
   alignItems: "center",
   marginTop: 8,
+  background: "transparent",
+  color: "inherit",
+  cursor: "pointer",
+  width: "100%",
+  textAlign: "left",
+  transition: buttonTransition,
+});
+
+export const userMenu = style({
+  // Mounted on document.body via createPortal so the sidebar's own
+  // backdrop-filter can't trap the blur in a child stacking context.
+  // top/left are set inline from the trigger's viewport rect; the transform
+  // shifts the menu up by its own height minus 20px so the bottom edge dips
+  // 20px into the footer button, giving the diagonal overlap effect.
+  position: "fixed",
+  transform: "translateY(calc(-100% + 20px))",
+  width: 200,
+  display: "flex",
+  flexDirection: "column",
+  padding: 6,
+  borderRadius: 14,
+  background: vars.glass.bgDeep,
+  backdropFilter: "blur(28px) saturate(180%)",
+  WebkitBackdropFilter: "blur(28px) saturate(180%)",
+  border: `1px solid ${vars.glass.stroke}`,
+  boxShadow: vars.shadow.panel,
+  zIndex: 100,
+});
+
+export const userMenuItem = style({
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "8px 10px",
+  border: "none",
+  borderRadius: 8,
+  background: "transparent",
+  color: vars.ink,
+  fontFamily: vars.font.ui,
+  fontSize: 13,
+  fontWeight: 500,
+  textAlign: "left",
+  cursor: "pointer",
+  textDecoration: "none",
+  transition: buttonTransition,
+  selectors: {
+    "&:hover": { background: vars.glass.bgSoft },
+  },
+});
+
+export const userMenuItemDanger = style({
+  color: vars.status.error,
+});
+
+export const userMenuIcon = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 14,
+  flexShrink: 0,
 });
 
 export const avatar = style({

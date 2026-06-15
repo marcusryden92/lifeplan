@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ChevronLeft, Moon, Sun } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { signOut } from "next-auth/react";
+import { ChevronLeft, LogOut, Moon, Settings, Sun } from "lucide-react";
 import { useTheme } from "../ThemeProvider";
 import { NAV_ITEMS } from "./nav";
 import {
@@ -21,8 +23,11 @@ import {
   footerText,
   footerName,
   collapseChevronIcon,
+  userMenu,
+  userMenuItem,
+  userMenuItemDanger,
+  userMenuIcon,
 } from "./Sidebar.css";
-import { caption } from "@/lib/theme";
 
 const COLLAPSE_KEY = "circadium.sidebar.collapsed";
 
@@ -119,17 +124,112 @@ export function Sidebar({ userName = "Marcus", userInitial = "M" }: Props) {
         <span className={navLabel}>{dark ? "Light mode" : "Dark mode"}</span>
       </button>
 
-      <div className={footerRow}>
+      <UserMenu userName={userName} userInitial={userInitial} />
+    </aside>
+  );
+}
+
+function UserMenu({
+  userName,
+  userInitial,
+}: {
+  userName: string;
+  userInitial: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
+  const [portalReady, setPortalReady] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setPortalReady(true), []);
+
+  // Anchor at the trigger's top-left + a horizontal offset past the avatar.
+  // The menu's own CSS transform shifts it up by its height so it ends up
+  // diagonally overlapping the footer button from above.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const btn = buttonRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    setMenuPos({ top: rect.top, left: rect.left + 28 });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const onDocPointer = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (buttonRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("mousedown", onDocPointer);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("mousedown", onDocPointer);
+    };
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        className={footerRow}
+        onClick={() => setOpen((o) => !o)}
+        title="Account menu"
+        aria-label="Open account menu"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
         <div className={avatar} aria-hidden>
           {userInitial}
         </div>
         <div className={footerText}>
           <div className={footerName}>{userName}</div>
-          <span className={caption} style={{ fontSize: 9.5 }}>
-            Beta member
-          </span>
         </div>
-      </div>
-    </aside>
+      </button>
+      {open &&
+        portalReady &&
+        createPortal(
+          <div
+            ref={menuRef}
+            className={userMenu}
+            role="menu"
+            style={{ top: menuPos.top, left: menuPos.left }}
+          >
+            <Link
+              href="/circadium/settings"
+              className={userMenuItem}
+              role="menuitem"
+              onClick={() => setOpen(false)}
+            >
+              <span className={userMenuIcon}>
+                <Settings size={14} strokeWidth={2} aria-hidden />
+              </span>
+              Settings
+            </Link>
+            <button
+              type="button"
+              className={`${userMenuItem} ${userMenuItemDanger}`}
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                signOut();
+              }}
+            >
+              <span className={userMenuIcon}>
+                <LogOut size={14} strokeWidth={2} aria-hidden />
+              </span>
+              Sign out
+            </button>
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }

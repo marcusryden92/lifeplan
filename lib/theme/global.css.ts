@@ -7,8 +7,8 @@ globalStyle("html", {
 });
 
 globalStyle("::-webkit-scrollbar", {
-  width: 11,
-  height: 11,
+  width: 7,
+  height: 7,
 });
 
 globalStyle("::-webkit-scrollbar-track", {
@@ -33,3 +33,41 @@ globalStyle("::-webkit-scrollbar-thumb:hover", {
 globalStyle("::-webkit-scrollbar-corner", {
   background: "transparent",
 });
+
+// Invisible spacer buttons at the ends of every scrollbar track. WebKit hides
+// scrollbar buttons by default; giving them a height with display:block turns
+// them into transparent end caps that push the thumb inward, so the scrollbar
+// thumb never abuts the edges of its container. Firefox ignores these
+// pseudo-elements, so its scrollbars stay edge-to-edge.
+globalStyle("::-webkit-scrollbar-button:vertical:start:decrement", {
+  display: "block",
+  height: 16,
+  background: "transparent",
+});
+
+globalStyle("::-webkit-scrollbar-button:vertical:end:increment", {
+  display: "block",
+  height: 16,
+  background: "transparent",
+});
+
+globalStyle("::-webkit-scrollbar-button:horizontal:start:decrement", {
+  display: "block",
+  width: 16,
+  background: "transparent",
+});
+
+globalStyle("::-webkit-scrollbar-button:horizontal:end:increment", {
+  display: "block",
+  width: 16,
+  background: "transparent",
+});
+
+// Suppress the inverse buttons (start:increment / end:decrement) that some
+// WebKit builds render as doubled arrows; we only want one spacer per end.
+globalStyle(
+  "::-webkit-scrollbar-button:vertical:start:increment, ::-webkit-scrollbar-button:vertical:end:decrement, ::-webkit-scrollbar-button:horizontal:start:increment, ::-webkit-scrollbar-button:horizontal:end:decrement",
+  {
+    display: "none",
+  },
+);
