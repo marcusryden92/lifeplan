@@ -7,6 +7,7 @@ import { AlertTriangle, Car } from "lucide-react";
 // extendedProps. The TravelTime record carries DRIVING/TRANSIT/BICYCLING/
 // WALKING but the engine only emits a duration today.
 import { RootState } from "@/redux/store";
+import { useTheme } from "@/components/ui";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
 import { vars } from "@/lib/theme";
@@ -29,6 +30,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
   );
+  const { dark } = useTheme();
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
   const [elementWidth, setElementWidth] = useState<number>(0);
@@ -78,9 +80,10 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
     elementHeight < 13 ? "tiny" : elementHeight < 24 ? "compact" : "regular";
   const showLabel = tier !== "tiny";
   // Time renders below the label, not next to it. Needs a second-line worth
-  // of vertical room; width threshold is gentle since the label already wraps.
-  const showTime = tier === "regular" && elementHeight >= 40 && elementWidth >= 70;
-  const showMinutes = tier === "regular";
+  // of vertical room PLUS bottom padding so it doesn't kiss the tile edge.
+  // ~48 covers: 6px top + ~16 title + 2 gap + ~14 time + 6 bottom + ~4 breath.
+  const showTime = tier === "regular" && elementHeight >= 48 && elementWidth >= 70;
+  const showMinutes = tier === "regular" && elementWidth >= 110;
   const titleFont = tier === "compact" ? 10 : 11.5;
   const padding =
     tier === "tiny"
@@ -109,10 +112,12 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
         borderRadius: 8,
         background: alertColor
           ? `color-mix(in srgb, ${alertColor} 78%, transparent)`
-          : "rgba(58, 64, 90, 0.94)",
-        border: `1px solid ${alertColor ?? "#3a405a"}`,
+          : dark
+            ? "rgba(230, 232, 236, 0.65)"
+            : "#f2efea",
+        border: `1px solid ${alertColor ?? "#16142a"}`,
         fontFamily: vars.font.ui,
-        color: "#fff",
+        color: alertColor ? "#fff" : "#16142a",
         cursor: "pointer",
       }}
     >
@@ -148,42 +153,38 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
           )}
           <span
             style={{
+              flex: 1,
+              minWidth: 0,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
             }}
           >
             {travelLabel}
-            {travelMinutes !== undefined && showMinutes && (
-              <span
-                style={{
-                  fontWeight: 500,
-                  opacity: 0.78,
-                  marginLeft: 6,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                ({travelMinutes}m
-                {showAlert &&
-                  requiredTravelMinutes !== null &&
-                  requiredTravelMinutes !== undefined && (
-                    <span>
-                      {" "}
-                      /{requiredTravelMinutes} needed
-                    </span>
-                  )}
-                {showOverconstrained &&
-                  requiredTravelMinutes !== null &&
-                  requiredTravelMinutes !== undefined && (
-                    <span>
-                      {" "}
-                      /{requiredTravelMinutes} actual
-                    </span>
-                  )}
-                )
-              </span>
-            )}
           </span>
+          {travelMinutes !== undefined && showMinutes && (
+            <span
+              style={{
+                flexShrink: 0,
+                fontWeight: 500,
+                opacity: 0.7,
+                fontVariantNumeric: "tabular-nums",
+                paddingRight: 4,
+              }}
+            >
+              {travelMinutes}m
+              {showAlert &&
+                requiredTravelMinutes !== null &&
+                requiredTravelMinutes !== undefined && (
+                  <> /{requiredTravelMinutes}</>
+                )}
+              {showOverconstrained &&
+                requiredTravelMinutes !== null &&
+                requiredTravelMinutes !== undefined && (
+                  <> /{requiredTravelMinutes}</>
+                )}
+            </span>
+          )}
         </span>
         )}
         {showTime && (

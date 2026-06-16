@@ -1,0 +1,90 @@
+/* Lumen palette — flat reference for both themes. Open in VSCode and the
+   editor's inline color swatches make this scannable. Values mirror
+   lib/theme/themes.css.ts. */
+
+/* ============================================================
+ * LIGHT
+ * ============================================================ */
+
+.lumen-light {
+  /* Text & surfaces */
+  --paper:    #f2efea;
+  --bezel:    #c8bfb6;
+  --ink:      #16142a;
+  --inkSoft:  #3c3a52;
+  --muted:    #7a7890;
+  --rule:     rgba(22, 20, 42, 0.12);
+
+  /* Glass */
+  --glass-bg:     rgba(255, 255, 255, 0.28);
+  --glass-bgDeep: rgba(255, 255, 255, 0.40);
+  --glass-bgSoft: rgba(255, 255, 255, 0.16);
+  --glass-stroke: rgba(22, 20, 42, 0.14);
+  --glass-hi:     rgba(255, 255, 255, 0.55);
+
+  /* Accent */
+  --accent-primary:   #3b82f6;
+  --accent-now:       #6366f1;
+  --accent-done:      #8b5cf6;
+  --accent-secondary: #6366f1;
+
+  /* Status */
+  --status-success: #22c55e;
+  --status-warning: #f59e0b;
+  --status-error:   #ef4444;
+  --status-info:    #3b82f6;
+
+  /* Swatches (suggested category palette) */
+  --swatch-blue:   #3b82f6;
+  --swatch-green:  #22c55e;
+  --swatch-violet: #8b5cf6;
+  --swatch-indigo: #6366f1;
+  --swatch-cyan:   #06b6d4;
+  --swatch-amber:  #f59e0b;
+  --swatch-rose:   #f43f5e;
+  --swatch-teal:   #14b8a6;
+}
+
+
+/* ============================================================
+ * DARK
+ * ============================================================ */
+
+.lumen-dark {
+  /* Text & surfaces */
+  --paper:    #12141a;
+  --bezel:    #06080b;
+  --ink:      #e6e8ec;
+  --inkSoft:  rgba(230, 232, 236, 0.65);
+  --muted:    rgba(230, 232, 236, 0.42);
+  --rule:     rgba(230, 232, 236, 0.10);
+
+  /* Glass */
+  --glass-bg:     rgba(230, 232, 236, 0.05);
+  --glass-bgDeep: rgba(230, 232, 236, 0.09);
+  --glass-bgSoft: rgba(230, 232, 236, 0.025);
+  --glass-stroke: rgba(230, 232, 236, 0.16);
+  --glass-hi:     rgba(230, 232, 236, 0.20);
+
+  /* Accent */
+  --accent-primary:   #60a5fa;
+  --accent-now:       #818cf8;
+  --accent-done:      #a78bfa;
+  --accent-secondary: #818cf8;
+
+  /* Status */
+  --status-success: #34d399;
+  --status-warning: #fbbf24;
+  --status-error:   #f87171;
+  --status-info:    #60a5fa;
+
+  /* Swatches (suggested category palette) */
+  --swatch-blue:   #60a5fa;
+  --swatch-green:  #34d399;
+  --swatch-violet: #a78bfa;
+  --swatch-indigo: #818cf8;
+  --swatch-cyan:   #22d3ee;
+  --swatch-amber:  #fbbf24;
+  --swatch-rose:   #fb7185;
+  --swatch-teal:   #2dd4bf;
+}

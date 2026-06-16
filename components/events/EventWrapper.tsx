@@ -109,9 +109,9 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
     elementHeight < 13 ? "tiny" : elementHeight < 24 ? "compact" : "regular";
   const showTitle = tier !== "tiny";
   // Time renders on a row BELOW the title so it never crowds it horizontally.
-  // Needs both height room for the second line and a non-trivial width — if
-  // either is missing, drop the time and let the title take everything.
-  const showTime = tier === "regular" && elementHeight >= 40 && elementWidth >= 70;
+  // Threshold reserves bottom padding so the time never kisses the tile edge —
+  // if the tile is shorter than that, drop time entirely.
+  const showTime = tier === "regular" && elementHeight >= 48 && elementWidth >= 70;
   const showPin = isPlan && tier !== "tiny";
   const titleFont = tier === "compact" ? 10 : 11.5;
   const padding =
@@ -147,9 +147,6 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
         backdropFilter: "blur(12px) saturate(160%)",
         WebkitBackdropFilter: "blur(12px) saturate(160%)",
         border,
-        boxShadow: showPopover
-          ? `0 8px 20px color-mix(in srgb, ${vars.ink} 24%, transparent), inset 0 1px 0 rgba(255,255,255,0.32)`
-          : `inset 0 1px 0 rgba(255,255,255,0.28)`,
         color: "#fff",
         fontFamily: vars.font.ui,
         ...(trespassingStart && {
