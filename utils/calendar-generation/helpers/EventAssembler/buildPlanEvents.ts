@@ -20,6 +20,7 @@ export function buildPlanEvents(
         new Date(plan.starts).getTime() + plan.duration * 60000,
       );
 
+      const planColor = plan.color ?? "black";
       events.push({
         userId,
         title: plan.title,
@@ -35,8 +36,8 @@ export function buildPlanEvents(
           completedEndTime: null,
           completedStartTime: null,
         },
-        backgroundColor: "black",
-        borderColor: "black",
+        backgroundColor: planColor,
+        borderColor: planColor,
         duration: null,
         rrule: null,
         createdAt: now.toISOString(),

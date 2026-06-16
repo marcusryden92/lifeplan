@@ -148,7 +148,7 @@ export default function Calendar({
                 onDelete={() =>
                   handleTemplateEventDelete(updateTemplateArray, event.id)
                 }
-                disableInteraction
+                hideHoverButtons
               />
             );
           }

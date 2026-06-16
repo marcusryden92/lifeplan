@@ -17,7 +17,10 @@ interface TemplateEventContentProps {
   ) => void;
   onCopy: () => void;
   onDelete: () => void;
-  disableInteraction?: boolean;
+  /** When true, suppresses the in-tile hover delete/duplicate buttons. The
+   *  popover still opens — destructive edits are deferred to that surface
+   *  (or future "delete all vs. add exception" prompts). */
+  hideHoverButtons?: boolean;
 }
 
 const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
@@ -25,7 +28,7 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
   onEditTitle,
   onCopy,
   onDelete,
-  disableInteraction = false,
+  hideHoverButtons = false,
 }) => {
   const { updateTemplateArray, userSettings } = useCalendarProvider();
 
@@ -70,9 +73,8 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
       isCompleted={false} // templates are never completed
       showPopover={showPopover}
       setShowPopover={setShowPopover}
-      disableInteraction={disableInteraction}
     >
-      {!disableInteraction &&
+      {!hideHoverButtons &&
         onHover &&
         elementHeight > 40 &&
         elementWidth > 70 && (
@@ -105,7 +107,7 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
           </div>
         )}
 
-      {!disableInteraction && showPopover && eventRect && (
+      {showPopover && eventRect && (
         <TemplateEventPopover
           event={event}
           eventRect={eventRect}

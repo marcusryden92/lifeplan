@@ -114,6 +114,16 @@ export default function CalendarPage() {
   // collapsed state from localStorage doesn't animate width 340 → 0 on mount.
   const [transitionsReady, setTransitionsReady] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
+  const [hoveredCategory, setHoveredCategory] = useState<{
+    name: string;
+    color: string | null;
+  } | null>(null);
+  const handleCategoryHover = useCallback(
+    (name: string | null, color: string | null) => {
+      setHoveredCategory(name ? { name, color } : null);
+    },
+    [],
+  );
 
   useLayoutEffect(() => {
     try {
@@ -177,6 +187,33 @@ export default function CalendarPage() {
               <ChevronRight size={14} strokeWidth={2} />
             </Button>
           </div>
+          {hoveredCategory && (
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 12,
+                color: vars.inkSoft,
+                fontFamily: vars.font.ui,
+                fontWeight: 600,
+                letterSpacing: "0.01em",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <span
+                aria-hidden
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 999,
+                  background: hoveredCategory.color ?? vars.muted,
+                  flexShrink: 0,
+                }}
+              />
+              {hoveredCategory.name}
+            </span>
+          )}
           <span className={spacer} />
           <div className={actionCluster}>
             <Button variant="glass" size="sm">
@@ -236,6 +273,7 @@ export default function CalendarPage() {
             <div className={`${fcWrap} lumen-calendar`}>
               <Calendar
                 initialDate={initialDate}
+                onCategoryHover={handleCategoryHover}
                 dayHeaderContent={(arg) => (
                   <div className={dayHeaderStack}>
                     <span
