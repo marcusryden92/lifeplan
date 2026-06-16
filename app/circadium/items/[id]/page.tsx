@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, type ChangeEvent } from "react";
+import { type ChangeEvent } from "react";
 import { Check } from "lucide-react";
 import { formatMinutesToHours } from "@/utils/taskArrayUtils";
+import { useFlashBoolean } from "@/hooks/useFlashAnimation";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   toggleSubtaskCompletion,
@@ -33,6 +34,8 @@ import {
   completeDateInputFaded,
 } from "./page.css";
 
+const SHAKE_DURATION_MS = 420;
+
 export default function ItemOverviewPage() {
   const {
     item,
@@ -61,14 +64,7 @@ export default function ItemOverviewPage() {
   // been marked ready. The checkbox stays interactive so a blocked click can
   // surface a shake-and-flash instead of silently doing nothing.
   const completionLocked = !item.isReady;
-  const [shakeLocked, setShakeLocked] = useState(false);
-  const flashShake = () => {
-    setShakeLocked((s) => {
-      if (s) return s;
-      window.setTimeout(() => setShakeLocked(false), 420);
-      return true;
-    });
-  };
+  const [shakeLocked, flashShake] = useFlashBoolean(SHAKE_DURATION_MS);
 
   const toggleCompletion = () => {
     if (completionLocked) {

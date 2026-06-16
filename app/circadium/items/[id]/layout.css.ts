@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, themeTransition, interactiveTransition } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -144,7 +144,7 @@ export const renamePencil = style({
   cursor: "pointer",
   opacity: 0,
   flexShrink: 0,
-  transition: "opacity 120ms ease, color 120ms ease, background-color 120ms ease",
+  transition: interactiveTransition("opacity", "color", "background-color"),
   selectors: {
     [`${titleHoverRow}:hover &`]: { opacity: 1 },
     "&:hover": { color: vars.ink, background: vars.glass.bgSoft },

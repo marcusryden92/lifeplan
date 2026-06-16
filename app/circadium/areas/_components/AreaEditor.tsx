@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronRight, Lock, MapPin, SquarePen, Trash2 } from "lucide-react";
 import { Button, Caption, vars } from "@/components/ui";
-import { LumenDropdown } from "@/app/circadium/items/[id]/_components/LumenDropdown";
+import { LumenDropdown } from "@/app/circadium/_components/LumenDropdown";
 import type { Category } from "@/types/prisma";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import { WindowsMiniGrid } from "./WindowsMiniGrid";

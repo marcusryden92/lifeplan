@@ -4,6 +4,7 @@ import {
   themeTransition,
   collapseTransition,
   DURATIONS,
+  backdropFilters,
 } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
@@ -178,8 +179,8 @@ export const engineCogBtn = style({
   padding: 0,
   border: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bgDeep,
-  backdropFilter: "blur(12px) saturate(140%)",
-  WebkitBackdropFilter: "blur(12px) saturate(140%)",
+  backdropFilter: backdropFilters.button,
+  WebkitBackdropFilter: backdropFilters.button,
   boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
   color: vars.ink,
   cursor: "pointer",
@@ -436,7 +437,7 @@ export const engineCardHead = style({
 export const engineTag = style({
   padding: "2px 8px",
   borderRadius: 999,
-  color: "#fff",
+  color: vars.textOnAccent,
   fontSize: 9.5,
   fontWeight: 700,
   letterSpacing: "0.08em",

@@ -5,6 +5,7 @@ import { Search, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui";
 import * as locationActions from "@/actions/locations";
 import { useListKeyboardNav } from "@/hooks/useListKeyboardNav";
+import { useModalStack } from "@/hooks/useModalStack";
 import {
   MODAL_FADE_MS,
   overlay,
@@ -51,6 +52,7 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
   const [dataState, setDataState] = useState<"open" | "closed">(
     open ? "open" : "closed",
   );
+  const { isTop } = useModalStack(open);
 
   useEffect(() => {
     if (open) {
@@ -62,6 +64,15 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
     const t = setTimeout(() => setShouldRender(false), MODAL_FADE_MS);
     return () => clearTimeout(t);
   }, [open]);
+
+  useEffect(() => {
+    if (!isTop || !shouldRender) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isTop, shouldRender, onClose]);
 
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
@@ -155,7 +166,7 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
       className={overlay}
       data-state={dataState}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && isTop) onClose();
       }}
     >
       <div className={modal}>

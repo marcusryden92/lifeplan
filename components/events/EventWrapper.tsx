@@ -4,7 +4,9 @@ import { Pin } from "lucide-react";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
-import { vars } from "@/lib/theme";
+import { vars, backdropFilters, colorMixAlpha } from "@/lib/theme";
+import { computeTemplateBorder } from "@/utils/colorUtils";
+import { getEventTier } from "@/utils/eventTier";
 import { useSetCalendarHoverLabel } from "./CalendarHoverLabelContext";
 import {
   TRESPASS_BORDER_COLOR,
@@ -15,33 +17,6 @@ interface EventExtendedPropsWithTrespassing {
   trespassingStart?: boolean;
   trespassingEnd?: boolean;
   [key: string]: unknown;
-}
-
-// OKLCH lightness deltas (0–1) for the template border. Two constants because
-// human perception is asymmetric — light strokes on saturated fills read as
-// softer than dark strokes of equal numeric shift, so lighten gets a bigger
-// number to compensate. Tweak each independently.
-const TEMPLATE_BORDER_LIGHTEN = 0.3;
-const TEMPLATE_BORDER_DARKEN = 0.3;
-
-// YIQ luminance — perceived brightness from 0 to 255. Threshold ~140 sorts
-// saturated mid-tones reliably: yellow/lime/cyan come out "light" and need a
-// dark stroke; reds/blues/purples come out "dark" and want a white stroke.
-function perceivedBrightness(hex: string | undefined | null): number {
-  if (!hex) return 0;
-  let s = hex.trim();
-  if (s.startsWith("#")) s = s.slice(1);
-  if (s.length === 3)
-    s = s
-      .split("")
-      .map((c) => c + c)
-      .join("");
-  if (s.length !== 6) return 0;
-  const r = parseInt(s.slice(0, 2), 16);
-  const g = parseInt(s.slice(2, 4), 16);
-  const b = parseInt(s.slice(4, 6), 16);
-  if ([r, g, b].some((n) => Number.isNaN(n))) return 0;
-  return (r * 299 + g * 587 + b * 114) / 1000;
 }
 
 interface EventWrapperProps {
@@ -106,12 +81,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
     : event.backgroundColor;
   const trespassPx = `${TRESPASS_BORDER_WIDTH}px`;
 
-  // Three-tier responsive layout. Thresholds tuned against FullCalendar's
-  // default slot density: a 30-min event renders at ~28-30px tall, so the
-  // regular cutoff lives at 24 to give it the time pill. A 15-min event
-  // (~14-16px) falls into compact. Anything below 13 is title-suppressed.
-  const tier: "tiny" | "compact" | "regular" =
-    elementHeight < 13 ? "tiny" : elementHeight < 24 ? "compact" : "regular";
+  const tier = getEventTier(elementHeight);
   const showTitle = tier !== "tiny";
   // Time renders on a row BELOW the title so it never crowds it horizontally.
   // Threshold reserves bottom padding so the time never kisses the tile edge —
@@ -131,17 +101,11 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
       : tier === "compact"
         ? "1px 8px"
         : "6px 10px";
-  const glassFill = `color-mix(in srgb, ${tint} 94%, transparent)`;
+  const glassFill = `color-mix(in srgb, ${tint} ${colorMixAlpha.denseFill}%, transparent)`;
 
-  // Templates get a dashed border via OKLCH relative-color syntax — same hue
-  // and chroma as the fill, just lightness shifted. Direction is chosen from
-  // the fill itself: light fills get a darker stroke, dark fills get a lighter
-  // one. Reads correctly in both themes since the contrast is fill-relative.
-  const fillBright = perceivedBrightness(tint);
-  const goLighter = fillBright < 140;
-  const lDelta = goLighter ? TEMPLATE_BORDER_LIGHTEN : -TEMPLATE_BORDER_DARKEN;
-  const templateBorder = `oklch(from ${tint} calc(l ${lDelta >= 0 ? "+" : "-"} ${Math.abs(lDelta)}) c h)`;
-  const border = isTemplate ? `2px dashed ${templateBorder}` : "none";
+  const border = isTemplate
+    ? `2px dashed ${computeTemplateBorder(tint)}`
+    : "none";
 
   return (
     <div
@@ -155,10 +119,10 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
         padding,
         borderRadius: 8,
         background: glassFill,
-        backdropFilter: "blur(12px) saturate(160%)",
-        WebkitBackdropFilter: "blur(12px) saturate(160%)",
+        backdropFilter: backdropFilters.event,
+        WebkitBackdropFilter: backdropFilters.event,
         border,
-        color: "#fff",
+        color: vars.textOnAccent,
         fontFamily: vars.font.ui,
         ...(trespassingStart && {
           borderTop: `${trespassPx} solid ${TRESPASS_BORDER_COLOR}`,
@@ -209,7 +173,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
               strokeWidth={2.2}
               aria-hidden
               style={{
-                color: "rgba(255,255,255,0.85)",
+                color: `color-mix(in srgb, ${vars.textOnAccent} 85%, transparent)`,
                 flexShrink: 0,
                 transform: "rotate(20deg)",
               }}
@@ -221,7 +185,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
                 fontSize: titleFont,
                 fontWeight: 500,
                 fontStyle: "italic",
-                color: "#fff",
+                color: vars.textOnAccent,
                 flex: 1,
                 minWidth: 0,
                 overflow: "hidden",
@@ -241,7 +205,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
               fontSize: 10,
               fontWeight: 500,
               fontVariantNumeric: "tabular-nums",
-              color: "rgba(255,255,255,0.7)",
+              color: `color-mix(in srgb, ${vars.textOnAccent} 70%, transparent)`,
             }}
           >
             <span>{formatTime(startTime)}</span>

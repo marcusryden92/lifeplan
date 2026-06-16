@@ -1,5 +1,11 @@
 import { style, keyframes } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import {
+  vars,
+  themeTransition,
+  interactiveTransition,
+  colorMixAlpha,
+  DURATIONS,
+} from "@/lib/theme";
 
 // Quick-shake when a locked completion checkbox is clicked. Subtle horizontal
 // jiggle paired with a red flash on the circle gives the user immediate "no"
@@ -42,7 +48,7 @@ export const nested = style({
   paddingLeft: 12,
   borderLeft: `1px solid ${vars.rule}`,
   overflow: "hidden",
-  transition: `border-color ${themeTransition}, padding 220ms ease`,
+  transition: `${themeTransition}, padding ${DURATIONS.collapse}s ease`,
 });
 
 export const nestedFocused = style({
@@ -71,7 +77,7 @@ export const draggable = style({
   borderRadius: 8,
   cursor: "pointer",
   border: "1px solid transparent",
-  transition: `background-color 120ms ease, border-color 120ms ease`,
+  transition: interactiveTransition("background-color", "border-color"),
 });
 
 export const draggableHover = style({
@@ -87,18 +93,21 @@ export const draggableGrabbing = style({
 });
 
 export const draggableDropTarget = style({
-  background: `color-mix(in srgb, ${vars.accent.now} 22%, transparent)`,
+  background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.hoverFill}%, transparent)`,
   borderColor: `color-mix(in srgb, ${vars.accent.now} 65%, transparent)`,
 });
 
 export const draggableSelected = style({
-  background: `color-mix(in srgb, ${vars.accent.now} 10%, transparent)`,
+  background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.subtleFill}%, transparent)`,
 });
 
 // Note: short explicit transition rather than themeTransition (1s) — completion
 // state flips on click and needs to feel immediate, not crossfaded.
-const COMPLETE_TRANSITION =
-  "background-color 120ms ease, border-color 120ms ease, color 120ms ease";
+const COMPLETE_TRANSITION = interactiveTransition(
+  "background-color",
+  "border-color",
+  "color",
+);
 
 export const completeBtn = style({
   display: "inline-flex",
@@ -195,7 +204,7 @@ export const gripBtn = style({
   color: vars.muted,
   opacity: 0,
   cursor: "grab",
-  transition: `opacity 120ms ease, color 120ms ease`,
+  transition: interactiveTransition("opacity", "color"),
   selectors: {
     [`${draggable}:hover &`]: { opacity: 1 },
     "&:hover": { color: vars.ink },
@@ -250,7 +259,7 @@ export const addChildBtn = style({
   color: vars.muted,
   cursor: "pointer",
   opacity: 0,
-  transition: `opacity 120ms ease, color 120ms ease, background-color 120ms ease`,
+  transition: interactiveTransition("opacity", "color", "background-color"),
   flexShrink: 0,
   selectors: {
     [`${draggable}:hover &`]: { opacity: 1 },
@@ -298,7 +307,7 @@ export const iconBtn = style({
   color: vars.muted,
   cursor: "pointer",
   opacity: 0,
-  transition: `opacity 120ms ease, color 120ms ease, background-color 120ms ease`,
+  transition: interactiveTransition("opacity", "color", "background-color"),
   selectors: {
     "&:disabled": { cursor: "default" },
     "&:not(:disabled):hover": {
@@ -461,7 +470,7 @@ export const dragBox = style({
   boxShadow: vars.shadow.panelSm,
   zIndex: 50,
   pointerEvents: "none",
-  transition: "opacity 120ms ease",
+  transition: interactiveTransition("opacity"),
 });
 
 export const subtasksCount = style({

@@ -150,7 +150,7 @@ export function buildMockCalendar(now: Date = new Date()) {
       end,
       backgroundColor: color,
       borderColor: e.warn ? vars.accent.now : color,
-      textColor: "#fff",
+      textColor: vars.textOnAccent,
       extendedProps: { kind, warn: e.warn, current: e.current, col: e.col },
     };
   });

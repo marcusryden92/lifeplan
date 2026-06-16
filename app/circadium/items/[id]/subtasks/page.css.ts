@@ -1,4 +1,5 @@
 import { style, globalStyle } from "@vanilla-extract/css";
+import { DURATIONS } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -25,7 +26,7 @@ export const drawerSlot = style({
   width: 0,
   flexShrink: 0,
   overflow: "hidden",
-  transition: "width 220ms ease",
+  transition: `width ${DURATIONS.collapse}s ease`,
 });
 
 export const drawerSlotOpen = style({

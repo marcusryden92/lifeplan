@@ -3,14 +3,17 @@
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { CornerDownLeft } from "lucide-react";
-import { Button, vars } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { useModalStack } from "@/hooks/useModalStack";
 import {
   overlay,
   modal,
   modalTitle,
   modalActions,
-  CONFIRM_FADE_MS,
-} from "@/app/circadium/items/[id]/_components/LumenConfirmModal.css";
+  timeRange as timeRangeStyle,
+  titleInput,
+  FADE_MS,
+} from "./NewPlanModal.css";
 import { kbd } from "@/components/ui/shell/CapturePalette.css";
 
 interface NewPlanModalProps {
@@ -34,6 +37,7 @@ export function NewPlanModal({
   );
   const [title, setTitle] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const { isTop } = useModalStack(open);
 
   useEffect(() => {
     if (open) {
@@ -46,7 +50,7 @@ export function NewPlanModal({
       return () => cancelAnimationFrame(id);
     }
     setDataState("closed");
-    const t = setTimeout(() => setShouldRender(false), CONFIRM_FADE_MS);
+    const t = setTimeout(() => setShouldRender(false), FADE_MS);
     return () => clearTimeout(t);
   }, [open]);
 
@@ -67,7 +71,9 @@ export function NewPlanModal({
     <div
       className={overlay}
       data-state={dataState}
-      onClick={onCancel}
+      onClick={() => {
+        if (isTop) onCancel();
+      }}
       role="presentation"
     >
       <div
@@ -78,19 +84,7 @@ export function NewPlanModal({
         aria-modal="true"
       >
         <h2 className={modalTitle}>New plan</h2>
-        {timeRange && (
-          <div
-            style={{
-              marginTop: 6,
-              fontSize: 12.5,
-              fontFamily: vars.font.ui,
-              color: vars.muted,
-              fontVariantNumeric: "tabular-nums",
-            }}
-          >
-            {timeRange}
-          </div>
-        )}
+        {timeRange && <div className={timeRangeStyle}>{timeRange}</div>}
         <input
           ref={inputRef}
           type="text"
@@ -98,24 +92,10 @@ export function NewPlanModal({
           onChange={(e) => setTitle(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") submit();
-            else if (e.key === "Escape") onCancel();
+            else if (e.key === "Escape" && isTop) onCancel();
           }}
           placeholder="What's the plan?"
-          style={{
-            display: "block",
-            width: "100%",
-            marginTop: 16,
-            padding: "10px 12px",
-            fontFamily: vars.font.ui,
-            fontSize: 14,
-            fontWeight: 500,
-            color: vars.ink,
-            background: vars.glass.bgSoft,
-            border: `1px solid ${vars.glass.stroke}`,
-            borderRadius: 10,
-            outline: "none",
-            boxSizing: "border-box",
-          }}
+          className={titleInput}
         />
         <div className={modalActions}>
           <Button variant="glass" size="sm" onClick={onCancel}>

@@ -1,5 +1,5 @@
 import { style, keyframes } from "@vanilla-extract/css";
-import { vars, DURATIONS, popover } from "@/lib/theme";
+import { vars, DURATIONS, popover, backdropFilters } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -21,9 +21,9 @@ const sheetUp = keyframes({
 export const overlay = style({
   position: "fixed",
   inset: 0,
-  background: "rgba(10, 8, 20, 0.42)",
-  backdropFilter: "blur(8px)",
-  WebkitBackdropFilter: "blur(8px)",
+  background: vars.overlay,
+  backdropFilter: backdropFilters.palette,
+  WebkitBackdropFilter: backdropFilters.palette,
   zIndex: 50,
   animationName: fadeIn,
   animationDuration: `${DURATIONS.modal}s`,

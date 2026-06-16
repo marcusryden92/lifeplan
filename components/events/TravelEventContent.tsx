@@ -7,10 +7,10 @@ import { AlertTriangle, Car } from "lucide-react";
 // extendedProps. The TravelTime record carries DRIVING/TRANSIT/BICYCLING/
 // WALKING but the engine only emits a duration today.
 import { RootState } from "@/redux/store";
-import { useTheme } from "@/components/ui";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
-import { vars } from "@/lib/theme";
+import { vars, colorMixAlpha } from "@/lib/theme";
+import { getEventTier } from "@/utils/eventTier";
 import { useSetCalendarHoverLabel } from "./CalendarHoverLabelContext";
 import TravelEventPopover from "./TravelEventPopover";
 
@@ -31,7 +31,6 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
   );
-  const { dark } = useTheme();
   const setHoverLabel = useSetCalendarHoverLabel();
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
@@ -76,10 +75,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
     : null;
   const travelLabel = fromName && toName ? `${fromName} → ${toName}` : "Travel";
 
-  // Same three-tier system as EventWrapper. Travel events are usually small
-  // (5-15 min), so tiny/compact are the common cases.
-  const tier: "tiny" | "compact" | "regular" =
-    elementHeight < 13 ? "tiny" : elementHeight < 24 ? "compact" : "regular";
+  const tier = getEventTier(elementHeight);
   const showLabel = tier !== "tiny";
   // Time renders below the label, not next to it. Needs a second-line worth
   // of vertical room PLUS bottom padding so it doesn't kiss the tile edge.
@@ -115,13 +111,11 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
         padding,
         borderRadius: 8,
         background: alertColor
-          ? `color-mix(in srgb, ${alertColor} 78%, transparent)`
-          : dark
-            ? "rgba(230, 232, 236, 0.65)"
-            : "#f2efea",
-        border: `1px solid ${alertColor ?? "#16142a"}`,
+          ? `color-mix(in srgb, ${alertColor} ${colorMixAlpha.alertFill}%, transparent)`
+          : vars.tileFill,
+        border: `1px solid ${alertColor ?? vars.ink}`,
         fontFamily: vars.font.ui,
-        color: alertColor ? "#fff" : "#16142a",
+        color: alertColor ? vars.textOnAccent : vars.ink,
         cursor: "pointer",
       }}
     >

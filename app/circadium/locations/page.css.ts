@@ -1,5 +1,5 @@
 import { style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, themeTransition, colorMixAlpha } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -63,55 +63,6 @@ export const headActions = style({
   marginLeft: "auto",
 });
 
-// Matches the segmented control in the library filter strip: a relatively
-// positioned pill with an absolute ink thumb that slides between options.
-export const segmentedControl = style({
-  position: "relative",
-  display: "inline-grid",
-  padding: 3,
-  borderRadius: 999,
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.glass.stroke}`,
-});
-
-export const segmentedThumb = style({
-  position: "absolute",
-  top: 3,
-  bottom: 3,
-  left: 3,
-  borderRadius: 999,
-  background: vars.ink,
-  transition:
-    "transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), width 0.22s ease",
-  zIndex: 0,
-});
-
-export const segmentedButton = style({
-  position: "relative",
-  zIndex: 1,
-  appearance: "none",
-  border: "none",
-  background: "transparent",
-  padding: "5px 14px",
-  borderRadius: 999,
-  cursor: "pointer",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 5,
-  fontSize: 11,
-  fontFamily: vars.font.ui,
-  fontWeight: 700,
-  letterSpacing: "0.06em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  transition: "color 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
-  selectors: {
-    "&[data-active='true']": { color: vars.paper },
-    "&:hover:not([data-active='true'])": { color: vars.ink },
-  },
-});
-
 // Inline status pill that sits in the subHeader between titleSummary and the
 // action cluster. Translucent tinted background; the surrounding flex layout
 // keeps the action cluster right-aligned whether the banner is present or not.
@@ -129,7 +80,7 @@ export const banner = style({
 export const successBanner = style([
   banner,
   {
-    background: `color-mix(in srgb, ${vars.status.success} 14%, transparent)`,
+    background: `color-mix(in srgb, ${vars.status.success} ${colorMixAlpha.lightFill}%, transparent)`,
     border: `1px solid ${vars.status.success}`,
     color: vars.status.success,
   },
@@ -138,7 +89,7 @@ export const successBanner = style([
 export const errorBanner = style([
   banner,
   {
-    background: `color-mix(in srgb, ${vars.status.error} 14%, transparent)`,
+    background: `color-mix(in srgb, ${vars.status.error} ${colorMixAlpha.lightFill}%, transparent)`,
     border: `1px solid ${vars.status.error}`,
     color: vars.status.error,
   },

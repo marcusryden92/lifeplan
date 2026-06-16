@@ -4,24 +4,28 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type KeyboardEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import { format, formatDistanceToNowStrict } from "date-fns";
+import { formatDistanceToNowStrict } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
-import { ChevronDown, CornerDownLeft, Plus, Sparkles } from "lucide-react";
-import { Button, Caption, CategoryDot, Loader } from "@/components/ui";
+import { CornerDownLeft, Plus, Sparkles } from "lucide-react";
+import { Button, Caption, Loader } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useSelector } from "react-redux";
 import { usePlatform } from "@/hooks/usePlatform";
-import { useListKeyboardNav } from "@/hooks/useListKeyboardNav";
-import useClickOutside from "@/hooks/useClickOutside";
 import { deleteGoal } from "@/utils/goalPageHandlers";
+import { ageLabel } from "@/utils/timeFormatting";
 import type { RootState } from "@/redux/store";
 import type { Planner, Category } from "@/types/prisma";
-import type { PlannerType } from "@/lib/generated/db-client";
+import { CategoryPicker } from "./_components/CategoryPicker";
+import { useCaptureKeyboard } from "./_hooks/useCaptureKeyboard";
+import {
+  DEFAULT_DRAFT_DURATION_MIN,
+  TYPE_OPTIONS,
+  type TriageType,
+} from "./_constants";
 import {
   page,
   subHeader,
@@ -61,30 +65,7 @@ import {
   footerHint,
   emptyMain,
   emptyMainTitle,
-  categoryTrigger,
-  categoryTriggerLabel,
-  categoryTriggerEmpty,
-  categoryTriggerChevron,
-  categoryDropdownWrap,
-  categoryDropdown,
-  categoryDropdownItem,
-  categoryDropdownItemActive,
-  categoryDropdownItemMuted,
 } from "./page.css";
-
-type TriageType = "task" | "plan" | "goal";
-
-function ageLabel(createdAt: string): string {
-  const ms = Date.now() - new Date(createdAt).getTime();
-  const s = Math.max(0, Math.floor(ms / 1000));
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  const d = Math.floor(h / 24);
-  return `${d}d`;
-}
 
 // Items that need triage: top-level, not completed, no duration set.
 // Goals enter the queue too — their duration is 0 by default and triage is
@@ -135,31 +116,39 @@ export default function CapturePage() {
     [queue, selectedId],
   );
 
-  // Draft state — local edits before commit. Reset whenever the selected
-  // item changes so the right side never shows stale form values.
-  const [draftType, setDraftType] = useState<TriageType>("task");
-  const [draftDuration, setDraftDuration] = useState<number>(30);
-  const [draftDeadline, setDraftDeadline] = useState<string>("");
-  const [draftStarts, setDraftStarts] = useState<string>("");
-  const [draftCategoryId, setDraftCategoryId] = useState<string>("");
+  // Draft state — local edits before commit, bundled as one object so the
+  // five fields move together. Reset whenever the selected item changes so
+  // the right side never shows stale form values.
+  type Draft = {
+    type: TriageType;
+    duration: number;
+    deadline: string;
+    starts: string;
+    categoryId: string;
+  };
+  const [draft, setDraft] = useState<Draft>({
+    type: "task",
+    duration: DEFAULT_DRAFT_DURATION_MIN,
+    deadline: "",
+    starts: "",
+    categoryId: "",
+  });
 
   useEffect(() => {
     if (!selected) return;
-    setDraftType(
-      selected.plannerType === "plan"
-        ? "plan"
-        : selected.plannerType === "goal"
-          ? "goal"
-          : "task",
-    );
-    setDraftDuration(selected.duration > 0 ? selected.duration : 30);
-    setDraftDeadline(
-      selected.deadline ? selected.deadline.slice(0, 10) : "",
-    );
-    setDraftStarts(
-      selected.starts ? selected.starts.slice(0, 16) : "",
-    );
-    setDraftCategoryId(selected.categoryId ?? "");
+    setDraft({
+      type:
+        selected.plannerType === "plan"
+          ? "plan"
+          : selected.plannerType === "goal"
+            ? "goal"
+            : "task",
+      duration:
+        selected.duration > 0 ? selected.duration : DEFAULT_DRAFT_DURATION_MIN,
+      deadline: selected.deadline ? selected.deadline.slice(0, 10) : "",
+      starts: selected.starts ? selected.starts.slice(0, 16) : "",
+      categoryId: selected.categoryId ?? "",
+    });
   }, [selected]);
 
   const advanceAfterSelectedId = useCallback(
@@ -208,33 +197,35 @@ export default function CapturePage() {
     (markReady: boolean) => {
       if (!selected) return;
       const id = selected.id;
-      const isGoal = draftType === "goal";
+      const isGoal = draft.type === "goal";
       // Goals need subtasks before they can be marked ready (enforced on the
       // item detail). Tasks need a deadline, plans need a start time. If the
       // user asked to mark-ready but the prerequisites aren't met, fall back
       // to saving as a draft rather than persisting an invalid state.
       const eligibleForReady =
         !isGoal &&
-        (draftType === "plan" ? draftStarts.length > 0 : draftDeadline.length > 0);
+        (draft.type === "plan"
+          ? draft.starts.length > 0
+          : draft.deadline.length > 0);
       const nextReady = markReady && eligibleForReady;
       const nowIso = new Date().toISOString();
-      const deadlineIso = draftDeadline
-        ? new Date(draftDeadline).toISOString()
+      const deadlineIso = draft.deadline
+        ? new Date(draft.deadline).toISOString()
         : null;
       const startsIso =
-        draftType === "plan" && draftStarts
-          ? new Date(draftStarts).toISOString()
+        draft.type === "plan" && draft.starts
+          ? new Date(draft.starts).toISOString()
           : null;
       updatePlannerArray((prev: Planner[]) =>
         prev.map((p) =>
           p.id === id
             ? {
                 ...p,
-                plannerType: draftType,
-                duration: isGoal ? 0 : Math.max(1, draftDuration),
+                plannerType: draft.type,
+                duration: isGoal ? 0 : Math.max(1, draft.duration),
                 deadline: deadlineIso,
                 starts: startsIso,
-                categoryId: draftCategoryId || null,
+                categoryId: draft.categoryId || null,
                 isReady: nextReady,
                 updatedAt: nowIso,
               }
@@ -243,16 +234,7 @@ export default function CapturePage() {
       );
       advanceAfterSelectedId(id);
     },
-    [
-      selected,
-      draftType,
-      draftDuration,
-      draftDeadline,
-      draftStarts,
-      draftCategoryId,
-      updatePlannerArray,
-      advanceAfterSelectedId,
-    ],
+    [selected, draft, updatePlannerArray, advanceAfterSelectedId],
   );
 
   const skipSelected = useCallback(() => {
@@ -267,62 +249,24 @@ export default function CapturePage() {
     advanceAfterSelectedId(id);
   }, [selected, updateAll, advanceAfterSelectedId]);
 
-  // Global keyboard handlers — only when no input has focus, so typing in
-  // the quick-add or a field doesn't trigger type switches.
-  useEffect(() => {
-    if (!selected) return;
-    const onKey = (e: globalThis.KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const tag = target?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
-        if (e.key === "Escape") (target as HTMLElement).blur();
-        return;
-      }
-      // Skip events originating inside the category picker so arrow keys
-      // navigate the dropdown instead of the queue, and Enter commits the
-      // dropdown selection instead of the triage item.
-      if (target?.closest("[data-capture-picker]")) return;
-      if (e.key === "1") {
-        setDraftType("task");
-      } else if (e.key === "2") {
-        setDraftType("plan");
-      } else if (e.key === "3") {
-        setDraftType("goal");
-      } else if (e.key.toLowerCase() === "x") {
-        e.preventDefault();
-        trashSelected();
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        commitSelected(true);
-      } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-        if (queue.length < 2) return;
-        e.preventDefault();
-        const idx = queue.findIndex((q) => q.id === selected.id);
-        if (idx === -1) return;
-        const delta = e.key === "ArrowDown" ? 1 : -1;
-        const nextIdx = (idx + delta + queue.length) % queue.length;
-        setSelectedId(queue[nextIdx].id);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [selected, queue, commitSelected, trashSelected]);
+  const setDraftType = useCallback(
+    (type: TriageType) => setDraft((d) => ({ ...d, type })),
+    [],
+  );
+
+  useCaptureKeyboard({
+    selected,
+    queue,
+    setSelectedId,
+    setDraftType,
+    commitSelected,
+    trashSelected,
+  });
 
   const selectedCategory: Category | null = useMemo(() => {
-    if (!draftCategoryId) return null;
-    return categories.find((c) => c.id === draftCategoryId) ?? null;
-  }, [categories, draftCategoryId]);
-
-  const TYPE_OPTIONS: Array<{
-    key: TriageType;
-    label: string;
-    sub: string;
-    hint: string;
-  }> = [
-    { key: "task", label: "task", sub: "scheduler picks a slot", hint: "1" },
-    { key: "plan", label: "plan", sub: "fixed time", hint: "2" },
-    { key: "goal", label: "goal", sub: "holds subtasks", hint: "3" },
-  ];
+    if (!draft.categoryId) return null;
+    return categories.find((c) => c.id === draft.categoryId) ?? null;
+  }, [categories, draft.categoryId]);
 
   return (
     <div className={page}>
@@ -439,7 +383,7 @@ export default function CapturePage() {
 
                 <div className={typeGrid}>
                   {TYPE_OPTIONS.map((opt) => {
-                    const active = draftType === opt.key;
+                    const active = draft.type === opt.key;
                     return (
                       <button
                         key={opt.key}
@@ -468,7 +412,7 @@ export default function CapturePage() {
                 <div className={fieldGrid}>
                   <div className={field}>
                     <span className={fieldLabel}>duration</span>
-                    {draftType === "goal" ? (
+                    {draft.type === "goal" ? (
                       <span className={fieldInput} style={{ opacity: 0.4 }}>
                         —
                       </span>
@@ -477,23 +421,28 @@ export default function CapturePage() {
                         className={fieldInput}
                         type="number"
                         min={1}
-                        value={draftDuration}
+                        value={draft.duration}
                         onChange={(e) =>
-                          setDraftDuration(Number(e.target.value) || 0)
+                          setDraft((d) => ({
+                            ...d,
+                            duration: Number(e.target.value) || 0,
+                          }))
                         }
                         onFocus={(e) => e.target.select()}
                       />
                     )}
                   </div>
 
-                  {draftType === "plan" ? (
+                  {draft.type === "plan" ? (
                     <div className={field}>
                       <span className={fieldLabel}>scheduled</span>
                       <input
                         className={fieldInput}
                         type="datetime-local"
-                        value={draftStarts}
-                        onChange={(e) => setDraftStarts(e.target.value)}
+                        value={draft.starts}
+                        onChange={(e) =>
+                          setDraft((d) => ({ ...d, starts: e.target.value }))
+                        }
                       />
                     </div>
                   ) : (
@@ -502,8 +451,10 @@ export default function CapturePage() {
                       <input
                         className={fieldInput}
                         type="date"
-                        value={draftDeadline}
-                        onChange={(e) => setDraftDeadline(e.target.value)}
+                        value={draft.deadline}
+                        onChange={(e) =>
+                          setDraft((d) => ({ ...d, deadline: e.target.value }))
+                        }
                       />
                     </div>
                   )}
@@ -512,8 +463,10 @@ export default function CapturePage() {
                     <span className={fieldLabel}>category</span>
                     <CategoryPicker
                       categories={categories}
-                      value={draftCategoryId}
-                      onChange={setDraftCategoryId}
+                      value={draft.categoryId}
+                      onChange={(categoryId) =>
+                        setDraft((d) => ({ ...d, categoryId }))
+                      }
                       selected={selectedCategory}
                     />
                   </div>
@@ -536,7 +489,7 @@ export default function CapturePage() {
                     size="sm"
                     onClick={() => commitSelected(true)}
                   >
-                    {draftType === "goal" ? "Save" : "Save & mark ready"}
+                    {draft.type === "goal" ? "Save" : "Save & mark ready"}
                   </Button>
                 </div>
               </div>
@@ -565,154 +518,6 @@ export default function CapturePage() {
           )}
         </section>
       </div>
-    </div>
-  );
-}
-
-type CategoryOption = { id: string; name: string; color?: string | null };
-
-const NO_CATEGORY: CategoryOption = { id: "", name: "No category", color: null };
-
-function CategoryPicker({
-  categories,
-  value,
-  onChange,
-  selected,
-}: {
-  categories: Category[];
-  value: string;
-  onChange: (id: string) => void;
-  selected: Category | null;
-}) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-
-  const options: CategoryOption[] = useMemo(
-    () => [NO_CATEGORY, ...categories],
-    [categories],
-  );
-
-  const handleSelect = useCallback(
-    (opt: CategoryOption) => {
-      onChange(opt.id);
-      setOpen(false);
-      triggerRef.current?.focus();
-    },
-    [onChange],
-  );
-
-  const keyboardNav = useListKeyboardNav<CategoryOption>(
-    open ? options : [],
-    handleSelect,
-  );
-
-  useClickOutside({
-    ref: wrapRef,
-    onClickOutside: () => setOpen(false),
-    isActive: open,
-  });
-
-  // Seed the highlight to the current selection when opening so the dropdown
-  // doesn't read as "nothing selected" while the field clearly has a value.
-  useEffect(() => {
-    if (!open) return;
-    const idx = options.findIndex((o) => o.id === value);
-    keyboardNav.setActiveIndex(idx >= 0 ? idx : 0);
-    // keyboardNav identity is stable per render but we only want to seed once
-    // per open transition; depending only on `open` is the intent.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  const triggerLabel = selected?.name ?? "No category";
-  const isEmpty = !selected;
-
-  const onTriggerKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
-    if (!open && (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")) {
-      e.preventDefault();
-      setOpen(true);
-      return;
-    }
-    if (open && e.key === "Escape") {
-      e.preventDefault();
-      setOpen(false);
-      return;
-    }
-    keyboardNav.onKeyDown(e);
-  };
-
-  return (
-    <div
-      className={categoryDropdownWrap}
-      ref={wrapRef}
-      data-capture-picker="true"
-    >
-      <button
-        ref={triggerRef}
-        type="button"
-        className={categoryTrigger}
-        onClick={() => setOpen((o) => !o)}
-        onKeyDown={onTriggerKeyDown}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        {selected?.color && (
-          <CategoryDot color={selected.color} size={10} glow={false} />
-        )}
-        <span
-          className={`${categoryTriggerLabel} ${
-            isEmpty ? categoryTriggerEmpty : ""
-          }`}
-        >
-          {triggerLabel}
-        </span>
-        <ChevronDown
-          size={14}
-          strokeWidth={2.4}
-          className={categoryTriggerChevron}
-        />
-      </button>
-
-      {open && (
-        <div className={categoryDropdown} ref={keyboardNav.containerRef}>
-          {options.map((opt, i) => {
-            const active = keyboardNav.activeIndex === i;
-            const isNone = opt.id === "";
-            return (
-              <button
-                key={opt.id || "none"}
-                type="button"
-                data-knav-index={i}
-                className={`${categoryDropdownItem} ${
-                  active ? categoryDropdownItemActive : ""
-                } ${isNone ? categoryDropdownItemMuted : ""}`}
-                onMouseEnter={() => keyboardNav.setActiveIndex(i)}
-                onClick={() => handleSelect(opt)}
-              >
-                {isNone ? (
-                  <span
-                    aria-hidden
-                    style={{
-                      display: "inline-block",
-                      width: 10,
-                      height: 10,
-                      borderRadius: 999,
-                      border: "1px dashed currentColor",
-                      opacity: 0.5,
-                      flexShrink: 0,
-                    }}
-                  />
-                ) : opt.color ? (
-                  <CategoryDot color={opt.color} size={10} glow={false} />
-                ) : (
-                  <span style={{ width: 10, flexShrink: 0 }} />
-                )}
-                <span style={{ flex: 1, minWidth: 0 }}>{opt.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }

@@ -8,6 +8,9 @@ export const lumenLight = createTheme(vars, {
   inkSoft: "#3c3a52",
   muted: "#7a7890",
   rule: "rgba(22,20,42,0.12)",
+  textOnAccent: "#ffffff",
+  overlay: "rgba(10,8,20,0.42)",
+  tileFill: "#f2efea",
 
   glass: {
     bg: "rgba(255,255,255,0.28)",
@@ -67,6 +70,9 @@ export const lumenDark = createTheme(vars, {
   inkSoft: "rgba(230,232,236,0.65)",
   muted: "rgba(230,232,236,0.42)",
   rule: "rgba(230,232,236,0.10)",
+  textOnAccent: "#ffffff",
+  overlay: "rgba(0,0,0,0.55)",
+  tileFill: "#1c1f27",
 
   glass: {
     bg: "rgba(230,232,236,0.05)",

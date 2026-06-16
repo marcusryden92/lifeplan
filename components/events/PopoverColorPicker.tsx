@@ -11,7 +11,11 @@ import { createPortal } from "react-dom";
 import { Check } from "lucide-react";
 import { calendarColors } from "@/data/calendarColors";
 import { useModalStack } from "@/hooks/useModalStack";
-import { vars, popover as popoverRecipe } from "@/lib/theme";
+import {
+  vars,
+  popover as popoverRecipe,
+  interactiveTransition,
+} from "@/lib/theme";
 
 interface Props {
   /** The currently applied color (used to highlight the active swatch). */
@@ -199,14 +203,14 @@ export function PopoverColorPicker({
                     boxShadow: active
                       ? `0 0 0 1.5px ${vars.paper}, 0 0 0 2.5px ${vars.ink}`
                       : "none",
-                    transition: "transform 120ms ease, box-shadow 120ms ease",
+                    transition: interactiveTransition("transform", "box-shadow"),
                   }}
                 >
                   {active && (
                     <Check
                       size={9}
                       strokeWidth={3}
-                      color="#fff"
+                      color={vars.textOnAccent}
                       aria-hidden
                     />
                   )}

@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, buttonTransition } from "@/lib/theme";
+import { vars, buttonTransition, backdropFilters } from "@/lib/theme";
 
 export const tabBar = style({
   position: "fixed",
@@ -12,8 +12,8 @@ export const tabBar = style({
   justifyContent: "space-around",
   padding: "8px 14px",
   background: vars.glass.bg,
-  backdropFilter: "blur(28px) saturate(180%)",
-  WebkitBackdropFilter: "blur(28px) saturate(180%)",
+  backdropFilter: backdropFilters.panel,
+  WebkitBackdropFilter: backdropFilters.panel,
   border: `1px solid ${vars.glass.stroke}`,
   borderRadius: 999,
   boxShadow: vars.shadow.panelSm,

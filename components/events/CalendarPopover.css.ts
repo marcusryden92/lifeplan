@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/lib/theme";
+import { vars, interactiveTransition } from "@/lib/theme";
 
 // Layout-only — the popover() recipe owns the glass surface (fill, blur,
 // stroke, shadow, radius). This file adds the calendar-popover-specific
@@ -34,7 +34,7 @@ export const dragHandle = style({
   color: vars.muted,
   cursor: "grab",
   borderRadius: 6,
-  transition: "color 120ms ease",
+  transition: interactiveTransition("color"),
   selectors: {
     "&:hover": { color: vars.ink },
     "&:active": { cursor: "grabbing" },
@@ -61,7 +61,7 @@ export const closeBtn = style({
   color: vars.muted,
   cursor: "pointer",
   flexShrink: 0,
-  transition: "color 120ms ease, background 120ms ease",
+  transition: interactiveTransition("color", "background"),
   selectors: {
     "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
   },
@@ -133,7 +133,7 @@ export const renamePencil = style({
   color: vars.muted,
   cursor: "pointer",
   flexShrink: 0,
-  transition: "color 120ms ease",
+  transition: interactiveTransition("color"),
   selectors: {
     "&:hover": { color: vars.ink },
   },

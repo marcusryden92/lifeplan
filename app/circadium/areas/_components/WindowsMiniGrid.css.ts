@@ -91,7 +91,7 @@ export const windowBlock = style({
   fontFamily: vars.font.ui,
   fontSize: 9,
   fontWeight: 600,
-  color: "#fff",
+  color: vars.textOnAccent,
   padding: "2px 4px",
   display: "flex",
   alignItems: "flex-start",

@@ -3,7 +3,6 @@
 import {
   useEffect,
   useMemo,
-  useRef,
   useState,
   type KeyboardEvent,
   type ReactNode,
@@ -11,6 +10,8 @@ import {
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Check, SquarePen } from "lucide-react";
 import { Button, Caption, Loader } from "@/components/ui";
+import { vars, interactiveTransition } from "@/lib/theme";
+import { useFlashValue } from "@/hooks/useFlashAnimation";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { DraggableContextProvider } from "@/components/draggable/DraggableContext";
 import * as categoryActions from "@/actions/categories";
@@ -25,7 +26,7 @@ import type { PlannerType } from "@/lib/generated/db-client";
 
 import { ItemProvider } from "./_components/ItemContext";
 import { ItemTabs } from "./_components/ItemTabs";
-import { LumenConfirmModal } from "./_components/LumenConfirmModal";
+import { LumenConfirmModal } from "@/app/circadium/_components/LumenConfirmModal";
 import {
   page,
   innerWrap,
@@ -43,6 +44,8 @@ import {
   readyHint,
   tabBodyWrap,
 } from "./layout.css";
+
+const READY_MESSAGE_MS = 3500;
 
 export default function ItemDetailLayout({
   children,
@@ -145,15 +148,9 @@ export default function ItemDetailLayout({
   // Transient hint shown under the Ready button — only set when the user
   // attempts a blocked toggle. Declared up here so the hook order stays stable
   // across the early returns below.
-  const [readyMessage, setReadyMessage] = useState<string | null>(null);
-  const readyMessageTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+  const [readyMessage, flashReadyMessage] = useFlashValue<string | null>(
+    READY_MESSAGE_MS,
     null,
-  );
-  useEffect(
-    () => () => {
-      if (readyMessageTimerRef.current) clearTimeout(readyMessageTimerRef.current);
-    },
-    [],
   );
 
   if (loadingCategories) {
@@ -233,14 +230,6 @@ export default function ItemDetailLayout({
     return false;
   })();
 
-  // The button itself is never disabled; clicking a blocked action surfaces
-  // the reason via flashReadyMessage instead of going inert.
-  const flashReadyMessage = (msg: string) => {
-    if (readyMessageTimerRef.current) clearTimeout(readyMessageTimerRef.current);
-    setReadyMessage(msg);
-    readyMessageTimerRef.current = setTimeout(() => setReadyMessage(null), 3500);
-  };
-
   const onReadyClick = () => {
     if (!item.isReady && !canMarkReady) {
       const msg =
@@ -254,8 +243,7 @@ export default function ItemDetailLayout({
       flashReadyMessage("Has completed work — cannot un-ready.");
       return;
     }
-    if (readyMessageTimerRef.current) clearTimeout(readyMessageTimerRef.current);
-    setReadyMessage(null);
+    flashReadyMessage(null);
     handleToggleReady();
   };
 
@@ -343,13 +331,16 @@ export default function ItemDetailLayout({
                       style={{
                         minWidth: 124,
                         justifyContent: "center",
-                        transition:
-                          "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
+                        transition: interactiveTransition(
+                          "background-color",
+                          "border-color",
+                          "color",
+                        ),
                         ...(item.isReady
                           ? {
-                              background: "#34d399",
-                              borderColor: "#34d399",
-                              color: "#fff",
+                              background: vars.status.success,
+                              borderColor: vars.status.success,
+                              color: vars.textOnAccent,
                             }
                           : {}),
                       }}

@@ -1,5 +1,10 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import {
+  vars,
+  themeTransition,
+  backdropFilters,
+  colorMixAlpha,
+} from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -126,8 +131,8 @@ export const leftCardHeader = style({
   borderTopRightRadius: 22,
   borderBottom: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bgDeep,
-  backdropFilter: "blur(28px) saturate(180%)",
-  WebkitBackdropFilter: "blur(28px) saturate(180%)",
+  backdropFilter: backdropFilters.panel,
+  WebkitBackdropFilter: backdropFilters.panel,
   boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
   transform: "translateZ(0)",
   willChange: "backdrop-filter",
@@ -202,7 +207,7 @@ export const agendaRow = style({
 });
 
 export const agendaRowNow = style({
-  background: `color-mix(in srgb, ${vars.accent.now} 14%, transparent)`,
+  background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.lightFill}%, transparent)`,
   border: `1px solid color-mix(in srgb, ${vars.accent.now} 45%, transparent)`,
   selectors: {
     "&:hover": {

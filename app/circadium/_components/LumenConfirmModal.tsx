@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui";
+import { useModalStack } from "@/hooks/useModalStack";
 import {
   overlay,
   modal,
@@ -41,6 +42,7 @@ export function LumenConfirmModal({
   const [dataState, setDataState] = useState<"open" | "closed">(
     open ? "open" : "closed",
   );
+  const { isTop } = useModalStack(open);
 
   useEffect(() => {
     if (open) {
@@ -53,13 +55,24 @@ export function LumenConfirmModal({
     return () => clearTimeout(t);
   }, [open]);
 
+  useEffect(() => {
+    if (!isTop || !shouldRender) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isTop, shouldRender, onCancel]);
+
   if (!shouldRender) return null;
 
   return (
     <div
       className={overlay}
       data-state={dataState}
-      onClick={onCancel}
+      onClick={() => {
+        if (isTop) onCancel();
+      }}
       role="presentation"
     >
       <div

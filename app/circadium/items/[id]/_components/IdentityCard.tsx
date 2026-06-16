@@ -7,7 +7,7 @@ import { Caption, Button, CategoryBadge } from "@/components/ui";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
 import { useItem } from "./ItemContext";
-import { LumenDropdown } from "./LumenDropdown";
+import { LumenDropdown } from "@/app/circadium/_components/LumenDropdown";
 import { formatMinutesToHours } from "@/utils/taskArrayUtils";
 import type { PlannerType } from "@/lib/generated/db-client";
 import {

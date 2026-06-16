@@ -1,5 +1,6 @@
 import { globalStyle } from "@vanilla-extract/css";
 import { vars } from "./tokens.css";
+import { backdropFilters, colorMixAlpha } from "./effects";
 
 globalStyle("html", {
   scrollbarWidth: "thin",
@@ -21,12 +22,12 @@ globalStyle("::-webkit-scrollbar-thumb", {
   borderRadius: 999,
   backgroundClip: "padding-box",
   boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
-  backdropFilter: "blur(14px) saturate(160%)",
-  WebkitBackdropFilter: "blur(14px) saturate(160%)",
+  backdropFilter: backdropFilters.scrollbar,
+  WebkitBackdropFilter: backdropFilters.scrollbar,
 });
 
 globalStyle("::-webkit-scrollbar-thumb:hover", {
-  background: `color-mix(in srgb, ${vars.ink} 28%, transparent)`,
+  background: `color-mix(in srgb, ${vars.ink} ${colorMixAlpha.selectedFill}%, transparent)`,
   backgroundClip: "padding-box",
 });
 

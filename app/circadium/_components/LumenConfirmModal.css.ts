@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, themeTransition, backdropFilters } from "@/lib/theme";
 
 export const CONFIRM_FADE_MS = 180;
 
@@ -11,8 +11,8 @@ export const overlay = style({
   alignItems: "center",
   justifyContent: "center",
   background: "rgba(0,0,0,0.32)",
-  backdropFilter: "blur(2px)",
-  WebkitBackdropFilter: "blur(2px)",
+  backdropFilter: backdropFilters.confirm,
+  WebkitBackdropFilter: backdropFilters.confirm,
   opacity: 0,
   transition: `opacity ${CONFIRM_FADE_MS}ms ease`,
   selectors: {

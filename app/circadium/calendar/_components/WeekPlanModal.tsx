@@ -23,6 +23,7 @@ import { X } from "lucide-react";
 
 import { Button, Backdrop, Grain, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useModalStack } from "@/hooks/useModalStack";
 import type { Category, EventTemplate } from "@/types/prisma";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 import {
@@ -253,6 +254,7 @@ export function WeekPlanModal({
   const [dataState, setDataState] = useState<"open" | "closed">(
     open ? "open" : "closed",
   );
+  const { isTop } = useModalStack(open);
 
   useEffect(() => {
     if (open) {
@@ -675,6 +677,16 @@ export function WeekPlanModal({
     onClose();
   };
 
+  useEffect(() => {
+    if (!isTop || !shouldRender) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") cancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTop, shouldRender, changeCount, onClose]);
+
   if (!shouldRender) return null;
 
   const tplCount = tplsWorking.length;
@@ -685,7 +697,7 @@ export function WeekPlanModal({
       className={overlay}
       data-state={dataState}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) cancel();
+        if (e.target === e.currentTarget && isTop) cancel();
       }}
     >
       <div className={modal}>

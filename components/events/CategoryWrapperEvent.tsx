@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { vars } from "@/lib/theme";
+import { vars, colorMixAlpha } from "@/lib/theme";
 import {
   TRESPASS_BORDER_COLOR,
   TRESPASS_BORDER_WIDTH,
@@ -41,7 +41,7 @@ export function CategoryWrapperEvent({
   };
 
   const accent = categoryColor || vars.accent.primary;
-  const stripeColor = `color-mix(in srgb, ${accent} 28%, transparent)`;
+  const stripeColor = `color-mix(in srgb, ${accent} ${colorMixAlpha.selectedFill}%, transparent)`;
   const fillTint = `color-mix(in srgb, ${accent} 12%, transparent)`;
   const trespassPx = `${TRESPASS_BORDER_WIDTH}px`;
 

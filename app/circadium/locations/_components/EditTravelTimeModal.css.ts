@@ -1,5 +1,12 @@
 import { style, keyframes } from "@vanilla-extract/css";
-import { vars, themeTransition, lumenDark, popover } from "@/lib/theme";
+import {
+  vars,
+  themeTransition,
+  lumenDark,
+  popover,
+  backdropFilters,
+  interactiveTransition,
+} from "@/lib/theme";
 
 const FADE_MS = 160;
 
@@ -22,9 +29,9 @@ export const overlay = style({
   alignItems: "center",
   justifyContent: "center",
   padding: 24,
-  background: "rgba(8, 6, 18, 0.42)",
-  backdropFilter: "blur(4px)",
-  WebkitBackdropFilter: "blur(4px)",
+  background: vars.overlay,
+  backdropFilter: backdropFilters.modal,
+  WebkitBackdropFilter: backdropFilters.modal,
   zIndex: 150,
   opacity: 0,
   transition: `opacity ${FADE_MS}ms ease`,
@@ -143,7 +150,7 @@ export const revertBtn = style({
   color: vars.muted,
   cursor: "pointer",
   padding: 0,
-  transition: "color 120ms ease, background-color 120ms ease, opacity 120ms ease",
+  transition: interactiveTransition("color", "background-color", "opacity"),
   selectors: {
     "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
     "&:disabled": { opacity: 0.25, cursor: "default" },

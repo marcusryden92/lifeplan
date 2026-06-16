@@ -100,7 +100,21 @@
       "Bash(npx prisma *)",
       "PowerShell(Move-Item -Path \"app/circadium/areas\" -Destination \"app/circadium/life-areas\")",
       "Bash(pnpm next *)",
-      "Bash(echo \"EXIT:$?\")"
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\lib\" -Recurse)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\circadium\" -Recurse -Force | Select-Object FullName | ForEach-Object { $_.FullName -replace [regex]::Escape\\(\"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\\"\\), \"\" } | Sort-Object)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\components\" -Recurse -Force)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(ConvertTo-Json -Depth 10)",
+      "Bash(Out-String)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\\\(protected\\)\" -Recurse -Force | Select-Object FullName | ForEach-Object { $_.FullName -replace [regex]::Escape\\(\"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\\"\\), \"\" } | Sort-Object)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\circadium\" -Depth 1 -Directory | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\\\(protected\\)\" -Depth 1 -Directory | ForEach-Object { $_.Name })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\lib\" -Recurse | Where-Object { $_.FullName -notmatch \"generated\" } | Select-Object FullName | Sort-Object FullName | ForEach-Object { $_.FullName.Replace\\(\"C:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\lib\\\\\", \"\"\\) })",
+      "Bash(grep -n \"style=\\\\|\\\\#[a-fA-F0-9]\\\\{3,6\\\\}\\\\|rgba\\\\|rgb\\(\" \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\circadium\\\\capture\\\\page.tsx\")",
+      "Bash(grep -n \"style=\\\\|\\\\#[a-fA-F0-9]\\\\{3,6\\\\}\\\\|rgba\\\\|rgb\\(\" \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\circadium\\\\library\\\\page.tsx\")"
     ]
   }
 }

@@ -1,0 +1,31 @@
+const SECONDS_PER_MINUTE = 60;
+const MINUTES_PER_HOUR = 60;
+const HOURS_PER_DAY = 24;
+
+// Compact relative-age label: "12s", "5m", "3h", "2d". Capped at days.
+// Use when the bucket matters more than precision (inbox queue ordering,
+// activity timestamps next to a row title).
+export function ageLabel(createdAt: string | Date): string {
+  const created =
+    typeof createdAt === "string" ? new Date(createdAt) : createdAt;
+  const ms = Date.now() - created.getTime();
+  const s = Math.max(0, Math.floor(ms / 1000));
+  if (s < SECONDS_PER_MINUTE) return `${s}s`;
+  const m = Math.floor(s / SECONDS_PER_MINUTE);
+  if (m < MINUTES_PER_HOUR) return `${m}m`;
+  const h = Math.floor(m / MINUTES_PER_HOUR);
+  if (h < HOURS_PER_DAY) return `${h}h`;
+  const d = Math.floor(h / HOURS_PER_DAY);
+  return `${d}d`;
+}
+
+// Compact duration formatter: "45m", "1h", "1h 30m". Empty/<=0 renders "—".
+// Distinct from `formatMinutesToHours` in utils/taskArrayUtils.ts which uses
+// the spaced form ("45 min", "1 h 30 min") for task-tree summaries.
+export function formatDurationCompact(minutes: number): string {
+  if (minutes <= 0) return "—";
+  if (minutes < MINUTES_PER_HOUR) return `${minutes}m`;
+  const h = Math.floor(minutes / MINUTES_PER_HOUR);
+  const m = minutes % MINUTES_PER_HOUR;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}

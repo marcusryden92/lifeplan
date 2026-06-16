@@ -1,11 +1,12 @@
 import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "./tokens.css";
+import { backdropFilters } from "./effects";
 import { themeTransition, buttonTransition } from "./transitions";
 
 export const glass = recipe({
   base: {
-    backdropFilter: "blur(28px) saturate(180%)",
-    WebkitBackdropFilter: "blur(28px) saturate(180%)",
+    backdropFilter: backdropFilters.panel,
+    WebkitBackdropFilter: backdropFilters.panel,
     border: `1px solid ${vars.glass.stroke}`,
     boxShadow: vars.shadow.panel,
     background: vars.glass.bg,
@@ -46,8 +47,8 @@ export type GlassVariants = NonNullable<Parameters<typeof glass>[0]>;
 export const popover = recipe({
   base: {
     background: vars.glass.bgDeep,
-    backdropFilter: "blur(28px) saturate(180%)",
-    WebkitBackdropFilter: "blur(28px) saturate(180%)",
+    backdropFilter: backdropFilters.panel,
+    WebkitBackdropFilter: backdropFilters.panel,
     border: `1px solid ${vars.glass.stroke}`,
     transition: themeTransition,
   },
@@ -86,8 +87,8 @@ export const pillBtn = recipe({
     variant: {
       glass: {
         background: vars.glass.bgDeep,
-        backdropFilter: "blur(12px) saturate(140%)",
-        WebkitBackdropFilter: "blur(12px) saturate(140%)",
+        backdropFilter: backdropFilters.button,
+        WebkitBackdropFilter: backdropFilters.button,
         border: `1px solid ${vars.glass.stroke}`,
         boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
         color: vars.ink,
@@ -105,7 +106,7 @@ export const pillBtn = recipe({
       },
       danger: {
         background: vars.status.error,
-        color: "#fff",
+        color: vars.textOnAccent,
       },
     },
     size: {
@@ -140,12 +141,12 @@ export const badge = recipe({
   variants: {
     tone: {
       type: { background: vars.ink, color: vars.paper },
-      now: { background: vars.accent.now, color: "#fff" },
-      done: { background: vars.accent.done, color: "#fff" },
-      success: { background: vars.status.success, color: "#fff" },
+      now: { background: vars.accent.now, color: vars.textOnAccent },
+      done: { background: vars.accent.done, color: vars.textOnAccent },
+      success: { background: vars.status.success, color: vars.textOnAccent },
       warning: { background: vars.status.warning, color: vars.ink },
-      error: { background: vars.status.error, color: "#fff" },
-      info: { background: vars.status.info, color: "#fff" },
+      error: { background: vars.status.error, color: vars.textOnAccent },
+      info: { background: vars.status.info, color: vars.textOnAccent },
       neutral: {
         background: vars.glass.bgSoft,
         border: `1px solid ${vars.rule}`,

@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, themeTransition, interactiveTransition } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -46,7 +46,7 @@ export const headerSwatch = style({
   fontFamily: vars.font.display,
   fontSize: 24,
   fontWeight: 500,
-  color: "#fff",
+  color: vars.textOnAccent,
   flexShrink: 0,
   textShadow: "0 1px 2px rgba(0,0,0,0.18)",
 });
@@ -124,8 +124,7 @@ export const headerNamePencil = style({
   cursor: "pointer",
   opacity: 0,
   flexShrink: 0,
-  transition:
-    "opacity 120ms ease, color 120ms ease, background-color 120ms ease",
+  transition: interactiveTransition("opacity", "color", "background-color"),
   selectors: {
     [`${headerNameRow}:hover &`]: { opacity: 1 },
     "&:hover": { color: vars.ink, background: vars.glass.bgSoft },

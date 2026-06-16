@@ -4,9 +4,10 @@ import { MapPin } from "lucide-react";
 import { useMemo } from "react";
 import { useSelector } from "react-redux";
 import { Caption } from "@/components/ui";
-import { LumenDropdown } from "@/app/circadium/items/[id]/_components/LumenDropdown";
+import { LumenDropdown } from "@/app/circadium/_components/LumenDropdown";
+import { LumenSwitch } from "@/app/circadium/_components/LumenSwitch";
 import type { RootState } from "@/redux/store";
-import { vars } from "@/lib/theme";
+import { vars, interactiveTransition } from "@/lib/theme";
 
 interface Props {
   value: string | null;
@@ -76,7 +77,7 @@ export function PopoverLocationPicker({
             flexWrap: "wrap",
           }}
         >
-          <Switch
+          <LumenSwitch
             checked={!!isOverridden}
             onChange={() => onToggleOverride?.()}
             ariaLabel="Override inherited location"
@@ -99,7 +100,7 @@ export function PopoverLocationPicker({
         style={{
           opacity: isInheriting ? 0.55 : 1,
           pointerEvents: isInheriting ? "none" : "auto",
-          transition: "opacity 120ms ease",
+          transition: interactiveTransition("opacity"),
         }}
         aria-disabled={isInheriting || undefined}
       >
@@ -144,48 +145,3 @@ export function PopoverLocationPicker({
   );
 }
 
-function Switch({
-  checked,
-  onChange,
-  ariaLabel,
-}: {
-  checked: boolean;
-  onChange: () => void;
-  ariaLabel: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={ariaLabel}
-      onClick={onChange}
-      style={{
-        position: "relative",
-        width: 32,
-        height: 18,
-        borderRadius: 999,
-        border: `1px solid ${checked ? vars.ink : vars.glass.stroke}`,
-        background: checked ? vars.ink : vars.glass.bgSoft,
-        cursor: "pointer",
-        flexShrink: 0,
-        padding: 0,
-        transition: "background 140ms ease, border-color 140ms ease",
-      }}
-    >
-      <span
-        aria-hidden
-        style={{
-          position: "absolute",
-          top: 1,
-          left: checked ? 15 : 1,
-          width: 14,
-          height: 14,
-          borderRadius: 999,
-          background: vars.paper,
-          transition: "left 140ms ease",
-        }}
-      />
-    </button>
-  );
-}

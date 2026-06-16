@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from "react";
-import { badge, type BadgeVariants } from "@/lib/theme";
+import { badge, colorMixAlpha, type BadgeVariants } from "@/lib/theme";
 
 type Props = HTMLAttributes<HTMLSpanElement> &
   Omit<BadgeVariants, "tone"> & {
@@ -20,7 +20,7 @@ export const CategoryBadge = forwardRef<HTMLSpanElement, Props>(
         // a thin tint of the same color so the pill still reads as belonging
         // to that category at a glance.
         style={{
-          background: `color-mix(in srgb, ${color} 14%, transparent)`,
+          background: `color-mix(in srgb, ${color} ${colorMixAlpha.lightFill}%, transparent)`,
           color,
           border: `1px solid ${color}`,
           maxWidth: 110,

@@ -10,9 +10,10 @@ import {
   MapPin,
   Plus,
   RefreshCw,
-  type LucideIcon,
 } from "lucide-react";
+import { SegmentedControl } from "@/app/circadium/_components/SegmentedControl";
 import { Button, Loader } from "@/components/ui";
+import { useFlashValue } from "@/hooks/useFlashAnimation";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import * as locationActions from "@/actions/locations";
 import type { RootState } from "@/redux/store";
@@ -28,7 +29,7 @@ import {
 } from "@/redux/slices/schedulingSettingsSlice";
 import type { Location, TravelTime } from "@/types/prisma";
 import type { TransportMode } from "@/lib/generated/db-client";
-import { LumenConfirmModal } from "@/app/circadium/items/[id]/_components/LumenConfirmModal";
+import { LumenConfirmModal } from "@/app/circadium/_components/LumenConfirmModal";
 import { TravelMatrix } from "./_components/TravelMatrix";
 import { AddLocationModal } from "./_components/AddLocationModal";
 import { EditTravelTimeModal } from "./_components/EditTravelTimeModal";
@@ -42,9 +43,6 @@ import {
   pageTitle,
   spacer,
   headActions,
-  segmentedControl,
-  segmentedThumb,
-  segmentedButton,
   successBanner,
   errorBanner,
   mainGrid,
@@ -79,16 +77,44 @@ import {
 
 const MAX_LOCATIONS = 10;
 
-const TRANSPORT_MODES: ReadonlyArray<{
-  key: TransportMode;
-  label: string;
-  Icon: LucideIcon;
-}> = [
-  { key: "DRIVING", label: "Driving", Icon: Car },
-  { key: "TRANSIT", label: "Transit", Icon: Train },
-  { key: "BICYCLING", label: "Bike", Icon: Bike },
-  { key: "WALKING", label: "Walk", Icon: Footprints },
-];
+const TRANSPORT_MODE_OPTIONS = [
+  {
+    key: "DRIVING" as TransportMode,
+    label: (
+      <>
+        <Car size={11} strokeWidth={2.4} />
+        Driving
+      </>
+    ),
+  },
+  {
+    key: "TRANSIT" as TransportMode,
+    label: (
+      <>
+        <Train size={11} strokeWidth={2.4} />
+        Transit
+      </>
+    ),
+  },
+  {
+    key: "BICYCLING" as TransportMode,
+    label: (
+      <>
+        <Bike size={11} strokeWidth={2.4} />
+        Bike
+      </>
+    ),
+  },
+  {
+    key: "WALKING" as TransportMode,
+    label: (
+      <>
+        <Footprints size={11} strokeWidth={2.4} />
+        Walk
+      </>
+    ),
+  },
+] as const;
 
 // Helper: narrow a Prisma Location to the serialized shape Redux holds.
 const serialize = (loc: Location): SerializedLocation => ({
@@ -110,6 +136,8 @@ const serializeTravel = (tt: TravelTime): SerializedTravelTime => ({
   customRegularMinutes: tt.customRegularMinutes,
   customNightMinutes: tt.customNightMinutes,
 });
+
+const SUCCESS_MESSAGE_MS = 3000;
 
 export default function LocationsPage() {
   // NOTE: this page does NOT refetch locations on mount. UserProvider already
@@ -139,7 +167,10 @@ export default function LocationsPage() {
 
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [success, flashSuccess] = useFlashValue<string | null>(
+    SUCCESS_MESSAGE_MS,
+    null,
+  );
 
   const [editingLocation, setEditingLocation] =
     useState<SerializedLocation | null>(null);
@@ -150,11 +181,6 @@ export default function LocationsPage() {
     null,
   );
   const [confirmClearAll, setConfirmClearAll] = useState(false);
-
-  const flashSuccess = (msg: string) => {
-    setSuccess(msg);
-    setTimeout(() => setSuccess(null), 3000);
-  };
 
   const travelTimes = useMemo(
     () => allTravelTimes.filter((tt) => tt.transportMode === transportMode),
@@ -412,9 +438,10 @@ export default function LocationsPage() {
         {success && !error && <div className={successBanner}>{success}</div>}
         <span className={spacer} />
         <div className={headActions}>
-          <TransportModeSegmented
+          <SegmentedControl<TransportMode>
             value={transportMode}
             onChange={handleTransportChange}
+            options={TRANSPORT_MODE_OPTIONS}
           />
           <Button
             variant="glass"
@@ -649,45 +676,3 @@ export default function LocationsPage() {
   );
 }
 
-// Sliding-thumb segmented control identical to the library filter strip's
-// pattern. Kept local since this is the only segment list on the page.
-function TransportModeSegmented({
-  value,
-  onChange,
-}: {
-  value: TransportMode;
-  onChange: (next: TransportMode) => void;
-}) {
-  const n = TRANSPORT_MODES.length;
-  const activeIdx = Math.max(
-    0,
-    TRANSPORT_MODES.findIndex((o) => o.key === value),
-  );
-  return (
-    <div
-      className={segmentedControl}
-      style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}
-    >
-      <span
-        className={segmentedThumb}
-        aria-hidden
-        style={{
-          width: `calc(${100 / n}% - ${6 / n}px)`,
-          transform: `translateX(${activeIdx * 100}%)`,
-        }}
-      />
-      {TRANSPORT_MODES.map((o) => (
-        <button
-          key={o.key}
-          type="button"
-          className={segmentedButton}
-          data-active={o.key === value}
-          onClick={() => onChange(o.key)}
-        >
-          <o.Icon size={11} strokeWidth={2.4} />
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}

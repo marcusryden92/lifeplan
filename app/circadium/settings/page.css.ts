@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, themeTransition, backdropFilters } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -177,8 +177,8 @@ export const pinstripeRule = style({
 
 export const card = style({
   background: vars.glass.bgDeep,
-  backdropFilter: "blur(28px) saturate(180%)",
-  WebkitBackdropFilter: "blur(28px) saturate(180%)",
+  backdropFilter: backdropFilters.panel,
+  WebkitBackdropFilter: backdropFilters.panel,
   border: `1px solid ${vars.glass.stroke}`,
   borderRadius: 18,
   padding: 20,

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui";
+import { useModalStack } from "@/hooks/useModalStack";
 import type { TransportMode } from "@/lib/generated/db-client";
 import type { SerializedTravelTime } from "@/redux/slices/schedulingSettingsSlice";
 
@@ -61,6 +62,7 @@ export function EditTravelTimeModal({
   const [dataState, setDataState] = useState<"open" | "closed">(
     open ? "open" : "closed",
   );
+  const { isTop } = useModalStack(open);
 
   useEffect(() => {
     if (open) {
@@ -72,6 +74,15 @@ export function EditTravelTimeModal({
     const t = setTimeout(() => setShouldRender(false), MODAL_FADE_MS);
     return () => clearTimeout(t);
   }, [open]);
+
+  useEffect(() => {
+    if (!isTop || !shouldRender) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isTop, shouldRender, onClose]);
 
   // Drafts mirror the current effective values for each period. They reset
   // whenever the modal is opened on a fresh travel-time entry.
@@ -216,7 +227,7 @@ export function EditTravelTimeModal({
       className={overlay}
       data-state={dataState}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && isTop) onClose();
       }}
     >
       <div className={modal}>

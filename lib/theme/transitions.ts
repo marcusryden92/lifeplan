@@ -10,8 +10,17 @@ export const DURATIONS = {
   // :active press scale feedback on buttons.
   press: 0.12,
 
+  // Quick hover/swap transitions inside popovers and pickers (transform,
+  // box-shadow, color, opacity). Same numeric value as `press` but distinct
+  // intent — tweak either independently.
+  interactive: 0.12,
+
+  // Slightly slower interactive transition for inputs/switches where the
+  // ease feels better at ~140ms.
+  interactive2: 0.14,
+
   // Sidebar collapse, label fade, panel slide-in animations.
-  collapse: 0.2,
+  collapse: 0.22,
 
   // Modal/dialog/sheet entrance.
   modal: 0.18,
@@ -55,6 +64,17 @@ export const collapseTransition = [
 
 // For progress bar width fills.
 export const progressTransition = `width ${DURATIONS.progress}s ease`;
+
+// Compose a multi-property transition string at DURATIONS.interactive (120ms).
+// Used by popovers, pickers, tree rows, and most hover/swap interactions where
+// a quick perceptual feedback is wanted without theme-level color easing.
+export const interactiveTransition = (...properties: string[]) =>
+  properties.map((p) => `${p} ${DURATIONS.interactive}s ease`).join(", ");
+
+// Same shape at DURATIONS.interactive2 (140ms) — switches and a few inputs
+// where the slightly slower ease feels better.
+export const interactive2Transition = (...properties: string[]) =>
+  properties.map((p) => `${p} ${DURATIONS.interactive2}s ease`).join(", ");
 
 // Back-compat alias for the previously exported TRANSITION_SPEED.
 export const TRANSITION_SPEED = DURATIONS.theme;

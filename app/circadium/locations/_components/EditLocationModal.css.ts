@@ -1,5 +1,11 @@
 import { style, keyframes } from "@vanilla-extract/css";
-import { vars, themeTransition, popover } from "@/lib/theme";
+import {
+  vars,
+  themeTransition,
+  popover,
+  backdropFilters,
+  colorMixAlpha,
+} from "@/lib/theme";
 
 const FADE_MS = 160;
 export const MODAL_FADE_MS = FADE_MS;
@@ -21,9 +27,9 @@ export const overlay = style({
   alignItems: "center",
   justifyContent: "center",
   padding: 24,
-  background: "rgba(8, 6, 18, 0.42)",
-  backdropFilter: "blur(4px)",
-  WebkitBackdropFilter: "blur(4px)",
+  background: vars.overlay,
+  backdropFilter: backdropFilters.modal,
+  WebkitBackdropFilter: backdropFilters.modal,
   zIndex: 150,
   opacity: 0,
   transition: `opacity ${FADE_MS}ms ease`,
@@ -215,7 +221,7 @@ export const cascadeNote = style({
   gap: 6,
   padding: "8px 10px",
   borderRadius: 8,
-  background: `color-mix(in srgb, ${vars.status.warning} 14%, transparent)`,
+  background: `color-mix(in srgb, ${vars.status.warning} ${colorMixAlpha.lightFill}%, transparent)`,
   border: `1px solid ${vars.status.warning}`,
   color: vars.status.warning,
   fontSize: 11.5,
@@ -238,7 +244,7 @@ export const errorSlot = style({
 export const errorBlock = style({
   padding: "8px 12px",
   borderRadius: 8,
-  background: `color-mix(in srgb, ${vars.status.error} 14%, transparent)`,
+  background: `color-mix(in srgb, ${vars.status.error} ${colorMixAlpha.lightFill}%, transparent)`,
   border: `1px solid ${vars.status.error}`,
   color: vars.status.error,
   fontSize: 12,

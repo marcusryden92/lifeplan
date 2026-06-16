@@ -5,14 +5,15 @@ import {
   buttonTransition,
   DURATIONS,
   popover,
+  backdropFilters,
 } from "@/lib/theme";
 
 export const sidebar = style({
   flexShrink: 0,
   borderRight: `1px solid ${vars.rule}`,
   background: vars.glass.bg,
-  backdropFilter: "blur(28px) saturate(180%)",
-  WebkitBackdropFilter: "blur(28px) saturate(180%)",
+  backdropFilter: backdropFilters.panel,
+  WebkitBackdropFilter: backdropFilters.panel,
   padding: "10px",
   display: "flex",
   flexDirection: "column",
@@ -208,9 +209,9 @@ export const avatar = style({
   placeItems: "center",
   fontSize: 13,
   fontWeight: 700,
-  color: "#1a1827",
+  color: vars.ink,
   flexShrink: 0,
-  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.6)`,
+  boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
 });
 
 export const footerText = style({

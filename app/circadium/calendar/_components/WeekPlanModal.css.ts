@@ -647,10 +647,10 @@ export const eventBox = style({
   transition: `opacity ${MODAL_FADE_MS}ms ease, filter ${MODAL_FADE_MS}ms ease, outline-color 150ms ease, ${themeTransition}`,
   selectors: {
     "&[data-kind='template']": {
-      color: "#fff",
+      color: vars.textOnAccent,
     },
     "&[data-kind='window'][data-assigned='true']": {
-      color: "#fff",
+      color: vars.textOnAccent,
     },
     "&[data-inactive='true']": {
       opacity: 0.22,

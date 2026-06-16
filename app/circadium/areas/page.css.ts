@@ -1,5 +1,10 @@
 import { style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import {
+  vars,
+  themeTransition,
+  interactiveTransition,
+  colorMixAlpha,
+} from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -217,7 +222,7 @@ export const railRowAddChild = style({
   color: vars.muted,
   cursor: "pointer",
   opacity: 0,
-  transition: "opacity 120ms ease, color 120ms ease, background-color 120ms ease",
+  transition: interactiveTransition("opacity", "color", "background-color"),
   flexShrink: 0,
   padding: 0,
   selectors: {
@@ -312,7 +317,7 @@ export const errorBanner = style({
   margin: "0 28px 14px",
   padding: "8px 12px",
   borderRadius: 10,
-  background: `color-mix(in srgb, ${vars.status.error} 14%, transparent)`,
+  background: `color-mix(in srgb, ${vars.status.error} ${colorMixAlpha.lightFill}%, transparent)`,
   border: `1px solid ${vars.status.error}`,
   color: vars.status.error,
   fontSize: 12.5,

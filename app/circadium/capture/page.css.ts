@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, popover } from "@/lib/theme";
+import { vars, themeTransition, popover, backdropFilters } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -220,8 +220,8 @@ export const breadcrumb = style({
 
 export const card = style({
   background: vars.glass.bgDeep,
-  backdropFilter: "blur(28px) saturate(180%)",
-  WebkitBackdropFilter: "blur(28px) saturate(180%)",
+  backdropFilter: backdropFilters.panel,
+  WebkitBackdropFilter: backdropFilters.panel,
   border: `1px solid ${vars.glass.stroke}`,
   borderRadius: 22,
   padding: 28,

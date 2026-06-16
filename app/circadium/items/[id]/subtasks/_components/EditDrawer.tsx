@@ -15,6 +15,8 @@ import type { RootState } from "@/redux/store";
 import { Button, Caption } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
+import { useFlashBoolean } from "@/hooks/useFlashAnimation";
+import { useModalStack } from "@/hooks/useModalStack";
 import { assignLocationToPlanner } from "@/actions/locations";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { NEW_SUBTASK_TITLE } from "@/components/tasks/task-item-subcomponents/TaskHeader";
@@ -24,8 +26,8 @@ import {
 } from "@/utils/goal-handlers/subtaskCompletion";
 import { getRootParentId, getSubtasksById } from "@/utils/goalPageHandlers";
 import { Check } from "lucide-react";
-import { LumenDropdown } from "@/app/circadium/items/[id]/_components/LumenDropdown";
-import { LumenConfirmModal } from "@/app/circadium/items/[id]/_components/LumenConfirmModal";
+import { LumenDropdown } from "@/app/circadium/_components/LumenDropdown";
+import { LumenConfirmModal } from "@/app/circadium/_components/LumenConfirmModal";
 
 import {
   drawer,
@@ -47,6 +49,8 @@ import {
   completeCheckbox,
   drawerFooter,
 } from "./EditDrawer.css";
+
+const SHAKE_DURATION_MS = 420;
 
 export function EditDrawer() {
   const { planner, updatePlannerArray, updateAll } = useCalendarProvider();
@@ -77,10 +81,20 @@ export function EditDrawer() {
   const [titleDraft, setTitleDraft] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const { isTop } = useModalStack(!!task);
 
   useEffect(() => {
     setTitleDraft(task?.title ?? "");
   }, [task?.id, task?.title]);
+
+  useEffect(() => {
+    if (!isTop || !task) return;
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") setFocusedTask(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isTop, task, setFocusedTask]);
 
   // Auto-focus + select the title input for freshly created subtasks.
   useEffect(() => {
@@ -182,14 +196,7 @@ export function EditDrawer() {
     updatePlannerArray((prev) => setSubtaskCompletedAt(prev, task.id, iso));
   };
 
-  const [shakeLocked, setShakeLocked] = useState(false);
-  const flashShake = () => {
-    setShakeLocked((s) => {
-      if (s) return s;
-      window.setTimeout(() => setShakeLocked(false), 420);
-      return true;
-    });
-  };
+  const [shakeLocked, flashShake] = useFlashBoolean(SHAKE_DURATION_MS);
 
   const toggleCompletion = () => {
     if (completionLocked) {

@@ -1,5 +1,10 @@
 import { style, keyframes } from "@vanilla-extract/css";
-import { vars, themeTransition, lumenDark } from "@/lib/theme";
+import {
+  vars,
+  themeTransition,
+  lumenDark,
+  interactiveTransition,
+} from "@/lib/theme";
 
 const lockedShake = keyframes({
   "0%, 100%": { transform: "translateX(0)" },
@@ -94,8 +99,7 @@ export const completeCheckbox = style({
   cursor: "pointer",
   padding: 0,
   flexShrink: 0,
-  transition:
-    "background-color 120ms ease, border-color 120ms ease, color 120ms ease",
+  transition: interactiveTransition("background-color", "border-color", "color"),
   selectors: {
     "&[data-completed='true']": {
       background: vars.status.success,

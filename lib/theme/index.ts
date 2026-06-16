@@ -6,12 +6,16 @@ export {
   buttonTransition,
   collapseTransition,
   progressTransition,
+  interactiveTransition,
+  interactive2Transition,
   TRANSITION_SPEED,
 } from "./transitions";
 
 export { vars } from "./tokens.css";
 export type { ThemeVars } from "./tokens.css";
 export { lumenLight, lumenDark } from "./themes.css";
+export { backdropFilters, colorMixAlpha } from "./effects";
+export type { BackdropFilterKey, ColorMixAlphaKey } from "./effects";
 export {
   display,
   text,

@@ -1,5 +1,5 @@
 import { style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, themeTransition, interactiveTransition } from "@/lib/theme";
 
 export const matrixWrap = style({
   border: `1px solid ${vars.glass.stroke}`,
@@ -128,7 +128,7 @@ export const cellButton = style({
   fontVariantNumeric: "tabular-nums",
   textAlign: "left",
   color: vars.ink,
-  transition: "background-color 120ms ease",
+  transition: interactiveTransition("background-color"),
   selectors: {
     "&:hover": { background: vars.glass.bgDeep },
   },

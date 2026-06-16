@@ -17,7 +17,7 @@ import { EventImpl } from "@fullcalendar/core/internal";
 import { formatTime } from "@/utils/calendarUtils";
 import type { RootState } from "@/redux/store";
 import { TypeBadge } from "@/components/ui";
-import { vars } from "@/lib/theme";
+import { vars, colorMixAlpha } from "@/lib/theme";
 import { CalendarPopover } from "./CalendarPopover";
 import {
   header,
@@ -239,7 +239,7 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
                   padding: "10px 12px",
                   borderRadius: 10,
                   border: `1px solid ${accent}`,
-                  background: `color-mix(in srgb, ${accent} 10%, transparent)`,
+                  background: `color-mix(in srgb, ${accent} ${colorMixAlpha.subtleFill}%, transparent)`,
                   display: "flex",
                   gap: 10,
                   alignItems: "flex-start",

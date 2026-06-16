@@ -7,6 +7,9 @@ export const vars = createThemeContract({
   inkSoft: null,
   muted: null,
   rule: null,
+  textOnAccent: null,
+  overlay: null,
+  tileFill: null,
 
   glass: {
     bg: null,

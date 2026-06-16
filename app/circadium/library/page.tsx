@@ -2,10 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 import {
-  ChevronRight,
-  ChevronDown,
   Plus,
   Search,
   Inbox,
@@ -18,15 +15,21 @@ import {
   Layers,
 } from "lucide-react";
 import { useSelector } from "react-redux";
-import { Button, Caption, Loader, TypeBadge } from "@/components/ui";
+import { Button, Caption, Loader } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { RootState } from "@/redux/store";
 import {
   buildCategoryTree,
   getCategoryAndDescendants,
-  type CategoryNode,
 } from "@/utils/categoryUtils";
-import type { Planner, Category } from "@/types/prisma";
+import { isInSmartView, type SmartView } from "@/utils/dateUtils";
+import type { Category } from "@/types/prisma";
+import { SegmentedControl } from "@/app/circadium/_components/SegmentedControl";
+import {
+  CategoryTreeNode,
+  type Selection,
+} from "./_components/CategoryTreeNode";
+import { ItemRow } from "./_components/ItemRow";
 import {
   page,
   subHeader,
@@ -44,10 +47,6 @@ import {
   railRowLabel,
   railRowCount,
   railRowCountAlert,
-  treeChevron,
-  treeChevronSpacer,
-  treeColorDot,
-  treeNoColor,
   mainCard,
   filterStrip,
   filterRow,
@@ -58,33 +57,9 @@ import {
   breadcrumbCurrent,
   tableWrap,
   tableHead,
-  tableRow,
-  cellTitle,
-  titleText,
-  cellMuted,
-  cellOverdue,
-  cellLocation,
-  cellChevron,
   emptyState,
   emptyStateTitle,
-  segmentedControl,
-  segmentedThumb,
-  segmentedButton,
 } from "./page.css";
-
-type SmartView =
-  | "today"
-  | "this-week"
-  | "inbox"
-  | "overdue"
-  | "all-goals"
-  | "all-plans"
-  | "done-7d";
-
-type Selection =
-  | { kind: "all" }
-  | { kind: "view"; view: SmartView }
-  | { kind: "category"; id: string };
 
 type TypeFilter = "all" | "task" | "plan" | "goal";
 type StatusFilter = "all" | "ready" | "not-ready" | "completed";
@@ -104,117 +79,6 @@ const SMART_VIEWS: Array<{
   { key: "all-plans", label: "All plans", icon: Flag },
   { key: "done-7d", label: "Done · 7d", icon: CheckCircle2 },
 ];
-
-function startOfDay(d: Date): Date {
-  const r = new Date(d);
-  r.setHours(0, 0, 0, 0);
-  return r;
-}
-
-function endOfDay(d: Date): Date {
-  const r = new Date(d);
-  r.setHours(23, 59, 59, 999);
-  return r;
-}
-
-function isInSmartView(item: Planner, view: SmartView, now: Date): boolean {
-  const today = startOfDay(now);
-  const todayEnd = endOfDay(now);
-  switch (view) {
-    case "today": {
-      if (!item.deadline) return false;
-      const dl = new Date(item.deadline);
-      return dl >= today && dl <= todayEnd && !item.completedEndTime;
-    }
-    case "this-week": {
-      if (!item.deadline) return false;
-      const weekEnd = endOfDay(new Date(today.getTime() + 6 * 86400000));
-      const dl = new Date(item.deadline);
-      return dl >= today && dl <= weekEnd && !item.completedEndTime;
-    }
-    case "inbox":
-      return !item.categoryId && !item.completedEndTime;
-    case "overdue": {
-      if (!item.deadline || item.completedEndTime) return false;
-      return new Date(item.deadline) < today;
-    }
-    case "all-goals":
-      return item.plannerType === "goal";
-    case "all-plans":
-      return item.plannerType === "plan";
-    case "done-7d": {
-      if (!item.completedEndTime) return false;
-      const cutoff = new Date(today.getTime() - 7 * 86400000);
-      return new Date(item.completedEndTime) >= cutoff;
-    }
-  }
-}
-
-function typeBadgeTone(type: string): "type" | "info" | "done" | "neutral" {
-  switch (type) {
-    case "goal":
-      return "done";
-    case "plan":
-      return "info";
-    case "task":
-      return "type";
-    default:
-      return "neutral";
-  }
-}
-
-function formatDuration(minutes: number): string {
-  if (minutes <= 0) return "—";
-  if (minutes < 60) return `${minutes}m`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m === 0 ? `${h}h` : `${h}h ${m}m`;
-}
-
-// Animated sliding-thumb segmented control. Matches the type picker in the
-// item detail view: ink-fill thumb translates to the active index, button
-// text fades from muted -> paper.
-function Segmented<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: ReadonlyArray<{ key: T; label: string }>;
-  value: T;
-  onChange: (v: T) => void;
-}) {
-  const n = options.length;
-  const activeIdx = Math.max(
-    0,
-    options.findIndex((o) => o.key === value),
-  );
-  return (
-    <div
-      className={segmentedControl}
-      style={{ gridTemplateColumns: `repeat(${n}, 1fr)` }}
-    >
-      <span
-        className={segmentedThumb}
-        aria-hidden
-        style={{
-          width: `calc(${100 / n}% - ${6 / n}px)`,
-          transform: `translateX(${activeIdx * 100}%)`,
-        }}
-      />
-      {options.map((o) => (
-        <button
-          key={o.key}
-          type="button"
-          className={segmentedButton}
-          data-active={o.key === value}
-          onClick={() => onChange(o.key)}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 export default function LibraryPage() {
   const router = useRouter();
@@ -443,7 +307,7 @@ export default function LibraryPage() {
               </div>
             ) : (
               categoryTree.map((node) => (
-                <TreeNode
+                <CategoryTreeNode
                   key={node.id}
                   node={node}
                   depth={0}
@@ -483,7 +347,7 @@ export default function LibraryPage() {
 
           <div className={filterStrip}>
             <div className={filterRow}>
-              <Segmented<TypeFilter>
+              <SegmentedControl<TypeFilter>
                 value={typeFilter}
                 onChange={setTypeFilter}
                 options={[
@@ -494,7 +358,7 @@ export default function LibraryPage() {
                 ]}
               />
 
-              <Segmented<StatusFilter>
+              <SegmentedControl<StatusFilter>
                 value={statusFilter}
                 onChange={setStatusFilter}
                 options={[
@@ -507,7 +371,7 @@ export default function LibraryPage() {
 
               <span className={spacer} />
 
-              <Segmented<SortKey>
+              <SegmentedControl<SortKey>
                 value={sortKey}
                 onChange={setSortKey}
                 options={[
@@ -582,153 +446,6 @@ export default function LibraryPage() {
             </div>
           )}
         </section>
-      </div>
-    </div>
-  );
-}
-
-function TreeNode({
-  node,
-  depth,
-  expanded,
-  toggleExpand,
-  selection,
-  setSelection,
-  counts,
-}: {
-  node: CategoryNode;
-  depth: number;
-  expanded: Set<string>;
-  toggleExpand: (id: string) => void;
-  selection: Selection;
-  setSelection: (s: Selection) => void;
-  counts: Map<string, number>;
-}) {
-  const isOpen = expanded.has(node.id);
-  const hasChildren = node.children.length > 0;
-  const active = selection.kind === "category" && selection.id === node.id;
-  const count = counts.get(node.id) ?? 0;
-
-  return (
-    <>
-      <button
-        className={`${railRow} ${active ? railRowActive : ""}`}
-        onClick={() => setSelection({ kind: "category", id: node.id })}
-        style={{ paddingLeft: 8 + depth * 14 }}
-      >
-        {hasChildren ? (
-          <span
-            className={treeChevron}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleExpand(node.id);
-            }}
-          >
-            {isOpen ? (
-              <ChevronDown size={11} strokeWidth={2.4} />
-            ) : (
-              <ChevronRight size={11} strokeWidth={2.4} />
-            )}
-          </span>
-        ) : (
-          <span className={treeChevronSpacer} />
-        )}
-        {node.color ? (
-          <span className={treeColorDot} style={{ background: node.color }} />
-        ) : (
-          <span className={treeNoColor} />
-        )}
-        <span className={railRowLabel}>{node.name}</span>
-        <span className={railRowCount}>{count}</span>
-      </button>
-      {hasChildren &&
-        isOpen &&
-        node.children.map((child) => (
-          <TreeNode
-            key={child.id}
-            node={child}
-            depth={depth + 1}
-            expanded={expanded}
-            toggleExpand={toggleExpand}
-            selection={selection}
-            setSelection={setSelection}
-            counts={counts}
-          />
-        ))}
-    </>
-  );
-}
-
-function ItemRow({
-  item,
-  category,
-  onClick,
-  now,
-}: {
-  item: Planner;
-  category?: Category;
-  onClick: () => void;
-  now: Date;
-}) {
-  const isOverdue =
-    item.deadline &&
-    new Date(item.deadline) < startOfDay(now) &&
-    !item.completedEndTime;
-
-  const statusLabel = item.completedEndTime
-    ? "Done"
-    : item.isReady
-      ? "Ready"
-      : "Draft";
-
-  return (
-    <div className={tableRow} onClick={onClick} role="button">
-      <div className={cellTitle}>
-        <span className={titleText}>{item.title}</span>
-      </div>
-      <div>
-        <TypeBadge tone={typeBadgeTone(item.plannerType)}>
-          {item.plannerType}
-        </TypeBadge>
-      </div>
-      <div className={cellMuted}>{formatDuration(item.duration)}</div>
-      <div className={`${cellMuted} ${isOverdue ? cellOverdue : ""}`}>
-        {item.deadline ? format(new Date(item.deadline), "MMM d, yyyy") : "—"}
-      </div>
-      <div className={cellLocation}>
-        {category ? (
-          <>
-            {category.color && (
-              <span
-                style={{
-                  display: "inline-block",
-                  width: 8,
-                  height: 8,
-                  borderRadius: 999,
-                  background: category.color,
-                  flexShrink: 0,
-                }}
-              />
-            )}
-            <span
-              style={{
-                minWidth: 0,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {category.name}
-            </span>
-          </>
-        ) : (
-          <span style={{ color: "var(--muted)" }}>—</span>
-        )}
-      </div>
-      <div>
-        <Caption>{statusLabel}</Caption>
-      </div>
-      <div className={cellChevron}>
-        <ChevronRight size={14} strokeWidth={2} />
       </div>
     </div>
   );

@@ -3,6 +3,7 @@
 import React from "react";
 import { TaskListWrapperProps } from "@/lib/taskItem";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
+import { DURATIONS } from "@/lib/theme";
 import {
   nested,
   nestedFocused,
@@ -33,7 +34,7 @@ const TaskListWrapper: React.FC<TaskListWrapperProps> = ({
       className={indentClass}
       style={{
         height: subtasksMinimized ? 0 : "auto",
-        transition: "height 220ms ease",
+        transition: `height ${DURATIONS.collapse}s ease`,
       }}
     >
       {children}

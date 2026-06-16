@@ -12,12 +12,14 @@
  *                      so the middle of the event stays readable.
  */
 
-export const TRESPASS_BORDER_COLOR = "#DC2626";
+import { vars } from "@/lib/theme";
+
+export const TRESPASS_BORDER_COLOR = vars.status.error;
 /**
- * Same red but at ~0.12 alpha to match the base category-wrapper tint.
- * Expressed as rgba so the alpha is easy to tweak.
+ * Same red at ~0.5 alpha to soften the trespass background tint. Uses
+ * `color-mix` so the channel comes from the theme `status.error` token.
  */
-export const TRESPASS_BACKGROUND_COLOR = "rgba(220, 38, 38, 0.5)";
+export const TRESPASS_BACKGROUND_COLOR = `color-mix(in srgb, ${vars.status.error} 50%, transparent)`;
 export const TRESPASS_BORDER_WIDTH = 1;
 
 export function getTrespassGradient(

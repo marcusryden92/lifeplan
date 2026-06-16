@@ -5,6 +5,7 @@ import { Loader2, MapPin, Trash2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui";
 import * as locationActions from "@/actions/locations";
 import { useListKeyboardNav } from "@/hooks/useListKeyboardNav";
+import { useModalStack } from "@/hooks/useModalStack";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import {
   MODAL_FADE_MS,
@@ -67,6 +68,7 @@ export function EditLocationModal({
   const [dataState, setDataState] = useState<"open" | "closed">(
     open ? "open" : "closed",
   );
+  const { isTop } = useModalStack(open);
 
   useEffect(() => {
     if (open) {
@@ -78,6 +80,15 @@ export function EditLocationModal({
     const t = setTimeout(() => setShouldRender(false), MODAL_FADE_MS);
     return () => clearTimeout(t);
   }, [open]);
+
+  useEffect(() => {
+    if (!isTop || !shouldRender) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isTop, shouldRender, onClose]);
 
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
@@ -195,7 +206,7 @@ export function EditLocationModal({
       className={overlay}
       data-state={dataState}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (e.target === e.currentTarget && isTop) onClose();
       }}
     >
       <div className={modal}>
