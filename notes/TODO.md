@@ -2,9 +2,9 @@
 
 - Refactoring of stupid new code
 
-- Fix calendar event responsiveness styles
-- 'Edit week plan' colored header
-- Category title edit style
+- Double check usage of spacing and theme tokens throughout the project
+- Text selection possible throughout the project - should be disabled
+
 - Add console error messaging
 - Calendar items not loading properly on initial load
 - Add RRule exceptions to plans, templates, categories

@@ -4,7 +4,7 @@ import {
   EventTemplate,
   PlannerType,
 } from "@/types/prisma";
-import { DateSelectArg, EventDropArg } from "@fullcalendar/core/index.js";
+import { EventDropArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { v4 as uuidv4 } from "uuid";
@@ -14,42 +14,40 @@ import { getPlannerAndCalendarForCompletedTask } from "@/utils/taskHelpers";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { assert } from "./assert/assert";
 
-export const handleSelect = (
+export const createPlanFromSelection = (
   userId: string | undefined,
   updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
-  selectInfo: DateSelectArg,
+  start: Date,
+  end: Date,
+  title: string,
 ) => {
-  const { start, end } = selectInfo;
-  const title = prompt("Enter event title:", "New Event");
-
+  if (!userId || !title) return;
   const now = new Date();
   const duration = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
 
-  if (userId && title) {
-    const newEvent: Planner = {
-      id: uuidv4(),
-      title,
-      parentId: null,
-      plannerType: PlannerType.plan,
-      isReady: true,
-      duration,
-      deadline: null,
-      starts: start.toISOString(),
-      dependency: null,
-      priority: 5,
-      completedStartTime: null,
-      completedEndTime: null,
-      userId,
-      color: "black",
-      locationId: null,
-      useParentLocation: false,
-      categoryId: null,
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-    };
+  const newEvent: Planner = {
+    id: uuidv4(),
+    title,
+    parentId: null,
+    plannerType: PlannerType.plan,
+    isReady: true,
+    duration,
+    deadline: null,
+    starts: start.toISOString(),
+    dependency: null,
+    priority: 5,
+    completedStartTime: null,
+    completedEndTime: null,
+    userId,
+    color: "black",
+    locationId: null,
+    useParentLocation: false,
+    categoryId: null,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  };
 
-    updatePlannerArray((prevEvents) => [...prevEvents, newEvent]);
-  }
+  updatePlannerArray((prevEvents) => [...prevEvents, newEvent]);
 };
 
 export const handleEventResize = (

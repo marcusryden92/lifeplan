@@ -93,11 +93,6 @@ globalStyle(`${ROOT} .fc-event`, {
   transition: themeTransition,
 });
 
-globalStyle(`${ROOT} .fc-event:hover`, {
-  transform: "translateY(-1px)",
-  boxShadow: `0 4px 10px color-mix(in srgb, ${vars.ink} 12%, transparent) !important`,
-});
-
 globalStyle(`${ROOT} .fc-event-main`, {
   padding: "0 !important",
   background: "transparent !important",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -19,10 +19,12 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
 
 import {
-  handleSelect,
+  createPlanFromSelection,
   handleEventResize,
   handleEventDrop,
 } from "@/utils/calendarEventHandlers";
+import { NewPlanModal } from "@/components/events/NewPlanModal";
+import type FullCalendarComponent from "@fullcalendar/react";
 
 import {
   handleTemplateEventCopy,
@@ -58,6 +60,12 @@ export default function Calendar({
     updateAll,
   } = useCalendarProvider();
 
+  const calendarRef = useRef<FullCalendarComponent>(null);
+  const [pendingPlan, setPendingPlan] = useState<{
+    start: Date;
+    end: Date;
+  } | null>(null);
+
   /* Transform SimpleEvent calendar to EventInput for FullCalendar */
   const fullCalendarEvents: EventInput[] = useMemo(() => {
     return calendar ? transformEventsForFullCalendar(calendar) : [];
@@ -68,6 +76,7 @@ export default function Calendar({
   return (
     <>
       <FullCalendar
+        ref={calendarRef}
         plugins={[
           dayGridPlugin,
           timeGridPlugin,
@@ -102,7 +111,7 @@ export default function Calendar({
         eventResizableFromStart={EVENT_INTERACTION_ENABLED}
         selectable={EVENT_INTERACTION_ENABLED}
         select={(selectInfo) =>
-          handleSelect(userId, updatePlannerArray, selectInfo)
+          setPendingPlan({ start: selectInfo.start, end: selectInfo.end })
         }
         headerToolbar={false}
         eventResize={(resizeInfo) => handleEventResize(updateAll, resizeInfo)}
@@ -158,6 +167,28 @@ export default function Calendar({
           }
 
           return <EventContent event={event} />;
+        }}
+      />
+      <NewPlanModal
+        open={pendingPlan !== null}
+        start={pendingPlan?.start ?? null}
+        end={pendingPlan?.end ?? null}
+        onCancel={() => {
+          setPendingPlan(null);
+          calendarRef.current?.getApi().unselect();
+        }}
+        onCreate={(title) => {
+          if (pendingPlan) {
+            createPlanFromSelection(
+              userId,
+              updatePlannerArray,
+              pendingPlan.start,
+              pendingPlan.end,
+              title,
+            );
+          }
+          setPendingPlan(null);
+          calendarRef.current?.getApi().unselect();
         }}
       />
     </>

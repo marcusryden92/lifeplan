@@ -67,19 +67,33 @@ export function CalendarPopover({
   if (typeof document === "undefined") return null;
 
   return createPortal(
-    <div
-      ref={popoverRef}
-      className={`${popover({ size: "lg" })} ${calendarPopover}`}
-      style={{
-        top: `${position.top}px`,
-        left: `${position.left}px`,
-        width: `${width}px`,
-        visibility: isPositioned ? "visible" : "hidden",
-        cursor: isDragging ? "grabbing" : "auto",
-      }}
-    >
-      {children({ startDrag, close: onClose, isDragging })}
-    </div>,
+    <>
+      {/* Transparent backdrop blocks pointer events from reaching the calendar
+          underneath so drag-to-select / event clicks can't fire while the
+          popover is open. Click bubbles to document and useClickOutside fires. */}
+      <div
+        aria-hidden
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 49,
+          background: "transparent",
+        }}
+      />
+      <div
+        ref={popoverRef}
+        className={`${popover({ size: "lg" })} ${calendarPopover}`}
+        style={{
+          top: `${position.top}px`,
+          left: `${position.left}px`,
+          width: `${width}px`,
+          visibility: isPositioned ? "visible" : "hidden",
+          cursor: isDragging ? "grabbing" : "auto",
+        }}
+      >
+        {children({ startDrag, close: onClose, isDragging })}
+      </div>
+    </>,
     document.body,
   );
 }
