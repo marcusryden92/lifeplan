@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { CornerDownLeft } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui";
-import { useModalStack } from "@/hooks/useModalStack";
 import {
   overlay,
   modal,
@@ -12,7 +12,6 @@ import {
   modalActions,
   timeRange as timeRangeStyle,
   titleInput,
-  FADE_MS,
 } from "./NewPlanModal.css";
 import { kbd } from "@/components/ui/shell/CapturePalette.css";
 
@@ -31,30 +30,12 @@ export function NewPlanModal({
   onCancel,
   onCreate,
 }: NewPlanModalProps) {
-  const [shouldRender, setShouldRender] = useState(open);
-  const [dataState, setDataState] = useState<"open" | "closed">(
-    open ? "open" : "closed",
-  );
   const [title, setTitle] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
-  const { isTop } = useModalStack(open);
 
   useEffect(() => {
-    if (open) {
-      setShouldRender(true);
-      setTitle("");
-      const id = requestAnimationFrame(() => {
-        setDataState("open");
-        inputRef.current?.focus();
-      });
-      return () => cancelAnimationFrame(id);
-    }
-    setDataState("closed");
-    const t = setTimeout(() => setShouldRender(false), FADE_MS);
-    return () => clearTimeout(t);
+    if (open) setTitle("");
   }, [open]);
-
-  if (!shouldRender) return null;
 
   const submit = () => {
     const trimmed = title.trim();
@@ -68,52 +49,53 @@ export function NewPlanModal({
       : "";
 
   return (
-    <div
-      className={overlay}
-      data-state={dataState}
-      onClick={() => {
-        if (isTop) onCancel();
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onCancel();
       }}
-      role="presentation"
     >
-      <div
-        className={modal}
-        data-state={dataState}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        <h2 className={modalTitle}>New plan</h2>
-        {timeRange && <div className={timeRangeStyle}>{timeRange}</div>}
-        <input
-          ref={inputRef}
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") submit();
-            else if (e.key === "Escape" && isTop) onCancel();
+      <Dialog.Portal>
+        <Dialog.Overlay className={overlay} />
+        <Dialog.Content
+          className={modal}
+          aria-describedby={undefined}
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            inputRef.current?.focus();
           }}
-          placeholder="What's the plan?"
-          className={titleInput}
-        />
-        <div className={modalActions}>
-          <Button variant="glass" size="sm" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button
-            variant="solid"
-            size="sm"
-            onClick={submit}
-            disabled={!title.trim()}
-          >
-            Create
-            <span className={kbd} style={{ marginLeft: 8 }}>
-              <CornerDownLeft size={11} strokeWidth={2.4} />
-            </span>
-          </Button>
-        </div>
-      </div>
-    </div>
+        >
+          <Dialog.Title className={modalTitle}>New plan</Dialog.Title>
+          {timeRange && <div className={timeRangeStyle}>{timeRange}</div>}
+          <input
+            ref={inputRef}
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+            }}
+            placeholder="What's the plan?"
+            className={titleInput}
+          />
+          <div className={modalActions}>
+            <Button variant="glass" size="sm" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button
+              variant="solid"
+              size="sm"
+              onClick={submit}
+              disabled={!title.trim()}
+            >
+              Create
+              <span className={kbd} style={{ marginLeft: 8 }}>
+                <CornerDownLeft size={11} strokeWidth={2.4} />
+              </span>
+            </Button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

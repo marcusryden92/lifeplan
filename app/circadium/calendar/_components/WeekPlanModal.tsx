@@ -21,9 +21,9 @@ import type { EventResizeDoneArg } from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
 import { X } from "lucide-react";
 
+import * as Dialog from "@radix-ui/react-dialog";
 import { Button, Backdrop, Grain, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { useModalStack } from "@/hooks/useModalStack";
 import type { Category, EventTemplate } from "@/types/prisma";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 import {
@@ -250,23 +250,6 @@ export function WeekPlanModal({
   // Defer unmount on close so the fade-out animation plays. `shouldRender`
   // controls mount; `dataState` flips on the next frame to drive the CSS
   // transition both directions.
-  const [shouldRender, setShouldRender] = useState(open);
-  const [dataState, setDataState] = useState<"open" | "closed">(
-    open ? "open" : "closed",
-  );
-  const { isTop } = useModalStack(open);
-
-  useEffect(() => {
-    if (open) {
-      setShouldRender(true);
-      const id = requestAnimationFrame(() => setDataState("open"));
-      return () => cancelAnimationFrame(id);
-    }
-    setDataState("closed");
-    const t = setTimeout(() => setShouldRender(false), MODAL_FADE_MS);
-    return () => clearTimeout(t);
-  }, [open]);
-
   const [mode, setMode] = useState<Mode>(initialMode);
 
   useEffect(() => {
@@ -677,30 +660,30 @@ export function WeekPlanModal({
     onClose();
   };
 
-  useEffect(() => {
-    if (!isTop || !shouldRender) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") cancel();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isTop, shouldRender, changeCount, onClose]);
-
-  if (!shouldRender) return null;
-
   const tplCount = tplsWorking.length;
   const winCount = winsWorking.length;
 
   return (
-    <div
-      className={overlay}
-      data-state={dataState}
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && isTop) cancel();
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) cancel();
       }}
     >
-      <div className={modal}>
+      <Dialog.Overlay className={overlay} />
+      <Dialog.Content
+        className={modal}
+        aria-describedby={undefined}
+        onPointerDownOutside={(e) => {
+          // Outside-pointer-down would close immediately; route through cancel()
+          // so the unsaved-changes confirm runs first.
+          e.preventDefault();
+          cancel();
+        }}
+      >
+        <Dialog.Title style={{ position: "absolute", left: -10000 }}>
+          Plan week
+        </Dialog.Title>
         <Backdrop variant="blob" />
         <Grain />
         <div className={banner}>
@@ -935,8 +918,8 @@ export function WeekPlanModal({
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </Dialog.Content>
+    </Dialog.Root>
   );
 }
 

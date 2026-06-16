@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Search, Loader2, MapPin } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui";
 import * as locationActions from "@/actions/locations";
 import { useListKeyboardNav } from "@/hooks/useListKeyboardNav";
-import { useModalStack } from "@/hooks/useModalStack";
 import {
-  MODAL_FADE_MS,
   overlay,
   modal,
   header,
@@ -48,32 +47,6 @@ interface AddLocationModalProps {
 }
 
 export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps) {
-  const [shouldRender, setShouldRender] = useState(open);
-  const [dataState, setDataState] = useState<"open" | "closed">(
-    open ? "open" : "closed",
-  );
-  const { isTop } = useModalStack(open);
-
-  useEffect(() => {
-    if (open) {
-      setShouldRender(true);
-      const id = requestAnimationFrame(() => setDataState("open"));
-      return () => cancelAnimationFrame(id);
-    }
-    setDataState("closed");
-    const t = setTimeout(() => setShouldRender(false), MODAL_FADE_MS);
-    return () => clearTimeout(t);
-  }, [open]);
-
-  useEffect(() => {
-    if (!isTop || !shouldRender) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isTop, shouldRender, onClose]);
-
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
   const [predictionList, setPredictionList] = useState<Prediction[]>([]);
@@ -139,8 +112,6 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
     handleSelect,
   );
 
-  if (!shouldRender) return null;
-
   const handleSubmit = async () => {
     if (!selected) {
       setError("Pick a place from the search results.");
@@ -162,111 +133,113 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
   };
 
   return (
-    <div
-      className={overlay}
-      data-state={dataState}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && isTop) onClose();
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
       }}
     >
-      <div className={modal}>
-        <div className={header}>
-          <h2 className={title}>Add location</h2>
-          <span className={subtitle}>
-            Give it a friendly name like &ldquo;Home&rdquo; or &ldquo;Office&rdquo;
-            and pick an address.
-          </span>
-        </div>
-
-        <div className={fieldStack}>
-          <span className={fieldLabel}>Name</span>
-          <input
-            className={plainInput}
-            placeholder="e.g. Home, Office, Gym"
-            value={name}
-            maxLength={50}
-            autoComplete="off"
-            autoFocus
-            onChange={(e) => setName(e.target.value)}
-          />
-          <span className={fieldHelp}>
-            A short label you&apos;ll recognize when picking it on tasks and
-            categories.
-          </span>
-        </div>
-
-        <div className={fieldStack}>
-          <span className={fieldLabel}>Address</span>
-          <div className={searchWrap}>
-            <span className={searchIcon}>
-              <Search size={13} strokeWidth={2.2} />
+      <Dialog.Portal>
+        <Dialog.Overlay className={overlay} />
+        <Dialog.Content className={modal} aria-describedby={undefined}>
+          <div className={header}>
+            <Dialog.Title className={title}>Add location</Dialog.Title>
+            <span className={subtitle}>
+              Give it a friendly name like &ldquo;Home&rdquo; or &ldquo;Office&rdquo;
+              and pick an address.
             </span>
+          </div>
+
+          <div className={fieldStack}>
+            <span className={fieldLabel}>Name</span>
             <input
-              className={textInput}
-              placeholder="Start typing an address…"
-              value={query}
+              className={plainInput}
+              placeholder="e.g. Home, Office, Gym"
+              value={name}
+              maxLength={50}
               autoComplete="off"
-              onChange={(e) => {
-                setQuery(e.target.value);
-                if (selected && e.target.value !== selected.description) {
-                  setSelected(null);
-                }
-              }}
-              onKeyDown={keyboardNav.onKeyDown}
+              autoFocus
+              onChange={(e) => setName(e.target.value)}
             />
-            {searching && (
-              <span className={`${searchSpinner} ${spinning}`}>
-                <Loader2 size={14} strokeWidth={2.2} />
-              </span>
-            )}
-            {predictionsVisible && (
-              <div className={predictions} ref={keyboardNav.containerRef}>
-                {predictionList.map((p, i) => (
-                  <button
-                    key={p.placeId}
-                    type="button"
-                    data-knav-index={i}
-                    className={`${predictionRow} ${
-                      keyboardNav.activeIndex === i ? predictionRowActive : ""
-                    }`}
-                    onMouseEnter={() => keyboardNav.setActiveIndex(i)}
-                    onClick={() => handleSelect(p)}
-                  >
-                    <span className={predictionMain}>{p.mainText}</span>
-                    <span className={predictionSub}>{p.secondaryText}</span>
-                  </button>
-                ))}
-              </div>
-            )}
+            <span className={fieldHelp}>
+              A short label you&apos;ll recognize when picking it on tasks and
+              categories.
+            </span>
           </div>
-          <div className={placeMessageSlot}>
-            {selected && (
-              <span className={selectedHint}>
-                <MapPin size={11} strokeWidth={2.2} />
-                Place selected
+
+          <div className={fieldStack}>
+            <span className={fieldLabel}>Address</span>
+            <div className={searchWrap}>
+              <span className={searchIcon}>
+                <Search size={13} strokeWidth={2.2} />
               </span>
-            )}
+              <input
+                className={textInput}
+                placeholder="Start typing an address…"
+                value={query}
+                autoComplete="off"
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  if (selected && e.target.value !== selected.description) {
+                    setSelected(null);
+                  }
+                }}
+                onKeyDown={keyboardNav.onKeyDown}
+              />
+              {searching && (
+                <span className={`${searchSpinner} ${spinning}`}>
+                  <Loader2 size={14} strokeWidth={2.2} />
+                </span>
+              )}
+              {predictionsVisible && (
+                <div className={predictions} ref={keyboardNav.containerRef}>
+                  {predictionList.map((p, i) => (
+                    <button
+                      key={p.placeId}
+                      type="button"
+                      data-knav-index={i}
+                      className={`${predictionRow} ${
+                        keyboardNav.activeIndex === i ? predictionRowActive : ""
+                      }`}
+                      onMouseEnter={() => keyboardNav.setActiveIndex(i)}
+                      onClick={() => handleSelect(p)}
+                    >
+                      <span className={predictionMain}>{p.mainText}</span>
+                      <span className={predictionSub}>{p.secondaryText}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className={placeMessageSlot}>
+              {selected && (
+                <span className={selectedHint}>
+                  <MapPin size={11} strokeWidth={2.2} />
+                  Place selected
+                </span>
+              )}
+            </div>
           </div>
-        </div>
 
-        <div className={errorSlot}>
-          {error && <div className={errorBlock}>{error}</div>}
-        </div>
+          <div className={errorSlot}>
+            {error && <div className={errorBlock}>{error}</div>}
+          </div>
 
-        <div className={footer}>
-          <Button variant="glass" size="sm" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            variant="solid"
-            size="sm"
-            onClick={handleSubmit}
-            disabled={saving || !selected || !name.trim()}
-          >
-            {saving ? "Adding…" : "Add location"}
-          </Button>
-        </div>
-      </div>
-    </div>
+          <div className={footer}>
+            <Button variant="glass" size="sm" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              variant="solid"
+              size="sm"
+              onClick={handleSubmit}
+              disabled={saving || !selected || !name.trim()}
+            >
+              {saving ? "Adding…" : "Add location"}
+            </Button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

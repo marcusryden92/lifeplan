@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useId, useLayoutEffect, useRef, useState } from "react";
 import { vars, colorMixAlpha } from "@/lib/theme";
 import {
   TRESPASS_BORDER_COLOR,
@@ -45,15 +45,46 @@ export function CategoryWrapperEvent({
   const fillTint = `color-mix(in srgb, ${accent} 12%, transparent)`;
   const trespassPx = `${TRESPASS_BORDER_WIDTH}px`;
 
+  // SVG pattern instead of repeating-linear-gradient: gradients render the
+  // stripe alpha at sub-pixel offsets along the 45° axis, which beats the
+  // pattern up visually. patternTransform rotates a clean vertical stripe and
+  // tiles it across the rect — perpendicular spacing is exact.
+  const patternId = useId();
+  const period = isStrict ? 6 : 8;
+  const stripeWidth = 2;
+
+  // Shift the pattern by the tile's document-relative position so adjacent
+  // tiles for the same category share an origin in document coords — stripes
+  // line up across day boundaries instead of restarting per element.
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [docOffset, setDocOffset] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  useLayoutEffect(() => {
+    const measure = () => {
+      const node = wrapperRef.current;
+      if (!node) return;
+      const r = node.getBoundingClientRect();
+      setDocOffset({
+        x: r.left + window.scrollX,
+        y: r.top + window.scrollY,
+      });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  const patternTransform = docOffset
+    ? `translate(${-docOffset.x}, ${-docOffset.y}) rotate(135)`
+    : "rotate(135)";
+
   return (
     <div
+      ref={wrapperRef}
       className="relative w-full h-full"
       style={{
-        background: `repeating-linear-gradient(45deg, transparent 0 ${
-          isStrict ? "4px" : "6px"
-        }, ${stripeColor} ${isStrict ? "4px" : "6px"} ${
-          isStrict ? "5.5px" : "7.5px"
-        }), ${fillTint}`,
+        background: fillTint,
         border: "none",
         borderRadius: 0,
         ...(trespassingStart && {
@@ -65,6 +96,37 @@ export function CategoryWrapperEvent({
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-    />
+    >
+      <svg
+        aria-hidden
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+        }}
+      >
+        <defs>
+          <pattern
+            id={patternId}
+            width={period}
+            height={period}
+            patternUnits="userSpaceOnUse"
+            patternTransform={patternTransform}
+          >
+            <line
+              x1={0}
+              y1={0}
+              x2={0}
+              y2={period}
+              stroke={stripeColor}
+              strokeWidth={stripeWidth}
+            />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill={`url(#${patternId})`} />
+      </svg>
+    </div>
   );
 }

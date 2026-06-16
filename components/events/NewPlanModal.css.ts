@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, backdropFilters } from "@/lib/theme";
+import { vars, themeTransition, backdropFilters, popover } from "@/lib/theme";
 
 export const FADE_MS = 180;
 
@@ -7,12 +7,9 @@ export const overlay = style({
   position: "fixed",
   inset: 0,
   zIndex: 100,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  background: "rgba(0,0,0,0.32)",
-  backdropFilter: backdropFilters.confirm,
-  WebkitBackdropFilter: backdropFilters.confirm,
+  background: vars.overlay,
+  backdropFilter: backdropFilters.palette,
+  WebkitBackdropFilter: backdropFilters.palette,
   opacity: 0,
   transition: `opacity ${FADE_MS}ms ease`,
   selectors: {
@@ -22,23 +19,30 @@ export const overlay = style({
   },
 });
 
-export const modal = style({
-  background: vars.paper,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 20,
-  boxShadow: vars.shadow.panel,
-  padding: "22px 26px 20px",
-  width: "min(440px, calc(100vw - 32px))",
-  maxHeight: "calc(100vh - 64px)",
-  overflow: "auto",
-  transform: "translateY(8px) scale(0.985)",
-  transition: `transform ${FADE_MS}ms ease, ${themeTransition}`,
-  selectors: {
-    "&[data-state='open']": {
-      transform: "translateY(0) scale(1)",
+// Sibling of overlay (not a child) so backdrop-filter samples the original
+// page content directly. Nesting inside overlay would mean the modal's
+// backdrop-filter resamples the overlay's already-blurred output and ends up
+// desaturated.
+export const modal = style([
+  popover({ size: "lg" }),
+  {
+    position: "fixed",
+    zIndex: 101,
+    top: "50%",
+    left: "50%",
+    padding: "22px 26px 20px",
+    width: "min(440px, calc(100vw - 32px))",
+    maxHeight: "calc(100vh - 64px)",
+    overflow: "auto",
+    transform: "translate(-50%, calc(-50% + 8px)) scale(0.985)",
+    transition: `transform ${FADE_MS}ms ease, ${themeTransition}`,
+    selectors: {
+      "&[data-state='open']": {
+        transform: "translate(-50%, -50%) scale(1)",
+      },
     },
   },
-});
+]);
 
 export const modalTitle = style({
   fontFamily: vars.font.display,

@@ -1,11 +1,8 @@
 "use client";
 
-import { type ReactNode, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { type ReactNode } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import usePopoverPosition from "@/hooks/usePopoverPosition";
-import useClickOutside from "@/hooks/useClickOutside";
-import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
-import { useModalStack } from "@/hooks/useModalStack";
 import { popover } from "@/lib/theme";
 import { calendarPopover } from "./CalendarPopover.css";
 
@@ -43,57 +40,51 @@ export function CalendarPopover({
       padding: 16,
     });
 
-  // Register with the global modal stack so floating layers opened on top of
-  // the popover (dropdowns, color pickers) get to handle outside-clicks first.
-  const { isTop } = useModalStack(true);
-
-  useClickOutside({
-    ref: popoverRef,
-    onClickOutside: onClickOutside ?? onClose,
-    isActive: isTop,
-  });
-
-  useKeyboardShortcuts({
-    shortcuts: { Escape: onEscape ?? onClose },
-    // Stay quiet while a child layer (e.g. an open dropdown) owns Escape.
-    // The child closes itself on Escape; only after it pops the stack does
-    // the popover become Escape-responsive again.
-    isActive: isTop,
-  });
-
-  // The popover is portaled, so the document needs to exist. Skip on first
-  // server render — there's no DOM target.
-  useEffect(() => {}, []);
-  if (typeof document === "undefined") return null;
-
-  return createPortal(
-    <>
-      {/* Transparent backdrop blocks pointer events from reaching the calendar
-          underneath so drag-to-select / event clicks can't fire while the
-          popover is open. Click bubbles to document and useClickOutside fires. */}
-      <div
-        aria-hidden
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 49,
-          background: "transparent",
-        }}
-      />
-      <div
-        ref={popoverRef}
-        className={`${popover({ size: "lg" })} ${calendarPopover}`}
-        style={{
-          top: `${position.top}px`,
-          left: `${position.left}px`,
-          width: `${width}px`,
-          visibility: isPositioned ? "visible" : "hidden",
-          cursor: isDragging ? "grabbing" : "auto",
-        }}
-      >
-        {children({ startDrag, close: onClose, isDragging })}
-      </div>
-    </>,
-    document.body,
+  return (
+    <Dialog.Root
+      open
+      modal={false}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      <Dialog.Portal>
+        {/* Transparent backdrop blocks pointer events from reaching the
+            calendar grid (drag-to-select, event clicks) while the popover is
+            open. pointerDownOutside on Dialog.Content handles dismissal. */}
+        <Dialog.Overlay
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 49,
+            background: "transparent",
+          }}
+        />
+        <Dialog.Content
+          ref={popoverRef}
+          className={`${popover({ size: "lg" })} ${calendarPopover}`}
+          aria-describedby={undefined}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => {
+            if (onEscape) {
+              e.preventDefault();
+              onEscape();
+            }
+          }}
+          onPointerDownOutside={() => {
+            (onClickOutside ?? onClose)();
+          }}
+          style={{
+            top: `${position.top}px`,
+            left: `${position.left}px`,
+            width: `${width}px`,
+            visibility: isPositioned ? "visible" : "hidden",
+            cursor: isDragging ? "grabbing" : "auto",
+          }}
+        >
+          {children({ startDrag, close: onClose, isDragging })}
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

@@ -19,9 +19,9 @@ export const overlay = style({
 });
 
 export const modal = style({
-  position: "relative",
-  width: "100%",
-  height: "100%",
+  position: "absolute",
+  inset: 0,
+  zIndex: 11,
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
@@ -32,7 +32,7 @@ export const modal = style({
   transform: "translateY(8px) scale(0.995)",
   transition: `${themeTransition}, opacity ${MODAL_FADE_MS}ms ease, transform ${MODAL_FADE_MS}ms cubic-bezier(0.4, 0, 0.2, 1)`,
   selectors: {
-    [`${overlay}[data-state='open'] &`]: {
+    "&[data-state='open']": {
       opacity: 1,
       transform: "translateY(0) scale(1)",
     },

@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, backdropFilters } from "@/lib/theme";
+import { vars, themeTransition, backdropFilters, popover } from "@/lib/theme";
 
 export const CONFIRM_FADE_MS = 180;
 
@@ -7,10 +7,7 @@ export const overlay = style({
   position: "fixed",
   inset: 0,
   zIndex: 100,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  background: "rgba(0,0,0,0.32)",
+  background: vars.overlay,
   backdropFilter: backdropFilters.confirm,
   WebkitBackdropFilter: backdropFilters.confirm,
   opacity: 0,
@@ -22,23 +19,29 @@ export const overlay = style({
   },
 });
 
-export const modal = style({
-  background: vars.paper,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 20,
-  boxShadow: vars.shadow.panel,
-  padding: "22px 26px 20px",
-  width: "min(440px, calc(100vw - 32px))",
-  maxHeight: "calc(100vh - 64px)",
-  overflow: "auto",
-  transform: "translateY(8px) scale(0.985)",
-  transition: `transform ${CONFIRM_FADE_MS}ms ease, ${themeTransition}`,
-  selectors: {
-    "&[data-state='open']": {
-      transform: "translateY(0) scale(1)",
+// Sibling of overlay (Radix Dialog.Portal renders Overlay + Content as
+// siblings) so backdrop-filter samples the page directly instead of the
+// overlay's pre-blurred output.
+export const modal = style([
+  popover({ size: "lg" }),
+  {
+    position: "fixed",
+    zIndex: 101,
+    top: "50%",
+    left: "50%",
+    padding: "22px 26px 20px",
+    width: "min(440px, calc(100vw - 32px))",
+    maxHeight: "calc(100vh - 64px)",
+    overflow: "auto",
+    transform: "translate(-50%, calc(-50% + 8px)) scale(0.985)",
+    transition: `transform ${CONFIRM_FADE_MS}ms ease, ${themeTransition}`,
+    selectors: {
+      "&[data-state='open']": {
+        transform: "translate(-50%, -50%) scale(1)",
+      },
     },
   },
-});
+]);
 
 export const modalTitle = style({
   fontFamily: vars.font.display,

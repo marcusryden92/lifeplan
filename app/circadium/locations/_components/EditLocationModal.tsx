@@ -2,13 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Loader2, MapPin, Trash2, AlertTriangle } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui";
 import * as locationActions from "@/actions/locations";
 import { useListKeyboardNav } from "@/hooks/useListKeyboardNav";
-import { useModalStack } from "@/hooks/useModalStack";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import {
-  MODAL_FADE_MS,
   overlay,
   modal,
   header,
@@ -64,32 +63,6 @@ export function EditLocationModal({
   onSave,
   onRequestDelete,
 }: EditLocationModalProps) {
-  const [shouldRender, setShouldRender] = useState(open);
-  const [dataState, setDataState] = useState<"open" | "closed">(
-    open ? "open" : "closed",
-  );
-  const { isTop } = useModalStack(open);
-
-  useEffect(() => {
-    if (open) {
-      setShouldRender(true);
-      const id = requestAnimationFrame(() => setDataState("open"));
-      return () => cancelAnimationFrame(id);
-    }
-    setDataState("closed");
-    const t = setTimeout(() => setShouldRender(false), MODAL_FADE_MS);
-    return () => clearTimeout(t);
-  }, [open]);
-
-  useEffect(() => {
-    if (!isTop || !shouldRender) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isTop, shouldRender, onClose]);
-
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
   const [predictionList, setPredictionList] = useState<Prediction[]>([]);
@@ -167,7 +140,7 @@ export function EditLocationModal({
     handleSelect,
   );
 
-  if (!shouldRender || !location) return null;
+  if (!location) return null;
 
   const nameChanged = name.trim() !== "" && name.trim() !== location.name;
   // Picking the prediction for the same place (e.g. typing the original
@@ -202,16 +175,17 @@ export function EditLocationModal({
   };
 
   return (
-    <div
-      className={overlay}
-      data-state={dataState}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && isTop) onClose();
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
       }}
     >
-      <div className={modal}>
+      <Dialog.Portal>
+        <Dialog.Overlay className={overlay} />
+        <Dialog.Content className={modal} aria-describedby={undefined}>
         <div className={header}>
-          <h2 className={title}>Edit location</h2>
+          <Dialog.Title className={title}>Edit location</Dialog.Title>
           <span className={subtitle}>
             Rename it or point it at a different address. Changing the address
             drops the travel times to and from this location so they get
@@ -319,7 +293,8 @@ export function EditLocationModal({
             {saving ? "Saving…" : "Save"}
           </Button>
         </div>
-      </div>
-    </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

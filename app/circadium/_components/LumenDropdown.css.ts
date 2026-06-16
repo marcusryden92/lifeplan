@@ -38,11 +38,9 @@ export const dropdownChevron = style({
 });
 
 export const dropdownMenu = style({
-  // Positioned via JS (fixed-coordinates from the trigger's bounding rect) so
-  // the menu can be portaled to document.body and escape any ancestor's
-  // overflow/clipping (e.g. the EditDrawer's overflow:auto). left/top get
-  // overridden inline by the component.
-  position: "fixed",
+  // Radix Popover.Content handles positioning via Floating UI; we only set
+  // sizing, surface, and z-index. Portaled to body so the menu escapes any
+  // ancestor's overflow/clipping (e.g. the EditDrawer's overflow:auto).
   maxWidth: 280,
   maxHeight: 280,
   overflow: "auto",

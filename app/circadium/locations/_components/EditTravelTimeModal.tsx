@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui";
-import { useModalStack } from "@/hooks/useModalStack";
 import type { TransportMode } from "@/lib/generated/db-client";
 import type { SerializedTravelTime } from "@/redux/slices/schedulingSettingsSlice";
 
@@ -11,7 +11,6 @@ import type { SerializedTravelTime } from "@/redux/slices/schedulingSettingsSlic
 // that carries an id + name (full Prisma Location or the narrower Redux row).
 type EndpointLocation = { id: string; name: string };
 import {
-  MODAL_FADE_MS,
   overlay,
   modal,
   header,
@@ -58,32 +57,6 @@ export function EditTravelTimeModal({
   onClose,
   onSave,
 }: EditTravelTimeModalProps) {
-  const [shouldRender, setShouldRender] = useState(open);
-  const [dataState, setDataState] = useState<"open" | "closed">(
-    open ? "open" : "closed",
-  );
-  const { isTop } = useModalStack(open);
-
-  useEffect(() => {
-    if (open) {
-      setShouldRender(true);
-      const id = requestAnimationFrame(() => setDataState("open"));
-      return () => cancelAnimationFrame(id);
-    }
-    setDataState("closed");
-    const t = setTimeout(() => setShouldRender(false), MODAL_FADE_MS);
-    return () => clearTimeout(t);
-  }, [open]);
-
-  useEffect(() => {
-    if (!isTop || !shouldRender) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isTop, shouldRender, onClose]);
-
   // Drafts mirror the current effective values for each period. They reset
   // whenever the modal is opened on a fresh travel-time entry.
   const [rushDraft, setRushDraft] = useState("");
@@ -108,7 +81,7 @@ export function EditTravelTimeModal({
     );
   }, [open, travelTime]);
 
-  if (!shouldRender || !travelTime) return null;
+  if (!travelTime) return null;
 
   const isTimeVarying = TIME_VARYING_MODES.has(transportMode);
 
@@ -223,18 +196,19 @@ export function EditTravelTimeModal({
       ];
 
   return (
-    <div
-      className={overlay}
-      data-state={dataState}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && isTop) onClose();
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
       }}
     >
-      <div className={modal}>
+      <Dialog.Portal>
+        <Dialog.Overlay className={overlay} />
+        <Dialog.Content className={modal} aria-describedby={undefined}>
         <div className={header}>
-          <h2 className={title}>
+          <Dialog.Title className={title}>
             {fromLocation?.name ?? "From"} → {toLocation?.name ?? "To"}
-          </h2>
+          </Dialog.Title>
           <span className={subtitle}>
             {isTimeVarying
               ? "Travel time in minutes. Override any period; clear to revert to Google's value."
@@ -289,7 +263,8 @@ export function EditTravelTimeModal({
             {saving ? "Saving…" : "Save"}
           </Button>
         </div>
-      </div>
-    </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

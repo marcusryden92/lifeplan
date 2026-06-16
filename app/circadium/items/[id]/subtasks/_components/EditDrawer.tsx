@@ -16,7 +16,6 @@ import { Button, Caption } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import { useFlashBoolean } from "@/hooks/useFlashAnimation";
-import { useModalStack } from "@/hooks/useModalStack";
 import { assignLocationToPlanner } from "@/actions/locations";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { NEW_SUBTASK_TITLE } from "@/components/tasks/task-item-subcomponents/TaskHeader";
@@ -81,20 +80,23 @@ export function EditDrawer() {
   const [titleDraft, setTitleDraft] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
-  const { isTop } = useModalStack(!!task);
 
   useEffect(() => {
     setTitleDraft(task?.title ?? "");
   }, [task?.id, task?.title]);
 
+  // Escape closes the drawer. defaultPrevented check yields to any open Radix
+  // Dialog above (the delete confirm) — Radix's dismissable-layer calls
+  // preventDefault on Escape when it consumes it.
   useEffect(() => {
-    if (!isTop || !task) return;
+    if (!task) return;
     const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.defaultPrevented) return;
       if (e.key === "Escape") setFocusedTask(null);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isTop, task, setFocusedTask]);
+  }, [task, setFocusedTask]);
 
   // Auto-focus + select the title input for freshly created subtasks.
   useEffect(() => {

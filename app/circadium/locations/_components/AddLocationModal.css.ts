@@ -10,23 +10,9 @@ import {
 const FADE_MS = 160;
 export const MODAL_FADE_MS = FADE_MS;
 
-const fadeIn = keyframes({
-  from: { opacity: 0 },
-  to: { opacity: 1 },
-});
-
-const liftIn = keyframes({
-  from: { opacity: 0, transform: "translateY(8px) scale(0.985)" },
-  to: { opacity: 1, transform: "translateY(0) scale(1)" },
-});
-
 export const overlay = style({
   position: "fixed",
   inset: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 24,
   background: vars.overlay,
   backdropFilter: backdropFilters.modal,
   WebkitBackdropFilter: backdropFilters.modal,
@@ -36,30 +22,33 @@ export const overlay = style({
   selectors: {
     "&[data-state='open']": {
       opacity: 1,
-      animation: `${fadeIn} ${FADE_MS}ms ease`,
     },
   },
 });
 
+// Sibling of overlay (Radix Dialog.Portal renders Overlay + Content as
+// siblings) so backdrop-filter samples the page content directly.
 export const modal = style([
   popover({ size: "lg" }),
   {
-    width: "100%",
-    maxWidth: 480,
+    position: "fixed",
+    zIndex: 151,
+    top: "50%",
+    left: "50%",
+    width: "min(480px, calc(100vw - 32px))",
+    maxHeight: "calc(100vh - 48px)",
+    overflow: "auto",
     padding: "22px 24px",
     display: "flex",
     flexDirection: "column",
     gap: 14,
     fontFamily: vars.font.ui,
     color: vars.ink,
-    opacity: 0,
-    transform: "translateY(8px) scale(0.985)",
-    transition: `opacity ${FADE_MS}ms ease, transform ${FADE_MS}ms ease`,
+    transform: "translate(-50%, calc(-50% + 8px)) scale(0.985)",
+    transition: `transform ${FADE_MS}ms ease, ${themeTransition}`,
     selectors: {
-      [`${overlay}[data-state='open'] &`]: {
-        opacity: 1,
-        transform: "translateY(0) scale(1)",
-        animation: `${liftIn} ${FADE_MS}ms ease`,
+      "&[data-state='open']": {
+        transform: "translate(-50%, -50%) scale(1)",
       },
     },
   },
