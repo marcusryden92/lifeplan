@@ -46,9 +46,9 @@ export const banner = style({
   display: "flex",
   alignItems: "center",
   gap: 14,
-  padding: "14px 20px",
-  borderBottom: `1px solid ${vars.rule}`,
-  background: `color-mix(in srgb, ${vars.ink} 4%, transparent)`,
+  padding: "8px 22px",
+  background: vars.ink,
+  color: vars.paper,
   transition: themeTransition,
 });
 
@@ -58,7 +58,7 @@ export const editingLabel = style({
   fontWeight: 600,
   letterSpacing: "0.14em",
   textTransform: "uppercase",
-  color: vars.muted,
+  color: `color-mix(in srgb, ${vars.paper} 65%, transparent)`,
   transition: themeTransition,
 });
 
@@ -68,8 +68,8 @@ export const modeToggle = style({
   gridTemplateColumns: "1fr 1fr",
   padding: 3,
   borderRadius: 999,
-  background: `color-mix(in srgb, ${vars.ink} 6%, transparent)`,
-  border: `1px solid ${vars.rule}`,
+  background: `color-mix(in srgb, ${vars.paper} 10%, transparent)`,
+  border: `1px solid color-mix(in srgb, ${vars.paper} 18%, transparent)`,
 });
 
 export const modeToggleThumb = style({
@@ -79,7 +79,7 @@ export const modeToggleThumb = style({
   left: 3,
   width: "calc(50% - 3px)",
   borderRadius: 999,
-  background: vars.ink,
+  background: vars.paper,
   transition: "transform 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
   zIndex: 0,
   selectors: {
@@ -101,15 +101,15 @@ export const modeToggleButton = style({
   fontSize: 12,
   fontWeight: 600,
   letterSpacing: "0.04em",
-  color: vars.muted,
+  color: `color-mix(in srgb, ${vars.paper} 70%, transparent)`,
   cursor: "pointer",
   transition: `color 0.22s cubic-bezier(0.4, 0, 0.2, 1)`,
   selectors: {
     "&[data-active='true']": {
-      color: vars.paper,
+      color: vars.ink,
     },
     "&:hover:not([data-active='true'])": {
-      color: vars.ink,
+      color: vars.paper,
     },
   },
 });
@@ -118,7 +118,7 @@ export const bannerSummary = style({
   fontFamily: vars.font.ui,
   fontSize: 11.5,
   fontWeight: 500,
-  color: vars.inkSoft,
+  color: `color-mix(in srgb, ${vars.paper} 72%, transparent)`,
   fontVariantNumeric: "tabular-nums",
 });
 

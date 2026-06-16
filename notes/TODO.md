@@ -2,6 +2,7 @@
 
 - Refactoring of stupid new code
 
+- Fix calendar event responsiveness styles
 - 'Edit week plan' colored header
 - Category title edit style
 - Add console error messaging

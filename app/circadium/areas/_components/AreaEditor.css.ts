@@ -56,24 +56,80 @@ export const headerInfo = style({
   minWidth: 0,
 });
 
+// Shared geometry so static ↔ edit doesn't shift the surrounding layout.
+const NAME_FONT = 30;
+const NAME_LINE_HEIGHT = 30;
+const NAME_BORDER = 2;
+
+export const headerNameRow = style({
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  minWidth: 0,
+});
+
 export const headerName = style({
   fontFamily: vars.font.display,
-  fontSize: 30,
+  fontSize: NAME_FONT,
   fontWeight: 500,
   letterSpacing: "-0.025em",
   color: vars.ink,
-  lineHeight: 1,
+  lineHeight: `${NAME_LINE_HEIGHT}px`,
+  margin: 0,
+  padding: 0,
+  flex: 1,
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  height: NAME_LINE_HEIGHT,
+  boxSizing: "content-box",
+  // Transparent border-bottom reserves the same vertical space the editing
+  // input's accent underline occupies, so swapping in/out doesn't pop layout.
+  borderBottom: `${NAME_BORDER}px solid transparent`,
+  cursor: "text",
+  transition: themeTransition,
+});
+
+export const headerNameInput = style({
+  fontFamily: vars.font.display,
+  fontSize: NAME_FONT,
+  fontWeight: 500,
+  letterSpacing: "-0.025em",
+  lineHeight: `${NAME_LINE_HEIGHT}px`,
+  color: vars.ink,
   background: "transparent",
   border: "none",
   outline: "none",
-  width: "100%",
   padding: 0,
   margin: 0,
-  transition: themeTransition,
+  flex: 1,
+  minWidth: 0,
+  display: "block",
+  boxSizing: "content-box",
+  height: NAME_LINE_HEIGHT,
+  borderBottom: `${NAME_BORDER}px solid ${vars.accent.primary}`,
+});
+
+export const headerNamePencil = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 28,
+  height: 28,
+  borderRadius: 999,
+  border: "none",
+  background: "transparent",
+  color: vars.muted,
+  cursor: "pointer",
+  opacity: 0,
+  flexShrink: 0,
+  transition:
+    "opacity 120ms ease, color 120ms ease, background-color 120ms ease",
   selectors: {
-    "&:focus": {
-      color: vars.ink,
-    },
+    [`${headerNameRow}:hover &`]: { opacity: 1 },
+    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+    "&:focus-visible": { opacity: 1 },
   },
 });
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ChevronRight, Lock, MapPin, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronRight, Lock, MapPin, SquarePen, Trash2 } from "lucide-react";
 import { Button, Caption, vars } from "@/components/ui";
 import { LumenDropdown } from "@/app/circadium/items/[id]/_components/LumenDropdown";
 import type { Category } from "@/types/prisma";
@@ -13,6 +13,9 @@ import {
   headerSwatch,
   headerInfo,
   headerName,
+  headerNameInput,
+  headerNamePencil,
+  headerNameRow,
   headerSummary,
   headerActions,
   section,
@@ -86,13 +89,38 @@ export function AreaEditor({
   onSelectSubArea,
   onOpenWindows,
 }: AreaEditorProps) {
+  const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(category.name);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Reset the draft when switching to a different area so we don't carry stale
   // input into the next editor.
   useEffect(() => {
     setNameDraft(category.name);
+    setEditingName(false);
   }, [category.id, category.name]);
+
+  useEffect(() => {
+    if (editingName) {
+      nameInputRef.current?.focus();
+      nameInputRef.current?.select();
+    }
+  }, [editingName]);
+
+  const commitName = () => {
+    const trimmed = nameDraft.trim();
+    if (trimmed && trimmed !== category.name) {
+      onRename(trimmed);
+    } else {
+      setNameDraft(category.name);
+    }
+    setEditingName(false);
+  };
+
+  const cancelName = () => {
+    setNameDraft(category.name);
+    setEditingName(false);
+  };
 
   const color = category.color || FALLBACK_COLOR;
   const initial = category.name.charAt(0).toUpperCase() || "?";
@@ -161,25 +189,40 @@ export function AreaEditor({
           {initial}
         </div>
         <div className={headerInfo}>
-          <input
-            className={headerName}
-            value={nameDraft}
-            onChange={(e) => setNameDraft(e.target.value)}
-            onBlur={() => {
-              const trimmed = nameDraft.trim();
-              if (trimmed && trimmed !== category.name) {
-                onRename(trimmed);
-              } else if (!trimmed) {
-                setNameDraft(category.name);
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.currentTarget.blur();
-              }
-            }}
-            aria-label="Category name"
-          />
+          <div className={headerNameRow}>
+            {editingName ? (
+              <input
+                ref={nameInputRef}
+                className={headerNameInput}
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onBlur={commitName}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitName();
+                  else if (e.key === "Escape") cancelName();
+                }}
+                aria-label="Category name"
+              />
+            ) : (
+              <>
+                <h2
+                  className={headerName}
+                  onClick={() => setEditingName(true)}
+                  title="Click to rename"
+                >
+                  {category.name}
+                </h2>
+                <button
+                  type="button"
+                  className={headerNamePencil}
+                  onClick={() => setEditingName(true)}
+                  aria-label="Rename category"
+                >
+                  <SquarePen size={14} strokeWidth={2} />
+                </button>
+              </>
+            )}
+          </div>
           <div className={headerSummary}>{summary}</div>
         </div>
         <div className={headerActions}>

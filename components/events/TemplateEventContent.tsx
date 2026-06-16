@@ -66,6 +66,7 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
       event={event}
       elementRef={elementRef}
       elementHeight={elementHeight}
+      elementWidth={elementWidth}
       setElementHeight={setElementHeight}
       setElementWidth={setElementWidth}
       setOnHover={setOnHover}

@@ -47,6 +47,7 @@ interface EventWrapperProps {
   event: EventImpl;
   elementRef: React.RefObject<HTMLDivElement>;
   elementHeight: number;
+  elementWidth: number;
   isCompleted: boolean;
   showPopover: boolean;
   disableInteraction?: boolean;
@@ -62,6 +63,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
   event,
   elementRef,
   elementHeight,
+  elementWidth,
   isCompleted,
   showPopover,
   disableInteraction = false,
@@ -99,7 +101,23 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
     : event.backgroundColor;
   const trespassPx = `${TRESPASS_BORDER_WIDTH}px`;
 
-  const compact = elementHeight < 28;
+  // Three-tier responsive layout:
+  //   tiny    — title-only single line at minimum padding (5-min slots, etc.)
+  //   compact — title-only with normal padding
+  //   regular — title + time pill
+  // Width gates the time pill independently — narrow events drop it even at
+  // regular height so the title never gets crowded out.
+  const tier: "tiny" | "compact" | "regular" =
+    elementHeight < 18 ? "tiny" : elementHeight < 32 ? "compact" : "regular";
+  const showTime = tier === "regular" && elementWidth >= 110;
+  const showPin = isPlan && tier !== "tiny";
+  const titleFont = tier === "tiny" ? 9 : tier === "compact" ? 10 : 11.5;
+  const padding =
+    tier === "tiny"
+      ? "0 6px"
+      : tier === "compact"
+        ? "2px 8px"
+        : "6px 10px";
   const glassFill = `color-mix(in srgb, ${tint} 94%, transparent)`;
 
   // Templates get a dashed border via OKLCH relative-color syntax — same hue
@@ -121,7 +139,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
         flexDirection: "column",
         justifyContent: "space-between",
         height: "100%",
-        padding: compact ? "2px 8px" : "6px 10px",
+        padding,
         borderRadius: 8,
         background: glassFill,
         backdropFilter: "blur(12px) saturate(160%)",
@@ -154,22 +172,22 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
           gap: 6,
         }}
       >
-        {isPlan && (
+        {showPin && (
           <Pin
-            size={compact ? 9 : 11}
+            size={tier === "compact" ? 9 : 11}
             strokeWidth={2.2}
             aria-hidden
             style={{
               color: "rgba(255,255,255,0.85)",
               flexShrink: 0,
               transform: "rotate(20deg)",
-              marginTop: 2,
+              marginTop: tier === "compact" ? 1 : 2,
             }}
           />
         )}
         <span
           style={{
-            fontSize: compact ? 10 : 11.5,
+            fontSize: titleFont,
             fontWeight: 600,
             letterSpacing: "-0.005em",
             lineHeight: 1.25,
@@ -178,12 +196,12 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
             minWidth: 0,
             overflow: "hidden",
             textOverflow: "ellipsis",
-            whiteSpace: compact ? "nowrap" : "normal",
+            whiteSpace: tier === "regular" ? "normal" : "nowrap",
           }}
         >
           {event.title}
         </span>
-        {!compact && (
+        {showTime && (
           <span
             style={{
               display: "flex",

@@ -78,6 +78,7 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
       event={event}
       elementRef={elementRef}
       elementHeight={elementHeight}
+      elementWidth={elementWidth}
       setElementHeight={setElementHeight}
       setElementWidth={setElementWidth}
       setOnHover={setOnHover}

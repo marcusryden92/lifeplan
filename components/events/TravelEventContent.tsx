@@ -27,6 +27,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   );
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
+  const [elementWidth, setElementWidth] = useState<number>(0);
   const [showPopover, setShowPopover] = useState<boolean>(false);
   const [eventRect, setEventRect] = useState<DOMRect | null>(null);
 
@@ -42,6 +43,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
     const element = elementRef.current;
     if (element) {
       setElementHeight(element.offsetHeight);
+      setElementWidth(element.offsetWidth);
     }
   }, []);
 
@@ -66,7 +68,19 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
     : null;
   const travelLabel = fromName && toName ? `${fromName} → ${toName}` : "Travel";
 
-  const compact = elementHeight < 28;
+  // Same three-tier system as EventWrapper, plus a width gate for the time
+  // pill so narrow travel slots don't crowd the from→to label out.
+  const tier: "tiny" | "compact" | "regular" =
+    elementHeight < 18 ? "tiny" : elementHeight < 32 ? "compact" : "regular";
+  const showTime = tier === "regular" && elementWidth >= 110;
+  const showMinutes = tier !== "tiny" && elementHeight > 36;
+  const titleFont = tier === "tiny" ? 9 : tier === "compact" ? 10 : 11.5;
+  const padding =
+    tier === "tiny"
+      ? "0 6px"
+      : tier === "compact"
+        ? "2px 8px"
+        : "6px 10px";
   const alertColor = showAlert
     ? vars.status.error
     : showOverconstrained
@@ -84,12 +98,12 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
         flexDirection: "column",
         justifyContent: "space-between",
         height: "100%",
-        padding: compact ? "2px 8px" : "6px 10px",
+        padding,
         borderRadius: 8,
         background: alertColor
           ? `color-mix(in srgb, ${alertColor} 78%, transparent)`
-          : `color-mix(in srgb, ${vars.ink} 92%, transparent)`,
-        border: `1px solid ${alertColor ?? vars.ink}`,
+          : "rgba(26, 29, 42, 0.92)",
+        border: `1px solid ${alertColor ?? "#1a1d2a"}`,
         fontFamily: vars.font.ui,
         color: "#fff",
         cursor: "pointer",
@@ -105,7 +119,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
       >
         <span
           style={{
-            fontSize: compact ? 10 : 11.5,
+            fontSize: titleFont,
             fontWeight: 500,
             fontStyle: alertColor ? "normal" : "italic",
             display: "flex",
@@ -140,7 +154,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
             }}
           >
             {travelLabel}
-            {travelMinutes !== undefined && elementHeight > 36 && (
+            {travelMinutes !== undefined && showMinutes && (
               <span
                 style={{
                   fontWeight: 500,
@@ -171,7 +185,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
             )}
           </span>
         </span>
-        {!compact && (
+        {showTime && (
           <span
             style={{
               display: "flex",
