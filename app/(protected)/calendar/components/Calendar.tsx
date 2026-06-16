@@ -123,18 +123,26 @@ export default function Calendar({
 
           if (eventType === EventType.category) {
             const ext = event.extendedProps as
-              | RuntimeEventExtendedProps
+              | (RuntimeEventExtendedProps & {
+                  categoryName?: string;
+                  categoryColor?: string | null;
+                })
               | undefined;
             const categoryId = ext?.categoryId || "";
             const isStrict = !!ext?.isStrict;
             const wrapperId = ext?.wrapperId || "";
             const trespassingStart = !!ext?.trespassingStart;
             const trespassingEnd = !!ext?.trespassingEnd;
+            // Clean name from extendedProps ("Work"), not event.title
+            // ("Work Time Slot") — so the header hover chip matches what
+            // items inside the category show.
+            const cleanCategoryName = ext?.categoryName ?? event.title;
+            const rawCategoryColor = ext?.categoryColor ?? null;
             return (
               <CategoryWrapperEvent
                 categoryId={categoryId}
-                categoryName={event.title}
-                categoryColor={event.backgroundColor}
+                categoryName={cleanCategoryName}
+                categoryColor={rawCategoryColor}
                 isStrict={isStrict}
                 start={event.start || new Date()}
                 end={event.end || new Date()}

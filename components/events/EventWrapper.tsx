@@ -1,10 +1,11 @@
-import React, { ReactNode, useLayoutEffect } from "react";
+import React, { ReactNode, useLayoutEffect, useState } from "react";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { Pin } from "lucide-react";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
 import { vars } from "@/lib/theme";
+import { useSetCalendarHoverLabel } from "./CalendarHoverLabelContext";
 import {
   TRESPASS_BORDER_COLOR,
   TRESPASS_BORDER_WIDTH,
@@ -74,7 +75,11 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
   setEventRect,
   children,
 }: EventWrapperProps) => {
-  const { userSettings } = useCalendarProvider();
+  const { userSettings, planner, categories } = useCalendarProvider();
+  const setHoverLabel = useSetCalendarHoverLabel();
+  // Local hover flag so the time row can yield to the action buttons that
+  // parent components render via `children` on hover.
+  const [isHovering, setIsHovering] = useState(false);
 
   useLayoutEffect(() => {
     const element = elementRef.current;
@@ -110,8 +115,14 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
   const showTitle = tier !== "tiny";
   // Time renders on a row BELOW the title so it never crowds it horizontally.
   // Threshold reserves bottom padding so the time never kisses the tile edge —
-  // if the tile is shorter than that, drop time entirely.
-  const showTime = tier === "regular" && elementHeight >= 48 && elementWidth >= 70;
+  // if the tile is shorter than that, drop time entirely. Also yield to the
+  // hover-action row at the bottom (Delete/Complete/Postpone) so the buttons
+  // don't get clipped by the tile.
+  const showTime =
+    tier === "regular" &&
+    elementHeight >= 48 &&
+    elementWidth >= 70 &&
+    !isHovering;
   const showPin = isPlan && tier !== "tiny";
   const titleFont = tier === "compact" ? 10 : 11.5;
   const padding =
@@ -156,8 +167,29 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
           borderBottom: `${trespassPx} solid ${TRESPASS_BORDER_COLOR}`,
         }),
       }}
-      onMouseEnter={() => setOnHover(true)}
-      onMouseLeave={() => setOnHover(false)}
+      onMouseEnter={() => {
+        setOnHover(true);
+        setIsHovering(true);
+        if (!setHoverLabel) return;
+        // Walk planner-parent chain to find effective categoryId (subtasks
+        // inherit from their goal ancestor).
+        let cursor = planner.find((p) => p.id === event.id);
+        let catId: string | null | undefined = cursor?.categoryId;
+        const seen = new Set<string>();
+        while (cursor && !catId && cursor.parentId && !seen.has(cursor.id)) {
+          seen.add(cursor.id);
+          cursor = planner.find((p) => p.id === cursor!.parentId);
+          catId = cursor?.categoryId;
+        }
+        if (!catId) return;
+        const cat = categories.find((c) => c.id === catId);
+        if (cat) setHoverLabel({ name: cat.name, color: cat.color ?? null });
+      }}
+      onMouseLeave={() => {
+        setOnHover(false);
+        setIsHovering(false);
+        setHoverLabel?.(null);
+      }}
       onDoubleClick={(e) =>
         !disableInteraction &&
         handleDoubleClick(e, elementRef, setEventRect, setShowPopover)

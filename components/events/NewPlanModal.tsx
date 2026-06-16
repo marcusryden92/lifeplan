@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
+import { CornerDownLeft } from "lucide-react";
 import { Button, vars } from "@/components/ui";
 import {
   overlay,
@@ -10,6 +11,7 @@ import {
   modalActions,
   CONFIRM_FADE_MS,
 } from "@/app/circadium/items/[id]/_components/LumenConfirmModal.css";
+import { kbd } from "@/components/ui/shell/CapturePalette.css";
 
 interface NewPlanModalProps {
   open: boolean;
@@ -126,6 +128,9 @@ export function NewPlanModal({
             disabled={!title.trim()}
           >
             Create
+            <span className={kbd} style={{ marginLeft: 8 }}>
+              <CornerDownLeft size={11} strokeWidth={2.4} />
+            </span>
           </Button>
         </div>
       </div>

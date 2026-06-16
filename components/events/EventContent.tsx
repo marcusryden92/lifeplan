@@ -96,51 +96,60 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
               display: "flex",
               width: "100%",
               justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
-            <>
-              <div
-                style={{ display: "flex", justifyContent: "flex-end" }}
-              >
-                <button
-                  onClick={onDelete}
-                  style={{ display: "inline-flex", padding: 2, color: "inherit" }}
-                  aria-label="Delete"
-                >
-                  <Trash2 size={14} strokeWidth={2} />
-                </button>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                {!event.extendedProps.isTemplateItem &&
-                  (event.extendedProps.plannerType === PlannerType.goal ||
-                    event.extendedProps.plannerType === PlannerType.task) && (
-                    <>
-                      <button
-                        onClick={onComplete}
-                        style={{ display: "inline-flex", padding: 2, color: "inherit" }}
-                        aria-label="Complete"
-                      >
-                        <Check size={14} strokeWidth={2.2} />
-                      </button>
-
-                      <button
-                        disabled={!displayPostponeButton}
-                        onClick={onPostpone}
-                        style={{
-                          display: "inline-flex",
-                          padding: 2,
-                          color: "inherit",
-                          opacity: displayPostponeButton ? 1 : 0.5,
-                        }}
-                        aria-label="Postpone"
-                      >
-                        <ArrowRight size={14} strokeWidth={2} />
-                      </button>
-                    </>
-                  )}
-              </div>
-            </>
+            <button
+              onClick={onDelete}
+              style={{
+                display: "inline-flex",
+                padding: 2,
+                color: "inherit",
+                background: "transparent",
+                border: "none",
+                cursor: "pointer",
+              }}
+              aria-label="Delete"
+            >
+              <Trash2 size={14} strokeWidth={2} />
+            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              {(event.extendedProps.plannerType === PlannerType.goal ||
+                event.extendedProps.plannerType === PlannerType.task) && (
+                <>
+                  <button
+                    onClick={onComplete}
+                    style={{
+                      display: "inline-flex",
+                      padding: 2,
+                      color: "inherit",
+                      background: "transparent",
+                      border: "none",
+                      cursor: "pointer",
+                    }}
+                    aria-label="Complete"
+                  >
+                    <Check size={14} strokeWidth={2.2} />
+                  </button>
+                  <button
+                    disabled={!displayPostponeButton}
+                    onClick={onPostpone}
+                    style={{
+                      display: "inline-flex",
+                      padding: 2,
+                      color: "inherit",
+                      background: "transparent",
+                      border: "none",
+                      cursor: displayPostponeButton ? "pointer" : "not-allowed",
+                      opacity: displayPostponeButton ? 1 : 0.5,
+                    }}
+                    aria-label="Postpone"
+                  >
+                    <ArrowRight size={14} strokeWidth={2} />
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         )}
 

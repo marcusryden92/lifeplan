@@ -14,6 +14,7 @@ import { Button, ConicDot, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { getWeekFirstDate, shiftDate } from "@/utils/calendarUtils";
 import Calendar from "@/app/(protected)/calendar/components/Calendar";
+import { CalendarHoverLabelContext } from "@/components/events/CalendarHoverLabelContext";
 import {
   setBufferTimeMinutes as setBufferTimeMinutesAction,
   setStrategyWeights,
@@ -122,6 +123,13 @@ export default function CalendarPage() {
     (name: string | null, color: string | null) => {
       setHoveredCategory(name ? { name, color } : null);
     },
+    [],
+  );
+  // Same setter for event tiles via context — keeps the header chip a single
+  // surface that anything hoverable on the calendar can populate.
+  const setHoverLabel = useCallback(
+    (label: { name: string; color: string | null } | null) =>
+      setHoveredCategory(label),
     [],
   );
 
@@ -271,28 +279,30 @@ export default function CalendarPage() {
         <div className={mainGrid}>
           <div className={calendarCard}>
             <div className={`${fcWrap} lumen-calendar`}>
-              <Calendar
-                initialDate={initialDate}
-                onCategoryHover={handleCategoryHover}
-                dayHeaderContent={(arg) => (
-                  <div className={dayHeaderStack}>
-                    <span
-                      className={`${dayHeaderLabel} ${
-                        arg.isToday ? dayHeaderLabelToday : ""
-                      }`}
-                    >
-                      {format(arg.date, "EEE")}
-                    </span>
-                    <span
-                      className={`${dayHeaderNum} ${
-                        arg.isToday ? dayHeaderNumToday : ""
-                      }`}
-                    >
-                      {arg.date.getDate()}
-                    </span>
-                  </div>
-                )}
-              />
+              <CalendarHoverLabelContext.Provider value={setHoverLabel}>
+                <Calendar
+                  initialDate={initialDate}
+                  onCategoryHover={handleCategoryHover}
+                  dayHeaderContent={(arg) => (
+                    <div className={dayHeaderStack}>
+                      <span
+                        className={`${dayHeaderLabel} ${
+                          arg.isToday ? dayHeaderLabelToday : ""
+                        }`}
+                      >
+                        {format(arg.date, "EEE")}
+                      </span>
+                      <span
+                        className={`${dayHeaderNum} ${
+                          arg.isToday ? dayHeaderNumToday : ""
+                        }`}
+                      >
+                        {arg.date.getDate()}
+                      </span>
+                    </div>
+                  )}
+                />
+              </CalendarHoverLabelContext.Provider>
             </div>
           </div>
 

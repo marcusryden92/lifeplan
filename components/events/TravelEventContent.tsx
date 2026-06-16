@@ -11,6 +11,7 @@ import { useTheme } from "@/components/ui";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
 import { vars } from "@/lib/theme";
+import { useSetCalendarHoverLabel } from "./CalendarHoverLabelContext";
 import TravelEventPopover from "./TravelEventPopover";
 
 interface TravelExtendedProps {
@@ -31,6 +32,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
     (state: RootState) => state.schedulingSettings.locations,
   );
   const { dark } = useTheme();
+  const setHoverLabel = useSetCalendarHoverLabel();
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
   const [elementWidth, setElementWidth] = useState<number>(0);
@@ -103,6 +105,8 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
       onDoubleClick={(e) =>
         handleDoubleClick(e, elementRef, setEventRect, setShowPopover)
       }
+      onMouseEnter={() => setHoverLabel?.({ name: travelLabel, color: null })}
+      onMouseLeave={() => setHoverLabel?.(null)}
       style={{
         display: "flex",
         flexDirection: "column",
