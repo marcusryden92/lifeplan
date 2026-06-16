@@ -20,12 +20,14 @@ export {
 } from "./typography.css";
 export {
   glass,
+  popover,
   pillBtn,
   badge,
   progressTrack,
 } from "./recipes.css";
 export type {
   GlassVariants,
+  PopoverVariants,
   PillBtnVariants,
   BadgeVariants,
 } from "./recipes.css";

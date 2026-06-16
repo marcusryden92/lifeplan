@@ -4,7 +4,9 @@ import { useSelector } from "react-redux";
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { RootState } from "@/redux/store";
 import { formatTime } from "@/utils/calendarUtils";
+import { handleDoubleClick } from "@/utils/calendarEventHandlers";
 import { vars } from "@/lib/theme";
+import TravelEventPopover from "./TravelEventPopover";
 
 interface TravelExtendedProps {
   travelMinutes?: number;
@@ -25,6 +27,8 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   );
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
+  const [showPopover, setShowPopover] = useState<boolean>(false);
+  const [eventRect, setEventRect] = useState<DOMRect | null>(null);
 
   const locationNameMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -72,6 +76,9 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   return (
     <div
       ref={elementRef}
+      onDoubleClick={(e) =>
+        handleDoubleClick(e, elementRef, setEventRect, setShowPopover)
+      }
       style={{
         display: "flex",
         flexDirection: "column",
@@ -85,6 +92,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
         border: `1px solid ${alertColor ?? vars.ink}`,
         fontFamily: vars.font.ui,
         color: "#fff",
+        cursor: "pointer",
       }}
     >
       <div
@@ -183,6 +191,16 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
           </span>
         )}
       </div>
+
+      {showPopover && eventRect && (
+        <TravelEventPopover
+          event={event}
+          eventRect={eventRect}
+          startTime={startTime}
+          endTime={endTime}
+          onClose={() => setShowPopover(false)}
+        />
+      )}
     </div>
   );
 };

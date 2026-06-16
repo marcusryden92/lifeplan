@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, themeTransition, popover } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -400,22 +400,21 @@ export const categoryDropdownWrap = style({
   position: "relative",
 });
 
-export const categoryDropdown = style({
-  position: "absolute",
-  top: "calc(100% + 6px)",
-  left: -8,
-  right: -8,
-  zIndex: 5,
-  display: "flex",
-  flexDirection: "column",
-  background: vars.paper,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 10,
-  maxHeight: 220,
-  overflow: "auto",
-  boxShadow: vars.shadow.panelSm,
-  padding: 4,
-});
+export const categoryDropdown = style([
+  popover({ size: "sm" }),
+  {
+    position: "absolute",
+    top: "calc(100% + 6px)",
+    left: -8,
+    right: -8,
+    zIndex: 5,
+    display: "flex",
+    flexDirection: "column",
+    maxHeight: 220,
+    overflow: "auto",
+    padding: 4,
+  },
+]);
 
 export const categoryDropdownItem = style({
   display: "flex",

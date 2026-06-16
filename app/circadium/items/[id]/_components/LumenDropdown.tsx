@@ -10,6 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
+import { useModalStack } from "@/hooks/useModalStack";
 import {
   dropdownWrap,
   dropdownTrigger,
@@ -35,6 +36,10 @@ interface LumenDropdownProps<V extends string | null> {
   renderValue?: (option: DropdownOption<V> | undefined) => ReactNode;
   placeholder?: ReactNode;
   ariaLabel?: string;
+  /** Optional fixed width applied to both the wrap and the trigger so the
+   *  control has a known footprint regardless of the selected option's text
+   *  length. */
+  width?: number | string;
 }
 
 export function LumenDropdown<V extends string | null>({
@@ -44,12 +49,17 @@ export function LumenDropdown<V extends string | null>({
   renderValue,
   placeholder = "Select…",
   ariaLabel,
+  width,
 }: LumenDropdownProps<V>) {
   const [open, setOpen] = useState(false);
   const [menuPos, setMenuPos] = useState<MenuPos | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Register with the modal stack so an open dropdown owns outside-clicks and
+  // Escape ahead of any popover/modal it sits inside.
+  const { isTop } = useModalStack(open);
 
   const updatePos = useCallback(() => {
     const rect = triggerRef.current?.getBoundingClientRect();
@@ -66,8 +76,10 @@ export function LumenDropdown<V extends string | null>({
     else setMenuPos(null);
   }, [open, updatePos]);
 
+  // Outside-click / Escape only fire while this dropdown is the top of the
+  // modal stack (so a color-picker popped on top can intercept them first).
   useEffect(() => {
-    if (!open) return;
+    if (!open || !isTop) return;
     const onDocClick = (e: MouseEvent) => {
       const t = e.target as Node;
       if (wrapRef.current?.contains(t) || menuRef.current?.contains(t)) return;
@@ -76,16 +88,23 @@ export function LumenDropdown<V extends string | null>({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
-    // Capture so we catch scrolls in any ancestor (e.g. EditDrawer's overflow:auto).
-    const onScroll = () => updatePos();
-    const onResize = () => updatePos();
     document.addEventListener("mousedown", onDocClick);
     document.addEventListener("keydown", onKey);
-    window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", onResize);
     return () => {
       document.removeEventListener("mousedown", onDocClick);
       document.removeEventListener("keydown", onKey);
+    };
+  }, [open, isTop]);
+
+  // Scroll / resize repositioning stays attached for the whole lifetime of the
+  // open dropdown — repositioning the menu doesn't depend on stack position.
+  useEffect(() => {
+    if (!open) return;
+    const onScroll = () => updatePos();
+    const onResize = () => updatePos();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onResize);
+    return () => {
       window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", onResize);
     };
@@ -94,7 +113,11 @@ export function LumenDropdown<V extends string | null>({
   const current = options.find((o) => o.value === value);
 
   return (
-    <div className={dropdownWrap} ref={wrapRef}>
+    <div
+      className={dropdownWrap}
+      ref={wrapRef}
+      style={width != null ? { width, display: "block" } : undefined}
+    >
       <button
         ref={triggerRef}
         type="button"
@@ -103,6 +126,7 @@ export function LumenDropdown<V extends string | null>({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
+        style={width != null ? { width: "100%" } : undefined}
       >
         <span style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
           {renderValue ? renderValue(current) : current?.label ?? placeholder}

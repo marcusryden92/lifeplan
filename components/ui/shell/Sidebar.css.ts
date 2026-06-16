@@ -4,6 +4,7 @@ import {
   collapseTransition,
   buttonTransition,
   DURATIONS,
+  popover,
 } from "@/lib/theme";
 
 export const sidebar = style({
@@ -147,26 +148,23 @@ export const footerRow = style({
   transition: buttonTransition,
 });
 
-export const userMenu = style({
-  // Mounted on document.body via createPortal so the sidebar's own
-  // backdrop-filter can't trap the blur in a child stacking context.
-  // top/left are set inline from the trigger's viewport rect; the transform
-  // shifts the menu up by its own height minus 20px so the bottom edge dips
-  // 20px into the footer button, giving the diagonal overlap effect.
-  position: "fixed",
-  transform: "translateY(calc(-100% + 20px))",
-  width: 200,
-  display: "flex",
-  flexDirection: "column",
-  padding: 6,
-  borderRadius: 14,
-  background: vars.glass.bgDeep,
-  backdropFilter: "blur(28px) saturate(180%)",
-  WebkitBackdropFilter: "blur(28px) saturate(180%)",
-  border: `1px solid ${vars.glass.stroke}`,
-  boxShadow: vars.shadow.panel,
-  zIndex: 100,
-});
+export const userMenu = style([
+  popover({ size: "md" }),
+  {
+    // Mounted on document.body via createPortal so the sidebar's own
+    // backdrop-filter can't trap the blur in a child stacking context.
+    // top/left are set inline from the trigger's viewport rect; the transform
+    // shifts the menu up by its own height minus 20px so the bottom edge dips
+    // 20px into the footer button, giving the diagonal overlap effect.
+    position: "fixed",
+    transform: "translateY(calc(-100% + 20px))",
+    width: 200,
+    display: "flex",
+    flexDirection: "column",
+    padding: 6,
+    zIndex: 100,
+  },
+]);
 
 export const userMenuItem = style({
   display: "flex",

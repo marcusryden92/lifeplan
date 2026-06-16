@@ -1,5 +1,5 @@
 import { style, keyframes } from "@vanilla-extract/css";
-import { vars, DURATIONS } from "@/lib/theme";
+import { vars, DURATIONS, popover } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -30,43 +30,40 @@ export const overlay = style({
   animationTimingFunction: "ease",
 });
 
-export const dialog = style({
-  position: "fixed",
-  zIndex: 51,
-  top: "20%",
-  left: 0,
-  right: 0,
-  marginLeft: "auto",
-  marginRight: "auto",
-  width: "min(560px, calc(100vw - 32px))",
-  background: vars.glass.bgDeep,
-  backdropFilter: "blur(28px) saturate(180%)",
-  WebkitBackdropFilter: "blur(28px) saturate(180%)",
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 22,
-  boxShadow: vars.shadow.panel,
-  padding: "18px 20px 20px",
-  display: "flex",
-  flexDirection: "column",
-  gap: 12,
-  animationName: slideUp,
-  animationDuration: `${DURATIONS.modal}s`,
-  animationTimingFunction: "ease",
-  "@media": {
-    [MOBILE]: {
-      top: "auto",
-      bottom: 0,
-      left: 0,
-      right: 0,
-      marginLeft: 0,
-      marginRight: 0,
-      width: "100%",
-      borderRadius: "22px 22px 0 0",
-      animationName: sheetUp,
-      animationDuration: `${DURATIONS.modal}s`,
+export const dialog = style([
+  popover({ size: "xl" }),
+  {
+    position: "fixed",
+    zIndex: 51,
+    top: "20%",
+    left: 0,
+    right: 0,
+    marginLeft: "auto",
+    marginRight: "auto",
+    width: "min(560px, calc(100vw - 32px))",
+    padding: "18px 20px 20px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
+    animationName: slideUp,
+    animationDuration: `${DURATIONS.modal}s`,
+    animationTimingFunction: "ease",
+    "@media": {
+      [MOBILE]: {
+        top: "auto",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        marginLeft: 0,
+        marginRight: 0,
+        width: "100%",
+        borderRadius: "22px 22px 0 0",
+        animationName: sheetUp,
+        animationDuration: `${DURATIONS.modal}s`,
+      },
     },
   },
-});
+]);
 
 export const header = style({
   display: "flex",

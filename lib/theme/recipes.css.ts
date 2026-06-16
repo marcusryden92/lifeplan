@@ -39,6 +39,33 @@ export const glass = recipe({
 
 export type GlassVariants = NonNullable<Parameters<typeof glass>[0]>;
 
+// Canonical recipe for every floating surface in the app: small dropdowns,
+// menus, mid-size popovers, and centered modals. Locks in the glass fill,
+// blur, stroke, and transition so call sites can't drift; size variants
+// bundle the radius + shadow pairing.
+export const popover = recipe({
+  base: {
+    background: vars.glass.bgDeep,
+    backdropFilter: "blur(28px) saturate(180%)",
+    WebkitBackdropFilter: "blur(28px) saturate(180%)",
+    border: `1px solid ${vars.glass.stroke}`,
+    transition: themeTransition,
+  },
+  variants: {
+    size: {
+      sm: { borderRadius: 10, boxShadow: vars.shadow.panelSm },
+      md: { borderRadius: 14, boxShadow: vars.shadow.panel },
+      lg: { borderRadius: 18, boxShadow: vars.shadow.panel },
+      xl: { borderRadius: 22, boxShadow: vars.shadow.panel },
+    },
+  },
+  defaultVariants: {
+    size: "md",
+  },
+});
+
+export type PopoverVariants = NonNullable<Parameters<typeof popover>[0]>;
+
 export const pillBtn = recipe({
   base: {
     fontFamily: vars.font.ui,
@@ -98,16 +125,16 @@ export type PillBtnVariants = NonNullable<Parameters<typeof pillBtn>[0]>;
 export const badge = recipe({
   base: {
     fontFamily: vars.font.ui,
-    fontSize: 10.5,
     fontWeight: 700,
     letterSpacing: "0.06em",
     textTransform: "uppercase",
-    padding: "3px 10px",
     borderRadius: 999,
+    border: "1px solid transparent",
     display: "inline-flex",
     alignItems: "center",
     gap: 6,
     whiteSpace: "nowrap",
+    lineHeight: 1,
     transition: themeTransition,
   },
   variants: {
@@ -125,9 +152,14 @@ export const badge = recipe({
         color: vars.inkSoft,
       },
     },
+    size: {
+      sm: { fontSize: 9, padding: "1.5px 7px", letterSpacing: "0.08em" },
+      md: { fontSize: 10.5, padding: "3px 10px" },
+    },
   },
   defaultVariants: {
     tone: "neutral",
+    size: "md",
   },
 });
 

@@ -7,10 +7,10 @@ type Props = HTMLAttributes<HTMLSpanElement> &
   };
 
 export const TypeBadge = forwardRef<HTMLSpanElement, Props>(function TypeBadge(
-  { tone = "type", className, ...rest },
+  { tone = "type", size, className, ...rest },
   ref,
 ) {
-  const cls = badge({ tone });
+  const cls = badge({ tone, size });
   return (
     <span
       ref={ref}

@@ -81,31 +81,19 @@ const usePopoverPosition = ({
     setIsPositioned(true);
   };
 
-  // Handle mousedown on the popover header to start dragging
-  const handleMouseDown = (
-    e: React.MouseEvent,
-    headerSelector: string = ".popover-header"
-  ) => {
-    // Only enable dragging if clicked on the header
-    if (
-      e.target instanceof Element &&
-      (e.target.closest(headerSelector) ||
-        e.target.classList.contains(headerSelector.replace(".", "")))
-    ) {
-      setIsDragging(true);
-
-      // Calculate drag offset from the click position
-      if (popoverRef.current) {
-        const rect = popoverRef.current.getBoundingClientRect();
-        setDragOffset({
-          top: e.clientY - rect.top,
-          left: e.clientX - rect.left,
-        });
-      }
-
-      // Prevent text selection during drag
-      e.preventDefault();
+  // Start dragging from the supplied mouse event. Caller controls which
+  // element triggers this (e.g. a dedicated grip handle), so no target-selector
+  // filtering is done here.
+  const startDrag = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    if (popoverRef.current) {
+      const rect = popoverRef.current.getBoundingClientRect();
+      setDragOffset({
+        top: e.clientY - rect.top,
+        left: e.clientX - rect.left,
+      });
     }
+    e.preventDefault();
   };
 
   // Calculate optimal position before first render to avoid flickering
@@ -144,7 +132,7 @@ const usePopoverPosition = ({
     isPositioned,
     isDragging,
     popoverRef,
-    handleMouseDown,
+    startDrag,
   };
 };
 

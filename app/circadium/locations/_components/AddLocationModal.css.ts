@@ -1,5 +1,5 @@
 import { style, keyframes } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, themeTransition, popover } from "@/lib/theme";
 
 const FADE_MS = 160;
 export const MODAL_FADE_MS = FADE_MS;
@@ -35,30 +35,29 @@ export const overlay = style({
   },
 });
 
-export const modal = style({
-  width: "100%",
-  maxWidth: 480,
-  background: vars.paper,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 16,
-  boxShadow: vars.shadow.panel,
-  padding: "22px 24px",
-  display: "flex",
-  flexDirection: "column",
-  gap: 14,
-  fontFamily: vars.font.ui,
-  color: vars.ink,
-  opacity: 0,
-  transform: "translateY(8px) scale(0.985)",
-  transition: `opacity ${FADE_MS}ms ease, transform ${FADE_MS}ms ease`,
-  selectors: {
-    [`${overlay}[data-state='open'] &`]: {
-      opacity: 1,
-      transform: "translateY(0) scale(1)",
-      animation: `${liftIn} ${FADE_MS}ms ease`,
+export const modal = style([
+  popover({ size: "lg" }),
+  {
+    width: "100%",
+    maxWidth: 480,
+    padding: "22px 24px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 14,
+    fontFamily: vars.font.ui,
+    color: vars.ink,
+    opacity: 0,
+    transform: "translateY(8px) scale(0.985)",
+    transition: `opacity ${FADE_MS}ms ease, transform ${FADE_MS}ms ease`,
+    selectors: {
+      [`${overlay}[data-state='open'] &`]: {
+        opacity: 1,
+        transform: "translateY(0) scale(1)",
+        animation: `${liftIn} ${FADE_MS}ms ease`,
+      },
     },
   },
-});
+]);
 
 export const header = style({
   display: "flex",
@@ -153,21 +152,20 @@ export const plainInput = style({
 
 // Absolute-positioned overlay so populating the prediction list never grows
 // the modal vertically. Anchored to searchWrap (which is position: relative).
-export const predictions = style({
-  position: "absolute",
-  top: "calc(100% + 4px)",
-  left: 0,
-  right: 0,
-  zIndex: 5,
-  display: "flex",
-  flexDirection: "column",
-  background: vars.paper,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 10,
-  maxHeight: 240,
-  overflow: "auto",
-  boxShadow: vars.shadow.panelSm,
-});
+export const predictions = style([
+  popover({ size: "sm" }),
+  {
+    position: "absolute",
+    top: "calc(100% + 4px)",
+    left: 0,
+    right: 0,
+    zIndex: 5,
+    display: "flex",
+    flexDirection: "column",
+    maxHeight: 240,
+    overflow: "auto",
+  },
+]);
 
 export const predictionRow = style({
   textAlign: "left",
