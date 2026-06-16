@@ -747,8 +747,8 @@ export function WeekPlanModal({
             onClick={saveAll}
             disabled={saving || changeCount === 0}
             style={{
-              background: vars.accent.primary,
-              color: vars.paper,
+              background: vars.paper,
+              color: vars.ink,
             }}
           >
             {saving
