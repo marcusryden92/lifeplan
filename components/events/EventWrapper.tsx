@@ -101,22 +101,24 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
     : event.backgroundColor;
   const trespassPx = `${TRESPASS_BORDER_WIDTH}px`;
 
-  // Three-tier responsive layout:
-  //   tiny    — title-only single line at minimum padding (5-min slots, etc.)
-  //   compact — title-only with normal padding
-  //   regular — title + time pill
-  // Width gates the time pill independently — narrow events drop it even at
-  // regular height so the title never gets crowded out.
+  // Three-tier responsive layout. Thresholds tuned against FullCalendar's
+  // default slot density: a 30-min event renders at ~28-30px tall, so the
+  // regular cutoff lives at 24 to give it the time pill. A 15-min event
+  // (~14-16px) falls into compact. Anything below 13 is title-suppressed.
   const tier: "tiny" | "compact" | "regular" =
-    elementHeight < 18 ? "tiny" : elementHeight < 32 ? "compact" : "regular";
-  const showTime = tier === "regular" && elementWidth >= 110;
+    elementHeight < 13 ? "tiny" : elementHeight < 24 ? "compact" : "regular";
+  const showTitle = tier !== "tiny";
+  // Time renders on a row BELOW the title so it never crowds it horizontally.
+  // Needs both height room for the second line and a non-trivial width — if
+  // either is missing, drop the time and let the title take everything.
+  const showTime = tier === "regular" && elementHeight >= 40 && elementWidth >= 70;
   const showPin = isPlan && tier !== "tiny";
-  const titleFont = tier === "tiny" ? 9 : tier === "compact" ? 10 : 11.5;
+  const titleFont = tier === "compact" ? 10 : 11.5;
   const padding =
     tier === "tiny"
-      ? "0 6px"
+      ? "0 4px"
       : tier === "compact"
-        ? "2px 8px"
+        ? "1px 8px"
         : "6px 10px";
   const glassFill = `color-mix(in srgb, ${tint} 94%, transparent)`;
 
@@ -164,53 +166,53 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
         handleDoubleClick(e, elementRef, setEventRect, setShowPopover)
       }
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 6,
-        }}
-      >
-        {showPin && (
-          <Pin
-            size={tier === "compact" ? 9 : 11}
-            strokeWidth={2.2}
-            aria-hidden
-            style={{
-              color: "rgba(255,255,255,0.85)",
-              flexShrink: 0,
-              transform: "rotate(20deg)",
-              marginTop: tier === "compact" ? 1 : 2,
-            }}
-          />
-        )}
-        <span
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <div
           style={{
-            fontSize: titleFont,
-            fontWeight: 600,
-            letterSpacing: "-0.005em",
-            lineHeight: 1.25,
-            color: "#fff",
-            flex: 1,
-            minWidth: 0,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: tier === "regular" ? "normal" : "nowrap",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
           }}
         >
-          {event.title}
-        </span>
+          {showPin && (
+            <Pin
+              size={tier === "compact" ? 9 : 11}
+              strokeWidth={2.2}
+              aria-hidden
+              style={{
+                color: "rgba(255,255,255,0.85)",
+                flexShrink: 0,
+                transform: "rotate(20deg)",
+              }}
+            />
+          )}
+          {showTitle && (
+            <span
+              style={{
+                fontSize: titleFont,
+                fontWeight: 500,
+                fontStyle: "italic",
+                color: "#fff",
+                flex: 1,
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {event.title}
+            </span>
+          )}
+        </div>
         {showTime && (
           <span
             style={{
               display: "flex",
               gap: 4,
               fontSize: 10,
-              fontWeight: 600,
+              fontWeight: 500,
               fontVariantNumeric: "tabular-nums",
-              color: "rgba(255,255,255,0.82)",
-              flexShrink: 0,
+              color: "rgba(255,255,255,0.7)",
             }}
           >
             <span>{formatTime(startTime)}</span>

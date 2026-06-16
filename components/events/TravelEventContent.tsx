@@ -1,7 +1,11 @@
 import React, { useRef, useState, useLayoutEffect, useMemo } from "react";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { useSelector } from "react-redux";
-import { AlertTriangle, ChevronRight } from "lucide-react";
+import { AlertTriangle, Car } from "lucide-react";
+// TODO: replace `Car` with a per-event mode icon (Car/Bike/Bus/Walk) once
+// TravelTime's transportMode is plumbed through to the calendar event's
+// extendedProps. The TravelTime record carries DRIVING/TRANSIT/BICYCLING/
+// WALKING but the engine only emits a duration today.
 import { RootState } from "@/redux/store";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
@@ -68,18 +72,21 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
     : null;
   const travelLabel = fromName && toName ? `${fromName} → ${toName}` : "Travel";
 
-  // Same three-tier system as EventWrapper, plus a width gate for the time
-  // pill so narrow travel slots don't crowd the from→to label out.
+  // Same three-tier system as EventWrapper. Travel events are usually small
+  // (5-15 min), so tiny/compact are the common cases.
   const tier: "tiny" | "compact" | "regular" =
-    elementHeight < 18 ? "tiny" : elementHeight < 32 ? "compact" : "regular";
-  const showTime = tier === "regular" && elementWidth >= 110;
-  const showMinutes = tier !== "tiny" && elementHeight > 36;
-  const titleFont = tier === "tiny" ? 9 : tier === "compact" ? 10 : 11.5;
+    elementHeight < 13 ? "tiny" : elementHeight < 24 ? "compact" : "regular";
+  const showLabel = tier !== "tiny";
+  // Time renders below the label, not next to it. Needs a second-line worth
+  // of vertical room; width threshold is gentle since the label already wraps.
+  const showTime = tier === "regular" && elementHeight >= 40 && elementWidth >= 70;
+  const showMinutes = tier === "regular";
+  const titleFont = tier === "compact" ? 10 : 11.5;
   const padding =
     tier === "tiny"
-      ? "0 6px"
+      ? "0 4px"
       : tier === "compact"
-        ? "2px 8px"
+        ? "1px 8px"
         : "6px 10px";
   const alertColor = showAlert
     ? vars.status.error
@@ -102,21 +109,15 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
         borderRadius: 8,
         background: alertColor
           ? `color-mix(in srgb, ${alertColor} 78%, transparent)`
-          : "rgba(26, 29, 42, 0.92)",
-        border: `1px solid ${alertColor ?? "#1a1d2a"}`,
+          : "rgba(58, 64, 90, 0.94)",
+        border: `1px solid ${alertColor ?? "#3a405a"}`,
         fontFamily: vars.font.ui,
         color: "#fff",
         cursor: "pointer",
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-          gap: 6,
-        }}
-      >
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {showLabel && (
         <span
           style={{
             fontSize: titleFont,
@@ -125,7 +126,6 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
             display: "flex",
             alignItems: "center",
             gap: 6,
-            flex: 1,
             minWidth: 0,
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -139,10 +139,10 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
               aria-hidden
             />
           ) : (
-            <ChevronRight
+            <Car
               size={12}
               strokeWidth={2}
-              style={{ flexShrink: 0, opacity: 0.6 }}
+              style={{ flexShrink: 0, opacity: 0.78 }}
               aria-hidden
             />
           )}
@@ -185,6 +185,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
             )}
           </span>
         </span>
+        )}
         {showTime && (
           <span
             style={{
@@ -194,7 +195,6 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
               fontWeight: 500,
               fontVariantNumeric: "tabular-nums",
               opacity: 0.7,
-              flexShrink: 0,
             }}
           >
             <span>{formatTime(startTime)}</span>

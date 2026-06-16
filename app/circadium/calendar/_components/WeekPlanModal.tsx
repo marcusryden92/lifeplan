@@ -728,7 +728,17 @@ export function WeekPlanModal({
               : `${winCount} window${winCount === 1 ? "" : "s"}`}
           </span>
           <span className={bannerSpacer} />
-          <Button variant="glass" size="sm" onClick={cancel} disabled={saving}>
+          <Button
+            variant="glass"
+            size="sm"
+            onClick={cancel}
+            disabled={saving}
+            style={{
+              background: `color-mix(in srgb, ${vars.paper} 12%, transparent)`,
+              border: `1px solid color-mix(in srgb, ${vars.paper} 22%, transparent)`,
+              color: vars.paper,
+            }}
+          >
             {changeCount === 0 ? "Back" : "Cancel"}
           </Button>
           <Button
@@ -736,6 +746,10 @@ export function WeekPlanModal({
             size="sm"
             onClick={saveAll}
             disabled={saving || changeCount === 0}
+            style={{
+              background: vars.accent.primary,
+              color: vars.paper,
+            }}
           >
             {saving
               ? "Saving…"
