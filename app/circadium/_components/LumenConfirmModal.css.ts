@@ -8,8 +8,10 @@ export const overlay = style({
   inset: 0,
   zIndex: 100,
   background: vars.overlay,
-  backdropFilter: backdropFilters.confirm,
-  WebkitBackdropFilter: backdropFilters.confirm,
+  // Match the Capture palette's blur depth so all centered/sheet modals
+  // feel like the same surface family.
+  backdropFilter: backdropFilters.palette,
+  WebkitBackdropFilter: backdropFilters.palette,
   opacity: 0,
   transition: `opacity ${CONFIRM_FADE_MS}ms ease`,
   selectors: {
@@ -21,15 +23,16 @@ export const overlay = style({
 
 // Sibling of overlay (Radix Dialog.Portal renders Overlay + Content as
 // siblings) so backdrop-filter samples the page directly instead of the
-// overlay's pre-blurred output.
+// overlay's pre-blurred output. Uses the same popover recipe size as the
+// Capture palette so the glass surface treatment is identical.
 export const modal = style([
-  popover({ size: "lg" }),
+  popover({ size: "xl" }),
   {
     position: "fixed",
     zIndex: 101,
     top: "50%",
     left: "50%",
-    padding: "22px 26px 20px",
+    padding: "18px 20px 20px",
     width: "min(440px, calc(100vw - 32px))",
     maxHeight: "calc(100vh - 64px)",
     overflow: "auto",

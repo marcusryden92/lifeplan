@@ -54,7 +54,7 @@ export function LumenConfirmModal({
               {cancelLabel}
             </Button>
             <Button
-              variant="solid"
+              variant={tone === "danger" ? "danger" : "glassInk"}
               size="sm"
               onClick={onConfirm}
               data-danger={tone === "danger" ? "true" : undefined}

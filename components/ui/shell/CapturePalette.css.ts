@@ -1,5 +1,11 @@
 import { style, keyframes } from "@vanilla-extract/css";
-import { vars, DURATIONS, popover, backdropFilters } from "@/lib/theme";
+import {
+  vars,
+  DURATIONS,
+  popover,
+  backdropFilters,
+  formInput,
+} from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -72,22 +78,7 @@ export const header = style({
   gap: 12,
 });
 
-export const input = style({
-  fontFamily: vars.font.ui,
-  fontSize: 16,
-  fontWeight: 500,
-  color: vars.ink,
-  width: "100%",
-  padding: "10px 0",
-  background: "transparent",
-  border: "none",
-  borderBottom: `1px solid ${vars.rule}`,
-  outline: "none",
-  selectors: {
-    "&::placeholder": { color: vars.muted },
-    "&:focus": { borderBottomColor: vars.ink },
-  },
-});
+export const input = style([formInput({ variant: "underline" })]);
 
 export const hintsRow = style({
   display: "flex",

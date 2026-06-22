@@ -1,19 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { format } from "date-fns";
 import { CornerDownLeft } from "lucide-react";
-import * as Dialog from "@radix-ui/react-dialog";
-import { Button } from "@/components/ui";
+import { Button, Caption } from "@/components/ui";
 import {
   overlay,
-  modal,
-  modalTitle,
-  modalActions,
-  timeRange as timeRangeStyle,
-  titleInput,
-} from "./NewPlanModal.css";
-import { kbd } from "@/components/ui/shell/CapturePalette.css";
+  dialog,
+  header,
+  input,
+  hintsRow,
+  kbd,
+} from "@/components/ui/shell/CapturePalette.css";
 
 interface NewPlanModalProps {
   open: boolean;
@@ -30,17 +29,27 @@ export function NewPlanModal({
   onCancel,
   onCreate,
 }: NewPlanModalProps) {
-  const [title, setTitle] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const [value, setValue] = useState("");
 
   useEffect(() => {
-    if (open) setTitle("");
+    if (open) {
+      const t = setTimeout(() => inputRef.current?.focus(), 30);
+      return () => clearTimeout(t);
+    }
+    setValue("");
   }, [open]);
 
   const submit = () => {
-    const trimmed = title.trim();
+    const trimmed = value.trim();
     if (!trimmed) return;
     onCreate(trimmed);
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    submit();
   };
 
   const timeRange =
@@ -48,45 +57,47 @@ export function NewPlanModal({
       ? `${format(start, "EEE MMM d · HH:mm")} – ${format(end, "HH:mm")}`
       : "";
 
+  const canSubmit = value.trim().length > 0;
+
   return (
     <Dialog.Root
       open={open}
-      onOpenChange={(next) => {
-        if (!next) onCancel();
+      onOpenChange={(o) => {
+        if (!o) onCancel();
       }}
     >
       <Dialog.Portal>
         <Dialog.Overlay className={overlay} />
         <Dialog.Content
-          className={modal}
+          className={dialog}
           aria-describedby={undefined}
-          onOpenAutoFocus={(e) => {
-            e.preventDefault();
-            inputRef.current?.focus();
-          }}
+          onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <Dialog.Title className={modalTitle}>New plan</Dialog.Title>
-          {timeRange && <div className={timeRangeStyle}>{timeRange}</div>}
+          <div className={header}>
+            <Caption>{timeRange ? `new plan · ${timeRange}` : "new plan"}</Caption>
+          </div>
+          <Dialog.Title style={{ position: "absolute", left: -10000 }}>
+            New plan
+          </Dialog.Title>
           <input
             ref={inputRef}
+            className={input}
+            placeholder="what's the plan?"
             type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") submit();
-            }}
-            placeholder="What's the plan?"
-            className={titleInput}
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={onKeyDown}
           />
-          <div className={modalActions}>
+          <div className={hintsRow} style={{ justifyContent: "flex-end" }}>
             <Button variant="glass" size="sm" onClick={onCancel}>
               Cancel
+              <span className={kbd} style={{ marginLeft: 8 }}>esc</span>
             </Button>
             <Button
-              variant="solid"
+              variant="glassInk"
               size="sm"
               onClick={submit}
-              disabled={!title.trim()}
+              disabled={!canSubmit}
             >
               Create
               <span className={kbd} style={{ marginLeft: 8 }}>

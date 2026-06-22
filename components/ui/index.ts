@@ -1,6 +1,7 @@
 export { Glass } from "./Glass";
 export { Caption } from "./Caption";
 export { Button } from "./Button";
+export { HintAction } from "./HintAction";
 export { TypeBadge } from "./TypeBadge";
 export { CategoryBadge } from "./CategoryBadge";
 export { CategoryDot } from "./CategoryDot";

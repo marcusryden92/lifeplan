@@ -230,7 +230,7 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
               Cancel
             </Button>
             <Button
-              variant="solid"
+              variant="glassInk"
               size="sm"
               onClick={handleSubmit}
               disabled={saving || !selected || !name.trim()}

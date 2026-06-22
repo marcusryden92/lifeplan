@@ -23,6 +23,7 @@ import { X } from "lucide-react";
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button, Backdrop, Grain, vars } from "@/components/ui";
+import { LumenConfirmModal } from "@/app/circadium/_components/LumenConfirmModal";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { Category, EventTemplate } from "@/types/prisma";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
@@ -251,6 +252,7 @@ export function WeekPlanModal({
   // controls mount; `dataState` flips on the next frame to drive the CSS
   // transition both directions.
   const [mode, setMode] = useState<Mode>(initialMode);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
 
   useEffect(() => {
     if (open) setMode(initialMode);
@@ -652,10 +654,8 @@ export function WeekPlanModal({
 
   const cancel = () => {
     if (changeCount > 0) {
-      const ok = window.confirm(
-        `Discard ${changeCount} unsaved change${changeCount === 1 ? "" : "s"}?`,
-      );
-      if (!ok) return;
+      setShowDiscardConfirm(true);
+      return;
     }
     onClose();
   };
@@ -737,14 +737,10 @@ export function WeekPlanModal({
             {changeCount === 0 ? "Back" : "Cancel"}
           </Button>
           <Button
-            variant="solid"
+            variant="solidLight"
             size="sm"
             onClick={saveAll}
             disabled={saving || changeCount === 0}
-            style={{
-              background: vars.paper,
-              color: vars.ink,
-            }}
           >
             {saving
               ? "Saving…"
@@ -918,6 +914,25 @@ export function WeekPlanModal({
             )}
           </div>
         </div>
+
+        <LumenConfirmModal
+          open={showDiscardConfirm}
+          title="Discard unsaved changes?"
+          body={
+            <p style={{ margin: 0 }}>
+              You have {changeCount} unsaved change
+              {changeCount === 1 ? "" : "s"}. Closing now will lose them.
+            </p>
+          }
+          confirmLabel="Discard"
+          cancelLabel="Keep editing"
+          tone="danger"
+          onCancel={() => setShowDiscardConfirm(false)}
+          onConfirm={() => {
+            setShowDiscardConfirm(false);
+            onClose();
+          }}
+        />
       </Dialog.Content>
     </Dialog.Root>
   );

@@ -5,6 +5,7 @@ import {
   popover,
   backdropFilters,
   colorMixAlpha,
+  formInput,
 } from "@/lib/theme";
 
 const FADE_MS = 160;
@@ -14,8 +15,10 @@ export const overlay = style({
   position: "fixed",
   inset: 0,
   background: vars.overlay,
-  backdropFilter: backdropFilters.modal,
-  WebkitBackdropFilter: backdropFilters.modal,
+  // Aligned with the Capture palette + confirm modal so every centered modal
+  // feels like the same surface family.
+  backdropFilter: backdropFilters.palette,
+  WebkitBackdropFilter: backdropFilters.palette,
   zIndex: 150,
   opacity: 0,
   transition: `opacity ${FADE_MS}ms ease`,
@@ -29,7 +32,7 @@ export const overlay = style({
 // Sibling of overlay (Radix Dialog.Portal renders Overlay + Content as
 // siblings) so backdrop-filter samples the page content directly.
 export const modal = style([
-  popover({ size: "lg" }),
+  popover({ size: "xl" }),
   {
     position: "fixed",
     zIndex: 151,
@@ -111,39 +114,16 @@ export const searchSpinner = style({
   display: "inline-flex",
 });
 
-export const textInput = style({
-  width: "100%",
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 10,
-  padding: "9px 36px 9px 32px",
-  fontFamily: vars.font.ui,
-  fontSize: 13.5,
-  color: vars.ink,
-  outline: "none",
-  transition: themeTransition,
-  selectors: {
-    "&:focus": { borderColor: vars.accent.primary },
-    "&::placeholder": { color: vars.muted },
+// Boxed input with extra left/right padding for the inline search icon +
+// spinner overlay.
+export const textInput = style([
+  formInput({ variant: "boxed" }),
+  {
+    padding: "9px 36px 9px 32px",
   },
-});
+]);
 
-export const plainInput = style({
-  width: "100%",
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 10,
-  padding: "9px 12px",
-  fontFamily: vars.font.ui,
-  fontSize: 13.5,
-  color: vars.ink,
-  outline: "none",
-  transition: themeTransition,
-  selectors: {
-    "&:focus": { borderColor: vars.accent.primary },
-    "&::placeholder": { color: vars.muted },
-  },
-});
+export const plainInput = style([formInput({ variant: "boxed" })]);
 
 // Absolute-positioned overlay so populating the prediction list never grows
 // the modal vertically. Anchored to searchWrap (which is position: relative).

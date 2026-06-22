@@ -285,7 +285,7 @@ export function EditLocationModal({
             Cancel
           </Button>
           <Button
-            variant="solid"
+            variant="glassInk"
             size="sm"
             onClick={handleSubmit}
             disabled={saving || !name.trim() || !canSave}

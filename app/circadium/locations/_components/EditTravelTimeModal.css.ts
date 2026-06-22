@@ -6,6 +6,7 @@ import {
   popover,
   backdropFilters,
   interactiveTransition,
+  formInput,
 } from "@/lib/theme";
 
 const FADE_MS = 160;
@@ -16,8 +17,8 @@ export const overlay = style({
   position: "fixed",
   inset: 0,
   background: vars.overlay,
-  backdropFilter: backdropFilters.modal,
-  WebkitBackdropFilter: backdropFilters.modal,
+  backdropFilter: backdropFilters.palette,
+  WebkitBackdropFilter: backdropFilters.palette,
   zIndex: 150,
   opacity: 0,
   transition: `opacity ${FADE_MS}ms ease`,
@@ -29,7 +30,7 @@ export const overlay = style({
 });
 
 export const modal = style([
-  popover({ size: "lg" }),
+  popover({ size: "xl" }),
   {
     position: "fixed",
     zIndex: 151,
@@ -96,27 +97,25 @@ export const periodName = style({
   fontWeight: 600,
 });
 
-export const periodInput = style({
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 8,
-  padding: "6px 10px",
-  fontFamily: vars.font.ui,
-  fontSize: 13,
-  fontWeight: 600,
-  color: vars.ink,
-  fontVariantNumeric: "tabular-nums",
-  outline: "none",
-  width: "100%",
-  textAlign: "right",
-  transition: themeTransition,
-  selectors: {
-    "&:focus": { borderColor: vars.accent.primary },
-    "&::-webkit-inner-spin-button": { appearance: "none", margin: 0 },
-    "&::-webkit-outer-spin-button": { appearance: "none", margin: 0 },
-    [`.${lumenDark} &`]: { colorScheme: "dark" },
+// Numeric stepper for travel-minute fields. Inherits the boxed form-input
+// look (bg, border, focus color) so it matches every other input, then
+// overrides the bits specific to a compact right-aligned numeric cell.
+export const periodInput = style([
+  formInput({ variant: "boxed" }),
+  {
+    borderRadius: 8,
+    padding: "6px 10px",
+    fontSize: 13,
+    fontWeight: 600,
+    fontVariantNumeric: "tabular-nums",
+    textAlign: "right",
+    selectors: {
+      "&::-webkit-inner-spin-button": { appearance: "none", margin: 0 },
+      "&::-webkit-outer-spin-button": { appearance: "none", margin: 0 },
+      [`.${lumenDark} &`]: { colorScheme: "dark" },
+    },
   },
-});
+]);
 
 export const googleHint = style({
   fontSize: 10.5,

@@ -255,7 +255,7 @@ export function EditTravelTimeModal({
             Cancel
           </Button>
           <Button
-            variant="solid"
+            variant="glassInk"
             size="sm"
             onClick={handleSave}
             disabled={saving}

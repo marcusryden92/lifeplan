@@ -85,17 +85,49 @@ export const pillBtn = recipe({
   },
   variants: {
     variant: {
+      // True transparent glass — bg and border tint with currentColor so the
+      // button adapts to light/dark without explicit branches. Used as the
+      // "secondary" action on glass dialogs. Hover overlays a fixed-white wash
+      // (via inset box-shadow) so the brighten direction is theme-neutral —
+      // mixing currentColor further would darken in light mode.
       glass: {
-        background: vars.glass.bgDeep,
+        background: "color-mix(in srgb, currentColor 8%, transparent)",
         backdropFilter: backdropFilters.button,
         WebkitBackdropFilter: backdropFilters.button,
-        border: `1px solid ${vars.glass.stroke}`,
-        boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
+        border: "1px solid color-mix(in srgb, currentColor 18%, transparent)",
         color: vars.ink,
+        selectors: {
+          "&:hover:not(:disabled)": {
+            boxShadow: "inset 0 0 0 999px rgba(255, 255, 255, 0.10)",
+          },
+        },
       },
+      // Primary glass — same transparent treatment as `glass` but with more
+      // tint weight in bg + border + font, so it reads as the action without
+      // becoming opaque. Theme-adaptive via currentColor.
+      glassInk: {
+        background: "color-mix(in srgb, currentColor 16%, transparent)",
+        backdropFilter: backdropFilters.button,
+        WebkitBackdropFilter: backdropFilters.button,
+        border: "1px solid color-mix(in srgb, currentColor 32%, transparent)",
+        color: vars.ink,
+        fontWeight: 700,
+        selectors: {
+          "&:hover:not(:disabled)": {
+            boxShadow: "inset 0 0 0 999px rgba(255, 255, 255, 0.12)",
+          },
+        },
+      },
+      // Opaque dark — pure ink bg. Use when full punch is needed.
       solid: {
         background: vars.ink,
         color: vars.paper,
+      },
+      // Opaque light — pure paper bg, ink text. For use on dark surfaces
+      // like the WeekPlanModal banner where solid would blend in.
+      solidLight: {
+        background: vars.paper,
+        color: vars.ink,
       },
       ghost: {
         background: "transparent",
@@ -165,6 +197,55 @@ export const badge = recipe({
 });
 
 export type BadgeVariants = NonNullable<Parameters<typeof badge>[0]>;
+
+// Shared form input recipe. Two intentional patterns:
+//   underline — single-input "command bar" modals (QC, NewPlanModal). The
+//     input IS the modal; large font, no box, just a focus underline.
+//   boxed — form-field modals (locations, settings). Multiple labeled fields
+//     where each input needs a clear container anchor.
+// Both share font family, focus color, and text color so they feel like the
+// same family. Only the shape differs.
+export const formInput = recipe({
+  base: {
+    fontFamily: vars.font.ui,
+    color: vars.ink,
+    outline: "none",
+    width: "100%",
+    transition: themeTransition,
+    selectors: {
+      "&::placeholder": { color: vars.muted },
+    },
+  },
+  variants: {
+    variant: {
+      underline: {
+        fontSize: 16,
+        fontWeight: 500,
+        padding: "10px 0",
+        background: "transparent",
+        border: "none",
+        borderBottom: `1px solid ${vars.rule}`,
+        selectors: {
+          "&:focus": { borderBottomColor: vars.accent.primary },
+        },
+      },
+      boxed: {
+        fontSize: 13.5,
+        fontWeight: 500,
+        padding: "9px 12px",
+        background: vars.glass.bgSoft,
+        border: `1px solid ${vars.glass.stroke}`,
+        borderRadius: 10,
+        selectors: {
+          "&:focus": { borderColor: vars.accent.primary },
+        },
+      },
+    },
+  },
+  defaultVariants: { variant: "boxed" },
+});
+
+export type FormInputVariants = NonNullable<Parameters<typeof formInput>[0]>;
 
 export const progressTrack = recipe({
   base: {

@@ -7,6 +7,7 @@ import { CornerDownLeft } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 import { useCapture } from "./CaptureContext";
 import { Caption } from "../Caption";
+import { Button } from "../Button";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { usePlatform } from "@/hooks/usePlatform";
 import type { Planner } from "@/types/prisma";
@@ -78,6 +79,18 @@ export function CapturePalette() {
     }
   };
 
+  const saveToInbox = () => {
+    if (saveNote()) setOpen(false);
+  };
+  const saveAndTriage = () => {
+    if (saveNote()) {
+      setOpen(false);
+      router.push("/circadium/capture");
+    }
+  };
+
+  const canSubmit = value.trim().length > 0;
+
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
@@ -89,7 +102,6 @@ export function CapturePalette() {
         >
           <div className={header}>
             <Caption>capture · jot · classify later</Caption>
-            <span className={kbd}>esc</span>
           </div>
           <Dialog.Title style={{ position: "absolute", left: -10000 }}>
             Capture
@@ -103,20 +115,38 @@ export function CapturePalette() {
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={onKeyDown}
           />
-          <div className={hintsRow}>
-            <Caption>save to inbox</Caption>
-            <span className={kbd}>
-              <CornerDownLeft size={11} strokeWidth={2.4} />
-            </span>
-            <Caption style={{ marginLeft: 12 }}>save & triage</Caption>
-            <span className={kbd}>
-              {modKey}
-              <CornerDownLeft
-                size={11}
-                strokeWidth={2.4}
-                style={{ marginLeft: 3 }}
-              />
-            </span>
+          <div className={hintsRow} style={{ justifyContent: "flex-end" }}>
+            <Button variant="glass" size="sm" onClick={() => setOpen(false)}>
+              Cancel
+              <span className={kbd} style={{ marginLeft: 8 }}>esc</span>
+            </Button>
+            <Button
+              variant="glass"
+              size="sm"
+              onClick={saveAndTriage}
+              disabled={!canSubmit}
+            >
+              Save & triage
+              <span className={kbd} style={{ marginLeft: 8 }}>
+                {modKey}
+                <CornerDownLeft
+                  size={11}
+                  strokeWidth={2.4}
+                  style={{ marginLeft: 3 }}
+                />
+              </span>
+            </Button>
+            <Button
+              variant="glassInk"
+              size="sm"
+              onClick={saveToInbox}
+              disabled={!canSubmit}
+            >
+              Save
+              <span className={kbd} style={{ marginLeft: 8 }}>
+                <CornerDownLeft size={11} strokeWidth={2.4} />
+              </span>
+            </Button>
           </div>
         </Dialog.Content>
       </Dialog.Portal>

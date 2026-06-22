@@ -27,6 +27,7 @@ export {
   popover,
   pillBtn,
   badge,
+  formInput,
   progressTrack,
 } from "./recipes.css";
 export type {
@@ -34,6 +35,7 @@ export type {
   PopoverVariants,
   PillBtnVariants,
   BadgeVariants,
+  FormInputVariants,
 } from "./recipes.css";
 export { sprinkles } from "./sprinkles.css";
 export type { Sprinkles } from "./sprinkles.css";
