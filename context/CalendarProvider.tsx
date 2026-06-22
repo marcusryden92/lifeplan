@@ -95,6 +95,9 @@ export default function CalendarProvider({
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations
   );
+  const travelTimes = useSelector(
+    (state: RootState) => state.schedulingSettings.allTravelTimes,
+  );
   const isInitialMount = useRef(true);
 
   // Regenerate calendar when bufferTimeMinutes changes (preserves current event positions)
@@ -108,8 +111,8 @@ export default function CalendarProvider({
   }, [bufferTimeMinutes, updateAll, userId]);
 
   const syncState = useMemo(
-    () => ({ ...calendarState, locations }),
-    [calendarState, locations],
+    () => ({ ...calendarState, locations, travelTimes }),
+    [calendarState, locations, travelTimes],
   );
   const { initializeState } = useCalendarServerSync(userId, syncState);
 

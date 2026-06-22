@@ -1,0 +1,166 @@
+"use client";
+
+import { type ChangeEvent } from "react";
+import { Check } from "lucide-react";
+import { formatMinutesToHours } from "@/utils/taskArrayUtils";
+import { useFlashBoolean } from "@/hooks/useFlashAnimation";
+import { useCalendarProvider } from "@/context/CalendarProvider";
+import {
+  toggleSubtaskCompletion,
+  setSubtaskCompletedAt,
+} from "@/utils/goal-handlers/subtaskCompletion";
+import { formatDatetimeLocal, parseDatetimeLocal } from "@/utils/datetime";
+import { vars } from "@/lib/theme";
+import { useItem } from "../_components/ItemContext";
+import { IdentityCard } from "../_components/IdentityCard";
+import {
+  NextOnCalendarCard,
+  AIHelperCard,
+  EngineNotesCard,
+} from "../_components/SideCards";
+import { SHAKE_DURATION_MS } from "../_constants";
+import {
+  overviewGrid,
+  leftCol,
+  rightCol,
+  progressBlock,
+  progressMeta,
+  progressMetaStrong,
+  progressTrack,
+  progressFill,
+  progressTick,
+  completeRow,
+  completeLeftGroup,
+  completeCheckbox,
+  completeLabel,
+  completeDateInput,
+  completeDateInputFaded,
+} from "./ItemDetailPage.css";
+
+export default function ItemOverviewPage() {
+  const {
+    item,
+    category,
+    pct,
+    totalDuration,
+    completedDuration,
+    completedSubtasks,
+    totalSubtasks,
+  } = useItem();
+  const { updatePlannerArray } = useCalendarProvider();
+  const isGoal = item.plannerType === "goal";
+  const isTask = item.plannerType === "task";
+  const areaColor = category?.color ?? vars.accent.primary;
+  const showProgress = isGoal && totalSubtasks > 0;
+
+  const isCompleted = !!item.completedEndTime;
+  const completedValue = formatDatetimeLocal(item.completedEndTime);
+
+  // Completion is gated on isReady — a task can't be checked off until it's
+  // been marked ready. The checkbox stays interactive so a blocked click can
+  // surface a shake-and-flash instead of silently doing nothing.
+  const completionLocked = !item.isReady;
+  const [shakeLocked, flashShake] = useFlashBoolean(SHAKE_DURATION_MS);
+
+  const toggleCompletion = () => {
+    if (completionLocked) {
+      flashShake();
+      return;
+    }
+    updatePlannerArray((prev) => toggleSubtaskCompletion(prev, item.id));
+  };
+
+  const onCompletedAtChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (completionLocked) {
+      flashShake();
+      return;
+    }
+    const iso = parseDatetimeLocal(e.target.value) || null;
+    updatePlannerArray((prev) => setSubtaskCompletedAt(prev, item.id, iso));
+  };
+
+  return (
+    <>
+      <div className={progressBlock}>
+        {showProgress && (
+          <>
+            <div className={progressMeta}>
+              <span className={progressMetaStrong}>
+                {completedSubtasks} of {totalSubtasks} subtasks
+              </span>
+              {"  ·  "}
+              {formatMinutesToHours(completedDuration)} out of{" "}
+              {formatMinutesToHours(totalDuration)}
+              {"  ·  "}
+              <span className={progressMetaStrong}>{pct}%</span>
+            </div>
+            <div className={progressTrack}>
+              <div
+                className={progressFill}
+                style={{
+                  width: `${pct}%`,
+                  background: `linear-gradient(90deg, ${areaColor}, color-mix(in srgb, ${areaColor} 80%, transparent))`,
+                }}
+              />
+              {Array.from({ length: totalSubtasks - 1 }).map((_, i) => (
+                <span
+                  key={i}
+                  className={progressTick}
+                  style={{
+                    left: `${((i + 1) / totalSubtasks) * 100}%`,
+                  }}
+                />
+              ))}
+            </div>
+          </>
+        )}
+        {isTask && (
+          <div className={completeRow}>
+            <div className={completeLeftGroup}>
+              <button
+                type="button"
+                className={completeCheckbox}
+                data-completed={isCompleted ? "true" : "false"}
+                data-locked={completionLocked ? "true" : "false"}
+                data-shake={shakeLocked ? "true" : "false"}
+                onClick={toggleCompletion}
+                aria-pressed={isCompleted}
+                aria-label={isCompleted ? "Mark incomplete" : "Mark complete"}
+                title={
+                  completionLocked
+                    ? "Mark ready before completing"
+                    : undefined
+                }
+              >
+                {isCompleted && <Check size={14} strokeWidth={3} />}
+              </button>
+              <span className={completeLabel}>Completed at</span>
+            </div>
+            <input
+              type="datetime-local"
+              className={`${completeDateInput} ${
+                isCompleted && !completionLocked ? "" : completeDateInputFaded
+              }`}
+              value={completedValue}
+              onChange={onCompletedAtChange}
+              title={
+                completionLocked ? "Mark ready before completing" : undefined
+              }
+            />
+          </div>
+        )}
+      </div>
+
+      <div className={overviewGrid}>
+        <div className={leftCol}>
+          <IdentityCard />
+        </div>
+        <div className={rightCol}>
+          <NextOnCalendarCard />
+          <AIHelperCard />
+          <EngineNotesCard />
+        </div>
+      </div>
+    </>
+  );
+}

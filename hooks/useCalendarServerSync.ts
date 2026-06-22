@@ -2,7 +2,10 @@
 
 import { useRef, useEffect, useCallback, useState } from "react";
 import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
-import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
+import type {
+  SerializedLocation,
+  SerializedTravelTime,
+} from "@/redux/slices/schedulingSettingsSlice";
 import { handleServerTransaction } from "@/utils/server-handlers/compareCalendarData";
 
 const useCalendarServerSync = (
@@ -13,6 +16,7 @@ const useCalendarServerSync = (
     template: EventTemplate[];
     categories: Category[];
     locations: SerializedLocation[];
+    travelTimes: SerializedTravelTime[];
   },
 ) => {
   // Previous state refs to track what the server has
@@ -21,10 +25,12 @@ const useCalendarServerSync = (
   const previousTemplate = useRef<EventTemplate[]>([]);
   const previousCategories = useRef<Category[]>([]);
   const previousLocations = useRef<SerializedLocation[]>([]);
+  const previousTravelTimes = useRef<SerializedTravelTime[]>([]);
 
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const { planner, calendar, template, categories, locations } = calendarState;
+  const { planner, calendar, template, categories, locations, travelTimes } =
+    calendarState;
 
   const initializeState = useCallback(
     (
@@ -44,26 +50,35 @@ const useCalendarServerSync = (
       // late-arriving setLocations(loaded) will be absorbed without sending
       // spurious create operations on the next sync pass.
       previousLocations.current = locationsAtInitRef.current;
+      previousTravelTimes.current = travelTimesAtInitRef.current;
       setIsInitialized(true);
     },
     [],
   );
 
-  // Mirrors locations into a ref so initializeState can read the latest value
-  // at the moment of init without taking it as a parameter (which would
-  // re-trigger useFetchCalendarData on every locations change).
+  // Mirrors locations + travel times into refs so initializeState can read the
+  // latest values at the moment of init without taking them as parameters
+  // (which would re-trigger useFetchCalendarData on every change).
   const locationsAtInitRef = useRef<SerializedLocation[]>(locations);
   locationsAtInitRef.current = locations;
+  const travelTimesAtInitRef = useRef<SerializedTravelTime[]>(travelTimes);
+  travelTimesAtInitRef.current = travelTimes;
 
-  // Direct server actions that bypass the diff (e.g. createLocation, which
-  // needs a Google Places lookup) should call this after their dispatch so the
-  // next sync pass doesn't re-create the row.
+  // Direct server actions that bypass the diff (createLocation needs Google
+  // Places; refreshAllTravelTimes / fetchMissingTravelTimes need Google
+  // distance) should call this after their dispatch so the next sync pass
+  // doesn't see them as missing-on-server.
   const markSynced = useCallback(
-    (kind: "categories" | "locations", current: Category[] | SerializedLocation[]) => {
+    (
+      kind: "categories" | "locations" | "travelTimes",
+      current: Category[] | SerializedLocation[] | SerializedTravelTime[],
+    ) => {
       if (kind === "categories") {
         previousCategories.current = current as Category[];
-      } else {
+      } else if (kind === "locations") {
         previousLocations.current = current as SerializedLocation[];
+      } else {
+        previousTravelTimes.current = current as SerializedTravelTime[];
       }
     },
     [],
@@ -86,6 +101,8 @@ const useCalendarServerSync = (
           previousCategories,
           locations,
           previousLocations,
+          travelTimes,
+          previousTravelTimes,
         );
 
         if (response.success) {
@@ -94,6 +111,7 @@ const useCalendarServerSync = (
           previousTemplate.current = template;
           previousCategories.current = categories;
           previousLocations.current = locations;
+          previousTravelTimes.current = travelTimes;
         } else {
           console.warn("Server sync response not successful:", response);
         }
@@ -117,13 +135,17 @@ const useCalendarServerSync = (
       JSON.stringify(previousCategories.current) === JSON.stringify(categories);
     const locationsSame =
       JSON.stringify(previousLocations.current) === JSON.stringify(locations);
+    const travelTimesSame =
+      JSON.stringify(previousTravelTimes.current) ===
+      JSON.stringify(travelTimes);
 
     if (
       plannerSame &&
       calendarSame &&
       templateSame &&
       categoriesSame &&
-      locationsSame
+      locationsSame &&
+      travelTimesSame
     ) {
       console.log("⏭ Skipping sync: no changes detected");
       return;
@@ -134,7 +156,16 @@ const useCalendarServerSync = (
     return () => {
       clearTimeout(timeout);
     };
-  }, [planner, calendar, template, categories, locations, isInitialized, userId]);
+  }, [
+    planner,
+    calendar,
+    template,
+    categories,
+    locations,
+    travelTimes,
+    isInitialized,
+    userId,
+  ]);
 
   return { initializeState, markSynced };
 };

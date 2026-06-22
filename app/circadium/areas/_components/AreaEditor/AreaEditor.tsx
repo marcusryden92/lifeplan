@@ -1,0 +1,380 @@
+"use client";
+
+import { ChevronRight, Lock, MapPin, SquarePen, Trash2 } from "lucide-react";
+import { Button, Caption, Combobox } from "@/components/ui";
+import type { Category } from "@/types/prisma";
+import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
+import { WindowsMiniGrid } from "../WindowsMiniGrid";
+import { useInlineEdit } from "./useInlineEdit";
+import {
+  editor,
+  header,
+  headerSwatch,
+  headerInfo,
+  headerName,
+  headerNameInput,
+  headerNamePencil,
+  headerNameRow,
+  headerSummary,
+  headerActions,
+  section,
+  sectionPair,
+  sectionTitle,
+  fieldGrid,
+  fieldStack,
+  fieldLabel,
+  swatchRow,
+  swatchChip,
+  strictRow,
+  strictToggle,
+  strictToggleThumb,
+  strictLabel,
+  sectionHelp,
+  windowsSubsection,
+  subsectionLabel,
+  classificationNote,
+  subAreasList,
+  subAreaRow,
+  subAreaDot,
+  subAreaName,
+  subAreaMeta,
+  inlineRow,
+  inlineRowTight,
+  parentOptionDot,
+  lockIcon,
+  subAreaChevron,
+} from "./AreaEditor.css";
+
+export const SWATCH_PALETTE = [
+  "#3b82f6",
+  "#22c55e",
+  "#8b5cf6",
+  "#6366f1",
+  "#06b6d4",
+  "#f59e0b",
+  "#f43f5e",
+  "#14b8a6",
+];
+
+const FALLBACK_COLOR = "#9ca3af";
+
+interface AreaEditorProps {
+  category: Category;
+  categories: Category[];
+  locations: SerializedLocation[];
+  itemCount: number;
+  subAreas: Category[];
+  subAreaCounts: Map<string, number>;
+  onRename: (name: string) => void;
+  onChangeColor: (color: string) => void;
+  onChangeParent: (parentId: string | null) => void;
+  onChangeLocation: (locationId: string | null) => void;
+  onToggleStrict: () => void;
+  onToggleUseTimeWindows: () => void;
+  onDelete: () => void;
+  onSelectSubArea: (id: string) => void;
+  onOpenWindows: () => void;
+}
+
+export function AreaEditor({
+  category,
+  categories,
+  locations,
+  itemCount,
+  subAreas,
+  subAreaCounts,
+  onRename,
+  onChangeColor,
+  onChangeParent,
+  onChangeLocation,
+  onToggleStrict,
+  onToggleUseTimeWindows,
+  onDelete,
+  onSelectSubArea,
+  onOpenWindows,
+}: AreaEditorProps) {
+  const {
+    editing: editingName,
+    draft: nameDraft,
+    setDraft: setNameDraft,
+    inputRef: nameInputRef,
+    startEdit: startNameEdit,
+    commit: commitName,
+    cancel: cancelName,
+  } = useInlineEdit({
+    value: category.name,
+    resetKey: category.id,
+    onCommit: onRename,
+  });
+
+  const color = category.color || FALLBACK_COLOR;
+  const initial = category.name.charAt(0).toUpperCase() || "?";
+
+  const parentOptions = [
+    { value: null as string | null, label: <Caption>Top-level</Caption> },
+    ...categories
+      .filter((c) => c.id !== category.id && c.parentId !== category.id)
+      .map((c) => ({
+        value: c.id,
+        label: (
+          <span className={inlineRow}>
+            {c.color && (
+              <span
+                className={parentOptionDot}
+                style={{ background: c.color }}
+              />
+            )}
+            <span>{c.name}</span>
+          </span>
+        ),
+      })),
+  ];
+
+  const locationOptions = [
+    { value: null as string | null, label: <Caption>No default</Caption> },
+    ...locations.map((l) => ({
+      value: l.id,
+      label: (
+        <span className={inlineRow}>
+          <MapPin size={12} strokeWidth={2} />
+          <span>{l.name}</span>
+        </span>
+      ),
+    })),
+  ];
+
+  const currentLocation = locations.find((l) => l.id === category.locationId);
+  const summary = [
+    `${itemCount} item${itemCount === 1 ? "" : "s"}`,
+    subAreas.length > 0
+      ? `${subAreas.length} sub-categor${subAreas.length === 1 ? "y" : "ies"}`
+      : null,
+    category.isStrict ? "strict" : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  return (
+    <div className={editor}>
+      <div className={header}>
+        <div className={headerSwatch} style={{ background: color }}>
+          {initial}
+        </div>
+        <div className={headerInfo}>
+          <div className={headerNameRow}>
+            {editingName ? (
+              <input
+                ref={nameInputRef}
+                className={headerNameInput}
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onBlur={commitName}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitName();
+                  else if (e.key === "Escape") cancelName();
+                }}
+                aria-label="Category name"
+              />
+            ) : (
+              <>
+                <h2
+                  className={headerName}
+                  onClick={() => startNameEdit()}
+                  title="Click to rename"
+                >
+                  {category.name}
+                </h2>
+                <button
+                  type="button"
+                  className={headerNamePencil}
+                  onClick={() => startNameEdit()}
+                  aria-label="Rename category"
+                >
+                  <SquarePen size={14} strokeWidth={2} />
+                </button>
+              </>
+            )}
+          </div>
+          <div className={headerSummary}>{summary}</div>
+        </div>
+        <div className={headerActions}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onDelete}
+            aria-label="Delete category"
+          >
+            <Trash2 size={12} strokeWidth={2.2} />
+            Delete
+          </Button>
+        </div>
+      </div>
+
+      <div className={section}>
+        <div className={sectionTitle}>Identity</div>
+        <div className={fieldGrid}>
+          <div className={fieldStack}>
+            <span className={fieldLabel}>Color</span>
+            <div className={swatchRow}>
+              {SWATCH_PALETTE.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  className={swatchChip}
+                  data-active={color.toLowerCase() === c.toLowerCase()}
+                  style={{ background: c }}
+                  onClick={() => onChangeColor(c)}
+                  aria-label={`Color ${c}`}
+                />
+              ))}
+            </div>
+          </div>
+          <div className={fieldStack}>
+            <span className={fieldLabel}>Parent category</span>
+            <Combobox
+              value={category.parentId ?? null}
+              options={parentOptions}
+              onChange={(v) => onChangeParent(v)}
+              ariaLabel="Parent category"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className={sectionPair}>
+        <div className={section}>
+          <div className={sectionTitle}>Default location</div>
+          <Combobox
+            value={category.locationId ?? null}
+            options={locationOptions}
+            onChange={(v) => onChangeLocation(v)}
+            renderValue={() =>
+              currentLocation ? (
+                <span className={inlineRowTight}>
+                  <MapPin size={12} strokeWidth={2} />
+                  {currentLocation.name}
+                </span>
+              ) : (
+                <Caption>No default</Caption>
+              )
+            }
+            ariaLabel="Default location"
+          />
+          <div className={sectionHelp}>
+            Items in this category inherit this location unless overridden.
+          </div>
+        </div>
+        <div className={section}>
+          <div className={sectionTitle}>Uses time windows</div>
+          <div className={strictRow}>
+            <button
+              type="button"
+              className={strictToggle}
+              data-on={category.useTimeWindows}
+              onClick={onToggleUseTimeWindows}
+              aria-pressed={category.useTimeWindows}
+              aria-label="Toggle time-window scheduling"
+            >
+              <span className={strictToggleThumb} />
+            </button>
+            <span className={strictLabel}>
+              {category.useTimeWindows ? "On" : "Off"}
+            </span>
+          </div>
+          <div className={sectionHelp}>
+            {category.useTimeWindows
+              ? "Items in this category schedule into the weekly windows below."
+              : "Items in this category schedule freely — it's used for classification only."}
+          </div>
+        </div>
+      </div>
+
+      {category.useTimeWindows ? (
+        <div className={section}>
+          <div className={sectionTitle}>Time windows</div>
+          <div className={windowsSubsection}>
+            <span className={subsectionLabel}>Strict mode</span>
+            <div className={strictRow}>
+              <button
+                type="button"
+                className={strictToggle}
+                data-on={category.isStrict}
+                onClick={onToggleStrict}
+                aria-pressed={category.isStrict}
+                aria-label="Toggle strict mode"
+              >
+                <span className={strictToggleThumb} />
+              </button>
+              <span className={strictLabel}>
+                {category.isStrict ? "On" : "Off"}
+              </span>
+              <Lock
+                size={13}
+                strokeWidth={2}
+                className={lockIcon}
+                data-on={category.isStrict}
+              />
+            </div>
+            <div className={sectionHelp}>
+              {category.isStrict
+                ? `Only ${category.name} items can be scheduled inside these windows.`
+                : "Other items may fill empty space inside these windows."}
+            </div>
+          </div>
+          <span className={subsectionLabel}>Weekly windows</span>
+          <WindowsMiniGrid
+            windows={category.timeSlots}
+            color={color}
+            onOpen={onOpenWindows}
+          />
+        </div>
+      ) : (
+        <div className={section}>
+          <div className={sectionTitle}>Time windows</div>
+          <div className={classificationNote}>
+            This category doesn&apos;t use time-window scheduling. Items in it
+            schedule wherever there&apos;s capacity. Turn on{" "}
+            <strong>Uses time windows</strong> to add weekly windows or strict
+            mode.
+          </div>
+        </div>
+      )}
+
+      {subAreas.length > 0 && (
+        <div className={section}>
+          <div className={sectionTitle}>
+            Sub-categories · {subAreas.length}
+          </div>
+          <div className={subAreasList}>
+            {subAreas.map((s) => {
+              const count = subAreaCounts.get(s.id) ?? 0;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  className={subAreaRow}
+                  onClick={() => onSelectSubArea(s.id)}
+                >
+                  <span
+                    className={subAreaDot}
+                    style={{ background: s.color || FALLBACK_COLOR }}
+                  />
+                  <span className={subAreaName}>{s.name}</span>
+                  <span className={subAreaMeta}>
+                    {count} item{count === 1 ? "" : "s"}
+                  </span>
+                  <ChevronRight
+                    size={14}
+                    strokeWidth={2}
+                    className={subAreaChevron}
+                  />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}

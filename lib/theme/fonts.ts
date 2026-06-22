@@ -33,7 +33,7 @@ export const fontDisplay = localFont({
       style: "normal",
     },
   ],
-  variable: "--lumen-font-display",
+  variable: "--app-font-display",
   display: "swap",
   fallback: ["system-ui", "sans-serif"],
 });
@@ -61,7 +61,7 @@ export const fontUI = localFont({
       style: "normal",
     },
   ],
-  variable: "--lumen-font-ui",
+  variable: "--app-font-ui",
   display: "swap",
   fallback: ["system-ui", "sans-serif"],
 });

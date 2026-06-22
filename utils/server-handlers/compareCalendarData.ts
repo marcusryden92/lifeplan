@@ -7,8 +7,12 @@ import {
   EventExtendedProps,
   EventType,
   Category,
+  CategoryTimeWindow,
 } from "@/types/prisma";
-import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
+import type {
+  SerializedLocation,
+  SerializedTravelTime,
+} from "@/redux/slices/schedulingSettingsSlice";
 import { objectsAreEqual } from "../generalUtils";
 import { syncCalendarData } from "@/actions/calendar-actions/syncCalendarData";
 
@@ -22,12 +26,18 @@ type PlannerChange = Planner;
 type CalendarChange = Omit<SimpleEvent, "extendedProps">;
 type TemplateChange = EventTemplate;
 type ExtendedPropsChange = EventExtendedProps;
-// timeSlots is a related table, excluded from the diff — those rows are
-// managed by actions/time-windows.ts directly.
+// timeSlots is a related table — flattened across categories and diffed as
+// its own group below so a window edit doesn't look like a category update.
 type CategoryChange = Omit<Category, "timeSlots">;
+type CategoryTimeWindowChange = CategoryTimeWindow;
 // Only the editable own-row fields. address/lat/lng/placeId are server-
 // authoritative (Google Places) and never flow back from the client.
 type LocationChange = SerializedLocation;
+// Custom override fields are client-editable. Google base values + identity
+// fields stay server-authoritative; create flows through direct actions
+// (refreshAllTravelTimes / fetchMissingTravelTimes) because they need a
+// Google distance lookup, and destroy is handled by location cascade.
+type TravelTimeChange = SerializedTravelTime;
 
 export type DatabaseChanges = {
   planner: ChangeGroup<PlannerChange>;
@@ -35,7 +45,9 @@ export type DatabaseChanges = {
   template: ChangeGroup<TemplateChange>;
   extendedProps: ChangeGroup<ExtendedPropsChange>;
   category: ChangeGroup<CategoryChange>;
+  categoryTimeWindow: ChangeGroup<CategoryTimeWindowChange>;
   location: ChangeGroup<LocationChange>;
+  travelTime: ChangeGroup<TravelTimeChange>;
 };
 
 export async function handleServerTransaction(
@@ -50,6 +62,8 @@ export async function handleServerTransaction(
   previousCategories?: { current: Category[] },
   locations?: SerializedLocation[],
   previousLocations?: { current: SerializedLocation[] },
+  travelTimes?: SerializedTravelTime[],
+  previousTravelTimes?: { current: SerializedTravelTime[] },
 ) {
   // Filter out generated events (travel, template, category wrappers) BEFORE serialization
   // These are dynamically generated and should never be persisted to database
@@ -114,6 +128,16 @@ export async function handleServerTransaction(
         ) as SerializedLocation[],
       }
     : undefined;
+  const serializedTravelTimes = travelTimes
+    ? (JSON.parse(JSON.stringify(travelTimes)) as SerializedTravelTime[])
+    : undefined;
+  const serializedPreviousTravelTimes = previousTravelTimes
+    ? {
+        current: JSON.parse(
+          JSON.stringify(previousTravelTimes.current),
+        ) as SerializedTravelTime[],
+      }
+    : undefined;
 
   const databaseChanges = compareData(
     serializedPlanner,
@@ -126,6 +150,8 @@ export async function handleServerTransaction(
     serializedPreviousCategories,
     serializedLocations,
     serializedPreviousLocations,
+    serializedTravelTimes,
+    serializedPreviousTravelTimes,
   );
 
   const response = await syncCalendarData(userId, databaseChanges);
@@ -144,6 +170,8 @@ export function compareData(
   previousCategories?: { current: Category[] },
   locations?: SerializedLocation[],
   previousLocations?: { current: SerializedLocation[] },
+  travelTimes?: SerializedTravelTime[],
+  previousTravelTimes?: { current: SerializedTravelTime[] },
 ) {
   const databaseChanges: DatabaseChanges = {
     planner: { create: [], update: [], destroy: [] },
@@ -151,7 +179,9 @@ export function compareData(
     template: { create: [], update: [], destroy: [] },
     extendedProps: { create: [], update: [], destroy: [] },
     category: { create: [], update: [], destroy: [] },
+    categoryTimeWindow: { create: [], update: [], destroy: [] },
     location: { create: [], update: [], destroy: [] },
+    travelTime: { create: [], update: [], destroy: [] },
   };
 
   // Check planner changes
@@ -282,6 +312,48 @@ export function compareData(
     prevByCategory.forEach((cat, id) => {
       if (!currentByCategory.has(id)) {
         databaseChanges.category.destroy.push(cat);
+      }
+    });
+
+    // Time windows are nested under categories in Redux but stored in their
+    // own table. Flatten across all categories and diff by window id so
+    // reparenting, edits, and removals each surface as a discrete operation.
+    // When a category is destroyed the schema sets its windows' categoryId to
+    // null (onDelete: SetNull), so we explicitly destroy those windows here
+    // rather than leaving orphans — they're already absent from the current
+    // category tree and present in the previous one.
+    const currentWindows = categories.flatMap((c) => c.timeSlots);
+    const prevWindows = previousCategories.current.flatMap((c) => c.timeSlots);
+    const currWindowMap = new Map(currentWindows.map((w) => [w.id, w]));
+    const prevWindowMap = new Map(prevWindows.map((w) => [w.id, w]));
+    currWindowMap.forEach((win, id) => {
+      const prev = prevWindowMap.get(id);
+      if (!prev) {
+        databaseChanges.categoryTimeWindow.create.push(win);
+      } else if (!objectsAreEqual(prev, win)) {
+        databaseChanges.categoryTimeWindow.update.push(win);
+      }
+    });
+    prevWindowMap.forEach((win, id) => {
+      if (!currWindowMap.has(id)) {
+        databaseChanges.categoryTimeWindow.destroy.push(win);
+      }
+    });
+  }
+
+  // Travel times. Only update flows through here — create needs a Google
+  // distance lookup (handled by refreshAllTravelTimes / fetchMissingTravelTimes)
+  // and destroy is handled by location cascade in Prisma.
+  if (travelTimes && previousTravelTimes) {
+    const currentByTravel = new Map(travelTimes.map((t) => [t.id, t]));
+    const prevByTravel = new Map(
+      previousTravelTimes.current.map((t) => [t.id, t]),
+    );
+    currentByTravel.forEach((tt, id) => {
+      const prev = prevByTravel.get(id);
+      if (!prev) return;
+      if (!objectsAreEqual(prev, tt)) {
+        databaseChanges.travelTime.update.push(tt);
       }
     });
   }

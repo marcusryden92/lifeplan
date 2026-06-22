@@ -24,7 +24,7 @@ import {
 } from "@/utils/categoryUtils";
 import { isInSmartView, type SmartView } from "@/utils/dateUtils";
 import type { Category } from "@/types/prisma";
-import { SegmentedControl } from "@/app/circadium/_components/SegmentedControl";
+import { SegmentedControl } from "@/components/ui";
 import {
   CategoryTreeNode,
   type Selection,

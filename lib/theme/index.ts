@@ -13,7 +13,7 @@ export {
 
 export { vars } from "./tokens.css";
 export type { ThemeVars } from "./tokens.css";
-export { lumenLight, lumenDark } from "./themes.css";
+export { themeLight, themeDark } from "./themes.css";
 export { backdropFilters, colorMixAlpha } from "./effects";
 export type { BackdropFilterKey, ColorMixAlphaKey } from "./effects";
 export {

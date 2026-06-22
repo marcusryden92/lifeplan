@@ -1,7 +1,7 @@
 import { createTheme } from "@vanilla-extract/css";
 import { vars } from "./tokens.css";
 
-export const lumenLight = createTheme(vars, {
+export const themeLight = createTheme(vars, {
   paper: "#f2efea",
   bezel: "#c8bfb6",
   ink: "#16142a",
@@ -58,12 +58,12 @@ export const lumenLight = createTheme(vars, {
   },
 
   font: {
-    display: "var(--lumen-font-display, 'Clash Display', sans-serif)",
-    ui: "var(--lumen-font-ui, system-ui, sans-serif)",
+    display: "var(--app-font-display, 'Clash Display', sans-serif)",
+    ui: "var(--app-font-ui, system-ui, sans-serif)",
   },
 });
 
-export const lumenDark = createTheme(vars, {
+export const themeDark = createTheme(vars, {
   paper: "#12141a",
   bezel: "#06080b",
   ink: "#e6e8ec",
@@ -119,7 +119,7 @@ export const lumenDark = createTheme(vars, {
   },
 
   font: {
-    display: "var(--lumen-font-display, 'Clash Display', sans-serif)",
-    ui: "var(--lumen-font-ui, system-ui, sans-serif)",
+    display: "var(--app-font-display, 'Clash Display', sans-serif)",
+    ui: "var(--app-font-ui, system-ui, sans-serif)",
   },
 });

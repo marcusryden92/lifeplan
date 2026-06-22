@@ -20,9 +20,9 @@ import {
   ENGINE_SUMMARY,
   type EngineTone,
 } from "../_mock/calendar";
-import { WeekPlanModal } from "./_components/WeekPlanModal";
+import { WeekPlanModal } from "@/components/calendar/WeekPlanModal";
 import { EngineControls } from "./_components/EngineControls";
-import "./fullcalendar.css";
+import "./_styles/fullcalendar.css";
 import {
   page,
   subHeader,
@@ -247,7 +247,7 @@ export default function CalendarPage() {
 
         <div className={mainGrid}>
           <div className={calendarCard}>
-            <div className={`${fcWrap} lumen-calendar`}>
+            <div className={`${fcWrap} circadium-calendar`}>
               <CalendarHoverLabelContext.Provider value={setHoverLabel}>
                 <Calendar
                   initialDate={initialDate}

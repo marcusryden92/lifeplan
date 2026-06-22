@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
-import { lumenLight, lumenDark, vars, type ThemeVars } from "@/lib/theme";
+import { themeLight, themeDark, vars, type ThemeVars } from "@/lib/theme";
 
 export type ThemeName = "light" | "dark";
 
@@ -24,7 +24,7 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const STORAGE_KEY = "lumen.dark";
+const STORAGE_KEY = "theme.dark";
 
 type UserVarOverrides = Parameters<typeof assignInlineVars<ThemeVars>>[1];
 
@@ -64,8 +64,8 @@ export function ThemeProvider({
 
   useEffect(() => {
     const body = document.body;
-    const next = dark ? lumenDark : lumenLight;
-    body.classList.remove(lumenLight, lumenDark);
+    const next = dark ? themeDark : themeLight;
+    body.classList.remove(themeLight, themeDark);
     body.classList.add(next);
     return () => {
       body.classList.remove(next);
@@ -88,7 +88,7 @@ export function ThemeProvider({
     [dark, toggle, setTheme],
   );
 
-  const themeClass = dark ? lumenDark : lumenLight;
+  const themeClass = dark ? themeDark : themeLight;
 
   const overrideStyle: CSSProperties | undefined = useMemo(() => {
     if (!userVars) return undefined;

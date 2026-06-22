@@ -16,6 +16,7 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useSelector } from "react-redux";
 import { usePlatform } from "@/hooks/usePlatform";
 import { deleteGoal } from "@/utils/goalPageHandlers";
+import { isUnprocessed } from "@/utils/plannerStatus";
 import { ageLabel } from "@/utils/timeFormatting";
 import type { RootState } from "@/redux/store";
 import type { Planner, Category } from "@/types/prisma";
@@ -66,16 +67,6 @@ import {
   emptyMain,
   emptyMainTitle,
 } from "./page.css";
-
-// Items that need triage: top-level, not completed, no duration set.
-// Goals enter the queue too — their duration is 0 by default and triage is
-// where the user assigns a deadline + category before opening it up for
-// subtasks.
-function isUnprocessed(item: Planner): boolean {
-  if (item.parentId) return false;
-  if (item.completedEndTime) return false;
-  return !item.duration || item.duration === 0;
-}
 
 export default function CapturePage() {
   const router = useRouter();

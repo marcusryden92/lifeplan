@@ -1,21 +1,24 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useReducer, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { MapPin, Plus, RefreshCw } from "lucide-react";
 import {
-  Car,
-  Train,
-  Bike,
-  Footprints,
-  MapPin,
-  Plus,
-  RefreshCw,
-} from "lucide-react";
-import { SegmentedControl } from "@/app/circadium/_components/SegmentedControl";
-import { Button, Loader } from "@/components/ui";
+  Button,
+  ConfirmModal,
+  Loader,
+  SegmentedControl,
+} from "@/components/ui";
 import { useFlashValue } from "@/hooks/useFlashAnimation";
+import { useServerAction } from "@/hooks/useServerAction";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import * as locationActions from "@/actions/locations";
+import {
+  serializeLocation,
+  serializeTravelTime,
+  hasCustomOverride,
+  isTimeVarying,
+} from "@/utils/locations";
 import type { RootState } from "@/redux/store";
 import {
   upsertLocation,
@@ -25,11 +28,8 @@ import {
   removeTravelTimesByLocationId,
   setDefaultTransportMode,
   type SerializedLocation,
-  type SerializedTravelTime,
 } from "@/redux/slices/schedulingSettingsSlice";
-import type { Location, TravelTime } from "@/types/prisma";
 import type { TransportMode } from "@/lib/generated/db-client";
-import { LumenConfirmModal } from "@/app/circadium/_components/LumenConfirmModal";
 import { TravelMatrix } from "./_components/TravelMatrix";
 import { AddLocationModal } from "./_components/AddLocationModal";
 import { EditTravelTimeModal } from "./_components/EditTravelTimeModal";
@@ -37,6 +37,11 @@ import {
   EditLocationModal,
   type EditLocationDraft,
 } from "./_components/EditLocationModal";
+import {
+  MAX_LOCATIONS,
+  SUCCESS_MESSAGE_MS,
+  TRANSPORT_MODE_OPTIONS,
+} from "./_constants";
 import {
   page,
   subHeader,
@@ -75,69 +80,38 @@ import {
   amberKeyword,
 } from "./page.css";
 
-const MAX_LOCATIONS = 10;
+type ModalState =
+  | { kind: "none" }
+  | { kind: "add" }
+  | { kind: "edit"; location: SerializedLocation }
+  | { kind: "travel"; from: string; to: string }
+  | { kind: "confirmDelete"; locationId: string }
+  | { kind: "confirmClearAll" };
 
-const TRANSPORT_MODE_OPTIONS = [
-  {
-    key: "DRIVING" as TransportMode,
-    label: (
-      <>
-        <Car size={11} strokeWidth={2.4} />
-        Driving
-      </>
-    ),
-  },
-  {
-    key: "TRANSIT" as TransportMode,
-    label: (
-      <>
-        <Train size={11} strokeWidth={2.4} />
-        Transit
-      </>
-    ),
-  },
-  {
-    key: "BICYCLING" as TransportMode,
-    label: (
-      <>
-        <Bike size={11} strokeWidth={2.4} />
-        Bike
-      </>
-    ),
-  },
-  {
-    key: "WALKING" as TransportMode,
-    label: (
-      <>
-        <Footprints size={11} strokeWidth={2.4} />
-        Walk
-      </>
-    ),
-  },
-] as const;
+type ModalAction =
+  | { type: "OPEN_ADD" }
+  | { type: "OPEN_EDIT"; location: SerializedLocation }
+  | { type: "OPEN_TRAVEL_EDIT"; from: string; to: string }
+  | { type: "CONFIRM_DELETE"; locationId: string }
+  | { type: "CONFIRM_CLEAR_ALL" }
+  | { type: "CLOSE_ALL" };
 
-// Helper: narrow a Prisma Location to the serialized shape Redux holds.
-const serialize = (loc: Location): SerializedLocation => ({
-  id: loc.id,
-  name: loc.name,
-  address: loc.address ?? "",
-  placeId: loc.placeId,
-});
-
-const serializeTravel = (tt: TravelTime): SerializedTravelTime => ({
-  id: tt.id,
-  fromLocationId: tt.fromLocationId,
-  toLocationId: tt.toLocationId,
-  transportMode: tt.transportMode,
-  googleRushHourMinutes: tt.googleRushHourMinutes,
-  googleRegularMinutes: tt.googleRegularMinutes,
-  googleNightMinutes: tt.googleNightMinutes,
-  customRushHourMinutes: tt.customRushHourMinutes,
-  customRegularMinutes: tt.customRegularMinutes,
-  customNightMinutes: tt.customNightMinutes,
-});
-
-const SUCCESS_MESSAGE_MS = 3000;
+function modalReducer(state: ModalState, action: ModalAction): ModalState {
+  switch (action.type) {
+    case "OPEN_ADD":
+      return { kind: "add" };
+    case "OPEN_EDIT":
+      return { kind: "edit", location: action.location };
+    case "OPEN_TRAVEL_EDIT":
+      return { kind: "travel", from: action.from, to: action.to };
+    case "CONFIRM_DELETE":
+      return { kind: "confirmDelete", locationId: action.locationId };
+    case "CONFIRM_CLEAR_ALL":
+      return { kind: "confirmClearAll" };
+    case "CLOSE_ALL":
+      return { kind: "none" };
+  }
+}
 
 export default function LocationsPage() {
   // NOTE: this page does NOT refetch locations on mount. UserProvider already
@@ -148,10 +122,6 @@ export default function LocationsPage() {
   const dispatch = useDispatch();
   const { categories } = useCalendarProvider();
 
-  // Every piece of location/travel-time state lives in Redux so this screen
-  // only mounts the UI — UserProvider loads the data once on auth and
-  // mutations below dispatch through Redux. Tab-switching this page no
-  // longer triggers a server fetch.
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
   );
@@ -165,22 +135,17 @@ export default function LocationsPage() {
     (state: RootState) => state.schedulingSettings.isLoaded,
   );
 
-  const [working, setWorking] = useState(false);
+  const [modal, modalDispatch] = useReducer(modalReducer, { kind: "none" });
+
   const [error, setError] = useState<string | null>(null);
   const [success, flashSuccess] = useFlashValue<string | null>(
     SUCCESS_MESSAGE_MS,
     null,
   );
 
-  const [editingLocation, setEditingLocation] =
-    useState<SerializedLocation | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const [addOpen, setAddOpen] = useState(false);
-  const [editPair, setEditPair] = useState<{ from: string; to: string } | null>(
-    null,
-  );
-  const [confirmClearAll, setConfirmClearAll] = useState(false);
+  const refresh = useServerAction(locationActions.refreshAllTravelTimes);
+  const fetchMissing = useServerAction(locationActions.fetchMissingTravelTimes);
+  const working = refresh.isPending || fetchMissing.isPending;
 
   const travelTimes = useMemo(
     () => allTravelTimes.filter((tt) => tt.transportMode === transportMode),
@@ -198,15 +163,16 @@ export default function LocationsPage() {
     return map;
   }, [categories]);
 
-  const isTimeVaryingMode =
-    transportMode === "DRIVING" || transportMode === "TRANSIT";
+  const timeVarying = isTimeVarying(transportMode);
+  const anyCustomOverride = travelTimes.some(hasCustomOverride);
 
-  const hasCustomOverride = travelTimes.some(
-    (tt) =>
-      tt.customRushHourMinutes !== null ||
-      tt.customRegularMinutes !== null ||
-      tt.customNightMinutes !== null,
-  );
+  const editingLocation =
+    modal.kind === "edit" ? modal.location : null;
+  const editPair =
+    modal.kind === "travel" ? { from: modal.from, to: modal.to } : null;
+  const deletingId =
+    modal.kind === "confirmDelete" ? modal.locationId : null;
+  const confirmClearAll = modal.kind === "confirmClearAll";
 
   const selectedTravelTime = editPair
     ? (travelTimes.find(
@@ -248,29 +214,43 @@ export default function LocationsPage() {
         placeId,
         sessionToken,
       });
-      dispatch(upsertLocation(serialize(created)));
+      dispatch(upsertLocation(serializeLocation(created)));
       flashSuccess(`Added "${name}".`);
-      setAddOpen(false);
+      modalDispatch({ type: "CLOSE_ALL" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add location");
       throw err;
     }
   };
 
-  // Edit flows are optimistic — the Redux dispatch happens before the server
-  // round-trip so the rail updates instantly. On failure we restore the
-  // original snapshot and surface the error.
+  // Edit splits two ways:
+  //   - name-only changes flow through Redux. The diff in useCalendarServerSync
+  //     picks them up and sends location.update.
+  //   - placeId changes still hit the server directly so updateLocation can do
+  //     the Google Places lookup and cascade-delete travel times.
   const handleSaveEdit = async (draft: EditLocationDraft) => {
     if (!editingLocation) return;
     const original = editingLocation;
     const trimmedName = draft.name.trim();
+
+    if (!draft.placeId) {
+      dispatch(
+        upsertLocation({
+          ...original,
+          name: trimmedName,
+        }),
+      );
+      modalDispatch({ type: "CLOSE_ALL" });
+      flashSuccess("Location updated.");
+      return;
+    }
 
     const optimistic: SerializedLocation = {
       ...original,
       name: trimmedName,
     };
     dispatch(upsertLocation(optimistic));
-    setEditingLocation(null);
+    modalDispatch({ type: "CLOSE_ALL" });
 
     try {
       const updated = await locationActions.updateLocation(original.id, {
@@ -278,12 +258,10 @@ export default function LocationsPage() {
         placeId: draft.placeId,
         sessionToken: draft.sessionToken,
       });
-      dispatch(upsertLocation(serialize(updated)));
-      if (draft.placeId && draft.placeId !== original.placeId) {
-        // updateLocation deletes affected travel times server-side; mirror
-        // that in Redux so the matrix shows them as missing immediately.
-        dispatch(removeTravelTimesByLocationId(updated.id));
-      }
+      dispatch(upsertLocation(serializeLocation(updated)));
+      // updateLocation cascades the affected travel times server-side; mirror
+      // that in Redux so the matrix shows them as missing immediately.
+      dispatch(removeTravelTimesByLocationId(updated.id));
       flashSuccess("Location updated.");
     } catch (err) {
       dispatch(upsertLocation(original));
@@ -291,29 +269,17 @@ export default function LocationsPage() {
     }
   };
 
-  const handleDelete = async () => {
+  // Delete is pure Redux dispatch — the diff sends location.destroy and
+  // Prisma cascades the related travel times server-side. The client-side
+  // travel-time removal keeps the matrix in sync immediately.
+  const handleDelete = () => {
     if (!deletingId) return;
     const original = locations.find((l) => l.id === deletingId);
     if (!original) return;
-    const deletedId = deletingId;
-    const droppedTravels = allTravelTimes.filter(
-      (tt) => tt.fromLocationId === deletedId || tt.toLocationId === deletedId,
-    );
-
-    dispatch(removeLocation(deletedId));
-    dispatch(removeTravelTimesByLocationId(deletedId));
-    setDeletingId(null);
-    setEditingLocation(null);
-
-    try {
-      await locationActions.deleteLocation(deletedId);
-      flashSuccess("Location deleted.");
-    } catch (err) {
-      dispatch(upsertLocation(original));
-      // Restore the dropped travel times one by one so the matrix re-populates.
-      droppedTravels.forEach((tt) => dispatch(upsertTravelTime(tt)));
-      setError(err instanceof Error ? err.message : "Failed to delete");
-    }
+    dispatch(removeLocation(deletingId));
+    dispatch(removeTravelTimesByLocationId(deletingId));
+    modalDispatch({ type: "CLOSE_ALL" });
+    flashSuccess("Location deleted.");
   };
 
   const handleFetchMissing = async () => {
@@ -321,25 +287,16 @@ export default function LocationsPage() {
       setError("Add at least 2 locations to fetch travel times.");
       return;
     }
-    try {
-      setWorking(true);
-      setError(null);
-      const result =
-        await locationActions.fetchMissingTravelTimes(transportMode);
-      const fresh = await locationActions.fetchTravelTimes();
-      dispatch(setAllTravelTimes(fresh.map(serializeTravel)));
-      flashSuccess(
-        result.fetched > 0
-          ? `Fetched ${result.fetched} travel time${result.fetched > 1 ? "s" : ""}.`
-          : "All travel times are up to date.",
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch travel times",
-      );
-    } finally {
-      setWorking(false);
-    }
+    setError(null);
+    const result = await fetchMissing.run(transportMode);
+    if (!result) return;
+    const fresh = await locationActions.fetchTravelTimes();
+    dispatch(setAllTravelTimes(fresh.map(serializeTravelTime)));
+    flashSuccess(
+      result.fetched > 0
+        ? `Fetched ${result.fetched} travel time${result.fetched > 1 ? "s" : ""}.`
+        : "All travel times are up to date.",
+    );
   };
 
   const handleRefreshAll = async () => {
@@ -347,22 +304,16 @@ export default function LocationsPage() {
       setError("Add at least 2 locations to refresh travel times.");
       return;
     }
-    try {
-      setWorking(true);
-      setError(null);
-      const result = await locationActions.refreshAllTravelTimes(transportMode);
-      const fresh = await locationActions.fetchTravelTimes();
-      dispatch(setAllTravelTimes(fresh.map(serializeTravel)));
-      flashSuccess(`Refreshed ${result.updated} travel times.`);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to refresh travel times",
-      );
-    } finally {
-      setWorking(false);
-    }
+    setError(null);
+    const result = await refresh.run(transportMode);
+    if (!result) return;
+    const fresh = await locationActions.fetchTravelTimes();
+    dispatch(setAllTravelTimes(fresh.map(serializeTravelTime)));
+    flashSuccess(`Refreshed ${result.updated} travel times.`);
   };
 
+  // Travel-time overrides flow through Redux. The diff picks up the changed
+  // custom fields and sends travelTime.update.
   const handleSaveOverrides = async (
     travelTimeId: string,
     overrides: {
@@ -371,42 +322,35 @@ export default function LocationsPage() {
       customNightMinutes: number | null;
     },
   ) => {
-    try {
-      const updated = await locationActions.updateTravelTimeOverride(
-        travelTimeId,
-        overrides,
-      );
-      dispatch(upsertTravelTime(serializeTravel(updated)));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save overrides");
-    }
+    const current = allTravelTimes.find((tt) => tt.id === travelTimeId);
+    if (!current) return;
+    dispatch(
+      upsertTravelTime({
+        ...current,
+        ...overrides,
+      }),
+    );
   };
 
   const handleClearAllOverrides = async () => {
-    setConfirmClearAll(false);
-    try {
-      setWorking(true);
-      await Promise.all(
-        travelTimes
-          .filter(
-            (tt) =>
-              tt.customRushHourMinutes !== null ||
-              tt.customRegularMinutes !== null ||
-              tt.customNightMinutes !== null,
-          )
-          .map((tt) => locationActions.clearTravelTimeOverrides(tt.id)),
+    modalDispatch({ type: "CLOSE_ALL" });
+    const customized = travelTimes.filter(hasCustomOverride);
+    if (customized.length === 0) return;
+    for (const tt of customized) {
+      dispatch(
+        upsertTravelTime({
+          ...tt,
+          customRushHourMinutes: null,
+          customRegularMinutes: null,
+          customNightMinutes: null,
+        }),
       );
-      const fresh = await locationActions.fetchTravelTimes();
-      dispatch(setAllTravelTimes(fresh.map(serializeTravel)));
-      flashSuccess("All overrides cleared.");
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to clear overrides",
-      );
-    } finally {
-      setWorking(false);
     }
+    flashSuccess("All overrides cleared.");
   };
+
+  const combinedError =
+    error ?? refresh.status?.text ?? fetchMissing.status?.text ?? null;
 
   if (!isLoaded) {
     return (
@@ -434,8 +378,10 @@ export default function LocationsPage() {
     <div className={page}>
       <div className={subHeader}>
         <h1 className={pageTitle}>Locations</h1>
-        {error && <div className={errorBanner}>{error}</div>}
-        {success && !error && <div className={successBanner}>{success}</div>}
+        {combinedError && <div className={errorBanner}>{combinedError}</div>}
+        {success && !combinedError && (
+          <div className={successBanner}>{success}</div>
+        )}
         <span className={spacer} />
         <div className={headActions}>
           <SegmentedControl<TransportMode>
@@ -486,7 +432,9 @@ export default function LocationsPage() {
                     key={loc.id}
                     type="button"
                     className={railRow}
-                    onClick={() => setEditingLocation(loc)}
+                    onClick={() =>
+                      modalDispatch({ type: "OPEN_EDIT", location: loc })
+                    }
                     aria-label={`Edit ${loc.name}`}
                   >
                     <span className={railRowPin}>
@@ -522,7 +470,7 @@ export default function LocationsPage() {
             <button
               type="button"
               className={railNewButton}
-              onClick={() => setAddOpen(true)}
+              onClick={() => modalDispatch({ type: "OPEN_ADD" })}
               disabled={locations.length >= MAX_LOCATIONS}
             >
               <Plus size={13} strokeWidth={2.4} />
@@ -541,11 +489,11 @@ export default function LocationsPage() {
           <div className={matrixHead}>
             <h2 className={matrixTitle}>Travel matrix</h2>
             <span className={matrixSubtitle}>
-              {isTimeVaryingMode
+              {timeVarying
                 ? "from row · to column · 3 time-of-day values"
                 : "from row · to column · minutes (constant)"}
             </span>
-            {isTimeVaryingMode && (
+            {timeVarying && (
               <span className={matrixLegend}>
                 <span>
                   <span className={`${legendDot} ${legendDotRegular}`} />
@@ -590,7 +538,9 @@ export default function LocationsPage() {
                 locations={locations}
                 travelTimes={travelTimes}
                 transportMode={transportMode}
-                onEditPair={(from, to) => setEditPair({ from, to })}
+                onEditPair={(from, to) =>
+                  modalDispatch({ type: "OPEN_TRAVEL_EDIT", from, to })
+                }
                 onFetchMissing={handleFetchMissing}
               />
               <div className={matrixFooter}>
@@ -602,8 +552,8 @@ export default function LocationsPage() {
                 <button
                   type="button"
                   className={matrixFooterAction}
-                  disabled={!hasCustomOverride || working}
-                  onClick={() => setConfirmClearAll(true)}
+                  disabled={!anyCustomOverride || working}
+                  onClick={() => modalDispatch({ type: "CONFIRM_CLEAR_ALL" })}
                 >
                   Clear all overrides
                 </button>
@@ -614,32 +564,36 @@ export default function LocationsPage() {
       </div>
 
       <AddLocationModal
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
+        open={modal.kind === "add"}
+        onClose={() => modalDispatch({ type: "CLOSE_ALL" })}
         onAdd={handleAdd}
       />
 
       <EditLocationModal
-        open={!!editingLocation}
+        open={modal.kind === "edit"}
         location={editingLocation}
-        onClose={() => setEditingLocation(null)}
+        onClose={() => modalDispatch({ type: "CLOSE_ALL" })}
         onSave={handleSaveEdit}
         onRequestDelete={() => {
-          if (editingLocation) setDeletingId(editingLocation.id);
+          if (editingLocation)
+            modalDispatch({
+              type: "CONFIRM_DELETE",
+              locationId: editingLocation.id,
+            });
         }}
       />
 
       <EditTravelTimeModal
-        open={!!editPair}
+        open={modal.kind === "travel"}
         travelTime={selectedTravelTime}
         fromLocation={editFromLocation}
         toLocation={editToLocation}
         transportMode={transportMode}
-        onClose={() => setEditPair(null)}
+        onClose={() => modalDispatch({ type: "CLOSE_ALL" })}
         onSave={handleSaveOverrides}
       />
 
-      <LumenConfirmModal
+      <ConfirmModal
         open={!!deletingId}
         title="Delete location?"
         tone="danger"
@@ -654,11 +608,11 @@ export default function LocationsPage() {
             &ldquo;Anywhere&rdquo;.
           </p>
         }
-        onCancel={() => setDeletingId(null)}
+        onCancel={() => modalDispatch({ type: "CLOSE_ALL" })}
         onConfirm={handleDelete}
       />
 
-      <LumenConfirmModal
+      <ConfirmModal
         open={confirmClearAll}
         title="Clear all overrides?"
         tone="danger"
@@ -669,10 +623,9 @@ export default function LocationsPage() {
             values? You can re-customize individual cells afterwards.
           </p>
         }
-        onCancel={() => setConfirmClearAll(false)}
+        onCancel={() => modalDispatch({ type: "CLOSE_ALL" })}
         onConfirm={handleClearAllOverrides}
       />
     </div>
   );
 }
-

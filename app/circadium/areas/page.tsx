@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import { Plus } from "lucide-react";
-import { Loader } from "@/components/ui";
+import { ConfirmModal, Loader } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   upsertCategory,
@@ -16,8 +16,7 @@ import {
   getCategoryAndDescendants,
 } from "@/utils/categoryUtils";
 import type { Category } from "@/types/prisma";
-import { WeekPlanModal } from "@/app/circadium/calendar/_components/WeekPlanModal";
-import { LumenConfirmModal } from "@/app/circadium/_components/LumenConfirmModal";
+import { WeekPlanModal } from "@/components/calendar/WeekPlanModal";
 import { AreaEditor, SWATCH_PALETTE } from "./_components/AreaEditor";
 import { AreaTreeNode, type DragZone } from "./_components/AreaTreeNode";
 import {
@@ -341,7 +340,7 @@ export default function AreasPage() {
         focusedCategoryId={selected?.id ?? null}
       />
 
-      <LumenConfirmModal
+      <ConfirmModal
         open={!!deletingId}
         title="Delete category?"
         tone="danger"

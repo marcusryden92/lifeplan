@@ -1,7 +1,6 @@
 export { Glass } from "./Glass";
 export { Caption } from "./Caption";
 export { Button } from "./Button";
-export { HintAction } from "./HintAction";
 export { TypeBadge } from "./TypeBadge";
 export { CategoryBadge } from "./CategoryBadge";
 export { CategoryDot } from "./CategoryDot";
@@ -15,6 +14,14 @@ export { StatusTag } from "./StatusTag";
 export { ThemeProvider, useTheme } from "./ThemeProvider";
 export type { ThemeName } from "./ThemeProvider";
 export { useResolvedCategoryColor } from "./useResolvedCategoryColor";
+export { Switch } from "./Switch";
+export { ConfirmModal } from "./ConfirmModal";
+export { Combobox } from "./Combobox";
+export type { ComboboxOption } from "./Combobox";
+export { SegmentedControl } from "./SegmentedControl";
+export type { SegmentedOption } from "./SegmentedControl";
+export { CenteredLoader } from "./CenteredLoader";
+export { StubPage } from "./StubPage";
 export {
   AppShell,
   Sidebar,
@@ -38,6 +45,6 @@ export {
   categoryGlow,
   categoryGradient,
   categoryTint,
-  lumenLight,
-  lumenDark,
+  themeLight,
+  themeDark,
 } from "@/lib/theme";

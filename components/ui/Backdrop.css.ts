@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { lumenDark, DURATIONS } from "@/lib/theme";
+import { themeDark, DURATIONS } from "@/lib/theme";
 
 const base = style({
   position: "absolute",
@@ -27,7 +27,7 @@ export const pinstripeLight = style([
     opacity: 1,
     background: `repeating-linear-gradient(45deg, transparent 0, transparent 9px, ${stripeLight} 9px, ${stripeLight} 10px)`,
     selectors: {
-      [`.${lumenDark} &`]: { opacity: 0 },
+      [`.${themeDark} &`]: { opacity: 0 },
     },
   },
 ]);
@@ -39,7 +39,7 @@ export const pinstripeDark = style([
     opacity: 0,
     background: `repeating-linear-gradient(45deg, transparent 0, transparent 9px, ${stripeDark} 9px, ${stripeDark} 10px)`,
     selectors: {
-      [`.${lumenDark} &`]: { opacity: 1 },
+      [`.${themeDark} &`]: { opacity: 1 },
     },
   },
 ]);
@@ -63,7 +63,7 @@ export const blobLight = style([
     opacity: 1,
     backgroundImage: blobImage(blobLightColor),
     selectors: {
-      [`.${lumenDark} &`]: { opacity: 0 },
+      [`.${themeDark} &`]: { opacity: 0 },
     },
   },
 ]);
@@ -76,7 +76,7 @@ export const blobDark = style([
     opacity: 0,
     backgroundImage: blobImage(blobDarkColor),
     selectors: {
-      [`.${lumenDark} &`]: { opacity: 1 },
+      [`.${themeDark} &`]: { opacity: 1 },
     },
   },
 ]);

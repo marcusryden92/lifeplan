@@ -3,9 +3,7 @@
 import { MapPin } from "lucide-react";
 import { useMemo } from "react";
 import { useSelector } from "react-redux";
-import { Caption } from "@/components/ui";
-import { LumenDropdown } from "@/app/circadium/_components/LumenDropdown";
-import { LumenSwitch } from "@/app/circadium/_components/LumenSwitch";
+import { Caption, Combobox, Switch } from "@/components/ui";
 import type { RootState } from "@/redux/store";
 import { vars, interactiveTransition } from "@/lib/theme";
 
@@ -77,10 +75,10 @@ export function PopoverLocationPicker({
             flexWrap: "wrap",
           }}
         >
-          <LumenSwitch
+          <Switch
             checked={!!isOverridden}
-            onChange={() => onToggleOverride?.()}
-            ariaLabel="Override inherited location"
+            onCheckedChange={() => onToggleOverride?.()}
+            aria-label="Override inherited location"
           />
           <span
             style={{
@@ -104,7 +102,7 @@ export function PopoverLocationPicker({
         }}
         aria-disabled={isInheriting || undefined}
       >
-        <LumenDropdown<string | null>
+        <Combobox<string | null>
           value={isInheriting ? null : value}
           options={options}
           onChange={(v) => onChange(v)}

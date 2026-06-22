@@ -1,0 +1,1 @@
+export { WindowsMiniGrid } from "./WindowsMiniGrid";

@@ -1,0 +1,94 @@
+import type { EventInput } from "@fullcalendar/core";
+import type { Category, EventTemplate } from "@/types/prisma";
+import type { WeekDayIntegers } from "@/types/calendarTypes";
+import { shiftDate, setTimeOnDate } from "@/utils/calendarUtils";
+import { TEMPLATE_PALETTE, UNASSIGNED_COLOR, WEEK_START_DAY } from "./constants";
+import type { WorkingWindow } from "./timeWindow";
+
+// EventTemplate.startDay arrives as either a WeekDayType string ("monday",...)
+// from Prisma or as a WeekDayIntegers from local handlers — normalize here.
+const WEEKDAY_STRING_TO_INT: Record<string, WeekDayIntegers> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+};
+
+export function startDayAsInt(tpl: EventTemplate): WeekDayIntegers {
+  const raw = tpl.startDay as unknown;
+  if (typeof raw === "number") return raw as WeekDayIntegers;
+  if (typeof raw === "string" && raw in WEEKDAY_STRING_TO_INT) {
+    return WEEKDAY_STRING_TO_INT[raw];
+  }
+  return 1;
+}
+
+export function templateToEvent(
+  tpl: EventTemplate,
+  weekStart: Date,
+  active: boolean,
+): EventInput {
+  const offset = (startDayAsInt(tpl) - WEEK_START_DAY + 7) % 7;
+  const baseDate = shiftDate(weekStart, offset);
+  const start = setTimeOnDate(baseDate, tpl.startTime);
+  const end = new Date(start);
+  end.setMinutes(end.getMinutes() + tpl.duration);
+  return {
+    id: `tpl:${tpl.id}`,
+    title: tpl.title,
+    start,
+    end,
+    backgroundColor: tpl.color || TEMPLATE_PALETTE[0],
+    borderColor: "transparent",
+    editable: active,
+    extendedProps: {
+      kind: "template",
+      templateId: tpl.id,
+      color: tpl.color || TEMPLATE_PALETTE[0],
+      active,
+    },
+  };
+}
+
+export function windowToEvent(
+  win: WorkingWindow,
+  weekStart: Date,
+  categoryById: Map<string, Category>,
+  active: boolean,
+  focused: boolean,
+): EventInput {
+  const category = win.categoryId ? categoryById.get(win.categoryId) : null;
+  const color = category?.color || UNASSIGNED_COLOR;
+  const title = category?.name || "Unassigned";
+  const offset = (win.day - WEEK_START_DAY + 7) % 7;
+  const baseDate = shiftDate(weekStart, offset);
+  const start = setTimeOnDate(baseDate, win.startTime);
+  const end =
+    win.endTime === "23:59"
+      ? new Date(
+          baseDate.getFullYear(),
+          baseDate.getMonth(),
+          baseDate.getDate() + 1,
+        )
+      : setTimeOnDate(baseDate, win.endTime);
+  return {
+    id: `win:${win.id}`,
+    title,
+    start,
+    end,
+    backgroundColor: color,
+    borderColor: "transparent",
+    editable: active,
+    extendedProps: {
+      kind: "window",
+      windowId: win.id,
+      color,
+      active,
+      assigned: !!win.categoryId,
+      focused,
+    },
+  };
+}

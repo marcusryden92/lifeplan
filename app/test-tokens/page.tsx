@@ -81,7 +81,7 @@ export default function TestTokensPage() {
         >
           <div>
             <h1 className={display.hero} style={{ margin: 0 }}>
-              Lumen foundation
+              Theme foundation
             </h1>
             <Caption>tokens · primitives · {dark ? "dark" : "light"}</Caption>
           </div>
@@ -208,7 +208,7 @@ export default function TestTokensPage() {
           })}
         >
           <Caption>type scale</Caption>
-          <Caption>{dark ? "lumen.dark" : "lumen.light"}</Caption>
+          <Caption>{dark ? "theme.dark" : "theme.light"}</Caption>
         </div>
         <Glass radius="md" fill="soft">
           <div className={sprinkles({ p: "6", display: "flex", flexDirection: "column", gap: "3" })}>
