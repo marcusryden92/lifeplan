@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCapture } from "./CaptureContext";
-import { MOBILE_TABS } from "./nav";
+import { useCapture } from "../CaptureContext";
+import { MOBILE_TABS } from "../nav";
 import {
   tabBar,
   tab,

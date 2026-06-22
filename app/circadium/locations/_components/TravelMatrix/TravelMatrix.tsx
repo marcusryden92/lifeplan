@@ -21,9 +21,6 @@ import {
   cellSelf,
   periodRow,
   periodValue,
-  periodValueRush,
-  periodValueRegular,
-  periodValueNight,
   periodLabel,
   missingBlock,
   missingLabel,
@@ -180,25 +177,19 @@ export function TravelMatrix({
                       {timeVarying ? (
                         <>
                           <span className={periodRow}>
-                            <span
-                              className={`${periodValue} ${periodValueRegular}`}
-                            >
+                            <span className={periodValue({ tone: "regular" })}>
                               {reg}
                             </span>
                             <span className={periodLabel}>reg</span>
                           </span>
                           <span className={periodRow}>
-                            <span
-                              className={`${periodValue} ${periodValueRush}`}
-                            >
+                            <span className={periodValue({ tone: "rush" })}>
                               {rush}
                             </span>
                             <span className={periodLabel}>rush</span>
                           </span>
                           <span className={periodRow}>
-                            <span
-                              className={`${periodValue} ${periodValueNight}`}
-                            >
+                            <span className={periodValue({ tone: "night" })}>
                               {night}
                             </span>
                             <span className={periodLabel}>night</span>

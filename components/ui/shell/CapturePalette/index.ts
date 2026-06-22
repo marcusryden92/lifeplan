@@ -1,0 +1,1 @@
+export { CapturePalette } from "./CapturePalette";

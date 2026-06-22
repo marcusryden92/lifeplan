@@ -4,6 +4,7 @@ import {
   themeTransition,
   backdropFilters,
   colorMixAlpha,
+  glass,
 } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
@@ -101,24 +102,22 @@ export const gridWrap = style({
   },
 });
 
-export const leftCard = style({
-  position: "relative",
-  background: vars.glass.bg,
-  border: `1px solid ${vars.glass.stroke}`,
-  boxShadow: vars.shadow.panel,
-  borderRadius: 22,
-  display: "flex",
-  flexDirection: "column",
-  minHeight: 0,
-  overflow: "hidden",
-  transition: themeTransition,
-  "@media": {
-    [MOBILE]: {
-      minHeight: "auto",
-      overflow: "visible",
+export const leftCard = style([
+  glass({ fill: "regular", radius: "lg", shadow: "panel" }),
+  {
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    minHeight: 0,
+    overflow: "hidden",
+    "@media": {
+      [MOBILE]: {
+        minHeight: "auto",
+        overflow: "visible",
+      },
     },
   },
-});
+]);
 
 export const leftCardHeader = style({
   position: "absolute",

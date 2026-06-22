@@ -1,4 +1,5 @@
 import { style, globalStyle } from "@vanilla-extract/css";
+import { recipe } from "@vanilla-extract/recipes";
 import { vars, themeTransition, interactiveTransition } from "@/lib/theme";
 
 export const matrixWrap = style({
@@ -154,15 +155,20 @@ export const periodRow = style({
   lineHeight: 1.2,
 });
 
-export const periodValue = style({
-  fontWeight: 700,
-  fontSize: 12.5,
-  fontVariantNumeric: "tabular-nums",
+export const periodValue = recipe({
+  base: {
+    fontWeight: 700,
+    fontSize: 12.5,
+    fontVariantNumeric: "tabular-nums",
+  },
+  variants: {
+    tone: {
+      rush: { color: vars.status.error },
+      regular: { color: vars.ink },
+      night: { color: vars.muted },
+    },
+  },
 });
-
-export const periodValueRush = style({ color: vars.status.error });
-export const periodValueRegular = style({ color: vars.ink });
-export const periodValueNight = style({ color: vars.muted });
 
 export const singleValue = style({
   display: "flex",

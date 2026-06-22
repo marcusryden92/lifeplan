@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, backdropFilters } from "@/lib/theme";
+import { vars, themeTransition, glass } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -175,19 +175,16 @@ export const pinstripeRule = style({
   transition: themeTransition,
 });
 
-export const card = style({
-  background: vars.glass.bgDeep,
-  backdropFilter: backdropFilters.panel,
-  WebkitBackdropFilter: backdropFilters.panel,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 18,
-  padding: 20,
-  display: "flex",
-  flexDirection: "column",
-  gap: 14,
-  transition: themeTransition,
-  "@media": { [MOBILE]: { padding: 16, borderRadius: 14 } },
-});
+export const card = style([
+  glass({ fill: "deep", radius: "md", shadow: "none" }),
+  {
+    padding: 20,
+    display: "flex",
+    flexDirection: "column",
+    gap: 14,
+    "@media": { [MOBILE]: { padding: 16, borderRadius: 14 } },
+  },
+]);
 
 export const cardTitle = style({
   fontFamily: vars.font.ui,

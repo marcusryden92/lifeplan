@@ -5,6 +5,7 @@ import {
   collapseTransition,
   DURATIONS,
   backdropFilters,
+  glass,
 } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
@@ -238,22 +239,20 @@ export const mainGrid = style({
   },
 });
 
-export const calendarCard = style({
-  background: vars.glass.bg,
-  border: `1px solid ${vars.glass.stroke}`,
-  boxShadow: vars.shadow.panel,
-  borderRadius: 22,
-  display: "flex",
-  flexDirection: "column",
-  minHeight: 0,
-  overflow: "hidden",
-  transition: themeTransition,
-  "@media": {
-    [MOBILE]: {
-      minHeight: 540,
+export const calendarCard = style([
+  glass({ fill: "regular", radius: "lg", shadow: "panel" }),
+  {
+    display: "flex",
+    flexDirection: "column",
+    minHeight: 0,
+    overflow: "hidden",
+    "@media": {
+      [MOBILE]: {
+        minHeight: 540,
+      },
     },
   },
-});
+]);
 
 export const engineCol = style({
   width: ENGINE_COL_WIDTH,

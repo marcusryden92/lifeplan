@@ -6,8 +6,8 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { signOut } from "next-auth/react";
 import { ChevronLeft, LogOut, Moon, Settings, Sun } from "lucide-react";
-import { useTheme } from "../ThemeProvider";
-import { NAV_ITEMS } from "./nav";
+import { useTheme } from "../../ThemeProvider";
+import { NAV_ITEMS } from "../nav";
 import {
   sidebar,
   brand,

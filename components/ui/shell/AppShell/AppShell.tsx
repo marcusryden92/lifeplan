@@ -1,12 +1,12 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { Backdrop } from "../Backdrop";
-import { Grain } from "../Grain";
-import { Sidebar } from "./Sidebar";
-import { MobileTabs } from "./MobileTabs";
-import { CaptureProvider } from "./CaptureContext";
-import { CapturePalette } from "./CapturePalette";
+import { Backdrop } from "../../Backdrop";
+import { Grain } from "../../Grain";
+import { Sidebar } from "../Sidebar";
+import { MobileTabs } from "../MobileTabs";
+import { CaptureProvider } from "../CaptureContext";
+import { CapturePalette } from "../CapturePalette";
 import {
   bezelFrame,
   canvas,

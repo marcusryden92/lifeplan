@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, popover, backdropFilters } from "@/lib/theme";
+import { vars, themeTransition, popover, glass } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -218,19 +218,16 @@ export const breadcrumb = style({
   fontVariantNumeric: "tabular-nums",
 });
 
-export const card = style({
-  background: vars.glass.bgDeep,
-  backdropFilter: backdropFilters.panel,
-  WebkitBackdropFilter: backdropFilters.panel,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 22,
-  padding: 28,
-  display: "flex",
-  flexDirection: "column",
-  gap: 18,
-  transition: themeTransition,
-  "@media": { [MOBILE]: { padding: 20, borderRadius: 18 } },
-});
+export const card = style([
+  glass({ fill: "deep", radius: "lg", shadow: "none" }),
+  {
+    padding: 28,
+    display: "flex",
+    flexDirection: "column",
+    gap: 18,
+    "@media": { [MOBILE]: { padding: 20, borderRadius: 18 } },
+  },
+]);
 
 export const itemTitle = style({
   fontFamily: vars.font.display,
