@@ -1,123 +1,65 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, glass } from "@/lib/theme";
+import { vars } from "@/lib/theme";
 
+const MOBILE = "screen and (max-width: 767px)";
+
+// Same chrome as AppShell: 5px bezel padding around a 30px-radius canvas.
+// On mobile we drop the padding + radius so the field bleeds edge-to-edge.
 export const page = style({
-  position: "relative",
   minHeight: "100vh",
-  width: "100%",
+  width: "100vw",
+  boxSizing: "border-box",
+  background: vars.paper,
+  padding: 12,
   display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 24,
-  background: vars.bezel,
+  flexDirection: "column",
+  gap: 5,
   color: vars.ink,
-  transition: themeTransition,
-});
-
-export const card = style([
-  glass({ radius: "xl", shadow: "panel", fill: "deep" }),
-  {
-    position: "relative",
-    width: "min(720px, calc(100vw - 32px))",
-    padding: "56px 48px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    textAlign: "center",
-    gap: 8,
-  },
-]);
-
-export const brand = style({
-  fontFamily: vars.font.display,
-  fontSize: "clamp(56px, 9vw, 96px)",
-  fontWeight: 500,
-  letterSpacing: "-0.04em",
-  lineHeight: 1,
-  margin: 0,
-  color: vars.ink,
-});
-
-export const brandDot = style({
-  display: "inline-block",
-  width: 10,
-  height: 10,
-  borderRadius: 999,
-  background: vars.accent.primary,
-  marginLeft: 4,
-  verticalAlign: "top",
-  marginTop: "0.18em",
-});
-
-export const subtitle = style({
-  fontFamily: vars.font.ui,
-  fontSize: 18,
-  color: vars.inkSoft,
-  marginTop: 12,
-  marginBottom: 12,
-});
-
-export const ctaRow = style({
-  display: "flex",
-  justifyContent: "center",
-  marginTop: 16,
-  marginBottom: 40,
-});
-
-export const featuresGrid = style({
-  display: "grid",
-  gridTemplateColumns: "1fr",
-  gap: 14,
-  width: "100%",
-  textAlign: "left",
   "@media": {
-    "screen and (min-width: 720px)": {
-      gridTemplateColumns: "repeat(3, 1fr)",
-    },
+    [MOBILE]: { padding: 0, gap: 0 },
   },
 });
 
-export const featureCard = style({
-  padding: "18px 18px 20px",
-  borderRadius: 14,
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.glass.stroke}`,
-  transition: themeTransition,
-  cursor: "default",
-  selectors: {
-    "&:hover": {
-      background: vars.glass.bg,
-      borderColor: vars.rule,
-    },
+// The vector-field card. ~2/3 of the viewport vertically, with the same 30px
+// rounded chrome the AppShell canvas uses.
+export const hero = style({
+  position: "relative",
+  height: "calc((100vh - 15px) * 2 / 3)",
+  borderRadius: 30,
+  overflow: "hidden",
+  isolation: "isolate",
+  background: vars.paper,
+  "@media": {
+    [MOBILE]: { borderRadius: 0 },
   },
 });
 
-export const featureHead = style({
+// Floating sign-in inside the hero card (top-right, inset from the rounded edge).
+export const signInWrap = style({
+  position: "absolute",
+  top: "clamp(16px, 2vw, 24px)",
+  right: "clamp(16px, 2vw, 24px)",
+  zIndex: 2,
+});
+
+// Title row beneath the hero. Takes the remaining ~1/3 of the viewport.
+export const titleRow = style({
+  flex: 1,
   display: "flex",
-  alignItems: "center",
-  gap: 10,
-  marginBottom: 8,
+  flexDirection: "column",
+  alignItems: "flex-start",
+  justifyContent: "center",
+  padding: "24px clamp(24px, 4vw, 56px)",
+  textAlign: "left",
 });
 
-export const featureGlyph = style({
+export const wordmark = style({
   fontFamily: vars.font.display,
-  fontSize: 22,
-  color: vars.accent.primary,
+  fontSize: "clamp(56px, 12vw, 140px)",
+  fontWeight: 400,
+  letterSpacing: "-0.03em",
   lineHeight: 1,
-});
-
-export const featureTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 16,
-  fontWeight: 500,
-  letterSpacing: "-0.01em",
   color: vars.ink,
   margin: 0,
-});
-
-export const featureBody = style({
-  fontSize: 13,
-  color: vars.muted,
-  lineHeight: 1.45,
-  margin: 0,
+  userSelect: "none",
 });

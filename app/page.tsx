@@ -1,58 +1,33 @@
 "use client";
 
 import { LoginButton } from "@/components/auth/LoginButton";
-import { Button, Grain } from "@/components/ui";
+import { Button } from "@/components/ui";
+import { themeLight } from "@/lib/theme";
+import { VectorField } from "@/components/landing/VectorField";
 import {
   page,
-  card,
-  brand,
-  brandDot,
-  subtitle,
-  ctaRow,
-  featuresGrid,
-  featureCard,
-  featureHead,
-  featureGlyph,
-  featureTitle,
-  featureBody,
+  hero,
+  signInWrap,
+  titleRow,
+  wordmark,
 } from "./page.css";
-
-const FEATURES = [
-  { glyph: "◎", title: "Plan", body: "Set goals and organize your journey." },
-  { glyph: "↗", title: "Track", body: "Monitor progress and milestones." },
-  { glyph: "✦", title: "Reflect", body: "Learn from experience and adapt." },
-];
 
 export default function Home() {
   return (
-    <main className={page}>
-      <Grain />
-      <div className={card}>
-        <h1 className={brand}>
-          circadium<span className={brandDot} aria-hidden />
-        </h1>
-        <p className={subtitle}>Your future, one step at a time.</p>
-
-        <div className={ctaRow}>
+    <main className={`${themeLight} ${page}`}>
+      <section className={hero}>
+        <VectorField />
+        <div className={signInWrap}>
           <LoginButton asChild>
-            <Button variant="solid" size="lg">
+            <Button variant="glass" size="md">
               Sign in
             </Button>
           </LoginButton>
         </div>
-
-        <div className={featuresGrid}>
-          {FEATURES.map((f) => (
-            <div key={f.title} className={featureCard}>
-              <div className={featureHead}>
-                <span className={featureGlyph}>{f.glyph}</span>
-                <h3 className={featureTitle}>{f.title}</h3>
-              </div>
-              <p className={featureBody}>{f.body}</p>
-            </div>
-          ))}
-        </div>
-      </div>
+      </section>
+      <section className={titleRow}>
+        <h1 className={wordmark}>Circadium</h1>
+      </section>
     </main>
   );
 }
