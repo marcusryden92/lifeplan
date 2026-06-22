@@ -117,7 +117,10 @@
       "Bash(grep -n \"style=\\\\|\\\\#[a-fA-F0-9]\\\\{3,6\\\\}\\\\|rgba\\\\|rgb\\(\" \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\circadium\\\\library\\\\page.tsx\")",
       "Bash(grep -n \"  </div>\\\\|</div>$\" \"c:/Users/Marcus/Desktop/Lifeplan/app/circadium/calendar/_components/WeekPlanModal.tsx\")",
       "Bash(git rm *)",
-      "PowerShell(pnpm tsc --noEmit)"
+      "PowerShell(pnpm tsc --noEmit)",
+      "PowerShell(Rename-Item -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\circadium\" -NewName \"\\(protected\\)\")",
+      "PowerShell(Move-Item -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\circadium\" -Destination \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\\\(protected\\)\")",
+      "Bash(grep -n \"^C:\\\\\\\\\\\\\\\\\" \"c:/Users/Marcus/Desktop/Lifeplan/notes/lint-errors.txt\")"
     ]
   }
 }

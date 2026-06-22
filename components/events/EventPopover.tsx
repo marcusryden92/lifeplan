@@ -173,7 +173,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
 
   const openFullEditor = () => {
     setShowPopover(false);
-    router.push(`/circadium/items/${event.id}`);
+    router.push(`/items/${event.id}`);
   };
 
   const plannerType = event.extendedProps.plannerType as

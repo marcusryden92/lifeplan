@@ -203,7 +203,7 @@ function UserMenu({
             style={{ top: menuPos.top, left: menuPos.left }}
           >
             <Link
-              href="/circadium/settings"
+              href="/settings"
               className={userMenuItem}
               role="menuitem"
               onClick={() => setOpen(false)}

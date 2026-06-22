@@ -73,7 +73,7 @@ export function CapturePalette() {
     e.preventDefault();
     if (e.metaKey || e.ctrlKey) {
       setOpen(false);
-      router.push("/circadium/capture");
+      router.push("/capture");
     } else {
       setOpen(false);
     }
@@ -85,7 +85,7 @@ export function CapturePalette() {
   const saveAndTriage = () => {
     if (saveNote()) {
       setOpen(false);
-      router.push("/circadium/capture");
+      router.push("/capture");
     }
   };
 

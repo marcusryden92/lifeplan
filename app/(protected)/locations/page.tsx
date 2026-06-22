@@ -1,450 +1,631 @@
-﻿"use client";
+"use client";
 
-import { useState, useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { useMemo, useReducer, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { MapPin, Plus, RefreshCw } from "lucide-react";
-import { Button } from "@/components/ui/Button.legacy";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/Card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
-import { LocationList } from "@/components/locations/LocationList";
-import { AddLocationDialog } from "@/components/locations/AddLocationDialog";
-import { TravelTimeMatrix } from "@/components/locations/TravelTimeMatrix";
+  Button,
+  ConfirmModal,
+  Loader,
+  SegmentedControl,
+} from "@/components/ui";
+import { useFlashValue } from "@/hooks/useFlashAnimation";
+import { useServerAction } from "@/hooks/useServerAction";
+import { useCalendarProvider } from "@/context/CalendarProvider";
 import * as locationActions from "@/actions/locations";
-import type { Location, TravelTime } from "@/types/prisma";
+import {
+  serializeLocation,
+  serializeTravelTime,
+  hasCustomOverride,
+  isTimeVarying,
+} from "@/utils/locations";
+import type { RootState } from "@/redux/store";
+import {
+  upsertLocation,
+  removeLocation,
+  setAllTravelTimes,
+  upsertTravelTime,
+  removeTravelTimesByLocationId,
+  setDefaultTransportMode,
+  type SerializedLocation,
+} from "@/redux/slices/schedulingSettingsSlice";
 import type { TransportMode } from "@/lib/generated/db-client";
-import { setLocations as setLocationsInRedux } from "@/redux/slices/schedulingSettingsSlice";
-import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
+import { TravelMatrix } from "./_components/TravelMatrix";
+import { AddLocationModal } from "./_components/AddLocationModal";
+import { EditTravelTimeModal } from "./_components/EditTravelTimeModal";
+import {
+  EditLocationModal,
+  type EditLocationDraft,
+} from "./_components/EditLocationModal";
+import {
+  MAX_LOCATIONS,
+  SUCCESS_MESSAGE_MS,
+  TRANSPORT_MODE_OPTIONS,
+} from "./_constants";
+import {
+  page,
+  subHeader,
+  pageTitle,
+  spacer,
+  headActions,
+  successBanner,
+  errorBanner,
+  mainGrid,
+  rail,
+  railHead,
+  railBody,
+  railFooter,
+  railNote,
+  railRow,
+  railRowPin,
+  railRowMeta,
+  railRowName,
+  railRowAddress,
+  railRowTags,
+  railRowTag,
+  railRowTagDot,
+  railNewButton,
+  matrixPane,
+  matrixHead,
+  matrixTitle,
+  matrixSubtitle,
+  matrixLegend,
+  legendDot,
+  legendDotRush,
+  legendDotRegular,
+  legendDotNight,
+  matrixEmpty,
+  matrixFooter,
+  matrixFooterAction,
+  amberKeyword,
+} from "./page.css";
 
-const TRANSPORT_MODES: { value: TransportMode; label: string }[] = [
-  { value: "DRIVING", label: "Driving" },
-  { value: "TRANSIT", label: "Public Transit" },
-  { value: "BICYCLING", label: "Bicycling" },
-  { value: "WALKING", label: "Walking" },
-];
+type ModalState =
+  | { kind: "none" }
+  | { kind: "add" }
+  | { kind: "edit"; location: SerializedLocation }
+  | { kind: "travel"; from: string; to: string }
+  | { kind: "confirmDelete"; locationId: string }
+  | { kind: "confirmClearAll" };
 
-const MAX_LOCATIONS = 10;
+type ModalAction =
+  | { type: "OPEN_ADD" }
+  | { type: "OPEN_EDIT"; location: SerializedLocation }
+  | { type: "OPEN_TRAVEL_EDIT"; from: string; to: string }
+  | { type: "CONFIRM_DELETE"; locationId: string }
+  | { type: "CONFIRM_CLEAR_ALL" }
+  | { type: "CLOSE_ALL" };
+
+function modalReducer(state: ModalState, action: ModalAction): ModalState {
+  switch (action.type) {
+    case "OPEN_ADD":
+      return { kind: "add" };
+    case "OPEN_EDIT":
+      return { kind: "edit", location: action.location };
+    case "OPEN_TRAVEL_EDIT":
+      return { kind: "travel", from: action.from, to: action.to };
+    case "CONFIRM_DELETE":
+      return { kind: "confirmDelete", locationId: action.locationId };
+    case "CONFIRM_CLEAR_ALL":
+      return { kind: "confirmClearAll" };
+    case "CLOSE_ALL":
+      return { kind: "none" };
+  }
+}
 
 export default function LocationsPage() {
+  // NOTE: this page does NOT refetch locations on mount. UserProvider already
+  // loads them on auth via fetchAllSchedulingData and pushes them into Redux.
+  // A page-level dispatch raced with useCalendarServerSync's diff hook and
+  // could cascade-delete locations on the server if the racing fetch ever
+  // returned an empty list. Trust Redux as the source of truth.
   const dispatch = useDispatch();
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [travelTimes, setTravelTimes] = useState<TravelTime[]>([]);
-  const [transportMode, setTransportMode] = useState<TransportMode>("DRIVING");
-  const [loading, setLoading] = useState(true);
-  const [fetchingTimes, setFetchingTimes] = useState(false);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const { categories } = useCalendarProvider();
+
+  const locations = useSelector(
+    (state: RootState) => state.schedulingSettings.locations,
+  );
+  const allTravelTimes = useSelector(
+    (state: RootState) => state.schedulingSettings.allTravelTimes,
+  );
+  const transportMode = useSelector(
+    (state: RootState) => state.schedulingSettings.defaultTransportMode,
+  );
+  const isLoaded = useSelector(
+    (state: RootState) => state.schedulingSettings.isLoaded,
+  );
+
+  const [modal, modalDispatch] = useReducer(modalReducer, { kind: "none" });
+
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [success, flashSuccess] = useFlashValue<string | null>(
+    SUCCESS_MESSAGE_MS,
+    null,
+  );
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const refresh = useServerAction(locationActions.refreshAllTravelTimes);
+  const fetchMissing = useServerAction(locationActions.fetchMissingTravelTimes);
+  const working = refresh.isPending || fetchMissing.isPending;
 
-  useEffect(() => {
-    loadTravelTimes();
-  }, [transportMode]);
+  const travelTimes = useMemo(
+    () => allTravelTimes.filter((tt) => tt.transportMode === transportMode),
+    [allTravelTimes, transportMode],
+  );
 
-  const loadData = async () => {
+  const categoryDefaultsByLocation = useMemo(() => {
+    const map = new Map<string, { name: string; color: string | null }[]>();
+    for (const cat of categories) {
+      if (!cat.locationId) continue;
+      const list = map.get(cat.locationId) ?? [];
+      list.push({ name: cat.name, color: cat.color });
+      map.set(cat.locationId, list);
+    }
+    return map;
+  }, [categories]);
+
+  const timeVarying = isTimeVarying(transportMode);
+  const anyCustomOverride = travelTimes.some(hasCustomOverride);
+
+  const editingLocation =
+    modal.kind === "edit" ? modal.location : null;
+  const editPair =
+    modal.kind === "travel" ? { from: modal.from, to: modal.to } : null;
+  const deletingId =
+    modal.kind === "confirmDelete" ? modal.locationId : null;
+  const confirmClearAll = modal.kind === "confirmClearAll";
+
+  const selectedTravelTime = editPair
+    ? (travelTimes.find(
+        (tt) =>
+          tt.fromLocationId === editPair.from &&
+          tt.toLocationId === editPair.to,
+      ) ?? null)
+    : null;
+  const editFromLocation = editPair
+    ? (locations.find((l) => l.id === editPair.from) ?? null)
+    : null;
+  const editToLocation = editPair
+    ? (locations.find((l) => l.id === editPair.to) ?? null)
+    : null;
+
+  const handleTransportChange = async (mode: TransportMode) => {
+    const previous = transportMode;
+    dispatch(setDefaultTransportMode(mode));
     try {
-      setLoading(true);
-      setError(null);
-
-      const [locs, defaultMode] = await Promise.all([
-        locationActions.fetchLocations(),
-        locationActions.getDefaultTransportMode(),
-      ]);
-
-      setLocations(locs);
-      setTransportMode(defaultMode);
-
-      // Sync locations to Redux so LocationSelector components see the updated list
-      const serializedLocations: SerializedLocation[] = locs.map((loc) => ({
-        id: loc.id,
-        name: loc.name,
-        address: loc.address || "",
-        placeId: loc.placeId,
-      }));
-      dispatch(setLocationsInRedux(serializedLocations));
+      await locationActions.updateDefaultTransportMode(mode);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load data");
-    } finally {
-      setLoading(false);
+      dispatch(setDefaultTransportMode(previous));
+      console.error("Failed to persist transport mode", err);
     }
   };
 
-  const loadTravelTimes = async () => {
-    try {
-      const times = await locationActions.fetchTravelTimesByMode(transportMode);
-      setTravelTimes(times);
-    } catch (err) {
-      console.error("Failed to load travel times:", err);
-    }
-  };
-
-  const handleAddLocation = async (
+  // Add is server-first because the row's id is server-generated. The
+  // returned row goes straight into Redux so the rest of the app sees the
+  // new location without a separate sync step.
+  const handleAdd = async (
     name: string,
     placeId: string,
-    sessionToken?: string
+    sessionToken?: string,
   ) => {
     try {
       setError(null);
-      const newLocation = await locationActions.createLocation({
+      const created = await locationActions.createLocation({
         name,
         placeId,
         sessionToken,
       });
-      const updatedLocations = [...locations, newLocation];
-      setLocations(updatedLocations);
-
-      // Sync to Redux so LocationSelector components immediately see the new location
-      const serializedLocations: SerializedLocation[] = updatedLocations.map(
-        (loc) => ({
-          id: loc.id,
-          name: loc.name,
-          address: loc.address || "",
-          placeId: loc.placeId,
-        })
-      );
-      dispatch(setLocationsInRedux(serializedLocations));
-
-      setSuccessMessage(`"${name}" added successfully!`);
-      setTimeout(() => setSuccessMessage(null), 3000);
-      setAddDialogOpen(false);
+      dispatch(upsertLocation(serializeLocation(created)));
+      flashSuccess(`Added "${name}".`);
+      modalDispatch({ type: "CLOSE_ALL" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to add location");
+      throw err;
     }
   };
 
-  const handleUpdateLocationName = async (locationId: string, name: string) => {
-    try {
-      setError(null);
-      const updated = await locationActions.updateLocationName(
-        locationId,
-        name
-      );
-      const updatedLocations = locations.map((loc) =>
-        loc.id === locationId ? updated : loc
-      );
-      setLocations(updatedLocations);
+  // Edit splits two ways:
+  //   - name-only changes flow through Redux. The diff in useCalendarServerSync
+  //     picks them up and sends location.update.
+  //   - placeId changes still hit the server directly so updateLocation can do
+  //     the Google Places lookup and cascade-delete travel times.
+  const handleSaveEdit = async (draft: EditLocationDraft) => {
+    if (!editingLocation) return;
+    const original = editingLocation;
+    const trimmedName = draft.name.trim();
 
-      // Sync to Redux so LocationSelector components see the updated name
-      const serializedLocations: SerializedLocation[] = updatedLocations.map(
-        (loc) => ({
-          id: loc.id,
-          name: loc.name,
-          address: loc.address || "",
-          placeId: loc.placeId,
-        })
+    if (!draft.placeId) {
+      dispatch(
+        upsertLocation({
+          ...original,
+          name: trimmedName,
+        }),
       );
-      dispatch(setLocationsInRedux(serializedLocations));
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to update location"
-      );
-    }
-  };
-
-  const handleDeleteLocation = async (locationId: string) => {
-    try {
-      setError(null);
-      await locationActions.deleteLocation(locationId);
-      const updatedLocations = locations.filter((loc) => loc.id !== locationId);
-      setLocations(updatedLocations);
-
-      // Sync to Redux so LocationSelector components see the deletion
-      const serializedLocations: SerializedLocation[] = updatedLocations.map(
-        (loc) => ({
-          id: loc.id,
-          name: loc.name,
-          address: loc.address || "",
-          placeId: loc.placeId,
-        })
-      );
-      dispatch(setLocationsInRedux(serializedLocations));
-
-      // Also remove related travel times from state
-      setTravelTimes((prev) =>
-        prev.filter(
-          (tt) =>
-            tt.fromLocationId !== locationId && tt.toLocationId !== locationId
-        )
-      );
-      setSuccessMessage("Location deleted successfully!");
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to delete location"
-      );
-    }
-  };
-
-  const handleFetchTravelTimes = async () => {
-    if (locations.length < 2) {
-      setError("Add at least 2 locations to fetch travel times");
+      modalDispatch({ type: "CLOSE_ALL" });
+      flashSuccess("Location updated.");
       return;
     }
 
+    const optimistic: SerializedLocation = {
+      ...original,
+      name: trimmedName,
+    };
+    dispatch(upsertLocation(optimistic));
+    modalDispatch({ type: "CLOSE_ALL" });
+
     try {
-      setFetchingTimes(true);
-      setError(null);
-
-      const result =
-        await locationActions.fetchMissingTravelTimes(transportMode);
-
-      if (result.fetched > 0) {
-        setSuccessMessage(
-          `Fetched ${result.fetched} travel time${result.fetched > 1 ? "s" : ""}!`
-        );
-      } else {
-        setSuccessMessage("All travel times are up to date!");
-      }
-
-      await loadTravelTimes();
-      setTimeout(() => setSuccessMessage(null), 3000);
+      const updated = await locationActions.updateLocation(original.id, {
+        name: trimmedName !== original.name ? trimmedName : undefined,
+        placeId: draft.placeId,
+        sessionToken: draft.sessionToken,
+      });
+      dispatch(upsertLocation(serializeLocation(updated)));
+      // updateLocation cascades the affected travel times server-side; mirror
+      // that in Redux so the matrix shows them as missing immediately.
+      dispatch(removeTravelTimesByLocationId(updated.id));
+      flashSuccess("Location updated.");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch travel times"
-      );
-    } finally {
-      setFetchingTimes(false);
+      dispatch(upsertLocation(original));
+      setError(err instanceof Error ? err.message : "Failed to update");
     }
   };
 
-  const handleRefreshAllTravelTimes = async () => {
+  // Delete is pure Redux dispatch — the diff sends location.destroy and
+  // Prisma cascades the related travel times server-side. The client-side
+  // travel-time removal keeps the matrix in sync immediately.
+  const handleDelete = () => {
+    if (!deletingId) return;
+    const original = locations.find((l) => l.id === deletingId);
+    if (!original) return;
+    dispatch(removeLocation(deletingId));
+    dispatch(removeTravelTimesByLocationId(deletingId));
+    modalDispatch({ type: "CLOSE_ALL" });
+    flashSuccess("Location deleted.");
+  };
+
+  const handleFetchMissing = async () => {
     if (locations.length < 2) {
-      setError("Add at least 2 locations to refresh travel times");
+      setError("Add at least 2 locations to fetch travel times.");
       return;
     }
-
-    try {
-      setFetchingTimes(true);
-      setError(null);
-
-      const result = await locationActions.refreshAllTravelTimes(transportMode);
-
-      setSuccessMessage(`Refreshed ${result.updated} travel times!`);
-      await loadTravelTimes();
-      setTimeout(() => setSuccessMessage(null), 3000);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to refresh travel times"
-      );
-    } finally {
-      setFetchingTimes(false);
-    }
+    setError(null);
+    const result = await fetchMissing.run(transportMode);
+    if (!result) return;
+    const fresh = await locationActions.fetchTravelTimes();
+    dispatch(setAllTravelTimes(fresh.map(serializeTravelTime)));
+    flashSuccess(
+      result.fetched > 0
+        ? `Fetched ${result.fetched} travel time${result.fetched > 1 ? "s" : ""}.`
+        : "All travel times are up to date.",
+    );
   };
 
-  const handleTransportModeChange = async (mode: TransportMode) => {
-    setTransportMode(mode);
-    try {
-      await locationActions.updateDefaultTransportMode(mode);
-    } catch (err) {
-      console.error("Failed to save transport mode preference:", err);
+  const handleRefreshAll = async () => {
+    if (locations.length < 2) {
+      setError("Add at least 2 locations to refresh travel times.");
+      return;
     }
+    setError(null);
+    const result = await refresh.run(transportMode);
+    if (!result) return;
+    const fresh = await locationActions.fetchTravelTimes();
+    dispatch(setAllTravelTimes(fresh.map(serializeTravelTime)));
+    flashSuccess(`Refreshed ${result.updated} travel times.`);
   };
 
-  const handleUpdateTravelTimeOverride = async (
+  // Travel-time overrides flow through Redux. The diff picks up the changed
+  // custom fields and sends travelTime.update.
+  const handleSaveOverrides = async (
     travelTimeId: string,
-    period: "rush" | "regular" | "night",
-    value: number | null
+    overrides: {
+      customRushHourMinutes: number | null;
+      customRegularMinutes: number | null;
+      customNightMinutes: number | null;
+    },
   ) => {
-    try {
-      setError(null);
-      const overrides: {
-        customRushHourMinutes?: number | null;
-        customRegularMinutes?: number | null;
-        customNightMinutes?: number | null;
-      } = {};
-
-      if (period === "rush") overrides.customRushHourMinutes = value;
-      if (period === "regular") overrides.customRegularMinutes = value;
-      if (period === "night") overrides.customNightMinutes = value;
-
-      const updated = await locationActions.updateTravelTimeOverride(
-        travelTimeId,
-        overrides
-      );
-
-      setTravelTimes((prev) =>
-        prev.map((tt) => (tt.id === travelTimeId ? updated : tt))
-      );
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to update travel time"
-      );
-    }
+    const current = allTravelTimes.find((tt) => tt.id === travelTimeId);
+    if (!current) return;
+    dispatch(
+      upsertTravelTime({
+        ...current,
+        ...overrides,
+      }),
+    );
   };
 
-  if (loading) {
+  const handleClearAllOverrides = async () => {
+    modalDispatch({ type: "CLOSE_ALL" });
+    const customized = travelTimes.filter(hasCustomOverride);
+    if (customized.length === 0) return;
+    for (const tt of customized) {
+      dispatch(
+        upsertTravelTime({
+          ...tt,
+          customRushHourMinutes: null,
+          customRegularMinutes: null,
+          customNightMinutes: null,
+        }),
+      );
+    }
+    flashSuccess("All overrides cleared.");
+  };
+
+  const combinedError =
+    error ?? refresh.status?.text ?? fetchMissing.status?.text ?? null;
+
+  if (!isLoaded) {
     return (
-      <div className="pageContainer bg-white mx-auto py-8 w-full">
-        <div className="flex flex-col ml-20 max-w-[900px]">
-          <p className="text-muted-foreground">Loading locations...</p>
+      <div className={page}>
+        <div className={subHeader}>
+          <h1 className={pageTitle}>Locations</h1>
+        </div>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "0 28px 28px",
+            marginBottom: "50px",
+          }}
+        >
+          <Loader size="md" label="Loading locations" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="pageContainer overflow-y-auto bg-white mx-auto py-8 w-full">
-      <div className="flex flex-col ml-20 max-w-[900px]">
-        <div className="space-y-2 mb-8">
-          <h1 className="my-6 text-3xl font-bold">Locations</h1>
-          <p className="text-muted-foreground">
-            Manage your frequently visited locations and travel times between
-            them for smarter scheduling.
-          </p>
+    <div className={page}>
+      <div className={subHeader}>
+        <h1 className={pageTitle}>Locations</h1>
+        {combinedError && <div className={errorBanner}>{combinedError}</div>}
+        {success && !combinedError && (
+          <div className={successBanner}>{success}</div>
+        )}
+        <span className={spacer} />
+        <div className={headActions}>
+          <SegmentedControl<TransportMode>
+            value={transportMode}
+            onChange={handleTransportChange}
+            options={TRANSPORT_MODE_OPTIONS}
+          />
+          <Button
+            variant="glass"
+            size="sm"
+            onClick={handleFetchMissing}
+            disabled={working || locations.length < 2}
+          >
+            <RefreshCw size={12} strokeWidth={2.2} />
+            Fetch missing
+          </Button>
+          <Button
+            variant="glass"
+            size="sm"
+            onClick={handleRefreshAll}
+            disabled={working || locations.length < 2}
+          >
+            <RefreshCw size={12} strokeWidth={2.2} />
+            Refresh all
+          </Button>
         </div>
+      </div>
 
-        {error && (
-          <div className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive text-sm">
-            {error}
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="mb-4 p-3 rounded-md bg-green-500/10 text-green-600 text-sm">
-            {successMessage}
-          </div>
-        )}
-
-        {/* Locations List */}
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="w-5 h-5" />
-                  Saved Locations ({locations.length}/{MAX_LOCATIONS})
-                </CardTitle>
-                <CardDescription>
-                  Add your home, office, gym, and other frequently visited
-                  places
-                </CardDescription>
-              </div>
-              <Button
-                onClick={() => setAddDialogOpen(true)}
-                disabled={locations.length >= MAX_LOCATIONS}
-                className="gap-2"
+      <div className={mainGrid}>
+        <aside className={rail}>
+          <div className={railHead}>Locations</div>
+          <div className={railBody}>
+            {locations.length === 0 ? (
+              <div
+                style={{
+                  padding: "12px 8px",
+                  fontSize: 12.5,
+                  color: "var(--muted)",
+                }}
               >
-                <Plus className="w-4 h-4" />
-                Add Location
+                No locations yet — add one to get started.
+              </div>
+            ) : (
+              locations.map((loc) => {
+                const tags = categoryDefaultsByLocation.get(loc.id) ?? [];
+                return (
+                  <button
+                    key={loc.id}
+                    type="button"
+                    className={railRow}
+                    onClick={() =>
+                      modalDispatch({ type: "OPEN_EDIT", location: loc })
+                    }
+                    aria-label={`Edit ${loc.name}`}
+                  >
+                    <span className={railRowPin}>
+                      <MapPin size={13} strokeWidth={2.2} />
+                    </span>
+                    <span className={railRowMeta}>
+                      <span className={railRowName}>{loc.name}</span>
+                      <span className={railRowAddress}>
+                        {loc.address || loc.placeId}
+                      </span>
+                      {tags.length > 0 && (
+                        <span className={railRowTags}>
+                          {tags.map((t) => (
+                            <span key={t.name} className={railRowTag}>
+                              {t.color && (
+                                <span
+                                  className={railRowTagDot}
+                                  style={{ background: t.color }}
+                                />
+                              )}
+                              {t.name}
+                            </span>
+                          ))}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+          <div className={railFooter}>
+            <button
+              type="button"
+              className={railNewButton}
+              onClick={() => modalDispatch({ type: "OPEN_ADD" })}
+              disabled={locations.length >= MAX_LOCATIONS}
+            >
+              <Plus size={13} strokeWidth={2.4} />
+              {locations.length >= MAX_LOCATIONS
+                ? `Max ${MAX_LOCATIONS} reached`
+                : "Add location"}
+            </button>
+            <span className={railNote}>
+              Up to {MAX_LOCATIONS} locations · deleting cascades to travel
+              times
+            </span>
+          </div>
+        </aside>
+
+        <section className={matrixPane}>
+          <div className={matrixHead}>
+            <h2 className={matrixTitle}>Travel matrix</h2>
+            <span className={matrixSubtitle}>
+              {timeVarying
+                ? "from row · to column · 3 time-of-day values"
+                : "from row · to column · minutes (constant)"}
+            </span>
+            {timeVarying && (
+              <span className={matrixLegend}>
+                <span>
+                  <span className={`${legendDot} ${legendDotRegular}`} />
+                  regular
+                </span>
+                <span>
+                  <span className={`${legendDot} ${legendDotRush}`} />
+                  rush
+                </span>
+                <span>
+                  <span className={`${legendDot} ${legendDotNight}`} />
+                  night
+                </span>
+              </span>
+            )}
+          </div>
+
+          {locations.length < 2 ? (
+            <div className={matrixEmpty}>
+              <div>Add at least 2 locations to see the travel matrix.</div>
+            </div>
+          ) : working ? (
+            <div className={matrixEmpty}>
+              <Loader size="md" label="Refreshing travel times" />
+            </div>
+          ) : travelTimes.length === 0 ? (
+            <div className={matrixEmpty}>
+              <div>No travel times yet for {transportMode.toLowerCase()}.</div>
+              <Button
+                variant="solid"
+                size="sm"
+                onClick={handleFetchMissing}
+                disabled={working}
+              >
+                <RefreshCw size={12} strokeWidth={2.2} />
+                Fetch travel times
               </Button>
             </div>
-          </CardHeader>
-          <CardContent>
-            <LocationList
-              locations={locations}
-              onUpdateName={handleUpdateLocationName}
-              onDelete={handleDeleteLocation}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Transport Mode & Travel Times */}
-        {locations.length >= 2 && (
-          <>
-            {/* Transport Mode Selector */}
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>Transport Mode</CardTitle>
-                <CardDescription>
-                  Select your primary mode of transportation for travel time
-                  calculations
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Select
-                  value={transportMode}
-                  onValueChange={(v) =>
-                    handleTransportModeChange(v as TransportMode)
-                  }
+          ) : (
+            <>
+              <TravelMatrix
+                locations={locations}
+                travelTimes={travelTimes}
+                transportMode={transportMode}
+                onEditPair={(from, to) =>
+                  modalDispatch({ type: "OPEN_TRAVEL_EDIT", from, to })
+                }
+                onFetchMissing={handleFetchMissing}
+              />
+              <div className={matrixFooter}>
+                <span>
+                  Cells tinted <span className={amberKeyword}>amber</span> are
+                  custom overrides; click any cell to edit all three periods.
+                </span>
+                <span style={{ flex: 1 }} />
+                <button
+                  type="button"
+                  className={matrixFooterAction}
+                  disabled={!anyCustomOverride || working}
+                  onClick={() => modalDispatch({ type: "CONFIRM_CLEAR_ALL" })}
                 >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TRANSPORT_MODES.map((mode) => (
-                      <SelectItem key={mode.value} value={mode.value}>
-                        {mode.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </CardContent>
-            </Card>
-
-            {/* Travel Time Matrix */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Travel Time Matrix</CardTitle>
-                    <CardDescription>
-                      Travel times in minutes between your locations. Click a
-                      cell to customize.
-                    </CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={handleFetchTravelTimes}
-                      disabled={fetchingTimes}
-                      className="gap-2"
-                    >
-                      {fetchingTimes ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                          Fetching...
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4" />
-                          Fetch Travel Times
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={handleRefreshAllTravelTimes}
-                      disabled={fetchingTimes || travelTimes.length === 0}
-                      className="gap-2"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                      Refresh All
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <TravelTimeMatrix
-                  locations={locations}
-                  travelTimes={travelTimes}
-                  onUpdateOverride={handleUpdateTravelTimeOverride}
-                />
-              </CardContent>
-            </Card>
-          </>
-        )}
-
-        {/* Add Location Dialog */}
-        <AddLocationDialog
-          open={addDialogOpen}
-          onOpenChange={setAddDialogOpen}
-          onAdd={handleAddLocation}
-        />
+                  Clear all overrides
+                </button>
+              </div>
+            </>
+          )}
+        </section>
       </div>
+
+      <AddLocationModal
+        open={modal.kind === "add"}
+        onClose={() => modalDispatch({ type: "CLOSE_ALL" })}
+        onAdd={handleAdd}
+      />
+
+      <EditLocationModal
+        open={modal.kind === "edit"}
+        location={editingLocation}
+        onClose={() => modalDispatch({ type: "CLOSE_ALL" })}
+        onSave={handleSaveEdit}
+        onRequestDelete={() => {
+          if (editingLocation)
+            modalDispatch({
+              type: "CONFIRM_DELETE",
+              locationId: editingLocation.id,
+            });
+        }}
+      />
+
+      <EditTravelTimeModal
+        open={modal.kind === "travel"}
+        travelTime={selectedTravelTime}
+        fromLocation={editFromLocation}
+        toLocation={editToLocation}
+        transportMode={transportMode}
+        onClose={() => modalDispatch({ type: "CLOSE_ALL" })}
+        onSave={handleSaveOverrides}
+      />
+
+      <ConfirmModal
+        open={!!deletingId}
+        title="Delete location?"
+        tone="danger"
+        confirmLabel="Delete"
+        body={
+          <p style={{ margin: 0 }}>
+            Delete &ldquo;
+            {locations.find((l) => l.id === deletingId)?.name ??
+              "this location"}
+            &rdquo;? This will also remove all travel times to and from it.
+            Items and categories that point at it will fall back to
+            &ldquo;Anywhere&rdquo;.
+          </p>
+        }
+        onCancel={() => modalDispatch({ type: "CLOSE_ALL" })}
+        onConfirm={handleDelete}
+      />
+
+      <ConfirmModal
+        open={confirmClearAll}
+        title="Clear all overrides?"
+        tone="danger"
+        confirmLabel="Clear all"
+        body={
+          <p style={{ margin: 0 }}>
+            Remove every custom travel-time override and revert to Google&apos;s
+            values? You can re-customize individual cells afterwards.
+          </p>
+        }
+        onCancel={() => modalDispatch({ type: "CLOSE_ALL" })}
+        onConfirm={handleClearAllOverrides}
+      />
     </div>
   );
 }

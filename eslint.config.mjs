@@ -20,6 +20,7 @@ export default [
       ".idea/",
       ".vscode/",
       "coverage/",
+      "notes/",
     ],
   },
   {

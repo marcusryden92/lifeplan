@@ -86,7 +86,7 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
 
   const openLocationsRoute = () => {
     onClose();
-    router.push("/circadium/locations");
+    router.push("/locations");
   };
 
   const variant: "ok" | "warning" | "error" = insufficient

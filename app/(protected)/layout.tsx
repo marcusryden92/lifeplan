@@ -1,29 +1,31 @@
 "use client";
 
-import { Navbar } from "@/components/interface/Navbar";
+import type { ReactNode } from "react";
 import StoreProvider from "@/context/StoreProvider";
 import UserProvider from "@/context/UserProvider";
 import CalendarProvider from "@/context/CalendarProvider";
+import { AppShell } from "@/components/ui";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-interface ProtectedLayoutProps {
-  children: React.ReactNode;
-}
-
-const ProtectedLayout = ({ children }: ProtectedLayoutProps) => {
+export default function CircadiumLayout({ children }: { children: ReactNode }) {
   return (
     <StoreProvider>
       <UserProvider>
         <CalendarProvider>
-          <div className="flex flex-col overflow-x-hidden overflow-y-auto h-auto lg:h-[100vh] flex-1 lg:flex-row lg:items-center bg-gray-300">
-            <Navbar />
-            <div className="h-full max-w-[100vw] flex-1 lg:max-h-[100vh]">
-              {children}
-            </div>
-          </div>
+          <CircadiumShell>{children}</CircadiumShell>
         </CalendarProvider>
       </UserProvider>
     </StoreProvider>
   );
-};
+}
 
-export default ProtectedLayout;
+function CircadiumShell({ children }: { children: ReactNode }) {
+  const user = useCurrentUser();
+  const userName = user?.name ?? user?.email ?? "";
+  const userInitial = userName.trim().charAt(0).toUpperCase() || "?";
+  return (
+    <AppShell userName={userName} userInitial={userInitial}>
+      {children}
+    </AppShell>
+  );
+}
