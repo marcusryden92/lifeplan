@@ -9,7 +9,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Welcome to Lifeplan!",
+  title: "Circadium",
   description: "Create your life!",
 };
 
@@ -22,7 +22,13 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${fontDisplay.variable} ${fontUI.variable}`}>
       <body
-        className={`flex ${inter.className} bg-gray-200 h-auto min-h-[100vh] w-[100vw] overflow-x-hidden`}
+        className={inter.className}
+        style={{
+          margin: 0,
+          minHeight: "100vh",
+          width: "100vw",
+          overflowX: "hidden",
+        }}
       >
         <SessionProvider session={session}>
           <ThemeProvider>{children}</ThemeProvider>

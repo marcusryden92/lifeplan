@@ -1,6 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import { format } from "date-fns";
-import { Caption, CategoryDot, TypeBadge } from "@/components/ui";
+import { Caption, CategoryDot, TypeBadge, vars } from "@/components/ui";
 import { isItemOverdue } from "@/utils/plannerStatus";
 import { formatDurationCompact } from "@/utils/timeFormatting";
 import { plannerTypeBadgeTone } from "@/utils/badgeTone";
@@ -65,7 +65,7 @@ export function ItemRow({
             </span>
           </>
         ) : (
-          <span style={{ color: "var(--muted)" }}>—</span>
+          <span style={{ color: vars.muted }}>—</span>
         )}
       </div>
       <div>

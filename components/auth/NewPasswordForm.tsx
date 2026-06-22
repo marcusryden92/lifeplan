@@ -5,24 +5,22 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 import { NewPasswordSchema } from "@/schemas";
-import { Input } from "@/components/ui/Input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/Form";
-
-import { FormError } from "@/components/ui/FormError";
-import { FormSuccess } from "@/components/ui/FormSuccess";
-
-import { CardWrapper } from "./CardWrapper";
-import { Button } from "@/components/ui/Button.legacy";
+import { Button } from "@/components/ui";
 import { newPassword } from "@/actions/newPassword";
+import { AuthCard } from "./AuthCard";
+import {
+  form as formStyle,
+  field,
+  label,
+  input,
+  fieldError,
+  alertError,
+  alertSuccess,
+  submit,
+} from "./AuthForm.css";
 
 interface NewPasswordResponse {
   error?: string;
@@ -39,79 +37,92 @@ export function NewPasswordForm() {
 
   const form = useForm<z.infer<typeof NewPasswordSchema>>({
     resolver: zodResolver(NewPasswordSchema),
-    defaultValues: {
-      password: "",
-      confirmPassword: "",
-    },
+    defaultValues: { password: "", confirmPassword: "" },
   });
 
   const onSubmit = (values: z.infer<typeof NewPasswordSchema>) => {
     setError("");
     setSuccess("");
-
     startTransition(() => {
       newPassword(values, token).then((data: NewPasswordResponse) => {
-        // Check if data is not undefined
         setError(data?.error);
         setSuccess(data?.success);
       });
     });
   };
 
-  return (
-    <CardWrapper
-      headerLabel="Enter a new password:"
-      backButtonLabel="Back to login"
-      backbuttonHref="/auth/login"
-    >
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>New Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={isPending}
-                      placeholder="******"
-                      type="password"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+  const errors = form.formState.errors;
 
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={isPending}
-                      placeholder="******"
-                      type="password"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+  return (
+    <AuthCard
+      title="set new password"
+      subtitle="choose something memorable"
+      altAction={{
+        prompt: "Remembered it?",
+        label: "Back to sign in",
+        href: "/auth/login",
+      }}
+    >
+      <form className={formStyle} onSubmit={form.handleSubmit(onSubmit)}>
+        <div className={field}>
+          <label htmlFor="password" className={label}>
+            New password
+          </label>
+          <input
+            id="password"
+            type="password"
+            placeholder="at least 6 chars"
+            className={input}
+            disabled={isPending}
+            autoComplete="new-password"
+            {...form.register("password")}
+          />
+          {errors.password && (
+            <span className={fieldError}>{errors.password.message}</span>
+          )}
+        </div>
+
+        <div className={field}>
+          <label htmlFor="confirmPassword" className={label}>
+            Confirm
+          </label>
+          <input
+            id="confirmPassword"
+            type="password"
+            placeholder="retype"
+            className={input}
+            disabled={isPending}
+            autoComplete="new-password"
+            {...form.register("confirmPassword")}
+          />
+          {errors.confirmPassword && (
+            <span className={fieldError}>{errors.confirmPassword.message}</span>
+          )}
+        </div>
+
+        {error && (
+          <div className={alertError} role="alert">
+            <AlertTriangle size={14} strokeWidth={2.2} />
+            <span>{error}</span>
           </div>
-          <FormError message={error} />
-          <FormSuccess message={success} />
-          <Button disabled={isPending} type="submit" className="w-full">
-            Reset password
-          </Button>
-        </form>
-      </Form>
-    </CardWrapper>
+        )}
+        {success && (
+          <div className={alertSuccess} role="status">
+            <CheckCircle2 size={14} strokeWidth={2.2} />
+            <span>{success}</span>
+          </div>
+        )}
+
+        <Button
+          type="submit"
+          variant="solid"
+          size="lg"
+          disabled={isPending}
+          className={submit}
+        >
+          Update password
+        </Button>
+      </form>
+    </AuthCard>
   );
 }

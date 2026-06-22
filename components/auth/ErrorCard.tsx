@@ -1,17 +1,32 @@
-import { Header } from "@/components/auth/Header";
-import { BackButton } from "@/components/auth/BackButton";
+"use client";
 
-import { Card, CardFooter, CardHeader } from "@/components/ui/Card";
+import { TriangleAlert } from "lucide-react";
+import { vars } from "@/lib/theme";
+import { AuthCard } from "./AuthCard";
 
 export const ErrorCard = () => {
   return (
-    <Card className="w-[400px] shadow-md">
-      <CardHeader>
-        <Header label="Oops! Something went wrong!" />
-      </CardHeader>
-      <CardFooter>
-        <BackButton label="Back to login" href="/auth/login" />
-      </CardFooter>
-    </Card>
+    <AuthCard
+      title="something went wrong"
+      subtitle="we couldn't complete that request"
+      altAction={{
+        prompt: "Want to try again?",
+        label: "Back to sign in",
+        href: "/auth/login",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 0 4px",
+          color: vars.status.error,
+        }}
+      >
+        <TriangleAlert size={36} strokeWidth={1.8} />
+      </div>
+    </AuthCard>
   );
 };

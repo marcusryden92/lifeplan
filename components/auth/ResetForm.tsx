@@ -4,24 +4,22 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState, useTransition } from "react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 import { ResetSchema } from "@/schemas";
-import { Input } from "@/components/ui/Input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/Form";
-
-import { FormError } from "@/components/ui/FormError";
-import { FormSuccess } from "@/components/ui/FormSuccess";
-
-import { CardWrapper } from "./CardWrapper";
-import { Button } from "@/components/ui/Button.legacy";
+import { Button } from "@/components/ui";
 import { reset } from "@/actions/reset";
+import { AuthCard } from "./AuthCard";
+import {
+  form as formStyle,
+  field,
+  label,
+  input,
+  fieldError,
+  alertError,
+  alertSuccess,
+  submit,
+} from "./AuthForm.css";
 
 interface ResetResponse {
   error?: string;
@@ -35,59 +33,74 @@ export function ResetForm() {
 
   const form = useForm<z.infer<typeof ResetSchema>>({
     resolver: zodResolver(ResetSchema),
-    defaultValues: {
-      email: "",
-    },
+    defaultValues: { email: "" },
   });
 
   const onSubmit = (values: z.infer<typeof ResetSchema>) => {
     setError("");
     setSuccess("");
-
     startTransition(() => {
       reset(values).then((data: ResetResponse) => {
-        // Check if data is not undefined
         setError(data?.error);
         setSuccess(data?.success);
       });
     });
   };
 
+  const errors = form.formState.errors;
+
   return (
-    <CardWrapper
-      headerLabel="Forgot your password?"
-      backButtonLabel="Back to login"
-      backbuttonHref="/auth/login"
+    <AuthCard
+      title="reset password"
+      subtitle="we'll email you a link to set a new password"
+      altAction={{
+        prompt: "Remembered it?",
+        label: "Back to sign in",
+        href: "/auth/login",
+      }}
     >
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={isPending}
-                      placeholder="john.doe@example.com"
-                      type="email"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      <form className={formStyle} onSubmit={form.handleSubmit(onSubmit)}>
+        <div className={field}>
+          <label htmlFor="email" className={label}>
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            placeholder="you@email.com"
+            className={input}
+            disabled={isPending}
+            autoComplete="email"
+            {...form.register("email")}
+          />
+          {errors.email && (
+            <span className={fieldError}>{errors.email.message}</span>
+          )}
+        </div>
+
+        {error && (
+          <div className={alertError} role="alert">
+            <AlertTriangle size={14} strokeWidth={2.2} />
+            <span>{error}</span>
           </div>
-          <FormError message={error} />
-          <FormSuccess message={success} />
-          <Button disabled={isPending} type="submit" className="w-full">
-            Send reset email
-          </Button>
-        </form>
-      </Form>
-    </CardWrapper>
+        )}
+        {success && (
+          <div className={alertSuccess} role="status">
+            <CheckCircle2 size={14} strokeWidth={2.2} />
+            <span>{success}</span>
+          </div>
+        )}
+
+        <Button
+          type="submit"
+          variant="solid"
+          size="lg"
+          disabled={isPending}
+          className={submit}
+        >
+          Send reset link
+        </Button>
+      </form>
+    </AuthCard>
   );
 }

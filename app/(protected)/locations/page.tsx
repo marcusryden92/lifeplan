@@ -8,6 +8,7 @@ import {
   ConfirmModal,
   Loader,
   SegmentedControl,
+  vars,
 } from "@/components/ui";
 import { useFlashValue } from "@/hooks/useFlashAnimation";
 import { useServerAction } from "@/hooks/useServerAction";
@@ -419,7 +420,7 @@ export default function LocationsPage() {
                 style={{
                   padding: "12px 8px",
                   fontSize: 12.5,
-                  color: "var(--muted)",
+                  color: vars.muted,
                 }}
               >
                 No locations yet — add one to get started.

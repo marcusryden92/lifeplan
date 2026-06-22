@@ -2,10 +2,9 @@
 
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
-import { Button } from "@/components/ui/Button.legacy";
 import { useSearchParams } from "next/navigation";
-
 import { signIn } from "next-auth/react";
+import { Button } from "@/components/ui";
 import { DEFAULT_LOGIN_REDIRECT } from "@/routes";
 
 export const Social = () => {
@@ -17,27 +16,26 @@ export const Social = () => {
       callbackUrl: callbackUrl || DEFAULT_LOGIN_REDIRECT,
     });
   };
+
   return (
-    <div className="flex items-center w-full gap-x-2">
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <Button
-        size="lg"
-        className="w-full"
-        variant="outline"
-        onClick={() => {
-          onClick("google");
-        }}
+        variant="glass"
+        size="md"
+        onClick={() => onClick("google")}
+        style={{ justifyContent: "flex-start", width: "100%" }}
       >
-        <FcGoogle className="h-5 w-5" />
+        <FcGoogle size={16} />
+        Continue with Google
       </Button>
       <Button
-        size="lg"
-        className="w-full"
-        variant="outline"
-        onClick={() => {
-          onClick("github");
-        }}
+        variant="glass"
+        size="md"
+        onClick={() => onClick("github")}
+        style={{ justifyContent: "flex-start", width: "100%" }}
       >
-        <FaGithub className="h-5 w-5" />
+        <FaGithub size={16} />
+        Continue with GitHub
       </Button>
     </div>
   );

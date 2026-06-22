@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { formatDistanceToNowStrict } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { CornerDownLeft, Plus, Sparkles } from "lucide-react";
-import { Button, Caption, Loader } from "@/components/ui";
+import { Button, Caption, Loader, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useSelector } from "react-redux";
 import { usePlatform } from "@/hooks/usePlatform";
@@ -284,7 +284,7 @@ export default function CapturePage() {
           </div>
 
           <div className={quickAdd}>
-            <Plus size={14} strokeWidth={2.4} style={{ color: "var(--muted)" }} />
+            <Plus size={14} strokeWidth={2.4} style={{ color: vars.muted }} />
             <input
               className={quickAddInput}
               placeholder="jot anything…"

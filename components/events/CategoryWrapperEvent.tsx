@@ -82,8 +82,10 @@ export function CategoryWrapperEvent({
   return (
     <div
       ref={wrapperRef}
-      className="relative w-full h-full"
       style={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
         background: fillTint,
         border: "none",
         borderRadius: 0,

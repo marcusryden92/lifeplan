@@ -120,7 +120,9 @@
       "PowerShell(pnpm tsc --noEmit)",
       "PowerShell(Rename-Item -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\circadium\" -NewName \"\\(protected\\)\")",
       "PowerShell(Move-Item -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\circadium\" -Destination \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\\\(protected\\)\")",
-      "Bash(grep -n \"^C:\\\\\\\\\\\\\\\\\" \"c:/Users/Marcus/Desktop/Lifeplan/notes/lint-errors.txt\")"
+      "Bash(grep -n \"^C:\\\\\\\\\\\\\\\\\" \"c:/Users/Marcus/Desktop/Lifeplan/notes/lint-errors.txt\")",
+      "PowerShell(pnpm remove tailwindcss tailwindcss-animate tailwind-merge clsx postcss autoprefixer 2>&1)",
+      "PowerShell(pnpm remove tailwindcss tailwindcss-animate tailwind-merge clsx postcss 2>&1)"
     ]
   }
 }

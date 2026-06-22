@@ -1,0 +1,96 @@
+import { style } from "@vanilla-extract/css";
+import { vars, formInput, colorMixAlpha, themeTransition } from "@/lib/theme";
+
+export const form = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: 12,
+});
+
+export const field = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: 4,
+});
+
+export const label = style({
+  fontFamily: vars.font.ui,
+  fontSize: 9.5,
+  fontWeight: 600,
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  color: vars.muted,
+});
+
+export const input = style([formInput({ variant: "boxed" })]);
+
+// Centered tabular-nums input for the 2FA code field.
+export const codeInput = style([
+  formInput({ variant: "boxed" }),
+  {
+    textAlign: "center",
+    fontSize: 22,
+    fontWeight: 700,
+    letterSpacing: "0.4em",
+    fontVariantNumeric: "tabular-nums",
+    padding: "14px 12px",
+  },
+]);
+
+export const fieldError = style({
+  fontSize: 11,
+  color: vars.status.error,
+  fontFamily: vars.font.ui,
+  marginTop: 2,
+});
+
+export const forgotRow = style({
+  display: "flex",
+  justifyContent: "flex-end",
+  marginTop: -2,
+});
+
+export const forgotLink = style({
+  fontSize: 11,
+  color: vars.muted,
+  textDecoration: "none",
+  fontWeight: 600,
+  transition: themeTransition,
+  selectors: {
+    "&:hover": { color: vars.ink },
+  },
+});
+
+const alertBase = style({
+  fontFamily: vars.font.ui,
+  fontSize: 12,
+  padding: "8px 12px",
+  borderRadius: 8,
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+});
+
+export const alertError = style([
+  alertBase,
+  {
+    background: `color-mix(in srgb, ${vars.status.error} ${colorMixAlpha.lightFill}%, transparent)`,
+    border: `1px solid ${vars.status.error}`,
+    color: vars.status.error,
+  },
+]);
+
+export const alertSuccess = style([
+  alertBase,
+  {
+    background: `color-mix(in srgb, ${vars.status.success} ${colorMixAlpha.lightFill}%, transparent)`,
+    border: `1px solid ${vars.status.success}`,
+    color: vars.status.success,
+  },
+]);
+
+export const submit = style({
+  width: "100%",
+  justifyContent: "center",
+  marginTop: 4,
+});

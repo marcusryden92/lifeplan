@@ -2,19 +2,18 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { BeatLoader } from "react-spinners";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 import { newVerification } from "@/actions/newVerificationAction";
-import { CardWrapper } from "@/components/auth/CardWrapper";
-import { FormError } from "@/components/ui/FormError";
-import { FormSuccess } from "@/components/ui/FormSuccess";
+import { Loader } from "@/components/ui";
+import { AuthCard } from "./AuthCard";
+import { alertError, alertSuccess } from "./AuthForm.css";
 
 export function NewVerificationForm() {
   const [error, setError] = useState<string | undefined>();
   const [success, setSuccess] = useState<string | undefined>();
 
   const searchParams = useSearchParams();
-
   const token = searchParams.get("token");
 
   const onSubmit = useCallback(() => {
@@ -28,26 +27,46 @@ export function NewVerificationForm() {
         setSuccess(data.success);
         setError(data.error);
       })
-      .catch(() => {
-        setError("Something went wrong!");
-      });
+      .catch(() => setError("Something went wrong!"));
   }, [token]);
 
   useEffect(() => {
     onSubmit();
   }, [onSubmit]);
 
+  const isPending = !success && !error;
+
   return (
-    <CardWrapper
-      headerLabel="Confirming your verification"
-      backButtonLabel="Back to login"
-      backbuttonHref="/auth/login"
+    <AuthCard
+      title="verifying"
+      subtitle="confirming your email address"
+      altAction={{
+        prompt: "Done?",
+        label: "Back to sign in",
+        href: "/auth/login",
+      }}
     >
-      <div className="flex items-center w-full justify-center">
-        {!success && !error ? <BeatLoader /> : ""}
-        <FormSuccess message={success} />
-        <FormError message={error} />
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          padding: "8px 0",
+        }}
+      >
+        {isPending && <Loader size="md" label="Verifying" />}
+        {success && (
+          <div className={alertSuccess} role="status">
+            <CheckCircle2 size={14} strokeWidth={2.2} />
+            <span>{success}</span>
+          </div>
+        )}
+        {error && (
+          <div className={alertError} role="alert">
+            <AlertTriangle size={14} strokeWidth={2.2} />
+            <span>{error}</span>
+          </div>
+        )}
       </div>
-    </CardWrapper>
+    </AuthCard>
   );
 }

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import { Plus } from "lucide-react";
-import { ConfirmModal, Loader } from "@/components/ui";
+import { ConfirmModal, Loader, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   upsertCategory,
@@ -264,7 +264,7 @@ export default function AreasPage() {
                 style={{
                   padding: "12px 8px",
                   fontSize: 12.5,
-                  color: "var(--muted)",
+                  color: vars.muted,
                 }}
               >
                 No categories yet — create one.

@@ -4,25 +4,22 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useState, useTransition } from "react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 import { RegisterSchema } from "@/schemas";
-
-import { Input } from "@/components/ui/Input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/Form";
-
-import { FormError } from "@/components/ui/FormError";
-import { FormSuccess } from "@/components/ui/FormSuccess";
-
-import { CardWrapper } from "./CardWrapper";
-import { Button } from "@/components/ui/Button.legacy";
+import { Button } from "@/components/ui";
 import { register } from "@/actions/register";
+import { AuthCard } from "./AuthCard";
+import {
+  form as formStyle,
+  field,
+  label,
+  input,
+  fieldError,
+  alertError,
+  alertSuccess,
+  submit,
+} from "./AuthForm.css";
 
 export const RegisterForm = () => {
   const [isPending, startTransition] = useTransition();
@@ -34,7 +31,7 @@ export const RegisterForm = () => {
     defaultValues: {
       email: "",
       password: "",
-      passwordConfirmation: "", // Add this line
+      passwordConfirmation: "",
       name: "",
     },
   });
@@ -50,94 +47,117 @@ export const RegisterForm = () => {
     });
   };
 
+  const errors = form.formState.errors;
+
   return (
-    <CardWrapper
-      headerLabel="Create an account"
-      backButtonLabel="Already have an account?"
-      backbuttonHref="/auth/login"
+    <AuthCard
+      title="create account"
+      subtitle="takes 30 seconds"
+      showSocial
+      altAction={{
+        prompt: "Have an account?",
+        label: "Sign in",
+        href: "/auth/login",
+      }}
     >
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={isPending}
-                      placeholder="John Doe"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={isPending}
-                      placeholder="john.doe@example.com"
-                      type="email"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={isPending}
-                      placeholder="******"
-                      type="password"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="passwordConfirmation" // Add this field
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      disabled={isPending}
-                      placeholder="******"
-                      type="password"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+      <form className={formStyle} onSubmit={form.handleSubmit(onSubmit)}>
+        <div className={field}>
+          <label htmlFor="name" className={label}>
+            Name
+          </label>
+          <input
+            id="name"
+            type="text"
+            placeholder="Alex Patel"
+            className={input}
+            disabled={isPending}
+            autoComplete="name"
+            {...form.register("name")}
+          />
+          {errors.name && (
+            <span className={fieldError}>{errors.name.message}</span>
+          )}
+        </div>
+
+        <div className={field}>
+          <label htmlFor="email" className={label}>
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            placeholder="you@email.com"
+            className={input}
+            disabled={isPending}
+            autoComplete="email"
+            {...form.register("email")}
+          />
+          {errors.email && (
+            <span className={fieldError}>{errors.email.message}</span>
+          )}
+        </div>
+
+        <div className={field}>
+          <label htmlFor="password" className={label}>
+            Password
+          </label>
+          <input
+            id="password"
+            type="password"
+            placeholder="at least 6 chars"
+            className={input}
+            disabled={isPending}
+            autoComplete="new-password"
+            {...form.register("password")}
+          />
+          {errors.password && (
+            <span className={fieldError}>{errors.password.message}</span>
+          )}
+        </div>
+
+        <div className={field}>
+          <label htmlFor="passwordConfirmation" className={label}>
+            Confirm
+          </label>
+          <input
+            id="passwordConfirmation"
+            type="password"
+            placeholder="retype"
+            className={input}
+            disabled={isPending}
+            autoComplete="new-password"
+            {...form.register("passwordConfirmation")}
+          />
+          {errors.passwordConfirmation && (
+            <span className={fieldError}>
+              {errors.passwordConfirmation.message}
+            </span>
+          )}
+        </div>
+
+        {error && (
+          <div className={alertError} role="alert">
+            <AlertTriangle size={14} strokeWidth={2.2} />
+            <span>{error}</span>
           </div>
-          <FormError message={error} />
-          <FormSuccess message={success} />
-          <Button disabled={isPending} type="submit" className="w-full">
-            Create an account
-          </Button>
-        </form>
-      </Form>
-    </CardWrapper>
+        )}
+        {success && (
+          <div className={alertSuccess} role="status">
+            <CheckCircle2 size={14} strokeWidth={2.2} />
+            <span>{success}</span>
+          </div>
+        )}
+
+        <Button
+          type="submit"
+          variant="solid"
+          size="lg"
+          disabled={isPending}
+          className={submit}
+        >
+          Create account
+        </Button>
+      </form>
+    </AuthCard>
   );
 };

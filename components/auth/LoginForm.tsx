@@ -6,24 +6,25 @@ import * as z from "zod";
 import { useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 import { LoginSchema } from "@/schemas";
-import { Input } from "@/components/ui/Input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/Form";
-
-import { FormError } from "@/components/ui/FormError";
-import { FormSuccess } from "@/components/ui/FormSuccess";
-
-import { CardWrapper } from "./CardWrapper";
-import { Button } from "@/components/ui/Button.legacy";
+import { Button } from "@/components/ui";
 import { login } from "@/actions/login";
+import { AuthCard } from "./AuthCard";
+import {
+  form as formStyle,
+  field,
+  label,
+  input,
+  codeInput,
+  fieldError,
+  forgotRow,
+  forgotLink,
+  alertError,
+  alertSuccess,
+  submit,
+} from "./AuthForm.css";
 
 interface LoginResponse {
   error?: string;
@@ -40,17 +41,13 @@ export const LoginForm = () => {
       : "";
 
   const [showTwoFactor, setShowTwoFactor] = useState(false);
-
   const [error, setError] = useState<string | undefined>("");
   const [success, setSuccess] = useState<string | undefined>("");
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof LoginSchema>>({
     resolver: zodResolver(LoginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-    },
+    defaultValues: { email: "", password: "", code: "" },
   });
 
   const onSubmit = (values: z.infer<typeof LoginSchema>) => {
@@ -63,112 +60,127 @@ export const LoginForm = () => {
             form.reset();
             setError(data.error);
           }
-
           if (data?.success) {
             form.reset();
             setSuccess(data.success);
           }
-
           if (data?.twoFactor) {
             setShowTwoFactor(true);
           }
         })
-        .catch((err) => {
-          // Handle any errors that occur during the login process
-          setError("An unexpected error occurred: " + err);
-        });
+        .catch((err) => setError("An unexpected error occurred: " + err));
     });
   };
 
-  return (
-    <CardWrapper
-      headerLabel={showTwoFactor ? "" : "Create your life!"}
-      backButtonLabel="Don't have an account?"
-      backbuttonHref="/auth/register"
-      showSocial
-    >
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-4">
-            {showTwoFactor && (
-              <FormField
-                control={form.control}
-                name="code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      <div className="w-full text-center">Two Factor Code</div>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        disabled={isPending}
-                        placeholder="------"
-                        className="text-6xl h-16 text-center font-bold"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            {!showTwoFactor && (
-              <>
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          disabled={isPending}
-                          placeholder="john.doe@example.com"
-                          type="email"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+  const errors = form.formState.errors;
+  const displayError = error || urlError;
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          disabled={isPending}
-                          placeholder="******"
-                          type="password"
-                        />
-                      </FormControl>
-                      <Button
-                        size="sm"
-                        variant="link"
-                        asChild
-                        className="px-0 font-normal flex items-center"
-                      >
-                        <Link href={"/auth/reset"}>Forgot password?</Link>
-                      </Button>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
+  return (
+    <AuthCard
+      title={showTwoFactor ? "two-factor" : "welcome back"}
+      subtitle={
+        showTwoFactor ? "code from your authenticator app" : undefined
+      }
+      showSocial={!showTwoFactor}
+      altAction={
+        showTwoFactor
+          ? undefined
+          : {
+              prompt: "New here?",
+              label: "Create an account",
+              href: "/auth/register",
+            }
+      }
+    >
+      <form className={formStyle} onSubmit={form.handleSubmit(onSubmit)}>
+        {showTwoFactor ? (
+          <div className={field}>
+            <label htmlFor="code" className={label}>
+              Code
+            </label>
+            <input
+              id="code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="______"
+              className={codeInput}
+              disabled={isPending}
+              {...form.register("code")}
+            />
+            {errors.code && (
+              <span className={fieldError}>{errors.code.message}</span>
             )}
           </div>
-          <FormError message={error || urlError} />
-          <FormSuccess message={success} />
-          <Button disabled={isPending} type="submit" className="w-full">
-            {showTwoFactor ? "Confirm" : "Login"}
-          </Button>
-        </form>
-      </Form>
-    </CardWrapper>
+        ) : (
+          <>
+            <div className={field}>
+              <label htmlFor="email" className={label}>
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                placeholder="you@email.com"
+                className={input}
+                disabled={isPending}
+                autoComplete="email"
+                {...form.register("email")}
+              />
+              {errors.email && (
+                <span className={fieldError}>{errors.email.message}</span>
+              )}
+            </div>
+
+            <div className={field}>
+              <label htmlFor="password" className={label}>
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                className={input}
+                disabled={isPending}
+                autoComplete="current-password"
+                {...form.register("password")}
+              />
+              {errors.password && (
+                <span className={fieldError}>{errors.password.message}</span>
+              )}
+              <div className={forgotRow}>
+                <Link href="/auth/reset" className={forgotLink}>
+                  Forgot password?
+                </Link>
+              </div>
+            </div>
+          </>
+        )}
+
+        {displayError && (
+          <div className={alertError} role="alert">
+            <AlertTriangle size={14} strokeWidth={2.2} />
+            <span>{displayError}</span>
+          </div>
+        )}
+        {success && (
+          <div className={alertSuccess} role="status">
+            <CheckCircle2 size={14} strokeWidth={2.2} />
+            <span>{success}</span>
+          </div>
+        )}
+
+        <Button
+          type="submit"
+          variant="solid"
+          size="lg"
+          disabled={isPending}
+          className={submit}
+        >
+          {showTwoFactor ? "Verify" : "Sign in"}
+        </Button>
+      </form>
+    </AuthCard>
   );
 };

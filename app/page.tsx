@@ -1,72 +1,58 @@
 "use client";
 
 import { LoginButton } from "@/components/auth/LoginButton";
-import { Button } from "@/components/ui/Button.legacy";
-import { useState } from "react";
-import styles from "./page.module.css";
+import { Button, Grain } from "@/components/ui";
+import {
+  page,
+  card,
+  brand,
+  brandDot,
+  subtitle,
+  ctaRow,
+  featuresGrid,
+  featureCard,
+  featureHead,
+  featureGlyph,
+  featureTitle,
+  featureBody,
+} from "./page.css";
 
-const Home = () => {
-  const [hovered, setHovered] = useState<number | null>(null);
+const FEATURES = [
+  { glyph: "◎", title: "Plan", body: "Set goals and organize your journey." },
+  { glyph: "↗", title: "Track", body: "Monitor progress and milestones." },
+  { glyph: "✦", title: "Reflect", body: "Learn from experience and adapt." },
+];
 
-  const features = [
-    {
-      title: "Plan",
-      description: "Set goals and organize your journey.",
-      icon: "◎",
-    },
-    {
-      title: "Track",
-      description: "Monitor progress and milestone achievements.",
-      icon: "↗",
-    },
-    {
-      title: "Reflect",
-      description: "Learn from your experiences and adapt.",
-      icon: "✦",
-    },
-  ];
-
+export default function Home() {
   return (
-    <main className={styles.main}>
-      <div className={styles.container}>
-        <h1 className={styles.title}>
-          <span className={styles.titleDotContainer}>
-            Lifeplan.
-            <div className={styles.titleDot}></div>
-          </span>
+    <main className={page}>
+      <Grain />
+      <div className={card}>
+        <h1 className={brand}>
+          circadium<span className={brandDot} aria-hidden />
         </h1>
+        <p className={subtitle}>Your future, one step at a time.</p>
 
-        <p className={styles.subtitle}>Your future, one step at a time.</p>
-
-        <div className={styles.loginButton}>
-          <LoginButton mode="modal" asChild>
-            <Button variant="default" className={styles.signInButton}>
-              Sign In
+        <div className={ctaRow}>
+          <LoginButton asChild>
+            <Button variant="solid" size="lg">
+              Sign in
             </Button>
           </LoginButton>
         </div>
 
-        <div className={styles.featuresGrid}>
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className={`${styles.featureCard} ${hovered === index ? styles.featureCardHovered : ""}`}
-              onMouseEnter={() => setHovered(index)}
-              onMouseLeave={() => setHovered(null)}
-            >
-              <div className={styles.featureIconTitle}>
-                <span className={styles.featureIcon}>{feature.icon}</span>
-                <h3 className="text-lg font-semibold">{feature.title}</h3>
+        <div className={featuresGrid}>
+          {FEATURES.map((f) => (
+            <div key={f.title} className={featureCard}>
+              <div className={featureHead}>
+                <span className={featureGlyph}>{f.glyph}</span>
+                <h3 className={featureTitle}>{f.title}</h3>
               </div>
-              <p className={styles.featureDescription}>{feature.description}</p>
+              <p className={featureBody}>{f.body}</p>
             </div>
           ))}
         </div>
-
-        <div className={styles.bottomGradient}></div>
       </div>
     </main>
   );
-};
-
-export default Home;
+}

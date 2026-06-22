@@ -15,7 +15,7 @@ import {
   Layers,
 } from "lucide-react";
 import { useSelector } from "react-redux";
-import { Button, Caption, Loader } from "@/components/ui";
+import { Button, Caption, Loader, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { RootState } from "@/redux/store";
 import {
@@ -300,7 +300,7 @@ export default function LibraryPage() {
                 style={{
                   padding: "8px",
                   fontSize: 12.5,
-                  color: "var(--muted)",
+                  color: vars.muted,
                 }}
               >
                 <Caption>No areas yet</Caption>
@@ -387,7 +387,7 @@ export default function LibraryPage() {
                 <Search
                   size={13}
                   strokeWidth={2}
-                  style={{ color: "var(--muted)" }}
+                  style={{ color: vars.muted }}
                 />
                 <input
                   className={searchInput}
