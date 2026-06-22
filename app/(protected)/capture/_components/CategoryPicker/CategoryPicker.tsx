@@ -73,7 +73,6 @@ export function CategoryPicker({
     if (!open) return;
     const idx = options.findIndex((o) => o.id === value);
     keyboardNav.setActiveIndex(idx >= 0 ? idx : 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const triggerLabel = selected?.name ?? "No category";

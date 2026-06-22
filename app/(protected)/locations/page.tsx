@@ -314,7 +314,7 @@ export default function LocationsPage() {
 
   // Travel-time overrides flow through Redux. The diff picks up the changed
   // custom fields and sends travelTime.update.
-  const handleSaveOverrides = async (
+  const handleSaveOverrides = (
     travelTimeId: string,
     overrides: {
       customRushHourMinutes: number | null;
@@ -332,7 +332,7 @@ export default function LocationsPage() {
     );
   };
 
-  const handleClearAllOverrides = async () => {
+  const handleClearAllOverrides = () => {
     modalDispatch({ type: "CLOSE_ALL" });
     const customized = travelTimes.filter(hasCustomOverride);
     if (customized.length === 0) return;

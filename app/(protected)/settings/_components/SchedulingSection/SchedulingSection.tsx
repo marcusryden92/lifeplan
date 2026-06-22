@@ -118,7 +118,7 @@ export function SchedulingSection() {
             <div className={toggleHead}>Show travel as its own block</div>
             <div className={toggleBody}>
               When on, travel time between two locations appears as a separate
-              event on the calendar. When off, it's absorbed into the
+              event on the calendar. When off, it&apos;s absorbed into the
               surrounding events.
             </div>
           </div>

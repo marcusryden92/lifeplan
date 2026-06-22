@@ -106,7 +106,9 @@ export default function CalendarPage() {
     try {
       const stored = window.localStorage.getItem(CONSOLE_COLLAPSE_KEY);
       if (stored === "1") setConsoleCollapsed(true);
-    } catch {}
+    } catch {
+      // localStorage may be unavailable (private mode, disabled cookies)
+    }
     setHydrated(true);
     const id = requestAnimationFrame(() => setTransitionsReady(true));
     return () => cancelAnimationFrame(id);
@@ -119,7 +121,9 @@ export default function CalendarPage() {
         CONSOLE_COLLAPSE_KEY,
         consoleCollapsed ? "1" : "0",
       );
-    } catch {}
+    } catch {
+      // localStorage may be unavailable (private mode, quota exceeded)
+    }
   }, [consoleCollapsed, hydrated]);
 
   const toggleConsole = () => setConsoleCollapsed((c) => !c);

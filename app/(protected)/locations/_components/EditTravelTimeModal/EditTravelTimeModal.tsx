@@ -43,7 +43,7 @@ interface EditTravelTimeModalProps {
       customRegularMinutes: number | null;
       customNightMinutes: number | null;
     },
-  ) => Promise<void>;
+  ) => void | Promise<void>;
 }
 
 export function EditTravelTimeModal({

@@ -7,8 +7,8 @@ export function DangerSection() {
     <div className={card}>
       <span className={cardTitle}>Account deletion</span>
       <div className={dangerNote}>
-        Permanent account deletion isn't wired up yet. When it is, this is where
-        you'll be able to download your data and remove everything.
+        Permanent account deletion isn&apos;t wired up yet. When it is, this is where
+        you&apos;ll be able to download your data and remove everything.
       </div>
     </div>
   );

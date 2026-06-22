@@ -12,7 +12,7 @@ import {
   input,
   hintsRow,
   kbd,
-} from "@/components/ui/shell/CapturePalette.css";
+} from "@/components/ui/shell/CapturePalette/CapturePalette.css";
 
 interface NewPlanModalProps {
   open: boolean;

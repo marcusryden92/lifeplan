@@ -6,7 +6,6 @@ import { format } from "date-fns";
 import {
   ArrowUpRight,
   Check,
-  ChevronRight,
   Clock,
   Copy,
   GripVertical,
@@ -396,74 +395,6 @@ const EventPopover: React.FC<EventPopoverProps> = ({
     </CalendarPopover>
   );
 };
-
-function CategoryChain({
-  chain,
-}: {
-  chain: { id: string; name: string; color?: string | null }[];
-}) {
-  // Cap at root + last 2. Anything between collapses to a "…" indicator that
-  // tooltips the skipped names, so deep chains don't overflow the header.
-  const MAX_VISIBLE = 3;
-  let visible = chain;
-  let hiddenNames: string[] = [];
-  if (chain.length > MAX_VISIBLE) {
-    hiddenNames = chain.slice(1, -2).map((c) => c.name);
-    visible = [chain[0], ...chain.slice(-2)];
-  }
-
-  const segments: React.ReactNode[] = [];
-  visible.forEach((cat, i) => {
-    if (i > 0) segments.push(<Chevron key={`sep-${i}`} />);
-    segments.push(
-      <CategoryBadge key={cat.id} size="sm" color={cat.color ?? vars.muted}>
-        {cat.name}
-      </CategoryBadge>,
-    );
-    if (hiddenNames.length > 0 && i === 0) {
-      segments.push(<Chevron key="sep-hidden" />);
-      segments.push(
-        <span
-          key="hidden"
-          title={hiddenNames.join(" › ")}
-          style={{
-            color: vars.muted,
-            fontSize: 11,
-            cursor: "help",
-            userSelect: "none",
-          }}
-        >
-          …
-        </span>,
-      );
-    }
-  });
-
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 4,
-        flexWrap: "wrap",
-        minWidth: 0,
-      }}
-    >
-      {segments}
-    </span>
-  );
-}
-
-function Chevron() {
-  return (
-    <ChevronRight
-      size={11}
-      strokeWidth={2}
-      aria-hidden
-      style={{ color: vars.muted, flexShrink: 0 }}
-    />
-  );
-}
 
 function PrimaryAction({
   onClick,

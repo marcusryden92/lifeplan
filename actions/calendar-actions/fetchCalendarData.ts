@@ -2,7 +2,7 @@
 import { db } from "@/lib/db";
 import { SimpleEvent, EventTemplate, Planner, Category } from "@/types/prisma";
 import { weekdayToInt } from "@/utils/calendarUtils";
-import type { WeekDayType, WeekDayIntegers } from "@/types/calendarTypes";
+import type { WeekDayIntegers } from "@/types/calendarTypes";
 
 // Fetches the raw data from the database
 export async function fetchCalendarData(userId: string) {

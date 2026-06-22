@@ -47,7 +47,7 @@ export default function AreasPage() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
+  const [error, _setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [windowsOpen, setWindowsOpen] = useState(false);
   // Native HTML5 drag state. draggedId tracks the source; dragOver tracks

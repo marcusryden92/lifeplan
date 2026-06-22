@@ -15,7 +15,7 @@ import { v4 as uuidv4 } from "uuid";
 import { X } from "lucide-react";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { Button, Backdrop, ConfirmModal, Grain, vars } from "@/components/ui";
+import { Button, Backdrop, ConfirmModal, Grain } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { Category, EventTemplate } from "@/types/prisma";
 import { getWeekFirstDate } from "@/utils/calendarUtils";

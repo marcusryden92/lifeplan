@@ -125,7 +125,7 @@ export default function TestShellPage() {
                 })}
               >
                 <ConicDot size={16} />
-                <span className={text.bodyLg}>✦ Draft this week's goals</span>
+                <span className={text.bodyLg}>✦ Draft this week&apos;s goals</span>
               </div>
               <Button variant="glass" size="sm">
                 start session →

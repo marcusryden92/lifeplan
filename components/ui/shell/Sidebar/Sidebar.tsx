@@ -46,7 +46,9 @@ export function Sidebar({ userName = "Marcus", userInitial = "M" }: Props) {
     try {
       const stored = window.localStorage.getItem(COLLAPSE_KEY);
       if (stored === "1") setCollapsed(true);
-    } catch {}
+    } catch {
+      // localStorage may be unavailable (private mode, disabled cookies)
+    }
     setHydrated(true);
   }, []);
 
@@ -54,7 +56,9 @@ export function Sidebar({ userName = "Marcus", userInitial = "M" }: Props) {
     if (!hydrated) return;
     try {
       window.localStorage.setItem(COLLAPSE_KEY, collapsed ? "1" : "0");
-    } catch {}
+    } catch {
+      // localStorage may be unavailable (private mode, quota exceeded)
+    }
   }, [collapsed, hydrated]);
 
   return (
