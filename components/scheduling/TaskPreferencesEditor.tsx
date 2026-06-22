@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { Calendar, Clock, Battery, Target } from "lucide-react";
@@ -16,7 +16,7 @@ import type {
   TaskTypeEnum,
   PriorityLevel,
   EnergyLevel,
-} from "@/lib/generated/db-client";
+} from "@/prisma/client";
 import {
   Card,
   CardContent,

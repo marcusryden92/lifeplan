@@ -1,5 +1,5 @@
 import { Car, Train, Bike, Footprints } from "lucide-react";
-import type { TransportMode } from "@/lib/generated/db-client";
+import type { TransportMode } from "@/prisma/client";
 
 export const SUCCESS_MESSAGE_MS = 3000;
 

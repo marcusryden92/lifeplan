@@ -1,6 +1,6 @@
 generator client {
   provider = "prisma-client-js"
-  output   = "../../lib/generated/db-client"
+  output   = "../client"
 }
 
 datasource db {

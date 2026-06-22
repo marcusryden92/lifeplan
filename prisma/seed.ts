@@ -1,9 +1,9 @@
-﻿import * as dotenv from "dotenv";
+import * as dotenv from "dotenv";
 dotenv.config();
 
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient, UserRole } from "../lib/generated/db-client";
+import { PrismaClient, UserRole } from "./client";
 import { generateTemplates } from "./seed-helpers/generateTemplates";
 import {
   generatePlanners,

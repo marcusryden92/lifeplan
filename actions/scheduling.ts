@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import type {
@@ -6,8 +6,8 @@ import type {
   PriorityLevel,
   EnergyLevel,
   TransportMode,
-} from "@/lib/generated/db-client";
-import type { Prisma } from "@/lib/generated/db-client";
+} from "@/prisma/client";
+import type { Prisma } from "@/prisma/client";
 import type { SerializedTravelTime } from "@/redux/slices/schedulingSettingsSlice";
 
 // User Scheduling Preferences

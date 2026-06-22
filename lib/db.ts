@@ -1,4 +1,4 @@
-import { PrismaClient } from "@/lib/generated/db-client";
+import { PrismaClient } from "@/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 declare global {

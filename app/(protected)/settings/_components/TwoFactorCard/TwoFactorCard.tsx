@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { settings } from "@/actions/settings";
 import { useServerAction } from "@/hooks/useServerAction";
-import type { UserRole } from "@/lib/generated/db-client";
+import type { UserRole } from "@/prisma/client";
 import { StatusLine } from "../StatusLine";
 import {
   card,

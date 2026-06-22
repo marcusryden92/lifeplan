@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui";
-import type { UserRole } from "@/lib/generated/db-client";
+import type { UserRole } from "@/prisma/client";
 import { StatusLine } from "../StatusLine";
 import {
   card,

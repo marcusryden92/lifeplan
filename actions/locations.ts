@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
@@ -9,7 +9,7 @@ import {
   getTravelTimesAllPeriods,
   generateSessionToken,
 } from "@/lib/google-maps-api";
-import type { TransportMode } from "@/lib/generated/db-client";
+import type { TransportMode } from "@/prisma/client";
 import type { Location, TravelTime } from "@/types/prisma";
 
 const MAX_LOCATIONS = 10;

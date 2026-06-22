@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Google Maps API Integration
  *
  * Utilities for Places API (New) and Distance Matrix API.
@@ -7,7 +7,7 @@
  * All functions are server-side only to protect API key.
  */
 
-import { TransportMode } from "@/lib/generated/db-client";
+import { TransportMode } from "@/prisma/client";
 
 // Types for our application
 export interface PlacePrediction {

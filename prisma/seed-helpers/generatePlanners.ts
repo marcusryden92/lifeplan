@@ -1,4 +1,4 @@
-﻿import { Planner } from "../../lib/generated/db-client";
+import { Planner } from "../client";
 import { LOCATION_IDS } from "./generateLocations";
 import { CATEGORY_IDS } from "./generateCategories";
 

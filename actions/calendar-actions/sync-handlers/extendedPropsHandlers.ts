@@ -1,5 +1,5 @@
-﻿import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
-import type { Prisma } from "@/lib/generated/db-client";
+import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
+import type { Prisma } from "@/prisma/client";
 type Database = typeof import("@/lib/db").db;
 
 export function handleExtendedPropsChanges(

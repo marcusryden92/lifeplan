@@ -15,7 +15,7 @@ import {
   setEnableTravelEvents,
 } from "@/redux/slices/schedulingSettingsSlice";
 import type { AppDispatch, RootState } from "@/redux/store";
-import type { TransportMode } from "@/lib/generated/db-client";
+import type { TransportMode } from "@/prisma/client";
 import { useServerAction } from "@/hooks/useServerAction";
 import { StatusLine } from "../StatusLine";
 import {

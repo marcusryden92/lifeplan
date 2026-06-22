@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MapPin, RefreshCw } from "lucide-react";
-import type { TransportMode } from "@/lib/generated/db-client";
+import type { TransportMode } from "@/prisma/client";
 import type { SerializedTravelTime } from "@/redux/slices/schedulingSettingsSlice";
 import {
   getEffectiveTravelTime,

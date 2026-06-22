@@ -1,6 +1,6 @@
 "use client";
 
-import type { UserRole } from "@/lib/generated/db-client";
+import type { UserRole } from "@/prisma/client";
 import { EmailCard } from "../EmailCard";
 import { PasswordCard } from "../PasswordCard";
 import { TwoFactorCard } from "../TwoFactorCard";
