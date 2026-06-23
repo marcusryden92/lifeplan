@@ -136,6 +136,18 @@ export const pillBtn = recipe({
           "&:hover": { color: vars.ink },
         },
       },
+      // Outlined — transparent fill with an ink-colored border. Pairs with
+      // `solid` as a secondary CTA on light surfaces.
+      outlined: {
+        background: "transparent",
+        color: vars.ink,
+        border: `1px solid ${vars.ink}`,
+        selectors: {
+          "&:hover:not(:disabled)": {
+            background: vars.glass.bgSoft,
+          },
+        },
+      },
       danger: {
         background: vars.status.error,
         color: vars.textOnAccent,

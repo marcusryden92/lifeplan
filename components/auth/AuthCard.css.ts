@@ -1,19 +1,23 @@
 import { style } from "@vanilla-extract/css";
-import { vars, popover, themeTransition } from "@/lib/theme";
+import { vars, themeTransition } from "@/lib/theme";
 
-export const card = style([
-  popover({ size: "xl" }),
-  {
-    width: "min(420px, calc(100vw - 32px))",
-    padding: "28px 28px 24px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 16,
-    color: vars.ink,
-    fontFamily: vars.font.ui,
-    position: "relative",
-  },
-]);
+// Paper card — replaces the previous glass treatment so the auth surface
+// matches the landing page's clean paper aesthetic.
+export const card = style({
+  width: "min(420px, calc(100vw - 32px))",
+  padding: "28px 28px 24px",
+  display: "flex",
+  flexDirection: "column",
+  gap: 16,
+  color: vars.ink,
+  fontFamily: vars.font.ui,
+  position: "relative",
+  background: vars.paper,
+  border: `1px solid ${vars.rule}`,
+  borderRadius: 14,
+  boxShadow:
+    "0 1px 0 rgba(255,255,255,0.6) inset, 0 18px 40px rgba(22,20,42,0.08), 0 4px 12px rgba(22,20,42,0.04)",
+});
 
 export const brandRow = style({
   display: "flex",

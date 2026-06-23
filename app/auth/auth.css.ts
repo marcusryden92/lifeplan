@@ -1,15 +1,90 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars } from "@/lib/theme";
 
+const MOBILE = "screen and (max-width: 767px)";
+
+// Locked to light. Split layout: vector field on the left, paper form panel
+// on the right. Carries the landing's hero artifact through the transition.
 export const page = style({
   position: "relative",
   minHeight: "100vh",
   width: "100%",
   display: "flex",
+  background: vars.paper,
+  color: vars.ink,
+  "@media": {
+    [MOBILE]: { flexDirection: "column" },
+  },
+});
+
+// Left side — vector field with a Circadium wordmark overlay (mirrors the
+// landing hero so the page transition feels continuous).
+export const fieldPanel = style({
+  position: "relative",
+  flex: "0 0 45%",
+  overflow: "hidden",
+  isolation: "isolate",
+  "@media": {
+    [MOBILE]: {
+      flex: "0 0 auto",
+      height: 200,
+      width: "100%",
+    },
+  },
+});
+
+// Big bottom-left wordmark on the field side. Pointer-events: none so it
+// doesn't block the canvas's mouse interaction.
+export const fieldWordmark = style({
+  position: "absolute",
+  left: "clamp(20px, 3vw, 48px)",
+  bottom: "clamp(20px, 3vw, 48px)",
+  fontFamily: vars.font.display,
+  fontSize: "clamp(36px, 5vw, 88px)",
+  fontWeight: 400,
+  letterSpacing: "-0.03em",
+  lineHeight: 1,
+  color: "#f5f0e8",
+  margin: 0,
+  pointerEvents: "none",
+  userSelect: "none",
+  zIndex: 1,
+  "@media": {
+    [MOBILE]: {
+      fontSize: "clamp(28px, 8vw, 48px)",
+      left: 20,
+      bottom: 16,
+    },
+  },
+});
+
+// Right side — paper form panel.
+export const formPanel = style({
+  flex: "1 1 0",
+  display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: 24,
-  background: vars.bezel,
-  color: vars.ink,
-  transition: themeTransition,
+  padding: "clamp(24px, 5vw, 56px)",
+  position: "relative",
+  "@media": {
+    [MOBILE]: {
+      padding: "32px 20px 48px",
+    },
+  },
+});
+
+// Back-to-landing link in the top corner of the form panel.
+export const backLink = style({
+  position: "absolute",
+  top: "clamp(16px, 2vw, 24px)",
+  right: "clamp(16px, 2vw, 24px)",
+  fontFamily: vars.font.ui,
+  fontSize: 12,
+  fontWeight: 600,
+  color: vars.muted,
+  textDecoration: "none",
+  letterSpacing: "0.02em",
+  selectors: {
+    "&:hover": { color: vars.ink },
+  },
 });
