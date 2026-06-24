@@ -23,6 +23,7 @@ export function useFetchCalendarData(
     calendar: SimpleEvent[],
     template: EventTemplate[],
     categories: Category[],
+    dataVersion: number,
   ) => void,
 ) {
   const dispatch = useDispatch<AppDispatch>();
@@ -42,7 +43,8 @@ export function useFetchCalendarData(
 
         if (!response.data) return null;
 
-        const { planner, calendar, template, categories } = response.data;
+        const { planner, calendar, template, categories, dataVersion } =
+          response.data;
         const newData = { planner, calendar, template, categories };
 
         setData(newData);
@@ -55,6 +57,7 @@ export function useFetchCalendarData(
           newData.calendar,
           newData.template,
           newData.categories,
+          dataVersion,
         );
       } catch (err) {
         setError(err as Error);

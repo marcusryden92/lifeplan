@@ -7,6 +7,10 @@ model User {
   password              String?
   role                  UserRole               @default(USER)
   isTwoFactorEnabled    Boolean                @default(false)
+  // Monotonic counter bumped inside every successful sync transaction.
+  // Used as the OCC token: client sends its known version, server compares
+  // and either commits + increments or rejects the entire sync as stale.
+  dataVersion           Int                    @default(0)
   EventTemplate         EventTemplate[]
   Planner               Planner[]
   SimpleEvent           SimpleEvent[]

@@ -1,5 +1,6 @@
+import type { Prisma } from "@/prisma/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
-type Database = typeof import("@/lib/db").db;
+type Database = Prisma.TransactionClient;
 
 // Locations only get simple name updates and deletes through the sync.
 // Creation goes through actions/locations.ts because it needs a Google Places

@@ -1,5 +1,6 @@
+import type { Prisma } from "@/prisma/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
-type Database = typeof import("@/lib/db").db;
+type Database = Prisma.TransactionClient;
 
 // Travel times only flow through the diff for custom override updates.
 // Create requires a Google distance lookup (refreshAllTravelTimes /

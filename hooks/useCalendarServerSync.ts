@@ -1,12 +1,17 @@
 "use client";
 
 import { useRef, useEffect, useCallback, useState } from "react";
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@/redux/store";
 import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
 import type {
   SerializedLocation,
   SerializedTravelTime,
 } from "@/redux/slices/schedulingSettingsSlice";
+import schedulingSettingsSlice from "@/redux/slices/schedulingSettingsSlice";
+import calendarSlice from "@/redux/slices/calendarSlice";
 import { handleServerTransaction } from "@/utils/server-handlers/compareCalendarData";
+import type { FreshState } from "@/actions/calendar-actions/fetchFreshState";
 
 const useCalendarServerSync = (
   userId: string | undefined,
@@ -26,8 +31,13 @@ const useCalendarServerSync = (
   const previousCategories = useRef<Category[]>([]);
   const previousLocations = useRef<SerializedLocation[]>([]);
   const previousTravelTimes = useRef<SerializedTravelTime[]>([]);
+  // OCC token. Every successful sync bumps the server-side User.dataVersion
+  // by 1; we send the version we think is current and the server rejects the
+  // sync if it has moved on. Seeded by initializeState from fetchCalendarData.
+  const knownDataVersion = useRef<number>(0);
 
   const [isInitialized, setIsInitialized] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
 
   const { planner, calendar, template, categories, locations, travelTimes } =
     calendarState;
@@ -38,6 +48,7 @@ const useCalendarServerSync = (
       calendar: SimpleEvent[],
       template: EventTemplate[],
       categories: Category[],
+      dataVersion: number,
     ) => {
       previousPlanner.current = planner;
       previousCalendar.current = calendar;
@@ -51,6 +62,7 @@ const useCalendarServerSync = (
       // spurious create operations on the next sync pass.
       previousLocations.current = locationsAtInitRef.current;
       previousTravelTimes.current = travelTimesAtInitRef.current;
+      knownDataVersion.current = dataVersion;
       setIsInitialized(true);
     },
     [],
@@ -84,6 +96,59 @@ const useCalendarServerSync = (
     [],
   );
 
+  // Snap Redux back to the last server-confirmed state stored in the refs.
+  // Called when a sync transaction fails so the client doesn't keep diverging
+  // optimistically from the DB. Without this, the same failing diff would
+  // re-fire indefinitely against stale refs.
+  const rollbackToLastConfirmedState = useCallback(() => {
+    dispatch(
+      calendarSlice.actions.updateCalendarArrayData({
+        planner: previousPlanner.current,
+        calendar: previousCalendar.current,
+        template: previousTemplate.current,
+        categories: previousCategories.current,
+      }),
+    );
+    dispatch(
+      schedulingSettingsSlice.actions.setLocations(previousLocations.current),
+    );
+    dispatch(
+      schedulingSettingsSlice.actions.setAllTravelTimes(
+        previousTravelTimes.current,
+      ),
+    );
+  }, [dispatch]);
+
+  // Replace Redux + every ref with the server's fresh snapshot. Used when the
+  // sync is rejected as stale (OCC mismatch) — the client's in-flight edit is
+  // discarded because applying it on top of a divergent DAG would corrupt
+  // state. Refs advance to the new dataVersion so the next sync starts clean.
+  const adoptFreshServerState = useCallback(
+    (fresh: FreshState) => {
+      previousPlanner.current = fresh.planner;
+      previousCalendar.current = fresh.calendar;
+      previousTemplate.current = fresh.template;
+      previousCategories.current = fresh.categories;
+      previousLocations.current = fresh.locations;
+      previousTravelTimes.current = fresh.travelTimes;
+      knownDataVersion.current = fresh.dataVersion;
+
+      dispatch(
+        calendarSlice.actions.updateCalendarArrayData({
+          planner: fresh.planner,
+          calendar: fresh.calendar,
+          template: fresh.template,
+          categories: fresh.categories,
+        }),
+      );
+      dispatch(schedulingSettingsSlice.actions.setLocations(fresh.locations));
+      dispatch(
+        schedulingSettingsSlice.actions.setAllTravelTimes(fresh.travelTimes),
+      );
+    },
+    [dispatch],
+  );
+
   useEffect(() => {
     const processServerSync = async () => {
       if (!userId) throw new Error("Id missing in processServerSync");
@@ -91,6 +156,7 @@ const useCalendarServerSync = (
       try {
         const response = await handleServerTransaction(
           userId,
+          knownDataVersion.current,
           planner,
           previousPlanner,
           calendar,
@@ -112,11 +178,23 @@ const useCalendarServerSync = (
           previousCategories.current = categories;
           previousLocations.current = locations;
           previousTravelTimes.current = travelTimes;
+          knownDataVersion.current = response.newDataVersion;
+        } else if (response.reason === "stale") {
+          // Server rejected this sync because another writer moved the
+          // dataVersion forward. Discard the in-flight edit and adopt the
+          // server's current snapshot wholesale — partial application across
+          // a DAG-shaped dataset can't be done safely.
+          console.warn(
+            "Sync rejected as stale; adopting fresh server state",
+          );
+          adoptFreshServerState(response.freshState);
         } else {
           console.warn("Server sync response not successful:", response);
+          rollbackToLastConfirmedState();
         }
       } catch (error) {
         console.error("Error processing server sync:", error);
+        rollbackToLastConfirmedState();
       }
     };
 

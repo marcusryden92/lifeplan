@@ -52,6 +52,7 @@ export type DatabaseChanges = {
 
 export async function handleServerTransaction(
   userId: string,
+  clientKnownDataVersion: number,
   planner: Planner[],
   previousPlanner: { current: Planner[] },
   calendar: SimpleEvent[],
@@ -154,7 +155,11 @@ export async function handleServerTransaction(
     serializedPreviousTravelTimes,
   );
 
-  const response = await syncCalendarData(userId, databaseChanges);
+  const response = await syncCalendarData(
+    userId,
+    databaseChanges,
+    clientKnownDataVersion,
+  );
 
   return response;
 }
