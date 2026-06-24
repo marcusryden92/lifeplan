@@ -20,14 +20,14 @@ import {
   completedSubtaskDuration,
   totalSubtaskDuration,
 } from "@/utils/taskArrayUtils";
-import { useItemHandlers } from "../_hooks/useItemHandlers";
+import { useItemHandlers } from "../../_hooks/useItemHandlers";
 import type { Category } from "@/types/prisma";
 import type { PlannerType } from "@/prisma/client";
 
-import { ItemProvider } from "../_components/ItemContext";
-import { ItemTabs } from "../_components/ItemTabs";
+import { ItemProvider } from "../ItemContext";
+import { ItemTabs } from "../ItemTabs";
 import { ConfirmModal } from "@/components/ui";
-import { READY_MESSAGE_MS } from "../_constants";
+import { READY_MESSAGE_MS } from "../../_constants";
 import {
   page,
   innerWrap,

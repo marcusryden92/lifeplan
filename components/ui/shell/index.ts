@@ -3,5 +3,7 @@ export { Sidebar } from "./Sidebar";
 export { MobileTabs } from "./MobileTabs";
 export { CapturePalette } from "./CapturePalette";
 export { CaptureProvider, useCapture } from "./CaptureContext";
+export { SearchPalette } from "./SearchPalette";
+export { SearchProvider, useSearch } from "./SearchContext";
 export { NAV_ITEMS, MOBILE_TABS } from "./nav";
 export type { NavItem } from "./nav";

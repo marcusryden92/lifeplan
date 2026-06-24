@@ -2,10 +2,9 @@
 
 - Refactoring of stupid new code
 
-- Double check usage of spacing and theme tokens throughout the project
-- Not multiple css.ts files in the same folder
-
 - Text selection possible throughout the project - should be disabled
+
+- Handle database collisions/data corruption
 
 - Add console error messaging
 - Calendar items not loading properly on initial load

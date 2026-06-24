@@ -11,14 +11,14 @@ import {
 } from "@/utils/goal-handlers/subtaskCompletion";
 import { formatDatetimeLocal, parseDatetimeLocal } from "@/utils/datetime";
 import { vars } from "@/lib/theme";
-import { useItem } from "../_components/ItemContext";
-import { IdentityCard } from "../_components/IdentityCard";
+import { useItem } from "../ItemContext";
+import { IdentityCard } from "../IdentityCard";
 import {
   NextOnCalendarCard,
   AIHelperCard,
   EngineNotesCard,
-} from "../_components/SideCards";
-import { SHAKE_DURATION_MS } from "../_constants";
+} from "../SideCards";
+import { SHAKE_DURATION_MS } from "../../_constants";
 import {
   overviewGrid,
   leftCol,
@@ -28,7 +28,6 @@ import {
   progressMetaStrong,
   progressTrack,
   progressFill,
-  progressTick,
   completeRow,
   completeLeftGroup,
   completeCheckbox,
@@ -102,15 +101,6 @@ export default function ItemOverviewPage() {
                   background: `linear-gradient(90deg, ${areaColor}, color-mix(in srgb, ${areaColor} 80%, transparent))`,
                 }}
               />
-              {Array.from({ length: totalSubtasks - 1 }).map((_, i) => (
-                <span
-                  key={i}
-                  className={progressTick}
-                  style={{
-                    left: `${((i + 1) / totalSubtasks) * 100}%`,
-                  }}
-                />
-              ))}
             </div>
           </>
         )}

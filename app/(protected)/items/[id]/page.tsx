@@ -1,1 +1,1 @@
-export { default } from "./ItemDetailPage";
+export { default } from "./_components/ItemDetailPage";

@@ -7,6 +7,8 @@ import { Sidebar } from "../Sidebar";
 import { MobileTabs } from "../MobileTabs";
 import { CaptureProvider } from "../CaptureContext";
 import { CapturePalette } from "../CapturePalette";
+import { SearchProvider } from "../SearchContext";
+import { SearchPalette } from "../SearchPalette";
 import {
   bezelFrame,
   canvas,
@@ -31,22 +33,25 @@ export function AppShell({
 }: Props) {
   return (
     <CaptureProvider>
-      <div className={bezelFrame}>
-        <div className={canvas}>
-          <Backdrop variant={backdrop} />
-          <Grain />
-          <div className={contentRow}>
-            <div className={desktopOnly}>
-              <Sidebar userName={userName} userInitial={userInitial} />
+      <SearchProvider>
+        <div className={bezelFrame}>
+          <div className={canvas}>
+            <Backdrop variant={backdrop} />
+            <Grain />
+            <div className={contentRow}>
+              <div className={desktopOnly}>
+                <Sidebar userName={userName} userInitial={userInitial} />
+              </div>
+              <div className={mainColumn}>{children}</div>
             </div>
-            <div className={mainColumn}>{children}</div>
+            <div className={mobileOnly}>
+              <MobileTabs />
+            </div>
+            <CapturePalette />
+            <SearchPalette />
           </div>
-          <div className={mobileOnly}>
-            <MobileTabs />
-          </div>
-          <CapturePalette />
         </div>
-      </div>
+      </SearchProvider>
     </CaptureProvider>
   );
 }

@@ -54,15 +54,6 @@ export const progressFill = style({
   borderRadius: 999,
 });
 
-export const progressTick = style({
-  position: "absolute",
-  top: 0,
-  bottom: 0,
-  width: 1,
-  background: vars.paper,
-  opacity: 0.8,
-});
-
 // Task completion row — sized to match the left column of overviewGrid (50%
 // minus half the 48px gap) so the checkbox lines up with IdentityCard's left
 // edge. justify-content puts the checkbox+label cluster on the left and the

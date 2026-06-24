@@ -307,13 +307,13 @@ export const windowsActions = style({
   marginTop: 10,
 });
 
-export const subAreasList = style({
+export const subCategoriesList = style({
   display: "flex",
   flexDirection: "column",
   gap: 6,
 });
 
-export const subAreaRow = style({
+export const subCategoryRow = style({
   display: "grid",
   gridTemplateColumns: "14px 1fr 130px 90px",
   alignItems: "center",
@@ -336,14 +336,14 @@ export const subAreaRow = style({
   },
 });
 
-export const subAreaDot = style({
+export const subCategoryDot = style({
   width: 9,
   height: 9,
   borderRadius: 999,
   flexShrink: 0,
 });
 
-export const subAreaName = style({
+export const subCategoryName = style({
   fontWeight: 600,
   color: vars.ink,
   minWidth: 0,
@@ -352,7 +352,7 @@ export const subAreaName = style({
   whiteSpace: "nowrap",
 });
 
-export const subAreaMeta = style({
+export const subCategoryMeta = style({
   fontFamily: vars.font.ui,
   fontSize: 11.5,
   color: vars.muted,
@@ -391,7 +391,7 @@ export const lockIcon = style({
   },
 });
 
-export const subAreaChevron = style({
+export const subCategoryChevron = style({
   color: vars.muted,
   justifySelf: "end",
 });

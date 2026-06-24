@@ -33,17 +33,17 @@ import {
   windowsSubsection,
   subsectionLabel,
   classificationNote,
-  subAreasList,
-  subAreaRow,
-  subAreaDot,
-  subAreaName,
-  subAreaMeta,
+  subCategoriesList,
+  subCategoryRow,
+  subCategoryDot,
+  subCategoryName,
+  subCategoryMeta,
   inlineRow,
   inlineRowTight,
   parentOptionDot,
   lockIcon,
-  subAreaChevron,
-} from "./AreaEditor.css";
+  subCategoryChevron,
+} from "./CategoryEditor.css";
 
 export const SWATCH_PALETTE = [
   "#3b82f6",
@@ -58,13 +58,13 @@ export const SWATCH_PALETTE = [
 
 const FALLBACK_COLOR = "#9ca3af";
 
-interface AreaEditorProps {
+interface CategoryEditorProps {
   category: Category;
   categories: Category[];
   locations: SerializedLocation[];
   itemCount: number;
-  subAreas: Category[];
-  subAreaCounts: Map<string, number>;
+  subCategories: Category[];
+  subCategoryCounts: Map<string, number>;
   onRename: (name: string) => void;
   onChangeColor: (color: string) => void;
   onChangeParent: (parentId: string | null) => void;
@@ -72,17 +72,17 @@ interface AreaEditorProps {
   onToggleStrict: () => void;
   onToggleUseTimeWindows: () => void;
   onDelete: () => void;
-  onSelectSubArea: (id: string) => void;
+  onSelectSubCategory: (id: string) => void;
   onOpenWindows: () => void;
 }
 
-export function AreaEditor({
+export function CategoryEditor({
   category,
   categories,
   locations,
   itemCount,
-  subAreas,
-  subAreaCounts,
+  subCategories,
+  subCategoryCounts,
   onRename,
   onChangeColor,
   onChangeParent,
@@ -90,9 +90,9 @@ export function AreaEditor({
   onToggleStrict,
   onToggleUseTimeWindows,
   onDelete,
-  onSelectSubArea,
+  onSelectSubCategory,
   onOpenWindows,
-}: AreaEditorProps) {
+}: CategoryEditorProps) {
   const {
     editing: editingName,
     draft: nameDraft,
@@ -146,8 +146,8 @@ export function AreaEditor({
   const currentLocation = locations.find((l) => l.id === category.locationId);
   const summary = [
     `${itemCount} item${itemCount === 1 ? "" : "s"}`,
-    subAreas.length > 0
-      ? `${subAreas.length} sub-categor${subAreas.length === 1 ? "y" : "ies"}`
+    subCategories.length > 0
+      ? `${subCategories.length} sub-categor${subCategories.length === 1 ? "y" : "ies"}`
       : null,
     category.isStrict ? "strict" : null,
   ]
@@ -340,33 +340,33 @@ export function AreaEditor({
         </div>
       )}
 
-      {subAreas.length > 0 && (
+      {subCategories.length > 0 && (
         <div className={section}>
           <div className={sectionTitle}>
-            Sub-categories · {subAreas.length}
+            Sub-categories · {subCategories.length}
           </div>
-          <div className={subAreasList}>
-            {subAreas.map((s) => {
-              const count = subAreaCounts.get(s.id) ?? 0;
+          <div className={subCategoriesList}>
+            {subCategories.map((s) => {
+              const count = subCategoryCounts.get(s.id) ?? 0;
               return (
                 <button
                   key={s.id}
                   type="button"
-                  className={subAreaRow}
-                  onClick={() => onSelectSubArea(s.id)}
+                  className={subCategoryRow}
+                  onClick={() => onSelectSubCategory(s.id)}
                 >
                   <span
-                    className={subAreaDot}
+                    className={subCategoryDot}
                     style={{ background: s.color || FALLBACK_COLOR }}
                   />
-                  <span className={subAreaName}>{s.name}</span>
-                  <span className={subAreaMeta}>
+                  <span className={subCategoryName}>{s.name}</span>
+                  <span className={subCategoryMeta}>
                     {count} item{count === 1 ? "" : "s"}
                   </span>
                   <ChevronRight
                     size={14}
                     strokeWidth={2}
-                    className={subAreaChevron}
+                    className={subCategoryChevron}
                   />
                 </button>
               );

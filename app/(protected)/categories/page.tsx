@@ -17,8 +17,8 @@ import {
 } from "@/utils/categoryUtils";
 import type { Category } from "@/types/prisma";
 import { WeekPlanModal } from "@/components/calendar/WeekPlanModal";
-import { AreaEditor, SWATCH_PALETTE } from "./_components/AreaEditor";
-import { AreaTreeNode, type DragZone } from "./_components/AreaTreeNode";
+import { CategoryEditor, SWATCH_PALETTE } from "./_components/CategoryEditor";
+import { CategoryTreeNode, type DragZone } from "./_components/CategoryTreeNode";
 import {
   page,
   subHeader,
@@ -35,7 +35,7 @@ import {
   errorBanner,
 } from "./page.css";
 
-export default function AreasPage() {
+export default function CategoriesPage() {
   const dispatch = useDispatch<AppDispatch>();
   const { planner, categories } = useCalendarProvider();
   const locations = useSelector(
@@ -61,7 +61,7 @@ export default function AreasPage() {
 
   const tree = useMemo(() => buildCategoryTree(categories), [categories]);
 
-  // Default to first top-level area on first render once data is in.
+  // Default to first top-level category on first render once data is in.
   const effectiveSelectedId =
     selectedId ?? (tree.length > 0 ? tree[0].id : null);
 
@@ -75,19 +75,19 @@ export default function AreasPage() {
 
   const itemCounts = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const cat of categories) {
+    for (const category of categories) {
       const descendantIds = new Set(
-        getCategoryAndDescendants(cat.id, categories),
+        getCategoryAndDescendants(category.id, categories),
       );
       const count = planner.filter(
         (i) => !i.parentId && i.categoryId && descendantIds.has(i.categoryId),
       ).length;
-      counts.set(cat.id, count);
+      counts.set(category.id, count);
     }
     return counts;
   }, [categories, planner]);
 
-  const subAreas = useMemo(
+  const subCategories = useMemo(
     () =>
       selected
         ? categories.filter((c) => c.parentId === selected.id)
@@ -188,10 +188,10 @@ export default function AreasPage() {
     const swatch = SWATCH_PALETTE[categories.length % SWATCH_PALETTE.length];
     const id = uuidv4();
     const now = new Date().toISOString();
-    // Sub-areas append to the end of their sibling group; top-level uses the
-    // total category count as a reasonable tail position. Either way the sync
-    // sends the sortOrder along, so the tree renders in the expected slot
-    // without a separate moveCategory round-trip.
+    // Sub-categories append to the end of their sibling group; top-level uses
+    // the total category count as a reasonable tail position. Either way the
+    // sync sends the sortOrder along, so the tree renders in the expected
+    // slot without a separate moveCategory round-trip.
     const siblingMax = categories
       .filter((c) => c.parentId === parentId)
       .reduce((max, c) => Math.max(max, c.sortOrder), -1);
@@ -271,7 +271,7 @@ export default function AreasPage() {
               </div>
             ) : (
               tree.map((node) => (
-                <AreaTreeNode
+                <CategoryTreeNode
                   key={node.id}
                   node={node}
                   depth={0}
@@ -308,13 +308,13 @@ export default function AreasPage() {
               <Loader size="md" label="Loading categories" />
             </div>
           ) : selected ? (
-            <AreaEditor
+            <CategoryEditor
               category={selected}
               categories={categories}
               locations={locations}
               itemCount={itemCounts.get(selected.id) ?? 0}
-              subAreas={subAreas}
-              subAreaCounts={itemCounts}
+              subCategories={subCategories}
+              subCategoryCounts={itemCounts}
               onRename={handleRename}
               onChangeColor={handleChangeColor}
               onChangeParent={handleChangeParent}
@@ -322,7 +322,7 @@ export default function AreasPage() {
               onToggleStrict={handleToggleStrict}
               onToggleUseTimeWindows={handleToggleUseTimeWindows}
               onDelete={() => setDeletingId(selected.id)}
-              onSelectSubArea={setSelectedId}
+              onSelectSubCategory={setSelectedId}
               onOpenWindows={() => setWindowsOpen(true)}
             />
           ) : (
@@ -359,4 +359,3 @@ export default function AreasPage() {
     </div>
   );
 }
-

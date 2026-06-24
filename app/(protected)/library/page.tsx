@@ -15,7 +15,7 @@ import {
   Layers,
 } from "lucide-react";
 import { useSelector } from "react-redux";
-import { Button, Caption, Loader, vars } from "@/components/ui";
+import { Button, Caption, Loader, useCapture, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { RootState } from "@/redux/store";
 import {
@@ -85,6 +85,7 @@ export default function LibraryPage() {
   const { planner, categories } = useCalendarProvider();
   const isLoaded = useSelector((state: RootState) => state.calendar.isLoaded);
   const now = useMemo(() => new Date(), []);
+  const { setOpen: setCaptureOpen } = useCapture();
 
   const [selection, setSelection] = useState<Selection>({ kind: "all" });
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -245,7 +246,11 @@ export default function LibraryPage() {
         </span>
         <span className={spacer} />
         <div className={actionCluster}>
-          <Button variant="solid" size="sm">
+          <Button
+            variant="solid"
+            size="sm"
+            onClick={() => setCaptureOpen(true)}
+          >
             <Plus size={13} strokeWidth={2.4} />
             New item
           </Button>
@@ -303,7 +308,7 @@ export default function LibraryPage() {
                   color: vars.muted,
                 }}
               >
-                <Caption>No areas yet</Caption>
+                <Caption>No categories yet</Caption>
               </div>
             ) : (
               categoryTree.map((node) => (

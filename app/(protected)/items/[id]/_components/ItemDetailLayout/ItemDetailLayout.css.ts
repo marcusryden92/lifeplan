@@ -1,5 +1,10 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, interactiveTransition } from "@/lib/theme";
+import {
+  vars,
+  themeTransition,
+  interactiveTransition,
+  contentWidths,
+} from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
@@ -15,7 +20,9 @@ export const innerWrap = style({
   display: "flex",
   flexDirection: "column",
   padding: "20px 56px 28px",
-  width: "100%",
+  width: "80%",
+  maxWidth: contentWidths.lg,
+  marginInline: "auto",
   flex: 1,
   minHeight: 0,
   "@media": {

@@ -23,11 +23,16 @@ export function handleCalendarChanges(
   }
 
   // UPDATE
+  // updateMany is a no-op on missing rows instead of throwing P2025, so a
+  // stale ghost id in previousCalendar (e.g. another tab deleted the row, or
+  // an overlapping sync drifted the ref) doesn't abort the whole transaction.
+  // Scoping by userId also prevents cross-user writes.
   for (const event of databaseChanges.calendar.update) {
+    const { id, ...rest } = event;
     operations.push(
-      db.simpleEvent.update({
-        where: { id: event.id },
-        data: { ...event, userId, updatedAt },
+      db.simpleEvent.updateMany({
+        where: { id, userId },
+        data: { ...rest, updatedAt },
       })
     );
   }
