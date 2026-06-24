@@ -68,7 +68,7 @@ export const RegisterForm = () => {
           <input
             id="name"
             type="text"
-            placeholder="Alex Patel"
+            placeholder="Your name"
             className={input}
             disabled={isPending}
             autoComplete="name"

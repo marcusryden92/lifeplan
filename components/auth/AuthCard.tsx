@@ -35,7 +35,7 @@ export const AuthCard = ({
   return (
     <div className={card}>
       <div className={brandRow}>
-        <h1 className={brand}>circadium</h1>
+        <h1 className={brand}>Circadium</h1>
         <h2 className={titleStyle}>{title}</h2>
         {subtitle && <span className={subtitleStyle}>{subtitle}</span>}
       </div>

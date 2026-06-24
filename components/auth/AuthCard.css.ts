@@ -1,54 +1,56 @@
 import { style } from "@vanilla-extract/css";
 import { vars, themeTransition } from "@/lib/theme";
 
-// Paper card — replaces the previous glass treatment so the auth surface
-// matches the landing page's clean paper aesthetic.
+// Flat form stack. The formPanel already paints paper; the auth content
+// sits directly on it with no chrome, mirroring the landing's editorial
+// aesthetic where content lives on paper without elevated containers.
 export const card = style({
   width: "min(420px, calc(100vw - 32px))",
-  padding: "28px 28px 24px",
   display: "flex",
   flexDirection: "column",
-  gap: 16,
+  gap: 20,
   color: vars.ink,
   fontFamily: vars.font.ui,
   position: "relative",
-  background: vars.paper,
-  border: `1px solid ${vars.rule}`,
-  borderRadius: 14,
-  boxShadow:
-    "0 1px 0 rgba(255,255,255,0.6) inset, 0 18px 40px rgba(22,20,42,0.08), 0 4px 12px rgba(22,20,42,0.04)",
 });
 
 export const brandRow = style({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: 8,
+  marginBottom: 8,
 });
 
+// Small wordmark — eyebrow-style label above the headline, matching the
+// landing's compact nav wordmark.
 export const brand = style({
   fontFamily: vars.font.display,
-  fontSize: 28,
+  fontSize: 18,
   fontWeight: 500,
-  letterSpacing: "-0.03em",
+  letterSpacing: "-0.02em",
   lineHeight: 1,
   color: vars.ink,
   margin: 0,
 });
 
+// Headline — display weight, large, ink. Reads as the page title for the
+// auth flow, mirroring the landing's intro headline rhythm.
 export const title = style({
   fontFamily: vars.font.display,
-  fontSize: 18,
-  fontWeight: 500,
-  letterSpacing: "-0.015em",
-  lineHeight: 1.15,
-  color: vars.inkSoft,
+  fontSize: 32,
+  fontWeight: 400,
+  letterSpacing: "-0.025em",
+  lineHeight: 1.05,
+  color: vars.ink,
   margin: 0,
 });
 
 export const subtitle = style({
-  fontSize: 12,
-  color: vars.muted,
-  letterSpacing: "0.01em",
+  fontFamily: vars.font.ui,
+  fontSize: 13,
+  color: vars.inkSoft,
+  lineHeight: 1.5,
+  marginTop: 2,
 });
 
 export const body = style({
