@@ -5,7 +5,7 @@ export const FIELD_SIZE = 1350;
 
 export const DEFAULTS: GlobalSettings = {
   strength: 1.5,
-  speed: 1.5,
+  speed: 1.2,
   density: 1.6,
   tilt: 10,
   rot: 133,
@@ -24,11 +24,11 @@ export const DEFAULTS: GlobalSettings = {
   // strandColor: "#c3bae6",
   strandColor: "#ffffff",
   //bgColor: "#0b0f41",+
-  bgColor: "#030303",
+  bgColor: "#16142a",
   strandWidth: 1,
-  hueShift: 50,
+  hueShift: 15,
   noise: 80,
-  mforce: 0.6,
+  mforce: 1,
   minner: 175,
   mouter: 285,
   mling: 0.3,

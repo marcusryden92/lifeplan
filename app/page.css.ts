@@ -1,257 +1,489 @@
-import { style } from "@vanilla-extract/css";
+import { globalStyle, style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
 // ---------- page chrome ----------
-// Same 5/12px bezel padding pattern AppShell uses; page background is paper,
-// locked to light via themeLight applied in page.tsx.
+// No horizontal padding — sections handle their own. This lets full-bleed
+// sections (e.g. the dark prose section) reach the viewport edge cleanly
+// while bezeled elements (hero, close card) supply their own 12px inset.
+// `main` itself is the scroll container so the `.custom-scrollbar` rules
+// from globals.css apply (instead of the browser's default page scrollbar).
 export const page = style({
-  minHeight: "100vh",
-  width: "100vw",
+  height: "100vh",
+  width: "100%",
   boxSizing: "border-box",
   background: vars.paper,
-  padding: 12,
-  display: "flex",
-  flexDirection: "column",
-  gap: 5,
+  padding: 0,
   color: vars.ink,
-  "@media": {
-    [MOBILE]: { padding: 0, gap: 0 },
-  },
+  overflowY: "auto",
+  overflowX: "hidden",
 });
 
-// ---------- above-the-fold container ----------
-// Hero card (2/3) + title row (1/3) fill the first viewport. Sections beyond
-// scroll naturally below.
-export const aboveFold = style({
-  height: "calc(100vh - 24px)",
+// ---------- top navigation ----------
+export const navBar = style({
   display: "flex",
-  flexDirection: "column",
-  gap: 5,
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 16,
+  padding: "8px clamp(12px, 1.6vw, 28px)",
+  flexShrink: 0,
   "@media": {
-    [MOBILE]: { height: "100vh", gap: 0 },
+    [MOBILE]: { padding: "14px 20px" },
   },
 });
 
+export const navWordmark = style({
+  fontFamily: vars.font.display,
+  fontSize: 24,
+  fontWeight: 500,
+  letterSpacing: "-0.02em",
+  color: vars.ink,
+  textDecoration: "none",
+  lineHeight: 1,
+});
+
+export const navActions = style({
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+});
+
+// ---------- hero ----------
+// Matches the original flex:2 of an aboveFold of height calc(100vh - 24px)
+// with a 5px gap — i.e. (100vh - 29px) * 2/3. Self-bezeled (12px inline
+// margin) since the page no longer pads horizontally.
 export const hero = style({
   position: "relative",
-  flex: 2,
   borderRadius: 30,
   overflow: "hidden",
   isolation: "isolate",
   background: vars.paper,
-  "@media": {
-    [MOBILE]: { borderRadius: 0 },
-  },
-});
-
-// ---------- title row ----------
-// Tightened horizontal padding so the wordmark sits close to the left edge,
-// plus a bottom rule that ties wordmark + CTA cluster together.
-export const titleRow = style({
-  flex: 1,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: 24,
-  padding: "0 clamp(12px, 1.6vw, 28px)",
-  borderBottom: `1px solid ${vars.rule}`,
+  height: "calc((100vh - 29px) * 2 / 3)",
+  marginInline: 12,
   "@media": {
     [MOBILE]: {
-      flexDirection: "column",
-      alignItems: "flex-start",
-      justifyContent: "center",
-      gap: 16,
-      padding: "20px 24px",
+      borderRadius: 0,
+      height: "calc(100vh * 2 / 3)",
+      marginInline: 0,
     },
   },
 });
 
-export const wordmark = style({
+// ---------- intro section (sits directly beneath the hero) ----------
+// Edge-aligned with the hero card so the headline reads as the wordmark
+// did in the original layout: large, immediately below the vector field,
+// not pushed into a narrow centered column.
+export const introSection = style({
+  padding:
+    "28px clamp(12px, 1.6vw, 28px) clamp(72px, 9vw, 120px) clamp(28px, 4vw, 80px)",
+  display: "flex",
+  flexDirection: "column",
+  gap: 22,
+  "@media": {
+    [MOBILE]: { padding: "32px 24px 64px", gap: 18 },
+  },
+});
+
+export const introHeadline = style({
   fontFamily: vars.font.display,
-  fontSize: "clamp(56px, 11vw, 132px)",
+  fontSize: "clamp(36px, 4.8vw, 72px)",
   fontWeight: 400,
-  letterSpacing: "-0.03em",
-  lineHeight: 1,
+  letterSpacing: "-0.025em",
+  lineHeight: 1.05,
   color: vars.ink,
   margin: 0,
-  userSelect: "none",
+  maxWidth: 960,
 });
 
-export const ctaCluster = style({
+globalStyle(`${introHeadline} em`, {
+  fontStyle: "italic",
+  fontWeight: 400,
+  color: vars.accent.primary,
+});
+
+export const introSubhead = style({
+  fontFamily: vars.font.display,
+  fontSize: "clamp(22px, 2.6vw, 32px)",
+  fontWeight: 400,
+  letterSpacing: "-0.015em",
+  lineHeight: 1.25,
+  color: vars.inkSoft,
+  margin: 0,
+  marginTop: 4,
+});
+
+export const introBody = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: 14,
+  fontFamily: vars.font.ui,
+  fontSize: "clamp(15px, 1.15vw, 17px)",
+  lineHeight: 1.6,
+  color: vars.inkSoft,
+  maxWidth: 640,
+  marginTop: 8,
+});
+
+globalStyle(`${introBody} p`, { margin: 0 });
+
+export const introCta = style({
   display: "flex",
   alignItems: "center",
-  gap: 12,
-  flexShrink: 0,
+  gap: 14,
+  marginTop: 12,
+  flexWrap: "wrap",
+});
+
+export const introCtaNote = style({
+  fontFamily: vars.font.ui,
+  fontSize: 12.5,
+  color: vars.muted,
+  letterSpacing: "0.01em",
+});
+
+// ---------- editorial sections ----------
+export const prose = style({
+  display: "flex",
+  flexDirection: "column",
+});
+
+const proseSectionBase = style({
+  padding: "clamp(96px, 10vw, 160px) clamp(12px, 1.6vw, 28px)",
+  position: "relative",
   "@media": {
-    [MOBILE]: { width: "100%" },
+    [MOBILE]: { padding: "72px 24px" },
   },
 });
 
-// ---------- sections (below the fold) ----------
-const sectionBase = style({
-  padding: "96px clamp(24px, 6vw, 96px)",
-  "@media": {
-    [MOBILE]: { padding: "56px 24px" },
+// Light prose section. Sections 1 and 4 (within the prose container) pick
+// up a soft tint via :nth-child so adjacent light sections don't blur into
+// each other. The dark section at position 3 uses a different class and
+// is unaffected by these selectors.
+export const proseSection = style([
+  proseSectionBase,
+  {
+    background: vars.paper,
+    color: vars.ink,
+    borderTop: `1px solid ${vars.rule}`,
+    selectors: {
+      "&:nth-child(1), &:nth-child(4)": {
+        background: `color-mix(in srgb, ${vars.ink} 5%, ${vars.paper})`,
+      },
+    },
   },
-});
+]);
 
-export const sectionInner = style({
-  maxWidth: 1180,
+// Dark inverse — used for one mid-page section to break the rhythm.
+export const proseSectionDark = style([
+  proseSectionBase,
+  {
+    background: vars.ink,
+    color: vars.paper,
+  },
+]);
+
+// Asymmetric two-column: marker on the left, content on the right.
+// Left column is fixed-ish; right column flows to a comfortable measure.
+export const proseGrid = style({
+  display: "grid",
+  gridTemplateColumns: "minmax(180px, 240px) minmax(0, 1fr)",
+  gap: "clamp(32px, 6vw, 96px)",
+  maxWidth: 1280,
   margin: "0 auto",
-  width: "100%",
+  alignItems: "start",
+  "@media": {
+    [MOBILE]: {
+      gridTemplateColumns: "1fr",
+      gap: 28,
+    },
+  },
 });
 
-export const featuresSection = style([sectionBase, {}]);
+export const proseAside = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: 14,
+  fontFamily: vars.font.ui,
+  fontSize: 12,
+  fontWeight: 600,
+  letterSpacing: "0.16em",
+  textTransform: "uppercase",
+  color: vars.muted,
+  position: "sticky",
+  top: 24,
+  "@media": {
+    [MOBILE]: {
+      position: "static",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+  },
+});
 
-export const sectionLead = style({
+export const proseNumber = style({
+  fontFamily: vars.font.display,
+  fontSize: 22,
+  fontWeight: 400,
+  letterSpacing: "-0.01em",
+  color: "currentColor",
+  textTransform: "none",
+});
+
+globalStyle(`${proseNumber} span`, {
   fontFamily: vars.font.ui,
   fontSize: 11,
+  fontWeight: 500,
+  letterSpacing: "0.14em",
+  color: vars.muted,
+  marginLeft: 8,
+});
+
+// Short horizontal hairline that ties the aside marker to the page rhythm.
+export const proseRule = style({
+  display: "block",
+  width: 48,
+  height: 1,
+  background: "currentColor",
+  opacity: 0.35,
+  "@media": {
+    [MOBILE]: { display: "none" },
+  },
+});
+
+export const proseHeading = style({
+  fontFamily: vars.font.display,
+  fontSize: "clamp(32px, 4.2vw, 60px)",
+  fontWeight: 400,
+  letterSpacing: "-0.025em",
+  lineHeight: 1.05,
+  color: "currentColor",
+  margin: 0,
+  marginBottom: "clamp(32px, 3.5vw, 48px)",
+  maxWidth: 820,
+});
+
+export const proseBody = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: 20,
+  fontFamily: vars.font.ui,
+  maxWidth: 680,
+});
+
+export const proseLine = style({
+  fontSize: "clamp(16px, 1.15vw, 18px)",
+  lineHeight: 1.6,
+  color: "currentColor",
+  opacity: 0.78,
+  margin: 0,
+});
+
+// Pull-quote: emphasized line breaks out of the body flow with a hanging
+// accent rule on the left and a larger display setting.
+export const proseEmphasis = style({
+  fontFamily: vars.font.display,
+  fontSize: "clamp(22px, 2vw, 30px)",
+  lineHeight: 1.25,
+  fontWeight: 400,
+  letterSpacing: "-0.015em",
+  color: "currentColor",
+  margin: 0,
+  marginTop: 8,
+  marginBottom: 8,
+  paddingLeft: 18,
+  borderLeft: `2px solid ${vars.accent.primary}`,
+});
+
+// ---------- features — concrete capability tiles ----------
+export const featuresSection = style({
+  padding: "clamp(96px, 10vw, 160px) clamp(12px, 1.6vw, 28px)",
+  borderTop: `1px solid ${vars.rule}`,
+  "@media": {
+    [MOBILE]: { padding: "72px 24px" },
+  },
+});
+
+export const featuresHeader = style({
+  maxWidth: 1280,
+  margin: "0 auto",
+  marginBottom: "clamp(40px, 5vw, 64px)",
+  display: "flex",
+  flexDirection: "column",
+  gap: 12,
+});
+
+export const featuresKicker = style({
+  fontFamily: vars.font.ui,
+  fontSize: 12,
   fontWeight: 600,
   letterSpacing: "0.16em",
   textTransform: "uppercase",
   color: vars.muted,
   margin: 0,
-  marginBottom: 14,
 });
 
-export const sectionTitle = style({
+export const featuresHeading = style({
   fontFamily: vars.font.display,
-  fontSize: "clamp(32px, 4.5vw, 56px)",
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
+  fontSize: "clamp(32px, 4.2vw, 60px)",
+  fontWeight: 400,
+  letterSpacing: "-0.025em",
   lineHeight: 1.05,
   color: vars.ink,
   margin: 0,
-  marginBottom: 48,
-  maxWidth: 760,
-  "@media": {
-    [MOBILE]: { marginBottom: 32 },
-  },
 });
 
-export const featureGrid = style({
-  display: "grid",
-  gridTemplateColumns: "repeat(3, 1fr)",
-  gap: 16,
-  "@media": {
-    [MOBILE]: { gridTemplateColumns: "1fr", gap: 12 },
-  },
-});
-
-export const featureTile = style({
-  position: "relative",
-  padding: "28px 24px 26px",
-  borderRadius: 18,
-  background: vars.paper,
-  border: `1px solid ${vars.rule}`,
-  boxShadow:
-    "0 1px 0 rgba(255,255,255,0.6) inset, 0 14px 36px rgba(22,20,42,0.05)",
+export const featuresList = style({
+  maxWidth: 1280,
+  margin: "0 auto",
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: "clamp(72px, 9vw, 128px)",
 });
 
-export const featureGlyph = style({
-  fontFamily: vars.font.display,
-  fontSize: 22,
-  fontWeight: 500,
-  color: vars.accent.primary,
-  lineHeight: 1,
+// Two-column subsection — icon side + content side. Ordering is done in
+// JSX so vanilla-extract doesn't need descendant selectors; the reverse
+// variant is here as a stable hook in case we want to style asymmetries
+// per-side later.
+export const featureRow = style({
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: "clamp(32px, 6vw, 96px)",
+  alignItems: "center",
+  "@media": {
+    [MOBILE]: {
+      gridTemplateColumns: "1fr",
+      gap: 24,
+    },
+  },
 });
 
-export const featureTitle = style({
+export const featureRowReverse = style([featureRow, {}]);
+
+export const featureVisual = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 200,
+  "@media": {
+    [MOBILE]: { minHeight: 0, justifyContent: "flex-start" },
+  },
+});
+
+// Neutral ash wash behind the lucide stroke icon. Ink at low opacity so
+// the icon reads as a quiet monochrome accent, not a colored chip.
+export const featureIconWrap = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 168,
+  height: 168,
+  borderRadius: 999,
+  background: `color-mix(in srgb, ${vars.ink} 5%, transparent)`,
+  color: vars.ink,
+  "@media": {
+    [MOBILE]: { width: 120, height: 120 },
+  },
+});
+
+globalStyle(`${featureIconWrap} svg`, { display: "block" });
+
+export const featureContent = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: 14,
+  maxWidth: 520,
+});
+
+export const featureIndex = style({
+  fontFamily: vars.font.ui,
+  fontSize: 12,
+  fontWeight: 600,
+  letterSpacing: "0.16em",
+  textTransform: "uppercase",
+  color: vars.muted,
+});
+
+export const featureName = style({
   fontFamily: vars.font.display,
-  fontSize: 20,
-  fontWeight: 500,
-  letterSpacing: "-0.015em",
+  fontSize: "clamp(26px, 2.8vw, 38px)",
+  fontWeight: 400,
+  letterSpacing: "-0.02em",
+  lineHeight: 1.1,
   color: vars.ink,
   margin: 0,
 });
 
 export const featureBody = style({
   fontFamily: vars.font.ui,
-  fontSize: 13.5,
-  lineHeight: 1.5,
+  fontSize: "clamp(15px, 1.1vw, 17px)",
+  lineHeight: 1.6,
   color: vars.inkSoft,
   margin: 0,
 });
 
-// ---------- demo section ----------
-export const demoSection = style([sectionBase, { paddingTop: 32 }]);
-
-export const demoCard = style({
-  position: "relative",
-  borderRadius: 24,
-  background: vars.paper,
-  border: `1px solid ${vars.rule}`,
-  boxShadow:
-    "0 1px 0 rgba(255,255,255,0.6) inset, 0 24px 60px rgba(22,20,42,0.08)",
-  padding: "64px 48px",
-  textAlign: "center",
-  color: vars.inkSoft,
-  fontFamily: vars.font.ui,
-  fontSize: 13,
-  letterSpacing: "0.04em",
-  textTransform: "uppercase",
-  fontWeight: 600,
-  minHeight: 340,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+// ---------- close — ink-tinted card ----------
+// Card width matches the hero/vector field: it fills the page bezel
+// (page already supplies 12px horizontal padding), so the section adds
+// only vertical padding.
+export const closeSection = style({
+  padding: "clamp(72px, 8vw, 120px) 0",
   "@media": {
-    [MOBILE]: { padding: "48px 24px", minHeight: 240 },
+    [MOBILE]: { padding: "72px 0" },
   },
 });
 
-// ---------- final CTA — ink-tinted ----------
-export const ctaSection = style({
-  padding: "104px clamp(24px, 6vw, 96px) 112px",
-  "@media": {
-    [MOBILE]: { padding: "72px 24px 80px" },
-  },
-});
-
-export const ctaCard = style({
+export const closeCard = style({
   borderRadius: 30,
   background: vars.ink,
   color: vars.paper,
-  padding: "72px clamp(32px, 5vw, 80px)",
+  padding: "clamp(72px, 9vw, 120px) clamp(32px, 6vw, 96px)",
+  marginInline: 12,
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
   textAlign: "center",
-  gap: 12,
+  gap: 14,
   "@media": {
-    [MOBILE]: { padding: "56px 24px", borderRadius: 22 },
+    [MOBILE]: { padding: "64px 28px", borderRadius: 0, marginInline: 0 },
   },
 });
 
-export const ctaTitle = style({
+export const closeHeading = style({
   fontFamily: vars.font.display,
-  fontSize: "clamp(36px, 5.5vw, 64px)",
+  fontSize: "clamp(34px, 5vw, 60px)",
   fontWeight: 400,
   letterSpacing: "-0.025em",
-  lineHeight: 1.04,
+  lineHeight: 1.05,
   margin: 0,
+  maxWidth: 640,
 });
 
-export const ctaBody = style({
+export const closeBody = style({
   fontFamily: vars.font.ui,
-  fontSize: 15,
+  fontSize: "clamp(15px, 1.15vw, 17px)",
+  lineHeight: 1.5,
   color: "rgba(242,239,234,0.78)",
   margin: 0,
   maxWidth: 520,
-  lineHeight: 1.5,
 });
 
-export const ctaActions = style({
+export const closeActions = style({
   display: "flex",
   gap: 10,
-  marginTop: 12,
+  marginTop: 20,
   flexWrap: "wrap",
   justifyContent: "center",
+});
+
+export const closeNote = style({
+  fontFamily: vars.font.ui,
+  fontSize: 12.5,
+  color: "rgba(242,239,234,0.55)",
+  margin: 0,
+  marginTop: 8,
+  letterSpacing: "0.01em",
 });
 
 // ---------- footer ----------
