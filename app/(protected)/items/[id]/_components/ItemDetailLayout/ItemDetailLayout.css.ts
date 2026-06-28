@@ -3,7 +3,6 @@ import {
   vars,
   themeTransition,
   interactiveTransition,
-  contentWidths,
 } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
@@ -21,7 +20,7 @@ export const innerWrap = style({
   flexDirection: "column",
   padding: "20px 56px 28px",
   width: "100%",
-  maxWidth: contentWidths.lg,
+  maxWidth: 1240,
   marginInline: "auto",
   flex: 1,
   minHeight: 0,

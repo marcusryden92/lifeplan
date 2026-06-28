@@ -32,8 +32,7 @@
 
 # P4 — Refactors / investigations
 
-- Window sizes / container leaks: current solution was added to fix item detail being too wide for the screen, but the same issue happens in the create/edit modals in the location view. Need to find the root cause — items leaking outside their container.
-- Token consolidation into sprinkles (color/space/radii) — started with `contentWidths`
+- Token consolidation into sprinkles (color/space/radii)
 - Server-side overlap validation for CategoryTimeWindow
 - Plumb `TravelTime.transportMode` through the scheduling engine
 - Add console error messaging
