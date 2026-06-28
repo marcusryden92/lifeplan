@@ -19,6 +19,7 @@ import {
   EventTemplate,
   Category,
   CategoryEvent,
+  TravelEvent,
 } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
@@ -38,6 +39,7 @@ type CalendarContextType = {
   template: EventTemplate[];
   categories: Category[];
   categoryEvents: CategoryEvent[];
+  travelEvents: TravelEvent[];
   updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>;
   updateCalendarArray: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
   updateTemplateArray: React.Dispatch<React.SetStateAction<EventTemplate[]>>;
@@ -75,10 +77,14 @@ export default function CalendarProvider({
     },
   };
 
-  const { planner, calendar, template, categories, categoryEvents } = useMemo(
-    () => calendarState,
-    [calendarState]
-  );
+  const {
+    planner,
+    calendar,
+    template,
+    categories,
+    categoryEvents,
+    travelEvents,
+  } = useMemo(() => calendarState, [calendarState]);
 
   const weekStartDay: WeekDayIntegers = 1;
 
@@ -141,6 +147,7 @@ export default function CalendarProvider({
     template,
     categories,
     categoryEvents,
+    travelEvents,
     updatePlannerArray,
     updateCalendarArray,
     updateTemplateArray,

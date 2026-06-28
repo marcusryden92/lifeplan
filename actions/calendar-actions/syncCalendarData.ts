@@ -9,6 +9,7 @@ import { handleTemplateChanges } from "./sync-handlers/templateHandlers";
 import { handleCategoryChanges } from "./sync-handlers/categoryHandlers";
 import { handleTimeWindowChanges } from "./sync-handlers/timeWindowHandlers";
 import { handleCategoryEventChanges } from "./sync-handlers/categoryEventHandlers";
+import { handleTravelEventChanges } from "./sync-handlers/travelEventHandlers";
 import { handleLocationChanges } from "./sync-handlers/locationHandlers";
 import { handleTravelTimeChanges } from "./sync-handlers/travelTimeHandlers";
 import { fetchFreshState, type FreshState } from "./fetchFreshState";
@@ -59,6 +60,7 @@ export async function syncCalendarData(
           ...handleCategoryChanges(tx, userId, databaseChanges, updatedAt),
           ...handleTimeWindowChanges(tx, userId, databaseChanges),
           ...handleCategoryEventChanges(tx, userId, databaseChanges),
+          ...handleTravelEventChanges(tx, userId, databaseChanges),
           ...handleLocationChanges(tx, userId, databaseChanges),
           ...handleTravelTimeChanges(tx, userId, databaseChanges),
         ];

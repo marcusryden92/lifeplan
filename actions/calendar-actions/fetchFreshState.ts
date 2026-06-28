@@ -9,6 +9,7 @@ import type {
   Planner,
   Category,
   CategoryEvent,
+  TravelEvent,
 } from "@/types/prisma";
 import type {
   SerializedLocation,
@@ -27,6 +28,7 @@ export type FreshState = {
   template: EventTemplate[];
   categories: Category[];
   categoryEvents: CategoryEvent[];
+  travelEvents: TravelEvent[];
   locations: SerializedLocation[];
   travelTimes: SerializedTravelTime[];
 };
@@ -39,6 +41,7 @@ export async function fetchFreshState(userId: string): Promise<FreshState> {
     templatesRaw,
     categoriesRaw,
     categoryEvents,
+    travelEvents,
     locations,
     travelTimes,
   ] = await Promise.all([
@@ -57,6 +60,7 @@ export async function fetchFreshState(userId: string): Promise<FreshState> {
       include: { timeSlots: true, location: true },
     }),
     db.categoryEvent.findMany({ where: { userId } }),
+    db.travelEvent.findMany({ where: { userId } }),
     db.location.findMany({
       where: { userId },
       orderBy: { createdAt: "asc" },
@@ -105,6 +109,7 @@ export async function fetchFreshState(userId: string): Promise<FreshState> {
     template,
     categories,
     categoryEvents,
+    travelEvents,
     locations,
     travelTimes: allTravelTimes,
   };

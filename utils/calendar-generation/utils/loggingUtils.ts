@@ -4,7 +4,7 @@
  * Centralized debug logging for calendar generation.
  */
 
-import { SimpleEvent } from "@/types/prisma";
+import { SimpleEvent, TravelEvent } from "@/types/prisma";
 import { PerTemplateMask } from "../models/TemplateModels";
 import {
   CalendarGenerationInput,
@@ -24,7 +24,7 @@ import type {
 
 export interface LoggingData {
   allEvents: SimpleEvent[];
-  travelEvents: SimpleEvent[];
+  travelEvents: TravelEvent[];
   recurringTemplateEvents: SimpleEvent[];
   perTemplateMasks: PerTemplateMask[];
   largestTemplateGap: number;
@@ -207,12 +207,19 @@ export function logCalendarDebugInfo(
   // Travel debug
   if (shouldLog(input, "travelDebug")) {
     console.log("TRAVEL DEBUG:");
-    const filtered = filterEventsByLogRange(data.travelEvents, logging);
+    const filtered = data.travelEvents.filter((te) => {
+      const start = new Date(te.start);
+      if (logging?.dateRangeStart && start < logging.dateRangeStart) return false;
+      if (logging?.dateRangeEnd && start > logging.dateRangeEnd) return false;
+      return true;
+    });
     console.log(`  Travel events generated: ${filtered.length}`);
     if (filtered.length > 0) {
       console.log("  Travel events:");
       filtered.forEach((te) => {
-        console.log(`    - ${te.title}: ${te.start} to ${te.end}`);
+        const from = te.fromLocationId ?? "?";
+        const to = te.toLocationId ?? "?";
+        console.log(`    - ${from} → ${to}: ${te.start} to ${te.end}`);
       });
     }
   }

@@ -5,7 +5,7 @@
  * Handles normal travel, insufficient travel, and location transitions.
  */
 
-import { SimpleEvent } from "@/types/prisma";
+import { TravelEvent } from "@/types/prisma";
 import {
   AvailableSlot,
   CategorySlot,
@@ -316,7 +316,7 @@ export class TravelManager {
     return this.slots.filter((s): s is TravelSlot => s.type === "travel");
   }
 
-  generateTravelEvents(userId: string): SimpleEvent[] {
+  generateTravelEvents(userId: string): TravelEvent[] {
     return generateTravelEvents(this.slots, userId);
   }
 }

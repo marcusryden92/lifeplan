@@ -9,6 +9,7 @@ import {
   EventTemplate,
   Category,
   CategoryEvent,
+  TravelEvent,
 } from "@/types/prisma";
 import type {
   SerializedLocation,
@@ -27,6 +28,7 @@ const useCalendarServerSync = (
     template: EventTemplate[];
     categories: Category[];
     categoryEvents: CategoryEvent[];
+    travelEvents: TravelEvent[];
     locations: SerializedLocation[];
     travelTimes: SerializedTravelTime[];
   },
@@ -37,6 +39,7 @@ const useCalendarServerSync = (
   const previousTemplate = useRef<EventTemplate[]>([]);
   const previousCategories = useRef<Category[]>([]);
   const previousCategoryEvents = useRef<CategoryEvent[]>([]);
+  const previousTravelEvents = useRef<TravelEvent[]>([]);
   const previousLocations = useRef<SerializedLocation[]>([]);
   const previousTravelTimes = useRef<SerializedTravelTime[]>([]);
   // OCC token. Every successful sync bumps the server-side User.dataVersion
@@ -53,6 +56,7 @@ const useCalendarServerSync = (
     template,
     categories,
     categoryEvents,
+    travelEvents,
     locations,
     travelTimes,
   } = calendarState;
@@ -64,6 +68,7 @@ const useCalendarServerSync = (
       template: EventTemplate[],
       categories: Category[],
       categoryEvents: CategoryEvent[],
+      travelEvents: TravelEvent[],
       dataVersion: number,
     ) => {
       previousPlanner.current = planner;
@@ -71,6 +76,7 @@ const useCalendarServerSync = (
       previousTemplate.current = template;
       previousCategories.current = categories;
       previousCategoryEvents.current = categoryEvents;
+      previousTravelEvents.current = travelEvents;
       // Locations are loaded asynchronously by UserProvider, which may race
       // with the calendar fetch. We seed previousLocations from the current
       // value; the diff's create-branch is a no-op for locations (Google
@@ -125,6 +131,7 @@ const useCalendarServerSync = (
         template: previousTemplate.current,
         categories: previousCategories.current,
         categoryEvents: previousCategoryEvents.current,
+        travelEvents: previousTravelEvents.current,
       }),
     );
     dispatch(
@@ -148,6 +155,7 @@ const useCalendarServerSync = (
       previousTemplate.current = fresh.template;
       previousCategories.current = fresh.categories;
       previousCategoryEvents.current = fresh.categoryEvents;
+      previousTravelEvents.current = fresh.travelEvents;
       previousLocations.current = fresh.locations;
       previousTravelTimes.current = fresh.travelTimes;
       knownDataVersion.current = fresh.dataVersion;
@@ -159,6 +167,7 @@ const useCalendarServerSync = (
           template: fresh.template,
           categories: fresh.categories,
           categoryEvents: fresh.categoryEvents,
+          travelEvents: fresh.travelEvents,
         }),
       );
       dispatch(schedulingSettingsSlice.actions.setLocations(fresh.locations));
@@ -187,6 +196,8 @@ const useCalendarServerSync = (
           previousCategories,
           categoryEvents,
           previousCategoryEvents,
+          travelEvents,
+          previousTravelEvents,
           locations,
           previousLocations,
           travelTimes,
@@ -199,6 +210,7 @@ const useCalendarServerSync = (
           previousTemplate.current = template;
           previousCategories.current = categories;
           previousCategoryEvents.current = categoryEvents;
+          previousTravelEvents.current = travelEvents;
           previousLocations.current = locations;
           previousTravelTimes.current = travelTimes;
           knownDataVersion.current = response.newDataVersion;
@@ -237,6 +249,9 @@ const useCalendarServerSync = (
     const categoryEventsSame =
       JSON.stringify(previousCategoryEvents.current) ===
       JSON.stringify(categoryEvents);
+    const travelEventsSame =
+      JSON.stringify(previousTravelEvents.current) ===
+      JSON.stringify(travelEvents);
     const locationsSame =
       JSON.stringify(previousLocations.current) === JSON.stringify(locations);
     const travelTimesSame =
@@ -249,6 +264,7 @@ const useCalendarServerSync = (
       templateSame &&
       categoriesSame &&
       categoryEventsSame &&
+      travelEventsSame &&
       locationsSame &&
       travelTimesSame
     ) {
@@ -267,6 +283,7 @@ const useCalendarServerSync = (
     template,
     categories,
     categoryEvents,
+    travelEvents,
     locations,
     travelTimes,
     isInitialized,

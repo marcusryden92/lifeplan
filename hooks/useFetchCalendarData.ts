@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import calendarSlice from "@/redux/slices/calendarSlice";
-import { Planner, Category, CategoryEvent } from "@/types/prisma";
+import {
+  Planner,
+  Category,
+  CategoryEvent,
+  TravelEvent,
+} from "@/types/prisma";
 import { SimpleEvent } from "@/types/prisma";
 import { EventTemplate } from "@/types/prisma";
 import { fetchCalendarData } from "@/actions/calendar-actions/fetchCalendarData";
@@ -15,6 +20,7 @@ interface Data {
   template: EventTemplate[];
   categories: Category[];
   categoryEvents: CategoryEvent[];
+  travelEvents: TravelEvent[];
 }
 
 export function useFetchCalendarData(
@@ -25,6 +31,7 @@ export function useFetchCalendarData(
     template: EventTemplate[],
     categories: Category[],
     categoryEvents: CategoryEvent[],
+    travelEvents: TravelEvent[],
     dataVersion: number,
   ) => void,
 ) {
@@ -51,6 +58,7 @@ export function useFetchCalendarData(
           template,
           categories,
           categoryEvents,
+          travelEvents,
           dataVersion,
         } = response.data;
         const newData = {
@@ -59,6 +67,7 @@ export function useFetchCalendarData(
           template,
           categories,
           categoryEvents,
+          travelEvents,
         };
 
         setData(newData);
@@ -72,6 +81,7 @@ export function useFetchCalendarData(
           newData.template,
           newData.categories,
           newData.categoryEvents,
+          newData.travelEvents,
           dataVersion,
         );
       } catch (err) {

@@ -12,6 +12,7 @@ import {
   SimpleEvent,
   Category,
   CategoryEvent,
+  TravelEvent,
 } from "@/types/prisma";
 import { CalendarGenerator } from "./core/CalendarGenerator";
 import { SCHEDULING_CONFIG } from "./constants";
@@ -46,8 +47,10 @@ export interface GenerateCalendarOptions {
  * @param planner - Planner items (tasks, goals, plans)
  * @param prevCalendar - Previous calendar events to preserve
  * @param options - Optional configuration (bufferTimeMinutes, travelTimeMatrix, injectTravelEvents)
- * @returns `{ events, categoryEvents }` — events are plans + scheduled tasks + travel;
- *   categoryEvents are the materialized weekly category occurrences (with trespass info).
+ * @returns `{ events, categoryEvents, travelEvents }` — events are plans +
+ *   scheduled tasks; categoryEvents are the materialized weekly category
+ *   occurrences (with trespass info); travelEvents are the materialized travel
+ *   blocks between scheduled items.
  */
 export function generateCalendar(
   userId: string,
@@ -56,7 +59,11 @@ export function generateCalendar(
   planner: Planner[],
   prevCalendar: SimpleEvent[],
   options: GenerateCalendarOptions | number = {},
-): { events: SimpleEvent[]; categoryEvents: CategoryEvent[] } {
+): {
+  events: SimpleEvent[];
+  categoryEvents: CategoryEvent[];
+  travelEvents: TravelEvent[];
+} {
   // Handle backwards compatibility - if a number is passed, treat it as bufferTimeMinutes
   const opts: GenerateCalendarOptions =
     typeof options === "number" ? { bufferTimeMinutes: options } : options;
@@ -106,5 +113,9 @@ export function generateCalendar(
     },
   }).generate();
 
-  return { events: result.events, categoryEvents: result.categoryEvents };
+  return {
+    events: result.events,
+    categoryEvents: result.categoryEvents,
+    travelEvents: result.travelEvents,
+  };
 }

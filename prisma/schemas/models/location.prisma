@@ -16,6 +16,10 @@ model Location {
   travelTimesFrom TravelTime[] @relation("FromLocation")
   travelTimesTo   TravelTime[] @relation("ToLocation")
 
+  // Materialized travel events going from / to this location
+  travelEventsFrom TravelEvent[] @relation("TravelEventFrom")
+  travelEventsTo   TravelEvent[] @relation("TravelEventTo")
+
   // Planners assigned to this location
   planners Planner[]
 
@@ -62,4 +66,39 @@ enum TransportMode {
   TRANSIT
   BICYCLING
   WALKING
+}
+
+model TravelEvent {
+  // Deterministic id: `${fromLocationId ?? "anywhere"}-${toLocationId ?? "anywhere"}-${start}`.
+  // Same logical travel at the same time produces the same row across regens
+  // — sync becomes idempotent. Engine writes wholesale on each regen; the
+  // diff lands as creates only when an actual placement shifted.
+  id                    String    @id
+
+  start                 String    // ISO datetime
+  end                   String    // ISO datetime
+
+  // Travel direction. Nullable when the engine couldn't determine a side
+  // (e.g. start of day, no preceding event with a location).
+  fromLocationId        String?
+  fromLocation          Location? @relation("TravelEventFrom", fields: [fromLocationId], references: [id], onDelete: SetNull)
+  toLocationId          String?
+  toLocation            Location? @relation("TravelEventTo", fields: [toLocationId], references: [id], onDelete: SetNull)
+
+  // Engine's intended duration in minutes
+  travelMinutes         Int
+  // Originally-required minutes when the engine was forced into a smaller slot
+  requiredTravelMinutes Int?
+
+  // Visual markers — render red / yellow when set
+  insufficientTravel    Boolean   @default(false)
+  overconstrained       Boolean   @default(false)
+
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt             String    @default(dbgenerated("NOW()::text"))
+  updatedAt             String
+
+  @@map("TravelEvents")
 }

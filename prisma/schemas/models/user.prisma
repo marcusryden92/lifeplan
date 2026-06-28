@@ -20,6 +20,7 @@ model User {
   categories            Category[]
   categoryTimeWindows   CategoryTimeWindow[]
   categoryEvents        CategoryEvent[]
+  travelEvents          TravelEvent[]
 
   @@map("users")
 }

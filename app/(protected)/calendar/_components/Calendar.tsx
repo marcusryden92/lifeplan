@@ -20,6 +20,7 @@ import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
 import {
   templatesToEventInput,
   categoryEventsToEventInput,
+  travelEventsToEventInput,
 } from "@/utils/calendar-rendering";
 
 import {
@@ -62,6 +63,7 @@ export default function Calendar({
     template,
     categories,
     categoryEvents,
+    travelEvents,
     updateTemplateArray,
     updatePlannerArray,
     updateAll,
@@ -73,14 +75,15 @@ export default function Calendar({
     end: Date;
   } | null>(null);
 
-  // Three render streams merged into the single FullCalendar event array:
-  //   1. persisted SimpleEvents (plans, scheduled tasks, travel)
+  // Four render streams merged into the single FullCalendar event array:
+  //   1. persisted SimpleEvents (plans + scheduled tasks)
   //   2. templates expanded from EventTemplate config at render time (RRule)
   //   3. category occurrences from the persisted CategoryEvent table (with
   //      trespass info)
-  // Templates and category occurrences are NOT in `calendar` — they were
-  // filtered out of the engine's SimpleEvent output. Render reads each from
-  // its own source of truth.
+  //   4. travel blocks from the persisted TravelEvent table
+  // Only #1 lives in `calendar` — templates, category wrappers, and travel
+  // each live in their own source of truth and survive reloads without a
+  // Regenerate.
   const fullCalendarEvents: EventInput[] = useMemo(() => {
     const persisted = calendar ? transformEventsForFullCalendar(calendar) : [];
     const templates = templatesToEventInput(template ?? []);
@@ -88,8 +91,9 @@ export default function Calendar({
       categoryEvents ?? [],
       categories ?? [],
     );
-    return [...persisted, ...templates, ...categoryWindows];
-  }, [calendar, template, categories, categoryEvents]);
+    const travel = travelEventsToEventInput(travelEvents ?? []);
+    return [...persisted, ...templates, ...categoryWindows, ...travel];
+  }, [calendar, template, categories, categoryEvents, travelEvents]);
 
   return (
     <>

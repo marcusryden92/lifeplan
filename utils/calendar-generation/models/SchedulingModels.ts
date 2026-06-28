@@ -10,6 +10,7 @@ import {
   EventTemplate,
   Category,
   CategoryEvent,
+  TravelEvent,
 } from "@/types/prisma";
 
 import { SchedulingFailureReason } from "../constants";
@@ -43,6 +44,12 @@ export interface CalendarGenerationResult extends SchedulingResult {
    * categories were configured.
    */
   categoryEvents: CategoryEvent[];
+  /**
+   * Materialized travel events between scheduled items. Persisted alongside
+   * `events` — renderer reads these to draw travel blocks. Empty when travel
+   * injection is disabled or no cross-location placements exist.
+   */
+  travelEvents: TravelEvent[];
 }
 
 /**

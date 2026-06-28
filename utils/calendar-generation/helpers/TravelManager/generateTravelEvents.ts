@@ -1,4 +1,4 @@
-import { SimpleEvent, EventType } from "@/types/prisma";
+import { TravelEvent } from "@/types/prisma";
 import { Slot, TravelSlot } from "../../models/TimeSlot";
 
 // Merge shards of one logical travel into a single rendered event. Shards
@@ -48,57 +48,38 @@ function mergeShardsIntoLogicalTravels(travelSlots: TravelSlot[]): TravelSlot[] 
   return merged;
 }
 
+// Produces materialized TravelEvent rows for persistence. Deterministic id
+// (`${fromLocationId ?? "anywhere"}-${toLocationId ?? "anywhere"}-${startISO}`)
+// keeps the same travel idempotent across regens — unchanged placements diff
+// as a no-op; shifted placements produce a destroy + create pair.
 export function generateTravelEvents(
   slots: Slot[],
   userId: string,
-): SimpleEvent[] {
+): TravelEvent[] {
   const travelSlots = mergeShardsIntoLogicalTravels(
     slots.filter((s): s is TravelSlot => s.type === "travel"),
   );
-  const now = new Date();
+  const now = new Date().toISOString();
 
-  return travelSlots.map((slot: TravelSlot) => {
-    // Color priority: insufficient (red) outranks overconstrained (yellow);
-    // a travel that's both gets the red treatment since the harder failure
-    // wins. Default grey for clean placements.
-    let backgroundColor = "#9CA3AF";
-    let borderColor = "#6B7280";
-    if (slot.insufficientTravel) {
-      backgroundColor = "#F87171";
-      borderColor = "#DC2626";
-    } else if (slot.overconstrained) {
-      backgroundColor = "#FDE68A";
-      borderColor = "#D97706";
-    }
+  return travelSlots.map((slot: TravelSlot): TravelEvent => {
+    const startISO = slot.start.toISOString();
+    const fromKey = slot.travelFromLocationId ?? "anywhere";
+    const toKey = slot.travelToLocationId ?? "anywhere";
 
     return {
-      userId,
-      id: slot.eventId,
-      title: `Travel_${slot.travelFromLocationId ?? "unknown"}_${slot.travelToLocationId ?? "unknown"}`,
-      start: slot.start.toISOString(),
+      id: `${fromKey}-${toKey}-${startISO}`,
+      start: startISO,
       end: slot.end.toISOString(),
-      backgroundColor,
-      borderColor,
-      duration: null,
-      rrule: null,
-      extendedProps: {
-        id: slot.eventId,
-        eventId: slot.eventId,
-        PlannerType: null,
-        eventType: EventType.travel,
-        parentId: null,
-        completedEndTime: null,
-        completedStartTime: null,
-        fromLocationId: slot.travelFromLocationId,
-        toLocationId: slot.travelToLocationId,
-        travelMinutes: slot.durationMinutes,
-        insufficientTravel: slot.insufficientTravel,
-        overconstrained: slot.overconstrained ?? false,
-        requiredTravelMinutes:
-          slot.requiredTravelMinutes > 0 ? slot.requiredTravelMinutes : null,
-      },
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString(),
-    } as unknown as SimpleEvent;
+      fromLocationId: slot.travelFromLocationId,
+      toLocationId: slot.travelToLocationId,
+      travelMinutes: slot.durationMinutes,
+      requiredTravelMinutes:
+        slot.requiredTravelMinutes > 0 ? slot.requiredTravelMinutes : null,
+      insufficientTravel: slot.insufficientTravel,
+      overconstrained: slot.overconstrained ?? false,
+      userId,
+      createdAt: now,
+      updatedAt: now,
+    };
   });
 }

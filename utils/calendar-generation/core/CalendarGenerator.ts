@@ -120,6 +120,7 @@ export class CalendarGenerator {
         success: false,
         events: [],
         categoryEvents: [],
+        travelEvents: [],
         failures: validation.failures,
         metrics: this.metrics,
       };
@@ -268,7 +269,11 @@ export class CalendarGenerator {
       timeSlotManager.slots,
       schedulingStartDate,
     );
-    const { events: allEvents, categoryEvents } = assembleFinalEvents(
+    const {
+      events: allEvents,
+      categoryEvents,
+      travelEvents,
+    } = assembleFinalEvents(
       input.userId,
       travelManager,
       context,
@@ -310,6 +315,7 @@ export class CalendarGenerator {
       success: schedulingResult.failures.length === 0,
       events: allEvents,
       categoryEvents,
+      travelEvents,
       failures: [...schedulingResult.failures],
       metrics: this.metrics,
     };
