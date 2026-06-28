@@ -2,17 +2,36 @@ import type { Prisma } from "@/prisma/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
 type Database = Prisma.TransactionClient;
 
+// Same delete + recreate pattern as categoryEventHandlers — TravelEvent rows
+// are entirely engine-derived, so collapsing updates to delete + createMany
+// removes per-row UPDATE round-trips.
 export function handleTravelEventChanges(
   db: Database,
   userId: string,
   databaseChanges: DatabaseChanges,
 ) {
-  const operations = [];
+  const operations: Promise<unknown>[] = [];
+  const now = new Date().toISOString();
 
-  if (databaseChanges.travelEvent.create.length) {
+  const updates = databaseChanges.travelEvent.update;
+  const creates = databaseChanges.travelEvent.create;
+  const destroys = databaseChanges.travelEvent.destroy;
+
+  const idsToDelete = [...destroys, ...updates].map((e) => e.id);
+  const rowsToCreate = [...creates, ...updates];
+
+  if (idsToDelete.length) {
+    operations.push(
+      db.travelEvent.deleteMany({
+        where: { id: { in: idsToDelete } },
+      }),
+    );
+  }
+
+  if (rowsToCreate.length) {
     operations.push(
       db.travelEvent.createMany({
-        data: databaseChanges.travelEvent.create.map((e) => ({
+        data: rowsToCreate.map((e) => ({
           id: e.id,
           start: e.start,
           end: e.end,
@@ -23,38 +42,8 @@ export function handleTravelEventChanges(
           insufficientTravel: e.insufficientTravel,
           overconstrained: e.overconstrained,
           userId,
-          updatedAt: new Date().toISOString(),
+          updatedAt: now,
         })),
-        skipDuplicates: true,
-      }),
-    );
-  }
-
-  for (const e of databaseChanges.travelEvent.update) {
-    operations.push(
-      db.travelEvent.update({
-        where: { id: e.id },
-        data: {
-          start: e.start,
-          end: e.end,
-          fromLocationId: e.fromLocationId,
-          toLocationId: e.toLocationId,
-          travelMinutes: e.travelMinutes,
-          requiredTravelMinutes: e.requiredTravelMinutes,
-          insufficientTravel: e.insufficientTravel,
-          overconstrained: e.overconstrained,
-          updatedAt: new Date().toISOString(),
-        },
-      }),
-    );
-  }
-
-  if (databaseChanges.travelEvent.destroy.length) {
-    operations.push(
-      db.travelEvent.deleteMany({
-        where: {
-          id: { in: databaseChanges.travelEvent.destroy.map((e) => e.id) },
-        },
       }),
     );
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useSelector } from "react-redux";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -15,6 +16,7 @@ import TravelEventContent from "@/components/events/TravelEventContent";
 import { CategoryWrapperEvent } from "@/components/events/CategoryWrapperEvent";
 
 import type { EventInput } from "@fullcalendar/core/index.js";
+import type { RootState } from "@/redux/store";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
 import {
@@ -69,6 +71,10 @@ export default function Calendar({
     updateAll,
   } = useCalendarProvider();
 
+  const locations = useSelector(
+    (state: RootState) => state.schedulingSettings.locations,
+  );
+
   const calendarRef = useRef<FullCalendarComponent>(null);
   const [pendingPlan, setPendingPlan] = useState<{
     start: Date;
@@ -91,9 +97,9 @@ export default function Calendar({
       categoryEvents ?? [],
       categories ?? [],
     );
-    const travel = travelEventsToEventInput(travelEvents ?? []);
+    const travel = travelEventsToEventInput(travelEvents ?? [], locations);
     return [...persisted, ...templates, ...categoryWindows, ...travel];
-  }, [calendar, template, categories, categoryEvents, travelEvents]);
+  }, [calendar, template, categories, categoryEvents, travelEvents, locations]);
 
   return (
     <>

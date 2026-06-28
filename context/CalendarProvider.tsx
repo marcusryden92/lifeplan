@@ -62,6 +62,9 @@ export default function CalendarProvider({
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.user.user);
   const calendarState = useSelector((state: RootState) => state.calendar);
+  const isCalendarLoaded = useSelector(
+    (state: RootState) => state.calendar.isLoaded,
+  );
 
   const userId = user?.id;
   const userSettings = {
@@ -84,7 +87,7 @@ export default function CalendarProvider({
     categories,
     categoryEvents,
     travelEvents,
-  } = useMemo(() => calendarState, [calendarState]);
+  } = calendarState;
 
   const weekStartDay: WeekDayIntegers = 1;
 
@@ -122,6 +125,40 @@ export default function CalendarProvider({
     if (!userId) return;
     updateAll();
   }, [bufferTimeMinutes, updateAll, userId]);
+
+  // Empty-state autoregen, fired exactly once per cold load. Snapshots
+  // isCalendarLoaded at mount: if redux retained the loaded state from a
+  // prior navigation (we're remounting, not cold-loading), this branch is
+  // permanently inert — preventing a perpetual re-fire when categories
+  // exist but no engine output materializes (e.g. categories with no time
+  // windows defined).
+  const isInitialColdLoadRef = useRef(!isCalendarLoaded);
+  const autoregenFired = useRef(false);
+  useEffect(() => {
+    if (!isInitialColdLoadRef.current) return;
+    if (!isCalendarLoaded || autoregenFired.current || !userId) return;
+    const hasNoChrome =
+      calendarState.categoryEvents.length === 0 &&
+      calendarState.travelEvents.length === 0;
+    // Tighter than `categories.length > 0` — a category without time windows
+    // produces nothing, so firing autoregen wouldn't change hasNoChrome and
+    // the next render would re-evaluate as still-empty.
+    const hasSomethingToMaterialize =
+      calendarState.categories.some((c) => c.timeSlots.length > 0) ||
+      calendarState.planner.some((p) => p.locationId);
+    if (hasNoChrome && hasSomethingToMaterialize) {
+      autoregenFired.current = true;
+      updateAll();
+    }
+  }, [
+    isCalendarLoaded,
+    userId,
+    updateAll,
+    calendarState.categoryEvents.length,
+    calendarState.travelEvents.length,
+    calendarState.categories,
+    calendarState.planner,
+  ]);
 
   const syncState = useMemo(
     () => ({ ...calendarState, locations, travelTimes }),

@@ -369,22 +369,17 @@ export function compareData(
     });
   }
 
-  // createdAt / updatedAt are DB metadata, not source-of-truth. The engine
-  // sets both to Date.now() on every regen, so without stripping them every
-  // row would diff as an UPDATE every regen — hundreds of needless writes
-  // that easily blow the transaction budget.
-  const stripMeta = <T extends { createdAt?: string; updatedAt?: string }>(
+  // Engine emits empty createdAt/updatedAt; DB owns those fields. Strip on
+  // both sides so engine output and DB-loaded rows compare cleanly.
+  const stripDbMetadata = <
+    T extends { createdAt?: string; updatedAt?: string },
+  >(
     e: T,
   ) => {
     const { createdAt: _c, updatedAt: _u, ...rest } = e;
     return rest;
   };
 
-  // Category events (materialized weekly occurrences with trespass info).
-  // Engine produces these wholesale on regen; deterministic ids mean unchanged
-  // occurrences diff as a no-op. Different list from time windows —
-  // categoryTimeWindow is the recurring rule, categoryEvent is the realized
-  // occurrence.
   if (categoryEvents && previousCategoryEvents) {
     const currByEvent = new Map(categoryEvents.map((e) => [e.id, e]));
     const prevByEvent = new Map(
@@ -394,7 +389,7 @@ export function compareData(
       const prev = prevByEvent.get(id);
       if (!prev) {
         databaseChanges.categoryEvent.create.push(ev);
-      } else if (!objectsAreEqual(stripMeta(prev), stripMeta(ev))) {
+      } else if (!objectsAreEqual(stripDbMetadata(prev), stripDbMetadata(ev))) {
         databaseChanges.categoryEvent.update.push(ev);
       }
     });
@@ -405,11 +400,6 @@ export function compareData(
     });
   }
 
-  // Travel events (materialized travels between scheduled items). Engine
-  // produces these wholesale on regen with deterministic ids
-  // (`${fromLocationId}-${toLocationId}-${start}`) — unchanged travels diff
-  // as a no-op. Schedule shifts that produce new (locations, start) tuples
-  // surface as create + destroy of the matching prior travel.
   if (travelEvents && previousTravelEvents) {
     const currByTravel = new Map(travelEvents.map((e) => [e.id, e]));
     const prevByTravel = new Map(
@@ -419,7 +409,7 @@ export function compareData(
       const prev = prevByTravel.get(id);
       if (!prev) {
         databaseChanges.travelEvent.create.push(ev);
-      } else if (!objectsAreEqual(stripMeta(prev), stripMeta(ev))) {
+      } else if (!objectsAreEqual(stripDbMetadata(prev), stripDbMetadata(ev))) {
         databaseChanges.travelEvent.update.push(ev);
       }
     });

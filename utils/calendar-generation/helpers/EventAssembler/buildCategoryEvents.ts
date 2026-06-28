@@ -1,6 +1,6 @@
 import { Category, CategoryEvent } from "@/types/prisma";
 import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
-import { TIME_CONSTANTS } from "../../constants";
+import { dateTimeService } from "../../utils/dateTimeService";
 
 type CategoryPeriod = {
   start: Date;
@@ -15,7 +15,6 @@ function expandPeriods(
   endDate: Date,
 ): CategoryPeriod[] {
   const periods: CategoryPeriod[] = [];
-  const { MS_PER_WEEK } = TIME_CONSTANTS;
 
   for (const constraint of constraints) {
     for (const slot of constraint.timeSlots) {
@@ -35,7 +34,11 @@ function expandPeriods(
           });
         }
 
-        searchBase.setTime(searchBase.getTime() + MS_PER_WEEK);
+        // setDate stays wall-clock aligned across DST; a fixed UTC stride
+        // (getTime + MS_PER_WEEK) drifts the local day-of-week by an hour
+        // either side of a DST boundary and can skip the target day-of-week
+        // entirely on the fall-back side.
+        searchBase.setDate(searchBase.getDate() + 7);
       }
     }
   }
@@ -43,10 +46,12 @@ function expandPeriods(
   return periods.sort((a, b) => a.start.getTime() - b.start.getTime());
 }
 
-// Materializes one CategoryEvent row per weekly occurrence of every active
-// time window. IDs are deterministic (`${categoryTimeWindowId}-${startISO}`)
-// so a regen produces the same id for the same occurrence — sync becomes
-// idempotent and trespass info travels with the row across reloads.
+// Id pairs windowId with the LOCAL calendar date of the occurrence. Local
+// keying tracks user intent — a "Monday 8 AM work" window stays at 8 AM
+// through DST and keeps the same id week-to-week. A user who changes
+// machine timezone WILL get fresh ids on their next regen, since the
+// window's wall-clock identity moves with them.
+// createdAt/updatedAt are empty: DB owns those fields, diff strips them.
 export function buildCategoryEvents(
   userId: string,
   constraints: Category[],
@@ -54,21 +59,20 @@ export function buildCategoryEvents(
   endDate: Date,
 ): CategoryEvent[] {
   const periods = expandPeriods(constraints, startDate, endDate);
-  const now = new Date().toISOString();
 
   return periods.map((period) => {
-    const startISO = period.start.toISOString();
+    const dayKey = dateTimeService.getDayKey(period.start);
     return {
-      id: `${period.categoryTimeWindowId}-${startISO}`,
-      start: startISO,
+      id: `${period.categoryTimeWindowId}|${dayKey}`,
+      start: period.start.toISOString(),
       end: period.end.toISOString(),
       trespassingStart: false,
       trespassingEnd: false,
       categoryTimeWindowId: period.categoryTimeWindowId,
       categoryId: period.categoryId,
       userId,
-      createdAt: now,
-      updatedAt: now,
+      createdAt: "",
+      updatedAt: "",
     };
   });
 }
