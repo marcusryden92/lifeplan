@@ -1,6 +1,6 @@
 # P0 — Production bugs
 
-- Calendar items not loading properly on initial load (have to click regenerate for items to display)
+- ~~Calendar items not loading properly on initial load (have to click regenerate for items to display)~~ (resolved: CategoryEvent + TravelEvent persistence refactor)
 
 # P1 — Quick UX wins
 

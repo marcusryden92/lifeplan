@@ -71,7 +71,6 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      document.body.classList.add("lp-dragging");
       setCurrentlyClickedItem({
         taskId: task.id,
         taskTitle: task.title,
