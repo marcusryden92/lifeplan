@@ -1,5 +1,4 @@
 import type { GlobalSettings, Wave } from "./types";
-import { vars } from "@/lib/theme";
 
 export const FIELD_SIZE = 1350;
 
