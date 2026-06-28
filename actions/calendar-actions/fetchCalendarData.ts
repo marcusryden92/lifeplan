@@ -1,12 +1,27 @@
 "use server";
 import { db } from "@/lib/db";
-import { SimpleEvent, EventTemplate, Planner, Category } from "@/types/prisma";
+import {
+  SimpleEvent,
+  EventTemplate,
+  Planner,
+  Category,
+  CategoryEvent,
+  TravelEvent,
+} from "@/types/prisma";
 import { weekdayToInt } from "@/utils/calendarUtils";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 
 // Fetches the raw data from the database
 export async function fetchCalendarData(userId: string) {
   try {
+    // Fetch the user's dataVersion alongside the rest of the bootstrap data.
+    // The client seeds its OCC token from this so the first sync after page
+    // load carries an accurate version.
+    const userRow = await db.user.findUnique({
+      where: { id: userId },
+      select: { dataVersion: true },
+    });
+
     // Fetch all planner items for the user
     const planner: Planner[] = await db.planner.findMany({
       where: {
@@ -40,6 +55,14 @@ export async function fetchCalendarData(userId: string) {
       include: { timeSlots: true, location: true },
     });
 
+    const categoryEvents: CategoryEvent[] = await db.categoryEvent.findMany({
+      where: { userId },
+    });
+
+    const travelEvents: TravelEvent[] = await db.travelEvent.findMany({
+      where: { userId },
+    });
+
     // Narrow timeSlots.day at the DB boundary and serialize location Dates
     // to avoid Redux non-serializable warnings.
     const categories: Category[] = categoriesRaw.map((cat) => ({
@@ -64,6 +87,9 @@ export async function fetchCalendarData(userId: string) {
         calendar: calendarEvents,
         template: templatesItems,
         categories: categories,
+        categoryEvents: categoryEvents,
+        travelEvents: travelEvents,
+        dataVersion: userRow?.dataVersion ?? 0,
       },
     };
   } catch (error) {

@@ -67,3 +67,7 @@ export type CategoryWithChildren = Omit<
 export type PlannerWithCategory = Prisma.PlannerGetPayload<{
   include: { category: true };
 }>;
+
+export type CategoryEvent = Prisma.CategoryEventGetPayload<undefined>;
+
+export type TravelEvent = Prisma.TravelEventGetPayload<undefined>;

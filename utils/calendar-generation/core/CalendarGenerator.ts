@@ -13,7 +13,7 @@ import { Scheduler } from "./Scheduler";
 import { CompositeStrategy } from "../strategies/SchedulingStrategy";
 import {
   CalendarGenerationInput,
-  SchedulingResult,
+  CalendarGenerationResult,
   SchedulingMetrics,
 } from "../models/SchedulingModels";
 import { SCHEDULING_CONFIG } from "../constants";
@@ -100,7 +100,7 @@ export class CalendarGenerator {
   /**
    * Generate calendar from input
    */
-  generate(): SchedulingResult {
+  generate(): CalendarGenerationResult {
     const startTime = performance.now();
     const {
       input,
@@ -119,6 +119,8 @@ export class CalendarGenerator {
       return {
         success: false,
         events: [],
+        categoryEvents: [],
+        travelEvents: [],
         failures: validation.failures,
         metrics: this.metrics,
       };
@@ -267,7 +269,11 @@ export class CalendarGenerator {
       timeSlotManager.slots,
       schedulingStartDate,
     );
-    const allEvents = assembleFinalEvents(
+    const {
+      events: allEvents,
+      categoryEvents,
+      travelEvents,
+    } = assembleFinalEvents(
       input.userId,
       travelManager,
       context,
@@ -308,6 +314,8 @@ export class CalendarGenerator {
     return {
       success: schedulingResult.failures.length === 0,
       events: allEvents,
+      categoryEvents,
+      travelEvents,
       failures: [...schedulingResult.failures],
       metrics: this.metrics,
     };

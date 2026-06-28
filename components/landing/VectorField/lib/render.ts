@@ -68,7 +68,7 @@ function parseCssColor(str: string): [number, number, number] {
   if (!colorParserCtx) return COLOR_FALLBACK;
   colorParserCtx.fillStyle = "#000";
   colorParserCtx.fillStyle = str;
-  const v = colorParserCtx.fillStyle as string;
+  const v = colorParserCtx.fillStyle;
   if (v.charCodeAt(0) === 35 && v.length === 7) {
     const n = parseInt(v.slice(1), 16);
     if (!Number.isNaN(n)) return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
@@ -305,15 +305,15 @@ export function renderFrame(
   for (let j = 0; j < steps; j++) terrainYs[j] = Math.sin(j * spacing * tky);
 
   const wCount = waves.length;
-  const wEnabled: boolean[] = new Array(wCount);
+  const wEnabled: boolean[] = new Array<boolean>(wCount);
   const wDx = new Float32Array(wCount);
   const wDy = new Float32Array(wCount);
   const wAmp = new Float32Array(wCount);
   const wDxk = new Float32Array(wCount);
   const wDyk = new Float32Array(wCount);
   const wWarpAmp = new Float32Array(wCount);
-  const wColConst: Float32Array[] = new Array(wCount);
-  const wRowConst: Float32Array[] = new Array(wCount);
+  const wColConst: Float32Array[] = new Array<Float32Array>(wCount);
+  const wRowConst: Float32Array[] = new Array<Float32Array>(wCount);
   let totalAmp = 0;
   let anyWarp = false;
   for (let wi = 0; wi < wCount; wi++) {

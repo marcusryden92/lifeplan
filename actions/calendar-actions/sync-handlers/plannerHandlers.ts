@@ -1,5 +1,6 @@
+import type { Prisma } from "@/prisma/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
-type Database = typeof import("@/lib/db").db;
+type Database = Prisma.TransactionClient;
 
 export function handlePlannerChanges(
   db: Database,
@@ -23,11 +24,14 @@ export function handlePlannerChanges(
   }
 
   // UPDATE
+  // updateMany is a no-op on missing rows instead of throwing P2025, so a
+  // stale ghost id in previousPlanner doesn't abort the whole transaction.
+  // Scoping by userId also prevents cross-user writes.
   for (const plannerUpdate of databaseChanges.planner.update) {
-    const { userId: _userId, ...rest } = plannerUpdate;
+    const { id, userId: _userId, ...rest } = plannerUpdate;
     operations.push(
-      db.planner.update({
-        where: { id: plannerUpdate.id },
+      db.planner.updateMany({
+        where: { id, userId },
         data: { ...rest, updatedAt },
       })
     );

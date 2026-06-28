@@ -17,6 +17,11 @@ import { CategoryWrapperEvent } from "@/components/events/CategoryWrapperEvent";
 import type { EventInput } from "@fullcalendar/core/index.js";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
+import {
+  templatesToEventInput,
+  categoryEventsToEventInput,
+  travelEventsToEventInput,
+} from "@/utils/calendar-rendering";
 
 import {
   createPlanFromSelection,
@@ -55,6 +60,10 @@ export default function Calendar({
   const {
     userId,
     calendar,
+    template,
+    categories,
+    categoryEvents,
+    travelEvents,
     updateTemplateArray,
     updatePlannerArray,
     updateAll,
@@ -66,9 +75,25 @@ export default function Calendar({
     end: Date;
   } | null>(null);
 
+  // Four render streams merged into the single FullCalendar event array:
+  //   1. persisted SimpleEvents (plans + scheduled tasks)
+  //   2. templates expanded from EventTemplate config at render time (RRule)
+  //   3. category occurrences from the persisted CategoryEvent table (with
+  //      trespass info)
+  //   4. travel blocks from the persisted TravelEvent table
+  // Only #1 lives in `calendar` — templates, category wrappers, and travel
+  // each live in their own source of truth and survive reloads without a
+  // Regenerate.
   const fullCalendarEvents: EventInput[] = useMemo(() => {
-    return calendar ? transformEventsForFullCalendar(calendar) : [];
-  }, [calendar]);
+    const persisted = calendar ? transformEventsForFullCalendar(calendar) : [];
+    const templates = templatesToEventInput(template ?? []);
+    const categoryWindows = categoryEventsToEventInput(
+      categoryEvents ?? [],
+      categories ?? [],
+    );
+    const travel = travelEventsToEventInput(travelEvents ?? []);
+    return [...persisted, ...templates, ...categoryWindows, ...travel];
+  }, [calendar, template, categories, categoryEvents, travelEvents]);
 
   return (
     <>

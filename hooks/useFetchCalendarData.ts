@@ -4,7 +4,12 @@ import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import calendarSlice from "@/redux/slices/calendarSlice";
-import { Planner, Category } from "@/types/prisma";
+import {
+  Planner,
+  Category,
+  CategoryEvent,
+  TravelEvent,
+} from "@/types/prisma";
 import { SimpleEvent } from "@/types/prisma";
 import { EventTemplate } from "@/types/prisma";
 import { fetchCalendarData } from "@/actions/calendar-actions/fetchCalendarData";
@@ -14,6 +19,8 @@ interface Data {
   calendar: SimpleEvent[];
   template: EventTemplate[];
   categories: Category[];
+  categoryEvents: CategoryEvent[];
+  travelEvents: TravelEvent[];
 }
 
 export function useFetchCalendarData(
@@ -23,6 +30,9 @@ export function useFetchCalendarData(
     calendar: SimpleEvent[],
     template: EventTemplate[],
     categories: Category[],
+    categoryEvents: CategoryEvent[],
+    travelEvents: TravelEvent[],
+    dataVersion: number,
   ) => void,
 ) {
   const dispatch = useDispatch<AppDispatch>();
@@ -42,8 +52,23 @@ export function useFetchCalendarData(
 
         if (!response.data) return null;
 
-        const { planner, calendar, template, categories } = response.data;
-        const newData = { planner, calendar, template, categories };
+        const {
+          planner,
+          calendar,
+          template,
+          categories,
+          categoryEvents,
+          travelEvents,
+          dataVersion,
+        } = response.data;
+        const newData = {
+          planner,
+          calendar,
+          template,
+          categories,
+          categoryEvents,
+          travelEvents,
+        };
 
         setData(newData);
 
@@ -55,6 +80,9 @@ export function useFetchCalendarData(
           newData.calendar,
           newData.template,
           newData.categories,
+          newData.categoryEvents,
+          newData.travelEvents,
+          dataVersion,
         );
       } catch (err) {
         setError(err as Error);

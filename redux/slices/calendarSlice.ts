@@ -5,6 +5,8 @@ import {
   EventTemplate,
   Category,
   CategoryTimeWindow,
+  CategoryEvent,
+  TravelEvent,
 } from "@/types/prisma";
 
 type CalendarData = {
@@ -12,6 +14,14 @@ type CalendarData = {
   calendar: SimpleEvent[];
   template: EventTemplate[];
   categories: Category[];
+  // Materialized weekly category occurrences with trespass info. Written
+  // wholesale by the engine each regen; renderer reads directly. Replaces the
+  // per-occurrence wrapper SimpleEvent path that used random UUIDs.
+  categoryEvents: CategoryEvent[];
+  // Materialized travel events between scheduled items. Written wholesale by
+  // the engine each regen; renderer reads directly. Replaces the per-regen
+  // travel SimpleEvent path that was stripped from sync.
+  travelEvents: TravelEvent[];
   // Flipped to true once useFetchCalendarData seeds the slice. Pages gate
   // their empty-state UI on this so a fresh load doesn't briefly read as
   // "no items" / "no categories" before the fetch returns.
@@ -23,6 +33,8 @@ const initialState: CalendarData = {
   calendar: [],
   template: [],
   categories: [],
+  categoryEvents: [],
+  travelEvents: [],
   isLoaded: false,
 };
 
@@ -37,6 +49,8 @@ const calendarSlice = createSlice({
         calendar: SimpleEvent[];
         template: EventTemplate[];
         categories?: Category[];
+        categoryEvents?: CategoryEvent[];
+        travelEvents?: TravelEvent[];
       }>
     ) => {
       state.planner = action.payload.planner;
@@ -44,6 +58,12 @@ const calendarSlice = createSlice({
       state.calendar = action.payload.calendar;
       if (action.payload.categories !== undefined) {
         state.categories = action.payload.categories;
+      }
+      if (action.payload.categoryEvents !== undefined) {
+        state.categoryEvents = action.payload.categoryEvents;
+      }
+      if (action.payload.travelEvents !== undefined) {
+        state.travelEvents = action.payload.travelEvents;
       }
     },
     // Dedicated flag-flip — kept out of updateCalendarArrayData because that

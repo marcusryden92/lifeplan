@@ -122,7 +122,29 @@
       "PowerShell(Move-Item -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\circadium\" -Destination \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\app\\\\\\(protected\\)\")",
       "Bash(grep -n \"^C:\\\\\\\\\\\\\\\\\" \"c:/Users/Marcus/Desktop/Lifeplan/notes/lint-errors.txt\")",
       "PowerShell(pnpm remove tailwindcss tailwindcss-animate tailwind-merge clsx postcss autoprefixer 2>&1)",
-      "PowerShell(pnpm remove tailwindcss tailwindcss-animate tailwind-merge clsx postcss 2>&1)"
+      "PowerShell(pnpm remove tailwindcss tailwindcss-animate tailwind-merge clsx postcss 2>&1)",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log --oneline -20 -- \"app/\\(protected\\)/items/[id]/ItemDetailLayout/\")",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log --oneline -20 -- \"app/\\(protected\\)/items/\" \"app/circadium/items/\")",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log --oneline --all -30 -- \"**/ItemDetailLayout*\" \"**/refine/**\")",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" show 8d02abd --stat)",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log -p --follow -- \"app/\\(protected\\)/items/[id]/ItemDetailLayout/ItemDetailLayout.css.ts\")",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log -p --all -- \"**/refine/**.css.ts\" \"**/refine/**.module.css\")",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log --oneline -10 -- \"components/ui/shell/\" \"components/ui/Sidebar*\")",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" show 0e8c88f --stat)",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" show e983434 --stat)",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" diff HEAD~2 HEAD -- \"components/ui/shell/Sidebar/Sidebar.css.ts\")",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log -p --all -- \"components/ui/shell/Sidebar/Sidebar.css.ts\")",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log --all --oneline -- \"**/ItemDetailPage*\")",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log --all --diff-filter=D --oneline -- \"**/items/[id]/page.css.ts\")",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log --all -p --diff-filter=D -- \"app/circadium/items/[id]/page.tsx\" \"app/circadium/items/[id]/page.css.ts\")",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log --all -p --diff-filter=D -- \"app/circadium/items/[id]/layout.tsx\" \"app/circadium/items/[id]/layout.css.ts\")",
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" show 0e8c88f -- \"components/ui/shell/Sidebar/\")",
+      "Bash(pnpm dev *)",
+      "Bash(cat C:\\\\\\\\Users\\\\\\\\Marcus\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\c--Users-Marcus-Desktop-Lifeplan\\\\\\\\d1b43163-b6b2-4e81-a96b-1ec28d61442e\\\\\\\\tasks\\\\\\\\bqn131ewn.output)",
+      "Bash(sleep 5 && cat \"/c/Users/Marcus/AppData/Local/Temp/claude/c--Users-Marcus-Desktop-Lifeplan/d1b43163-b6b2-4e81-a96b-1ec28d61442e/tasks/bqn131ewn.output\" 2>&1 | tail -60)",
+      "Read(//c/Users/Marcus/AppData/Local/Temp/claude/c--Users-Marcus-Desktop-Lifeplan/d1b43163-b6b2-4e81-a96b-1ec28d61442e/tasks/**)",
+      "Bash(PORT=3001 pnpm dev)",
+      "Bash(node -e 'const { PrismaClient } = require\\('\\\\''./prisma/client'\\\\''\\); const { PrismaPg } = require\\('\\\\''@prisma/adapter-pg'\\\\''\\); require\\('\\\\''dotenv'\\\\''\\).config\\(\\); const adapter = new PrismaPg\\({ connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL }\\); const db = new PrismaClient\\({ adapter }\\); \\(async \\(\\) => { const u = await db.user.findFirst\\(\\); console.log\\('\\\\''user:'\\\\'', u?.id, u?.email\\); const p = await db.planner.count\\(\\); const c = await db.category.count\\(\\); const t = await db.eventTemplate.count\\(\\); const ce = await db.categoryEvent.count\\(\\); const te = await db.travelEvent.count\\(\\); const l = await db.location.count\\(\\); console.log\\({planners: p, categories: c, templates: t, categoryEvents: ce, travelEvents: te, locations: l}\\); await db.$disconnect\\(\\); }\\)\\(\\).catch\\(e => { console.error\\('\\\\''ERR:'\\\\'', e.message\\); process.exit\\(1\\); }\\);')"
     ]
   }
 }

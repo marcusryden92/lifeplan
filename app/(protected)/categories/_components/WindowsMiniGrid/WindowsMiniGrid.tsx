@@ -25,8 +25,9 @@ interface WindowsMiniGridProps {
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const WEEK_START_DAY = 1;
 
-// Full-24h grid keeps height constant across areas so the surrounding layout
-// doesn't shift when selecting between areas with different window ranges.
+// Full-24h grid keeps height constant across categories so the surrounding
+// layout doesn't shift when selecting between categories with different
+// window ranges.
 const TOTAL_HOURS = 24;
 const ROW_HEIGHT_PX = 14;
 const GRID_HEIGHT_PX = TOTAL_HOURS * ROW_HEIGHT_PX;

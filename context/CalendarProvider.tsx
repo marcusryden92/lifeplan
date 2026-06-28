@@ -13,7 +13,14 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch } from "@/redux/store";
 import { RootState } from "@/redux/store";
 
-import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
+import {
+  Planner,
+  SimpleEvent,
+  EventTemplate,
+  Category,
+  CategoryEvent,
+  TravelEvent,
+} from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
 import type { UserSettings } from "@/types/userTypes";
@@ -31,6 +38,8 @@ type CalendarContextType = {
   calendar: SimpleEvent[];
   template: EventTemplate[];
   categories: Category[];
+  categoryEvents: CategoryEvent[];
+  travelEvents: TravelEvent[];
   updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>;
   updateCalendarArray: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
   updateTemplateArray: React.Dispatch<React.SetStateAction<EventTemplate[]>>;
@@ -68,10 +77,14 @@ export default function CalendarProvider({
     },
   };
 
-  const { planner, calendar, template, categories } = useMemo(
-    () => calendarState,
-    [calendarState]
-  );
+  const {
+    planner,
+    calendar,
+    template,
+    categories,
+    categoryEvents,
+    travelEvents,
+  } = useMemo(() => calendarState, [calendarState]);
 
   const weekStartDay: WeekDayIntegers = 1;
 
@@ -133,6 +146,8 @@ export default function CalendarProvider({
     calendar,
     template,
     categories,
+    categoryEvents,
+    travelEvents,
     updatePlannerArray,
     updateCalendarArray,
     updateTemplateArray,

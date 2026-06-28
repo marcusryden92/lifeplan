@@ -5,9 +5,10 @@ import {
   SimpleEvent,
   EventTemplate,
   EventExtendedProps,
-  EventType,
   Category,
   CategoryTimeWindow,
+  CategoryEvent,
+  TravelEvent,
 } from "@/types/prisma";
 import type {
   SerializedLocation,
@@ -30,6 +31,8 @@ type ExtendedPropsChange = EventExtendedProps;
 // its own group below so a window edit doesn't look like a category update.
 type CategoryChange = Omit<Category, "timeSlots">;
 type CategoryTimeWindowChange = CategoryTimeWindow;
+type CategoryEventChange = CategoryEvent;
+type TravelEventChange = TravelEvent;
 // Only the editable own-row fields. address/lat/lng/placeId are server-
 // authoritative (Google Places) and never flow back from the client.
 type LocationChange = SerializedLocation;
@@ -46,12 +49,15 @@ export type DatabaseChanges = {
   extendedProps: ChangeGroup<ExtendedPropsChange>;
   category: ChangeGroup<CategoryChange>;
   categoryTimeWindow: ChangeGroup<CategoryTimeWindowChange>;
+  categoryEvent: ChangeGroup<CategoryEventChange>;
+  travelEvent: ChangeGroup<TravelEventChange>;
   location: ChangeGroup<LocationChange>;
   travelTime: ChangeGroup<TravelTimeChange>;
 };
 
 export async function handleServerTransaction(
   userId: string,
+  clientKnownDataVersion: number,
   planner: Planner[],
   previousPlanner: { current: Planner[] },
   calendar: SimpleEvent[],
@@ -60,41 +66,29 @@ export async function handleServerTransaction(
   previousTemplate?: { current: EventTemplate[] },
   categories?: Category[],
   previousCategories?: { current: Category[] },
+  categoryEvents?: CategoryEvent[],
+  previousCategoryEvents?: { current: CategoryEvent[] },
+  travelEvents?: TravelEvent[],
+  previousTravelEvents?: { current: TravelEvent[] },
   locations?: SerializedLocation[],
   previousLocations?: { current: SerializedLocation[] },
   travelTimes?: SerializedTravelTime[],
   previousTravelTimes?: { current: SerializedTravelTime[] },
 ) {
-  // Filter out generated events (travel, template, category wrappers) BEFORE serialization
-  // These are dynamically generated and should never be persisted to database
-  const filterGeneratedEvents = (events: SimpleEvent[]) =>
-    events.filter(
-      (e) =>
-        e.extendedProps?.eventType !== EventType.travel &&
-        e.extendedProps?.eventType !== EventType.template &&
-        !(
-          e.extendedProps &&
-          "wrapperId" in e.extendedProps &&
-          e.extendedProps.wrapperId
-        ), // Category wrapper events have wrapperId
-    );
-
-  const filteredCalendar = filterGeneratedEvents(calendar);
-  const filteredPreviousCalendar = filterGeneratedEvents(
-    previousCalendar.current,
-  );
-
-  // Serialize inputs to remove any Date objects or non-serializable data
+  // Templates, category wrappers, and travel events no longer enter
+  // state.calendar.calendar — they live in their own redux slice fields and
+  // their own sync diff groups. SimpleEvent[] now only carries plans +
+  // scheduled tasks, so no filter is needed before the diff.
   const serializedPlanner = JSON.parse(JSON.stringify(planner)) as Planner[];
   const serializedPreviousPlanner = {
     current: JSON.parse(JSON.stringify(previousPlanner.current)) as Planner[],
   };
   const serializedCalendar = JSON.parse(
-    JSON.stringify(filteredCalendar),
+    JSON.stringify(calendar),
   ) as SimpleEvent[];
   const serializedPreviousCalendar = {
     current: JSON.parse(
-      JSON.stringify(filteredPreviousCalendar),
+      JSON.stringify(previousCalendar.current),
     ) as SimpleEvent[],
   };
   const serializedTemplate = template
@@ -138,6 +132,26 @@ export async function handleServerTransaction(
         ) as SerializedTravelTime[],
       }
     : undefined;
+  const serializedCategoryEvents = categoryEvents
+    ? (JSON.parse(JSON.stringify(categoryEvents)) as CategoryEvent[])
+    : undefined;
+  const serializedPreviousCategoryEvents = previousCategoryEvents
+    ? {
+        current: JSON.parse(
+          JSON.stringify(previousCategoryEvents.current),
+        ) as CategoryEvent[],
+      }
+    : undefined;
+  const serializedTravelEvents = travelEvents
+    ? (JSON.parse(JSON.stringify(travelEvents)) as TravelEvent[])
+    : undefined;
+  const serializedPreviousTravelEvents = previousTravelEvents
+    ? {
+        current: JSON.parse(
+          JSON.stringify(previousTravelEvents.current),
+        ) as TravelEvent[],
+      }
+    : undefined;
 
   const databaseChanges = compareData(
     serializedPlanner,
@@ -148,13 +162,21 @@ export async function handleServerTransaction(
     serializedPreviousTemplate,
     serializedCategories,
     serializedPreviousCategories,
+    serializedCategoryEvents,
+    serializedPreviousCategoryEvents,
+    serializedTravelEvents,
+    serializedPreviousTravelEvents,
     serializedLocations,
     serializedPreviousLocations,
     serializedTravelTimes,
     serializedPreviousTravelTimes,
   );
 
-  const response = await syncCalendarData(userId, databaseChanges);
+  const response = await syncCalendarData(
+    userId,
+    databaseChanges,
+    clientKnownDataVersion,
+  );
 
   return response;
 }
@@ -168,6 +190,10 @@ export function compareData(
   previousTemplate?: { current: EventTemplate[] },
   categories?: Category[],
   previousCategories?: { current: Category[] },
+  categoryEvents?: CategoryEvent[],
+  previousCategoryEvents?: { current: CategoryEvent[] },
+  travelEvents?: TravelEvent[],
+  previousTravelEvents?: { current: TravelEvent[] },
   locations?: SerializedLocation[],
   previousLocations?: { current: SerializedLocation[] },
   travelTimes?: SerializedTravelTime[],
@@ -180,6 +206,8 @@ export function compareData(
     extendedProps: { create: [], update: [], destroy: [] },
     category: { create: [], update: [], destroy: [] },
     categoryTimeWindow: { create: [], update: [], destroy: [] },
+    categoryEvent: { create: [], update: [], destroy: [] },
+    travelEvent: { create: [], update: [], destroy: [] },
     location: { create: [], update: [], destroy: [] },
     travelTime: { create: [], update: [], destroy: [] },
   };
@@ -337,6 +365,67 @@ export function compareData(
     prevWindowMap.forEach((win, id) => {
       if (!currWindowMap.has(id)) {
         databaseChanges.categoryTimeWindow.destroy.push(win);
+      }
+    });
+  }
+
+  // createdAt / updatedAt are DB metadata, not source-of-truth. The engine
+  // sets both to Date.now() on every regen, so without stripping them every
+  // row would diff as an UPDATE every regen — hundreds of needless writes
+  // that easily blow the transaction budget.
+  const stripMeta = <T extends { createdAt?: string; updatedAt?: string }>(
+    e: T,
+  ) => {
+    const { createdAt: _c, updatedAt: _u, ...rest } = e;
+    return rest;
+  };
+
+  // Category events (materialized weekly occurrences with trespass info).
+  // Engine produces these wholesale on regen; deterministic ids mean unchanged
+  // occurrences diff as a no-op. Different list from time windows —
+  // categoryTimeWindow is the recurring rule, categoryEvent is the realized
+  // occurrence.
+  if (categoryEvents && previousCategoryEvents) {
+    const currByEvent = new Map(categoryEvents.map((e) => [e.id, e]));
+    const prevByEvent = new Map(
+      previousCategoryEvents.current.map((e) => [e.id, e]),
+    );
+    currByEvent.forEach((ev, id) => {
+      const prev = prevByEvent.get(id);
+      if (!prev) {
+        databaseChanges.categoryEvent.create.push(ev);
+      } else if (!objectsAreEqual(stripMeta(prev), stripMeta(ev))) {
+        databaseChanges.categoryEvent.update.push(ev);
+      }
+    });
+    prevByEvent.forEach((ev, id) => {
+      if (!currByEvent.has(id)) {
+        databaseChanges.categoryEvent.destroy.push(ev);
+      }
+    });
+  }
+
+  // Travel events (materialized travels between scheduled items). Engine
+  // produces these wholesale on regen with deterministic ids
+  // (`${fromLocationId}-${toLocationId}-${start}`) — unchanged travels diff
+  // as a no-op. Schedule shifts that produce new (locations, start) tuples
+  // surface as create + destroy of the matching prior travel.
+  if (travelEvents && previousTravelEvents) {
+    const currByTravel = new Map(travelEvents.map((e) => [e.id, e]));
+    const prevByTravel = new Map(
+      previousTravelEvents.current.map((e) => [e.id, e]),
+    );
+    currByTravel.forEach((ev, id) => {
+      const prev = prevByTravel.get(id);
+      if (!prev) {
+        databaseChanges.travelEvent.create.push(ev);
+      } else if (!objectsAreEqual(stripMeta(prev), stripMeta(ev))) {
+        databaseChanges.travelEvent.update.push(ev);
+      }
+    });
+    prevByTravel.forEach((ev, id) => {
+      if (!currByTravel.has(id)) {
+        databaseChanges.travelEvent.destroy.push(ev);
       }
     });
   }

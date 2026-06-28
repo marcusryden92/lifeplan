@@ -1,1 +1,1 @@
-export { default } from "./ItemDetailLayout";
+export { default } from "./_components/ItemDetailLayout";

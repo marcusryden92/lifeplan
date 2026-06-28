@@ -3,6 +3,7 @@ import {
   createSprinkles,
 } from "@vanilla-extract/sprinkles";
 import { vars } from "./tokens.css";
+import { contentWidths } from "./layout";
 
 const space = {
   none: 0,
@@ -94,7 +95,7 @@ const layoutProps = defineProperties({
     height: ["auto", "100%", "fit-content"],
     minWidth: { "0": 0, full: "100%" },
     minHeight: { "0": 0, full: "100%" },
-    maxWidth: { full: "100%", screen: "100vw" },
+    maxWidth: { full: "100%", screen: "100vw", ...contentWidths },
     borderRadius: radii,
     borderTopLeftRadius: radii,
     borderTopRightRadius: radii,

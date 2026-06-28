@@ -1,7 +1,8 @@
+import type { Prisma } from "@/prisma/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
 import { intToWeekday } from "@/utils/calendarUtils";
 import type { EventTemplate } from "@/types/prisma";
-type Database = typeof import("@/lib/db").db;
+type Database = Prisma.TransactionClient;
 
 // App holds startDay as WeekDayIntegers; DB expects the WeekDayType enum string.
 function templateForWrite(template: EventTemplate) {

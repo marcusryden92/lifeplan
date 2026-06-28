@@ -32,7 +32,7 @@ const TRANSPARENT_DRAG_IMAGE: HTMLImageElement | null = (() => {
 // even on short rows where percentage-based thirds would be ~10px each.
 const EDGE_ZONE_PX = 12;
 
-export function AreaTreeNode({
+export function CategoryTreeNode({
   node,
   depth,
   expanded,
@@ -169,7 +169,7 @@ export function AreaTreeNode({
       {hasChildren &&
         isOpen &&
         node.children.map((child) => (
-          <AreaTreeNode
+          <CategoryTreeNode
             key={child.id}
             node={child}
             depth={depth + 1}

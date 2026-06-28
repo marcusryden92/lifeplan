@@ -1,7 +1,7 @@
 export { buildMemoizedEvents } from "./buildMemoizedEvents";
 export { buildPlanEvents } from "./buildPlanEvents";
 export { buildCompletedEvents } from "./buildCompletedEvents";
-export { buildCategoryWrapperEvents } from "./buildCategoryWrapperEvents";
+export { buildCategoryEvents } from "./buildCategoryEvents";
 export { markTrespassingEvents } from "./markTrespassingEvents";
-export { stampCategoryWrapperBorders } from "./stampCategoryWrapperBorders";
+export { stampCategoryEventBorders } from "./stampCategoryEventBorders";
 export { assembleFinalEventList } from "./assembleFinalEventList";

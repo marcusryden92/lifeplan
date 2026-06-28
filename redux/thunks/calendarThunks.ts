@@ -58,7 +58,11 @@ export const updateAllCalendarStates =
     // Convert serialized array to Map for calendar generation
     const travelTimeMap = travelTimeArrayToMap(travelTimeMatrix);
 
-    const newCalendar = generateCalendar(
+    const {
+      events: newCalendar,
+      categoryEvents: newCategoryEvents,
+      travelEvents: newTravelEvents,
+    } = generateCalendar(
       userId,
       weekStartDay,
       newTemplate,
@@ -69,7 +73,7 @@ export const updateAllCalendarStates =
         travelTimeMatrix: travelTimeMap ?? undefined,
         injectTravelEvents: enableTravelEvents,
         categories,
-      }
+      },
     );
 
     const calendarData = {
@@ -77,6 +81,8 @@ export const updateAllCalendarStates =
       calendar: newCalendar,
       template: newTemplate,
       categories,
+      categoryEvents: newCategoryEvents,
+      travelEvents: newTravelEvents,
     };
 
     dispatch(calendarSlice.actions.updateCalendarArrayData(calendarData));

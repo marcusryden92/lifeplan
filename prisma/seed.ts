@@ -48,7 +48,13 @@ async function main() {
     },
   });
 
-  // Clear existing data (order matters for foreign keys)
+  // Clear existing data (order matters for foreign keys). Engine output rows
+  // (categoryEvent + travelEvent) go first: categoryEvents would cascade with
+  // their Category but the explicit delete is cheap insurance; travelEvents
+  // would otherwise be left with null location FKs when Location is dropped
+  // below (onDelete: SetNull), producing orphans.
+  await prisma.categoryEvent.deleteMany({});
+  await prisma.travelEvent.deleteMany({});
   await prisma.planner.deleteMany({});
   await prisma.eventTemplate.deleteMany({});
   await prisma.category.deleteMany({});
