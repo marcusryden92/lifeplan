@@ -1,13 +1,9 @@
-# P0 — Production bugs
-
-- ~~Calendar items not loading properly on initial load (have to click regenerate for items to display)~~ (resolved: CategoryEvent + TravelEvent persistence refactor)
 
 # P1 — Quick UX wins
 
 - Text selection possible throughout the project — should be disabled (except for text boxes)
 - Dashboard capture button not using system-specific key (ie ctrl)
 - Hovering calendar events and displaying hover buttons shouldn't hide timestamp
-- Deadline box overlaps Rolled-up duration box in item detail view
 - Plus sign for adding subtask way too small
 - Up/Down arrow keys in Capture view currently navigates left menu (nice). Left/Right should navigate the task/plan/goal/trash buttons. Enter to save
 - Goals in capture menu that have been saved don't disappear from the list
@@ -33,6 +29,7 @@
 # P4 — Refactors / investigations
 
 - Token consolidation into sprinkles (color/space/radii)
+- Tokens for contentWidth (sm, md, lg etc) for layouts
 - Server-side overlap validation for CategoryTimeWindow
 - Plumb `TravelTime.transportMode` through the scheduling engine
 - Add console error messaging
