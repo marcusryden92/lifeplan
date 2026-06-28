@@ -2,6 +2,10 @@ import { globalStyle } from "@vanilla-extract/css";
 import { vars } from "./tokens.css";
 import { backdropFilters, colorMixAlpha } from "./effects";
 
+globalStyle("*, *::before, *::after", {
+  boxSizing: "border-box",
+});
+
 globalStyle("html", {
   scrollbarWidth: "thin",
   scrollbarColor: `${vars.glass.bgDeep} transparent`,

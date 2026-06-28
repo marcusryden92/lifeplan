@@ -20,7 +20,7 @@ export const innerWrap = style({
   display: "flex",
   flexDirection: "column",
   padding: "20px 56px 28px",
-  width: "80%",
+  width: "100%",
   maxWidth: contentWidths.lg,
   marginInline: "auto",
   flex: 1,

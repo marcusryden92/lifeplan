@@ -17,8 +17,6 @@ const MOBILE = "screen and (max-width: 767px)";
 export const progressBlock = style({
   marginTop: 36,
   marginBottom: 22,
-  // Locks the block to the exact visible-state height so switching item type
-  // or going to a goal with 0 subtasks doesn't shift the cards below.
   height: 38,
   overflow: "hidden",
 });
@@ -90,7 +88,11 @@ export const completeCheckbox = style({
   cursor: "pointer",
   padding: 0,
   flexShrink: 0,
-  transition: interactiveTransition("background-color", "border-color", "color"),
+  transition: interactiveTransition(
+    "background-color",
+    "border-color",
+    "color",
+  ),
   selectors: {
     "&[data-completed='true']": {
       background: vars.status.success,
