@@ -146,7 +146,12 @@
       "Bash(PORT=3001 pnpm dev)",
       "Bash(node -e 'const { PrismaClient } = require\\('\\\\''./prisma/client'\\\\''\\); const { PrismaPg } = require\\('\\\\''@prisma/adapter-pg'\\\\''\\); require\\('\\\\''dotenv'\\\\''\\).config\\(\\); const adapter = new PrismaPg\\({ connectionString: process.env.DIRECT_URL ?? process.env.DATABASE_URL }\\); const db = new PrismaClient\\({ adapter }\\); \\(async \\(\\) => { const u = await db.user.findFirst\\(\\); console.log\\('\\\\''user:'\\\\'', u?.id, u?.email\\); const p = await db.planner.count\\(\\); const c = await db.category.count\\(\\); const t = await db.eventTemplate.count\\(\\); const ce = await db.categoryEvent.count\\(\\); const te = await db.travelEvent.count\\(\\); const l = await db.location.count\\(\\); console.log\\({planners: p, categories: c, templates: t, categoryEvents: ce, travelEvents: te, locations: l}\\); await db.$disconnect\\(\\); }\\)\\(\\).catch\\(e => { console.error\\('\\\\''ERR:'\\\\'', e.message\\); process.exit\\(1\\); }\\);')",
       "Bash(grep -v \"^$\")",
-      "Bash(pnpm test *)"
+      "Bash(pnpm test *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\utils\\\\calendar-generation\\\\helpers\\\\Scheduler\\\\\" -Recurse | Select-Object -ExpandProperty FullName)",
+      "Bash(ls -la '/cygdrive/c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/')",
+      "Read(//cygdrive/c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/**)",
+      "Bash(find /cygdrive/c/Users/Marcus/Desktop/Lifeplan -type d -name helpers 2>/dev/null | head -20)",
+      "Read(//cygdrive/c/Users/Marcus/Desktop/**)"
     ]
   }
 }
