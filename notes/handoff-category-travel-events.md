@@ -55,14 +55,9 @@ This is enabled by the design constraint that both tables are entirely engine-de
 
 ### Production data risk
 
-Migrations are purely additive (CREATE TABLE x2). No destructive operations. But:
+Migrations are purely additive (CREATE TABLE x2). No destructive operations. Legacy `SimpleEvent` rows with `extendedProps.eventType IN ('category', 'travel', 'template')` exist in prod from the old engine — the new engine no longer produces them, and the diff destroys them on the first regen post-deploy.
 
-- Legacy `SimpleEvent` rows with `extendedProps.eventType IN ('category', 'travel', 'template')` exist in prod from the old engine.
-- The new engine no longer produces them.
-- `transformEventsForFullCalendar` filters those eventTypes out of the renderer (see `calendarUtils.ts`), so they no longer double-render against the new CategoryEvent/TravelEvent overlays.
-- On the first regen post-deploy the diff will destroy the legacy rows.
-
-For LifePlan's solo-dev prod this is acceptable. Recommended a one-shot `DELETE FROM "SimpleEvents" WHERE ...` cleanup but user declined; the renderer filter is the defensive backstop. **The filter is permanent overhead on every render forever** — after the first post-deploy regen actually destroys the legacy rows, the filter is dead code. Track removing it once you've confirmed the destroy fired.
+No renderer filter, no cleanup migration. LifePlan currently has one prod user (solo dev); the brief double-render window between deploy and first manual Regenerate is acceptable. If the user-count ever grows, revisit either a one-shot `DELETE FROM "SimpleEvents" WHERE extendedProps.eventType IN ('category','travel','template')` cleanup or a renderer-side filter.
 
 ### First-load behavior
 
@@ -76,11 +71,21 @@ The gating is deliberately careful to prevent perpetual re-fire:
 
 Triggers `updateAll()` (the implicit-regen path through the thunk), NOT `manuallyRefreshCalendar`. The narrower "user has unfinished overdue tasks they want to control" concern is preserved — overdue detection is part of the explicit user-click path.
 
-### Expansion seam interaction
+### Expansion seam — deterministic by construction
 
-The scheduling engine does incremental horizon expansion (chunk-by-chunk). Each expansion replays past decisions from preserved Travels and re-runs the static-pass starting at the `isFinal` Category. The deterministic-ID scheme is local-date-based, so the resumed pass should produce the same CategoryEvent IDs for the preserved-and-now-re-emitted region.
+The scheduling engine does incremental horizon expansion (chunk-by-chunk). Each expansion replays past decisions from preserved Travels and re-runs the static-pass starting at the `isFinal` Category. The earlier draft of this doc framed seam ID stability as a deferred risk; on closer reading, it isn't:
 
-**This is the central correctness claim of the refactor and it is not under test.** If IDs drift at the seam, every expansion would destroy and re-create rows at the boundary — re-introducing the original bug minus the cold-load symptom (the rows would still survive reloads, but every regen would churn the seam). Writing an integration test that runs two expansions and asserts CategoryEvent set equality at the seam is the highest-leverage next step.
+- `buildCategoryEvents` runs **once at the end** of generation, after all expansion. It walks `Categories` across `[schedulingStartDate, schedulingEndDate]` with `setDate(+7)` — a single deterministic enumeration. CategoryEvent ID = `windowId|local-date`. Same Categories + same range → same IDs, regardless of how many expansion chunks ran during scheduling.
+- TravelEvent IDs derive from `slot.start`. `expandSlots` preserves the slot array verbatim up to `isFinal` — preserved slots are byte-identical pre/post-expansion, so their IDs don't shift. Fresh placements in the new chunk get new IDs (which is correct).
+
+The four tests at `__tests__/calendar-generation/expansion-seam.test.ts` cover the realistic failure modes:
+
+- Determinism: two runs of `generateCalendar` with identical input produce identical CategoryEvent id sets.
+- Input-stability: adding unrelated planner items doesn't shift CategoryEvent ids.
+- Id format: every id matches `${categoryTimeWindowId}|${YYYY-MM-DD}`.
+- Local-date derivation: the date component of each id matches `new Date(row.start)`'s local date.
+
+The remaining latent risks live in the date math itself — DST drift (now guarded by the `setDate(+7)` stride), or someone reverting the local-date keying back to UTC instants (caught by the local-date-derivation test).
 
 ### Cascade behavior
 
@@ -92,7 +97,7 @@ The scheduling engine does incremental horizon expansion (chunk-by-chunk). Each 
 
 - **`skipDuplicates` removed** from both `categoryEvent.createMany` and `travelEvent.createMany`. The deterministic-ID scheme is the only thing preventing collisions; silently swallowing dupes meant any determinism regression would produce missing-chrome bugs with no log line.
 - **TravelEvent renders resolved location names**. The previous title was `Travel_${fromLocationId}_${toLocationId}` — raw CUIDs. Now `Home → Office` via render-time join against the `locations` slice; renaming a Location takes effect without rewriting every materialized travel row.
-- **Renderer legacy filter** in `transformEventsForFullCalendar` strips SimpleEvents of eventType category/travel/template before mapping. The previously-dead `isCategory`/`isTemplate` branches were removed since the filter makes them unreachable.
+- **Legacy SimpleEvent rows handled by destroy-on-regen**, not by a renderer filter. The earlier draft of this refactor shipped a defensive filter in `transformEventsForFullCalendar`; it was removed once the user accepted the brief double-render window before the first post-deploy Regenerate.
 
 ## Files touched
 
@@ -150,20 +155,16 @@ The scheduling engine does incremental horizon expansion (chunk-by-chunk). Each 
 ### UI
 - `context/CalendarProvider.tsx` — exposes `categoryEvents` and `travelEvents` through context; one-shot empty-state autoregen gated by `isInitialColdLoadRef` + `useRef` + tightened precondition
 - `app/(protected)/calendar/_components/Calendar.tsx` — merges the four render streams in a `useMemo`; renders category occurrences as background events; renders travel with `TravelEventContent`; reads `locations` from the schedulingSettings slice to pass into `travelEventsToEventInput`
-- `utils/calendarUtils.ts` — `transformEventsForFullCalendar` filters legacy SimpleEvents of eventType `category`/`travel`/`template` before mapping; the previously-dead `isCategory`/`isTemplate` branches were removed
+- `utils/calendarUtils.ts` — `transformEventsForFullCalendar` simplified; the legacy-eventType filter and the `isCategory`/`isTemplate` branches were removed (see "Production data risk")
 
 ## Notes for a future agent
 
-1. **Write the expansion-seam test.** This is the most important deferred item — the central correctness claim ships untested. See "Expansion seam interaction" above.
+1. **Decoration churn is inherent.** CategoryEvent's trespass flags and TravelEvent's insufficient/overconstrained flags are placement-decision outputs — moving one task can flip flags on multiple surrounding rows. The delete + createMany pattern makes this cheap (2 batched queries per regen regardless of how many rows changed), but the *write count* is still proportional to schedule churn radius, not literal-placement-shift count. Acceptable but worth knowing if you're tuning sync latency.
 
-2. **Decoration churn is inherent.** CategoryEvent's trespass flags and TravelEvent's insufficient/overconstrained flags are placement-decision outputs — moving one task can flip flags on multiple surrounding rows. The delete + createMany pattern makes this cheap (2 batched queries per regen regardless of how many rows changed), but the *write count* is still proportional to schedule churn radius, not literal-placement-shift count. Acceptable but worth knowing if you're tuning sync latency.
+2. **TravelEvent FK SET NULL — orphan rendering.** Deleting a Location leaves orphan TravelEvents until next regen; renderer falls back to "Unknown". Switching the cascade to DELETE would eliminate orphans at the cost of disappearing rendered travels mid-session; the SET NULL + render fallback was chosen to favor continuity.
 
-3. **TravelEvent FK SET NULL — orphan rendering.** Deleting a Location leaves orphan TravelEvents until next regen; renderer falls back to "Unknown". Switching the cascade to DELETE would eliminate orphans at the cost of disappearing rendered travels mid-session; the SET NULL + render fallback was chosen to favor continuity.
+3. **Window-edit doesn't cascade.** Cascade fires on DELETE, not UPDATE. Editing a window's startTime/endTime/day leaves stale CategoryEvent spans until the next regen. If the engine ever stops auto-regenerating on every window edit, this becomes a visible staleness bug.
 
-4. **Remove the legacy SimpleEvent filter once it's safe.** `transformEventsForFullCalendar` runs the eventType check on every event on every render. After the first post-deploy regen destroys the legacy rows, the filter is permanently dead code. Remove it then.
+4. **30s transaction timeout — not load-tested.** Worst-case math (4-week initial horizon, 7 categories × 5 weekly windows = 140 CategoryEvents on first regen; expansion can multiply this). With the delete + createMany handler it's all batched, so the budget is much more comfortable than the original sequential pattern, but headroom under real prod load is unmeasured.
 
-5. **Window-edit doesn't cascade.** Cascade fires on DELETE, not UPDATE. Editing a window's startTime/endTime/day leaves stale CategoryEvent spans until the next regen. If the engine ever stops auto-regenerating on every window edit, this becomes a visible staleness bug.
-
-6. **30s transaction timeout — not load-tested.** Worst-case math (4-week initial horizon, 7 categories × 5 weekly windows = 140 CategoryEvents on first regen; expansion can multiply this). With the delete + createMany handler it's all batched, so the budget is much more comfortable than the original sequential pattern, but headroom under real prod load is unmeasured.
-
-7. **The other sync handlers still use the sequential `for (const e of update) operations.push(...)` pattern**. CategoryEvent and TravelEvent were collapsed to delete + createMany first because they're entirely engine-derived. The same simplification is NOT safe for handlers whose tables have user edits, FK relations crossing regens, or audit-meaningful timestamps (Planner, SimpleEvent, Category, Location, etc.).
+5. **The other sync handlers still use the sequential `for (const e of update) operations.push(...)` pattern**. CategoryEvent and TravelEvent were collapsed to delete + createMany first because they're entirely engine-derived. The same simplification is NOT safe for handlers whose tables have user edits, FK relations crossing regens, or audit-meaningful timestamps (Planner, SimpleEvent, Category, Location, etc.).
