@@ -1,4 +1,4 @@
-import React, { ReactNode, useLayoutEffect, useState } from "react";
+import React, { ReactNode, useLayoutEffect } from "react";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { Pin } from "lucide-react";
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -52,9 +52,6 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
 }: EventWrapperProps) => {
   const { userSettings, planner, categories } = useCalendarProvider();
   const setHoverLabel = useSetCalendarHoverLabel();
-  // Local hover flag so the time row can yield to the action buttons that
-  // parent components render via `children` on hover.
-  const [isHovering, setIsHovering] = useState(false);
 
   useLayoutEffect(() => {
     const element = elementRef.current;
@@ -85,14 +82,9 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
   const showTitle = tier !== "tiny";
   // Time renders on a row BELOW the title so it never crowds it horizontally.
   // Threshold reserves bottom padding so the time never kisses the tile edge —
-  // if the tile is shorter than that, drop time entirely. Also yield to the
-  // hover-action row at the bottom (Delete/Complete/Postpone) so the buttons
-  // don't get clipped by the tile.
+  // if the tile is shorter than that, drop time entirely.
   const showTime =
-    tier === "regular" &&
-    elementHeight >= 48 &&
-    elementWidth >= 70 &&
-    !isHovering;
+    tier === "regular" && elementHeight >= 48 && elementWidth >= 70;
   const showPin = isPlan && tier !== "tiny";
   const titleFont = tier === "compact" ? 10 : 11.5;
   const padding =
@@ -133,7 +125,6 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
       }}
       onMouseEnter={() => {
         setOnHover(true);
-        setIsHovering(true);
         if (!setHoverLabel) return;
         // Walk planner-parent chain to find effective categoryId (subtasks
         // inherit from their goal ancestor).
@@ -151,7 +142,6 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
       }}
       onMouseLeave={() => {
         setOnHover(false);
-        setIsHovering(false);
         setHoverLabel?.(null);
       }}
       onDoubleClick={(e) =>

@@ -1,5 +1,6 @@
 export { Glass } from "./Glass";
 export { Caption } from "./Caption";
+export { Kbd } from "./Kbd";
 export { Button } from "./Button";
 export { TypeBadge } from "./TypeBadge";
 export { CategoryBadge } from "./CategoryBadge";

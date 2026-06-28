@@ -1,7 +1,6 @@
 
 # P1 — Quick UX wins
 
-- Text selection possible throughout the project — should be disabled (except for text boxes)
 - Dashboard capture button not using system-specific key (ie ctrl)
 - Hovering calendar events and displaying hover buttons shouldn't hide timestamp
 - Plus sign for adding subtask way too small

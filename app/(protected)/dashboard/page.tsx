@@ -8,8 +8,10 @@ import {
   Button,
   CategoryBadge,
   CategoryDot,
+  Kbd,
   useCapture,
 } from "@/components/ui";
+import { usePlatform } from "@/hooks/usePlatform";
 import { TODAY, areaColor } from "../_mock/dashboard";
 import {
   page,
@@ -54,6 +56,7 @@ import {
 
 export default function DashboardPage() {
   const { setOpen: setCaptureOpen } = useCapture();
+  const { modKey } = usePlatform();
 
   return (
     <div className={page}>
@@ -69,7 +72,9 @@ export default function DashboardPage() {
         </div>
         <div className={headerActions}>
           <Button variant="glass" onClick={() => setCaptureOpen(true)}>
-            ⌘K capture
+            <Kbd>{modKey}</Kbd>
+            <Kbd>K</Kbd>
+            capture
           </Button>
           <Link href="/calendar">
             <Button variant="solid">Open calendar →</Button>

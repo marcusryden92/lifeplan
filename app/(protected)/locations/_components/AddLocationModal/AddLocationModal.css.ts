@@ -140,9 +140,10 @@ export const fieldHelp = style({
 });
 
 // Reserved-height containers so conditional messages don't shift surrounding
-// content when they appear.
+// content when they appear. Height matches the visible-state intrinsic size
+// (selectedHint at fontSize 11 with icon, ~18-22px depending on font metrics).
 export const placeMessageSlot = style({
-  minHeight: 18,
+  minHeight: 22,
 });
 
 export const errorSlot = style({

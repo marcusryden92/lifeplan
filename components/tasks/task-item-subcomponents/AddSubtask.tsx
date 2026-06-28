@@ -99,7 +99,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
           className={`${iconBtn} ${iconBtnVisible}`}
           aria-label="Add subtask"
         >
-          <Plus size={14} strokeWidth={2.4} />
+          <Plus size={18} strokeWidth={2.4} />
         </button>
       </div>
     </div>

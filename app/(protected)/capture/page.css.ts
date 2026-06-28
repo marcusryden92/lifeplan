@@ -54,22 +54,6 @@ export const kbdHint = style({
   transition: themeTransition,
 });
 
-export const kbd = style({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minWidth: 18,
-  fontFamily: vars.font.ui,
-  fontSize: 10.5,
-  fontWeight: 600,
-  color: vars.inkSoft,
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.rule}`,
-  borderRadius: 6,
-  padding: "2px 6px",
-  transition: themeTransition,
-});
-
 export const mainGrid = style({
   display: "grid",
   gridTemplateColumns: "300px 1fr",
@@ -280,6 +264,11 @@ export const typeCardActive = style({
 export const typeCardDanger = style({
   color: vars.status.error,
   borderColor: vars.status.error,
+});
+
+export const typeCardFocused = style({
+  outline: `2px solid ${vars.accent.now}`,
+  outlineOffset: 2,
 });
 
 export const typeCardLabel = style({

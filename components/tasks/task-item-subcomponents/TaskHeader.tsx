@@ -75,7 +75,7 @@ export const TaskHeader = ({
           onMouseDown={(e) => e.stopPropagation()}
           aria-label="Add subtask"
         >
-          <Plus size={14} strokeWidth={2.4} />
+          <Plus size={28} strokeWidth={2.4} />
         </button>
       </div>
 

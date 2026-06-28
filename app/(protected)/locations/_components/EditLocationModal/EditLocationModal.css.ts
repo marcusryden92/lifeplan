@@ -144,9 +144,10 @@ export const cascadeNote = style({
 });
 
 // Reserved-height containers so conditional messages don't shift surrounding
-// content when they appear. Heights match the visible-state intrinsic size.
+// content when they appear. Heights match the visible-state intrinsic size
+// (hint ~22 + gap 6 + cascade note ~52 with two lines of 11.5px text).
 export const placeMessageSlot = style({
-  minHeight: 68,
+  minHeight: 80,
   display: "flex",
   flexDirection: "column",
   gap: 6,
