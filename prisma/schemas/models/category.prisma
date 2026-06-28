@@ -31,6 +31,9 @@ model Category {
   // Items in this category (back-reference)
   planners  Planner[]
 
+  // Materialized weekly occurrences with trespass info (back-reference)
+  events    CategoryEvent[]
+
   createdAt String     @default(dbgenerated("NOW()::text"))
   updatedAt String
 
@@ -55,5 +58,41 @@ model CategoryTimeWindow {
   userId     String
   user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // Materialized weekly occurrences (back-reference). Cascade in CategoryEvent
+  // ensures these go away when the window is deleted.
+  events     CategoryEvent[]
+
   @@map("CategoryTimeWindows")
+}
+
+model CategoryEvent {
+  // Deterministic id: `${categoryTimeWindowId}-${start}`. Same occurrence on
+  // a regen produces the same row id, so sync sees no diff unless the slot
+  // actually moved. No DB-side autogen needed.
+  id                    String             @id
+
+  start                 String             // ISO datetime
+  end                   String             // ISO datetime
+
+  // Trespass markers — engine fills these when its scheduling decisions
+  // violated a category boundary. Renderer stamps red borders accordingly.
+  trespassingStart      Boolean            @default(false)
+  trespassingEnd        Boolean            @default(false)
+
+  // Source slot. Cascade so deleting a window deletes its materialized
+  // occurrences.
+  categoryTimeWindowId  String
+  categoryTimeWindow    CategoryTimeWindow @relation(fields: [categoryTimeWindowId], references: [id], onDelete: Cascade)
+
+  // Owning category — required for render (color, name, isStrict).
+  categoryId            String
+  category              Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  userId                String
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt             String             @default(dbgenerated("NOW()::text"))
+  updatedAt             String
+
+  @@map("CategoryEvents")
 }

@@ -5,6 +5,7 @@ import {
   EventTemplate,
   Category,
   CategoryTimeWindow,
+  CategoryEvent,
 } from "@/types/prisma";
 
 type CalendarData = {
@@ -12,6 +13,10 @@ type CalendarData = {
   calendar: SimpleEvent[];
   template: EventTemplate[];
   categories: Category[];
+  // Materialized weekly category occurrences with trespass info. Written
+  // wholesale by the engine each regen; renderer reads directly. Replaces the
+  // per-occurrence wrapper SimpleEvent path that used random UUIDs.
+  categoryEvents: CategoryEvent[];
   // Flipped to true once useFetchCalendarData seeds the slice. Pages gate
   // their empty-state UI on this so a fresh load doesn't briefly read as
   // "no items" / "no categories" before the fetch returns.
@@ -23,6 +28,7 @@ const initialState: CalendarData = {
   calendar: [],
   template: [],
   categories: [],
+  categoryEvents: [],
   isLoaded: false,
 };
 
@@ -37,6 +43,7 @@ const calendarSlice = createSlice({
         calendar: SimpleEvent[];
         template: EventTemplate[];
         categories?: Category[];
+        categoryEvents?: CategoryEvent[];
       }>
     ) => {
       state.planner = action.payload.planner;
@@ -44,6 +51,9 @@ const calendarSlice = createSlice({
       state.calendar = action.payload.calendar;
       if (action.payload.categories !== undefined) {
         state.categories = action.payload.categories;
+      }
+      if (action.payload.categoryEvents !== undefined) {
+        state.categoryEvents = action.payload.categoryEvents;
       }
     },
     // Dedicated flag-flip — kept out of updateCalendarArrayData because that

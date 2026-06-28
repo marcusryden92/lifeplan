@@ -8,6 +8,7 @@ import { handleExtendedPropsChanges } from "./sync-handlers/extendedPropsHandler
 import { handleTemplateChanges } from "./sync-handlers/templateHandlers";
 import { handleCategoryChanges } from "./sync-handlers/categoryHandlers";
 import { handleTimeWindowChanges } from "./sync-handlers/timeWindowHandlers";
+import { handleCategoryEventChanges } from "./sync-handlers/categoryEventHandlers";
 import { handleLocationChanges } from "./sync-handlers/locationHandlers";
 import { handleTravelTimeChanges } from "./sync-handlers/travelTimeHandlers";
 import { fetchFreshState, type FreshState } from "./fetchFreshState";
@@ -36,39 +37,51 @@ export async function syncCalendarData(
   const updatedAt = now.toISOString();
 
   try {
-    const newDataVersion = await db.$transaction(async (tx) => {
-      // OCC gate. updateMany returns count: 0 if the user row doesn't exist OR
-      // if dataVersion has moved on since the client read it. Either way we
-      // abort the transaction (rolling back any prior ops) and let the upstream
-      // catch block return the fresh state to the client.
-      const versionBump = await tx.user.updateMany({
-        where: { id: userId, dataVersion: clientKnownDataVersion },
-        data: { dataVersion: { increment: 1 } },
-      });
-      if (versionBump.count === 0) {
-        throw new StaleVersionError();
-      }
+    const newDataVersion = await db.$transaction(
+      async (tx) => {
+        // OCC gate. updateMany returns count: 0 if the user row doesn't exist OR
+        // if dataVersion has moved on since the client read it. Either way we
+        // abort the transaction (rolling back any prior ops) and let the upstream
+        // catch block return the fresh state to the client.
+        const versionBump = await tx.user.updateMany({
+          where: { id: userId, dataVersion: clientKnownDataVersion },
+          data: { dataVersion: { increment: 1 } },
+        });
+        if (versionBump.count === 0) {
+          throw new StaleVersionError();
+        }
 
-      const operations = [
-        ...handlePlannerChanges(tx, userId, databaseChanges, updatedAt),
-        ...handleCalendarChanges(tx, userId, databaseChanges, updatedAt),
-        ...handleExtendedPropsChanges(tx, databaseChanges),
-        ...handleTemplateChanges(tx, userId, databaseChanges, updatedAt),
-        ...handleCategoryChanges(tx, userId, databaseChanges, updatedAt),
-        ...handleTimeWindowChanges(tx, userId, databaseChanges),
-        ...handleLocationChanges(tx, userId, databaseChanges),
-        ...handleTravelTimeChanges(tx, userId, databaseChanges),
-      ];
+        const operations = [
+          ...handlePlannerChanges(tx, userId, databaseChanges, updatedAt),
+          ...handleCalendarChanges(tx, userId, databaseChanges, updatedAt),
+          ...handleExtendedPropsChanges(tx, databaseChanges),
+          ...handleTemplateChanges(tx, userId, databaseChanges, updatedAt),
+          ...handleCategoryChanges(tx, userId, databaseChanges, updatedAt),
+          ...handleTimeWindowChanges(tx, userId, databaseChanges),
+          ...handleCategoryEventChanges(tx, userId, databaseChanges),
+          ...handleLocationChanges(tx, userId, databaseChanges),
+          ...handleTravelTimeChanges(tx, userId, databaseChanges),
+        ];
 
-      // Sequential execution matches the previous array-form semantics so
-      // ordering invariants (e.g. SimpleEvent must exist before ExtendedProps
-      // upsert connects to it) still hold.
-      for (const op of operations) {
-        await op;
-      }
+        // Sequential execution matches the previous array-form semantics so
+        // ordering invariants (e.g. SimpleEvent must exist before ExtendedProps
+        // upsert connects to it) still hold.
+        for (const op of operations) {
+          await op;
+        }
 
-      return clientKnownDataVersion + 1;
-    });
+        return clientKnownDataVersion + 1;
+      },
+      {
+        // The first regen after a fresh load runs hundreds of writes:
+        // CategoryEvent creates for every materialized weekly occurrence on top
+        // of the usual planner/calendar/extendedProps churn. Prisma's 5s
+        // interactive-transaction default tips over here. 30s gives steady
+        // headroom — long syncs are still bounded so a runaway diff can't
+        // block the connection indefinitely.
+        timeout: 30_000,
+      },
+    );
 
     console.log("📊 Sync operations:", {
       newDataVersion,

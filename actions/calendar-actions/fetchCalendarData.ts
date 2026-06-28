@@ -1,6 +1,12 @@
 "use server";
 import { db } from "@/lib/db";
-import { SimpleEvent, EventTemplate, Planner, Category } from "@/types/prisma";
+import {
+  SimpleEvent,
+  EventTemplate,
+  Planner,
+  Category,
+  CategoryEvent,
+} from "@/types/prisma";
 import { weekdayToInt } from "@/utils/calendarUtils";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 
@@ -48,6 +54,10 @@ export async function fetchCalendarData(userId: string) {
       include: { timeSlots: true, location: true },
     });
 
+    const categoryEvents: CategoryEvent[] = await db.categoryEvent.findMany({
+      where: { userId },
+    });
+
     // Narrow timeSlots.day at the DB boundary and serialize location Dates
     // to avoid Redux non-serializable warnings.
     const categories: Category[] = categoriesRaw.map((cat) => ({
@@ -72,6 +82,7 @@ export async function fetchCalendarData(userId: string) {
         calendar: calendarEvents,
         template: templatesItems,
         categories: categories,
+        categoryEvents: categoryEvents,
         dataVersion: userRow?.dataVersion ?? 0,
       },
     };

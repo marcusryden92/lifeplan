@@ -4,7 +4,7 @@
  * Assembles all events into final calendar output
  */
 
-import { SimpleEvent, Category } from "@/types/prisma";
+import { SimpleEvent, Category, CategoryEvent } from "@/types/prisma";
 import { TravelManager } from "../../core/TravelManager";
 import {
   LoggingConfig,
@@ -12,11 +12,11 @@ import {
 } from "../../models/SchedulingModels";
 import { Slot } from "../../models/TimeSlot";
 import {
-  buildCategoryWrapperEvents,
+  buildCategoryEvents,
   markTrespassingEvents,
   assembleFinalEventList,
+  stampCategoryEventBorders,
 } from "../EventAssembler";
-import { stampCategoryWrapperBorders } from "../EventAssembler/stampCategoryWrapperBorders";
 import { filterEventsByLogRange } from "../../utils/loggingUtils";
 
 export function assembleFinalEvents(
@@ -29,7 +29,7 @@ export function assembleFinalEvents(
   plannerLocationMap: Map<string, string | null>,
   slots: Slot[],
   logging?: LoggingConfig,
-): SimpleEvent[] {
+): { events: SimpleEvent[]; categoryEvents: CategoryEvent[] } {
   const travelEvents = travelManager.generateTravelEvents(userId);
 
   if (logging?.travelDebug) {
@@ -52,24 +52,21 @@ export function assembleFinalEvents(
     }
   }
 
-  const categoryWrapperEvents = buildCategoryWrapperEvents(
+  const events = assembleFinalEventList(context.scheduledEvents, travelEvents);
+
+  markTrespassingEvents(events, plannerLocationMap);
+
+  const categoryEvents = buildCategoryEvents(
     userId,
     scheduledCategories,
     startDate,
     endDate,
   );
 
-  const allEvents = assembleFinalEventList(
-    context.scheduledEvents,
-    travelEvents,
-    categoryWrapperEvents,
-  );
+  // Stamp trespass borders on the persisted CategoryEvents. Engine decisions
+  // (strict-category trespass + travel slot consumption) land directly on the
+  // row so the renderer reads it on cold load without re-running the engine.
+  stampCategoryEventBorders(categoryEvents, slots);
 
-  markTrespassingEvents(allEvents, plannerLocationMap);
-
-  // Mark category wrapper events whose travel-pass placement would have
-  // consumed the entire wrapper — renders the wrapper's top/bottom red.
-  stampCategoryWrapperBorders(allEvents, slots);
-
-  return allEvents;
+  return { events, categoryEvents };
 }

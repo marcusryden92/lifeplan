@@ -4,7 +4,13 @@
  * Core interfaces and types for the scheduling system
  */
 
-import { SimpleEvent, Planner, EventTemplate, Category } from "@/types/prisma";
+import {
+  SimpleEvent,
+  Planner,
+  EventTemplate,
+  Category,
+  CategoryEvent,
+} from "@/types/prisma";
 
 import { SchedulingFailureReason } from "../constants";
 import { PlaceableSlot } from "./TimeSlot";
@@ -23,6 +29,20 @@ export interface SchedulingResult {
   failures: SchedulingFailure[];
   /** Performance and diagnostic metrics */
   metrics: SchedulingMetrics;
+}
+
+/**
+ * Full output of the calendar generator orchestrator (CalendarGenerator).
+ * Extends the inner scheduling pass result with the materialized category
+ * occurrences (with trespass info) the engine writes for each regen.
+ */
+export interface CalendarGenerationResult extends SchedulingResult {
+  /**
+   * Materialized weekly category occurrences. Persisted alongside `events` —
+   * renderer reads these to draw category wrappers. Empty when no scheduled
+   * categories were configured.
+   */
+  categoryEvents: CategoryEvent[];
 }
 
 /**

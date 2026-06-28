@@ -138,7 +138,12 @@
       "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log --all --diff-filter=D --oneline -- \"**/items/[id]/page.css.ts\")",
       "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log --all -p --diff-filter=D -- \"app/circadium/items/[id]/page.tsx\" \"app/circadium/items/[id]/page.css.ts\")",
       "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" log --all -p --diff-filter=D -- \"app/circadium/items/[id]/layout.tsx\" \"app/circadium/items/[id]/layout.css.ts\")",
-      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" show 0e8c88f -- \"components/ui/shell/Sidebar/\")"
+      "Bash(git -C \"c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\" show 0e8c88f -- \"components/ui/shell/Sidebar/\")",
+      "Bash(pnpm dev *)",
+      "Bash(cat C:\\\\\\\\Users\\\\\\\\Marcus\\\\\\\\AppData\\\\\\\\Local\\\\\\\\Temp\\\\\\\\claude\\\\\\\\c--Users-Marcus-Desktop-Lifeplan\\\\\\\\d1b43163-b6b2-4e81-a96b-1ec28d61442e\\\\\\\\tasks\\\\\\\\bqn131ewn.output)",
+      "Bash(sleep 5 && cat \"/c/Users/Marcus/AppData/Local/Temp/claude/c--Users-Marcus-Desktop-Lifeplan/d1b43163-b6b2-4e81-a96b-1ec28d61442e/tasks/bqn131ewn.output\" 2>&1 | tail -60)",
+      "Read(//c/Users/Marcus/AppData/Local/Temp/claude/c--Users-Marcus-Desktop-Lifeplan/d1b43163-b6b2-4e81-a96b-1ec28d61442e/tasks/**)",
+      "Bash(PORT=3001 pnpm dev)"
     ]
   }
 }

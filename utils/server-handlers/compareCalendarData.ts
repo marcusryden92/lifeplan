@@ -8,6 +8,7 @@ import {
   EventType,
   Category,
   CategoryTimeWindow,
+  CategoryEvent,
 } from "@/types/prisma";
 import type {
   SerializedLocation,
@@ -30,6 +31,7 @@ type ExtendedPropsChange = EventExtendedProps;
 // its own group below so a window edit doesn't look like a category update.
 type CategoryChange = Omit<Category, "timeSlots">;
 type CategoryTimeWindowChange = CategoryTimeWindow;
+type CategoryEventChange = CategoryEvent;
 // Only the editable own-row fields. address/lat/lng/placeId are server-
 // authoritative (Google Places) and never flow back from the client.
 type LocationChange = SerializedLocation;
@@ -46,6 +48,7 @@ export type DatabaseChanges = {
   extendedProps: ChangeGroup<ExtendedPropsChange>;
   category: ChangeGroup<CategoryChange>;
   categoryTimeWindow: ChangeGroup<CategoryTimeWindowChange>;
+  categoryEvent: ChangeGroup<CategoryEventChange>;
   location: ChangeGroup<LocationChange>;
   travelTime: ChangeGroup<TravelTimeChange>;
 };
@@ -61,6 +64,8 @@ export async function handleServerTransaction(
   previousTemplate?: { current: EventTemplate[] },
   categories?: Category[],
   previousCategories?: { current: Category[] },
+  categoryEvents?: CategoryEvent[],
+  previousCategoryEvents?: { current: CategoryEvent[] },
   locations?: SerializedLocation[],
   previousLocations?: { current: SerializedLocation[] },
   travelTimes?: SerializedTravelTime[],
@@ -139,6 +144,16 @@ export async function handleServerTransaction(
         ) as SerializedTravelTime[],
       }
     : undefined;
+  const serializedCategoryEvents = categoryEvents
+    ? (JSON.parse(JSON.stringify(categoryEvents)) as CategoryEvent[])
+    : undefined;
+  const serializedPreviousCategoryEvents = previousCategoryEvents
+    ? {
+        current: JSON.parse(
+          JSON.stringify(previousCategoryEvents.current),
+        ) as CategoryEvent[],
+      }
+    : undefined;
 
   const databaseChanges = compareData(
     serializedPlanner,
@@ -149,6 +164,8 @@ export async function handleServerTransaction(
     serializedPreviousTemplate,
     serializedCategories,
     serializedPreviousCategories,
+    serializedCategoryEvents,
+    serializedPreviousCategoryEvents,
     serializedLocations,
     serializedPreviousLocations,
     serializedTravelTimes,
@@ -173,6 +190,8 @@ export function compareData(
   previousTemplate?: { current: EventTemplate[] },
   categories?: Category[],
   previousCategories?: { current: Category[] },
+  categoryEvents?: CategoryEvent[],
+  previousCategoryEvents?: { current: CategoryEvent[] },
   locations?: SerializedLocation[],
   previousLocations?: { current: SerializedLocation[] },
   travelTimes?: SerializedTravelTime[],
@@ -185,6 +204,7 @@ export function compareData(
     extendedProps: { create: [], update: [], destroy: [] },
     category: { create: [], update: [], destroy: [] },
     categoryTimeWindow: { create: [], update: [], destroy: [] },
+    categoryEvent: { create: [], update: [], destroy: [] },
     location: { create: [], update: [], destroy: [] },
     travelTime: { create: [], update: [], destroy: [] },
   };
@@ -342,6 +362,31 @@ export function compareData(
     prevWindowMap.forEach((win, id) => {
       if (!currWindowMap.has(id)) {
         databaseChanges.categoryTimeWindow.destroy.push(win);
+      }
+    });
+  }
+
+  // Category events (materialized weekly occurrences with trespass info).
+  // Engine produces these wholesale on regen; deterministic ids mean unchanged
+  // occurrences diff as a no-op. Different list from time windows —
+  // categoryTimeWindow is the recurring rule, categoryEvent is the realized
+  // occurrence.
+  if (categoryEvents && previousCategoryEvents) {
+    const currByEvent = new Map(categoryEvents.map((e) => [e.id, e]));
+    const prevByEvent = new Map(
+      previousCategoryEvents.current.map((e) => [e.id, e]),
+    );
+    currByEvent.forEach((ev, id) => {
+      const prev = prevByEvent.get(id);
+      if (!prev) {
+        databaseChanges.categoryEvent.create.push(ev);
+      } else if (!objectsAreEqual(prev, ev)) {
+        databaseChanges.categoryEvent.update.push(ev);
+      }
+    });
+    prevByEvent.forEach((ev, id) => {
+      if (!currByEvent.has(id)) {
+        databaseChanges.categoryEvent.destroy.push(ev);
       }
     });
   }

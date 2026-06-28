@@ -19,6 +19,7 @@ model User {
   locations             Location[]
   categories            Category[]
   categoryTimeWindows   CategoryTimeWindow[]
+  categoryEvents        CategoryEvent[]
 
   @@map("users")
 }

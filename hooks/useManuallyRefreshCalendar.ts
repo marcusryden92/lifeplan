@@ -114,23 +114,24 @@ const useManuallyRefreshCalendar = (
       // Convert serialized array to Map for calendar generation
       const travelTimeMap = travelTimeArrayToMap(travelTimeMatrix);
 
-      const newCalendar = generateCalendar(
-        userId,
-        weekStartDay,
-        template,
-        planner,
-        filteredCalendar,
-        {
-          bufferTimeMinutes,
-          travelTimeMatrix: travelTimeMap ?? undefined,
-          injectTravelEvents: enableTravelEvents,
-          strategyWeights: debugStrategyConfig.weights,
-          locationGroupingScores: debugStrategyConfig.locationGrouping.scores,
-          locationGroupingPenalties:
-            debugStrategyConfig.locationGrouping.penalties,
-          categories,
-        }
-      );
+      const { events: newCalendar, categoryEvents: newCategoryEvents } =
+        generateCalendar(
+          userId,
+          weekStartDay,
+          template,
+          planner,
+          filteredCalendar,
+          {
+            bufferTimeMinutes,
+            travelTimeMatrix: travelTimeMap ?? undefined,
+            injectTravelEvents: enableTravelEvents,
+            strategyWeights: debugStrategyConfig.weights,
+            locationGroupingScores: debugStrategyConfig.locationGrouping.scores,
+            locationGroupingPenalties:
+              debugStrategyConfig.locationGrouping.penalties,
+            categories,
+          },
+        );
 
       // Use updateAll to bypass the thunk's regeneration
       // Pass the generated calendar directly without triggering another generation
@@ -140,6 +141,7 @@ const useManuallyRefreshCalendar = (
           calendar: newCalendar,
           template,
           categories,
+          categoryEvents: newCategoryEvents,
         })
       );
     }

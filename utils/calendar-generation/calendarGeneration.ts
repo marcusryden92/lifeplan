@@ -6,7 +6,13 @@
  */
 
 import { WeekDayIntegers } from "@/types/calendarTypes";
-import { Planner, EventTemplate, SimpleEvent, Category } from "@/types/prisma";
+import {
+  Planner,
+  EventTemplate,
+  SimpleEvent,
+  Category,
+  CategoryEvent,
+} from "@/types/prisma";
 import { CalendarGenerator } from "./core/CalendarGenerator";
 import { SCHEDULING_CONFIG } from "./constants";
 import type {
@@ -40,7 +46,8 @@ export interface GenerateCalendarOptions {
  * @param planner - Planner items (tasks, goals, plans)
  * @param prevCalendar - Previous calendar events to preserve
  * @param options - Optional configuration (bufferTimeMinutes, travelTimeMatrix, injectTravelEvents)
- * @returns Array of calendar events
+ * @returns `{ events, categoryEvents }` — events are plans + scheduled tasks + travel;
+ *   categoryEvents are the materialized weekly category occurrences (with trespass info).
  */
 export function generateCalendar(
   userId: string,
@@ -49,7 +56,7 @@ export function generateCalendar(
   planner: Planner[],
   prevCalendar: SimpleEvent[],
   options: GenerateCalendarOptions | number = {},
-): SimpleEvent[] {
+): { events: SimpleEvent[]; categoryEvents: CategoryEvent[] } {
   // Handle backwards compatibility - if a number is passed, treat it as bufferTimeMinutes
   const opts: GenerateCalendarOptions =
     typeof options === "number" ? { bufferTimeMinutes: options } : options;
@@ -99,5 +106,5 @@ export function generateCalendar(
     },
   }).generate();
 
-  return result.events;
+  return { events: result.events, categoryEvents: result.categoryEvents };
 }
