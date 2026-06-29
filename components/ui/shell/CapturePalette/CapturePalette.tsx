@@ -46,6 +46,7 @@ export function CapturePalette() {
       parentId: null,
       plannerType: "task",
       isReady: false,
+      isTriaged: false,
       duration: 0,
       deadline: null,
       starts: null,

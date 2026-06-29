@@ -170,6 +170,7 @@ export default function CapturePage() {
         parentId: null,
         plannerType: "task",
         isReady: false,
+        isTriaged: false,
         duration: 0,
         deadline: null,
         starts: null,
@@ -225,6 +226,7 @@ export default function CapturePage() {
                 starts: startsIso,
                 categoryId: draft.categoryId || null,
                 isReady: nextReady,
+                isTriaged: true,
                 updatedAt: nowIso,
               }
             : p,

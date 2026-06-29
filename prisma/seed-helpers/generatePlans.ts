@@ -114,6 +114,7 @@ export const generatePlans = (userId: string): Planner[] => {
       parentId: null,
       plannerType: "plan" as const,
       isReady: true,
+      isTriaged: true,
       duration: data.duration,
       deadline: null,
       starts,

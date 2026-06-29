@@ -53,6 +53,7 @@ export const onSubmit = ({
       parentId: null,
       plannerType: type || "goal",
       isReady: true,
+      isTriaged: true,
       duration: 5,
       deadline: null,
       starts: null,

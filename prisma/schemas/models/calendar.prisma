@@ -35,6 +35,7 @@ model Planner {
   parentId           String?
   plannerType        PlannerType
   isReady            Boolean?
+  isTriaged          Boolean     @default(false) // Cleared on capture; set on first Capture save so the item leaves the triage queue
   duration           Int
   deadline           String?
   starts             String?
