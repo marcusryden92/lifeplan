@@ -33,6 +33,54 @@ function calculateTaskUrgency(
   return task.priority * scaledUrgency;
 }
 
+// Compute the urgency score for an arbitrary subset of planners using the
+// same normalization (sum of all planner durations) the scheduler uses.
+// Caller decides which items to score, so the same denominator can drive both
+// the scheduler's candidate sort and the dashboard's "priority goals" list
+// without recomputing.
+export function computeUrgencyScores(
+  allPlanners: Planner[],
+  itemsToScore: Planner[],
+  currentDate: Date,
+): Map<string, number> {
+  const totalPlannerTime = allPlanners.reduce((acc, p) => acc + p.duration, 0);
+  const scores = new Map<string, number>();
+  for (const item of itemsToScore) {
+    scores.set(
+      item.id,
+      calculateTaskUrgency(item, {
+        currentDate,
+        totalEstimatedTime: totalPlannerTime,
+      }),
+    );
+  }
+  return scores;
+}
+
+// Scores active scheduling candidates (root goals with isReady + standalone
+// tasks) plus every top-level uncompleted goal, so consumers like the
+// dashboard can rank goals that the scheduler intentionally skipped (e.g.
+// not-yet-ready goals). Single pass against allPlanners' duration sum.
+export function scoreCandidatesAndRootGoals(
+  allPlanners: Planner[],
+  currentDate: Date,
+): Map<string, number> {
+  const toScore = new Map<string, Planner>();
+  for (const p of allPlanners) {
+    const isStandaloneTask = p.plannerType === PlannerType.task && !p.parentId;
+    const isReadyRootGoal =
+      p.plannerType === PlannerType.goal && !p.parentId && p.isReady === true;
+    const isAnyRootGoal =
+      p.plannerType === PlannerType.goal &&
+      !p.parentId &&
+      !p.completedEndTime;
+    if (isStandaloneTask || isReadyRootGoal || isAnyRootGoal) {
+      toScore.set(p.id, p);
+    }
+  }
+  return computeUrgencyScores(allPlanners, [...toScore.values()], currentDate);
+}
+
 function hasCategoryConstraint(
   item: Planner,
   allPlanners: Planner[],
@@ -78,33 +126,24 @@ function hasChildWithCategoryConstraint(
 export function sortByPriorityAndConstraints(
   allPlanners: Planner[],
   goalsAndTasks: Planner[],
-  currentDate: Date,
+  urgencyScores: Map<string, number>,
   plannerCategoryMap?: Map<string, string | null>,
 ): Planner[] {
-  const totalPlannerTime = allPlanners.reduce((acc, p) => acc + p.duration, 0);
-
-  const withUrgency = goalsAndTasks.map((item) => {
-    const itemHasCategoryConstraint = hasCategoryConstraint(
+  const withMeta = goalsAndTasks.map((item) => ({
+    item,
+    urgencyScore: urgencyScores.get(item.id) ?? 0,
+    hasCategoryConstraint: hasCategoryConstraint(
       item,
       allPlanners,
       plannerCategoryMap,
-    );
+    ),
+  }));
 
-    const urgencyScore = calculateTaskUrgency(item, {
-      currentDate,
-      totalEstimatedTime: totalPlannerTime,
-    });
-
-    return {
-      ...item,
-      urgencyScore,
-      hasCategoryConstraint: itemHasCategoryConstraint,
-    };
-  });
-
-  return withUrgency.sort((a, b) => {
-    if (a.hasCategoryConstraint && !b.hasCategoryConstraint) return -1;
-    if (!a.hasCategoryConstraint && b.hasCategoryConstraint) return 1;
-    return b.urgencyScore - a.urgencyScore;
-  });
+  return withMeta
+    .sort((a, b) => {
+      if (a.hasCategoryConstraint && !b.hasCategoryConstraint) return -1;
+      if (!a.hasCategoryConstraint && b.hasCategoryConstraint) return 1;
+      return b.urgencyScore - a.urgencyScore;
+    })
+    .map((row) => row.item);
 }

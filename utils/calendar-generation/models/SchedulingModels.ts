@@ -50,6 +50,13 @@ export interface CalendarGenerationResult extends SchedulingResult {
    * injection is disabled or no cross-location placements exist.
    */
   travelEvents: TravelEvent[];
+  /**
+   * Per-planner urgency score the engine computed for this regen. Keys are
+   * planner ids; covers scheduling candidates plus every top-level
+   * uncompleted goal so consumers can rank goals the scheduler skipped
+   * (e.g. not-yet-ready ones). Ephemeral — not persisted to the DB.
+   */
+  plannerScores: Record<string, number>;
 }
 
 /**

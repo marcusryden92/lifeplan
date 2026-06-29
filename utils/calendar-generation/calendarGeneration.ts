@@ -63,6 +63,7 @@ export function generateCalendar(
   events: SimpleEvent[];
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
+  plannerScores: Record<string, number>;
 } {
   // Handle backwards compatibility - if a number is passed, treat it as bufferTimeMinutes
   const opts: GenerateCalendarOptions =
@@ -117,5 +118,6 @@ export function generateCalendar(
     events: result.events,
     categoryEvents: result.categoryEvents,
     travelEvents: result.travelEvents,
+    plannerScores: result.plannerScores,
   };
 }

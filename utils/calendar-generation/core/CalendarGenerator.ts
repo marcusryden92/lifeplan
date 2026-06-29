@@ -30,6 +30,7 @@ import {
   buildLoggingLookups,
   emitDebugLog,
 } from "../helpers/CalendarGenerator";
+import { scoreCandidatesAndRootGoals } from "../helpers/PrioritySorter";
 import {
   buildAvailableSlots,
   dropPastAvailableSlots,
@@ -121,10 +122,21 @@ export class CalendarGenerator {
         events: [],
         categoryEvents: [],
         travelEvents: [],
+        plannerScores: {},
         failures: validation.failures,
         metrics: this.metrics,
       };
     }
+
+    // Single urgency-score pass: covers scheduler candidates AND every
+    // top-level uncompleted goal. Same denominator (sum of all planner
+    // durations) so the scheduler's sort is unchanged, and downstream
+    // consumers (dashboard, etc.) read scores for goals the scheduler
+    // intentionally skipped without recomputing.
+    const urgencyScores = scoreCandidatesAndRootGoals(
+      input.planners,
+      currentDate,
+    );
 
     // Phase 2: Build initial event array (memoized, plans, completed)
     const { eventArray, memoizedEventIds } = buildInitialEventArray(
@@ -242,7 +254,7 @@ export class CalendarGenerator {
     const candidates = prepareCandidates(
       input.planners,
       memoizedEventIds,
-      currentDate,
+      urgencyScores,
       plannerCategoryMap,
     );
 
@@ -316,6 +328,7 @@ export class CalendarGenerator {
       events: allEvents,
       categoryEvents,
       travelEvents,
+      plannerScores: Object.fromEntries(urgencyScores),
       failures: [...schedulingResult.failures],
       metrics: this.metrics,
     };

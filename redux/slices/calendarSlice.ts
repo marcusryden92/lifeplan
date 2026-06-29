@@ -22,6 +22,11 @@ type CalendarData = {
   // the engine each regen; renderer reads directly. Replaces the per-regen
   // travel SimpleEvent path that was stripped from sync.
   travelEvents: TravelEvent[];
+  // Per-planner urgency scores from the engine's last regen. Ephemeral —
+  // hydrated only when the engine runs (not from the server fetch), so a
+  // cold load before the autoregen fires will see {}. Consumers (e.g. the
+  // dashboard's priority-goals ranking) must handle the empty case.
+  plannerScores: Record<string, number>;
   // Flipped to true once useFetchCalendarData seeds the slice. Pages gate
   // their empty-state UI on this so a fresh load doesn't briefly read as
   // "no items" / "no categories" before the fetch returns.
@@ -35,6 +40,7 @@ const initialState: CalendarData = {
   categories: [],
   categoryEvents: [],
   travelEvents: [],
+  plannerScores: {},
   isLoaded: false,
 };
 
@@ -51,6 +57,7 @@ const calendarSlice = createSlice({
         categories?: Category[];
         categoryEvents?: CategoryEvent[];
         travelEvents?: TravelEvent[];
+        plannerScores?: Record<string, number>;
       }>
     ) => {
       state.planner = action.payload.planner;
@@ -64,6 +71,9 @@ const calendarSlice = createSlice({
       }
       if (action.payload.travelEvents !== undefined) {
         state.travelEvents = action.payload.travelEvents;
+      }
+      if (action.payload.plannerScores !== undefined) {
+        state.plannerScores = action.payload.plannerScores;
       }
     },
     // Dedicated flag-flip — kept out of updateCalendarArrayData because that

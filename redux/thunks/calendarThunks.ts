@@ -62,6 +62,7 @@ export const updateAllCalendarStates =
       events: newCalendar,
       categoryEvents: newCategoryEvents,
       travelEvents: newTravelEvents,
+      plannerScores: newPlannerScores,
     } = generateCalendar(
       userId,
       weekStartDay,
@@ -83,6 +84,7 @@ export const updateAllCalendarStates =
       categories,
       categoryEvents: newCategoryEvents,
       travelEvents: newTravelEvents,
+      plannerScores: newPlannerScores,
     };
 
     dispatch(calendarSlice.actions.updateCalendarArrayData(calendarData));

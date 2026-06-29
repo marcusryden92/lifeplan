@@ -215,6 +215,23 @@ export const agendaRowNow = style({
   },
 });
 
+export const agendaRowTravel = style({
+  cursor: "default",
+  selectors: {
+    "&:hover": {
+      background: "transparent",
+    },
+  },
+});
+
+export const agendaEmpty = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 160,
+  color: vars.muted,
+});
+
 export const agendaTimeCol = style({
   fontFamily: vars.font.ui,
   fontVariantNumeric: "tabular-nums",
@@ -392,4 +409,12 @@ export const goalNext = style({
   fontFamily: vars.font.ui,
   fontWeight: 500,
   transition: themeTransition,
+});
+
+export const goalsEmpty = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minHeight: 120,
+  color: vars.muted,
 });
