@@ -1,13 +1,7 @@
-
-# P1 — Quick UX wins
-- Location drop down menu in Create/Edit modal for /locations is rendered inside and cut off by the modal
-
 # P2 — Wire-up debt (known stubs)
 
 - Dashboard setup (replace mocks in `_mock/dashboard.ts`)
 - Wire up Schedule and Activity tabs in item detail view
-- Calendar engine console drawer still using mocks (`_mock/calendar.ts`)
-- Filter for completed/not completed in library
 - Option to archive completed goals/items so they don't clutter the interface
 
 # P3 — Small features
