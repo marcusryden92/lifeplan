@@ -1,25 +1,7 @@
-# P0 — Production bugs
-
-- Calendar items not loading properly on initial load (have to click regenerate for items to display)
-
-# P1 — Quick UX wins
-
-- Text selection possible throughout the project — should be disabled (except for text boxes)
-- Dashboard capture button not using system-specific key (ie ctrl)
-- Hovering calendar events and displaying hover buttons shouldn't hide timestamp
-- Deadline box overlaps Rolled-up duration box in item detail view
-- Plus sign for adding subtask way too small
-- Up/Down arrow keys in Capture view currently navigates left menu (nice). Left/Right should navigate the task/plan/goal/trash buttons. Enter to save
-- Goals in capture menu that have been saved don't disappear from the list
-- Filter/Week buttons in calendar header do nothing
-- "Place selected" notice in modals shouldn't cause the modal to expand vertically — needs to reserve its space
-
 # P2 — Wire-up debt (known stubs)
 
 - Dashboard setup (replace mocks in `_mock/dashboard.ts`)
 - Wire up Schedule and Activity tabs in item detail view
-- Calendar engine console drawer still using mocks (`_mock/calendar.ts`)
-- Filter for completed/not completed in library
 - Option to archive completed goals/items so they don't clutter the interface
 
 # P3 — Small features
@@ -32,8 +14,8 @@
 
 # P4 — Refactors / investigations
 
-- Window sizes / container leaks: current solution was added to fix item detail being too wide for the screen, but the same issue happens in the create/edit modals in the location view. Need to find the root cause — items leaking outside their container.
-- Token consolidation into sprinkles (color/space/radii) — started with `contentWidths`
+- Token consolidation into sprinkles (color/space/radii)
+- Tokens for contentWidth (sm, md, lg etc) for layouts
 - Server-side overlap validation for CategoryTimeWindow
 - Plumb `TravelTime.transportMode` through the scheduling engine
 - Add console error messaging

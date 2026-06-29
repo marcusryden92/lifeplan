@@ -36,7 +36,7 @@ type Props = {
   userInitial?: string;
 };
 
-export function Sidebar({ userName = "Marcus", userInitial = "M" }: Props) {
+export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
   const pathname = usePathname() ?? "";
   const { dark, toggle } = useTheme();
   const [collapsed, setCollapsed] = useState(false);

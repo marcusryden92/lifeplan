@@ -13,6 +13,10 @@ import {
   /* generatePlans, */ planSeedData,
 } from "./seed-helpers/generatePlans";
 import {
+  generateUncompletedItems,
+  uncompletedSeedData,
+} from "./seed-helpers/generateUncompletedItems";
+import {
   generateLocations,
   generateTravelTimes,
 } from "./seed-helpers/generateLocations";
@@ -83,6 +87,11 @@ async function main() {
   const planners = generatePlanners(userId);
   await prisma.planner.createMany({ data: planners });
 
+  // Seed uncompleted items (standalone top-level plans anchored to past
+  // `starts` times so the engine emits SimpleEvents that end before "now")
+  const uncompleted = generateUncompletedItems(userId);
+  await prisma.planner.createMany({ data: uncompleted });
+
   // Seed plans (scheduled tasks)
   /*  const plans = generatePlans(userId);
   await prisma.planner.createMany({ data: plans }); */
@@ -94,6 +103,7 @@ async function main() {
   console.log(`  - Event templates: ${templates.length}`);
   console.log(`  - Planner goals: ${plannerSeedData.length}`);
   console.log(`  - Planner plans: ${planSeedData.length}`);
+  console.log(`  - Uncompleted items: ${uncompletedSeedData.length}`);
 }
 
 main()

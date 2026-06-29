@@ -4,14 +4,13 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { format } from "date-fns";
 import { CornerDownLeft } from "lucide-react";
-import { Button, Caption } from "@/components/ui";
+import { Button, Caption, Kbd } from "@/components/ui";
 import {
   overlay,
   dialog,
   header,
   input,
   hintsRow,
-  kbd,
 } from "@/components/ui/shell/CapturePalette/CapturePalette.css";
 
 interface NewPlanModalProps {
@@ -91,7 +90,7 @@ export function NewPlanModal({
           <div className={hintsRow} style={{ justifyContent: "flex-end" }}>
             <Button variant="glass" size="sm" onClick={onCancel}>
               Cancel
-              <span className={kbd} style={{ marginLeft: 8 }}>esc</span>
+              <Kbd style={{ marginLeft: 8 }}>esc</Kbd>
             </Button>
             <Button
               variant="glassInk"
@@ -100,9 +99,9 @@ export function NewPlanModal({
               disabled={!canSubmit}
             >
               Create
-              <span className={kbd} style={{ marginLeft: 8 }}>
+              <Kbd style={{ marginLeft: 8 }}>
                 <CornerDownLeft size={11} strokeWidth={2.4} />
-              </span>
+              </Kbd>
             </Button>
           </div>
         </Dialog.Content>

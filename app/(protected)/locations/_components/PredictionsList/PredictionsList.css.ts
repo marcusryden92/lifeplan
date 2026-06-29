@@ -1,8 +1,10 @@
 import { style } from "@vanilla-extract/css";
 import { vars, popover } from "@/lib/theme";
 
-// Absolute-positioned overlay so populating the prediction list never grows
-// the parent vertically. Anchored to its position: relative wrap.
+// Absolute-positioned overlay anchored to its position: relative wrap.
+// The parent modal must use `overflow: visible` for this to escape its box.
+// Opaque paper background overrides popover's translucent glass fill so the
+// list reads as a solid surface when it overlaps the modal's footer buttons.
 export const predictions = style([
   popover({ size: "sm" }),
   {
@@ -10,7 +12,8 @@ export const predictions = style([
     top: "calc(100% + 4px)",
     left: 0,
     right: 0,
-    zIndex: 5,
+    zIndex: 50,
+    background: vars.paper,
     display: "flex",
     flexDirection: "column",
     maxHeight: 240,

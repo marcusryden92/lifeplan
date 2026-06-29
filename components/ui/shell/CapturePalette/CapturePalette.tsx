@@ -8,6 +8,7 @@ import { v4 as uuidv4 } from "uuid";
 import { useCapture } from "../CaptureContext";
 import { Caption } from "../../Caption";
 import { Button } from "../../Button";
+import { Kbd } from "../../Kbd";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { usePlatform } from "@/hooks/usePlatform";
 import type { Planner } from "@/types/prisma";
@@ -17,7 +18,6 @@ import {
   header,
   input,
   hintsRow,
-  kbd,
 } from "./CapturePalette.css";
 
 export function CapturePalette() {
@@ -46,6 +46,7 @@ export function CapturePalette() {
       parentId: null,
       plannerType: "task",
       isReady: false,
+      isTriaged: false,
       duration: 0,
       deadline: null,
       starts: null,
@@ -118,7 +119,7 @@ export function CapturePalette() {
           <div className={hintsRow} style={{ justifyContent: "flex-end" }}>
             <Button variant="glass" size="sm" onClick={() => setOpen(false)}>
               Cancel
-              <span className={kbd} style={{ marginLeft: 8 }}>esc</span>
+              <Kbd style={{ marginLeft: 8 }}>esc</Kbd>
             </Button>
             <Button
               variant="glass"
@@ -127,14 +128,14 @@ export function CapturePalette() {
               disabled={!canSubmit}
             >
               Save & triage
-              <span className={kbd} style={{ marginLeft: 8 }}>
+              <Kbd style={{ marginLeft: 8 }}>
                 {modKey}
                 <CornerDownLeft
                   size={11}
                   strokeWidth={2.4}
                   style={{ marginLeft: 3 }}
                 />
-              </span>
+              </Kbd>
             </Button>
             <Button
               variant="glassInk"
@@ -143,9 +144,9 @@ export function CapturePalette() {
               disabled={!canSubmit}
             >
               Save
-              <span className={kbd} style={{ marginLeft: 8 }}>
+              <Kbd style={{ marginLeft: 8 }}>
                 <CornerDownLeft size={11} strokeWidth={2.4} />
-              </span>
+              </Kbd>
             </Button>
           </div>
         </Dialog.Content>

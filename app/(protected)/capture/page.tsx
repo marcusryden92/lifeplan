@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { formatDistanceToNowStrict } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { CornerDownLeft, Plus, Sparkles } from "lucide-react";
-import { Button, Caption, Loader, vars } from "@/components/ui";
+import { Button, Caption, Kbd, Loader, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useSelector } from "react-redux";
 import { usePlatform } from "@/hooks/usePlatform";
@@ -34,7 +34,6 @@ import {
   titleSummary,
   spacer,
   kbdHint,
-  kbd,
   mainGrid,
   queueRail,
   queueHead,
@@ -55,6 +54,7 @@ import {
   typeCard,
   typeCardActive,
   typeCardDanger,
+  typeCardFocused,
   typeCardLabel,
   typeCardSub,
   typeCardKbd,
@@ -88,6 +88,8 @@ export default function CapturePage() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [jot, setJot] = useState("");
+  const [typeCursor, setTypeCursor] = useState(0);
+  const typeKeys = useMemo(() => TYPE_OPTIONS.map((o) => o.key), []);
 
   // Pin selection to the first queue item when nothing is selected, or when
   // the previous selection drops out (saved / trashed). Stays put across
@@ -142,6 +144,11 @@ export default function CapturePage() {
     });
   }, [selected]);
 
+  useEffect(() => {
+    const idx = typeKeys.indexOf(draft.type);
+    if (idx !== -1) setTypeCursor(idx);
+  }, [draft.type, typeKeys]);
+
   const advanceAfterSelectedId = useCallback(
     (id: string) => {
       const idx = queue.findIndex((q) => q.id === id);
@@ -163,6 +170,7 @@ export default function CapturePage() {
         parentId: null,
         plannerType: "task",
         isReady: false,
+        isTriaged: false,
         duration: 0,
         deadline: null,
         starts: null,
@@ -218,6 +226,7 @@ export default function CapturePage() {
                 starts: startsIso,
                 categoryId: draft.categoryId || null,
                 isReady: nextReady,
+                isTriaged: true,
                 updatedAt: nowIso,
               }
             : p,
@@ -252,6 +261,9 @@ export default function CapturePage() {
     setDraftType,
     commitSelected,
     trashSelected,
+    typeCursor,
+    setTypeCursor,
+    typeKeys,
   });
 
   const selectedCategory: Category | null = useMemo(() => {
@@ -270,8 +282,8 @@ export default function CapturePage() {
         </span>
         <span className={spacer} />
         <span className={kbdHint}>
-          <span className={kbd}>{modKey}</span>
-          <span className={kbd}>K</span>
+          <Kbd>{modKey}</Kbd>
+          <Kbd>K</Kbd>
           <Caption>capture</Caption>
         </span>
       </div>
@@ -292,9 +304,9 @@ export default function CapturePage() {
               onChange={(e) => setJot(e.target.value)}
               onKeyDown={handleQuickAdd}
             />
-            <span className={kbd}>
+            <Kbd>
               <CornerDownLeft size={11} strokeWidth={2.4} />
-            </span>
+            </Kbd>
           </div>
 
           <div className={queueList}>
@@ -373,14 +385,18 @@ export default function CapturePage() {
                 <h2 className={itemTitle}>{selected.title}</h2>
 
                 <div className={typeGrid}>
-                  {TYPE_OPTIONS.map((opt) => {
+                  {TYPE_OPTIONS.map((opt, idx) => {
                     const active = draft.type === opt.key;
+                    const focused = typeCursor === idx;
                     return (
                       <button
                         key={opt.key}
                         type="button"
-                        className={`${typeCard} ${active ? typeCardActive : ""}`}
-                        onClick={() => setDraftType(opt.key)}
+                        className={`${typeCard} ${active ? typeCardActive : ""} ${focused ? typeCardFocused : ""}`}
+                        onClick={() => {
+                          setDraftType(opt.key);
+                          setTypeCursor(idx);
+                        }}
                       >
                         <span className={typeCardLabel}>{opt.label}</span>
                         <span className={typeCardSub}>{opt.sub}</span>
@@ -390,7 +406,7 @@ export default function CapturePage() {
                   })}
                   <button
                     type="button"
-                    className={`${typeCard} ${typeCardDanger}`}
+                    className={`${typeCard} ${typeCardDanger} ${typeCursor === TYPE_OPTIONS.length ? typeCardFocused : ""}`}
                     onClick={trashSelected}
                     title="Delete this item"
                   >
@@ -486,15 +502,18 @@ export default function CapturePage() {
               </div>
 
               <div className={footerHint}>
-                <span className={kbd}>
+                <Kbd>
                   <CornerDownLeft size={11} strokeWidth={2.4} />
-                </span>
+                </Kbd>
                 <Caption>save & next</Caption>
-                <span className={kbd}>1</span>
-                <span className={kbd}>2</span>
-                <span className={kbd}>3</span>
+                <Kbd>1</Kbd>
+                <Kbd>2</Kbd>
+                <Kbd>3</Kbd>
                 <Caption>type</Caption>
-                <span className={kbd}>x</span>
+                <Kbd>←</Kbd>
+                <Kbd>→</Kbd>
+                <Caption>cycle buttons</Caption>
+                <Kbd>x</Kbd>
                 <Caption>trash</Caption>
                 <span className={spacer} />
                 <span

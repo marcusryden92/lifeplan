@@ -31,6 +31,7 @@ export const createPlanFromSelection = (
     parentId: null,
     plannerType: PlannerType.plan,
     isReady: true,
+    isTriaged: true,
     duration,
     deadline: null,
     starts: start.toISOString(),

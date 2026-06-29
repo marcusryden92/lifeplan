@@ -36,7 +36,7 @@ export const modal = style([
     left: "50%",
     width: "min(480px, calc(100vw - 32px))",
     maxHeight: "calc(100vh - 48px)",
-    overflow: "auto",
+    overflow: "visible",
     padding: "22px 24px",
     display: "flex",
     flexDirection: "column",
@@ -90,6 +90,8 @@ export const fieldLabel = style({
 
 export const searchWrap = style({
   position: "relative",
+  zIndex: 100,
+  isolation: "isolate",
 });
 
 export const searchIcon = style({
@@ -144,9 +146,10 @@ export const cascadeNote = style({
 });
 
 // Reserved-height containers so conditional messages don't shift surrounding
-// content when they appear. Heights match the visible-state intrinsic size.
+// content when they appear. Heights match the visible-state intrinsic size
+// (hint ~22 + gap 6 + cascade note ~52 with two lines of 11.5px text).
 export const placeMessageSlot = style({
-  minHeight: 68,
+  minHeight: 80,
   display: "flex",
   flexDirection: "column",
   gap: 6,
@@ -171,6 +174,8 @@ export const footer = style({
   gap: 8,
   justifyContent: "flex-end",
   marginTop: 4,
+  position: "relative",
+  zIndex: 0,
 });
 
 export const dangerSlot = style({ marginRight: "auto" });

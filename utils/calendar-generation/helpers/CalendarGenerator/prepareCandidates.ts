@@ -10,7 +10,7 @@ import { sortByPriorityAndConstraints } from "../PrioritySorter";
 export function prepareCandidates(
   planners: Planner[],
   memoizedEventIds: Set<string>,
-  currentDate: Date,
+  urgencyScores: Map<string, number>,
   plannerCategoryMap?: Map<string, string | null>,
 ): Planner[] {
   const candidates = planners.filter(
@@ -25,7 +25,7 @@ export function prepareCandidates(
   return sortByPriorityAndConstraints(
     planners,
     candidates,
-    currentDate,
+    urgencyScores,
     plannerCategoryMap,
   );
 }

@@ -9,12 +9,12 @@ export const themeLight = createTheme(vars, {
   muted: "#7a7890",
   rule: "rgba(22,20,42,0.12)",
   textOnAccent: "#ffffff",
-  overlay: "rgba(10,8,20,0.42)",
+  overlay: "rgba(10,8,20,0.22)",
   tileFill: "#f2efea",
 
   glass: {
     bg: "rgba(255,255,255,0.28)",
-    bgDeep: "rgba(255,255,255,0.40)",
+    bgDeep: "rgba(255,255,255,0.65)",
     bgSoft: "rgba(255,255,255,0.16)",
     stroke: "rgba(22,20,42,0.14)",
     hi: "rgba(255,255,255,0.55)",

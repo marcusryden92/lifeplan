@@ -45,19 +45,21 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* Disable text selection globally while dragging (except in editable fields) */
-body.lp-dragging {
+/* Disable text selection globally — editable surfaces opt back in below.
+   Opt-in escape hatch: add the .lp-allow-select class to any element whose
+   text should remain selectable (e.g. a code block, a copyable token). */
+body {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
 }
 
-body.lp-dragging input,
-body.lp-dragging textarea,
-body.lp-dragging select,
-body.lp-dragging [contenteditable="true"],
-body.lp-dragging .lp-allow-select {
+body input,
+body textarea,
+body select,
+body [contenteditable="true"],
+body .lp-allow-select {
   -webkit-user-select: text;
   -moz-user-select: text;
   -ms-user-select: text;

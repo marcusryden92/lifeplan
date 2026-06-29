@@ -1,352 +1,324 @@
-# LifePlan - Project Documentation for AI Assistants
+# Circadium — Project Documentation for AI Assistants
 
-## Overview
+Circadium is a personal scheduling app: it takes a tree of tasks/goals/plans plus recurring templates and categories, and produces a fully placed weekly calendar with travel time injected between locations. The package directory is still named `lifeplan/` (legacy); the UI brand is **Circadium** (see [app/layout.tsx](app/layout.tsx)).
 
-LifePlan is a personal scheduling and task management application that automatically schedules tasks based on priorities, deadlines, and user preferences.
-
-**Stack:**
-
-- Next.js 14.2.6 (App Router)
-- React 18 + TypeScript 5.5
-- Prisma ORM with PostgreSQL
-- NextAuth v5.0.0-beta.20
-- shadcn/ui + Radix UI + Tailwind CSS
-- Redux Toolkit for state management
-- FullCalendar 6.1.x for calendar visualization
-- date-fns 3.6.0 for date utilities
-- React Hook Form + Zod for form validation
-
-**Package Manager:** pnpm (use `pnpm` instead of `npm` for all commands)
+This file is the high-level map. For engine internals, read [documentation/calendar-generation-deep-dive.md](documentation/calendar-generation-deep-dive.md).
 
 ---
 
-## Code Style Rules
+## Stack
 
-- **No emojis** in code, comments, or generated documentation. Keep it professional.
-- **No pointless comments** like `// Fixed this function to now take numbers` or `// Updated to use new API`. Comments should explain _why_ something is non-obvious, not narrate what was changed. If someone reading the code for the first time wouldn't benefit from the comment, don't write it.
-- **No summary or log files** added to the repo. No `REFACTOR_SUMMARY.md`, no `CHANGELOG.md` for refactors, no `MIGRATION_NOTES.md`. Just make the changes and commit them.
-- **No over-documentation**. The code should speak for itself. Only document complex logic, non-obvious decisions, and public APIs.
-- Use absolute imports with `@/` prefix.
-- Components use React.FC typing.
-- Prefer server actions over API routes.
-- Use Zod for validation schemas.
-- shadcn/ui components in `components/ui/`.
+- **Next.js** 14.2.6 — App Router, server actions, `(protected)` route group.
+- **React** 18, **TypeScript** 6.0.3 (strict, `moduleResolution: "bundler"`, `@/*` path alias).
+- **Prisma** 7.8 with `@prisma/adapter-pg` driver adapter (Prisma 7 requires a driver adapter at construction time — see [lib/db.ts](lib/db.ts)). Client is generated to `prisma/client` and imported as `@/prisma/client`.
+- **PostgreSQL** (local: `docker-compose.dev.yml`, port 5433, db `lifeplan_dev`).
+- **NextAuth** v5 (5.0.0-beta.20). Edge-safe config in [auth.config.ts](auth.config.ts) (OAuth providers only, used by middleware); full config with Credentials + adapter in [auth.ts](auth.ts).
+- **Vanilla Extract** for styling — `@vanilla-extract/{css,sprinkles,recipes,dynamic,next-plugin}`. Every page/component has a co-located `*.css.ts` file. There is no Tailwind in this project despite a leftover `components.json`.
+- **Redux Toolkit** for cross-component state, **React Context** for scoped providers (Store, User, Calendar, Capture, Search).
+- **FullCalendar** 6.1 for the calendar surface; **date-fns** 3 for date math (engine has its own [dateTimeService](utils/calendar-generation/utils/dateTimeService.ts)); **rrule** for template recurrence.
+- **React Hook Form** + **Zod** for forms.
+- **Jest** + **Testing Library** for tests.
+- **pnpm** 9.15.4 — use `pnpm` for all commands.
 
 ---
 
-## Directory Structure
+## Code style rules
+
+- **No emojis** in code, comments, or generated docs.
+- **No narration comments** ("// fixed to handle X", "// updated to use new API"). Comments explain *why* something non-obvious exists, not *what* the code does.
+- **No summary, changelog, refactor-notes, or migration-notes markdown files** added to the repo. Make the change and commit.
+- **Absolute imports with `@/`** prefix.
+- **Prefer server actions** (`"use server"` files in [actions/](actions/)) over `app/api/` routes. API routes exist only for `auth/` and `admin/`.
+- **Zod schemas** in [schemas/](schemas/) for any user-facing form.
+- Spell out "category" — never "cat".
+- The location surface is named **Locations**, not "Places" (Google Places is the underlying API, but the user-facing concept is Location).
+
+---
+
+## Directory map
 
 ```
 lifeplan/
-├── app/                          # Next.js App Router
-│   ├── (protected)/              # Auth-protected routes
-│   │   ├── calendar/             # Calendar view
-│   │   ├── create/               # Task/goal creation
-│   │   ├── refine/               # Task editing/refinement
-│   │   └── settings/             # User settings
-│   │       └── scheduling/       # Scheduling preferences
-│   └── api/                      # API routes (minimal - prefer server actions)
+├── app/                              # Next.js App Router
+│   ├── layout.tsx                    # Root: SessionProvider + ThemeProvider
+│   ├── page.tsx                      # Landing
+│   ├── globals.css, page.css.ts
+│   ├── (protected)/                  # Auth-gated routes
+│   │   ├── layout.tsx                # StoreProvider > UserProvider > CalendarProvider > AppShell
+│   │   ├── calendar/                 # FullCalendar surface
+│   │   ├── capture/                  # Quick-entry surface
+│   │   ├── categories/               # Category management
+│   │   ├── dashboard/                # Default landing after login
+│   │   ├── items/[id]/               # Item detail; sub-routes: activity/, schedule/, subtasks/
+│   │   ├── library/                  # Task/goal browser
+│   │   ├── locations/                # Location + travel-time management
+│   │   └── settings/
+│   ├── auth/                         # login/register/reset/new-password/new-verification/error
+│   ├── api/                          # auth/ + admin/ only
+│   └── test-shell/, test-tokens/     # Dev scaffolding
 │
-├── actions/                      # Next.js Server Actions ("use server")
-│   ├── scheduling.ts             # User/task scheduling preferences
-│   ├── settings.ts               # User settings
-│   ├── categories.ts             # Category CRUD operations
-│   ├── locations.ts              # Location & TravelTime operations
-│   ├── calendar-actions/         # Calendar data operations
-│   │   ├── fetchCalendarData.ts
-│   │   ├── syncCalendarData.ts
-│   │   └── sync-handlers/        # Individual CRUD handlers
-│   └── [auth actions]            # login, register, reset, etc.
+├── actions/                          # Server actions (preferred backend surface)
+│   ├── login.ts, register.ts, reset.ts, newPassword.ts, newVerificationAction.ts, settings.ts
+│   ├── scheduling.ts                 # UserSchedulingPreferences + TaskPreferences
+│   ├── categories.ts                 # Category CRUD + planner-category assignment
+│   ├── locations.ts                  # Location + Google Places integration
+│   └── calendar-actions/
+│       ├── fetchCalendarData.ts      # Initial load — returns planner/calendar/template/categories/categoryEvents/travelEvents + dataVersion
+│       ├── fetchFreshState.ts        # Used on stale-version recovery
+│       ├── syncCalendarData.ts       # OCC-gated transactional diff sync
+│       └── sync-handlers/            # One handler per table (planner, calendar, extendedProps, template, category, timeWindow, categoryEvent, travelEvent, location, travelTime)
 │
 ├── components/
-│   ├── ui/                       # shadcn/ui primitives
-│   ├── auth/                     # Auth components
-│   ├── categories/               # Category selection components
-│   ├── events/                   # Calendar event components
-│   ├── interface/                # Global UI (Navbar, etc.)
-│   ├── locations/                # Location management components
-│   ├── tasks/                    # Task editing components
-│   ├── scheduling/               # Strategy builder components
-│   ├── draggable/                # Drag-and-drop components
-│   └── utilities/                # Shared utility components (e.g., time-picker)
+│   ├── auth/                         # AuthCard, login/register/reset forms, Social, LoginButton
+│   ├── calendar/                     # WeekPlanModal + editors (Template, Window, Event tile)
+│   ├── draggable/                    # DragBox, DraggableItem, TaskDivider, DraggableContext
+│   ├── events/                       # Calendar event renderers + popovers (Event, Template, Travel, CategoryWrapper, NewPlanModal, color/location pickers)
+│   ├── landing/VectorField/          # Landing-page visual
+│   ├── tasks/                        # TaskItem, TaskList, task-item-subcomponents/
+│   └── ui/                           # Custom design-system primitives (NOT pure shadcn)
+│       ├── Button, Glass, Backdrop, Grain, Masthead, ProgressBar, Loader,
+│       │   StatusTag, TypeBadge, CategoryBadge, CategoryDot, ConicDot, Caption,
+│       │   Combobox, SegmentedControl, ConfirmModal, Switch, StubPage,
+│       │   ThemeProvider, useResolvedCategoryColor, CenteredLoader
+│       └── shell/                    # AppShell architecture
+│           ├── AppShell/             # Outer bezel + canvas + content row
+│           ├── Sidebar/              # Desktop nav
+│           ├── MobileTabs/           # Mobile bottom nav
+│           ├── CapturePalette/       # Quick-entry overlay
+│           ├── SearchPalette/        # Cmd-K-style search
+│           ├── CaptureContext.tsx, SearchContext.tsx
+│           └── nav.ts                # NAV_ITEMS, MOBILE_TABS
 │
 ├── context/
-│   └── CalendarProvider.tsx      # Main data context for planners/calendar
+│   ├── StoreProvider.tsx             # Redux store wrapper
+│   ├── UserProvider.tsx
+│   └── CalendarProvider.tsx          # Main data context — wraps planner/calendar/template/categories + the auto-regen useEffects
 │
-├── documentation/                # Project documentation
-│   └── calendar-generation-deep-dive.md  # Deep dive into the scheduling engine
-│
-├── hooks/                        # Custom React hooks
+├── hooks/
+│   ├── useCurrentUser, useCurrentRole
+│   ├── useFetchCalendarData          # Initial Redux seed from server
+│   ├── useCalendarServerSync         # Diff-based sync to DB with OCC, stale recovery, rollback
+│   ├── useCalendarStateActions       # updatePlannerArray / updateCalendarArray / updateTemplateArray / updateAll
+│   ├── useManuallyRefreshCalendar    # User-triggered regen
+│   ├── useServerAction               # useTransition + status pattern for mutations
+│   ├── useKeyboardShortcuts, useListKeyboardNav, useClickOutside, usePopoverPosition,
+│   │   useFlashAnimation, usePlatform, useTitleEditor
 │
 ├── lib/
-│   ├── auth.ts                   # Auth utilities
-│   ├── db.ts                     # Prisma client singleton
-│   ├── google-maps-api.ts        # Google Places/Distance Matrix API
-│   └── [other utilities]
-│
-├── notes/                        # Personal notes and TODOs (not documentation)
+│   ├── auth.ts                       # Helpers around NextAuth session
+│   ├── db.ts                         # Prisma client singleton (PrismaPg adapter)
+│   ├── google-maps-api.ts            # Places autocomplete + Distance Matrix
+│   ├── mail.ts, tokens.ts            # Auth flows
+│   ├── taskItem.d.ts
+│   └── theme/                        # The whole design system
+│       ├── tokens.css.ts             # createThemeContract: paper/bezel/ink/glass/shadow/accent/status
+│       ├── themes.css.ts             # themeLight, themeDark
+│       ├── sprinkles.css.ts          # Atomic style API
+│       ├── recipes.css.ts            # glass, popover, pillBtn, badge, formInput, progressTrack
+│       ├── typography.css.ts         # display, text, caption, statusTag
+│       ├── transitions.ts            # DURATIONS, theme/button/collapse/progress/interactive transitions
+│       ├── fonts.ts                  # fontDisplay, fontUI
+│       ├── effects.ts                # backdropFilters, colorMixAlpha
+│       ├── categoryColor.ts          # Category color resolution + glow/gradient/tint
+│       └── global.css.ts, index.ts
 │
 ├── prisma/
 │   ├── schemas/
-│   │   ├── schema.prisma         # Main schema (imports others)
+│   │   ├── schema.prisma             # Generator + datasource only
 │   │   └── models/
-│   │       ├── user.prisma       # User model
-│   │       ├── calendar.prisma   # Planner, SimpleEvent, EventTemplate
-│   │       ├── category.prisma   # Category (hierarchical task organization)
-│   │       ├── location.prisma   # Location, TravelTime
-│   │       └── scheduling.prisma # UserSchedulingPreferences, TaskPreferences
-│   ├── generated/                # Generated Prisma client
-│   └── seed-helpers/             # Seed data generators
-│       ├── generateLocations.ts  # Location & TravelTime seed data
-│       ├── generatePlanners.ts   # Planner seed data
-│       ├── generatePlans.ts      # Plan items seed data
-│       └── generateTemplates.ts  # EventTemplate seed data
+│   │       ├── user.prisma           # User (+ dataVersion OCC counter), Account, VerificationToken, PasswordResetToken, TwoFactorToken, TwoFactorConfirmation, UserRole
+│   │       ├── calendar.prisma       # SimpleEvent, EventExtendedProps, Planner, EventTemplate, WeekDayType, PlannerType, EventType
+│   │       ├── category.prisma       # Category, CategoryTimeWindow, CategoryEvent
+│   │       ├── location.prisma       # Location, TravelTime, TravelEvent, TransportMode
+│   │       └── scheduling.prisma     # UserSchedulingPreferences, TaskPreferences, enums
+│   ├── migrations/                   # 0_init, add_data_version, add_category_event, add_travel_event
+│   ├── seed.ts                       # Wholesale reseed (admin@lifeplan.com / "password")
+│   └── seed-helpers/                 # generateCategories, generateLocations (+ TravelTimes), generatePlanners, generatePlans, generateTemplates
 │
 ├── redux/
-│   ├── store.ts                  # Redux store configuration
-│   └── slices/
-│       └── schedulingSettingsSlice.ts
+│   ├── store.ts                      # { user, calendar, schedulingSettings }
+│   ├── slices/
+│   │   ├── calendarSlice.ts          # planner, calendar, template, categories, categoryEvents, travelEvents, isLoaded
+│   │   ├── userSlice.ts
+│   │   └── schedulingSettingsSlice.ts # bufferTimeMinutes, defaultTransportMode, travelTimeMatrix (engine-shaped), allTravelTimes (full rows), locations, strategy weights/scores/penalties, enableTravelEvents
+│   └── thunks/
+│       └── calendarThunks.ts         # updateAllCalendarStates — the engine entry point from Redux
 │
-├── schemas/                      # Zod validation schemas
+├── schemas/                          # Zod schemas (auth + TaskListSchema)
 │
 ├── types/
-│   ├── prisma.d.ts               # Prisma type exports
-│   ├── calendarTypes.d.ts        # Calendar-specific types (WeekDayIntegers, TravelExtendedProps, etc.)
-│   ├── categoryTypes.d.ts        # Category-related types
-│   ├── models.d.ts               # Shared model types
-│   ├── ui.d.ts                   # UI component types
-│   ├── user.d.ts                 # User types
-│   └── userTypes.d.ts            # Extended user types
+│   ├── prisma.ts                     # Re-exports Prisma payload types with runtime augmentations (SimpleEvent.extendedProps gets categoryWrapperId, travel fields, trespass flags)
+│   ├── calendarTypes.d.ts            # WeekDayIntegers, TravelExtendedProps, TrespassingExtendedProps
+│   ├── categoryTypes.d.ts
+│   ├── models.d.ts, ui.d.ts, css.d.ts, user.d.ts, userTypes.d.ts
 │
-└── utils/
-    ├── calendar-generation/      # Core scheduling engine
-    │   ├── calendarGeneration.ts      # Public entry point (backward-compatible)
-    │   ├── constants.ts               # All configuration constants
-    │   ├── index.ts                   # Public API exports
-    │   │
-    │   ├── core/                      # Stateful classes (kept as classes because they own real state)
-    │   │   ├── CalendarGenerator.ts   # Main orchestrator (~330 lines)
-    │   │   ├── Scheduler.ts           # Task placement + per-pass metrics (~160 lines)
-    │   │   ├── TimeSlotManager.ts     # Thin holder for the mutable slots array (~22 lines)
-    │   │   └── TravelManager.ts       # Travel-time lookup + legTracker state (~325 lines)
-    │   │
-    │   ├── helpers/                   # Function modules grouped by module name
-    │   │   ├── CalendarGenerator/     # One file per generation phase (validateInput, expandTemplates, buildLocationMap, prepareSchedulingContext, prepareCandidates, assembleFinalEvents, buildLoggingLookups, emitDebugLog, etc.)
-    │   │   ├── CalendarValidator/     # Input validation (validatePlanner+validatePlanners, validateTemplate+validateTemplates, validateGenerationInput) + shared types.ts
-    │   │   ├── EventAssembler/        # SimpleEvent builders (memoized / plan / completed / category wrappers, trespass marking, final list assembly)
-    │   │   ├── LocationMapper/        # Planner -> location resolution (own + parent chain + category fallback)
-    │   │   ├── PrioritySorter/        # sortByPriorityAndConstraints (urgency calc inlined as a private helper)
-    │   │   ├── Scheduler/             # 5-phase pipeline (validateTask, findValidSlots, selectBestSlot, reserveTaskSlot, buildTaskEvent) + scheduleTasksAndGoals loop + expandSlots + capacityCheck + SchedulerRecorder + schedulerMessages
-    │   │   ├── TemplateExpander/      # expandTemplates / getPerTemplateMasks / calculateLargestGap / gapIntervalsForDay
-    │   │   ├── TimeSlotManager/       # buildAvailableSlots + slot-shape helpers (splitSlotsAtCategoryBoundaries, inheritLocationFromCategoryPeriods, expandSlotForDay) + findAllFittingSlots + reserveSlotWithTravel + dropPastAvailableSlots + deriveSchedulingHorizon + getDayAvailableMinutes (with getDaySlots)
-    │   │   └── TravelManager/         # getTravelTime + canPlaceStandaloneTravelBefore + reserveStandaloneTravelBefore/After + reserveInsufficientTravel (Before+After) + findAdjacentTravels (From/To/PrecedingGap) + dropUnreachableCategoryVisits + generateTravelEvents + legTracker + TravelPassRecorder + travelPassMessages + travelPassUtils
-    │   │       └── staticEventTravelPass/  # The travel-placement state machine (handleAvailable, handleCategory, absorb, bleed, cascade, placement, slotShape, lookups, staticEventTravelPass)
-    │   │
-    │   ├── strategies/
-    │   │   ├── SchedulingStrategy.ts  # Base interface + CompositeStrategy
-    │   │   ├── defaultStrategy.ts     # Default weights and scoring config
-    │   │   ├── EarliestSlotStrategy.ts
-    │   │   └── LocationGroupingStrategy.ts
-    │   │
-    │   ├── models/
-    │   │   ├── SchedulingModels.ts    # SchedulingContext, SlotSelectionResult, failure types, etc.
-    │   │   ├── TemplateModels.ts      # PerTemplateMask
-    │   │   └── TimeSlot.ts            # Sealed discriminated union: AvailableSlot | OccupiedSlot | CategorySlot | TravelSlot
-    │   │
-    │   └── utils/
-    │       ├── RecorderBase.ts        # Shared base for TravelPassRecorder + SchedulerRecorder
-    │       ├── dateTimeService.ts     # Centralized date utilities
-    │       ├── intervalUtils.ts       # findGaps, eventsToIntervals, masksToIntervals
-    │       ├── loggingUtils.ts        # logCalendarDebugInfo + filterEventsByLogRange
-    │       └── timeSlotUtils.ts       # Shard model + TravelShardSpan + removeTravelSpan{At,ByTravelId} + reclaimTravelSlot + restoreAbsorbedRange
-    │
-    ├── goalPageHandlers.ts            # Goal tree utilities
-    └── taskHelpers.ts                 # Task utility functions
+├── utils/
+│   ├── calendar-generation/          # The scheduling engine — see deep-dive doc
+│   ├── calendar-rendering/           # categoryEventsToEventInput, templatesToEventInput, travelEventsToEventInput (DB rows → FullCalendar input)
+│   ├── server-handlers/              # compareCalendarData (the diff that feeds syncCalendarData)
+│   ├── template-handlers/, datetime/, locations/, goal-handlers/, category-constraints/
+│   ├── assert/                       # assert.ts (+ assert.js in tsconfig include)
+│   └── (loose helpers)               # generalUtils, badgeTone, calendarEventHandlers, categoryUtils,
+│                                     # colorUtils, creationPagesFunctions, dateUtils, engineTones,
+│                                     # eventTier, goalPageHandlers, plannerStatus, plannerUtils,
+│                                     # taskArrayUtils, taskHelpers, templateBuilderUtils, timeFormatting, calendarUtils
+│
+├── __tests__/
+│   └── calendar-generation/expansion-seam.test.ts  # Currently the only engine test — guards the local-date CategoryEvent ID format via a forced expansion run
+│
+├── documentation/
+│   └── calendar-generation-deep-dive.md
+│
+├── notes/                            # Personal notes / TODOs — NOT documentation, do not quote
+├── middleware.ts                     # Route protection (uses edge-safe auth.config.ts)
+├── routes.ts                         # publicRoutes, authRoutes, apiAuthPrefix, DEFAULT_LOGIN_REDIRECT (/dashboard)
+├── auth.ts, auth.config.ts, next-auth.d.ts
+├── docker-compose.dev.yml
+├── prisma.config.ts, components.json (legacy), jest.config.ts, jest.setup.ts
+├── next.config.mjs                   # withVanillaExtract + rrule webpack alias
+└── package.json                      # pnpm scripts
 ```
 
 ---
 
-## Core Concepts
+## Core domain model
 
-### Item Types (PlannerType enum)
+### Planner (the central schedulable row)
 
-- **task** - Schedulable work item with duration
-- **plan** - Fixed-time appointment (has `starts` datetime)
-- **goal** - Container for tasks (hierarchical)
-- **template** - Recurring calendar blocks
-- **travel** - Auto-generated travel time between locations
-- **category** - Organizational container with time constraints
-
-### Planner Model
-
-Central model for all schedulable items:
-
-```typescript
+```ts
 {
-  id: string;
-  title: string;
-  parentId?: string;      // For hierarchy (subtasks, goals)
-  plannerType: PlannerType;
-  duration: number;       // Minutes
-  deadline?: string;      // ISO date
-  starts?: string;        // For plan items only
-  priority: number;
-  isReady?: boolean;      // For goals - ready to schedule?
-  completedStartTime?: string;
-  completedEndTime?: string;
-  userId: string;
-  color?: string;
-  locationId?: string;    // Reference to Location for travel time calculation
-  categoryId?: string;    // Reference to Category for organization
-  useParentLocation?: boolean; // If true, inherits location from parent item
+  id, title, parentId?,
+  plannerType: "task" | "plan" | "goal",
+  duration: number,             // minutes
+  deadline?: ISO,
+  starts?: ISO,                 // plan items only
+  priority: number,
+  isReady?: boolean,            // goals: ready to schedule?
+  completedStartTime?, completedEndTime?,
+  locationId?: string | null,   // null = "Anywhere"
+  useParentLocation: boolean,   // inherit from category or ancestor instead
+  categoryId?: string | null,
+  color?, userId, createdAt, updatedAt
 }
 ```
 
-### Location System
+`PlannerType` is `task | plan | goal`. `EventType` (on `EventExtendedProps`) adds `planner | template | travel | category` — the engine emits the latter two at runtime.
 
-Items can have an associated location for travel time calculation:
+### Templates, plans, completed
 
-- **Location** - Named location with address, coordinates, and Google Place ID
-- **TravelTime** - Directional travel duration between two locations with transport modes (DRIVING, TRANSIT, BICYCLING, WALKING)
-  - Stores Google API baseline values for rush hour, regular, and night times
-  - Supports user overrides for custom travel times
-- Items with `locationId: null` are considered "Anywhere" (no travel time needed)
+- **EventTemplate** — recurring weekly blocks (`startDay`, `startTime`, `duration`, optional `locationId`).
+- **plan** — a Planner row with `plannerType: "plan"` and a fixed `starts` timestamp. Anchors the calendar.
+- **completed** — any task/goal/plan with `completedStartTime` / `completedEndTime` set. Rendered at the actual completion window, not the originally-scheduled one.
 
-### Category System
+### Location & travel
 
-Categories provide organizational structure with time-based scheduling constraints:
+- **Location** — name, address, Google `placeId`, lat/lng. `null` locationId means **"Anywhere"** (no travel needed).
+- **TravelTime** — directional, per-transport-mode (`DRIVING | TRANSIT | BICYCLING | WALKING`), with Google baseline values (`rushHour | regular | night`) and optional user overrides.
+- **TravelEvent** — engine-materialized row written wholesale on each regen with a deterministic id (`${fromId ?? "anywhere"}-${toId ?? "anywhere"}-${start}`). Carries `insufficientTravel` / `overconstrained` markers.
 
-- **Category** - Hierarchical organizational container for planners
-  - `timeSlots`: JSON array defining when category items can be scheduled
-    - Format: `[{ days: [1,3,5], startTime: "08:00", endTime: "17:00" }, ...]`
-    - days: 0=Sunday, 1=Monday, ... 6=Saturday
-  - `isStrict`: Boolean controlling whether other items can fill empty time slots
-    - `true`: Only items from this category can be scheduled in these slots
-    - `false`: Other items can fill empty space in the time slots
-  - `locationId`: Optional default location (items without location inherit this)
-  - Supports parent-child hierarchy via `parentId` for subcategories
-- Categories appear as background events on the calendar to visualize time constraints
+### Category system
 
-### Scheduling System
+- **Category** — hierarchical (`parentId`), with `icon`, `color`, `sortOrder`, `useTimeWindows`, `isStrict`, optional `locationId`.
+- **CategoryTimeWindow** — one row per weekly occurrence (`day` 0–6, `startTime`/`endTime` `"HH:MM"`). `categoryId` is nullable so windows can exist as unassigned drafts; the engine ignores those.
+- **CategoryEvent** — engine-materialized weekly occurrence with a composite id `` `${categoryTimeWindowId}|${YYYY-MM-DD-local}` ``. Carries `trespassingStart` / `trespassingEnd` flags stamped by the engine when its placement violated a category boundary; the renderer reads these directly for red-border display.
 
-The calendar generation uses a **strategy-based architecture** with **incremental horizon expansion**:
+A category only constrains scheduling geometry when `useTimeWindows === true` **and** `timeSlots.length > 0`. Otherwise it still contributes location inheritance, but not slot shape or strictness.
 
-1. **CalendarGenerator** (`core/CalendarGenerator.ts`) — orchestrates the 11 phases
-2. **TimeSlotManager** (`core/TimeSlotManager.ts`) — a thin holder for the canonical mutable `slots` array; the actual building/finding/reserving lives in `helpers/TimeSlotManager/`
-3. **Scheduler** (`core/Scheduler.ts`) — places tasks using strategies; per-task metrics
-4. **TravelManager** (`core/TravelManager.ts`) — travel-time lookups, leg tracking for round-trip detection
-5. **CompositeStrategy** (`strategies/SchedulingStrategy.ts`) — combines multiple weighted strategies
-6. **Template expansion** is now a module of plain functions under `helpers/TemplateExpander/` (no class)
+### Strict vs. soft categories
 
-#### Incremental Expansion
-
-The slot horizon is bounded — initial build covers `SCHEDULING_CONFIG.HORIZON_CHUNK_DAYS` (28 days), not whatever distant Plans the user has on the calendar. As the scheduler exhausts slots, `expandSlots` extends another chunk past the previous pickup point.
-
-Three pieces make this work:
-
-- **`isFinal` marker on the last Category** — set at the end of every `staticEventTravelPass` by `markLastCategoryAsFinal`. It's the pickup point for the next expansion: everything ending at or before `isFinal.end` is preserved verbatim; everything past is rebuilt.
-- **`expandSlots`** at `helpers/Scheduler/expandSlots.ts` — finds the isFinal slot, preserves everything up to it (including the static pass's earlier decisions on those slots), rebuilds the new chunk via `buildAvailableSlots` with `startingLocationOverride` set to the preserved Cat's location (so the seam Available's `prev` is honest), then re-runs the static pass starting at `resumeIdx = isFinal slot's index`. Replays `legTracker` state from preserved Travels so round-trip detection works at the seam (skipping self-travels and deduping multi-shard travels by `travelId`).
-- **Proactive expansion watermark** in `scheduleTasksAndGoals` — before each candidate pass, checks `availableCount < LOW_SLOT_WATERMARK` OR `largestCompatibleSlotForLargestTask < biggestRemainingTask`. Trips expansion before the reactive try-fail-expand cycle burns iterations. The reactive backstop still fires after a fully-failed pass.
-
-#### Placement Buffer
-
-`SCHEDULING_CONFIG.PLACEMENT_BUFFER_DAYS` (3 days) of room is left at the trailing edge of the horizon — dynamic tasks aren't placed in that range. Gives the next expansion's seam re-decision empty space to work in.
-
-#### Buffer & Travel Placement (Dynamic Tasks)
-
-Dynamic placement enforces a single buffer between every unit and each slot boundary it touches. The unit footprint is `[travel-before, task, travel-after]` with **travel flush against the task** (no buffer between them). Inside each slot:
-
-```
-[slot.start] [leading buffer] [travel-before] [task] [travel-after] [trailing buffer] [slot.end]
-```
-
-When `selectBestSlot` discovers that travel-before fits standalone in an earlier slot (`canPlaceStandaloneTravelBefore`), the standalone travel's end becomes the leading boundary and the task lands flush at `slot.start` (no leading buffer in this slot — the buffer is owned by the earlier slot). When no travel-before is needed at all, the leading buffer still applies.
-
-Leftover slots are created flush with the unit's edges (no `+bufferMs` offset). The recursive "each placement owns its own leading + trailing buffer" rule gives exactly one buffer of separation between consecutive dynamic placements in the same slot, without double-counting.
-
-Static placements (plans, templates, category-wrapper travel) are always flush with their owning event — the buffer model only applies to dynamic tasks.
-
-#### Absorb / Reclaim (Identity-Based)
-
-When a dynamic placement can reuse the travel-after of a same-location prior task ("absorb"), or bypass a static-pass return-trip ("reclaim preceding gap travel"), the relevant `TravelShardSpan` flows through `SlotSelectionResult` (`absorbableTravel` / `reclaimPrecedingGapTravel`) from `selectBestSlot` into `reserveSlotWithTravel`. Removal is by `travelId` (via `removeTravelShards`), not by heuristic time search. The adjacent `availSlot` is identified by exact-position match (`availSlot.start === removed.spanEnd`) with a guard against producing a malformed slot. The same pattern applies to inbound/outbound travel removal — pre-existing travels are matched by exact end-position (`occ.end === task.start` for inbound, `occ.end === slot.end` for outbound) rather than by tolerance window.
-
-#### Capacity-Aware TOO_LARGE Check
-
-`helpers/Scheduler/capacityCheck.ts` exposes `maxEffectiveCapacityFor(task, ...)` — the largest single duration a task could ever fit in a clean week, accounting for:
-
-1. Templates carving the day into gap intervals.
-2. **Strict categories** with a different categoryId subtract from any gap they overlap (the task can never use them).
-3. **If the task is categorized**, the largest single window in its own category is a hard ceiling.
-
-`scheduleSingleTask` and `scheduleGoal` call this at task entry; if `task.duration > maxCapacity`, the task is marked `TOO_LARGE` immediately instead of burning iterations.
-
-See `documentation/calendar-generation-deep-dive.md` for a detailed walkthrough.
-
-#### Strategy Interface
-
-```typescript
-interface SchedulingStrategy {
-  readonly name: string;
-  score(task: Planner, slot: PlaceableSlot, context: SchedulingContext): number;
-  // Returns 0.0 to 1.0 (higher = better fit)
-}
-```
-
-`PlaceableSlot = AvailableSlot | CategorySlot` — strategies are only ever asked to score slots a task could actually land in.
-
-#### Current Strategies
-
-- **EarliestSlotStrategy** - Prefers earlier time slots
-- **LocationGroupingStrategy** - Groups tasks at same location to minimize travel
-  - Scores slots based on adjacent location matches (sandwich patterns)
-  - Applies travel time penalties for cross-location scheduling
-
-Note: Task urgency/deadline prioritization is handled by `sortPlannersByPriority` before slot scoring.
-
-#### Weight Configuration (defaultStrategy.ts)
-
-```typescript
-DEFAULT_STRATEGY_WEIGHTS = {
-  earliestSlot: 1.0, // Baseline preference for earlier slots
-  locationGrouping: 0.2, // Weight for location-based grouping
-};
-
-DEFAULT_LOCATION_GROUPING_SCORES = {
-  bothMatch: 0.95, // Both adjacent events match task location
-  oneMatchOneOpen: 0.8, // One end matches, other end is open
-  oneMatch: 0.5, // One end matches, other doesn't
-  bothOpen: 0.7, // Both ends are open (empty day)
-  oneOpenNoMatch: 0.45, // One end open, other doesn't match
-  neitherMatch: 0.4, // Neither end matches
-  noLocation: 0.5, // Task has no location (neutral)
-};
-
-DEFAULT_LOCATION_GROUPING_PENALTIES = {
-  maxSingleTravelPenalty: 0.02,
-  maxDoubleTravelPenalty: 0.03,
-  singleTravelPenaltyDivisor: 600, // travelMinutes / divisor = penalty
-  doubleTravelPenaltyDivisor: 400,
-};
-```
-
-#### Expansion Configuration (constants.ts)
-
-```typescript
-SCHEDULING_CONFIG = {
-  HORIZON_CHUNK_DAYS: 28,       // Initial build + every expansion chunk
-  LOW_SLOT_WATERMARK: 100,      // Available-slot count triggering proactive expansion
-  PLACEMENT_BUFFER_DAYS: 3,     // Tail buffer where dynamic placement is suppressed
-  // ...
-};
-```
+- `isStrict: true` — only items belonging to this category can be scheduled in its windows. Other items are filtered out, and the capacity check subtracts the window from any overlapping gap.
+- `isStrict: false` — other items may fill empty space inside the window.
 
 ---
 
-## Key Patterns
+## Calendar generation engine (summary)
 
-### Server Actions
+The engine takes `{ planners, templates, categories, previousCalendar, options }` and returns `{ events, categoryEvents, travelEvents }`. It is a stateful pipeline organized as an orchestrator + strategies + identity-tracked travel.
 
-Prefer server actions over API routes:
+- Public entry: [utils/calendar-generation/calendarGeneration.ts](utils/calendar-generation/calendarGeneration.ts).
+- Module exports: [utils/calendar-generation/index.ts](utils/calendar-generation/index.ts).
+- Core classes (in [utils/calendar-generation/core/](utils/calendar-generation/core/)): `CalendarGenerator` (11-phase orchestrator), `Scheduler` (5-phase per-task pipeline), `TimeSlotManager` (thin holder for the sorted slot array), `TravelManager` (travel lookups + leg tracker).
+- Each phase delegates to function modules under [utils/calendar-generation/helpers/<Name>/](utils/calendar-generation/helpers/).
+- Strategies in [utils/calendar-generation/strategies/](utils/calendar-generation/strategies/): `EarliestSlotStrategy`, `LocationGroupingStrategy`, combined by `CompositeStrategy`.
+- Tunable constants in [utils/calendar-generation/constants.ts](utils/calendar-generation/constants.ts): `SCHEDULING_CONFIG` (horizon chunk, watermark, placement buffer, iteration caps), `URGENCY_CONFIG`, `SchedulingFailureReason`.
+- The horizon is incrementally expanded (`HORIZON_CHUNK_DAYS = 28`); the slot array carries an `isFinal` pickup marker for the next chunk.
+
+Everything else — slot union, shard model, static travel pass, dynamic placement, buffer model, capacity gating, strategies, debug switchboard, edge cases — is in [documentation/calendar-generation-deep-dive.md](documentation/calendar-generation-deep-dive.md). Compress from there if writing about it elsewhere; do not re-document here.
+
+---
+
+## State & data flow
+
+```
+                          fetchCalendarData (initial)
+                                   │
+                                   ▼
+   server actions ◄──── Redux (calendarSlice, schedulingSettingsSlice, userSlice)
+                                   ▲
+                                   │ dispatch
+                                   │
+   CalendarProvider ── useCalendarStateActions ─► updateAllCalendarStates
+   (context)             updatePlannerArray /         (thunk → engine)
+                         updateCalendarArray /              │
+                         updateTemplateArray /              ▼
+                         updateAll                generateCalendar(...)
+                                                           │
+                                                           ▼
+                                       events + categoryEvents + travelEvents
+                                                  written to calendarSlice
+                                                           │
+                                                           ▼
+                                        useCalendarServerSync (300ms debounce)
+                                            │
+                                            ├─ OK   → bump dataVersion, refs forward
+                                            ├─ stale → adoptFreshServerState
+                                            └─ error → rollbackToLastConfirmedState
+```
+
+Key wiring:
+
+- **CalendarProvider** ([context/CalendarProvider.tsx](context/CalendarProvider.tsx)) — owns the data context, fires regen on `bufferTimeMinutes` change, fires a one-time "cold-load autoregen" when categories/locations exist but no engine output materialized yet (see the inline comment for the conditions).
+- **Sync** uses **optimistic concurrency control** via `User.dataVersion`. The client sends the version it knows; if the DB has moved on, the transaction aborts and the client adopts a fresh snapshot wholesale. Partial application across a DAG-shaped dataset is unsafe.
+- **CategoryEvent** and **TravelEvent** are written by the engine on every regen but use **deterministic IDs**, so the diff lands as creates/deletes only when an actual placement shifted. Don't switch them to autogenerated IDs.
+- The 30-second transaction timeout in `syncCalendarData` exists because the first regen after a fresh load runs hundreds of CategoryEvent creates on top of the usual diff.
+
+---
+
+## App routes & access control
+
+- `routes.ts` defines `publicRoutes = ["/", "/auth/new-verification"]`, `authRoutes = [/auth/login|register|error|reset|new-password]`, and `DEFAULT_LOGIN_REDIRECT = "/dashboard"`.
+- `middleware.ts` uses the **edge-safe** `auth.config.ts` (OAuth providers only) — it must NOT import anything Node-only. The Credentials provider, bcrypt, and DB access live in `auth.ts`.
+- Everything under `app/(protected)/` requires login. Unauthenticated requests are redirected to `/`.
+
+Nav structure (from [components/ui/shell/nav.ts](components/ui/shell/nav.ts)):
+
+| Key | Route | Surface |
+| --- | --- | --- |
+| dashboard | `/dashboard` | Default landing after login |
+| calendar | `/calendar` | FullCalendar surface |
+| capture | `/capture` | Quick-entry surface |
+| library | `/library` | Task/goal browser |
+| categories | `/categories` | Category management |
+| locations | `/locations` | Location + travel-time management |
+| settings | `/settings` | (Mobile "More" tab) |
+
+---
+
+## Styling — Vanilla Extract
+
+- **No Tailwind.** The leftover `components.json` is dormant — ignore it.
+- Tokens are a contract in [lib/theme/tokens.css.ts](lib/theme/tokens.css.ts), assigned values in [lib/theme/themes.css.ts](lib/theme/themes.css.ts) (`themeLight`, `themeDark`).
+- Atomic styles via `sprinkles` from [lib/theme/sprinkles.css.ts](lib/theme/sprinkles.css.ts).
+- Multi-variant components via `recipes` (glass, popover, pillBtn, badge, formInput, progressTrack) from [lib/theme/recipes.css.ts](lib/theme/recipes.css.ts).
+- Typography presets from [lib/theme/typography.css.ts](lib/theme/typography.css.ts).
+- Category color resolution lives in [lib/theme/categoryColor.ts](lib/theme/categoryColor.ts).
+- Co-locate styles next to the component: `Foo/Foo.tsx` + `Foo/Foo.css.ts`.
+- The Vanilla Extract plugin is wired in `next.config.mjs`.
+- The 45° pinstripe pattern is reserved for marking category-affiliated items on the calendar — do not use it as a screen-level backdrop.
+
+---
+
+## Server actions pattern
 
 ```typescript
 "use server";
@@ -356,144 +328,108 @@ import { db } from "@/lib/db";
 export async function myAction(data: MyType) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
-
-  return await db.model.operation({...});
+  // ... db work, scoped to session.user.id
 }
 ```
 
-### Form Handling
+Conventions:
 
-React Hook Form + Zod:
-
-```typescript
-const form = useForm<z.infer<typeof MySchema>>({
-  resolver: zodResolver(MySchema),
-  defaultValues: {...},
-});
-```
-
-### Data Context
-
-CalendarProvider manages planner state:
-
-```typescript
-const { plannerArray, updatePlannerArray } = useCalendarProvider();
-```
+- Every server action verifies the session first and scopes queries by `userId`.
+- Direct mutations (Location create, travel-time refresh) that bypass the diff path must call `markSynced(kind, current)` on the sync hook afterward, or the next diff will treat them as missing-on-server.
+- Mutations that need to touch many tables go through `syncCalendarData` (transactional, OCC-gated). Single-row direct edits (categories, locations) live in their own action files.
 
 ---
 
-## Database Commands
+## Database commands
+
+This project uses **migrations**, not `prisma db push`.
 
 ```bash
-# Generate Prisma client after schema changes
-pnpm prisma generate
+# Local Postgres (Docker)
+pnpm db:start                       # docker compose up -d
+pnpm db:stop                        # docker compose down
+pnpm db:reset:dev                   # nuke volume, restart, migrate, seed
 
-# Push schema changes to database
-pnpm prisma db push
+# Migrations
+pnpm prisma:migrate:dev             # prisma migrate dev (interactive in dev)
+pnpm prisma:migrate:deploy          # prisma migrate deploy (CI / prod)
 
-# Reset database and run seed (development)
-pnpm prisma db push --force-reset && pnpm prisma db seed
-
-# Open Prisma Studio
-pnpm prisma studio
-
-# Create migration
-pnpm prisma migrate dev --name migration_name
+# Other
+pnpm db:seed                        # prisma db seed
+pnpm db:studio                      # prisma studio
+pnpm prisma generate                # regenerate client after schema changes
 ```
 
-### Seed Data
+The seed creates a single admin user (`admin@lifeplan.com` / `password`) and populates locations, travel times, categories, templates, and planners. Seed planners are labeled with location markers `A/B/C/D` (no-location / Work / Home / Gym).
 
-Seed helpers in `prisma/seed-helpers/` provide test data with location assignments:
+Migration history (single source of truth in [prisma/migrations/](prisma/migrations/)):
 
-- **A items** - No location (can be done anywhere)
-- **B items** - Work location
-- **C items** - Home location
-- **D items** - Gym location
-- **Templates** - Sleep/Breakfast/Cleaning at Home, Work at Work
+- `0_init`
+- `add_data_version` — the OCC counter on User
+- `add_category_event` — materialized weekly category occurrences
+- `add_travel_event` — materialized travel events
+
+Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 
 ---
 
-## Environment Variables
+## Environment variables
 
 Required in `.env`:
 
 ```
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 NEXTAUTH_SECRET=""
-DATABASE_URL=""
+DATABASE_URL=""                     # Pooled, used by the app
+DIRECT_URL=""                       # Direct, preferred by the seed for bulk writes
 GITHUB_CLIENT_ID=""
 GITHUB_CLIENT_SECRET=""
 GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
+GOOGLE_MAPS_API_KEY=""              # Places + Distance Matrix
 RESEND_API_KEY=""
 ```
 
 ---
 
-## Adding New Features
+## Adding new features
 
-### Adding a new scheduling strategy:
+### A new server action
+1. Add a file under [actions/](actions/) with `"use server"` at the top.
+2. Call `auth()`, scope every query by `session.user.id`.
+3. If it mutates rows the diff layer tracks, call `markSynced(...)` on the next render or you'll get phantom diffs.
 
-1. Create strategy in `utils/calendar-generation/strategies/`
-2. Implement `SchedulingStrategy` interface
-3. Add weight constant in `strategies/defaultStrategy.ts`
-4. Add to CompositeStrategy in `CalendarGenerator/scheduling/buildSchedulingStrategy.ts`
+### A new Prisma model
+1. Add a new file in [prisma/schemas/models/](prisma/schemas/models/) and reference it in `schema.prisma` if needed.
+2. `pnpm prisma:migrate:dev --name <descriptive_name>`.
+3. `pnpm prisma generate`.
+4. Add type re-exports in [types/prisma.ts](types/prisma.ts) (note: `.ts`, not `.d.ts`).
+5. If the model is engine output, give it a deterministic id and write wholesale on each regen — see CategoryEvent / TravelEvent for the pattern.
 
-### Adding a new Prisma model:
+### A new scheduling strategy
+See [documentation/calendar-generation-deep-dive.md](documentation/calendar-generation-deep-dive.md#10-strategies). Implement the interface, add a weight constant in `defaultStrategy.ts`, wire it in via `buildSchedulingStrategy`.
 
-1. Create/modify file in `prisma/schemas/models/`
-2. Import in `prisma/schemas/schema.prisma` if new file
-3. Run `pnpm prisma generate` and `pnpm prisma db push`
-4. Add type export in `types/prisma.d.ts`
+### A new UI primitive
+1. Put it under [components/ui/](components/ui/) with a co-located `*.css.ts`.
+2. Add the export to [components/ui/index.ts](components/ui/index.ts).
+3. Use design tokens via `vars` from [lib/theme](lib/theme); avoid hardcoded colors.
 
-### Adding server actions:
-
-1. Create file in `actions/` with `"use server"` directive
-2. Import auth and db
-3. Always verify session before operations
-
----
-
-## Debugging Calendar Generation
-
-Granular logging is available in `utils/calendar-generation/calendarGeneration.ts`:
-
-```typescript
-const enableLogging = true; // Master switch
-const logging = {
-  metrics: false,
-  failures: false,
-  finalEvents: false,
-  travelDebug: false,
-  templateInfo: false,
-  planners: false,
-  templates: false,
-  locations: false,
-  strategySettings: false,
-  leanCalendar: false,           // Sorted events with location info
-  staticEventTravelPass: false,  // Per-slot decision/action trail (TravelPassRecorder)
-  dynamicScheduling: false,      // Per-task decision/action trail (SchedulerRecorder)
-  dateRangeStart: null,          // Optional Date — narrows event-based dumps to a range
-  dateRangeEnd: null,            // ditto
-};
-```
-
-Set `enableLogging = true` and flip individual flags to get specific dumps. The `staticEventTravelPass` flag dumps the decision trail of every static-pass run (preliminary and each `resume@<date>` expansion); the `dynamicScheduling` flag dumps the trail of every dynamic task placement. Both honor `dateRangeStart`/`dateRangeEnd` to focus on a specific day or week.
+### A new page
+1. Add it under `app/(protected)/<route>/page.tsx`; the protected layout already wires the providers and the AppShell.
+2. If it should appear in the desktop or mobile nav, add it to `NAV_ITEMS` / `MOBILE_TABS` in [components/ui/shell/nav.ts](components/ui/shell/nav.ts).
 
 ---
 
-## Implemented Features
+## Tests
 
-- **Travel Time & Location Management** - Location-aware scheduling with travel time injection between events at different locations
-- **Category System** - Hierarchical task organization with time-based scheduling constraints (strict/non-strict modes)
-- **Incremental Slot Horizon** - Bounded initial build (`HORIZON_CHUNK_DAYS`), expanded chunk-by-chunk from the `isFinal` pickup point. Plans far in the future no longer balloon the initial slot array.
-- **Capacity-Aware TOO_LARGE Detection** - Task entry checks whether the task can ever fit given templates + strict-category subtraction + per-category window ceiling, instead of comparing only to the raw template gap.
-- **Proactive Expansion Watermark** - Expansion triggers before placement attempts when the largest remaining task can't fit any compatible slot, complementing the reactive try-fail-expand backstop.
-- **Tail Placement Buffer** - Dynamic placement leaves the trailing `PLACEMENT_BUFFER_DAYS` of the horizon empty so the next expansion's static-pass resume has clean room to re-decide travels at the seam.
+Only one engine test currently lives in the repo: [`__tests__/calendar-generation/expansion-seam.test.ts`](__tests__/calendar-generation/expansion-seam.test.ts). It guards the local-date-keyed `CategoryEvent` ID format by forcing horizon expansion (a single Plan three weeks out). The diff layer and the DB schema depend on this composite ID; UTC-instant keying would desync near midnight UTC.
 
-## Active Feature Plans
+Run with `pnpm test` / `pnpm test:watch`.
 
-- Cross-slot straddling for dynamic placement (a 1.5hr task using Available + adjacent non-strict Category with travel cost) — deferred; requires multi-slot reservation in the scheduler.
-- Splitting the Plan-driven horizon from scheduler-anchor knowledge (Plans as point anchors instead of horizon drivers).
-- Further refinement of category-based scheduling strategies.
-- Enhanced user preferences for strategy weight customization.
+---
+
+## Notes for future work
+
+- `CategoryConstraint` and `utils/category-constraints/` are a vestige from when `Category.timeSlots` was a JSON column. The real constraint surface now lives in the `CategoryTimeWindow` table + the engine's slot geometry. Treat the folder as legacy.
+- Default to functions over classes when extending the engine; the core classes (`CalendarGenerator`, `Scheduler`, `TimeSlotManager`, `TravelManager`) earn their class form because they own real state. Adding a new class for "tidiness" without a polymorphism / invariant / multi-instance justification is class creep.
+- `notes/` is personal scratch — don't quote it as documentation, and don't add summary/changelog files there.

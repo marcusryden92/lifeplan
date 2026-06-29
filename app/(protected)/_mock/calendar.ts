@@ -1,7 +1,22 @@
 import { startOfWeek, addDays, addMinutes, format } from "date-fns";
 import { vars } from "@/components/ui";
-import type { AreaKey } from "./dashboard";
-import { areaColor } from "./dashboard";
+
+export type AreaKey =
+  | "career"
+  | "health"
+  | "home"
+  | "growth"
+  | "rel"
+  | "finance";
+
+const areaColor: Record<AreaKey, string> = {
+  career: vars.swatches.blue,
+  health: vars.swatches.green,
+  home: vars.swatches.teal,
+  growth: vars.swatches.violet,
+  rel: vars.swatches.rose,
+  finance: vars.swatches.amber,
+};
 
 export type MockEventKind = "task" | "plan" | "template" | "travel";
 

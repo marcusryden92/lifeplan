@@ -6,6 +6,10 @@ import type { TriageType } from "../_constants";
 // an input/textarea/select (lets the user type freely) and when the event
 // originates inside the category picker (so its own arrow/Enter navigation
 // wins over the queue's). Escape inside an input blurs it.
+//
+// typeCursor: 0..typeKeys.length-1 selects a type from typeKeys; the trailing
+// slot (typeCursor === typeKeys.length) is the trash button. Left/Right cycle
+// across all slots; Enter trashes on the trash slot, saves otherwise.
 export function useCaptureKeyboard({
   selected,
   queue,
@@ -13,6 +17,9 @@ export function useCaptureKeyboard({
   setDraftType,
   commitSelected,
   trashSelected,
+  typeCursor,
+  setTypeCursor,
+  typeKeys,
 }: {
   selected: Planner | null;
   queue: Planner[];
@@ -20,6 +27,9 @@ export function useCaptureKeyboard({
   setDraftType: (type: TriageType) => void;
   commitSelected: (markReady: boolean) => void;
   trashSelected: () => void;
+  typeCursor: number;
+  setTypeCursor: (n: number) => void;
+  typeKeys: ReadonlyArray<TriageType>;
 }) {
   useEffect(() => {
     if (!selected) return;
@@ -42,7 +52,11 @@ export function useCaptureKeyboard({
         trashSelected();
       } else if (e.key === "Enter") {
         e.preventDefault();
-        commitSelected(true);
+        if (typeCursor === typeKeys.length) {
+          trashSelected();
+        } else {
+          commitSelected(true);
+        }
       } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
         if (queue.length < 2) return;
         e.preventDefault();
@@ -51,6 +65,15 @@ export function useCaptureKeyboard({
         const delta = e.key === "ArrowDown" ? 1 : -1;
         const nextIdx = (idx + delta + queue.length) % queue.length;
         setSelectedId(queue[nextIdx].id);
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        e.preventDefault();
+        const total = typeKeys.length + 1;
+        const delta = e.key === "ArrowRight" ? 1 : -1;
+        const next = (typeCursor + delta + total) % total;
+        setTypeCursor(next);
+        if (next < typeKeys.length) {
+          setDraftType(typeKeys[next]);
+        }
       }
     };
     window.addEventListener("keydown", onKey);
@@ -62,5 +85,8 @@ export function useCaptureKeyboard({
     setDraftType,
     commitSelected,
     trashSelected,
+    typeCursor,
+    setTypeCursor,
+    typeKeys,
   ]);
 }

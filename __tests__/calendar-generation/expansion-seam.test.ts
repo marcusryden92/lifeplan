@@ -60,6 +60,7 @@ function makePlan(id: string, startsISO: string): Planner {
     parentId: null,
     plannerType: "plan",
     isReady: true,
+    isTriaged: true,
     duration: 60,
     deadline: null,
     starts: startsISO,

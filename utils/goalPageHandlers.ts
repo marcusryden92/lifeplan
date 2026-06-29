@@ -35,6 +35,7 @@ export function addSubtask({
       parentId: task.id || null,
       plannerType: PlannerType.goal,
       isReady: true,
+      isTriaged: true,
       duration: taskDuration < 15 ? 15 : taskDuration,
       deadline: null,
       starts: null,

@@ -12,22 +12,30 @@ import {
   cellMuted,
   cellOverdue,
   cellLocation,
+  cellProgress,
+  cellProgressPct,
   cellChevron,
 } from "../../page.css";
 
 export function ItemRow({
   item,
   category,
+  goalProgress,
+  remainingDuration,
   onClick,
   now,
 }: {
   item: Planner;
   category?: Category;
+  goalProgress?: number;
+  remainingDuration?: number;
   onClick: () => void;
   now: Date;
 }) {
   const isOverdue = isItemOverdue(item, now);
 
+  const showProgressInstead =
+    goalProgress != null && goalProgress > 0 && goalProgress < 1;
   const statusLabel = item.completedEndTime
     ? "Done"
     : item.isReady
@@ -44,7 +52,13 @@ export function ItemRow({
           {item.plannerType}
         </TypeBadge>
       </div>
-      <div className={cellMuted}>{formatDurationCompact(item.duration)}</div>
+      <div className={cellMuted}>
+        {remainingDuration != null
+          ? remainingDuration > 0
+            ? formatDurationCompact(remainingDuration)
+            : "—"
+          : formatDurationCompact(item.duration)}
+      </div>
       <div className={`${cellMuted} ${isOverdue ? cellOverdue : ""}`}>
         {item.deadline ? format(new Date(item.deadline), "MMM d, yyyy") : "—"}
       </div>
@@ -68,8 +82,14 @@ export function ItemRow({
           <span style={{ color: vars.muted }}>—</span>
         )}
       </div>
-      <div>
-        <Caption>{statusLabel}</Caption>
+      <div className={cellProgress}>
+        {showProgressInstead ? (
+          <Caption className={cellProgressPct}>
+            {Math.round(goalProgress * 100)}%
+          </Caption>
+        ) : (
+          <Caption>{statusLabel}</Caption>
+        )}
       </div>
       <div className={cellChevron}>
         <ChevronRight size={14} strokeWidth={2} />

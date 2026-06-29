@@ -5,8 +5,6 @@ import { themeTransition, buttonTransition } from "./transitions";
 
 export const glass = recipe({
   base: {
-    backdropFilter: backdropFilters.panel,
-    WebkitBackdropFilter: backdropFilters.panel,
     border: `1px solid ${vars.glass.stroke}`,
     boxShadow: vars.shadow.panel,
     background: vars.glass.bg,
@@ -30,11 +28,47 @@ export const glass = recipe({
       panelSm: { boxShadow: vars.shadow.panelSm },
       none: { boxShadow: "none" },
     },
+    // How the backdrop blur is attached to the surface.
+    //   self   — backdrop-filter on the element itself. Default. Use for
+    //            leaf surfaces (no nested element wants its own blur).
+    //   pseudo — backdrop-filter on a ::before pseudo. Use when this
+    //            surface contains a nested element that also has its
+    //            own backdrop-filter (e.g. a pinned glass header inside
+    //            a glass card). A parent's filter establishes a backdrop
+    //            root that blocks descendant filters from sampling
+    //            correctly; a pseudo has no descendants so it cannot
+    //            block anything. See `glass({ blur: "pseudo" })` callers
+    //            for the canonical use.
+    //   none   — opt out entirely (e.g. surfaces that need to participate
+    //            in a parent's blur sample without contributing one).
+    blur: {
+      self: {
+        backdropFilter: backdropFilters.panel,
+        WebkitBackdropFilter: backdropFilters.panel,
+      },
+      pseudo: {
+        position: "relative",
+        isolation: "isolate",
+        selectors: {
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            inset: 0,
+            zIndex: -1,
+            borderRadius: "inherit",
+            backdropFilter: backdropFilters.panel,
+            WebkitBackdropFilter: backdropFilters.panel,
+          },
+        },
+      },
+      none: {},
+    },
   },
   defaultVariants: {
     fill: "regular",
     radius: "lg",
     shadow: "panel",
+    blur: "self",
   },
 });
 

@@ -39,8 +39,6 @@ export type {
 } from "./recipes.css";
 export { sprinkles } from "./sprinkles.css";
 export type { Sprinkles } from "./sprinkles.css";
-export { contentWidths } from "./layout";
-export type { ContentWidth } from "./layout";
 export {
   categoryColor,
   categoryGlow,

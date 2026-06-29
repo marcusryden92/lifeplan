@@ -197,12 +197,6 @@ export default function CalendarPage() {
           )}
           <span className={spacer} />
           <div className={actionCluster}>
-            <Button variant="glass" size="sm">
-              Filters · all
-            </Button>
-            <Button variant="glass" size="sm">
-              Week ▾
-            </Button>
             <Button
               variant="glass"
               size="sm"

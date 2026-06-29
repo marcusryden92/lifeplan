@@ -40,7 +40,7 @@ export const modal = style([
     left: "50%",
     width: "min(480px, calc(100vw - 32px))",
     maxHeight: "calc(100vh - 48px)",
-    overflow: "auto",
+    overflow: "visible",
     padding: "22px 24px",
     display: "flex",
     flexDirection: "column",
@@ -94,6 +94,8 @@ export const fieldLabel = style({
 
 export const searchWrap = style({
   position: "relative",
+  zIndex: 100,
+  isolation: "isolate",
 });
 
 export const searchIcon = style({
@@ -140,9 +142,10 @@ export const fieldHelp = style({
 });
 
 // Reserved-height containers so conditional messages don't shift surrounding
-// content when they appear.
+// content when they appear. Height matches the visible-state intrinsic size
+// (selectedHint at fontSize 11 with icon, ~18-22px depending on font metrics).
 export const placeMessageSlot = style({
-  minHeight: 18,
+  minHeight: 22,
 });
 
 export const errorSlot = style({
@@ -164,6 +167,8 @@ export const footer = style({
   gap: 8,
   justifyContent: "flex-end",
   marginTop: 4,
+  position: "relative",
+  zIndex: 0,
 });
 
 const spinKeyframe = keyframes({
