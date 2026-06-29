@@ -14,7 +14,7 @@ export type AgendaItem = {
   warn: boolean;
   overdue: boolean;
   pastDeadline: boolean;
-  kind?: "plan" | "task" | "goal" | "template" | "travel";
+  kind: "plan" | "task" | "goal" | "template" | "travel";
   categoryId?: string | null;
   categoryName?: string;
   categoryColor?: string | null;
@@ -22,7 +22,7 @@ export type AgendaItem = {
 };
 
 export type AgendaGroupHeader = {
-  kind: NonNullable<AgendaItem["kind"]>;
+  kind: AgendaItem["kind"];
   categoryId: string | null;
   categoryName?: string;
   categoryColor?: string | null;
@@ -56,6 +56,7 @@ export type UncompletedItem = {
   plannerId: string;
   eventId: string;
   title: string;
+  scheduledStart: Date;
   scheduledEnd: Date;
   daysAgo: number;
   kind: "task" | "goal" | "plan";

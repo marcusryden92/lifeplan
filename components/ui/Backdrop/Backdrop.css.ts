@@ -44,16 +44,22 @@ export const pinstripeDark = style([
   },
 ]);
 
-// Blob peaks pushed further from paper + higher alpha so the highlight is
-// clearly visible in both modes.
-const blobLightColor = "rgba(255,255,255,0.75)";
-const blobDarkColor = "rgba(45,48,54,0.5)"; // peak ≈ #292c32 on #12141a
+// Single corner-to-corner linear gradient instead of two radial peaks.
+// Two reasons:
+//   - Cross-fading two stacked divs during a theme toggle briefly shows
+//     the wrong-theme color. With concentrated radial peaks you get a
+//     visible "black blob on white" flash mid-transition. A linear ramp
+//     spreads the brightness uniformly, so any transient wrong-color is
+//     smeared rather than punchy.
+//   - Local gradient slope is bounded, which reduces the sub-panel
+//     luminance step that drives backdrop-filter edge bleed (less
+//     conclusive in practice — the bleed has multiple sources — but at
+//     least it doesn't make it worse).
+const blobLightColor = "rgba(255,255,255,0.55)";
+const blobDarkColor = "rgba(60,64,72,0.45)";
 
 const blobImage = (color: string) =>
-  [
-    `radial-gradient(65% 55% at 12% 18%, ${color} 0%, transparent 65%)`,
-    `radial-gradient(70% 60% at 88% 82%, ${color} 0%, transparent 65%)`,
-  ].join(", ");
+  `linear-gradient(135deg, ${color} 0%, transparent 100%)`;
 
 export const blobLight = style([
   base,

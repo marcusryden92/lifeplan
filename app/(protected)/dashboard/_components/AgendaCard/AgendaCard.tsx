@@ -13,14 +13,14 @@ import type {
   DashboardSummary,
   UncompletedItem,
 } from "../../_data/types";
-import { AgendaItemRow } from "../AgendaItemRow";
-import { UncompletedItemRow } from "../UncompletedItemRow";
+import { AgendaItemRow } from "../AgendaItemRow/AgendaItemRow";
+import { UncompletedItemRow } from "../UncompletedItemRow/UncompletedItemRow";
 import {
   leftCard,
   leftCardHeader,
   leftCardTitle,
   agendaList,
-  agendaRows,
+  agendaRows as agendaRowsClass,
   agendaEmpty,
   agendaSection,
   agendaSectionHeader,
@@ -33,26 +33,25 @@ import {
 
 type Props = {
   isLoaded: boolean;
-  hasAnyAgenda: boolean;
   uncompleted: UncompletedItem[];
-  agendaRowsBuilt: AgendaRow[];
+  agendaRows: AgendaRow[];
   summary: DashboardSummary;
   onOpenItem: (plannerId: string) => void;
-  onCompleteUncompleted: (plannerId: string) => void;
-  onPostponeUncompleted: (plannerId: string) => void;
+  onCompleteUncompleted: (item: UncompletedItem) => void;
+  onPostponeUncompleted: (item: UncompletedItem) => void;
 };
 
 export function AgendaCard({
   isLoaded,
-  hasAnyAgenda,
   uncompleted,
-  agendaRowsBuilt,
+  agendaRows,
   summary,
   onOpenItem,
   onCompleteUncompleted,
   onPostponeUncompleted,
 }: Props) {
   const flash = useFlashAction();
+  const hasAnyAgenda = agendaRows.length > 0 || uncompleted.length > 0;
 
   return (
     <div className={leftCard}>
@@ -65,7 +64,7 @@ export function AgendaCard({
         </Link>
       </div>
       <div className={agendaList}>
-        <div className={agendaRows}>
+        <div className={agendaRowsClass}>
           {!isLoaded ? (
             <div className={agendaEmpty}>
               <Loader size="md" label="Loading today's agenda" />
@@ -100,12 +99,12 @@ export function AgendaCard({
                       onOpen={onOpenItem}
                       onComplete={() =>
                         flash.run(item.id, "success", () =>
-                          onCompleteUncompleted(item.plannerId),
+                          onCompleteUncompleted(item),
                         )
                       }
                       onPostpone={() =>
                         flash.run(item.id, "info", () =>
-                          onPostponeUncompleted(item.plannerId),
+                          onPostponeUncompleted(item),
                         )
                       }
                     />
@@ -113,7 +112,7 @@ export function AgendaCard({
                 </div>
               )}
 
-              {agendaRowsBuilt.length > 0 && (
+              {agendaRows.length > 0 && (
                 <div className={agendaSection}>
                   <div
                     className={agendaSectionHeader}
@@ -127,7 +126,7 @@ export function AgendaCard({
                       {summary.itemCount === 1 ? "item" : "items"}
                     </span>
                   </div>
-                  {agendaRowsBuilt.map((row, i) => {
+                  {agendaRows.map((row, i) => {
                     const headerColor = TYPE_COLOR[row.header.kind];
                     const parts: string[] = [row.header.kind.toUpperCase()];
                     if (row.header.categoryName) {

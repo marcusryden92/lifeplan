@@ -43,6 +43,21 @@ export const agendaTitleTravel = style({
   fontStyle: "italic",
 });
 
+// Floating label sitting above a NOW / NEXT row, aligned with the row's
+// inner gutter so it visually anchors to the colored item card below it.
+export const rowLabel = style({
+  display: "flex",
+  margin: "12px 24px 6px",
+  fontFamily: vars.font.ui,
+  fontSize: 12,
+  fontWeight: 800,
+  letterSpacing: "0.12em",
+  transition: themeTransition,
+});
+
+export const rowLabelNow = style({ color: vars.accent.now });
+export const rowLabelNext = style({ color: vars.status.warning });
+
 export const agendaWarn = style({
   fontSize: 10,
   fontWeight: 700,
@@ -64,5 +79,6 @@ export const agendaChevron = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
+  alignSelf: "center",
   transition: themeTransition,
 });

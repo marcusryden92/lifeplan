@@ -11,7 +11,7 @@ import {
   agendaTitle,
   agendaMeta,
   agendaMetaDimmer,
-} from "../AgendaCard/AgendaCard.css";
+} from "../agendaRow.css";
 import {
   uncompletedDaysLabel,
   uncompletedActions,

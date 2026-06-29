@@ -5,7 +5,7 @@ import {
   agendaDur,
   agendaTitle,
   agendaMeta,
-} from "../AgendaCard/AgendaCard.css";
+} from "../agendaRow.css";
 
 export const uncompletedDaysLabel = style({
   color: vars.status.success,
@@ -14,6 +14,7 @@ export const uncompletedDaysLabel = style({
 export const uncompletedActions = style({
   display: "inline-flex",
   alignItems: "center",
+  alignSelf: "center",
   gap: 6,
 });
 

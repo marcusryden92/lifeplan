@@ -1,29 +1,32 @@
 import { style } from "@vanilla-extract/css";
-import {
-  vars,
-  themeTransition,
-  backdropFilters,
-  glass,
-} from "@/lib/theme";
+import { vars, themeTransition, backdropFilters } from "@/lib/theme";
 
 const MOBILE = "screen and (max-width: 767px)";
 
-export const leftCard = style([
-  glass({ fill: "regular", radius: "lg", shadow: "panel" }),
-  {
-    position: "relative",
-    display: "flex",
-    flexDirection: "column",
-    minHeight: 0,
-    overflow: "hidden",
-    "@media": {
-      [MOBILE]: {
-        minHeight: "auto",
-        overflow: "visible",
-      },
+// Deliberately does NOT use the glass() recipe: a parent backdrop-filter
+// would create a backdrop root that hides the scrolling agendaList from
+// the header's own backdrop-filter sample, breaking the under-header
+// blur. The card carries the same visual via bg + border + shadow, and
+// the page-behind blur was only visible at the card's empty edges
+// anyway since the agendaList content covers the body.
+export const leftCard = style({
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+  minHeight: 0,
+  overflow: "hidden",
+  background: vars.glass.bg,
+  border: `1px solid ${vars.glass.stroke}`,
+  borderRadius: 22,
+  boxShadow: vars.shadow.panel,
+  transition: themeTransition,
+  "@media": {
+    [MOBILE]: {
+      minHeight: "auto",
+      overflow: "visible",
     },
   },
-]);
+});
 
 export const leftCardHeader = style({
   position: "absolute",
@@ -39,8 +42,6 @@ export const leftCardHeader = style({
   backdropFilter: backdropFilters.panel,
   WebkitBackdropFilter: backdropFilters.panel,
   boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
-  transform: "translateZ(0)",
-  willChange: "backdrop-filter",
   display: "flex",
   alignItems: "baseline",
   justifyContent: "space-between",
@@ -67,7 +68,6 @@ export const leftCardTitle = style({
 export const agendaList = style({
   flex: 1,
   overflow: "auto",
-  isolation: "isolate",
   paddingTop: 78,
   marginBottom: 8,
   selectors: {
@@ -162,71 +162,4 @@ export const agendaGroupHeaderText = style({
   textTransform: "uppercase",
   color: vars.muted,
   transition: themeTransition,
-});
-
-// Shared row primitives — used by both AgendaItemRow and UncompletedItemRow.
-// Variants (NOW/NEXT/TRAVEL flash etc.) live in the respective row files.
-export const agendaRow = style({
-  display: "grid",
-  gridTemplateColumns: "72px 1fr auto",
-  gap: 14,
-  alignItems: "center",
-  padding: "10px 12px",
-  margin: "4px 12px",
-  borderRadius: 14,
-  cursor: "pointer",
-  background: "transparent",
-  border: "1px solid transparent",
-  transition: themeTransition,
-  selectors: {
-    "&:hover": {
-      background: vars.glass.bgSoft,
-    },
-  },
-});
-
-export const agendaRowGrouped = style({
-  margin: "2px 12px",
-});
-
-export const agendaTimeCol = style({
-  fontFamily: vars.font.ui,
-  fontVariantNumeric: "tabular-nums",
-});
-
-export const agendaTime = style({
-  fontSize: 13.5,
-  fontWeight: 700,
-  color: vars.ink,
-  letterSpacing: "0.02em",
-  transition: themeTransition,
-});
-
-export const agendaDur = style({
-  fontSize: 11,
-  color: vars.muted,
-  marginTop: 2,
-  fontWeight: 600,
-  transition: themeTransition,
-});
-
-export const agendaTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 16,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  transition: themeTransition,
-});
-
-export const agendaMeta = style({
-  marginTop: 4,
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  flexWrap: "wrap",
-});
-
-export const agendaMetaDimmer = style({
-  color: vars.muted,
 });

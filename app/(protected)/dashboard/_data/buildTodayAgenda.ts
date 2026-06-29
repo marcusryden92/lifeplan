@@ -55,8 +55,9 @@ export function buildTodayAgenda(args: {
     if (event.extendedProps?.eventType !== EventType.planner) continue;
     const start = new Date(event.start);
     if (!withinToday(start, dayStart, dayEnd)) continue;
-    const end = new Date(event.end);
     const planner = plannerById.get(event.id);
+    if (!planner) continue;
+    const end = new Date(event.end);
     const durationMinutes = Math.max(
       0,
       Math.round((end.getTime() - start.getTime()) / 60000),
@@ -64,15 +65,13 @@ export function buildTodayAgenda(args: {
 
     // Walk the planner parent chain so subtasks/sub-goals inherit their
     // ancestor's category (matches the EventPopover modal pattern).
-    const effectiveCategoryId = planner
-      ? getEffectiveCategoryId(planners, planner.id)
-      : null;
+    const effectiveCategoryId = getEffectiveCategoryId(planners, planner.id);
     const category = effectiveCategoryId
       ? categoryById.get(effectiveCategoryId)
       : undefined;
-    const completed = Boolean(planner?.completedEndTime);
+    const completed = Boolean(planner.completedEndTime);
 
-    const deadline = planner?.deadline ? new Date(planner.deadline) : null;
+    const deadline = planner.deadline ? new Date(planner.deadline) : null;
     const pastDeadline =
       !!deadline && !completed && start.getTime() > deadline.getTime();
     const overdue =
@@ -81,18 +80,14 @@ export function buildTodayAgenda(args: {
     const isNow = start <= now && now < end;
     const warn = !isNow && !completed && end.getTime() <= now.getTime();
 
-    let where: string | undefined;
-    if (planner) {
-      if (planner.locationId && !planner.useParentLocation) {
-        where = locationById.get(planner.locationId)?.name;
-      } else {
-        where = inheritedLocationMap.get(planner.id)?.locationName;
-      }
-    }
+    const where =
+      planner.locationId && !planner.useParentLocation
+        ? locationById.get(planner.locationId)?.name
+        : inheritedLocationMap.get(planner.id)?.locationName;
 
     items.push({
       id: event.id,
-      plannerId: planner?.id,
+      plannerId: planner.id,
       start,
       end,
       durationMinutes,
@@ -103,7 +98,7 @@ export function buildTodayAgenda(args: {
       warn,
       overdue,
       pastDeadline,
-      kind: planner?.plannerType,
+      kind: planner.plannerType,
       categoryId: effectiveCategoryId,
       categoryName: category?.name,
       categoryColor: category?.color,

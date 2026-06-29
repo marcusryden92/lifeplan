@@ -1,1 +1,0 @@
-export { AgendaCard } from "./AgendaCard";

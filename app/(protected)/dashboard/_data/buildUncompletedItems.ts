@@ -39,6 +39,7 @@ export function buildUncompletedItems(args: {
       continue;
     }
 
+    const start = new Date(event.start);
     const daysAgo = Math.max(
       0,
       Math.floor((dayStart.getTime() - startOfDay(end).getTime()) / MS_PER_DAY),
@@ -54,6 +55,7 @@ export function buildUncompletedItems(args: {
       plannerId: planner.id,
       eventId: event.id,
       title: planner.title,
+      scheduledStart: start,
       scheduledEnd: end,
       daysAgo,
       kind: planner.plannerType,

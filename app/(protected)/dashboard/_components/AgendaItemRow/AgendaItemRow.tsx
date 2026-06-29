@@ -14,17 +14,18 @@ import {
   agendaTitle,
   agendaMeta,
   agendaMetaDimmer,
-} from "../AgendaCard/AgendaCard.css";
+} from "../agendaRow.css";
 import {
   agendaRowNow,
   agendaRowNext,
   agendaRowTravel,
-  agendaTimeNow,
-  agendaTimeNext,
   agendaTitleTravel,
   agendaWarn,
   agendaOverdue,
   agendaChevron,
+  rowLabel,
+  rowLabelNow,
+  rowLabelNext,
 } from "./AgendaItemRow.css";
 
 type Props = {
@@ -33,11 +34,9 @@ type Props = {
 };
 
 export function AgendaItemRow({ item, onClick }: Props) {
-  const interactive = !item.travel && !!item.plannerId;
-  const handleClick =
-    interactive && item.plannerId
-      ? () => onClick?.(item.plannerId as string)
-      : undefined;
+  const plannerId = !item.travel ? item.plannerId : undefined;
+  const interactive = plannerId !== undefined;
+  const handleClick = plannerId ? () => onClick?.(plannerId) : undefined;
 
   const rowClass = [
     agendaRow,
@@ -57,16 +56,18 @@ export function AgendaItemRow({ item, onClick }: Props) {
     item.overdue ||
     item.pastDeadline;
 
-  const durLabel = item.now
-    ? "NOW"
-    : item.next
-      ? "NEXT"
-      : item.durationMinutes > 0
-        ? formatDurationCompact(item.durationMinutes)
-        : "0m";
+  const durationLabel =
+    item.durationMinutes > 0 ? formatDurationCompact(item.durationMinutes) : "0m";
 
   return (
-    <div
+    <>
+      {item.now && (
+        <div className={`${rowLabel} ${rowLabelNow}`}>NOW</div>
+      )}
+      {item.next && (
+        <div className={`${rowLabel} ${rowLabelNext}`}>NEXT</div>
+      )}
+      <div
       className={rowClass}
       onClick={handleClick}
       role={interactive ? "button" : undefined}
@@ -84,13 +85,7 @@ export function AgendaItemRow({ item, onClick }: Props) {
     >
       <div className={agendaTimeCol}>
         <div className={agendaTime}>{formatTimeOfDay(item.start)}</div>
-        <div
-          className={`${agendaDur} ${
-            item.now ? agendaTimeNow : item.next ? agendaTimeNext : ""
-          }`}
-        >
-          {durLabel}
-        </div>
+        <div className={agendaDur}>{durationLabel}</div>
       </div>
 
       <div>
@@ -121,6 +116,7 @@ export function AgendaItemRow({ item, onClick }: Props) {
       ) : (
         <span />
       )}
-    </div>
+      </div>
+    </>
   );
 }
