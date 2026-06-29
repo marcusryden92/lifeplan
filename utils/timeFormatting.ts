@@ -1,3 +1,5 @@
+import { format } from "date-fns";
+
 const SECONDS_PER_MINUTE = 60;
 const MINUTES_PER_HOUR = 60;
 const HOURS_PER_DAY = 24;
@@ -28,4 +30,31 @@ export function formatDurationCompact(minutes: number): string {
   const h = Math.floor(minutes / MINUTES_PER_HOUR);
   const m = minutes % MINUTES_PER_HOUR;
   return m === 0 ? `${h}h` : `${h}h ${m}m`;
+}
+
+// Time-of-day in user-readable 12h form: "9:30 AM".
+export function formatTimeOfDay(date: Date): string {
+  return format(date, "h:mm a");
+}
+
+// Long-form date: "Monday, June 29".
+export function formatLongDate(date: Date): string {
+  return format(date, "EEEE, MMMM d");
+}
+
+// Time-of-day greeting, optionally personalized with the first name.
+// Brackets: <5 night, <12 morning, <17 afternoon, <21 evening, else night.
+export function greetingForHour(hour: number, name?: string | null): string {
+  const period =
+    hour < 5
+      ? "Good night"
+      : hour < 12
+        ? "Good morning"
+        : hour < 17
+          ? "Good afternoon"
+          : hour < 21
+            ? "Good evening"
+            : "Good night";
+  const firstName = name?.split(" ")[0]?.trim();
+  return firstName ? `${period}, ${firstName}` : period;
 }
