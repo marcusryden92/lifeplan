@@ -85,7 +85,7 @@ export function ItemRow({
       <div className={cellProgress}>
         {showProgressInstead ? (
           <Caption className={cellProgressPct}>
-            {Math.round((goalProgress as number) * 100)}%
+            {Math.round(goalProgress * 100)}%
           </Caption>
         ) : (
           <Caption>{statusLabel}</Caption>
