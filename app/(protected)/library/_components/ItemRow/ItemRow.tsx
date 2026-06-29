@@ -21,12 +21,14 @@ export function ItemRow({
   item,
   category,
   goalProgress,
+  remainingDuration,
   onClick,
   now,
 }: {
   item: Planner;
   category?: Category;
   goalProgress?: number;
+  remainingDuration?: number;
   onClick: () => void;
   now: Date;
 }) {
@@ -50,7 +52,13 @@ export function ItemRow({
           {item.plannerType}
         </TypeBadge>
       </div>
-      <div className={cellMuted}>{formatDurationCompact(item.duration)}</div>
+      <div className={cellMuted}>
+        {remainingDuration != null
+          ? remainingDuration > 0
+            ? formatDurationCompact(remainingDuration)
+            : "—"
+          : formatDurationCompact(item.duration)}
+      </div>
       <div className={`${cellMuted} ${isOverdue ? cellOverdue : ""}`}>
         {item.deadline ? format(new Date(item.deadline), "MMM d, yyyy") : "—"}
       </div>

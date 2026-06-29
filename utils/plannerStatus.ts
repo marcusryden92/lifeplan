@@ -64,3 +64,42 @@ export function getGoalDurationProgress(
   }
   return completedDuration / totalDuration;
 }
+
+/**
+ * Rolled-up remaining duration for an item with descendants: sum of leaf
+ * durations whose `completedEndTime` is unset. Returns null for items with
+ * no children (caller should fall back to the item's own duration).
+ */
+export function getRolledUpRemainingDuration(
+  item: Planner,
+  allItems: Planner[],
+): number | null {
+  const childrenByParent = new Map<string, Planner[]>();
+  for (const p of allItems) {
+    if (!p.parentId) continue;
+    const arr = childrenByParent.get(p.parentId);
+    if (arr) arr.push(p);
+    else childrenByParent.set(p.parentId, [p]);
+  }
+
+  if (!childrenByParent.get(item.id)?.length) return null;
+
+  let remaining = 0;
+  const stack: Planner[] = [item];
+  const visited = new Set<string>();
+  while (stack.length > 0) {
+    const node = stack.pop() as Planner;
+    if (visited.has(node.id)) continue;
+    visited.add(node.id);
+
+    const children = childrenByParent.get(node.id);
+    if (!children || children.length === 0) {
+      if (node.id === item.id) continue;
+      if (!node.completedEndTime) remaining += node.duration ?? 0;
+    } else {
+      for (const c of children) stack.push(c);
+    }
+  }
+
+  return remaining;
+}
