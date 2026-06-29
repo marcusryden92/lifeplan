@@ -1,6 +1,5 @@
 
 # P1 — Quick UX wins
-- Percentage completed column in the library view for goals (or just checkmark for completed items)
 - Location drop down menu in Create/Edit modal for /locations is rendered inside and cut off by the modal
 
 # P2 — Wire-up debt (known stubs)

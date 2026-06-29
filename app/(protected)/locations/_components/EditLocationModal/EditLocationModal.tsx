@@ -162,7 +162,7 @@ export function EditLocationModal({
 
           <div className={fieldStack}>
             <span className={fieldLabel}>Address</span>
-            <div className={searchWrap}>
+            <div className={searchWrap} ref={predictionsList.containerRef}>
               <span className={searchIcon}>
                 <MapPin size={13} strokeWidth={2} />
               </span>

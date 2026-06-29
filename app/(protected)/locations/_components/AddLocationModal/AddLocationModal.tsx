@@ -129,7 +129,7 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
 
           <div className={fieldStack}>
             <span className={fieldLabel}>Address</span>
-            <div className={searchWrap}>
+            <div className={searchWrap} ref={predictionsList.containerRef}>
               <span className={searchIcon}>
                 <Search size={13} strokeWidth={2.2} />
               </span>

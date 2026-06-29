@@ -151,7 +151,9 @@
       "Bash(ls -la '/cygdrive/c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/helpers/')",
       "Read(//cygdrive/c/Users/Marcus/Desktop/Lifeplan/utils/calendar-generation/**)",
       "Bash(find /cygdrive/c/Users/Marcus/Desktop/Lifeplan -type d -name helpers 2>/dev/null | head -20)",
-      "Read(//cygdrive/c/Users/Marcus/Desktop/**)"
+      "Read(//cygdrive/c/Users/Marcus/Desktop/**)",
+      "Bash(pnpm grep *)",
+      "Bash(taskkill //F //IM node.exe)"
     ]
   }
 }
