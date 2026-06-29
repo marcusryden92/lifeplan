@@ -23,6 +23,7 @@ import {
   getCategoryAndDescendants,
 } from "@/utils/categoryUtils";
 import { isInSmartView, type SmartView } from "@/utils/dateUtils";
+import { getGoalDurationProgress } from "@/utils/plannerStatus";
 import type { Category } from "@/types/prisma";
 import { SegmentedControl } from "@/components/ui";
 import {
@@ -210,6 +211,16 @@ export default function LibraryPage() {
       return next;
     });
   };
+
+  const goalProgressByItemId = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const item of rootItems) {
+      if (item.plannerType !== "goal") continue;
+      const pct = getGoalDurationProgress(item, planner);
+      if (pct != null) map.set(item.id, pct);
+    }
+    return map;
+  }, [rootItems, planner]);
 
   const breadcrumbPath = useMemo((): Category[] => {
     if (selection.kind !== "category") return [];
@@ -444,6 +455,7 @@ export default function LibraryPage() {
                       ? categoryIndex.get(item.categoryId)
                       : undefined
                   }
+                  goalProgress={goalProgressByItemId.get(item.id)}
                   onClick={() => router.push(`/items/${item.id}`)}
                   now={now}
                 />

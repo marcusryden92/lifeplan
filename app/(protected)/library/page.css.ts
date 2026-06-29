@@ -380,6 +380,19 @@ export const cellLocation = style({
   textOverflow: "ellipsis",
 });
 
+export const cellProgress = style({
+  color: vars.inkSoft,
+  fontVariantNumeric: "tabular-nums",
+  fontSize: 13,
+  fontFamily: vars.font.ui,
+  transition: themeTransition,
+});
+
+export const cellProgressPct = style({
+  color: vars.status.success,
+  opacity: 1,
+});
+
 export const cellChevron = style({
   color: vars.muted,
   display: "flex",

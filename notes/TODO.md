@@ -1,13 +1,7 @@
 
 # P1 — Quick UX wins
-
-- Dashboard capture button not using system-specific key (ie ctrl)
-- Hovering calendar events and displaying hover buttons shouldn't hide timestamp
-- Plus sign for adding subtask way too small
-- Up/Down arrow keys in Capture view currently navigates left menu (nice). Left/Right should navigate the task/plan/goal/trash buttons. Enter to save
-- Goals in capture menu that have been saved don't disappear from the list
-- Filter/Week buttons in calendar header do nothing
-- "Place selected" notice in modals shouldn't cause the modal to expand vertically — needs to reserve its space
+- Percentage completed column in the library view for goals (or just checkmark for completed items)
+- Location drop down menu in Create/Edit modal for /locations is rendered inside and cut off by the modal
 
 # P2 — Wire-up debt (known stubs)
 
