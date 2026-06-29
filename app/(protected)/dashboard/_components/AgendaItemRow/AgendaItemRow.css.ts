@@ -30,14 +30,6 @@ export const agendaRowTravel = style({
   },
 });
 
-export const agendaTimeNow = style({
-  color: vars.accent.now,
-});
-
-export const agendaTimeNext = style({
-  color: vars.status.warning,
-});
-
 export const agendaTitleTravel = style({
   color: vars.muted,
   fontStyle: "italic",

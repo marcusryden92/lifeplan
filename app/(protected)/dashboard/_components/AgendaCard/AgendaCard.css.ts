@@ -82,6 +82,7 @@ export const agendaList = style({
     [MOBILE]: {
       flex: "0 0 auto",
       overflow: "visible",
+      paddingTop: 0,
       marginTop: 0,
       marginBottom: 0,
     },
