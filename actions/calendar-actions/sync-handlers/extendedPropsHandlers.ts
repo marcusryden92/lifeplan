@@ -1,5 +1,5 @@
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
-import type { Prisma } from "@/prisma/client";
+import type { Prisma } from "@/generated/client";
 type Database = Prisma.TransactionClient;
 
 export function handleExtendedPropsChanges(

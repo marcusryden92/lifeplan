@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Planner, Category } from "@/types/prisma";
-import type { PlannerType } from "@/prisma/client";
+import type { PlannerType } from "@/generated/client";
 
 export interface ItemContextValue {
   item: Planner;

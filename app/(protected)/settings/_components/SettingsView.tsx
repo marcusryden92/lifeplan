@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui";
-import type { UserRole } from "@/prisma/client";
+import type { UserRole } from "@/generated/client";
 import { ProfileSection } from "./ProfileSection";
 import { AccountSection } from "./AccountSection";
 import { SchedulingSection } from "./SchedulingSection";

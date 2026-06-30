@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import type { TransportMode } from "@/prisma/client";
+import type { TransportMode } from "@/generated/client";
 import type { TravelTimeEntry } from "@/utils/calendar-generation/models/SchedulingModels";
 import {
   DEFAULT_STRATEGY_WEIGHTS,

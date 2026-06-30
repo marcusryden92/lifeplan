@@ -7,7 +7,7 @@
  * All functions are server-side only to protect API key.
  */
 
-import { TransportMode } from "@/prisma/client";
+import { TransportMode } from "@/generated/client";
 
 // Types for our application
 export interface PlacePrediction {

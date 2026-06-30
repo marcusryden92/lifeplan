@@ -1,6 +1,6 @@
 "use client";
 
-import type { PlannerType } from "@/prisma/client";
+import type { PlannerType } from "@/generated/client";
 import { useItem } from "../../ItemContext";
 import {
   fieldStack,

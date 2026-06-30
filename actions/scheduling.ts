@@ -6,8 +6,8 @@ import type {
   PriorityLevel,
   EnergyLevel,
   TransportMode,
-} from "@/prisma/client";
-import type { Prisma } from "@/prisma/client";
+} from "@/generated/client";
+import type { Prisma } from "@/generated/client";
 import type { SerializedTravelTime } from "@/redux/slices/schedulingSettingsSlice";
 
 // User Scheduling Preferences

@@ -22,7 +22,7 @@ import {
 } from "@/utils/taskArrayUtils";
 import { useItemHandlers } from "../../_hooks/useItemHandlers";
 import type { Category } from "@/types/prisma";
-import type { PlannerType } from "@/prisma/client";
+import type { PlannerType } from "@/generated/client";
 
 import { ItemProvider } from "../ItemContext";
 import { ItemTabs } from "../ItemTabs";

@@ -1,6 +1,6 @@
-import { Prisma } from "@/prisma/client";
+import { Prisma } from "@/generated/client";
 import type { WeekDayIntegers } from "./calendarTypes";
-export { PlannerType, EventType, UserRole } from "@/prisma/client";
+export { PlannerType, EventType, UserRole } from "@/generated/client";
 
 // SimpleEvent with runtime fields added to extendedProps
 export type SimpleEvent = Omit<

@@ -1,4 +1,4 @@
-import type { Prisma } from "@/prisma/client";
+import type { Prisma } from "@/generated/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
 type Database = Prisma.TransactionClient;
 

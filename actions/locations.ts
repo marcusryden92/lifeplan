@@ -9,7 +9,7 @@ import {
   getTravelTimesAllPeriods,
   generateSessionToken,
 } from "@/lib/google-maps-api";
-import type { TransportMode } from "@/prisma/client";
+import type { TransportMode } from "@/generated/client";
 import type { Location, TravelTime } from "@/types/prisma";
 
 const MAX_LOCATIONS = 10;

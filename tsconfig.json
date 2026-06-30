@@ -30,6 +30,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "prisma/**/*",
+    "generated/**/*",
     "utils/goal-handlers",
     "utils/assert/assert.js"
   ],

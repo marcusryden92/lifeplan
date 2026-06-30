@@ -1,4 +1,4 @@
-import { EventTemplate } from "../client";
+import { EventTemplate } from "../../generated/client";
 import { WeekDayType } from "../../types/calendarTypes";
 import { v4 as uuidv4 } from "uuid";
 import { LOCATION_IDS } from "./generateLocations";

@@ -1,7 +1,7 @@
 import { Planner, SimpleEvent } from "@/types/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { taskIsCompleted } from "../../../taskHelpers";
-import { EventType } from "@/prisma/client";
+import { EventType } from "@/generated/client";
 
 export function buildCompletedEvents(
   userId: string,

@@ -1,4 +1,4 @@
-import { Planner } from "../client";
+import { Planner } from "../../generated/client";
 import { CATEGORY_IDS } from "./generateCategories";
 import { LOCATION_IDS } from "./generateLocations";
 

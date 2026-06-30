@@ -1,4 +1,4 @@
-import type { Prisma } from "@/prisma/client";
+import type { Prisma } from "@/generated/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
 import { intToWeekday } from "@/utils/calendarUtils";
 import type { EventTemplate } from "@/types/prisma";

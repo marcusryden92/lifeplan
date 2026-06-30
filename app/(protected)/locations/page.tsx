@@ -30,7 +30,7 @@ import {
   setDefaultTransportMode,
   type SerializedLocation,
 } from "@/redux/slices/schedulingSettingsSlice";
-import type { TransportMode } from "@/prisma/client";
+import type { TransportMode } from "@/generated/client";
 import { TravelMatrix } from "./_components/TravelMatrix";
 import { AddLocationModal } from "./_components/AddLocationModal";
 import { EditTravelTimeModal } from "./_components/EditTravelTimeModal";

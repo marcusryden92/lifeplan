@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui";
-import type { TransportMode } from "@/prisma/client";
+import type { TransportMode } from "@/generated/client";
 import type { SerializedTravelTime } from "@/redux/slices/schedulingSettingsSlice";
 import { isTimeVarying } from "@/utils/locations";
 import {
