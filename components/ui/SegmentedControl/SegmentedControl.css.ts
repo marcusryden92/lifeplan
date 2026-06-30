@@ -17,7 +17,7 @@ export const segmentedThumb = style({
   left: 3,
   borderRadius: 999,
   background: vars.ink,
-  transition: `transform ${DURATIONS.collapse}, width ${DURATIONS.collapse}`,
+  transition: `transform ${DURATIONS.collapse}s cubic-bezier(0.4, 0, 0.2, 1), width ${DURATIONS.collapse}s cubic-bezier(0.4, 0, 0.2, 1)`,
   zIndex: 0,
 });
 
@@ -40,7 +40,7 @@ export const segmentedButton = style({
   letterSpacing: "0.06em",
   textTransform: "uppercase",
   color: vars.muted,
-  transition: `color ${DURATIONS.collapse}`,
+  transition: `color ${DURATIONS.collapse}s cubic-bezier(0.4, 0, 0.2, 1)`,
   selectors: {
     "&[data-active='true']": { color: vars.paper },
     "&:hover:not([data-active='true'])": { color: vars.ink },

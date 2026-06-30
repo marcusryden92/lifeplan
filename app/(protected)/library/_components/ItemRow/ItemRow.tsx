@@ -59,6 +59,7 @@ export function ItemRow({
             : "—"
           : formatDurationCompact(item.duration)}
       </div>
+      <div className={cellMuted}>{item.priority}</div>
       <div className={`${cellMuted} ${isOverdue ? cellOverdue : ""}`}>
         {item.deadline ? format(new Date(item.deadline), "MMM d, yyyy") : "—"}
       </div>

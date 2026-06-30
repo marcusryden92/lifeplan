@@ -1,6 +1,5 @@
 # P2 — Wire-up debt (known stubs)
 
-- Wire up Schedule and Activity tabs in item detail view
 - Option to archive completed goals/items so they don't clutter the interface
 
 # P3 — Small features

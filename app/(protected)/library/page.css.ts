@@ -305,14 +305,8 @@ export const tableWrap = style({
 
 export const tableHead = style({
   display: "grid",
-  gridTemplateColumns: "1fr 80px 90px 130px 110px 90px 30px",
+  gridTemplateColumns: "1fr 80px 100px 110px 130px 120px 90px 30px",
   padding: "12px 8px 10px",
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
   borderBottom: `1px solid ${vars.rule}`,
   position: "sticky",
   top: 0,
@@ -321,9 +315,64 @@ export const tableHead = style({
   transition: themeTransition,
 });
 
+export const headerCell = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  paddingRight: 12,
+  fontFamily: vars.font.ui,
+  fontSize: 9.5,
+  fontWeight: 600,
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  color: vars.muted,
+  background: "transparent",
+  border: "none",
+  textAlign: "left",
+  transition: themeTransition,
+});
+
+export const headerCellSortable = style({
+  cursor: "pointer",
+  selectors: {
+    "&:hover": {
+      color: vars.ink,
+    },
+  },
+});
+
+export const headerCellActive = style({
+  color: vars.ink,
+});
+
+export const headerCellIcon = style({
+  display: "inline-flex",
+  alignItems: "center",
+  color: "currentColor",
+});
+
+export const headerCellIconIdle = style({
+  opacity: 0.45,
+});
+
+export const showCompletedToggle = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  fontFamily: vars.font.ui,
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
+  color: vars.muted,
+  cursor: "pointer",
+  userSelect: "none",
+  transition: themeTransition,
+});
+
 export const tableRow = style({
   display: "grid",
-  gridTemplateColumns: "1fr 80px 90px 130px 110px 90px 30px",
+  gridTemplateColumns: "1fr 80px 100px 110px 130px 120px 90px 30px",
   padding: "12px 8px",
   alignItems: "center",
   borderBottom: `1px solid ${vars.rule}`,
