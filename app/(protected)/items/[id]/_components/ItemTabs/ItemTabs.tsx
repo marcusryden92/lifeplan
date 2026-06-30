@@ -34,7 +34,6 @@ export function ItemTabs({
 
   const tabs: Tab[] = [
     { key: "overview", label: "Overview", href: base },
-    { key: "schedule", label: "Schedule", href: `${base}/schedule` },
     {
       key: "subtasks",
       label: "Subtasks",
@@ -42,7 +41,7 @@ export function ItemTabs({
       count: subtaskCount,
       disabled: !subtasksEnabled,
     },
-    { key: "activity", label: "Activity", href: `${base}/activity` },
+    { key: "schedule", label: "Schedule", href: `${base}/schedule` },
   ];
 
   return (
