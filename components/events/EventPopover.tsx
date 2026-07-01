@@ -26,7 +26,7 @@ import {
 import { formatTime } from "@/utils/calendarUtils";
 import { PlannerType } from "@/types/prisma";
 import { calendarColors } from "@/data/calendarColors";
-import { getCompleteTaskTreeIds } from "@/utils/goalPageHandlers";
+import { getCompleteTaskTreeIds, getRootParentId } from "@/utils/goalPageHandlers";
 import { CategoryBadge, TypeBadge } from "@/components/ui";
 import { vars } from "@/lib/theme";
 import { CalendarPopover } from "./CalendarPopover";
@@ -172,7 +172,8 @@ const EventPopover: React.FC<EventPopoverProps> = ({
 
   const openFullEditor = () => {
     setShowPopover(false);
-    router.push(`/items/${event.id}`);
+    const rootId = getRootParentId(planner, event.id) ?? event.id;
+    router.push(`/items/${rootId}`);
   };
 
   const plannerType = event.extendedProps.plannerType as

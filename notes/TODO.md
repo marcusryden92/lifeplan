@@ -1,6 +1,5 @@
 # P3 — Small features
 
-- Button for duplicating subtasks in subtask view
 - Set location for template events in WeekPlanModal
 - More/different color options for template events in WeekPlanModal
 - Rename WeekPlanModal and its buttons — "Week Structure"? "Week Template"?
@@ -13,6 +12,7 @@
 - Server-side overlap validation for CategoryTimeWindow
 - Plumb `TravelTime.transportMode` through the scheduling engine
 - Add console error messaging
+- Notice when an item is too large to fit within the template (alerts list)
 - Option to remove your own account + data
 - Item-detail AIHelper + EngineNotes side cards still using mocks (deferred while AI coach is shelved)
 
@@ -25,7 +25,6 @@
 - Add habits (repeating events with min/max size rendering within a given time frame)
 - Add routines (tasks that are always bundled)
 - Splitting large tasks into smaller chunks when generating calendar (important for cases like 20 × 30-min "reading" — currently painful)
-- Notice when an item is too large to fit within the template (alerts list)
 - Maximum time of a goal per day
 - Allow moving/pinning of dynamic objects (temporarily acting like a plan)
 - Multiple templates of different time spans (3 days, 2 weeks etc)
