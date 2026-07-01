@@ -15,7 +15,11 @@ import { useFlashValue } from "@/hooks/useFlashAnimation";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { DraggableContextProvider } from "@/components/draggable/DraggableContext";
 import * as categoryActions from "@/actions/categories";
-import { getSubtasksById, getTaskTreeIds } from "@/utils/goalPageHandlers";
+import {
+  getSubtasksById,
+  getTaskTreeIds,
+  getTreeBottomLayer,
+} from "@/utils/goalPageHandlers";
 import {
   completedSubtaskDuration,
   totalSubtaskDuration,
@@ -137,8 +141,16 @@ export default function ItemDetailLayout({
     router.push("/library");
   };
 
-  const completedSubtasks = subtasks.filter((s) => s.completedEndTime).length;
-  const totalSubtasks = subtasks.length;
+  // "Subtasks" in the item detail view refers to actionable (leaf) descendants —
+  // intermediate branches aren't work you check off, so they don't count.
+  const leafSubtasks = useMemo(() => {
+    if (!item || item.plannerType !== "goal" || subtasks.length === 0) return [];
+    return getTreeBottomLayer(planner, item.id);
+  }, [item, planner, subtasks.length]);
+  const totalSubtasks = leafSubtasks.length;
+  const completedSubtasks = leafSubtasks.filter(
+    (s) => s.completedEndTime,
+  ).length;
   const pct =
     totalDuration > 0
       ? Math.round((completedDuration / totalDuration) * 100)

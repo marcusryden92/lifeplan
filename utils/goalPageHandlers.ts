@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
 
 import { updateDependenciesOnDelete_ReturnArray } from "@/utils/goal-handlers/update-dependencies/updateDependenciesOnDelete";
+import { updateDependenciesOnCreate } from "@/utils/goal-handlers/update-dependencies/updateDependenciesOnCreate";
+import { updateDependenciesOnDuplicate } from "@/utils/goal-handlers/update-dependencies/updateDependenciesOnDuplicate";
 
 interface AddSubtaskInterface {
   userId?: string;
@@ -64,6 +66,68 @@ export function addSubtask({
     return newId;
   }
   return undefined;
+}
+
+interface DuplicateSubtreeInterface {
+  planner: Planner[];
+  taskId: string;
+}
+
+// Clone a subtask and all of its descendants with fresh IDs, appending the
+// copy at the end of the sibling chain. Root of the copy gets a "(copy)" suffix.
+// The dependency chain runs through the bottom layer (leaves), so the boundary
+// wiring is done on the new subtree's first/last BLI — not on the root — so
+// the calendar renders A1, A2, A3, B1, B2, B3, X1, ... rather than
+// A1, A2, A3, B, X1, ... (the whole cloned subtree slots in as leaves, not as
+// a single node).
+export function duplicateSubtree({
+  planner,
+  taskId,
+}: DuplicateSubtreeInterface): { newPlanner: Planner[]; newRootId: string } | null {
+  const original = planner.find((p) => p.id === taskId);
+  if (!original || !original.parentId) return null;
+
+  const tree = getGoalTree(planner, taskId);
+  if (tree.length === 0) return null;
+
+  const now = new Date().toISOString();
+  const idMap = new Map<string, string>();
+  for (const t of tree) idMap.set(t.id, uuidv4());
+
+  const newTasks: Planner[] = tree.map((t) => {
+    const isRoot = t.id === taskId;
+    const newId = idMap.get(t.id)!;
+    const parentId = isRoot
+      ? original.parentId
+      : t.parentId && idMap.has(t.parentId)
+        ? idMap.get(t.parentId)!
+        : t.parentId;
+    // Internal chain dependencies get remapped to the cloned IDs. Any dep that
+    // pointed outside the original subtree (the boundary dep on the first BLI)
+    // is cleared here and rewired below to slot into the sibling chain.
+    const dependency =
+      t.dependency && idMap.has(t.dependency) ? idMap.get(t.dependency)! : null;
+    return {
+      ...t,
+      id: newId,
+      parentId,
+      dependency,
+      title: isRoot ? `${t.title} (copy)` : t.title,
+      completedStartTime: null,
+      completedEndTime: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+  });
+
+  const newRootId = idMap.get(taskId)!;
+  const newPlanner = updateDependenciesOnDuplicate(
+    [...planner, ...newTasks],
+    original.parentId,
+    newRootId,
+  );
+
+  return { newPlanner, newRootId };
 }
 
 interface DeleteGoalInterface {
@@ -147,99 +211,6 @@ export function deleteGoal_ReturnArray({
   const treeIds: string[] = getTaskTreeIds(planner, taskId);
 
   return (newArray = newArray.filter((t) => !treeIds.includes(t.id)));
-}
-
-// Get the correct dependency when creating a new subtask in a goal
-export function updateDependenciesOnCreate(
-  newPlanner: Planner[],
-  parentId: string,
-  newId: string,
-): Planner[] {
-  // Create a copy of the planner to avoid direct mutation
-  let updatedPlanner = [...newPlanner];
-
-  // Get potential siblings
-  const siblings: Planner[] = updatedPlanner.filter(
-    (task) => task.parentId === parentId && task.id !== newId,
-  );
-
-  // Check if the task is the first task of the first layer (the next one after root later), and if so return the unchanged planner
-  const parentTask = updatedPlanner.find((task) => task.id === parentId);
-
-  if (parentTask && !parentTask.parentId && siblings.length === 0)
-    return updatedPlanner;
-
-  // Get the ID of the root task/goal
-  const rootParentId = getRootParentId(updatedPlanner, parentId);
-
-  if (!rootParentId) {
-    return updatedPlanner;
-  }
-
-  if (siblings && siblings.length > 0) {
-    // Order siblings
-    const sortedSiblings = sortTasksByDependencies(updatedPlanner, siblings);
-
-    // Get last item in array
-    const lastSiblingItem = sortedSiblings[sortedSiblings.length - 1];
-
-    // Get the whole bottom layer (actionable items) from this item
-    const bottomLayer = getSortedTreeBottomLayer(
-      updatedPlanner,
-      lastSiblingItem.id,
-    );
-
-    const lastBottomLayerItem = bottomLayer[bottomLayer.length - 1];
-
-    // If a task exists in the bottom layer, which carries the ID of lastSiblingItem as its dependency, swap it for newId
-    updatedPlanner = updatedPlanner.map((task) => {
-      if (task.dependency === lastBottomLayerItem.id) {
-        // Replace lastSiblingItem.id with newId in dependencies
-        return { ...task, dependency: newId };
-      }
-      return task; // Return the unchanged task if no dependency matches
-    });
-
-    // Set the last item ID in the dependency array of the new task (with newId)
-    updatedPlanner = updatedPlanner.map((task) => {
-      if (task.id === newId) {
-        return { ...task, dependency: lastBottomLayerItem.id }; // Add lastItem.id as a dependency for the new task
-      }
-      return task;
-    });
-  }
-
-  if (!siblings || siblings.length === 0) {
-    // Check if the parentId is dependent on anything
-    const parentTask = updatedPlanner.find((task) => task.id === parentId);
-    const parentDependency = parentTask?.dependency || null;
-
-    updatedPlanner = updatedPlanner.map((task) => {
-      if (
-        task.id === parentId &&
-        task.dependency &&
-        task.dependency?.length > 0
-      ) {
-        return { ...task, dependency: null };
-      }
-
-      if (task.id === newId) {
-        return { ...task, dependency: parentDependency };
-      }
-      return task;
-    });
-
-    // If any task in the bottomLayer is dependent on the parentId, update it to be dependent on the newId
-    updatedPlanner = updatedPlanner.map((task) => {
-      if (task.dependency === parentId) {
-        return { ...task, dependency: newId };
-      }
-      return task; // Return the unchanged task if no dependency matches
-    });
-  }
-
-  // Return the modified planner array
-  return updatedPlanner;
 }
 
 // CHECK IF GOAL IS READY

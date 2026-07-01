@@ -247,3 +247,9 @@ export const drawerFooter = style({
   borderTop: `1px solid ${vars.rule}`,
   transition: themeTransition,
 });
+
+export const footerActionGroup = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+});
