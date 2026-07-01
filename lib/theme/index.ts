@@ -13,6 +13,24 @@ export {
 
 export { vars } from "./tokens.css";
 export type { ThemeVars } from "./tokens.css";
+export {
+  space,
+  radii,
+  contentWidth,
+  breakpoints,
+  media,
+  borderWidth,
+  zIndex,
+} from "./scales";
+export type {
+  Space,
+  Radii,
+  ContentWidth,
+  Breakpoints,
+  Media,
+  BorderWidth,
+  ZIndex,
+} from "./scales";
 export { themeLight, themeDark } from "./themes.css";
 export { backdropFilters, colorMixAlpha } from "./effects";
 export type { BackdropFilterKey, ColorMixAlphaKey } from "./effects";

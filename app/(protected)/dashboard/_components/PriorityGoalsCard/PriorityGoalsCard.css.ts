@@ -1,7 +1,6 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, media } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const goalsCard = style({
   padding: "16px 20px",
@@ -10,7 +9,7 @@ export const goalsCard = style({
   display: "flex",
   flexDirection: "column",
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
     },

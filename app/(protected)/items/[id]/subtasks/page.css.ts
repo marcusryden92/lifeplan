@@ -1,7 +1,6 @@
-import { style, globalStyle } from "@vanilla-extract/css";
-import { DURATIONS } from "@/lib/theme";
+﻿import { style, globalStyle } from "@vanilla-extract/css";
+import { DURATIONS, media } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const layout = style({
   display: "flex",
@@ -11,7 +10,7 @@ export const layout = style({
   minHeight: 0,
   gap: 0,
   "@media": {
-    [MOBILE]: { flexDirection: "column" },
+    [media.mobile]: { flexDirection: "column" },
   },
 });
 
@@ -51,7 +50,7 @@ export const cardBody = style({
 });
 
 // When the subtask list wrapper renders null (no subtasks), AddSubtask is the
-// only child — pin it to the bottom so the empty space sits above it rather
+// only child â€” pin it to the bottom so the empty space sits above it rather
 // than below.
 globalStyle(`${cardBody} > :only-child`, {
   marginTop: "auto",

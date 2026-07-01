@@ -1,12 +1,12 @@
-import { style, globalStyle } from "@vanilla-extract/css";
+﻿import { style, globalStyle } from "@vanilla-extract/css";
 import {
   vars,
   themeTransition,
   interactiveTransition,
   colorMixAlpha,
+  media,
 } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const page = style({
   position: "relative",
@@ -15,7 +15,7 @@ export const page = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
     },
@@ -29,7 +29,7 @@ export const subHeader = style({
   padding: "20px 28px 18px",
   flexShrink: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       padding: "16px 16px 12px",
       flexWrap: "wrap",
       gap: 10,
@@ -47,7 +47,7 @@ export const pageTitle = style({
   margin: 0,
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { fontSize: 24 },
+    [media.mobile]: { fontSize: 24 },
   },
 });
 
@@ -78,7 +78,7 @@ export const mainGrid = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       gridTemplateColumns: "1fr",
       padding: "0 16px 24px",
       gap: 14,
@@ -104,7 +104,7 @@ export const rail = style([
     background: "transparent",
     transition: themeTransition,
     "@media": {
-      [MOBILE]: { minHeight: "auto", borderRadius: 12 },
+      [media.mobile]: { minHeight: "auto", borderRadius: 12 },
     },
   },
 ]);
@@ -296,7 +296,7 @@ export const mainCard = style([
     borderRadius: 14,
     transition: themeTransition,
     "@media": {
-      [MOBILE]: { minHeight: 540, borderRadius: 12 },
+      [media.mobile]: { minHeight: 540, borderRadius: 12 },
     },
   },
 ]);

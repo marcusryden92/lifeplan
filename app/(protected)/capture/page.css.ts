@@ -1,7 +1,6 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, popover, glass } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, popover, glass, media } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const page = style({
   display: "flex",
@@ -17,7 +16,7 @@ export const subHeader = style({
   padding: "20px 28px 18px",
   flexShrink: 0,
   "@media": {
-    [MOBILE]: { padding: "16px 16px 12px", flexWrap: "wrap", gap: 10 },
+    [media.mobile]: { padding: "16px 16px 12px", flexWrap: "wrap", gap: 10 },
   },
 });
 
@@ -30,7 +29,7 @@ export const pageTitle = style({
   lineHeight: 1,
   margin: 0,
   transition: themeTransition,
-  "@media": { [MOBILE]: { fontSize: 24 } },
+  "@media": { [media.mobile]: { fontSize: 24 } },
 });
 
 export const titleSummary = style({
@@ -62,7 +61,7 @@ export const mainGrid = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       gridTemplateColumns: "1fr",
       padding: "0 16px 24px",
       gap: 14,
@@ -209,7 +208,7 @@ export const card = style([
     display: "flex",
     flexDirection: "column",
     gap: 18,
-    "@media": { [MOBILE]: { padding: 20, borderRadius: 18 } },
+    "@media": { [media.mobile]: { padding: 20, borderRadius: 18 } },
   },
 ]);
 
@@ -222,14 +221,14 @@ export const itemTitle = style({
   color: vars.ink,
   margin: 0,
   transition: themeTransition,
-  "@media": { [MOBILE]: { fontSize: 22 } },
+  "@media": { [media.mobile]: { fontSize: 22 } },
 });
 
 export const typeGrid = style({
   display: "grid",
   gridTemplateColumns: "repeat(4, 1fr)",
   gap: 8,
-  "@media": { [MOBILE]: { gridTemplateColumns: "repeat(2, 1fr)" } },
+  "@media": { [media.mobile]: { gridTemplateColumns: "repeat(2, 1fr)" } },
 });
 
 export const typeCard = style({
@@ -299,7 +298,7 @@ export const fieldGrid = style({
   display: "grid",
   gridTemplateColumns: "repeat(3, 1fr)",
   gap: 12,
-  "@media": { [MOBILE]: { gridTemplateColumns: "1fr" } },
+  "@media": { [media.mobile]: { gridTemplateColumns: "1fr" } },
 });
 
 export const field = style({

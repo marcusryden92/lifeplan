@@ -1,7 +1,6 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, backdropFilters } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, backdropFilters, media } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 // Deliberately does NOT use the glass() recipe: a parent backdrop-filter
 // would create a backdrop root that hides the scrolling agendaList from
@@ -21,7 +20,7 @@ export const leftCard = style({
   boxShadow: vars.shadow.panel,
   transition: themeTransition,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       minHeight: "auto",
       overflow: "visible",
     },
@@ -48,7 +47,7 @@ export const leftCardHeader = style({
   gap: 12,
   transition: themeTransition,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       position: "relative",
       top: "auto",
     },
@@ -79,7 +78,7 @@ export const agendaList = style({
     },
   },
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       flex: "0 0 auto",
       overflow: "visible",
       paddingTop: 0,

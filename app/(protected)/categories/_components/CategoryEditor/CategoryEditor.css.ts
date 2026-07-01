@@ -1,7 +1,6 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, interactiveTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, interactiveTransition, media } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const editor = style({
   display: "flex",
@@ -12,7 +11,7 @@ export const editor = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       padding: "16px 16px 24px",
       gap: 16,
     },
@@ -56,7 +55,7 @@ export const headerInfo = style({
   minWidth: 0,
 });
 
-// Shared geometry so static ↔ edit doesn't shift the surrounding layout.
+// Shared geometry so static â†” edit doesn't shift the surrounding layout.
 const NAME_FONT = 30;
 const NAME_LINE_HEIGHT = 30;
 const NAME_BORDER = 2;
@@ -161,7 +160,7 @@ export const sectionPair = style({
   gridTemplateColumns: "1fr 1fr",
   gap: 32,
   "@media": {
-    [MOBILE]: { gridTemplateColumns: "1fr", gap: 22 },
+    [media.mobile]: { gridTemplateColumns: "1fr", gap: 22 },
   },
 });
 
@@ -170,7 +169,7 @@ export const fieldGrid = style({
   gridTemplateColumns: "1fr 1fr",
   gap: "18px 26px",
   "@media": {
-    [MOBILE]: { gridTemplateColumns: "1fr" },
+    [media.mobile]: { gridTemplateColumns: "1fr" },
   },
 });
 

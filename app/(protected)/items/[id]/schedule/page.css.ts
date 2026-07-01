@@ -1,7 +1,6 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, media } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const root = style({
   paddingTop: 12,
@@ -61,7 +60,7 @@ export const eventRow = style({
   alignItems: "baseline",
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { gridTemplateColumns: "92px 1fr auto", gap: 10 },
+    [media.mobile]: { gridTemplateColumns: "92px 1fr auto", gap: 10 },
   },
   selectors: {
     "&:last-child": { borderBottom: `1px solid ${vars.rule}` },

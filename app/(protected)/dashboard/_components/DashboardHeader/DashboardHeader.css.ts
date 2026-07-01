@@ -1,7 +1,6 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, media } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const headerRow = style({
   padding: "30px 32px 22px",
@@ -11,7 +10,7 @@ export const headerRow = style({
   justifyContent: "space-between",
   gap: 24,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       padding: "22px 18px 16px",
       flexDirection: "column",
       alignItems: "flex-start",
@@ -30,7 +29,7 @@ export const greeting = style({
   margin: 0,
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { fontSize: 38 },
+    [media.mobile]: { fontSize: 38 },
   },
 });
 
@@ -61,6 +60,6 @@ export const headerActions = style({
   gap: 8,
   flexShrink: 0,
   "@media": {
-    [MOBILE]: { width: "100%" },
+    [media.mobile]: { width: "100%" },
   },
 });

@@ -2,6 +2,7 @@ import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "./tokens.css";
 import { backdropFilters } from "./effects";
 import { themeTransition, buttonTransition } from "./transitions";
+import { radii } from "./scales";
 
 export const glass = recipe({
   base: {
@@ -17,11 +18,11 @@ export const glass = recipe({
       soft: { background: vars.glass.bgSoft },
     },
     radius: {
-      sm: { borderRadius: 16 },
-      md: { borderRadius: 18 },
-      lg: { borderRadius: 22 },
-      xl: { borderRadius: 24 },
-      canvas: { borderRadius: 30 },
+      sm: { borderRadius: radii.lg },
+      md: { borderRadius: radii["lg+2"] },
+      lg: { borderRadius: radii["xl+2"] },
+      xl: { borderRadius: radii["2xl"] },
+      canvas: { borderRadius: radii["3xl"] },
     },
     shadow: {
       panel: { boxShadow: vars.shadow.panel },
@@ -88,10 +89,10 @@ export const popover = recipe({
   },
   variants: {
     size: {
-      sm: { borderRadius: 10, boxShadow: vars.shadow.panelSm },
-      md: { borderRadius: 14, boxShadow: vars.shadow.panel },
-      lg: { borderRadius: 18, boxShadow: vars.shadow.panel },
-      xl: { borderRadius: 22, boxShadow: vars.shadow.panel },
+      sm: { borderRadius: radii["sm+2"], boxShadow: vars.shadow.panelSm },
+      md: { borderRadius: radii["md+2"], boxShadow: vars.shadow.panel },
+      lg: { borderRadius: radii["lg+2"], boxShadow: vars.shadow.panel },
+      xl: { borderRadius: radii["xl+2"], boxShadow: vars.shadow.panel },
     },
   },
   defaultVariants: {
@@ -105,7 +106,7 @@ export const pillBtn = recipe({
   base: {
     fontFamily: vars.font.ui,
     fontWeight: 600,
-    borderRadius: 999,
+    borderRadius: radii.pill,
     cursor: "pointer",
     border: "1px solid transparent",
     display: "inline-flex",
@@ -207,7 +208,7 @@ export const badge = recipe({
     fontWeight: 700,
     letterSpacing: "0.06em",
     textTransform: "uppercase",
-    borderRadius: 999,
+    borderRadius: radii.pill,
     border: "1px solid transparent",
     display: "inline-flex",
     alignItems: "center",
@@ -281,7 +282,7 @@ export const formInput = recipe({
         padding: "9px 12px",
         background: vars.glass.bgSoft,
         border: `1px solid ${vars.glass.stroke}`,
-        borderRadius: 10,
+        borderRadius: radii["sm+2"],
         selectors: {
           "&:focus": { borderColor: vars.accent.primary },
         },
@@ -298,7 +299,7 @@ export const progressTrack = recipe({
     width: "100%",
     height: 6,
     background: vars.rule,
-    borderRadius: 999,
+    borderRadius: radii.pill,
     overflow: "hidden",
     position: "relative",
   },

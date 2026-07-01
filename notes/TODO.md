@@ -1,11 +1,8 @@
-# P3 — Small features
-
-- Bulk-actions floating bar in Library
-
 # P4 — Refactors / investigations
 
 - Token consolidation into sprinkles (color/space/radii)
 - Tokens for contentWidth (sm, md, lg etc) for layouts
+
 - Server-side overlap validation for CategoryTimeWindow
 - Plumb `TravelTime.transportMode` through the scheduling engine
 - Add console error messaging
@@ -16,6 +13,7 @@
 # P5 — Medium features
 
 - Onboarding flow (6-step)
+- Bulk-actions floating bar in Library
 - File-view / mind-map style: displays categories + sub-categories + items together
 - Change date picker / date picker styles
 - Add RRule exceptions to plans, templates, categories

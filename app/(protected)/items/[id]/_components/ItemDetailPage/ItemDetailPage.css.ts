@@ -1,9 +1,10 @@
-import { style, keyframes } from "@vanilla-extract/css";
+﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
   vars,
   themeTransition,
   themeDark,
   interactiveTransition,
+  media,
 } from "@/lib/theme";
 
 const lockedShake = keyframes({
@@ -12,7 +13,6 @@ const lockedShake = keyframes({
   "40%, 80%": { transform: "translateX(3px)" },
 });
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const progressBlock = style({
   marginTop: 36,
@@ -52,7 +52,7 @@ export const progressFill = style({
   borderRadius: 999,
 });
 
-// Task completion row — sized to match the left column of overviewGrid (50%
+// Task completion row â€” sized to match the left column of overviewGrid (50%
 // minus half the 48px gap) so the checkbox lines up with IdentityCard's left
 // edge. justify-content puts the checkbox+label cluster on the left and the
 // date picker on the right edge of that span. Drops to full width on mobile
@@ -65,7 +65,7 @@ export const completeRow = style({
   height: "100%",
   width: "calc(50% - 24px)",
   "@media": {
-    [MOBILE]: { width: "100%" },
+    [media.mobile]: { width: "100%" },
   },
 });
 
@@ -154,7 +154,7 @@ export const overviewGrid = style({
   gridTemplateColumns: "1fr 1fr",
   gap: 48,
   "@media": {
-    [MOBILE]: { gridTemplateColumns: "1fr", gap: 24 },
+    [media.mobile]: { gridTemplateColumns: "1fr", gap: 24 },
   },
 });
 

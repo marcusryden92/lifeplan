@@ -1,13 +1,13 @@
-import { style, keyframes } from "@vanilla-extract/css";
+﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
   vars,
   DURATIONS,
   popover,
   backdropFilters,
   formInput,
+  media,
 } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 const fadeIn = keyframes({
   from: { opacity: 0 },
@@ -56,7 +56,7 @@ export const dialog = style([
     animationDuration: `${DURATIONS.modal}s`,
     animationTimingFunction: "ease",
     "@media": {
-      [MOBILE]: {
+      [media.mobile]: {
         top: "auto",
         bottom: 0,
         left: 0,
@@ -208,7 +208,7 @@ export const footer = style({
   color: vars.muted,
   flexWrap: "wrap",
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       display: "none",
     },
   },

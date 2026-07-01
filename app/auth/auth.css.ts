@@ -1,7 +1,6 @@
-import { style } from "@vanilla-extract/css";
-import { vars } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, media } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 // Locked to light. Split layout: vector field on the left, paper form panel
 // on the right. Carries the landing's hero artifact through the transition.
@@ -13,11 +12,11 @@ export const page = style({
   background: vars.paper,
   color: vars.ink,
   "@media": {
-    [MOBILE]: { flexDirection: "column" },
+    [media.mobile]: { flexDirection: "column" },
   },
 });
 
-// Left side — vector field with a Circadium wordmark overlay (mirrors the
+// Left side â€” vector field with a Circadium wordmark overlay (mirrors the
 // landing hero so the page transition feels continuous).
 export const fieldPanel = style({
   position: "relative",
@@ -25,7 +24,7 @@ export const fieldPanel = style({
   overflow: "hidden",
   isolation: "isolate",
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       flex: "0 0 auto",
       height: 200,
       width: "100%",
@@ -50,7 +49,7 @@ export const fieldWordmark = style({
   userSelect: "none",
   zIndex: 1,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       fontSize: "clamp(28px, 8vw, 48px)",
       left: 20,
       bottom: 16,
@@ -58,7 +57,7 @@ export const fieldWordmark = style({
   },
 });
 
-// Right side — paper form panel.
+// Right side â€” paper form panel.
 export const formPanel = style({
   flex: "1 1 0",
   display: "flex",
@@ -67,7 +66,7 @@ export const formPanel = style({
   padding: "clamp(24px, 5vw, 56px)",
   position: "relative",
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       padding: "32px 20px 48px",
     },
   },

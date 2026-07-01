@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+﻿import { style } from "@vanilla-extract/css";
 import {
   vars,
   themeTransition,
@@ -6,9 +6,9 @@ import {
   DURATIONS,
   backdropFilters,
   glass,
+  media,
 } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const page = style({
   display: "flex",
@@ -16,7 +16,7 @@ export const page = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
     },
@@ -33,7 +33,7 @@ export const subHeader = style({
   padding: "20px 28px 18px",
   flexShrink: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       padding: "16px 16px 12px",
       flexWrap: "wrap",
       gap: 10,
@@ -57,7 +57,7 @@ export const rangeTitle = style({
   fontVariantNumeric: "tabular-nums",
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { fontSize: 24, minWidth: "auto" },
+    [media.mobile]: { fontSize: 24, minWidth: "auto" },
   },
 });
 
@@ -147,7 +147,7 @@ export const headerConsoleSpacer = style({
     },
   },
   "@media": {
-    [MOBILE]: { display: "none" },
+    [media.mobile]: { display: "none" },
   },
 });
 
@@ -229,7 +229,7 @@ export const mainGrid = style({
     },
   },
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       gridTemplateColumns: "1fr",
       padding: "0 16px 24px",
       gap: 14,
@@ -247,7 +247,7 @@ export const calendarCard = style([
     minHeight: 0,
     overflow: "hidden",
     "@media": {
-      [MOBILE]: {
+      [media.mobile]: {
         minHeight: 540,
       },
     },
