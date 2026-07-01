@@ -75,7 +75,7 @@ export function WindowsMiniGrid({
         onKeyDown={onKey}
         role="button"
         tabIndex={0}
-        aria-label="Open week plan to add time windows"
+        aria-label="Open week structure to add time windows"
       >
         <div className={emptyState}>
           No time windows yet — click to add some
@@ -84,8 +84,8 @@ export function WindowsMiniGrid({
     );
   }
 
-  // Pinstripe matches the WeekPlanModal window styling: 45° diagonal lines on a
-  // tinted color fill, the visual idiom for "category time window".
+  // Pinstripe matches the WeekStructureModal window styling: 45° diagonal lines
+  // on a tinted color fill, the visual idiom for "category time window".
   const blockBg = `repeating-linear-gradient(45deg, transparent 0 5px, ${color} 5px 6.5px), color-mix(in srgb, ${color} 80%, transparent)`;
   const hours = Array.from({ length: TOTAL_HOURS }, (_, i) => i);
 
@@ -96,7 +96,7 @@ export function WindowsMiniGrid({
       onKeyDown={onKey}
       role="button"
       tabIndex={0}
-      aria-label="Open week plan to edit time windows"
+      aria-label="Open week structure to edit time windows"
     >
       <div className={dayHeader}>
         <span />

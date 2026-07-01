@@ -1,8 +1,5 @@
 # P3 — Small features
 
-- Set location for template events in WeekPlanModal
-- More/different color options for template events in WeekPlanModal
-- Rename WeekPlanModal and its buttons — "Week Structure"? "Week Template"?
 - Bulk-actions floating bar in Library
 
 # P4 — Refactors / investigations
@@ -18,8 +15,8 @@
 
 # P5 — Medium features
 
-- File-view / mind-map style: displays categories + sub-categories + items together
 - Onboarding flow (6-step)
+- File-view / mind-map style: displays categories + sub-categories + items together
 - Change date picker / date picker styles
 - Add RRule exceptions to plans, templates, categories
 - Add habits (repeating events with min/max size rendering within a given time frame)

@@ -2,7 +2,8 @@
 
 import { Button, vars } from "@/components/ui";
 import type { EventTemplate } from "@/types/prisma";
-import { TEMPLATE_PALETTE } from "../constants";
+import { PopoverLocationPicker } from "@/components/events/PopoverLocationPicker";
+import { calendarColors } from "@/data/calendarColors";
 import { addMinutesToHHMM } from "../timeWindow";
 import {
   selectedPanel,
@@ -38,7 +39,7 @@ export function TemplateEditor({
       <div className={selectedHeaderRow}>
         <span
           className={selectedSwatch}
-          style={{ background: template.color || TEMPLATE_PALETTE[0] }}
+          style={{ background: template.color || calendarColors[0] }}
         />
         <span className={selectedTitle}>{template.title || "Untitled"}</span>
       </div>
@@ -66,9 +67,17 @@ export function TemplateEditor({
       </div>
 
       <div className={fieldWithMargin}>
+        <span className={fieldLabel}>location</span>
+        <PopoverLocationPicker
+          value={template.locationId ?? null}
+          onChange={(locationId) => onUpdate({ locationId })}
+        />
+      </div>
+
+      <div className={fieldWithMargin}>
         <span className={fieldLabel}>color</span>
         <div className={swatchRow}>
-          {TEMPLATE_PALETTE.map((c) => (
+          {calendarColors.map((c) => (
             <button
               key={c}
               type="button"

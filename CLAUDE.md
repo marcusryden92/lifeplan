@@ -70,7 +70,7 @@ lifeplan/
 │
 ├── components/
 │   ├── auth/                         # AuthCard, login/register/reset forms, Social, LoginButton
-│   ├── calendar/                     # WeekPlanModal + editors (Template, Window, Event tile)
+│   ├── calendar/                     # WeekStructureModal + editors (Template, Window, Event tile)
 │   ├── draggable/                    # DragBox, DraggableItem, TaskDivider, DraggableContext
 │   ├── events/                       # Calendar event renderers + popovers (Event, Template, Travel, CategoryWrapper, NewPlanModal, color/location pickers)
 │   ├── landing/VectorField/          # Landing-page visual

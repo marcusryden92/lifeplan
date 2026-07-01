@@ -15,7 +15,6 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import { CategoryBadge, TypeBadge } from "@/components/ui";
 import { PopoverLocationPicker } from "./PopoverLocationPicker";
 import { PopoverColorPicker } from "./PopoverColorPicker";
-import { assignLocationToTemplate } from "@/actions/locations";
 import { formatTime } from "@/utils/calendarUtils";
 import { calendarColors } from "@/data/calendarColors";
 import { vars } from "@/lib/theme";
@@ -83,17 +82,10 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
     }
   }, [isEditingTitle]);
 
-  const handleLocationChange = async (locationId: string | null) => {
-    try {
-      await assignLocationToTemplate(event.id, locationId);
-      updateTemplateArray((prev) =>
-        prev.map((t) =>
-          t.id === event.id ? { ...t, locationId: locationId } : t,
-        ),
-      );
-    } catch (error) {
-      console.error("Failed to update template location:", error);
-    }
+  const handleLocationChange = (locationId: string | null) => {
+    updateTemplateArray((prev) =>
+      prev.map((t) => (t.id === event.id ? { ...t, locationId } : t)),
+    );
   };
 
   const startEditing = () => setIsEditingTitle(true);

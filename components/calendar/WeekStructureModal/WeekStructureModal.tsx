@@ -35,7 +35,7 @@ import {
   type WorkingWindow,
 } from "./timeWindow";
 import { templateToEvent, windowToEvent } from "./eventSerializers";
-import { useWeekPlanState } from "./useWeekPlanState";
+import { useWeekStructureState } from "./useWeekStructureState";
 import { TemplateEditor } from "./TemplateEditor";
 import { WindowEditor } from "./WindowEditor";
 import { EventTile } from "./EventTile";
@@ -64,11 +64,11 @@ import {
   cancelButtonStyle,
   a11yHiddenTitle,
   discardConfirmBody,
-} from "./WeekPlanModal.css";
+} from "./WeekStructureModal.css";
 
 type Mode = "templates" | "windows";
 
-interface WeekPlanModalProps {
+interface WeekStructureModalProps {
   open: boolean;
   onClose: () => void;
   initialMode?: Mode;
@@ -77,12 +77,12 @@ interface WeekPlanModalProps {
   focusedCategoryId?: string | null;
 }
 
-export function WeekPlanModal({
+export function WeekStructureModal({
   open,
   onClose,
   initialMode = "templates",
   focusedCategoryId = null,
-}: WeekPlanModalProps) {
+}: WeekStructureModalProps) {
   const { userId, categories } = useCalendarProvider();
   const calendarRef = useRef<FullCalendar>(null);
 
@@ -103,7 +103,7 @@ export function WeekPlanModal({
     setWinsWorking,
     changeCount,
     saveAll,
-  } = useWeekPlanState({ open, onClose });
+  } = useWeekStructureState({ open, onClose });
 
   useEffect(() => {
     if (open) {
@@ -388,7 +388,7 @@ export function WeekPlanModal({
           cancel();
         }}
       >
-        <Dialog.Title className={a11yHiddenTitle}>Plan week</Dialog.Title>
+        <Dialog.Title className={a11yHiddenTitle}>Week Structure</Dialog.Title>
         <Backdrop variant="blob" />
         <Grain />
         <div className={banner}>
@@ -474,7 +474,7 @@ export function WeekPlanModal({
               </span>
             </div>
 
-            <div className={`${calendarWrap} week-plan-fc`}>
+            <div className={`${calendarWrap} week-structure-fc`}>
               <FullCalendar
                 ref={calendarRef}
                 initialDate={REFERENCE_WEEK_DATE}

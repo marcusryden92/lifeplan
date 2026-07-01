@@ -13,12 +13,15 @@ import {
 import { startDayAsInt } from "./eventSerializers";
 import type { WorkingWindow } from "./timeWindow";
 
-interface UseWeekPlanStateArgs {
+interface UseWeekStructureStateArgs {
   open: boolean;
   onClose: () => void;
 }
 
-export function useWeekPlanState({ open, onClose }: UseWeekPlanStateArgs) {
+export function useWeekStructureState({
+  open,
+  onClose,
+}: UseWeekStructureStateArgs) {
   const dispatch = useDispatch<AppDispatch>();
   const { template, categories } = useCalendarProvider();
 
@@ -59,6 +62,7 @@ export function useWeekPlanState({ open, onClose }: UseWeekPlanStateArgs) {
         t.startTime,
         t.duration,
         t.color,
+        t.locationId ?? null,
       ]);
     const tplSet = new Set(tplsInitial.map(sig));
     let n = 0;
@@ -147,7 +151,8 @@ export function useWeekPlanState({ open, onClose }: UseWeekPlanStateArgs) {
           startDayAsInt(prev) === startDayAsInt(t) &&
           prev.startTime === t.startTime &&
           prev.duration === t.duration &&
-          prev.color === t.color;
+          prev.color === t.color &&
+          (prev.locationId ?? null) === (t.locationId ?? null);
         if (!tplUnchanged) dispatch(upsertTemplate(t));
         return t;
       });

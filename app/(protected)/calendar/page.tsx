@@ -20,7 +20,7 @@ import {
   ENGINE_SUMMARY,
   type EngineTone,
 } from "../_mock/calendar";
-import { WeekPlanModal } from "@/components/calendar/WeekPlanModal";
+import { WeekStructureModal } from "@/components/calendar/WeekStructureModal";
 import { EngineControls } from "./_components/EngineControls";
 import "./_styles/fullcalendar.css";
 import {
@@ -204,7 +204,7 @@ export default function CalendarPage() {
               aria-label="Edit week templates and category windows"
             >
               <CalendarCog size={13} strokeWidth={2.2} />
-              Plan week
+              Week structure
             </Button>
             <Button variant="solid" size="sm" onClick={manuallyRefreshCalendar}>
               <RotateCw size={13} strokeWidth={2.4} />
@@ -313,7 +313,7 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        <WeekPlanModal open={planOpen} onClose={() => setPlanOpen(false)} />
+        <WeekStructureModal open={planOpen} onClose={() => setPlanOpen(false)} />
       </div>
     </div>
   );

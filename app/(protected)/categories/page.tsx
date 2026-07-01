@@ -16,7 +16,7 @@ import {
   getCategoryAndDescendants,
 } from "@/utils/categoryUtils";
 import type { Category } from "@/types/prisma";
-import { WeekPlanModal } from "@/components/calendar/WeekPlanModal";
+import { WeekStructureModal } from "@/components/calendar/WeekStructureModal";
 import { CategoryEditor, SWATCH_PALETTE } from "./_components/CategoryEditor";
 import { CategoryTreeNode, type DragZone } from "./_components/CategoryTreeNode";
 import {
@@ -333,7 +333,7 @@ export default function CategoriesPage() {
         </section>
       </div>
 
-      <WeekPlanModal
+      <WeekStructureModal
         open={windowsOpen}
         onClose={() => setWindowsOpen(false)}
         initialMode="windows"

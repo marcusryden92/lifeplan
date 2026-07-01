@@ -18,6 +18,8 @@ interface Props {
   /** Optional extra swatches appended after the default palette. Wired up so
    *  user-saved custom colors will slot in later without touching this API. */
   customColors?: string[];
+  /** Replace the base palette (defaults to `calendarColors`). */
+  palette?: string[];
 }
 
 const SWATCH_SIZE = 16;
@@ -36,9 +38,10 @@ export function PopoverColorPicker({
   currentColor,
   onChange,
   customColors = [],
+  palette,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const swatches = [...calendarColors, ...customColors];
+  const swatches = [...(palette ?? calendarColors), ...customColors];
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>

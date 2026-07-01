@@ -1,1 +1,0 @@
-export { WeekPlanModal } from "./WeekPlanModal";

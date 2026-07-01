@@ -226,10 +226,21 @@ export const errorDismiss = style({
   display: "inline-flex",
 });
 
+// Doubled selector (`&&`) beats the `pillBtn` recipe on specificity so the
+// paper-tinted overrides actually win on top of `variant="glass"`, which sets
+// `color: vars.ink` — that would render as dark text on the dark banner.
 export const cancelButtonStyle = style({
-  background: `color-mix(in srgb, ${vars.paper} 12%, transparent)`,
-  border: `1px solid color-mix(in srgb, ${vars.paper} 22%, transparent)`,
-  color: vars.paper,
+  selectors: {
+    "&&": {
+      background: `color-mix(in srgb, ${vars.paper} 14%, transparent)`,
+      border: `1px solid color-mix(in srgb, ${vars.paper} 40%, transparent)`,
+      color: vars.paper,
+    },
+    "&&:hover:not(:disabled)": {
+      background: `color-mix(in srgb, ${vars.paper} 22%, transparent)`,
+      borderColor: `color-mix(in srgb, ${vars.paper} 55%, transparent)`,
+    },
+  },
 });
 
 export const a11yHiddenTitle = style({
@@ -241,7 +252,7 @@ export const discardConfirmBody = style({
   margin: 0,
 });
 
-const FC = ".week-plan-fc";
+const FC = ".week-structure-fc";
 
 globalStyle(`${FC}`, {
   flex: 1,

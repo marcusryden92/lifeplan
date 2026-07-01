@@ -158,7 +158,7 @@ export const pillBtn = recipe({
         color: vars.paper,
       },
       // Opaque light — pure paper bg, ink text. For use on dark surfaces
-      // like the WeekPlanModal banner where solid would blend in.
+      // like the WeekStructureModal banner where solid would blend in.
       solidLight: {
         background: vars.paper,
         color: vars.ink,
