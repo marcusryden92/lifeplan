@@ -1,6 +1,6 @@
 # Calendar Generation — Deep Dive
 
-This document describes the `utils/calendar-generation/` engine: the code that turns the user's planners, templates, and previously persisted calendar into a fresh `{ events, categoryEvents, travelEvents, plannerScores }` payload on every regeneration.
+This document describes the `utils/calendar-generation/` engine: the code that turns the user's planners, templates, and previously persisted calendar into a fresh `{ events, categoryEvents, travelEvents, plannerScores, messages }` payload on every regeneration.
 
 The engine is a stateful pipeline. Read top-to-bottom; later sections assume the data structures and phase ordering established earlier.
 
@@ -25,6 +25,7 @@ output:
   categoryEvents: CategoryEvent[]            // materialized weekly category occurrences
   travelEvents:   TravelEvent[]              // travel blocks between scheduled items
   plannerScores:  Record<string, number>     // per-planner urgency scores (ephemeral, not persisted)
+  messages:       EngineMessage[]            // engine console rows (failures, warnings, SCHEDULED_OK)
 ```
 
 The pipeline is built on three central data structures:
@@ -45,7 +46,7 @@ The horizon is **bounded** (28 days initially, see [constants.ts:80](../utils/ca
 
 1. Normalizes the optional `bufferTimeMinutes`-as-number legacy arg into a `GenerateCalendarOptions` object.
 2. Builds a `LoggingConfig` from local flags (see [Debugging](#13-debugging-the-engine)).
-3. Constructs `new CalendarGenerator(weekStartDay, input).generate()` and returns the resulting `{ events, categoryEvents, travelEvents, plannerScores }`.
+3. Constructs `new CalendarGenerator(weekStartDay, input).generate()` and returns the resulting `{ events, categoryEvents, travelEvents, plannerScores, messages }`.
 
 ### Module exports
 
@@ -121,8 +122,8 @@ A few invariants worth internalizing:
 
 [models/SchedulingModels.ts](../utils/calendar-generation/models/SchedulingModels.ts) carries the shape contracts between phases:
 
-- `CalendarGenerationInput` — the typed input to `CalendarGenerator`.
-- `CalendarGenerationResult` extends `SchedulingResult` with `categoryEvents` and `travelEvents` (the orchestrator's full output).
+- `CalendarGenerationInput` — the typed input to `CalendarGenerator`, including `previousEngineMessages` which the message emitter consults to carry the user-owned `dismissed` flag forward by id.
+- `CalendarGenerationResult` extends `SchedulingResult` with `categoryEvents`, `travelEvents`, `plannerScores`, and `messages` (the orchestrator's full output).
 - `SchedulingContext` — the bag of state passed to every scheduling call: `currentDate`, `weekStartDay`, `allPlanners`, `scheduledEvents`, `metrics`, `categories` (Map), `plannerLocationMap`, `plannerCategoryMap`, the optional `schedulerRecorder`, and the per-iteration `placementCutoffDate` (tail buffer).
 - `SlotSelectionResult` — what `selectBestSlot` hands to `reserveTaskSlot`. Crucially carries `absorbableTravel` and `reclaimPrecedingGapTravel` as `TravelShardSpan | null`, so removal is by identity (`travelId`), not heuristic time search.
 - `SchedulingFailure` — `{ taskId, taskTitle, reason: SchedulingFailureReason, details, context? }`.
@@ -133,7 +134,7 @@ A few invariants worth internalizing:
 
 ---
 
-## 4. The 11 Phases (CalendarGenerator)
+## 4. The 12 Phases (CalendarGenerator)
 
 [core/CalendarGenerator.ts](../utils/calendar-generation/core/CalendarGenerator.ts) is the orchestrator. Each phase delegates to a single function in [helpers/CalendarGenerator/](../utils/calendar-generation/helpers/CalendarGenerator/).
 
@@ -216,13 +217,27 @@ Constructs `new Scheduler(timeSlotManager, travelManager, strategy, context)` an
 
 ### Phase 11 — Assemble final events
 
-[assembleFinalEvents.ts](../utils/calendar-generation/helpers/CalendarGenerator/assembleFinalEvents.ts) produces the three output arrays (a fourth output, `plannerScores`, comes from the Phase 9 scoring pass — see above):
+[assembleFinalEvents.ts](../utils/calendar-generation/helpers/CalendarGenerator/assembleFinalEvents.ts) produces three of the output arrays (a fourth output, `plannerScores`, comes from the Phase 9 scoring pass — see above; a fifth, `messages`, comes from Phase 12 — see below):
 
 - **`events`** — memoized + plan + completed + scheduled tasks + templates, with trespass flags stamped via [markTrespassingEvents](../utils/calendar-generation/helpers/EventAssembler/markTrespassingEvents.ts) and template events filtered out at the end via [assembleFinalEventList](../utils/calendar-generation/helpers/EventAssembler/assembleFinalEventList.ts).
 - **`categoryEvents`** — [buildCategoryEvents](../utils/calendar-generation/helpers/EventAssembler/buildCategoryEvents.ts) materializes one `CategoryEvent` per `CategoryTimeWindow` per matching day across the horizon. IDs are composite: `` `${categoryTimeWindowId}|${YYYY-MM-DD-local}` ``. [stampCategoryEventBorders](../utils/calendar-generation/helpers/EventAssembler/stampCategoryEventBorders.ts) propagates `trespassingStart` / `trespassingEnd` flags from category slots and insufficient-travel slots onto the persisted rows.
 - **`travelEvents`** — [generateTravelEvents](../utils/calendar-generation/helpers/TravelManager/generateTravelEvents.ts) merges contiguous shards of each logical travel back into a single `TravelEvent`, keyed by `travelId`.
 
 The horizon for category wrapper expansion is re-derived from the final slot array via [deriveSchedulingHorizon](../utils/calendar-generation/helpers/TimeSlotManager/deriveSchedulingHorizon.ts); the latest slot's end is used, so wrappers extend with any expanded chunks.
+
+### Phase 12 — Emit engine messages
+
+[coalesceMessages.ts](../utils/calendar-generation/helpers/CalendarGenerator/coalesceMessages.ts) (`buildEngineMessages`) reads the Phase 10 failure list plus the Phase 11 output (finalized events + travel events) and produces the persisted `EngineMessage[]` array the console renders. Each per-type emitter writes rows already keyed by their identity tuple, so there is no post-hoc fold:
+
+- **`TASK_TOO_LARGE`** — one row per planner that failed with `TOO_LARGE`. Payload carries `{ duration, maxCapacity }` (structured — the renderer builds the body).
+- **`TASK_UNSCHEDULABLE`** — one row per (plannerId, reason) for every non-`TOO_LARGE` failure. Payload carries `reason` only; prose lives in [renderEngineMessage.ts](../utils/renderEngineMessage.ts) so a copy rewrite doesn't require a data migration.
+- **`SCHEDULED_LATE`** — one row per placed planner event whose scheduled start is after the deadline inherited via parent walk, guarded so completed tasks and not-yet-passed deadlines don't emit.
+- **`INSUFFICIENT_TRAVEL`** — coalesces recurring travel legs by `(from, to, actualMinutes, timeOfDay, dayOfWeek)`; 400 repeats of the same short leg fold to one row with `affectedCount`.
+- **`SCHEDULED_OK`** — one info-tone row per regen with `placedCount` in the id, so a change in count supersedes the prior card. Skipped when count is zero.
+
+Dismissal is user-owned. `buildDismissedSet(previousEngineMessages)` extracts every id whose prior row had `dismissed: true`; when the current emit produces the same id, the flag is carried forward. A fresh id (situation shifted) surfaces as a new, undismissed row. Full identity model and payload shapes live in [models/EngineMessage.ts](../utils/calendar-generation/models/EngineMessage.ts).
+
+The `createdAt` / `updatedAt` fields are left empty on emit — the DB owns them, and `compareCalendarData` strips both sides before comparing so the placeholders don't mark rows spuriously changed.
 
 ---
 

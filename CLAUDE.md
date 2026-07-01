@@ -63,10 +63,10 @@ lifeplan/
 │   ├── categories.ts                 # Category CRUD + planner-category assignment
 │   ├── locations.ts                  # Location + Google Places integration
 │   └── calendar-actions/
-│       ├── fetchCalendarData.ts      # Initial load — returns planner/calendar/template/categories/categoryEvents/travelEvents + dataVersion
+│       ├── fetchCalendarData.ts      # Initial load — returns planner/calendar/template/categories/categoryEvents/travelEvents/engineMessages + dataVersion
 │       ├── fetchFreshState.ts        # Used on stale-version recovery
 │       ├── syncCalendarData.ts       # OCC-gated transactional diff sync
-│       └── sync-handlers/            # One handler per table (planner, calendar, extendedProps, template, category, timeWindow, categoryEvent, travelEvent, location, travelTime)
+│       └── sync-handlers/            # One handler per table (planner, calendar, extendedProps, template, category, timeWindow, categoryEvent, travelEvent, engineMessage, location, travelTime)
 │
 ├── components/
 │   ├── auth/                         # AuthCard, login/register/reset forms, Social, LoginButton
@@ -131,15 +131,16 @@ lifeplan/
 │   │       ├── calendar.prisma       # SimpleEvent, EventExtendedProps, Planner, EventTemplate, WeekDayType, PlannerType, EventType
 │   │       ├── category.prisma       # Category, CategoryTimeWindow, CategoryEvent
 │   │       ├── location.prisma       # Location, TravelTime, TravelEvent, TransportMode
-│   │       └── scheduling.prisma     # UserSchedulingPreferences, TaskPreferences, enums
-│   ├── migrations/                   # 0_init, add_data_version, add_category_event, add_travel_event, add_planner_is_triaged
+│   │       ├── scheduling.prisma     # UserSchedulingPreferences, TaskPreferences, enums
+│   │       └── engineMessage.prisma  # EngineMessage — engine-emitted console rows with user-owned dismissed flag
+│   ├── migrations/                   # 0_init, add_data_version, add_category_event, add_travel_event, add_planner_is_triaged, add_engine_message, engine_message_user_index, add_engine_message_dismissed
 │   ├── seed.ts                       # Wholesale reseed (admin@lifeplan.com / "password")
 │   └── seed-helpers/                 # generateCategories, generateLocations (+ TravelTimes), generatePlanners, generatePlans, generateTemplates, generateUncompletedItems
 │
 ├── redux/
 │   ├── store.ts                      # { user, calendar, schedulingSettings }
 │   ├── slices/
-│   │   ├── calendarSlice.ts          # planner, calendar, template, categories, categoryEvents, travelEvents, plannerScores (ephemeral engine output), isLoaded
+│   │   ├── calendarSlice.ts          # planner, calendar, template, categories, categoryEvents, travelEvents, engineMessages, plannerScores (ephemeral engine output), isLoaded
 │   │   ├── userSlice.ts
 │   │   └── schedulingSettingsSlice.ts # bufferTimeMinutes, defaultTransportMode, travelTimeMatrix (engine-shaped), allTravelTimes (full rows), locations, strategy weights/scores/penalties, enableTravelEvents
 │   └── thunks/
@@ -159,6 +160,7 @@ lifeplan/
 │   ├── server-handlers/              # compareCalendarData (the diff that feeds syncCalendarData)
 │   ├── template-handlers/, datetime/, locations/, goal-handlers/, category-constraints/
 │   ├── assert/                       # assert.ts (+ assert.js in tsconfig include)
+│   ├── renderEngineMessage.ts        # Maps persisted EngineMessage rows into console-friendly {tag, tone, title, body, goToDate}
 │   └── (loose helpers)               # generalUtils, badgeTone, calendarEventHandlers, categoryUtils,
 │                                     # colorUtils, creationPagesFunctions, dateUtils, engineTones,
 │                                     # eventTier, goalPageHandlers, plannerStatus, plannerUtils,
@@ -231,6 +233,12 @@ A category only constrains scheduling geometry when `useTimeWindows === true` **
 - `isStrict: true` — only items belonging to this category can be scheduled in its windows. Other items are filtered out, and the capacity check subtracts the window from any overlapping gap.
 - `isStrict: false` — other items may fill empty space inside the window.
 
+### Engine messages
+
+- **EngineMessage** — engine-materialized console row with a deterministic id (`${TYPE}::${discriminators}`) and a typed JSON payload. Same "wholesale-write + diff by id" pattern as CategoryEvent / TravelEvent; the id encodes what makes an instance unique (plannerId, reason, travel tuple, placed count) so a shifted placement surfaces as a new row and an unchanged one is a no-op diff.
+- **Dismissed flag** is user-owned. The engine consults the previous emit array at coalesce time and carries `dismissed: true` forward when the same id is re-emitted; a fresh id (situation shifted) surfaces as a new, undismissed row. Full identity model + payload shapes live in [utils/calendar-generation/models/EngineMessage.ts](utils/calendar-generation/models/EngineMessage.ts).
+- Presentation prose (titles, bodies, tags) is generated by [utils/renderEngineMessage.ts](utils/renderEngineMessage.ts) from the current entity tree — the engine emits structured facts only, so a category rename doesn't rot a persisted message.
+
 ---
 
 ## Calendar generation engine (summary)
@@ -239,7 +247,7 @@ The engine takes `{ planners, templates, categories, previousCalendar, options }
 
 - Public entry: [utils/calendar-generation/calendarGeneration.ts](utils/calendar-generation/calendarGeneration.ts).
 - Module exports: [utils/calendar-generation/index.ts](utils/calendar-generation/index.ts).
-- Core classes (in [utils/calendar-generation/core/](utils/calendar-generation/core/)): `CalendarGenerator` (11-phase orchestrator), `Scheduler` (5-phase per-task pipeline), `TimeSlotManager` (thin holder for the sorted slot array), `TravelManager` (travel lookups + leg tracker).
+- Core classes (in [utils/calendar-generation/core/](utils/calendar-generation/core/)): `CalendarGenerator` (12-phase orchestrator; final phase emits EngineMessages), `Scheduler` (5-phase per-task pipeline), `TimeSlotManager` (thin holder for the sorted slot array), `TravelManager` (travel lookups + leg tracker).
 - Each phase delegates to function modules under [utils/calendar-generation/helpers/<Name>/](utils/calendar-generation/helpers/).
 - Strategies in [utils/calendar-generation/strategies/](utils/calendar-generation/strategies/): `EarliestSlotStrategy`, `LocationGroupingStrategy`, combined by `CompositeStrategy`.
 - Tunable constants in [utils/calendar-generation/constants.ts](utils/calendar-generation/constants.ts): `SCHEDULING_CONFIG` (horizon chunk, watermark, placement buffer, iteration caps), `URGENCY_CONFIG`, `SchedulingFailureReason`.
@@ -266,7 +274,7 @@ Everything else — slot union, shard model, static travel pass, dynamic placeme
                          updateAll                generateCalendar(...)
                                                            │
                                                            ▼
-                                       events + categoryEvents + travelEvents
+                                events + categoryEvents + travelEvents + engineMessages
                                                   written to calendarSlice
                                                            │
                                                            ▼
@@ -281,7 +289,7 @@ Key wiring:
 
 - **CalendarProvider** ([context/CalendarProvider.tsx](context/CalendarProvider.tsx)) — owns the data context, fires regen on `bufferTimeMinutes` change, fires a one-time "cold-load autoregen" when categories/locations exist but no engine output materialized yet (see the inline comment for the conditions).
 - **Sync** uses **optimistic concurrency control** via `User.dataVersion`. The client sends the version it knows; if the DB has moved on, the transaction aborts and the client adopts a fresh snapshot wholesale. Partial application across a DAG-shaped dataset is unsafe.
-- **CategoryEvent** and **TravelEvent** are written by the engine on every regen but use **deterministic IDs**, so the diff lands as creates/deletes only when an actual placement shifted. Don't switch them to autogenerated IDs.
+- **CategoryEvent**, **TravelEvent**, and **EngineMessage** are all written by the engine on every regen but use **deterministic IDs**, so the diff lands as creates/deletes only when an actual placement shifted (or, for EngineMessage, only when the underlying situation changed or the user flipped `dismissed`). Don't switch them to autogenerated IDs.
 - The 30-second transaction timeout in `syncCalendarData` exists because the first regen after a fresh load runs hundreds of CategoryEvent creates on top of the usual diff.
 
 ---
@@ -408,6 +416,9 @@ Migration history (single source of truth in [prisma/migrations/](prisma/migrati
 - `add_category_event` — materialized weekly category occurrences
 - `add_travel_event` — materialized travel events
 - `add_planner_is_triaged` — Planner.isTriaged flag for the Capture triage queue
+- `add_engine_message` — engine-emitted console rows with deterministic id and JSON payload
+- `engine_message_user_index` — `@@index([userId])` for the fetch/sync-sweep queries
+- `add_engine_message_dismissed` — user-owned soft-dismiss flag; carried forward by the engine at emit time
 
 Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 
