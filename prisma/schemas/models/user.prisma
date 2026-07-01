@@ -15,6 +15,7 @@ model User {
   Planner               Planner[]
   SimpleEvent           SimpleEvent[]
   twoFactorConfirmation TwoFactorConfirmation?
+  accountDeletionToken  AccountDeletionToken?
   accounts              Account[]
   locations             Location[]
   categories            Category[]
@@ -76,6 +77,14 @@ model TwoFactorConfirmation {
   id     String @id @default(cuid())
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AccountDeletionToken {
+  id      String   @id @default(cuid())
+  userId  String   @unique
+  token   String   @unique
+  expires DateTime
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum UserRole {

@@ -20,6 +20,7 @@ interface ConfirmModalProps {
   confirmLabel?: string;
   cancelLabel?: string;
   tone?: ConfirmTone;
+  confirmDisabled?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
   extraActions?: ReactNode;
@@ -32,6 +33,7 @@ export function ConfirmModal({
   confirmLabel = "Confirm",
   cancelLabel = "Cancel",
   tone = "default",
+  confirmDisabled = false,
   onCancel,
   onConfirm,
   extraActions,
@@ -61,7 +63,14 @@ export function ConfirmModal({
               <Button
                 variant={tone === "danger" ? "danger" : "glassInk"}
                 size="sm"
-                onClick={onConfirm}
+                onClick={(e) => {
+                  if (confirmDisabled) {
+                    e.preventDefault();
+                    return;
+                  }
+                  onConfirm();
+                }}
+                disabled={confirmDisabled}
                 data-danger={tone === "danger" ? "true" : undefined}
               >
                 {confirmLabel}

@@ -50,7 +50,7 @@ model Planner {
   categoryId         String? // Optional FK to Category for organization
   createdAt          String
   updatedAt          String
-  user               User        @relation(fields: [userId], references: [id])
+  user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   location           Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
   category           Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 

@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { getVerificationTokenByEmail } from "@/data/verificationToken";
 import { getPasswordResetTokenByEmail } from "@/data/passwordResetToken";
 import { getTwoFactorTokenByEmail } from "@/data/twoFactorToken";
+import { getAccountDeletionTokenByUserId } from "@/data/accountDeletionToken";
 
 export const generateTwoFactorToken = async (email: string) => {
   const token = crypto.randomInt(100_000, 1_000_000).toString();
@@ -50,6 +51,21 @@ export const generatePasswordResetToken = async (email: string) => {
   });
 
   return passwordResetToken;
+};
+
+export const generateAccountDeletionToken = async (userId: string) => {
+  const token = uuidv4();
+  // Short window: user just clicked "send me a confirmation email" seconds ago.
+  const expires = new Date(new Date().getTime() + 30 * 60 * 1000);
+
+  const existingToken = await getAccountDeletionTokenByUserId(userId);
+  if (existingToken) {
+    await db.accountDeletionToken.delete({ where: { id: existingToken.id } });
+  }
+
+  return db.accountDeletionToken.create({
+    data: { userId, token, expires },
+  });
 };
 
 export const generateVerificationToken = async (email: string) => {

@@ -166,7 +166,7 @@ export function SettingsView({ user }: { user: SettingsUser }) {
             {section === "data" && (
               <ComingSoonSection {...COMING_SOON_COPY.data} />
             )}
-            {section === "danger" && <DangerSection />}
+            {section === "danger" && <DangerSection user={user} />}
           </div>
           <div className={pinstripeRule} aria-hidden />
         </div>
