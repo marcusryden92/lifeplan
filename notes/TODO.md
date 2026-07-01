@@ -1,7 +1,3 @@
-# P2 — Wire-up debt (known stubs)
-
-- Option to archive completed goals/items so they don't clutter the interface
-
 # P3 — Small features
 
 - Button for duplicating subtasks in subtask view

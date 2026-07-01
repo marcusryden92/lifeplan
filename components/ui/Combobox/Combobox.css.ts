@@ -31,6 +31,16 @@ export const comboboxTrigger = style({
   },
 });
 
+export const comboboxTriggerDisabled = style({
+  cursor: "not-allowed",
+  opacity: 0.5,
+  selectors: {
+    "&:hover": {
+      background: vars.glass.bgDeep,
+    },
+  },
+});
+
 export const comboboxChevron = style({
   color: vars.muted,
   flexShrink: 0,

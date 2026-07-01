@@ -1,6 +1,6 @@
 # Calendar Generation — Deep Dive
 
-This document describes the `utils/calendar-generation/` engine: the code that turns the user's planners, templates, and previously persisted calendar into a fresh `{ events, categoryEvents, travelEvents }` payload on every regeneration.
+This document describes the `utils/calendar-generation/` engine: the code that turns the user's planners, templates, and previously persisted calendar into a fresh `{ events, categoryEvents, travelEvents, plannerScores }` payload on every regeneration.
 
 The engine is a stateful pipeline. Read top-to-bottom; later sections assume the data structures and phase ordering established earlier.
 
@@ -21,9 +21,10 @@ inputs:
   options:         GenerateCalendarOptions (travel matrix, categories, ...)
 
 output:
-  events:         SimpleEvent[]    // plans, scheduled tasks, completed, memoized
-  categoryEvents: CategoryEvent[]  // materialized weekly category occurrences
-  travelEvents:   TravelEvent[]    // travel blocks between scheduled items
+  events:         SimpleEvent[]              // plans, scheduled tasks, completed, memoized
+  categoryEvents: CategoryEvent[]            // materialized weekly category occurrences
+  travelEvents:   TravelEvent[]              // travel blocks between scheduled items
+  plannerScores:  Record<string, number>     // per-planner urgency scores (ephemeral, not persisted)
 ```
 
 The pipeline is built on three central data structures:
@@ -44,7 +45,7 @@ The horizon is **bounded** (28 days initially, see [constants.ts:80](../utils/ca
 
 1. Normalizes the optional `bufferTimeMinutes`-as-number legacy arg into a `GenerateCalendarOptions` object.
 2. Builds a `LoggingConfig` from local flags (see [Debugging](#13-debugging-the-engine)).
-3. Constructs `new CalendarGenerator(weekStartDay, input).generate()` and returns the resulting `{ events, categoryEvents, travelEvents }`.
+3. Constructs `new CalendarGenerator(weekStartDay, input).generate()` and returns the resulting `{ events, categoryEvents, travelEvents, plannerScores }`.
 
 ### Module exports
 
@@ -199,11 +200,15 @@ This is the most consequential phase. It happens in three sub-steps:
 
 ### Phase 9 — Prepare candidates
 
+Urgency scoring runs once at the top of `CalendarGenerator.execute()` — before validation, before this phase — via [scoreCandidatesAndRootGoals](../utils/calendar-generation/helpers/PrioritySorter/sortByPriorityAndConstraints.ts). The pass covers scheduling candidates (standalone tasks + ready root goals) **plus every top-level uncompleted goal**, so consumers like the dashboard can rank goals the scheduler intentionally skipped (e.g. not-yet-ready ones) using the same denominator (sum of all planner durations). The resulting map is returned in `plannerScores` and passed into this phase.
+
+Scoring itself: tasks without a deadline get `MIN_URGENCY_MULTIPLIER * priority`; tasks with a deadline use a sigmoid over deadline proximity (parameters in `URGENCY_CONFIG`: `CURVE_STEEPNESS: 4`, `CRITICAL_THRESHOLD: 0.7`, scaled into `[URGENCY_SCALE_MIN, URGENCY_SCALE_MAX] = [0.3, 1.0]`).
+
 [prepareCandidates.ts](../utils/calendar-generation/helpers/CalendarGenerator/prepareCandidates.ts) returns the ordered list of planners the scheduler will try:
 
 - Excludes memoized rows.
 - Keeps only ready root goals and all tasks.
-- Sorts via [sortByPriorityAndConstraints](../utils/calendar-generation/helpers/PrioritySorter/sortByPriorityAndConstraints.ts) — two-tier sort: category-constrained items first (because they have fewer eligible slots), then by descending **urgency score**. Urgency is inlined here, not a separate strategy: tasks without a deadline get `MIN_URGENCY_MULTIPLIER * priority`; tasks with a deadline use a sigmoid over deadline proximity (parameters in `URGENCY_CONFIG`: `CURVE_STEEPNESS: 4`, `CRITICAL_THRESHOLD: 0.7`, scaled into `[URGENCY_SCALE_MIN, URGENCY_SCALE_MAX] = [0.3, 1.0]`).
+- Sorts via [sortByPriorityAndConstraints](../utils/calendar-generation/helpers/PrioritySorter/sortByPriorityAndConstraints.ts) — two-tier sort: category-constrained items first (because they have fewer eligible slots), then by descending **urgency score** looked up from the precomputed map. Urgency is not a strategy; it is decided here before any slot scoring.
 
 ### Phase 10 — Schedule tasks and goals
 
@@ -211,7 +216,7 @@ Constructs `new Scheduler(timeSlotManager, travelManager, strategy, context)` an
 
 ### Phase 11 — Assemble final events
 
-[assembleFinalEvents.ts](../utils/calendar-generation/helpers/CalendarGenerator/assembleFinalEvents.ts) produces the three output arrays:
+[assembleFinalEvents.ts](../utils/calendar-generation/helpers/CalendarGenerator/assembleFinalEvents.ts) produces the three output arrays (a fourth output, `plannerScores`, comes from the Phase 9 scoring pass — see above):
 
 - **`events`** — memoized + plan + completed + scheduled tasks + templates, with trespass flags stamped via [markTrespassingEvents](../utils/calendar-generation/helpers/EventAssembler/markTrespassingEvents.ts) and template events filtered out at the end via [assembleFinalEventList](../utils/calendar-generation/helpers/EventAssembler/assembleFinalEventList.ts).
 - **`categoryEvents`** — [buildCategoryEvents](../utils/calendar-generation/helpers/EventAssembler/buildCategoryEvents.ts) materializes one `CategoryEvent` per `CategoryTimeWindow` per matching day across the horizon. IDs are composite: `` `${categoryTimeWindowId}|${YYYY-MM-DD-local}` ``. [stampCategoryEventBorders](../utils/calendar-generation/helpers/EventAssembler/stampCategoryEventBorders.ts) propagates `trespassingStart` / `trespassingEnd` flags from category slots and insufficient-travel slots onto the persisted rows.
@@ -460,7 +465,7 @@ DEFAULT_LOCATION_GROUPING_PENALTIES = {
 
 [buildSchedulingStrategy.ts](../utils/calendar-generation/helpers/CalendarGenerator/buildSchedulingStrategy.ts) always includes `EarliestSlotStrategy`. `LocationGroupingStrategy` is added only if a `travelTimeMatrix` was supplied. Weights default to `DEFAULT_STRATEGY_WEIGHTS` but can be overridden per call.
 
-> Note: task urgency / deadline prioritization is **not** a strategy. It happens once in `sortByPriorityAndConstraints` before any slot scoring.
+> Note: task urgency / deadline prioritization is **not** a strategy. Scores are computed once at the top of `CalendarGenerator.execute()` via `scoreCandidatesAndRootGoals` and consumed by `sortByPriorityAndConstraints` before any slot scoring.
 
 ---
 
@@ -618,4 +623,4 @@ CalendarGenerator.generate()
 - **CategoryEvent ID is local-date keyed.** `` `${windowId}|${YYYY-MM-DD-local}` ``. Never derive the date component from the UTC instant — the diff layer assumes local. See [`expansion-seam.test.ts`](../__tests__/calendar-generation/expansion-seam.test.ts).
 - **Template events are filtered out of `events`.** They're consumed by the slot builder (as `PerTemplateMask[]`), not surfaced in the final `SimpleEvent[]`. The renderer reads recurring template instances separately.
 - **Trespass flags propagate from slots to `CategoryEvent` rows.** Don't compute trespass in the renderer — the engine writes it via `stampCategoryEventBorders` so cold loads render correctly.
-- **Urgency is inlined, not a strategy.** Strategy weights affect *slot scoring* only. Task ordering by urgency/deadline happens once in `sortByPriorityAndConstraints` before any strategy runs.
+- **Urgency is not a strategy.** Strategy weights affect *slot scoring* only. Urgency scores are computed once at the top of `CalendarGenerator.execute()` (via `scoreCandidatesAndRootGoals`, which also covers non-candidate root goals so the dashboard can rank them) and consumed by `sortByPriorityAndConstraints` before any strategy runs. The same map is returned as `plannerScores`.

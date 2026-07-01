@@ -49,7 +49,7 @@ lifeplan/
 │   │   ├── capture/                  # Quick-entry surface
 │   │   ├── categories/               # Category management
 │   │   ├── dashboard/                # Default landing after login
-│   │   ├── items/[id]/               # Item detail; sub-routes: activity/, schedule/, subtasks/
+│   │   ├── items/[id]/               # Item detail; sub-routes: schedule/, subtasks/
 │   │   ├── library/                  # Task/goal browser
 │   │   ├── locations/                # Location + travel-time management
 │   │   └── settings/
@@ -78,7 +78,7 @@ lifeplan/
 │   └── ui/                           # Custom design-system primitives (NOT pure shadcn)
 │       ├── Button, Glass, Backdrop, Grain, Masthead, ProgressBar, Loader,
 │       │   StatusTag, TypeBadge, CategoryBadge, CategoryDot, ConicDot, Caption,
-│       │   Combobox, SegmentedControl, ConfirmModal, Switch, StubPage,
+│       │   Combobox, SegmentedControl, ConfirmModal, Switch, StubPage, Kbd,
 │       │   ThemeProvider, useResolvedCategoryColor, CenteredLoader
 │       └── shell/                    # AppShell architecture
 │           ├── AppShell/             # Outer bezel + canvas + content row
@@ -131,14 +131,14 @@ lifeplan/
 │   │       ├── category.prisma       # Category, CategoryTimeWindow, CategoryEvent
 │   │       ├── location.prisma       # Location, TravelTime, TravelEvent, TransportMode
 │   │       └── scheduling.prisma     # UserSchedulingPreferences, TaskPreferences, enums
-│   ├── migrations/                   # 0_init, add_data_version, add_category_event, add_travel_event
+│   ├── migrations/                   # 0_init, add_data_version, add_category_event, add_travel_event, add_planner_is_triaged
 │   ├── seed.ts                       # Wholesale reseed (admin@lifeplan.com / "password")
-│   └── seed-helpers/                 # generateCategories, generateLocations (+ TravelTimes), generatePlanners, generatePlans, generateTemplates
+│   └── seed-helpers/                 # generateCategories, generateLocations (+ TravelTimes), generatePlanners, generatePlans, generateTemplates, generateUncompletedItems
 │
 ├── redux/
 │   ├── store.ts                      # { user, calendar, schedulingSettings }
 │   ├── slices/
-│   │   ├── calendarSlice.ts          # planner, calendar, template, categories, categoryEvents, travelEvents, isLoaded
+│   │   ├── calendarSlice.ts          # planner, calendar, template, categories, categoryEvents, travelEvents, plannerScores (ephemeral engine output), isLoaded
 │   │   ├── userSlice.ts
 │   │   └── schedulingSettingsSlice.ts # bufferTimeMinutes, defaultTransportMode, travelTimeMatrix (engine-shaped), allTravelTimes (full rows), locations, strategy weights/scores/penalties, enableTravelEvents
 │   └── thunks/
@@ -194,6 +194,7 @@ lifeplan/
   starts?: ISO,                 // plan items only
   priority: number,
   isReady?: boolean,            // goals: ready to schedule?
+  isTriaged: boolean,           // false until first Capture save moves the item out of the triage queue
   completedStartTime?, completedEndTime?,
   locationId?: string | null,   // null = "Anywhere"
   useParentLocation: boolean,   // inherit from category or ancestor instead
@@ -368,6 +369,7 @@ Migration history (single source of truth in [prisma/migrations/](prisma/migrati
 - `add_data_version` — the OCC counter on User
 - `add_category_event` — materialized weekly category occurrences
 - `add_travel_event` — materialized travel events
+- `add_planner_is_triaged` — Planner.isTriaged flag for the Capture triage queue
 
 Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 

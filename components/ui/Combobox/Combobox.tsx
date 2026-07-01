@@ -6,6 +6,7 @@ import * as Popover from "@radix-ui/react-popover";
 import {
   comboboxWrap,
   comboboxTrigger,
+  comboboxTriggerDisabled,
   comboboxMenu,
   comboboxOption,
   comboboxOptionActive,
@@ -26,6 +27,7 @@ interface ComboboxProps<V extends string | null> {
   placeholder?: ReactNode;
   ariaLabel?: string;
   width?: number | string;
+  disabled?: boolean;
 }
 
 export function Combobox<V extends string | null>({
@@ -36,12 +38,19 @@ export function Combobox<V extends string | null>({
   placeholder = "Select…",
   ariaLabel,
   width,
+  disabled = false,
 }: ComboboxProps<V>) {
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (disabled) return;
+        setOpen(next);
+      }}
+    >
       <div
         className={comboboxWrap}
         style={width != null ? { width, display: "block" } : undefined}
@@ -49,9 +58,11 @@ export function Combobox<V extends string | null>({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className={comboboxTrigger}
+            className={`${comboboxTrigger} ${disabled ? comboboxTriggerDisabled : ""}`}
             aria-haspopup="listbox"
             aria-label={ariaLabel}
+            aria-disabled={disabled}
+            disabled={disabled}
             style={width != null ? { width: "100%" } : undefined}
           >
             <span style={{ flex: 1, minWidth: 0, textAlign: "left" }}>

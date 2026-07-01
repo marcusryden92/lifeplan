@@ -6,6 +6,7 @@ export const fieldStack = style({
   flexDirection: "column",
   gap: 7,
   minWidth: 0,
+  gridColumn: "1 / -1",
 });
 
 export const fieldLabel = style({
@@ -21,40 +22,27 @@ export const fieldLabel = style({
 export const placeRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  flexWrap: "wrap",
+  gap: 10,
 });
 
-export const overrideToggle = style({
-  border: `1px solid ${vars.glass.stroke}`,
-  background: "transparent",
-  borderRadius: 999,
-  padding: "3px 10px",
-  fontSize: 10,
-  fontFamily: vars.font.ui,
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  cursor: "pointer",
-  transition: themeTransition,
-  selectors: {
-    "&:hover": { color: vars.ink, borderColor: vars.rule },
-    "&[aria-pressed='true']": {
-      background: vars.ink,
-      borderColor: vars.ink,
-      color: vars.paper,
-    },
-  },
+// Reserves a fixed line so the "from {category}" hint can toggle visibility
+// without the surrounding column shifting up/down.
+export const hintRow = style({
+  display: "flex",
+  alignItems: "center",
+  minHeight: 17,
+  marginTop: 2,
 });
 
+// Indented to align the first letter of "from ..." with the first letter of
+// the "Inherited" / "Override" labels inside the SegmentedControl above.
+// SegmentedControl is: 1px border + 3px outer padding + 14px button padding = 18px.
 export const inheritedHint = style({
+  paddingLeft: 18,
   fontFamily: vars.font.ui,
   fontSize: 11,
   fontWeight: 500,
   color: vars.muted,
-  // Allows the hint to wrap inside the place cell when the category name is
-  // long, instead of overflowing into the column on the right.
   minWidth: 0,
   overflowWrap: "anywhere",
 });

@@ -4,16 +4,18 @@ import { useMemo } from "react";
 import { MapPin, RotateCcw } from "lucide-react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
-import { Button, Caption, Combobox } from "@/components/ui";
+import { Button, Caption, Combobox, SegmentedControl } from "@/components/ui";
 import { useItem } from "../../ItemContext";
 import {
   fieldStack,
   fieldLabel,
   placeRow,
-  overrideToggle,
+  hintRow,
   inheritedHint,
   flushLeftBtn,
 } from "./LocationSection.css";
+
+type OverrideKey = "inherited" | "override";
 
 export function LocationSection() {
   const {
@@ -50,14 +52,32 @@ export function LocationSection() {
 
   const currentLocation = locations.find((l) => l.id === item.locationId);
 
+  const dropdownDisabled = categoryHasLocation && !locationOverrideEnabled;
+
   return (
     <div className={fieldStack}>
       <span className={fieldLabel}>Place</span>
       <div className={placeRow}>
+        {categoryHasLocation && (
+          <SegmentedControl<OverrideKey>
+            value={locationOverrideEnabled ? "override" : "inherited"}
+            onChange={(next) => {
+              const nextEnabled = next === "override";
+              if (nextEnabled !== locationOverrideEnabled) {
+                toggleLocationOverride();
+              }
+            }}
+            options={[
+              { key: "inherited", label: "Inherited" },
+              { key: "override", label: "Override" },
+            ]}
+          />
+        )}
         <Combobox
           value={item.locationId ?? null}
           options={locationOptions}
           onChange={(v) => changeLocation(v)}
+          disabled={dropdownDisabled}
           renderValue={(opt) => {
             if (currentLocation) {
               return (
@@ -78,25 +98,19 @@ export function LocationSection() {
           }}
           ariaLabel="Location"
         />
-        {categoryHasLocation && (
-          <button
-            type="button"
-            className={overrideToggle}
-            onClick={toggleLocationOverride}
-            aria-pressed={locationOverrideEnabled}
-            title={
-              locationOverrideEnabled
-                ? "Override on — using this item's place"
-                : "Inheriting place from category"
-            }
-          >
-            {locationOverrideEnabled ? "Override" : "Inherited"}
-          </button>
-        )}
-        {categoryHasLocation && !locationOverrideEnabled && (
-          <span className={inheritedHint}>from {category?.name}</span>
-        )}
       </div>
+      {categoryHasLocation && (
+        <div className={hintRow}>
+          <span
+            className={inheritedHint}
+            style={{
+              visibility: locationOverrideEnabled ? "hidden" : "visible",
+            }}
+          >
+            from {category?.name}
+          </span>
+        </div>
+      )}
       <div
         style={{
           marginTop: 6,

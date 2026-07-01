@@ -6,13 +6,6 @@ import {
   getTaskTreeIds,
 } from "@/utils/goalPageHandlers";
 import { toggleGoalIsReady } from "@/utils/goal-handlers/toggleGoalIsReady";
-import {
-  assignLocationToPlanner,
-  assignLocationToMultiplePlanners,
-  setUseParentLocation,
-  setUseParentLocationMultiple,
-} from "@/actions/locations";
-import * as categoryActions from "@/actions/categories";
 import type { Planner, Category } from "@/types/prisma";
 import type { Dispatch, SetStateAction } from "react";
 
@@ -96,9 +89,8 @@ export function useItemHandlers(
   );
 
   const handleCategoryChange = useCallback(
-    async (categoryId: string | null) => {
+    (categoryId: string | null) => {
       if (!item) return;
-      await categoryActions.assignCategoryToPlanner(item.id, categoryId);
 
       const newCategoryHasLocation = categoryId
         ? !!categories.find((c) => c.id === categoryId)?.locationId
@@ -136,7 +128,7 @@ export function useItemHandlers(
   );
 
   const handleLocationChange = useCallback(
-    async (locationId: string | null) => {
+    (locationId: string | null) => {
       if (!item) return;
 
       if (item.plannerType === "goal" && subtasks.length > 0) {
@@ -146,62 +138,45 @@ export function useItemHandlers(
         return;
       }
 
-      await assignLocationToPlanner(item.id, locationId);
       handleUpdateField("locationId", locationId);
     },
     [item, subtasks, handleUpdateField],
   );
 
   const applyLocationChange = useCallback(
-    async (locationId: string | null, cascade: boolean) => {
+    (locationId: string | null, cascade: boolean) => {
       if (!item) return;
 
-      try {
-        const treeItems = getGoalTree(planner, item.id);
-        const treeIds = treeItems.map((i) => i.id);
+      const treeItems = getGoalTree(planner, item.id);
+      const treeIds = treeItems.map((i) => i.id);
 
-        if (pendingKind === "override-off") {
-          if (cascade) {
-            await setUseParentLocationMultiple(treeIds, true);
-            updatePlannerArray((prev) =>
-              prev.map((p) =>
-                treeIds.includes(p.id) ? { ...p, useParentLocation: true } : p,
-              ),
-            );
-          } else {
-            await setUseParentLocation(item.id, true);
-            handleUpdateField("useParentLocation", true);
-          }
-          setLocationOverrideEnabled(false);
-        } else if (cascade) {
-          await assignLocationToMultiplePlanners(treeIds, locationId);
+      if (pendingKind === "override-off") {
+        if (cascade) {
           updatePlannerArray((prev) =>
             prev.map((p) =>
-              treeIds.includes(p.id) ? { ...p, locationId } : p,
+              treeIds.includes(p.id) ? { ...p, useParentLocation: true } : p,
             ),
           );
         } else {
-          await assignLocationToPlanner(item.id, locationId);
-          handleUpdateField("locationId", locationId);
+          handleUpdateField("useParentLocation", true);
         }
-      } catch (error) {
-        console.error("Failed to update location:", error);
-      } finally {
-        setShowCascadeConfirm(false);
-        setPendingLocationId(null);
-        setPendingKind(null);
+        setLocationOverrideEnabled(false);
+      } else if (cascade) {
+        updatePlannerArray((prev) =>
+          prev.map((p) => (treeIds.includes(p.id) ? { ...p, locationId } : p)),
+        );
+      } else {
+        handleUpdateField("locationId", locationId);
       }
+
+      setShowCascadeConfirm(false);
+      setPendingLocationId(null);
+      setPendingKind(null);
     },
-    [
-      item,
-      planner,
-      updatePlannerArray,
-      handleUpdateField,
-      pendingKind,
-    ],
+    [item, planner, updatePlannerArray, handleUpdateField, pendingKind],
   );
 
-  const handleToggleLocationOverride = useCallback(async () => {
+  const handleToggleLocationOverride = useCallback(() => {
     if (!item || !categoryHasLocation) return;
 
     const newOverrideEnabled = !locationOverrideEnabled;
@@ -217,9 +192,7 @@ export function useItemHandlers(
       return;
     }
 
-    const newUseParent = !newOverrideEnabled;
-    await setUseParentLocation(item.id, newUseParent);
-    handleUpdateField("useParentLocation", newUseParent);
+    handleUpdateField("useParentLocation", !newOverrideEnabled);
     setLocationOverrideEnabled(newOverrideEnabled);
   }, [
     item,
@@ -229,24 +202,18 @@ export function useItemHandlers(
     handleUpdateField,
   ]);
 
-  const confirmResetSubgoalLocations = useCallback(async () => {
+  const confirmResetSubgoalLocations = useCallback(() => {
     if (!item) return;
 
     const treeIds = getGoalTree(planner, item.id).map((i) => i.id);
 
-    try {
-      await setUseParentLocationMultiple(treeIds, true);
-      updatePlannerArray((prev) =>
-        prev.map((p) =>
-          treeIds.includes(p.id) ? { ...p, useParentLocation: true } : p,
-        ),
-      );
-      setLocationOverrideEnabled(false);
-    } catch (error) {
-      console.error("Failed to reset sub-goal locations:", error);
-    } finally {
-      setShowResetLocationsConfirm(false);
-    }
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        treeIds.includes(p.id) ? { ...p, useParentLocation: true } : p,
+      ),
+    );
+    setLocationOverrideEnabled(false);
+    setShowResetLocationsConfirm(false);
   }, [item, planner, updatePlannerArray]);
 
   return {
