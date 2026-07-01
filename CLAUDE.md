@@ -111,8 +111,9 @@ lifeplan/
 │   ├── mail.ts, tokens.ts            # Auth flows
 │   ├── taskItem.d.ts
 │   └── theme/                        # The whole design system
-│       ├── tokens.css.ts             # createThemeContract: paper/bezel/ink/glass/shadow/accent/status
+│       ├── tokens.css.ts             # createThemeContract: paper/bezel/ink/glass/interactive/shadow/accent/status
 │       ├── themes.css.ts             # themeLight, themeDark
+│       ├── scales.ts                 # Theme-independent numerics: space, radii, contentWidth, breakpoints, media, borderWidth, zIndex
 │       ├── sprinkles.css.ts          # Atomic style API
 │       ├── recipes.css.ts            # glass, popover, pillBtn, badge, formInput, progressTrack
 │       ├── typography.css.ts         # display, text, caption, statusTag
@@ -307,15 +308,52 @@ Nav structure (from [components/ui/shell/nav.ts](components/ui/shell/nav.ts)):
 
 ## Styling — Vanilla Extract
 
-- **No Tailwind.** The leftover `components.json` is dormant — ignore it.
-- Tokens are a contract in [lib/theme/tokens.css.ts](lib/theme/tokens.css.ts), assigned values in [lib/theme/themes.css.ts](lib/theme/themes.css.ts) (`themeLight`, `themeDark`).
-- Atomic styles via `sprinkles` from [lib/theme/sprinkles.css.ts](lib/theme/sprinkles.css.ts).
-- Multi-variant components via `recipes` (glass, popover, pillBtn, badge, formInput, progressTrack) from [lib/theme/recipes.css.ts](lib/theme/recipes.css.ts).
-- Typography presets from [lib/theme/typography.css.ts](lib/theme/typography.css.ts).
+**No Tailwind.** The leftover `components.json` is dormant — ignore it. Co-locate styles next to the component: `Foo/Foo.tsx` + `Foo/Foo.css.ts`. The Vanilla Extract plugin is wired in `next.config.mjs`.
+
+The design system has four layers. Prefer the higher-level surface (recipes, typography presets, sprinkles) over reaching for raw tokens.
+
+### 1. Vars — theme-swappable ([lib/theme/tokens.css.ts](lib/theme/tokens.css.ts) + [themes.css.ts](lib/theme/themes.css.ts))
+
+CSS-custom-property contract with values assigned per theme (`themeLight`, `themeDark`). Groups:
+
+- `paper` / `bezel` / `ink` / `inkSoft` / `muted` / `rule` / `textOnAccent` / `overlay` / `tileFill` — flat surface + text colors
+- `glass.{bg, bgDeep, bgSoft, stroke, hi}` — frosted-panel surface fills (used as **base** fills, not hovers)
+- `interactive.{hoverFill, selectedFill}` — **row/button hover + selected states**. Direction inverts per theme: light-mode hovers **darken the paper** (ink at 7%/12%), dark-mode hovers **brighten** it (paper at 7%/12%). Use these for row hovers, not `glass.bgSoft`.
+- `shadow.{panel, panelSm}` — floating-surface elevation
+- `noise.{opacity, blend}` — noise overlay
+- `accent.{primary, now, done, secondary}` — brand accents
+- `status.{success, warning, error, info}` — semantic status
+- `swatches.{blue, green, violet, indigo, cyan, amber, rose, teal}` — category color palette
+- `font.{display, ui}` — font family bindings (Clash Display + Hubot Sans, wired in [fonts.ts](lib/theme/fonts.ts))
+
+### 2. Scales — theme-independent numerics ([lib/theme/scales.ts](lib/theme/scales.ts))
+
+Single source of truth for sizing vocabulary. Both `sprinkles` and `style()` blocks import from here.
+
+- `space` (0–80px) — padding/margin/gap
+- `radii` — base tiers (`xs 6`, `sm 8`, `md 12`, `lg 16`, `xl 20`, `2xl 24`, `3xl 30`) + half-steps (`sm+2 10`, `md+2 14`, `lg+2 18`, `xl+2 22`) used by glass/popover recipes to sit intentionally rounder than a plain card at the same tier, plus `pill 999`. Values below 6 (2–5px) stay hardcoded as bespoke micro-corners.
+- `contentWidth` (`xs 520` … `2xl 1280`) — text measures + page containers. Prefer over raw `maxWidth: 1240`.
+- `breakpoints` (`mobile 767`, `tablet 1023`) + `media` (prebuilt `@media` query strings: `mobile`, `tablet`, `tabletUp`, `desktopUp`). **Do not declare local `const MOBILE = "..."`** — import `media` from `@/lib/theme` and use `[media.mobile]` as the `@media` key.
+- `borderWidth` (`hairline 1`, `medium 2`, `thick 3`)
+- `zIndex` — semantic layers: `base 0`, `docked 5`, `raised 10`, `floating 30`, `palette 50`, `popoverOverPalette 60`, `modal 100`, `modalOver 150`, `toast 200`
+
+### 3. Recipes — component shapes ([lib/theme/recipes.css.ts](lib/theme/recipes.css.ts))
+
+`glass`, `popover`, `pillBtn`, `badge`, `formInput`, `progressTrack`. All reference the `radii` scale internally. `pillBtn.glass` / `pillBtn.glassInk` deliberately keep a **theme-neutral inset-white-wash** hover (not `interactive.hoverFill`) because those buttons can sit on either light or dark surfaces.
+
+### 4. Typography — text presets ([lib/theme/typography.css.ts](lib/theme/typography.css.ts))
+
+`display.{hero, bigStat, pageTitle, statCard, modalTitle, sectionHead, panelTitle, listTitle}`, `text.{body, bodyLg, bodySm, row, label, microLabel}`, `caption`, `statusTag`. Prefer over inline `fontSize` when a preset fits — presets bundle family + weight + letter-spacing + feature settings.
+
+### Sprinkles — atomic props API ([lib/theme/sprinkles.css.ts](lib/theme/sprinkles.css.ts))
+
+Consumes all scales. Notable atoms: `bg: "hoverFill" | "selectedFill" | "glassBg" | …`, `maxWidth: "xl" | …` (contentWidth), `borderRadius: "md" | …`, `zIndex: "modal" | …`. Media conditions `md` and `lg` correspond to `tabletUp` and `desktopUp`.
+
+### Other conventions
+
 - Category color resolution lives in [lib/theme/categoryColor.ts](lib/theme/categoryColor.ts).
-- Co-locate styles next to the component: `Foo/Foo.tsx` + `Foo/Foo.css.ts`.
-- The Vanilla Extract plugin is wired in `next.config.mjs`.
 - The 45° pinstripe pattern is reserved for marking category-affiliated items on the calendar — do not use it as a screen-level backdrop.
+- `colorMixAlpha` in [effects.ts](lib/theme/effects.ts) names the recurring `color-mix(in srgb, X N%, transparent)` percentages so consumers tune a hierarchy step, not a magic number.
 
 ---
 

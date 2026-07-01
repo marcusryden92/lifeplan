@@ -1,12 +1,10 @@
 # P4 — Refactors / investigations
 
-- Token consolidation into sprinkles (color/space/radii)
-- Tokens for contentWidth (sm, md, lg etc) for layouts
-
 - Server-side overlap validation for CategoryTimeWindow
-- Plumb `TravelTime.transportMode` through the scheduling engine
+
 - Add console error messaging
 - Notice when an item is too large to fit within the template (alerts list)
+
 - Option to remove your own account + data
 - Item-detail AIHelper + EngineNotes side cards still using mocks (deferred while AI coach is shelved)
 
