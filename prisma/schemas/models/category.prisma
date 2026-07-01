@@ -1,9 +1,9 @@
 model Category {
-  id        String     @id @default(uuid())
+  id        String  @id @default(uuid())
   name      String
-  icon      String?    // Emoji or icon identifier
-  color     String?    // Hex color for visual distinction
-  sortOrder Int        @default(0)
+  icon      String? // Emoji or icon identifier
+  color     String? // Hex color for visual distinction
+  sortOrder Int     @default(0)
 
   timeSlots CategoryTimeWindow[]
 
@@ -13,54 +13,54 @@ model Category {
 
   // Strict mode: when true, only items from this category can be in these time slots
   // When false, other items can fill empty space in the time slots
-  isStrict  Boolean    @default(false)
+  isStrict Boolean @default(false)
 
   // Optional location for this category (items without location inherit this)
   locationId String?
-  location   Location?  @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
   // Self-referential hierarchy (subcategories)
-  parentId  String?
-  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
-  children  Category[] @relation("CategoryHierarchy")
+  parentId String?
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children Category[] @relation("CategoryHierarchy")
 
   // User ownership
-  userId    String
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Items in this category (back-reference)
-  planners  Planner[]
+  planners Planner[]
 
   // Materialized weekly occurrences with trespass info (back-reference)
-  events    CategoryEvent[]
+  events CategoryEvent[]
 
-  createdAt String     @default(dbgenerated("NOW()::text"))
+  createdAt String @default(dbgenerated("NOW()::text"))
   updatedAt String
 
   @@map("Categories")
 }
 
 model CategoryTimeWindow {
-  id         String        @id @default(uuid())
+  id        String @id @default(uuid())
   // Day of the week this window applies to (0=Sunday ... 6=Saturday, matches JS Date.getDay()).
   // One row per weekly occurrence: a Mon/Wed/Fri pattern is three rows.
-  day        Int
-  startTime  String        // HH:MM (24-hour)
-  endTime    String        // HH:MM (24-hour); if <= startTime the slot spans midnight
+  day       Int
+  startTime String // HH:MM (24-hour)
+  endTime   String // HH:MM (24-hour); if <= startTime the slot spans midnight
 
   // categoryId is nullable so the user can place windows on the calendar before
   // deciding which category they belong to (drafted, unassigned windows).
   categoryId String?
-  category   Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   // userId is the direct owner. Required so unassigned windows (categoryId=null)
   // are still scoped to a user.
-  userId     String
-  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Materialized weekly occurrences (back-reference). Cascade in CategoryEvent
   // ensures these go away when the window is deleted.
-  events     CategoryEvent[]
+  events CategoryEvent[]
 
   @@map("CategoryTimeWindows")
 }
@@ -69,30 +69,30 @@ model CategoryEvent {
   // Deterministic id: `${categoryTimeWindowId}-${start}`. Same occurrence on
   // a regen produces the same row id, so sync sees no diff unless the slot
   // actually moved. No DB-side autogen needed.
-  id                    String             @id
+  id String @id
 
-  start                 String             // ISO datetime
-  end                   String             // ISO datetime
+  start String // ISO datetime
+  end   String // ISO datetime
 
   // Trespass markers — engine fills these when its scheduling decisions
   // violated a category boundary. Renderer stamps red borders accordingly.
-  trespassingStart      Boolean            @default(false)
-  trespassingEnd        Boolean            @default(false)
+  trespassingStart Boolean @default(false)
+  trespassingEnd   Boolean @default(false)
 
   // Source slot. Cascade so deleting a window deletes its materialized
   // occurrences.
-  categoryTimeWindowId  String
-  categoryTimeWindow    CategoryTimeWindow @relation(fields: [categoryTimeWindowId], references: [id], onDelete: Cascade)
+  categoryTimeWindowId String
+  categoryTimeWindow   CategoryTimeWindow @relation(fields: [categoryTimeWindowId], references: [id], onDelete: Cascade)
 
   // Owning category — required for render (color, name, isStrict).
-  categoryId            String
-  category              Category           @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-  userId                String
-  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt             String             @default(dbgenerated("NOW()::text"))
-  updatedAt             String
+  createdAt String @default(dbgenerated("NOW()::text"))
+  updatedAt String
 
   @@map("CategoryEvents")
 }

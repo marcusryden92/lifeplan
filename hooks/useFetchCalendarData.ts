@@ -9,6 +9,7 @@ import {
   Category,
   CategoryEvent,
   TravelEvent,
+  EngineMessage,
 } from "@/types/prisma";
 import { SimpleEvent } from "@/types/prisma";
 import { EventTemplate } from "@/types/prisma";
@@ -21,6 +22,7 @@ interface Data {
   categories: Category[];
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
+  engineMessages: EngineMessage[];
 }
 
 export function useFetchCalendarData(
@@ -32,6 +34,7 @@ export function useFetchCalendarData(
     categories: Category[],
     categoryEvents: CategoryEvent[],
     travelEvents: TravelEvent[],
+    engineMessages: EngineMessage[],
     dataVersion: number,
   ) => void,
 ) {
@@ -59,6 +62,7 @@ export function useFetchCalendarData(
           categories,
           categoryEvents,
           travelEvents,
+          engineMessages,
           dataVersion,
         } = response.data;
         const newData = {
@@ -68,6 +72,7 @@ export function useFetchCalendarData(
           categories,
           categoryEvents,
           travelEvents,
+          engineMessages,
         };
 
         setData(newData);
@@ -82,6 +87,7 @@ export function useFetchCalendarData(
           newData.categories,
           newData.categoryEvents,
           newData.travelEvents,
+          newData.engineMessages,
           dataVersion,
         );
       } catch (err) {

@@ -11,6 +11,7 @@ import {
   Category,
   CategoryEvent,
   TravelEvent,
+  EngineMessage,
 } from "@/types/prisma";
 
 import { SchedulingFailureReason } from "../constants";
@@ -57,6 +58,14 @@ export interface CalendarGenerationResult extends SchedulingResult {
    * (e.g. not-yet-ready ones). Ephemeral — not persisted to the DB.
    */
   plannerScores: Record<string, number>;
+  /**
+   * Structured, coalesced messages describing scheduling failures and
+   * warnings. One row per (type, groupKey) after aggregation — e.g. 400
+   * insufficient-travel instances on the same route collapse to a single
+   * row with affectedCount and worst-case shortage. Persisted alongside
+   * events for cross-session recall; the UI's engine console renders them.
+   */
+  messages: EngineMessage[];
 }
 
 /**
@@ -294,6 +303,12 @@ export interface CalendarGenerationInput {
   planners: Planner[];
   /** Previous calendar events to preserve */
   previousCalendar: SimpleEvent[];
+  /**
+   * Previous engine messages, consulted at emit time to carry forward the
+   * user-owned `dismissed` flag. A re-emit of an id whose prior row was
+   * dismissed stays dismissed; a fresh id is naturally undismissed.
+   */
+  previousEngineMessages?: EngineMessage[];
   /** Optional configuration overrides */
   config?: CalendarGenerationConfig;
   /** Categories with time constraints */

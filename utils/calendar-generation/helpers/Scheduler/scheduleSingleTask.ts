@@ -39,6 +39,7 @@ export function scheduleSingleTask(
       taskTitle: task.title,
       reason: SchedulingFailureReason.TOO_LARGE,
       details: `Task duration (${task.duration} min) exceeds max effective capacity (${maxCapacity} min) given templates and category constraints`,
+      context: { duration: task.duration, maxCapacity },
     });
     return { scheduled: false, permanentFailure: true };
   }
@@ -49,8 +50,12 @@ export function scheduleSingleTask(
     scheduledTaskIds.add(task.id);
     return { scheduled: true, permanentFailure: false, event: result.event };
   } else if (result.failure) {
+    // NO_SLOTS was previously swallowed to let the outer loop retry the task
+    // after other placements freed up room. Retries still apply — the caller
+    // uses permanentFailure to decide — but the failure now surfaces to the
+    // engine console so a task that never fits doesn't disappear silently.
+    failures.push(result.failure);
     if (result.failure.reason !== SchedulingFailureReason.NO_SLOTS) {
-      failures.push(result.failure);
       return { scheduled: false, permanentFailure: true };
     }
     return { scheduled: false, permanentFailure: false };

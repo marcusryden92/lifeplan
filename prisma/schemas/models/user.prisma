@@ -21,6 +21,7 @@ model User {
   categoryTimeWindows   CategoryTimeWindow[]
   categoryEvents        CategoryEvent[]
   travelEvents          TravelEvent[]
+  engineMessages        EngineMessage[]
 
   @@map("users")
 }

@@ -144,10 +144,15 @@ export function scheduleTasksAndGoals(
     }
   }
 
+  // Drop failures for tasks that eventually placed on a later iteration.
+  // A NO_SLOTS on attempt 1 that succeeds after expansion is not something the
+  // console should surface — the retry was the whole point of the outer loop.
+  const finalFailures = failures.filter((f) => !scheduledTaskIds.has(f.taskId));
+
   return {
-    success: failures.length === 0 && candidates.length === 0,
+    success: finalFailures.length === 0 && candidates.length === 0,
     newEvents: events,
-    failures,
+    failures: finalFailures,
   };
 }
 

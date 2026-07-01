@@ -1,7 +1,5 @@
 # P4 — Refactors / investigations
 
-- Server-side overlap validation for CategoryTimeWindow
-
 - Add console error messaging
 - Notice when an item is too large to fit within the template (alerts list)
 

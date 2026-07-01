@@ -7,7 +7,13 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
 import { taskIsCompleted } from "@/utils/taskHelpers";
 
-import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
+import {
+  Planner,
+  SimpleEvent,
+  EventTemplate,
+  Category,
+  EngineMessage,
+} from "@/types/prisma";
 import { AppDispatch, RootState } from "@/redux/store";
 import calendarSlice from "@/redux/slices/calendarSlice";
 import { useSelector } from "react-redux";
@@ -41,6 +47,9 @@ const useManuallyRefreshCalendar = (
   const debugStrategyConfig = useSelector(
     (state: RootState) => state.schedulingSettings.debugStrategyConfig
   );
+  const previousEngineMessages = useSelector(
+    (state: RootState) => state.calendar.engineMessages
+  );
 
   // Store latest values in refs so callback doesn't need to depend on them
   const stateRef = useRef<{
@@ -54,6 +63,7 @@ const useManuallyRefreshCalendar = (
     enableTravelEvents: boolean;
     travelTimeMatrix: SerializedTravelTimeEntry[] | null;
     debugStrategyConfig: DebugStrategyConfig;
+    previousEngineMessages: EngineMessage[];
     dispatch: AppDispatch;
   }>({
     userId,
@@ -66,6 +76,7 @@ const useManuallyRefreshCalendar = (
     enableTravelEvents,
     travelTimeMatrix,
     debugStrategyConfig,
+    previousEngineMessages,
     dispatch,
   });
   stateRef.current = {
@@ -79,6 +90,7 @@ const useManuallyRefreshCalendar = (
     enableTravelEvents,
     travelTimeMatrix,
     debugStrategyConfig,
+    previousEngineMessages,
     dispatch,
   };
 
@@ -94,6 +106,7 @@ const useManuallyRefreshCalendar = (
       enableTravelEvents,
       travelTimeMatrix,
       debugStrategyConfig,
+      previousEngineMessages,
       dispatch,
     } = stateRef.current;
 
@@ -118,6 +131,7 @@ const useManuallyRefreshCalendar = (
         events: newCalendar,
         categoryEvents: newCategoryEvents,
         travelEvents: newTravelEvents,
+        messages: newEngineMessages,
       } = generateCalendar(
         userId,
         weekStartDay,
@@ -133,6 +147,7 @@ const useManuallyRefreshCalendar = (
           locationGroupingPenalties:
             debugStrategyConfig.locationGrouping.penalties,
           categories,
+          previousEngineMessages,
         },
       );
 
@@ -146,6 +161,7 @@ const useManuallyRefreshCalendar = (
           categories,
           categoryEvents: newCategoryEvents,
           travelEvents: newTravelEvents,
+          engineMessages: newEngineMessages,
         })
       );
     }

@@ -7,6 +7,7 @@ import {
   CategoryTimeWindow,
   CategoryEvent,
   TravelEvent,
+  EngineMessage,
 } from "@/types/prisma";
 
 type CalendarData = {
@@ -22,6 +23,13 @@ type CalendarData = {
   // the engine each regen; renderer reads directly. Replaces the per-regen
   // travel SimpleEvent path that was stripped from sync.
   travelEvents: TravelEvent[];
+  // Engine messages surfaced in the calendar engine console. Written
+  // wholesale by the engine each regen; the engine consults this slice's
+  // prior contents at emit time to carry forward the user-owned `dismissed`
+  // flag by id, so a dismissed row stays dismissed across regens as long as
+  // the deterministic id keeps matching. Dismissal is a plain field flip
+  // that flows to the DB through the standard diff sync.
+  engineMessages: EngineMessage[];
   // Per-planner urgency scores from the engine's last regen. Ephemeral —
   // hydrated only when the engine runs (not from the server fetch), so a
   // cold load before the autoregen fires will see {}. Consumers (e.g. the
@@ -40,6 +48,7 @@ const initialState: CalendarData = {
   categories: [],
   categoryEvents: [],
   travelEvents: [],
+  engineMessages: [],
   plannerScores: {},
   isLoaded: false,
 };
@@ -57,6 +66,7 @@ const calendarSlice = createSlice({
         categories?: Category[];
         categoryEvents?: CategoryEvent[];
         travelEvents?: TravelEvent[];
+        engineMessages?: EngineMessage[];
         plannerScores?: Record<string, number>;
       }>
     ) => {
@@ -71,6 +81,9 @@ const calendarSlice = createSlice({
       }
       if (action.payload.travelEvents !== undefined) {
         state.travelEvents = action.payload.travelEvents;
+      }
+      if (action.payload.engineMessages !== undefined) {
+        state.engineMessages = action.payload.engineMessages;
       }
       if (action.payload.plannerScores !== undefined) {
         state.plannerScores = action.payload.plannerScores;
@@ -126,6 +139,17 @@ const calendarSlice = createSlice({
         c.timeSlots = c.timeSlots.filter((ts) => ts.id !== action.payload);
       }
     },
+    // Dismissal path: flip the row's `dismissed` flag. The row stays in
+    // Redux (and eventually the DB via diff sync) so subsequent regens can
+    // consult its dismissed state and carry it forward. The next regen's
+    // emit sees the flag and keeps the row hidden as long as the
+    // deterministic id keeps matching; cycling falls out naturally when the
+    // engine stops emitting the row (diff destroys it) and any later
+    // re-emit is a fresh, undismissed row.
+    dismissEngineMessage: (state, action: PayloadAction<string>) => {
+      const target = state.engineMessages.find((m) => m.id === action.payload);
+      if (target) target.dismissed = true;
+    },
   },
 });
 
@@ -139,5 +163,6 @@ export const {
   removeTemplate,
   upsertTimeWindow,
   removeTimeWindow,
+  dismissEngineMessage,
 } = calendarSlice.actions;
 export default calendarSlice;

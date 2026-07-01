@@ -39,6 +39,7 @@ export const updateAllCalendarStates =
     const calendar: SimpleEvent[] = state.calendar.calendar;
     const template: EventTemplate[] = state.calendar.template;
     const categories: Category[] = state.calendar.categories;
+    const previousEngineMessages = state.calendar.engineMessages;
     const bufferTimeMinutes: number =
       state.schedulingSettings.bufferTimeMinutes;
     const enableTravelEvents: boolean =
@@ -63,6 +64,7 @@ export const updateAllCalendarStates =
       categoryEvents: newCategoryEvents,
       travelEvents: newTravelEvents,
       plannerScores: newPlannerScores,
+      messages: newEngineMessages,
     } = generateCalendar(
       userId,
       weekStartDay,
@@ -74,6 +76,7 @@ export const updateAllCalendarStates =
         travelTimeMatrix: travelTimeMap ?? undefined,
         injectTravelEvents: enableTravelEvents,
         categories,
+        previousEngineMessages,
       },
     );
 
@@ -84,6 +87,7 @@ export const updateAllCalendarStates =
       categories,
       categoryEvents: newCategoryEvents,
       travelEvents: newTravelEvents,
+      engineMessages: newEngineMessages,
       plannerScores: newPlannerScores,
     };
 

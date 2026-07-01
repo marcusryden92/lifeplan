@@ -420,6 +420,7 @@ export const controlSlider = style({
 
 
 export const engineCard = style({
+  position: "relative",
   padding: "10px 12px",
   borderRadius: radii["sm+2"],
   border: `1px solid ${vars.rule}`,
@@ -427,11 +428,103 @@ export const engineCard = style({
   transition: themeTransition,
 });
 
+// Whole-card link overlay when the payload references a planner. Sits under
+// the dismiss button so a click on × doesn't accidentally navigate.
+export const engineCardLink = style({
+  position: "absolute",
+  inset: 0,
+  borderRadius: "inherit",
+  color: "transparent",
+  textDecoration: "none",
+  cursor: "pointer",
+  zIndex: 0,
+  ":focus-visible": {
+    outline: `2px solid ${vars.accent.primary}`,
+    outlineOffset: 2,
+  },
+});
+
+// Card content sits above the link overlay so text remains selectable and
+// the dismiss button remains clickable.
+export const engineCardContent = style({
+  position: "relative",
+  zIndex: 1,
+  pointerEvents: "none",
+});
+
+// Small × in the top-right. `pointer-events: auto` restores clickability
+// against the parent's disabled events set on engineCardContent.
+export const engineDismissBtn = style({
+  position: "absolute",
+  top: 6,
+  right: 6,
+  zIndex: 2,
+  pointerEvents: "auto",
+  width: 22,
+  height: 22,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+  border: "none",
+  background: "transparent",
+  color: vars.inkSoft,
+  borderRadius: radii.sm,
+  cursor: "pointer",
+  opacity: 0.65,
+  transition: themeTransition,
+  ":hover": {
+    opacity: 1,
+    background: vars.interactive.hoverFill,
+  },
+  ":focus-visible": {
+    outline: `2px solid ${vars.accent.primary}`,
+    outlineOffset: 1,
+  },
+});
+
+// Locate icon sits just left of the dismiss button. Only rendered on cards
+// with a concrete date to navigate to (SCHEDULED_LATE). Same interaction
+// shape as the dismiss button.
+export const engineGoToBtn = style({
+  position: "absolute",
+  top: 6,
+  right: 32,
+  zIndex: 2,
+  pointerEvents: "auto",
+  width: 22,
+  height: 22,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+  border: "none",
+  background: "transparent",
+  color: vars.inkSoft,
+  borderRadius: radii.sm,
+  cursor: "pointer",
+  opacity: 0.65,
+  transition: themeTransition,
+  ":hover": {
+    opacity: 1,
+    background: vars.interactive.hoverFill,
+  },
+  ":focus-visible": {
+    outline: `2px solid ${vars.accent.primary}`,
+    outlineOffset: 1,
+  },
+});
+
 export const engineCardHead = style({
   display: "flex",
-  alignItems: "center",
+  alignItems: "flex-start",
   gap: 8,
   flexWrap: "wrap",
+  // Reserve space for the absolute-positioned buttons in the top-right
+  // corner (dismiss + optional go-to) so a long title wraps before it slides
+  // under either. Sized for both buttons; cards without a go-to have a bit
+  // of extra breathing room, which reads consistently.
+  paddingRight: 48,
 });
 
 export const engineTag = style({

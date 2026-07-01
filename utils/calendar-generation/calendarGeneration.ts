@@ -13,6 +13,7 @@ import {
   Category,
   CategoryEvent,
   TravelEvent,
+  EngineMessage,
 } from "@/types/prisma";
 import { CalendarGenerator } from "./core/CalendarGenerator";
 import { SCHEDULING_CONFIG } from "./constants";
@@ -36,6 +37,12 @@ export interface GenerateCalendarOptions {
   locationGroupingScores?: LocationGroupingScoresConfig;
   locationGroupingPenalties?: LocationGroupingPenaltiesConfig;
   categories?: Category[];
+  /**
+   * Prior engine messages array, consulted at emit time to carry forward
+   * the user-owned `dismissed` flag by id. Callers pass the current Redux
+   * engineMessages slice.
+   */
+  previousEngineMessages?: EngineMessage[];
 }
 
 /**
@@ -64,6 +71,7 @@ export function generateCalendar(
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
   plannerScores: Record<string, number>;
+  messages: EngineMessage[];
 } {
   // Handle backwards compatibility - if a number is passed, treat it as bufferTimeMinutes
   const opts: GenerateCalendarOptions =
@@ -100,6 +108,7 @@ export function generateCalendar(
     templates: template,
     planners: planner,
     previousCalendar: prevCalendar,
+    previousEngineMessages: opts.previousEngineMessages,
     categories: opts.categories,
     config: {
       maxDaysAhead: SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
@@ -119,5 +128,6 @@ export function generateCalendar(
     categoryEvents: result.categoryEvents,
     travelEvents: result.travelEvents,
     plannerScores: result.plannerScores,
+    messages: result.messages,
   };
 }
