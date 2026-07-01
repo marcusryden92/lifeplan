@@ -120,6 +120,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
       anchorRect={eventRect}
       width={POPOVER_WIDTH}
       height={POPOVER_HEIGHT}
+      title={event.title || "Template details"}
       onClose={() => {
         if (isEditingTitle) handleTitleSave();
         onClose();

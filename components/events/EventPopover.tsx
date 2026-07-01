@@ -236,6 +236,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
       anchorRect={eventRect}
       width={POPOVER_WIDTH}
       height={POPOVER_HEIGHT}
+      title={event.title || "Event details"}
       onClose={() => {
         if (isEditing) handleSave();
         onClose();

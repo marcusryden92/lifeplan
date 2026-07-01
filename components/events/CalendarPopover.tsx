@@ -16,6 +16,8 @@ interface CalendarPopoverProps {
   anchorRect: DOMRect;
   width: number;
   height: number;
+  /** Accessible label announced by screen readers when the popover opens. */
+  title: string;
   onClose: () => void;
   /** Fires when the user presses Escape; falls back to onClose if omitted. */
   onEscape?: () => void;
@@ -24,10 +26,23 @@ interface CalendarPopoverProps {
   children: (args: RenderArgs) => ReactNode;
 }
 
+const srOnlyStyle: React.CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
+
 export function CalendarPopover({
   anchorRect,
   width,
   height,
+  title,
   onClose,
   onEscape,
   onClickOutside,
@@ -82,6 +97,7 @@ export function CalendarPopover({
             cursor: isDragging ? "grabbing" : "auto",
           }}
         >
+          <Dialog.Title style={srOnlyStyle}>{title}</Dialog.Title>
           {children({ startDrag, close: onClose, isDragging })}
         </Dialog.Content>
       </Dialog.Portal>

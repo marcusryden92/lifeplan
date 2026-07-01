@@ -107,6 +107,7 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
       anchorRect={eventRect}
       width={POPOVER_WIDTH}
       height={POPOVER_HEIGHT}
+      title={event.title || "Travel details"}
       onClose={onClose}
     >
       {({ startDrag, isDragging }) => (
