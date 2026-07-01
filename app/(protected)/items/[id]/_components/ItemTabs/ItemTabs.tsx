@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import {
   tabsStrip,
   tab,
   tabActive,
   tabCount,
   tabDisabled,
+  tabSpacer,
+  coachTrigger,
 } from "./ItemTabs.css";
 
 interface Tab {
@@ -22,12 +25,16 @@ interface ItemTabsProps {
   itemId: string;
   subtaskCount: number;
   subtasksEnabled: boolean;
+  onOpenCoach?: () => void;
+  coachEnabled?: boolean;
 }
 
 export function ItemTabs({
   itemId,
   subtaskCount,
   subtasksEnabled,
+  onOpenCoach,
+  coachEnabled = false,
 }: ItemTabsProps) {
   const pathname = usePathname();
   const base = `/items/${itemId}`;
@@ -85,6 +92,20 @@ export function ItemTabs({
           </Link>
         );
       })}
+      {coachEnabled && onOpenCoach && (
+        <>
+          <span className={tabSpacer} />
+          <button
+            type="button"
+            className={coachTrigger}
+            onClick={onOpenCoach}
+            aria-label="Open AI coach"
+          >
+            <Sparkles size={13} strokeWidth={2} />
+            <span>AI coach</span>
+          </button>
+        </>
+      )}
     </div>
   );
 }

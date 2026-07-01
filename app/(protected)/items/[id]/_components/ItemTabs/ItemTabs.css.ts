@@ -48,3 +48,29 @@ export const tabDisabled = style({
   cursor: "not-allowed",
   pointerEvents: "none",
 });
+
+export const tabSpacer = style({ flex: 1 });
+
+export const coachTrigger = style({
+  appearance: "none",
+  border: "none",
+  background: "transparent",
+  padding: "10px 14px",
+  marginBottom: -1,
+  fontFamily: vars.font.ui,
+  fontSize: 12.5,
+  fontWeight: 600,
+  letterSpacing: "0.02em",
+  color: vars.inkSoft,
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 6,
+  borderBottom: "2px solid transparent",
+  transition: themeTransition,
+  selectors: {
+    "&:hover": {
+      color: vars.ink,
+    },
+  },
+});

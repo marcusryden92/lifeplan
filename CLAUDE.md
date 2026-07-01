@@ -127,13 +127,13 @@ lifeplan/
 │   ├── schemas/
 │   │   ├── schema.prisma             # Generator + datasource only
 │   │   └── models/
-│   │       ├── user.prisma           # User (+ dataVersion OCC counter), Account, VerificationToken, PasswordResetToken, TwoFactorToken, TwoFactorConfirmation, UserRole
+│   │       ├── user.prisma           # User (+ dataVersion OCC counter), Account, VerificationToken, PasswordResetToken, TwoFactorToken, TwoFactorConfirmation, AccountDeletionToken, UserRole
 │   │       ├── calendar.prisma       # SimpleEvent, EventExtendedProps, Planner, EventTemplate, WeekDayType, PlannerType, EventType
 │   │       ├── category.prisma       # Category, CategoryTimeWindow, CategoryEvent
 │   │       ├── location.prisma       # Location, TravelTime, TravelEvent, TransportMode
 │   │       ├── scheduling.prisma     # UserSchedulingPreferences, TaskPreferences, enums
 │   │       └── engineMessage.prisma  # EngineMessage — engine-emitted console rows with user-owned dismissed flag
-│   ├── migrations/                   # 0_init, add_data_version, add_category_event, add_travel_event, add_planner_is_triaged, add_engine_message, engine_message_user_index, add_engine_message_dismissed
+│   ├── migrations/                   # 0_init, add_data_version, add_category_event, add_travel_event, add_planner_is_triaged, add_engine_message, engine_message_user_index, add_engine_message_dismissed, planner_user_cascade, add_account_deletion_token
 │   ├── seed.ts                       # Wholesale reseed (admin@lifeplan.com / "password")
 │   └── seed-helpers/                 # generateCategories, generateLocations (+ TravelTimes), generatePlanners, generatePlans, generateTemplates, generateUncompletedItems
 │
@@ -419,6 +419,8 @@ Migration history (single source of truth in [prisma/migrations/](prisma/migrati
 - `add_engine_message` — engine-emitted console rows with deterministic id and JSON payload
 - `engine_message_user_index` — `@@index([userId])` for the fetch/sync-sweep queries
 - `add_engine_message_dismissed` — user-owned soft-dismiss flag; carried forward by the engine at emit time
+- `planner_user_cascade` — Planner.userId FK converted from RESTRICT to CASCADE so account deletion cascades cleanly
+- `add_account_deletion_token` — short-lived tokens for the email-confirmation step of account deletion
 
 Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 

@@ -31,9 +31,11 @@ import type { PlannerType } from "@/generated/client";
 import { ItemProvider } from "../ItemContext";
 import { ItemTabs } from "../ItemTabs";
 import { ConfirmModal } from "@/components/ui";
+import { AICoachModal } from "@/components/coach/AICoachModal";
 import { READY_MESSAGE_MS } from "../../_constants";
 import {
   page,
+  scrollArea,
   innerWrap,
   backRow,
   backLink,
@@ -64,6 +66,7 @@ export default function ItemDetailLayout({
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [editingTitle, setEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
+  const [coachOpen, setCoachOpen] = useState(false);
 
   useEffect(() => {
     categoryActions
@@ -167,16 +170,18 @@ export default function ItemDetailLayout({
   if (loadingCategories) {
     return (
       <div className={page}>
-        <div
-          className={innerWrap}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 240,
-          }}
-        >
-          <Loader size="md" label="Loading item" />
+        <div className={scrollArea}>
+          <div
+            className={innerWrap}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: 240,
+            }}
+          >
+            <Loader size="md" label="Loading item" />
+          </div>
         </div>
       </div>
     );
@@ -185,18 +190,20 @@ export default function ItemDetailLayout({
   if (!item) {
     return (
       <div className={page}>
-        <div className={innerWrap}>
-          <button
-            type="button"
-            className={backLink}
-            onClick={() => router.push("/library")}
-          >
-            <ArrowLeft size={12} strokeWidth={2.4} />
-            Library
-          </button>
-          <p style={{ marginTop: 14 }}>
-            <Caption>Item not found.</Caption>
-          </p>
+        <div className={scrollArea}>
+          <div className={innerWrap}>
+            <button
+              type="button"
+              className={backLink}
+              onClick={() => router.push("/library")}
+            >
+              <ArrowLeft size={12} strokeWidth={2.4} />
+              Library
+            </button>
+            <p style={{ marginTop: 14 }}>
+              <Caption>Item not found.</Caption>
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -288,8 +295,9 @@ export default function ItemDetailLayout({
         }}
       >
         <div className={page}>
-          <div className={innerWrap}>
-            <div className={backRow}>
+          <div className={scrollArea}>
+            <div className={innerWrap}>
+              <div className={backRow}>
               <button
                 type="button"
                 className={backLink}
@@ -371,9 +379,12 @@ export default function ItemDetailLayout({
               itemId={item.id}
               subtaskCount={totalSubtasks}
               subtasksEnabled={isGoal}
+              coachEnabled={isGoal}
+              onOpenCoach={() => setCoachOpen(true)}
             />
 
             <div className={tabBodyWrap}>{children}</div>
+            </div>
           </div>
 
           <ConfirmModal
@@ -431,6 +442,14 @@ export default function ItemDetailLayout({
             onCancel={() => setShowResetLocationsConfirm(false)}
             onConfirm={confirmResetSubgoalLocations}
           />
+
+          {isGoal && (
+            <AICoachModal
+              open={coachOpen}
+              onClose={() => setCoachOpen(false)}
+              rootId={item.id}
+            />
+          )}
         </div>
       </ItemProvider>
     </DraggableContextProvider>

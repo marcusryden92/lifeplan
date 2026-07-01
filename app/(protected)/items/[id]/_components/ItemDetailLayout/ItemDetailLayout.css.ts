@@ -10,6 +10,17 @@ import {
 
 
 export const page = style({
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+  flex: 1,
+  minHeight: 0,
+  overflow: "hidden",
+});
+
+// Owns the scroll so that overlays anchored to `.page` (AICoachModal) don't
+// scroll away with the content underneath.
+export const scrollArea = style({
   display: "flex",
   flexDirection: "column",
   flex: 1,
