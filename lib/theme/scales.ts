@@ -27,14 +27,16 @@ export const space = {
 } as const;
 
 // Radius scale — the base tiers (xs/sm/md/lg/xl/2xl/3xl) are the "snap-to"
-// palette for buttons, cards, and panels. The `+2` half-steps (10, 14, 18, 22)
-// exist because the shared recipes (glass, popover) intentionally sit a couple
-// pixels rounder than a plain card at the same "size" tier — that softness is
-// part of the frosted-panel identity. Prefer the base tiers for new leaf
-// components; reach for the half-steps only inside recipe variants that need
-// to differentiate a floating surface from a static one.
+// palette for chips, buttons, cards, and panels. The `+2` half-steps
+// (10, 14, 18, 22) exist because the shared recipes (glass, popover)
+// intentionally sit a couple pixels rounder than a plain card at the same
+// "size" tier — that softness is part of the frosted-panel identity. Prefer
+// the base tiers for new leaf components; reach for the half-steps only
+// inside recipe variants that need to differentiate a floating surface from
+// a static one.
 export const radii = {
   none: 0,
+  xs: 6,
   sm: 8,
   md: 12,
   lg: 16,

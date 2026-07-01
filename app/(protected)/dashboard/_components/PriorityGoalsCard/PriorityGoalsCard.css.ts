@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, media } from "@/lib/theme";
+import { vars, themeTransition, media, radii } from "@/lib/theme";
 
 
 export const goalsCard = style({
@@ -71,7 +71,7 @@ export const goalFraction = style({
 export const goalTrack = style({
   marginTop: 8,
   height: 6,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: `color-mix(in srgb, ${vars.ink} 10%, transparent)`,
   position: "relative",
   overflow: "hidden",
@@ -80,7 +80,7 @@ export const goalTrack = style({
 export const goalFill = style({
   position: "absolute",
   inset: 0,
-  borderRadius: 999,
+  borderRadius: radii.pill,
 });
 
 export const goalFooter = style({

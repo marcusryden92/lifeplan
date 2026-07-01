@@ -5,6 +5,7 @@ import {
   interactiveTransition,
   contentWidth,
   media,
+  radii,
 } from "@/lib/theme";
 
 
@@ -144,7 +145,7 @@ export const renamePencil = style({
   width: 30,
   height: 30,
   marginTop: 4,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: "none",
   background: "transparent",
   color: vars.muted,
@@ -154,7 +155,7 @@ export const renamePencil = style({
   transition: interactiveTransition("opacity", "color", "background-color"),
   selectors: {
     [`${titleHoverRow}:hover &`]: { opacity: 1 },
-    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
   },
 });
 

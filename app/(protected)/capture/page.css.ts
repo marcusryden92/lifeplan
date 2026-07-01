@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, popover, glass, media } from "@/lib/theme";
+import { vars, themeTransition, popover, glass, media, radii } from "@/lib/theme";
 
 
 export const page = style({
@@ -99,7 +99,7 @@ export const quickAdd = style({
   alignItems: "center",
   gap: 8,
   padding: "8px 12px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bgSoft,
   transition: themeTransition,
@@ -132,7 +132,7 @@ export const queueRow = style({
   justifyContent: "space-between",
   gap: 8,
   padding: "10px 12px",
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   cursor: "pointer",
   border: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
@@ -208,7 +208,7 @@ export const card = style([
     display: "flex",
     flexDirection: "column",
     gap: 18,
-    "@media": { [media.mobile]: { padding: 20, borderRadius: 18 } },
+    "@media": { [media.mobile]: { padding: 20, borderRadius: radii["lg+2"] } },
   },
 ]);
 
@@ -238,7 +238,7 @@ export const typeCard = style({
   justifyContent: "center",
   gap: 4,
   padding: "14px 10px",
-  borderRadius: 12,
+  borderRadius: radii.md,
   border: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
   color: vars.ink,
@@ -307,7 +307,7 @@ export const field = style({
   justifyContent: "center",
   gap: 6,
   padding: "10px 14px",
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   border: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
   minHeight: 72,
@@ -408,7 +408,7 @@ export const categoryDropdownItem = style({
   width: "100%",
   padding: "8px 10px",
   border: "none",
-  borderRadius: 6,
+  borderRadius: radii.xs,
   background: "transparent",
   cursor: "pointer",
   fontFamily: vars.font.ui,
@@ -418,7 +418,7 @@ export const categoryDropdownItem = style({
   textAlign: "left",
   transition: themeTransition,
   selectors: {
-    "&:hover": { background: vars.glass.bgSoft },
+    "&:hover": { background: vars.interactive.hoverFill },
   },
 });
 

@@ -1,7 +1,7 @@
-import { style } from "@vanilla-extract/css";
-import { vars, interactiveTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, interactiveTransition, radii } from "@/lib/theme";
 
-// Layout-only — the popover() recipe owns the glass surface (fill, blur,
+// Layout-only â€” the popover() recipe owns the glass surface (fill, blur,
 // stroke, shadow, radius). This file adds the calendar-popover-specific
 // positioning, sizing limits, font, and viewport guards.
 export const calendarPopover = style({
@@ -33,7 +33,7 @@ export const dragHandle = style({
   background: "transparent",
   color: vars.muted,
   cursor: "grab",
-  borderRadius: 6,
+  borderRadius: radii.xs,
   transition: interactiveTransition("color"),
   selectors: {
     "&:hover": { color: vars.ink },
@@ -55,7 +55,7 @@ export const closeBtn = style({
   alignItems: "center",
   justifyContent: "center",
   padding: 4,
-  borderRadius: 6,
+  borderRadius: radii.xs,
   border: "none",
   background: "transparent",
   color: vars.muted,
@@ -63,7 +63,7 @@ export const closeBtn = style({
   flexShrink: 0,
   transition: interactiveTransition("color", "background"),
   selectors: {
-    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
   },
 });
 
@@ -127,7 +127,7 @@ export const renamePencil = style({
   alignItems: "center",
   justifyContent: "center",
   padding: 4,
-  borderRadius: 6,
+  borderRadius: radii.xs,
   border: "none",
   background: "transparent",
   color: vars.muted,

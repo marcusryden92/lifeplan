@@ -20,6 +20,11 @@ export const themeLight = createTheme(vars, {
     hi: "rgba(255,255,255,0.55)",
   },
 
+  interactive: {
+    hoverFill: "rgba(22,20,42,0.07)",
+    selectedFill: "rgba(22,20,42,0.12)",
+  },
+
   shadow: {
     panel:
       "0 14px 40px rgba(40,30,60,0.10), inset 0 1px 0 rgba(255,255,255,0.55)",
@@ -80,6 +85,11 @@ export const themeDark = createTheme(vars, {
     bgSoft: "rgba(230,232,236,0.025)",
     stroke: "rgba(230,232,236,0.16)",
     hi: "rgba(230,232,236,0.20)",
+  },
+
+  interactive: {
+    hoverFill: "rgba(230,232,236,0.07)",
+    selectedFill: "rgba(230,232,236,0.12)",
   },
 
   shadow: {

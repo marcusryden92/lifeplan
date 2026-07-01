@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, radii } from "@/lib/theme";
 
 export const fieldStack = style({
   display: "flex",
@@ -23,7 +23,7 @@ export const typePicker = style({
   display: "inline-grid",
   gridTemplateColumns: "1fr 1fr 1fr",
   padding: 3,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
   alignSelf: "flex-start",
@@ -35,7 +35,7 @@ export const typePickerThumb = style({
   bottom: 3,
   left: 3,
   width: "calc(33.333% - 2px)",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.ink,
   transition: "transform 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
   zIndex: 0,
@@ -52,7 +52,7 @@ export const typePickerBtn = style({
   border: "none",
   background: "transparent",
   padding: "5px 14px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   cursor: "pointer",
   fontSize: 11,
   fontFamily: vars.font.ui,

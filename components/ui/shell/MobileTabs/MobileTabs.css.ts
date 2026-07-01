@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, buttonTransition, backdropFilters } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, buttonTransition, backdropFilters, radii } from "@/lib/theme";
 
 export const tabBar = style({
   position: "fixed",
@@ -15,7 +15,7 @@ export const tabBar = style({
   backdropFilter: backdropFilters.panel,
   WebkitBackdropFilter: backdropFilters.panel,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   boxShadow: vars.shadow.panelSm,
 });
 
@@ -67,7 +67,7 @@ export const captureTabWrapper = style({
 export const captureButton = style({
   width: 54,
   height: 54,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.ink,
   color: vars.paper,
   border: "none",

@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, radii } from "@/lib/theme";
 
 export const selectedPanel = style({
   flexShrink: 0,
@@ -18,7 +18,7 @@ export const selectedHeaderRow = style({
 export const selectedSwatch = style({
   width: 10,
   height: 10,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   flexShrink: 0,
   boxShadow: `0 0 0 1px color-mix(in srgb, ${vars.ink} 14%, transparent)`,
 });
@@ -70,7 +70,7 @@ export const fieldInput = style({
   border: `1px solid ${vars.rule}`,
   background: vars.paper,
   padding: "6px 10px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   fontFamily: vars.font.ui,
   fontSize: 12.5,
   color: vars.ink,
@@ -103,7 +103,7 @@ export const swatchRow = style({
 export const swatchChip = style({
   width: 22,
   height: 22,
-  borderRadius: 6,
+  borderRadius: radii.xs,
   cursor: "pointer",
   border: `1px solid ${vars.rule}`,
   padding: 0,

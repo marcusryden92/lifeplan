@@ -5,6 +5,7 @@ import {
   interactiveTransition,
   colorMixAlpha,
   media,
+  radii,
 } from "@/lib/theme";
 
 
@@ -99,12 +100,12 @@ export const rail = style([
   cardBase,
   {
     border: `1px solid ${vars.rule}`,
-    borderRadius: 14,
+    borderRadius: radii["md+2"],
     padding: "12px 8px 8px",
     background: "transparent",
     transition: themeTransition,
     "@media": {
-      [media.mobile]: { minHeight: "auto", borderRadius: 12 },
+      [media.mobile]: { minHeight: "auto", borderRadius: radii.md },
     },
   },
 ]);
@@ -133,7 +134,7 @@ export const railRow = style({
   alignItems: "center",
   gap: 8,
   padding: "5px 8px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   cursor: "pointer",
   fontSize: 13.5,
   fontFamily: vars.font.ui,
@@ -145,7 +146,7 @@ export const railRow = style({
   width: "100%",
   selectors: {
     "&:hover": {
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
   },
 });
@@ -160,7 +161,7 @@ export const railRowDot = style({
   display: "inline-block",
   width: 9,
   height: 9,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   flexShrink: 0,
 });
 
@@ -168,7 +169,7 @@ export const railRowNoDot = style({
   display: "inline-block",
   width: 9,
   height: 9,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1px dashed ${vars.muted}`,
   opacity: 0.5,
   flexShrink: 0,
@@ -227,7 +228,7 @@ export const railRowAddChild = style({
   padding: 0,
   selectors: {
     [`${railRow}:hover &`]: { opacity: 1 },
-    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
     "&:focus-visible": { opacity: 1, outline: `1px solid ${vars.accent.primary}` },
   },
 });
@@ -271,7 +272,7 @@ export const railNewButton = style({
   justifyContent: "center",
   gap: 6,
   padding: "8px 10px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   border: `1px dashed ${vars.rule}`,
   background: "transparent",
   color: vars.muted,
@@ -284,7 +285,7 @@ export const railNewButton = style({
     "&:hover": {
       color: vars.ink,
       borderColor: vars.glass.stroke,
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
   },
 });
@@ -293,10 +294,10 @@ export const mainCard = style([
   cardBase,
   {
     border: `1px solid ${vars.rule}`,
-    borderRadius: 14,
+    borderRadius: radii["md+2"],
     transition: themeTransition,
     "@media": {
-      [media.mobile]: { minHeight: 540, borderRadius: 12 },
+      [media.mobile]: { minHeight: 540, borderRadius: radii.md },
     },
   },
 ]);
@@ -316,7 +317,7 @@ export const emptyMain = style({
 export const errorBanner = style({
   margin: "0 28px 14px",
   padding: "8px 12px",
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   background: `color-mix(in srgb, ${vars.status.error} ${colorMixAlpha.lightFill}%, transparent)`,
   border: `1px solid ${vars.status.error}`,
   color: vars.status.error,

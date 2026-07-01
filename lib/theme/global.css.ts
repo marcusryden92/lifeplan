@@ -1,6 +1,7 @@
 import { globalStyle } from "@vanilla-extract/css";
 import { vars } from "./tokens.css";
 import { backdropFilters, colorMixAlpha } from "./effects";
+import { radii } from "./scales";
 
 globalStyle("*, *::before, *::after", {
   boxSizing: "border-box",
@@ -23,7 +24,7 @@ globalStyle("::-webkit-scrollbar-track", {
 globalStyle("::-webkit-scrollbar-thumb", {
   background: vars.glass.bgDeep,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   backgroundClip: "padding-box",
   boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
   backdropFilter: backdropFilters.scrollbar,

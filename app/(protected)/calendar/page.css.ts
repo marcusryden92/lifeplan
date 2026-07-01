@@ -7,6 +7,7 @@ import {
   backdropFilters,
   glass,
   media,
+  radii,
 } from "@/lib/theme";
 
 
@@ -185,7 +186,7 @@ export const engineCogBtn = style({
   boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
   color: vars.ink,
   cursor: "pointer",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   flexShrink: 0,
   transition: themeTransition,
   selectors: {
@@ -199,7 +200,7 @@ export const engineCogAlertDot = style({
   right: 3,
   width: 7,
   height: 7,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1.5px solid ${vars.paper}`,
   transition: themeTransition,
 });
@@ -389,7 +390,7 @@ export const controlSlider = style({
   appearance: "none",
   width: "100%",
   height: 4,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.glass.bgDeep,
   border: `1px solid ${vars.rule}`,
   outline: "none",
@@ -401,7 +402,7 @@ export const controlSlider = style({
       appearance: "none",
       width: 14,
       height: 14,
-      borderRadius: 999,
+      borderRadius: radii.pill,
       background: vars.ink,
       border: `2px solid ${vars.paper}`,
       cursor: "pointer",
@@ -409,7 +410,7 @@ export const controlSlider = style({
     "&::-moz-range-thumb": {
       width: 14,
       height: 14,
-      borderRadius: 999,
+      borderRadius: radii.pill,
       background: vars.ink,
       border: `2px solid ${vars.paper}`,
       cursor: "pointer",
@@ -420,7 +421,7 @@ export const controlSlider = style({
 
 export const engineCard = style({
   padding: "10px 12px",
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   border: `1px solid ${vars.rule}`,
   background: "transparent",
   transition: themeTransition,
@@ -435,7 +436,7 @@ export const engineCardHead = style({
 
 export const engineTag = style({
   padding: "2px 8px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   color: vars.textOnAccent,
   fontSize: 9.5,
   fontWeight: 700,
@@ -471,5 +472,5 @@ export const fcWrap = style({
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  borderRadius: 22,
+  borderRadius: radii["xl+2"],
 });

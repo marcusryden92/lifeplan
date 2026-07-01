@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, radii } from "@/lib/theme";
 
 export const selectedPanel = style({
   flexShrink: 0,
@@ -18,7 +18,7 @@ export const selectedHeaderRow = style({
 export const selectedSwatch = style({
   width: 10,
   height: 10,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   flexShrink: 0,
   boxShadow: `0 0 0 1px color-mix(in srgb, ${vars.ink} 14%, transparent)`,
 });
@@ -82,7 +82,7 @@ export const categoryRow = style({
   maxHeight: 140,
   overflow: "auto",
   border: `1px solid ${vars.rule}`,
-  borderRadius: 8,
+  borderRadius: radii.sm,
   padding: 4,
 });
 
@@ -91,7 +91,7 @@ export const categoryOption = style({
   border: "none",
   background: "transparent",
   padding: "5px 8px",
-  borderRadius: 6,
+  borderRadius: radii.xs,
   fontFamily: vars.font.ui,
   fontSize: 12,
   color: vars.ink,
@@ -116,7 +116,7 @@ export const categoryOption = style({
 export const categoryDot = style({
   width: 8,
   height: 8,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   flexShrink: 0,
 });
 

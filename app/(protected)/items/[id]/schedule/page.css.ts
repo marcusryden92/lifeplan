@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, media } from "@/lib/theme";
+import { vars, themeTransition, media, radii } from "@/lib/theme";
 
 
 export const root = style({
@@ -106,7 +106,7 @@ export const emptyState = style({
 export const pastToggle = style({
   background: "transparent",
   border: `1px solid ${vars.rule}`,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   padding: "6px 14px",
   fontFamily: vars.font.ui,
   fontSize: 12,

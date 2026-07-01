@@ -1,5 +1,5 @@
 ﻿import { globalStyle, style } from "@vanilla-extract/css";
-import { vars, contentWidth, media } from "@/lib/theme";
+import { vars, contentWidth, media, radii } from "@/lib/theme";
 
 
 // ---------- page chrome ----------
@@ -54,7 +54,7 @@ export const navActions = style({
 // margin) since the page no longer pads horizontally.
 export const hero = style({
   position: "relative",
-  borderRadius: 30,
+  borderRadius: radii["3xl"],
   overflow: "hidden",
   isolation: "isolate",
   background: vars.paper,
@@ -62,7 +62,7 @@ export const hero = style({
   marginInline: 12,
   "@media": {
     [media.mobile]: {
-      borderRadius: 0,
+      borderRadius: radii.none,
       height: "calc(100vh * 2 / 3)",
       marginInline: 0,
     },
@@ -378,7 +378,7 @@ export const featureIconWrap = style({
   justifyContent: "center",
   width: 168,
   height: 168,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: `color-mix(in srgb, ${vars.ink} 5%, transparent)`,
   color: vars.ink,
   "@media": {
@@ -434,7 +434,7 @@ export const closeSection = style({
 });
 
 export const closeCard = style({
-  borderRadius: 30,
+  borderRadius: radii["3xl"],
   background: vars.ink,
   color: vars.paper,
   padding: "clamp(72px, 9vw, 120px) clamp(32px, 6vw, 96px)",
@@ -445,7 +445,7 @@ export const closeCard = style({
   textAlign: "center",
   gap: 14,
   "@media": {
-    [media.mobile]: { padding: "64px 28px", borderRadius: 0, marginInline: 0 },
+    [media.mobile]: { padding: "64px 28px", borderRadius: radii.none, marginInline: 0 },
   },
 });
 

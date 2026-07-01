@@ -1,9 +1,10 @@
-import { style, keyframes } from "@vanilla-extract/css";
+﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
   vars,
   themeTransition,
   themeDark,
   interactiveTransition,
+  radii,
 } from "@/lib/theme";
 
 const lockedShake = keyframes({
@@ -19,7 +20,7 @@ export const drawer = style({
   padding: "16px 18px",
   borderLeft: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
-  borderBottomRightRadius: 18,
+  borderBottomRightRadius: radii["lg+2"],
   height: "100%",
   minHeight: 0,
   overflow: "auto",
@@ -42,14 +43,14 @@ export const drawerClose = style({
   justifyContent: "center",
   width: 26,
   height: 26,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: "none",
   background: "transparent",
   color: vars.muted,
   cursor: "pointer",
   transition: themeTransition,
   selectors: {
-    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
   },
 });
 
@@ -107,7 +108,7 @@ export const stepperBtn = style({
   height: 26,
   border: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bg,
-  borderRadius: 6,
+  borderRadius: radii.xs,
   color: vars.ink,
   cursor: "pointer",
   transition: themeTransition,
@@ -121,7 +122,7 @@ export const stepperValue = style({
   padding: "5px 10px",
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 8,
+  borderRadius: radii.sm,
   fontFamily: vars.font.ui,
   fontSize: 13.5,
   fontWeight: 600,
@@ -140,7 +141,7 @@ export const stepperValue = style({
 export const dateInput = style({
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 8,
+  borderRadius: radii.sm,
   padding: "8px 36px 8px 12px",
   fontFamily: vars.font.ui,
   fontSize: 13,
@@ -171,7 +172,7 @@ export const dateClearBtn = style({
   justifyContent: "center",
   width: 22,
   height: 22,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: "none",
   background: "transparent",
   color: vars.muted,
@@ -181,7 +182,7 @@ export const dateClearBtn = style({
   selectors: {
     "&:hover": {
       color: vars.ink,
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
     "&:focus-visible": {
       outline: `1px solid ${vars.accent.primary}`,
@@ -201,7 +202,7 @@ export const completeCheckbox = style({
   justifyContent: "center",
   width: 16,
   height: 16,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1.5px solid ${vars.muted}`,
   background: "transparent",
   color: vars.muted,

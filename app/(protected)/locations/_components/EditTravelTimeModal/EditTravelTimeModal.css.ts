@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+﻿import { style } from "@vanilla-extract/css";
 import {
   vars,
   themeTransition,
@@ -7,6 +7,7 @@ import {
   backdropFilters,
   interactiveTransition,
   formInput,
+  radii,
 } from "@/lib/theme";
 
 const FADE_MS = 160;
@@ -103,7 +104,7 @@ export const periodName = style({
 export const periodInput = style([
   formInput({ variant: "boxed" }),
   {
-    borderRadius: 8,
+    borderRadius: radii.sm,
     padding: "6px 10px",
     fontSize: 13,
     fontWeight: 600,
@@ -138,7 +139,7 @@ export const revertBtn = style({
   padding: 0,
   transition: interactiveTransition("color", "background-color", "opacity"),
   selectors: {
-    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
     "&:disabled": { opacity: 0.25, cursor: "default" },
   },
 });

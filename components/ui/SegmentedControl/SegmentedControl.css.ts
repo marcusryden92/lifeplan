@@ -1,11 +1,11 @@
-import { style } from "@vanilla-extract/css";
-import { vars, DURATIONS } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, DURATIONS, radii } from "@/lib/theme";
 
 export const segmentedControl = style({
   position: "relative",
   display: "inline-grid",
   padding: 3,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
 });
@@ -15,7 +15,7 @@ export const segmentedThumb = style({
   top: 3,
   bottom: 3,
   left: 3,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.ink,
   transition: `transform ${DURATIONS.collapse}s cubic-bezier(0.4, 0, 0.2, 1), width ${DURATIONS.collapse}s cubic-bezier(0.4, 0, 0.2, 1)`,
   zIndex: 0,
@@ -28,7 +28,7 @@ export const segmentedButton = style({
   border: "none",
   background: "transparent",
   padding: "5px 14px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   cursor: "pointer",
   display: "inline-flex",
   alignItems: "center",

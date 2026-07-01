@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+﻿import { style } from "@vanilla-extract/css";
 import { vars, popover } from "@/lib/theme";
 
 // Absolute-positioned overlay anchored to its position: relative wrap.
@@ -35,7 +35,7 @@ export const predictionRow = style({
   borderBottom: `1px solid ${vars.glass.stroke}`,
   selectors: {
     "&:last-child": { borderBottom: "none" },
-    "&:hover": { background: vars.glass.bgSoft },
+    "&:hover": { background: vars.interactive.hoverFill },
   },
 });
 

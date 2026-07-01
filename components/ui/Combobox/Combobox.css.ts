@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, radii } from "@/lib/theme";
 
 export const comboboxWrap = style({
   position: "relative",
@@ -11,7 +11,7 @@ export const comboboxTrigger = style({
   alignItems: "center",
   gap: 6,
   padding: "5px 10px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.glass.bgDeep,
   border: `1px solid ${vars.glass.stroke}`,
   fontSize: 12,
@@ -53,7 +53,7 @@ export const comboboxMenu = style({
   overflow: "auto",
   background: vars.paper,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 12,
+  borderRadius: radii.md,
   boxShadow: vars.shadow.panel,
   zIndex: 100,
   padding: 4,
@@ -68,7 +68,7 @@ export const comboboxOption = style({
   alignItems: "center",
   gap: 8,
   padding: "7px 10px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   background: "transparent",
   border: "none",
   cursor: "pointer",
@@ -81,7 +81,7 @@ export const comboboxOption = style({
   transition: themeTransition,
   selectors: {
     "&:hover": {
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
   },
 });

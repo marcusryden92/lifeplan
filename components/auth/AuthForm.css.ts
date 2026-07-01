@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, formInput, colorMixAlpha, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, formInput, colorMixAlpha, themeTransition, radii } from "@/lib/theme";
 
 export const form = style({
   display: "flex",
@@ -65,7 +65,7 @@ const alertBase = style({
   fontFamily: vars.font.ui,
   fontSize: 12,
   padding: "8px 12px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   display: "flex",
   alignItems: "center",
   gap: 8,

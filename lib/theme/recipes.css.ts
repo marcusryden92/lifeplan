@@ -179,7 +179,7 @@ export const pillBtn = recipe({
         border: `1px solid ${vars.ink}`,
         selectors: {
           "&:hover:not(:disabled)": {
-            background: vars.glass.bgSoft,
+            background: vars.interactive.hoverFill,
           },
         },
       },

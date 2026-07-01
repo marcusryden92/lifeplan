@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, radii } from "@/lib/theme";
 
 export const kbd = style({
   display: "inline-flex",
@@ -12,7 +12,7 @@ export const kbd = style({
   color: vars.inkSoft,
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.rule}`,
-  borderRadius: 6,
+  borderRadius: radii.xs,
   padding: "2px 6px",
   transition: themeTransition,
 });

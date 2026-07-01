@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, interactiveTransition, media } from "@/lib/theme";
+import { vars, themeTransition, interactiveTransition, media, radii } from "@/lib/theme";
 
 
 export const editor = style({
@@ -37,7 +37,7 @@ export const headerActions = style({
 export const headerSwatch = style({
   width: 52,
   height: 52,
-  borderRadius: 14,
+  borderRadius: radii["md+2"],
   border: `1px solid ${vars.glass.stroke}`,
   display: "flex",
   alignItems: "center",
@@ -116,7 +116,7 @@ export const headerNamePencil = style({
   justifyContent: "center",
   width: 28,
   height: 28,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: "none",
   background: "transparent",
   color: vars.muted,
@@ -126,7 +126,7 @@ export const headerNamePencil = style({
   transition: interactiveTransition("opacity", "color", "background-color"),
   selectors: {
     [`${headerNameRow}:hover &`]: { opacity: 1 },
-    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
     "&:focus-visible": { opacity: 1 },
   },
 });
@@ -200,7 +200,7 @@ export const swatchChip = style({
   width: 22,
   height: 22,
   border: `1.5px solid ${vars.rule}`,
-  borderRadius: 6,
+  borderRadius: radii.xs,
   padding: 0,
   cursor: "pointer",
   flexShrink: 0,
@@ -226,7 +226,7 @@ export const strictToggle = style({
   width: 38,
   height: 22,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: `color-mix(in srgb, ${vars.ink} 6%, transparent)`,
   cursor: "pointer",
   padding: 2,
@@ -291,7 +291,7 @@ export const subsectionLabel = style({
 export const classificationNote = style({
   padding: "14px 16px",
   border: `1px dashed ${vars.rule}`,
-  borderRadius: 12,
+  borderRadius: radii.md,
   background: vars.glass.bgSoft,
   fontFamily: vars.font.ui,
   fontSize: 12.5,
@@ -319,7 +319,7 @@ export const subCategoryRow = style({
   gap: 12,
   padding: "8px 12px",
   border: `1px solid ${vars.rule}`,
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   background: "transparent",
   cursor: "pointer",
   textAlign: "left",
@@ -329,7 +329,7 @@ export const subCategoryRow = style({
   transition: themeTransition,
   selectors: {
     "&:hover": {
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
       borderColor: vars.glass.stroke,
     },
   },
@@ -338,7 +338,7 @@ export const subCategoryRow = style({
 export const subCategoryDot = style({
   width: 9,
   height: 9,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   flexShrink: 0,
 });
 
@@ -375,7 +375,7 @@ export const inlineRowTight = style({
 export const parentOptionDot = style({
   width: 9,
   height: 9,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   flexShrink: 0,
 });
 

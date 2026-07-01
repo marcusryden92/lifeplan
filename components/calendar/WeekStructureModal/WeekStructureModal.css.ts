@@ -1,7 +1,7 @@
-import { style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style, globalStyle } from "@vanilla-extract/css";
+import { vars, themeTransition, radii } from "@/lib/theme";
 
-// Modal fade duration in ms — used by both CSS transition and the JS unmount timer.
+// Modal fade duration in ms â€” used by both CSS transition and the JS unmount timer.
 export const MODAL_FADE_MS = 220;
 
 export const overlay = style({
@@ -67,7 +67,7 @@ export const modeToggle = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
   padding: 3,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: `color-mix(in srgb, ${vars.paper} 10%, transparent)`,
   border: `1px solid color-mix(in srgb, ${vars.paper} 18%, transparent)`,
 });
@@ -78,7 +78,7 @@ export const modeToggleThumb = style({
   bottom: 3,
   left: 3,
   width: "calc(50% - 3px)",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.paper,
   transition: "transform 0.22s cubic-bezier(0.4, 0, 0.2, 1)",
   zIndex: 0,
@@ -96,7 +96,7 @@ export const modeToggleButton = style({
   border: "none",
   background: "transparent",
   padding: "5px 18px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   fontFamily: vars.font.ui,
   fontSize: 12,
   fontWeight: 600,
@@ -175,7 +175,7 @@ export const calendarWrap = style({
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  borderRadius: 14,
+  borderRadius: radii["md+2"],
   border: `1px solid ${vars.rule}`,
 });
 
@@ -203,7 +203,7 @@ export const errorBanner = style({
   zIndex: 1,
   margin: "0 18px 12px",
   padding: "10px 14px",
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   border: `1px solid color-mix(in srgb, ${vars.status.error} 60%, transparent)`,
   background: `color-mix(in srgb, ${vars.status.error} 12%, transparent)`,
   color: vars.ink,
@@ -228,7 +228,7 @@ export const errorDismiss = style({
 
 // Doubled selector (`&&`) beats the `pillBtn` recipe on specificity so the
 // paper-tinted overrides actually win on top of `variant="glass"`, which sets
-// `color: vars.ink` — that would render as dark text on the dark banner.
+// `color: vars.ink` â€” that would render as dark text on the dark banner.
 export const cancelButtonStyle = style({
   selectors: {
     "&&": {

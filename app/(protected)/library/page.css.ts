@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, media } from "@/lib/theme";
+import { vars, themeTransition, media, radii } from "@/lib/theme";
 
 
 export const page = style({
@@ -128,7 +128,7 @@ export const railRow = style({
   alignItems: "center",
   gap: 8,
   padding: "5px 8px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   cursor: "pointer",
   fontSize: 13.5,
   fontFamily: vars.font.ui,
@@ -140,7 +140,7 @@ export const railRow = style({
   width: "100%",
   selectors: {
     "&:hover": {
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
   },
 });
@@ -206,7 +206,7 @@ export const treeColorDot = style({
   display: "inline-block",
   width: 9,
   height: 9,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   flexShrink: 0,
 });
 
@@ -214,7 +214,7 @@ export const treeNoColor = style({
   display: "inline-block",
   width: 9,
   height: 9,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1px dashed ${vars.muted}`,
   opacity: 0.5,
   flexShrink: 0,
@@ -250,7 +250,7 @@ export const searchWrap = style({
   alignItems: "center",
   gap: 6,
   padding: "6px 12px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bgSoft,
   flex: 1,
@@ -383,7 +383,7 @@ export const tableRow = style({
   transition: themeTransition,
   selectors: {
     "&:hover": {
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
   },
 });

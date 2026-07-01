@@ -1,4 +1,4 @@
-import { style, keyframes } from "@vanilla-extract/css";
+﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
   vars,
   themeTransition,
@@ -6,6 +6,7 @@ import {
   backdropFilters,
   colorMixAlpha,
   formInput,
+  radii,
 } from "@/lib/theme";
 
 const FADE_MS = 160;
@@ -154,7 +155,7 @@ export const errorSlot = style({
 
 export const errorBlock = style({
   padding: "8px 12px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   background: `color-mix(in srgb, ${vars.status.error} ${colorMixAlpha.lightFill}%, transparent)`,
   border: `1px solid ${vars.status.error}`,
   color: vars.status.error,

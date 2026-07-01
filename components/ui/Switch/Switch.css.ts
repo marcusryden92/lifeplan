@@ -1,11 +1,11 @@
-import { style } from "@vanilla-extract/css";
-import { vars, interactive2Transition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, interactive2Transition, radii } from "@/lib/theme";
 
 export const root = style({
   position: "relative",
   width: 32,
   height: 18,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bgSoft,
   cursor: "pointer",
@@ -32,7 +32,7 @@ export const thumb = style({
   display: "block",
   width: 14,
   height: 14,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.paper,
   transform: "translateX(1px)",
   transition: interactive2Transition("transform"),

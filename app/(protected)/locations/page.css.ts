@@ -1,5 +1,5 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition, colorMixAlpha, media } from "@/lib/theme";
+import { vars, themeTransition, colorMixAlpha, media, radii } from "@/lib/theme";
 
 
 export const page = style({
@@ -67,7 +67,7 @@ export const headActions = style({
 // keeps the action cluster right-aligned whether the banner is present or not.
 export const banner = style({
   padding: "5px 12px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   fontSize: 11.5,
   fontFamily: vars.font.ui,
   fontWeight: 500,
@@ -123,12 +123,12 @@ export const rail = style([
   cardBase,
   {
     border: `1px solid ${vars.rule}`,
-    borderRadius: 14,
+    borderRadius: radii["md+2"],
     padding: "12px 8px 8px",
     background: "transparent",
     transition: themeTransition,
     "@media": {
-      [media.mobile]: { minHeight: "auto", borderRadius: 12 },
+      [media.mobile]: { minHeight: "auto", borderRadius: radii.md },
     },
   },
 ]);
@@ -158,7 +158,7 @@ export const railRow = style({
   alignItems: "flex-start",
   gap: 8,
   padding: "8px 8px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   cursor: "pointer",
   fontSize: 13.5,
   fontFamily: vars.font.ui,
@@ -169,7 +169,7 @@ export const railRow = style({
   textAlign: "left",
   width: "100%",
   selectors: {
-    "&:hover": { background: vars.glass.bgSoft },
+    "&:hover": { background: vars.interactive.hoverFill },
   },
 });
 
@@ -234,7 +234,7 @@ export const railRowTag = style({
 export const railRowTagDot = style({
   width: 6,
   height: 6,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   flexShrink: 0,
 });
 
@@ -267,7 +267,7 @@ export const railNewButton = style({
   justifyContent: "center",
   gap: 6,
   padding: "8px 10px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   border: `1px dashed ${vars.rule}`,
   background: "transparent",
   color: vars.muted,
@@ -280,7 +280,7 @@ export const railNewButton = style({
     "&:hover": {
       color: vars.ink,
       borderColor: vars.glass.stroke,
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
     "&:disabled": {
       opacity: 0.4,
@@ -293,13 +293,13 @@ export const matrixPane = style([
   cardBase,
   {
     border: `1px solid ${vars.rule}`,
-    borderRadius: 14,
+    borderRadius: radii["md+2"],
     padding: "16px 18px",
     gap: 12,
     overflow: "auto",
     transition: themeTransition,
     "@media": {
-      [media.mobile]: { minHeight: 540, borderRadius: 12 },
+      [media.mobile]: { minHeight: 540, borderRadius: radii.md },
     },
   },
 ]);
@@ -372,7 +372,7 @@ export const matrixFooter = style({
   gap: 10,
   marginTop: "auto",
   padding: "8px 12px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
   fontSize: 11.5,

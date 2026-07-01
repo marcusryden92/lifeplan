@@ -1,4 +1,4 @@
-import { style, keyframes } from "@vanilla-extract/css";
+﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
   vars,
   themeTransition,
@@ -6,6 +6,7 @@ import {
   backdropFilters,
   colorMixAlpha,
   formInput,
+  radii,
 } from "@/lib/theme";
 
 const FADE_MS = 160;
@@ -137,7 +138,7 @@ export const cascadeNote = style({
   alignItems: "flex-start",
   gap: 6,
   padding: "8px 10px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   background: `color-mix(in srgb, ${vars.status.warning} ${colorMixAlpha.lightFill}%, transparent)`,
   border: `1px solid ${vars.status.warning}`,
   color: vars.status.warning,
@@ -161,7 +162,7 @@ export const errorSlot = style({
 
 export const errorBlock = style({
   padding: "8px 12px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   background: `color-mix(in srgb, ${vars.status.error} ${colorMixAlpha.lightFill}%, transparent)`,
   border: `1px solid ${vars.status.error}`,
   color: vars.status.error,

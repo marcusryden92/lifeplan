@@ -147,6 +147,8 @@ const colorProps = defineProperties({
       glassBg: vars.glass.bg,
       glassBgDeep: vars.glass.bgDeep,
       glassBgSoft: vars.glass.bgSoft,
+      hoverFill: vars.interactive.hoverFill,
+      selectedFill: vars.interactive.selectedFill,
       accent: vars.accent.primary,
       now: vars.accent.now,
       done: vars.accent.done,

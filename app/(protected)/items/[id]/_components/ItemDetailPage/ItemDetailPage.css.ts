@@ -5,6 +5,7 @@ import {
   themeDark,
   interactiveTransition,
   media,
+  radii,
 } from "@/lib/theme";
 
 const lockedShake = keyframes({
@@ -39,7 +40,7 @@ export const progressMetaStrong = style({
 export const progressTrack = style({
   marginTop: 9,
   height: 8,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.rule,
   position: "relative",
   overflow: "hidden",
@@ -49,7 +50,7 @@ export const progressTrack = style({
 export const progressFill = style({
   position: "absolute",
   inset: 0,
-  borderRadius: 999,
+  borderRadius: radii.pill,
 });
 
 // Task completion row â€” sized to match the left column of overviewGrid (50%
@@ -81,7 +82,7 @@ export const completeCheckbox = style({
   justifyContent: "center",
   width: 22,
   height: 22,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1.5px solid ${vars.muted}`,
   background: "transparent",
   color: vars.muted,
@@ -127,7 +128,7 @@ export const completeLabel = style({
 export const completeDateInput = style({
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 8,
+  borderRadius: radii.sm,
   padding: "0 32px 0 12px",
   fontFamily: vars.font.ui,
   fontSize: 13.5,

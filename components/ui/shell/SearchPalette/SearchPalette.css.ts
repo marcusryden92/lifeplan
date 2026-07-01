@@ -143,7 +143,7 @@ export const item = style({
   textDecoration: "none",
   selectors: {
     "&:hover": {
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
   },
 });

@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, media } from "@/lib/theme";
+import { vars, themeTransition, media, radii } from "@/lib/theme";
 
 
 export const bezelFrame = style({
@@ -20,7 +20,7 @@ export const canvas = style({
   background: vars.paper,
   color: vars.ink,
   fontFamily: vars.font.ui,
-  borderRadius: 30,
+  borderRadius: radii["3xl"],
   flex: 1,
   minWidth: 0,
   minHeight: 0,
@@ -32,7 +32,7 @@ export const canvas = style({
   transition: themeTransition,
   "@media": {
     [media.mobile]: {
-      borderRadius: 0,
+      borderRadius: radii.none,
     },
   },
 });

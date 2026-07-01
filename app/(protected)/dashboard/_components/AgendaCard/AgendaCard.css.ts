@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, backdropFilters, media } from "@/lib/theme";
+import { vars, themeTransition, backdropFilters, media, radii } from "@/lib/theme";
 
 
 // Deliberately does NOT use the glass() recipe: a parent backdrop-filter
@@ -16,7 +16,7 @@ export const leftCard = style({
   overflow: "hidden",
   background: vars.glass.bg,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 22,
+  borderRadius: radii["xl+2"],
   boxShadow: vars.shadow.panel,
   transition: themeTransition,
   "@media": {
@@ -34,8 +34,8 @@ export const leftCardHeader = style({
   right: 0,
   zIndex: 100,
   padding: "16px 20px",
-  borderTopLeftRadius: 22,
-  borderTopRightRadius: 22,
+  borderTopLeftRadius: radii["xl+2"],
+  borderTopRightRadius: radii["xl+2"],
   borderBottom: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bgDeep,
   backdropFilter: backdropFilters.panel,

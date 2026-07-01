@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, themeDark } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, themeDark, radii } from "@/lib/theme";
 
 export const fieldStack = style({
   display: "flex",
@@ -21,7 +21,7 @@ export const fieldLabel = style({
 export const dateInput = style({
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   padding: "8px 36px 8px 12px",
   fontFamily: vars.font.ui,
   fontSize: 13,
@@ -59,7 +59,7 @@ export const dateClearBtn = style({
   justifyContent: "center",
   width: 22,
   height: 22,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: "none",
   background: "transparent",
   color: vars.muted,
@@ -69,7 +69,7 @@ export const dateClearBtn = style({
   selectors: {
     "&:hover": {
       color: vars.ink,
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
     "&:focus-visible": {
       outline: `1px solid ${vars.accent.primary}`,

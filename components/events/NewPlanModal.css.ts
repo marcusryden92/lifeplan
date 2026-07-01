@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, backdropFilters, popover } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, backdropFilters, popover, radii } from "@/lib/theme";
 
 export const FADE_MS = 180;
 
@@ -73,7 +73,7 @@ export const titleInput = style({
   color: vars.ink,
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   outline: "none",
   boxSizing: "border-box",
 });

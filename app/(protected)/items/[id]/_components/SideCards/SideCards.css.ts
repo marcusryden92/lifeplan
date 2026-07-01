@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, radii } from "@/lib/theme";
 
 export const card = style({
   padding: "12px 0",
@@ -75,7 +75,7 @@ export const nextCardBody = style({
 
 export const helperSuggestion = style({
   padding: "8px 12px",
-  borderRadius: 14,
+  borderRadius: radii["md+2"],
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.rule}`,
   fontSize: 12.5,
@@ -94,7 +94,7 @@ export const helperPillRow = style({
 
 export const helperPill = style({
   padding: "3px 10px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.glass.bgDeep,
   border: `1px solid ${vars.glass.stroke}`,
   fontSize: 11,
