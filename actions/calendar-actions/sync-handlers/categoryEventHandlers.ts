@@ -25,7 +25,7 @@ export function handleCategoryEventChanges(
   if (idsToDelete.length) {
     operations.push(
       db.categoryEvent.deleteMany({
-        where: { id: { in: idsToDelete } },
+        where: { userId, id: { in: idsToDelete } },
       }),
     );
   }

@@ -23,7 +23,7 @@ export function handleTravelEventChanges(
   if (idsToDelete.length) {
     operations.push(
       db.travelEvent.deleteMany({
-        where: { id: { in: idsToDelete } },
+        where: { userId, id: { in: idsToDelete } },
       }),
     );
   }

@@ -13,6 +13,7 @@ model SimpleEvent {
   user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   extendedProps   EventExtendedProps?
 
+  @@index([userId])
   @@map("SimpleEvents")
 }
 
@@ -54,6 +55,7 @@ model Planner {
   location           Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
   category           Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
   @@map("Planners")
 }
 
@@ -71,6 +73,7 @@ model EventTemplate {
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   location   Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
 
+  @@index([userId])
   @@map("EventTemplates")
 }
 

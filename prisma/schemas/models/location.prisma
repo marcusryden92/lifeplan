@@ -58,6 +58,7 @@ model TravelTime {
 
   // Note: No self-referential entries (fromLocationId != toLocationId enforced in application code)
   @@unique([fromLocationId, toLocationId, transportMode])
+  @@index([userId])
   @@map("TravelTimes")
 }
 
@@ -100,5 +101,6 @@ model TravelEvent {
   createdAt String @default(dbgenerated("NOW()::text"))
   updatedAt String
 
+  @@index([userId])
   @@map("TravelEvents")
 }

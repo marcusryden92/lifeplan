@@ -59,7 +59,6 @@ export type DatabaseChanges = {
 };
 
 export async function handleServerTransaction(
-  userId: string,
   clientKnownDataVersion: number,
   planner: Planner[],
   previousPlanner: { current: Planner[] },
@@ -190,7 +189,6 @@ export async function handleServerTransaction(
   );
 
   const response = await syncCalendarData(
-    userId,
     databaseChanges,
     clientKnownDataVersion,
   );

@@ -51,9 +51,11 @@ export function useFetchCalendarData(
       setError(null);
 
       try {
-        const response = await fetchCalendarData(userId);
+        const response = await fetchCalendarData();
 
-        if (!response.data) return null;
+        if (!response.success) {
+          throw new Error(response.error);
+        }
 
         const {
           planner,

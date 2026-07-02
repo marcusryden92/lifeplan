@@ -21,6 +21,10 @@ import calendarSlice from "@/redux/slices/calendarSlice";
 import { handleServerTransaction } from "@/utils/server-handlers/compareCalendarData";
 import type { FreshState } from "@/actions/calendar-actions/fetchFreshState";
 
+// Backoff schedule for transport-level sync failures (request never reached
+// the server, or the response was lost). Server-side rejections don't retry.
+const RETRY_DELAYS_MS = [2_000, 5_000, 15_000];
+
 const useCalendarServerSync = (
   userId: string | undefined,
   calendarState: {
@@ -187,108 +191,145 @@ const useCalendarServerSync = (
     [dispatch],
   );
 
-  useEffect(() => {
-    const processServerSync = async () => {
-      if (!userId) throw new Error("Id missing in processServerSync");
+  // Latest state mirrored into a ref so a queued re-sync reads fresh values
+  // instead of the (possibly stale) closure the timer was created with.
+  const latestStateRef = useRef(calendarState);
+  latestStateRef.current = calendarState;
 
-      try {
-        const response = await handleServerTransaction(
-          userId,
-          knownDataVersion.current,
-          planner,
-          previousPlanner,
-          calendar,
-          previousCalendar,
-          template,
-          previousTemplate,
-          categories,
-          previousCategories,
-          categoryEvents,
-          previousCategoryEvents,
-          travelEvents,
-          previousTravelEvents,
-          engineMessages,
-          previousEngineMessages,
-          locations,
-          previousLocations,
-          travelTimes,
-          previousTravelTimes,
-        );
+  // Serialization guard. The 300ms debounce only cancels unfired timers; once
+  // a sync is in flight, a second one dispatched in parallel would read the
+  // pre-bump dataVersion, get rejected as stale, and wholesale-adopt a server
+  // snapshot that lacks the newer edit — silent data loss with no actual
+  // concurrency. All syncs funnel through runSync, which loops until quiet.
+  const syncInFlightRef = useRef(false);
+  const resyncQueuedRef = useRef(false);
+  const retryAttemptRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-        if (response.success) {
-          previousPlanner.current = planner;
-          previousCalendar.current = calendar;
-          previousTemplate.current = template;
-          previousCategories.current = categories;
-          previousCategoryEvents.current = categoryEvents;
-          previousTravelEvents.current = travelEvents;
-          previousEngineMessages.current = engineMessages;
-          previousLocations.current = locations;
-          previousTravelTimes.current = travelTimes;
-          knownDataVersion.current = response.newDataVersion;
-        } else if (response.reason === "stale") {
-          // Server rejected this sync because another writer moved the
-          // dataVersion forward. Discard the in-flight edit and adopt the
-          // server's current snapshot wholesale — partial application across
-          // a DAG-shaped dataset can't be done safely.
-          console.warn(
-            "Sync rejected as stale; adopting fresh server state",
+  const hasPendingChanges = useCallback(
+    (s: typeof calendarState) =>
+      !(
+        JSON.stringify(previousPlanner.current) === JSON.stringify(s.planner) &&
+        JSON.stringify(previousCalendar.current) ===
+          JSON.stringify(s.calendar) &&
+        JSON.stringify(previousTemplate.current) ===
+          JSON.stringify(s.template) &&
+        JSON.stringify(previousCategories.current) ===
+          JSON.stringify(s.categories) &&
+        JSON.stringify(previousCategoryEvents.current) ===
+          JSON.stringify(s.categoryEvents) &&
+        JSON.stringify(previousTravelEvents.current) ===
+          JSON.stringify(s.travelEvents) &&
+        JSON.stringify(previousEngineMessages.current) ===
+          JSON.stringify(s.engineMessages) &&
+        JSON.stringify(previousLocations.current) ===
+          JSON.stringify(s.locations) &&
+        JSON.stringify(previousTravelTimes.current) ===
+          JSON.stringify(s.travelTimes)
+      ),
+    [],
+  );
+
+  const runSync = useCallback(async () => {
+    if (syncInFlightRef.current) {
+      resyncQueuedRef.current = true;
+      return;
+    }
+    syncInFlightRef.current = true;
+
+    try {
+      do {
+        resyncQueuedRef.current = false;
+        const snapshot = latestStateRef.current;
+        if (!hasPendingChanges(snapshot)) break;
+
+        try {
+          const response = await handleServerTransaction(
+            knownDataVersion.current,
+            snapshot.planner,
+            previousPlanner,
+            snapshot.calendar,
+            previousCalendar,
+            snapshot.template,
+            previousTemplate,
+            snapshot.categories,
+            previousCategories,
+            snapshot.categoryEvents,
+            previousCategoryEvents,
+            snapshot.travelEvents,
+            previousTravelEvents,
+            snapshot.engineMessages,
+            previousEngineMessages,
+            snapshot.locations,
+            previousLocations,
+            snapshot.travelTimes,
+            previousTravelTimes,
           );
-          adoptFreshServerState(response.freshState);
-        } else {
-          console.warn("Server sync response not successful:", response);
-          rollbackToLastConfirmedState();
+          retryAttemptRef.current = 0;
+
+          if (response.success) {
+            // Advance refs to the snapshot that was actually sent — edits made
+            // during the request stay diffable and trigger the next loop pass.
+            previousPlanner.current = snapshot.planner;
+            previousCalendar.current = snapshot.calendar;
+            previousTemplate.current = snapshot.template;
+            previousCategories.current = snapshot.categories;
+            previousCategoryEvents.current = snapshot.categoryEvents;
+            previousTravelEvents.current = snapshot.travelEvents;
+            previousEngineMessages.current = snapshot.engineMessages;
+            previousLocations.current = snapshot.locations;
+            previousTravelTimes.current = snapshot.travelTimes;
+            knownDataVersion.current = response.newDataVersion;
+          } else if (response.reason === "stale") {
+            // Server rejected this sync because another writer moved the
+            // dataVersion forward. Discard the in-flight edit and adopt the
+            // server's current snapshot wholesale — partial application across
+            // a DAG-shaped dataset can't be done safely.
+            console.warn("Sync rejected as stale; adopting fresh server state");
+            adoptFreshServerState(response.freshState);
+          } else {
+            // The server received the diff and rejected it — replaying the
+            // same diff would fail the same way, so snap back to the last
+            // confirmed state rather than diverging further.
+            console.warn("Server sync response not successful:", response);
+            rollbackToLastConfirmedState();
+          }
+        } catch (error) {
+          // Transport-level failure: the request may never have reached the
+          // server. Rolling back would destroy real edits over a network blip
+          // — keep local state and retry with backoff instead. If retries run
+          // out, edits stay pending and the next state change re-triggers.
+          const attempt = retryAttemptRef.current;
+          if (attempt < RETRY_DELAYS_MS.length) {
+            retryAttemptRef.current = attempt + 1;
+            console.warn(
+              `Sync transport error; retrying (${attempt + 1}/${RETRY_DELAYS_MS.length})`,
+              error,
+            );
+            retryTimerRef.current = setTimeout(
+              () => void runSync(),
+              RETRY_DELAYS_MS[attempt],
+            );
+          } else {
+            retryAttemptRef.current = 0;
+            console.error(
+              "Sync failed after retries; local edits stay pending",
+              error,
+            );
+          }
+          return;
         }
-      } catch (error) {
-        console.error("Error processing server sync:", error);
-        rollbackToLastConfirmedState();
-      }
-    };
-
-    if (!isInitialized) {
-      console.log("⏭ Skipping sync: not initialized");
-      return;
+      } while (resyncQueuedRef.current);
+    } finally {
+      syncInFlightRef.current = false;
     }
+  }, [hasPendingChanges, adoptFreshServerState, rollbackToLastConfirmedState]);
 
-    const plannerSame =
-      JSON.stringify(previousPlanner.current) === JSON.stringify(planner);
-    const calendarSame =
-      JSON.stringify(previousCalendar.current) === JSON.stringify(calendar);
-    const templateSame =
-      JSON.stringify(previousTemplate.current) === JSON.stringify(template);
-    const categoriesSame =
-      JSON.stringify(previousCategories.current) === JSON.stringify(categories);
-    const categoryEventsSame =
-      JSON.stringify(previousCategoryEvents.current) ===
-      JSON.stringify(categoryEvents);
-    const travelEventsSame =
-      JSON.stringify(previousTravelEvents.current) ===
-      JSON.stringify(travelEvents);
-    const engineMessagesSame =
-      JSON.stringify(previousEngineMessages.current) ===
-      JSON.stringify(engineMessages);
-    const locationsSame =
-      JSON.stringify(previousLocations.current) === JSON.stringify(locations);
-    const travelTimesSame =
-      JSON.stringify(previousTravelTimes.current) ===
-      JSON.stringify(travelTimes);
+  useEffect(() => {
+    if (!isInitialized || !userId) return;
+    if (!hasPendingChanges(latestStateRef.current)) return;
 
-    if (
-      plannerSame &&
-      calendarSame &&
-      templateSame &&
-      categoriesSame &&
-      categoryEventsSame &&
-      travelEventsSame &&
-      engineMessagesSame &&
-      locationsSame &&
-      travelTimesSame
-    ) {
-      console.log("⏭ Skipping sync: no changes detected");
-      return;
-    }
-
-    const timeout = setTimeout(processServerSync, 300);
+    const timeout = setTimeout(() => void runSync(), 300);
 
     return () => {
       clearTimeout(timeout);
@@ -305,7 +346,16 @@ const useCalendarServerSync = (
     travelTimes,
     isInitialized,
     userId,
+    runSync,
+    hasPendingChanges,
   ]);
+
+  useEffect(
+    () => () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    },
+    [],
+  );
 
   return { initializeState, markSynced };
 };

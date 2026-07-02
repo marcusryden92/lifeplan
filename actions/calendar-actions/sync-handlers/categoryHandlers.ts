@@ -39,6 +39,8 @@ export function handleCategoryChanges(
         db,
         tableName: `"Categories"`,
         rows: databaseChanges.category.update,
+        userIdColumn: "userId",
+        userId,
         updatedAtColumn: "updatedAt",
         updatedAt,
         columns: [
@@ -63,6 +65,7 @@ export function handleCategoryChanges(
     operations.push(
       db.category.deleteMany({
         where: {
+          userId,
           id: { in: databaseChanges.category.destroy.map((c) => c.id) },
         },
       }),

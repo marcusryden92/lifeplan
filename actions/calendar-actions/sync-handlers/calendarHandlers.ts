@@ -58,6 +58,7 @@ export function handleCalendarChanges(
     operations.push(
       db.simpleEvent.deleteMany({
         where: {
+          userId,
           id: { in: databaseChanges.calendar.destroy.map((e) => e.id) },
         },
       })

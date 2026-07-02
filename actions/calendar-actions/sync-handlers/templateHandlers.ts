@@ -66,6 +66,7 @@ export function handleTemplateChanges(
     operations.push(
       db.eventTemplate.deleteMany({
         where: {
+          userId,
           id: { in: databaseChanges.template.destroy.map((t) => t.id) },
         },
       })

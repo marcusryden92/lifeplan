@@ -84,7 +84,11 @@ export function generateCalendar(
   // leanCalendar, travelDebug, the [travel] dump in assembleFinalEvents) to
   // items whose start falls within [dateRangeStart, dateRangeEnd]. Either bound
   // can be null to leave that side open.
-  const enableLogging = true;
+  // Off by default: the engine runs on every planner edit, and an enabled
+  // recorder accumulates decision/action/slot-snapshot records for every
+  // failed task on every retry pass — real per-keystroke cost, not just
+  // console noise. Flip locally when debugging.
+  const enableLogging = false;
   const logging = {
     metrics: false,
     failures: false,
@@ -95,11 +99,11 @@ export function generateCalendar(
     locations: false,
     strategySettings: false,
     finalEvents: false,
-    leanCalendar: true,
+    leanCalendar: false,
     staticEventTravelPass: false,
-    dynamicScheduling: true,
-    dateRangeStart: new Date("2026-05-28") as Date | null,
-    dateRangeEnd: new Date("2026-05-30") as Date | null,
+    dynamicScheduling: false,
+    dateRangeStart: null as Date | null,
+    dateRangeEnd: null as Date | null,
   };
 
   const result = new CalendarGenerator(weekStartDay, {

@@ -48,6 +48,7 @@ export function handleTimeWindowChanges(
     operations.push(
       db.categoryTimeWindow.deleteMany({
         where: {
+          userId,
           id: {
             in: databaseChanges.categoryTimeWindow.destroy.map((w) => w.id),
           },

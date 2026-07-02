@@ -1,4 +1,5 @@
 "use server";
+import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import {
   SimpleEvent,
@@ -12,8 +13,14 @@ import {
 import { weekdayToInt } from "@/utils/calendarUtils";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 
-// Fetches the raw data from the database
-export async function fetchCalendarData(userId: string) {
+// Fetches the raw data from the database for the authenticated user.
+export async function fetchCalendarData() {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return { success: false as const, error: "Unauthorized" };
+  }
+
   try {
     // Fetch the user's dataVersion alongside the rest of the bootstrap data.
     // The client seeds its OCC token from this so the first sync after page
@@ -86,7 +93,7 @@ export async function fetchCalendarData(userId: string) {
     }));
 
     return {
-      success: true,
+      success: true as const,
       data: {
         planner: planner,
         calendar: calendarEvents,
@@ -99,10 +106,12 @@ export async function fetchCalendarData(userId: string) {
       },
     };
   } catch (error) {
+    // Log the real error server-side; never return raw error objects across
+    // the action boundary (leaks internals + non-serializable warnings).
     console.error("Failed to fetch calendar data:", error);
     return {
-      success: false,
-      error: error,
+      success: false as const,
+      error: "Failed to fetch calendar data",
     };
   }
 }

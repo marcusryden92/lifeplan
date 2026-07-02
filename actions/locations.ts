@@ -583,10 +583,14 @@ export async function setUseParentLocation(
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
-  await db.planner.update({
-    where: { id: plannerId },
+  const result = await db.planner.updateMany({
+    where: { id: plannerId, userId: session.user.id },
     data: { useParentLocation },
   });
+
+  if (result.count === 0) {
+    throw new Error("Planner item not found");
+  }
 }
 
 /**

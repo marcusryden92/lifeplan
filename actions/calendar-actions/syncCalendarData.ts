@@ -1,5 +1,6 @@
 "use server";
 
+import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
 import { handlePlannerChanges } from "./sync-handlers/plannerHandlers";
@@ -31,10 +32,24 @@ export type SyncResponse =
   | { success: false; reason: "error"; error: string };
 
 export async function syncCalendarData(
-  userId: string,
   databaseChanges: DatabaseChanges,
   clientKnownDataVersion: number,
 ): Promise<SyncResponse> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return { success: false, reason: "error", error: "Unauthorized" };
+  }
+
+  // Empty diffs must not bump dataVersion — a no-op bump forces every other
+  // tab's next sync into stale-adoption, discarding its in-flight edits.
+  const hasChanges = Object.values(databaseChanges).some((group) =>
+    Object.values(group).some((ops) => ops.length > 0),
+  );
+  if (!hasChanges) {
+    return { success: true, newDataVersion: clientKnownDataVersion };
+  }
+
   const now = new Date();
   const updatedAt = now.toISOString();
 
@@ -56,7 +71,7 @@ export async function syncCalendarData(
         const operations = [
           ...handlePlannerChanges(tx, userId, databaseChanges, updatedAt),
           ...handleCalendarChanges(tx, userId, databaseChanges, updatedAt),
-          ...handleExtendedPropsChanges(tx, databaseChanges),
+          ...handleExtendedPropsChanges(tx, userId, databaseChanges),
           ...handleTemplateChanges(tx, userId, databaseChanges, updatedAt),
           ...handleCategoryChanges(tx, userId, databaseChanges, updatedAt),
           ...handleTimeWindowChanges(tx, userId, databaseChanges),
@@ -106,11 +121,13 @@ export async function syncCalendarData(
       const freshState = await fetchFreshState(userId);
       return { success: false, reason: "stale", freshState };
     }
+    // Log the real error server-side; return a generic message so Prisma /
+    // driver internals don't leak across the action boundary.
     console.error("❌ Failed to sync planner and calendar data:", error);
     return {
       success: false,
       reason: "error",
-      error: error instanceof Error ? error.message : String(error),
+      error: "Sync failed",
     };
   }
 }

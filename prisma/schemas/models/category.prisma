@@ -37,6 +37,7 @@ model Category {
   createdAt String @default(dbgenerated("NOW()::text"))
   updatedAt String
 
+  @@index([userId])
   @@map("Categories")
 }
 
@@ -62,11 +63,13 @@ model CategoryTimeWindow {
   // ensures these go away when the window is deleted.
   events CategoryEvent[]
 
+  @@index([userId])
   @@map("CategoryTimeWindows")
 }
 
 model CategoryEvent {
-  // Deterministic id: `${categoryTimeWindowId}-${start}`. Same occurrence on
+  // Deterministic id: `${categoryTimeWindowId}|${YYYY-MM-DD}` (local date key,
+  // see buildCategoryEvents + the expansion-seam test). Same occurrence on
   // a regen produces the same row id, so sync sees no diff unless the slot
   // actually moved. No DB-side autogen needed.
   id String @id
@@ -94,5 +97,6 @@ model CategoryEvent {
   createdAt String @default(dbgenerated("NOW()::text"))
   updatedAt String
 
+  @@index([userId])
   @@map("CategoryEvents")
 }

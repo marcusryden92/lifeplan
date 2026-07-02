@@ -1,5 +1,7 @@
-"use server";
-
+// NOT a server action on purpose: this module is only called server-side with
+// an already-authenticated userId (syncCalendarData's stale path). Exposing it
+// with "use server" would make it a public endpoint that reads arbitrary
+// users' data by id.
 import { db } from "@/lib/db";
 import { weekdayToInt } from "@/utils/calendarUtils";
 import type { WeekDayIntegers } from "@/types/calendarTypes";

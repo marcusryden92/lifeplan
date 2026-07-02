@@ -80,7 +80,10 @@ export function handlePlannerChanges(
   if (databaseChanges.planner.destroy.length) {
     operations.push(
       db.planner.deleteMany({
-        where: { id: { in: databaseChanges.planner.destroy.map((p) => p.id) } },
+        where: {
+          userId,
+          id: { in: databaseChanges.planner.destroy.map((p) => p.id) },
+        },
       })
     );
   }

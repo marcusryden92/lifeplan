@@ -85,9 +85,14 @@ export function scheduleTasksAndGoals(
       continue;
     }
 
-    for (let i = candidates.length - 1; i >= 0; i--) {
-      const item = candidates[i];
+    // Walk candidates in sorted order — category-constrained and
+    // highest-urgency items pick slots first. Removals are collected and
+    // applied after the pass so the walk order matches the sort (the previous
+    // reverse-index splice idiom handed first pick to the lowest-urgency,
+    // unconstrained item, inverting the sorter's intent under contention).
+    const resolvedIds = new Set<string>();
 
+    for (const item of candidates) {
       if (item.plannerType === PlannerType.task) {
         const result = scheduleSingleTask(
           item,
@@ -103,9 +108,9 @@ export function scheduleTasksAndGoals(
 
         if (result.scheduled) {
           if (result.event) events.push(result.event);
-          candidates.splice(i, 1);
+          resolvedIds.add(item.id);
         } else if (result.permanentFailure) {
-          candidates.splice(i, 1);
+          resolvedIds.add(item.id);
         }
       } else if (item.plannerType === PlannerType.goal) {
         const result = scheduleGoal(
@@ -124,9 +129,14 @@ export function scheduleTasksAndGoals(
         );
 
         if (result.scheduled || result.permanentFailure) {
-          candidates.splice(i, 1);
+          resolvedIds.add(item.id);
         }
       }
+    }
+
+    if (resolvedIds.size > 0) {
+      const remaining = candidates.filter((c) => !resolvedIds.has(c.id));
+      candidates.splice(0, candidates.length, ...remaining);
     }
 
     if (candidates.length > 0) {

@@ -24,7 +24,7 @@ export function handleEngineMessageChanges(
   if (destroys.length) {
     operations.push(
       db.engineMessage.deleteMany({
-        where: { id: { in: destroys.map((m) => m.id) } },
+        where: { userId, id: { in: destroys.map((m) => m.id) } },
       }),
     );
   }
