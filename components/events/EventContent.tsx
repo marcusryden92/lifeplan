@@ -1,7 +1,7 @@
 // EventContent.tsx
 import { Check, ArrowRight, Trash2 } from "lucide-react";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { floorMinutes } from "@/utils/calendarUtils";
@@ -29,9 +29,19 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
   const [showPopover, setShowPopover] = useState<boolean>(false);
   const [eventRect, setEventRect] = useState<DOMRect | null>(null);
   const [onHover, setOnHover] = useState<boolean>(false);
-  const [isCompleted, setIsCompleted] = useState<boolean>(
-    !!(completedStartTime && completedEndTime) || false,
-  );
+
+  // Completion is derived from the event data; the override only bridges the
+  // gap between the optimistic click and the regen/sync confirming it. State
+  // seeded once from props would go stale when the event updates in place.
+  const propsCompleted = !!(completedStartTime && completedEndTime);
+  const [optimisticCompleted, setOptimisticCompleted] = useState<
+    boolean | null
+  >(null);
+  const isCompleted = optimisticCompleted ?? propsCompleted;
+
+  useEffect(() => {
+    setOptimisticCompleted(null);
+  }, [propsCompleted]);
 
   if (!event.start || !event.end) return null;
 
@@ -62,7 +72,10 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
     handleClickCompleteTask(
       event,
       isCompleted,
-      setIsCompleted,
+      (value) =>
+        setOptimisticCompleted(
+          typeof value === "function" ? value(isCompleted) : value,
+        ),
       elementRef,
       planner,
       calendar,

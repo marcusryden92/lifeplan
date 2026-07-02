@@ -28,6 +28,10 @@ import type { UserSettings } from "@/types/userTypes";
 import useCalendarStateActions from "@/hooks/useCalendarStateActions";
 import useManuallyRefreshCalendar from "@/hooks/useManuallyRefreshCalendar";
 import useCalendarServerSync from "@/hooks/useCalendarServerSync";
+import type {
+  SerializedLocation,
+  SerializedTravelTime,
+} from "@/redux/slices/schedulingSettingsSlice";
 import { buildInheritedLocationMap, InheritedLocationInfo } from "@/utils/goalPageHandlers";
 
 type CalendarContextType = {
@@ -50,9 +54,32 @@ type CalendarContextType = {
   ) => void;
   manuallyRefreshCalendar: () => void;
   inheritedLocationMap: Map<string, InheritedLocationInfo>;
+  // Direct server actions that bypass the diff sync (Location create needs
+  // Google Places, travel-time refresh needs Google distances) must call this
+  // after dispatching their result to Redux, or the next sync pass treats the
+  // new rows as missing-on-server and re-sends them as creates.
+  markSynced: (
+    kind: "categories" | "locations" | "travelTimes",
+    current: Category[] | SerializedLocation[] | SerializedTravelTime[],
+  ) => void;
 };
 
 const CalendarContext = createContext<CalendarContextType | null>(null);
+
+// Static render config — module-level so the context value memo isn't
+// invalidated by a fresh object literal every render.
+const USER_SETTINGS: UserSettings = {
+  styles: {
+    events: {
+      borderRadius: "0",
+      completedColor: "#0ebf7e",
+      errorColor: "#ef4444",
+    },
+    template: { event: { borderLeft: "4px solid black" } },
+    calendar: { event: { borderLeft: "4px solid #ADD8E6" } },
+    travel: { event: { borderLeft: "5px solid #70757F" } },
+  },
+};
 
 export default function CalendarProvider({
   children,
@@ -67,18 +94,6 @@ export default function CalendarProvider({
   );
 
   const userId = user?.id;
-  const userSettings = {
-    styles: {
-      events: {
-        borderRadius: "0",
-        completedColor: "#0ebf7e",
-        errorColor: "#ef4444",
-      },
-      template: { event: { borderLeft: "4px solid black" } },
-      calendar: { event: { borderLeft: "4px solid #ADD8E6" } },
-      travel: { event: { borderLeft: "5px solid #70757F" } },
-    },
-  };
 
   const {
     planner,
@@ -164,7 +179,10 @@ export default function CalendarProvider({
     () => ({ ...calendarState, locations, travelTimes }),
     [calendarState, locations, travelTimes],
   );
-  const { initializeState } = useCalendarServerSync(userId, syncState);
+  const { initializeState, markSynced } = useCalendarServerSync(
+    userId,
+    syncState,
+  );
 
   useFetchCalendarData(userId, initializeState);
 
@@ -173,25 +191,51 @@ export default function CalendarProvider({
     [planner, categories, locations]
   );
 
-  if (!userId) return null;
+  // Memoized so a provider re-render (any calendar-slice write) only reaches
+  // consumers when something they can read actually changed — every event
+  // tile and popover subscribes to this context.
+  const value = useMemo<CalendarContextType | null>(
+    () =>
+      userId
+        ? {
+            userId,
+            userSettings: USER_SETTINGS,
+            weekStartDay,
+            planner,
+            calendar,
+            template,
+            categories,
+            categoryEvents,
+            travelEvents,
+            updatePlannerArray,
+            updateCalendarArray,
+            updateTemplateArray,
+            updateAll,
+            manuallyRefreshCalendar,
+            inheritedLocationMap,
+            markSynced,
+          }
+        : null,
+    [
+      userId,
+      weekStartDay,
+      planner,
+      calendar,
+      template,
+      categories,
+      categoryEvents,
+      travelEvents,
+      updatePlannerArray,
+      updateCalendarArray,
+      updateTemplateArray,
+      updateAll,
+      manuallyRefreshCalendar,
+      inheritedLocationMap,
+      markSynced,
+    ],
+  );
 
-  const value = {
-    userId,
-    userSettings,
-    weekStartDay,
-    planner,
-    calendar,
-    template,
-    categories,
-    categoryEvents,
-    travelEvents,
-    updatePlannerArray,
-    updateCalendarArray,
-    updateTemplateArray,
-    updateAll,
-    manuallyRefreshCalendar,
-    inheritedLocationMap,
-  };
+  if (!value) return null;
 
   return (
     <CalendarContext.Provider value={value}>

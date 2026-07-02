@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -45,7 +45,6 @@ import { EventType } from "@/types/prisma";
 const EVENT_INTERACTION_ENABLED = true;
 
 interface CalendarProps {
-  fullCalendarEvents?: EventInput[] | undefined;
   initialDate: Date;
   onCategoryHover?: (
     categoryName: string | null,
@@ -81,6 +80,14 @@ export default function Calendar({
     end: Date;
   } | null>(null);
 
+  // Navigate the existing instance when the requested date changes. The
+  // previous `key={initialDate.getTime()}` approach tore down and rebuilt the
+  // whole FullCalendar DOM (plugins, every event tile) on each prev/next/today
+  // click; gotoDate is the API for this.
+  useEffect(() => {
+    calendarRef.current?.getApi().gotoDate(initialDate);
+  }, [initialDate]);
+
   // Four render streams merged into the single FullCalendar event array:
   //   1. persisted SimpleEvents (plans + scheduled tasks)
   //   2. templates expanded from EventTemplate config at render time (RRule)
@@ -112,7 +119,6 @@ export default function Calendar({
           RRulePlugin,
           luxonPlugin,
         ]}
-        key={initialDate.getTime()}
         initialDate={initialDate}
         timeZone={"local"}
         events={fullCalendarEvents}

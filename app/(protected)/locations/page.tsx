@@ -121,7 +121,7 @@ export default function LocationsPage() {
   // could cascade-delete locations on the server if the racing fetch ever
   // returned an empty list. Trust Redux as the source of truth.
   const dispatch = useDispatch();
-  const { categories } = useCalendarProvider();
+  const { categories, markSynced } = useCalendarProvider();
 
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
@@ -200,9 +200,23 @@ export default function LocationsPage() {
     }
   };
 
+  // Mirrors the upsertLocation reducer so markSynced can be handed the exact
+  // post-dispatch array without waiting for a re-render.
+  const upsertIntoList = (
+    list: SerializedLocation[],
+    row: SerializedLocation,
+  ): SerializedLocation[] => {
+    const idx = list.findIndex((l) => l.id === row.id);
+    if (idx === -1) return [...list, row];
+    const next = [...list];
+    next[idx] = row;
+    return next;
+  };
+
   // Add is server-first because the row's id is server-generated. The
   // returned row goes straight into Redux so the rest of the app sees the
-  // new location without a separate sync step.
+  // new location without a separate sync step. markSynced advances the sync
+  // refs so the diff doesn't treat the server-created row as a client change.
   const handleAdd = async (
     name: string,
     placeId: string,
@@ -215,7 +229,9 @@ export default function LocationsPage() {
         placeId,
         sessionToken,
       });
-      dispatch(upsertLocation(serializeLocation(created)));
+      const serialized = serializeLocation(created);
+      dispatch(upsertLocation(serialized));
+      markSynced("locations", upsertIntoList(locations, serialized));
       flashSuccess(`Added "${name}".`);
       modalDispatch({ type: "CLOSE_ALL" });
     } catch (err) {
@@ -259,10 +275,20 @@ export default function LocationsPage() {
         placeId: draft.placeId,
         sessionToken: draft.sessionToken,
       });
-      dispatch(upsertLocation(serializeLocation(updated)));
+      const serialized = serializeLocation(updated);
+      dispatch(upsertLocation(serialized));
       // updateLocation cascades the affected travel times server-side; mirror
-      // that in Redux so the matrix shows them as missing immediately.
+      // that in Redux so the matrix shows them as missing immediately, and
+      // advance the sync refs so neither shows up as a phantom diff.
       dispatch(removeTravelTimesByLocationId(updated.id));
+      markSynced("locations", upsertIntoList(locations, serialized));
+      markSynced(
+        "travelTimes",
+        allTravelTimes.filter(
+          (tt) =>
+            tt.fromLocationId !== updated.id && tt.toLocationId !== updated.id,
+        ),
+      );
       flashSuccess("Location updated.");
     } catch (err) {
       dispatch(upsertLocation(original));
@@ -292,7 +318,9 @@ export default function LocationsPage() {
     const result = await fetchMissing.run(transportMode);
     if (!result) return;
     const fresh = await locationActions.fetchTravelTimes();
-    dispatch(setAllTravelTimes(fresh.map(serializeTravelTime)));
+    const serialized = fresh.map(serializeTravelTime);
+    dispatch(setAllTravelTimes(serialized));
+    markSynced("travelTimes", serialized);
     flashSuccess(
       result.fetched > 0
         ? `Fetched ${result.fetched} travel time${result.fetched > 1 ? "s" : ""}.`
@@ -309,7 +337,9 @@ export default function LocationsPage() {
     const result = await refresh.run(transportMode);
     if (!result) return;
     const fresh = await locationActions.fetchTravelTimes();
-    dispatch(setAllTravelTimes(fresh.map(serializeTravelTime)));
+    const serialized = fresh.map(serializeTravelTime);
+    dispatch(setAllTravelTimes(serialized));
+    markSynced("travelTimes", serialized);
     flashSuccess(`Refreshed ${result.updated} travel times.`);
   };
 

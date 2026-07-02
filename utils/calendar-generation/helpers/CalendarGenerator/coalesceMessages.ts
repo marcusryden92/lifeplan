@@ -50,7 +50,18 @@ export function buildEngineMessages(
     ...emitScheduledOkMessages(finalEvents),
   ];
 
-  return emits.map((m) => ({
+  // Dedupe by id (keep-first) — id is the DB primary key, so duplicate ids in
+  // one emit array become a double-create in the sync transaction. The known
+  // producer: a never-scheduled task fails once per expansion pass in the
+  // retry loop, pushing up to MAX_WEEKS_TO_SEARCH identical NO_SLOTS failures.
+  const seenIds = new Set<string>();
+  const uniqueEmits = emits.filter((m) => {
+    if (seenIds.has(m.id)) return false;
+    seenIds.add(m.id);
+    return true;
+  });
+
+  return uniqueEmits.map((m) => ({
     id: m.id,
     type: m.type,
     tone: m.tone,
@@ -76,8 +87,10 @@ function buildDismissedSet(previous: EngineMessage[]): Set<string> {
 }
 
 /**
- * Scheduler failures are already one-per-planner (or planner+reason for
- * non-TOO_LARGE reasons). No coalesce needed — dynamic items don't recur.
+ * Scheduler failures are one-per-planner+reason per scheduling pass, but the
+ * retry loop re-attempts unscheduled tasks after each horizon expansion and
+ * pushes a fresh failure each time — so a never-scheduled task arrives here
+ * with duplicates. The id-level dedupe in buildEngineMessages collapses them.
  */
 function emitSchedulerFailureMessages(
   failures: SchedulingFailure[],
