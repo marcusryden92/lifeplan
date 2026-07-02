@@ -213,12 +213,19 @@ export function selectBestSlot(
         recorder?.decision(SM.selectBestSlot.travelBeforeNotNeeded, 3);
       }
 
-      // Travel AFTER: needed if next location differs from task location
+      // Travel AFTER: needed if next location differs from task location.
+      // Look up at the departure time (after travel-before + the task), not
+      // slot.start — a long task can cross into a different rush-hour bucket,
+      // and the reservation path prices the leg at its actual position.
       if (slotNextLoc && slotNextLoc !== taskLocationId) {
+        const travelAfterDeparture = new Date(
+          slot.start.getTime() +
+            (needTravelBefore + task.duration) * 60 * 1000,
+        );
         needTravelAfter = travelManager.getTravelTime(
           taskLocationId,
           slotNextLoc,
-          slot.start,
+          travelAfterDeparture,
         );
         recorder?.decision(
           SM.selectBestSlot.travelAfterRequired(

@@ -19,6 +19,7 @@ import { formatTime } from "@/utils/calendarUtils";
 import { calendarColors } from "@/data/calendarColors";
 import { vars } from "@/lib/theme";
 import { CalendarPopover } from "./CalendarPopover";
+import { PopoverAction } from "./PopoverAction";
 import {
   header,
   dragHandle,
@@ -230,16 +231,16 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
                 gap: 2,
               }}
             >
-              <PopAction
+              <PopoverAction
                 onClick={onCopy}
                 icon={<Copy size={13} strokeWidth={2} />}
                 label="Duplicate"
               />
-              <PopAction
+              <PopoverAction
                 onClick={onDelete}
                 icon={<Trash2 size={13} strokeWidth={2} />}
                 label="Delete all occurrences"
-                danger
+                variant="danger"
               />
             </div>
           </div>
@@ -248,48 +249,5 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
     </CalendarPopover>
   );
 };
-
-function PopAction({
-  onClick,
-  icon,
-  label,
-  danger,
-}: {
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "6px 8px",
-        borderRadius: 8,
-        border: "none",
-        background: "transparent",
-        color: danger ? vars.status.error : vars.ink,
-        fontFamily: vars.font.ui,
-        fontSize: 12.5,
-        cursor: "pointer",
-        textAlign: "left",
-      }}
-    >
-      <span
-        style={{
-          display: "inline-flex",
-          color: danger ? vars.status.error : vars.muted,
-        }}
-      >
-        {icon}
-      </span>
-      {label}
-    </button>
-  );
-}
 
 export default TemplateEventPopover;

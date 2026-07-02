@@ -68,7 +68,13 @@ export const generateAccountDeletionToken = async (userId: string) => {
   });
 };
 
-export const generateVerificationToken = async (email: string) => {
+// userId is required for email-change verification: the token's email is the
+// NEW address, which no user row has yet, so the consumer must resolve the
+// user by id. Registration/login verification omits it (email matches a row).
+export const generateVerificationToken = async (
+  email: string,
+  userId?: string,
+) => {
   const token = uuidv4();
   const expires = new Date(new Date().getTime() + 3600 * 1000);
 
@@ -87,6 +93,7 @@ export const generateVerificationToken = async (email: string) => {
       email,
       token,
       expires,
+      userId: userId ?? null,
     },
   });
 

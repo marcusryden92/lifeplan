@@ -19,6 +19,7 @@ import type { RootState } from "@/redux/store";
 import { TypeBadge } from "@/components/ui";
 import { vars, colorMixAlpha } from "@/lib/theme";
 import { CalendarPopover } from "./CalendarPopover";
+import { PopoverAction } from "./PopoverAction";
 import {
   header,
   dragHandle,
@@ -276,12 +277,12 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
                 gap: 2,
               }}
             >
-              <PopAction
+              <PopoverAction
                 onClick={openLocationsRoute}
                 icon={<Settings size={13} strokeWidth={2} />}
                 label="Adjust travel times in Locations"
               />
-              <PopAction
+              <PopoverAction
                 onClick={openLocationsRoute}
                 icon={<ArrowUpRight size={13} strokeWidth={2} />}
                 label="Open full travel matrix"
@@ -293,40 +294,4 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
     </CalendarPopover>
   );
 };
-
-
-function PopAction({
-  onClick,
-  icon,
-  label,
-}: {
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "6px 8px",
-        borderRadius: 8,
-        border: "none",
-        background: "transparent",
-        color: vars.ink,
-        fontFamily: vars.font.ui,
-        fontSize: 12.5,
-        cursor: "pointer",
-        textAlign: "left",
-      }}
-    >
-      <span style={{ display: "inline-flex", color: vars.muted }}>{icon}</span>
-      {label}
-    </button>
-  );
-}
-
 export default TravelEventPopover;

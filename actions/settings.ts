@@ -46,7 +46,12 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
       return { error: "Email already in use!" };
     }
 
-    const verificationToken = await generateVerificationToken(data.email);
+    // Bind the token to the user id — the new email doesn't resolve to any
+    // user row yet, so newVerification can't look the account up by email.
+    const verificationToken = await generateVerificationToken(
+      data.email,
+      dbUser.id,
+    );
 
     await sendVerificationEmail(
       verificationToken.email,

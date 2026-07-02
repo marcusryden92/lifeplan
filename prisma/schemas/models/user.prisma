@@ -23,6 +23,7 @@ model User {
   categoryEvents        CategoryEvent[]
   travelEvents          TravelEvent[]
   engineMessages        EngineMessage[]
+  verificationTokens    VerificationToken[]
 
   @@map("users")
 }
@@ -51,6 +52,11 @@ model VerificationToken {
   email   String
   token   String   @unique
   expires DateTime
+  // Set for email-change verification only: the token's email is the NEW
+  // address, which no user row has yet, so the consumer resolves the user by
+  // id. Null for registration verification (user found by the token email).
+  userId  String?
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([email, token])
 }

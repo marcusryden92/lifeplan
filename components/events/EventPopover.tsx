@@ -30,6 +30,7 @@ import { getCompleteTaskTreeIds, getRootParentId } from "@/utils/goalPageHandler
 import { CategoryBadge, TypeBadge } from "@/components/ui";
 import { vars } from "@/lib/theme";
 import { CalendarPopover } from "./CalendarPopover";
+import { PopoverAction } from "./PopoverAction";
 import {
   header,
   dragHandle,
@@ -346,15 +347,16 @@ const EventPopover: React.FC<EventPopoverProps> = ({
 
             {showStatusActions && (
               <div style={{ display: "flex", gap: 6 }}>
-                <PrimaryAction
+                <PopoverAction
                   onClick={onComplete}
-                  filled={!isCompleted}
+                  variant={isCompleted ? "primary" : "primaryFilled"}
                   icon={<Check size={13} strokeWidth={2.2} />}
                   label={isCompleted ? "Completed" : "Complete"}
                 />
                 {displayPostponeButton && (
-                  <PrimaryAction
+                  <PopoverAction
                     onClick={onPostpone}
+                    variant="primary"
                     icon={<Clock size={13} strokeWidth={2} />}
                     label="Postpone"
                   />
@@ -371,24 +373,24 @@ const EventPopover: React.FC<EventPopoverProps> = ({
                 gap: 2,
               }}
             >
-              <PopAction
+              <PopoverAction
                 onClick={openFullEditor}
                 icon={<ArrowUpRight size={13} strokeWidth={2} />}
                 label="Open full editor"
               />
               {plannerType !== PlannerType.task &&
                 plannerType !== PlannerType.goal && (
-                  <PopAction
+                  <PopoverAction
                     onClick={onCopy}
                     icon={<Copy size={13} strokeWidth={2} />}
                     label="Duplicate"
                   />
                 )}
-              <PopAction
+              <PopoverAction
                 onClick={onDelete}
                 icon={<Trash2 size={13} strokeWidth={2} />}
                 label="Delete"
-                danger
+                variant="danger"
               />
             </div>
           </div>
@@ -397,90 +399,5 @@ const EventPopover: React.FC<EventPopoverProps> = ({
     </CalendarPopover>
   );
 };
-
-function PrimaryAction({
-  onClick,
-  filled,
-  icon,
-  label,
-  disabled,
-}: {
-  onClick: () => void;
-  filled?: boolean;
-  icon: React.ReactNode;
-  label: string;
-  disabled?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        flex: 1,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 6,
-        padding: "8px 12px",
-        borderRadius: 999,
-        border: `1px solid ${filled ? vars.ink : vars.glass.stroke}`,
-        background: filled ? vars.ink : vars.glass.bgDeep,
-        color: filled ? vars.paper : vars.ink,
-        fontFamily: vars.font.ui,
-        fontSize: 12,
-        fontWeight: 600,
-        cursor: disabled ? "not-allowed" : "pointer",
-        opacity: disabled ? 0.45 : 1,
-      }}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}
-
-function PopAction({
-  onClick,
-  icon,
-  label,
-  danger,
-}: {
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-  danger?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 10,
-        padding: "6px 8px",
-        borderRadius: 8,
-        border: "none",
-        background: "transparent",
-        color: danger ? vars.status.error : vars.ink,
-        fontFamily: vars.font.ui,
-        fontSize: 12.5,
-        cursor: "pointer",
-        textAlign: "left",
-      }}
-    >
-      <span
-        style={{
-          display: "inline-flex",
-          color: danger ? vars.status.error : vars.muted,
-        }}
-      >
-        {icon}
-      </span>
-      {label}
-    </button>
-  );
-}
 
 export default EventPopover;
