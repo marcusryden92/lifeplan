@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
+import { bulkUpdate } from "./bulkUpdate";
 type Database = Prisma.TransactionClient;
 
 export function handlePlannerChanges(
@@ -23,16 +24,54 @@ export function handlePlannerChanges(
     );
   }
 
-  // UPDATE
-  // updateMany is a no-op on missing rows instead of throwing P2025, so a
-  // stale ghost id in previousPlanner doesn't abort the whole transaction.
-  // Scoping by userId also prevents cross-user writes.
-  for (const plannerUpdate of databaseChanges.planner.update) {
-    const { id, userId: _userId, ...rest } = plannerUpdate;
+  // UPDATE — bulk `UPDATE ... FROM VALUES` in a single round-trip. Previously
+  // this looped a per-row `updateMany`, which multiplied wall-clock time on
+  // big diffs (e.g. AI-coach save on a large goal restructure). Missing ids
+  // just don't match in the join, preserving the earlier ghost-id safety.
+  if (databaseChanges.planner.update.length) {
     operations.push(
-      db.planner.updateMany({
-        where: { id, userId },
-        data: { ...rest, updatedAt },
+      bulkUpdate({
+        db,
+        tableName: `"Planners"`,
+        rows: databaseChanges.planner.update,
+        userIdColumn: "userId",
+        userId,
+        updatedAtColumn: "updatedAt",
+        updatedAt,
+        columns: [
+          { name: "title", cast: "text", extract: (r) => r.title },
+          { name: "parentId", cast: "text", extract: (r) => r.parentId },
+          {
+            name: "plannerType",
+            cast: `"PlannerType"`,
+            extract: (r) => r.plannerType,
+          },
+          { name: "isReady", cast: "boolean", extract: (r) => r.isReady },
+          { name: "isTriaged", cast: "boolean", extract: (r) => r.isTriaged },
+          { name: "duration", cast: "int", extract: (r) => r.duration },
+          { name: "deadline", cast: "text", extract: (r) => r.deadline },
+          { name: "starts", cast: "text", extract: (r) => r.starts },
+          { name: "dependency", cast: "text", extract: (r) => r.dependency },
+          {
+            name: "completedStartTime",
+            cast: "text",
+            extract: (r) => r.completedStartTime,
+          },
+          {
+            name: "completedEndTime",
+            cast: "text",
+            extract: (r) => r.completedEndTime,
+          },
+          { name: "priority", cast: "int", extract: (r) => r.priority },
+          { name: "color", cast: "text", extract: (r) => r.color },
+          { name: "locationId", cast: "text", extract: (r) => r.locationId },
+          {
+            name: "useParentLocation",
+            cast: "boolean",
+            extract: (r) => r.useParentLocation,
+          },
+          { name: "categoryId", cast: "text", extract: (r) => r.categoryId },
+        ],
       })
     );
   }

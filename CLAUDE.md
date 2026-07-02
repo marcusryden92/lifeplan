@@ -18,6 +18,7 @@ This file is the high-level map. For engine internals, read [documentation/calen
 - **FullCalendar** 6.1 for the calendar surface; **date-fns** 3 for date math (engine has its own [dateTimeService](utils/calendar-generation/utils/dateTimeService.ts)); **rrule** for template recurrence.
 - **React Hook Form** + **Zod** for forms.
 - **Jest** + **Testing Library** for tests.
+- **Anthropic SDK** (`@anthropic-ai/sdk`) for the AI coach — streams a single `propose_tree` tool call whose input JSON is parsed incrementally on the server with `partial-json` and forwarded as SSE `tree` events.
 - **pnpm** 9.15.4 — use `pnpm` for all commands.
 
 ---
@@ -28,7 +29,7 @@ This file is the high-level map. For engine internals, read [documentation/calen
 - **No narration comments** ("// fixed to handle X", "// updated to use new API"). Comments explain *why* something non-obvious exists, not *what* the code does.
 - **No summary, changelog, refactor-notes, or migration-notes markdown files** added to the repo. Make the change and commit.
 - **Absolute imports with `@/`** prefix.
-- **Prefer server actions** (`"use server"` files in [actions/](actions/)) over `app/api/` routes. API routes exist only for `auth/` and `admin/`.
+- **Prefer server actions** (`"use server"` files in [actions/](actions/)) over `app/api/` routes. API routes exist only for `auth/`, `admin/`, and `coach/stream/` (SSE streaming from Anthropic — a Response-body concern that doesn't fit the server-action return shape).
 - **Zod schemas** in [schemas/](schemas/) for any user-facing form.
 - Spell out "category" — never "cat".
 - The location surface is named **Locations**, not "Places" (Google Places is the underlying API, but the user-facing concept is Location).
@@ -54,7 +55,7 @@ lifeplan/
 │   │   ├── locations/                # Location + travel-time management
 │   │   └── settings/
 │   ├── auth/                         # login/register/reset/new-password/new-verification/error
-│   ├── api/                          # auth/ + admin/ only
+│   ├── api/                          # auth/ + admin/ + coach/stream/ (SSE)
 │   └── test-shell/, test-tokens/     # Dev scaffolding
 │
 ├── actions/                          # Server actions (preferred backend surface)
@@ -71,6 +72,7 @@ lifeplan/
 ├── components/
 │   ├── auth/                         # AuthCard, login/register/reset forms, Social, LoginButton
 │   ├── calendar/                     # WeekStructureModal + editors (Template, Window, Event tile)
+│   ├── coach/AICoachModal/           # AI coach modal — chat + JSON tree diff view; opens from ItemTabs on goals
 │   ├── draggable/                    # DragBox, DraggableItem, TaskDivider, DraggableContext
 │   ├── events/                       # Calendar event renderers + popovers (Event, Template, Travel, CategoryWrapper, NewPlanModal, color/location pickers)
 │   ├── landing/VectorField/          # Landing-page visual
@@ -257,6 +259,63 @@ Everything else — slot union, shard model, static travel pass, dynamic placeme
 
 ---
 
+## AI coach (goal-subtree restructuring)
+
+Opens from the far-right button in `ItemTabs` on any goal item detail page (button gated on `plannerType === "goal"`; the modal itself sits inside `ItemDetailLayout` as a positioned sibling of the page's scroll area so it fills the item-detail content region and doesn't overlap the AppShell sidebar).
+
+Split-pane modal ([components/coach/AICoachModal/](components/coach/AICoachModal/)):
+
+- **Left**: chat pane. User bubbles right, coach responses left-aligned as plain text. Composer is a paper card at the bottom of the darker chat pane surface. The whole chat pane sits on `color-mix(ink 4%, paper)` so it reads as sunken relative to the tree pane.
+- **Right**: JSON tree view rendering the current `workingTree` overlaid with a diff against the canonical tree — added/modified/deleted are tagged per node by [diffCoachTree.ts](components/coach/AICoachModal/diffCoachTree.ts); deleted nodes stay under their original parent at the end of that parent's children so removals are visible in-place.
+- **Draggable divider** between the panes (state clamped 20/80%; both panes have `minWidth: 240px`).
+
+Data flow per turn:
+
+```
+plannerTreeToJson(planner, rootId)      → canonical CoachNode
+useAICoachState({open, canonical})       ─ owns workingTree + chat messages
+  User sends message
+       │
+       ▼
+POST /api/coach/stream                   ← auth-gated, Sonnet 4.6
+  system prompt includes current tree
+  tools: [ propose_tree({ tree }) ]
+       │
+       │ Anthropic streams input_json_delta chunks
+       ▼
+  server-side partial-json parse on each delta,
+  emits SSE `text` and `tree` events
+       │
+       ▼
+streamCoach (client) → onTree(tree) → normalizeCoachTree → setWorkingTree
+  right pane redraws with diff overlay on every parseable subtree
+       │
+       ▼
+User clicks Save (hasChanges = workingTree ≠ canonical, by content)
+       │
+       ▼
+applyCoachTreeToPlanner({planner, rootId, workingTree, userId})
+  - preserves existing planner UUIDs for retained nodes
+  - mints fresh UUIDs only for new nodes
+  - re-threads `dependency` via preorder traversal with a leaf cursor
+  - fixes the outer-chain neighbor whose dep was pointing at the old last leaf
+  - leaves root's parentId/dependency/categoryId/locationId/color/createdAt alone
+       │
+       ▼
+updatePlannerArray(nextPlanner) → CalendarProvider auto-regen → sync
+```
+
+Contracts worth not breaking:
+
+- **UUID preservation is load-bearing** — see the `preserve-planner-ids` memory note. The AI is instructed to echo existing ids; the reverse parser will only trust an id that exists in the current subtree (any other id becomes a fresh UUID). Inter-goal dependencies (planned) will reference these ids.
+- **`dependency` is never emitted by the AI** — sibling order is array position. The reverse parser re-threads the linked list from scratch. The AI's JSON contract intentionally omits the field so the model can't produce a malformed chain.
+- **Streaming path is a Route handler**, not a server action. See the note in "Code style rules" — SSE bytes don't fit the server-action return shape.
+- **BYOK is deferred** — one key in `.env` for now (see TODO). If/when we ship publicly, wire per-user keys before enabling the feature.
+
+Related utilities: [normalizeCoachTree.ts](components/coach/AICoachModal/normalizeCoachTree.ts) fills defaults for partial JSON mid-stream so the renderer and diff can rely on complete `CoachNode` shape.
+
+---
+
 ## State & data flow
 
 ```
@@ -290,7 +349,8 @@ Key wiring:
 - **CalendarProvider** ([context/CalendarProvider.tsx](context/CalendarProvider.tsx)) — owns the data context, fires regen on `bufferTimeMinutes` change, fires a one-time "cold-load autoregen" when categories/locations exist but no engine output materialized yet (see the inline comment for the conditions).
 - **Sync** uses **optimistic concurrency control** via `User.dataVersion`. The client sends the version it knows; if the DB has moved on, the transaction aborts and the client adopts a fresh snapshot wholesale. Partial application across a DAG-shaped dataset is unsafe.
 - **CategoryEvent**, **TravelEvent**, and **EngineMessage** are all written by the engine on every regen but use **deterministic IDs**, so the diff lands as creates/deletes only when an actual placement shifted (or, for EngineMessage, only when the underlying situation changed or the user flipped `dismissed`). Don't switch them to autogenerated IDs.
-- The 30-second transaction timeout in `syncCalendarData` exists because the first regen after a fresh load runs hundreds of CategoryEvent creates on top of the usual diff.
+- The 60-second transaction timeout in `syncCalendarData` exists because the first regen after a fresh load runs hundreds of writes on top of the usual diff.
+- **Sync-handler update paths use bulk raw SQL** ([actions/calendar-actions/sync-handlers/bulkUpdate.ts](actions/calendar-actions/sync-handlers/bulkUpdate.ts)) — a single `UPDATE ... FROM (VALUES ...)` per table via `$executeRawUnsafe`, regardless of row count. Prisma's `updateMany` only supports "same values for all matched rows", so per-row updates would otherwise turn into N sequential round-trips inside the interactive transaction (multiplied out by the OCC guard that forces interactive form). ExtendedProps uses `INSERT ... ON CONFLICT (eventId) DO UPDATE`. CategoryEvent and TravelEvent are already collapsed to `deleteMany + createMany` because the rows are engine-derived — don't rework those to bulk update. Ghost-id safety (no P2025 on missing rows) is preserved by the WHERE join in the bulk statement.
 
 ---
 
@@ -441,6 +501,7 @@ GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
 GOOGLE_MAPS_API_KEY=""              # Places + Distance Matrix
 RESEND_API_KEY=""
+ANTHROPIC_API_KEY=""                # AI coach — Sonnet 4.6 via @anthropic-ai/sdk
 ```
 
 ---

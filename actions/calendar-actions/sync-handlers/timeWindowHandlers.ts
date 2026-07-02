@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
+import { bulkUpdate } from "./bulkUpdate";
 type Database = Prisma.TransactionClient;
 
 export function handleTimeWindowChanges(
@@ -25,16 +26,20 @@ export function handleTimeWindowChanges(
     );
   }
 
-  for (const w of databaseChanges.categoryTimeWindow.update) {
+  if (databaseChanges.categoryTimeWindow.update.length) {
     operations.push(
-      db.categoryTimeWindow.update({
-        where: { id: w.id },
-        data: {
-          day: w.day,
-          startTime: w.startTime,
-          endTime: w.endTime,
-          categoryId: w.categoryId,
-        },
+      bulkUpdate({
+        db,
+        tableName: `"CategoryTimeWindows"`,
+        rows: databaseChanges.categoryTimeWindow.update,
+        userIdColumn: "userId",
+        userId,
+        columns: [
+          { name: "day", cast: "int", extract: (r) => r.day },
+          { name: "startTime", cast: "text", extract: (r) => r.startTime },
+          { name: "endTime", cast: "text", extract: (r) => r.endTime },
+          { name: "categoryId", cast: "text", extract: (r) => r.categoryId },
+        ],
       }),
     );
   }

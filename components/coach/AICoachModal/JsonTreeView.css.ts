@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+import { style, styleVariants } from "@vanilla-extract/css";
 import { vars, themeTransition, radii } from "@/lib/theme";
 
 export const wrap = style({
@@ -25,7 +25,7 @@ export const nodeBlock = style({
   flexDirection: "column",
 });
 
-export const row = style({
+const rowBase = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -33,6 +33,7 @@ export const row = style({
   padding: "4px 8px",
   minWidth: 0,
   borderRadius: radii.sm,
+  borderLeft: `2px solid transparent`,
   transition: themeTransition,
   selectors: {
     "&:hover": {
@@ -41,7 +42,36 @@ export const row = style({
   },
 });
 
-export const title = style({
+// Status-specific row treatments. Each variant gets a colored left border
+// (matches the drag-and-drop indent border language) and a subtle background
+// tint so the change stands out without becoming loud.
+export const row = styleVariants({
+  unchanged: [rowBase],
+  modified: [
+    rowBase,
+    {
+      borderLeftColor: vars.status.warning,
+      background: `color-mix(in srgb, ${vars.status.warning} 8%, transparent)`,
+    },
+  ],
+  added: [
+    rowBase,
+    {
+      borderLeftColor: vars.status.success,
+      background: `color-mix(in srgb, ${vars.status.success} 8%, transparent)`,
+    },
+  ],
+  deleted: [
+    rowBase,
+    {
+      borderLeftColor: vars.status.error,
+      background: `color-mix(in srgb, ${vars.status.error} 8%, transparent)`,
+      opacity: 0.7,
+    },
+  ],
+});
+
+const titleBase = style({
   fontFamily: vars.font.ui,
   fontSize: 12.5,
   fontWeight: 500,
@@ -52,6 +82,72 @@ export const title = style({
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
   transition: themeTransition,
+});
+
+export const title = styleVariants({
+  unchanged: [titleBase],
+  modified: [titleBase],
+  added: [titleBase],
+  deleted: [
+    titleBase,
+    {
+      textDecoration: "line-through",
+      textDecorationThickness: 1.5,
+      color: vars.muted,
+    },
+  ],
+});
+
+export const statusBadge = styleVariants({
+  unchanged: [{ display: "none" }],
+  modified: [
+    {
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "1px 6px",
+      borderRadius: radii.pill,
+      fontFamily: vars.font.ui,
+      fontSize: 9,
+      fontWeight: 700,
+      letterSpacing: "0.1em",
+      textTransform: "uppercase",
+      color: vars.status.warning,
+      border: `1px solid color-mix(in srgb, ${vars.status.warning} 45%, transparent)`,
+      flexShrink: 0,
+    },
+  ],
+  added: [
+    {
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "1px 6px",
+      borderRadius: radii.pill,
+      fontFamily: vars.font.ui,
+      fontSize: 9,
+      fontWeight: 700,
+      letterSpacing: "0.1em",
+      textTransform: "uppercase",
+      color: vars.status.success,
+      border: `1px solid color-mix(in srgb, ${vars.status.success} 45%, transparent)`,
+      flexShrink: 0,
+    },
+  ],
+  deleted: [
+    {
+      display: "inline-flex",
+      alignItems: "center",
+      padding: "1px 6px",
+      borderRadius: radii.pill,
+      fontFamily: vars.font.ui,
+      fontSize: 9,
+      fontWeight: 700,
+      letterSpacing: "0.1em",
+      textTransform: "uppercase",
+      color: vars.status.error,
+      border: `1px solid color-mix(in srgb, ${vars.status.error} 45%, transparent)`,
+      flexShrink: 0,
+    },
+  ],
 });
 
 export const metaCluster = style({
@@ -90,8 +186,15 @@ export const readyDot = style({
   display: "inline-block",
 });
 
-// Left-indent border matches the drag-and-drop nested list convention. Smaller
-// left offset than lumenTasks since the coach tree has no grip/chevron gutter.
+export const changedFields = style({
+  fontFamily: vars.font.ui,
+  fontSize: 10,
+  color: vars.muted,
+  fontStyle: "italic",
+  flexShrink: 0,
+});
+
+// Left-indent border matches the drag-and-drop nested list convention.
 export const childrenWrap = style({
   marginLeft: 12,
   paddingLeft: 10,

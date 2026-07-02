@@ -29,32 +29,47 @@ export function handleExtendedPropsChanges(
     );
   }
 
-  // UPDATE
-  for (const props of databaseChanges.extendedProps.update) {
-    const updateData: Prisma.EventExtendedPropsUpdateInput = {
-      plannerType: props.plannerType,
-      parentId: props.parentId,
-      completedStartTime: props.completedStartTime,
-      completedEndTime: props.completedEndTime,
-    };
+  // UPSERT — one INSERT ... ON CONFLICT (eventId) DO UPDATE statement covers
+  // every update row in a single round-trip. Previously this looped per-row
+  // upsert, which meant N × (SELECT + INSERT-or-UPDATE) round-trips against
+  // Postgres. Note: eventType is intentionally omitted from the DO UPDATE SET
+  // clause — it's set on create only, matching the previous handler shape.
+  if (databaseChanges.extendedProps.update.length) {
+    const params: unknown[] = [];
+    const rowFragments: string[] = [];
+    for (const props of databaseChanges.extendedProps.update) {
+      const cells: string[] = [];
+      params.push(props.id);
+      cells.push(`$${params.length}::text`);
+      params.push(props.eventId);
+      cells.push(`$${params.length}::text`);
+      params.push(props.plannerType);
+      cells.push(`$${params.length}::"PlannerType"`);
+      params.push(props.eventType);
+      cells.push(`$${params.length}::"EventType"`);
+      params.push(props.parentId);
+      cells.push(`$${params.length}::text`);
+      params.push(props.completedStartTime);
+      cells.push(`$${params.length}::text`);
+      params.push(props.completedEndTime);
+      cells.push(`$${params.length}::text`);
+      rowFragments.push(`(${cells.join(",")})`);
+    }
 
-    const createData: Prisma.EventExtendedPropsCreateInput = {
-      id: props.id,
-      event: { connect: { id: props.eventId } },
-      plannerType: props.plannerType,
-      eventType: props.eventType,
-      parentId: props.parentId,
-      completedStartTime: props.completedStartTime,
-      completedEndTime: props.completedEndTime,
-    };
+    const query = `
+      INSERT INTO "EventExtendedProps" (
+        id, "eventId", "plannerType", "eventType", "parentId",
+        "completedStartTime", "completedEndTime"
+      )
+      VALUES ${rowFragments.join(",")}
+      ON CONFLICT ("eventId") DO UPDATE SET
+        "plannerType" = EXCLUDED."plannerType",
+        "parentId" = EXCLUDED."parentId",
+        "completedStartTime" = EXCLUDED."completedStartTime",
+        "completedEndTime" = EXCLUDED."completedEndTime"
+    `;
 
-    operations.push(
-      db.eventExtendedProps.upsert({
-        where: { eventId: props.eventId },
-        update: updateData,
-        create: createData,
-      }),
-    );
+    operations.push(db.$executeRawUnsafe(query, ...params));
   }
 
   // DELETE

@@ -97,23 +97,41 @@ export const body = style({
 
 export const chatPane = style({
   position: "relative",
-  flex: 1,
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
-  minWidth: 0,
+  minWidth: 240,
   padding: "14px 18px",
-  borderRight: `1px solid ${vars.rule}`,
+  // Subtle darker surface behind the chat — makes the assistant text and
+  // composer sit on a differentiated surface without breaking the modal's
+  // paper theme. Auto-adapts per light/dark: in light mode we tint toward
+  // ink, in dark mode this reads as a slightly deeper paper.
+  background: `color-mix(in srgb, ${vars.ink} 4%, ${vars.paper})`,
+  transition: themeTransition,
 });
 
 export const treePane = style({
   position: "relative",
-  flex: 1,
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
-  minWidth: 0,
+  minWidth: 240,
   padding: "14px 18px",
+});
+
+// Drag handle between the two panes. Thin bar with a wider hover target and
+// a col-resize cursor. Sits inside `.body` (which is display: flex).
+export const paneDivider = style({
+  position: "relative",
+  flex: "0 0 4px",
+  cursor: "col-resize",
+  background: vars.rule,
+  transition: themeTransition,
+  selectors: {
+    "&:hover, &[data-dragging='true']": {
+      background: vars.accent.primary,
+    },
+  },
 });
 
 export const paneHeader = style({

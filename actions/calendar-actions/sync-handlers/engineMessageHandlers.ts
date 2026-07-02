@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
+import { bulkUpdate } from "./bulkUpdate";
 type Database = Prisma.TransactionClient;
 
 /**
@@ -7,21 +8,13 @@ type Database = Prisma.TransactionClient;
  * flip that flows through the update path; there is no separate delete
  * edge for dismissal (the row survives so the engine can carry the flag
  * forward on the next regen).
- *
- * Batching model:
- *   - creates → `createMany` (default createdAt fires; type/tone/payload/
- *     dismissed set)
- *   - updates → per-row `update` (preserves createdAt so row-age is stable
- *     across payload / dismissal changes)
- *   - deletes → `deleteMany` on ids (fires when the engine stops emitting
- *     the row entirely — the situation resolved)
  */
 export function handleEngineMessageChanges(
   db: Database,
   userId: string,
   databaseChanges: DatabaseChanges,
 ) {
-  const operations: Promise<unknown>[] = [];
+  const operations = [];
   const now = new Date().toISOString();
 
   const updates = databaseChanges.engineMessage.update;
@@ -52,17 +45,28 @@ export function handleEngineMessageChanges(
     );
   }
 
-  for (const m of updates) {
+  // UPDATE — bulk `UPDATE ... FROM VALUES`. Note: JSON payload is serialized
+  // client-side and cast to jsonb; nulls stay null via the standard cast.
+  if (updates.length) {
     operations.push(
-      db.engineMessage.update({
-        where: { id: m.id },
-        data: {
-          type: m.type,
-          tone: m.tone,
-          payload: m.payload as Prisma.InputJsonValue,
-          dismissed: m.dismissed,
-          updatedAt: now,
-        },
+      bulkUpdate({
+        db,
+        tableName: `"EngineMessages"`,
+        rows: updates,
+        userIdColumn: "userId",
+        userId,
+        updatedAtColumn: "updatedAt",
+        updatedAt: now,
+        columns: [
+          { name: "type", cast: "text", extract: (r) => r.type },
+          { name: "tone", cast: "text", extract: (r) => r.tone },
+          {
+            name: "payload",
+            cast: "jsonb",
+            extract: (r) => JSON.stringify(r.payload),
+          },
+          { name: "dismissed", cast: "boolean", extract: (r) => r.dismissed },
+        ],
       }),
     );
   }

@@ -80,10 +80,11 @@ export async function syncCalendarData(
         // The first regen after a fresh load runs hundreds of writes:
         // CategoryEvent creates for every materialized weekly occurrence on top
         // of the usual planner/calendar/extendedProps churn. Prisma's 5s
-        // interactive-transaction default tips over here. 30s gives steady
-        // headroom — long syncs are still bounded so a runaway diff can't
-        // block the connection indefinitely.
-        timeout: 30_000,
+        // interactive-transaction default tips over here. AI-coach saves on a
+        // large goal restructure hit the same shape (many planner ops + full
+        // engine regen), so 60s gives steady headroom. Long syncs are still
+        // bounded so a runaway diff can't block the connection indefinitely.
+        timeout: 60_000,
       },
     );
 

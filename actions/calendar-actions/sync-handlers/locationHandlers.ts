@@ -1,5 +1,6 @@
 import type { Prisma } from "@/generated/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
+import { bulkUpdate } from "./bulkUpdate";
 type Database = Prisma.TransactionClient;
 
 // Locations only get simple name updates and deletes through the sync.
@@ -15,11 +16,17 @@ export function handleLocationChanges(
 ) {
   const operations = [];
 
-  for (const loc of databaseChanges.location.update) {
+  if (databaseChanges.location.update.length) {
     operations.push(
-      db.location.update({
-        where: { id: loc.id, userId },
-        data: { name: loc.name },
+      bulkUpdate({
+        db,
+        tableName: `"Locations"`,
+        rows: databaseChanges.location.update,
+        userIdColumn: "userId",
+        userId,
+        columns: [
+          { name: "name", cast: "text", extract: (r) => r.name },
+        ],
       }),
     );
   }
