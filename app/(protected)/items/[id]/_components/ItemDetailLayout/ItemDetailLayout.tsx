@@ -66,7 +66,7 @@ export default function ItemDetailLayout({
   const { planner, updatePlannerArray, updateAll, categories } =
     useCalendarProvider();
   const isCalendarLoaded = useSelector(
-    (state: RootState) => state.calendar.isLoaded,
+    (state: RootState) => state.calendarSource.isLoaded,
   );
   const [editingTitle, setEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");

@@ -9,7 +9,7 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   upsertCategory,
   removeCategory,
-} from "@/redux/slices/calendarSlice";
+} from "@/redux/slices/calendarSourceSlice";
 import type { AppDispatch, RootState } from "@/redux/store";
 import {
   buildCategoryTree,
@@ -42,7 +42,7 @@ export default function CategoriesPage() {
     (state: RootState) => state.schedulingSettings.locations,
   );
   const isLoaded = useSelector(
-    (state: RootState) => state.calendar.isLoaded,
+    (state: RootState) => state.calendarSource.isLoaded,
   );
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -96,7 +96,7 @@ export default function CategoriesPage() {
   );
 
   // All mutations are pure Redux dispatches. useCalendarServerSync watches
-  // state.calendar.categories, diffs against its prev-ref, and 300ms after
+  // state.calendarSource.categories, diffs against its prev-ref, and 300ms after
   // the user stops fiddling sends one batched sync transaction. No direct
   // server-action calls from this component.
   const replace = (next: Partial<Category>) => {

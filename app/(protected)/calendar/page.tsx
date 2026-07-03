@@ -14,7 +14,7 @@ import {
 import { format } from "date-fns";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/redux/store";
-import { dismissEngineMessage } from "@/redux/slices/calendarSlice";
+import { dismissEngineMessage } from "@/redux/slices/engineOutputSlice";
 import { Button, ConicDot, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { getWeekFirstDate, shiftDate } from "@/utils/calendarUtils";
@@ -103,16 +103,16 @@ export default function CalendarPage() {
     useCalendarProvider();
   const dispatch = useDispatch<AppDispatch>();
   const engineMessages = useSelector(
-    (state: RootState) => state.calendar.engineMessages,
+    (state: RootState) => state.engineOutput.engineMessages,
   );
   const calendarEvents = useSelector(
-    (state: RootState) => state.calendar.calendar,
+    (state: RootState) => state.engineOutput.calendar,
   );
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
   );
   const lastEngineRunAt = useSelector(
-    (state: RootState) => state.calendar.lastEngineRunAt,
+    (state: RootState) => state.engineOutput.lastEngineRunAt,
   );
   // Placed count is derived from live calendar state, not the SCHEDULED_OK
   // payload, so the header stays accurate after user edits (dismissed card,

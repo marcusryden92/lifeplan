@@ -9,7 +9,7 @@ import {
   removeTemplate,
   upsertTimeWindow,
   removeTimeWindow,
-} from "@/redux/slices/calendarSlice";
+} from "@/redux/slices/calendarSourceSlice";
 import { startDayAsInt } from "./eventSerializers";
 import type { WorkingWindow } from "./timeWindow";
 

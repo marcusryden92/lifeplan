@@ -3,7 +3,8 @@ import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { AppDispatch } from "../store";
 import { RootState } from "../store";
-import calendarSlice from "../slices/calendarSlice";
+import { setPlannerAndTemplate } from "../slices/calendarSourceSlice";
+import { applyEngineRun } from "../slices/engineOutputSlice";
 import { travelTimeArrayToMap } from "../slices/schedulingSettingsSlice";
 
 type CalendarPayload = {
@@ -35,11 +36,11 @@ export const updateAllCalendarStates =
       return;
     }
 
-    const currentPlanner: Planner[] = state.calendar.planner;
-    const calendar: SimpleEvent[] = state.calendar.calendar;
-    const template: EventTemplate[] = state.calendar.template;
-    const categories: Category[] = state.calendar.categories;
-    const previousEngineMessages = state.calendar.engineMessages;
+    const currentPlanner: Planner[] = state.calendarSource.planner;
+    const calendar: SimpleEvent[] = state.engineOutput.calendar;
+    const template: EventTemplate[] = state.calendarSource.template;
+    const categories: Category[] = state.calendarSource.categories;
+    const previousEngineMessages = state.engineOutput.engineMessages;
     const bufferTimeMinutes: number =
       state.schedulingSettings.bufferTimeMinutes;
     const enableTravelEvents: boolean =
@@ -80,17 +81,20 @@ export const updateAllCalendarStates =
       },
     );
 
-    const calendarData = {
-      planner: newPlanner,
-      calendar: newCalendar,
-      template: newTemplate,
-      categories,
-      categoryEvents: newCategoryEvents,
-      travelEvents: newTravelEvents,
-      engineMessages: newEngineMessages,
-      plannerScores: newPlannerScores,
-    };
-
-    dispatch(calendarSlice.actions.updateCalendarArrayData(calendarData));
-    dispatch(calendarSlice.actions.markEngineRun(new Date().toISOString()));
+    // Two dispatches, one tick: React 18 batches them, and the sync effect
+    // is debounced anyway, so source and derived state advance atomically
+    // from the subscriber's point of view.
+    dispatch(
+      setPlannerAndTemplate({ planner: newPlanner, template: newTemplate }),
+    );
+    dispatch(
+      applyEngineRun({
+        calendar: newCalendar,
+        categoryEvents: newCategoryEvents,
+        travelEvents: newTravelEvents,
+        engineMessages: newEngineMessages,
+        plannerScores: newPlannerScores,
+        ranAt: new Date().toISOString(),
+      }),
+    );
   };

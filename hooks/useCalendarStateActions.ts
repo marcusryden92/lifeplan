@@ -18,17 +18,6 @@ export default function useCalendarStateActions(dispatch: AppDispatch) {
     []
   );
 
-  const updateCalendarArray = useCallback(
-    (calendar: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[])) => {
-      dispatch(
-        updateAllCalendarStates({
-          calendar,
-        })
-      );
-    },
-    []
-  );
-
   const updateTemplateArray = useCallback(
     (
       template: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
@@ -61,7 +50,6 @@ export default function useCalendarStateActions(dispatch: AppDispatch) {
 
   return {
     updatePlannerArray,
-    updateCalendarArray,
     updateTemplateArray,
     updateAll,
   };

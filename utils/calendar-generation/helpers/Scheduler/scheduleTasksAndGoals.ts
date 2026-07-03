@@ -3,12 +3,15 @@ import { Scheduler } from "../../core/Scheduler";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { SchedulingFailure } from "../../models/SchedulingModels";
 import { Slot } from "../../models/TimeSlot";
-import { SCHEDULING_CONFIG } from "../../constants";
+import { SCHEDULING_CONFIG, SchedulingFailureReason } from "../../constants";
 import { scheduleSingleTask } from "./scheduleSingleTask";
 import { scheduleGoal } from "./scheduleGoal";
 import { expandSlots } from "./expandSlots";
 import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
-import { largestCompatibleSlotForLargestTask } from "./capacityCheck";
+import {
+  largestCompatibleSlotForLargestTask,
+  effectiveCandidateDuration,
+} from "./capacityCheck";
 
 export function scheduleTasksAndGoals(
   scheduler: Scheduler,
@@ -56,8 +59,12 @@ export function scheduleTasksAndGoals(
     const availableCount = slotManager.slots.filter(
       (s) => s.type === "available",
     ).length;
+    // Goal candidates size as their largest uncompleted leaf, not the
+    // subtree aggregate — scheduleGoal places leaves individually, and the
+    // aggregate can exceed any possible slot, which would pin this watermark
+    // permanently true and starve the placement walk below.
     const biggestRemaining = candidates.reduce(
-      (m, c) => Math.max(m, c.duration),
+      (m, c) => Math.max(m, effectiveCandidateDuration(c, allPlanners)),
       0,
     );
     const biggestFit = largestCompatibleSlotForLargestTask(
@@ -65,6 +72,7 @@ export function scheduleTasksAndGoals(
       slotManager.slots,
       plannerCategoryMap,
       context.placementCutoffDate,
+      allPlanners,
     );
 
     if (
@@ -152,6 +160,20 @@ export function scheduleTasksAndGoals(
         travelPassRecorder,
       );
     }
+  }
+
+  // Candidates still standing when the expansion budget runs out must fail
+  // loudly. This exit used to be silent (no event, no failure), which let a
+  // starved run report SCHEDULED_OK while the sync deleted every previously
+  // placed event.
+  for (const item of candidates) {
+    failures.push({
+      taskId: item.id,
+      taskTitle: item.title,
+      reason: SchedulingFailureReason.NO_SLOTS,
+      details: `Horizon expansion budget exhausted (${expansionsDone} expansions) before a slot was found`,
+      context: { expansionsDone },
+    });
   }
 
   // Drop failures for tasks that eventually placed on a later iteration.

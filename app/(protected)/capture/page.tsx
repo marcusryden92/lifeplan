@@ -72,7 +72,7 @@ export default function CapturePage() {
   const router = useRouter();
   const { userId, planner, categories, updatePlannerArray, updateAll } =
     useCalendarProvider();
-  const isLoaded = useSelector((state: RootState) => state.calendar.isLoaded);
+  const isLoaded = useSelector((state: RootState) => state.calendarSource.isLoaded);
   const { modKey } = usePlatform();
 
   const queue = useMemo(

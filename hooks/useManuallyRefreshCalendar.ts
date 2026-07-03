@@ -15,7 +15,7 @@ import {
   EngineMessage,
 } from "@/types/prisma";
 import { AppDispatch, RootState } from "@/redux/store";
-import calendarSlice from "@/redux/slices/calendarSlice";
+import { applyEngineRun } from "@/redux/slices/engineOutputSlice";
 import { useSelector } from "react-redux";
 import {
   travelTimeArrayToMap,
@@ -48,7 +48,7 @@ const useManuallyRefreshCalendar = (
     (state: RootState) => state.schedulingSettings.debugStrategyConfig
   );
   const previousEngineMessages = useSelector(
-    (state: RootState) => state.calendar.engineMessages
+    (state: RootState) => state.engineOutput.engineMessages
   );
 
   // Store latest values in refs so callback doesn't need to depend on them
@@ -131,6 +131,7 @@ const useManuallyRefreshCalendar = (
         events: newCalendar,
         categoryEvents: newCategoryEvents,
         travelEvents: newTravelEvents,
+        plannerScores: newPlannerScores,
         messages: newEngineMessages,
       } = generateCalendar(
         userId,
@@ -151,21 +152,17 @@ const useManuallyRefreshCalendar = (
         },
       );
 
-      // Use updateAll to bypass the thunk's regeneration
-      // Pass the generated calendar directly without triggering another generation
+      // Source inputs (planner/template/categories) pass through unchanged,
+      // so only the derived slice needs a dispatch.
       dispatch(
-        calendarSlice.actions.updateCalendarArrayData({
-          planner,
+        applyEngineRun({
           calendar: newCalendar,
-          template,
-          categories,
           categoryEvents: newCategoryEvents,
           travelEvents: newTravelEvents,
           engineMessages: newEngineMessages,
-        })
-      );
-      dispatch(
-        calendarSlice.actions.markEngineRun(new Date().toISOString()),
+          plannerScores: newPlannerScores,
+          ranAt: new Date().toISOString(),
+        }),
       );
     }
   }, []);

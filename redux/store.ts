@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
-import calendarSlice from "./slices/calendarSlice";
+import calendarSourceSlice from "./slices/calendarSourceSlice";
+import engineOutputSlice from "./slices/engineOutputSlice";
 import userSlice from "./slices/userSlice";
 import schedulingSettingsSlice from "./slices/schedulingSettingsSlice";
 
@@ -9,7 +10,8 @@ export type AppDispatch = typeof store.dispatch;
 const store = configureStore({
   reducer: {
     user: userSlice,
-    calendar: calendarSlice.reducer,
+    calendarSource: calendarSourceSlice.reducer,
+    engineOutput: engineOutputSlice.reducer,
     schedulingSettings: schedulingSettingsSlice.reducer,
   },
 });

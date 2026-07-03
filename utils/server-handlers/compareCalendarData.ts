@@ -80,7 +80,7 @@ export async function handleServerTransaction(
   previousTravelTimes?: { current: SerializedTravelTime[] },
 ) {
   // Templates, category wrappers, and travel events no longer enter
-  // state.calendar.calendar — they live in their own redux slice fields and
+  // state.engineOutput.calendar — they live in their own redux fields and
   // their own sync diff groups. SimpleEvent[] now only carries plans +
   // scheduled tasks, so no filter is needed before the diff.
   const serializedPlanner = JSON.parse(JSON.stringify(planner)) as Planner[];

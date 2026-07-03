@@ -140,9 +140,10 @@ lifeplan/
 │   └── seed-helpers/                 # generateCategories, generateLocations (+ TravelTimes), generatePlanners, generatePlans, generateTemplates, generateUncompletedItems
 │
 ├── redux/
-│   ├── store.ts                      # { user, calendar, schedulingSettings }
+│   ├── store.ts                      # { user, calendarSource, engineOutput, schedulingSettings }
 │   ├── slices/
-│   │   ├── calendarSlice.ts          # planner, calendar, template, categories, categoryEvents, travelEvents, engineMessages, plannerScores (ephemeral engine output), isLoaded
+│   │   ├── calendarSourceSlice.ts    # User-authored inputs: planner, template, categories, isLoaded
+│   │   ├── engineOutputSlice.ts      # Engine-derived: calendar, categoryEvents, travelEvents, engineMessages, plannerScores + lastEngineRunAt (ephemeral)
 │   │   ├── userSlice.ts
 │   │   └── schedulingSettingsSlice.ts # bufferTimeMinutes, defaultTransportMode, travelTimeMatrix (engine-shaped), allTravelTimes (full rows), locations, strategy weights/scores/penalties, enableTravelEvents
 │   └── thunks/
@@ -323,7 +324,7 @@ Related utilities: [normalizeCoachTree.ts](components/coach/AICoachModal/normali
                           fetchCalendarData (initial)
                                    │
                                    ▼
-   server actions ◄──── Redux (calendarSlice, schedulingSettingsSlice, userSlice)
+   server actions ◄──── Redux (calendarSourceSlice, engineOutputSlice, schedulingSettingsSlice, userSlice)
                                    ▲
                                    │ dispatch
                                    │
@@ -335,7 +336,7 @@ Related utilities: [normalizeCoachTree.ts](components/coach/AICoachModal/normali
                                                            │
                                                            ▼
                                 events + categoryEvents + travelEvents + engineMessages
-                                                  written to calendarSlice
+                                              written to engineOutputSlice
                                                            │
                                                            ▼
                                         useCalendarServerSync (300ms debounce)

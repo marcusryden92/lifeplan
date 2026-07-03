@@ -3,7 +3,11 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
-import calendarSlice from "@/redux/slices/calendarSlice";
+import {
+  hydrateSource,
+  markCalendarLoaded,
+} from "@/redux/slices/calendarSourceSlice";
+import { hydrateEngineOutput } from "@/redux/slices/engineOutputSlice";
 import {
   Planner,
   Category,
@@ -80,8 +84,22 @@ export function useFetchCalendarData(
         setData(newData);
 
         // Dispatch to Redux
-        dispatch(calendarSlice.actions.updateCalendarArrayData(newData));
-        dispatch(calendarSlice.actions.markCalendarLoaded());
+        dispatch(
+          hydrateSource({
+            planner: newData.planner,
+            template: newData.template,
+            categories: newData.categories,
+          }),
+        );
+        dispatch(
+          hydrateEngineOutput({
+            calendar: newData.calendar,
+            categoryEvents: newData.categoryEvents,
+            travelEvents: newData.travelEvents,
+            engineMessages: newData.engineMessages,
+          }),
+        );
+        dispatch(markCalendarLoaded());
         initializeState(
           newData.planner,
           newData.calendar,

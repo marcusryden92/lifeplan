@@ -17,7 +17,8 @@ import type {
   SerializedTravelTime,
 } from "@/redux/slices/schedulingSettingsSlice";
 import schedulingSettingsSlice from "@/redux/slices/schedulingSettingsSlice";
-import calendarSlice from "@/redux/slices/calendarSlice";
+import { hydrateSource } from "@/redux/slices/calendarSourceSlice";
+import { hydrateEngineOutput } from "@/redux/slices/engineOutputSlice";
 import { handleServerTransaction } from "@/utils/server-handlers/compareCalendarData";
 import type { FreshState } from "@/actions/calendar-actions/fetchFreshState";
 
@@ -135,11 +136,15 @@ const useCalendarServerSync = (
   // re-fire indefinitely against stale refs.
   const rollbackToLastConfirmedState = useCallback(() => {
     dispatch(
-      calendarSlice.actions.updateCalendarArrayData({
+      hydrateSource({
         planner: previousPlanner.current,
-        calendar: previousCalendar.current,
         template: previousTemplate.current,
         categories: previousCategories.current,
+      }),
+    );
+    dispatch(
+      hydrateEngineOutput({
+        calendar: previousCalendar.current,
         categoryEvents: previousCategoryEvents.current,
         travelEvents: previousTravelEvents.current,
         engineMessages: previousEngineMessages.current,
@@ -173,11 +178,15 @@ const useCalendarServerSync = (
       knownDataVersion.current = fresh.dataVersion;
 
       dispatch(
-        calendarSlice.actions.updateCalendarArrayData({
+        hydrateSource({
           planner: fresh.planner,
-          calendar: fresh.calendar,
           template: fresh.template,
           categories: fresh.categories,
+        }),
+      );
+      dispatch(
+        hydrateEngineOutput({
+          calendar: fresh.calendar,
           categoryEvents: fresh.categoryEvents,
           travelEvents: fresh.travelEvents,
           engineMessages: fresh.engineMessages,

@@ -53,9 +53,9 @@ export function useDashboardData(): DashboardData {
     updateAll,
   } = useCalendarProvider();
 
-  const isLoaded = useSelector((state: RootState) => state.calendar.isLoaded);
+  const isLoaded = useSelector((state: RootState) => state.calendarSource.isLoaded);
   const plannerScores = useSelector(
-    (state: RootState) => state.calendar.plannerScores,
+    (state: RootState) => state.engineOutput.plannerScores,
   );
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,

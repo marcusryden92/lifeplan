@@ -1,9 +1,30 @@
-import { Planner, Category } from "@/types/prisma";
+import { Planner, Category, PlannerType } from "@/types/prisma";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { Slot } from "../../models/TimeSlot";
 import { gapIntervalsForDay } from "../TemplateExpander/gapIntervalsForDay";
 import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
 import { dateTimeService } from "../../utils/dateTimeService";
+import { getTreeBottomLayer } from "../../../goalPageHandlers";
+import { taskIsCompleted } from "../../../taskHelpers";
+
+// A goal candidate is never placed as one block — scheduleGoal places its
+// leaves one at a time — so for watermark/fit purposes its size is its
+// largest uncompleted leaf, not the subtree aggregate. Treating the
+// aggregate as a block made `biggestFit < biggestRemaining` permanently
+// true for any substantial ready goal: the scheduling loop then burned its
+// whole expansion budget on watermark `continue`s and exited without
+// attempting a single candidate — silently, since nothing ever failed.
+export function effectiveCandidateDuration(
+  item: Planner,
+  allPlanners: Planner[],
+): number {
+  if (item.plannerType !== PlannerType.goal) return item.duration;
+  const leaves = getTreeBottomLayer(allPlanners, item.id).filter(
+    (t) => !taskIsCompleted(t),
+  );
+  if (leaves.length === 0) return 0;
+  return Math.max(...leaves.map((l) => l.duration));
+}
 
 // Max usable duration in a single category window, ignoring everything else.
 // Handles midnight wrap the same way expandSlotForDay does so the result is
@@ -133,13 +154,19 @@ export function largestCompatibleSlotForLargestTask(
   candidates: Planner[],
   slots: Slot[],
   plannerCategoryMap: Map<string, string | null>,
-  placementCutoffDate?: Date | null,
+  placementCutoffDate: Date | null | undefined,
+  allPlanners: Planner[],
 ): number {
   if (candidates.length === 0) return 0;
 
   let biggest: Planner | null = null;
+  let biggestDuration = -1;
   for (const c of candidates) {
-    if (!biggest || c.duration > biggest.duration) biggest = c;
+    const duration = effectiveCandidateDuration(c, allPlanners);
+    if (duration > biggestDuration) {
+      biggest = c;
+      biggestDuration = duration;
+    }
   }
   if (!biggest) return 0;
 

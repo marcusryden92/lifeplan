@@ -153,7 +153,7 @@ function SortHeader({
 export default function LibraryPage() {
   const router = useRouter();
   const { planner, categories } = useCalendarProvider();
-  const isLoaded = useSelector((state: RootState) => state.calendar.isLoaded);
+  const isLoaded = useSelector((state: RootState) => state.calendarSource.isLoaded);
   const now = useMemo(() => new Date(), []);
   const { setOpen: setCaptureOpen } = useCapture();
 

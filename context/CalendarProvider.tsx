@@ -45,7 +45,6 @@ type CalendarContextType = {
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
   updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>;
-  updateCalendarArray: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
   updateTemplateArray: React.Dispatch<React.SetStateAction<EventTemplate[]>>;
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
@@ -88,34 +87,43 @@ export default function CalendarProvider({
 }) {
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.user.user);
-  const calendarState = useSelector((state: RootState) => state.calendar);
+
+  // Field-level subscriptions instead of whole-slice: a write to a field the
+  // provider doesn't read (e.g. plannerScores after an engine run) no longer
+  // re-renders the provider tree.
+  const planner = useSelector((state: RootState) => state.calendarSource.planner);
+  const template = useSelector(
+    (state: RootState) => state.calendarSource.template,
+  );
+  const categories = useSelector(
+    (state: RootState) => state.calendarSource.categories,
+  );
   const isCalendarLoaded = useSelector(
-    (state: RootState) => state.calendar.isLoaded,
+    (state: RootState) => state.calendarSource.isLoaded,
+  );
+  const calendar = useSelector(
+    (state: RootState) => state.engineOutput.calendar,
+  );
+  const categoryEvents = useSelector(
+    (state: RootState) => state.engineOutput.categoryEvents,
+  );
+  const travelEvents = useSelector(
+    (state: RootState) => state.engineOutput.travelEvents,
+  );
+  const engineMessages = useSelector(
+    (state: RootState) => state.engineOutput.engineMessages,
   );
 
   const userId = user?.id;
 
-  const {
-    planner,
-    calendar,
-    template,
-    categories,
-    categoryEvents,
-    travelEvents,
-  } = calendarState;
-
   const weekStartDay: WeekDayIntegers = 1;
 
-  const {
-    updatePlannerArray,
-    updateCalendarArray,
-    updateTemplateArray,
-    updateAll,
-  } = useCalendarStateActions(dispatch);
+  const { updatePlannerArray, updateTemplateArray, updateAll } =
+    useCalendarStateActions(dispatch);
 
   const manuallyRefreshCalendar = useManuallyRefreshCalendar(
     userId,
-    calendarState,
+    { planner, calendar, template, categories },
     weekStartDay,
     dispatch
   );
@@ -153,14 +161,13 @@ export default function CalendarProvider({
     if (!isInitialColdLoadRef.current) return;
     if (!isCalendarLoaded || autoregenFired.current || !userId) return;
     const hasNoChrome =
-      calendarState.categoryEvents.length === 0 &&
-      calendarState.travelEvents.length === 0;
+      categoryEvents.length === 0 && travelEvents.length === 0;
     // Tighter than `categories.length > 0` — a category without time windows
     // produces nothing, so firing autoregen wouldn't change hasNoChrome and
     // the next render would re-evaluate as still-empty.
     const hasSomethingToMaterialize =
-      calendarState.categories.some((c) => c.timeSlots.length > 0) ||
-      calendarState.planner.some((p) => p.locationId);
+      categories.some((c) => c.timeSlots.length > 0) ||
+      planner.some((p) => p.locationId);
     if (hasNoChrome && hasSomethingToMaterialize) {
       autoregenFired.current = true;
       updateAll();
@@ -169,15 +176,38 @@ export default function CalendarProvider({
     isCalendarLoaded,
     userId,
     updateAll,
-    calendarState.categoryEvents.length,
-    calendarState.travelEvents.length,
-    calendarState.categories,
-    calendarState.planner,
+    categoryEvents.length,
+    travelEvents.length,
+    categories,
+    planner,
   ]);
 
+  // Only the sync-relevant arrays — ephemeral fields (plannerScores,
+  // lastEngineRunAt, isLoaded) live outside this object, so they can't
+  // invalidate it and wake the sync effect.
   const syncState = useMemo(
-    () => ({ ...calendarState, locations, travelTimes }),
-    [calendarState, locations, travelTimes],
+    () => ({
+      planner,
+      calendar,
+      template,
+      categories,
+      categoryEvents,
+      travelEvents,
+      engineMessages,
+      locations,
+      travelTimes,
+    }),
+    [
+      planner,
+      calendar,
+      template,
+      categories,
+      categoryEvents,
+      travelEvents,
+      engineMessages,
+      locations,
+      travelTimes,
+    ],
   );
   const { initializeState, markSynced } = useCalendarServerSync(
     userId,
@@ -208,7 +238,6 @@ export default function CalendarProvider({
             categoryEvents,
             travelEvents,
             updatePlannerArray,
-            updateCalendarArray,
             updateTemplateArray,
             updateAll,
             manuallyRefreshCalendar,
@@ -226,7 +255,6 @@ export default function CalendarProvider({
       categoryEvents,
       travelEvents,
       updatePlannerArray,
-      updateCalendarArray,
       updateTemplateArray,
       updateAll,
       manuallyRefreshCalendar,
