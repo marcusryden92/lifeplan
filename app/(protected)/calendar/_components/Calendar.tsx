@@ -84,8 +84,21 @@ export default function Calendar({
   // previous `key={initialDate.getTime()}` approach tore down and rebuilt the
   // whole FullCalendar DOM (plugins, every event tile) on each prev/next/today
   // click; gotoDate is the API for this.
+  //
+  // Skipped on mount (the initialDate prop already positioned the calendar)
+  // and deferred to a timeout: FullCalendar's React connector flushSyncs on
+  // API mutations, and React warns if that happens inside an effect's commit
+  // phase.
+  const hasMountedRef = useRef(false);
   useEffect(() => {
-    calendarRef.current?.getApi().gotoDate(initialDate);
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    const timeout = setTimeout(() => {
+      calendarRef.current?.getApi().gotoDate(initialDate);
+    }, 0);
+    return () => clearTimeout(timeout);
   }, [initialDate]);
 
   // Four render streams merged into the single FullCalendar event array:
