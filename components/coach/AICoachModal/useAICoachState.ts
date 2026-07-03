@@ -49,7 +49,6 @@ export function useAICoachState({
     }
     // canonical intentionally excluded — re-running on every planner change
     // while the modal is open would blow away in-flight AI edits.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const setWorkingTree = useCallback((tree: CoachNode | null) => {

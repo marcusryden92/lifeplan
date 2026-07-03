@@ -43,8 +43,11 @@ export async function syncCalendarData(
 
   // Empty diffs must not bump dataVersion — a no-op bump forces every other
   // tab's next sync into stale-adoption, discarding its in-flight edits.
-  const hasChanges = Object.values(databaseChanges).some((group) =>
-    Object.values(group).some((ops) => ops.length > 0),
+  const hasChanges = Object.values(databaseChanges).some(
+    (group: { create: unknown[]; update: unknown[]; destroy: unknown[] }) =>
+      group.create.length > 0 ||
+      group.update.length > 0 ||
+      group.destroy.length > 0,
   );
   if (!hasChanges) {
     return { success: true, newDataVersion: clientKnownDataVersion };

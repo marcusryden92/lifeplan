@@ -5,6 +5,10 @@ model User {
   emailVerified         DateTime?              @map("email_verified")
   image                 String?
   password              String?
+  // Stamped on every password change (reset flow + settings). The jwt
+  // callback compares it against the token's iat and invalidates sessions
+  // issued before the change.
+  passwordChangedAt     DateTime?              @map("password_changed_at")
   role                  UserRole               @default(USER)
   isTwoFactorEnabled    Boolean                @default(false)
   // Monotonic counter bumped inside every successful sync transaction.

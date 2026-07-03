@@ -111,7 +111,7 @@ lifeplan/
 │   ├── db.ts                         # Prisma client singleton (PrismaPg adapter)
 │   ├── google-maps-api.ts            # Places autocomplete + Distance Matrix
 │   ├── mail.ts, tokens.ts            # Auth flows
-│   ├── taskItem.d.ts
+│   ├── taskItem.ts
 │   └── theme/                        # The whole design system
 │       ├── tokens.css.ts             # createThemeContract: paper/bezel/ink/glass/interactive/shadow/accent/status
 │       ├── themes.css.ts             # themeLight, themeDark
@@ -135,7 +135,7 @@ lifeplan/
 │   │       ├── location.prisma       # Location, TravelTime, TravelEvent, TransportMode
 │   │       ├── scheduling.prisma     # UserSchedulingPreferences, TaskPreferences, enums
 │   │       └── engineMessage.prisma  # EngineMessage — engine-emitted console rows with user-owned dismissed flag
-│   ├── migrations/                   # 0_init, add_data_version, add_category_event, add_travel_event, add_planner_is_triaged, add_engine_message, engine_message_user_index, add_engine_message_dismissed, planner_user_cascade, add_account_deletion_token
+│   ├── migrations/                   # 0_init … add_password_changed_at — see "Migration history" below for the full list
 │   ├── seed.ts                       # Wholesale reseed (admin@lifeplan.com / "password")
 │   └── seed-helpers/                 # generateCategories, generateLocations (+ TravelTimes), generatePlanners, generatePlans, generateTemplates, generateUncompletedItems
 │
@@ -152,21 +152,22 @@ lifeplan/
 │
 ├── types/
 │   ├── prisma.ts                     # Re-exports Prisma payload types with runtime augmentations (SimpleEvent.extendedProps gets categoryWrapperId, travel fields, trespass flags)
-│   ├── calendarTypes.d.ts            # WeekDayIntegers, TravelExtendedProps, TrespassingExtendedProps
-│   ├── categoryTypes.d.ts
-│   ├── models.d.ts, ui.d.ts, css.d.ts, user.d.ts, userTypes.d.ts
+│   ├── calendarTypes.ts              # WeekDayIntegers, TravelExtendedProps, TrespassingExtendedProps
+│   ├── categoryTypes.ts
+│   ├── ui.ts, user.ts, userTypes.ts
+│   ├── css.d.ts                      # Ambient `declare module "*.css"` — the one legitimate .d.ts here
 │
 ├── utils/
 │   ├── calendar-generation/          # The scheduling engine — see deep-dive doc
 │   ├── calendar-rendering/           # categoryEventsToEventInput, templatesToEventInput, travelEventsToEventInput (DB rows → FullCalendar input)
 │   ├── server-handlers/              # compareCalendarData (the diff that feeds syncCalendarData)
-│   ├── template-handlers/, datetime/, locations/, goal-handlers/, category-constraints/
+│   ├── template-handlers/, datetime/, locations/, goal-handlers/
 │   ├── assert/                       # assert.ts (+ assert.js in tsconfig include)
 │   ├── renderEngineMessage.ts        # Maps persisted EngineMessage rows into console-friendly {tag, tone, title, body, goToDate}
 │   └── (loose helpers)               # generalUtils, badgeTone, calendarEventHandlers, categoryUtils,
-│                                     # colorUtils, creationPagesFunctions, dateUtils, engineTones,
-│                                     # eventTier, goalPageHandlers, plannerStatus, plannerUtils,
-│                                     # taskArrayUtils, taskHelpers, templateBuilderUtils, timeFormatting, calendarUtils
+│                                     # colorUtils, dateUtils, engineTones, eventTier, goalPageHandlers,
+│                                     # plannerStatus, taskArrayUtils, taskHelpers, templateBuilderUtils,
+│                                     # timeFormatting, calendarUtils
 │
 ├── __tests__/
 │   └── calendar-generation/expansion-seam.test.ts  # Currently the only engine test — guards the local-date CategoryEvent ID format via a forced expansion run
@@ -481,6 +482,9 @@ Migration history (single source of truth in [prisma/migrations/](prisma/migrati
 - `add_engine_message_dismissed` — user-owned soft-dismiss flag; carried forward by the engine at emit time
 - `planner_user_cascade` — Planner.userId FK converted from RESTRICT to CASCADE so account deletion cascades cleanly
 - `add_account_deletion_token` — short-lived tokens for the email-confirmation step of account deletion
+- `user_id_indexes` — `@@index([userId])` across the per-user tables the fetch/sync queries filter on
+- `verification_token_user_id` — nullable `VerificationToken.userId` so email-change tokens resolve the user by id
+- `add_password_changed_at` — `users.password_changed_at`; the jwt callback invalidates tokens issued before it
 
 Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 
@@ -544,6 +548,6 @@ Run with `pnpm test` / `pnpm test:watch`.
 
 ## Notes for future work
 
-- `CategoryConstraint` and `utils/category-constraints/` are a vestige from when `Category.timeSlots` was a JSON column. The real constraint surface now lives in the `CategoryTimeWindow` table + the engine's slot geometry. Treat the folder as legacy.
+- The legacy `utils/category-constraints/` folder (a vestige from when `Category.timeSlots` was a JSON column) has been removed. The constraint surface lives in the `CategoryTimeWindow` table + the engine's slot geometry.
 - Default to functions over classes when extending the engine; the core classes (`CalendarGenerator`, `Scheduler`, `TimeSlotManager`, `TravelManager`) earn their class form because they own real state. Adding a new class for "tidiness" without a polymorphism / invariant / multi-instance justification is class creep.
 - `notes/` is personal scratch — don't quote it as documentation, and don't add summary/changelog files there.

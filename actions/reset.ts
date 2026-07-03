@@ -17,18 +17,20 @@ export const reset = async (values: z.infer<typeof ResetSchema>) => {
 
   const { email } = validatedFields.data;
 
+  // Same response whether or not the account exists — a distinct "not found"
+  // error would let anyone probe which emails are registered. Only send for
+  // credentials accounts: an OAuth-only user has no password to reset, and
+  // this flow shouldn't silently mint one.
   const existingUser = await getUserByEmail(email);
 
-  if (!existingUser) {
-    return { error: "Email not found" };
+  if (existingUser?.password) {
+    const passwordResetToken = await generatePasswordResetToken(email);
+
+    await sendPasswordResetEmail(
+      passwordResetToken.email,
+      passwordResetToken.token
+    );
   }
 
-  const passwordResetToken = await generatePasswordResetToken(email);
-
-  await sendPasswordResetEmail(
-    passwordResetToken.email,
-    passwordResetToken.token
-  );
-
-  return { success: "Reset email sent!" };
+  return { success: "If an account exists for that email, a reset link is on its way." };
 };

@@ -67,6 +67,7 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
   const update: {
     name?: string;
     password?: string;
+    passwordChangedAt?: Date;
     isTwoFactorEnabled?: boolean;
   } = {};
 
@@ -85,6 +86,7 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
     }
 
     update.password = await bcrypt.hash(data.newPassword, 10);
+    update.passwordChangedAt = new Date();
   }
 
   if (Object.keys(update).length === 0) {

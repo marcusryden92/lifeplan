@@ -13,6 +13,12 @@ export const runtime = "nodejs";
 const MODEL = "claude-sonnet-4-6";
 const MAX_TOKENS = 16000;
 
+// Request caps. The endpoint spends real money per call, so a malformed or
+// hostile body should fail fast instead of being forwarded to Anthropic.
+const MAX_HISTORY_MESSAGES = 40;
+const MAX_MESSAGE_CHARS = 8_000;
+const MAX_TREE_CHARS = 200_000;
+
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
@@ -25,6 +31,47 @@ interface CoachChatMessage {
 interface CoachRequestBody {
   currentTree: CoachNode | null;
   history: CoachChatMessage[];
+}
+
+function parseRequestBody(raw: unknown): CoachRequestBody | string {
+  if (typeof raw !== "object" || raw === null) return "Body must be an object";
+  const { currentTree, history } = raw as Record<string, unknown>;
+
+  if (!Array.isArray(history) || history.length === 0) {
+    return "history must be a non-empty array";
+  }
+  if (history.length > MAX_HISTORY_MESSAGES) {
+    return `history exceeds ${MAX_HISTORY_MESSAGES} messages`;
+  }
+  for (const entry of history) {
+    if (typeof entry !== "object" || entry === null) {
+      return "history entries must be objects";
+    }
+    const { role, content } = entry as Record<string, unknown>;
+    if (role !== "user" && role !== "assistant") {
+      return "history roles must be 'user' or 'assistant'";
+    }
+    if (typeof content !== "string" || content.trim().length === 0) {
+      return "history contents must be non-empty strings";
+    }
+    if (content.length > MAX_MESSAGE_CHARS) {
+      return `a history message exceeds ${MAX_MESSAGE_CHARS} characters`;
+    }
+  }
+
+  if (currentTree !== null && currentTree !== undefined) {
+    if (typeof currentTree !== "object" || Array.isArray(currentTree)) {
+      return "currentTree must be an object or null";
+    }
+    if (JSON.stringify(currentTree).length > MAX_TREE_CHARS) {
+      return `currentTree exceeds ${MAX_TREE_CHARS} serialized characters`;
+    }
+  }
+
+  return {
+    currentTree: (currentTree ?? null) as CoachNode | null,
+    history: history as CoachChatMessage[],
+  };
 }
 
 function buildSystemPrompt(tree: CoachNode | null): string {
@@ -115,14 +162,18 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: CoachRequestBody;
+  let rawBody: unknown;
   try {
-    body = (await req.json()) as CoachRequestBody;
+    rawBody = await req.json();
   } catch {
     return new Response("Invalid JSON body", { status: 400 });
   }
 
-  const { currentTree, history } = body;
+  const parsed = parseRequestBody(rawBody);
+  if (typeof parsed === "string") {
+    return new Response(parsed, { status: 400 });
+  }
+  const { currentTree, history } = parsed;
 
   const anthropicMessages: Anthropic.MessageParam[] = history.map((m) => ({
     role: m.role,
@@ -132,10 +183,20 @@ export async function POST(req: Request) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
+      let closed = false;
       const send = (event: string, data: unknown) => {
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-        );
+        if (closed) return;
+        // The client can disconnect at any time; enqueue on a cancelled
+        // controller throws, and there is nobody left to send to anyway.
+        try {
+          controller.enqueue(
+            encoder.encode(
+              `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
+            ),
+          );
+        } catch {
+          closed = true;
+        }
       };
 
       // Accumulate the tool_use input JSON as it streams; parse on each delta.
@@ -143,13 +204,19 @@ export async function POST(req: Request) {
       let lastEmittedTreeJson: string | null = null;
 
       try {
-        const anthropicStream = client.messages.stream({
-          model: MODEL,
-          max_tokens: MAX_TOKENS,
-          system: buildSystemPrompt(currentTree),
-          messages: anthropicMessages,
-          tools: [proposeTreeTool],
-        });
+        // req.signal fires when the browser disconnects (tab closed, modal
+        // dismissed). Forwarding it aborts the upstream Anthropic request so
+        // we stop paying for tokens nobody will receive.
+        const anthropicStream = client.messages.stream(
+          {
+            model: MODEL,
+            max_tokens: MAX_TOKENS,
+            system: buildSystemPrompt(currentTree),
+            messages: anthropicMessages,
+            tools: [proposeTreeTool],
+          },
+          { signal: req.signal },
+        );
 
         for await (const event of anthropicStream) {
           if (event.type === "content_block_start") {
@@ -165,12 +232,16 @@ export async function POST(req: Request) {
               // in missing brackets/quotes so we can extract whatever complete
               // subtree has landed so far.
               try {
-                const parsed = parsePartial(toolInputAccumulator, Allow.ALL);
+                const parsed: unknown = parsePartial(
+                  toolInputAccumulator,
+                  Allow.ALL,
+                );
                 if (parsed && typeof parsed === "object" && "tree" in parsed) {
-                  const treeJson = JSON.stringify(parsed.tree);
+                  const tree = (parsed as { tree: unknown }).tree;
+                  const treeJson = JSON.stringify(tree);
                   if (treeJson !== lastEmittedTreeJson) {
                     lastEmittedTreeJson = treeJson;
-                    send("tree", { tree: parsed.tree });
+                    send("tree", { tree });
                   }
                 }
               } catch {
@@ -185,15 +256,25 @@ export async function POST(req: Request) {
           stopReason: finalMessage.stop_reason,
         });
       } catch (err) {
-        const message =
-          err instanceof Anthropic.APIError
-            ? `${err.status}: ${err.message}`
-            : err instanceof Error
-              ? err.message
-              : "Unknown error";
-        send("error", { message });
+        // Client-initiated abort is a normal exit, not an error to report.
+        if (!req.signal.aborted) {
+          const message =
+            err instanceof Anthropic.APIError
+              ? `${err.status}: ${err.message}`
+              : err instanceof Error
+                ? err.message
+                : "Unknown error";
+          send("error", { message });
+        }
       } finally {
-        controller.close();
+        if (!closed) {
+          closed = true;
+          try {
+            controller.close();
+          } catch {
+            // Controller already cancelled by the disconnect.
+          }
+        }
       }
     },
   });

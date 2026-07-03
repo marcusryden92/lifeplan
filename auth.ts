@@ -84,6 +84,16 @@ export const {
 
       if (!existingUser) return token;
 
+      // Kill sessions issued before the last password change. iat has
+      // second granularity, so allow 2s of slack for the login that
+      // immediately follows a reset.
+      if (existingUser.passwordChangedAt) {
+        const issuedAtMs = (token.iat ?? 0) * 1000;
+        if (issuedAtMs + 2000 < existingUser.passwordChangedAt.getTime()) {
+          return null;
+        }
+      }
+
       const existingAccount = await getAccountByUserId(existingUser.id);
 
       token.isOAuth = !!existingAccount;
