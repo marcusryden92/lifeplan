@@ -100,7 +100,7 @@ lifeplan/
 │   ├── useCurrentUser, useCurrentRole
 │   ├── useFetchCalendarData          # Initial Redux seed from server
 │   ├── useCalendarServerSync         # Diff-based sync to DB with OCC, stale recovery, rollback
-│   ├── useCalendarStateActions       # updatePlannerArray / updateCalendarArray / updateTemplateArray / updateAll
+│   ├── useCalendarStateActions       # updatePlannerArray / updateTemplateArray / updateAll
 │   ├── useManuallyRefreshCalendar    # User-triggered regen
 │   ├── useServerAction               # useTransition + status pattern for mutations
 │   ├── useKeyboardShortcuts, useListKeyboardNav, useClickOutside, usePopoverPosition,
@@ -171,7 +171,7 @@ lifeplan/
 │                                     # timeFormatting, calendarUtils
 │
 ├── __tests__/
-│   └── calendar-generation/expansion-seam.test.ts  # Currently the only engine test — guards the local-date CategoryEvent ID format via a forced expansion run
+│   └── calendar-generation/          # Engine regression tests + fixtures/ (trimmed live-data snapshots)
 │
 ├── documentation/
 │   └── calendar-generation-deep-dive.md
@@ -330,9 +330,9 @@ Related utilities: [normalizeCoachTree.ts](components/coach/AICoachModal/normali
                                    │
    CalendarProvider ── useCalendarStateActions ─► updateAllCalendarStates
    (context)             updatePlannerArray /         (thunk → engine)
-                         updateCalendarArray /              │
-                         updateTemplateArray /              ▼
-                         updateAll                generateCalendar(...)
+                         updateTemplateArray /              │
+                         updateAll                          ▼
+                                                  generateCalendar(...)
                                                            │
                                                            ▼
                                 events + categoryEvents + travelEvents + engineMessages
@@ -541,9 +541,15 @@ See [documentation/calendar-generation-deep-dive.md](documentation/calendar-gene
 
 ## Tests
 
-Only one engine test currently lives in the repo: [`__tests__/calendar-generation/expansion-seam.test.ts`](__tests__/calendar-generation/expansion-seam.test.ts). It guards the local-date-keyed `CategoryEvent` ID format by forcing horizon expansion (a single Plan three weeks out). The diff layer and the DB schema depend on this composite ID; UTC-instant keying would desync near midnight UTC.
+Engine regression tests live in [`__tests__/calendar-generation/`](__tests__/calendar-generation/):
 
-Run with `pnpm test` / `pnpm test:watch`.
+- **expansion-seam** — guards the local-date-keyed `CategoryEvent` ID format by forcing horizon expansion (a single Plan three weeks out). The diff layer and the DB schema depend on this composite ID; UTC-instant keying would desync near midnight UTC.
+- **completed-task-not-rescheduled** — a completed task under a non-ready goal must render only at its completion window, never re-enter the candidate list (guards the `prepareCandidates` completed filter).
+- **ready-goal-watermark** — a ready goal whose subtree-aggregate duration exceeds any possible slot must still place every leaf (goals size as their largest uncompleted leaf in the expansion watermark), and an exhausted expansion budget must surface `NO_SLOTS` failures instead of exiting silently.
+
+The latter two run against trimmed live-data snapshots in `fixtures/` — synthetic minimal fixtures don't produce a valid slot fabric, so new engine tests should extend the fixture pattern rather than hand-building planners. Tests use jest fake timers (`{ doNotFake: ["queueMicrotask"] }` + `setSystemTime`) for a deterministic "now", and map fixture template `startDay` weekday names to the integers the engine expects.
+
+Run with `pnpm test` / `pnpm test:watch`. Type-checking covers both the app and the test project: `pnpm type-check` (also chained into `pnpm lint`).
 
 ---
 

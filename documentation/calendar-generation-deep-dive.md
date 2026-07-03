@@ -208,7 +208,8 @@ Scoring itself: tasks without a deadline get `MIN_URGENCY_MULTIPLIER * priority`
 [prepareCandidates.ts](../utils/calendar-generation/helpers/CalendarGenerator/prepareCandidates.ts) returns the ordered list of planners the scheduler will try:
 
 - Excludes memoized rows.
-- Keeps only ready root goals and all tasks.
+- Excludes completed tasks — completed items render via `buildCompletedEvents` (Phase 2) and must never re-enter scheduling. This filter is what keeps a completed task under a **non-ready** goal from being re-placed: such tasks reach the scheduler through the standalone-task path, which has no goal-level readiness gate.
+- Keeps only ready root goals and (uncompleted) tasks.
 - Sorts via [sortByPriorityAndConstraints](../utils/calendar-generation/helpers/PrioritySorter/sortByPriorityAndConstraints.ts) — two-tier sort: category-constrained items first (because they have fewer eligible slots), then by descending **urgency score** looked up from the precomputed map. Urgency is not a strategy; it is decided here before any slot scoring.
 
 ### Phase 10 — Schedule tasks and goals
@@ -300,11 +301,11 @@ Static placements (plans, templates, category-wrapper travel) are always flush w
 - Per iteration: compute `placementCutoffDate = lastPlaceableSlotEnd − PLACEMENT_BUFFER_DAYS`.
 - **Proactive expansion check**: count Available slots. Trigger [expandSlots](../utils/calendar-generation/helpers/Scheduler/expandSlots.ts) if either:
   - `availableCount < LOW_SLOT_WATERMARK`, **or**
-  - The largest compatible slot for the biggest remaining task is smaller than that task's duration ([largestCompatibleSlotForLargestTask](../utils/calendar-generation/helpers/Scheduler/capacityCheck.ts)).
+  - The largest compatible slot for the biggest remaining candidate is smaller than that candidate's **effective duration** ([largestCompatibleSlotForLargestTask](../utils/calendar-generation/helpers/Scheduler/capacityCheck.ts)). Effective duration (`effectiveCandidateDuration`) is the item's own duration for tasks, but for goals it is the **largest uncompleted leaf** — `scheduleGoal` places leaves one at a time, so the subtree aggregate is the wrong unit. Comparing the aggregate here made the watermark permanently true for any substantial ready goal, and the loop burned its whole expansion budget on `continue`s without attempting a single placement.
   - Then `continue` (skip the forward pass and re-check on the expanded array).
-- **Forward pass**: walk candidates in reverse, calling [scheduleSingleTask](../utils/calendar-generation/helpers/Scheduler/scheduleSingleTask.ts) for tasks and [scheduleGoal](../utils/calendar-generation/helpers/Scheduler/scheduleGoal.ts) for goals. Splice out anything that scheduled or permanently failed; retain rows that failed with `NO_SLOTS` for retry.
+- **Forward pass**: walk candidates **in sorted order** (category-constrained and highest-urgency first — matching the Phase 9 sort), calling [scheduleSingleTask](../utils/calendar-generation/helpers/Scheduler/scheduleSingleTask.ts) for tasks and [scheduleGoal](../utils/calendar-generation/helpers/Scheduler/scheduleGoal.ts) for goals. Resolved ids (scheduled or permanently failed) are collected during the walk and removed after the pass; rows that failed with `NO_SLOTS` are retained for retry. (The old reverse-index splice idiom handed first pick to the lowest-urgency item under contention, inverting the sorter's intent.)
 - **Reactive backstop**: if candidates remain after a full forward pass, run `expandSlots` and loop again.
-- Stops when candidates empty or `expansionsDone ≥ MAX_WEEKS_TO_SEARCH`.
+- Stops when candidates empty or `expansionsDone ≥ MAX_WEEKS_TO_SEARCH`. Candidates still standing at budget exhaustion each push a `NO_SLOTS` failure — this exit used to be silent, which let a starved run report `SCHEDULED_OK` with zero events while the diff sync deleted every previously placed event.
 
 ### Goals
 
@@ -398,11 +399,17 @@ The slot horizon is bounded — initial build covers `HORIZON_CHUNK_DAYS = 28` d
 
 ### Why proactive expansion matters
 
-Without the proactive watermark check, the scheduler would burn iterations on tasks that can't possibly fit before triggering reactive expansion. Detecting "biggest task > biggest compatible slot" before the forward pass starts cuts straight to the expansion step.
+Without the proactive watermark check, the scheduler would burn iterations on tasks that can't possibly fit before triggering reactive expansion. Detecting "biggest candidate > biggest compatible slot" before the forward pass starts cuts straight to the expansion step. The comparison must use `effectiveCandidateDuration` (goals sized as their largest uncompleted leaf) — see Section 6 for the starvation failure mode when the goal aggregate is used instead.
 
 ### Regression coverage
 
-[`__tests__/calendar-generation/expansion-seam.test.ts`](../__tests__/calendar-generation/expansion-seam.test.ts) is the only test currently in the engine's test directory. It is narrower than the section title implies: it guards the `CategoryEvent` ID format (`` `${categoryTimeWindowId}|${YYYY-MM-DD-local}` ``) by running `generateCalendar` with a single Plan three weeks out (which forces expansion) and asserting that every produced `CategoryEvent` ID matches the local-date pattern. The diff layer and the DB schema depend on this composite ID; a regression to UTC-instant keying would diverge near midnight UTC and would be caught here.
+Three tests live in [`__tests__/calendar-generation/`](../__tests__/calendar-generation/):
+
+- [`expansion-seam.test.ts`](../__tests__/calendar-generation/expansion-seam.test.ts) — guards the `CategoryEvent` ID format (`` `${categoryTimeWindowId}|${YYYY-MM-DD-local}` ``) by running `generateCalendar` with a single Plan three weeks out (which forces expansion) and asserting that every produced `CategoryEvent` ID matches the local-date pattern. The diff layer and the DB schema depend on this composite ID; a regression to UTC-instant keying would diverge near midnight UTC and would be caught here.
+- [`ready-goal-watermark.test.ts`](../__tests__/calendar-generation/ready-goal-watermark.test.ts) — guards the effective-duration watermark: a ready root goal whose subtree aggregate exceeds any possible slot must still get every leaf placed.
+- [`completed-task-not-rescheduled.test.ts`](../__tests__/calendar-generation/completed-task-not-rescheduled.test.ts) — guards the Phase 9 completed-task filter: a task completed under a non-ready goal renders exactly once, at its completion window.
+
+The latter two run against a trimmed live-data snapshot in `fixtures/` — hand-built minimal fixtures don't produce a valid slot fabric and fail silently, so new engine tests should extend the fixture pattern.
 
 ---
 
@@ -422,7 +429,7 @@ Returns `min(categoryCeiling, largestGap)`. Cached per `taskCategoryId ?? "anywh
 
 ### `largestCompatibleSlotForLargestTask`
 
-Same module, used by the proactive expansion check. Walks the slot array and returns the largest currently-existing slot the biggest remaining candidate could land in, honoring category strictness and the `placementCutoffDate`.
+Same module, used by the proactive expansion check. Walks the slot array and returns the largest currently-existing slot the biggest remaining candidate could land in, honoring category strictness and the `placementCutoffDate`. "Biggest" is measured by `effectiveCandidateDuration` (same module): a task's own duration, but a goal's **largest uncompleted leaf** — never the subtree aggregate (see Section 6).
 
 ---
 
@@ -551,7 +558,7 @@ The engine has a built-in switchboard at [calendarGeneration.ts:78–94](../util
 | `planners` / `templates` / `locations` | Echo of input |
 | `strategySettings` | Active strategy weights / scores / penalties |
 | `staticEventTravelPass` | Per-slot decision/action trail of every static pass (preliminary plus each `resume@<date>` expansion) — set via [TravelPassRecorder](../utils/calendar-generation/helpers/TravelManager/TravelPassRecorder.ts), formatted via [travelPassMessages](../utils/calendar-generation/helpers/TravelManager/travelPassMessages.ts) |
-| `dynamicScheduling` | Per-task decision/action trail of every dynamic placement — set via [SchedulerRecorder](../utils/calendar-generation/helpers/Scheduler/SchedulerRecorder.ts), formatted via [schedulerMessages](../utils/calendar-generation/helpers/Scheduler/schedulerMessages.ts) |
+| `dynamicScheduling` | Per-task decision/action trail of every dynamic placement — set via [SchedulerRecorder](../utils/calendar-generation/helpers/Scheduler/SchedulerRecorder.ts), formatted via [schedulerMessages](../utils/calendar-generation/helpers/Scheduler/schedulerMessages.ts). A `COMPACT` constant in [loggingUtils.ts](../utils/calendar-generation/utils/loggingUtils.ts) (default `true`) prints only task headers + outcomes — one screenful per regen instead of a slot-dump avalanche; flip it off for the full decision/action/end-state trail on a task under investigation |
 | `dateRangeStart` / `dateRangeEnd` | Inclusive bounds applied to event-based dumps (`finalEvents`, `leanCalendar`, `travelDebug`) and the recorder trails. Either can be `null` to leave that side open. |
 
 When investigating a misplaced travel block or a task that ended up in the wrong slot:
@@ -603,16 +610,17 @@ CalendarGenerator.generate()
    ├─ (10) Scheduler.scheduleTasksAndGoals
    │         │
    │         ▼
-   │       loop while candidates remain:
+   │       loop while candidates remain (≤ MAX_WEEKS_TO_SEARCH expansions):
    │         compute placementCutoffDate
-   │         proactive expansion check (watermark / largest-task vs largest-compatible-slot)
+   │         proactive expansion check (watermark / effective-duration vs largest-compatible-slot)
    │           → if needed: expandSlots → continue
    │         forward pass:
-   │           for each candidate in reverse:
+   │           for each candidate in sorted order:
    │             scheduleSingleTask / scheduleGoal
    │               → scheduleTask: validate → findValid → selectBest → reserve → buildEvent
-   │             splice on scheduled or permanent failure
+   │             collect resolved ids; remove after the pass
    │         if candidates remain → expandSlots (reactive backstop)
+   │       leftover candidates at budget exhaustion → loud NO_SLOTS failures
    │
    ├─ (11) deriveSchedulingHorizon → assembleFinalEvents
    │         → events, categoryEvents, travelEvents
