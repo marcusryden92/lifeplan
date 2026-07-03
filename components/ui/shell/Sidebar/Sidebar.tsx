@@ -19,6 +19,7 @@ import {
   navGlyph,
   navLabel,
   spacer,
+  navDivider,
   footerRow,
   avatar,
   footerText,
@@ -110,21 +111,7 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
         <span className={navLabel}>Assistant</span>
       </button>
 
-      <button
-        type="button"
-        className={navItem}
-        onClick={() => setCollapsed((c) => !c)}
-        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        aria-expanded={!collapsed}
-      >
-        <span className={navGlyph}>
-          <span className={collapseChevronIcon} aria-hidden>
-            <ChevronLeft size={20} strokeWidth={2} />
-          </span>
-        </span>
-        <span className={navLabel}>Collapse</span>
-      </button>
+      <div className={navDivider} aria-hidden />
 
       <button
         type="button"
@@ -140,6 +127,22 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
           )}
         </span>
         <span className={navLabel}>{dark ? "Light mode" : "Dark mode"}</span>
+      </button>
+
+      <button
+        type="button"
+        className={navItem}
+        onClick={() => setCollapsed((c) => !c)}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-expanded={!collapsed}
+      >
+        <span className={navGlyph}>
+          <span className={collapseChevronIcon} aria-hidden>
+            <ChevronLeft size={20} strokeWidth={2} />
+          </span>
+        </span>
+        <span className={navLabel}>Collapse</span>
       </button>
 
       <UserMenu userName={userName} userInitial={userInitial} />
