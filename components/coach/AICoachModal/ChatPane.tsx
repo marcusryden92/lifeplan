@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ArrowUp } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui";
 import type { ChatMessage } from "./useAICoachState";
 import {
@@ -12,6 +14,7 @@ import {
   messageAssistant,
   messageRole,
   messageContent,
+  markdownBody,
   streamingDots,
   streamingDot,
   composer,
@@ -87,7 +90,15 @@ export function ChatPane({
                 <span className={messageRole}>assistant</span>
               )}
               <span className={messageContent}>
-                {m.content}
+                {m.role === "assistant" ? (
+                  <span className={markdownBody}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {m.content}
+                    </ReactMarkdown>
+                  </span>
+                ) : (
+                  m.content
+                )}
                 {m.streaming && (
                   <span className={streamingDots} aria-label="streaming">
                     <span className={streamingDot} />

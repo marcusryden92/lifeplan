@@ -1,4 +1,4 @@
-import { style, keyframes } from "@vanilla-extract/css";
+import { style, keyframes, globalStyle } from "@vanilla-extract/css";
 import { vars, themeTransition, radii } from "@/lib/theme";
 
 export const wrap = style({
@@ -87,6 +87,87 @@ export const messageRole = style({
 export const messageContent = style({
   whiteSpace: "pre-wrap",
   wordBreak: "break-word",
+});
+
+// Assistant replies render as markdown. The wrapper resets pre-wrap (markdown
+// manages its own whitespace) and the globalStyle rules below theme the
+// generated elements — scoped to this class so nothing leaks.
+export const markdownBody = style({
+  display: "block",
+  whiteSpace: "normal",
+  minWidth: 0,
+});
+
+globalStyle(`${markdownBody} p`, {
+  margin: "0 0 8px",
+});
+globalStyle(`${markdownBody} > :last-child, ${markdownBody} li > :last-child`, {
+  marginBottom: 0,
+});
+globalStyle(`${markdownBody} ul, ${markdownBody} ol`, {
+  margin: "4px 0 8px",
+  paddingLeft: 20,
+});
+globalStyle(`${markdownBody} li`, {
+  margin: "2px 0",
+});
+globalStyle(`${markdownBody} strong`, {
+  fontWeight: 650,
+});
+globalStyle(
+  `${markdownBody} h1, ${markdownBody} h2, ${markdownBody} h3, ${markdownBody} h4`,
+  {
+    fontSize: 13.5,
+    fontWeight: 700,
+    margin: "10px 0 4px",
+    lineHeight: 1.4,
+  },
+);
+globalStyle(`${markdownBody} code`, {
+  fontFamily:
+    "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace",
+  fontSize: 12,
+  padding: "1px 5px",
+  borderRadius: 4,
+  background: `color-mix(in srgb, ${vars.ink} 8%, transparent)`,
+});
+globalStyle(`${markdownBody} pre`, {
+  margin: "4px 0 8px",
+  padding: "8px 10px",
+  borderRadius: radii.sm,
+  border: `1px solid ${vars.rule}`,
+  background: `color-mix(in srgb, ${vars.ink} 5%, transparent)`,
+  overflowX: "auto",
+});
+globalStyle(`${markdownBody} pre code`, {
+  padding: 0,
+  background: "transparent",
+});
+globalStyle(`${markdownBody} a`, {
+  color: vars.accent.primary,
+  textDecoration: "underline",
+  textUnderlineOffset: 2,
+});
+globalStyle(`${markdownBody} blockquote`, {
+  margin: "4px 0 8px",
+  paddingLeft: 10,
+  borderLeft: `2px solid ${vars.rule}`,
+  color: vars.inkSoft,
+});
+globalStyle(`${markdownBody} hr`, {
+  border: "none",
+  borderTop: `1px solid ${vars.rule}`,
+  margin: "10px 0",
+});
+globalStyle(`${markdownBody} table`, {
+  borderCollapse: "collapse",
+  margin: "4px 0 8px",
+  fontSize: 12,
+});
+globalStyle(`${markdownBody} th, ${markdownBody} td`, {
+  border: `1px solid ${vars.rule}`,
+  padding: "3px 8px",
+  textAlign: "left",
 });
 
 const dotPulse = keyframes({
