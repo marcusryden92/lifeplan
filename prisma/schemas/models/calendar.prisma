@@ -54,6 +54,7 @@ model Planner {
   user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   location           Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
   category           Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  taskPreferences    TaskPreferences?
 
   @@index([userId])
   @@map("Planners")

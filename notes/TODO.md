@@ -1,7 +1,9 @@
 # P4 — Refactors / investigations
 
-- Item-detail AIHelper + EngineNotes side cards still using mocks (deferred while AI coach is shelved)
-- AI coach ( JSON-action pipeline + BYOK + slide-over)
+- Claude Templates, Categories, Locations
+
+- Plan not triggering regeneration issue
+- General responsiveness check
 
 # P5 — Medium features
 

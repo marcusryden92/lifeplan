@@ -181,6 +181,9 @@ describe("applyCoachForestToPlanner", () => {
     // Children inherit the root's category.
     expect(buy.categoryId).toBe("cat-2");
     expect(lesson.categoryId).toBe("cat-2");
+    // New subtasks are NOT ready by default — readying is a user decision.
+    expect(buy.isReady).toBeNull();
+    expect(lesson.isReady).toBeNull();
   });
 
   it("only readies a new goal that has both subtasks and a deadline", () => {
@@ -329,6 +332,74 @@ describe("applyCoachForestToPlanner", () => {
     expect(result.find((p) => p.id === "a2")).toBeUndefined();
     // b1 pointed at a2 (A's old last leaf); A's new last leaf is a1.
     expect(byId(result, "b1").dependency).toBe("a1");
+  });
+
+  it("applies a draft goal with route-minted ids as a new root with fresh ids and clean threading", () => {
+    const planner = makePlanner();
+    const workingForest = clone(plannerForestToJson(planner));
+    // Draft ids as minted by the route at propose/add time: unknown to the
+    // planner array. Save must re-mint every id and derive parentId +
+    // dependency from the tree shape alone.
+    workingForest.goals.push({
+      id: "draft-root",
+      title: "Draft goal",
+      plannerType: "goal",
+      duration: 0,
+      deadline: null,
+      priority: 0,
+      isReady: null,
+      categoryId: null,
+      children: [
+        {
+          id: "draft-child-1",
+          title: "first step",
+          plannerType: "task",
+          duration: 30,
+          deadline: null,
+          priority: 0,
+          isReady: null,
+          categoryId: null,
+          children: [],
+        },
+        {
+          id: "draft-child-2",
+          title: "second step",
+          plannerType: "task",
+          duration: 30,
+          deadline: null,
+          priority: 0,
+          isReady: null,
+          categoryId: null,
+          children: [],
+        },
+      ],
+    });
+
+    const result = applyCoachForestToPlanner({
+      planner,
+      workingForest,
+      userId: USER_ID,
+      validCategoryIds: VALID_CATEGORY_IDS,
+    });
+
+    // No draft id survives into the planner array — not as a row id, not as
+    // a parentId, not as a dependency.
+    const draftIds = new Set(["draft-root", "draft-child-1", "draft-child-2"]);
+    for (const p of result) {
+      expect(draftIds.has(p.id)).toBe(false);
+      if (p.parentId) expect(draftIds.has(p.parentId)).toBe(false);
+      if (p.dependency) expect(draftIds.has(p.dependency)).toBe(false);
+    }
+
+    const root = result.find((p) => p.title === "Draft goal")!;
+    const first = result.find((p) => p.title === "first step")!;
+    const second = result.find((p) => p.title === "second step")!;
+    expect(root.parentId).toBeNull();
+    expect(root.dependency).toBeNull();
+    expect(first.parentId).toBe(root.id);
+    expect(second.parentId).toBe(root.id);
+    expect(first.dependency).toBeNull();
+    expect(second.dependency).toBe(first.id);
   });
 
   it("treats a goal whose id matches a nested row as a brand-new goal", () => {

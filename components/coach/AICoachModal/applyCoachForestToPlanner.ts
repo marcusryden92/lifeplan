@@ -226,6 +226,7 @@ function applyTreeToExistingRoot({
           title: node.title,
           parentId,
           plannerType: normalizePlannerType(node.plannerType),
+          // Deliberately NOT ready by default — readying is a user decision.
           isReady: node.isReady,
           isTriaged: true,
           duration: Math.max(1, Math.floor(node.duration)),
@@ -320,6 +321,7 @@ function buildNewRootRows(
       title: child.title,
       parentId,
       plannerType: normalizePlannerType(child.plannerType),
+      // Deliberately NOT ready by default — readying is a user decision.
       isReady: child.isReady,
       isTriaged: true,
       duration: Math.max(1, Math.floor(child.duration)),

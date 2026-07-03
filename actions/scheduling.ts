@@ -175,7 +175,7 @@ export async function upsertTaskPreferences(
     allowFlexibility: prefs.allowFlexibility ?? undefined,
   };
 
-  const createPayload: Prisma.TaskPreferencesCreateInput = {
+  const createPayload: Prisma.TaskPreferencesUncheckedCreateInput = {
     plannerId,
     taskType: prefs.taskType ?? undefined,
     preferredDays: prefs.preferredDays ?? [],

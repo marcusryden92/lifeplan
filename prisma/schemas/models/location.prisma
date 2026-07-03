@@ -72,7 +72,7 @@ enum TransportMode {
 model TravelEvent {
   // Deterministic id: `${fromLocationId ?? "anywhere"}-${toLocationId ?? "anywhere"}-${start}`.
   // Same logical travel at the same time produces the same row across regens
-  // — sync becomes idempotent. Engine writes wholesale on each regen; the
+  // â€” sync becomes idempotent. Engine writes wholesale on each regen; the
   // diff lands as creates only when an actual placement shifted.
   id String @id
 
@@ -91,14 +91,14 @@ model TravelEvent {
   // Originally-required minutes when the engine was forced into a smaller slot
   requiredTravelMinutes Int?
 
-  // Visual markers — render red / yellow when set
+  // Visual markers â€” render red / yellow when set
   insufficientTravel Boolean @default(false)
   overconstrained    Boolean @default(false)
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt String @default(dbgenerated("NOW()::text"))
+  createdAt String @default(dbgenerated("(now())::text"))
   updatedAt String
 
   @@index([userId])

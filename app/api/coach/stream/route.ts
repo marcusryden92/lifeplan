@@ -12,6 +12,9 @@ import {
   type CoachItemUpdate,
   type CoachOpsResult,
 } from "@/components/coach/AICoachModal/coachForestOps";
+import { assignDraftIds } from "@/components/coach/AICoachModal/assignDraftIds";
+import { normalizeCoachForest } from "@/components/coach/AICoachModal/normalizeCoachForest";
+import { mergeCoachForest } from "@/components/coach/AICoachModal/mergeCoachForest";
 
 // Note: this file lives under app/api/ despite the CLAUDE.md convention of
 // preferring server actions. Streaming binary/SSE responses don't map cleanly
@@ -242,13 +245,14 @@ Each node in a goal tree has:
 - duration: minutes required for that leaf task. For a "goal" node, duration is a rough estimate (children sum to the real total).
 - deadline: ISO date string or null.
 - priority: integer.
-- isReady: boolean or null (goals only). Only set true on a goal that has at least one subtask AND a deadline — the app blocks readying goals without both. Otherwise use false or null.
+- isReady: top-level goals only — true marks the goal ready for scheduling, and requires at least one subtask AND a deadline (the app blocks it otherwise). OMIT this field (or use null) on all child nodes; items are not ready by default and readying is the user's decision.
 - categoryId: top-level goals only — one of the user's category ids, or null. Echo it verbatim for retained goals (null on a retained goal means "leave as is"); pick a fitting category for new goals, or null if none fits. Never set it on child nodes; they inherit.
 - children: ordered array of sub-nodes. Empty for leaves.
 
 ID PRESERVATION (IMPORTANT)
 - KEEP an existing node: include its id EXACTLY as given.
-- CREATE a new node: omit the id field or set it to null.
+- CREATE a new node: omit the id field or set it to null. The app assigns it a draft id (reported in tool results and visible in fetched trees); unsaved drafts then behave exactly like saved goals — they appear in the index and work with every tool, including fetch-before-modify.
+- Draft ids are replaced with permanent ids when the user saves, so never reuse an id remembered from an earlier conversation — verify against the current index or search first.
 - REMOVE a node inside a goal you're editing: simply don't include it in that goal's tree.
 - Never invent, modify, or reuse an id from a different node, and never move a node between two different top-level goals — that changes its identity.
 
@@ -261,11 +265,11 @@ Reading:
 Editing — deterministic operations. PREFER these for small changes; each applies immediately to the user's review pane as a pending change (nothing is saved without their confirmation):
 - update_items: change fields (title, duration, deadline, priority, isReady; categoryId on top-level goals only) on items by id. No fetch needed.
 - move_item: move or reorder an item within its own goal (new parent + position). Cross-goal moves and moving top-level goals are not supported.
-- add_items: insert new subtasks under an existing parent. Added items receive their real ids only when the user saves — do not try to reference them by id.
+- add_items: insert new subtasks under an existing parent. Added items are assigned draft ids on insertion — fetch the goal tree if you need to reference them.
 - delete_items: remove items (with their subtrees) or whole goals by id.
 
 Building:
-- propose_goals: create new top-level goals, or restructure a goal wholesale. Complete trees ONLY for goals you create or modify — never re-emit untouched goals, and never use this for small edits (use the editing tools instead). Emit each goal's id as its FIRST field; new nodes omit id. deletedGoalIds removes whole goals. The order of the goals array is not meaningful.
+- propose_goals: create new top-level goals, or restructure a goal wholesale. Complete trees ONLY for goals you create or modify — never re-emit untouched goals, and never use this for small edits (use the editing tools instead). Emit each goal's id as its FIRST field; new nodes omit id (draft ids are assigned and reported back). deletedGoalIds removes whole goals. The order of the goals array is not meaningful.
 
 Display:
 - show_goals: bring existing goals into the user's tree pane without changing them. Pass ids, or all: true.
@@ -687,6 +691,10 @@ export async function POST(req: Request) {
           let currentToolName: string | null = null;
           let currentProposeCallIndex = 0;
           let lastEmittedProposalJson: string | null = null;
+          // The final stamped re-emit (in the tool-execution pass below) must
+          // reuse the callIndex the partial deltas streamed under, so the
+          // client fold replaces them instead of stacking a second proposal.
+          const proposeCallIndexByToolUseId = new Map<string, number>();
 
           for await (const event of anthropicStream) {
             if (event.type === "content_block_start") {
@@ -695,6 +703,10 @@ export async function POST(req: Request) {
                 currentToolName = event.content_block.name;
                 if (currentToolName === "propose_goals") {
                   currentProposeCallIndex = proposeCallCounter++;
+                  proposeCallIndexByToolUseId.set(
+                    event.content_block.id,
+                    currentProposeCallIndex,
+                  );
                 }
                 if (anyTextSent) needsSeparator = true;
               }
@@ -842,7 +854,7 @@ export async function POST(req: Request) {
                           : undefined,
                       atStart: input?.atStart === true,
                     }),
-                    `Added ${items.length} item(s); real ids are assigned when the user saves`,
+                    `Added ${items.length} item(s) with draft ids (fetch the goal tree to read them)`,
                   );
                   break;
                 }
@@ -860,10 +872,49 @@ export async function POST(req: Request) {
                 }
                 case "propose_goals": {
                   const filtered = filterProposal(tu.input);
+                  // Stamp draft ids on the accepted goals, adopt them into
+                  // the server's working copy (so same-turn fetches and edit
+                  // ops see them), and re-emit the stamped proposal under the
+                  // callIndex its id-less partials streamed with — the client
+                  // fold replaces those partials with the final stamped trees.
+                  const normalized = normalizeCoachForest({
+                    goals: filtered.goals,
+                    deletedGoalIds: filtered.deletedGoalIds,
+                  });
+                  let assignedNote = "";
+                  if (normalized) {
+                    const { goals: stampedGoals, newRoots } = assignDraftIds(
+                      normalized.goals,
+                    );
+                    workingForest = mergeCoachForest(workingForest, {
+                      ...normalized,
+                      goals: stampedGoals,
+                    });
+                    for (const root of newRoots) {
+                      // The model authored these trees this request — no
+                      // fetch required before revising them.
+                      existingGoalIds.add(root.id);
+                      fetchedGoalIds.add(root.id);
+                    }
+                    send("forest", {
+                      callIndex:
+                        proposeCallIndexByToolUseId.get(tu.id) ??
+                        proposeCallCounter++,
+                      goals: stampedGoals,
+                      deletedGoalIds: normalized.deletedGoalIds,
+                    });
+                    if (newRoots.length > 0) {
+                      assignedNote = ` New goals were assigned draft ids: ${newRoots
+                        .map((r) => `"${r.title}" = ${r.id}`)
+                        .join(
+                          ", ",
+                        )}. Draft ids work with every tool; permanent ids replace them when the user saves.`;
+                    }
+                  }
                   content =
                     filtered.rejectedIds.length > 0
                       ? `Proposal received, EXCEPT these goals were REJECTED because you have not fetched their trees this message: ${filtered.rejectedIds.join(", ")}. Call get_goal_trees for them, then re-propose only those goals.`
-                      : "Proposal received. The user sees it as a pending diff; do not repeat it.";
+                      : `Proposal received. The user sees it as a pending diff; do not repeat it.${assignedNote}`;
                   break;
                 }
                 default:

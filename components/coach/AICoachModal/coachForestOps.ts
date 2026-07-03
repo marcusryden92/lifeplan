@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from "uuid";
 import type { CoachNode } from "./plannerTreeToJson";
 import type { CoachForest } from "./plannerForestToJson";
 import { normalizeCoachTree } from "./normalizeCoachTree";
@@ -350,7 +351,7 @@ export function addCoachItems(
   const items = (Array.isArray(args.items) ? args.items : [])
     .map((raw) => normalizeCoachTree(raw))
     .filter((node): node is CoachNode => node !== null)
-    .map(stripIds);
+    .map(mintDraftIds);
   if (items.length === 0) return fail(null, "no valid items to add");
 
   const target = parentLoc.node.children;
@@ -374,13 +375,15 @@ export function addCoachItems(
   };
 }
 
-// Added nodes are new by definition — real UUIDs are minted at Save. Stripping
-// any model-supplied id also blocks "moving" an existing item via add_items.
-function stripIds(node: CoachNode): CoachNode {
+// Added nodes are new by definition, so any model-supplied id is discarded
+// (which also blocks "moving" an existing item via add_items) and a fresh
+// draft id is minted in its place — draft nodes stay addressable by every
+// tool. Permanent UUIDs still replace draft ids at Save.
+function mintDraftIds(node: CoachNode): CoachNode {
   return {
     ...node,
-    id: "",
+    id: uuidv4(),
     categoryId: null,
-    children: node.children.map(stripIds),
+    children: node.children.map(mintDraftIds),
   };
 }

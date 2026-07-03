@@ -94,18 +94,6 @@ export const confirmAccountDeletion = async (
   try {
     await db.$transaction(
       async (tx) => {
-        // TaskPreferences links to Planner via plannerId with no FK relation,
-        // so the Planner cascade won't reach it — clean it up first.
-        const plannerIds = await tx.planner.findMany({
-          where: { userId: dbUser.id },
-          select: { id: true },
-        });
-        if (plannerIds.length > 0) {
-          await tx.taskPreferences.deleteMany({
-            where: { plannerId: { in: plannerIds.map((p) => p.id) } },
-          });
-        }
-
         // UserSchedulingPreferences has no FK relation, so no cascade.
         await tx.userSchedulingPreferences.deleteMany({
           where: { userId: dbUser.id },

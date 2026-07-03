@@ -291,8 +291,9 @@
              ← deterministic ops executed server-side by coachForestOps.ts on
                the request's working copy; the resulting trees are emitted as
                fromOps forest events (code-computed — never retyped by the
-               model). Same-goal moves only; ids stripped on add; isReady /
-               categoryId validation built in.
+               model). Same-goal moves only; supplied ids on add are discarded
+               and re-minted as draft ids; isReady / categoryId validation
+               built in.
       build: propose_goals({goals, deletedGoalIds})   ← new goals + wholesale restructures
       show:  show_goals({goalIds | all})
         │
@@ -336,6 +337,7 @@
   - **`dependency` is never emitted by the AI** — sibling order is array position (top-level goal order is NOT semantic; goals match by id). The reverse parser re-threads the linked list from scratch.
   - **Goal-granular deltas** — the model never re-emits untouched goals; unchanged goals are skipped at apply time so they see zero `updatedAt` churn and no phantom sync diffs.
   - **Fetch-before-modify is enforced server-side** — tool results are not carried between user messages (client history is prose-only), so the model must re-fetch trees each message; the route rejects proposal entries for unfetched existing goals rather than trusting the prompt alone. The deterministic edit tools are exempt: they operate by id on the server's copy, so they cannot drop data the model never saw.
+  - **Draft ids are route-minted** — id-less nodes in an accepted `propose_goals` call (and every `add_items` node) get UUIDs stamped by the route (`assignDraftIds` / `mintDraftIds`); the stamped trees are merged into the request's working copy, re-emitted to the client under the same `callIndex` (replacing the id-less partials), and the new root ids are reported in the tool result. Unsaved drafts are therefore first-class for every tool — fetchable, editable, replaceable by id, deletable — instead of duplicate-prone rebuilds from model memory. Draft ids never reach the DB: they match no canonical root at Save, so `applyCoachForestToPlanner` mints the permanent UUIDs.
   - **Edit ops never touch the dependency linked list** — coachForestOps works on the nested tree where order is array position; threading is derived once at Save by applyCoachForestToPlanner. The `utils/goal-handlers/update-dependencies/` functions are not used by (or affected by) the assistant.
   - **`categoryId` rides on top-level goal roots only**; children inherit. Null on a retained root means "leave as is" (backfilled in `mergeCoachForest`); an id not in the user's category set is ignored. New top-level rows are never plans (`starts` isn't in the contract; coerced defensively).
   - **Streaming path is a Route handler**, not a server action. See the note in "Code style rules" — SSE bytes don't fit the server-action return shape.

@@ -7,7 +7,7 @@ model Category {
 
   timeSlots CategoryTimeWindow[]
 
-  // When false, the category is used purely for classification — its time windows
+  // When false, the category is used purely for classification â€” its time windows
   // (if any) are ignored by the scheduler and items in it schedule freely.
   useTimeWindows Boolean @default(true)
 
@@ -34,7 +34,7 @@ model Category {
   // Materialized weekly occurrences with trespass info (back-reference)
   events CategoryEvent[]
 
-  createdAt String @default(dbgenerated("NOW()::text"))
+  createdAt String @default(dbgenerated("(now())::text"))
   updatedAt String
 
   @@index([userId])
@@ -77,7 +77,7 @@ model CategoryEvent {
   start String // ISO datetime
   end   String // ISO datetime
 
-  // Trespass markers — engine fills these when its scheduling decisions
+  // Trespass markers â€” engine fills these when its scheduling decisions
   // violated a category boundary. Renderer stamps red borders accordingly.
   trespassingStart Boolean @default(false)
   trespassingEnd   Boolean @default(false)
@@ -87,14 +87,14 @@ model CategoryEvent {
   categoryTimeWindowId String
   categoryTimeWindow   CategoryTimeWindow @relation(fields: [categoryTimeWindowId], references: [id], onDelete: Cascade)
 
-  // Owning category — required for render (color, name, isStrict).
+  // Owning category â€” required for render (color, name, isStrict).
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt String @default(dbgenerated("NOW()::text"))
+  createdAt String @default(dbgenerated("(now())::text"))
   updatedAt String
 
   @@index([userId])

@@ -217,12 +217,12 @@ describe("deleteCoachItems", () => {
 });
 
 describe("addCoachItems", () => {
-  it("inserts normalized, id-stripped subtrees at the requested position", () => {
+  it("inserts normalized subtrees with fresh draft ids at the requested position", () => {
     const result = addCoachItems(makeForest(), {
       parentId: "goal-a",
       items: [
         {
-          id: "should-be-stripped",
+          id: "should-be-discarded",
           title: "Listening practice",
           plannerType: "task",
           duration: 30,
@@ -238,11 +238,14 @@ describe("addCoachItems", () => {
       "Listening practice",
       "Basics",
     ]);
-    expect(children[1].id).toBe("");
-    expect(children[1].children[0]).toMatchObject({
-      id: "",
-      title: "Find a podcast",
-    });
+    // Supplied ids are discarded (no smuggled moves) and every added node
+    // gets its own fresh draft id so the model can address it immediately.
+    const added = children[1];
+    expect(added.id).not.toBe("");
+    expect(added.id).not.toBe("should-be-discarded");
+    expect(added.children[0].title).toBe("Find a podcast");
+    expect(added.children[0].id).not.toBe("");
+    expect(added.children[0].id).not.toBe(added.id);
   });
 
   it("rejects unknown parents and empty item lists", () => {

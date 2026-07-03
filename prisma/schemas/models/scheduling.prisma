@@ -13,7 +13,8 @@ model UserSchedulingPreferences {
 // Task/Habit preferences
 model TaskPreferences {
   id                 String        @id @default(cuid())
-  plannerId          String        @unique // Links to Planner table
+  plannerId          String        @unique
+  planner            Planner       @relation(fields: [plannerId], references: [id], onDelete: Cascade)
   taskType           TaskTypeEnum?
   preferredDays      Int[] // [1,2,3] = Mon, Tue, Wed
   preferredStartTime String? // "09:00"

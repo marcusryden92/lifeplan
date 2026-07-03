@@ -9,7 +9,7 @@
 // the engine emits one row per unique instance rather than spamming the
 // console) and "same specific instance" (so dismissal survives regens as
 // long as the id matches). Any change to a discriminating field (placement
-// shift, new reason, new travel numbers) produces a new id → surfaces as a
+// shift, new reason, new travel numbers) produces a new id â†’ surfaces as a
 // new row.
 
 model EngineMessage {
@@ -26,7 +26,7 @@ model EngineMessage {
   // Type-specific structured payload. Kept as Json because the field set
   // differs per type and would balloon the schema; relational integrity for
   // referenced planners / travel events falls out of the regen sweep (a
-  // deleted entity is no longer emitted → its row is diffed away).
+  // deleted entity is no longer emitted â†’ its row is diffed away).
   payload Json
 
   // User-owned soft-dismiss flag. Set by the dismiss button; carried forward
@@ -39,7 +39,7 @@ model EngineMessage {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt String @default(dbgenerated("NOW()::text"))
+  createdAt String @default(dbgenerated("(now())::text"))
   updatedAt String
 
   @@index([userId])

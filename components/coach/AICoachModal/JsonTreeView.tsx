@@ -192,7 +192,6 @@ function TreeNode({ node }: { node: DiffNode }) {
               </span>
             </>
           )}
-          {node.isReady && <span className={readyDot} aria-label="Ready" />}
         </span>
       </div>
       {node.children.length > 0 && (
