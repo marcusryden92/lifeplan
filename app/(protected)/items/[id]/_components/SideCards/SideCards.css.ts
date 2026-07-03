@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { vars, themeTransition } from "@/lib/theme";
 
 export const card = style({
   padding: "12px 0",
@@ -8,13 +8,6 @@ export const card = style({
   selectors: {
     "&:last-child": { borderBottom: "none" },
   },
-});
-
-export const cardHeaderRow = style({
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  marginBottom: 10,
 });
 
 export const cardSectionTitle = style({
@@ -71,37 +64,6 @@ export const nextCardBody = style({
   // Reserves room for title (~22px) + marginTop (2) + sub (~17px) so the
   // empty "Not scheduled yet" state takes the same vertical space.
   minHeight: 42,
-});
-
-export const helperSuggestion = style({
-  padding: "8px 12px",
-  borderRadius: radii["md+2"],
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.rule}`,
-  fontSize: 12.5,
-  color: vars.inkSoft,
-  fontWeight: 500,
-  fontFamily: vars.font.ui,
-  transition: themeTransition,
-});
-
-export const helperPillRow = style({
-  display: "flex",
-  flexWrap: "wrap",
-  gap: 6,
-  marginTop: 10,
-});
-
-export const helperPill = style({
-  padding: "3px 10px",
-  borderRadius: radii.pill,
-  background: vars.glass.bgDeep,
-  border: `1px solid ${vars.glass.stroke}`,
-  fontSize: 11,
-  fontWeight: 600,
-  color: vars.ink,
-  fontFamily: vars.font.ui,
-  transition: themeTransition,
 });
 
 export const whyText = style({

@@ -10,6 +10,9 @@ export const wrap = style({
   background: vars.paper,
   padding: 10,
   transition: themeTransition,
+  // Opt back in from the global user-select: none — goal titles and fields
+  // should be copyable.
+  userSelect: "text",
 });
 
 export const empty = style({
@@ -23,6 +26,19 @@ export const empty = style({
 export const nodeBlock = style({
   display: "flex",
   flexDirection: "column",
+});
+
+// Collapsible goal header <button>. Emitted BEFORE the status `row` variants
+// so their borderLeft/background/padding win over these UA resets; this class
+// only contributes the reset, cursor, and header-weight tweaks.
+export const goalRow = style({
+  appearance: "none",
+  background: "transparent",
+  border: "none",
+  width: "100%",
+  textAlign: "left",
+  font: "inherit",
+  cursor: "pointer",
 });
 
 const rowBase = style({
@@ -200,4 +216,53 @@ export const childrenWrap = style({
   paddingLeft: 10,
   borderLeft: `1px solid ${vars.rule}`,
   transition: themeTransition,
+});
+
+export const goalBlock = style({
+  display: "flex",
+  flexDirection: "column",
+  selectors: {
+    "& + &": {
+      marginTop: 6,
+    },
+  },
+});
+
+export const goalTitle = style({
+  fontSize: 13,
+  fontWeight: 600,
+});
+
+export const showAllRow = style({
+  appearance: "none",
+  background: "transparent",
+  border: "none",
+  width: "100%",
+  marginTop: 8,
+  padding: "6px 8px",
+  borderRadius: radii.sm,
+  cursor: "pointer",
+  fontFamily: vars.font.ui,
+  fontSize: 11,
+  fontWeight: 600,
+  color: vars.inkSoft,
+  textAlign: "center",
+  transition: themeTransition,
+  selectors: {
+    "&:hover": {
+      background: vars.interactive.hoverFill,
+      color: vars.ink,
+    },
+  },
+});
+
+export const chevron = style({
+  flexShrink: 0,
+  color: vars.inkSoft,
+  transition: `transform 140ms ease, ${themeTransition}`,
+  selectors: {
+    "&[data-expanded='true']": {
+      transform: "rotate(90deg)",
+    },
+  },
 });

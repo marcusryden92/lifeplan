@@ -22,12 +22,24 @@ interface ChatPaneProps {
   messages: ChatMessage[];
   onSend: (content: string) => void;
   disabled?: boolean;
+  // Prefills the composer (not auto-sent) — used by entry points that carry a
+  // canned prompt, e.g. the item-detail helper pills.
+  initialDraft?: string | null;
 }
 
-export function ChatPane({ messages, onSend, disabled }: ChatPaneProps) {
+export function ChatPane({
+  messages,
+  onSend,
+  disabled,
+  initialDraft,
+}: ChatPaneProps) {
   const [draft, setDraft] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (initialDraft) setDraft(initialDraft);
+  }, [initialDraft]);
 
   useEffect(() => {
     const list = listRef.current;
@@ -61,9 +73,9 @@ export function ChatPane({ messages, onSend, disabled }: ChatPaneProps) {
       <div className={messageList} ref={listRef}>
         {messages.length === 0 ? (
           <div className={empty}>
-            Describe how you want to restructure this goal.
+            Ask for new goals, restructure existing ones, or clean things up.
             <br />
-            The coach will propose changes and update the tree on the right.
+            The assistant proposes changes and updates the goals on the right.
           </div>
         ) : (
           messages.map((m) => (
@@ -72,7 +84,7 @@ export function ChatPane({ messages, onSend, disabled }: ChatPaneProps) {
               className={m.role === "user" ? messageUser : messageAssistant}
             >
               {m.role === "assistant" && (
-                <span className={messageRole}>coach</span>
+                <span className={messageRole}>assistant</span>
               )}
               <span className={messageContent}>
                 {m.content}
@@ -96,7 +108,7 @@ export function ChatPane({ messages, onSend, disabled }: ChatPaneProps) {
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Message the coach…"
+          placeholder="Message the assistant…"
           rows={1}
           disabled={disabled}
         />

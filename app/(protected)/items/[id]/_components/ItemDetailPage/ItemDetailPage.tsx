@@ -13,11 +13,7 @@ import { formatDatetimeLocal, parseDatetimeLocal } from "@/utils/datetime";
 import { vars } from "@/lib/theme";
 import { useItem } from "../ItemContext";
 import { IdentityCard } from "../IdentityCard";
-import {
-  NextOnCalendarCard,
-  AIHelperCard,
-  EngineNotesCard,
-} from "../SideCards";
+import { NextOnCalendarCard, EngineNotesCard } from "../SideCards";
 import { SHAKE_DURATION_MS } from "../../_constants";
 import {
   overviewGrid,
@@ -147,7 +143,6 @@ export default function ItemOverviewPage() {
         </div>
         <div className={rightCol}>
           <NextOnCalendarCard />
-          <AIHelperCard />
           <EngineNotesCard />
         </div>
       </div>

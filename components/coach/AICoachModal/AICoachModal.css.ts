@@ -1,12 +1,15 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { vars, themeTransition, radii, zIndex } from "@/lib/theme";
 
 export const MODAL_FADE_MS = 220;
 
+// Fills the AppShell main column (the mount point is the assistantSlot inside
+// mainColumn), leaving the sidebar visible and interactive. Sits above page
+// content but below the Capture/Search palettes (zIndex.palette).
 export const overlay = style({
   position: "absolute",
   inset: 0,
-  zIndex: 10,
+  zIndex: zIndex.floating,
   display: "flex",
   opacity: 0,
   transition: `opacity ${MODAL_FADE_MS}ms ease`,
@@ -18,7 +21,7 @@ export const overlay = style({
 export const modal = style({
   position: "absolute",
   inset: 0,
-  zIndex: 11,
+  zIndex: zIndex.floating + 1,
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",

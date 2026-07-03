@@ -20,6 +20,10 @@ export function normalizeCoachTree(raw: unknown): CoachNode | null {
   const id = typeof node.id === "string" ? node.id : "";
   const deadline = typeof node.deadline === "string" ? node.deadline : null;
   const isReady = typeof node.isReady === "boolean" ? node.isReady : null;
+  const categoryId =
+    typeof node.categoryId === "string" && node.categoryId.length > 0
+      ? node.categoryId
+      : null;
 
   const rawChildren = Array.isArray(node.children) ? node.children : [];
   const children = rawChildren
@@ -34,6 +38,7 @@ export function normalizeCoachTree(raw: unknown): CoachNode | null {
     deadline,
     priority,
     isReady,
+    categoryId,
     children,
   };
 }

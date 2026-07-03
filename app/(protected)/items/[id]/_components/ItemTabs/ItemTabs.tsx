@@ -25,16 +25,14 @@ interface ItemTabsProps {
   itemId: string;
   subtaskCount: number;
   subtasksEnabled: boolean;
-  onOpenCoach?: () => void;
-  coachEnabled?: boolean;
+  onOpenAssistant?: () => void;
 }
 
 export function ItemTabs({
   itemId,
   subtaskCount,
   subtasksEnabled,
-  onOpenCoach,
-  coachEnabled = false,
+  onOpenAssistant,
 }: ItemTabsProps) {
   const pathname = usePathname();
   const base = `/items/${itemId}`;
@@ -92,17 +90,17 @@ export function ItemTabs({
           </Link>
         );
       })}
-      {coachEnabled && onOpenCoach && (
+      {onOpenAssistant && (
         <>
           <span className={tabSpacer} />
           <button
             type="button"
             className={coachTrigger}
-            onClick={onOpenCoach}
-            aria-label="Open AI coach"
+            onClick={onOpenAssistant}
+            aria-label="Open AI assistant"
           >
             <Sparkles size={13} strokeWidth={2} />
-            <span>AI coach</span>
+            <span>AI assistant</span>
           </button>
         </>
       )}

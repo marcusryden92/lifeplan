@@ -30,10 +30,12 @@ export {
   CapturePalette,
   CaptureProvider,
   useCapture,
+  AssistantProvider,
+  useAssistant,
   NAV_ITEMS,
   MOBILE_TABS,
 } from "./shell";
-export type { NavItem } from "./shell";
+export type { NavItem, AssistantScope } from "./shell";
 
 export {
   vars,

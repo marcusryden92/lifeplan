@@ -29,8 +29,7 @@ import type { PlannerType } from "@/generated/client";
 
 import { ItemProvider } from "../ItemContext";
 import { ItemTabs } from "../ItemTabs";
-import { ConfirmModal } from "@/components/ui";
-import { AICoachModal } from "@/components/coach/AICoachModal";
+import { ConfirmModal, useAssistant } from "@/components/ui";
 import { READY_MESSAGE_MS } from "../../_constants";
 import {
   page,
@@ -70,7 +69,7 @@ export default function ItemDetailLayout({
   );
   const [editingTitle, setEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
-  const [coachOpen, setCoachOpen] = useState(false);
+  const { openAssistant } = useAssistant();
 
   const item = useMemo(
     () => planner.find((p) => p.id === itemId),
@@ -375,8 +374,7 @@ export default function ItemDetailLayout({
               itemId={item.id}
               subtaskCount={totalSubtasks}
               subtasksEnabled={isGoal}
-              coachEnabled={isGoal}
-              onOpenCoach={() => setCoachOpen(true)}
+              onOpenAssistant={() => openAssistant({ focusItemId: item.id })}
             />
 
             <div className={tabBodyWrap}>{children}</div>
@@ -439,13 +437,6 @@ export default function ItemDetailLayout({
             onConfirm={confirmResetSubgoalLocations}
           />
 
-          {isGoal && (
-            <AICoachModal
-              open={coachOpen}
-              onClose={() => setCoachOpen(false)}
-              rootId={item.id}
-            />
-          )}
         </div>
       </ItemProvider>
     </DraggableContextProvider>

@@ -69,13 +69,14 @@ function diffNode(working: CoachNode, canonical: CoachNode): DiffNode {
     deadline: working.deadline,
     priority: working.priority,
     isReady: working.isReady,
+    categoryId: working.categoryId,
     status,
     children: diffedChildren,
     changedFields,
   };
 }
 
-function markSubtree(node: CoachNode, status: DiffStatus): DiffNode {
+export function markSubtree(node: CoachNode, status: DiffStatus): DiffNode {
   return {
     id: node.id,
     title: node.title,
@@ -84,6 +85,7 @@ function markSubtree(node: CoachNode, status: DiffStatus): DiffNode {
     deadline: node.deadline,
     priority: node.priority,
     isReady: node.isReady,
+    categoryId: node.categoryId,
     status,
     changedFields: [],
     children: node.children.map((c) => markSubtree(c, status)),
@@ -98,5 +100,24 @@ function fieldsThatChanged(a: CoachNode, b: CoachNode): string[] {
   if (a.deadline !== b.deadline) changed.push("deadline");
   if (a.priority !== b.priority) changed.push("priority");
   if (a.isReady !== b.isReady) changed.push("isReady");
+  if (a.categoryId !== b.categoryId) changed.push("categoryId");
   return changed;
+}
+
+export function diffSubtreeHasChanges(node: DiffNode): boolean {
+  if (node.status !== "unchanged") return true;
+  return node.children.some(diffSubtreeHasChanges);
+}
+
+// Shallow-fields-plus-ordered-children equality. Cheap and sufficient: the AI
+// writes wholesale subtree replacements, so a real edit always changes at
+// least one field, id, or child ordering. Child order IS semantic within a
+// goal (schedule order); top-level forest order is not — see coachForestsEqual.
+export function coachTreesEqual(a: CoachNode, b: CoachNode): boolean {
+  if (fieldsThatChanged(a, b).length > 0) return false;
+  if (a.id !== b.id || a.children.length !== b.children.length) return false;
+  for (let i = 0; i < a.children.length; i++) {
+    if (!coachTreesEqual(a.children[i], b.children[i])) return false;
+  }
+  return true;
 }

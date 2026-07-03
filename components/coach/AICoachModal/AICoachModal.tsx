@@ -3,16 +3,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { v4 as uuidv4 } from "uuid";
+import { format } from "date-fns";
 import { Button, Backdrop, Grain, ConfirmModal } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { plannerTreeToJson } from "./plannerTreeToJson";
-import { JsonTreeView } from "./JsonTreeView";
+import { plannerForestToJson } from "./plannerForestToJson";
+import { JsonForestView } from "./JsonTreeView";
 import { ChatPane } from "./ChatPane";
 import { useAICoachState } from "./useAICoachState";
-import { streamCoach, type StreamChatMessage } from "./streamCoach";
-import { normalizeCoachTree } from "./normalizeCoachTree";
-import { applyCoachTreeToPlanner } from "./applyCoachTreeToPlanner";
-import { diffCoachTree } from "./diffCoachTree";
+import {
+  streamCoach,
+  type StreamChatMessage,
+  type StreamCoachFocus,
+} from "./streamCoach";
+import {
+  normalizeCoachForest,
+  type CoachForestProposal,
+} from "./normalizeCoachForest";
+import { foldCoachProposals } from "./mergeCoachForest";
+import { applyCoachForestToPlanner } from "./applyCoachForestToPlanner";
+import { diffCoachForest } from "./diffCoachForest";
+import { diffSubtreeHasChanges } from "./diffCoachTree";
 
 import {
   overlay,
@@ -32,17 +42,30 @@ import {
   a11yHiddenTitle,
 } from "./AICoachModal.css";
 
+export interface AICoachFocus {
+  rootId: string | null;
+  itemId: string | null;
+}
+
 interface AICoachModalProps {
   open: boolean;
   onClose: () => void;
-  rootId: string;
+  focus?: AICoachFocus | null;
+  initialPrompt?: string | null;
 }
 
-export function AICoachModal({ open, onClose, rootId }: AICoachModalProps) {
-  const { planner, updatePlannerArray, userId } = useCalendarProvider();
+export function AICoachModal({
+  open,
+  onClose,
+  focus,
+  initialPrompt,
+}: AICoachModalProps) {
+  const { planner, categories, updatePlannerArray, userId } =
+    useCalendarProvider();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [chatBasisPct, setChatBasisPct] = useState(50);
   const [isDraggingDivider, setIsDraggingDivider] = useState(false);
+  const [streamStatus, setStreamStatus] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
 
   const onDividerMouseDown = useCallback(
@@ -72,37 +95,53 @@ export function AICoachModal({ open, onClose, rootId }: AICoachModalProps) {
     [chatBasisPct],
   );
 
-  const canonical = useMemo(
-    () => plannerTreeToJson(planner, rootId),
-    [planner, rootId],
-  );
-
-  // Recompute on every workingTree/canonical tick. Cheap: pure walk of a
-  // typically-small subtree, no memo cost worth introducing.
+  const canonical = useMemo(() => plannerForestToJson(planner), [planner]);
 
   const {
-    workingTree,
-    setWorkingTree,
+    workingForest,
+    setWorkingForest,
     hasChanges,
     messages,
     appendMessage,
     updateMessage,
   } = useAICoachState({ open, canonical });
 
-  useEffect(() => {
-    if (open && workingTree) {
-      console.log(
-        "[coach] tree JSON:\n" + JSON.stringify(workingTree, null, 2),
-      );
-    }
-  }, [open, workingTree]);
+  // Recompute on every workingForest/canonical tick. Cheap: pure walk of a
+  // personal-scale forest, no memo cost worth introducing.
+  const diffedGoals = diffCoachForest(workingForest, canonical);
 
-  // Keep the latest workingTree in a ref so the send callback always reads
-  // fresh state without having to be recreated on every tree tick.
-  const workingTreeRef = useRef(workingTree);
+  // The tree pane shows a relevance-scoped subset: the focused goal, goals
+  // the AI touched (any diff status in the subtree), and goals brought into
+  // view via show_goals — with a manual show-all escape hatch. The working
+  // forest itself always stays complete; this is a render filter only, so
+  // Save/delete semantics are unaffected.
+  const [showAll, setShowAll] = useState(false);
+  const [shownGoalIds, setShownGoalIds] = useState<Set<string>>(new Set());
+  const focusRootId = focus?.rootId ?? null;
   useEffect(() => {
-    workingTreeRef.current = workingTree;
-  }, [workingTree]);
+    if (open) {
+      setShowAll(false);
+      setShownGoalIds(focusRootId ? new Set([focusRootId]) : new Set());
+    }
+  }, [open, focusRootId]);
+
+  const visibleGoals = showAll
+    ? diffedGoals
+    : diffedGoals.filter(
+        (g) => shownGoalIds.has(g.id) || diffSubtreeHasChanges(g),
+      );
+  const hiddenCount = diffedGoals.length - visibleGoals.length;
+
+  const focusedGoalTitle = focusRootId
+    ? canonical.goals.find((g) => g.id === focusRootId)?.title ?? null
+    : null;
+
+  // Keep the latest workingForest in a ref so the send callback always reads
+  // fresh state without having to be recreated on every forest tick.
+  const workingForestRef = useRef(workingForest);
+  useEffect(() => {
+    workingForestRef.current = workingForest;
+  }, [workingForest]);
 
   const messagesRef = useRef(messages);
   useEffect(() => {
@@ -125,11 +164,15 @@ export function AICoachModal({ open, onClose, rootId }: AICoachModalProps) {
       const userMessageId = uuidv4();
       const assistantMessageId = uuidv4();
 
+      // Tool-only turns can leave an assistant message with empty content;
+      // the server rejects empty history entries, so drop them here.
       const history: StreamChatMessage[] = [
-        ...messagesRef.current.map((m) => ({
-          role: m.role,
-          content: m.content,
-        })),
+        ...messagesRef.current
+          .filter((m) => m.content.trim().length > 0)
+          .map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
         { role: "user", content },
       ];
 
@@ -144,23 +187,91 @@ export function AICoachModal({ open, onClose, rootId }: AICoachModalProps) {
       const controller = new AbortController();
       abortRef.current = controller;
 
+      // Snapshot the working forest once per send. Every propose_goals call
+      // streams partial re-parses keyed by callIndex; folding the latest
+      // snapshot of each call over this same base means re-parses replace
+      // (never compound) while multiple calls in one turn still stack.
+      const turnStartForest = workingForestRef.current;
+      const proposalsByCall = new Map<number, CoachForestProposal>();
+      setStreamStatus(null);
+      const streamFocus: StreamCoachFocus | null = focus?.rootId
+        ? { rootId: focus.rootId, itemId: focus.itemId ?? null }
+        : null;
+
       let assistantText = "";
+      let sawForest = false;
+      let sawShow = false;
       await streamCoach({
-        currentTree: workingTreeRef.current,
+        currentForest: turnStartForest,
         history,
+        focus: streamFocus,
+        categories: categories.map((c) => ({ id: c.id, name: c.name })),
+        // Local date, not server UTC — deadlines are user-local decisions.
+        today: format(new Date(), "yyyy-MM-dd"),
         signal: controller.signal,
         onText: (delta) => {
           assistantText += delta;
+          setStreamStatus(null);
           updateMessage(assistantMessageId, { content: assistantText });
         },
-        onTree: (tree) => {
-          const normalized = normalizeCoachTree(tree);
-          if (normalized) setWorkingTree(normalized);
+        onForest: ({ callIndex, proposal: raw }) => {
+          sawForest = true;
+          const proposal = normalizeCoachForest(raw);
+          if (proposal) {
+            proposalsByCall.set(callIndex, proposal);
+            const ordered = [...proposalsByCall.keys()]
+              .sort((a, b) => a - b)
+              .map((idx) => proposalsByCall.get(idx)!);
+            setWorkingForest(foldCoachProposals(turnStartForest, ordered));
+          }
+        },
+        onStatus: ({ tool, count }) => {
+          const plural = count === 1 ? "" : "s";
+          const label =
+            tool === "get_goal_trees"
+              ? `reading ${count} goal${plural}…`
+              : tool === "search_items"
+                ? "searching…"
+                : tool === "update_items"
+                  ? `editing ${count} item${plural}…`
+                  : tool === "move_item"
+                    ? "moving an item…"
+                    : tool === "add_items"
+                      ? `adding ${count} item${plural}…`
+                      : tool === "delete_items"
+                        ? `deleting ${count} item${plural}…`
+                        : null;
+          if (label) setStreamStatus(label);
+        },
+        onShow: ({ goalIds, all }) => {
+          sawShow = true;
+          if (all) setShowAll(true);
+          else if (goalIds.length > 0) {
+            // A specific-goal show reads as narrowing ("open just X"), so it
+            // also exits show-all mode; ids still union across turns.
+            setShowAll(false);
+            setShownGoalIds((prev) => new Set([...prev, ...goalIds]));
+          }
         },
         onDone: () => {
-          updateMessage(assistantMessageId, { streaming: false });
+          setStreamStatus(null);
+          // A tool-only turn produces no prose; fill the bubble so it isn't
+          // blank (this fallback also enters future history as the
+          // assistant's reply).
+          const fallback = sawForest
+            ? "Proposed changes — review them in the goals pane."
+            : sawShow
+              ? "Brought them into view in the goals pane."
+              : "Done.";
+          updateMessage(assistantMessageId, {
+            streaming: false,
+            ...(assistantText.trim().length === 0
+              ? { content: fallback }
+              : {}),
+          });
         },
         onError: (message) => {
+          setStreamStatus(null);
           updateMessage(assistantMessageId, {
             content:
               assistantText.length > 0
@@ -175,7 +286,7 @@ export function AICoachModal({ open, onClose, rootId }: AICoachModalProps) {
         abortRef.current = null;
       }
     },
-    [appendMessage, updateMessage, setWorkingTree],
+    [appendMessage, updateMessage, setWorkingForest, focus, categories],
   );
 
   const requestClose = useCallback(() => {
@@ -187,21 +298,21 @@ export function AICoachModal({ open, onClose, rootId }: AICoachModalProps) {
   }, [hasChanges, onClose]);
 
   const handleSave = useCallback(() => {
-    if (!workingTree || !hasChanges || !userId) return;
-    const nextPlanner = applyCoachTreeToPlanner({
+    if (!hasChanges || !userId) return;
+    const nextPlanner = applyCoachForestToPlanner({
       planner,
-      rootId,
-      workingTree,
+      workingForest,
       userId,
+      validCategoryIds: new Set(categories.map((c) => c.id)),
     });
     updatePlannerArray(nextPlanner);
     onClose();
   }, [
-    workingTree,
+    workingForest,
     hasChanges,
     userId,
     planner,
-    rootId,
+    categories,
     updatePlannerArray,
     onClose,
   ]);
@@ -209,6 +320,9 @@ export function AICoachModal({ open, onClose, rootId }: AICoachModalProps) {
   return (
     <Dialog.Root
       open={open}
+      // Non-modal: the sidebar stays interactive while the assistant is open
+      // (theme toggle, nav). Dismissal is Esc / the Close button only.
+      modal={false}
       onOpenChange={(next) => {
         if (!next) requestClose();
       }}
@@ -217,18 +331,16 @@ export function AICoachModal({ open, onClose, rootId }: AICoachModalProps) {
       <Dialog.Content
         className={modal}
         aria-describedby={undefined}
-        onPointerDownOutside={(e) => {
-          e.preventDefault();
-          requestClose();
-        }}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
       >
-        <Dialog.Title className={a11yHiddenTitle}>AI Coach</Dialog.Title>
+        <Dialog.Title className={a11yHiddenTitle}>AI Assistant</Dialog.Title>
         <Backdrop variant="blob" />
         <Grain />
 
         <div className={banner}>
-          <span className={editingLabel}>ai coach</span>
-          <span className={bannerTitle}>{canonical?.title ?? "—"}</span>
+          <span className={editingLabel}>ai assistant</span>
+          <span className={bannerTitle}>{focusedGoalTitle ?? "All goals"}</span>
           <span className={bannerSpacer} />
           <Button
             variant="glass"
@@ -249,20 +361,20 @@ export function AICoachModal({ open, onClose, rootId }: AICoachModalProps) {
         </div>
 
         <div className={body} ref={bodyRef}>
-          <div
-            className={chatPane}
-            style={{ flex: `0 0 ${chatBasisPct}%` }}
-          >
+          <div className={chatPane} style={{ flex: `0 0 ${chatBasisPct}%` }}>
             <div className={paneHeader}>
               <h2 className={paneTitle}>Chat</h2>
               <span className={paneSubtitle}>
-                {isStreaming ? "coach is thinking…" : "send a prompt to begin"}
+                {isStreaming
+                  ? streamStatus ?? "assistant is thinking…"
+                  : "send a prompt to begin"}
               </span>
             </div>
             <ChatPane
               messages={messages}
               onSend={handleSend}
               disabled={isStreaming}
+              initialDraft={open ? initialPrompt ?? null : null}
             />
           </div>
           <div
@@ -275,12 +387,19 @@ export function AICoachModal({ open, onClose, rootId }: AICoachModalProps) {
           />
           <div className={treePane} style={{ flex: "1 1 0" }}>
             <div className={paneHeader}>
-              <h2 className={paneTitle}>Goal structure</h2>
+              <h2 className={paneTitle}>Goals</h2>
               <span className={paneSubtitle}>
-                {hasChanges ? "unsaved changes" : "current tree"}
+                {hasChanges ? "unsaved changes" : "current goals"}
               </span>
             </div>
-            <JsonTreeView root={diffCoachTree(workingTree, canonical)} />
+            <JsonForestView
+              goals={visibleGoals}
+              hiddenCount={hiddenCount}
+              showingAll={showAll}
+              onToggleShowAll={() => setShowAll((v) => !v)}
+              categories={categories}
+              focusRootId={focusRootId}
+            />
           </div>
         </div>
 
@@ -289,8 +408,8 @@ export function AICoachModal({ open, onClose, rootId }: AICoachModalProps) {
           title="Discard changes?"
           body={
             <p style={{ margin: 0 }}>
-              The coach has proposed changes to this goal. Closing now will
-              discard them.
+              The assistant has proposed changes to your goals. Closing now
+              will discard them.
             </p>
           }
           confirmLabel="Discard"

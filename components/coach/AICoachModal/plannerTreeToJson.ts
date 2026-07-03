@@ -8,6 +8,8 @@ import {
 // The JSON shape sent to the AI and rendered in the right pane of the coach
 // modal. `dependency` is intentionally omitted — sibling order is array order,
 // and the linked list is re-threaded from the goal-handlers utilities on save.
+// `categoryId` is meaningful on top-level goal roots only; children inherit
+// via the existing category-inheritance logic and always carry null here.
 export interface CoachNode {
   id: string;
   title: string;
@@ -16,6 +18,7 @@ export interface CoachNode {
   deadline: string | null;
   priority: number;
   isReady: boolean | null;
+  categoryId: string | null;
   children: CoachNode[];
 }
 
@@ -25,10 +28,11 @@ export function plannerTreeToJson(
 ): CoachNode | null {
   const root = planner.find((p) => p.id === rootId);
   if (!root) return null;
-  return buildNode(planner, root);
+  const node = buildCoachNode(planner, root);
+  return { ...node, categoryId: root.categoryId ?? null };
 }
 
-function buildNode(planner: Planner[], node: Planner): CoachNode {
+export function buildCoachNode(planner: Planner[], node: Planner): CoachNode {
   const orderedChildren = sortTasksByDependencies(
     planner,
     getSubtasksById(planner, node.id),
@@ -41,6 +45,7 @@ function buildNode(planner: Planner[], node: Planner): CoachNode {
     deadline: node.deadline ?? null,
     priority: node.priority,
     isReady: node.isReady ?? null,
-    children: orderedChildren.map((child) => buildNode(planner, child)),
+    categoryId: null,
+    children: orderedChildren.map((child) => buildCoachNode(planner, child)),
   };
 }

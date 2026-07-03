@@ -21,6 +21,8 @@ export const messageList = style({
   gap: 12,
   padding: "6px 6px",
   transition: themeTransition,
+  // Opt back in from the global user-select: none — chat text is copyable.
+  userSelect: "text",
 });
 
 export const empty = style({

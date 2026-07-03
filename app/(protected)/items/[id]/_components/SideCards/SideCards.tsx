@@ -3,10 +3,9 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
-import { Caption, ConicDot } from "@/components/ui";
+import { Caption } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useItem } from "../ItemContext";
-import { AI_ACTIONS } from "../../_constants";
 import {
   card,
   nextCardHeaderRow,
@@ -14,11 +13,7 @@ import {
   nextCardTitle,
   nextCardSub,
   nextCardBody,
-  cardHeaderRow,
   cardSectionTitle,
-  helperPill,
-  helperPillRow,
-  helperSuggestion,
   whyText,
 } from "./SideCards.css";
 
@@ -72,30 +67,6 @@ export function NextOnCalendarCard() {
         ) : (
           <Caption>Not scheduled yet.</Caption>
         )}
-      </div>
-    </div>
-  );
-}
-
-export function AIHelperCard() {
-  return (
-    <div className={card}>
-      <div className={cardHeaderRow}>
-        <ConicDot size={12} />
-        <span className={cardSectionTitle}>AI helper</span>
-        <span style={{ marginLeft: "auto" }}>
-          <Caption>scoped</Caption>
-        </span>
-      </div>
-      <div className={helperSuggestion}>
-        Tighten last 2 weeks · add taper
-      </div>
-      <div className={helperPillRow}>
-        {AI_ACTIONS.map((a) => (
-          <span key={a} className={helperPill}>
-            ✦ {a}
-          </span>
-        ))}
       </div>
     </div>
   );

@@ -1,6 +1,10 @@
 "use client";
 
-import type { DiffNode } from "./diffCoachTree";
+import { useState } from "react";
+import { ChevronRight } from "lucide-react";
+import type { Category } from "@/types/prisma";
+import { CategoryBadge, useResolvedCategoryColor } from "@/components/ui";
+import { diffSubtreeHasChanges, type DiffNode } from "./diffCoachTree";
 import {
   wrap,
   empty,
@@ -15,23 +19,148 @@ import {
   readyDot,
   changedFields as changedFieldsStyle,
   childrenWrap,
+  goalBlock,
+  goalRow,
+  goalTitle,
+  chevron,
+  showAllRow,
 } from "./JsonTreeView.css";
 
-interface JsonTreeViewProps {
-  root: DiffNode | null;
+interface JsonForestViewProps {
+  // The visible (relevance-scoped) subset of the diffed forest.
+  goals: DiffNode[];
+  // Goals filtered out of view; > 0 renders the show-all footer.
+  hiddenCount: number;
+  showingAll: boolean;
+  onToggleShowAll: () => void;
+  categories: Category[];
+  focusRootId: string | null;
 }
 
-export function JsonTreeView({ root }: JsonTreeViewProps) {
-  if (!root) {
+export function JsonForestView({
+  goals,
+  hiddenCount,
+  showingAll,
+  onToggleShowAll,
+  categories,
+  focusRootId,
+}: JsonForestViewProps) {
+  // User toggles override the computed default, which keeps reacting while a
+  // proposal streams in: the focused goal and any goal with changes open up,
+  // untouched goals stay collapsed.
+  const [expandOverrides, setExpandOverrides] = useState<
+    Record<string, boolean>
+  >({});
+
+  const footer =
+    hiddenCount > 0 ? (
+      <button type="button" className={showAllRow} onClick={onToggleShowAll}>
+        Show all · {hiddenCount} more goal{hiddenCount === 1 ? "" : "s"}
+      </button>
+    ) : showingAll && goals.length > 0 ? (
+      <button type="button" className={showAllRow} onClick={onToggleShowAll}>
+        Show relevant only
+      </button>
+    ) : null;
+
+  if (goals.length === 0) {
     return (
       <div className={wrap}>
-        <div className={empty}>No goal loaded.</div>
+        <div className={empty}>
+          {hiddenCount > 0
+            ? "Nothing in view — goals appear here as the assistant works on them, or ask it to show some."
+            : "No goals yet — ask the assistant for some."}
+        </div>
+        {footer}
       </div>
     );
   }
+
   return (
     <div className={wrap}>
-      <TreeNode node={root} />
+      {goals.map((goal, i) => {
+        const key = goal.id || `new-${i}`;
+        const expanded =
+          expandOverrides[key] ??
+          (goal.id === focusRootId || diffSubtreeHasChanges(goal));
+        return (
+          <GoalSection
+            key={key}
+            goal={goal}
+            category={
+              goal.categoryId
+                ? categories.find((c) => c.id === goal.categoryId)
+                : undefined
+            }
+            expanded={expanded}
+            onToggle={() =>
+              setExpandOverrides((prev) => ({ ...prev, [key]: !expanded }))
+            }
+          />
+        );
+      })}
+      {footer}
+    </div>
+  );
+}
+
+interface GoalSectionProps {
+  goal: DiffNode;
+  category: Category | undefined;
+  expanded: boolean;
+  onToggle: () => void;
+}
+
+function GoalSection({ goal, category, expanded, onToggle }: GoalSectionProps) {
+  const categoryColor = useResolvedCategoryColor(category);
+  const hasChildren = goal.children.length > 0;
+  return (
+    <div className={goalBlock}>
+      <button
+        type="button"
+        className={`${row[goal.status]} ${goalRow}`}
+        onClick={onToggle}
+        aria-expanded={expanded}
+      >
+        <ChevronRight
+          size={13}
+          strokeWidth={2.2}
+          className={chevron}
+          data-expanded={expanded ? "true" : undefined}
+          style={{ visibility: hasChildren ? "visible" : "hidden" }}
+        />
+        <span className={`${titleStyle[goal.status]} ${goalTitle}`}>
+          {goal.title}
+        </span>
+        <span className={metaCluster}>
+          {goal.status === "modified" && goal.changedFields.length > 0 && (
+            <span className={changedFieldsStyle}>
+              {goal.changedFields.join(", ")}
+            </span>
+          )}
+          {goal.status !== "unchanged" && (
+            <span className={statusBadge[goal.status]}>
+              {statusLabel(goal.status)}
+            </span>
+          )}
+          {category && (
+            <CategoryBadge color={categoryColor}>{category.name}</CategoryBadge>
+          )}
+          {goal.deadline && (
+            <span className={deadlineStyle}>
+              {formatDeadline(goal.deadline)}
+            </span>
+          )}
+          {goal.isReady && <span className={readyDot} aria-label="Ready" />}
+        </span>
+      </button>
+      {expanded && hasChildren && (
+        <div className={childrenWrap}>
+          {goal.children.map((child, i) => (
+            <TreeNode key={child.id || `unkeyed-${i}`} node={child} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -49,11 +178,7 @@ function TreeNode({ node }: { node: DiffNode }) {
           )}
           {node.status !== "unchanged" && (
             <span className={statusBadge[node.status]}>
-              {node.status === "added"
-                ? "new"
-                : node.status === "modified"
-                  ? "edit"
-                  : "gone"}
+              {statusLabel(node.status)}
             </span>
           )}
           <span className={durationStyle}>
@@ -79,6 +204,12 @@ function TreeNode({ node }: { node: DiffNode }) {
       )}
     </div>
   );
+}
+
+function statusLabel(status: DiffNode["status"]): string {
+  if (status === "added") return "new";
+  if (status === "modified") return "edit";
+  return "gone";
 }
 
 function formatDuration(minutes: number): string {

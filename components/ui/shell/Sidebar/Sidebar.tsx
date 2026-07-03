@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { signOut } from "next-auth/react";
-import { ChevronLeft, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { ChevronLeft, LogOut, Moon, Settings, Sparkles, Sun } from "lucide-react";
 import { useTheme } from "../../ThemeProvider";
+import { useAssistant } from "../AssistantContext";
 import { NAV_ITEMS } from "../nav";
 import {
   sidebar,
@@ -39,6 +40,7 @@ type Props = {
 export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
   const pathname = usePathname() ?? "";
   const { dark, toggle } = useTheme();
+  const { openAssistant } = useAssistant();
   const [collapsed, setCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -95,6 +97,18 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
       })}
 
       <div className={spacer} />
+
+      <button
+        type="button"
+        className={navItem}
+        onClick={() => openAssistant()}
+        title="AI assistant (Ctrl/Cmd+I)"
+      >
+        <span className={navGlyph}>
+          <Sparkles size={20} strokeWidth={2} aria-hidden />
+        </span>
+        <span className={navLabel}>Assistant</span>
+      </button>
 
       <button
         type="button"

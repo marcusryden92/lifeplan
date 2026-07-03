@@ -1,28 +1,48 @@
 "use client";
 
-import type { CoachNode } from "./plannerTreeToJson";
+import type { CoachForest } from "./plannerForestToJson";
 
 export interface StreamChatMessage {
   role: "user" | "assistant";
   content: string;
 }
 
+export interface StreamCoachFocus {
+  rootId: string | null;
+  itemId: string | null;
+}
+
 export interface StreamCoachArgs {
-  currentTree: CoachNode | null;
+  currentForest: CoachForest;
   history: StreamChatMessage[];
+  focus: StreamCoachFocus | null;
+  categories: { id: string; name: string }[];
+  today: string;
   signal?: AbortSignal;
   onText: (delta: string) => void;
-  onTree: (tree: CoachNode) => void;
+  // Raw (possibly partial) propose_goals input plus its callIndex; the caller
+  // normalizes and folds it against the turn-start working forest.
+  onForest: (payload: { callIndex: number; proposal: unknown }) => void;
+  // show_goals: display-only request to bring goals into the tree pane.
+  onShow: (payload: { goalIds: string[]; all: boolean }) => void;
+  // Server-side tool activity (e.g. the model fetching goal trees) — for a
+  // progress hint while a tool round trip runs.
+  onStatus?: (payload: { tool: string; count: number }) => void;
   onDone: (stopReason: string | null) => void;
   onError: (message: string) => void;
 }
 
 export async function streamCoach({
-  currentTree,
+  currentForest,
   history,
+  focus,
+  categories,
+  today,
   signal,
   onText,
-  onTree,
+  onForest,
+  onShow,
+  onStatus,
   onDone,
   onError,
 }: StreamCoachArgs): Promise<void> {
@@ -31,7 +51,7 @@ export async function streamCoach({
     response = await fetch("/api/coach/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ currentTree, history }),
+      body: JSON.stringify({ currentForest, history, focus, categories, today }),
       signal,
     });
   } catch (err) {
@@ -61,7 +81,14 @@ export async function streamCoach({
       while ((sepIndex = buffer.indexOf("\n\n")) !== -1) {
         const rawEvent = buffer.slice(0, sepIndex);
         buffer = buffer.slice(sepIndex + 2);
-        dispatchSseEvent(rawEvent, { onText, onTree, onDone, onError });
+        dispatchSseEvent(rawEvent, {
+          onText,
+          onForest,
+          onShow,
+          onStatus,
+          onDone,
+          onError,
+        });
       }
     }
   } catch (err) {
@@ -74,7 +101,9 @@ export async function streamCoach({
 
 interface DispatchHandlers {
   onText: StreamCoachArgs["onText"];
-  onTree: StreamCoachArgs["onTree"];
+  onForest: StreamCoachArgs["onForest"];
+  onShow: StreamCoachArgs["onShow"];
+  onStatus: StreamCoachArgs["onStatus"];
   onDone: StreamCoachArgs["onDone"];
   onError: StreamCoachArgs["onError"];
 }
@@ -99,9 +128,32 @@ function dispatchSseEvent(raw: string, handlers: DispatchHandlers): void {
     case "text":
       handlers.onText((data as { delta: string }).delta);
       break;
-    case "tree":
-      handlers.onTree((data as { tree: CoachNode }).tree);
+    case "forest": {
+      const { callIndex } = data as { callIndex?: unknown };
+      handlers.onForest({
+        callIndex: typeof callIndex === "number" ? callIndex : 0,
+        proposal: data,
+      });
       break;
+    }
+    case "status": {
+      const { tool, count } = data as { tool?: unknown; count?: unknown };
+      handlers.onStatus?.({
+        tool: typeof tool === "string" ? tool : "",
+        count: typeof count === "number" ? count : 0,
+      });
+      break;
+    }
+    case "show": {
+      const { goalIds, all } = data as { goalIds?: unknown; all?: unknown };
+      handlers.onShow({
+        goalIds: Array.isArray(goalIds)
+          ? goalIds.filter((id): id is string => typeof id === "string")
+          : [],
+        all: all === true,
+      });
+      break;
+    }
     case "done":
       handlers.onDone((data as { stopReason: string | null }).stopReason);
       break;

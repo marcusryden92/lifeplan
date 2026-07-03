@@ -46,6 +46,8 @@ export const contentRow = style({
 });
 
 export const mainColumn = style({
+  // Positioning context for the assistant overlay (assistantSlot).
+  position: "relative",
   flex: 1,
   display: "flex",
   flexDirection: "column",

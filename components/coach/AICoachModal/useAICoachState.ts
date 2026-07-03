@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { CoachNode } from "./plannerTreeToJson";
+import type { CoachForest } from "./plannerForestToJson";
+import { coachForestsEqual } from "./diffCoachForest";
 
 export interface ChatMessage {
   id: string;
@@ -14,13 +15,13 @@ export interface ChatMessage {
 
 export interface UseAICoachStateArgs {
   open: boolean;
-  canonical: CoachNode | null;
+  canonical: CoachForest;
 }
 
 export interface UseAICoachStateReturn {
-  workingTree: CoachNode | null;
-  setWorkingTree: (tree: CoachNode | null) => void;
-  resetWorkingTree: () => void;
+  workingForest: CoachForest;
+  setWorkingForest: (forest: CoachForest) => void;
+  resetWorkingForest: () => void;
   hasChanges: boolean;
 
   messages: ChatMessage[];
@@ -33,9 +34,8 @@ export function useAICoachState({
   open,
   canonical,
 }: UseAICoachStateArgs): UseAICoachStateReturn {
-  const [workingTree, setWorkingTreeState] = useState<CoachNode | null>(
-    canonical,
-  );
+  const [workingForest, setWorkingForestState] =
+    useState<CoachForest>(canonical);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   // On modal open, adopt the current canonical as the working copy and start
@@ -44,26 +44,25 @@ export function useAICoachState({
   // semantics).
   useEffect(() => {
     if (open) {
-      setWorkingTreeState(canonical);
+      setWorkingForestState(canonical);
       setMessages([]);
     }
     // canonical intentionally excluded — re-running on every planner change
     // while the modal is open would blow away in-flight AI edits.
   }, [open]);
 
-  const setWorkingTree = useCallback((tree: CoachNode | null) => {
-    setWorkingTreeState(tree);
+  const setWorkingForest = useCallback((forest: CoachForest) => {
+    setWorkingForestState(forest);
   }, []);
 
-  const resetWorkingTree = useCallback(() => {
-    setWorkingTreeState(canonical);
+  const resetWorkingForest = useCallback(() => {
+    setWorkingForestState(canonical);
   }, [canonical]);
 
   const hasChanges = useMemo(() => {
-    if (workingTree === canonical) return false;
-    if (!workingTree || !canonical) return workingTree !== canonical;
-    return !treesEqual(workingTree, canonical);
-  }, [workingTree, canonical]);
+    if (workingForest === canonical) return false;
+    return !coachForestsEqual(workingForest, canonical);
+  }, [workingForest, canonical]);
 
   const appendMessage = useCallback((msg: ChatMessage) => {
     setMessages((prev) => [...prev, msg]);
@@ -81,35 +80,13 @@ export function useAICoachState({
   const clearMessages = useCallback(() => setMessages([]), []);
 
   return {
-    workingTree,
-    setWorkingTree,
-    resetWorkingTree,
+    workingForest,
+    setWorkingForest,
+    resetWorkingForest,
     hasChanges,
     messages,
     appendMessage,
     updateMessage,
     clearMessages,
   };
-}
-
-// Shallow-fields-plus-child-ids equality. Cheap and sufficient: the AI writes
-// wholesale subtree replacements, so a real edit always changes at least one
-// title/duration/id/child-ordering.
-function treesEqual(a: CoachNode, b: CoachNode): boolean {
-  if (
-    a.id !== b.id ||
-    a.title !== b.title ||
-    a.plannerType !== b.plannerType ||
-    a.duration !== b.duration ||
-    a.deadline !== b.deadline ||
-    a.priority !== b.priority ||
-    a.isReady !== b.isReady ||
-    a.children.length !== b.children.length
-  ) {
-    return false;
-  }
-  for (let i = 0; i < a.children.length; i++) {
-    if (!treesEqual(a.children[i], b.children[i])) return false;
-  }
-  return true;
 }
