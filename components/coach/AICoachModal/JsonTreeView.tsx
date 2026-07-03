@@ -23,16 +23,14 @@ import {
   goalRow,
   goalTitle,
   chevron,
-  showAllRow,
 } from "./JsonTreeView.css";
 
 interface JsonForestViewProps {
   // The visible (relevance-scoped) subset of the diffed forest.
   goals: DiffNode[];
-  // Goals filtered out of view; > 0 renders the show-all footer.
+  // Goals filtered out of view; informs the empty-state copy. The show-all
+  // toggle itself lives in the pane header (AICoachModal).
   hiddenCount: number;
-  showingAll: boolean;
-  onToggleShowAll: () => void;
   categories: Category[];
   focusRootId: string | null;
 }
@@ -40,8 +38,6 @@ interface JsonForestViewProps {
 export function JsonForestView({
   goals,
   hiddenCount,
-  showingAll,
-  onToggleShowAll,
   categories,
   focusRootId,
 }: JsonForestViewProps) {
@@ -52,17 +48,6 @@ export function JsonForestView({
     Record<string, boolean>
   >({});
 
-  const footer =
-    hiddenCount > 0 ? (
-      <button type="button" className={showAllRow} onClick={onToggleShowAll}>
-        Show all · {hiddenCount} more goal{hiddenCount === 1 ? "" : "s"}
-      </button>
-    ) : showingAll && goals.length > 0 ? (
-      <button type="button" className={showAllRow} onClick={onToggleShowAll}>
-        Show relevant only
-      </button>
-    ) : null;
-
   if (goals.length === 0) {
     return (
       <div className={wrap}>
@@ -71,7 +56,6 @@ export function JsonForestView({
             ? "Nothing in view — goals appear here as the assistant works on them, or ask it to show some."
             : "No goals yet — ask the assistant for some."}
         </div>
-        {footer}
       </div>
     );
   }
@@ -99,7 +83,6 @@ export function JsonForestView({
           />
         );
       })}
-      {footer}
     </div>
   );
 }
@@ -135,7 +118,7 @@ function GoalSection({ goal, category, expanded, onToggle }: GoalSectionProps) {
         <span className={metaCluster}>
           {goal.status === "modified" && goal.changedFields.length > 0 && (
             <span className={changedFieldsStyle}>
-              {goal.changedFields.join(", ")}
+              {formatChangedFields(goal.changedFields)}
             </span>
           )}
           {goal.status !== "unchanged" && (
@@ -157,7 +140,11 @@ function GoalSection({ goal, category, expanded, onToggle }: GoalSectionProps) {
       {expanded && hasChildren && (
         <div className={childrenWrap}>
           {goal.children.map((child, i) => (
-            <TreeNode key={child.id || `unkeyed-${i}`} node={child} />
+            <TreeNode
+              key={child.id || `unkeyed-${i}`}
+              node={child}
+              subtreeReady={!!goal.isReady}
+            />
           ))}
         </div>
       )}
@@ -165,7 +152,16 @@ function GoalSection({ goal, category, expanded, onToggle }: GoalSectionProps) {
   );
 }
 
-function TreeNode({ node }: { node: DiffNode }) {
+// Readiness cascades from the root — the subtree is ready or unready as one —
+// so child dots derive from the goal root's state, not each node's stored
+// field (which can lag mid-draft until Save stamps the cascade).
+function TreeNode({
+  node,
+  subtreeReady,
+}: {
+  node: DiffNode;
+  subtreeReady: boolean;
+}) {
   return (
     <div className={nodeBlock}>
       <div className={row[node.status]}>
@@ -173,7 +169,7 @@ function TreeNode({ node }: { node: DiffNode }) {
         <span className={metaCluster}>
           {node.status === "modified" && node.changedFields.length > 0 && (
             <span className={changedFieldsStyle}>
-              {node.changedFields.join(", ")}
+              {formatChangedFields(node.changedFields)}
             </span>
           )}
           {node.status !== "unchanged" && (
@@ -192,12 +188,19 @@ function TreeNode({ node }: { node: DiffNode }) {
               </span>
             </>
           )}
+          {subtreeReady && node.status !== "deleted" && (
+            <span className={readyDot} aria-label="Ready" />
+          )}
         </span>
       </div>
       {node.children.length > 0 && (
         <div className={childrenWrap}>
           {node.children.map((child, i) => (
-            <TreeNode key={child.id || `unkeyed-${i}`} node={child} />
+            <TreeNode
+              key={child.id || `unkeyed-${i}`}
+              node={child}
+              subtreeReady={subtreeReady}
+            />
           ))}
         </div>
       )}
@@ -209,6 +212,18 @@ function statusLabel(status: DiffNode["status"]): string {
   if (status === "added") return "new";
   if (status === "modified") return "edit";
   return "gone";
+}
+
+// changedFields carries the coach contract's raw field names; the pane shows
+// plain words instead.
+const FIELD_LABELS: Record<string, string> = {
+  plannerType: "type",
+  isReady: "ready",
+  categoryId: "category",
+};
+
+function formatChangedFields(fields: string[]): string {
+  return fields.map((f) => FIELD_LABELS[f] ?? f).join(", ");
 }
 
 function formatDuration(minutes: number): string {

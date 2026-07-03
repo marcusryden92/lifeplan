@@ -1,7 +1,10 @@
 # P4 — Refactors / investigations
 
 - Claude Templates, Categories, Locations
+- Claude history
+- Custom Claude API key
 
+- WeekStructureModal click outside
 - Plan not triggering regeneration issue
 - General responsiveness check
 

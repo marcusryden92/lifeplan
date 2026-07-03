@@ -216,7 +216,9 @@ function applyTreeToExistingRoot({
           duration: Math.max(1, Math.floor(node.duration)),
           deadline: node.deadline,
           priority: node.priority,
-          isReady: node.isReady,
+          // Readiness cascades from the root: the subtree is ready or
+          // unready as one, matching the manual toggle's semantics.
+          isReady: workingTree.isReady,
           parentId,
           dependency: nodeDep,
           updatedAt: now,
@@ -226,8 +228,7 @@ function applyTreeToExistingRoot({
           title: node.title,
           parentId,
           plannerType: normalizePlannerType(node.plannerType),
-          // Deliberately NOT ready by default — readying is a user decision.
-          isReady: node.isReady,
+          isReady: workingTree.isReady,
           isTriaged: true,
           duration: Math.max(1, Math.floor(node.duration)),
           deadline: node.deadline,
@@ -307,6 +308,12 @@ function buildNewRootRows(
   const rows: Planner[] = [];
   let cursor: string | null = null;
 
+  // The app's manual gate only allows readying a goal with subtasks and a
+  // deadline; hold AI-created goals to the same rule. Readiness cascades
+  // from the root: every row in the subtree carries the same value.
+  const canBeReady = node.children.length > 0 && node.deadline !== null;
+  const rootIsReady = node.isReady === true && canBeReady;
+
   function thread(child: CoachNode, parentId: string): void {
     const childId = uuidv4();
     const childDep = cursor;
@@ -321,8 +328,7 @@ function buildNewRootRows(
       title: child.title,
       parentId,
       plannerType: normalizePlannerType(child.plannerType),
-      // Deliberately NOT ready by default — readying is a user decision.
-      isReady: child.isReady,
+      isReady: rootIsReady,
       isTriaged: true,
       duration: Math.max(1, Math.floor(child.duration)),
       deadline: child.deadline,
@@ -343,16 +349,12 @@ function buildNewRootRows(
     });
   }
 
-  // The app's manual gate only allows readying a goal with subtasks and a
-  // deadline; hold AI-created goals to the same rule.
-  const canBeReady = node.children.length > 0 && node.deadline !== null;
-
   const rootRow: Planner = {
     id: rootId,
     title: node.title,
     parentId: null,
     plannerType: normalizeRootType(node.plannerType, node.children.length > 0),
-    isReady: node.isReady === true && canBeReady,
+    isReady: rootIsReady,
     isTriaged: true,
     duration: Math.max(1, Math.floor(node.duration)),
     deadline: node.deadline,

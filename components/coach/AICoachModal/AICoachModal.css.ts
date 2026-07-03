@@ -162,6 +162,28 @@ export const paneSubtitle = style({
   fontVariantNumeric: "tabular-nums",
 });
 
+export const showAllHeaderButton = style({
+  appearance: "none",
+  background: "transparent",
+  border: "none",
+  marginLeft: "auto",
+  padding: "4px 8px",
+  borderRadius: radii.sm,
+  cursor: "pointer",
+  fontFamily: vars.font.ui,
+  fontSize: 11,
+  fontWeight: 600,
+  color: vars.inkSoft,
+  whiteSpace: "nowrap",
+  transition: themeTransition,
+  selectors: {
+    "&:hover": {
+      background: vars.interactive.hoverFill,
+      color: vars.ink,
+    },
+  },
+});
+
 export const chatPlaceholder = style({
   flex: 1,
   minHeight: 0,

@@ -13,12 +13,11 @@ import type { EventImpl } from "@fullcalendar/core/internal";
 // Completing a future-scheduled task removes its event from the calendar and
 // stamps completedStart/EndTime on the planner row. The regen that follows
 // must render exactly one event for it — the completion window — and never
-// hand it back to the scheduler. The shape that used to slip through:
-// scheduleGoal filters completed children, but a subtree whose root goal is
-// NOT ready (isReady false — e.g. an AI-coach subtree never flipped to
-// ready) is scheduled task-by-task through scheduleSingleTask, which had no
-// completed check. The completed task then double-placed: a completion tile
-// at the right time plus a fresh, uncompleted copy at the next open slot.
+// hand it back to the scheduler. The shape that used to slip through: the
+// completed task re-entered the candidate list and double-placed — a
+// completion tile at the right time plus a fresh, uncompleted copy at the
+// next open slot. The goal is readied here so its subtree actually reaches
+// the scheduler (unready subtrees stay off the calendar entirely).
 //
 // The fixture is a real reproducing snapshot (goal subtree + week templates)
 // trimmed to the minimum that still drives the scheduler.
@@ -54,6 +53,7 @@ const templates = FIXTURE.templates.map((t) => ({
 // The future-scheduled task getting completed "early" (its event sits on the
 // day after FAKE_NOW).
 const COMPLETED_TASK_ID = "452a62a1-203b-4e93-956f-d085af23c613";
+const ROOT_GOAL_ID = "ce1a7c26-986e-478d-8fdf-8be5bc0ac68b";
 const FAKE_NOW = new Date("2026-07-03T14:43:00.000Z");
 
 let consoleSpies: jest.SpyInstance[] = [];
@@ -86,8 +86,13 @@ describe("completed tasks are not re-scheduled", () => {
       end: new Date(taskEvent.end),
     } as unknown as EventImpl;
 
+    const readiedPlanner = FIXTURE.planner.map((p) =>
+      p.id === ROOT_GOAL_ID
+        ? { ...p, isReady: true, deadline: "2026-08-09T10:08:00.000Z" }
+        : p,
+    );
     const result = getPlannerAndCalendarForCompletedTask(
-      FIXTURE.planner,
+      readiedPlanner,
       FIXTURE.calendar,
       fakeEventImpl,
     )!;

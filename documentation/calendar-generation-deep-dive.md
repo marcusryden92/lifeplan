@@ -208,8 +208,8 @@ Scoring itself: tasks without a deadline get `MIN_URGENCY_MULTIPLIER * priority`
 [prepareCandidates.ts](../utils/calendar-generation/helpers/CalendarGenerator/prepareCandidates.ts) returns the ordered list of planners the scheduler will try:
 
 - Excludes memoized rows.
-- Excludes completed tasks — completed items render via `buildCompletedEvents` (Phase 2) and must never re-enter scheduling. This filter is what keeps a completed task under a **non-ready** goal from being re-placed: such tasks reach the scheduler through the standalone-task path, which has no goal-level readiness gate.
-- Keeps only ready root goals and (uncompleted) tasks.
+- Excludes completed tasks — completed items render via `buildCompletedEvents` (Phase 2) and must never re-enter scheduling.
+- Keeps ready root goals, plus tasks whose root ancestor is **not** a goal (standalone tasks and task-rooted subtrees). Tasks inside a goal subtree are owned by the goal's readiness gate — `scheduleGoal` places them when the root is ready, and an unready goal's subtree stays off the calendar entirely. Admitting them individually would make readying a no-op.
 - Sorts via [sortByPriorityAndConstraints](../utils/calendar-generation/helpers/PrioritySorter/sortByPriorityAndConstraints.ts) — two-tier sort: category-constrained items first (because they have fewer eligible slots), then by descending **urgency score** looked up from the precomputed map. Urgency is not a strategy; it is decided here before any slot scoring.
 
 ### Phase 10 — Schedule tasks and goals
@@ -399,17 +399,18 @@ The slot horizon is bounded — initial build covers `HORIZON_CHUNK_DAYS = 28` d
 
 ### Why proactive expansion matters
 
-Without the proactive watermark check, the scheduler would burn iterations on tasks that can't possibly fit before triggering reactive expansion. Detecting "biggest candidate > biggest compatible slot" before the forward pass starts cuts straight to the expansion step. The comparison must use `effectiveCandidateDuration` (goals sized as their largest uncompleted leaf) — see Section 6 for the starvation failure mode when the goal aggregate is used instead.
+Without the proactive watermark check, the scheduler would burn iterations on tasks that can't possibly fit before triggering reactive expansion. Detecting "biggest candidate > biggest compatible slot" before the forward pass starts cuts straight to the expansion step. The comparison must use `effectiveCandidateDuration` (goals sized as their largest uncompleted leaf, excluding leaves already placed or memoized) — see Section 6 for the starvation failure mode when the goal aggregate is used instead. The watermark must also resolve category constraints against the same window-bearing category set placement uses (`scheduledCategories`): a classification-only category (no time windows) is unconstrained at placement, and treating it as constraining here demands category slots that can never exist — the loop then spends its whole expansion budget on watermark `continue`s and the placement walk never runs.
 
 ### Regression coverage
 
-Three tests live in [`__tests__/calendar-generation/`](../__tests__/calendar-generation/):
+Four tests live in [`__tests__/calendar-generation/`](../__tests__/calendar-generation/):
 
 - [`expansion-seam.test.ts`](../__tests__/calendar-generation/expansion-seam.test.ts) — guards the `CategoryEvent` ID format (`` `${categoryTimeWindowId}|${YYYY-MM-DD-local}` ``) by running `generateCalendar` with a single Plan three weeks out (which forces expansion) and asserting that every produced `CategoryEvent` ID matches the local-date pattern. The diff layer and the DB schema depend on this composite ID; a regression to UTC-instant keying would diverge near midnight UTC and would be caught here.
-- [`ready-goal-watermark.test.ts`](../__tests__/calendar-generation/ready-goal-watermark.test.ts) — guards the effective-duration watermark: a ready root goal whose subtree aggregate exceeds any possible slot must still get every leaf placed.
-- [`completed-task-not-rescheduled.test.ts`](../__tests__/calendar-generation/completed-task-not-rescheduled.test.ts) — guards the Phase 9 completed-task filter: a task completed under a non-ready goal renders exactly once, at its completion window.
+- [`ready-goal-watermark.test.ts`](../__tests__/calendar-generation/ready-goal-watermark.test.ts) — guards the three watermark starvation modes: a ready root goal must place every leaf even when the subtree aggregate exceeds any slot, when its `categoryId` names a windowless (classification-only) category, and when a memoized past leaf would otherwise inflate the goal's effective size.
+- [`ready-gate.test.ts`](../__tests__/calendar-generation/ready-gate.test.ts) — guards the Phase 9 readiness gate: a NOT-ready goal's subtree schedules nothing, while standalone tasks next to it still place.
+- [`completed-task-not-rescheduled.test.ts`](../__tests__/calendar-generation/completed-task-not-rescheduled.test.ts) — guards the Phase 9 completed-task filter: a completed task under a ready goal renders exactly once, at its completion window, and never re-enters the scheduler.
 
-The latter two run against a trimmed live-data snapshot in `fixtures/` — hand-built minimal fixtures don't produce a valid slot fabric and fail silently, so new engine tests should extend the fixture pattern.
+All but the seam test run against a trimmed live-data snapshot in `fixtures/` — hand-built minimal fixtures don't produce a valid slot fabric and fail silently, so new engine tests should extend the fixture pattern.
 
 ---
 
@@ -429,7 +430,7 @@ Returns `min(categoryCeiling, largestGap)`. Cached per `taskCategoryId ?? "anywh
 
 ### `largestCompatibleSlotForLargestTask`
 
-Same module, used by the proactive expansion check. Walks the slot array and returns the largest currently-existing slot the biggest remaining candidate could land in, honoring category strictness and the `placementCutoffDate`. "Biggest" is measured by `effectiveCandidateDuration` (same module): a task's own duration, but a goal's **largest uncompleted leaf** — never the subtree aggregate (see Section 6).
+Same module, used by the proactive expansion check. Walks the slot array and returns the largest currently-existing slot the biggest remaining candidate could land in, honoring category strictness and the `placementCutoffDate`. "Biggest" is measured by `effectiveCandidateDuration` (same module): a task's own duration, but a goal's **largest uncompleted, still-placeable leaf** — never the subtree aggregate (see Section 6), and never a leaf that is memoized or already placed this run. Category constraints are resolved against the caller-supplied `schedulableCategoryIds` (the window-bearing categories) so the watermark agrees with `findValidSlots` about which tasks are actually constrained.
 
 ---
 

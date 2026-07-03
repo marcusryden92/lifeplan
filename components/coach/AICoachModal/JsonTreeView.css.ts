@@ -233,29 +233,6 @@ export const goalTitle = style({
   fontWeight: 600,
 });
 
-export const showAllRow = style({
-  appearance: "none",
-  background: "transparent",
-  border: "none",
-  width: "100%",
-  marginTop: 8,
-  padding: "6px 8px",
-  borderRadius: radii.sm,
-  cursor: "pointer",
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  fontWeight: 600,
-  color: vars.inkSoft,
-  textAlign: "center",
-  transition: themeTransition,
-  selectors: {
-    "&:hover": {
-      background: vars.interactive.hoverFill,
-      color: vars.ink,
-    },
-  },
-});
-
 export const chevron = style({
   flexShrink: 0,
   color: vars.inkSoft,

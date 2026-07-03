@@ -84,4 +84,100 @@ describe("ready root goal does not starve the scheduler", () => {
     );
     expect(placed.length).toBe(subtreeTasks.length);
   });
+
+  // A category without time windows is classification-only: findValidSlots
+  // treats its tasks as unconstrained, but the watermark used to resolve the
+  // constraint from the raw planner-category map and demand category slots
+  // that can never exist — biggestFit pinned at 0, the whole expansion budget
+  // burned on watermark continues, zero events placed.
+  it("a windowless categoryId on a ready goal does not starve the scheduler", () => {
+    const windowless = {
+      ...FIXTURE.categories[0],
+      id: "windowless-category-id",
+      name: "Classification only",
+      useTimeWindows: false,
+      isStrict: false,
+      timeSlots: [],
+    } as Category;
+    const planner = FIXTURE.planner.map((p) =>
+      p.id === ROOT_GOAL_ID
+        ? {
+            ...p,
+            isReady: true,
+            categoryId: "windowless-category-id",
+            deadline: "2026-08-09T10:08:00.000Z",
+          }
+        : p,
+    );
+    const subtreeTasks = planner.filter((p) => p.plannerType === "task");
+
+    const { events } = generateCalendar("1", 1, templates, planner, [], {
+      bufferTimeMinutes: 10,
+      categories: [...FIXTURE.categories, windowless],
+      previousEngineMessages: [],
+    });
+
+    const placed = subtreeTasks.filter((t) =>
+      events.some((e) => e.id === t.id),
+    );
+    expect(placed.length).toBe(subtreeTasks.length);
+  });
+
+  // Goal sizing must ignore leaves the scheduler will never attempt. A leaf
+  // whose event has drifted into the past is memoized (excluded from
+  // candidates and from scheduleGoal) but used to still size its ready goal
+  // in the watermark, demanding room for a task that would never be placed.
+  // The leaf's duration is inflated beyond any possible slot so the stale
+  // sizing alone is what would pin the watermark.
+  it("a memoized past leaf does not size its ready goal in the watermark", () => {
+    const biggestLeafId = "452a62a1-203b-4e93-956f-d085af23c613";
+    const planner = FIXTURE.planner.map((p) => {
+      if (p.id === ROOT_GOAL_ID) {
+        return { ...p, isReady: true, deadline: "2026-08-09T10:08:00.000Z" };
+      }
+      if (p.id === biggestLeafId) {
+        return { ...p, duration: 24 * 60 };
+      }
+      return p;
+    });
+    const biggestLeaf = planner.find((p) => p.id === biggestLeafId)!;
+    expect(biggestLeaf).toBeDefined();
+
+    const pastEvent = {
+      id: biggestLeafId,
+      title: biggestLeaf.title,
+      start: "2026-07-01T08:00:00.000Z",
+      end: "2026-07-01T09:15:00.000Z",
+      rrule: null,
+      userId: "1",
+      extendedProps: { eventType: "planner" },
+    } as unknown as SimpleEvent;
+
+    const remainingLeaves = planner.filter(
+      (p) =>
+        p.plannerType === "task" &&
+        !p.completedEndTime &&
+        p.id !== biggestLeafId,
+    );
+
+    const { events } = generateCalendar(
+      "1",
+      1,
+      templates,
+      planner,
+      [pastEvent],
+      {
+        bufferTimeMinutes: 10,
+        categories: FIXTURE.categories,
+        previousEngineMessages: [],
+      },
+    );
+
+    const placed = remainingLeaves.filter((t) =>
+      events.some(
+        (e) => e.id === t.id && new Date(e.start) > new Date("2026-07-03"),
+      ),
+    );
+    expect(placed.length).toBe(remainingLeaves.length);
+  });
 });

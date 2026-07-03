@@ -14,13 +14,17 @@ import { taskIsCompleted } from "../../../taskHelpers";
 // true for any substantial ready goal: the scheduling loop then burned its
 // whole expansion budget on watermark `continue`s and exited without
 // attempting a single candidate — silently, since nothing ever failed.
+// Leaves the scheduler will never attempt (memoized past events, already
+// placed this run) must be excluded for the same reason: sizing the goal by
+// a leaf that can't be placed pins the watermark just like the aggregate did.
 export function effectiveCandidateDuration(
   item: Planner,
   allPlanners: Planner[],
+  excludedLeafIds?: Set<string>,
 ): number {
   if (item.plannerType !== PlannerType.goal) return item.duration;
   const leaves = getTreeBottomLayer(allPlanners, item.id).filter(
-    (t) => !taskIsCompleted(t),
+    (t) => !taskIsCompleted(t) && !excludedLeafIds?.has(t.id),
   );
   if (leaves.length === 0) return 0;
   return Math.max(...leaves.map((l) => l.duration));
@@ -150,19 +154,26 @@ export function maxEffectiveCapacityFor(
 // honors it, so the watermark agrees with what the scheduler will actually
 // see — otherwise the watermark could report "we have room" while every fit
 // lies inside the buffer zone.
+// schedulableCategoryIds is the set of categories that actually constrain
+// geometry (useTimeWindows + windows) — the same filter findValidSlots
+// applies via context.categories. A categoryId outside it (classification-
+// only category) must be treated as unconstrained here too, or the watermark
+// demands category slots that can never exist and starves the placement walk.
 export function largestCompatibleSlotForLargestTask(
   candidates: Planner[],
   slots: Slot[],
   plannerCategoryMap: Map<string, string | null>,
   placementCutoffDate: Date | null | undefined,
   allPlanners: Planner[],
+  schedulableCategoryIds: Set<string>,
+  excludedLeafIds?: Set<string>,
 ): number {
   if (candidates.length === 0) return 0;
 
   let biggest: Planner | null = null;
   let biggestDuration = -1;
   for (const c of candidates) {
-    const duration = effectiveCandidateDuration(c, allPlanners);
+    const duration = effectiveCandidateDuration(c, allPlanners, excludedLeafIds);
     if (duration > biggestDuration) {
       biggest = c;
       biggestDuration = duration;
@@ -170,7 +181,11 @@ export function largestCompatibleSlotForLargestTask(
   }
   if (!biggest) return 0;
 
-  const taskCategoryId = plannerCategoryMap.get(biggest.id) ?? null;
+  const rawCategoryId = plannerCategoryMap.get(biggest.id) ?? null;
+  const taskCategoryId =
+    rawCategoryId && schedulableCategoryIds.has(rawCategoryId)
+      ? rawCategoryId
+      : null;
   const cutoffMs = placementCutoffDate?.getTime();
 
   let largest = 0;

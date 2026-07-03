@@ -39,6 +39,7 @@ import {
   paneHeader,
   paneTitle,
   paneSubtitle,
+  showAllHeaderButton,
   a11yHiddenTitle,
 } from "./AICoachModal.css";
 
@@ -391,12 +392,28 @@ export function AICoachModal({
               <span className={paneSubtitle}>
                 {hasChanges ? "unsaved changes" : "current goals"}
               </span>
+              {hiddenCount > 0 ? (
+                <button
+                  type="button"
+                  className={showAllHeaderButton}
+                  onClick={() => setShowAll(true)}
+                >
+                  Show all · {hiddenCount} more goal
+                  {hiddenCount === 1 ? "" : "s"}
+                </button>
+              ) : showAll && visibleGoals.length > 0 ? (
+                <button
+                  type="button"
+                  className={showAllHeaderButton}
+                  onClick={() => setShowAll(false)}
+                >
+                  Show relevant only
+                </button>
+              ) : null}
             </div>
             <JsonForestView
               goals={visibleGoals}
               hiddenCount={hiddenCount}
-              showingAll={showAll}
-              onToggleShowAll={() => setShowAll((v) => !v)}
               categories={categories}
               focusRootId={focusRootId}
             />

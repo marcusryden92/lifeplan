@@ -35,6 +35,10 @@ export function scheduleTasksAndGoals(
   const plannerCategoryMap =
     context.plannerCategoryMap ?? new Map<string, string | null>();
   const capacityCache = new Map<string, number>();
+  // `categories` is already filtered to window-bearing categories upstream
+  // (CalendarGenerator.scheduledCategories) — the watermark must resolve
+  // constraints against the same set placement uses.
+  const schedulableCategoryIds = new Set(categories.map((c) => c.id));
 
   let expansionsDone = 0;
 
@@ -62,9 +66,19 @@ export function scheduleTasksAndGoals(
     // Goal candidates size as their largest uncompleted leaf, not the
     // subtree aggregate — scheduleGoal places leaves individually, and the
     // aggregate can exceed any possible slot, which would pin this watermark
-    // permanently true and starve the placement walk below.
+    // permanently true and starve the placement walk below. Leaves already
+    // placed (this run or memoized from the previous calendar) are excluded
+    // from the sizing for the same reason.
+    const unplaceableLeafIds = new Set([
+      ...memoizedEventIds,
+      ...scheduledTaskIds,
+    ]);
     const biggestRemaining = candidates.reduce(
-      (m, c) => Math.max(m, effectiveCandidateDuration(c, allPlanners)),
+      (m, c) =>
+        Math.max(
+          m,
+          effectiveCandidateDuration(c, allPlanners, unplaceableLeafIds),
+        ),
       0,
     );
     const biggestFit = largestCompatibleSlotForLargestTask(
@@ -73,6 +87,8 @@ export function scheduleTasksAndGoals(
       plannerCategoryMap,
       context.placementCutoffDate,
       allPlanners,
+      schedulableCategoryIds,
+      unplaceableLeafIds,
     );
 
     if (

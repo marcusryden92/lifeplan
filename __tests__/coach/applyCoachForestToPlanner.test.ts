@@ -181,9 +181,10 @@ describe("applyCoachForestToPlanner", () => {
     // Children inherit the root's category.
     expect(buy.categoryId).toBe("cat-2");
     expect(lesson.categoryId).toBe("cat-2");
-    // New subtasks are NOT ready by default — readying is a user decision.
-    expect(buy.isReady).toBeNull();
-    expect(lesson.isReady).toBeNull();
+    // New subtasks are NOT ready by default — readying is a user decision,
+    // and the whole subtree carries the root's value.
+    expect(buy.isReady).toBe(false);
+    expect(lesson.isReady).toBe(false);
   });
 
   it("only readies a new goal that has both subtasks and a deadline", () => {
@@ -234,6 +235,51 @@ describe("applyCoachForestToPlanner", () => {
 
     expect(result.find((p) => p.title === "no deadline")!.isReady).toBe(false);
     expect(result.find((p) => p.title === "fully gated")!.isReady).toBe(true);
+
+    // Readiness cascades: every row in a subtree carries the root's value.
+    const gatedRoot = result.find((p) => p.title === "fully gated")!;
+    const gatedChild = result.find(
+      (p) => p.title === "step" && p.parentId === gatedRoot.id,
+    )!;
+    expect(gatedChild.isReady).toBe(true);
+    const ungatedRoot = result.find((p) => p.title === "no deadline")!;
+    const ungatedChild = result.find(
+      (p) => p.title === "step" && p.parentId === ungatedRoot.id,
+    )!;
+    expect(ungatedChild.isReady).toBe(false);
+  });
+
+  it("cascades a retained root's ready state to restructured descendants", () => {
+    const planner = makePlanner().map((p) =>
+      p.id === "goal-a" || p.id === "a1" || p.id === "a2"
+        ? { ...p, isReady: true, deadline: "2026-08-01" }
+        : p,
+    );
+    const workingForest = clone(plannerForestToJson(planner));
+    const goalA = workingForest.goals.find((g) => g.id === "goal-a")!;
+    goalA.children.push({
+      id: "",
+      title: "new step",
+      plannerType: "task",
+      duration: 20,
+      deadline: null,
+      priority: 0,
+      isReady: null,
+      categoryId: null,
+      children: [],
+    });
+
+    const result = applyCoachForestToPlanner({
+      planner,
+      workingForest,
+      userId: USER_ID,
+      validCategoryIds: VALID_CATEGORY_IDS,
+    });
+
+    const added = result.find((p) => p.title === "new step")!;
+    expect(added.parentId).toBe("goal-a");
+    expect(added.isReady).toBe(true);
+    expect(byId(result, "a1").isReady).toBe(true);
   });
 
   it("coerces a new top-level plan to a non-plan type", () => {

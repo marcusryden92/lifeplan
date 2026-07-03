@@ -39,11 +39,12 @@ export const empty = style({
   lineHeight: 1.55,
 });
 
+// No explicit fontFamily: message text reads in the app's regular body font
+// (inherited from <body>) rather than the UI font.
 const messageBase = style({
   display: "flex",
   flexDirection: "column",
   gap: 4,
-  fontFamily: vars.font.ui,
   fontSize: 13,
   lineHeight: 1.6,
   color: vars.ink,
@@ -223,7 +224,7 @@ export const textarea = style({
   outline: "none",
   background: "transparent",
   padding: "4px 6px",
-  fontFamily: vars.font.ui,
+  fontFamily: "inherit",
   fontSize: 13,
   lineHeight: 1.5,
   color: vars.ink,

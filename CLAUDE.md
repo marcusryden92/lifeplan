@@ -135,7 +135,7 @@
   │   │       ├── location.prisma       # Location, TravelTime, TravelEvent, TransportMode
   │   │       ├── scheduling.prisma     # UserSchedulingPreferences, TaskPreferences, enums
   │   │       └── engineMessage.prisma  # EngineMessage — engine-emitted console rows with user-owned dismissed flag
-  │   ├── migrations/                   # 0_init … add_password_changed_at — see "Migration history" below for the full list
+  │   ├── migrations/                   # 0_init … task_preferences_planner_cascade — see "Migration history" below for the full list
   │   ├── seed.ts                       # Wholesale reseed (admin@lifeplan.com / "password")
   │   └── seed-helpers/                 # generateCategories, generateLocations (+ TravelTimes), generatePlanners, generatePlans, generateTemplates, generateUncompletedItems
   │
@@ -515,6 +515,7 @@
   - `user_id_indexes` — `@@index([userId])` across the per-user tables the fetch/sync queries filter on
   - `verification_token_user_id` — nullable `VerificationToken.userId` so email-change tokens resolve the user by id
   - `add_password_changed_at` — `users.password_changed_at`; the jwt callback invalidates tokens issued before it
+  - `task_preferences_planner_cascade` — real FK `TaskPreferences.plannerId → Planner.id` with ON DELETE CASCADE (after an orphan cleanup); replaces the manual sweep that lived in `deleteAccount.ts`
 
   Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 
@@ -573,10 +574,11 @@
   Engine regression tests live in [`__tests__/calendar-generation/`](__tests__/calendar-generation/):
 
   - **expansion-seam** — guards the local-date-keyed `CategoryEvent` ID format by forcing horizon expansion (a single Plan three weeks out). The diff layer and the DB schema depend on this composite ID; UTC-instant keying would desync near midnight UTC.
-  - **completed-task-not-rescheduled** — a completed task under a non-ready goal must render only at its completion window, never re-enter the candidate list (guards the `prepareCandidates` completed filter).
-  - **ready-goal-watermark** — a ready goal whose subtree-aggregate duration exceeds any possible slot must still place every leaf (goals size as their largest uncompleted leaf in the expansion watermark), and an exhausted expansion budget must surface `NO_SLOTS` failures instead of exiting silently.
+  - **completed-task-not-rescheduled** — a completed task under a ready goal must render only at its completion window, never re-enter the candidate list (guards the `prepareCandidates` completed filter).
+  - **ready-gate** — a NOT-ready goal's subtree schedules nothing (its tasks are never individual candidates), while standalone tasks still place. Readiness is the scheduling gate and cascades: `toggleGoalIsReady` / `setGoalIsReady` / the coach apply / `addSubtask` stamp the whole subtree with the root's value.
+  - **ready-goal-watermark** — a ready goal must place every leaf despite the three watermark starvation modes: subtree-aggregate sizing (goals size as their largest uncompleted, still-placeable leaf), a windowless classification-only `categoryId` (the watermark resolves constraints against the same window-bearing category set placement uses), and a memoized past leaf inflating the goal's size. An exhausted expansion budget must surface `NO_SLOTS` failures instead of exiting silently.
 
-  The latter two run against trimmed live-data snapshots in `fixtures/` — synthetic minimal fixtures don't produce a valid slot fabric, so new engine tests should extend the fixture pattern rather than hand-building planners. Tests use jest fake timers (`{ doNotFake: ["queueMicrotask"] }` + `setSystemTime`) for a deterministic "now", and map fixture template `startDay` weekday names to the integers the engine expects.
+  All but the seam test run against trimmed live-data snapshots in `fixtures/` — synthetic minimal fixtures don't produce a valid slot fabric, so new engine tests should extend the fixture pattern rather than hand-building planners. Tests use jest fake timers (`{ doNotFake: ["queueMicrotask"] }` + `setSystemTime`) for a deterministic "now", and map fixture template `startDay` weekday names to the integers the engine expects.
 
   Run with `pnpm test` / `pnpm test:watch`. Type-checking covers both the app and the test project: `pnpm type-check` (also chained into `pnpm lint`).
 

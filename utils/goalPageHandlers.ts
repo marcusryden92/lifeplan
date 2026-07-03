@@ -31,12 +31,16 @@ export function addSubtask({
   const now = new Date();
 
   if (userId && taskDuration && taskTitle) {
+    // Readiness cascades from the root: a subtree is ready or unready as one.
+    const rootId = getRootParentId(planner, task.id);
+    const rootItem = rootId ? planner.find((p) => p.id === rootId) : undefined;
+
     const newTask: Planner = {
       title: taskTitle,
       id: newId,
       parentId: task.id || null,
       plannerType: PlannerType.goal,
-      isReady: true,
+      isReady: rootItem?.isReady ?? false,
       isTriaged: true,
       duration: taskDuration < 15 ? 15 : taskDuration,
       deadline: null,

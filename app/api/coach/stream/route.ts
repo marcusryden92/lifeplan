@@ -245,7 +245,7 @@ Each node in a goal tree has:
 - duration: minutes required for that leaf task. For a "goal" node, duration is a rough estimate (children sum to the real total).
 - deadline: ISO date string or null.
 - priority: integer.
-- isReady: top-level goals only — true marks the goal ready for scheduling, and requires at least one subtask AND a deadline (the app blocks it otherwise). OMIT this field (or use null) on all child nodes; items are not ready by default and readying is the user's decision.
+- isReady: top-level goals only — true marks the goal ready for scheduling, and requires at least one subtask AND a deadline (the app blocks it otherwise). OMIT this field (or use null) on all child nodes; readiness cascades from the root (every row in a subtree carries the root's value, stamped on save), and readying is the user's decision.
 - categoryId: top-level goals only — one of the user's category ids, or null. Echo it verbatim for retained goals (null on a retained goal means "leave as is"); pick a fitting category for new goals, or null if none fits. Never set it on child nodes; they inherit.
 - children: ordered array of sub-nodes. Empty for leaves.
 
