@@ -5,7 +5,8 @@ import { vars, colorMixAlpha } from "@/lib/theme";
 import {
   TRESPASS_BORDER_COLOR,
   TRESPASS_BORDER_WIDTH,
-} from "./trespassBorderStyles";
+} from "../trespassBorderStyles";
+import { wrapper, stripeSvg } from "./CategoryWrapperEvent.css";
 
 interface CategoryWrapperEventProps {
   categoryId: string;
@@ -82,13 +83,9 @@ export function CategoryWrapperEvent({
   return (
     <div
       ref={wrapperRef}
+      className={wrapper}
       style={{
-        position: "relative",
-        width: "100%",
-        height: "100%",
         background: fillTint,
-        border: "none",
-        borderRadius: 0,
         ...(trespassingStart && {
           borderTop: `${trespassPx} solid ${TRESPASS_BORDER_COLOR}`,
         }),
@@ -99,16 +96,7 @@ export function CategoryWrapperEvent({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <svg
-        aria-hidden
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          pointerEvents: "none",
-        }}
-      >
+      <svg aria-hidden className={stripeSvg}>
         <defs>
           <pattern
             id={patternId}

@@ -5,8 +5,9 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { EventTemplate } from "@/types/prisma";
 
-import TemplateEventPopover from "./TemplateEventPopover";
-import EventWrapper from "./EventWrapper";
+import TemplateEventPopover from "../TemplateEventPopover";
+import EventWrapper from "../EventWrapper";
+import { hoverRow, hoverBtnGroup, hoverBtn } from "./TemplateEventContent.css";
 
 interface TemplateEventContentProps {
   event: EventImpl;
@@ -79,27 +80,21 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
         onHover &&
         elementHeight > 40 &&
         elementWidth > 70 && (
-          <div
-            style={{
-              display: "flex",
-              width: "100%",
-              justifyContent: "space-between",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div className={hoverRow}>
+            <div className={hoverBtnGroup}>
               <button
                 onClick={handleClickDelete}
-                style={{ display: "inline-flex", padding: 2, color: "inherit" }}
+                className={hoverBtn}
                 aria-label="Delete"
               >
                 <Trash2 size={14} strokeWidth={2} />
               </button>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <div className={hoverBtnGroup}>
               <button
                 onClick={onCopy}
-                style={{ display: "inline-flex", padding: 2, color: "inherit" }}
+                className={hoverBtn}
                 aria-label="Duplicate"
               >
                 <Copy size={14} strokeWidth={2} />

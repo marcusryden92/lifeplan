@@ -164,6 +164,9 @@ const useManuallyRefreshCalendar = (
           engineMessages: newEngineMessages,
         })
       );
+      dispatch(
+        calendarSlice.actions.markEngineRun(new Date().toISOString()),
+      );
     }
   }, []);
 

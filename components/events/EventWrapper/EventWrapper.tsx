@@ -4,14 +4,23 @@ import { Pin } from "lucide-react";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
-import { vars, backdropFilters, colorMixAlpha } from "@/lib/theme";
+import { colorMixAlpha } from "@/lib/theme";
 import { computeTemplateBorder } from "@/utils/colorUtils";
 import { getEventTier } from "@/utils/eventTier";
-import { useSetCalendarHoverLabel } from "./CalendarHoverLabelContext";
+import { useSetCalendarHoverLabel } from "../CalendarHoverLabelContext";
 import {
   TRESPASS_BORDER_COLOR,
   TRESPASS_BORDER_WIDTH,
-} from "./trespassBorderStyles";
+} from "../trespassBorderStyles";
+import {
+  tile,
+  textBlock,
+  titleRow,
+  pin,
+  title,
+  timeRow,
+  timeDash,
+} from "./EventWrapper.css";
 
 interface EventExtendedPropsWithTrespassing {
   trespassingStart?: boolean;
@@ -86,13 +95,6 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
   const showTime =
     tier === "regular" && elementHeight >= 48 && elementWidth >= 70;
   const showPin = isPlan && tier !== "tiny";
-  const titleFont = tier === "compact" ? 10 : 11.5;
-  const padding =
-    tier === "tiny"
-      ? "0 4px"
-      : tier === "compact"
-        ? "1px 8px"
-        : "6px 10px";
   const glassFill = `color-mix(in srgb, ${tint} ${colorMixAlpha.denseFill}%, transparent)`;
 
   const border = isTemplate
@@ -102,20 +104,10 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
   return (
     <div
       ref={elementRef}
+      className={tile[tier]}
       style={{
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        height: "100%",
-        padding,
-        borderRadius: 8,
         background: glassFill,
-        backdropFilter: backdropFilters.event,
-        WebkitBackdropFilter: backdropFilters.event,
         border,
-        color: vars.textOnAccent,
-        fontFamily: vars.font.ui,
         ...(trespassingStart && {
           borderTop: `${trespassPx} solid ${TRESPASS_BORDER_COLOR}`,
         }),
@@ -149,57 +141,26 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
         handleDoubleClick(e, elementRef, setEventRect, setShowPopover)
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
+      <div className={textBlock}>
+        <div className={titleRow}>
           {showPin && (
             <Pin
               size={tier === "compact" ? 9 : 11}
               strokeWidth={2.2}
               aria-hidden
-              style={{
-                color: `color-mix(in srgb, ${vars.textOnAccent} 85%, transparent)`,
-                flexShrink: 0,
-                transform: "rotate(20deg)",
-              }}
+              className={pin}
             />
           )}
           {showTitle && (
-            <span
-              style={{
-                fontSize: titleFont,
-                fontWeight: 500,
-                fontStyle: "italic",
-                color: vars.textOnAccent,
-                flex: 1,
-                minWidth: 0,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
+            <span className={title[tier === "compact" ? "compact" : "regular"]}>
               {event.title}
             </span>
           )}
         </div>
         {showTime && (
-          <span
-            style={{
-              display: "flex",
-              gap: 4,
-              fontSize: 10,
-              fontWeight: 500,
-              fontVariantNumeric: "tabular-nums",
-              color: `color-mix(in srgb, ${vars.textOnAccent} 70%, transparent)`,
-            }}
-          >
+          <span className={timeRow}>
             <span>{formatTime(startTime)}</span>
-            <span aria-hidden style={{ opacity: 0.6 }}>
+            <span aria-hidden className={timeDash}>
               –
             </span>
             <span>{formatTime(endTime)}</span>

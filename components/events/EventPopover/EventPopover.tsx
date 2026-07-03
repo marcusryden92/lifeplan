@@ -16,8 +16,8 @@ import {
 import { EventImpl } from "@fullcalendar/core/internal";
 import useTitleEditor from "@/hooks/useTitleEditor";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { PopoverLocationPicker } from "./PopoverLocationPicker";
-import { PopoverColorPicker } from "./PopoverColorPicker";
+import { PopoverLocationPicker } from "../PopoverLocationPicker";
+import { PopoverColorPicker } from "../PopoverColorPicker";
 import { handleEventCopy } from "@/utils/calendarEventHandlers";
 import {
   assignLocationToPlanner,
@@ -29,8 +29,8 @@ import { calendarColors } from "@/data/calendarColors";
 import { getCompleteTaskTreeIds, getRootParentId } from "@/utils/goalPageHandlers";
 import { CategoryBadge, TypeBadge } from "@/components/ui";
 import { vars } from "@/lib/theme";
-import { CalendarPopover } from "./CalendarPopover";
-import { PopoverAction } from "./PopoverAction";
+import { CalendarPopover } from "../CalendarPopover";
+import { PopoverAction } from "../PopoverAction";
 import {
   header,
   dragHandle,
@@ -42,7 +42,12 @@ import {
   renamePencil,
   body,
   metaRow,
-} from "./CalendarPopover.css";
+} from "../CalendarPopover/CalendarPopover.css";
+import {
+  metaIcon,
+  statusActionsRow,
+  footerSection,
+} from "./EventPopover.css";
 
 interface EventPopoverProps {
   event: EventImpl;
@@ -319,7 +324,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
                 size={13}
                 strokeWidth={2}
                 aria-hidden
-                style={{ color: vars.muted }}
+                className={metaIcon}
               />
               <span>
                 {format(startTime, "EEE MMM d")} · {formatTime(startTime)} –{" "}
@@ -346,7 +351,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
             />
 
             {showStatusActions && (
-              <div style={{ display: "flex", gap: 6 }}>
+              <div className={statusActionsRow}>
                 <PopoverAction
                   onClick={onComplete}
                   variant={isCompleted ? "primary" : "primaryFilled"}
@@ -364,15 +369,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
               </div>
             )}
 
-            <div
-              style={{
-                paddingTop: 8,
-                borderTop: `1px solid ${vars.rule}`,
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-              }}
-            >
+            <div className={footerSection}>
               <PopoverAction
                 onClick={openFullEditor}
                 icon={<ArrowUpRight size={13} strokeWidth={2} />}

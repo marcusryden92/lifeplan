@@ -9,10 +9,22 @@ import { AlertTriangle, Car } from "lucide-react";
 import { RootState } from "@/redux/store";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
-import { vars, colorMixAlpha } from "@/lib/theme";
 import { getEventTier } from "@/utils/eventTier";
-import { useSetCalendarHoverLabel } from "./CalendarHoverLabelContext";
-import TravelEventPopover from "./TravelEventPopover";
+import { useSetCalendarHoverLabel } from "../CalendarHoverLabelContext";
+import TravelEventPopover from "../TravelEventPopover";
+import {
+  tile,
+  tilePadding,
+  tileInner,
+  titleText,
+  titleItalic,
+  alertIcon,
+  modeIcon,
+  labelText,
+  minutes,
+  timeRow,
+  timeDash,
+} from "./TravelEventContent.css";
 
 interface TravelExtendedProps {
   travelMinutes?: number;
@@ -82,18 +94,13 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   // ~48 covers: 6px top + ~16 title + 2 gap + ~14 time + 6 bottom + ~4 breath.
   const showTime = tier === "regular" && elementHeight >= 48 && elementWidth >= 70;
   const showMinutes = tier === "regular" && elementWidth >= 110;
-  const titleFont = tier === "compact" ? 10 : 11.5;
-  const padding =
-    tier === "tiny"
-      ? "0 4px"
-      : tier === "compact"
-        ? "1px 8px"
-        : "6px 10px";
-  const alertColor = showAlert
-    ? vars.status.error
+  const showsAlertTone = showAlert || showOverconstrained;
+  const tileState = showAlert
+    ? ("error" as const)
     : showOverconstrained
-      ? vars.status.warning
-      : null;
+      ? ("warning" as const)
+      : ("plain" as const);
+  const titleSize = tier === "compact" ? ("compact" as const) : ("regular" as const);
 
   return (
     <div
@@ -103,73 +110,33 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
       }
       onMouseEnter={() => setHoverLabel?.({ name: travelLabel, color: null })}
       onMouseLeave={() => setHoverLabel?.(null)}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        height: "100%",
-        padding,
-        borderRadius: 8,
-        background: alertColor
-          ? `color-mix(in srgb, ${alertColor} ${colorMixAlpha.alertFill}%, transparent)`
-          : vars.tileFill,
-        border: `1px solid ${alertColor ?? vars.ink}`,
-        fontFamily: vars.font.ui,
-        color: alertColor ? vars.textOnAccent : vars.ink,
-        cursor: "pointer",
-      }}
+      className={`${tile[tileState]} ${tilePadding[tier]}`}
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+      <div className={tileInner}>
         {showLabel && (
         <span
-          style={{
-            fontSize: titleFont,
-            fontWeight: 500,
-            fontStyle: alertColor ? "normal" : "italic",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            minWidth: 0,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
+          className={`${titleText[titleSize]}${showsAlertTone ? "" : ` ${titleItalic}`}`}
         >
-          {alertColor ? (
+          {showsAlertTone ? (
             <AlertTriangle
               size={12}
               strokeWidth={2.2}
-              style={{ flexShrink: 0 }}
+              className={alertIcon}
               aria-hidden
             />
           ) : (
             <Car
               size={12}
               strokeWidth={2}
-              style={{ flexShrink: 0, opacity: 0.78 }}
+              className={modeIcon}
               aria-hidden
             />
           )}
-          <span
-            style={{
-              flex: 1,
-              minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
+          <span className={labelText}>
             {travelLabel}
           </span>
           {travelMinutes !== undefined && showMinutes && (
-            <span
-              style={{
-                flexShrink: 0,
-                fontWeight: 500,
-                opacity: 0.7,
-                fontVariantNumeric: "tabular-nums",
-                paddingRight: 4,
-              }}
-            >
+            <span className={minutes}>
               {travelMinutes}m
               {showAlert &&
                 requiredTravelMinutes !== null &&
@@ -186,18 +153,9 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
         </span>
         )}
         {showTime && (
-          <span
-            style={{
-              display: "flex",
-              gap: 4,
-              fontSize: 10,
-              fontWeight: 500,
-              fontVariantNumeric: "tabular-nums",
-              opacity: 0.7,
-            }}
-          >
+          <span className={timeRow}>
             <span>{formatTime(startTime)}</span>
-            <span aria-hidden style={{ opacity: 0.6 }}>
+            <span aria-hidden className={timeDash}>
               –
             </span>
             <span>{formatTime(endTime)}</span>

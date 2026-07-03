@@ -39,6 +39,10 @@ type CalendarData = {
   // their empty-state UI on this so a fresh load doesn't briefly read as
   // "no items" / "no categories" before the fetch returns.
   isLoaded: boolean;
+  // ISO timestamp of the last engine run this session (thunk or manual
+  // refresh). Ephemeral like plannerScores — null until the engine has run,
+  // including after a cold load that only fetched persisted output.
+  lastEngineRunAt: string | null;
 };
 
 const initialState: CalendarData = {
@@ -51,6 +55,7 @@ const initialState: CalendarData = {
   engineMessages: [],
   plannerScores: {},
   isLoaded: false,
+  lastEngineRunAt: null,
 };
 
 const calendarSlice = createSlice({
@@ -95,6 +100,11 @@ const calendarSlice = createSlice({
     // resolves). Only useFetchCalendarData should call this.
     markCalendarLoaded: (state) => {
       state.isLoaded = true;
+    },
+    // Timestamp passed in by the caller (reducers stay pure). Dispatched by
+    // both engine invocation paths: the thunk and useManuallyRefreshCalendar.
+    markEngineRun: (state, action: PayloadAction<string>) => {
+      state.lastEngineRunAt = action.payload;
     },
     setCategories: (state, action: PayloadAction<Category[]>) => {
       state.categories = action.payload;
@@ -156,6 +166,7 @@ const calendarSlice = createSlice({
 export const {
   updateCalendarArrayData,
   markCalendarLoaded,
+  markEngineRun,
   setCategories,
   upsertCategory,
   removeCategory,

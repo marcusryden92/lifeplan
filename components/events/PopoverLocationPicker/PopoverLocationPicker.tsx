@@ -5,7 +5,16 @@ import { useMemo } from "react";
 import { useSelector } from "react-redux";
 import { Caption, Combobox, Switch } from "@/components/ui";
 import type { RootState } from "@/redux/store";
-import { vars, interactiveTransition } from "@/lib/theme";
+import {
+  root,
+  overrideRow,
+  overrideLabel,
+  comboWrap,
+  optionLabel,
+  valueWrap,
+  valueIcon,
+  valueText,
+} from "./PopoverLocationPicker.css";
 
 interface Props {
   value: string | null;
@@ -43,13 +52,7 @@ export function PopoverLocationPicker({
       ...locations.map((l) => ({
         value: l.id,
         label: (
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
+          <span className={optionLabel}>
             <MapPin size={12} strokeWidth={2} />
             <span>{l.name}</span>
           </span>
@@ -65,28 +68,16 @@ export function PopoverLocationPicker({
     : (currentLocation?.name ?? "Anywhere");
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className={root}>
       {hasOverrideControls && (
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
+        <div className={overrideRow}>
           <Switch
             checked={!!isOverridden}
             onCheckedChange={() => onToggleOverride?.()}
             aria-label="Override inherited location"
           />
           <span
-            style={{
-              fontFamily: vars.font.ui,
-              fontSize: 11.5,
-              color: isOverridden ? vars.ink : vars.muted,
-              fontWeight: 600,
-            }}
+            className={overrideLabel[isOverridden ? "custom" : "inherited"]}
           >
             {isOverridden
               ? "Custom location"
@@ -95,11 +86,7 @@ export function PopoverLocationPicker({
         </div>
       )}
       <div
-        style={{
-          opacity: isInheriting ? 0.55 : 1,
-          pointerEvents: isInheriting ? "none" : "auto",
-          transition: interactiveTransition("opacity"),
-        }}
+        className={comboWrap[isInheriting ? "inheriting" : "enabled"]}
         aria-disabled={isInheriting || undefined}
       >
         <Combobox<string | null>
@@ -108,32 +95,9 @@ export function PopoverLocationPicker({
           onChange={(v) => onChange(v)}
           width={DROPDOWN_WIDTH}
           renderValue={() => (
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                flex: 1,
-                minWidth: 0,
-              }}
-              title={displayName}
-            >
-              <MapPin
-                size={12}
-                strokeWidth={2}
-                style={{ flexShrink: 0 }}
-              />
-              <span
-                style={{
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                {displayName}
-              </span>
+            <span className={valueWrap} title={displayName}>
+              <MapPin size={12} strokeWidth={2} className={valueIcon} />
+              <span className={valueText}>{displayName}</span>
             </span>
           )}
           ariaLabel="Location"

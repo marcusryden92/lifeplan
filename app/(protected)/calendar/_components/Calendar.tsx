@@ -8,7 +8,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 
 import RRulePlugin from "@fullcalendar/rrule";
-import luxonPlugin from "@fullcalendar/luxon";
+import luxonPlugin from "@fullcalendar/luxon3";
 
 import EventContent from "@/components/events/EventContent";
 import TemplateEventContent from "@/components/events/TemplateEventContent";

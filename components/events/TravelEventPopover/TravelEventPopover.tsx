@@ -17,9 +17,8 @@ import { EventImpl } from "@fullcalendar/core/internal";
 import { formatTime } from "@/utils/calendarUtils";
 import type { RootState } from "@/redux/store";
 import { TypeBadge } from "@/components/ui";
-import { vars, colorMixAlpha } from "@/lib/theme";
-import { CalendarPopover } from "./CalendarPopover";
-import { PopoverAction } from "./PopoverAction";
+import { CalendarPopover } from "../CalendarPopover";
+import { PopoverAction } from "../PopoverAction";
 import {
   header,
   dragHandle,
@@ -29,7 +28,21 @@ import {
   titleStatic,
   body,
   metaRow,
-} from "./CalendarPopover.css";
+} from "../CalendarPopover/CalendarPopover.css";
+import {
+  headerCursor,
+  tone,
+  statusNote,
+  travelTitle,
+  titleIcon,
+  mutedText,
+  estimateRow,
+  estimateValue,
+  alertBox,
+  alertIcon,
+  alertText,
+  footerActions,
+} from "./TravelEventPopover.css";
 
 interface TravelExtendedProps {
   travelMinutes?: number;
@@ -96,13 +109,6 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
       ? "warning"
       : "ok";
 
-  const accent =
-    variant === "error"
-      ? vars.status.error
-      : variant === "warning"
-        ? vars.status.warning
-        : vars.muted;
-
   return (
     <CalendarPopover
       anchorRect={eventRect}
@@ -114,8 +120,7 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
       {({ startDrag, isDragging }) => (
         <>
           <div
-            className={header}
-            style={{ cursor: isDragging ? "grabbing" : "default" }}
+            className={`${header} ${headerCursor[isDragging ? "dragging" : "idle"]}`}
           >
             <button
               type="button"
@@ -144,15 +149,7 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
                     : "travel"}
               </TypeBadge>
               {variant !== "ok" && (
-                <span
-                  style={{
-                    fontFamily: vars.font.ui,
-                    fontSize: 11,
-                    color: accent,
-                    fontWeight: 600,
-                    letterSpacing: "0.02em",
-                  }}
-                >
+                <span className={`${statusNote} ${tone[variant]}`}>
                   {variant === "error"
                     ? "insufficient travel time"
                     : "travel window exceeded"}
@@ -171,33 +168,17 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
 
           <div className={titleRow}>
             <h3
-              className={titleStatic}
-              style={{
-                cursor: "default",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-              }}
+              className={`${titleStatic} ${travelTitle}`}
               title={`${fromName} → ${toName}`}
             >
-              <Car
-                size={18}
-                strokeWidth={2}
-                aria-hidden
-                style={{ color: vars.muted, flexShrink: 0 }}
-              />
-              {fromName} <span style={{ color: vars.muted }}>→</span> {toName}
+              <Car size={18} strokeWidth={2} aria-hidden className={titleIcon} />
+              {fromName} <span className={mutedText}>→</span> {toName}
             </h3>
           </div>
 
           <div className={body}>
             <div className={metaRow}>
-              <Clock
-                size={13}
-                strokeWidth={2}
-                aria-hidden
-                style={{ color: vars.muted }}
-              />
+              <Clock size={13} strokeWidth={2} aria-hidden className={mutedText} />
               <span>
                 {format(startTime, "EEE MMM d")} · {formatTime(startTime)} –{" "}
                 {formatTime(endTime)}
@@ -206,26 +187,11 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
             </div>
 
             {requiredLabel && (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: vars.inkSoft,
-                  fontFamily: vars.font.ui,
-                  fontVariantNumeric: "tabular-nums",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <span style={{ color: vars.muted }}>Engine estimate</span>
-                <span style={{ fontWeight: 600 }}>{requiredLabel}</span>
+              <div className={estimateRow}>
+                <span className={mutedText}>Engine estimate</span>
+                <span className={estimateValue}>{requiredLabel}</span>
                 {allottedLabel && requiredMinutes != null && travelMinutes != null && (
-                  <span
-                    style={{
-                      color: accent,
-                      fontWeight: 600,
-                    }}
-                  >
+                  <span className={`${estimateValue} ${tone[variant]}`}>
                     ·{" "}
                     {requiredMinutes - travelMinutes > 0
                       ? `${requiredMinutes - travelMinutes}m short`
@@ -236,31 +202,14 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
             )}
 
             {variant !== "ok" && (
-              <div
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: 10,
-                  border: `1px solid ${accent}`,
-                  background: `color-mix(in srgb, ${accent} ${colorMixAlpha.subtleFill}%, transparent)`,
-                  display: "flex",
-                  gap: 10,
-                  alignItems: "flex-start",
-                }}
-              >
+              <div className={alertBox[variant]}>
                 <AlertTriangle
                   size={14}
                   strokeWidth={2.2}
-                  style={{ color: accent, marginTop: 1, flexShrink: 0 }}
+                  className={`${alertIcon} ${tone[variant]}`}
                   aria-hidden
                 />
-                <span
-                  style={{
-                    fontSize: 11.5,
-                    color: vars.ink,
-                    lineHeight: 1.45,
-                    fontFamily: vars.font.ui,
-                  }}
-                >
+                <span className={alertText}>
                   {variant === "error"
                     ? "The engine couldn't fit the full travel time between these events. The route will run short — consider freeing up time on either side, or switch to a faster transport mode in Locations."
                     : "This travel slot is longer than the route's expected duration. The engine reserved the window to keep surrounding events from drifting."}
@@ -268,15 +217,7 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
               </div>
             )}
 
-            <div
-              style={{
-                paddingTop: 8,
-                borderTop: `1px solid ${vars.rule}`,
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-              }}
-            >
+            <div className={footerActions}>
               <PopoverAction
                 onClick={openLocationsRoute}
                 icon={<Settings size={13} strokeWidth={2} />}

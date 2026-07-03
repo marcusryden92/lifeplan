@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useEffect,
   useMemo,
   useState,
   type KeyboardEvent,
@@ -11,10 +10,11 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Check, SquarePen } from "lucide-react";
 import { Button, Caption, Loader } from "@/components/ui";
 import { vars, interactiveTransition } from "@/lib/theme";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/redux/store";
 import { useFlashValue } from "@/hooks/useFlashAnimation";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { DraggableContextProvider } from "@/components/draggable/DraggableContext";
-import * as categoryActions from "@/actions/categories";
 import {
   getSubtasksById,
   getTaskTreeIds,
@@ -25,7 +25,6 @@ import {
   totalSubtaskDuration,
 } from "@/utils/taskArrayUtils";
 import { useItemHandlers } from "../../_hooks/useItemHandlers";
-import type { Category } from "@/types/prisma";
 import type { PlannerType } from "@/generated/client";
 
 import { ItemProvider } from "../ItemContext";
@@ -61,20 +60,17 @@ export default function ItemDetailLayout({
   const params = useParams();
   const itemId = params.id as string;
 
-  const { planner, updatePlannerArray, updateAll } = useCalendarProvider();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
+  // Categories come from the provider (Redux) like every other surface — a
+  // page-local fetch showed stale data after edits elsewhere and blocked
+  // first paint on its own round-trip.
+  const { planner, updatePlannerArray, updateAll, categories } =
+    useCalendarProvider();
+  const isCalendarLoaded = useSelector(
+    (state: RootState) => state.calendar.isLoaded,
+  );
   const [editingTitle, setEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
   const [coachOpen, setCoachOpen] = useState(false);
-
-  useEffect(() => {
-    categoryActions
-      .fetchCategories()
-      .then((cats) => setCategories(cats))
-      .catch((err) => console.error("Failed to load categories:", err))
-      .finally(() => setLoadingCategories(false));
-  }, []);
 
   const item = useMemo(
     () => planner.find((p) => p.id === itemId),
@@ -167,7 +163,7 @@ export default function ItemDetailLayout({
     null,
   );
 
-  if (loadingCategories) {
+  if (!isCalendarLoaded) {
     return (
       <div className={page}>
         <div className={scrollArea}>

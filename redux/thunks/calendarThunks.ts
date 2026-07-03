@@ -92,4 +92,5 @@ export const updateAllCalendarStates =
     };
 
     dispatch(calendarSlice.actions.updateCalendarArrayData(calendarData));
+    dispatch(calendarSlice.actions.markEngineRun(new Date().toISOString()));
   };

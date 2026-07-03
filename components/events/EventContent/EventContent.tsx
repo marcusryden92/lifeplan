@@ -5,8 +5,8 @@ import { useEffect, useRef, useState } from "react";
 
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { floorMinutes } from "@/utils/calendarUtils";
-import EventPopover from "./EventPopover";
-import EventWrapper from "./EventWrapper";
+import EventPopover from "../EventPopover";
+import EventWrapper from "../EventWrapper";
 import { EventImpl } from "@fullcalendar/core/internal";
 import {
   handleClickCompleteTask,
@@ -14,6 +14,7 @@ import {
   handlePostponeTask,
 } from "@/utils/calendarEventHandlers";
 import { PlannerType } from "@/types/prisma";
+import { hoverActions, actionGroup, iconButton } from "./EventContent.css";
 
 interface EventContentProps {
   event: EventImpl;
@@ -104,42 +105,17 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
         elementHeight > 40 &&
         elementWidth > 70 &&
         !event.extendedProps.isTemplateItem && (
-          <div
-            style={{
-              display: "flex",
-              width: "100%",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <button
-              onClick={onDelete}
-              style={{
-                display: "inline-flex",
-                padding: 2,
-                color: "inherit",
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-              }}
-              aria-label="Delete"
-            >
+          <div className={hoverActions}>
+            <button onClick={onDelete} className={iconButton} aria-label="Delete">
               <Trash2 size={14} strokeWidth={2} />
             </button>
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className={actionGroup}>
               {(event.extendedProps.plannerType === PlannerType.goal ||
                 event.extendedProps.plannerType === PlannerType.task) && (
                 <>
                   <button
                     onClick={onComplete}
-                    style={{
-                      display: "inline-flex",
-                      padding: 2,
-                      color: "inherit",
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                    }}
+                    className={iconButton}
                     aria-label="Complete"
                   >
                     <Check size={14} strokeWidth={2.2} />
@@ -147,15 +123,7 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
                   <button
                     disabled={!displayPostponeButton}
                     onClick={onPostpone}
-                    style={{
-                      display: "inline-flex",
-                      padding: 2,
-                      color: "inherit",
-                      background: "transparent",
-                      border: "none",
-                      cursor: displayPostponeButton ? "pointer" : "not-allowed",
-                      opacity: displayPostponeButton ? 1 : 0.5,
-                    }}
+                    className={iconButton}
                     aria-label="Postpone"
                   >
                     <ArrowRight size={14} strokeWidth={2} />

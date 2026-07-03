@@ -27,7 +27,7 @@ import {
   renderEngineMessage,
 } from "@/utils/renderEngineMessage";
 import { getRootParentId } from "@/utils/goalPageHandlers";
-import { ENGINE_SUMMARY, type EngineTone } from "../_mock/calendar";
+import { type EngineTone } from "../_mock/calendar";
 import { WeekStructureModal } from "@/components/calendar/WeekStructureModal";
 import { EngineControls } from "./_components/EngineControls";
 import "./_styles/fullcalendar.css";
@@ -71,6 +71,19 @@ import {
 
 const CONSOLE_COLLAPSE_KEY = "circadium.engine.collapsed";
 
+// Compact relative timestamp for the console header. Null means the engine
+// hasn't run this session (cold load renders persisted output only).
+function formatLastRun(iso: string | null): string {
+  if (!iso) return "—";
+  const deltaMs = Date.now() - new Date(iso).getTime();
+  const minutes = Math.floor(deltaMs / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 function toneColor(tone: EngineTone) {
   switch (tone) {
     case "fail":
@@ -97,6 +110,9 @@ export default function CalendarPage() {
   );
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
+  );
+  const lastEngineRunAt = useSelector(
+    (state: RootState) => state.calendar.lastEngineRunAt,
   );
   // Placed count is derived from live calendar state, not the SCHEDULED_OK
   // payload, so the header stays accurate after user edits (dismissed card,
@@ -346,7 +362,7 @@ export default function CalendarPage() {
             <div className={engineContainer}>
               <div className={engineHeader}>
                 <span className={engineLastRun}>
-                  last run · {ENGINE_SUMMARY.lastRun}
+                  last run · {formatLastRun(lastEngineRunAt)}
                 </span>
                 <div className={engineSummary}>
                   {failCount} fail · {warnCount} warn · {placedCount} placed

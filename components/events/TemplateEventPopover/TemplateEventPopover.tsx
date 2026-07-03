@@ -13,13 +13,13 @@ import {
 import { EventImpl } from "@fullcalendar/core/internal";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { CategoryBadge, TypeBadge } from "@/components/ui";
-import { PopoverLocationPicker } from "./PopoverLocationPicker";
-import { PopoverColorPicker } from "./PopoverColorPicker";
+import { PopoverLocationPicker } from "../PopoverLocationPicker";
+import { PopoverColorPicker } from "../PopoverColorPicker";
 import { formatTime } from "@/utils/calendarUtils";
 import { calendarColors } from "@/data/calendarColors";
 import { vars } from "@/lib/theme";
-import { CalendarPopover } from "./CalendarPopover";
-import { PopoverAction } from "./PopoverAction";
+import { CalendarPopover } from "../CalendarPopover";
+import { PopoverAction } from "../PopoverAction";
 import {
   header,
   dragHandle,
@@ -31,7 +31,13 @@ import {
   renamePencil,
   body,
   metaRow,
-} from "./CalendarPopover.css";
+} from "../CalendarPopover/CalendarPopover.css";
+import {
+  headerGrabbing,
+  metaIcon,
+  note,
+  actionsSection,
+} from "./TemplateEventPopover.css";
 
 interface TemplateEventPopoverProps {
   event: EventImpl;
@@ -122,10 +128,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
     >
       {({ startDrag, isDragging }) => (
         <>
-          <div
-            className={header}
-            style={{ cursor: isDragging ? "grabbing" : "default" }}
-          >
+          <div className={isDragging ? `${header} ${headerGrabbing}` : header}>
             <button
               type="button"
               className={dragHandle}
@@ -191,7 +194,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
                 size={13}
                 strokeWidth={2}
                 aria-hidden
-                style={{ color: vars.muted }}
+                className={metaIcon}
               />
               <span>
                 {format(startTime, "EEE")} · {formatTime(startTime)} –{" "}
@@ -199,14 +202,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
               </span>
             </div>
 
-            <div
-              style={{
-                fontSize: 11.5,
-                color: vars.muted,
-                fontFamily: vars.font.ui,
-                lineHeight: 1.45,
-              }}
-            >
+            <div className={note}>
               Editing applies to every occurrence of this template.
             </div>
 
@@ -222,15 +218,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
               onChange={applyColor}
             />
 
-            <div
-              style={{
-                paddingTop: 8,
-                borderTop: `1px solid ${vars.rule}`,
-                display: "flex",
-                flexDirection: "column",
-                gap: 2,
-              }}
-            >
+            <div className={actionsSection}>
               <PopoverAction
                 onClick={onCopy}
                 icon={<Copy size={13} strokeWidth={2} />}
