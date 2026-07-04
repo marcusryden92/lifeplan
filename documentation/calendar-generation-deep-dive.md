@@ -430,7 +430,7 @@ Returns `min(categoryCeiling, largestGap)`. Cached per `taskCategoryId ?? "anywh
 
 ### `largestCompatibleSlotForLargestTask`
 
-Same module, used by the proactive expansion check. Walks the slot array and returns the largest currently-existing slot the biggest remaining candidate could land in, honoring category strictness and the `placementCutoffDate`. "Biggest" is measured by `effectiveCandidateDuration` (same module): a task's own duration, but a goal's **largest uncompleted, still-placeable leaf** — never the subtree aggregate (see Section 6), and never a leaf that is memoized or already placed this run. Category constraints are resolved against the caller-supplied `schedulableCategoryIds` (the window-bearing categories) so the watermark agrees with `findValidSlots` about which tasks are actually constrained.
+Same module, used by the proactive expansion check. Walks the slot array and returns the largest currently-existing slot the caller-supplied biggest remaining candidate could land in, honoring category strictness and the `placementCutoffDate`. The biggest candidate is selected once per outer-loop iteration in `scheduleTasksAndGoals` by `effectiveCandidateDuration` (same module) and shared with the watermark comparison: a task's own duration, but a goal's **largest uncompleted, still-placeable leaf** — never the subtree aggregate (see Section 6), and never a leaf that is memoized or already placed this run. Category constraints are resolved against the caller-supplied `schedulableCategoryIds` (the window-bearing categories) so the watermark agrees with `findValidSlots` about which tasks are actually constrained.
 
 ---
 

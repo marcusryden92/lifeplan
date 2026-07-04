@@ -60,9 +60,10 @@ export function scheduleTasksAndGoals(
     // expand the horizon before burning iterations on guaranteed failures.
     // The reactive expansion at the bottom still fires after a fully-failed
     // pass, catching location/travel cases the watermark doesn't model.
-    const availableCount = slotManager.slots.filter(
-      (s) => s.type === "available",
-    ).length;
+    let availableCount = 0;
+    for (const s of slotManager.slots) {
+      if (s.type === "available") availableCount++;
+    }
     // Goal candidates size as their largest uncompleted leaf, not the
     // subtree aggregate — scheduleGoal places leaves individually, and the
     // aggregate can exceed any possible slot, which would pin this watermark
@@ -73,22 +74,25 @@ export function scheduleTasksAndGoals(
       ...memoizedEventIds,
       ...scheduledTaskIds,
     ]);
-    const biggestRemaining = candidates.reduce(
-      (m, c) =>
-        Math.max(
-          m,
-          effectiveCandidateDuration(c, allPlanners, unplaceableLeafIds),
-        ),
-      0,
-    );
+    let biggestRemaining = 0;
+    let biggestCandidate: Planner | null = null;
+    for (const c of candidates) {
+      const duration = effectiveCandidateDuration(
+        c,
+        allPlanners,
+        unplaceableLeafIds,
+      );
+      if (biggestCandidate === null || duration > biggestRemaining) {
+        biggestRemaining = duration;
+        biggestCandidate = c;
+      }
+    }
     const biggestFit = largestCompatibleSlotForLargestTask(
-      candidates,
+      biggestCandidate,
       slotManager.slots,
       plannerCategoryMap,
       context.placementCutoffDate,
-      allPlanners,
       schedulableCategoryIds,
-      unplaceableLeafIds,
     );
 
     if (

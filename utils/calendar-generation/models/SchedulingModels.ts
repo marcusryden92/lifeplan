@@ -159,6 +159,8 @@ export interface ScoredSlot {
     end: Date;
     durationMinutes: number;
   };
+  /** The scored PlaceableSlot itself, so consumers avoid a re-find by time */
+  source: PlaceableSlot;
   /** Combined score from all strategies */
   score: number;
   /** Individual scores from each strategy for debugging */

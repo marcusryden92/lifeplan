@@ -4,7 +4,7 @@ import { useCallback, useRef } from "react";
 import { floorMinutes } from "@/utils/calendarUtils";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 
-import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
+import { runEngineCalculation } from "@/utils/calendar-generation/engineWorkerClient";
 import { taskIsCompleted } from "@/utils/taskHelpers";
 
 import {
@@ -127,19 +127,13 @@ const useManuallyRefreshCalendar = (
       // Convert serialized array to Map for calendar generation
       const travelTimeMap = travelTimeArrayToMap(travelTimeMatrix);
 
-      const {
-        events: newCalendar,
-        categoryEvents: newCategoryEvents,
-        travelEvents: newTravelEvents,
-        plannerScores: newPlannerScores,
-        messages: newEngineMessages,
-      } = generateCalendar(
+      void runEngineCalculation({
         userId,
         weekStartDay,
         template,
         planner,
-        filteredCalendar,
-        {
+        prevCalendar: filteredCalendar,
+        options: {
           bufferTimeMinutes,
           travelTimeMatrix: travelTimeMap ?? undefined,
           injectTravelEvents: enableTravelEvents,
@@ -150,20 +144,22 @@ const useManuallyRefreshCalendar = (
           categories,
           previousEngineMessages,
         },
-      );
-
-      // Source inputs (planner/template/categories) pass through unchanged,
-      // so only the derived slice needs a dispatch.
-      dispatch(
-        applyEngineRun({
-          calendar: newCalendar,
-          categoryEvents: newCategoryEvents,
-          travelEvents: newTravelEvents,
-          engineMessages: newEngineMessages,
-          plannerScores: newPlannerScores,
-          ranAt: new Date().toISOString(),
-        }),
-      );
+      }).then((result) => {
+        // Null means a newer regen superseded this one mid-flight.
+        if (!result) return;
+        // Source inputs (planner/template/categories) pass through unchanged,
+        // so only the derived slice needs a dispatch.
+        dispatch(
+          applyEngineRun({
+            calendar: result.events,
+            categoryEvents: result.categoryEvents,
+            travelEvents: result.travelEvents,
+            engineMessages: result.messages,
+            plannerScores: result.plannerScores,
+            ranAt: new Date().toISOString(),
+          }),
+        );
+      });
     }
   }, []);
 

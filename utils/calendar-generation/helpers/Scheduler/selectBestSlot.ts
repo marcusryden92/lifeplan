@@ -38,6 +38,7 @@ function scoreSlots(
         end: slot.end,
         durationMinutes: slot.durationMinutes,
       },
+      source: slot,
       score,
       strategyScores: { [strategy.name]: score },
     };
@@ -54,7 +55,6 @@ function scoreSlots(
 export function selectBestSlot(
   task: Planner,
   validSlots: PlaceableSlot[],
-  fittingSlots: PlaceableSlot[],
   taskLocationId: string | null | undefined,
   slotManager: TimeSlotManager,
   travelManager: TravelManager,
@@ -81,11 +81,7 @@ export function selectBestSlot(
   let candidateIdx = 0;
   for (const scoredSlot of scoredSlots) {
     candidateIdx += 1;
-    // Find the original slot with location info
-    const slot = fittingSlots.find(
-      (s) => s.start.getTime() === scoredSlot.slot.start.getTime(),
-    );
-    if (!slot) continue;
+    const slot = scoredSlot.source;
 
     recorder?.noteSlotInRange(slot);
     recorder?.decision(

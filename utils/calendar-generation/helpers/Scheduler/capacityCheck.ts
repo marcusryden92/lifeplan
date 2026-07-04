@@ -145,11 +145,13 @@ export function maxEffectiveCapacityFor(
 }
 
 // Walks the current slot array and returns the largest slot the scheduler
-// would accept for the biggest remaining candidate. Mirrors the predicate in
-// findAllFittingSlots: categorized task → only matching-category slots;
-// uncategorized task → Available + non-strict-category slots. Used by the
-// proactive expansion watermark in scheduleTasksAndGoals to decide whether to
-// extend the horizon before attempting the next placement.
+// would accept for `biggest` — the caller-supplied biggest remaining candidate
+// (by effectiveCandidateDuration; computed once per iteration in
+// scheduleTasksAndGoals and shared with the watermark comparison). Mirrors the
+// predicate in findAllFittingSlots: categorized task → only matching-category
+// slots; uncategorized task → Available + non-strict-category slots. Used by
+// the proactive expansion watermark in scheduleTasksAndGoals to decide whether
+// to extend the horizon before attempting the next placement.
 // placementCutoffDate (tail buffer) is respected the same way findAllFittingSlots
 // honors it, so the watermark agrees with what the scheduler will actually
 // see — otherwise the watermark could report "we have room" while every fit
@@ -160,25 +162,12 @@ export function maxEffectiveCapacityFor(
 // only category) must be treated as unconstrained here too, or the watermark
 // demands category slots that can never exist and starves the placement walk.
 export function largestCompatibleSlotForLargestTask(
-  candidates: Planner[],
+  biggest: Planner | null,
   slots: Slot[],
   plannerCategoryMap: Map<string, string | null>,
   placementCutoffDate: Date | null | undefined,
-  allPlanners: Planner[],
   schedulableCategoryIds: Set<string>,
-  excludedLeafIds?: Set<string>,
 ): number {
-  if (candidates.length === 0) return 0;
-
-  let biggest: Planner | null = null;
-  let biggestDuration = -1;
-  for (const c of candidates) {
-    const duration = effectiveCandidateDuration(c, allPlanners, excludedLeafIds);
-    if (duration > biggestDuration) {
-      biggest = c;
-      biggestDuration = duration;
-    }
-  }
   if (!biggest) return 0;
 
   const rawCategoryId = plannerCategoryMap.get(biggest.id) ?? null;

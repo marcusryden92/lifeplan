@@ -82,7 +82,6 @@ export function scheduleTask(
   const selectionResult = selectBestSlot(
     task,
     slotsResult.validSlots,
-    slotsResult.fittingSlots,
     slotsResult.taskLocationId,
     slotManager,
     travelManager,

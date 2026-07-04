@@ -1,5 +1,5 @@
 import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
-import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
+import { runEngineCalculation } from "@/utils/calendar-generation/engineWorkerClient";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { AppDispatch } from "../store";
 import { RootState } from "../store";
@@ -30,7 +30,7 @@ const processInput = <T>(
 
 export const updateAllCalendarStates =
   (updates: CalendarPayload) =>
-  (dispatch: AppDispatch, getState: () => RootState) => {
+  async (dispatch: AppDispatch, getState: () => RootState): Promise<void> => {
     const state = getState();
     const userId: string | undefined = state.user?.user?.id;
     const weekStartDay: WeekDayIntegers = 1;
@@ -67,43 +67,42 @@ export const updateAllCalendarStates =
     // Convert serialized array to Map for calendar generation
     const travelTimeMap = travelTimeArrayToMap(travelTimeMatrix);
 
-    const {
-      events: newCalendar,
-      categoryEvents: newCategoryEvents,
-      travelEvents: newTravelEvents,
-      plannerScores: newPlannerScores,
-      messages: newEngineMessages,
-    } = generateCalendar(
-      userId,
-      weekStartDay,
-      newTemplate,
-      newPlanner,
-      newCalendarInput,
-      {
-        bufferTimeMinutes,
-        travelTimeMatrix: travelTimeMap ?? undefined,
-        injectTravelEvents: enableTravelEvents,
-        categories: newCategories,
-        previousEngineMessages,
-      },
-    );
-
-    // Two dispatches, one tick: React 18 batches them, and the sync effect
-    // is debounced anyway, so source and derived state advance atomically
-    // from the subscriber's point of view.
+    // Source state lands immediately (optimistic UI); engine output follows
+    // when the worker replies. These dispatches must stay BEFORE the await so
+    // functional updates from rapid consecutive calls chain off fresh state.
     if (updates.categories) {
       dispatch(setCategories(newCategories));
     }
     dispatch(
       setPlannerAndTemplate({ planner: newPlanner, template: newTemplate }),
     );
+
+    const result = await runEngineCalculation({
+      userId,
+      weekStartDay,
+      template: newTemplate,
+      planner: newPlanner,
+      prevCalendar: newCalendarInput,
+      options: {
+        bufferTimeMinutes,
+        travelTimeMatrix: travelTimeMap ?? undefined,
+        injectTravelEvents: enableTravelEvents,
+        categories: newCategories,
+        previousEngineMessages,
+      },
+    });
+
+    // Null means a newer regen superseded this one mid-flight; its result
+    // will land instead.
+    if (!result) return;
+
     dispatch(
       applyEngineRun({
-        calendar: newCalendar,
-        categoryEvents: newCategoryEvents,
-        travelEvents: newTravelEvents,
-        engineMessages: newEngineMessages,
-        plannerScores: newPlannerScores,
+        calendar: result.events,
+        categoryEvents: result.categoryEvents,
+        travelEvents: result.travelEvents,
+        engineMessages: result.messages,
+        plannerScores: result.plannerScores,
         ranAt: new Date().toISOString(),
       }),
     );
