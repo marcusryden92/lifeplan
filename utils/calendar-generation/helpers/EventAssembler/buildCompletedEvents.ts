@@ -3,11 +3,13 @@ import { v4 as uuidv4 } from "uuid";
 import { taskIsCompleted } from "../../../taskHelpers";
 import { EventType } from "@/generated/client";
 import { calendarColors } from "@/data/calendarColors";
+import { stabilizeEvent } from "./stabilizeEvent";
 
 export function buildCompletedEvents(
   userId: string,
   planners: Planner[],
   memoizedEventIds: Set<string>,
+  previousById: Map<string, SimpleEvent>,
 ): SimpleEvent[] {
   const completedItems = planners.filter(
     (task) => taskIsCompleted(task) && !memoizedEventIds.has(task.id),
@@ -18,7 +20,7 @@ export function buildCompletedEvents(
 
   for (const item of completedItems) {
     if (item.completedStartTime && item.completedEndTime) {
-      events.push({
+      const candidate: SimpleEvent = {
         userId,
         title: item.title,
         id: item.id,
@@ -42,7 +44,8 @@ export function buildCompletedEvents(
         },
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
-      });
+      };
+      events.push(stabilizeEvent(candidate, previousById.get(item.id)));
     }
   }
 

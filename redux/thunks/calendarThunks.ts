@@ -15,6 +15,14 @@ type CalendarPayload = {
   calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]);
   template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]);
   categories?: Category[] | ((prev: Category[]) => Category[]);
+  /**
+   * "inline" runs the engine synchronously on the main thread so the source
+   * update and the engine output commit before the next paint — no
+   * intermediate frame. Used by calendar drag/resize, where FullCalendar has
+   * already moved the tile internally and an async regen would briefly render
+   * it overlapping stale placements. Everything else defaults to the worker.
+   */
+  engineMode?: "inline" | "worker";
 };
 
 // Helper function that processes optional update parameters
@@ -34,11 +42,6 @@ export const updateAllCalendarStates =
     const state = getState();
     const userId: string | undefined = state.user?.user?.id;
     const weekStartDay: WeekDayIntegers = 1;
-
-    if (!userId || weekStartDay === undefined) {
-      console.warn("Missing userId or weekStartDay in state, aborting update");
-      return;
-    }
 
     const currentPlanner: Planner[] = state.calendarSource.planner;
     const calendar: SimpleEvent[] = state.engineOutput.calendar;
@@ -77,20 +80,35 @@ export const updateAllCalendarStates =
       setPlannerAndTemplate({ planner: newPlanner, template: newTemplate }),
     );
 
-    const result = await runEngineCalculation({
-      userId,
-      weekStartDay,
-      template: newTemplate,
-      planner: newPlanner,
-      prevCalendar: newCalendarInput,
-      options: {
-        bufferTimeMinutes,
-        travelTimeMatrix: travelTimeMap ?? undefined,
-        injectTravelEvents: enableTravelEvents,
-        categories: newCategories,
-        previousEngineMessages,
+    // Only the engine run needs userId (it stamps generated events). The
+    // source dispatches above must never be gated on it: userId hydrates a
+    // beat after page load, and dropping the whole update here silently
+    // swallowed edits made in that window — the dragged tile stayed put
+    // visually while nothing was saved. The diff sync authenticates
+    // server-side via the session, so the planner change still persists;
+    // the next regen from any trigger re-derives the calendar.
+    if (!userId) {
+      console.warn("No userId in state yet; source updated, engine run skipped");
+      return;
+    }
+
+    const result = await runEngineCalculation(
+      {
+        userId,
+        weekStartDay,
+        template: newTemplate,
+        planner: newPlanner,
+        prevCalendar: newCalendarInput,
+        options: {
+          bufferTimeMinutes,
+          travelTimeMatrix: travelTimeMap ?? undefined,
+          injectTravelEvents: enableTravelEvents,
+          categories: newCategories,
+          previousEngineMessages,
+        },
       },
-    });
+      updates.engineMode ?? "worker",
+    );
 
     // Null means a newer regen superseded this one mid-flight; its result
     // will land instead.

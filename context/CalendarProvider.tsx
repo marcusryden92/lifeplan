@@ -25,7 +25,9 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
 import type { UserSettings } from "@/types/userTypes";
 
-import useCalendarStateActions from "@/hooks/useCalendarStateActions";
+import useCalendarStateActions, {
+  type CalendarUpdateOptions,
+} from "@/hooks/useCalendarStateActions";
 import useManuallyRefreshCalendar from "@/hooks/useManuallyRefreshCalendar";
 import useCalendarServerSync from "@/hooks/useCalendarServerSync";
 import type {
@@ -45,13 +47,17 @@ type CalendarContextType = {
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
   locations: SerializedLocation[];
-  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>;
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[]),
+    options?: CalendarUpdateOptions,
+  ) => void;
   updateTemplateArray: React.Dispatch<React.SetStateAction<EventTemplate[]>>;
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
     calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
     template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
-    categories?: Category[] | ((prev: Category[]) => Category[])
+    categories?: Category[] | ((prev: Category[]) => Category[]),
+    options?: CalendarUpdateOptions,
   ) => void;
   manuallyRefreshCalendar: () => void;
   inheritedLocationMap: Map<string, InheritedLocationInfo>;

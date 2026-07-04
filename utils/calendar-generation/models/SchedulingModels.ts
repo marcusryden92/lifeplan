@@ -147,6 +147,12 @@ export interface SchedulingContext {
    * placement without colliding with already-placed dynamic events.
    */
   placementCutoffDate?: Date | null;
+  /**
+   * Previous regen's events by id. Event builders reuse identity fields
+   * (extendedProps.id, createdAt, updatedAt) from here so an unchanged
+   * placement diffs as a no-op instead of a fresh-uuid phantom update.
+   */
+  previousCalendarById?: Map<string, SimpleEvent>;
 }
 
 /**

@@ -141,12 +141,13 @@ export class CalendarGenerator {
     );
 
     // Phase 2: Build initial event array (memoized, plans, completed)
-    const { eventArray, memoizedEventIds } = buildInitialEventArray(
-      input.userId,
-      input.planners,
-      input.previousCalendar,
-      currentDate,
-    );
+    const { eventArray, memoizedEventIds, previousById } =
+      buildInitialEventArray(
+        input.userId,
+        input.planners,
+        input.previousCalendar,
+        currentDate,
+      );
 
     // Phase 3: Expand templates
     const {
@@ -250,6 +251,7 @@ export class CalendarGenerator {
       plannerLocationMap,
       plannerCategoryMap,
       schedulerRecorder,
+      previousById,
     );
 
     // Phase 9: Prepare candidates (filter root goals, tasks and sort by priority)

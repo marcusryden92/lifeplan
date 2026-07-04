@@ -41,14 +41,17 @@ function spawnWorker(): Worker | null {
 }
 
 /**
- * Run the scheduling engine off the main thread. Latest-wins: a new request
- * supersedes any in-flight run — the busy worker is terminated mid-compute
- * (its result would be stale anyway) and the superseded caller resolves null,
- * which callers treat as "drop this run silently". Falls back to a
- * synchronous main-thread run when workers are unavailable or broken.
+ * Run the scheduling engine. Default mode is off-main-thread via the worker;
+ * "inline" runs synchronously so the result commits before the next paint
+ * (used by calendar drag/resize for atomic updates). Latest-wins: a new
+ * request supersedes any in-flight run — the busy worker is terminated
+ * mid-compute (its result would be stale anyway) and the superseded caller
+ * resolves null, which callers treat as "drop this run silently". Falls back
+ * to a synchronous main-thread run when workers are unavailable or broken.
  */
 export function runEngineCalculation(
   request: EngineWorkerRequest,
+  mode: "inline" | "worker" = "worker",
 ): Promise<EngineRunResult | null> {
   if (typeof Worker === "undefined") {
     return Promise.resolve(runInline(request));
@@ -59,6 +62,10 @@ export function runEngineCalculation(
     worker = null;
     resolveInFlight(null);
     resolveInFlight = null;
+  }
+
+  if (mode === "inline") {
+    return Promise.resolve(runInline(request));
   }
 
   if (!worker) worker = spawnWorker();

@@ -8,6 +8,7 @@ import { Planner, SimpleEvent, EventType } from "@/types/prisma";
 import { SchedulingContext } from "../../models/SchedulingModels";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
+import { stabilizeEvent } from "../EventAssembler/stabilizeEvent";
 
 export function buildTaskEvent(
   task: Planner,
@@ -77,5 +78,5 @@ export function buildTaskEvent(
     updatedAt: now.toISOString(),
   };
 
-  return event;
+  return stabilizeEvent(event, context.previousCalendarById?.get(task.id));
 }
