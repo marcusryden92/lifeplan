@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { AppDispatch } from "@/redux/store";
 
-import { Planner, SimpleEvent, EventTemplate } from "@/types/prisma";
+import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
 import { updateAllCalendarStates } from "@/redux/thunks/calendarThunks";
 
 export default function useCalendarStateActions(dispatch: AppDispatch) {
@@ -35,13 +35,15 @@ export default function useCalendarStateActions(dispatch: AppDispatch) {
     (
       planner?: Planner[] | ((prev: Planner[]) => Planner[]),
       calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
-      template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
+      template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
+      categories?: Category[] | ((prev: Category[]) => Category[])
     ) => {
       dispatch(
         updateAllCalendarStates({
           planner,
           calendar,
           template,
+          categories,
         })
       );
     },

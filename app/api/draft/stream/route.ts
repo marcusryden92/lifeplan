@@ -28,6 +28,20 @@ import {
   type DraftTemplateOpsResult,
   type DraftTemplateUpdate,
 } from "@/components/draft/AIDraftModal/draftTemplateOps";
+import {
+  findWindowOverlaps,
+  type DraftWindowsState,
+  type DraftTimeWindow,
+} from "@/components/draft/AIDraftModal/draftWindows";
+import {
+  addDraftTimeWindows,
+  deleteDraftTimeWindows,
+  updateDraftCategorySettings,
+  updateDraftTimeWindows,
+  type DraftCategorySettingsUpdate,
+  type DraftTimeWindowUpdate,
+  type DraftWindowOpsResult,
+} from "@/components/draft/AIDraftModal/draftWindowOps";
 
 // Note: this file lives under app/api/ despite the CLAUDE.md convention of
 // preferring server actions. Streaming binary/SSE responses don't map cleanly
@@ -58,9 +72,10 @@ const MAX_TEMPLATES = 200;
 const MAX_LOCATIONS = 100;
 const MAX_TIME_WINDOWS_PER_CATEGORY = 56;
 
-// Loop guards. Ten turns fits the headline flow (search + fetch + template
-// batches + propose_goals + follow-up edits) without inviting runaways.
-const MAX_TOOL_TURNS = 10;
+// Loop guards. Twelve turns fits the headline flow (search + fetch + template
+// batches + window edits + propose_goals + follow-ups) without inviting
+// runaways.
+const MAX_TOOL_TURNS = 12;
 const MAX_TREES_PER_FETCH = 25;
 const MAX_SEARCH_RESULTS = 25;
 const MAX_OP_ITEMS = 50;
@@ -74,7 +89,8 @@ interface DraftChatMessage {
   content: string;
 }
 
-interface DraftTimeWindow {
+interface RequestTimeWindow {
+  id: string;
   day: number;
   startTime: string;
   endTime: string;
@@ -85,7 +101,7 @@ interface DraftCategory {
   name: string;
   isStrict: boolean;
   useTimeWindows: boolean;
-  timeSlots: DraftTimeWindow[];
+  timeSlots: RequestTimeWindow[];
 }
 
 interface DraftLocationRef {
@@ -174,7 +190,7 @@ function parseRequestBody(raw: unknown): DraftRequestBody | string {
     if (typeof name !== "string" || name.length > MAX_CATEGORY_NAME_CHARS) {
       return "category names must be short strings";
     }
-    const parsedSlots: DraftTimeWindow[] = [];
+    const parsedSlots: RequestTimeWindow[] = [];
     if (timeSlots !== undefined) {
       if (!Array.isArray(timeSlots)) {
         return "category timeSlots must be an array";
@@ -186,11 +202,17 @@ function parseRequestBody(raw: unknown): DraftRequestBody | string {
         if (typeof slot !== "object" || slot === null) {
           return "time window entries must be objects";
         }
-        const { day, startTime, endTime } = slot as Record<string, unknown>;
+        const { id: windowId, day, startTime, endTime } = slot as Record<
+          string,
+          unknown
+        >;
+        if (typeof windowId !== "string" || windowId.length === 0) {
+          return "time window ids must be non-empty strings";
+        }
         if (!isValidStartDay(day) || !isValidTime(startTime) || !isValidTime(endTime)) {
           return "time windows must have day 0-6 and HH:MM start/end times";
         }
-        parsedSlots.push({ day, startTime, endTime });
+        parsedSlots.push({ id: windowId, day, startTime, endTime });
       }
     }
     parsedCategories.push({
@@ -297,13 +319,12 @@ function buildGoalIndex(
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function formatCategoryLine(category: DraftCategory): string {
-  let line = `- ${category.id}: ${category.name}`;
-  if (category.isStrict) line += " [strict]";
-  if (category.useTimeWindows && category.timeSlots.length > 0) {
-    const windows = category.timeSlots
-      .map((w) => `${DAY_NAMES[w.day]} ${w.startTime}-${w.endTime}`)
-      .join("; ");
-    line += ` | windows: ${windows}`;
+  const flags = `strict: ${category.isStrict ? "yes" : "no"} | windows: ${
+    category.useTimeWindows ? "on" : "off"
+  }`;
+  let line = `- ${category.id}: ${category.name} | ${flags}`;
+  for (const w of category.timeSlots) {
+    line += `\n  - ${w.id} | ${DAY_NAMES[w.day]} ${w.startTime}-${w.endTime}`;
   }
   return line;
 }
@@ -368,7 +389,7 @@ Scope your work to this goal unless the user asks for something broader.
 
   return `You are a planning assistant for Circadium, a personal scheduling app.
 
-The user's planning library is a forest of top-level goals (and loose tasks), each with a tree of subtasks. You help them restructure existing goals, create new goals with fully worked-out contents, and remove goals. You also manage their weekly template blocks — the fixed recurring commitments (sleep, work hours, standing sessions) the scheduler plans around.
+The user's planning library is a forest of top-level goals (and loose tasks), each with a tree of subtasks. You help them restructure existing goals, create new goals with fully worked-out contents, and remove goals. You also manage their weekly template blocks — the fixed recurring commitments (sleep, work hours, standing sessions) the scheduler plans around — and their category time windows, the weekly hours a category's items are allowed to schedule in.
 
 STYLE
 The chat renders markdown — bold, lists, and inline code are fine; avoid headings and tables in casual replies. Keep responses short and conversational; the tree pane shows the details, so don't enumerate what the user can already see there.
@@ -380,7 +401,7 @@ ${buildGoalIndex(currentForest, categories)}
 
 This index is a summary. Use search_items to find specific items (including subtasks) by name, and get_goal_trees to read a goal's complete tree.
 
-USER CATEGORIES (id: name; [strict] categories reserve their windows for their own items)
+USER CATEGORIES (id: name | flags; indented lines are the category's time windows: windowId | day range)
 ${categoryList}
 
 USER LOCATIONS (id: name) — read-only; you cannot create locations, only reference these ids
@@ -396,6 +417,14 @@ Templates are fixed weekly-recurring blocks of occupied time; goals and tasks ar
 - color: optional 6-digit hex. Reuse one color for every block of the same activity. Good palette picks: #1976D2 blue, #2E7D32 green, #F77F00 orange, #6C5CE7 violet, #16A085 teal, #E63946 red, #FFB703 amber, #1D3557 navy.
 - locationId: one of the user's location ids, or omit for "Anywhere".
 - The full current template list is always shown above — there is nothing to fetch. Template ids are minted by the app and reported back when you add.
+
+Category time windows bound WHEN a category's goals and tasks may be scheduled (work items only during work hours, etc.). Window rules:
+- One window = one day + one within-day range: "HH:MM" 24h with startTime < endTime. Use "23:59" for end of day; spanning midnight takes two windows (evening + next morning).
+- Windows must NEVER overlap — not within a category and not across categories (two categories cannot both claim the same hours). Plan the week as non-overlapping blocks. The tool result flags any overlap your change creates; fix it immediately with update_time_windows or delete_time_windows before ending your turn.
+- Windows only take effect while the category's windows flag is on. Adding a window to a category with windows off turns the flag on automatically — mention that to the user.
+- strict: a strict category reserves its windows exclusively for its own items; other work is pushed out. This reshapes the whole schedule — only change strict when the user explicitly asks.
+- The full window list is always shown above under USER CATEGORIES — there is nothing to fetch. Window ids are minted by the app and reported back when you add.
+- Windows constrain scheduling; templates occupy time. "I work 9-17" as occupied time is a template; "work tasks should happen 9-17" is a window on the Work category.
 ${focusBlock}
 NODE STRUCTURE
 Each node in a goal tree has:
@@ -428,6 +457,8 @@ Editing — deterministic operations. PREFER these for small changes; each appli
 - add_items: insert new subtasks under an existing parent. Added items are assigned draft ids on insertion — fetch the goal tree if you need to reference them.
 - delete_items: remove items (with their subtrees) or whole goals by id.
 - add_templates / update_templates / delete_templates: manage the user's weekly template blocks. Batch related blocks into one call (e.g. all three gym sessions). Updates are partial patches by id; null clears color or locationId.
+- add_time_windows / update_time_windows / delete_time_windows: manage category time windows by id. Batch related windows into one call (e.g. all five weekday windows).
+- update_categories: toggle a category's windows flag (useTimeWindows) or strict flag (isStrict). Strict changes need an explicit user request.
 
 Building:
 - propose_goals: create new top-level goals, or restructure a goal wholesale. Complete trees ONLY for goals you create or modify — never re-emit untouched goals, and never use this for small edits (use the editing tools instead). Emit each goal's id as its FIRST field; new nodes omit id (draft ids are assigned and reported back). deletedGoalIds removes whole goals. The order of the goals array is not meaningful.
@@ -435,7 +466,7 @@ Building:
 Display:
 - show_goals: bring existing goals into the user's tree pane without changing them. Pass ids, or all: true.
 
-The user's tree pane starts nearly empty: it displays only the focused goal, goals you change, and goals you show. Template changes appear on a separate Week tab that always shows the full weekly schedule.
+The user's tree pane starts nearly empty: it displays only the focused goal, goals you change, and goals you show. Template changes appear on a separate Week tab that always shows the full weekly schedule; window and flag changes appear on a Windows tab grouped by category.
 
 Always write at least one short sentence of prose before calling any tool — never reply with a bare tool call. If the user is only asking a question, answer in prose (using the reading tools if needed) and don't make changes.`;
 }
@@ -734,6 +765,106 @@ const deleteTemplatesTool: Anthropic.Tool = {
   } as Anthropic.Tool["input_schema"],
 };
 
+const addTimeWindowsTool: Anthropic.Tool = {
+  name: "add_time_windows",
+  description:
+    "Create category time windows (the weekly hours a category's items may schedule in). One entry per day occurrence, within-day only (startTime < endTime; two windows to span midnight). Ids are minted by the app and reported back. Adding to a category with windows off enables the flag automatically.",
+  input_schema: {
+    type: "object",
+    properties: {
+      windows: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            categoryId: { type: "string" },
+            day: {
+              type: "integer",
+              description: "0-6, 0 = Sunday.",
+            },
+            startTime: {
+              type: "string",
+              description: '"HH:MM", 24-hour.',
+            },
+            endTime: {
+              type: "string",
+              description:
+                '"HH:MM", 24-hour, after startTime; "23:59" for end of day.',
+            },
+          },
+          required: ["categoryId", "day", "startTime", "endTime"],
+        },
+      },
+    },
+    required: ["windows"],
+  } as Anthropic.Tool["input_schema"],
+};
+
+const updateTimeWindowsTool: Anthropic.Tool = {
+  name: "update_time_windows",
+  description:
+    "Change existing category time windows by id — day (0-6, 0 = Sunday), startTime/endTime (HH:MM, within-day), or categoryId to move a window to another category. Partial patches; omit fields you are not changing.",
+  input_schema: {
+    type: "object",
+    properties: {
+      updates: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            categoryId: { type: "string" },
+            day: { type: "integer" },
+            startTime: { type: "string" },
+            endTime: { type: "string" },
+          },
+          required: ["id"],
+        },
+      },
+    },
+    required: ["updates"],
+  } as Anthropic.Tool["input_schema"],
+};
+
+const deleteTimeWindowsTool: Anthropic.Tool = {
+  name: "delete_time_windows",
+  description: "Delete category time windows by id.",
+  input_schema: {
+    type: "object",
+    properties: {
+      windowIds: {
+        type: "array",
+        items: { type: "string" },
+      },
+    },
+    required: ["windowIds"],
+  } as Anthropic.Tool["input_schema"],
+};
+
+const updateCategoriesTool: Anthropic.Tool = {
+  name: "update_categories",
+  description:
+    "Toggle category scheduling flags by category id: useTimeWindows (whether the category's windows constrain scheduling) and isStrict (whether its windows are reserved exclusively for its own items). Only change isStrict when the user explicitly asks. Category names, colors, and hierarchy are not editable here.",
+  input_schema: {
+    type: "object",
+    properties: {
+      updates: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            useTimeWindows: { type: "boolean" },
+            isStrict: { type: "boolean" },
+          },
+          required: ["id"],
+        },
+      },
+    },
+    required: ["updates"],
+  } as Anthropic.Tool["input_schema"],
+};
+
 function parseGoalIds(input: unknown): string[] {
   const goalIds = (input as { goalIds?: unknown } | null)?.goalIds;
   if (!Array.isArray(goalIds)) return [];
@@ -781,11 +912,33 @@ export async function POST(req: Request) {
   // full list rides in the prompt and ops emit the whole next array.
   let workingTemplates: DraftTemplate[] = parsed.currentTemplates;
 
+  // And for category windows + flags: flattened from the request categories,
+  // ops emit the whole next state.
+  let workingWindows: DraftWindowsState = {
+    windows: parsed.categories.flatMap((c) =>
+      c.timeSlots.map(
+        (w): DraftTimeWindow => ({
+          id: w.id,
+          categoryId: c.id,
+          day: w.day,
+          startTime: w.startTime,
+          endTime: w.endTime,
+        }),
+      ),
+    ),
+    settings: parsed.categories.map((c) => ({
+      id: c.id,
+      useTimeWindows: c.useTimeWindows,
+      isStrict: c.isStrict,
+    })),
+  };
+
   const existingGoalIds = new Set(
     parsed.currentForest.goals.map((g) => g.id).filter((id) => id.length > 0),
   );
   const validCategoryIds = new Set(parsed.categories.map((c) => c.id));
   const validLocationIds = new Set(parsed.locations.map((l) => l.id));
+  const categoryNameById = new Map(parsed.categories.map((c) => [c.id, c.name]));
 
   // Trees the model may legitimately modify this request: the focused goal is
   // pre-fetched in the prompt; everything else must go through get_goal_trees
@@ -901,6 +1054,68 @@ export async function POST(req: Request) {
         return parts.join(" ") || "Nothing changed.";
       };
 
+      // Overlapping windows are accepted by the ops (a batch may be fixed by
+      // a later call) but flagged straight back to the model, which the
+      // prompt instructs to resolve before ending its turn. Only pairs
+      // involving windows this op touched are reported, so pre-existing
+      // overlaps in the user's data don't nag on every op.
+      const MAX_REPORTED_OVERLAPS = 5;
+      const describeWindow = (w: DraftTimeWindow): string =>
+        `"${categoryNameById.get(w.categoryId) ?? w.categoryId}" ${
+          DAY_NAMES[w.day]
+        } ${w.startTime}-${w.endTime} (${w.id})`;
+      const buildOverlapNote = (
+        state: DraftWindowsState,
+        touchedIds: ReadonlySet<string>,
+      ): string => {
+        const overlaps = findWindowOverlaps(state.windows, touchedIds);
+        if (overlaps.length === 0) return "";
+        const listed = overlaps
+          .slice(0, MAX_REPORTED_OVERLAPS)
+          .map(({ a, b }) => `${describeWindow(a)} overlaps ${describeWindow(b)}`)
+          .join("; ");
+        const more =
+          overlaps.length > MAX_REPORTED_OVERLAPS
+            ? ` (+${overlaps.length - MAX_REPORTED_OVERLAPS} more)`
+            : "";
+        return ` OVERLAP WARNING: ${listed}${more}. Category windows must never overlap — adjust or delete the conflicting windows now.`;
+      };
+
+      // Windows sibling of applyTemplateOpResult — same full-state contract.
+      const applyWindowOpResult = (
+        result: DraftWindowOpsResult,
+        appliedVerb: string,
+      ): string => {
+        workingWindows = result.state;
+        if (result.changed) {
+          send("windows", {
+            windows: workingWindows.windows,
+            settings: workingWindows.settings,
+          });
+        }
+        const parts: string[] = [];
+        if (result.changed) {
+          parts.push(
+            `${appliedVerb} — the user sees it as a pending change on the Windows tab.`,
+          );
+        }
+        if (result.autoEnabledCategoryIds.length > 0) {
+          parts.push(
+            `Auto-enabled windows for: ${result.autoEnabledCategoryIds
+              .map((id) => categoryNameById.get(id) ?? id)
+              .join(", ")} — tell the user.`,
+          );
+        }
+        if (result.failures.length > 0) {
+          parts.push(
+            `Failed: ${result.failures
+              .map((f) => `${f.id ?? "(no id)"}: ${f.reason}`)
+              .join("; ")}.`,
+          );
+        }
+        return parts.join(" ") || "Nothing changed.";
+      };
+
       // Template sibling of applyOpResult. The event carries the full
       // authoritative array — small list, last write wins, no client folding.
       const applyTemplateOpResult = (
@@ -962,6 +1177,10 @@ export async function POST(req: Request) {
                 addTemplatesTool,
                 updateTemplatesTool,
                 deleteTemplatesTool,
+                addTimeWindowsTool,
+                updateTimeWindowsTool,
+                deleteTimeWindowsTool,
+                updateCategoriesTool,
                 proposeGoalsTool,
                 showGoalsTool,
               ],
@@ -1205,6 +1424,100 @@ export async function POST(req: Request) {
                   );
                   break;
                 }
+                case "add_time_windows": {
+                  const items = (
+                    Array.isArray(input?.windows) ? input.windows : []
+                  ).slice(0, MAX_OP_ITEMS);
+                  send("status", { tool: tu.name, count: items.length });
+                  const before = new Set(
+                    workingWindows.windows.map((w) => w.id),
+                  );
+                  const result = addDraftTimeWindows(
+                    workingWindows,
+                    items,
+                    validCategoryIds,
+                  );
+                  const minted = result.state.windows.filter(
+                    (w) => !before.has(w.id),
+                  );
+                  const mintedNote =
+                    minted.length > 0
+                      ? ` Assigned ids: ${minted
+                          .map(
+                            (w) =>
+                              `"${
+                                categoryNameById.get(w.categoryId) ??
+                                w.categoryId
+                              } ${DAY_NAMES[w.day]}" = ${w.id}`,
+                          )
+                          .join(", ")}.`
+                      : "";
+                  content =
+                    applyWindowOpResult(
+                      result,
+                      `Added ${minted.length} window(s)`,
+                    ) +
+                    mintedNote +
+                    buildOverlapNote(
+                      result.state,
+                      new Set(minted.map((w) => w.id)),
+                    );
+                  break;
+                }
+                case "update_time_windows": {
+                  const updates = (
+                    Array.isArray(input?.updates) ? input.updates : []
+                  ).slice(0, MAX_OP_ITEMS) as DraftTimeWindowUpdate[];
+                  send("status", { tool: tu.name, count: updates.length });
+                  const result = updateDraftTimeWindows(
+                    workingWindows,
+                    updates,
+                    validCategoryIds,
+                  );
+                  content =
+                    applyWindowOpResult(
+                      result,
+                      `Updated ${updates.length} window(s)`,
+                    ) +
+                    buildOverlapNote(
+                      result.state,
+                      new Set(
+                        updates
+                          .map((u) => u.id)
+                          .filter((id): id is string => typeof id === "string"),
+                      ),
+                    );
+                  break;
+                }
+                case "delete_time_windows": {
+                  const windowIds = parseStringArray(input?.windowIds).slice(
+                    0,
+                    MAX_OP_ITEMS,
+                  );
+                  send("status", { tool: tu.name, count: windowIds.length });
+                  content = applyWindowOpResult(
+                    deleteDraftTimeWindows(workingWindows, windowIds),
+                    `Deleted ${windowIds.length} window(s)`,
+                  );
+                  break;
+                }
+                case "update_categories": {
+                  const updates = (
+                    Array.isArray(input?.updates) ? input.updates : []
+                  ).slice(0, MAX_OP_ITEMS) as DraftCategorySettingsUpdate[];
+                  send("status", { tool: tu.name, count: updates.length });
+                  content = applyWindowOpResult(
+                    updateDraftCategorySettings(
+                      workingWindows,
+                      updates,
+                      validCategoryIds,
+                    ),
+                    `Updated ${updates.length} categor${
+                      updates.length === 1 ? "y" : "ies"
+                    }`,
+                  );
+                  break;
+                }
                 case "propose_goals": {
                   const filtered = filterProposal(tu.input);
                   // Stamp draft ids on the accepted goals, adopt them into
@@ -1237,6 +1550,9 @@ export async function POST(req: Request) {
                         proposeCallCounter++,
                       goals: stampedGoals,
                       deletedGoalIds: normalized.deletedGoalIds,
+                      // Lets the client tell finalized proposals from
+                      // truncated partials when a stream is aborted.
+                      complete: true,
                     });
                     if (newRoots.length > 0) {
                       assignedNote = ` New goals were assigned draft ids: ${newRoots

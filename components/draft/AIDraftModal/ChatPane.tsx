@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui";
@@ -24,7 +24,8 @@ import {
 interface ChatPaneProps {
   messages: ChatMessage[];
   onSend: (content: string) => void;
-  disabled?: boolean;
+  onStop: () => void;
+  isStreaming: boolean;
   // Prefills the composer (not auto-sent) — used by entry points that carry a
   // canned prompt, e.g. the item-detail helper pills.
   initialDraft?: string | null;
@@ -33,7 +34,8 @@ interface ChatPaneProps {
 export function ChatPane({
   messages,
   onSend,
-  disabled,
+  onStop,
+  isStreaming,
   initialDraft,
 }: ChatPaneProps) {
   const [draft, setDraft] = useState("");
@@ -59,7 +61,7 @@ export function ChatPane({
 
   const send = () => {
     const trimmed = draft.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed || isStreaming) return;
     onSend(trimmed);
     setDraft("");
   };
@@ -121,17 +123,27 @@ export function ChatPane({
           onKeyDown={onKeyDown}
           placeholder="Message the assistant…"
           rows={1}
-          disabled={disabled}
         />
-        <Button
-          variant="solid"
-          size="sm"
-          onClick={send}
-          disabled={disabled || draft.trim().length === 0}
-          aria-label="Send"
-        >
-          <ArrowUp size={14} strokeWidth={2.4} />
-        </Button>
+        {isStreaming ? (
+          <Button
+            variant="solid"
+            size="sm"
+            onClick={onStop}
+            aria-label="Stop"
+          >
+            <Square size={11} strokeWidth={0} fill="currentColor" />
+          </Button>
+        ) : (
+          <Button
+            variant="solid"
+            size="sm"
+            onClick={send}
+            disabled={draft.trim().length === 0}
+            aria-label="Send"
+          >
+            <ArrowUp size={14} strokeWidth={2.4} />
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -3,7 +3,10 @@ import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { AppDispatch } from "../store";
 import { RootState } from "../store";
-import { setPlannerAndTemplate } from "../slices/calendarSourceSlice";
+import {
+  setCategories,
+  setPlannerAndTemplate,
+} from "../slices/calendarSourceSlice";
 import { applyEngineRun } from "../slices/engineOutputSlice";
 import { travelTimeArrayToMap } from "../slices/schedulingSettingsSlice";
 
@@ -11,6 +14,7 @@ type CalendarPayload = {
   planner?: Planner[] | ((prev: Planner[]) => Planner[]);
   calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]);
   template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]);
+  categories?: Category[] | ((prev: Category[]) => Category[]);
 };
 
 // Helper function that processes optional update parameters
@@ -56,6 +60,9 @@ export const updateAllCalendarStates =
     const newTemplate = updates.template
       ? processInput(updates.template, template)
       : template;
+    const newCategories = updates.categories
+      ? processInput(updates.categories, categories)
+      : categories;
 
     // Convert serialized array to Map for calendar generation
     const travelTimeMap = travelTimeArrayToMap(travelTimeMatrix);
@@ -76,7 +83,7 @@ export const updateAllCalendarStates =
         bufferTimeMinutes,
         travelTimeMatrix: travelTimeMap ?? undefined,
         injectTravelEvents: enableTravelEvents,
-        categories,
+        categories: newCategories,
         previousEngineMessages,
       },
     );
@@ -84,6 +91,9 @@ export const updateAllCalendarStates =
     // Two dispatches, one tick: React 18 batches them, and the sync effect
     // is debounced anyway, so source and derived state advance atomically
     // from the subscriber's point of view.
+    if (updates.categories) {
+      dispatch(setCategories(newCategories));
+    }
     dispatch(
       setPlannerAndTemplate({ planner: newPlanner, template: newTemplate }),
     );

@@ -215,11 +215,22 @@ export const tabChangeCount = style({
   transition: themeTransition,
 });
 
-export const showAllHeaderButton = style({
+// Right-aligned group of header actions (history, "New chat", "Show all").
+export const headerActionCluster = style({
+  marginLeft: "auto",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
+});
+
+// Small action button in a pane header ("Show all", "New chat", "History").
+export const headerActionButton = style({
   appearance: "none",
   background: "transparent",
   border: "none",
-  marginLeft: "auto",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 4,
   padding: "4px 8px",
   borderRadius: radii.sm,
   cursor: "pointer",

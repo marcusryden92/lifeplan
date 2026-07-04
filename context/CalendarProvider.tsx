@@ -50,7 +50,8 @@ type CalendarContextType = {
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
     calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
-    template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
+    template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
+    categories?: Category[] | ((prev: Category[]) => Category[])
   ) => void;
   manuallyRefreshCalendar: () => void;
   inheritedLocationMap: Map<string, InheritedLocationInfo>;

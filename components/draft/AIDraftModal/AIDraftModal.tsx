@@ -10,6 +10,7 @@ import { plannerForestToJson } from "./plannerForestToJson";
 import { JsonForestView } from "./JsonTreeView";
 import { TemplateWeekView } from "./TemplateWeekView";
 import { ChatPane } from "./ChatPane";
+import { ChatHistoryPopover } from "./ChatHistoryPopover";
 import { useAIDraftState } from "./useAIDraftState";
 import {
   streamDraft,
@@ -23,11 +24,18 @@ import {
 import { foldDraftProposals } from "./mergeDraftForest";
 import { applyDraftForestToPlanner } from "./applyDraftForestToPlanner";
 import { applyDraftTemplates } from "./applyDraftTemplates";
+import { applyDraftWindows } from "./applyDraftWindows";
 import { templatesToDraft } from "./draftTemplates";
+import { categoriesToDraftWindows } from "./draftWindows";
 import {
   countTemplateChanges,
   diffDraftTemplates,
 } from "./diffDraftTemplates";
+import {
+  countWindowChanges,
+  diffDraftWindows,
+} from "./diffDraftWindows";
+import { WindowsView } from "./WindowsView";
 import { diffDraftForest } from "./diffDraftForest";
 import { diffSubtreeHasChanges } from "./diffDraftTree";
 
@@ -49,15 +57,30 @@ import {
   paneTab,
   paneTabLabel,
   tabChangeCount,
-  showAllHeaderButton,
+  headerActionButton,
+  headerActionCluster,
   a11yHiddenTitle,
 } from "./AIDraftModal.css";
 
-type DraftPaneTab = "goals" | "week";
+type DraftPaneTab = "goals" | "week" | "windows";
 
 export interface AIDraftFocus {
   rootId: string | null;
   itemId: string | null;
+}
+
+function formatDirtyDomains(
+  forest: boolean,
+  templates: boolean,
+  windows: boolean,
+): string {
+  const parts = [
+    forest ? "goals" : null,
+    templates ? "weekly schedule" : null,
+    windows ? "category windows" : null,
+  ].filter((p): p is string => p !== null);
+  if (parts.length <= 1) return parts[0] ?? "plan";
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 }
 
 interface AIDraftModalProps {
@@ -113,19 +136,34 @@ export function AIDraftModal({
     () => templatesToDraft(template),
     [template],
   );
+  const canonicalWindows = useMemo(
+    () => categoriesToDraftWindows(categories),
+    [categories],
+  );
 
   const {
     workingForest,
     setWorkingForest,
     workingTemplates,
     setWorkingTemplates,
+    workingWindows,
+    setWorkingWindows,
     hasForestChanges,
     hasTemplateChanges,
+    hasWindowChanges,
     hasChanges,
     messages,
     appendMessage,
     updateMessage,
-  } = useAIDraftState({ open, canonical, canonicalTemplates });
+    conversationId,
+    startNewConversation,
+    adoptConversation,
+  } = useAIDraftState({
+    open,
+    canonical,
+    canonicalTemplates,
+    canonicalWindows,
+  });
 
   // Recompute on every working/canonical tick. Cheap: pure walks of
   // personal-scale data, no memo cost worth introducing.
@@ -134,8 +172,10 @@ export function AIDraftModal({
     workingTemplates,
     canonicalTemplates,
   );
+  const diffedWindows = diffDraftWindows(workingWindows, canonicalWindows);
   const goalChangeCount = diffedGoals.filter(diffSubtreeHasChanges).length;
   const templateChangeCount = countTemplateChanges(diffedTemplates);
+  const windowChangeCount = countWindowChanges(diffedWindows);
 
   // Goals / Week tabs. During a stream the pane follows the assistant's work
   // (last streamed domain wins) unless the user clicked a tab this turn; the
@@ -194,6 +234,11 @@ export function AIDraftModal({
     workingTemplatesRef.current = workingTemplates;
   }, [workingTemplates]);
 
+  const workingWindowsRef = useRef(workingWindows);
+  useEffect(() => {
+    workingWindowsRef.current = workingWindows;
+  }, [workingWindows]);
+
   const messagesRef = useRef(messages);
   useEffect(() => {
     messagesRef.current = messages;
@@ -244,6 +289,7 @@ export function AIDraftModal({
       // (never compound) while multiple calls in one turn still stack.
       const turnStartForest = workingForestRef.current;
       const proposalsByCall = new Map<number, DraftForestProposal>();
+      const completedCalls = new Set<number>();
       setStreamStatus(null);
       tabPinnedRef.current = false;
       const streamFocus: StreamDraftFocus | null = focus?.rootId
@@ -253,23 +299,37 @@ export function AIDraftModal({
       let assistantText = "";
       let sawForest = false;
       let sawTemplates = false;
+      let sawWindows = false;
       let sawShow = false;
+      let finished = false;
+      // Categories ride from the WORKING windows state, not the provider —
+      // pending window/flag drafts must be visible to the model on the next
+      // turn (names still come from the provider; only the assistant-editable
+      // parts are draft-backed).
+      const windowsState = workingWindowsRef.current;
+      const settingsById = new Map(windowsState.settings.map((s) => [s.id, s]));
       await streamDraft({
         currentForest: turnStartForest,
         currentTemplates: workingTemplatesRef.current,
         history,
         focus: streamFocus,
-        categories: categories.map((c) => ({
-          id: c.id,
-          name: c.name,
-          isStrict: c.isStrict,
-          useTimeWindows: c.useTimeWindows,
-          timeSlots: c.timeSlots.map((w) => ({
-            day: w.day,
-            startTime: w.startTime,
-            endTime: w.endTime,
-          })),
-        })),
+        categories: categories.map((c) => {
+          const setting = settingsById.get(c.id);
+          return {
+            id: c.id,
+            name: c.name,
+            isStrict: setting?.isStrict ?? c.isStrict,
+            useTimeWindows: setting?.useTimeWindows ?? c.useTimeWindows,
+            timeSlots: windowsState.windows
+              .filter((w) => w.categoryId === c.id)
+              .map((w) => ({
+                id: w.id,
+                day: w.day,
+                startTime: w.startTime,
+                endTime: w.endTime,
+              })),
+          };
+        }),
         locations: locations.map((l) => ({ id: l.id, name: l.name })),
         // Local date, not server UTC — deadlines are user-local decisions.
         today: format(new Date(), "yyyy-MM-dd"),
@@ -279,11 +339,12 @@ export function AIDraftModal({
           setStreamStatus(null);
           updateMessage(assistantMessageId, { content: assistantText });
         },
-        onForest: ({ callIndex, proposal: raw }) => {
+        onForest: ({ callIndex, proposal: raw, complete }) => {
           sawForest = true;
           const proposal = normalizeDraftForest(raw);
           if (proposal) {
             proposalsByCall.set(callIndex, proposal);
+            if (complete) completedCalls.add(callIndex);
             const ordered = [...proposalsByCall.keys()]
               .sort((a, b) => a - b)
               .map((idx) => proposalsByCall.get(idx)!);
@@ -297,6 +358,11 @@ export function AIDraftModal({
           // wholesale, no folding.
           setWorkingTemplates(templates);
           autoSwitchTab("week");
+        },
+        onWindows: (state) => {
+          sawWindows = true;
+          setWorkingWindows(state);
+          autoSwitchTab("windows");
         },
         onStatus: ({ tool, count }) => {
           const plural = count === 1 ? "" : "s";
@@ -319,7 +385,15 @@ export function AIDraftModal({
                             ? `editing ${count} template${plural}…`
                             : tool === "delete_templates"
                               ? `deleting ${count} template${plural}…`
-                              : null;
+                              : tool === "add_time_windows"
+                                ? `adding ${count} window${plural}…`
+                                : tool === "update_time_windows"
+                                  ? `editing ${count} window${plural}…`
+                                  : tool === "delete_time_windows"
+                                    ? `deleting ${count} window${plural}…`
+                                    : tool === "update_categories"
+                                      ? `updating ${count} categor${count === 1 ? "y" : "ies"}…`
+                                      : null;
           if (label) setStreamStatus(label);
         },
         onShow: ({ goalIds, all }) => {
@@ -334,20 +408,24 @@ export function AIDraftModal({
           }
         },
         onDone: () => {
+          finished = true;
           setStreamStatus(null);
           // A tool-only turn produces no prose; fill the bubble so it isn't
           // blank (this fallback also enters future history as the
           // assistant's reply).
+          const touchedTabs = [
+            sawForest ? "Goals" : null,
+            sawTemplates ? "Week" : null,
+            sawWindows ? "Windows" : null,
+          ].filter((t): t is string => t !== null);
           const fallback =
-            sawForest && sawTemplates
-              ? "Proposed changes — review the Goals and Week tabs."
-              : sawTemplates
-                ? "Proposed changes — review them on the Week tab."
-                : sawForest
-                  ? "Proposed changes — review them in the goals pane."
-                  : sawShow
-                    ? "Brought them into view in the goals pane."
-                    : "Done.";
+            touchedTabs.length > 0
+              ? `Proposed changes — review the ${touchedTabs.join(" and ")} tab${
+                  touchedTabs.length === 1 ? "" : "s"
+                }.`
+              : sawShow
+                ? "Brought them into view in the goals pane."
+                : "Done.";
           updateMessage(assistantMessageId, {
             streaming: false,
             ...(assistantText.trim().length === 0
@@ -356,6 +434,7 @@ export function AIDraftModal({
           });
         },
         onError: (message) => {
+          finished = true;
           setStreamStatus(null);
           updateMessage(assistantMessageId, {
             content:
@@ -367,6 +446,29 @@ export function AIDraftModal({
         },
       });
 
+      // An aborted stream (Stop button or modal close) resolves without
+      // reaching onDone/onError. Completed work stays, but a propose_goals
+      // call cut off mid-stream leaves a truncated tree in the fold — refold
+      // with only the calls whose finalized emit arrived before the abort.
+      if (!finished) {
+        setStreamStatus(null);
+        if (completedCalls.size < proposalsByCall.size) {
+          const completeOrdered = [...proposalsByCall.keys()]
+            .filter((idx) => completedCalls.has(idx))
+            .sort((a, b) => a - b)
+            .map((idx) => proposalsByCall.get(idx)!);
+          setWorkingForest(
+            foldDraftProposals(turnStartForest, completeOrdered),
+          );
+        }
+        updateMessage(assistantMessageId, {
+          streaming: false,
+          ...(assistantText.trim().length === 0
+            ? { content: "Stopped." }
+            : {}),
+        });
+      }
+
       if (abortRef.current === controller) {
         abortRef.current = null;
       }
@@ -376,12 +478,18 @@ export function AIDraftModal({
       updateMessage,
       setWorkingForest,
       setWorkingTemplates,
+      setWorkingWindows,
       autoSwitchTab,
       focus,
       categories,
       locations,
     ],
   );
+
+  const handleStop = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+  }, []);
 
   const requestClose = useCallback(() => {
     if (hasChanges) {
@@ -403,24 +511,37 @@ export function AIDraftModal({
           validCategoryIds: new Set(categories.map((c) => c.id)),
         })
       : undefined;
+    const now = new Date().toISOString();
     const nextTemplates = hasTemplateChanges
       ? applyDraftTemplates({
           current: template,
           canonical: canonicalTemplates,
           working: workingTemplates,
           userId,
-          now: new Date().toISOString(),
+          now,
         })
       : undefined;
-    updateAll(nextPlanner, undefined, nextTemplates);
+    const nextCategories = hasWindowChanges
+      ? applyDraftWindows({
+          currentCategories: categories,
+          canonical: canonicalWindows,
+          working: workingWindows,
+          userId,
+          now,
+        })
+      : undefined;
+    updateAll(nextPlanner, undefined, nextTemplates, nextCategories);
     onClose();
   }, [
     workingForest,
     workingTemplates,
+    workingWindows,
     canonicalTemplates,
+    canonicalWindows,
     hasChanges,
     hasForestChanges,
     hasTemplateChanges,
+    hasWindowChanges,
     userId,
     planner,
     template,
@@ -481,11 +602,29 @@ export function AIDraftModal({
                   ? streamStatus ?? "assistant is thinking…"
                   : "send a prompt to begin"}
               </span>
+              <span className={headerActionCluster}>
+                <ChatHistoryPopover
+                  currentConversationId={conversationId}
+                  disabled={isStreaming}
+                  onAdopt={adoptConversation}
+                  onDeletedCurrent={startNewConversation}
+                />
+                {messages.length > 0 && !isStreaming && (
+                  <button
+                    type="button"
+                    className={headerActionButton}
+                    onClick={startNewConversation}
+                  >
+                    New chat
+                  </button>
+                )}
+              </span>
             </div>
             <ChatPane
               messages={messages}
               onSend={handleSend}
-              disabled={isStreaming}
+              onStop={handleStop}
+              isStreaming={isStreaming}
               initialDraft={open ? initialPrompt ?? null : null}
             />
           </div>
@@ -521,27 +660,42 @@ export function AIDraftModal({
                   <span className={tabChangeCount}>{templateChangeCount}</span>
                 )}
               </button>
+              <button
+                type="button"
+                className={paneTab}
+                data-active={activeTab === "windows" ? "true" : undefined}
+                onClick={() => selectTab("windows")}
+              >
+                <span className={paneTabLabel}>Windows</span>
+                {windowChangeCount > 0 && (
+                  <span className={tabChangeCount}>{windowChangeCount}</span>
+                )}
+              </button>
               <span className={paneSubtitle}>
                 {hasChanges ? "unsaved changes" : "current state"}
               </span>
               {activeTab === "goals" &&
                 (hiddenCount > 0 ? (
-                  <button
-                    type="button"
-                    className={showAllHeaderButton}
-                    onClick={() => setShowAll(true)}
-                  >
-                    Show all · {hiddenCount} more goal
-                    {hiddenCount === 1 ? "" : "s"}
-                  </button>
+                  <span className={headerActionCluster}>
+                    <button
+                      type="button"
+                      className={headerActionButton}
+                      onClick={() => setShowAll(true)}
+                    >
+                      Show all · {hiddenCount} more goal
+                      {hiddenCount === 1 ? "" : "s"}
+                    </button>
+                  </span>
                 ) : showAll && visibleGoals.length > 0 ? (
-                  <button
-                    type="button"
-                    className={showAllHeaderButton}
-                    onClick={() => setShowAll(false)}
-                  >
-                    Show relevant only
-                  </button>
+                  <span className={headerActionCluster}>
+                    <button
+                      type="button"
+                      className={headerActionButton}
+                      onClick={() => setShowAll(false)}
+                    >
+                      Show relevant only
+                    </button>
+                  </span>
                 ) : null)}
             </div>
             {activeTab === "goals" ? (
@@ -552,11 +706,13 @@ export function AIDraftModal({
                 focusRootId={focusRootId}
                 groupByCategory={showAll}
               />
-            ) : (
+            ) : activeTab === "week" ? (
               <TemplateWeekView
                 templates={diffedTemplates}
                 locations={locations}
               />
+            ) : (
+              <WindowsView diffed={diffedWindows} categories={categories} />
             )}
           </div>
         </div>
@@ -567,11 +723,11 @@ export function AIDraftModal({
           body={
             <p style={{ margin: 0 }}>
               The assistant has proposed changes to your{" "}
-              {hasForestChanges && hasTemplateChanges
-                ? "goals and weekly schedule"
-                : hasTemplateChanges
-                  ? "weekly schedule"
-                  : "goals"}
+              {formatDirtyDomains(
+                hasForestChanges,
+                hasTemplateChanges,
+                hasWindowChanges,
+              )}
               . Closing now will discard them.
             </p>
           }

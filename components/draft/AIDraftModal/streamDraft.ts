@@ -5,11 +5,19 @@ import {
   normalizeDraftTemplates,
   type DraftTemplate,
 } from "./draftTemplates";
+import {
+  normalizeDraftWindowsState,
+  type DraftWindowsState,
+} from "./draftWindows";
 
 export interface StreamChatMessage {
   role: "user" | "assistant";
   content: string;
 }
+
+// Server-side cap (route rejects longer histories). Persistent conversations
+// can outgrow it, so send only the trailing window.
+const MAX_HISTORY_MESSAGES = 40;
 
 export interface StreamDraftFocus {
   rootId: string | null;
@@ -21,7 +29,7 @@ export interface StreamDraftCategory {
   name: string;
   isStrict: boolean;
   useTimeWindows: boolean;
-  timeSlots: { day: number; startTime: string; endTime: string }[];
+  timeSlots: { id: string; day: number; startTime: string; endTime: string }[];
 }
 
 export interface StreamDraftArgs {
@@ -35,11 +43,19 @@ export interface StreamDraftArgs {
   signal?: AbortSignal;
   onText: (delta: string) => void;
   // Raw (possibly partial) propose_goals input plus its callIndex; the caller
-  // normalizes and folds it against the turn-start working forest.
-  onForest: (payload: { callIndex: number; proposal: unknown }) => void;
+  // normalizes and folds it against the turn-start working forest. `complete`
+  // marks server-finalized emits (stamped propose_goals re-emit or fromOps
+  // trees) — anything else may be a truncated partial if the stream aborts.
+  onForest: (payload: {
+    callIndex: number;
+    proposal: unknown;
+    complete: boolean;
+  }) => void;
   // Template ops emit the full authoritative array — the caller replaces its
   // working templates wholesale (last write wins, no folding).
   onTemplates: (templates: DraftTemplate[]) => void;
+  // Window/flag ops emit the full authoritative state — same contract.
+  onWindows: (state: DraftWindowsState) => void;
   // show_goals: display-only request to bring goals into the tree pane.
   onShow: (payload: { goalIds: string[]; all: boolean }) => void;
   // Server-side tool activity (e.g. the model fetching goal trees) — for a
@@ -61,6 +77,7 @@ export async function streamDraft({
   onText,
   onForest,
   onTemplates,
+  onWindows,
   onShow,
   onStatus,
   onDone,
@@ -74,7 +91,7 @@ export async function streamDraft({
       body: JSON.stringify({
         currentForest,
         currentTemplates,
-        history,
+        history: history.slice(-MAX_HISTORY_MESSAGES),
         focus,
         categories,
         locations,
@@ -113,6 +130,7 @@ export async function streamDraft({
           onText,
           onForest,
           onTemplates,
+          onWindows,
           onShow,
           onStatus,
           onDone,
@@ -132,6 +150,7 @@ interface DispatchHandlers {
   onText: StreamDraftArgs["onText"];
   onForest: StreamDraftArgs["onForest"];
   onTemplates: StreamDraftArgs["onTemplates"];
+  onWindows: StreamDraftArgs["onWindows"];
   onShow: StreamDraftArgs["onShow"];
   onStatus: StreamDraftArgs["onStatus"];
   onDone: StreamDraftArgs["onDone"];
@@ -159,16 +178,26 @@ function dispatchSseEvent(raw: string, handlers: DispatchHandlers): void {
       handlers.onText((data as { delta: string }).delta);
       break;
     case "forest": {
-      const { callIndex } = data as { callIndex?: unknown };
+      const { callIndex, complete, fromOps } = data as {
+        callIndex?: unknown;
+        complete?: unknown;
+        fromOps?: unknown;
+      };
       handlers.onForest({
         callIndex: typeof callIndex === "number" ? callIndex : 0,
         proposal: data,
+        complete: complete === true || fromOps === true,
       });
       break;
     }
     case "templates": {
       const templates = normalizeDraftTemplates(data);
       if (templates) handlers.onTemplates(templates);
+      break;
+    }
+    case "windows": {
+      const state = normalizeDraftWindowsState(data);
+      if (state) handlers.onWindows(state);
       break;
     }
     case "status": {

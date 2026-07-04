@@ -73,3 +73,5 @@ export type CategoryEvent = Prisma.CategoryEventGetPayload<undefined>;
 export type TravelEvent = Prisma.TravelEventGetPayload<undefined>;
 
 export type EngineMessage = Prisma.EngineMessageGetPayload<undefined>;
+
+export type DraftConversation = Prisma.DraftConversationGetPayload<undefined>;

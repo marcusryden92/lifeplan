@@ -27,6 +27,7 @@ model User {
   categoryEvents        CategoryEvent[]
   travelEvents          TravelEvent[]
   engineMessages        EngineMessage[]
+  draftConversations    DraftConversation[]
   verificationTokens    VerificationToken[]
 
   @@map("users")
