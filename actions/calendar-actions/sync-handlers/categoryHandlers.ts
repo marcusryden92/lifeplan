@@ -1,5 +1,6 @@
-import type { Prisma } from "@/prisma/client";
+import type { Prisma } from "@/generated/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
+import { bulkUpdate } from "./bulkUpdate";
 type Database = Prisma.TransactionClient;
 
 export function handleCategoryChanges(
@@ -32,21 +33,30 @@ export function handleCategoryChanges(
     );
   }
 
-  for (const c of databaseChanges.category.update) {
+  if (databaseChanges.category.update.length) {
     operations.push(
-      db.category.update({
-        where: { id: c.id },
-        data: {
-          name: c.name,
-          icon: c.icon,
-          color: c.color,
-          sortOrder: c.sortOrder,
-          isStrict: c.isStrict,
-          useTimeWindows: c.useTimeWindows,
-          locationId: c.locationId,
-          parentId: c.parentId,
-          updatedAt,
-        },
+      bulkUpdate({
+        db,
+        tableName: `"Categories"`,
+        rows: databaseChanges.category.update,
+        userIdColumn: "userId",
+        userId,
+        updatedAtColumn: "updatedAt",
+        updatedAt,
+        columns: [
+          { name: "name", cast: "text", extract: (r) => r.name },
+          { name: "icon", cast: "text", extract: (r) => r.icon },
+          { name: "color", cast: "text", extract: (r) => r.color },
+          { name: "sortOrder", cast: "int", extract: (r) => r.sortOrder },
+          { name: "isStrict", cast: "boolean", extract: (r) => r.isStrict },
+          {
+            name: "useTimeWindows",
+            cast: "boolean",
+            extract: (r) => r.useTimeWindows,
+          },
+          { name: "locationId", cast: "text", extract: (r) => r.locationId },
+          { name: "parentId", cast: "text", extract: (r) => r.parentId },
+        ],
       }),
     );
   }
@@ -55,6 +65,7 @@ export function handleCategoryChanges(
     operations.push(
       db.category.deleteMany({
         where: {
+          userId,
           id: { in: databaseChanges.category.destroy.map((c) => c.id) },
         },
       }),

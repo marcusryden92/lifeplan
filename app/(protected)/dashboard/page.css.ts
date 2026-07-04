@@ -1,6 +1,5 @@
-import { style } from "@vanilla-extract/css";
-
-const MOBILE = "screen and (max-width: 767px)";
+﻿import { style } from "@vanilla-extract/css";
+import { media } from "@/lib/theme";
 
 export const page = style({
   display: "flex",
@@ -8,7 +7,7 @@ export const page = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
     },
@@ -23,7 +22,7 @@ export const gridWrap = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       gridTemplateColumns: "1fr",
       padding: "0 16px 24px",
       gap: 14,

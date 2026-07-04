@@ -2,11 +2,11 @@
 
 model Location {
   id        String   @id @default(cuid())
-  name      String   // User-friendly name: "Home", "Office", etc.
-  address   String   // Full formatted address from Google Places
-  placeId   String   // Google Place ID for reference
-  lat       Float    // Latitude
-  lng       Float    // Longitude
+  name      String // User-friendly name: "Home", "Office", etc.
+  address   String // Full formatted address from Google Places
+  placeId   String // Google Place ID for reference
+  lat       Float // Latitude
+  lng       Float // Longitude
   userId    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -58,6 +58,7 @@ model TravelTime {
 
   // Note: No self-referential entries (fromLocationId != toLocationId enforced in application code)
   @@unique([fromLocationId, toLocationId, transportMode])
+  @@index([userId])
   @@map("TravelTimes")
 }
 
@@ -71,34 +72,35 @@ enum TransportMode {
 model TravelEvent {
   // Deterministic id: `${fromLocationId ?? "anywhere"}-${toLocationId ?? "anywhere"}-${start}`.
   // Same logical travel at the same time produces the same row across regens
-  // — sync becomes idempotent. Engine writes wholesale on each regen; the
+  // â€” sync becomes idempotent. Engine writes wholesale on each regen; the
   // diff lands as creates only when an actual placement shifted.
-  id                    String    @id
+  id String @id
 
-  start                 String    // ISO datetime
-  end                   String    // ISO datetime
+  start String // ISO datetime
+  end   String // ISO datetime
 
   // Travel direction. Nullable when the engine couldn't determine a side
   // (e.g. start of day, no preceding event with a location).
-  fromLocationId        String?
-  fromLocation          Location? @relation("TravelEventFrom", fields: [fromLocationId], references: [id], onDelete: SetNull)
-  toLocationId          String?
-  toLocation            Location? @relation("TravelEventTo", fields: [toLocationId], references: [id], onDelete: SetNull)
+  fromLocationId String?
+  fromLocation   Location? @relation("TravelEventFrom", fields: [fromLocationId], references: [id], onDelete: SetNull)
+  toLocationId   String?
+  toLocation     Location? @relation("TravelEventTo", fields: [toLocationId], references: [id], onDelete: SetNull)
 
   // Engine's intended duration in minutes
   travelMinutes         Int
   // Originally-required minutes when the engine was forced into a smaller slot
   requiredTravelMinutes Int?
 
-  // Visual markers — render red / yellow when set
-  insufficientTravel    Boolean   @default(false)
-  overconstrained       Boolean   @default(false)
+  // Visual markers â€” render red / yellow when set
+  insufficientTravel Boolean @default(false)
+  overconstrained    Boolean @default(false)
 
-  userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt             String    @default(dbgenerated("NOW()::text"))
-  updatedAt             String
+  createdAt String @default(dbgenerated("(now())::text"))
+  updatedAt String
 
+  @@index([userId])
   @@map("TravelEvents")
 }

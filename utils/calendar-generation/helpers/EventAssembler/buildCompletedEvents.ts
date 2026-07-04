@@ -1,12 +1,15 @@
 import { Planner, SimpleEvent } from "@/types/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { taskIsCompleted } from "../../../taskHelpers";
-import { EventType } from "@/prisma/client";
+import { EventType } from "@/generated/client";
+import { calendarColors } from "@/data/calendarColors";
+import { stabilizeEvent } from "./stabilizeEvent";
 
 export function buildCompletedEvents(
   userId: string,
   planners: Planner[],
   memoizedEventIds: Set<string>,
+  previousById: Map<string, SimpleEvent>,
 ): SimpleEvent[] {
   const completedItems = planners.filter(
     (task) => taskIsCompleted(task) && !memoizedEventIds.has(task.id),
@@ -17,13 +20,16 @@ export function buildCompletedEvents(
 
   for (const item of completedItems) {
     if (item.completedStartTime && item.completedEndTime) {
-      events.push({
+      const candidate: SimpleEvent = {
         userId,
         title: item.title,
         id: item.id,
         start: item.completedStartTime,
         end: item.completedEndTime,
-        backgroundColor: item.color as string,
+        // Planner.color is nullable but the SimpleEvent column is NOT NULL —
+        // an uncolored completed item must fall back like buildTaskEvent does,
+        // or the sync's bulk UPDATE hits a 23502 on the write.
+        backgroundColor: item.color || calendarColors[0],
         borderColor: "",
         duration: null,
         rrule: null,
@@ -38,7 +44,8 @@ export function buildCompletedEvents(
         },
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
-      });
+      };
+      events.push(stabilizeEvent(candidate, previousById.get(item.id)));
     }
   }
 

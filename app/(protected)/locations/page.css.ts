@@ -1,7 +1,6 @@
-import { style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition, colorMixAlpha } from "@/lib/theme";
+﻿import { style, globalStyle } from "@vanilla-extract/css";
+import { vars, themeTransition, colorMixAlpha, media, radii } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const page = style({
   position: "relative",
@@ -10,7 +9,7 @@ export const page = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: { flex: "0 0 auto", minHeight: "auto" },
+    [media.mobile]: { flex: "0 0 auto", minHeight: "auto" },
   },
 });
 
@@ -22,7 +21,7 @@ export const subHeader = style({
   flexShrink: 0,
   flexWrap: "wrap",
   "@media": {
-    [MOBILE]: { padding: "16px 16px 12px", gap: 10 },
+    [media.mobile]: { padding: "16px 16px 12px", gap: 10 },
   },
 });
 
@@ -36,7 +35,7 @@ export const pageTitle = style({
   margin: 0,
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { fontSize: 24 },
+    [media.mobile]: { fontSize: 24 },
   },
 });
 
@@ -58,7 +57,7 @@ export const headActions = style({
   flexShrink: 0,
   flexWrap: "wrap",
   // marginLeft: auto keeps the cluster right-aligned even when the parent
-  // subHeader wraps it onto its own row — without it, a wrapped row reverts
+  // subHeader wraps it onto its own row â€” without it, a wrapped row reverts
   // to the left edge and the title sits visually orphaned.
   marginLeft: "auto",
 });
@@ -68,7 +67,7 @@ export const headActions = style({
 // keeps the action cluster right-aligned whether the banner is present or not.
 export const banner = style({
   padding: "5px 12px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   fontSize: 11.5,
   fontFamily: vars.font.ui,
   fontWeight: 500,
@@ -103,7 +102,7 @@ export const mainGrid = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       gridTemplateColumns: "1fr",
       padding: "0 16px 24px",
       gap: 14,
@@ -124,12 +123,12 @@ export const rail = style([
   cardBase,
   {
     border: `1px solid ${vars.rule}`,
-    borderRadius: 14,
+    borderRadius: radii["md+2"],
     padding: "12px 8px 8px",
     background: "transparent",
     transition: themeTransition,
     "@media": {
-      [MOBILE]: { minHeight: "auto", borderRadius: 12 },
+      [media.mobile]: { minHeight: "auto", borderRadius: radii.md },
     },
   },
 ]);
@@ -159,7 +158,7 @@ export const railRow = style({
   alignItems: "flex-start",
   gap: 8,
   padding: "8px 8px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   cursor: "pointer",
   fontSize: 13.5,
   fontFamily: vars.font.ui,
@@ -170,7 +169,7 @@ export const railRow = style({
   textAlign: "left",
   width: "100%",
   selectors: {
-    "&:hover": { background: vars.glass.bgSoft },
+    "&:hover": { background: vars.interactive.hoverFill },
   },
 });
 
@@ -235,7 +234,7 @@ export const railRowTag = style({
 export const railRowTagDot = style({
   width: 6,
   height: 6,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   flexShrink: 0,
 });
 
@@ -268,7 +267,7 @@ export const railNewButton = style({
   justifyContent: "center",
   gap: 6,
   padding: "8px 10px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   border: `1px dashed ${vars.rule}`,
   background: "transparent",
   color: vars.muted,
@@ -281,7 +280,7 @@ export const railNewButton = style({
     "&:hover": {
       color: vars.ink,
       borderColor: vars.glass.stroke,
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
     "&:disabled": {
       opacity: 0.4,
@@ -294,13 +293,13 @@ export const matrixPane = style([
   cardBase,
   {
     border: `1px solid ${vars.rule}`,
-    borderRadius: 14,
+    borderRadius: radii["md+2"],
     padding: "16px 18px",
     gap: 12,
     overflow: "auto",
     transition: themeTransition,
     "@media": {
-      [MOBILE]: { minHeight: 540, borderRadius: 12 },
+      [media.mobile]: { minHeight: 540, borderRadius: radii.md },
     },
   },
 ]);
@@ -373,7 +372,7 @@ export const matrixFooter = style({
   gap: 10,
   marginTop: "auto",
   padding: "8px 12px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
   fontSize: 11.5,

@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import StoreProvider from "@/context/StoreProvider";
 import UserProvider from "@/context/UserProvider";
 import CalendarProvider from "@/context/CalendarProvider";
-import { AppShell } from "@/components/ui";
+import { AppShell, AssistantProvider } from "@/components/ui";
+import { GlobalAssistant } from "@/components/draft/AIDraftModal";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export default function CircadiumLayout({ children }: { children: ReactNode }) {
@@ -24,8 +25,14 @@ function CircadiumShell({ children }: { children: ReactNode }) {
   const userName = user?.name ?? user?.email ?? "";
   const userInitial = userName.trim().charAt(0).toUpperCase() || "?";
   return (
-    <AppShell userName={userName} userInitial={userInitial}>
-      {children}
-    </AppShell>
+    <AssistantProvider>
+      <AppShell
+        userName={userName}
+        userInitial={userInitial}
+        assistantSlot={<GlobalAssistant />}
+      >
+        {children}
+      </AppShell>
+    </AssistantProvider>
   );
 }

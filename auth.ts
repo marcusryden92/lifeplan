@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import { UserRole } from "@/prisma/client";
+import { UserRole } from "@/generated/client";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 
 import { db } from "@/lib/db";
@@ -83,6 +83,16 @@ export const {
       const existingUser = await getUserById(token.sub);
 
       if (!existingUser) return token;
+
+      // Kill sessions issued before the last password change. iat has
+      // second granularity, so allow 2s of slack for the login that
+      // immediately follows a reset.
+      if (existingUser.passwordChangedAt) {
+        const issuedAtMs = (token.iat ?? 0) * 1000;
+        if (issuedAtMs + 2000 < existingUser.passwordChangedAt.getTime()) {
+          return null;
+        }
+      }
 
       const existingAccount = await getAccountByUserId(existingUser.id);
 

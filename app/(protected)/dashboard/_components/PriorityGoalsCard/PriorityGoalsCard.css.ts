@@ -1,7 +1,6 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, media, radii } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const goalsCard = style({
   padding: "16px 20px",
@@ -10,7 +9,7 @@ export const goalsCard = style({
   display: "flex",
   flexDirection: "column",
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
     },
@@ -72,7 +71,7 @@ export const goalFraction = style({
 export const goalTrack = style({
   marginTop: 8,
   height: 6,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: `color-mix(in srgb, ${vars.ink} 10%, transparent)`,
   position: "relative",
   overflow: "hidden",
@@ -81,7 +80,7 @@ export const goalTrack = style({
 export const goalFill = style({
   position: "absolute",
   inset: 0,
-  borderRadius: 999,
+  borderRadius: radii.pill,
 });
 
 export const goalFooter = style({

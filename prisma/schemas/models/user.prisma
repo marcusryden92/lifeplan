@@ -5,6 +5,10 @@ model User {
   emailVerified         DateTime?              @map("email_verified")
   image                 String?
   password              String?
+  // Stamped on every password change (reset flow + settings). The jwt
+  // callback compares it against the token's iat and invalidates sessions
+  // issued before the change.
+  passwordChangedAt     DateTime?              @map("password_changed_at")
   role                  UserRole               @default(USER)
   isTwoFactorEnabled    Boolean                @default(false)
   // Monotonic counter bumped inside every successful sync transaction.
@@ -15,12 +19,16 @@ model User {
   Planner               Planner[]
   SimpleEvent           SimpleEvent[]
   twoFactorConfirmation TwoFactorConfirmation?
+  accountDeletionToken  AccountDeletionToken?
   accounts              Account[]
   locations             Location[]
   categories            Category[]
   categoryTimeWindows   CategoryTimeWindow[]
   categoryEvents        CategoryEvent[]
   travelEvents          TravelEvent[]
+  engineMessages        EngineMessage[]
+  draftConversations    DraftConversation[]
+  verificationTokens    VerificationToken[]
 
   @@map("users")
 }
@@ -49,6 +57,11 @@ model VerificationToken {
   email   String
   token   String   @unique
   expires DateTime
+  // Set for email-change verification only: the token's email is the NEW
+  // address, which no user row has yet, so the consumer resolves the user by
+  // id. Null for registration verification (user found by the token email).
+  userId  String?
+  user    User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([email, token])
 }
@@ -75,6 +88,14 @@ model TwoFactorConfirmation {
   id     String @id @default(cuid())
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AccountDeletionToken {
+  id      String   @id @default(cuid())
+  userId  String   @unique
+  token   String   @unique
+  expires DateTime
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum UserRole {

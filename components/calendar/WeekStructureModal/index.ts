@@ -1,0 +1,1 @@
+export { WeekStructureModal } from "./WeekStructureModal";

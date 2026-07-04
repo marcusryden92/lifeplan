@@ -11,6 +11,7 @@ export default [
     ignores: [
       "**/.next/",
       "node_modules/",
+      "generated/",
       "public/",
       "prisma/",
       "*.md",
@@ -31,7 +32,9 @@ export default [
       parser: tseslintParser,
       parserOptions: {
         ecmaFeatures: { jsx: true },
-        project: "./tsconfig.json",
+        // Test files live in tsconfig.test.json (jest globals stay out of
+        // the app project); the parser needs both to type-check everything.
+        project: ["./tsconfig.json", "./tsconfig.test.json"],
       },
       globals: {
         ...globals.browser,

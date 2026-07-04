@@ -3,12 +3,17 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@/redux/store";
-import calendarSlice from "@/redux/slices/calendarSlice";
+import {
+  hydrateSource,
+  markCalendarLoaded,
+} from "@/redux/slices/calendarSourceSlice";
+import { hydrateEngineOutput } from "@/redux/slices/engineOutputSlice";
 import {
   Planner,
   Category,
   CategoryEvent,
   TravelEvent,
+  EngineMessage,
 } from "@/types/prisma";
 import { SimpleEvent } from "@/types/prisma";
 import { EventTemplate } from "@/types/prisma";
@@ -21,6 +26,7 @@ interface Data {
   categories: Category[];
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
+  engineMessages: EngineMessage[];
 }
 
 export function useFetchCalendarData(
@@ -32,6 +38,7 @@ export function useFetchCalendarData(
     categories: Category[],
     categoryEvents: CategoryEvent[],
     travelEvents: TravelEvent[],
+    engineMessages: EngineMessage[],
     dataVersion: number,
   ) => void,
 ) {
@@ -48,9 +55,11 @@ export function useFetchCalendarData(
       setError(null);
 
       try {
-        const response = await fetchCalendarData(userId);
+        const response = await fetchCalendarData();
 
-        if (!response.data) return null;
+        if (!response.success) {
+          throw new Error(response.error);
+        }
 
         const {
           planner,
@@ -59,6 +68,7 @@ export function useFetchCalendarData(
           categories,
           categoryEvents,
           travelEvents,
+          engineMessages,
           dataVersion,
         } = response.data;
         const newData = {
@@ -68,13 +78,28 @@ export function useFetchCalendarData(
           categories,
           categoryEvents,
           travelEvents,
+          engineMessages,
         };
 
         setData(newData);
 
         // Dispatch to Redux
-        dispatch(calendarSlice.actions.updateCalendarArrayData(newData));
-        dispatch(calendarSlice.actions.markCalendarLoaded());
+        dispatch(
+          hydrateSource({
+            planner: newData.planner,
+            template: newData.template,
+            categories: newData.categories,
+          }),
+        );
+        dispatch(
+          hydrateEngineOutput({
+            calendar: newData.calendar,
+            categoryEvents: newData.categoryEvents,
+            travelEvents: newData.travelEvents,
+            engineMessages: newData.engineMessages,
+          }),
+        );
+        dispatch(markCalendarLoaded());
         initializeState(
           newData.planner,
           newData.calendar,
@@ -82,6 +107,7 @@ export function useFetchCalendarData(
           newData.categories,
           newData.categoryEvents,
           newData.travelEvents,
+          newData.engineMessages,
           dataVersion,
         );
       } catch (err) {

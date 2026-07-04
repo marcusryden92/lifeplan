@@ -29,6 +29,7 @@ import {
   assembleFinalEvents,
   buildLoggingLookups,
   emitDebugLog,
+  buildEngineMessages,
 } from "../helpers/CalendarGenerator";
 import { scoreCandidatesAndRootGoals } from "../helpers/PrioritySorter";
 import {
@@ -123,6 +124,7 @@ export class CalendarGenerator {
         categoryEvents: [],
         travelEvents: [],
         plannerScores: {},
+        messages: [],
         failures: validation.failures,
         metrics: this.metrics,
       };
@@ -139,12 +141,13 @@ export class CalendarGenerator {
     );
 
     // Phase 2: Build initial event array (memoized, plans, completed)
-    const { eventArray, memoizedEventIds } = buildInitialEventArray(
-      input.userId,
-      input.planners,
-      input.previousCalendar,
-      currentDate,
-    );
+    const { eventArray, memoizedEventIds, previousById } =
+      buildInitialEventArray(
+        input.userId,
+        input.planners,
+        input.previousCalendar,
+        currentDate,
+      );
 
     // Phase 3: Expand templates
     const {
@@ -248,6 +251,7 @@ export class CalendarGenerator {
       plannerLocationMap,
       plannerCategoryMap,
       schedulerRecorder,
+      previousById,
     );
 
     // Phase 9: Prepare candidates (filter root goals, tasks and sort by priority)
@@ -323,12 +327,27 @@ export class CalendarGenerator {
       });
     }
 
+    // Phase 12: Emit engine messages. Per-type emit functions produce
+    // already-coalesced rows (one per unique identity tuple), and the prior
+    // messages array is consulted to carry forward the user-owned
+    // `dismissed` flag by id.
+    const messages = buildEngineMessages(
+      input.userId,
+      schedulingResult.failures,
+      travelEvents,
+      input.planners,
+      allEvents,
+      currentDate,
+      input.previousEngineMessages ?? [],
+    );
+
     return {
       success: schedulingResult.failures.length === 0,
       events: allEvents,
       categoryEvents,
       travelEvents,
       plannerScores: Object.fromEntries(urgencyScores),
+      messages,
       failures: [...schedulingResult.failures],
       metrics: this.metrics,
     };

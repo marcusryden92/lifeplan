@@ -1,7 +1,6 @@
-import { style } from "@vanilla-extract/css";
-import { vars } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, media } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const masthead = style({
   padding: "11px 28px",
@@ -14,6 +13,6 @@ export const masthead = style({
   WebkitBackdropFilter: "blur(20px)",
   flexShrink: 0,
   "@media": {
-    [MOBILE]: { display: "none" },
+    [media.mobile]: { display: "none" },
   },
 });

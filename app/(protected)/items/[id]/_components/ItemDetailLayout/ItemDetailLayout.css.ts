@@ -1,13 +1,26 @@
-import { style } from "@vanilla-extract/css";
+﻿import { style } from "@vanilla-extract/css";
 import {
   vars,
   themeTransition,
   interactiveTransition,
+  contentWidth,
+  media,
+  radii,
 } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const page = style({
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+  flex: 1,
+  minHeight: 0,
+  overflow: "hidden",
+});
+
+// Owns the scroll so that overlays anchored to `.page` (AIDraftModal) don't
+// scroll away with the content underneath.
+export const scrollArea = style({
   display: "flex",
   flexDirection: "column",
   flex: 1,
@@ -20,12 +33,12 @@ export const innerWrap = style({
   flexDirection: "column",
   padding: "20px 56px 28px",
   width: "100%",
-  maxWidth: 1240,
+  maxWidth: contentWidth.xl,
   marginInline: "auto",
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: { padding: "16px 32px 24px" },
+    [media.mobile]: { padding: "16px 32px 24px" },
   },
 });
 
@@ -62,7 +75,7 @@ export const titleBlock = style({
   gap: 24,
   marginTop: 14,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       flexDirection: "column",
       alignItems: "stretch",
       gap: 14,
@@ -89,7 +102,7 @@ export const title = style({
   borderBottom: `${TITLE_BORDER}px solid transparent`,
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { fontSize: 38, lineHeight: "38px" },
+    [media.mobile]: { fontSize: 38, lineHeight: "38px" },
   },
 });
 
@@ -112,7 +125,7 @@ export const titleEditInput = style({
   borderBottom: `${TITLE_BORDER}px solid ${vars.accent.primary}`,
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { fontSize: 38, lineHeight: "38px", height: 38 },
+    [media.mobile]: { fontSize: 38, lineHeight: "38px", height: 38 },
   },
 });
 
@@ -143,7 +156,7 @@ export const renamePencil = style({
   width: 30,
   height: 30,
   marginTop: 4,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: "none",
   background: "transparent",
   color: vars.muted,
@@ -153,7 +166,7 @@ export const renamePencil = style({
   transition: interactiveTransition("opacity", "color", "background-color"),
   selectors: {
     [`${titleHoverRow}:hover &`]: { opacity: 1 },
-    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
   },
 });
 

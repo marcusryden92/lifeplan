@@ -13,6 +13,7 @@ import {
   Category,
   CategoryEvent,
   TravelEvent,
+  EngineMessage,
 } from "@/types/prisma";
 import { CalendarGenerator } from "./core/CalendarGenerator";
 import { SCHEDULING_CONFIG } from "./constants";
@@ -36,6 +37,12 @@ export interface GenerateCalendarOptions {
   locationGroupingScores?: LocationGroupingScoresConfig;
   locationGroupingPenalties?: LocationGroupingPenaltiesConfig;
   categories?: Category[];
+  /**
+   * Prior engine messages array, consulted at emit time to carry forward
+   * the user-owned `dismissed` flag by id. Callers pass the current Redux
+   * engineMessages slice.
+   */
+  previousEngineMessages?: EngineMessage[];
 }
 
 /**
@@ -64,6 +71,7 @@ export function generateCalendar(
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
   plannerScores: Record<string, number>;
+  messages: EngineMessage[];
 } {
   // Handle backwards compatibility - if a number is passed, treat it as bufferTimeMinutes
   const opts: GenerateCalendarOptions =
@@ -76,7 +84,11 @@ export function generateCalendar(
   // leanCalendar, travelDebug, the [travel] dump in assembleFinalEvents) to
   // items whose start falls within [dateRangeStart, dateRangeEnd]. Either bound
   // can be null to leave that side open.
-  const enableLogging = true;
+  // Off by default: the engine runs on every planner edit, and an enabled
+  // recorder accumulates decision/action/slot-snapshot records for every
+  // failed task on every retry pass — real per-keystroke cost, not just
+  // console noise. Flip locally when debugging.
+  const enableLogging = false;
   const logging = {
     metrics: false,
     failures: false,
@@ -87,11 +99,11 @@ export function generateCalendar(
     locations: false,
     strategySettings: false,
     finalEvents: false,
-    leanCalendar: true,
+    leanCalendar: false,
     staticEventTravelPass: false,
-    dynamicScheduling: true,
-    dateRangeStart: new Date("2026-05-28") as Date | null,
-    dateRangeEnd: new Date("2026-05-30") as Date | null,
+    dynamicScheduling: false,
+    dateRangeStart: null as Date | null,
+    dateRangeEnd: null as Date | null,
   };
 
   const result = new CalendarGenerator(weekStartDay, {
@@ -100,6 +112,7 @@ export function generateCalendar(
     templates: template,
     planners: planner,
     previousCalendar: prevCalendar,
+    previousEngineMessages: opts.previousEngineMessages,
     categories: opts.categories,
     config: {
       maxDaysAhead: SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
@@ -119,5 +132,6 @@ export function generateCalendar(
     categoryEvents: result.categoryEvents,
     travelEvents: result.travelEvents,
     plannerScores: result.plannerScores,
+    messages: result.messages,
   };
 }

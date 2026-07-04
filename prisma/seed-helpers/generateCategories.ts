@@ -1,4 +1,4 @@
-import { Prisma } from "../client";
+import { Prisma } from "../../generated/client";
 import { LOCATION_IDS } from "./generateLocations";
 
 export const CATEGORY_IDS = {

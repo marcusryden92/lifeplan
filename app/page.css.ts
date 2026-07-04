@@ -1,10 +1,9 @@
-import { globalStyle, style } from "@vanilla-extract/css";
-import { vars } from "@/lib/theme";
+﻿import { globalStyle, style } from "@vanilla-extract/css";
+import { vars, contentWidth, media, radii } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 // ---------- page chrome ----------
-// No horizontal padding — sections handle their own. This lets full-bleed
+// No horizontal padding â€” sections handle their own. This lets full-bleed
 // sections (e.g. the dark prose section) reach the viewport edge cleanly
 // while bezeled elements (hero, close card) supply their own 12px inset.
 // `main` itself is the scroll container so the `.custom-scrollbar` rules
@@ -29,7 +28,7 @@ export const navBar = style({
   padding: "8px clamp(12px, 1.6vw, 28px)",
   flexShrink: 0,
   "@media": {
-    [MOBILE]: { padding: "14px 20px" },
+    [media.mobile]: { padding: "14px 20px" },
   },
 });
 
@@ -51,19 +50,19 @@ export const navActions = style({
 
 // ---------- hero ----------
 // Matches the original flex:2 of an aboveFold of height calc(100vh - 24px)
-// with a 5px gap — i.e. (100vh - 29px) * 2/3. Self-bezeled (12px inline
+// with a 5px gap â€” i.e. (100vh - 29px) * 2/3. Self-bezeled (12px inline
 // margin) since the page no longer pads horizontally.
 export const hero = style({
   position: "relative",
-  borderRadius: 30,
+  borderRadius: radii["3xl"],
   overflow: "hidden",
   isolation: "isolate",
   background: vars.paper,
   height: "calc((100vh - 29px) * 2 / 3)",
   marginInline: 12,
   "@media": {
-    [MOBILE]: {
-      borderRadius: 0,
+    [media.mobile]: {
+      borderRadius: radii.none,
       height: "calc(100vh * 2 / 3)",
       marginInline: 0,
     },
@@ -81,7 +80,7 @@ export const introSection = style({
   flexDirection: "column",
   gap: 22,
   "@media": {
-    [MOBILE]: { padding: "32px 24px 64px", gap: 18 },
+    [media.mobile]: { padding: "32px 24px 64px", gap: 18 },
   },
 });
 
@@ -93,7 +92,7 @@ export const introHeadline = style({
   lineHeight: 1.05,
   color: vars.ink,
   margin: 0,
-  maxWidth: 960,
+  maxWidth: contentWidth.lg,
 });
 
 globalStyle(`${introHeadline} em`, {
@@ -121,7 +120,7 @@ export const introBody = style({
   fontSize: "clamp(15px, 1.15vw, 17px)",
   lineHeight: 1.6,
   color: vars.inkSoft,
-  maxWidth: 640,
+  maxWidth: contentWidth.sm,
   marginTop: 8,
 });
 
@@ -152,7 +151,7 @@ const proseSectionBase = style({
   padding: "clamp(96px, 10vw, 160px) clamp(12px, 1.6vw, 28px)",
   position: "relative",
   "@media": {
-    [MOBILE]: { padding: "72px 24px" },
+    [media.mobile]: { padding: "72px 24px" },
   },
 });
 
@@ -174,7 +173,7 @@ export const proseSection = style([
   },
 ]);
 
-// Dark inverse — used for one mid-page section to break the rhythm.
+// Dark inverse â€” used for one mid-page section to break the rhythm.
 export const proseSectionDark = style([
   proseSectionBase,
   {
@@ -189,11 +188,11 @@ export const proseGrid = style({
   display: "grid",
   gridTemplateColumns: "minmax(180px, 240px) minmax(0, 1fr)",
   gap: "clamp(32px, 6vw, 96px)",
-  maxWidth: 1280,
+  maxWidth: contentWidth["2xl"],
   margin: "0 auto",
   alignItems: "start",
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       gridTemplateColumns: "1fr",
       gap: 28,
     },
@@ -213,7 +212,7 @@ export const proseAside = style({
   position: "sticky",
   top: 24,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       position: "static",
       flexDirection: "row",
       alignItems: "center",
@@ -248,7 +247,7 @@ export const proseRule = style({
   background: "currentColor",
   opacity: 0.35,
   "@media": {
-    [MOBILE]: { display: "none" },
+    [media.mobile]: { display: "none" },
   },
 });
 
@@ -261,7 +260,7 @@ export const proseHeading = style({
   color: "currentColor",
   margin: 0,
   marginBottom: "clamp(32px, 3.5vw, 48px)",
-  maxWidth: 820,
+  maxWidth: contentWidth.md,
 });
 
 export const proseBody = style({
@@ -296,17 +295,17 @@ export const proseEmphasis = style({
   borderLeft: `2px solid ${vars.accent.primary}`,
 });
 
-// ---------- features — concrete capability tiles ----------
+// ---------- features â€” concrete capability tiles ----------
 export const featuresSection = style({
   padding: "clamp(96px, 10vw, 160px) clamp(12px, 1.6vw, 28px)",
   borderTop: `1px solid ${vars.rule}`,
   "@media": {
-    [MOBILE]: { padding: "72px 24px" },
+    [media.mobile]: { padding: "72px 24px" },
   },
 });
 
 export const featuresHeader = style({
-  maxWidth: 1280,
+  maxWidth: contentWidth["2xl"],
   margin: "0 auto",
   marginBottom: "clamp(40px, 5vw, 64px)",
   display: "flex",
@@ -335,14 +334,14 @@ export const featuresHeading = style({
 });
 
 export const featuresList = style({
-  maxWidth: 1280,
+  maxWidth: contentWidth["2xl"],
   margin: "0 auto",
   display: "flex",
   flexDirection: "column",
   gap: "clamp(72px, 9vw, 128px)",
 });
 
-// Two-column subsection — icon side + content side. Ordering is done in
+// Two-column subsection â€” icon side + content side. Ordering is done in
 // JSX so vanilla-extract doesn't need descendant selectors; the reverse
 // variant is here as a stable hook in case we want to style asymmetries
 // per-side later.
@@ -352,7 +351,7 @@ export const featureRow = style({
   gap: "clamp(32px, 6vw, 96px)",
   alignItems: "center",
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       gridTemplateColumns: "1fr",
       gap: 24,
     },
@@ -367,7 +366,7 @@ export const featureVisual = style({
   justifyContent: "center",
   minHeight: 200,
   "@media": {
-    [MOBILE]: { minHeight: 0, justifyContent: "flex-start" },
+    [media.mobile]: { minHeight: 0, justifyContent: "flex-start" },
   },
 });
 
@@ -379,11 +378,11 @@ export const featureIconWrap = style({
   justifyContent: "center",
   width: 168,
   height: 168,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: `color-mix(in srgb, ${vars.ink} 5%, transparent)`,
   color: vars.ink,
   "@media": {
-    [MOBILE]: { width: 120, height: 120 },
+    [media.mobile]: { width: 120, height: 120 },
   },
 });
 
@@ -393,7 +392,7 @@ export const featureContent = style({
   display: "flex",
   flexDirection: "column",
   gap: 14,
-  maxWidth: 520,
+  maxWidth: contentWidth.xs,
 });
 
 export const featureIndex = style({
@@ -423,19 +422,19 @@ export const featureBody = style({
   margin: 0,
 });
 
-// ---------- close — ink-tinted card ----------
+// ---------- close â€” ink-tinted card ----------
 // Card width matches the hero/vector field: it fills the page bezel
 // (page already supplies 12px horizontal padding), so the section adds
 // only vertical padding.
 export const closeSection = style({
   padding: "clamp(72px, 8vw, 120px) 0",
   "@media": {
-    [MOBILE]: { padding: "72px 0" },
+    [media.mobile]: { padding: "72px 0" },
   },
 });
 
 export const closeCard = style({
-  borderRadius: 30,
+  borderRadius: radii["3xl"],
   background: vars.ink,
   color: vars.paper,
   padding: "clamp(72px, 9vw, 120px) clamp(32px, 6vw, 96px)",
@@ -446,7 +445,7 @@ export const closeCard = style({
   textAlign: "center",
   gap: 14,
   "@media": {
-    [MOBILE]: { padding: "64px 28px", borderRadius: 0, marginInline: 0 },
+    [media.mobile]: { padding: "64px 28px", borderRadius: radii.none, marginInline: 0 },
   },
 });
 
@@ -457,7 +456,7 @@ export const closeHeading = style({
   letterSpacing: "-0.025em",
   lineHeight: 1.05,
   margin: 0,
-  maxWidth: 640,
+  maxWidth: contentWidth.sm,
 });
 
 export const closeBody = style({
@@ -466,7 +465,7 @@ export const closeBody = style({
   lineHeight: 1.5,
   color: "rgba(242,239,234,0.78)",
   margin: 0,
-  maxWidth: 520,
+  maxWidth: contentWidth.xs,
 });
 
 export const closeActions = style({
@@ -498,7 +497,7 @@ export const footer = style({
   fontSize: 12,
   fontFamily: vars.font.ui,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       flexDirection: "column",
       alignItems: "flex-start",
       padding: "24px 24px 32px",

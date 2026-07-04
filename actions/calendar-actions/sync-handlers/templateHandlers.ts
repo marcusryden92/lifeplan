@@ -1,7 +1,8 @@
-import type { Prisma } from "@/prisma/client";
+import type { Prisma } from "@/generated/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
 import { intToWeekday } from "@/utils/calendarUtils";
 import type { EventTemplate } from "@/types/prisma";
+import { bulkUpdate } from "./bulkUpdate";
 type Database = Prisma.TransactionClient;
 
 // App holds startDay as WeekDayIntegers; DB expects the WeekDayType enum string.
@@ -33,12 +34,29 @@ export function handleTemplateChanges(
     );
   }
 
-  // UPDATE
-  for (const template of databaseChanges.template.update) {
+  // UPDATE — bulk `UPDATE ... FROM VALUES`.
+  if (databaseChanges.template.update.length) {
     operations.push(
-      db.eventTemplate.update({
-        where: { id: template.id },
-        data: { ...templateForWrite(template), userId, updatedAt },
+      bulkUpdate({
+        db,
+        tableName: `"EventTemplates"`,
+        rows: databaseChanges.template.update,
+        userIdColumn: "userId",
+        userId,
+        updatedAtColumn: "updatedAt",
+        updatedAt,
+        columns: [
+          { name: "title", cast: "text", extract: (r) => r.title },
+          {
+            name: "startDay",
+            cast: `"WeekDayType"`,
+            extract: (r) => intToWeekday(r.startDay),
+          },
+          { name: "startTime", cast: "text", extract: (r) => r.startTime },
+          { name: "duration", cast: "int", extract: (r) => r.duration },
+          { name: "color", cast: "text", extract: (r) => r.color },
+          { name: "locationId", cast: "text", extract: (r) => r.locationId },
+        ],
       })
     );
   }
@@ -48,6 +66,7 @@ export function handleTemplateChanges(
     operations.push(
       db.eventTemplate.deleteMany({
         where: {
+          userId,
           id: { in: databaseChanges.template.destroy.map((t) => t.id) },
         },
       })

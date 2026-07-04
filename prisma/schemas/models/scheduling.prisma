@@ -12,16 +12,17 @@ model UserSchedulingPreferences {
 
 // Task/Habit preferences
 model TaskPreferences {
-  id                  String   @id @default(cuid())
-  plannerId           String   @unique  // Links to Planner table
-  taskType            TaskTypeEnum?
-  preferredDays       Int[]    // [1,2,3] = Mon, Tue, Wed
-  preferredStartTime  String?  // "09:00"
-  preferredEndTime    String?  // "12:00"
-  avoidDays           Int[]    // Days to avoid
-  priority            PriorityLevel @default(MEDIUM)
-  energyLevel         EnergyLevel?
-  allowFlexibility    Boolean  @default(true)
+  id                 String        @id @default(cuid())
+  plannerId          String        @unique
+  planner            Planner       @relation(fields: [plannerId], references: [id], onDelete: Cascade)
+  taskType           TaskTypeEnum?
+  preferredDays      Int[] // [1,2,3] = Mon, Tue, Wed
+  preferredStartTime String? // "09:00"
+  preferredEndTime   String? // "12:00"
+  avoidDays          Int[] // Days to avoid
+  priority           PriorityLevel @default(MEDIUM)
+  energyLevel        EnergyLevel?
+  allowFlexibility   Boolean       @default(true)
 
   @@map("TaskPreferences")
 }
@@ -45,7 +46,7 @@ enum PriorityLevel {
 }
 
 enum EnergyLevel {
-  LOW      // Light tasks
-  MEDIUM   // Normal tasks
-  HIGH     // Deep work, exercise
+  LOW // Light tasks
+  MEDIUM // Normal tasks
+  HIGH // Deep work, exercise
 }

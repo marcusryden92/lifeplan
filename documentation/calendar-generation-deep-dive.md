@@ -1,6 +1,6 @@
 # Calendar Generation — Deep Dive
 
-This document describes the `utils/calendar-generation/` engine: the code that turns the user's planners, templates, and previously persisted calendar into a fresh `{ events, categoryEvents, travelEvents }` payload on every regeneration.
+This document describes the `utils/calendar-generation/` engine: the code that turns the user's planners, templates, and previously persisted calendar into a fresh `{ events, categoryEvents, travelEvents, plannerScores, messages }` payload on every regeneration.
 
 The engine is a stateful pipeline. Read top-to-bottom; later sections assume the data structures and phase ordering established earlier.
 
@@ -21,9 +21,11 @@ inputs:
   options:         GenerateCalendarOptions (travel matrix, categories, ...)
 
 output:
-  events:         SimpleEvent[]    // plans, scheduled tasks, completed, memoized
-  categoryEvents: CategoryEvent[]  // materialized weekly category occurrences
-  travelEvents:   TravelEvent[]    // travel blocks between scheduled items
+  events:         SimpleEvent[]              // plans, scheduled tasks, completed, memoized
+  categoryEvents: CategoryEvent[]            // materialized weekly category occurrences
+  travelEvents:   TravelEvent[]              // travel blocks between scheduled items
+  plannerScores:  Record<string, number>     // per-planner urgency scores (ephemeral, not persisted)
+  messages:       EngineMessage[]            // engine console rows (failures, warnings, SCHEDULED_OK)
 ```
 
 The pipeline is built on three central data structures:
@@ -44,7 +46,7 @@ The horizon is **bounded** (28 days initially, see [constants.ts:80](../utils/ca
 
 1. Normalizes the optional `bufferTimeMinutes`-as-number legacy arg into a `GenerateCalendarOptions` object.
 2. Builds a `LoggingConfig` from local flags (see [Debugging](#13-debugging-the-engine)).
-3. Constructs `new CalendarGenerator(weekStartDay, input).generate()` and returns the resulting `{ events, categoryEvents, travelEvents }`.
+3. Constructs `new CalendarGenerator(weekStartDay, input).generate()` and returns the resulting `{ events, categoryEvents, travelEvents, plannerScores, messages }`.
 
 ### Module exports
 
@@ -120,8 +122,8 @@ A few invariants worth internalizing:
 
 [models/SchedulingModels.ts](../utils/calendar-generation/models/SchedulingModels.ts) carries the shape contracts between phases:
 
-- `CalendarGenerationInput` — the typed input to `CalendarGenerator`.
-- `CalendarGenerationResult` extends `SchedulingResult` with `categoryEvents` and `travelEvents` (the orchestrator's full output).
+- `CalendarGenerationInput` — the typed input to `CalendarGenerator`, including `previousEngineMessages` which the message emitter consults to carry the user-owned `dismissed` flag forward by id.
+- `CalendarGenerationResult` extends `SchedulingResult` with `categoryEvents`, `travelEvents`, `plannerScores`, and `messages` (the orchestrator's full output).
 - `SchedulingContext` — the bag of state passed to every scheduling call: `currentDate`, `weekStartDay`, `allPlanners`, `scheduledEvents`, `metrics`, `categories` (Map), `plannerLocationMap`, `plannerCategoryMap`, the optional `schedulerRecorder`, and the per-iteration `placementCutoffDate` (tail buffer).
 - `SlotSelectionResult` — what `selectBestSlot` hands to `reserveTaskSlot`. Crucially carries `absorbableTravel` and `reclaimPrecedingGapTravel` as `TravelShardSpan | null`, so removal is by identity (`travelId`), not heuristic time search.
 - `SchedulingFailure` — `{ taskId, taskTitle, reason: SchedulingFailureReason, details, context? }`.
@@ -132,7 +134,7 @@ A few invariants worth internalizing:
 
 ---
 
-## 4. The 11 Phases (CalendarGenerator)
+## 4. The 12 Phases (CalendarGenerator)
 
 [core/CalendarGenerator.ts](../utils/calendar-generation/core/CalendarGenerator.ts) is the orchestrator. Each phase delegates to a single function in [helpers/CalendarGenerator/](../utils/calendar-generation/helpers/CalendarGenerator/).
 
@@ -144,11 +146,11 @@ A few invariants worth internalizing:
 
 [buildInitialEventArray.ts](../utils/calendar-generation/helpers/CalendarGenerator/buildInitialEventArray.ts) combines three sources into a single `eventArray`:
 
-1. **Memoized events** ([buildMemoizedEvents](../utils/calendar-generation/helpers/EventAssembler/buildMemoizedEvents.ts)) — items from `previousCalendar` whose start is before `now` and aren't templates/travel/category wrappers. Preserved verbatim.
-2. **Plan events** ([buildPlanEvents](../utils/calendar-generation/helpers/EventAssembler/buildPlanEvents.ts)) — `Planner` rows with `plannerType: "plan"` and a `starts` timestamp, converted to `SimpleEvent` shape, minus already-memoized rows.
-3. **Completed events** ([buildCompletedEvents](../utils/calendar-generation/helpers/EventAssembler/buildCompletedEvents.ts)) — tasks/goals with `completedStartTime`/`completedEndTime` set, rendered at their actual completion window (not the originally-scheduled window).
+1. **Memoized events** ([buildMemoizedEvents](../utils/calendar-generation/helpers/EventAssembler/buildMemoizedEvents.ts)) — items from `previousCalendar` whose end is before `now` and aren't templates/travel/category wrappers **or plans**. Preserved verbatim. Plans are excluded because they are deterministic from their own planner row — pinning the old emit would make the engine ignore a `starts` change on any plan whose block already ended.
+2. **Plan events** ([buildPlanEvents](../utils/calendar-generation/helpers/EventAssembler/buildPlanEvents.ts)) — uncompleted `Planner` rows with `plannerType: "plan"` and a `starts` timestamp, converted to `SimpleEvent` shape. Completed plans render via `buildCompletedEvents` instead.
+3. **Completed events** ([buildCompletedEvents](../utils/calendar-generation/helpers/EventAssembler/buildCompletedEvents.ts)) — tasks/goals/plans with `completedStartTime`/`completedEndTime` set, rendered at their actual completion window (not the originally-scheduled window).
 
-Returns `{ eventArray, memoizedEventIds }`. The ID set is used downstream to prevent the scheduler from re-scheduling already-frozen rows.
+Returns `{ eventArray, memoizedEventIds, previousById }`. The ID set is used downstream to prevent the scheduler from re-scheduling already-frozen rows. `previousById` (previous emits keyed by id) rides into the scheduling context; every event builder passes its candidate through [stabilizeEvent](../utils/calendar-generation/helpers/EventAssembler/stabilizeEvent.ts), which reuses the previous emit's `extendedProps.id` / `createdAt` and returns the previous object outright when nothing meaningful changed — an unchanged placement must diff as a no-op, not a fresh-uuid phantom update (see [`stable-regen.test.ts`](../__tests__/calendar-generation/stable-regen.test.ts)).
 
 ### Phase 3 — Expand templates
 
@@ -199,11 +201,16 @@ This is the most consequential phase. It happens in three sub-steps:
 
 ### Phase 9 — Prepare candidates
 
+Urgency scoring runs once at the top of `CalendarGenerator.execute()` — before validation, before this phase — via [scoreCandidatesAndRootGoals](../utils/calendar-generation/helpers/PrioritySorter/sortByPriorityAndConstraints.ts). The pass covers scheduling candidates (standalone tasks + ready root goals) **plus every top-level uncompleted goal**, so consumers like the dashboard can rank goals the scheduler intentionally skipped (e.g. not-yet-ready ones) using the same denominator (sum of all planner durations). The resulting map is returned in `plannerScores` and passed into this phase.
+
+Scoring itself: tasks without a deadline get `MIN_URGENCY_MULTIPLIER * priority`; tasks with a deadline use a sigmoid over deadline proximity (parameters in `URGENCY_CONFIG`: `CURVE_STEEPNESS: 4`, `CRITICAL_THRESHOLD: 0.7`, scaled into `[URGENCY_SCALE_MIN, URGENCY_SCALE_MAX] = [0.3, 1.0]`).
+
 [prepareCandidates.ts](../utils/calendar-generation/helpers/CalendarGenerator/prepareCandidates.ts) returns the ordered list of planners the scheduler will try:
 
 - Excludes memoized rows.
-- Keeps only ready root goals and all tasks.
-- Sorts via [sortByPriorityAndConstraints](../utils/calendar-generation/helpers/PrioritySorter/sortByPriorityAndConstraints.ts) — two-tier sort: category-constrained items first (because they have fewer eligible slots), then by descending **urgency score**. Urgency is inlined here, not a separate strategy: tasks without a deadline get `MIN_URGENCY_MULTIPLIER * priority`; tasks with a deadline use a sigmoid over deadline proximity (parameters in `URGENCY_CONFIG`: `CURVE_STEEPNESS: 4`, `CRITICAL_THRESHOLD: 0.7`, scaled into `[URGENCY_SCALE_MIN, URGENCY_SCALE_MAX] = [0.3, 1.0]`).
+- Excludes completed tasks — completed items render via `buildCompletedEvents` (Phase 2) and must never re-enter scheduling.
+- Keeps ready root goals, plus tasks whose root ancestor is **not** a goal (standalone tasks and task-rooted subtrees). Tasks inside a goal subtree are owned by the goal's readiness gate — `scheduleGoal` places them when the root is ready, and an unready goal's subtree stays off the calendar entirely. Admitting them individually would make readying a no-op.
+- Sorts via [sortByPriorityAndConstraints](../utils/calendar-generation/helpers/PrioritySorter/sortByPriorityAndConstraints.ts) — two-tier sort: category-constrained items first (because they have fewer eligible slots), then by descending **urgency score** looked up from the precomputed map. Urgency is not a strategy; it is decided here before any slot scoring.
 
 ### Phase 10 — Schedule tasks and goals
 
@@ -211,13 +218,27 @@ Constructs `new Scheduler(timeSlotManager, travelManager, strategy, context)` an
 
 ### Phase 11 — Assemble final events
 
-[assembleFinalEvents.ts](../utils/calendar-generation/helpers/CalendarGenerator/assembleFinalEvents.ts) produces the three output arrays:
+[assembleFinalEvents.ts](../utils/calendar-generation/helpers/CalendarGenerator/assembleFinalEvents.ts) produces three of the output arrays (a fourth output, `plannerScores`, comes from the Phase 9 scoring pass — see above; a fifth, `messages`, comes from Phase 12 — see below):
 
 - **`events`** — memoized + plan + completed + scheduled tasks + templates, with trespass flags stamped via [markTrespassingEvents](../utils/calendar-generation/helpers/EventAssembler/markTrespassingEvents.ts) and template events filtered out at the end via [assembleFinalEventList](../utils/calendar-generation/helpers/EventAssembler/assembleFinalEventList.ts).
 - **`categoryEvents`** — [buildCategoryEvents](../utils/calendar-generation/helpers/EventAssembler/buildCategoryEvents.ts) materializes one `CategoryEvent` per `CategoryTimeWindow` per matching day across the horizon. IDs are composite: `` `${categoryTimeWindowId}|${YYYY-MM-DD-local}` ``. [stampCategoryEventBorders](../utils/calendar-generation/helpers/EventAssembler/stampCategoryEventBorders.ts) propagates `trespassingStart` / `trespassingEnd` flags from category slots and insufficient-travel slots onto the persisted rows.
 - **`travelEvents`** — [generateTravelEvents](../utils/calendar-generation/helpers/TravelManager/generateTravelEvents.ts) merges contiguous shards of each logical travel back into a single `TravelEvent`, keyed by `travelId`.
 
 The horizon for category wrapper expansion is re-derived from the final slot array via [deriveSchedulingHorizon](../utils/calendar-generation/helpers/TimeSlotManager/deriveSchedulingHorizon.ts); the latest slot's end is used, so wrappers extend with any expanded chunks.
+
+### Phase 12 — Emit engine messages
+
+[coalesceMessages.ts](../utils/calendar-generation/helpers/CalendarGenerator/coalesceMessages.ts) (`buildEngineMessages`) reads the Phase 10 failure list plus the Phase 11 output (finalized events + travel events) and produces the persisted `EngineMessage[]` array the console renders. Each per-type emitter writes rows already keyed by their identity tuple, so there is no post-hoc fold:
+
+- **`TASK_TOO_LARGE`** — one row per planner that failed with `TOO_LARGE`. Payload carries `{ duration, maxCapacity }` (structured — the renderer builds the body).
+- **`TASK_UNSCHEDULABLE`** — one row per (plannerId, reason) for every non-`TOO_LARGE` failure. Payload carries `reason` only; prose lives in [renderEngineMessage.ts](../utils/renderEngineMessage.ts) so a copy rewrite doesn't require a data migration.
+- **`SCHEDULED_LATE`** — one row per placed planner event whose scheduled start is after the deadline inherited via parent walk, guarded so completed tasks and not-yet-passed deadlines don't emit.
+- **`INSUFFICIENT_TRAVEL`** — coalesces recurring travel legs by `(from, to, actualMinutes, timeOfDay, dayOfWeek)`; 400 repeats of the same short leg fold to one row with `affectedCount`.
+- **`SCHEDULED_OK`** — one info-tone row per regen with `placedCount` in the id, so a change in count supersedes the prior card. Skipped when count is zero.
+
+Dismissal is user-owned. `buildDismissedSet(previousEngineMessages)` extracts every id whose prior row had `dismissed: true`; when the current emit produces the same id, the flag is carried forward. A fresh id (situation shifted) surfaces as a new, undismissed row. Full identity model and payload shapes live in [models/EngineMessage.ts](../utils/calendar-generation/models/EngineMessage.ts).
+
+The `createdAt` / `updatedAt` fields are left empty on emit — the DB owns them, and `compareCalendarData` strips both sides before comparing so the placeholders don't mark rows spuriously changed.
 
 ---
 
@@ -280,11 +301,11 @@ Static placements (plans, templates, category-wrapper travel) are always flush w
 - Per iteration: compute `placementCutoffDate = lastPlaceableSlotEnd − PLACEMENT_BUFFER_DAYS`.
 - **Proactive expansion check**: count Available slots. Trigger [expandSlots](../utils/calendar-generation/helpers/Scheduler/expandSlots.ts) if either:
   - `availableCount < LOW_SLOT_WATERMARK`, **or**
-  - The largest compatible slot for the biggest remaining task is smaller than that task's duration ([largestCompatibleSlotForLargestTask](../utils/calendar-generation/helpers/Scheduler/capacityCheck.ts)).
+  - The largest compatible slot for the biggest remaining candidate is smaller than that candidate's **effective duration** ([largestCompatibleSlotForLargestTask](../utils/calendar-generation/helpers/Scheduler/capacityCheck.ts)). Effective duration (`effectiveCandidateDuration`) is the item's own duration for tasks, but for goals it is the **largest uncompleted leaf** — `scheduleGoal` places leaves one at a time, so the subtree aggregate is the wrong unit. Comparing the aggregate here made the watermark permanently true for any substantial ready goal, and the loop burned its whole expansion budget on `continue`s without attempting a single placement.
   - Then `continue` (skip the forward pass and re-check on the expanded array).
-- **Forward pass**: walk candidates in reverse, calling [scheduleSingleTask](../utils/calendar-generation/helpers/Scheduler/scheduleSingleTask.ts) for tasks and [scheduleGoal](../utils/calendar-generation/helpers/Scheduler/scheduleGoal.ts) for goals. Splice out anything that scheduled or permanently failed; retain rows that failed with `NO_SLOTS` for retry.
+- **Forward pass**: walk candidates **in sorted order** (category-constrained and highest-urgency first — matching the Phase 9 sort), calling [scheduleSingleTask](../utils/calendar-generation/helpers/Scheduler/scheduleSingleTask.ts) for tasks and [scheduleGoal](../utils/calendar-generation/helpers/Scheduler/scheduleGoal.ts) for goals. Resolved ids (scheduled or permanently failed) are collected during the walk and removed after the pass; rows that failed with `NO_SLOTS` are retained for retry. (The old reverse-index splice idiom handed first pick to the lowest-urgency item under contention, inverting the sorter's intent.)
 - **Reactive backstop**: if candidates remain after a full forward pass, run `expandSlots` and loop again.
-- Stops when candidates empty or `expansionsDone ≥ MAX_WEEKS_TO_SEARCH`.
+- Stops when candidates empty or `expansionsDone ≥ MAX_WEEKS_TO_SEARCH`. Candidates still standing at budget exhaustion each push a `NO_SLOTS` failure — this exit used to be silent, which let a starved run report `SCHEDULED_OK` with zero events while the diff sync deleted every previously placed event.
 
 ### Goals
 
@@ -378,11 +399,18 @@ The slot horizon is bounded — initial build covers `HORIZON_CHUNK_DAYS = 28` d
 
 ### Why proactive expansion matters
 
-Without the proactive watermark check, the scheduler would burn iterations on tasks that can't possibly fit before triggering reactive expansion. Detecting "biggest task > biggest compatible slot" before the forward pass starts cuts straight to the expansion step.
+Without the proactive watermark check, the scheduler would burn iterations on tasks that can't possibly fit before triggering reactive expansion. Detecting "biggest candidate > biggest compatible slot" before the forward pass starts cuts straight to the expansion step. The comparison must use `effectiveCandidateDuration` (goals sized as their largest uncompleted leaf, excluding leaves already placed or memoized) — see Section 6 for the starvation failure mode when the goal aggregate is used instead. The watermark must also resolve category constraints against the same window-bearing category set placement uses (`scheduledCategories`): a classification-only category (no time windows) is unconstrained at placement, and treating it as constraining here demands category slots that can never exist — the loop then spends its whole expansion budget on watermark `continue`s and the placement walk never runs.
 
 ### Regression coverage
 
-[`__tests__/calendar-generation/expansion-seam.test.ts`](../__tests__/calendar-generation/expansion-seam.test.ts) is the only test currently in the engine's test directory. It is narrower than the section title implies: it guards the `CategoryEvent` ID format (`` `${categoryTimeWindowId}|${YYYY-MM-DD-local}` ``) by running `generateCalendar` with a single Plan three weeks out (which forces expansion) and asserting that every produced `CategoryEvent` ID matches the local-date pattern. The diff layer and the DB schema depend on this composite ID; a regression to UTC-instant keying would diverge near midnight UTC and would be caught here.
+Four tests live in [`__tests__/calendar-generation/`](../__tests__/calendar-generation/):
+
+- [`expansion-seam.test.ts`](../__tests__/calendar-generation/expansion-seam.test.ts) — guards the `CategoryEvent` ID format (`` `${categoryTimeWindowId}|${YYYY-MM-DD-local}` ``) by running `generateCalendar` with a single Plan three weeks out (which forces expansion) and asserting that every produced `CategoryEvent` ID matches the local-date pattern. The diff layer and the DB schema depend on this composite ID; a regression to UTC-instant keying would diverge near midnight UTC and would be caught here.
+- [`ready-goal-watermark.test.ts`](../__tests__/calendar-generation/ready-goal-watermark.test.ts) — guards the three watermark starvation modes: a ready root goal must place every leaf even when the subtree aggregate exceeds any slot, when its `categoryId` names a windowless (classification-only) category, and when a memoized past leaf would otherwise inflate the goal's effective size.
+- [`ready-gate.test.ts`](../__tests__/calendar-generation/ready-gate.test.ts) — guards the Phase 9 readiness gate: a NOT-ready goal's subtree schedules nothing, while standalone tasks next to it still place.
+- [`completed-task-not-rescheduled.test.ts`](../__tests__/calendar-generation/completed-task-not-rescheduled.test.ts) — guards the Phase 9 completed-task filter: a completed task under a ready goal renders exactly once, at its completion window, and never re-enters the scheduler.
+
+All but the seam test run against a trimmed live-data snapshot in `fixtures/` — hand-built minimal fixtures don't produce a valid slot fabric and fail silently, so new engine tests should extend the fixture pattern.
 
 ---
 
@@ -402,7 +430,7 @@ Returns `min(categoryCeiling, largestGap)`. Cached per `taskCategoryId ?? "anywh
 
 ### `largestCompatibleSlotForLargestTask`
 
-Same module, used by the proactive expansion check. Walks the slot array and returns the largest currently-existing slot the biggest remaining candidate could land in, honoring category strictness and the `placementCutoffDate`.
+Same module, used by the proactive expansion check. Walks the slot array and returns the largest currently-existing slot the caller-supplied biggest remaining candidate could land in, honoring category strictness and the `placementCutoffDate`. The biggest candidate is selected once per outer-loop iteration in `scheduleTasksAndGoals` by `effectiveCandidateDuration` (same module) and shared with the watermark comparison: a task's own duration, but a goal's **largest uncompleted, still-placeable leaf** — never the subtree aggregate (see Section 6), and never a leaf that is memoized or already placed this run. Category constraints are resolved against the caller-supplied `schedulableCategoryIds` (the window-bearing categories) so the watermark agrees with `findValidSlots` about which tasks are actually constrained.
 
 ---
 
@@ -460,7 +488,7 @@ DEFAULT_LOCATION_GROUPING_PENALTIES = {
 
 [buildSchedulingStrategy.ts](../utils/calendar-generation/helpers/CalendarGenerator/buildSchedulingStrategy.ts) always includes `EarliestSlotStrategy`. `LocationGroupingStrategy` is added only if a `travelTimeMatrix` was supplied. Weights default to `DEFAULT_STRATEGY_WEIGHTS` but can be overridden per call.
 
-> Note: task urgency / deadline prioritization is **not** a strategy. It happens once in `sortByPriorityAndConstraints` before any slot scoring.
+> Note: task urgency / deadline prioritization is **not** a strategy. Scores are computed once at the top of `CalendarGenerator.execute()` via `scoreCandidatesAndRootGoals` and consumed by `sortByPriorityAndConstraints` before any slot scoring.
 
 ---
 
@@ -531,7 +559,7 @@ The engine has a built-in switchboard at [calendarGeneration.ts:78–94](../util
 | `planners` / `templates` / `locations` | Echo of input |
 | `strategySettings` | Active strategy weights / scores / penalties |
 | `staticEventTravelPass` | Per-slot decision/action trail of every static pass (preliminary plus each `resume@<date>` expansion) — set via [TravelPassRecorder](../utils/calendar-generation/helpers/TravelManager/TravelPassRecorder.ts), formatted via [travelPassMessages](../utils/calendar-generation/helpers/TravelManager/travelPassMessages.ts) |
-| `dynamicScheduling` | Per-task decision/action trail of every dynamic placement — set via [SchedulerRecorder](../utils/calendar-generation/helpers/Scheduler/SchedulerRecorder.ts), formatted via [schedulerMessages](../utils/calendar-generation/helpers/Scheduler/schedulerMessages.ts) |
+| `dynamicScheduling` | Per-task decision/action trail of every dynamic placement — set via [SchedulerRecorder](../utils/calendar-generation/helpers/Scheduler/SchedulerRecorder.ts), formatted via [schedulerMessages](../utils/calendar-generation/helpers/Scheduler/schedulerMessages.ts). A `COMPACT` constant in [loggingUtils.ts](../utils/calendar-generation/utils/loggingUtils.ts) (default `true`) prints only task headers + outcomes — one screenful per regen instead of a slot-dump avalanche; flip it off for the full decision/action/end-state trail on a task under investigation |
 | `dateRangeStart` / `dateRangeEnd` | Inclusive bounds applied to event-based dumps (`finalEvents`, `leanCalendar`, `travelDebug`) and the recorder trails. Either can be `null` to leave that side open. |
 
 When investigating a misplaced travel block or a task that ended up in the wrong slot:
@@ -583,16 +611,17 @@ CalendarGenerator.generate()
    ├─ (10) Scheduler.scheduleTasksAndGoals
    │         │
    │         ▼
-   │       loop while candidates remain:
+   │       loop while candidates remain (≤ MAX_WEEKS_TO_SEARCH expansions):
    │         compute placementCutoffDate
-   │         proactive expansion check (watermark / largest-task vs largest-compatible-slot)
+   │         proactive expansion check (watermark / effective-duration vs largest-compatible-slot)
    │           → if needed: expandSlots → continue
    │         forward pass:
-   │           for each candidate in reverse:
+   │           for each candidate in sorted order:
    │             scheduleSingleTask / scheduleGoal
    │               → scheduleTask: validate → findValid → selectBest → reserve → buildEvent
-   │             splice on scheduled or permanent failure
+   │             collect resolved ids; remove after the pass
    │         if candidates remain → expandSlots (reactive backstop)
+   │       leftover candidates at budget exhaustion → loud NO_SLOTS failures
    │
    ├─ (11) deriveSchedulingHorizon → assembleFinalEvents
    │         → events, categoryEvents, travelEvents
@@ -618,4 +647,4 @@ CalendarGenerator.generate()
 - **CategoryEvent ID is local-date keyed.** `` `${windowId}|${YYYY-MM-DD-local}` ``. Never derive the date component from the UTC instant — the diff layer assumes local. See [`expansion-seam.test.ts`](../__tests__/calendar-generation/expansion-seam.test.ts).
 - **Template events are filtered out of `events`.** They're consumed by the slot builder (as `PerTemplateMask[]`), not surfaced in the final `SimpleEvent[]`. The renderer reads recurring template instances separately.
 - **Trespass flags propagate from slots to `CategoryEvent` rows.** Don't compute trespass in the renderer — the engine writes it via `stampCategoryEventBorders` so cold loads render correctly.
-- **Urgency is inlined, not a strategy.** Strategy weights affect *slot scoring* only. Task ordering by urgency/deadline happens once in `sortByPriorityAndConstraints` before any strategy runs.
+- **Urgency is not a strategy.** Strategy weights affect *slot scoring* only. Urgency scores are computed once at the top of `CalendarGenerator.execute()` (via `scoreCandidatesAndRootGoals`, which also covers non-candidate root goals so the dashboard can rank them) and consumed by `sortByPriorityAndConstraints` before any strategy runs. The same map is returned as `plannerScores`.

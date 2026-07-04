@@ -1,9 +1,34 @@
-import { Planner, Category } from "@/types/prisma";
+import { Planner, Category, PlannerType } from "@/types/prisma";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { Slot } from "../../models/TimeSlot";
 import { gapIntervalsForDay } from "../TemplateExpander/gapIntervalsForDay";
 import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
 import { dateTimeService } from "../../utils/dateTimeService";
+import { getTreeBottomLayer } from "../../../goalPageHandlers";
+import { taskIsCompleted } from "../../../taskHelpers";
+
+// A goal candidate is never placed as one block — scheduleGoal places its
+// leaves one at a time — so for watermark/fit purposes its size is its
+// largest uncompleted leaf, not the subtree aggregate. Treating the
+// aggregate as a block made `biggestFit < biggestRemaining` permanently
+// true for any substantial ready goal: the scheduling loop then burned its
+// whole expansion budget on watermark `continue`s and exited without
+// attempting a single candidate — silently, since nothing ever failed.
+// Leaves the scheduler will never attempt (memoized past events, already
+// placed this run) must be excluded for the same reason: sizing the goal by
+// a leaf that can't be placed pins the watermark just like the aggregate did.
+export function effectiveCandidateDuration(
+  item: Planner,
+  allPlanners: Planner[],
+  excludedLeafIds?: Set<string>,
+): number {
+  if (item.plannerType !== PlannerType.goal) return item.duration;
+  const leaves = getTreeBottomLayer(allPlanners, item.id).filter(
+    (t) => !taskIsCompleted(t) && !excludedLeafIds?.has(t.id),
+  );
+  if (leaves.length === 0) return 0;
+  return Math.max(...leaves.map((l) => l.duration));
+}
 
 // Max usable duration in a single category window, ignoring everything else.
 // Handles midnight wrap the same way expandSlotForDay does so the result is
@@ -120,30 +145,36 @@ export function maxEffectiveCapacityFor(
 }
 
 // Walks the current slot array and returns the largest slot the scheduler
-// would accept for the biggest remaining candidate. Mirrors the predicate in
-// findAllFittingSlots: categorized task → only matching-category slots;
-// uncategorized task → Available + non-strict-category slots. Used by the
-// proactive expansion watermark in scheduleTasksAndGoals to decide whether to
-// extend the horizon before attempting the next placement.
+// would accept for `biggest` — the caller-supplied biggest remaining candidate
+// (by effectiveCandidateDuration; computed once per iteration in
+// scheduleTasksAndGoals and shared with the watermark comparison). Mirrors the
+// predicate in findAllFittingSlots: categorized task → only matching-category
+// slots; uncategorized task → Available + non-strict-category slots. Used by
+// the proactive expansion watermark in scheduleTasksAndGoals to decide whether
+// to extend the horizon before attempting the next placement.
 // placementCutoffDate (tail buffer) is respected the same way findAllFittingSlots
 // honors it, so the watermark agrees with what the scheduler will actually
 // see — otherwise the watermark could report "we have room" while every fit
 // lies inside the buffer zone.
+// schedulableCategoryIds is the set of categories that actually constrain
+// geometry (useTimeWindows + windows) — the same filter findValidSlots
+// applies via context.categories. A categoryId outside it (classification-
+// only category) must be treated as unconstrained here too, or the watermark
+// demands category slots that can never exist and starves the placement walk.
 export function largestCompatibleSlotForLargestTask(
-  candidates: Planner[],
+  biggest: Planner | null,
   slots: Slot[],
   plannerCategoryMap: Map<string, string | null>,
-  placementCutoffDate?: Date | null,
+  placementCutoffDate: Date | null | undefined,
+  schedulableCategoryIds: Set<string>,
 ): number {
-  if (candidates.length === 0) return 0;
-
-  let biggest: Planner | null = null;
-  for (const c of candidates) {
-    if (!biggest || c.duration > biggest.duration) biggest = c;
-  }
   if (!biggest) return 0;
 
-  const taskCategoryId = plannerCategoryMap.get(biggest.id) ?? null;
+  const rawCategoryId = plannerCategoryMap.get(biggest.id) ?? null;
+  const taskCategoryId =
+    rawCategoryId && schedulableCategoryIds.has(rawCategoryId)
+      ? rawCategoryId
+      : null;
   const cutoffMs = placementCutoffDate?.getTime();
 
   let largest = 0;

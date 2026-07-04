@@ -25,9 +25,15 @@ import { WeekDayIntegers } from "@/types/calendarTypes";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
 import type { UserSettings } from "@/types/userTypes";
 
-import useCalendarStateActions from "@/hooks/useCalendarStateActions";
+import useCalendarStateActions, {
+  type CalendarUpdateOptions,
+} from "@/hooks/useCalendarStateActions";
 import useManuallyRefreshCalendar from "@/hooks/useManuallyRefreshCalendar";
 import useCalendarServerSync from "@/hooks/useCalendarServerSync";
+import type {
+  SerializedLocation,
+  SerializedTravelTime,
+} from "@/redux/slices/schedulingSettingsSlice";
 import { buildInheritedLocationMap, InheritedLocationInfo } from "@/utils/goalPageHandlers";
 
 type CalendarContextType = {
@@ -40,19 +46,47 @@ type CalendarContextType = {
   categories: Category[];
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
-  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>;
-  updateCalendarArray: React.Dispatch<React.SetStateAction<SimpleEvent[]>>;
+  locations: SerializedLocation[];
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[]),
+    options?: CalendarUpdateOptions,
+  ) => void;
   updateTemplateArray: React.Dispatch<React.SetStateAction<EventTemplate[]>>;
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
     calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
-    template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
+    template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
+    categories?: Category[] | ((prev: Category[]) => Category[]),
+    options?: CalendarUpdateOptions,
   ) => void;
   manuallyRefreshCalendar: () => void;
   inheritedLocationMap: Map<string, InheritedLocationInfo>;
+  // Direct server actions that bypass the diff sync (Location create needs
+  // Google Places, travel-time refresh needs Google distances) must call this
+  // after dispatching their result to Redux, or the next sync pass treats the
+  // new rows as missing-on-server and re-sends them as creates.
+  markSynced: (
+    kind: "categories" | "locations" | "travelTimes",
+    current: Category[] | SerializedLocation[] | SerializedTravelTime[],
+  ) => void;
 };
 
 const CalendarContext = createContext<CalendarContextType | null>(null);
+
+// Static render config — module-level so the context value memo isn't
+// invalidated by a fresh object literal every render.
+const USER_SETTINGS: UserSettings = {
+  styles: {
+    events: {
+      borderRadius: "0",
+      completedColor: "#0ebf7e",
+      errorColor: "#ef4444",
+    },
+    template: { event: { borderLeft: "4px solid black" } },
+    calendar: { event: { borderLeft: "4px solid #ADD8E6" } },
+    travel: { event: { borderLeft: "5px solid #70757F" } },
+  },
+};
 
 export default function CalendarProvider({
   children,
@@ -61,46 +95,43 @@ export default function CalendarProvider({
 }) {
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.user.user);
-  const calendarState = useSelector((state: RootState) => state.calendar);
+
+  // Field-level subscriptions instead of whole-slice: a write to a field the
+  // provider doesn't read (e.g. plannerScores after an engine run) no longer
+  // re-renders the provider tree.
+  const planner = useSelector((state: RootState) => state.calendarSource.planner);
+  const template = useSelector(
+    (state: RootState) => state.calendarSource.template,
+  );
+  const categories = useSelector(
+    (state: RootState) => state.calendarSource.categories,
+  );
   const isCalendarLoaded = useSelector(
-    (state: RootState) => state.calendar.isLoaded,
+    (state: RootState) => state.calendarSource.isLoaded,
+  );
+  const calendar = useSelector(
+    (state: RootState) => state.engineOutput.calendar,
+  );
+  const categoryEvents = useSelector(
+    (state: RootState) => state.engineOutput.categoryEvents,
+  );
+  const travelEvents = useSelector(
+    (state: RootState) => state.engineOutput.travelEvents,
+  );
+  const engineMessages = useSelector(
+    (state: RootState) => state.engineOutput.engineMessages,
   );
 
   const userId = user?.id;
-  const userSettings = {
-    styles: {
-      events: {
-        borderRadius: "0",
-        completedColor: "#0ebf7e",
-        errorColor: "#ef4444",
-      },
-      template: { event: { borderLeft: "4px solid black" } },
-      calendar: { event: { borderLeft: "4px solid #ADD8E6" } },
-      travel: { event: { borderLeft: "5px solid #70757F" } },
-    },
-  };
-
-  const {
-    planner,
-    calendar,
-    template,
-    categories,
-    categoryEvents,
-    travelEvents,
-  } = calendarState;
 
   const weekStartDay: WeekDayIntegers = 1;
 
-  const {
-    updatePlannerArray,
-    updateCalendarArray,
-    updateTemplateArray,
-    updateAll,
-  } = useCalendarStateActions(dispatch);
+  const { updatePlannerArray, updateTemplateArray, updateAll } =
+    useCalendarStateActions(dispatch);
 
   const manuallyRefreshCalendar = useManuallyRefreshCalendar(
     userId,
-    calendarState,
+    { planner, calendar, template, categories },
     weekStartDay,
     dispatch
   );
@@ -138,14 +169,13 @@ export default function CalendarProvider({
     if (!isInitialColdLoadRef.current) return;
     if (!isCalendarLoaded || autoregenFired.current || !userId) return;
     const hasNoChrome =
-      calendarState.categoryEvents.length === 0 &&
-      calendarState.travelEvents.length === 0;
+      categoryEvents.length === 0 && travelEvents.length === 0;
     // Tighter than `categories.length > 0` — a category without time windows
     // produces nothing, so firing autoregen wouldn't change hasNoChrome and
     // the next render would re-evaluate as still-empty.
     const hasSomethingToMaterialize =
-      calendarState.categories.some((c) => c.timeSlots.length > 0) ||
-      calendarState.planner.some((p) => p.locationId);
+      categories.some((c) => c.timeSlots.length > 0) ||
+      planner.some((p) => p.locationId);
     if (hasNoChrome && hasSomethingToMaterialize) {
       autoregenFired.current = true;
       updateAll();
@@ -154,17 +184,43 @@ export default function CalendarProvider({
     isCalendarLoaded,
     userId,
     updateAll,
-    calendarState.categoryEvents.length,
-    calendarState.travelEvents.length,
-    calendarState.categories,
-    calendarState.planner,
+    categoryEvents.length,
+    travelEvents.length,
+    categories,
+    planner,
   ]);
 
+  // Only the sync-relevant arrays — ephemeral fields (plannerScores,
+  // lastEngineRunAt, isLoaded) live outside this object, so they can't
+  // invalidate it and wake the sync effect.
   const syncState = useMemo(
-    () => ({ ...calendarState, locations, travelTimes }),
-    [calendarState, locations, travelTimes],
+    () => ({
+      planner,
+      calendar,
+      template,
+      categories,
+      categoryEvents,
+      travelEvents,
+      engineMessages,
+      locations,
+      travelTimes,
+    }),
+    [
+      planner,
+      calendar,
+      template,
+      categories,
+      categoryEvents,
+      travelEvents,
+      engineMessages,
+      locations,
+      travelTimes,
+    ],
   );
-  const { initializeState } = useCalendarServerSync(userId, syncState);
+  const { initializeState, markSynced } = useCalendarServerSync(
+    userId,
+    syncState,
+  );
 
   useFetchCalendarData(userId, initializeState);
 
@@ -173,25 +229,51 @@ export default function CalendarProvider({
     [planner, categories, locations]
   );
 
-  if (!userId) return null;
+  // Memoized so a provider re-render (any calendar-slice write) only reaches
+  // consumers when something they can read actually changed — every event
+  // tile and popover subscribes to this context.
+  const value = useMemo<CalendarContextType | null>(
+    () =>
+      userId
+        ? {
+            userId,
+            userSettings: USER_SETTINGS,
+            weekStartDay,
+            planner,
+            calendar,
+            template,
+            categories,
+            categoryEvents,
+            travelEvents,
+            locations,
+            updatePlannerArray,
+            updateTemplateArray,
+            updateAll,
+            manuallyRefreshCalendar,
+            inheritedLocationMap,
+            markSynced,
+          }
+        : null,
+    [
+      userId,
+      weekStartDay,
+      planner,
+      calendar,
+      template,
+      categories,
+      categoryEvents,
+      travelEvents,
+      locations,
+      updatePlannerArray,
+      updateTemplateArray,
+      updateAll,
+      manuallyRefreshCalendar,
+      inheritedLocationMap,
+      markSynced,
+    ],
+  );
 
-  const value = {
-    userId,
-    userSettings,
-    weekStartDay,
-    planner,
-    calendar,
-    template,
-    categories,
-    categoryEvents,
-    travelEvents,
-    updatePlannerArray,
-    updateCalendarArray,
-    updateTemplateArray,
-    updateAll,
-    manuallyRefreshCalendar,
-    inheritedLocationMap,
-  };
+  if (!value) return null;
 
   return (
     <CalendarContext.Provider value={value}>

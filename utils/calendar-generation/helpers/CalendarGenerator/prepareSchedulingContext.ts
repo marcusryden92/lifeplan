@@ -23,6 +23,7 @@ export function prepareSchedulingContext(
   plannerLocationMap: Map<string, string | null>,
   plannerCategoryMap: Map<string, string | null>,
   schedulerRecorder: SchedulerRecorder | null,
+  previousCalendarById?: Map<string, SimpleEvent>,
 ): SchedulingContext {
   const categoryById = new Map<string, Category>(
     scheduledCategories.map((c) => [c.id, c]),
@@ -39,5 +40,6 @@ export function prepareSchedulingContext(
     plannerLocationMap,
     plannerCategoryMap,
     schedulerRecorder,
+    previousCalendarById,
   };
 }

@@ -44,14 +44,18 @@ export const newPassword = async (
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  await db.user.update({
-    where: { id: existingUser.id },
-    data: { password: hashedPassword },
-  });
-
-  await db.passwordResetToken.delete({
-    where: { id: existingToken.id },
-  });
+  // One transaction so a used token can't survive a failed update (or vice
+  // versa). passwordChangedAt invalidates every session issued before now —
+  // the point of a reset is usually that someone else may hold a session.
+  await db.$transaction([
+    db.user.update({
+      where: { id: existingUser.id },
+      data: { password: hashedPassword, passwordChangedAt: new Date() },
+    }),
+    db.passwordResetToken.delete({
+      where: { id: existingToken.id },
+    }),
+  ]);
 
   return { success: "Password updated!" };
 };

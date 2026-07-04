@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+﻿import { style } from "@vanilla-extract/css";
 import {
   vars,
   collapseTransition,
@@ -6,18 +6,20 @@ import {
   DURATIONS,
   popover,
   backdropFilters,
+  radii,
+  space,
 } from "@/lib/theme";
 
 export const sidebar = style({
   flexShrink: 0,
-  borderRight: `1px solid ${vars.rule}`,
+  boxShadow: `1px 0 0 ${vars.rule}`,
   background: vars.glass.bg,
   backdropFilter: backdropFilters.panel,
   WebkitBackdropFilter: backdropFilters.panel,
-  padding: "10px",
+  padding: "15px",
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: space["2"],
   position: "relative",
   zIndex: 2,
   width: 208,
@@ -30,7 +32,7 @@ export const sidebar = style({
 });
 
 export const brand = style({
-  padding: "4px 5px 18px",
+  padding: "0 0 18px",
   display: "flex",
   alignItems: "center",
   whiteSpace: "nowrap",
@@ -40,7 +42,7 @@ export const brand = style({
 export const brandLogo = style({
   width: 30,
   height: 30,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.ink,
   flexShrink: 0,
 });
@@ -67,14 +69,15 @@ export const brandText = style({
 });
 
 export const navItem = style({
-  height: 38,
-  padding: "0 4px",
+  height: 30,
+  margin: 0,
+  padding: 0,
   display: "flex",
   alignItems: "center",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   textAlign: "left",
   background: "transparent",
-  border: "1px solid transparent",
+  border: "none",
   color: vars.inkSoft,
   fontSize: 13.5,
   fontWeight: 500,
@@ -86,7 +89,7 @@ export const navItem = style({
   transition: buttonTransition,
   selectors: {
     "&:hover": {
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
       color: vars.ink,
     },
   },
@@ -94,10 +97,9 @@ export const navItem = style({
 
 export const navItemActive = style({
   background: vars.glass.bgDeep,
-  border: `1px solid ${vars.glass.stroke}`,
   color: vars.ink,
   fontWeight: 600,
-  boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
+  boxShadow: `inset 0 0 0 1px ${vars.glass.stroke}, inset 0 1px 0 ${vars.glass.hi}`,
 });
 
 export const navGlyph = style({
@@ -130,9 +132,15 @@ export const navLabel = style({
 
 export const spacer = style({ flex: 1 });
 
+export const navDivider = style({
+  height: 1,
+  background: vars.rule,
+  flexShrink: 0,
+});
+
 export const footerRow = style({
-  padding: "12px 5px 4px",
-  // Reset button borders explicitly per side so the top divider survives — a
+  padding: "12px 0 0",
+  // Reset button borders explicitly per side so the top divider survives â€” a
   // shorthand `border: "none"` would clobber the borderTop set below.
   borderRight: "none",
   borderBottom: "none",
@@ -140,7 +148,6 @@ export const footerRow = style({
   borderTop: `1px solid ${vars.rule}`,
   display: "flex",
   alignItems: "center",
-  marginTop: 8,
   background: "transparent",
   color: "inherit",
   cursor: "pointer",
@@ -173,7 +180,7 @@ export const userMenuItem = style({
   gap: 10,
   padding: "8px 10px",
   border: "none",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   background: "transparent",
   color: vars.ink,
   fontFamily: vars.font.ui,
@@ -184,7 +191,7 @@ export const userMenuItem = style({
   textDecoration: "none",
   transition: buttonTransition,
   selectors: {
-    "&:hover": { background: vars.glass.bgSoft },
+    "&:hover": { background: vars.interactive.hoverFill },
   },
 });
 
@@ -203,7 +210,7 @@ export const userMenuIcon = style({
 export const avatar = style({
   width: 30,
   height: 30,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: `linear-gradient(135deg, ${vars.accent.secondary}, ${vars.accent.primary})`,
   display: "grid",
   placeItems: "center",

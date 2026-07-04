@@ -16,7 +16,9 @@ export const display = styleVariants({
   bigStat: [baseDisplay, { fontSize: 44, letterSpacing: "-0.045em" }],
   pageTitle: [baseDisplay, { fontSize: 32, letterSpacing: "-0.03em" }],
   statCard: [baseDisplay, { fontSize: 26, letterSpacing: "-0.04em" }],
+  modalTitle: [baseDisplay, { fontSize: 22, letterSpacing: "-0.02em" }],
   sectionHead: [baseDisplay, { fontSize: 20, letterSpacing: "-0.02em" }],
+  panelTitle: [baseDisplay, { fontSize: 18, letterSpacing: "-0.02em" }],
   listTitle: [baseDisplay, { fontSize: 16, letterSpacing: "-0.02em" }],
 });
 
@@ -24,6 +26,9 @@ export const text = styleVariants({
   body: [baseUI, { fontSize: 13, fontWeight: 500 }],
   bodyLg: [baseUI, { fontSize: 14, fontWeight: 500 }],
   bodySm: [baseUI, { fontSize: 12.5, fontWeight: 500 }],
+  row: [baseUI, { fontSize: 13.5, fontWeight: 500 }],
+  label: [baseUI, { fontSize: 11.5, fontWeight: 500 }],
+  microLabel: [baseUI, { fontSize: 11, fontWeight: 500 }],
 });
 
 export const caption = style([

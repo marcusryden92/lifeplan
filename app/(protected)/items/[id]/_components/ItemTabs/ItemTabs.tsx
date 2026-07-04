@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import {
   tabsStrip,
   tab,
   tabActive,
   tabCount,
   tabDisabled,
+  tabSpacer,
+  assistantTrigger,
 } from "./ItemTabs.css";
 
 interface Tab {
@@ -22,19 +25,20 @@ interface ItemTabsProps {
   itemId: string;
   subtaskCount: number;
   subtasksEnabled: boolean;
+  onOpenAssistant?: () => void;
 }
 
 export function ItemTabs({
   itemId,
   subtaskCount,
   subtasksEnabled,
+  onOpenAssistant,
 }: ItemTabsProps) {
   const pathname = usePathname();
   const base = `/items/${itemId}`;
 
   const tabs: Tab[] = [
     { key: "overview", label: "Overview", href: base },
-    { key: "schedule", label: "Schedule", href: `${base}/schedule` },
     {
       key: "subtasks",
       label: "Subtasks",
@@ -42,7 +46,7 @@ export function ItemTabs({
       count: subtaskCount,
       disabled: !subtasksEnabled,
     },
-    { key: "activity", label: "Activity", href: `${base}/activity` },
+    { key: "schedule", label: "Schedule", href: `${base}/schedule` },
   ];
 
   return (
@@ -86,6 +90,20 @@ export function ItemTabs({
           </Link>
         );
       })}
+      {onOpenAssistant && (
+        <>
+          <span className={tabSpacer} />
+          <button
+            type="button"
+            className={assistantTrigger}
+            onClick={onOpenAssistant}
+            aria-label="Open AI assistant"
+          >
+            <Sparkles size={13} strokeWidth={2} />
+            <span>AI assistant</span>
+          </button>
+        </>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
-import { getUserByEmail } from "@/data/user";
+import { getUserByEmail, getUserById } from "@/data/user";
 import { getVerificationTokenByToken } from "@/data/verificationToken";
 
 export const newVerification = async (token: string) => {
@@ -17,10 +17,21 @@ export const newVerification = async (token: string) => {
     return { error: "Token has expired" };
   }
 
-  const existingUser = await getUserByEmail(existingToken.email);
+  // Email-change tokens carry the userId (the new address has no user row
+  // yet); registration tokens resolve by email.
+  const existingUser = existingToken.userId
+    ? await getUserById(existingToken.userId)
+    : await getUserByEmail(existingToken.email);
 
   if (!existingUser) {
     return { error: "Email does not exist!" };
+  }
+
+  // The address may have been claimed by another account between the request
+  // and the click — bail instead of hitting the unique constraint.
+  const emailOwner = await getUserByEmail(existingToken.email);
+  if (emailOwner && emailOwner.id !== existingUser.id) {
+    return { error: "Email is already in use." };
   }
 
   await db.user.update({

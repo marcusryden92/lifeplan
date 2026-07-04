@@ -1,7 +1,6 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, glass } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, glass, media, radii } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const page = style({
   display: "flex",
@@ -17,7 +16,7 @@ export const subHeader = style({
   padding: "20px 28px 18px",
   flexShrink: 0,
   "@media": {
-    [MOBILE]: { padding: "16px 16px 12px", flexWrap: "wrap", gap: 10 },
+    [media.mobile]: { padding: "16px 16px 12px", flexWrap: "wrap", gap: 10 },
   },
 });
 
@@ -30,7 +29,7 @@ export const pageTitle = style({
   lineHeight: 1,
   margin: 0,
   transition: themeTransition,
-  "@media": { [MOBILE]: { fontSize: 24 } },
+  "@media": { [media.mobile]: { fontSize: 24 } },
 });
 
 export const titleSummary = style({
@@ -64,7 +63,7 @@ export const mainGrid = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       gridTemplateColumns: "1fr",
       padding: "0 16px 24px",
       gap: 14,
@@ -88,7 +87,7 @@ export const subnavItem = style({
   alignItems: "center",
   gap: 10,
   padding: "10px 12px",
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   border: `1px solid transparent`,
   background: "transparent",
   color: vars.ink,
@@ -99,7 +98,7 @@ export const subnavItem = style({
   cursor: "pointer",
   transition: themeTransition,
   selectors: {
-    "&:hover": { background: vars.glass.bgSoft },
+    "&:hover": { background: vars.interactive.hoverFill },
   },
 });
 
@@ -182,7 +181,7 @@ export const card = style([
     display: "flex",
     flexDirection: "column",
     gap: 14,
-    "@media": { [MOBILE]: { padding: 16, borderRadius: 14 } },
+    "@media": { [media.mobile]: { padding: 16, borderRadius: radii["md+2"] } },
   },
 ]);
 
@@ -200,7 +199,7 @@ export const fieldGrid = style({
   display: "grid",
   gridTemplateColumns: "repeat(2, 1fr)",
   gap: 12,
-  "@media": { [MOBILE]: { gridTemplateColumns: "1fr" } },
+  "@media": { [media.mobile]: { gridTemplateColumns: "1fr" } },
 });
 
 export const field = style({
@@ -221,7 +220,7 @@ export const fieldLabel = style({
 
 export const fieldInput = style({
   padding: "10px 12px",
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   border: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
   color: vars.ink,
@@ -281,7 +280,7 @@ export const toggleSwitch = style({
   position: "relative",
   width: 36,
   height: 20,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
   cursor: "pointer",
@@ -301,7 +300,7 @@ export const toggleKnob = style({
   left: 1,
   width: 16,
   height: 16,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.paper,
   transition: `transform ${0.18}s ease, background ${0.18}s ease`,
 });
@@ -322,7 +321,7 @@ export const transportBtn = style({
   alignItems: "center",
   gap: 6,
   padding: "12px 8px",
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   border: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
   color: vars.ink,
@@ -350,7 +349,7 @@ export const providerRow = style({
   alignItems: "center",
   gap: 12,
   padding: "10px 12px",
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   border: `1px solid ${vars.rule}`,
   background: "transparent",
   transition: themeTransition,
@@ -359,7 +358,7 @@ export const providerRow = style({
 export const providerIcon = style({
   width: 28,
   height: 28,
-  borderRadius: 8,
+  borderRadius: radii.sm,
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -432,7 +431,7 @@ export const comingSoonTitle = style({
 
 export const dangerNote = style({
   padding: "12px 14px",
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   border: `1px solid ${vars.status.error}`,
   background: vars.glass.bgSoft,
   color: vars.status.error,

@@ -9,6 +9,7 @@ import {
   CategoryTimeWindow,
   CategoryEvent,
   TravelEvent,
+  EngineMessage,
 } from "@/types/prisma";
 import type {
   SerializedLocation,
@@ -33,6 +34,7 @@ type CategoryChange = Omit<Category, "timeSlots">;
 type CategoryTimeWindowChange = CategoryTimeWindow;
 type CategoryEventChange = CategoryEvent;
 type TravelEventChange = TravelEvent;
+type EngineMessageChange = EngineMessage;
 // Only the editable own-row fields. address/lat/lng/placeId are server-
 // authoritative (Google Places) and never flow back from the client.
 type LocationChange = SerializedLocation;
@@ -51,12 +53,12 @@ export type DatabaseChanges = {
   categoryTimeWindow: ChangeGroup<CategoryTimeWindowChange>;
   categoryEvent: ChangeGroup<CategoryEventChange>;
   travelEvent: ChangeGroup<TravelEventChange>;
+  engineMessage: ChangeGroup<EngineMessageChange>;
   location: ChangeGroup<LocationChange>;
   travelTime: ChangeGroup<TravelTimeChange>;
 };
 
 export async function handleServerTransaction(
-  userId: string,
   clientKnownDataVersion: number,
   planner: Planner[],
   previousPlanner: { current: Planner[] },
@@ -70,13 +72,15 @@ export async function handleServerTransaction(
   previousCategoryEvents?: { current: CategoryEvent[] },
   travelEvents?: TravelEvent[],
   previousTravelEvents?: { current: TravelEvent[] },
+  engineMessages?: EngineMessage[],
+  previousEngineMessages?: { current: EngineMessage[] },
   locations?: SerializedLocation[],
   previousLocations?: { current: SerializedLocation[] },
   travelTimes?: SerializedTravelTime[],
   previousTravelTimes?: { current: SerializedTravelTime[] },
 ) {
   // Templates, category wrappers, and travel events no longer enter
-  // state.calendar.calendar — they live in their own redux slice fields and
+  // state.engineOutput.calendar — they live in their own redux fields and
   // their own sync diff groups. SimpleEvent[] now only carries plans +
   // scheduled tasks, so no filter is needed before the diff.
   const serializedPlanner = JSON.parse(JSON.stringify(planner)) as Planner[];
@@ -152,6 +156,16 @@ export async function handleServerTransaction(
         ) as TravelEvent[],
       }
     : undefined;
+  const serializedEngineMessages = engineMessages
+    ? (JSON.parse(JSON.stringify(engineMessages)) as EngineMessage[])
+    : undefined;
+  const serializedPreviousEngineMessages = previousEngineMessages
+    ? {
+        current: JSON.parse(
+          JSON.stringify(previousEngineMessages.current),
+        ) as EngineMessage[],
+      }
+    : undefined;
 
   const databaseChanges = compareData(
     serializedPlanner,
@@ -166,6 +180,8 @@ export async function handleServerTransaction(
     serializedPreviousCategoryEvents,
     serializedTravelEvents,
     serializedPreviousTravelEvents,
+    serializedEngineMessages,
+    serializedPreviousEngineMessages,
     serializedLocations,
     serializedPreviousLocations,
     serializedTravelTimes,
@@ -173,7 +189,6 @@ export async function handleServerTransaction(
   );
 
   const response = await syncCalendarData(
-    userId,
     databaseChanges,
     clientKnownDataVersion,
   );
@@ -194,6 +209,8 @@ export function compareData(
   previousCategoryEvents?: { current: CategoryEvent[] },
   travelEvents?: TravelEvent[],
   previousTravelEvents?: { current: TravelEvent[] },
+  engineMessages?: EngineMessage[],
+  previousEngineMessages?: { current: EngineMessage[] },
   locations?: SerializedLocation[],
   previousLocations?: { current: SerializedLocation[] },
   travelTimes?: SerializedTravelTime[],
@@ -208,6 +225,7 @@ export function compareData(
     categoryTimeWindow: { create: [], update: [], destroy: [] },
     categoryEvent: { create: [], update: [], destroy: [] },
     travelEvent: { create: [], update: [], destroy: [] },
+    engineMessage: { create: [], update: [], destroy: [] },
     location: { create: [], update: [], destroy: [] },
     travelTime: { create: [], update: [], destroy: [] },
   };
@@ -416,6 +434,26 @@ export function compareData(
     prevByTravel.forEach((ev, id) => {
       if (!currByTravel.has(id)) {
         databaseChanges.travelEvent.destroy.push(ev);
+      }
+    });
+  }
+
+  if (engineMessages && previousEngineMessages) {
+    const currByMessage = new Map(engineMessages.map((m) => [m.id, m]));
+    const prevByMessage = new Map(
+      previousEngineMessages.current.map((m) => [m.id, m]),
+    );
+    currByMessage.forEach((m, id) => {
+      const prev = prevByMessage.get(id);
+      if (!prev) {
+        databaseChanges.engineMessage.create.push(m);
+      } else if (!objectsAreEqual(stripDbMetadata(prev), stripDbMetadata(m))) {
+        databaseChanges.engineMessage.update.push(m);
+      }
+    });
+    prevByMessage.forEach((m, id) => {
+      if (!currByMessage.has(id)) {
+        databaseChanges.engineMessage.destroy.push(m);
       }
     });
   }

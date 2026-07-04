@@ -13,9 +13,19 @@ import {
   Flag,
   CheckCircle2,
   Layers,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
 } from "lucide-react";
 import { useSelector } from "react-redux";
-import { Button, Caption, Loader, useCapture, vars } from "@/components/ui";
+import {
+  Button,
+  Caption,
+  Loader,
+  Switch,
+  useCapture,
+  vars,
+} from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { RootState } from "@/redux/store";
 import {
@@ -61,13 +71,35 @@ import {
   breadcrumbCurrent,
   tableWrap,
   tableHead,
+  headerCell,
+  headerCellSortable,
+  headerCellActive,
+  headerCellIcon,
+  headerCellIconIdle,
+  showCompletedToggle,
   emptyState,
   emptyStateTitle,
 } from "./page.css";
 
 type TypeFilter = "all" | "task" | "plan" | "goal";
-type StatusFilter = "all" | "ready" | "not-ready" | "completed";
-type SortKey = "newest" | "deadline" | "priority";
+type SortKey =
+  | "title"
+  | "type"
+  | "duration"
+  | "priority"
+  | "deadline"
+  | "category";
+type SortDir = "asc" | "desc";
+type GoalReadiness = "all" | "ready" | "not-ready";
+
+const DEFAULT_SORT_DIR: Record<SortKey, SortDir> = {
+  title: "asc",
+  type: "asc",
+  duration: "desc",
+  priority: "desc",
+  deadline: "asc",
+  category: "asc",
+};
 
 const SMART_VIEWS: Array<{
   key: SmartView;
@@ -84,10 +116,44 @@ const SMART_VIEWS: Array<{
   { key: "done-7d", label: "Done · 7d", icon: CheckCircle2 },
 ];
 
+function SortHeader({
+  k,
+  label,
+  sortKey,
+  sortDir,
+  onSort,
+}: {
+  k: SortKey;
+  label: string;
+  sortKey: SortKey | null;
+  sortDir: SortDir;
+  onSort: (k: SortKey) => void;
+}) {
+  const active = sortKey === k;
+  const className = `${headerCell} ${headerCellSortable} ${active ? headerCellActive : ""}`;
+  return (
+    <button type="button" className={className} onClick={() => onSort(k)}>
+      <span>{label}</span>
+      <span
+        className={`${headerCellIcon} ${active ? "" : headerCellIconIdle}`}
+        aria-hidden
+      >
+        {!active ? (
+          <ChevronsUpDown size={11} strokeWidth={2.5} />
+        ) : sortDir === "asc" ? (
+          <ChevronUp size={11} strokeWidth={2.5} />
+        ) : (
+          <ChevronDown size={11} strokeWidth={2.5} />
+        )}
+      </span>
+    </button>
+  );
+}
+
 export default function LibraryPage() {
   const router = useRouter();
   const { planner, categories } = useCalendarProvider();
-  const isLoaded = useSelector((state: RootState) => state.calendar.isLoaded);
+  const isLoaded = useSelector((state: RootState) => state.calendarSource.isLoaded);
   const now = useMemo(() => new Date(), []);
   const { setOpen: setCaptureOpen } = useCapture();
 
@@ -95,8 +161,19 @@ export default function LibraryPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [sortKey, setSortKey] = useState<SortKey>("newest");
+  const [goalReadiness, setGoalReadiness] = useState<GoalReadiness>("all");
+  const [showCompleted, setShowCompleted] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const onSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(DEFAULT_SORT_DIR[key]);
+    }
+  };
 
   const rootItems = useMemo(
     () => planner.filter((i) => !i.parentId),
@@ -164,34 +241,62 @@ export default function LibraryPage() {
       result = result.filter((i) => i.title.toLowerCase().includes(q));
     }
 
+    if (!showCompleted) {
+      result = result.filter((i) => !i.completedEndTime);
+    }
+
     if (typeFilter !== "all") {
       result = result.filter((i) => i.plannerType === typeFilter);
     }
 
-    if (statusFilter === "ready") {
-      result = result.filter((i) => i.isReady && !i.completedEndTime);
-    } else if (statusFilter === "not-ready") {
-      result = result.filter((i) => !i.isReady && !i.completedEndTime);
-    } else if (statusFilter === "completed") {
-      result = result.filter((i) => i.completedEndTime);
+    if (typeFilter === "goal" && goalReadiness !== "all") {
+      const wantReady = goalReadiness === "ready";
+      result = result.filter((i) => !!i.isReady === wantReady);
     }
 
     const sorted = [...result].sort((a, b) => {
-      switch (sortKey) {
-        case "newest":
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        case "deadline":
-          if (!a.deadline && !b.deadline) return 0;
-          if (!a.deadline) return 1;
-          if (!b.deadline) return -1;
-          return (
-            new Date(a.deadline).getTime() - new Date(b.deadline).getTime()
-          );
-        case "priority":
-          return b.priority - a.priority;
+      if (sortKey === null) {
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
       }
+      let cmp = 0;
+      switch (sortKey) {
+        case "title":
+          cmp = a.title.localeCompare(b.title);
+          break;
+        case "type":
+          cmp = a.plannerType.localeCompare(b.plannerType);
+          break;
+        case "duration":
+          cmp = a.duration - b.duration;
+          break;
+        case "priority":
+          cmp = a.priority - b.priority;
+          break;
+        case "deadline":
+          if (!a.deadline && !b.deadline) cmp = 0;
+          else if (!a.deadline) return 1;
+          else if (!b.deadline) return -1;
+          else
+            cmp =
+              new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+          break;
+        case "category": {
+          const ca = a.categoryId
+            ? (categoryIndex.get(a.categoryId)?.name ?? "")
+            : "";
+          const cb = b.categoryId
+            ? (categoryIndex.get(b.categoryId)?.name ?? "")
+            : "";
+          if (!ca && !cb) cmp = 0;
+          else if (!ca) return 1;
+          else if (!cb) return -1;
+          else cmp = ca.localeCompare(cb);
+          break;
+        }
+      }
+      return sortDir === "asc" ? cmp : -cmp;
     });
 
     return sorted;
@@ -199,10 +304,13 @@ export default function LibraryPage() {
     rootItems,
     selection,
     categories,
+    categoryIndex,
     search,
     typeFilter,
-    statusFilter,
+    goalReadiness,
+    showCompleted,
     sortKey,
+    sortDir,
     now,
   ]);
 
@@ -386,28 +494,27 @@ export default function LibraryPage() {
                 ]}
               />
 
-              <SegmentedControl<StatusFilter>
-                value={statusFilter}
-                onChange={setStatusFilter}
-                options={[
-                  { key: "all", label: "All" },
-                  { key: "ready", label: "Ready" },
-                  { key: "not-ready", label: "Draft" },
-                  { key: "completed", label: "Done" },
-                ]}
-              />
+              {typeFilter === "goal" && (
+                <SegmentedControl<GoalReadiness>
+                  value={goalReadiness}
+                  onChange={setGoalReadiness}
+                  options={[
+                    { key: "all", label: "All" },
+                    { key: "ready", label: "Ready" },
+                    { key: "not-ready", label: "Draft" },
+                  ]}
+                />
+              )}
 
               <span className={spacer} />
 
-              <SegmentedControl<SortKey>
-                value={sortKey}
-                onChange={setSortKey}
-                options={[
-                  { key: "newest", label: "Newest" },
-                  { key: "deadline", label: "Deadline" },
-                  { key: "priority", label: "Priority" },
-                ]}
-              />
+              <label className={showCompletedToggle}>
+                <Switch
+                  checked={showCompleted}
+                  onCheckedChange={setShowCompleted}
+                />
+                <span>Show completed</span>
+              </label>
             </div>
 
             <div className={filterRow}>
@@ -450,12 +557,49 @@ export default function LibraryPage() {
           ) : (
             <div className={tableWrap}>
               <div className={tableHead}>
-                <span>Title</span>
-                <span>Type</span>
-                <span>Duration</span>
-                <span>Deadline</span>
-                <span>Area</span>
-                <span>Status</span>
+                <SortHeader
+                  k="title"
+                  label="Title"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={onSort}
+                />
+                <SortHeader
+                  k="type"
+                  label="Type"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={onSort}
+                />
+                <SortHeader
+                  k="duration"
+                  label="Duration"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={onSort}
+                />
+                <SortHeader
+                  k="priority"
+                  label="Priority"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={onSort}
+                />
+                <SortHeader
+                  k="deadline"
+                  label="Deadline"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={onSort}
+                />
+                <SortHeader
+                  k="category"
+                  label="Category"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={onSort}
+                />
+                <span className={headerCell}>Status</span>
                 <span />
               </div>
               {filteredItems.map((item) => (

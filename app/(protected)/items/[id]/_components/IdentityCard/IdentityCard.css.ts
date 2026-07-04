@@ -1,6 +1,5 @@
-import { style } from "@vanilla-extract/css";
-
-const MOBILE = "screen and (max-width: 767px)";
+﻿import { style } from "@vanilla-extract/css";
+import { media } from "@/lib/theme";
 
 export const card = style({
   display: "flex",
@@ -16,6 +15,6 @@ export const fieldGrid = style({
   gridTemplateColumns: "1fr 1fr",
   gap: "18px 26px",
   "@media": {
-    [MOBILE]: { gridTemplateColumns: "1fr" },
+    [media.mobile]: { gridTemplateColumns: "1fr" },
   },
 });

@@ -9,7 +9,9 @@ import { WeekDayIntegers, WeekDayType } from "@/types/calendarTypes";
 import { SimpleEvent } from "@/types/prisma";
 import { EventInput } from "@fullcalendar/core/index.js";
 import { RRule, Weekday } from "rrule";
+import { format } from "date-fns";
 import { dateTimeService } from "./calendar-generation/utils/dateTimeService";
+import { startOfDay } from "./dateUtils";
 
 // Re-export from dateTimeService for backward compatibility
 export const getWeekdayFromDate = (date: Date): WeekDayType =>
@@ -108,6 +110,31 @@ export const transformEventsForFullCalendar = (
     },
   }));
 };
+
+// Bucket calendar events into per-day groups, preserving input order within
+// each day. Day key is YYYY-MM-DD in local time, and `date` is the day-start
+// Date so callers can format it without re-parsing. Used by per-item schedule
+// views and dashboard "upcoming" lists.
+export type EventDayBucket = {
+  dayKey: string;
+  date: Date;
+  events: SimpleEvent[];
+};
+
+export function bucketEventsByDay(events: SimpleEvent[]): EventDayBucket[] {
+  const map = new Map<string, EventDayBucket>();
+  for (const e of events) {
+    const date = new Date(e.start);
+    const dayKey = format(date, "yyyy-MM-dd");
+    const bucket = map.get(dayKey);
+    if (bucket) {
+      bucket.events.push(e);
+    } else {
+      map.set(dayKey, { dayKey, date: startOfDay(date), events: [e] });
+    }
+  }
+  return Array.from(map.values());
+}
 
 export function getCalendarHeaderDateString(
   initialDate: Date,

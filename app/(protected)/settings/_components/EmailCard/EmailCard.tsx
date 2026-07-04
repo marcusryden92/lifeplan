@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui";
 import { settings } from "@/actions/settings";
 import { useServerAction } from "@/hooks/useServerAction";
-import type { UserRole } from "@/prisma/client";
+import type { UserRole } from "@/generated/client";
 import { StatusLine } from "../StatusLine";
 import {
   card,

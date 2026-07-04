@@ -1,4 +1,4 @@
-import { Location, TravelTime } from "../client";
+import { Location, TravelTime } from "../../generated/client";
 
 // Fixed IDs so we can reference them in other seed files
 export const LOCATION_IDS = {

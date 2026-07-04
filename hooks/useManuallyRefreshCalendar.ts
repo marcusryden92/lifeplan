@@ -4,12 +4,18 @@ import { useCallback, useRef } from "react";
 import { floorMinutes } from "@/utils/calendarUtils";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 
-import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
+import { runEngineCalculation } from "@/utils/calendar-generation/engineWorkerClient";
 import { taskIsCompleted } from "@/utils/taskHelpers";
 
-import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
+import {
+  Planner,
+  SimpleEvent,
+  EventTemplate,
+  Category,
+  EngineMessage,
+} from "@/types/prisma";
 import { AppDispatch, RootState } from "@/redux/store";
-import calendarSlice from "@/redux/slices/calendarSlice";
+import { applyEngineRun } from "@/redux/slices/engineOutputSlice";
 import { useSelector } from "react-redux";
 import {
   travelTimeArrayToMap,
@@ -41,6 +47,9 @@ const useManuallyRefreshCalendar = (
   const debugStrategyConfig = useSelector(
     (state: RootState) => state.schedulingSettings.debugStrategyConfig
   );
+  const previousEngineMessages = useSelector(
+    (state: RootState) => state.engineOutput.engineMessages
+  );
 
   // Store latest values in refs so callback doesn't need to depend on them
   const stateRef = useRef<{
@@ -54,6 +63,7 @@ const useManuallyRefreshCalendar = (
     enableTravelEvents: boolean;
     travelTimeMatrix: SerializedTravelTimeEntry[] | null;
     debugStrategyConfig: DebugStrategyConfig;
+    previousEngineMessages: EngineMessage[];
     dispatch: AppDispatch;
   }>({
     userId,
@@ -66,6 +76,7 @@ const useManuallyRefreshCalendar = (
     enableTravelEvents,
     travelTimeMatrix,
     debugStrategyConfig,
+    previousEngineMessages,
     dispatch,
   });
   stateRef.current = {
@@ -79,6 +90,7 @@ const useManuallyRefreshCalendar = (
     enableTravelEvents,
     travelTimeMatrix,
     debugStrategyConfig,
+    previousEngineMessages,
     dispatch,
   };
 
@@ -94,6 +106,7 @@ const useManuallyRefreshCalendar = (
       enableTravelEvents,
       travelTimeMatrix,
       debugStrategyConfig,
+      previousEngineMessages,
       dispatch,
     } = stateRef.current;
 
@@ -114,17 +127,13 @@ const useManuallyRefreshCalendar = (
       // Convert serialized array to Map for calendar generation
       const travelTimeMap = travelTimeArrayToMap(travelTimeMatrix);
 
-      const {
-        events: newCalendar,
-        categoryEvents: newCategoryEvents,
-        travelEvents: newTravelEvents,
-      } = generateCalendar(
+      void runEngineCalculation({
         userId,
         weekStartDay,
         template,
         planner,
-        filteredCalendar,
-        {
+        prevCalendar: filteredCalendar,
+        options: {
           bufferTimeMinutes,
           travelTimeMatrix: travelTimeMap ?? undefined,
           injectTravelEvents: enableTravelEvents,
@@ -133,21 +142,24 @@ const useManuallyRefreshCalendar = (
           locationGroupingPenalties:
             debugStrategyConfig.locationGrouping.penalties,
           categories,
+          previousEngineMessages,
         },
-      );
-
-      // Use updateAll to bypass the thunk's regeneration
-      // Pass the generated calendar directly without triggering another generation
-      dispatch(
-        calendarSlice.actions.updateCalendarArrayData({
-          planner,
-          calendar: newCalendar,
-          template,
-          categories,
-          categoryEvents: newCategoryEvents,
-          travelEvents: newTravelEvents,
-        })
-      );
+      }).then((result) => {
+        // Null means a newer regen superseded this one mid-flight.
+        if (!result) return;
+        // Source inputs (planner/template/categories) pass through unchanged,
+        // so only the derived slice needs a dispatch.
+        dispatch(
+          applyEngineRun({
+            calendar: result.events,
+            categoryEvents: result.categoryEvents,
+            travelEvents: result.travelEvents,
+            engineMessages: result.messages,
+            plannerScores: result.plannerScores,
+            ranAt: new Date().toISOString(),
+          }),
+        );
+      });
     }
   }, []);
 

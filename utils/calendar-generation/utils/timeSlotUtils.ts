@@ -25,6 +25,23 @@ export function doSlotsOverlap(slot1: TimeSlot, slot2: TimeSlot): boolean {
   return slot1.start < slot2.end && slot2.start < slot1.end;
 }
 
+// First index whose slot.start >= timeMs, relying on the array's sorted-by-
+// start invariant. Lets time-window lookups skip straight to the relevant
+// region instead of scanning from index 0.
+export function lowerBoundSlotIndexByStart(
+  slots: TimeSlot[],
+  timeMs: number,
+): number {
+  let lo = 0;
+  let hi = slots.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (slots[mid].start.getTime() < timeMs) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
 export function splitSlot(
   slot: TimeSlot,
   splitTime: Date,

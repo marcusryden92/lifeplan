@@ -23,6 +23,11 @@ type Props = {
   backdrop?: "blob" | "pinstripe" | "both" | "none";
   userName?: string;
   userInitial?: string;
+  // Rendered inside mainColumn after the page content — the mount point for
+  // the global AI assistant, which fills the content region while leaving the
+  // sidebar interactive. Passed in as a slot so the shell never imports draft
+  // code (avoids an AppShell -> draft -> ui-barrel -> AppShell cycle).
+  assistantSlot?: ReactNode;
 };
 
 export function AppShell({
@@ -30,6 +35,7 @@ export function AppShell({
   backdrop = "blob",
   userName,
   userInitial,
+  assistantSlot,
 }: Props) {
   return (
     <CaptureProvider>
@@ -42,7 +48,10 @@ export function AppShell({
               <div className={desktopOnly}>
                 <Sidebar userName={userName} userInitial={userInitial} />
               </div>
-              <div className={mainColumn}>{children}</div>
+              <div className={mainColumn}>
+                {children}
+                {assistantSlot}
+              </div>
             </div>
             <div className={mobileOnly}>
               <MobileTabs />

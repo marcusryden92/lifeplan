@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "lib": ["dom", "dom.iterable", "esnext"],
-    "types": ["jest", "@testing-library/jest-dom", "node"],
+    "types": ["node"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -25,13 +25,14 @@
   },
   "include": [
     "next-env.d.ts",
-    "src/**/*.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
     "prisma/**/*",
-    "utils/goal-handlers",
+    "generated/**/*",
     "utils/assert/assert.js"
   ],
-  "exclude": ["node_modules"]
+  // Test files get jest globals via tsconfig.test.json instead of leaking
+  // jest types into app code.
+  "exclude": ["node_modules", "__tests__", "jest.setup.ts"]
 }

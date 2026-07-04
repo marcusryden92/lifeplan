@@ -1,5 +1,6 @@
-import type { Prisma } from "@/prisma/client";
+import type { Prisma } from "@/generated/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
+import { bulkUpdate } from "./bulkUpdate";
 type Database = Prisma.TransactionClient;
 
 export function handleCalendarChanges(
@@ -23,17 +24,31 @@ export function handleCalendarChanges(
     );
   }
 
-  // UPDATE
-  // updateMany is a no-op on missing rows instead of throwing P2025, so a
-  // stale ghost id in previousCalendar (e.g. another tab deleted the row, or
-  // an overlapping sync drifted the ref) doesn't abort the whole transaction.
-  // Scoping by userId also prevents cross-user writes.
-  for (const event of databaseChanges.calendar.update) {
-    const { id, ...rest } = event;
+  // UPDATE — bulk `UPDATE ... FROM VALUES`. Missing ids just don't match in
+  // the join, preserving the earlier ghost-id safety.
+  if (databaseChanges.calendar.update.length) {
     operations.push(
-      db.simpleEvent.updateMany({
-        where: { id, userId },
-        data: { ...rest, updatedAt },
+      bulkUpdate({
+        db,
+        tableName: `"SimpleEvents"`,
+        rows: databaseChanges.calendar.update,
+        userIdColumn: "userId",
+        userId,
+        updatedAtColumn: "updatedAt",
+        updatedAt,
+        columns: [
+          { name: "title", cast: "text", extract: (r) => r.title },
+          { name: "start", cast: "text", extract: (r) => r.start },
+          { name: "end", cast: "text", extract: (r) => r.end },
+          { name: "duration", cast: "int", extract: (r) => r.duration },
+          { name: "rrule", cast: "text", extract: (r) => r.rrule },
+          {
+            name: "backgroundColor",
+            cast: "text",
+            extract: (r) => r.backgroundColor,
+          },
+          { name: "borderColor", cast: "text", extract: (r) => r.borderColor },
+        ],
       })
     );
   }
@@ -43,6 +58,7 @@ export function handleCalendarChanges(
     operations.push(
       db.simpleEvent.deleteMany({
         where: {
+          userId,
           id: { in: databaseChanges.calendar.destroy.map((e) => e.id) },
         },
       })

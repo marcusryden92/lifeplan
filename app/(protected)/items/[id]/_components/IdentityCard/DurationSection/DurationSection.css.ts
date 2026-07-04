@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, radii } from "@/lib/theme";
 
 export const fieldStack = style({
   display: "flex",
@@ -30,7 +30,7 @@ export const fieldValue = style({
 export const numberInput = style({
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   padding: "8px 12px",
   fontFamily: vars.font.ui,
   fontSize: 13.5,

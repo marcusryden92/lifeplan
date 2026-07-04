@@ -1,9 +1,11 @@
-import { style, keyframes } from "@vanilla-extract/css";
+﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
   vars,
   themeTransition,
   themeDark,
   interactiveTransition,
+  media,
+  radii,
 } from "@/lib/theme";
 
 const lockedShake = keyframes({
@@ -12,7 +14,6 @@ const lockedShake = keyframes({
   "40%, 80%": { transform: "translateX(3px)" },
 });
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const progressBlock = style({
   marginTop: 36,
@@ -39,7 +40,7 @@ export const progressMetaStrong = style({
 export const progressTrack = style({
   marginTop: 9,
   height: 8,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.rule,
   position: "relative",
   overflow: "hidden",
@@ -49,10 +50,10 @@ export const progressTrack = style({
 export const progressFill = style({
   position: "absolute",
   inset: 0,
-  borderRadius: 999,
+  borderRadius: radii.pill,
 });
 
-// Task completion row — sized to match the left column of overviewGrid (50%
+// Task completion row â€” sized to match the left column of overviewGrid (50%
 // minus half the 48px gap) so the checkbox lines up with IdentityCard's left
 // edge. justify-content puts the checkbox+label cluster on the left and the
 // date picker on the right edge of that span. Drops to full width on mobile
@@ -65,7 +66,7 @@ export const completeRow = style({
   height: "100%",
   width: "calc(50% - 24px)",
   "@media": {
-    [MOBILE]: { width: "100%" },
+    [media.mobile]: { width: "100%" },
   },
 });
 
@@ -81,7 +82,7 @@ export const completeCheckbox = style({
   justifyContent: "center",
   width: 22,
   height: 22,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1.5px solid ${vars.muted}`,
   background: "transparent",
   color: vars.muted,
@@ -127,7 +128,7 @@ export const completeLabel = style({
 export const completeDateInput = style({
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 8,
+  borderRadius: radii.sm,
   padding: "0 32px 0 12px",
   fontFamily: vars.font.ui,
   fontSize: 13.5,
@@ -154,7 +155,7 @@ export const overviewGrid = style({
   gridTemplateColumns: "1fr 1fr",
   gap: 48,
   "@media": {
-    [MOBILE]: { gridTemplateColumns: "1fr", gap: 24 },
+    [media.mobile]: { gridTemplateColumns: "1fr", gap: 24 },
   },
 });
 

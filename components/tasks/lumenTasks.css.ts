@@ -1,10 +1,11 @@
-import { style, keyframes } from "@vanilla-extract/css";
+﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
   vars,
   themeTransition,
   interactiveTransition,
   colorMixAlpha,
   DURATIONS,
+  radii,
 } from "@/lib/theme";
 
 // Quick-shake when a locked completion checkbox is clicked. Subtle horizontal
@@ -74,7 +75,7 @@ export const draggable = style({
   display: "flex",
   alignItems: "center",
   width: "100%",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   cursor: "pointer",
   border: "1px solid transparent",
   transition: interactiveTransition("background-color", "border-color"),
@@ -83,7 +84,7 @@ export const draggable = style({
 export const draggableHover = style({
   selectors: {
     "&:hover": {
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
   },
 });
@@ -101,7 +102,20 @@ export const draggableSelected = style({
   background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.subtleFill}%, transparent)`,
 });
 
-// Note: short explicit transition rather than themeTransition (1s) — completion
+// Post-drop landing feedback: the moved row glows at the drop-target tint and
+// fades, so the item is findable wherever it landed in the list.
+const dropFlash = keyframes({
+  "0%": {
+    background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.hoverFill}%, transparent)`,
+  },
+  "100%": { background: "transparent" },
+});
+
+export const draggableDropped = style({
+  animation: `${dropFlash} 0.7s ease-out`,
+});
+
+// Note: short explicit transition rather than themeTransition (1s) â€” completion
 // state flips on click and needs to feel immediate, not crossfaded.
 const COMPLETE_TRANSITION = interactiveTransition(
   "background-color",
@@ -119,14 +133,14 @@ export const completeBtn = style({
   border: "none",
   background: "transparent",
   cursor: "pointer",
-  borderRadius: 6,
+  borderRadius: radii.xs,
   padding: 0,
   color: vars.muted,
   transition: COMPLETE_TRANSITION,
   selectors: {
     "&:hover": {
       color: vars.ink,
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
     "&[data-shake='true']": {
       animation: `${completeLockedShake} 0.4s ease-in-out`,
@@ -143,7 +157,7 @@ export const completeCircle = style({
   justifyContent: "center",
   width: 16,
   height: 16,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1.5px solid currentColor`,
   background: "transparent",
   transition: COMPLETE_TRANSITION,
@@ -177,13 +191,13 @@ export const chevronBtn = style({
   background: "transparent",
   color: vars.muted,
   cursor: "pointer",
-  borderRadius: 6,
+  borderRadius: radii.xs,
   transition: themeTransition,
   selectors: {
     "&:disabled": { cursor: "default", opacity: 0.4 },
     "&:not(:disabled):hover": {
       color: vars.ink,
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
   },
 });
@@ -214,7 +228,7 @@ export const gripBtn = style({
 
 export const dragDisableWrap = style({
   flex: 1,
-  borderRadius: 8,
+  borderRadius: radii.sm,
 });
 
 export const dragDisableWrapDragged = style({
@@ -253,7 +267,7 @@ export const addChildBtn = style({
   justifyContent: "center",
   width: 28,
   height: 28,
-  borderRadius: 6,
+  borderRadius: radii.xs,
   border: "none",
   background: "transparent",
   color: vars.muted,
@@ -263,7 +277,7 @@ export const addChildBtn = style({
   flexShrink: 0,
   selectors: {
     [`${draggable}:hover &`]: { opacity: 1 },
-    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
   },
 });
 
@@ -303,7 +317,7 @@ export const iconBtn = style({
   height: 26,
   border: "none",
   background: "transparent",
-  borderRadius: 6,
+  borderRadius: radii.xs,
   color: vars.muted,
   cursor: "pointer",
   opacity: 0,
@@ -312,7 +326,7 @@ export const iconBtn = style({
     "&:disabled": { cursor: "default" },
     "&:not(:disabled):hover": {
       color: vars.ink,
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
   },
 });
@@ -359,7 +373,7 @@ export const editInput = style({
   minWidth: 0,
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 8,
+  borderRadius: radii.sm,
   padding: "5px 10px",
   fontFamily: vars.font.ui,
   fontSize: 13.5,
@@ -375,7 +389,7 @@ export const editDurationInput = style({
   width: 72,
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 8,
+  borderRadius: radii.sm,
   padding: "5px 10px",
   fontFamily: vars.font.ui,
   fontSize: 13.5,
@@ -400,10 +414,10 @@ export const addSubtaskTrigger = style({
   color: vars.muted,
   cursor: "pointer",
   padding: "4px 8px",
-  borderRadius: 6,
+  borderRadius: radii.xs,
   transition: themeTransition,
   selectors: {
-    "&:hover": { color: vars.ink, background: vars.glass.bgSoft },
+    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
   },
 });
 
@@ -430,7 +444,6 @@ export const dropDivider = style({
   height: 10,
   borderRadius: 3,
   position: "relative",
-  transition: "background-color 80ms ease",
   selectors: {
     "&::before": {
       content: '""',
@@ -439,19 +452,23 @@ export const dropDivider = style({
       right: 0,
       top: "50%",
       height: 2,
-      borderRadius: 999,
+      borderRadius: radii.pill,
       transform: "translateY(-50%)",
       background: "transparent",
-      transition: "background-color 80ms ease, height 80ms ease",
     },
   },
 });
 
 export const dropDividerActive = style({
   selectors: {
+    // Transition declared on the hover state only: the accent line eases in,
+    // but snaps off the instant the hover or drag ends. A fade-out here reads
+    // as a flash after a drop — the mounted row pushes the divider down while
+    // the stale accent line is still fading on it.
     "&:hover::before": {
       background: vars.accent.now,
       height: 4,
+      transition: "background-color 80ms ease, height 80ms ease",
     },
   },
 });
@@ -466,7 +483,7 @@ export const dragBox = style({
   fontFamily: vars.font.ui,
   fontSize: 13,
   fontWeight: 600,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   boxShadow: vars.shadow.panelSm,
   zIndex: 50,
   pointerEvents: "none",

@@ -5,6 +5,8 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useRef,
+  useCallback,
   ReactNode,
   SetStateAction,
 } from "react";
@@ -27,6 +29,11 @@ interface DraggableContextType {
   setDisplayDragBox: React.Dispatch<SetStateAction<boolean>>;
   focusedTask: string | null;
   setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
+  // Transient post-drop marker: the just-moved row flashes so it's findable
+  // wherever it landed. Self-clears; separate from focusedTask, which opens
+  // the edit drawer on the subtasks page.
+  droppedTask: string | null;
+  flashDroppedTask: (taskId: string) => void;
 }
 
 const DraggableContext = createContext<DraggableContextType | null>(null);
@@ -44,6 +51,27 @@ export const DraggableContextProvider = ({
     useState<ClickedItem>(null);
   const [displayDragBox, setDisplayDragBox] = useState<boolean>(false);
   const [focusedTask, setFocusedTask] = useState<string | null>(null);
+  const [droppedTask, setDroppedTask] = useState<string | null>(null);
+  const droppedTimerRef = useRef<number | null>(null);
+
+  // Duration matches the dropFlash keyframe animation in lumenTasks.css.ts.
+  const flashDroppedTask = useCallback((taskId: string) => {
+    if (droppedTimerRef.current !== null)
+      window.clearTimeout(droppedTimerRef.current);
+    setDroppedTask(taskId);
+    droppedTimerRef.current = window.setTimeout(() => {
+      setDroppedTask(null);
+      droppedTimerRef.current = null;
+    }, 700);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (droppedTimerRef.current !== null)
+        window.clearTimeout(droppedTimerRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     function resetDisplayDragBox() {
@@ -67,6 +95,8 @@ export const DraggableContextProvider = ({
     setDisplayDragBox,
     focusedTask,
     setFocusedTask,
+    droppedTask,
+    flashDroppedTask,
   };
 
   return (

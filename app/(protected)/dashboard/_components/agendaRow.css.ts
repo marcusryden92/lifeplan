@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, radii } from "@/lib/theme";
 
 // Row primitives shared by AgendaItemRow and UncompletedItemRow. Variants
 // (NOW/NEXT/TRAVEL, flash tints) live in the respective row files.
@@ -10,14 +10,14 @@ export const agendaRow = style({
   alignItems: "baseline",
   padding: "10px 12px",
   margin: "4px 12px",
-  borderRadius: 14,
+  borderRadius: radii["md+2"],
   cursor: "pointer",
   background: "transparent",
   border: "1px solid transparent",
   transition: themeTransition,
   selectors: {
     "&:hover": {
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
   },
 });

@@ -6,8 +6,8 @@ import type {
   PriorityLevel,
   EnergyLevel,
   TransportMode,
-} from "@/prisma/client";
-import type { Prisma } from "@/prisma/client";
+} from "@/generated/client";
+import type { Prisma } from "@/generated/client";
 import type { SerializedTravelTime } from "@/redux/slices/schedulingSettingsSlice";
 
 // User Scheduling Preferences
@@ -175,7 +175,7 @@ export async function upsertTaskPreferences(
     allowFlexibility: prefs.allowFlexibility ?? undefined,
   };
 
-  const createPayload: Prisma.TaskPreferencesCreateInput = {
+  const createPayload: Prisma.TaskPreferencesUncheckedCreateInput = {
     plannerId,
     taskType: prefs.taskType ?? undefined,
     preferredDays: prefs.preferredDays ?? [],

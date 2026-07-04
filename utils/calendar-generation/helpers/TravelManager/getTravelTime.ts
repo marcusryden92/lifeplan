@@ -1,4 +1,33 @@
 import { TravelTimeEntry } from "../../models/SchedulingModels";
+import { LOCATION_CONFIG } from "../../constants";
+
+// Single source of truth for the time-of-day bucket. The reservation path
+// (getTravelTime) and the scoring path (LocationGroupingStrategy) previously
+// hardcoded divergent windows (16-19 vs 17-19 evening rush, 22 vs 21 night
+// start, no weekend exemption), so the strategy could score a slot assuming
+// one travel duration while reservation carved a different one.
+export function travelMinutesForTime(
+  entry: TravelTimeEntry,
+  atTime: Date,
+): number {
+  const hour = atTime.getHours();
+  const dayOfWeek = atTime.getDay();
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+  const isRushHour =
+    !isWeekend &&
+    ((hour >= LOCATION_CONFIG.RUSH_HOUR_MORNING_START &&
+      hour < LOCATION_CONFIG.RUSH_HOUR_MORNING_END) ||
+      (hour >= LOCATION_CONFIG.RUSH_HOUR_EVENING_START &&
+        hour < LOCATION_CONFIG.RUSH_HOUR_EVENING_END));
+  if (isRushHour) return entry.rushHourMinutes;
+
+  const isNight =
+    hour >= LOCATION_CONFIG.NIGHT_START || hour < LOCATION_CONFIG.NIGHT_END;
+  if (isNight) return entry.nightMinutes;
+
+  return entry.regularMinutes;
+}
 
 export function getTravelTime(
   travelTimeMatrix: Map<string, TravelTimeEntry> | null,
@@ -21,13 +50,5 @@ export function getTravelTime(
     return 0;
   }
 
-  const hour = timeOfDay.getHours();
-
-  if ((hour >= 7 && hour < 9) || (hour >= 16 && hour < 19)) {
-    return entry.rushHourMinutes;
-  } else if (hour >= 22 || hour < 6) {
-    return entry.nightMinutes;
-  } else {
-    return entry.regularMinutes;
-  }
+  return travelMinutesForTime(entry, timeOfDay);
 }

@@ -3,12 +3,15 @@ import { Scheduler } from "../../core/Scheduler";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { SchedulingFailure } from "../../models/SchedulingModels";
 import { Slot } from "../../models/TimeSlot";
-import { SCHEDULING_CONFIG } from "../../constants";
+import { SCHEDULING_CONFIG, SchedulingFailureReason } from "../../constants";
 import { scheduleSingleTask } from "./scheduleSingleTask";
 import { scheduleGoal } from "./scheduleGoal";
 import { expandSlots } from "./expandSlots";
 import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
-import { largestCompatibleSlotForLargestTask } from "./capacityCheck";
+import {
+  largestCompatibleSlotForLargestTask,
+  effectiveCandidateDuration,
+} from "./capacityCheck";
 
 export function scheduleTasksAndGoals(
   scheduler: Scheduler,
@@ -32,6 +35,10 @@ export function scheduleTasksAndGoals(
   const plannerCategoryMap =
     context.plannerCategoryMap ?? new Map<string, string | null>();
   const capacityCache = new Map<string, number>();
+  // `categories` is already filtered to window-bearing categories upstream
+  // (CalendarGenerator.scheduledCategories) — the watermark must resolve
+  // constraints against the same set placement uses.
+  const schedulableCategoryIds = new Set(categories.map((c) => c.id));
 
   let expansionsDone = 0;
 
@@ -53,18 +60,39 @@ export function scheduleTasksAndGoals(
     // expand the horizon before burning iterations on guaranteed failures.
     // The reactive expansion at the bottom still fires after a fully-failed
     // pass, catching location/travel cases the watermark doesn't model.
-    const availableCount = slotManager.slots.filter(
-      (s) => s.type === "available",
-    ).length;
-    const biggestRemaining = candidates.reduce(
-      (m, c) => Math.max(m, c.duration),
-      0,
-    );
+    let availableCount = 0;
+    for (const s of slotManager.slots) {
+      if (s.type === "available") availableCount++;
+    }
+    // Goal candidates size as their largest uncompleted leaf, not the
+    // subtree aggregate — scheduleGoal places leaves individually, and the
+    // aggregate can exceed any possible slot, which would pin this watermark
+    // permanently true and starve the placement walk below. Leaves already
+    // placed (this run or memoized from the previous calendar) are excluded
+    // from the sizing for the same reason.
+    const unplaceableLeafIds = new Set([
+      ...memoizedEventIds,
+      ...scheduledTaskIds,
+    ]);
+    let biggestRemaining = 0;
+    let biggestCandidate: Planner | null = null;
+    for (const c of candidates) {
+      const duration = effectiveCandidateDuration(
+        c,
+        allPlanners,
+        unplaceableLeafIds,
+      );
+      if (biggestCandidate === null || duration > biggestRemaining) {
+        biggestRemaining = duration;
+        biggestCandidate = c;
+      }
+    }
     const biggestFit = largestCompatibleSlotForLargestTask(
-      candidates,
+      biggestCandidate,
       slotManager.slots,
       plannerCategoryMap,
       context.placementCutoffDate,
+      schedulableCategoryIds,
     );
 
     if (
@@ -85,9 +113,14 @@ export function scheduleTasksAndGoals(
       continue;
     }
 
-    for (let i = candidates.length - 1; i >= 0; i--) {
-      const item = candidates[i];
+    // Walk candidates in sorted order — category-constrained and
+    // highest-urgency items pick slots first. Removals are collected and
+    // applied after the pass so the walk order matches the sort (the previous
+    // reverse-index splice idiom handed first pick to the lowest-urgency,
+    // unconstrained item, inverting the sorter's intent under contention).
+    const resolvedIds = new Set<string>();
 
+    for (const item of candidates) {
       if (item.plannerType === PlannerType.task) {
         const result = scheduleSingleTask(
           item,
@@ -103,9 +136,9 @@ export function scheduleTasksAndGoals(
 
         if (result.scheduled) {
           if (result.event) events.push(result.event);
-          candidates.splice(i, 1);
+          resolvedIds.add(item.id);
         } else if (result.permanentFailure) {
-          candidates.splice(i, 1);
+          resolvedIds.add(item.id);
         }
       } else if (item.plannerType === PlannerType.goal) {
         const result = scheduleGoal(
@@ -124,9 +157,14 @@ export function scheduleTasksAndGoals(
         );
 
         if (result.scheduled || result.permanentFailure) {
-          candidates.splice(i, 1);
+          resolvedIds.add(item.id);
         }
       }
+    }
+
+    if (resolvedIds.size > 0) {
+      const remaining = candidates.filter((c) => !resolvedIds.has(c.id));
+      candidates.splice(0, candidates.length, ...remaining);
     }
 
     if (candidates.length > 0) {
@@ -144,10 +182,29 @@ export function scheduleTasksAndGoals(
     }
   }
 
+  // Candidates still standing when the expansion budget runs out must fail
+  // loudly. This exit used to be silent (no event, no failure), which let a
+  // starved run report SCHEDULED_OK while the sync deleted every previously
+  // placed event.
+  for (const item of candidates) {
+    failures.push({
+      taskId: item.id,
+      taskTitle: item.title,
+      reason: SchedulingFailureReason.NO_SLOTS,
+      details: `Horizon expansion budget exhausted (${expansionsDone} expansions) before a slot was found`,
+      context: { expansionsDone },
+    });
+  }
+
+  // Drop failures for tasks that eventually placed on a later iteration.
+  // A NO_SLOTS on attempt 1 that succeeds after expansion is not something the
+  // console should surface — the retry was the whole point of the outer loop.
+  const finalFailures = failures.filter((f) => !scheduledTaskIds.has(f.taskId));
+
   return {
-    success: failures.length === 0 && candidates.length === 0,
+    success: finalFailures.length === 0 && candidates.length === 0,
     newEvents: events,
-    failures,
+    failures: finalFailures,
   };
 }
 

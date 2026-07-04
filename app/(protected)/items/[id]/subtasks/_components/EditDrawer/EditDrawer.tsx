@@ -8,7 +8,7 @@ import {
   type ChangeEvent,
   type KeyboardEvent,
 } from "react";
-import { X, Minus, Plus, Trash2, MapPin } from "lucide-react";
+import { X, Minus, Plus, Trash2, Copy, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
@@ -17,7 +17,7 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import { useFlashBoolean } from "@/hooks/useFlashAnimation";
 import { assignLocationToPlanner } from "@/actions/locations";
-import { deleteGoal } from "@/utils/goalPageHandlers";
+import { deleteGoal, duplicateSubtree } from "@/utils/goalPageHandlers";
 import { NEW_SUBTASK_TITLE } from "@/components/tasks/task-item-subcomponents/TaskHeader";
 import {
   setSubtaskCompletedAt,
@@ -48,6 +48,7 @@ import {
   completeHeader,
   completeCheckbox,
   drawerFooter,
+  footerActionGroup,
 } from "./EditDrawer.css";
 
 export function EditDrawer() {
@@ -214,9 +215,16 @@ export function EditDrawer() {
   const currentLocation = locations.find((l) => l.id === task.locationId);
 
   const handleDelete = () => {
-    deleteGoal({ updateAll, taskId: task.id, parentId: task.parentId });
+    deleteGoal({ updateAll, taskId: task.id });
     setShowDeleteConfirm(false);
     setFocusedTask(null);
+  };
+
+  const handleDuplicate = () => {
+    const result = duplicateSubtree({ planner, taskId: task.id });
+    if (!result) return;
+    updatePlannerArray(result.newPlanner);
+    setFocusedTask(result.newRootId);
   };
 
   return (
@@ -373,14 +381,25 @@ export function EditDrawer() {
       </div>
 
       <div className={drawerFooter}>
-        <Button
-          variant="glass"
-          size="sm"
-          onClick={() => setShowDeleteConfirm(true)}
-          aria-label="Delete subtask"
-        >
-          <Trash2 size={12} strokeWidth={2.2} />
-        </Button>
+        <div className={footerActionGroup}>
+          <Button
+            variant="glass"
+            size="sm"
+            onClick={() => setShowDeleteConfirm(true)}
+            aria-label="Delete subtask"
+          >
+            <Trash2 size={12} strokeWidth={2.2} />
+          </Button>
+          <Button
+            variant="glass"
+            size="sm"
+            onClick={handleDuplicate}
+            aria-label="Duplicate subtask"
+            title="Duplicate subtask"
+          >
+            <Copy size={12} strokeWidth={2.2} />
+          </Button>
+        </div>
         <Button variant="solid" size="sm" onClick={close}>
           Done
         </Button>

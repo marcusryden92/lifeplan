@@ -42,6 +42,25 @@ export function formatLongDate(date: Date): string {
   return format(date, "EEEE, MMMM d");
 }
 
+// Short relative-day label for upcoming/past dates: "Today", "Tomorrow",
+// "Yesterday", "In 3d", "4d ago". Returns null for dates more than a week
+// out — callers fall back to the absolute date.
+export function relativeDayLabel(date: Date, now: Date = new Date()): string | null {
+  const dayStart = new Date(date);
+  dayStart.setHours(0, 0, 0, 0);
+  const todayStart = new Date(now);
+  todayStart.setHours(0, 0, 0, 0);
+  const diff = Math.round(
+    (dayStart.getTime() - todayStart.getTime()) / 86400000,
+  );
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff === -1) return "Yesterday";
+  if (diff > 0 && diff < 7) return `In ${diff}d`;
+  if (diff < 0 && diff > -7) return `${-diff}d ago`;
+  return null;
+}
+
 // Time-of-day greeting, optionally personalized with the first name.
 // Brackets: <5 night, <12 morning, <17 afternoon, <21 evening, else night.
 export function greetingForHour(hour: number, name?: string | null): string {

@@ -1,4 +1,4 @@
-import type { Prisma } from "@/prisma/client";
+import type { Prisma } from "@/generated/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
 type Database = Prisma.TransactionClient;
 
@@ -25,7 +25,7 @@ export function handleCategoryEventChanges(
   if (idsToDelete.length) {
     operations.push(
       db.categoryEvent.deleteMany({
-        where: { id: { in: idsToDelete } },
+        where: { userId, id: { in: idsToDelete } },
       }),
     );
   }

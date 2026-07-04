@@ -1,6 +1,6 @@
-import { style, keyframes } from "@vanilla-extract/css";
+﻿import { style, keyframes } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, themeTransition, radii } from "@/lib/theme";
 
 const slide = keyframes({
   "0%": { transform: "translateX(-100%)" },
@@ -11,7 +11,7 @@ export const loaderTrack = recipe({
   base: {
     position: "relative",
     background: vars.rule,
-    borderRadius: 999,
+    borderRadius: radii.pill,
     overflow: "hidden",
     transition: themeTransition,
     opacity: "80%",
@@ -32,7 +32,7 @@ export const loaderPill = style({
   bottom: 0,
   left: 0,
   width: "40%",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   animationName: slide,
   animationDuration: "1.2s",
   animationIterationCount: "infinite",

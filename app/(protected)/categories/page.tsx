@@ -9,14 +9,14 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   upsertCategory,
   removeCategory,
-} from "@/redux/slices/calendarSlice";
+} from "@/redux/slices/calendarSourceSlice";
 import type { AppDispatch, RootState } from "@/redux/store";
 import {
   buildCategoryTree,
   getCategoryAndDescendants,
 } from "@/utils/categoryUtils";
 import type { Category } from "@/types/prisma";
-import { WeekPlanModal } from "@/components/calendar/WeekPlanModal";
+import { WeekStructureModal } from "@/components/calendar/WeekStructureModal";
 import { CategoryEditor, SWATCH_PALETTE } from "./_components/CategoryEditor";
 import { CategoryTreeNode, type DragZone } from "./_components/CategoryTreeNode";
 import {
@@ -42,7 +42,7 @@ export default function CategoriesPage() {
     (state: RootState) => state.schedulingSettings.locations,
   );
   const isLoaded = useSelector(
-    (state: RootState) => state.calendar.isLoaded,
+    (state: RootState) => state.calendarSource.isLoaded,
   );
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -96,7 +96,7 @@ export default function CategoriesPage() {
   );
 
   // All mutations are pure Redux dispatches. useCalendarServerSync watches
-  // state.calendar.categories, diffs against its prev-ref, and 300ms after
+  // state.calendarSource.categories, diffs against its prev-ref, and 300ms after
   // the user stops fiddling sends one batched sync transaction. No direct
   // server-action calls from this component.
   const replace = (next: Partial<Category>) => {
@@ -333,7 +333,7 @@ export default function CategoriesPage() {
         </section>
       </div>
 
-      <WeekPlanModal
+      <WeekStructureModal
         open={windowsOpen}
         onClose={() => setWindowsOpen(false)}
         initialMode="windows"

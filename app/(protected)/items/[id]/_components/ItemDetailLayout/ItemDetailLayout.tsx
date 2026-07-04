@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  useEffect,
   useMemo,
   useState,
   type KeyboardEvent,
@@ -11,25 +10,30 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Check, SquarePen } from "lucide-react";
 import { Button, Caption, Loader } from "@/components/ui";
 import { vars, interactiveTransition } from "@/lib/theme";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/redux/store";
 import { useFlashValue } from "@/hooks/useFlashAnimation";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { DraggableContextProvider } from "@/components/draggable/DraggableContext";
-import * as categoryActions from "@/actions/categories";
-import { getSubtasksById, getTaskTreeIds } from "@/utils/goalPageHandlers";
+import {
+  getSubtasksById,
+  getTaskTreeIds,
+  getTreeBottomLayer,
+} from "@/utils/goalPageHandlers";
 import {
   completedSubtaskDuration,
   totalSubtaskDuration,
 } from "@/utils/taskArrayUtils";
 import { useItemHandlers } from "../../_hooks/useItemHandlers";
-import type { Category } from "@/types/prisma";
-import type { PlannerType } from "@/prisma/client";
+import type { PlannerType } from "@/generated/client";
 
 import { ItemProvider } from "../ItemContext";
 import { ItemTabs } from "../ItemTabs";
-import { ConfirmModal } from "@/components/ui";
+import { ConfirmModal, useAssistant } from "@/components/ui";
 import { READY_MESSAGE_MS } from "../../_constants";
 import {
   page,
+  scrollArea,
   innerWrap,
   backRow,
   backLink,
@@ -55,19 +59,17 @@ export default function ItemDetailLayout({
   const params = useParams();
   const itemId = params.id as string;
 
-  const { planner, updatePlannerArray, updateAll } = useCalendarProvider();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
+  // Categories come from the provider (Redux) like every other surface — a
+  // page-local fetch showed stale data after edits elsewhere and blocked
+  // first paint on its own round-trip.
+  const { planner, updatePlannerArray, updateAll, categories } =
+    useCalendarProvider();
+  const isCalendarLoaded = useSelector(
+    (state: RootState) => state.calendarSource.isLoaded,
+  );
   const [editingTitle, setEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
-
-  useEffect(() => {
-    categoryActions
-      .fetchCategories()
-      .then((cats) => setCategories(cats))
-      .catch((err) => console.error("Failed to load categories:", err))
-      .finally(() => setLoadingCategories(false));
-  }, []);
+  const { openAssistant } = useAssistant();
 
   const item = useMemo(
     () => planner.find((p) => p.id === itemId),
@@ -137,8 +139,16 @@ export default function ItemDetailLayout({
     router.push("/library");
   };
 
-  const completedSubtasks = subtasks.filter((s) => s.completedEndTime).length;
-  const totalSubtasks = subtasks.length;
+  // "Subtasks" in the item detail view refers to actionable (leaf) descendants —
+  // intermediate branches aren't work you check off, so they don't count.
+  const leafSubtasks = useMemo(() => {
+    if (!item || item.plannerType !== "goal" || subtasks.length === 0) return [];
+    return getTreeBottomLayer(planner, item.id);
+  }, [item, planner, subtasks.length]);
+  const totalSubtasks = leafSubtasks.length;
+  const completedSubtasks = leafSubtasks.filter(
+    (s) => s.completedEndTime,
+  ).length;
   const pct =
     totalDuration > 0
       ? Math.round((completedDuration / totalDuration) * 100)
@@ -152,19 +162,21 @@ export default function ItemDetailLayout({
     null,
   );
 
-  if (loadingCategories) {
+  if (!isCalendarLoaded) {
     return (
       <div className={page}>
-        <div
-          className={innerWrap}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minHeight: 240,
-          }}
-        >
-          <Loader size="md" label="Loading item" />
+        <div className={scrollArea}>
+          <div
+            className={innerWrap}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: 240,
+            }}
+          >
+            <Loader size="md" label="Loading item" />
+          </div>
         </div>
       </div>
     );
@@ -173,18 +185,20 @@ export default function ItemDetailLayout({
   if (!item) {
     return (
       <div className={page}>
-        <div className={innerWrap}>
-          <button
-            type="button"
-            className={backLink}
-            onClick={() => router.push("/library")}
-          >
-            <ArrowLeft size={12} strokeWidth={2.4} />
-            Library
-          </button>
-          <p style={{ marginTop: 14 }}>
-            <Caption>Item not found.</Caption>
-          </p>
+        <div className={scrollArea}>
+          <div className={innerWrap}>
+            <button
+              type="button"
+              className={backLink}
+              onClick={() => router.push("/library")}
+            >
+              <ArrowLeft size={12} strokeWidth={2.4} />
+              Library
+            </button>
+            <p style={{ marginTop: 14 }}>
+              <Caption>Item not found.</Caption>
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -276,8 +290,9 @@ export default function ItemDetailLayout({
         }}
       >
         <div className={page}>
-          <div className={innerWrap}>
-            <div className={backRow}>
+          <div className={scrollArea}>
+            <div className={innerWrap}>
+              <div className={backRow}>
               <button
                 type="button"
                 className={backLink}
@@ -359,9 +374,11 @@ export default function ItemDetailLayout({
               itemId={item.id}
               subtaskCount={totalSubtasks}
               subtasksEnabled={isGoal}
+              onOpenAssistant={() => openAssistant({ focusItemId: item.id })}
             />
 
             <div className={tabBodyWrap}>{children}</div>
+            </div>
           </div>
 
           <ConfirmModal
@@ -419,6 +436,7 @@ export default function ItemDetailLayout({
             onCancel={() => setShowResetLocationsConfirm(false)}
             onConfirm={confirmResetSubgoalLocations}
           />
+
         </div>
       </ItemProvider>
     </DraggableContextProvider>

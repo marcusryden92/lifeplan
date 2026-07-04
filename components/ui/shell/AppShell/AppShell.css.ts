@@ -1,7 +1,6 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, media, radii } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const bezelFrame = style({
   width: "100vw",
@@ -13,7 +12,7 @@ export const bezelFrame = style({
   overflow: "hidden",
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { padding: 0 },
+    [media.mobile]: { padding: 0 },
   },
 });
 
@@ -21,7 +20,7 @@ export const canvas = style({
   background: vars.paper,
   color: vars.ink,
   fontFamily: vars.font.ui,
-  borderRadius: 30,
+  borderRadius: radii["3xl"],
   flex: 1,
   minWidth: 0,
   minHeight: 0,
@@ -32,8 +31,8 @@ export const canvas = style({
   flexDirection: "column",
   transition: themeTransition,
   "@media": {
-    [MOBILE]: {
-      borderRadius: 0,
+    [media.mobile]: {
+      borderRadius: radii.none,
     },
   },
 });
@@ -47,6 +46,8 @@ export const contentRow = style({
 });
 
 export const mainColumn = style({
+  // Positioning context for the assistant overlay (assistantSlot).
+  position: "relative",
   flex: 1,
   display: "flex",
   flexDirection: "column",
@@ -54,7 +55,7 @@ export const mainColumn = style({
   minHeight: 0,
   overflow: "hidden",
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       paddingBottom: 96,
       overflow: "auto",
       WebkitOverflowScrolling: "touch",
@@ -65,13 +66,13 @@ export const mainColumn = style({
 export const desktopOnly = style({
   display: "flex",
   "@media": {
-    [MOBILE]: { display: "none" },
+    [media.mobile]: { display: "none" },
   },
 });
 
 export const mobileOnly = style({
   display: "none",
   "@media": {
-    [MOBILE]: { display: "flex" },
+    [media.mobile]: { display: "flex" },
   },
 });

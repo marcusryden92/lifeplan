@@ -153,7 +153,8 @@
       "Bash(find /cygdrive/c/Users/Marcus/Desktop/Lifeplan -type d -name helpers 2>/dev/null | head -20)",
       "Read(//cygdrive/c/Users/Marcus/Desktop/**)",
       "Bash(pnpm grep *)",
-      "Bash(taskkill //F //IM node.exe)"
+      "Bash(taskkill //F //IM node.exe)",
+      "PowerShell($full = 'c:\\\\Users\\\\Marcus\\\\Desktop\\\\Lifeplan\\\\lib\\\\db.ts'; $content = [System.IO.File]::ReadAllText\\($full\\); Write-Output \\(\"Length: \" + $content.Length\\); Write-Output \\(\"Contains literal: \" + $content.Contains\\('@/prisma/client'\\)\\); Write-Output \\(\"First 200 chars:\"\\); Write-Output $content.Substring\\(0, [Math]::Min\\(200, $content.Length\\)\\))"
     ]
   }
 }

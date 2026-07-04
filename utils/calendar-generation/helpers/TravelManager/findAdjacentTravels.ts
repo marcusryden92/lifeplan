@@ -1,8 +1,15 @@
 import { Slot } from "../../models/TimeSlot";
 import {
   findTravelShardSpan,
+  lowerBoundSlotIndexByStart,
   type TravelShardSpan,
 } from "../../utils/timeSlotUtils";
+
+// Upper bound on a single travel shard's duration, used to bound the
+// binary-searched scan window when matching on slot END times (end = start +
+// duration, so start >= windowStart - MAX_TRAVEL_SPAN_MS). Real travel legs
+// are priced from the Distance Matrix and never approach this.
+const MAX_TRAVEL_SPAN_MS = 24 * 60 * 60 * 1000;
 
 // Locate the outbound travel whose END sits near `nearTime` and whose
 // origin matches `fromLocationId`. Returns the FULL multi-shard span (not
@@ -16,14 +23,23 @@ export function findAdjacentTravelFrom(
   fromLocationId: string,
 ): TravelShardSpan | null {
   const searchWindowMs = bufferTimeMinutes * 60000 + 10 * 60 * 1000;
+  const nearMs = nearTime.getTime();
+  const scanEndMs = nearMs + searchWindowMs;
 
-  for (let i = 0; i < slots.length; i++) {
+  for (
+    let i = lowerBoundSlotIndexByStart(
+      slots,
+      nearMs - searchWindowMs - MAX_TRAVEL_SPAN_MS,
+    );
+    i < slots.length && slots[i].start.getTime() <= scanEndMs;
+    i++
+  ) {
     const slot = slots[i];
     if (
       slot.type === "travel" &&
       slot.travelFromLocationId === fromLocationId &&
       slot.travelType === "outbound" &&
-      Math.abs(slot.end.getTime() - nearTime.getTime()) <= searchWindowMs
+      Math.abs(slot.end.getTime() - nearMs) <= searchWindowMs
     ) {
       return findTravelShardSpan(slots, i);
     }
@@ -43,13 +59,19 @@ export function findAdjacentTravelTo(
   toLocationId: string,
 ): TravelShardSpan | null {
   const searchWindowMs = bufferTimeMinutes * 60000 + 10 * 60 * 1000;
+  const nearMs = nearTime.getTime();
+  const scanEndMs = nearMs + searchWindowMs;
 
-  for (let i = 0; i < slots.length; i++) {
+  for (
+    let i = lowerBoundSlotIndexByStart(slots, nearMs - searchWindowMs);
+    i < slots.length && slots[i].start.getTime() <= scanEndMs;
+    i++
+  ) {
     const slot = slots[i];
     if (
       slot.type === "travel" &&
       slot.travelToLocationId === toLocationId &&
-      Math.abs(slot.start.getTime() - nearTime.getTime()) <= searchWindowMs
+      Math.abs(slot.start.getTime() - nearMs) <= searchWindowMs
     ) {
       return findTravelShardSpan(slots, i);
     }
@@ -70,8 +92,16 @@ export function findPrecedingGapTravel(
   const bufferMs = bufferTimeMinutes * 60000;
   const expectedEnd = slotStart.getTime() - bufferMs;
   const toleranceMs = bufferMs + 10 * 60 * 1000;
+  const scanEndMs = expectedEnd + toleranceMs;
 
-  for (let i = 0; i < slots.length; i++) {
+  for (
+    let i = lowerBoundSlotIndexByStart(
+      slots,
+      expectedEnd - toleranceMs - MAX_TRAVEL_SPAN_MS,
+    );
+    i < slots.length && slots[i].start.getTime() <= scanEndMs;
+    i++
+  ) {
     const slot = slots[i];
     if (slot.type !== "travel") continue;
     if (slot.travelType !== "preliminary" && slot.travelType !== "outbound")

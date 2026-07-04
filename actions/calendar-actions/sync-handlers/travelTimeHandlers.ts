@@ -1,5 +1,6 @@
-import type { Prisma } from "@/prisma/client";
+import type { Prisma } from "@/generated/client";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
+import { bulkUpdate } from "./bulkUpdate";
 type Database = Prisma.TransactionClient;
 
 // Travel times only flow through the diff for custom override updates.
@@ -15,15 +16,31 @@ export function handleTravelTimeChanges(
 ) {
   const operations = [];
 
-  for (const tt of databaseChanges.travelTime.update) {
+  if (databaseChanges.travelTime.update.length) {
     operations.push(
-      db.travelTime.update({
-        where: { id: tt.id, userId },
-        data: {
-          customRushHourMinutes: tt.customRushHourMinutes,
-          customRegularMinutes: tt.customRegularMinutes,
-          customNightMinutes: tt.customNightMinutes,
-        },
+      bulkUpdate({
+        db,
+        tableName: `"TravelTimes"`,
+        rows: databaseChanges.travelTime.update,
+        userIdColumn: "userId",
+        userId,
+        columns: [
+          {
+            name: "customRushHourMinutes",
+            cast: "int",
+            extract: (r) => r.customRushHourMinutes,
+          },
+          {
+            name: "customRegularMinutes",
+            cast: "int",
+            extract: (r) => r.customRegularMinutes,
+          },
+          {
+            name: "customNightMinutes",
+            cast: "int",
+            extract: (r) => r.customNightMinutes,
+          },
+        ],
       }),
     );
   }

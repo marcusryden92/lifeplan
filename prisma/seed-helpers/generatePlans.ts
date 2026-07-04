@@ -1,4 +1,4 @@
-import { Planner } from "../client";
+import { Planner } from "../../generated/client";
 import { v4 as uuidv4 } from "uuid";
 
 /**
@@ -118,7 +118,7 @@ export const generatePlans = (userId: string): Planner[] => {
       duration: data.duration,
       deadline: null,
       starts,
-      dependency: null,
+      sortOrder: 0,
       completedStartTime: null,
       completedEndTime: null,
       priority: 5,

@@ -19,6 +19,16 @@ export const vars = createThemeContract({
     hi: null,
   },
 
+  // Interaction fills. hoverFill inverts direction per theme (darkens on
+  // light paper, brightens on dark paper) so hovers stay visible in both
+  // modes. selectedFill is the persistent active/selected row state — a
+  // stronger version of the same idea. Prefer these over reaching for
+  // glass.bgSoft/bgDeep when the intent is "row hover" or "selected row".
+  interactive: {
+    hoverFill: null,
+    selectedFill: null,
+  },
+
   shadow: {
     panel: null,
     panelSm: null,

@@ -1,14 +1,22 @@
 import { Planner, SimpleEvent, PlannerType, EventType } from "@/types/prisma";
 import { v4 as uuidv4 } from "uuid";
+import { taskIsCompleted } from "../../../taskHelpers";
+import { stabilizeEvent } from "./stabilizeEvent";
 
+// Plans are always rebuilt from their planner row — never memoized (see
+// buildMemoizedEvents). Completed plans are excluded here; they render at
+// their completion window via buildCompletedEvents.
 export function buildPlanEvents(
   userId: string,
   planners: Planner[],
   memoizedEventIds: Set<string>,
+  previousById: Map<string, SimpleEvent>,
 ): SimpleEvent[] {
   const planItems = planners.filter(
     (task) =>
-      task.plannerType === PlannerType.plan && !memoizedEventIds.has(task.id),
+      task.plannerType === PlannerType.plan &&
+      !taskIsCompleted(task) &&
+      !memoizedEventIds.has(task.id),
   );
 
   const now = new Date();
@@ -21,7 +29,7 @@ export function buildPlanEvents(
       );
 
       const planColor = plan.color ?? "black";
-      events.push({
+      const candidate: SimpleEvent = {
         userId,
         title: plan.title,
         id: plan.id,
@@ -42,7 +50,8 @@ export function buildPlanEvents(
         rrule: null,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
-      });
+      };
+      events.push(stabilizeEvent(candidate, previousById.get(plan.id)));
     }
   }
 

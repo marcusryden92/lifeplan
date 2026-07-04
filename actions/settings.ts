@@ -24,25 +24,34 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
     return { error: "Unauthorized." };
   }
 
+  // Runtime validation — the z.infer type is compile-time only, so a caller
+  // can send arbitrary User columns without this.
+  const parsed = SettingsSchema.safeParse(values);
+  if (!parsed.success) {
+    return { error: "Invalid fields." };
+  }
+  const data = parsed.data;
+
   if (user.isOAuth) {
-    values.email = undefined;
-    values.password = undefined;
-    values.newPassword = undefined;
-    values.isTwoFactorEnabled = undefined;
+    data.email = undefined;
+    data.password = undefined;
+    data.newPassword = undefined;
+    data.isTwoFactorEnabled = undefined;
   }
 
-  if (
-    values.email &&
-    typeof values.email === "string" &&
-    values.email !== user.email
-  ) {
-    const existingUser = await getUserByEmail(values.email);
+  if (data.email && data.email !== user.email) {
+    const existingUser = await getUserByEmail(data.email);
 
     if (existingUser && existingUser.id !== user.id) {
       return { error: "Email already in use!" };
     }
 
-    const verificationToken = await generateVerificationToken(values.email);
+    // Bind the token to the user id — the new email doesn't resolve to any
+    // user row yet, so newVerification can't look the account up by email.
+    const verificationToken = await generateVerificationToken(
+      data.email,
+      dbUser.id,
+    );
 
     await sendVerificationEmail(
       verificationToken.email,
@@ -52,33 +61,41 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
     return { success: "Verification email sent!" };
   }
 
-  if (
-    values.password &&
-    typeof values.password === "string" &&
-    typeof values.newPassword === "string" &&
-    values.newPassword &&
-    dbUser.password
-  ) {
-    const passwordsMatch = await bcrypt.compare(
-      values.password,
-      dbUser.password
-    );
+  // Explicit whitelist — never spread client input into the update. The User
+  // row also carries role, emailVerified, and the OCC dataVersion counter;
+  // none of those are settable from here.
+  const update: {
+    name?: string;
+    password?: string;
+    passwordChangedAt?: Date;
+    isTwoFactorEnabled?: boolean;
+  } = {};
+
+  if (data.name !== undefined) {
+    update.name = data.name;
+  }
+  if (data.isTwoFactorEnabled !== undefined) {
+    update.isTwoFactorEnabled = data.isTwoFactorEnabled;
+  }
+
+  if (data.password && data.newPassword && dbUser.password) {
+    const passwordsMatch = await bcrypt.compare(data.password, dbUser.password);
 
     if (!passwordsMatch) {
       return { error: "Incorrect password!" };
     }
 
-    const hashedPassword = await bcrypt.hash(values.newPassword, 10);
+    update.password = await bcrypt.hash(data.newPassword, 10);
+    update.passwordChangedAt = new Date();
+  }
 
-    values.password = hashedPassword;
-    values.newPassword = undefined;
+  if (Object.keys(update).length === 0) {
+    return { success: "Settings updated!" };
   }
 
   await db.user.update({
     where: { id: dbUser.id },
-    data: {
-      ...values,
-    },
+    data: update,
   });
 
   return { success: "Settings updated!" };

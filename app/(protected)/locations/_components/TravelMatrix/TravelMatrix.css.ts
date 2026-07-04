@@ -1,10 +1,10 @@
-import { style, globalStyle } from "@vanilla-extract/css";
+﻿import { style, globalStyle } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars, themeTransition, interactiveTransition } from "@/lib/theme";
+import { vars, themeTransition, interactiveTransition, radii } from "@/lib/theme";
 
 export const matrixWrap = style({
   border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   overflow: "auto",
   background: vars.glass.bgSoft,
   transition: themeTransition,
@@ -19,7 +19,7 @@ export const matrixTable = style({
   color: vars.ink,
 });
 
-// Trace highlight motion — fast enough to track a cursor moving across the
+// Trace highlight motion â€” fast enough to track a cursor moving across the
 // matrix without lag, but with a touch of easing so it doesn't snap.
 const TRACE_TRANSITION =
   "background-color 200ms cubic-bezier(0.4, 0, 0.2, 1)";
@@ -210,7 +210,7 @@ globalStyle(`${cell}[data-custom="true"] > button:hover`, {
   background: `color-mix(in srgb, ${vars.status.warning} 20%, transparent)`,
 });
 
-// Crosshair trace — hovered cell ("active") and the row/column lead-in cells
+// Crosshair trace â€” hovered cell ("active") and the row/column lead-in cells
 // + their headers ("trail"). Applied to the inner button OR self-div via the
 // universal child selector so both render the same way.
 globalStyle(`${cell}[data-trace="active"] > *`, {

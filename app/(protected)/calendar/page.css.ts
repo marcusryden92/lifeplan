@@ -1,4 +1,4 @@
-import { style } from "@vanilla-extract/css";
+﻿import { style } from "@vanilla-extract/css";
 import {
   vars,
   themeTransition,
@@ -6,9 +6,10 @@ import {
   DURATIONS,
   backdropFilters,
   glass,
+  media,
+  radii,
 } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const page = style({
   display: "flex",
@@ -16,7 +17,7 @@ export const page = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
     },
@@ -33,7 +34,7 @@ export const subHeader = style({
   padding: "20px 28px 18px",
   flexShrink: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       padding: "16px 16px 12px",
       flexWrap: "wrap",
       gap: 10,
@@ -57,7 +58,7 @@ export const rangeTitle = style({
   fontVariantNumeric: "tabular-nums",
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { fontSize: 24, minWidth: "auto" },
+    [media.mobile]: { fontSize: 24, minWidth: "auto" },
   },
 });
 
@@ -147,7 +148,7 @@ export const headerConsoleSpacer = style({
     },
   },
   "@media": {
-    [MOBILE]: { display: "none" },
+    [media.mobile]: { display: "none" },
   },
 });
 
@@ -185,7 +186,7 @@ export const engineCogBtn = style({
   boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
   color: vars.ink,
   cursor: "pointer",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   flexShrink: 0,
   transition: themeTransition,
   selectors: {
@@ -199,7 +200,7 @@ export const engineCogAlertDot = style({
   right: 3,
   width: 7,
   height: 7,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1.5px solid ${vars.paper}`,
   transition: themeTransition,
 });
@@ -229,7 +230,7 @@ export const mainGrid = style({
     },
   },
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       gridTemplateColumns: "1fr",
       padding: "0 16px 24px",
       gap: 14,
@@ -247,7 +248,7 @@ export const calendarCard = style([
     minHeight: 0,
     overflow: "hidden",
     "@media": {
-      [MOBILE]: {
+      [media.mobile]: {
         minHeight: 540,
       },
     },
@@ -389,7 +390,7 @@ export const controlSlider = style({
   appearance: "none",
   width: "100%",
   height: 4,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   background: vars.glass.bgDeep,
   border: `1px solid ${vars.rule}`,
   outline: "none",
@@ -401,7 +402,7 @@ export const controlSlider = style({
       appearance: "none",
       width: 14,
       height: 14,
-      borderRadius: 999,
+      borderRadius: radii.pill,
       background: vars.ink,
       border: `2px solid ${vars.paper}`,
       cursor: "pointer",
@@ -409,7 +410,7 @@ export const controlSlider = style({
     "&::-moz-range-thumb": {
       width: 14,
       height: 14,
-      borderRadius: 999,
+      borderRadius: radii.pill,
       background: vars.ink,
       border: `2px solid ${vars.paper}`,
       cursor: "pointer",
@@ -419,23 +420,116 @@ export const controlSlider = style({
 
 
 export const engineCard = style({
+  position: "relative",
   padding: "10px 12px",
-  borderRadius: 10,
+  borderRadius: radii["sm+2"],
   border: `1px solid ${vars.rule}`,
   background: "transparent",
   transition: themeTransition,
 });
 
+// Whole-card link overlay when the payload references a planner. Sits under
+// the dismiss button so a click on × doesn't accidentally navigate.
+export const engineCardLink = style({
+  position: "absolute",
+  inset: 0,
+  borderRadius: "inherit",
+  color: "transparent",
+  textDecoration: "none",
+  cursor: "pointer",
+  zIndex: 0,
+  ":focus-visible": {
+    outline: `2px solid ${vars.accent.primary}`,
+    outlineOffset: 2,
+  },
+});
+
+// Card content sits above the link overlay so text remains selectable and
+// the dismiss button remains clickable.
+export const engineCardContent = style({
+  position: "relative",
+  zIndex: 1,
+  pointerEvents: "none",
+});
+
+// Small × in the top-right. `pointer-events: auto` restores clickability
+// against the parent's disabled events set on engineCardContent.
+export const engineDismissBtn = style({
+  position: "absolute",
+  top: 6,
+  right: 6,
+  zIndex: 2,
+  pointerEvents: "auto",
+  width: 22,
+  height: 22,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+  border: "none",
+  background: "transparent",
+  color: vars.inkSoft,
+  borderRadius: radii.sm,
+  cursor: "pointer",
+  opacity: 0.65,
+  transition: themeTransition,
+  ":hover": {
+    opacity: 1,
+    background: vars.interactive.hoverFill,
+  },
+  ":focus-visible": {
+    outline: `2px solid ${vars.accent.primary}`,
+    outlineOffset: 1,
+  },
+});
+
+// Locate icon sits just left of the dismiss button. Only rendered on cards
+// with a concrete date to navigate to (SCHEDULED_LATE). Same interaction
+// shape as the dismiss button.
+export const engineGoToBtn = style({
+  position: "absolute",
+  top: 6,
+  right: 32,
+  zIndex: 2,
+  pointerEvents: "auto",
+  width: 22,
+  height: 22,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 0,
+  border: "none",
+  background: "transparent",
+  color: vars.inkSoft,
+  borderRadius: radii.sm,
+  cursor: "pointer",
+  opacity: 0.65,
+  transition: themeTransition,
+  ":hover": {
+    opacity: 1,
+    background: vars.interactive.hoverFill,
+  },
+  ":focus-visible": {
+    outline: `2px solid ${vars.accent.primary}`,
+    outlineOffset: 1,
+  },
+});
+
 export const engineCardHead = style({
   display: "flex",
-  alignItems: "center",
+  alignItems: "flex-start",
   gap: 8,
   flexWrap: "wrap",
+  // Reserve space for the absolute-positioned buttons in the top-right
+  // corner (dismiss + optional go-to) so a long title wraps before it slides
+  // under either. Sized for both buttons; cards without a go-to have a bit
+  // of extra breathing room, which reads consistently.
+  paddingRight: 48,
 });
 
 export const engineTag = style({
   padding: "2px 8px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   color: vars.textOnAccent,
   fontSize: 9.5,
   fontWeight: 700,
@@ -471,5 +565,5 @@ export const fcWrap = style({
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  borderRadius: 22,
+  borderRadius: radii["xl+2"],
 });

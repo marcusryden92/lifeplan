@@ -1,5 +1,7 @@
-"use server";
-
+// NOT a server action on purpose: this module is only called server-side with
+// an already-authenticated userId (syncCalendarData's stale path). Exposing it
+// with "use server" would make it a public endpoint that reads arbitrary
+// users' data by id.
 import { db } from "@/lib/db";
 import { weekdayToInt } from "@/utils/calendarUtils";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
@@ -10,6 +12,7 @@ import type {
   Category,
   CategoryEvent,
   TravelEvent,
+  EngineMessage,
 } from "@/types/prisma";
 import type {
   SerializedLocation,
@@ -29,6 +32,7 @@ export type FreshState = {
   categories: Category[];
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
+  engineMessages: EngineMessage[];
   locations: SerializedLocation[];
   travelTimes: SerializedTravelTime[];
 };
@@ -42,6 +46,7 @@ export async function fetchFreshState(userId: string): Promise<FreshState> {
     categoriesRaw,
     categoryEvents,
     travelEvents,
+    engineMessages,
     locations,
     travelTimes,
   ] = await Promise.all([
@@ -61,6 +66,7 @@ export async function fetchFreshState(userId: string): Promise<FreshState> {
     }),
     db.categoryEvent.findMany({ where: { userId } }),
     db.travelEvent.findMany({ where: { userId } }),
+    db.engineMessage.findMany({ where: { userId } }),
     db.location.findMany({
       where: { userId },
       orderBy: { createdAt: "asc" },
@@ -110,6 +116,7 @@ export async function fetchFreshState(userId: string): Promise<FreshState> {
     categories,
     categoryEvents,
     travelEvents,
+    engineMessages,
     locations,
     travelTimes: allTravelTimes,
   };

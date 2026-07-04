@@ -1,7 +1,6 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, media, radii } from "@/lib/theme";
 
-const MOBILE = "screen and (max-width: 767px)";
 
 export const page = style({
   display: "flex",
@@ -9,7 +8,7 @@ export const page = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
     },
@@ -23,7 +22,7 @@ export const subHeader = style({
   padding: "20px 28px 18px",
   flexShrink: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       padding: "16px 16px 12px",
       flexWrap: "wrap",
       gap: 10,
@@ -41,7 +40,7 @@ export const pageTitle = style({
   margin: 0,
   transition: themeTransition,
   "@media": {
-    [MOBILE]: { fontSize: 24 },
+    [media.mobile]: { fontSize: 24 },
   },
 });
 
@@ -72,7 +71,7 @@ export const mainGrid = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [MOBILE]: {
+    [media.mobile]: {
       gridTemplateColumns: "1fr",
       padding: "0 16px 24px",
       gap: 14,
@@ -93,7 +92,7 @@ export const rail = style([
   cardBase,
   {
     "@media": {
-      [MOBILE]: { minHeight: "auto" },
+      [media.mobile]: { minHeight: "auto" },
     },
   },
 ]);
@@ -129,7 +128,7 @@ export const railRow = style({
   alignItems: "center",
   gap: 8,
   padding: "5px 8px",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   cursor: "pointer",
   fontSize: 13.5,
   fontFamily: vars.font.ui,
@@ -141,7 +140,7 @@ export const railRow = style({
   width: "100%",
   selectors: {
     "&:hover": {
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
   },
 });
@@ -207,7 +206,7 @@ export const treeColorDot = style({
   display: "inline-block",
   width: 9,
   height: 9,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   flexShrink: 0,
 });
 
@@ -215,7 +214,7 @@ export const treeNoColor = style({
   display: "inline-block",
   width: 9,
   height: 9,
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1px dashed ${vars.muted}`,
   opacity: 0.5,
   flexShrink: 0,
@@ -225,7 +224,7 @@ export const mainCard = style([
   cardBase,
   {
     "@media": {
-      [MOBILE]: { minHeight: 540 },
+      [media.mobile]: { minHeight: 540 },
     },
   },
 ]);
@@ -251,7 +250,7 @@ export const searchWrap = style({
   alignItems: "center",
   gap: 6,
   padding: "6px 12px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bgSoft,
   flex: 1,
@@ -305,14 +304,8 @@ export const tableWrap = style({
 
 export const tableHead = style({
   display: "grid",
-  gridTemplateColumns: "1fr 80px 90px 130px 110px 90px 30px",
+  gridTemplateColumns: "1fr 80px 100px 110px 130px 120px 90px 30px",
   padding: "12px 8px 10px",
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
   borderBottom: `1px solid ${vars.rule}`,
   position: "sticky",
   top: 0,
@@ -321,9 +314,64 @@ export const tableHead = style({
   transition: themeTransition,
 });
 
+export const headerCell = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 5,
+  paddingRight: 12,
+  fontFamily: vars.font.ui,
+  fontSize: 9.5,
+  fontWeight: 600,
+  letterSpacing: "0.14em",
+  textTransform: "uppercase",
+  color: vars.muted,
+  background: "transparent",
+  border: "none",
+  textAlign: "left",
+  transition: themeTransition,
+});
+
+export const headerCellSortable = style({
+  cursor: "pointer",
+  selectors: {
+    "&:hover": {
+      color: vars.ink,
+    },
+  },
+});
+
+export const headerCellActive = style({
+  color: vars.ink,
+});
+
+export const headerCellIcon = style({
+  display: "inline-flex",
+  alignItems: "center",
+  color: "currentColor",
+});
+
+export const headerCellIconIdle = style({
+  opacity: 0.45,
+});
+
+export const showCompletedToggle = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  fontFamily: vars.font.ui,
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: "0.06em",
+  textTransform: "uppercase",
+  color: vars.muted,
+  cursor: "pointer",
+  userSelect: "none",
+  transition: themeTransition,
+});
+
 export const tableRow = style({
   display: "grid",
-  gridTemplateColumns: "1fr 80px 90px 130px 110px 90px 30px",
+  gridTemplateColumns: "1fr 80px 100px 110px 130px 120px 90px 30px",
   padding: "12px 8px",
   alignItems: "center",
   borderBottom: `1px solid ${vars.rule}`,
@@ -335,7 +383,7 @@ export const tableRow = style({
   transition: themeTransition,
   selectors: {
     "&:hover": {
-      background: vars.glass.bgSoft,
+      background: vars.interactive.hoverFill,
     },
   },
 });

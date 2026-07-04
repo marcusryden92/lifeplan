@@ -21,7 +21,7 @@ import {
   LocationGroupingPenaltiesConfig,
 } from "../models/SchedulingModels";
 import { SchedulingStrategy } from "./SchedulingStrategy";
-import { LOCATION_CONFIG } from "../constants";
+import { travelMinutesForTime } from "../helpers/TravelManager/getTravelTime";
 import {
   DEFAULT_LOCATION_GROUPING_SCORES,
   DEFAULT_LOCATION_GROUPING_PENALTIES,
@@ -138,7 +138,8 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
   }
 
   /**
-   * Get travel time between two locations based on time of day
+   * Get travel time between two locations based on time of day. Delegates to
+   * the shared bucket function so scoring and reservation always agree.
    */
   private getTravelTimeMinutes(
     fromLocationId: string,
@@ -150,28 +151,7 @@ export class LocationGroupingStrategy implements SchedulingStrategy {
 
     if (!entry) return 0;
 
-    const hour = atTime.getHours();
-    const dayOfWeek = atTime.getDay(); // 0 = Sunday, 6 = Saturday
-    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-    // Determine time period
-    const isRushHour =
-      !isWeekend &&
-      ((hour >= LOCATION_CONFIG.RUSH_HOUR_MORNING_START &&
-        hour < LOCATION_CONFIG.RUSH_HOUR_MORNING_END) ||
-        (hour >= LOCATION_CONFIG.RUSH_HOUR_EVENING_START &&
-          hour < LOCATION_CONFIG.RUSH_HOUR_EVENING_END));
-
-    const isNight =
-      hour >= LOCATION_CONFIG.NIGHT_START || hour < LOCATION_CONFIG.NIGHT_END;
-
-    if (isRushHour) {
-      return entry.rushHourMinutes;
-    } else if (isNight) {
-      return entry.nightMinutes;
-    } else {
-      return entry.regularMinutes;
-    }
+    return travelMinutesForTime(entry, atTime);
   }
 }
 

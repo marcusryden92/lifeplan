@@ -3,6 +3,7 @@ import {
   Planner,
   EventTemplate,
   PlannerType,
+  Category,
 } from "@/types/prisma";
 import { EventDropArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
@@ -35,7 +36,7 @@ export const createPlanFromSelection = (
     duration,
     deadline: null,
     starts: start.toISOString(),
-    dependency: null,
+    sortOrder: 0,
     priority: 5,
     completedStartTime: null,
     completedEndTime: null,
@@ -51,11 +52,18 @@ export const createPlanFromSelection = (
   updatePlannerArray((prevEvents) => [...prevEvents, newEvent]);
 };
 
+// Calendar drag/resize run the engine inline: FullCalendar has already moved
+// the tile internally, so an async regen would paint it overlapping stale
+// placements for a frame ("half-width popping"). Inline commits source +
+// engine output before the next paint — same atomicity the synchronous
+// engine had.
 export const handleEventResize = (
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
     calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
     template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
+    categories?: Category[] | ((prev: Category[]) => Category[]),
+    options?: { engineMode?: "inline" | "worker" },
   ) => void,
   resizeInfo: EventResizeStartArg,
 ) => {
@@ -83,24 +91,38 @@ export const handleEventResize = (
             }
           : ev,
       ),
+    undefined,
+    undefined,
+    { engineMode: "inline" },
   );
 };
 
 export const handleEventDrop = (
-  updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>,
+  updatePlannerArray: (
+    planner: Planner[] | ((prev: Planner[]) => Planner[]),
+    options?: { engineMode?: "inline" | "worker" },
+  ) => void,
   dropInfo: EventDropArg,
 ) => {
   const { event } = dropInfo;
+  console.debug("[calendar] eventDrop", event.id, event.start?.toISOString());
 
-  updatePlannerArray((prevEvents) =>
-    prevEvents.map((ev) =>
-      ev.id === event.id
-        ? {
-            ...ev,
-            starts: event.start?.toISOString() || ev.starts,
-          }
-        : ev,
-    ),
+  updatePlannerArray(
+    (prevPlanner) => {
+      if (!prevPlanner.some((p) => p.id === event.id)) {
+        console.warn("[calendar] eventDrop matched no planner row", event.id);
+        return prevPlanner;
+      }
+      return prevPlanner.map((ev) =>
+        ev.id === event.id
+          ? {
+              ...ev,
+              starts: event.start?.toISOString() || ev.starts,
+            }
+          : ev,
+      );
+    },
+    { engineMode: "inline" },
   );
 };
 
@@ -267,7 +289,6 @@ export const handleClickDelete = (
       deleteGoal({
         updateAll,
         taskId: event.id,
-        parentId,
         manuallyUpdatedCalendar: updatedCalendar,
       });
     } else {

@@ -1,12 +1,12 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+﻿import { style } from "@vanilla-extract/css";
+import { vars, themeTransition, radii } from "@/lib/theme";
 
 export const wrap = style({
   position: "relative",
   display: "flex",
   flexDirection: "column",
   border: `1px solid ${vars.rule}`,
-  borderRadius: 14,
+  borderRadius: radii["md+2"],
   background: vars.glass.bgSoft,
   padding: 10,
   cursor: "pointer",
@@ -40,7 +40,7 @@ export const dayLabel = style({
 export const scrollArea = style({
   height: 240,
   overflowY: "auto",
-  borderRadius: 8,
+  borderRadius: radii.sm,
   // Soft fade at the top/bottom so scrolled content visually attaches to the
   // header without a hard edge.
   maskImage:
@@ -126,7 +126,7 @@ export const editHint = style({
   color: vars.muted,
   background: vars.paper,
   padding: "2px 7px",
-  borderRadius: 999,
+  borderRadius: radii.pill,
   border: `1px solid ${vars.rule}`,
   transition: themeTransition,
   pointerEvents: "none",

@@ -3,45 +3,20 @@ import {
   createSprinkles,
 } from "@vanilla-extract/sprinkles";
 import { vars } from "./tokens.css";
-
-const space = {
-  none: 0,
-  px: 1,
-  "0.5": 2,
-  "1": 4,
-  "1.5": 6,
-  "2": 8,
-  "2.5": 10,
-  "3": 12,
-  "3.5": 14,
-  "4": 16,
-  "5": 20,
-  "6": 24,
-  "7": 28,
-  "8": 32,
-  "10": 40,
-  "12": 48,
-  "14": 56,
-  "16": 64,
-  "20": 80,
-} as const;
-
-const radii = {
-  none: 0,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 20,
-  "2xl": 24,
-  "3xl": 30,
-  full: 9999,
-} as const;
+import {
+  space,
+  radii,
+  contentWidth,
+  borderWidth,
+  zIndex,
+  media,
+} from "./scales";
 
 const layoutProps = defineProperties({
   conditions: {
     base: {},
-    md: { "@media": "screen and (min-width: 768px)" },
-    lg: { "@media": "screen and (min-width: 1024px)" },
+    md: { "@media": media.tabletUp },
+    lg: { "@media": media.desktopUp },
   },
   defaultCondition: "base",
   properties: {
@@ -94,12 +69,18 @@ const layoutProps = defineProperties({
     height: ["auto", "100%", "fit-content"],
     minWidth: { "0": 0, full: "100%" },
     minHeight: { "0": 0, full: "100%" },
-    maxWidth: { full: "100%", screen: "100vw" },
+    maxWidth: { ...contentWidth, full: "100%", screen: "100vw" },
     borderRadius: radii,
     borderTopLeftRadius: radii,
     borderTopRightRadius: radii,
     borderBottomLeftRadius: radii,
     borderBottomRightRadius: radii,
+    borderWidth: borderWidth,
+    borderTopWidth: borderWidth,
+    borderRightWidth: borderWidth,
+    borderBottomWidth: borderWidth,
+    borderLeftWidth: borderWidth,
+    borderStyle: ["solid", "dashed", "dotted", "none"],
     position: ["static", "relative", "absolute", "fixed", "sticky"],
     overflow: ["visible", "hidden", "auto", "scroll"],
     overflowX: ["visible", "hidden", "auto", "scroll"],
@@ -107,7 +88,7 @@ const layoutProps = defineProperties({
     textAlign: ["left", "center", "right"],
     cursor: ["pointer", "default", "not-allowed", "text"],
     pointerEvents: ["auto", "none"],
-    zIndex: { auto: "auto", "0": 0, "1": 1, "2": 2, "10": 10, "20": 20 },
+    zIndex: { auto: "auto", ...zIndex },
   },
   shorthands: {
     p: ["padding"],
@@ -166,6 +147,8 @@ const colorProps = defineProperties({
       glassBg: vars.glass.bg,
       glassBgDeep: vars.glass.bgDeep,
       glassBgSoft: vars.glass.bgSoft,
+      hoverFill: vars.interactive.hoverFill,
+      selectedFill: vars.interactive.selectedFill,
       accent: vars.accent.primary,
       now: vars.accent.now,
       done: vars.accent.done,

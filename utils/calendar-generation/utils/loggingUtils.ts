@@ -294,6 +294,11 @@ function logDynamicScheduling(recorder: SchedulerRecorder): void {
     return;
   }
 
+  // Compact mode prints only the task header + outcome — one screenful for a
+  // whole regen instead of a slot-dump avalanche. Flip off for the full
+  // decision/action/end-state trail on a single task under investigation.
+  const COMPACT = true;
+
   console.log(
     `\n=== DYNAMIC SCHEDULING (${records.length} task${records.length === 1 ? "" : "s"} in range) ===`,
   );
@@ -303,12 +308,14 @@ function logDynamicScheduling(recorder: SchedulerRecorder): void {
     console.log(
       `\n[task #${rec.iterationIndex}] "${rec.task.title}" (${rec.task.duration}min, location=${locLabel})`,
     );
-    for (const d of rec.decisions) {
-      const indent = "  ".repeat(d.depth + 1);
-      console.log(`${indent}${d.text}`);
-    }
-    for (const a of rec.actions) {
-      console.log(`  → ${a}`);
+    if (!COMPACT) {
+      for (const d of rec.decisions) {
+        const indent = "  ".repeat(d.depth + 1);
+        console.log(`${indent}${d.text}`);
+      }
+      for (const a of rec.actions) {
+        console.log(`  → ${a}`);
+      }
     }
     if (rec.outcome) {
       if (rec.outcome.kind === "scheduled") {
@@ -325,7 +332,7 @@ function logDynamicScheduling(recorder: SchedulerRecorder): void {
         console.log(`  · Skipped: ${rec.outcome.reason}`);
       }
     }
-    if (rec.endState.length > 0) {
+    if (!COMPACT && rec.endState.length > 0) {
       console.log(`\n  End state (${rec.endState.length} slots in range):`);
       rec.endState.forEach((s, idx) => {
         const m = s.markers.length > 0 ? ` {${s.markers.join(", ")}}` : "";

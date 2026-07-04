@@ -1,0 +1,1 @@
+export { CategoryWrapperEvent } from "./CategoryWrapperEvent";

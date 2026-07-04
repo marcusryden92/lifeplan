@@ -1,6 +1,7 @@
 "use server";
 
 import * as z from "zod";
+import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
 
 import { signIn } from "@/auth";
@@ -31,8 +32,18 @@ export const login = async (
 
   const existingUser = await getUserByEmail(email);
 
+  // Same message as a wrong password — a distinct "email does not exist"
+  // error lets anyone enumerate registered accounts.
   if (!existingUser || !existingUser.email || !existingUser.password) {
-    return { error: "Email does not exist." };
+    return { error: "Invalid credentials!" };
+  }
+
+  // Verify the password BEFORE the 2FA branch. Otherwise anyone who knows an
+  // email can trigger 2FA mails at will, and an attacker can brute-force the
+  // 6-digit code without ever presenting a password.
+  const passwordsMatch = await bcrypt.compare(password, existingUser.password);
+  if (!passwordsMatch) {
+    return { error: "Invalid credentials!" };
   }
 
   if (!existingUser.emailVerified) {
@@ -54,7 +65,7 @@ export const login = async (
       if (!twoFactorToken) {
         return { error: "Code does not exist!" };
       }
-      if (twoFactorToken.token != code) {
+      if (twoFactorToken.token !== code) {
         return { error: "Invalid code!" };
       }
 

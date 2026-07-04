@@ -47,6 +47,7 @@ export function scheduleGoal(
         taskTitle: task.title,
         reason: SchedulingFailureReason.TOO_LARGE,
         details: `Task duration (${task.duration} min) exceeds max effective capacity (${maxCapacity} min) given templates and category constraints`,
+        context: { duration: task.duration, maxCapacity },
       });
       continue;
     }
@@ -58,11 +59,14 @@ export function scheduleGoal(
       scheduledTaskIds.add(task.id);
       goalAfterTime = new Date(res.event.end);
     } else if (res.failure) {
+      // Push NO_SLOTS the same as any other failure so the engine console
+      // sees goals that ran out of horizon. scheduleTasksAndGoals filters
+      // failures for taskIds that eventually got scheduled on retry, so a
+      // task that succeeds after horizon expansion won't leave a phantom row.
+      failures.push(res.failure);
       if (res.failure.reason === SchedulingFailureReason.NO_SLOTS) {
         goalFailedDueToNoSlots = true;
         break;
-      } else {
-        failures.push(res.failure);
       }
     }
   }

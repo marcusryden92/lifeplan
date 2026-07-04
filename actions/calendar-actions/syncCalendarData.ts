@@ -1,5 +1,6 @@
 "use server";
 
+import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { DatabaseChanges } from "@/utils/server-handlers/compareCalendarData";
 import { handlePlannerChanges } from "./sync-handlers/plannerHandlers";
@@ -10,6 +11,7 @@ import { handleCategoryChanges } from "./sync-handlers/categoryHandlers";
 import { handleTimeWindowChanges } from "./sync-handlers/timeWindowHandlers";
 import { handleCategoryEventChanges } from "./sync-handlers/categoryEventHandlers";
 import { handleTravelEventChanges } from "./sync-handlers/travelEventHandlers";
+import { handleEngineMessageChanges } from "./sync-handlers/engineMessageHandlers";
 import { handleLocationChanges } from "./sync-handlers/locationHandlers";
 import { handleTravelTimeChanges } from "./sync-handlers/travelTimeHandlers";
 import { fetchFreshState, type FreshState } from "./fetchFreshState";
@@ -30,10 +32,27 @@ export type SyncResponse =
   | { success: false; reason: "error"; error: string };
 
 export async function syncCalendarData(
-  userId: string,
   databaseChanges: DatabaseChanges,
   clientKnownDataVersion: number,
 ): Promise<SyncResponse> {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    return { success: false, reason: "error", error: "Unauthorized" };
+  }
+
+  // Empty diffs must not bump dataVersion — a no-op bump forces every other
+  // tab's next sync into stale-adoption, discarding its in-flight edits.
+  const hasChanges = Object.values(databaseChanges).some(
+    (group: { create: unknown[]; update: unknown[]; destroy: unknown[] }) =>
+      group.create.length > 0 ||
+      group.update.length > 0 ||
+      group.destroy.length > 0,
+  );
+  if (!hasChanges) {
+    return { success: true, newDataVersion: clientKnownDataVersion };
+  }
+
   const now = new Date();
   const updatedAt = now.toISOString();
 
@@ -55,12 +74,13 @@ export async function syncCalendarData(
         const operations = [
           ...handlePlannerChanges(tx, userId, databaseChanges, updatedAt),
           ...handleCalendarChanges(tx, userId, databaseChanges, updatedAt),
-          ...handleExtendedPropsChanges(tx, databaseChanges),
+          ...handleExtendedPropsChanges(tx, userId, databaseChanges),
           ...handleTemplateChanges(tx, userId, databaseChanges, updatedAt),
           ...handleCategoryChanges(tx, userId, databaseChanges, updatedAt),
           ...handleTimeWindowChanges(tx, userId, databaseChanges),
           ...handleCategoryEventChanges(tx, userId, databaseChanges),
           ...handleTravelEventChanges(tx, userId, databaseChanges),
+          ...handleEngineMessageChanges(tx, userId, databaseChanges),
           ...handleLocationChanges(tx, userId, databaseChanges),
           ...handleTravelTimeChanges(tx, userId, databaseChanges),
         ];
@@ -78,10 +98,11 @@ export async function syncCalendarData(
         // The first regen after a fresh load runs hundreds of writes:
         // CategoryEvent creates for every materialized weekly occurrence on top
         // of the usual planner/calendar/extendedProps churn. Prisma's 5s
-        // interactive-transaction default tips over here. 30s gives steady
-        // headroom — long syncs are still bounded so a runaway diff can't
-        // block the connection indefinitely.
-        timeout: 30_000,
+        // interactive-transaction default tips over here. Assistant saves on a
+        // large goal restructure hit the same shape (many planner ops + full
+        // engine regen), so 60s gives steady headroom. Long syncs are still
+        // bounded so a runaway diff can't block the connection indefinitely.
+        timeout: 60_000,
       },
     );
 
@@ -103,11 +124,13 @@ export async function syncCalendarData(
       const freshState = await fetchFreshState(userId);
       return { success: false, reason: "stale", freshState };
     }
+    // Log the real error server-side; return a generic message so Prisma /
+    // driver internals don't leak across the action boundary.
     console.error("❌ Failed to sync planner and calendar data:", error);
     return {
       success: false,
       reason: "error",
-      error: error instanceof Error ? error.message : String(error),
+      error: "Sync failed",
     };
   }
 }

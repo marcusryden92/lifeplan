@@ -5,8 +5,9 @@ import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { signOut } from "next-auth/react";
-import { ChevronLeft, LogOut, Moon, Settings, Sun } from "lucide-react";
+import { ChevronLeft, LogOut, Moon, Settings, Sparkles, Sun } from "lucide-react";
 import { useTheme } from "../../ThemeProvider";
+import { useAssistant } from "../AssistantContext";
 import { NAV_ITEMS } from "../nav";
 import {
   sidebar,
@@ -18,6 +19,7 @@ import {
   navGlyph,
   navLabel,
   spacer,
+  navDivider,
   footerRow,
   avatar,
   footerText,
@@ -39,6 +41,7 @@ type Props = {
 export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
   const pathname = usePathname() ?? "";
   const { dark, toggle } = useTheme();
+  const { openAssistant } = useAssistant();
   const [collapsed, setCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -99,18 +102,16 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
       <button
         type="button"
         className={navItem}
-        onClick={() => setCollapsed((c) => !c)}
-        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        aria-expanded={!collapsed}
+        onClick={() => openAssistant()}
+        title="AI assistant (Ctrl/Cmd+I)"
       >
         <span className={navGlyph}>
-          <span className={collapseChevronIcon} aria-hidden>
-            <ChevronLeft size={20} strokeWidth={2} />
-          </span>
+          <Sparkles size={20} strokeWidth={2} aria-hidden />
         </span>
-        <span className={navLabel}>Collapse</span>
+        <span className={navLabel}>Assistant</span>
       </button>
+
+      <div className={navDivider} aria-hidden />
 
       <button
         type="button"
@@ -126,6 +127,22 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
           )}
         </span>
         <span className={navLabel}>{dark ? "Light mode" : "Dark mode"}</span>
+      </button>
+
+      <button
+        type="button"
+        className={navItem}
+        onClick={() => setCollapsed((c) => !c)}
+        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        aria-expanded={!collapsed}
+      >
+        <span className={navGlyph}>
+          <span className={collapseChevronIcon} aria-hidden>
+            <ChevronLeft size={20} strokeWidth={2} />
+          </span>
+        </span>
+        <span className={navLabel}>Collapse</span>
       </button>
 
       <UserMenu userName={userName} userInitial={userInitial} />

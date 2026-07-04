@@ -1,4 +1,4 @@
-import { Planner } from "../client";
+import { Planner } from "../../generated/client";
 import { CATEGORY_IDS } from "./generateCategories";
 import { LOCATION_IDS } from "./generateLocations";
 
@@ -77,7 +77,7 @@ export const generateUncompletedItems = (userId: string): Planner[] => {
       duration: row.duration,
       deadline: null,
       starts: starts.toISOString(),
-      dependency: null,
+      sortOrder: 0,
       completedStartTime: null,
       completedEndTime: null,
       priority: 6,
