@@ -40,7 +40,7 @@ model Planner {
   duration           Int
   deadline           String?
   starts             String?
-  dependency         String?
+  sortOrder          Float       @default(0) // Fractional key ordering siblings within a parentId group; 0 on top-level roots (order non-semantic)
   completedStartTime String?
   completedEndTime   String?
   priority           Int

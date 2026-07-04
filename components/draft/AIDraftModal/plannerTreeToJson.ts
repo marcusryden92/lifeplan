@@ -1,13 +1,11 @@
 import type { Planner } from "@/types/prisma";
 import type { PlannerType } from "@/generated/client";
-import {
-  getSubtasksById,
-  sortTasksByDependencies,
-} from "@/utils/goalPageHandlers";
+import { getSubtasksById } from "@/utils/goalPageHandlers";
+import { sortSiblings } from "@/utils/goal-handlers/sortOrderKeys";
 
 // The JSON shape sent to the AI and rendered in the right pane of the draft
-// modal. `dependency` is intentionally omitted — sibling order is array order,
-// and the linked list is re-threaded from the goal-handlers utilities on save.
+// modal. `sortOrder` is intentionally omitted — sibling order is array order,
+// and fractional keys are stamped from array position on save.
 // `categoryId` is meaningful on top-level goal roots only; children inherit
 // via the existing category-inheritance logic and always carry null here.
 export interface DraftNode {
@@ -33,10 +31,7 @@ export function plannerTreeToJson(
 }
 
 export function buildDraftNode(planner: Planner[], node: Planner): DraftNode {
-  const orderedChildren = sortTasksByDependencies(
-    planner,
-    getSubtasksById(planner, node.id),
-  );
+  const orderedChildren = sortSiblings(getSubtasksById(planner, node.id));
   return {
     id: node.id,
     title: node.title,

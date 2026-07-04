@@ -50,7 +50,7 @@ export function CapturePalette() {
       duration: 0,
       deadline: null,
       starts: null,
-      dependency: null,
+      sortOrder: 0,
       completedStartTime: null,
       completedEndTime: null,
       priority: 5,

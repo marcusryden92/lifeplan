@@ -77,7 +77,7 @@ export const generateUncompletedItems = (userId: string): Planner[] => {
       duration: row.duration,
       deadline: null,
       starts: starts.toISOString(),
-      dependency: null,
+      sortOrder: 0,
       completedStartTime: null,
       completedEndTime: null,
       priority: 6,

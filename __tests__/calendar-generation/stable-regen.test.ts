@@ -105,7 +105,7 @@ describe("regen stability against previousCalendar", () => {
       duration: 60,
       deadline: null,
       starts: "2026-07-02T08:00:00.000Z",
-      dependency: null,
+      sortOrder: 0,
       completedStartTime: null,
       completedEndTime: null,
       locationId: null,

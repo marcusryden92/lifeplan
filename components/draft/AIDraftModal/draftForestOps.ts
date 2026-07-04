@@ -6,9 +6,9 @@ import { normalizeDraftTree } from "./normalizeDraftTree";
 // Deterministic operations on a DraftForest, executed server-side on the
 // assistant's working copy so the model states intent (ids + fields) and code
 // performs the tree surgery — no retyped trees, no transcription drift. All
-// functions are pure (clone-then-mutate); the dependency linked list is not
-// represented here at all — it is derived from array order once, at Save, by
-// applyDraftForestToPlanner. The update-dependencies utilities are untouched.
+// functions are pure (clone-then-mutate); sortOrder is not represented here
+// at all — sibling order is array position, stamped as fractional keys once,
+// at Save, by applyDraftForestToPlanner.
 
 export interface DraftOpFailure {
   id: string | null;

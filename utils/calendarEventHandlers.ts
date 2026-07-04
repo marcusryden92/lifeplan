@@ -36,7 +36,7 @@ export const createPlanFromSelection = (
     duration,
     deadline: null,
     starts: start.toISOString(),
-    dependency: null,
+    sortOrder: 0,
     priority: 5,
     completedStartTime: null,
     completedEndTime: null,
@@ -289,7 +289,6 @@ export const handleClickDelete = (
       deleteGoal({
         updateAll,
         taskId: event.id,
-        parentId,
         manuallyUpdatedCalendar: updatedCalendar,
       });
     } else {

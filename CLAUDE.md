@@ -137,7 +137,7 @@
   │   │       ├── scheduling.prisma     # UserSchedulingPreferences, TaskPreferences, enums
   │   │       ├── engineMessage.prisma  # EngineMessage — engine-emitted console rows with user-owned dismissed flag
   │   │       └── draftConversation.prisma # DraftConversation — AI-assistant chat history (messages as Json)
-  │   ├── migrations/                   # 0_init … add_draft_conversation — see "Migration history" below for the full list
+  │   ├── migrations/                   # 0_init … drop_planner_dependency — see "Migration history" below for the full list
   │   ├── seed.ts                       # Wholesale reseed (admin@lifeplan.com / "password")
   │   └── seed-helpers/                 # generateCategories, generateLocations (+ TravelTimes), generatePlanners, generatePlans, generateTemplates, generateUncompletedItems
   │
@@ -175,7 +175,7 @@
   ├── __tests__/
   │   ├── calendar-generation/          # Engine regression tests + fixtures/ (trimmed live-data snapshots)
   │   ├── draft/                        # Assistant draft-domain unit tests (forest, templates, windows)
-  │   └── goal-handlers/                # toggleGoalIsReady cascade test
+  │   └── goal-handlers/                # toggleGoalIsReady cascade + sortOrderKeys/moveItem tests
   │
   ├── documentation/
   │   └── calendar-generation-deep-dive.md
@@ -203,6 +203,7 @@
     duration: number,             // minutes
     deadline?: ISO,
     starts?: ISO,                 // plan items only
+    sortOrder: number,            // fractional sibling key within a parentId group (0 on roots — top-level order non-semantic)
     priority: number,
     isReady?: boolean,            // goals: ready to schedule?
     isTriaged: boolean,           // false until first Capture save moves the item out of the triage queue
@@ -215,6 +216,8 @@
   ```
 
   `PlannerType` is `task | plan | goal`. `EventType` (on `EventExtendedProps`) adds `planner | template | travel | category` — the engine emits the latter two at runtime.
+
+  **Sibling order** is `sortOrder`: a fractional float key local to each `parentId` group (append = max + 1024, insert = midpoint, reindex the group when a gap collapses — see [utils/goal-handlers/sortOrderKeys.ts](utils/goal-handlers/sortOrderKeys.ts)). The engine's flattened leaf order for a goal is the depth-first traversal with children sorted by `sortOrder` at each level (`getSortedTreeBottomLayer`). Reorder/reparent handlers live in [utils/goal-handlers/moveItem.ts](utils/goal-handlers/moveItem.ts) and touch only the moved row (plus the group on a rare reindex). Planned inter-goal dependencies will be a separate relation referencing Planner ids — order and dependency are deliberately no longer one field.
 
   ### Templates, plans, completed
 
@@ -356,13 +359,13 @@
         │
         ▼
   forest dirty → applyDraftForestToPlanner({planner, workingForest, userId, validCategoryIds})
-    1. deleted roots: subtree removed, outer chain bridged over its leaves
+    1. deleted roots: pure subtree filter (order is a local property; no
+      neighbor fixup)
     2. retained goals (only if !draftTreesEqual): existing per-tree apply —
-      UUID preservation, leaf-cursor dependency re-threading, outer-neighbor
-      fixup; root categoryId applied when it validates
-    3. new roots: parentId null, dependency null, isTriaged true, validated
-      categoryId, children threaded from a null cursor
-    + final pass nulls any dependency pointing at a removed row
+      UUID preservation, sibling sortOrder stamped from array position;
+      root categoryId applied when it validates
+    3. new roots: parentId null, sortOrder 0, isTriaged true, validated
+      categoryId, children stamped per level
   templates dirty → applyDraftTemplates({current, canonical, working, userId, now})
     deletes removed rows, restamps updatedAt on changed rows, creates new rows
     keeping the route-minted uuid; UNTOUCHED rows return by object identity
@@ -386,11 +389,11 @@
   Contracts worth not breaking:
 
   - **UUID preservation is load-bearing** — see the `preserve-planner-ids` memory note. The AI is instructed to echo existing ids; the reverse parser only trusts an id inside the subtree of the goal being applied (any other id becomes a fresh UUID). Inter-goal dependencies (planned) will reference these ids.
-  - **`dependency` is never emitted by the AI** — sibling order is array position (top-level goal order is NOT semantic; goals match by id). The reverse parser re-threads the linked list from scratch.
+  - **`sortOrder` is never emitted by the AI** — sibling order is array position (top-level goal order is NOT semantic; goals match by id). The reverse parser stamps fresh fractional keys from array position at each level.
   - **Goal-granular deltas** — the model never re-emits untouched goals; unchanged goals are skipped at apply time so they see zero `updatedAt` churn and no phantom sync diffs.
   - **Fetch-before-modify is enforced server-side** — tool results are not carried between user messages (client history is prose-only), so the model must re-fetch trees each message; the route rejects proposal entries for unfetched existing goals rather than trusting the prompt alone. The deterministic edit tools are exempt: they operate by id on the server's copy, so they cannot drop data the model never saw.
   - **Draft ids are route-minted** — id-less nodes in an accepted `propose_goals` call (and every `add_items` node) get UUIDs stamped by the route (`assignDraftIds` / `mintDraftIds`); the stamped trees are merged into the request's working copy, re-emitted to the client under the same `callIndex` (replacing the id-less partials), and the new root ids are reported in the tool result. Unsaved drafts are therefore first-class for every tool — fetchable, editable, replaceable by id, deletable — instead of duplicate-prone rebuilds from model memory. Draft ids never reach the DB: they match no canonical root at Save, so `applyDraftForestToPlanner` mints the permanent UUIDs.
-  - **Edit ops never touch the dependency linked list** — draftForestOps works on the nested tree where order is array position; threading is derived once at Save by applyDraftForestToPlanner. The `utils/goal-handlers/update-dependencies/` functions are not used by (or affected by) the assistant.
+  - **Edit ops never touch sortOrder** — draftForestOps works on the nested tree where order is array position; fractional keys are stamped once at Save by applyDraftForestToPlanner.
   - **`categoryId` rides on top-level goal roots only**; children inherit. Null on a retained root means "leave as is" (backfilled in `mergeDraftForest`); an id not in the user's category set is ignored. New top-level rows are never plans (`starts` isn't in the contract; coerced defensively).
   - **Streaming path is a Route handler**, not a server action. See the note in "Code style rules" — SSE bytes don't fit the server-action return shape.
   - **Template draft ids ARE the DB ids** — unlike goal draft ids (re-minted at Save), a route-minted template uuid survives into the EventTemplate row (WeekStructureModal set the uuidv4-id precedent). applyDraftTemplates must keep returning untouched rows by object identity: the template sync diff does not strip timestamps, so a fresh object with a fresh updatedAt would produce a phantom update on every save.
@@ -401,7 +404,7 @@
   - **`update_categories` is flags-only** (useTimeWindows, isStrict) — names, colors, hierarchy, and locationId stay human-edited. The prompt tells the model to touch isStrict only on explicit user request; add_time_windows auto-enables useTimeWindows deterministically.
   - **BYOK is deferred** — one key in `.env` for now (see TODO). If/when we ship publicly, wire per-user keys before enabling the feature.
 
-  Unit tests: [__tests__/draft/](__tests__/draft/) covers forest apply (UUID preservation, deletion chain-bridging, new-root threading, categoryId validation), merge, diff, and forest equality with hand-built planner arrays, plus the template domain: ops (minting, per-field validation, locationId gating), save-time apply (object-identity no-op rule, concurrent-row preservation), and diff/day-grouping — and the windows domain: ops (minting, auto-enable, range/reparent validation, settings patches), save-time apply (category identity, flag-vs-window updatedAt rules, userId stamping, concurrent-edit preservation), and diff/category-grouping.
+  Unit tests: [__tests__/draft/](__tests__/draft/) covers forest apply (UUID preservation, subtree deletion, sortOrder stamping, categoryId validation), merge, diff, and forest equality with hand-built planner arrays, plus the template domain: ops (minting, per-field validation, locationId gating), save-time apply (object-identity no-op rule, concurrent-row preservation), and diff/day-grouping — and the windows domain: ops (minting, auto-enable, range/reparent validation, settings patches), save-time apply (category identity, flag-vs-window updatedAt rules, userId stamping, concurrent-edit preservation), and diff/category-grouping.
 
   ---
 
@@ -440,7 +443,7 @@
   - **Calendar drag/resize run the engine inline** (`engineMode: "inline"` through `updatePlannerArray`/`updateAll` → thunk → `runEngineCalculation`): FullCalendar has already moved the tile internally, so an async regen would paint it overlapping stale placements for a frame. Inline commits source + engine output before the next paint. Everything else stays on the worker.
   - **Every FullCalendar option must be identity-stable across renders** — the React connector shallow-diffs its props, so a fresh inline arrow/object/array counts as a changed option and triggers an internal option reset; one landing mid-drag kills the interaction without firing `eventDrop` (the tile stays painted at the drop position, nothing dispatched, refresh reverts it). [Calendar.tsx](app/(protected)/calendar/_components/Calendar.tsx) is memoized with all callbacks in `useCallback` and static options hoisted to module scope; `dayHeaderContent` is a module-level function in [page.tsx](app/(protected)/calendar/page.tsx). Hover-label changes re-render the page continuously during drags (the drag mirror fires `onMouseEnter`), so this is load-bearing, not style.
   - **Event identity is stable across regens** ([stabilizeEvent](utils/calendar-generation/helpers/EventAssembler/stabilizeEvent.ts)): builders reuse the previous emit's `extendedProps.id`/`createdAt` and return the previous object when nothing changed, so an idle regen produces an empty diff. Do not reintroduce per-regen uuids/timestamps in event builders — every non-empty sync bumps the OCC `dataVersion`, and constant churn makes a second open window's syncs permanently stale (its edits get discarded by `adoptFreshServerState`). Plans are never memoized from `previousCalendar` for the same reason a `starts` drag must always re-derive them.
-  - **Planner tree walks are memoized per array** — `getTreeBottomLayer` / `getSortedTreeBottomLayer` / `sortTasksByDependencies` in [utils/goalPageHandlers.ts](utils/goalPageHandlers.ts) share a `WeakMap` index keyed on the planner-array reference (children map + bottom-layer/sort caches). Safe because planner updates are immutable everywhere; never mutate a planner array in place or the cache serves stale trees.
+  - **Planner tree walks are memoized per array** — `getTreeBottomLayer` / `getSortedTreeBottomLayer` in [utils/goalPageHandlers.ts](utils/goalPageHandlers.ts) share a `WeakMap` index keyed on the planner-array reference (children sorted by `sortOrder` at build time + bottom-layer cache). Safe because planner updates are immutable everywhere; never mutate a planner array in place or the cache serves stale trees.
   - **CalendarProvider** ([context/CalendarProvider.tsx](context/CalendarProvider.tsx)) — owns the data context, fires regen on `bufferTimeMinutes` change, fires a one-time "cold-load autoregen" when categories/locations exist but no engine output materialized yet (see the inline comment for the conditions).
   - **Sync** uses **optimistic concurrency control** via `User.dataVersion`. The client sends the version it knows; if the DB has moved on, the transaction aborts and the client adopts a fresh snapshot wholesale. Partial application across a DAG-shaped dataset is unsafe.
   - **CategoryEvent**, **TravelEvent**, and **EngineMessage** are all written by the engine on every regen but use **deterministic IDs**, so the diff lands as creates/deletes only when an actual placement shifted (or, for EngineMessage, only when the underlying situation changed or the user flipped `dismissed`). Don't switch them to autogenerated IDs.
@@ -581,6 +584,8 @@
   - `add_password_changed_at` — `users.password_changed_at`; the jwt callback invalidates tokens issued before it
   - `task_preferences_planner_cascade` — real FK `TaskPreferences.plannerId → Planner.id` with ON DELETE CASCADE (after an orphan cleanup); replaces the manual sweep that lived in `deleteAccount.ts`
   - `add_draft_conversation` — DraftConversation: AI-assistant chat history (client-minted id, messages as Json, `@@index([userId])`, cascade delete)
+  - `add_planner_sort_order` — `Planner.sortOrder` (double precision, fractional sibling key) + SQL backfill deriving per-sibling-group order from the legacy dependency chain
+  - `drop_planner_dependency` — retires the `dependency` linked-list column; sibling/leaf order lives in `sortOrder`
 
   Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 

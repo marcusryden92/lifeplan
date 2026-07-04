@@ -1,3 +1,4 @@
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { Planner } from "@/types/prisma";
 
 export interface TaskListProps {
@@ -11,7 +12,7 @@ export interface TaskListWrapperProps {
   parentId?: string;
   subtasksMinimized: boolean;
   itemIsFocused: boolean;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 export interface TaskItemProps {
@@ -23,9 +24,9 @@ export interface TaskHeaderProps {
   task: Planner;
   subtasks: Planner[]; // Array of subtasks of type Planner
   itemIsFocused: boolean; // Boolean indicating if the item is focused
-  setItemIsFocused: React.Dispatch<React.SetStateAction<boolean>>;
+  setItemIsFocused: Dispatch<SetStateAction<boolean>>;
   focusedTask: string | null;
-  setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
+  setFocusedTask: Dispatch<SetStateAction<string | null>>;
   devMode: boolean; // Boolean indicating if dev mode is active
 }
 

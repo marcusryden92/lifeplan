@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 
-import { moveToEdge } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/moveToEdge";
+import { moveToEdge } from "@/utils/goal-handlers/moveItem";
 import { Planner } from "@/types/prisma";
 import {
   dropDivider,
@@ -21,20 +21,25 @@ const TaskDivider: React.FC<TaskDividerProps> = ({
   targetId,
   mouseLocationInItem,
 }) => {
-  const { currentlyClickedItem, setCurrentlyClickedItem, displayDragBox } =
-    useDraggableContext();
+  const {
+    currentlyClickedItem,
+    setCurrentlyClickedItem,
+    displayDragBox,
+    flashDroppedTask,
+  } = useDraggableContext();
   const [isHovered, setIsHovered] = useState<boolean>(false);
 
   const handleDragEnd = () => {
     if (!currentlyClickedItem || !isHovered || !displayDragBox) return;
 
-    moveToEdge({
+    const moved = moveToEdge({
       planner,
       updatePlannerArray,
       currentlyClickedItem,
       targetId,
       mouseLocationInItem,
     });
+    if (moved) flashDroppedTask(currentlyClickedItem.taskId);
 
     setCurrentlyClickedItem(null);
   };

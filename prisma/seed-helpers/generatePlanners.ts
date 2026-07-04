@@ -12,14 +12,14 @@ export interface SimplePlannerData {
   parentId: string | null;
   duration: number;
   color: string;
-  dependency?: string | null;
   locationId?: string | null;
   categoryId?: string | null;
 }
 
 /**
  * Seed data for planner goals organized in hierarchical structures.
- * Three main goal hierarchies: A, B, and C with their respective subgoals.
+ * Sibling order is the array order within each parent group; the generator
+ * stamps fractional sortOrder keys from it.
  */
 export const plannerSeedData: SimplePlannerData[] = [
   // Goal A hierarchy - No specific location, Work category
@@ -52,7 +52,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
     duration: 45,
     color: "#6C5CE7",
-    dependency: "5d3d674c-5bc0-45b0-8bce-d01a30d81522",
   },
   {
     id: "da47b873-4a31-4671-b729-5748ce070d22",
@@ -60,7 +59,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
     duration: 45,
     color: "#6C5CE7",
-    dependency: "ded9475d-4b1b-433e-96d2-76b987654cb2",
   },
   {
     id: "ef08d5bb-54aa-4403-8783-47f5ba65e8ac",
@@ -68,7 +66,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
     duration: 15,
     color: "#6C5CE7",
-    dependency: "da47b873-4a31-4671-b729-5748ce070d22",
   },
   {
     id: "c123a380-1303-415b-849f-6211fac04001",
@@ -76,7 +73,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
     duration: 30,
     color: "#6C5CE7",
-    dependency: "ef08d5bb-54aa-4403-8783-47f5ba65e8ac",
   },
   {
     id: "3ac9edae-5a09-49be-ac16-940a05047a18",
@@ -84,7 +80,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
     duration: 15,
     color: "#6C5CE7",
-    dependency: "c123a380-1303-415b-849f-6211fac04001",
   },
   {
     id: "d0bc9d33-3acd-429b-99ec-9993f44e9741",
@@ -92,7 +87,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
     duration: 60,
     color: "#6C5CE7",
-    dependency: "3ac9edae-5a09-49be-ac16-940a05047a18",
   },
 
   // Goal B hierarchy - Work category (location inherited from category)
@@ -117,7 +111,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
     duration: 15,
     color: "#8E44AD",
-    dependency: "7f8665a1-a476-412f-83ad-71fd21158372",
   },
   {
     id: "9adc0a2f-5505-4334-9e5a-dae3e744bdd4",
@@ -125,7 +118,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
     duration: 45,
     color: "#8E44AD",
-    dependency: "13878697-4a27-4e18-bb0b-bf99dfad3e4c",
   },
   {
     id: "d9abc068-181b-4e32-a97b-362ee85bfcb6",
@@ -133,7 +125,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
     duration: 100,
     color: "#8E44AD",
-    dependency: "9adc0a2f-5505-4334-9e5a-dae3e744bdd4",
   },
   {
     id: "e53e6d6a-c5da-4621-8165-da7f1102b5c8",
@@ -141,7 +132,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
     duration: 50,
     color: "#8E44AD",
-    dependency: "d9abc068-181b-4e32-a97b-362ee85bfcb6",
   },
   {
     id: "e908862a-8b2a-4b06-9f5f-b2695101994e",
@@ -149,7 +139,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
     duration: 30,
     color: "#8E44AD",
-    dependency: "e53e6d6a-c5da-4621-8165-da7f1102b5c8",
   },
   {
     id: "d696ed65-01a7-437a-9b67-1e5076e52e30",
@@ -157,7 +146,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
     duration: 45,
     color: "#8E44AD",
-    dependency: "e908862a-8b2a-4b06-9f5f-b2695101994e",
   },
 
   // Goal C hierarchy - Home location
@@ -182,7 +170,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
     duration: 45,
     color: "#457B9D",
-    dependency: "0fcae948-e489-44ed-92fc-cd03a42e2f5f",
   },
   {
     id: "6a68c08b-b2ed-4c0a-a927-7f7d14bfa8f8",
@@ -190,7 +177,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
     duration: 55,
     color: "#457B9D",
-    dependency: "9403a111-3d02-470a-a930-4baf95097bfd",
   },
   {
     id: "0a1101c5-d1d1-426c-b53e-4c0a31cb6168",
@@ -198,7 +184,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
     duration: 20,
     color: "#457B9D",
-    dependency: "6a68c08b-b2ed-4c0a-a927-7f7d14bfa8f8",
   },
   {
     id: "333e37fd-55c9-44f2-8947-107d01980b65",
@@ -206,7 +191,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
     duration: 20,
     color: "#457B9D",
-    dependency: "0a1101c5-d1d1-426c-b53e-4c0a31cb6168",
   },
   {
     id: "d85763b6-175a-4841-90d4-2ce14eb58d9e",
@@ -214,10 +198,9 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
     duration: 60,
     color: "#457B9D",
-    dependency: "333e37fd-55c9-44f2-8947-107d01980b65",
   },
 
-  // Goal D hierarchy - Gym location (no category, no root location â€” children override)
+  // Goal D hierarchy - Gym location (no category, no root location - children override)
   {
     id: "3f2588fe-0190-4e58-baf9-a7045cad9d96",
     title: "D",
@@ -247,7 +230,6 @@ export const plannerSeedData: SimplePlannerData[] = [
     parentId: "bbc700de-9a5d-460d-9f95-6c21cf164981",
     duration: 45,
     color: "#E63946",
-    dependency: "3c039ae5-e3a3-4a71-8dd9-3ad194578ff8",
     locationId: LOCATION_IDS.GYM,
   },
 ];
@@ -263,10 +245,18 @@ export const plannerSeedData: SimplePlannerData[] = [
  */
 export const generatePlanners = (userId: string): Planner[] => {
   const timestamp = new Date().toISOString();
+  const siblingCounts = new Map<string, number>();
 
   return plannerSeedData.map((data) => {
     const isChild = data.parentId !== null;
     const hasCustomLocation = !!data.locationId;
+
+    let sortOrder = 0;
+    if (data.parentId) {
+      const position = (siblingCounts.get(data.parentId) ?? 0) + 1;
+      siblingCounts.set(data.parentId, position);
+      sortOrder = position * 1024;
+    }
 
     return {
       id: data.id,
@@ -278,7 +268,7 @@ export const generatePlanners = (userId: string): Planner[] => {
       duration: data.duration,
       deadline: null,
       starts: null,
-      dependency: data.dependency ?? null,
+      sortOrder,
       completedStartTime: null,
       completedEndTime: null,
       priority: 5,

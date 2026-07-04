@@ -215,7 +215,7 @@ export function EditDrawer() {
   const currentLocation = locations.find((l) => l.id === task.locationId);
 
   const handleDelete = () => {
-    deleteGoal({ updateAll, taskId: task.id, parentId: task.parentId });
+    deleteGoal({ updateAll, taskId: task.id });
     setShowDeleteConfirm(false);
     setFocusedTask(null);
   };

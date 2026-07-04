@@ -118,7 +118,7 @@ export const generatePlans = (userId: string): Planner[] => {
       duration: data.duration,
       deadline: null,
       starts,
-      dependency: null,
+      sortOrder: 0,
       completedStartTime: null,
       completedEndTime: null,
       priority: 5,

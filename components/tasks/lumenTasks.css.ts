@@ -102,6 +102,19 @@ export const draggableSelected = style({
   background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.subtleFill}%, transparent)`,
 });
 
+// Post-drop landing feedback: the moved row glows at the drop-target tint and
+// fades, so the item is findable wherever it landed in the list.
+const dropFlash = keyframes({
+  "0%": {
+    background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.hoverFill}%, transparent)`,
+  },
+  "100%": { background: "transparent" },
+});
+
+export const draggableDropped = style({
+  animation: `${dropFlash} 0.7s ease-out`,
+});
+
 // Note: short explicit transition rather than themeTransition (1s) â€” completion
 // state flips on click and needs to feel immediate, not crossfaded.
 const COMPLETE_TRANSITION = interactiveTransition(
@@ -431,7 +444,6 @@ export const dropDivider = style({
   height: 10,
   borderRadius: 3,
   position: "relative",
-  transition: "background-color 80ms ease",
   selectors: {
     "&::before": {
       content: '""',
@@ -443,16 +455,20 @@ export const dropDivider = style({
       borderRadius: radii.pill,
       transform: "translateY(-50%)",
       background: "transparent",
-      transition: "background-color 80ms ease, height 80ms ease",
     },
   },
 });
 
 export const dropDividerActive = style({
   selectors: {
+    // Transition declared on the hover state only: the accent line eases in,
+    // but snaps off the instant the hover or drag ends. A fade-out here reads
+    // as a flash after a drop — the mounted row pushes the divider down while
+    // the stale accent line is still fading on it.
     "&:hover::before": {
       background: vars.accent.now,
       height: 4,
+      transition: "background-color 80ms ease, height 80ms ease",
     },
   },
 });

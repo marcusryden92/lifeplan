@@ -88,7 +88,7 @@ describe("goal readiness gates the subtree", () => {
       id: "standalone-task-id",
       title: "standalone",
       parentId: null,
-      dependency: null,
+      sortOrder: 0,
       categoryId: null,
     };
     const planner = [

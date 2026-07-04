@@ -51,7 +51,11 @@ export function handlePlannerChanges(
           { name: "duration", cast: "int", extract: (r) => r.duration },
           { name: "deadline", cast: "text", extract: (r) => r.deadline },
           { name: "starts", cast: "text", extract: (r) => r.starts },
-          { name: "dependency", cast: "text", extract: (r) => r.dependency },
+          {
+            name: "sortOrder",
+            cast: "double precision",
+            extract: (r) => r.sortOrder,
+          },
           {
             name: "completedStartTime",
             cast: "text",

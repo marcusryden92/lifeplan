@@ -120,7 +120,7 @@ export interface SchedulingContext {
   userId: string;
   /** Week start day (0-6, Sunday-Saturday) */
   weekStartDay: number;
-  /** All planner items for dependency lookups */
+  /** All planner items for tree walks */
   allPlanners: Planner[];
   /** Already scheduled events */
   scheduledEvents: SimpleEvent[];

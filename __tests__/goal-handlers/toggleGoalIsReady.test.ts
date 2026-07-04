@@ -17,7 +17,7 @@ function row(overrides: Partial<Planner> & { id: string }): Planner {
     duration: 30,
     deadline: null,
     starts: null,
-    dependency: null,
+    sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,
     priority: 0,
@@ -37,8 +37,8 @@ function makePlanner(rootIsReady: boolean | null): Planner[] {
   return [
     row({ id: "root", plannerType: "goal", isReady: rootIsReady }),
     row({ id: "sub", plannerType: "goal", parentId: "root" }),
-    row({ id: "leaf1", parentId: "sub" }),
-    row({ id: "leaf2", parentId: "sub", dependency: "leaf1" }),
+    row({ id: "leaf1", parentId: "sub", sortOrder: 1024 }),
+    row({ id: "leaf2", parentId: "sub", sortOrder: 2048 }),
     row({ id: "other" }),
   ];
 }

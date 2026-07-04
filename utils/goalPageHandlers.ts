@@ -2,9 +2,10 @@ import { Planner, SimpleEvent, Category, PlannerType } from "@/types/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
 
-import { updateDependenciesOnDelete_ReturnArray } from "@/utils/goal-handlers/update-dependencies/updateDependenciesOnDelete";
-import { updateDependenciesOnCreate } from "@/utils/goal-handlers/update-dependencies/updateDependenciesOnCreate";
-import { updateDependenciesOnDuplicate } from "@/utils/goal-handlers/update-dependencies/updateDependenciesOnDuplicate";
+import {
+  appendKey,
+  compareSiblings,
+} from "@/utils/goal-handlers/sortOrderKeys";
 
 interface AddSubtaskInterface {
   userId?: string;
@@ -45,7 +46,7 @@ export function addSubtask({
       duration: taskDuration < 15 ? 15 : taskDuration,
       deadline: null,
       starts: null,
-      dependency: null,
+      sortOrder: appendKey(getSubtasksById(planner, task.id)),
       completedStartTime: null,
       completedEndTime: null,
       priority: Number(task.priority),
@@ -58,14 +59,7 @@ export function addSubtask({
       updatedAt: now.toISOString(),
     };
 
-    const newPlanner = [...planner, newTask];
-    const updatedPlanner = updateDependenciesOnCreate(
-      newPlanner,
-      task.id,
-      newId,
-    );
-
-    updatePlannerArray(updatedPlanner);
+    updatePlannerArray([...planner, newTask]);
     resetTaskState();
     return newId;
   }
@@ -77,13 +71,9 @@ interface DuplicateSubtreeInterface {
   taskId: string;
 }
 
-// Clone a subtask and all of its descendants with fresh IDs, appending the
-// copy at the end of the sibling chain. Root of the copy gets a "(copy)" suffix.
-// The dependency chain runs through the bottom layer (leaves), so the boundary
-// wiring is done on the new subtree's first/last BLI — not on the root — so
-// the calendar renders A1, A2, A3, B1, B2, B3, X1, ... rather than
-// A1, A2, A3, B, X1, ... (the whole cloned subtree slots in as leaves, not as
-// a single node).
+// Clone a subtask and all of its descendants with fresh IDs. Descendants keep
+// their sortOrder (relative order clones for free); the copy's root is
+// appended after the last sibling. Root of the copy gets a "(copy)" suffix.
 export function duplicateSubtree({
   planner,
   taskId,
@@ -98,6 +88,8 @@ export function duplicateSubtree({
   const idMap = new Map<string, string>();
   for (const t of tree) idMap.set(t.id, uuidv4());
 
+  const rootSortOrder = appendKey(getSubtasksById(planner, original.parentId));
+
   const newTasks: Planner[] = tree.map((t) => {
     const isRoot = t.id === taskId;
     const newId = idMap.get(t.id)!;
@@ -106,16 +98,11 @@ export function duplicateSubtree({
       : t.parentId && idMap.has(t.parentId)
         ? idMap.get(t.parentId)!
         : t.parentId;
-    // Internal chain dependencies get remapped to the cloned IDs. Any dep that
-    // pointed outside the original subtree (the boundary dep on the first BLI)
-    // is cleared here and rewired below to slot into the sibling chain.
-    const dependency =
-      t.dependency && idMap.has(t.dependency) ? idMap.get(t.dependency)! : null;
     return {
       ...t,
       id: newId,
       parentId,
-      dependency,
+      sortOrder: isRoot ? rootSortOrder : t.sortOrder,
       title: isRoot ? `${t.title} (copy)` : t.title,
       completedStartTime: null,
       completedEndTime: null,
@@ -125,13 +112,7 @@ export function duplicateSubtree({
   });
 
   const newRootId = idMap.get(taskId)!;
-  const newPlanner = updateDependenciesOnDuplicate(
-    [...planner, ...newTasks],
-    original.parentId,
-    newRootId,
-  );
-
-  return { newPlanner, newRootId };
+  return { newPlanner: [...planner, ...newTasks], newRootId };
 }
 
 interface DeleteGoalInterface {
@@ -140,37 +121,23 @@ interface DeleteGoalInterface {
     manuallyUpdatedCalendar?: SimpleEvent[],
   ) => void;
   taskId: string;
-  parentId: string | null;
   manuallyUpdatedCalendar?: SimpleEvent[];
 }
 
 export function deleteGoal({
   updateAll,
   taskId,
-  parentId,
   manuallyUpdatedCalendar,
 }: DeleteGoalInterface) {
   updateAll((planner: Planner[]) => {
-    // Create a working copy of the state
-    let newTaskArray = [...planner];
-
-    if (parentId) {
-      // Use your existing function that returns an updated array
-      newTaskArray = updateDependenciesOnDelete_ReturnArray({
-        planner: newTaskArray,
-        taskId,
-        parentId,
-      });
-    }
-
     // Get goal-tree (all IDs under the goal to be deleted)
-    const treeIds: string[] = getTaskTreeIds(newTaskArray, taskId);
+    const treeIds: string[] = getTaskTreeIds(planner, taskId);
 
     // Find the root parent
-    const rootParent = getRootParentId(newTaskArray, taskId);
+    const rootParent = getRootParentId(planner, taskId);
 
     // Filter out the tasks to be deleted
-    newTaskArray = newTaskArray.filter((t) => !treeIds.includes(t.id));
+    let newTaskArray = planner.filter((t) => !treeIds.includes(t.id));
 
     // Check if root becomes empty
     if (rootParent && rootParent !== taskId) {
@@ -185,36 +152,6 @@ export function deleteGoal({
 
     return newTaskArray;
   }, manuallyUpdatedCalendar);
-}
-
-interface DeleteGoalReturnArrayInterface {
-  planner: Planner[];
-  updatePlannerArray: (
-    planner: Planner[] | ((prev: Planner[]) => Planner[]),
-  ) => void;
-  taskId: string;
-  parentId?: string | undefined;
-}
-
-export function deleteGoal_ReturnArray({
-  planner,
-  taskId,
-  parentId,
-}: DeleteGoalReturnArrayInterface): Planner[] {
-  let newArray: Planner[] = planner;
-
-  // Corrected type
-  if (parentId) {
-    newArray = updateDependenciesOnDelete_ReturnArray({
-      planner,
-      taskId,
-      parentId,
-    });
-  }
-
-  const treeIds: string[] = getTaskTreeIds(planner, taskId);
-
-  return (newArray = newArray.filter((t) => !treeIds.includes(t.id)));
 }
 
 // CHECK IF GOAL IS READY
@@ -243,18 +180,14 @@ export function getSubtasksById(planner: Planner[], id: string): Planner[] {
   return subtasks;
 }
 
+// Children are sorted by sortOrder when the tree index is built, so the
+// depth-first bottom layer is already in schedule order. Kept as a separate
+// export because the name documents intent at the engine call sites.
 export function getSortedTreeBottomLayer(
   planner: Planner[],
   id: string,
 ): Planner[] {
-  const index = getTreeIndex(planner);
-  let sorted = index.sortedBottomLayer.get(id);
-  if (!sorted) {
-    sorted = sortTasksByDependencies(planner, getTreeBottomLayer(planner, id));
-    index.sortedBottomLayer.set(id, sorted);
-  }
-  // Slice so callers can't mutate the cached array.
-  return sorted.slice();
+  return getTreeBottomLayer(planner, id);
 }
 
 // GET GOAL ROOT PARENT
@@ -285,9 +218,6 @@ type PlannerTreeIndex = {
   byId: Map<string, Planner>;
   childrenByParent: Map<string, Planner[]>;
   bottomLayer: Map<string, Planner[]>;
-  bottomLayerIdSet: Map<string, Set<string>>;
-  bottomLayerDepSet: Map<string, Set<string>>;
-  sortedBottomLayer: Map<string, Planner[]>;
 };
 
 const treeIndexCache = new WeakMap<Planner[], PlannerTreeIndex>();
@@ -306,14 +236,14 @@ function getTreeIndex(planner: Planner[]): PlannerTreeIndex {
       else childrenByParent.set(task.parentId, [task]);
     }
   }
+  for (const siblings of childrenByParent.values()) {
+    siblings.sort(compareSiblings);
+  }
 
   index = {
     byId,
     childrenByParent,
     bottomLayer: new Map(),
-    bottomLayerIdSet: new Map(),
-    bottomLayerDepSet: new Map(),
-    sortedBottomLayer: new Map(),
   };
   treeIndexCache.set(planner, index);
   return index;
@@ -337,125 +267,6 @@ function bottomLayerOf(index: PlannerTreeIndex, id: string): Planner[] {
 
   index.bottomLayer.set(id, result);
   return result;
-}
-
-function bottomLayerIdSetOf(index: PlannerTreeIndex, id: string): Set<string> {
-  let set = index.bottomLayerIdSet.get(id);
-  if (!set) {
-    set = new Set(bottomLayerOf(index, id).map((t) => t.id));
-    index.bottomLayerIdSet.set(id, set);
-  }
-  return set;
-}
-
-function bottomLayerDepSetOf(index: PlannerTreeIndex, id: string): Set<string> {
-  let set = index.bottomLayerDepSet.get(id);
-  if (!set) {
-    set = new Set<string>();
-    for (const t of bottomLayerOf(index, id)) {
-      if (t.dependency) set.add(t.dependency);
-    }
-    index.bottomLayerDepSet.set(id, set);
-  }
-  return set;
-}
-
-// SORT TASKS BY DEPENDENCIES
-export function sortTasksByDependencies(
-  planner: Planner[],
-  tasksToSort: Planner[],
-): Planner[] {
-  const index = getTreeIndex(planner);
-  const sortedArray: Planner[] = [];
-
-  // Find root tasks (no dependencies, but has dependents, or children has dependents)
-  const rootTask: Planner | undefined = tasksToSort.find((task) => {
-    // A task qualifies when it has no dependency, or its dependency can't be
-    // found among the siblings or their children.
-    if (
-      task.dependency &&
-      tasksToSort.some((otherTask) =>
-        idsExistsInDependenciesOf(planner, otherTask.id, task.dependency),
-      )
-    ) {
-      return false;
-    }
-
-    const siblings = tasksToSort.filter((t) => t.id !== task.id);
-    if (siblings.length === 0) return true;
-
-    // Root = siblings (or their descendants) depend on it, but it depends on
-    // none of them.
-    const hasSiblingDependents = siblings.some((t) =>
-      idsExistsInDependenciesOf(planner, task.id, t.id),
-    );
-    const isDependentOnSiblings = siblings.some((t) =>
-      idsExistsInDependenciesOf(planner, t.id, task.id),
-    );
-
-    return hasSiblingDependents && !isDependentOnSiblings;
-  });
-
-  // Function to add a task and its dependents to the sorted array
-  const addTaskWithDependents = (task: Planner) => {
-    let currentTask = task;
-    let currentId = task.id;
-    let currentBottomIds = bottomLayerIdSetOf(index, currentId);
-
-    const visited = new Set<string>();
-    const maxLoops = Math.max(1000, planner.length * 2);
-    let loops = 0;
-
-    for (;;) {
-      loops++;
-      if (loops > maxLoops)
-        throw new Error("sortTasksByDependencies exceeded loop budget.");
-
-      if (!visited.has(currentTask.id)) {
-        sortedArray.push(currentTask);
-        visited.add(currentTask.id);
-      }
-
-      // Find the task whose bottom layer depends on the current chain tip.
-      const nextTask = tasksToSort.find((t) => {
-        const bottomLayer = bottomLayerOf(index, t.id);
-        if (bottomLayer.length === 0) return false;
-
-        const item = bottomLayer.find(
-          (leaf) =>
-            leaf.dependency === currentId ||
-            (leaf.dependency && currentBottomIds.has(leaf.dependency)),
-        );
-
-        if (item && !visited.has(item.id)) {
-          currentId = item.id;
-          currentBottomIds = bottomLayerIdSetOf(index, item.id);
-          return true;
-        }
-        return false;
-      });
-
-      if (!nextTask) break;
-      currentTask = nextTask;
-    }
-  };
-
-  // Add all root tasks and their dependents to the sorted array
-  if (rootTask) addTaskWithDependents(rootTask);
-
-  // Fallback: when tasks have no dependency relationships between them (the
-  // common case for fresh subtasks), no rootTask is found and sortedArray stays
-  // empty. Return the input order so downstream rendering/move logic can still
-  // operate. Also append any tasks that weren't reached by the dependency walk.
-  if (sortedArray.length === 0) return tasksToSort;
-  if (sortedArray.length < tasksToSort.length) {
-    const visited = new Set(sortedArray.map((t) => t.id));
-    for (const t of tasksToSort) {
-      if (!visited.has(t.id)) sortedArray.push(t);
-    }
-  }
-
-  return sortedArray;
 }
 
 // GET BOTTOM (ACTIONABLE) LAYER OF GOAL
@@ -585,26 +396,3 @@ export function buildInheritedLocationMap(
   return result;
 }
 
-// Check if any ID's in the main tree matches any of the dependencies in the tree to check
-export function idsExistsInDependenciesOf(
-  planner: Planner[],
-  mainTaskId: string | null,
-  dependenciesToCheckId: string | null,
-): boolean {
-  // Make sure the function can run
-  if (!planner || planner.length === 0 || !mainTaskId || !dependenciesToCheckId)
-    return false;
-
-  const index = getTreeIndex(planner);
-  const mainIds = bottomLayerIdSetOf(index, mainTaskId);
-  const depsToCheck = bottomLayerDepSetOf(index, dependenciesToCheckId);
-
-  const [smaller, larger] =
-    mainIds.size <= depsToCheck.size
-      ? [mainIds, depsToCheck]
-      : [depsToCheck, mainIds];
-  for (const id of smaller) {
-    if (larger.has(id)) return true;
-  }
-  return false;
-}

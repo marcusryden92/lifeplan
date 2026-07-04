@@ -1,13 +1,14 @@
 import React, { useRef, useCallback } from "react";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { moveToMiddle } from "@/utils/goal-handlers/update-dependencies/update-dependencies-on-move/moveToMiddle";
+import { moveToMiddle } from "@/utils/goal-handlers/moveItem";
 import {
   draggable,
   draggableHover,
   draggableGrabbing,
   draggableDropTarget,
   draggableSelected,
+  draggableDropped,
 } from "@/components/tasks/lumenTasks.css";
 
 export default function DraggableItem({
@@ -31,6 +32,8 @@ export default function DraggableItem({
     setCurrentlyClickedItem,
     displayDragBox,
     focusedTask,
+    droppedTask,
+    flashDroppedTask,
   } = useDraggableContext();
 
   const handleMouseEnter = useCallback(
@@ -61,12 +64,13 @@ export default function DraggableItem({
     )
       return;
 
-    moveToMiddle({
+    const moved = moveToMiddle({
       planner,
       updatePlannerArray,
       currentlyClickedItem,
       currentlyHoveredItem,
     });
+    if (moved) flashDroppedTask(currentlyClickedItem.taskId);
 
     setCurrentlyClickedItem(null);
     setCurrentlyHoveredItem(null);
@@ -77,6 +81,7 @@ export default function DraggableItem({
     updatePlannerArray,
     setCurrentlyClickedItem,
     setCurrentlyHoveredItem,
+    flashDroppedTask,
   ]);
 
   const isGrabbing = !!currentlyClickedItem && displayDragBox;
@@ -93,6 +98,7 @@ export default function DraggableItem({
     isGrabbing ? draggableGrabbing : "",
     isDropTarget ? draggableDropTarget : "",
     isSelected && !isGrabbing ? draggableSelected : "",
+    droppedTask === taskId ? draggableDropped : "",
     className ?? "",
   ]
     .filter(Boolean)

@@ -17,7 +17,7 @@ function row(overrides: Partial<Planner> & { id: string }): Planner {
     duration: 30,
     deadline: null,
     starts: null,
-    dependency: null,
+    sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,
     priority: 0,
@@ -32,18 +32,17 @@ function row(overrides: Partial<Planner> & { id: string }): Planner {
   };
 }
 
-// Two goals with leaf chains threaded through the bottom layer
-// (a1 -> a2 -> b1 -> b2 -> goal-c), one childless loose task at top level,
-// and one untriaged Capture jot that the forest must ignore.
+// Two goals with sortOrder-keyed children, one childless loose task at top
+// level, and one untriaged Capture jot that the forest must ignore.
 function makePlanner(): Planner[] {
   return [
     row({ id: "goal-a", plannerType: "goal", categoryId: "cat-1" }),
-    row({ id: "a1", parentId: "goal-a", dependency: null }),
-    row({ id: "a2", parentId: "goal-a", dependency: "a1" }),
+    row({ id: "a1", parentId: "goal-a", sortOrder: 1024 }),
+    row({ id: "a2", parentId: "goal-a", sortOrder: 2048 }),
     row({ id: "goal-b", plannerType: "goal" }),
-    row({ id: "b1", parentId: "goal-b", dependency: "a2" }),
-    row({ id: "b2", parentId: "goal-b", dependency: "b1" }),
-    row({ id: "goal-c", plannerType: "task", dependency: "b2" }),
+    row({ id: "b1", parentId: "goal-b", sortOrder: 1024 }),
+    row({ id: "b2", parentId: "goal-b", sortOrder: 2048 }),
+    row({ id: "goal-c", plannerType: "task" }),
     row({ id: "inbox-1", isTriaged: false }),
   ];
 }
@@ -159,7 +158,7 @@ describe("applyDraftForestToPlanner", () => {
     expect(result).toHaveLength(planner.length + 4);
     const root = result.find((p) => p.title === "Learn violin")!;
     expect(root.parentId).toBeNull();
-    expect(root.dependency).toBeNull();
+    expect(root.sortOrder).toBe(0);
     expect(root.isTriaged).toBe(true);
     expect(root.isReady).toBe(false);
     expect(root.categoryId).toBe("cat-2");
@@ -172,12 +171,10 @@ describe("applyDraftForestToPlanner", () => {
     expect(buy.parentId).toBe(root.id);
     expect(basics.parentId).toBe(root.id);
     expect(lesson.parentId).toBe(basics.id);
-    // Internal chain from a null cursor: first leaf has no dep; the
-    // intermediate node records the cursor at visit time (the previous
-    // leaf), and the next leaf chains onto that same previous leaf.
-    expect(buy.dependency).toBeNull();
-    expect(basics.dependency).toBe(buy.id);
-    expect(lesson.dependency).toBe(buy.id);
+    // Sibling sortOrder is stamped from array position at each level.
+    expect(buy.sortOrder).toBe(1024);
+    expect(basics.sortOrder).toBe(2048);
+    expect(lesson.sortOrder).toBe(1024);
     // Children inherit the root's category.
     expect(buy.categoryId).toBe("cat-2");
     expect(lesson.categoryId).toBe("cat-2");
@@ -309,7 +306,7 @@ describe("applyDraftForestToPlanner", () => {
     );
   });
 
-  it("deletes a removed goal's subtree and bridges the outer chain", () => {
+  it("deletes a removed goal's whole subtree and leaves the rest untouched", () => {
     const planner = makePlanner();
     const workingForest = clone(plannerForestToJson(planner));
     workingForest.goals = workingForest.goals.filter(
@@ -326,14 +323,10 @@ describe("applyDraftForestToPlanner", () => {
     expect(result.find((p) => p.id === "goal-b")).toBeUndefined();
     expect(result.find((p) => p.id === "b1")).toBeUndefined();
     expect(result.find((p) => p.id === "b2")).toBeUndefined();
-    // goal-c depended on b2 (B's last leaf); it bridges to a2, which b1
-    // (B's first leaf) depended on.
-    expect(byId(result, "goal-c").dependency).toBe("a2");
-    // No dependency may point at a removed row.
-    const ids = new Set(result.map((p) => p.id));
-    for (const p of result) {
-      if (p.dependency) expect(ids.has(p.dependency)).toBe(true);
-    }
+    // Order is a local property now — no neighboring row is touched by a
+    // subtree deletion.
+    expect(byId(result, "goal-c")).toBe(byId(planner, "goal-c"));
+    expect(byId(result, "goal-a")).toBe(byId(planner, "goal-a"));
   });
 
   it("applies a valid root categoryId and rejects an unknown one", () => {
@@ -362,7 +355,7 @@ describe("applyDraftForestToPlanner", () => {
     expect(byId(bogusResult, "goal-a").categoryId).toBe("cat-1");
   });
 
-  it("repoints the outer neighbor when a retained goal's last leaf changes", () => {
+  it("removes a leaf from a retained goal without touching other goals", () => {
     const planner = makePlanner();
     const workingForest = clone(plannerForestToJson(planner));
     const goalA = workingForest.goals.find((g) => g.id === "goal-a")!;
@@ -376,16 +369,17 @@ describe("applyDraftForestToPlanner", () => {
     });
 
     expect(result.find((p) => p.id === "a2")).toBeUndefined();
-    // b1 pointed at a2 (A's old last leaf); A's new last leaf is a1.
-    expect(byId(result, "b1").dependency).toBe("a1");
+    expect(byId(result, "a1").id).toBe("a1");
+    // Goal B is untouched by goal A's restructure.
+    expect(byId(result, "b1")).toBe(byId(planner, "b1"));
   });
 
-  it("applies a draft goal with route-minted ids as a new root with fresh ids and clean threading", () => {
+  it("applies a draft goal with route-minted ids as a new root with fresh ids and clean keys", () => {
     const planner = makePlanner();
     const workingForest = clone(plannerForestToJson(planner));
     // Draft ids as minted by the route at propose/add time: unknown to the
     // planner array. Save must re-mint every id and derive parentId +
-    // dependency from the tree shape alone.
+    // sortOrder from the tree shape alone.
     workingForest.goals.push({
       id: "draft-root",
       title: "Draft goal",
@@ -429,23 +423,22 @@ describe("applyDraftForestToPlanner", () => {
     });
 
     // No draft id survives into the planner array — not as a row id, not as
-    // a parentId, not as a dependency.
+    // a parentId.
     const draftIds = new Set(["draft-root", "draft-child-1", "draft-child-2"]);
     for (const p of result) {
       expect(draftIds.has(p.id)).toBe(false);
       if (p.parentId) expect(draftIds.has(p.parentId)).toBe(false);
-      if (p.dependency) expect(draftIds.has(p.dependency)).toBe(false);
     }
 
     const root = result.find((p) => p.title === "Draft goal")!;
     const first = result.find((p) => p.title === "first step")!;
     const second = result.find((p) => p.title === "second step")!;
     expect(root.parentId).toBeNull();
-    expect(root.dependency).toBeNull();
+    expect(root.sortOrder).toBe(0);
     expect(first.parentId).toBe(root.id);
     expect(second.parentId).toBe(root.id);
-    expect(first.dependency).toBeNull();
-    expect(second.dependency).toBe(first.id);
+    expect(first.sortOrder).toBe(1024);
+    expect(second.sortOrder).toBe(2048);
   });
 
   it("treats a goal whose id matches a nested row as a brand-new goal", () => {

@@ -64,7 +64,7 @@ function makePlan(id: string, startsISO: string): Planner {
     duration: 60,
     deadline: null,
     starts: startsISO,
-    dependency: null,
+    sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,
     priority: 5,

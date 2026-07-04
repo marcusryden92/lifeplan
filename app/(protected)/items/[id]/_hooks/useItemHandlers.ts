@@ -53,7 +53,7 @@ export function useItemHandlers(
 
   const handleDelete = useCallback(() => {
     if (!item) return;
-    deleteGoal({ updateAll, taskId: item.id, parentId: null });
+    deleteGoal({ updateAll, taskId: item.id });
     router.push("/items");
   }, [item, updateAll, router]);
 

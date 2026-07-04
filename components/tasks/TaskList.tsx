@@ -6,10 +6,8 @@ import TaskItem from "./TaskItem";
 import TaskDivider from "@/components/draggable/TaskDivider";
 import { TaskListProps } from "@/lib/taskItem";
 import { getTaskById } from "@/utils/taskArrayUtils";
-import {
-  getSubtasksById,
-  sortTasksByDependencies,
-} from "@/utils/goalPageHandlers";
+import { getSubtasksById } from "@/utils/goalPageHandlers";
+import { sortSiblings } from "@/utils/goal-handlers/sortOrderKeys";
 import { Planner } from "@/types/prisma";
 import { sublist } from "./lumenTasks.css";
 
@@ -33,7 +31,7 @@ const TaskList: React.FC<TaskListProps> = React.memo(({ id, subtasks }) => {
       return;
     }
 
-    setSortedTasks(sortTasksByDependencies(planner, subtasksToUse));
+    setSortedTasks(sortSiblings(subtasksToUse));
     setLoading(false);
   }, [id, subtasks, planner]);
 
