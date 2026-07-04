@@ -12,11 +12,13 @@ import type {
 } from "@fullcalendar/core";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction";
 import { v4 as uuidv4 } from "uuid";
-import { X } from "lucide-react";
+import { addDays, format } from "date-fns";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button, Backdrop, ConfirmModal, Grain } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { Category, EventTemplate } from "@/types/prisma";
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 
@@ -55,6 +57,9 @@ import {
   gridHeader,
   gridTitle,
   gridSubtitle,
+  dayNav,
+  dayNavBtn,
+  dayNavLabel,
   calendarWrap,
   rail,
   emptyPanel,
@@ -122,6 +127,32 @@ export function WeekStructureModal({
     () => getWeekFirstDate(WEEK_START_DAY, REFERENCE_WEEK_DATE),
     [],
   );
+
+  // Mobile shows one drawable day at a time — seven ~45px columns are too
+  // small to read or draw on with a finger. The index is an offset into the
+  // reference week, initialized to today's weekday.
+  const isMobile = useIsMobile();
+  const [mobileDayIdx, setMobileDayIdx] = useState(0);
+  useEffect(() => {
+    if (open) {
+      setMobileDayIdx((new Date().getDay() - WEEK_START_DAY + 7) % 7);
+    }
+  }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    // Deferred: FullCalendar flushSyncs on API calls, which React warns about
+    // inside an effect's commit phase.
+    const timeout = setTimeout(() => {
+      const api = calendarRef.current?.getApi();
+      if (!api) return;
+      if (isMobile) {
+        api.changeView("timeGridDay", addDays(weekStart, mobileDayIdx));
+      } else if (api.view.type !== "timeGridWeek") {
+        api.changeView("timeGridWeek", weekStart);
+      }
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [open, isMobile, mobileDayIdx, weekStart]);
 
   const events = useMemo(() => {
     const out = [];
@@ -467,6 +498,27 @@ export function WeekStructureModal({
               <h2 className={gridTitle}>Your typical week</h2>
               <span className={gridSubtitle}>
                 drag on the grid to draw new · click a block to edit
+              </span>
+              <span className={dayNav}>
+                <button
+                  type="button"
+                  className={dayNavBtn}
+                  onClick={() => setMobileDayIdx((i) => (i + 6) % 7)}
+                  aria-label="Previous day"
+                >
+                  <ChevronLeft size={14} strokeWidth={2} />
+                </button>
+                <span className={dayNavLabel}>
+                  {format(addDays(weekStart, mobileDayIdx), "EEEE")}
+                </span>
+                <button
+                  type="button"
+                  className={dayNavBtn}
+                  onClick={() => setMobileDayIdx((i) => (i + 1) % 7)}
+                  aria-label="Next day"
+                >
+                  <ChevronRight size={14} strokeWidth={2} />
+                </button>
               </span>
             </div>
 

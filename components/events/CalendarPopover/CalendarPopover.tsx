@@ -3,8 +3,9 @@
 import { type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import usePopoverPosition from "@/hooks/usePopoverPosition";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { popover } from "@/lib/theme";
-import { calendarPopover } from "./CalendarPopover.css";
+import { calendarPopover, calendarPopoverSheet } from "./CalendarPopover.css";
 
 interface RenderArgs {
   startDrag: (e: React.MouseEvent) => void;
@@ -61,6 +62,9 @@ export function CalendarPopover({
       dimensions: { width: effectiveWidth, height },
       padding: 16,
     });
+  // Mobile skips anchored positioning entirely and presents as a bottom
+  // sheet — a floating box anchored to a tiny tile is a desktop idiom.
+  const isMobile = useIsMobile();
 
   return (
     <Dialog.Root
@@ -84,7 +88,9 @@ export function CalendarPopover({
         />
         <Dialog.Content
           ref={popoverRef}
-          className={`${popover({ size: "lg" })} ${calendarPopover}`}
+          className={`${popover({ size: "lg" })} ${calendarPopover} ${
+            isMobile ? calendarPopoverSheet : ""
+          }`}
           aria-describedby={undefined}
           onOpenAutoFocus={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => {
@@ -96,13 +102,17 @@ export function CalendarPopover({
           onPointerDownOutside={() => {
             (onClickOutside ?? onClose)();
           }}
-          style={{
-            top: `${position.top}px`,
-            left: `${position.left}px`,
-            width: `${effectiveWidth}px`,
-            visibility: isPositioned ? "visible" : "hidden",
-            cursor: isDragging ? "grabbing" : "auto",
-          }}
+          style={
+            isMobile
+              ? undefined
+              : {
+                  top: `${position.top}px`,
+                  left: `${position.left}px`,
+                  width: `${effectiveWidth}px`,
+                  visibility: isPositioned ? "visible" : "hidden",
+                  cursor: isDragging ? "grabbing" : "auto",
+                }
+          }
         >
           <Dialog.Title style={srOnlyStyle}>{title}</Dialog.Title>
           {children({ startDrag, close: onClose, isDragging })}

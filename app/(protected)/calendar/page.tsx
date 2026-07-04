@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useLayoutEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import Link from "next/link";
 import {
   CalendarCog,
@@ -17,6 +23,7 @@ import type { AppDispatch, RootState } from "@/redux/store";
 import { dismissEngineMessage } from "@/redux/slices/engineOutputSlice";
 import { Button, ConicDot, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { getWeekFirstDate, shiftDate } from "@/utils/calendarUtils";
 import Calendar from "./_components/Calendar";
 import { CalendarHoverLabelContext } from "@/components/events/CalendarHoverLabelContext";
@@ -177,17 +184,29 @@ export default function CalendarPage() {
     (id: string) => dispatch(dismissEngineMessage(id)),
     [dispatch],
   );
+  // Mobile renders a 3-day window anchored on any date; desktop renders the
+  // full week anchored on the week start. Navigation steps match the window.
+  const isMobile = useIsMobile();
   const handleGoToDate = useCallback(
     (iso: string) => {
       const target = new Date(iso);
       if (Number.isNaN(target.getTime())) return;
-      setInitialDate(getWeekFirstDate(weekStartDay, target));
+      setInitialDate(
+        isMobile ? target : getWeekFirstDate(weekStartDay, target),
+      );
     },
-    [weekStartDay],
+    [weekStartDay, isMobile],
   );
   const [initialDate, setInitialDate] = useState<Date>(() =>
     getWeekFirstDate(weekStartDay, new Date()),
   );
+  useEffect(() => {
+    // Crossing the breakpoint re-anchors the window: to today on mobile (the
+    // week start can put today outside a 3-day window), back to the week
+    // start of whatever was in view on desktop.
+    if (isMobile) setInitialDate(new Date());
+    else setInitialDate((d) => getWeekFirstDate(weekStartDay, d));
+  }, [isMobile, weekStartDay]);
   const [consoleCollapsed, setConsoleCollapsed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   // Suppresses the engineCol transition during the first frame so syncing
@@ -240,13 +259,16 @@ export default function CalendarPage() {
 
   const alertTone: EngineTone | null = worstUnresolved(renderedMessages);
 
-  const finalDate = shiftDate(initialDate, 6);
+  const windowDays = isMobile ? 3 : 7;
+  const finalDate = shiftDate(initialDate, windowDays - 1);
   const range = `${format(initialDate, "MMM d")} – ${format(finalDate, "MMM d")}`;
 
-  const goPrev = () => setInitialDate((d) => shiftDate(d, -7));
-  const goNext = () => setInitialDate((d) => shiftDate(d, 7));
+  const goPrev = () => setInitialDate((d) => shiftDate(d, -windowDays));
+  const goNext = () => setInitialDate((d) => shiftDate(d, windowDays));
   const goToday = () =>
-    setInitialDate(getWeekFirstDate(weekStartDay, new Date()));
+    setInitialDate(
+      isMobile ? new Date() : getWeekFirstDate(weekStartDay, new Date()),
+    );
 
   return (
     <div

@@ -104,6 +104,7 @@
   │   ├── useCalendarStateActions       # updatePlannerArray / updateTemplateArray / updateAll
   │   ├── useManuallyRefreshCalendar    # User-triggered regen
   │   ├── useServerAction               # useTransition + status pattern for mutations
+  │   ├── useIsMobile                   # matchMedia on breakpoints.mobile — for JS-level mobile treatments (view types, bottom sheets)
   │   ├── useKeyboardShortcuts, useListKeyboardNav, useClickOutside, usePopoverPosition,
   │   │   useFlashAnimation, usePlatform, useTitleEditor
   │

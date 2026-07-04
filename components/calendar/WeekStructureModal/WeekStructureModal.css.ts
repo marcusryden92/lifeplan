@@ -194,6 +194,48 @@ export const gridSubtitle = style({
   fontVariantNumeric: "tabular-nums",
 });
 
+// Mobile swaps the 7-column drawable week for a single-day view; this is the
+// prev / weekday / next switcher in the grid header. Hidden on wider layouts.
+export const dayNav = style({
+  display: "none",
+  "@media": {
+    [media.mobile]: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: 6,
+      marginLeft: "auto",
+    },
+  },
+});
+
+export const dayNavBtn = style({
+  appearance: "none",
+  border: `1px solid ${vars.rule}`,
+  background: "transparent",
+  color: vars.ink,
+  width: 26,
+  height: 26,
+  borderRadius: radii.sm,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  padding: 0,
+  transition: themeTransition,
+  selectors: {
+    "&:hover": { background: vars.interactive.hoverFill },
+  },
+});
+
+export const dayNavLabel = style({
+  fontFamily: vars.font.ui,
+  fontSize: 12,
+  fontWeight: 600,
+  color: vars.ink,
+  minWidth: 78,
+  textAlign: "center",
+});
+
 export const calendarWrap = style({
   flex: 1,
   minHeight: 0,

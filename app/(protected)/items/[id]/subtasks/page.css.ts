@@ -1,5 +1,5 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { DURATIONS, media } from "@/lib/theme";
+import { DURATIONS, media, radii, vars, zIndex } from "@/lib/theme";
 
 
 export const layout = style({
@@ -26,17 +26,33 @@ export const drawerSlot = style({
   flexShrink: 0,
   overflow: "hidden",
   transition: `width ${DURATIONS.collapse}s ease`,
-  // The parent layout stacks to a column on mobile, where a width-based
-  // reveal is the wrong axis — the drawer simply toggles instead.
   "@media": {
     [media.mobile]: { display: "none", width: "auto", transition: "none" },
   },
 });
 
+// On mobile the drawer presents as a fixed bottom sheet instead of a side
+// column — in the stacked flow it would render below the entire tree,
+// off-screen from the row that was tapped.
 export const drawerSlotOpen = style({
   width: 360,
   "@media": {
-    [media.mobile]: { display: "block", width: "auto" },
+    [media.mobile]: {
+      display: "block",
+      position: "fixed",
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: "auto",
+      height: "70vh",
+      zIndex: zIndex.floating,
+      background: vars.paper,
+      borderTop: `1px solid ${vars.rule}`,
+      borderTopLeftRadius: radii.xl,
+      borderTopRightRadius: radii.xl,
+      boxShadow: vars.shadow.panel,
+      overflow: "hidden",
+    },
   },
 });
 

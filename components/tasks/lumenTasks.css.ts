@@ -6,6 +6,8 @@ import {
   colorMixAlpha,
   DURATIONS,
   radii,
+  media,
+  zIndex,
 } from "@/lib/theme";
 
 // Quick-shake when a locked completion checkbox is clicked. Subtle horizontal
@@ -223,6 +225,53 @@ export const gripBtn = style({
     [`${draggable}:hover &`]: { opacity: 1 },
     "&:hover": { color: vars.ink },
     "&:active": { cursor: "grabbing" },
+  },
+  // No hover on touch: the handle is always visible on mobile, where it
+  // opens the move menu instead of starting a mouse drag.
+  "@media": {
+    [media.mobile]: { opacity: 1, cursor: "pointer" },
+  },
+});
+
+export const gripWrap = style({
+  position: "relative",
+  display: "inline-flex",
+});
+
+// Touch-reorder menu anchored to the grip on mobile (the mouse drag system
+// never fires on touch). Plain popover panel; rendered only while open.
+export const moveMenu = style({
+  position: "absolute",
+  top: "100%",
+  left: 0,
+  zIndex: zIndex.floating,
+  minWidth: 170,
+  display: "flex",
+  flexDirection: "column",
+  padding: 4,
+  background: vars.paper,
+  border: `1px solid ${vars.rule}`,
+  borderRadius: radii["sm+2"],
+  boxShadow: vars.shadow.panelSm,
+});
+
+export const moveMenuItem = style({
+  appearance: "none",
+  border: "none",
+  background: "transparent",
+  textAlign: "left",
+  padding: "8px 10px",
+  borderRadius: radii.sm,
+  fontFamily: vars.font.ui,
+  fontSize: 12.5,
+  fontWeight: 500,
+  color: vars.ink,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  transition: interactiveTransition("background-color", "color"),
+  selectors: {
+    "&:hover:not(:disabled)": { background: vars.interactive.hoverFill },
+    "&:disabled": { color: vars.muted, cursor: "default" },
   },
 });
 

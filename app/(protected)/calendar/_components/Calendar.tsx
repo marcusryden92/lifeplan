@@ -19,6 +19,7 @@ import type { EventDropArg, EventInput } from "@fullcalendar/core/index.js";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction/index.js";
 import type { RootState } from "@/redux/store";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
 import {
   templatesToEventInput,
@@ -57,6 +58,15 @@ const TIME_FORMAT = {
   hour: "2-digit",
   minute: "2-digit",
   hour12: false,
+} as const;
+// Mobile swaps the 7-day week for a 3-day window — seven ~45px columns on a
+// phone are unreadable and untappable. The page header drives navigation in
+// matching 3-day steps.
+const VIEWS = {
+  timeGridThreeDay: {
+    type: "timeGrid",
+    duration: { days: 3 },
+  },
 } as const;
 
 interface CalendarProps {
@@ -122,6 +132,21 @@ function Calendar({
     }, 0);
     return () => clearTimeout(timeout);
   }, [initialDate]);
+
+  // View follows the breakpoint via the API rather than the initialView
+  // option — the connector treats a changed option as a full option reset,
+  // and initialView is only honored at mount anyway. Same timeout deferral
+  // as gotoDate above (flushSync inside effect commit).
+  const isMobile = useIsMobile();
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const api = calendarRef.current?.getApi();
+      if (!api) return;
+      const view = isMobile ? "timeGridThreeDay" : "timeGridWeek";
+      if (api.view.type !== view) api.changeView(view);
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [isMobile]);
 
   // Four render streams merged into the single FullCalendar event array:
   //   1. persisted SimpleEvents (plans + scheduled tasks)
@@ -229,6 +254,7 @@ function Calendar({
         timeZone={"local"}
         events={fullCalendarEvents}
         initialView="timeGridWeek"
+        views={VIEWS}
         scrollTime={"05:00:00"}
         allDaySlot={false}
         snapDuration={"00:00:01"}

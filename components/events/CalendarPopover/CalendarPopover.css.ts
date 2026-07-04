@@ -14,6 +14,22 @@ export const calendarPopover = style({
   color: vars.ink,
 });
 
+// Mobile presentation: a bottom sheet instead of an anchored floating box.
+// Applied alongside calendarPopover when the component detects mobile (the
+// anchored inline top/left/width are skipped there, so these win).
+export const calendarPopoverSheet = style({
+  left: 0,
+  right: 0,
+  bottom: 0,
+  top: "auto",
+  width: "auto",
+  maxWidth: "100vw",
+  maxHeight: "75vh",
+  overflowY: "auto",
+  borderBottomLeftRadius: 0,
+  borderBottomRightRadius: 0,
+});
+
 export const header = style({
   display: "flex",
   alignItems: "center",

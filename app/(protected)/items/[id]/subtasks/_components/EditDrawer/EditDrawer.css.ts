@@ -5,6 +5,7 @@ import {
   themeDark,
   interactiveTransition,
   radii,
+  media,
 } from "@/lib/theme";
 
 const lockedShake = keyframes({
@@ -25,6 +26,14 @@ export const drawer = style({
   minHeight: 0,
   overflow: "auto",
   transition: themeTransition,
+  // Inside the mobile bottom sheet (see drawerSlotOpen) the side-column
+  // chrome comes off; the sheet owns the border and radius.
+  "@media": {
+    [media.mobile]: {
+      borderLeft: "none",
+      borderBottomRightRadius: 0,
+    },
+  },
 });
 
 export const drawerHeader = style({
