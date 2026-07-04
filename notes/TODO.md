@@ -1,16 +1,12 @@
 # P4 — Refactors / investigations
 
-- Claude Templates, Categories, Locations
-- Claude history
-- Custom Claude API key
-
 - WeekStructureModal click outside
-- Plan not triggering regeneration issue
 - General responsiveness check
 
 # P5 — Medium features
 
 - Onboarding flow (6-step)
+- Custom Claude API key
 - Bulk-actions floating bar in Library
 - File-view / mind-map style: displays categories + sub-categories + items together
 - Change week start day in settings

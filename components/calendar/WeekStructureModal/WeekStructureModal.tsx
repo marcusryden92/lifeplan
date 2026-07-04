@@ -381,12 +381,8 @@ export function WeekStructureModal({
       <Dialog.Content
         className={modal}
         aria-describedby={undefined}
-        onPointerDownOutside={(e) => {
-          // Outside-pointer-down would close immediately; route through cancel()
-          // so the unsaved-changes confirm runs first.
-          e.preventDefault();
-          cancel();
-        }}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
       >
         <Dialog.Title className={a11yHiddenTitle}>Week Structure</Dialog.Title>
         <Backdrop variant="blob" />
