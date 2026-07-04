@@ -25,8 +25,8 @@ type Props = {
   userInitial?: string;
   // Rendered inside mainColumn after the page content — the mount point for
   // the global AI assistant, which fills the content region while leaving the
-  // sidebar interactive. Passed in as a slot so the shell never imports coach
-  // code (avoids an AppShell -> coach -> ui-barrel -> AppShell cycle).
+  // sidebar interactive. Passed in as a slot so the shell never imports draft
+  // code (avoids an AppShell -> draft -> ui-barrel -> AppShell cycle).
   assistantSlot?: ReactNode;
 };
 

@@ -18,7 +18,7 @@
   - **FullCalendar** 6.1 for the calendar surface; **date-fns** 3 for date math (engine has its own [dateTimeService](utils/calendar-generation/utils/dateTimeService.ts)); **rrule** for template recurrence.
   - **React Hook Form** + **Zod** for forms.
   - **Jest** + **Testing Library** for tests.
-  - **Anthropic SDK** (`@anthropic-ai/sdk`) for the AI coach — streams a single `propose_tree` tool call whose input JSON is parsed incrementally on the server with `partial-json` and forwarded as SSE `tree` events.
+  - **Anthropic SDK** (`@anthropic-ai/sdk`) for the AI assistant — streams `propose_goals` tool calls whose input JSON is parsed incrementally on the server with `partial-json` and forwarded as SSE `forest` events.
   - **pnpm** 9.15.4 — use `pnpm` for all commands.
 
   ---
@@ -29,7 +29,7 @@
   - **No narration comments** ("// fixed to handle X", "// updated to use new API"). Comments explain *why* something non-obvious exists, not *what* the code does.
   - **No summary, changelog, refactor-notes, or migration-notes markdown files** added to the repo. Make the change and commit.
   - **Absolute imports with `@/`** prefix.
-  - **Prefer server actions** (`"use server"` files in [actions/](actions/)) over `app/api/` routes. API routes exist only for `auth/`, `admin/`, and `coach/stream/` (SSE streaming from Anthropic — a Response-body concern that doesn't fit the server-action return shape).
+  - **Prefer server actions** (`"use server"` files in [actions/](actions/)) over `app/api/` routes. API routes exist only for `auth/`, `admin/`, and `draft/stream/` (SSE streaming from Anthropic — a Response-body concern that doesn't fit the server-action return shape).
   - **Zod schemas** in [schemas/](schemas/) for any user-facing form.
   - Spell out "category" — never "cat".
   - The location surface is named **Locations**, not "Places" (Google Places is the underlying API, but the user-facing concept is Location).
@@ -55,7 +55,7 @@
   │   │   ├── locations/                # Location + travel-time management
   │   │   └── settings/
   │   ├── auth/                         # login/register/reset/new-password/new-verification/error
-  │   ├── api/                          # auth/ + admin/ + coach/stream/ (SSE)
+  │   ├── api/                          # auth/ + admin/ + draft/stream/ (SSE)
   │   └── test-shell/, test-tokens/     # Dev scaffolding
   │
   ├── actions/                          # Server actions (preferred backend surface)
@@ -72,7 +72,7 @@
   ├── components/
   │   ├── auth/                         # AuthCard, login/register/reset forms, Social, LoginButton
   │   ├── calendar/                     # WeekStructureModal + editors (Template, Window, Event tile)
-  │   ├── coach/AICoachModal/           # Global AI assistant — chat + goal-forest diff view; mounted in the AppShell assistant slot, opened anywhere via mod+I / sidebar / item-detail entry points
+  │   ├── draft/AIDraftModal/           # Global AI assistant — chat + tabbed Goals/Week diff view (goal forest + weekly templates); mounted in the AppShell assistant slot, opened anywhere via mod+I / sidebar / item-detail entry points
   │   ├── draggable/                    # DragBox, DraggableItem, TaskDivider, DraggableContext
   │   ├── events/                       # Calendar event renderers + popovers (Event, Template, Travel, CategoryWrapper, NewPlanModal, color/location pickers)
   │   ├── landing/VectorField/          # Landing-page visual
@@ -261,39 +261,53 @@
 
   ---
 
-  ## AI assistant (goal-forest planning)
+  ## AI assistant (goal-forest + weekly-template planning)
 
-  One global assistant, always reachable: **mod+I**, the Sparkles button in the Sidebar, or the "AI assistant" button in `ItemTabs`. It operates on the whole **forest** of triaged top-level rows — restructuring existing goals, creating new goals with full subtrees, and deleting goals. Untriaged Capture-inbox jots are excluded and never touched.
+  One global assistant, always reachable: **mod+I**, the Sparkles button in the Sidebar, or the "AI assistant" button in `ItemTabs`. It operates on the whole **forest** of triaged top-level rows — restructuring existing goals, creating new goals with full subtrees, and deleting goals — and on the user's **weekly templates** (EventTemplate rows: sleep, work hours, standing commitments), so "set up my week and this goal" happens in one conversation. Untriaged Capture-inbox jots are excluded and never touched. Locations and category time windows are read context only (locations can't be created here — they need Google Places).
 
-  Mounting: `AssistantProvider` ([components/ui/shell/AssistantContext.tsx](components/ui/shell/AssistantContext.tsx)) wraps `AppShell` in the protected layout; [GlobalAssistant.tsx](components/coach/AICoachModal/GlobalAssistant.tsx) is passed into AppShell's `assistantSlot` and renders the modal filling `mainColumn` (`position: absolute; inset: 0`) — the sidebar stays visible and interactive (`Dialog modal={false}`, outside-interaction dismissal prevented; Esc / Close only). Focus resolution: an explicit `AssistantScope.focusItemId` from the opener wins, else the `/items/[id]` route is detected; either maps to its root via `getRootParentId` and is sent as a prompt hint plus default tree-pane expansion. `AssistantScope.intent` is the reserved hook for onboarding ("draft-goals").
+  Mounting: `AssistantProvider` ([components/ui/shell/AssistantContext.tsx](components/ui/shell/AssistantContext.tsx)) wraps `AppShell` in the protected layout; [GlobalAssistant.tsx](components/draft/AIDraftModal/GlobalAssistant.tsx) is passed into AppShell's `assistantSlot` and renders the modal filling `mainColumn` (`position: absolute; inset: 0`) — the sidebar stays visible and interactive (`Dialog modal={false}`, outside-interaction dismissal prevented; Esc / Close only). Focus resolution: an explicit `AssistantScope.focusItemId` from the opener wins, else the `/items/[id]` route is detected; either maps to its root via `getRootParentId` and is sent as a prompt hint plus default tree-pane expansion. `AssistantScope.intent` is the reserved hook for onboarding ("draft-goals").
 
-  Split-pane modal ([components/coach/AICoachModal/](components/coach/AICoachModal/)):
+  Split-pane modal ([components/draft/AIDraftModal/](components/draft/AIDraftModal/)):
 
   - **Left**: chat pane. User bubbles right, assistant responses left-aligned as plain text; `initialDraft` prefills the composer without sending. The chat pane sits on `color-mix(ink 4%, paper)` so it reads as sunken relative to the tree pane.
-  - **Right**: `JsonForestView` — one collapsible section per top-level goal (chevron + title + `CategoryBadge` + goal-level diff badge), the focused goal and changed goals expanded by default, with the per-node diff overlay from [diffCoachTree.ts](components/coach/AICoachModal/diffCoachTree.ts); deleted nodes/goals stay visible in place. **Display is relevance-scoped**: the pane shows only the focused goal, goals the AI touched, and goals brought into view via the `show_goals` tool (display-only second tool → SSE `show` event), plus a "Show all" footer toggle. The full forest is still sent to the model and held in working state — visibility is a render filter only, so Save/delete semantics are unaffected.
+  - **Right**: a tabbed review pane — **Goals / Week** tab buttons in the pane header, each with a change-count badge; during a stream the pane auto-follows the domain the assistant is editing unless the user clicked a tab this turn (pin resets per send).
+    - **Goals tab**: `JsonForestView` — one collapsible section per top-level goal (chevron + title + `CategoryBadge` + goal-level diff badge), the focused goal and changed goals expanded by default, with the per-node diff overlay from [diffDraftTree.ts](components/draft/AIDraftModal/diffDraftTree.ts); deleted nodes/goals stay visible in place. **Display is relevance-scoped**: the pane shows only the focused goal, goals the AI touched, and goals brought into view via the `show_goals` tool (display-only tool → SSE `show` event), plus a "Show all" header toggle. Show-all mode groups goals under category headers (provider order, uncategorized last); the relevance-scoped view stays flat. The full forest is still sent to the model and held in working state — visibility is a render filter only, so Save/delete semantics are unaffected.
+    - **Week tab**: `TemplateWeekView` — Monday-first day-grouped template list with the same diff language (status badges + friendly changedFields), color dot, HH:MM–HH:MM range with a `+1d` overnight marker, location name ("Anywhere" when null). Always shows all templates — no relevance filter.
   - **Draggable divider** between the panes (state clamped 20/80%; both panes have `minWidth: 240px`).
 
   Data flow per turn:
 
   ```
-  plannerForestToJson(planner)             → canonical CoachForest (triaged roots + subtrees; root categoryId stamped)
-  useAICoachState({open, canonical})        ─ owns workingForest + chat messages
+  plannerForestToJson(planner)             → canonical DraftForest (triaged roots + subtrees; root categoryId stamped)
+  useAIDraftState({open, canonical})        ─ owns workingForest + chat messages
     User sends message
         │
         ▼
-  POST /api/coach/stream                    ← auth-gated, Sonnet 4.6
-    body: { currentForest, history, focus?, categories (id+name), today (local) }
+  POST /api/draft/stream                    ← auth-gated, Sonnet 4.6
+    body: { currentForest, currentTemplates, history, focus?,
+            categories (id+name+isStrict+useTimeWindows+timeSlots),
+            locations (id+name), today (local) }
     (full forest goes to OUR server only — Anthropic gets a compact per-goal
-     INDEX line + the focused goal's tree; everything else is fetched on demand)
+     INDEX line + the focused goal's tree; everything else is fetched on
+     demand. Templates, category windows, and locations are small and ride in
+     the prompt whole — no fetch dance for them)
     tools:
       read:  search_items({query}), get_goal_trees({goalIds})
       edit:  update_items, move_item, add_items, delete_items
-             ← deterministic ops executed server-side by coachForestOps.ts on
+             ← deterministic ops executed server-side by draftForestOps.ts on
                the request's working copy; the resulting trees are emitted as
                fromOps forest events (code-computed — never retyped by the
                model). Same-goal moves only; supplied ids on add are discarded
                and re-minted as draft ids; isReady / categoryId validation
                built in.
+      week:  add_templates, update_templates, delete_templates
+             ← deterministic ops (draftTemplateOps.ts) on the request's
+               workingTemplates copy; each change emits an SSE `templates`
+               event carrying the FULL authoritative array (small flat list —
+               last write wins, no callIndex folding, no fetch guard). Ids are
+               route-minted uuids that become the real DB ids at Save;
+               locationId validated against the user's set; overlap is
+               allowed (engine warns), never rejected.
       build: propose_goals({goals, deletedGoalIds})   ← new goals + wholesale restructures
       show:  show_goals({goalIds | all})
         │
@@ -308,27 +322,34 @@
     subtree would silently delete children.
         │
         ▼
-  streamCoach (client) → onForest({callIndex, proposal}) → normalizeCoachForest
-    → foldCoachProposals(turnStartSnapshot, proposals in callIndex order)
+  streamDraft (client) → onForest({callIndex, proposal}) → normalizeDraftForest
+    → foldDraftProposals(turnStartSnapshot, proposals in callIndex order)
     → setWorkingForest
     (snapshot per send: each call's partial re-parses replace, never compound;
      multiple propose_goals calls in one turn stack via the fold)
         │
         ▼
-  User clicks Save (hasChanges = coachForestsEqual, top-level order-insensitive)
+  User clicks Save (hasChanges = forest dirty (draftForestsEqual, top-level
+  order-insensitive) OR templates dirty (draftTemplatesEqual, order-insensitive))
         │
         ▼
-  applyCoachForestToPlanner({planner, workingForest, userId, validCategoryIds})
+  forest dirty → applyDraftForestToPlanner({planner, workingForest, userId, validCategoryIds})
     1. deleted roots: subtree removed, outer chain bridged over its leaves
-    2. retained goals (only if !coachTreesEqual): existing per-tree apply —
+    2. retained goals (only if !draftTreesEqual): existing per-tree apply —
       UUID preservation, leaf-cursor dependency re-threading, outer-neighbor
       fixup; root categoryId applied when it validates
     3. new roots: parentId null, dependency null, isTriaged true, validated
       categoryId, children threaded from a null cursor
     + final pass nulls any dependency pointing at a removed row
+  templates dirty → applyDraftTemplates({current, canonical, working, userId, now})
+    deletes removed rows, restamps updatedAt on changed rows, creates new rows
+    keeping the route-minted uuid; UNTOUCHED rows return by object identity
+    (the template diff compares timestamps, so identity = sync no-op); rows
+    created elsewhere while the modal was open are preserved
         │
         ▼
-  updatePlannerArray(nextPlanner) → CalendarProvider auto-regen → sync
+  updateAll(nextPlanner, undefined, nextTemplates) → ONE engine regen → one sync
+  (clean domains pass undefined so their state keeps identity)
   ```
 
   Contracts worth not breaking:
@@ -337,13 +358,15 @@
   - **`dependency` is never emitted by the AI** — sibling order is array position (top-level goal order is NOT semantic; goals match by id). The reverse parser re-threads the linked list from scratch.
   - **Goal-granular deltas** — the model never re-emits untouched goals; unchanged goals are skipped at apply time so they see zero `updatedAt` churn and no phantom sync diffs.
   - **Fetch-before-modify is enforced server-side** — tool results are not carried between user messages (client history is prose-only), so the model must re-fetch trees each message; the route rejects proposal entries for unfetched existing goals rather than trusting the prompt alone. The deterministic edit tools are exempt: they operate by id on the server's copy, so they cannot drop data the model never saw.
-  - **Draft ids are route-minted** — id-less nodes in an accepted `propose_goals` call (and every `add_items` node) get UUIDs stamped by the route (`assignDraftIds` / `mintDraftIds`); the stamped trees are merged into the request's working copy, re-emitted to the client under the same `callIndex` (replacing the id-less partials), and the new root ids are reported in the tool result. Unsaved drafts are therefore first-class for every tool — fetchable, editable, replaceable by id, deletable — instead of duplicate-prone rebuilds from model memory. Draft ids never reach the DB: they match no canonical root at Save, so `applyCoachForestToPlanner` mints the permanent UUIDs.
-  - **Edit ops never touch the dependency linked list** — coachForestOps works on the nested tree where order is array position; threading is derived once at Save by applyCoachForestToPlanner. The `utils/goal-handlers/update-dependencies/` functions are not used by (or affected by) the assistant.
-  - **`categoryId` rides on top-level goal roots only**; children inherit. Null on a retained root means "leave as is" (backfilled in `mergeCoachForest`); an id not in the user's category set is ignored. New top-level rows are never plans (`starts` isn't in the contract; coerced defensively).
+  - **Draft ids are route-minted** — id-less nodes in an accepted `propose_goals` call (and every `add_items` node) get UUIDs stamped by the route (`assignDraftIds` / `mintDraftIds`); the stamped trees are merged into the request's working copy, re-emitted to the client under the same `callIndex` (replacing the id-less partials), and the new root ids are reported in the tool result. Unsaved drafts are therefore first-class for every tool — fetchable, editable, replaceable by id, deletable — instead of duplicate-prone rebuilds from model memory. Draft ids never reach the DB: they match no canonical root at Save, so `applyDraftForestToPlanner` mints the permanent UUIDs.
+  - **Edit ops never touch the dependency linked list** — draftForestOps works on the nested tree where order is array position; threading is derived once at Save by applyDraftForestToPlanner. The `utils/goal-handlers/update-dependencies/` functions are not used by (or affected by) the assistant.
+  - **`categoryId` rides on top-level goal roots only**; children inherit. Null on a retained root means "leave as is" (backfilled in `mergeDraftForest`); an id not in the user's category set is ignored. New top-level rows are never plans (`starts` isn't in the contract; coerced defensively).
   - **Streaming path is a Route handler**, not a server action. See the note in "Code style rules" — SSE bytes don't fit the server-action return shape.
+  - **Template draft ids ARE the DB ids** — unlike goal draft ids (re-minted at Save), a route-minted template uuid survives into the EventTemplate row (WeekStructureModal set the uuidv4-id precedent). applyDraftTemplates must keep returning untouched rows by object identity: the template sync diff does not strip timestamps, so a fresh object with a fresh updatedAt would produce a phantom update on every save.
+  - **Template ops never reject overlap** — overlapping templates are an engine warning by design; the assistant flags them in prose instead.
   - **BYOK is deferred** — one key in `.env` for now (see TODO). If/when we ship publicly, wire per-user keys before enabling the feature.
 
-  Unit tests: [__tests__/coach/](__tests__/coach/) covers apply (UUID preservation, deletion chain-bridging, new-root threading, categoryId validation), merge, diff, and forest equality with hand-built planner arrays.
+  Unit tests: [__tests__/draft/](__tests__/draft/) covers forest apply (UUID preservation, deletion chain-bridging, new-root threading, categoryId validation), merge, diff, and forest equality with hand-built planner arrays, plus the template domain: ops (minting, per-field validation, locationId gating), save-time apply (object-identity no-op rule, concurrent-row preservation), and diff/day-grouping.
 
   ---
 
@@ -536,7 +559,7 @@
   GOOGLE_CLIENT_SECRET=""
   GOOGLE_MAPS_API_KEY=""              # Places + Distance Matrix
   RESEND_API_KEY=""
-  ANTHROPIC_API_KEY=""                # AI coach — Sonnet 4.6 via @anthropic-ai/sdk
+  ANTHROPIC_API_KEY=""                # AI assistant — Sonnet 4.6 via @anthropic-ai/sdk
   ```
 
   ---
@@ -575,7 +598,7 @@
 
   - **expansion-seam** — guards the local-date-keyed `CategoryEvent` ID format by forcing horizon expansion (a single Plan three weeks out). The diff layer and the DB schema depend on this composite ID; UTC-instant keying would desync near midnight UTC.
   - **completed-task-not-rescheduled** — a completed task under a ready goal must render only at its completion window, never re-enter the candidate list (guards the `prepareCandidates` completed filter).
-  - **ready-gate** — a NOT-ready goal's subtree schedules nothing (its tasks are never individual candidates), while standalone tasks still place. Readiness is the scheduling gate and cascades: `toggleGoalIsReady` / `setGoalIsReady` / the coach apply / `addSubtask` stamp the whole subtree with the root's value.
+  - **ready-gate** — a NOT-ready goal's subtree schedules nothing (its tasks are never individual candidates), while standalone tasks still place. Readiness is the scheduling gate and cascades: `toggleGoalIsReady` / `setGoalIsReady` / the assistant apply / `addSubtask` stamp the whole subtree with the root's value.
   - **ready-goal-watermark** — a ready goal must place every leaf despite the three watermark starvation modes: subtree-aggregate sizing (goals size as their largest uncompleted, still-placeable leaf), a windowless classification-only `categoryId` (the watermark resolves constraints against the same window-bearing category set placement uses), and a memoized past leaf inflating the goal's size. An exhausted expansion budget must surface `NO_SLOTS` failures instead of exiting silently.
 
   All but the seam test run against trimmed live-data snapshots in `fixtures/` — synthetic minimal fixtures don't produce a valid slot fabric, so new engine tests should extend the fixture pattern rather than hand-building planners. Tests use jest fake timers (`{ doNotFake: ["queueMicrotask"] }` + `setSystemTime`) for a deterministic "now", and map fixture template `startDay` weekday names to the integers the engine expects.

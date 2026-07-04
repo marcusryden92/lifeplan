@@ -51,7 +51,7 @@ export const tabDisabled = style({
 
 export const tabSpacer = style({ flex: 1 });
 
-export const coachTrigger = style({
+export const assistantTrigger = style({
   appearance: "none",
   border: "none",
   background: "transparent",

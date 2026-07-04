@@ -44,6 +44,7 @@ type CalendarContextType = {
   categories: Category[];
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
+  locations: SerializedLocation[];
   updatePlannerArray: React.Dispatch<React.SetStateAction<Planner[]>>;
   updateTemplateArray: React.Dispatch<React.SetStateAction<EventTemplate[]>>;
   updateAll: (
@@ -237,6 +238,7 @@ export default function CalendarProvider({
             categories,
             categoryEvents,
             travelEvents,
+            locations,
             updatePlannerArray,
             updateTemplateArray,
             updateAll,
@@ -254,6 +256,7 @@ export default function CalendarProvider({
       categories,
       categoryEvents,
       travelEvents,
+      locations,
       updatePlannerArray,
       updateTemplateArray,
       updateAll,

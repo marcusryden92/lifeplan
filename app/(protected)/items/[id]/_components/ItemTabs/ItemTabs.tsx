@@ -10,7 +10,7 @@ import {
   tabCount,
   tabDisabled,
   tabSpacer,
-  coachTrigger,
+  assistantTrigger,
 } from "./ItemTabs.css";
 
 interface Tab {
@@ -95,7 +95,7 @@ export function ItemTabs({
           <span className={tabSpacer} />
           <button
             type="button"
-            className={coachTrigger}
+            className={assistantTrigger}
             onClick={onOpenAssistant}
             aria-label="Open AI assistant"
           >

@@ -26,7 +26,7 @@ export function handlePlannerChanges(
 
   // UPDATE — bulk `UPDATE ... FROM VALUES` in a single round-trip. Previously
   // this looped a per-row `updateMany`, which multiplied wall-clock time on
-  // big diffs (e.g. AI-coach save on a large goal restructure). Missing ids
+  // big diffs (e.g. assistant save on a large goal restructure). Missing ids
   // just don't match in the join, preserving the earlier ghost-id safety.
   if (databaseChanges.planner.update.length) {
     operations.push(

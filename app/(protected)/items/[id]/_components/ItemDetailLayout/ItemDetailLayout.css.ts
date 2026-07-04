@@ -18,7 +18,7 @@ export const page = style({
   overflow: "hidden",
 });
 
-// Owns the scroll so that overlays anchored to `.page` (AICoachModal) don't
+// Owns the scroll so that overlays anchored to `.page` (AIDraftModal) don't
 // scroll away with the content underneath.
 export const scrollArea = style({
   display: "flex",

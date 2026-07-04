@@ -5,7 +5,7 @@ import StoreProvider from "@/context/StoreProvider";
 import UserProvider from "@/context/UserProvider";
 import CalendarProvider from "@/context/CalendarProvider";
 import { AppShell, AssistantProvider } from "@/components/ui";
-import { GlobalAssistant } from "@/components/coach/AICoachModal";
+import { GlobalAssistant } from "@/components/draft/AIDraftModal";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export default function CircadiumLayout({ children }: { children: ReactNode }) {
