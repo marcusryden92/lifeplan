@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -15,7 +15,8 @@ import TemplateEventContent from "@/components/events/TemplateEventContent";
 import TravelEventContent from "@/components/events/TravelEventContent";
 import { CategoryWrapperEvent } from "@/components/events/CategoryWrapperEvent";
 
-import type { EventInput } from "@fullcalendar/core/index.js";
+import type { EventDropArg, EventInput } from "@fullcalendar/core/index.js";
+import type { EventResizeDoneArg } from "@fullcalendar/interaction/index.js";
 import type { RootState } from "@/redux/store";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
@@ -44,6 +45,20 @@ import { EventType } from "@/types/prisma";
 
 const EVENT_INTERACTION_ENABLED = true;
 
+// Identity-stable FullCalendar option values (see the note on Calendar below).
+const PLUGINS = [
+  dayGridPlugin,
+  timeGridPlugin,
+  interactionPlugin,
+  RRulePlugin,
+  luxonPlugin,
+];
+const TIME_FORMAT = {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+} as const;
+
 interface CalendarProps {
   initialDate: Date;
   onCategoryHover?: (
@@ -53,7 +68,14 @@ interface CalendarProps {
   dayHeaderContent?: React.ComponentProps<typeof FullCalendar>["dayHeaderContent"];
 }
 
-export default function Calendar({
+// Memoized, and every function handed to FullCalendar below is
+// identity-stable across re-renders. The React connector shallow-diffs its
+// props, so a fresh inline arrow counts as a changed option and triggers an
+// internal option reset — if one lands while a drag is in flight (hover-label
+// updates re-render the page continuously during drags), the interaction dies
+// without firing eventDrop: the tile stays painted at the drop position while
+// nothing was dispatched.
+function Calendar({
   initialDate,
   onCategoryHover,
   dayHeaderContent,
@@ -121,17 +143,88 @@ export default function Calendar({
     return [...persisted, ...templates, ...categoryWindows, ...travel];
   }, [calendar, template, categories, categoryEvents, travelEvents, locations]);
 
+  const onSelect = useCallback(
+    (selectInfo: { start: Date; end: Date }) =>
+      setPendingPlan({ start: selectInfo.start, end: selectInfo.end }),
+    [],
+  );
+  const onEventResize = useCallback(
+    (resizeInfo: EventResizeDoneArg) => handleEventResize(updateAll, resizeInfo),
+    [updateAll],
+  );
+  const onEventDrop = useCallback(
+    (dropInfo: EventDropArg) => handleEventDrop(updatePlannerArray, dropInfo),
+    [updatePlannerArray],
+  );
+  const renderEventContent = useCallback(
+    ({ event }: { event: EventImpl }) => {
+      const eventType = (
+        event.extendedProps as RuntimeEventExtendedProps | undefined
+      )?.eventType;
+
+      if (eventType === EventType.category) {
+        const ext = event.extendedProps as
+          | (RuntimeEventExtendedProps & {
+              categoryName?: string;
+              categoryColor?: string | null;
+            })
+          | undefined;
+        const categoryId = ext?.categoryId || "";
+        const isStrict = !!ext?.isStrict;
+        const wrapperId = ext?.wrapperId || "";
+        const trespassingStart = !!ext?.trespassingStart;
+        const trespassingEnd = !!ext?.trespassingEnd;
+        // Clean name from extendedProps ("Work"), not event.title
+        // ("Work Time Slot") — so the header hover chip matches what
+        // items inside the category show.
+        const cleanCategoryName = ext?.categoryName ?? event.title;
+        const rawCategoryColor = ext?.categoryColor ?? null;
+        return (
+          <CategoryWrapperEvent
+            categoryId={categoryId}
+            categoryName={cleanCategoryName}
+            categoryColor={rawCategoryColor}
+            isStrict={isStrict}
+            start={event.start || new Date()}
+            end={event.end || new Date()}
+            wrapperId={wrapperId}
+            trespassingStart={trespassingStart}
+            trespassingEnd={trespassingEnd}
+            onHover={onCategoryHover}
+          />
+        );
+      }
+
+      if (eventType === EventType.template) {
+        return (
+          <TemplateEventContent
+            event={event}
+            onEditTitle={handleTemplateEventEdit}
+            onCopy={() =>
+              handleTemplateEventCopy(updateTemplateArray, event, userId)
+            }
+            onDelete={() =>
+              handleTemplateEventDelete(updateTemplateArray, event.id)
+            }
+            hideHoverButtons
+          />
+        );
+      }
+
+      if (eventType === EventType.travel) {
+        return <TravelEventContent event={event} />;
+      }
+
+      return <EventContent event={event} />;
+    },
+    [onCategoryHover, updateTemplateArray, userId],
+  );
+
   return (
     <>
       <FullCalendar
         ref={calendarRef}
-        plugins={[
-          dayGridPlugin,
-          timeGridPlugin,
-          interactionPlugin,
-          RRulePlugin,
-          luxonPlugin,
-        ]}
+        plugins={PLUGINS}
         initialDate={initialDate}
         timeZone={"local"}
         events={fullCalendarEvents}
@@ -142,87 +235,18 @@ export default function Calendar({
         firstDay={1}
         nowIndicator={true}
         height={"100%"}
-        slotLabelFormat={{
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }}
-        eventTimeFormat={{
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }}
+        slotLabelFormat={TIME_FORMAT}
+        eventTimeFormat={TIME_FORMAT}
         eventOrder={"-duration,start"}
         dayHeaderContent={dayHeaderContent}
         editable={EVENT_INTERACTION_ENABLED}
         eventResizableFromStart={EVENT_INTERACTION_ENABLED}
         selectable={EVENT_INTERACTION_ENABLED}
-        select={(selectInfo) =>
-          setPendingPlan({ start: selectInfo.start, end: selectInfo.end })
-        }
+        select={onSelect}
         headerToolbar={false}
-        eventResize={(resizeInfo) => handleEventResize(updateAll, resizeInfo)}
-        eventDrop={(dropInfo) => handleEventDrop(updatePlannerArray, dropInfo)}
-        eventContent={({ event }: { event: EventImpl }) => {
-          const eventType = (
-            event.extendedProps as RuntimeEventExtendedProps | undefined
-          )?.eventType;
-
-          if (eventType === EventType.category) {
-            const ext = event.extendedProps as
-              | (RuntimeEventExtendedProps & {
-                  categoryName?: string;
-                  categoryColor?: string | null;
-                })
-              | undefined;
-            const categoryId = ext?.categoryId || "";
-            const isStrict = !!ext?.isStrict;
-            const wrapperId = ext?.wrapperId || "";
-            const trespassingStart = !!ext?.trespassingStart;
-            const trespassingEnd = !!ext?.trespassingEnd;
-            // Clean name from extendedProps ("Work"), not event.title
-            // ("Work Time Slot") — so the header hover chip matches what
-            // items inside the category show.
-            const cleanCategoryName = ext?.categoryName ?? event.title;
-            const rawCategoryColor = ext?.categoryColor ?? null;
-            return (
-              <CategoryWrapperEvent
-                categoryId={categoryId}
-                categoryName={cleanCategoryName}
-                categoryColor={rawCategoryColor}
-                isStrict={isStrict}
-                start={event.start || new Date()}
-                end={event.end || new Date()}
-                wrapperId={wrapperId}
-                trespassingStart={trespassingStart}
-                trespassingEnd={trespassingEnd}
-                onHover={onCategoryHover}
-              />
-            );
-          }
-
-          if (eventType === EventType.template) {
-            return (
-              <TemplateEventContent
-                event={event}
-                onEditTitle={handleTemplateEventEdit}
-                onCopy={() =>
-                  handleTemplateEventCopy(updateTemplateArray, event, userId)
-                }
-                onDelete={() =>
-                  handleTemplateEventDelete(updateTemplateArray, event.id)
-                }
-                hideHoverButtons
-              />
-            );
-          }
-
-          if (eventType === EventType.travel) {
-            return <TravelEventContent event={event} />;
-          }
-
-          return <EventContent event={event} />;
-        }}
+        eventResize={onEventResize}
+        eventDrop={onEventDrop}
+        eventContent={renderEventContent}
       />
       <NewPlanModal
         open={pendingPlan !== null}
@@ -249,3 +273,5 @@ export default function Calendar({
     </>
   );
 }
+
+export default memo(Calendar);

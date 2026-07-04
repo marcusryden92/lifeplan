@@ -105,17 +105,23 @@ export const handleEventDrop = (
   dropInfo: EventDropArg,
 ) => {
   const { event } = dropInfo;
+  console.debug("[calendar] eventDrop", event.id, event.start?.toISOString());
 
   updatePlannerArray(
-    (prevEvents) =>
-      prevEvents.map((ev) =>
+    (prevPlanner) => {
+      if (!prevPlanner.some((p) => p.id === event.id)) {
+        console.warn("[calendar] eventDrop matched no planner row", event.id);
+        return prevPlanner;
+      }
+      return prevPlanner.map((ev) =>
         ev.id === event.id
           ? {
               ...ev,
               starts: event.start?.toISOString() || ev.starts,
             }
           : ev,
-      ),
+      );
+    },
     { engineMode: "inline" },
   );
 };

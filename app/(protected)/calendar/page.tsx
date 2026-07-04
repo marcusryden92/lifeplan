@@ -71,6 +71,28 @@ import {
 
 const CONSOLE_COLLAPSE_KEY = "circadium.engine.collapsed";
 
+// Module-level so its identity is stable across renders. An inline arrow here
+// counts as a changed FullCalendar option on every page render — and the page
+// re-renders on every hover-label change, including from the drag mirror tile,
+// so an option reset could land mid-drag and kill the interaction before
+// eventDrop fired.
+function renderDayHeader(arg: { date: Date; isToday: boolean }) {
+  return (
+    <div className={dayHeaderStack}>
+      <span
+        className={`${dayHeaderLabel} ${arg.isToday ? dayHeaderLabelToday : ""}`}
+      >
+        {format(arg.date, "EEE")}
+      </span>
+      <span
+        className={`${dayHeaderNum} ${arg.isToday ? dayHeaderNumToday : ""}`}
+      >
+        {arg.date.getDate()}
+      </span>
+    </div>
+  );
+}
+
 // Compact relative timestamp for the console header. Null means the engine
 // hasn't run this session (cold load renders persisted output only).
 function formatLastRun(iso: string | null): string {
@@ -335,24 +357,7 @@ export default function CalendarPage() {
                 <Calendar
                   initialDate={initialDate}
                   onCategoryHover={handleCategoryHover}
-                  dayHeaderContent={(arg) => (
-                    <div className={dayHeaderStack}>
-                      <span
-                        className={`${dayHeaderLabel} ${
-                          arg.isToday ? dayHeaderLabelToday : ""
-                        }`}
-                      >
-                        {format(arg.date, "EEE")}
-                      </span>
-                      <span
-                        className={`${dayHeaderNum} ${
-                          arg.isToday ? dayHeaderNumToday : ""
-                        }`}
-                      >
-                        {arg.date.getDate()}
-                      </span>
-                    </div>
-                  )}
+                  dayHeaderContent={renderDayHeader}
                 />
               </CalendarHoverLabelContext.Provider>
             </div>

@@ -92,23 +92,33 @@ export const updateAllCalendarStates =
       return;
     }
 
-    const result = await runEngineCalculation(
-      {
-        userId,
-        weekStartDay,
-        template: newTemplate,
-        planner: newPlanner,
-        prevCalendar: newCalendarInput,
-        options: {
-          bufferTimeMinutes,
-          travelTimeMatrix: travelTimeMap ?? undefined,
-          injectTravelEvents: enableTravelEvents,
-          categories: newCategories,
-          previousEngineMessages,
+    let result: Awaited<ReturnType<typeof runEngineCalculation>>;
+    try {
+      result = await runEngineCalculation(
+        {
+          userId,
+          weekStartDay,
+          template: newTemplate,
+          planner: newPlanner,
+          prevCalendar: newCalendarInput,
+          options: {
+            bufferTimeMinutes,
+            travelTimeMatrix: travelTimeMap ?? undefined,
+            injectTravelEvents: enableTravelEvents,
+            categories: newCategories,
+            previousEngineMessages,
+          },
         },
-      },
-      updates.engineMode ?? "worker",
-    );
+        updates.engineMode ?? "worker",
+      );
+    } catch (error) {
+      // Inline mode runs synchronously inside the dispatch call stack — an
+      // uncaught throw would unwind into FullCalendar's drop emitter mid-
+      // interaction. Source state is already committed above and the diff
+      // sync persists it; only the calendar output stays stale.
+      console.error("Engine run failed; source edit kept", error);
+      return;
+    }
 
     // Null means a newer regen superseded this one mid-flight; its result
     // will land instead.
