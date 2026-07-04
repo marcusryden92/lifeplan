@@ -18,7 +18,7 @@
   - **FullCalendar** 6.1 for the calendar surface; **date-fns** 3 for date math (engine has its own [dateTimeService](utils/calendar-generation/utils/dateTimeService.ts)); **rrule** for template recurrence.
   - **React Hook Form** + **Zod** for forms.
   - **Jest** + **Testing Library** for tests.
-  - **Anthropic SDK** (`@anthropic-ai/sdk`) for the AI assistant — streams `propose_goals` tool calls whose input JSON is parsed incrementally on the server with `partial-json` and forwarded as SSE `forest` events.
+  - **Anthropic SDK** (`@anthropic-ai/sdk`) for the AI assistant — a server-side tool-use loop: `propose_goals` input JSON is parsed incrementally with `partial-json` and forwarded as SSE `forest` events; deterministic edit tools (items, templates, category windows/flags) execute server-side and emit their results as SSE events.
   - **pnpm** 9.15.4 — use `pnpm` for all commands.
 
   ---
@@ -73,7 +73,7 @@
   ├── components/
   │   ├── auth/                         # AuthCard, login/register/reset forms, Social, LoginButton
   │   ├── calendar/                     # WeekStructureModal + editors (Template, Window, Event tile)
-  │   ├── draft/AIDraftModal/           # Global AI assistant — chat + tabbed Goals/Week diff view (goal forest + weekly templates); mounted in the AppShell assistant slot, opened anywhere via mod+I / sidebar / item-detail entry points
+  │   ├── draft/AIDraftModal/           # Global AI assistant — chat (+ DB-backed history popover) + tabbed Goals/Week/Windows diff view (goal forest, weekly templates, category windows/flags); mounted in the AppShell assistant slot, opened anywhere via mod+I / sidebar / item-detail entry points
   │   ├── draggable/                    # DragBox, DraggableItem, TaskDivider, DraggableContext
   │   ├── events/                       # Calendar event renderers + popovers (Event, Template, Travel, CategoryWrapper, NewPlanModal, color/location pickers)
   │   ├── landing/VectorField/          # Landing-page visual
@@ -173,7 +173,9 @@
   │                                     # timeFormatting, calendarUtils
   │
   ├── __tests__/
-  │   └── calendar-generation/          # Engine regression tests + fixtures/ (trimmed live-data snapshots)
+  │   ├── calendar-generation/          # Engine regression tests + fixtures/ (trimmed live-data snapshots)
+  │   ├── draft/                        # Assistant draft-domain unit tests (forest, templates, windows)
+  │   └── goal-handlers/                # toggleGoalIsReady cascade test
   │
   ├── documentation/
   │   └── calendar-generation-deep-dive.md
@@ -282,7 +284,9 @@
 
   ```
   plannerForestToJson(planner)             → canonical DraftForest (triaged roots + subtrees; root categoryId stamped)
-  useAIDraftState({open, canonical})        ─ owns workingForest + chat messages
+  useAIDraftState({open, canonical, canonicalTemplates, canonicalWindows})
+    ─ owns workingForest/workingTemplates/workingWindows + chat messages +
+      conversation lifecycle (id minting, debounced DB upsert, auto-resume)
     User sends message
         │
         ▼
@@ -331,7 +335,8 @@
         │ append tool_results → stream again, until end_turn
         ▼
     server-side partial-json parse of each propose_goals input_json_delta,
-    emits SSE `text`, `forest` (with callIndex), `show`, `status` events.
+    emits SSE `text`, `forest` (with callIndex; the finalized stamped re-emit
+    carries `complete: true`), `templates`, `windows`, `show`, `status` events.
     GUARD: a proposal touching an existing goal whose tree the model has NOT
     fetched this request (focused goal counts as fetched) is filtered out and
     rejected via tool_result — complete-tree replacement without the current
