@@ -1,4 +1,4 @@
-﻿import { style } from "@vanilla-extract/css";
+﻿import { style, globalStyle } from "@vanilla-extract/css";
 import { vars, themeTransition, media, radii } from "@/lib/theme";
 
 
@@ -71,12 +71,14 @@ export const mainGrid = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [media.mobile]: {
+    [media.tablet]: {
       gridTemplateColumns: "1fr",
-      padding: "0 16px 24px",
-      gap: 14,
       flex: "0 0 auto",
       minHeight: "auto",
+    },
+    [media.mobile]: {
+      padding: "0 16px 24px",
+      gap: 14,
     },
   },
 });
@@ -302,6 +304,10 @@ export const tableWrap = style({
   padding: "0 0 18px",
 });
 
+// Columns: Title | Type | Duration | Priority | Deadline | Category | Status
+// | chevron. Narrow widths drop the secondary columns (cells hidden by
+// position in the globalStyle rules below) instead of forcing an
+// almost-always-horizontal-scrolling table.
 export const tableHead = style({
   display: "grid",
   gridTemplateColumns: "1fr 80px 100px 110px 130px 120px 90px 30px",
@@ -312,6 +318,14 @@ export const tableHead = style({
   background: vars.paper,
   zIndex: 1,
   transition: themeTransition,
+  "@media": {
+    [media.tablet]: {
+      gridTemplateColumns: "1fr 80px 100px 130px 90px 30px",
+    },
+    [media.mobile]: {
+      gridTemplateColumns: "1fr 80px 110px 30px",
+    },
+  },
 });
 
 export const headerCell = style({
@@ -386,7 +400,36 @@ export const tableRow = style({
       background: vars.interactive.hoverFill,
     },
   },
+  "@media": {
+    [media.tablet]: {
+      gridTemplateColumns: "1fr 80px 100px 130px 90px 30px",
+    },
+    [media.mobile]: {
+      gridTemplateColumns: "1fr 80px 110px 30px",
+    },
+  },
 });
+
+// Priority (4th) and Category (6th) go first; Duration (3rd) and Status
+// (7th) follow on mobile. Cells are positional in both the head and the
+// rows, so the hide rules match by child index.
+globalStyle(
+  `${tableHead} > :nth-child(4), ${tableHead} > :nth-child(6), ${tableRow} > :nth-child(4), ${tableRow} > :nth-child(6)`,
+  {
+    "@media": {
+      [media.tablet]: { display: "none" },
+    },
+  },
+);
+
+globalStyle(
+  `${tableHead} > :nth-child(3), ${tableHead} > :nth-child(7), ${tableRow} > :nth-child(3), ${tableRow} > :nth-child(7)`,
+  {
+    "@media": {
+      [media.mobile]: { display: "none" },
+    },
+  },
+);
 
 export const cellTitle = style({
   display: "flex",

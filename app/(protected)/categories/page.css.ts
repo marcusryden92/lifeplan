@@ -79,12 +79,14 @@ export const mainGrid = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [media.mobile]: {
+    [media.tablet]: {
       gridTemplateColumns: "1fr",
-      padding: "0 16px 24px",
-      gap: 14,
       flex: "0 0 auto",
       minHeight: "auto",
+    },
+    [media.mobile]: {
+      padding: "0 16px 24px",
+      gap: 14,
     },
   },
 });

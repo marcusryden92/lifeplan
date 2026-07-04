@@ -1,5 +1,5 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { vars, themeTransition, radii, media } from "@/lib/theme";
 
 // Modal fade duration in ms â€” used by both CSS transition and the JS unmount timer.
 export const MODAL_FADE_MS = 220;
@@ -50,6 +50,15 @@ export const banner = style({
   background: vars.ink,
   color: vars.paper,
   transition: themeTransition,
+  "@media": {
+    [media.tablet]: {
+      flexWrap: "wrap",
+    },
+    [media.mobile]: {
+      padding: "8px 14px",
+      gap: 10,
+    },
+  },
 });
 
 export const editingLabel = style({
@@ -131,6 +140,13 @@ export const body = style({
   display: "flex",
   minHeight: 0,
   overflow: "hidden",
+  // Below the tablet breakpoint the fixed editor rail would crush the week
+  // grid, so it becomes a bottom panel instead.
+  "@media": {
+    [media.tablet]: {
+      flexDirection: "column",
+    },
+  },
 });
 
 export const gridCol = style({
@@ -142,11 +158,20 @@ export const gridCol = style({
   minWidth: 0,
   padding: "14px 18px",
   borderRight: `1px solid ${vars.rule}`,
+  "@media": {
+    [media.tablet]: {
+      borderRight: "none",
+    },
+    [media.mobile]: {
+      padding: "12px 14px",
+    },
+  },
 });
 
 export const gridHeader = style({
   display: "flex",
   alignItems: "baseline",
+  flexWrap: "wrap",
   gap: 12,
   marginBottom: 8,
   flexShrink: 0,
@@ -186,6 +211,14 @@ export const rail = style({
   flexDirection: "column",
   minHeight: 0,
   overflow: "hidden",
+  "@media": {
+    [media.tablet]: {
+      width: "auto",
+      maxHeight: "45%",
+      overflowY: "auto",
+      borderTop: `1px solid ${vars.rule}`,
+    },
+  },
 });
 
 export const emptyPanel = style({

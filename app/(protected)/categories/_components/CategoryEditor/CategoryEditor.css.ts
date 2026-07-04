@@ -317,6 +317,9 @@ export const subCategoryRow = style({
   gridTemplateColumns: "14px 1fr 130px 90px",
   alignItems: "center",
   gap: 12,
+  "@media": {
+    [media.mobile]: { gridTemplateColumns: "14px 1fr auto auto", gap: 8 },
+  },
   padding: "8px 12px",
   border: `1px solid ${vars.rule}`,
   borderRadius: radii["sm+2"],

@@ -2,9 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { v4 as uuidv4 } from "uuid";
 import { format } from "date-fns";
-import { Button, Backdrop, Grain, ConfirmModal } from "@/components/ui";
+import {
+  Button,
+  Backdrop,
+  Grain,
+  ConfirmModal,
+  SegmentedControl,
+} from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { plannerForestToJson } from "./plannerForestToJson";
 import { JsonForestView } from "./JsonTreeView";
@@ -48,7 +55,10 @@ import {
   bannerSpacer,
   cancelButtonStyle,
   body,
+  mobilePaneSwitch,
+  paneMobileHidden,
   chatPane,
+  chatBasisVar,
   treePane,
   paneDivider,
   paneHeader,
@@ -63,6 +73,7 @@ import {
 } from "./AIDraftModal.css";
 
 type DraftPaneTab = "goals" | "week" | "windows";
+type MobilePane = "chat" | "review";
 
 export interface AIDraftFocus {
   rootId: string | null;
@@ -104,8 +115,8 @@ export function AIDraftModal({
   const [streamStatus, setStreamStatus] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  const onDividerMouseDown = useCallback(
-    (e: React.MouseEvent) => {
+  const onDividerPointerDown = useCallback(
+    (e: React.PointerEvent) => {
       e.preventDefault();
       const bodyRect = bodyRef.current?.getBoundingClientRect();
       if (!bodyRect) return;
@@ -114,7 +125,7 @@ export function AIDraftModal({
       const bodyWidth = bodyRect.width;
       setIsDraggingDivider(true);
 
-      const onMove = (ev: MouseEvent) => {
+      const onMove = (ev: PointerEvent) => {
         const deltaX = ev.clientX - startX;
         const deltaPct = (deltaX / bodyWidth) * 100;
         // Clamp to keep both panes usable; matches the CSS minWidth on each.
@@ -122,14 +133,24 @@ export function AIDraftModal({
       };
       const onUp = () => {
         setIsDraggingDivider(false);
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
       };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
     },
     [chatBasisPct],
   );
+
+  const onDividerKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const step =
+      e.key === "ArrowLeft" ? -4 : e.key === "ArrowRight" ? 4 : null;
+    if (step === null) return;
+    e.preventDefault();
+    setChatBasisPct((prev) => Math.max(20, Math.min(80, prev + step)));
+  }, []);
 
   const canonical = useMemo(() => plannerForestToJson(planner), [planner]);
   const canonicalTemplates = useMemo(
@@ -176,6 +197,8 @@ export function AIDraftModal({
   const goalChangeCount = diffedGoals.filter(diffSubtreeHasChanges).length;
   const templateChangeCount = countTemplateChanges(diffedTemplates);
   const windowChangeCount = countWindowChanges(diffedWindows);
+  const reviewChangeCount =
+    goalChangeCount + templateChangeCount + windowChangeCount;
 
   // Goals / Week tabs. During a stream the pane follows the assistant's work
   // (last streamed domain wins) unless the user clicked a tab this turn; the
@@ -189,10 +212,15 @@ export function AIDraftModal({
   const autoSwitchTab = useCallback((tab: DraftPaneTab) => {
     if (!tabPinnedRef.current) setActiveTab(tab);
   }, []);
+  // On mobile only one pane renders at a time (CSS hides the other); this is
+  // a render filter only — the hidden pane stays mounted so streams and
+  // working state keep flowing.
+  const [mobilePane, setMobilePane] = useState<MobilePane>("chat");
   useEffect(() => {
     if (open) {
       setActiveTab("goals");
       tabPinnedRef.current = false;
+      setMobilePane("chat");
     }
   }, [open]);
 
@@ -593,8 +621,36 @@ export function AIDraftModal({
           </Button>
         </div>
 
+        <div className={mobilePaneSwitch}>
+          <SegmentedControl<MobilePane>
+            options={[
+              { key: "chat", label: "Chat" },
+              {
+                key: "review",
+                label: (
+                  <>
+                    Review
+                    {reviewChangeCount > 0 && (
+                      <span className={tabChangeCount}>
+                        {reviewChangeCount}
+                      </span>
+                    )}
+                  </>
+                ),
+              },
+            ]}
+            value={mobilePane}
+            onChange={setMobilePane}
+          />
+        </div>
+
         <div className={body} ref={bodyRef}>
-          <div className={chatPane} style={{ flex: `0 0 ${chatBasisPct}%` }}>
+          <div
+            className={`${chatPane} ${
+              mobilePane === "chat" ? "" : paneMobileHidden
+            }`}
+            style={assignInlineVars({ [chatBasisVar]: `${chatBasisPct}%` })}
+          >
             <div className={paneHeader}>
               <h2 className={paneTitle}>Chat</h2>
               <span className={paneSubtitle}>
@@ -631,12 +687,18 @@ export function AIDraftModal({
           <div
             className={paneDivider}
             data-dragging={isDraggingDivider ? "true" : undefined}
-            onMouseDown={onDividerMouseDown}
+            onPointerDown={onDividerPointerDown}
+            onKeyDown={onDividerKeyDown}
             role="separator"
             aria-orientation="vertical"
             aria-label="Resize chat / tree panes"
+            tabIndex={0}
           />
-          <div className={treePane} style={{ flex: "1 1 0" }}>
+          <div
+            className={`${treePane} ${
+              mobilePane === "review" ? "" : paneMobileHidden
+            }`}
+          >
             <div className={paneHeader}>
               <button
                 type="button"

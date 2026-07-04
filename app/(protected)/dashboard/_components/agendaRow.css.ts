@@ -1,4 +1,4 @@
-﻿import { style } from "@vanilla-extract/css";
+﻿import { style, globalStyle } from "@vanilla-extract/css";
 import { vars, themeTransition, radii } from "@/lib/theme";
 
 // Row primitives shared by AgendaItemRow and UncompletedItemRow. Variants
@@ -53,7 +53,15 @@ export const agendaTitle = style({
   fontWeight: 500,
   letterSpacing: "-0.02em",
   color: vars.ink,
+  overflowWrap: "anywhere",
   transition: themeTransition,
+});
+
+// The title cell is a bare div in the row markup; without a min-width floor
+// an unbreakable title expands the 1fr track and pushes the chevron out of
+// the card.
+globalStyle(`${agendaRow} > :nth-child(2)`, {
+  minWidth: 0,
 });
 
 export const agendaMeta = style({

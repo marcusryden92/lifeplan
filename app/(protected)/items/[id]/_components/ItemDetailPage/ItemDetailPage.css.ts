@@ -66,7 +66,7 @@ export const completeRow = style({
   height: "100%",
   width: "calc(50% - 24px)",
   "@media": {
-    [media.mobile]: { width: "100%" },
+    [media.tablet]: { width: "100%" },
   },
 });
 
@@ -155,7 +155,7 @@ export const overviewGrid = style({
   gridTemplateColumns: "1fr 1fr",
   gap: 48,
   "@media": {
-    [media.mobile]: { gridTemplateColumns: "1fr", gap: 24 },
+    [media.tablet]: { gridTemplateColumns: "1fr", gap: 24 },
   },
 });
 

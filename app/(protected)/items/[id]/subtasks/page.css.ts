@@ -26,10 +26,18 @@ export const drawerSlot = style({
   flexShrink: 0,
   overflow: "hidden",
   transition: `width ${DURATIONS.collapse}s ease`,
+  // The parent layout stacks to a column on mobile, where a width-based
+  // reveal is the wrong axis — the drawer simply toggles instead.
+  "@media": {
+    [media.mobile]: { display: "none", width: "auto", transition: "none" },
+  },
 });
 
 export const drawerSlotOpen = style({
   width: 360,
+  "@media": {
+    [media.mobile]: { display: "block", width: "auto" },
+  },
 });
 
 export const card = style({

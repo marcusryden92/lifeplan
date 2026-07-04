@@ -70,9 +70,13 @@ export const contentWidth = {
 // Breakpoint values (in pixels). Layouts are mobile-first; each breakpoint is
 // the *maximum* width at which the smaller layout still applies. So
 // `mobile: 767` means "mobile up to 767px" and tablet/desktop start at 768.
+// `laptop: 1279` marks the boundary below which a persistent side column
+// (sidebar + 340px engine console + a usable week grid) no longer fits;
+// surfaces that dock a wide side panel switch it to an overlay under this.
 export const breakpoints = {
   mobile: 767,
   tablet: 1023,
+  laptop: 1279,
 } as const;
 
 // Prebuilt media query strings. Use inside `@media` keys in vanilla-extract
@@ -80,8 +84,10 @@ export const breakpoints = {
 export const media = {
   mobile: `screen and (max-width: ${breakpoints.mobile}px)`,
   tablet: `screen and (max-width: ${breakpoints.tablet}px)`,
+  laptop: `screen and (max-width: ${breakpoints.laptop}px)`,
   tabletUp: `screen and (min-width: ${breakpoints.mobile + 1}px)`,
   desktopUp: `screen and (min-width: ${breakpoints.tablet + 1}px)`,
+  wideUp: `screen and (min-width: ${breakpoints.laptop + 1}px)`,
 } as const;
 
 // Border-width scale. `hairline` is the app's default 1px rule (85+ uses);

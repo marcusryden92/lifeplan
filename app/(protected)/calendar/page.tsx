@@ -37,6 +37,9 @@ import {
   rangeTitle,
   navCluster,
   spacer,
+  hoverChip,
+  hoverChipDot,
+  hoverChipName,
   actionCluster,
   headerConsoleSpacer,
   headerEngineLabel,
@@ -276,30 +279,13 @@ export default function CalendarPage() {
             </Button>
           </div>
           {hoveredCategory && (
-            <span
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                fontSize: 12,
-                color: vars.inkSoft,
-                fontFamily: vars.font.ui,
-                fontWeight: 600,
-                letterSpacing: "0.01em",
-                whiteSpace: "nowrap",
-              }}
-            >
+            <span className={hoverChip}>
               <span
                 aria-hidden
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 999,
-                  background: hoveredCategory.color ?? vars.muted,
-                  flexShrink: 0,
-                }}
+                className={hoverChipDot}
+                style={{ background: hoveredCategory.color ?? vars.muted }}
               />
-              {hoveredCategory.name}
+              <span className={hoverChipName}>{hoveredCategory.name}</span>
             </span>
           )}
           <span className={spacer} />

@@ -1,7 +1,7 @@
 # P4 — Refactors / investigations
 
-- WeekStructureModal click outside
 - General responsiveness check
+- Category nesting in calendar / category windows
 
 # P5 — Medium features
 
@@ -9,8 +9,10 @@
 - Custom Claude API key
 - Bulk-actions floating bar in Library
 - File-view / mind-map style: displays categories + sub-categories + items together
+
 - Change week start day in settings
 - Change date picker / date picker styles
+
 - Add RRule exceptions to plans, templates, categories
 - Splitting large tasks into smaller chunks when generating calendar (important for cases like 20 × 30-min "reading" — currently painful)
 - Maximum time of a goal per day

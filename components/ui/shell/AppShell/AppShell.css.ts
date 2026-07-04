@@ -55,9 +55,14 @@ export const mainColumn = style({
   minHeight: 0,
   overflow: "hidden",
   "@media": {
+    // Pages collapse their rail grids to a single stacked column at the
+    // tablet breakpoint and grow past the viewport, so the column must
+    // scroll there too — not just on mobile.
+    [media.tablet]: {
+      overflow: "auto",
+    },
     [media.mobile]: {
       paddingBottom: 96,
-      overflow: "auto",
       WebkitOverflowScrolling: "touch",
     },
   },

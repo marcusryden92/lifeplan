@@ -48,10 +48,17 @@ export function CalendarPopover({
   onClickOutside,
   children,
 }: CalendarPopoverProps) {
+  // The stylesheet already caps the rendered box at calc(100vw - 20px); the
+  // position math must reason about the same clamped width or narrow
+  // viewports get placements biased by a box wider than what paints.
+  const effectiveWidth =
+    typeof window === "undefined"
+      ? width
+      : Math.min(width, window.innerWidth - 20);
   const { position, isPositioned, isDragging, popoverRef, startDrag } =
     usePopoverPosition({
       eventRect: anchorRect,
-      dimensions: { width, height },
+      dimensions: { width: effectiveWidth, height },
       padding: 16,
     });
 
@@ -92,7 +99,7 @@ export function CalendarPopover({
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
-            width: `${width}px`,
+            width: `${effectiveWidth}px`,
             visibility: isPositioned ? "visible" : "hidden",
             cursor: isDragging ? "grabbing" : "auto",
           }}

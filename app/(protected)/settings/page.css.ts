@@ -63,12 +63,14 @@ export const mainGrid = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [media.mobile]: {
+    [media.tablet]: {
       gridTemplateColumns: "1fr",
-      padding: "0 16px 24px",
-      gap: 14,
       flex: "0 0 auto",
       minHeight: "auto",
+    },
+    [media.mobile]: {
+      padding: "0 16px 24px",
+      gap: 14,
     },
   },
 });
@@ -313,6 +315,7 @@ export const transportRow = style({
   display: "grid",
   gridTemplateColumns: "repeat(4, 1fr)",
   gap: 6,
+  "@media": { [media.mobile]: { gridTemplateColumns: "repeat(2, 1fr)" } },
 });
 
 export const transportBtn = style({
