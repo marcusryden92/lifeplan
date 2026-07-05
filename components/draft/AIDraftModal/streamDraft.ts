@@ -40,6 +40,9 @@ export interface StreamDraftArgs {
   categories: StreamDraftCategory[];
   locations: { id: string; name: string }[];
   today: string;
+  // Programmatic session hint (e.g. "onboarding") — the route keys a
+  // prompt preamble off it. Prompt-only; never alters tool/apply semantics.
+  intent?: string | null;
   signal?: AbortSignal;
   onText: (delta: string) => void;
   // Raw (possibly partial) propose_goals input plus its callIndex; the caller
@@ -73,6 +76,7 @@ export async function streamDraft({
   categories,
   locations,
   today,
+  intent,
   signal,
   onText,
   onForest,
@@ -96,6 +100,7 @@ export async function streamDraft({
         categories,
         locations,
         today,
+        intent: intent ?? null,
       }),
       signal,
     });

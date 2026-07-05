@@ -156,7 +156,10 @@ function applyTreeToExistingRoot({
       ? {
           ...existing,
           title: node.title,
-          plannerType: normalizePlannerType(node.plannerType),
+          plannerType: normalizePlannerType(
+            node.plannerType,
+            node.children.length > 0,
+          ),
           duration: Math.max(1, Math.floor(node.duration)),
           deadline: node.deadline,
           priority: node.priority,
@@ -171,7 +174,10 @@ function applyTreeToExistingRoot({
           id: nodeId,
           title: node.title,
           parentId,
-          plannerType: normalizePlannerType(node.plannerType),
+          plannerType: normalizePlannerType(
+            node.plannerType,
+            node.children.length > 0,
+          ),
           isReady: workingTree.isReady,
           isTriaged: true,
           duration: Math.max(1, Math.floor(node.duration)),
@@ -253,7 +259,10 @@ function buildNewRootRows(
       id: childId,
       title: child.title,
       parentId,
-      plannerType: normalizePlannerType(child.plannerType),
+      plannerType: normalizePlannerType(
+        child.plannerType,
+        child.children.length > 0,
+      ),
       isReady: rootIsReady,
       isTriaged: true,
       duration: Math.max(1, Math.floor(child.duration)),
@@ -306,20 +315,27 @@ function buildNewRootRows(
   return rows;
 }
 
-function normalizePlannerType(raw: DraftNode["plannerType"]): PlannerType {
+// Structure wins over the model's label: any node that holds children is a
+// goal (goals hold subtasks; tasks and plans are leaves). This keeps a nested
+// item from persisting as a "task" just because the assistant mislabeled it.
+function normalizePlannerType(
+  raw: DraftNode["plannerType"],
+  hasChildren: boolean,
+): PlannerType {
+  if (hasChildren) return PlannerType.goal;
   if (raw === "goal") return PlannerType.goal;
   if (raw === "plan") return PlannerType.plan;
   return PlannerType.task;
 }
 
 // New top-level rows must never be plans — a plan needs a fixed `starts`,
-// which the draft contract doesn't carry. The prompt forbids it; this is the
-// defensive coercion if the model does it anyway.
+// which the draft contract doesn't carry. A root with children is a goal; a
+// leaf root falls back to task (goal only when explicitly labeled).
 function normalizeRootType(
   raw: DraftNode["plannerType"],
   hasChildren: boolean,
 ): PlannerType {
+  if (hasChildren) return PlannerType.goal;
   if (raw === "goal") return PlannerType.goal;
-  if (raw === "task") return PlannerType.task;
-  return hasChildren ? PlannerType.goal : PlannerType.task;
+  return PlannerType.task;
 }

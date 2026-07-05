@@ -39,6 +39,20 @@ export const modal = style({
   },
 });
 
+// Embedded mode (onboarding AI step): fills its parent container instead of
+// the app main column, with no Dialog overlay/animation. The host provides its
+// own framing and save action.
+export const embeddedRoot = style({
+  position: "relative",
+  width: "100%",
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
+  isolation: "isolate",
+  background: vars.paper,
+});
+
 export const banner = style({
   position: "relative",
   zIndex: 1,

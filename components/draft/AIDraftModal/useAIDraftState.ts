@@ -30,6 +30,9 @@ export interface UseAIDraftStateArgs {
   canonical: DraftForest;
   canonicalTemplates: DraftTemplate[];
   canonicalWindows: DraftWindowsState;
+  // Adopt the most recent conversation on first open. Off for the onboarding
+  // instance, which always starts on a fresh chat.
+  autoResume?: boolean;
 }
 
 export interface UseAIDraftStateReturn {
@@ -61,6 +64,7 @@ export function useAIDraftState({
   canonical,
   canonicalTemplates,
   canonicalWindows,
+  autoResume = true,
 }: UseAIDraftStateArgs): UseAIDraftStateReturn {
   const [workingForest, setWorkingForestState] =
     useState<DraftForest>(canonical);
@@ -195,6 +199,7 @@ export function useAIDraftState({
   useEffect(() => {
     if (!open || resumeAttemptedRef.current) return;
     resumeAttemptedRef.current = true;
+    if (!autoResume) return;
     if (messageCountRef.current > 0) return;
     let cancelled = false;
     void (async () => {
@@ -214,7 +219,7 @@ export function useAIDraftState({
     return () => {
       cancelled = true;
     };
-  }, [open, adoptConversation]);
+  }, [open, autoResume, adoptConversation]);
 
   return {
     workingForest,

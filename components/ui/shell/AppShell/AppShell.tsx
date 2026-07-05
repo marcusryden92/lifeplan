@@ -28,6 +28,10 @@ type Props = {
   // sidebar interactive. Passed in as a slot so the shell never imports draft
   // code (avoids an AppShell -> draft -> ui-barrel -> AppShell cycle).
   assistantSlot?: ReactNode;
+  // Rendered as the last child of the canvas — a full-canvas overlay that
+  // clips to the shell rounding and covers the sidebar (onboarding). Same
+  // slot rationale as assistantSlot.
+  overlaySlot?: ReactNode;
 };
 
 export function AppShell({
@@ -36,6 +40,7 @@ export function AppShell({
   userName,
   userInitial,
   assistantSlot,
+  overlaySlot,
 }: Props) {
   return (
     <CaptureProvider>
@@ -58,6 +63,7 @@ export function AppShell({
             </div>
             <CapturePalette />
             <SearchPalette />
+            {overlaySlot}
           </div>
         </div>
       </SearchProvider>

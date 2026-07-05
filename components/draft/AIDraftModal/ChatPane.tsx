@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import { ArrowUp, Square } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -29,6 +35,8 @@ interface ChatPaneProps {
   // Prefills the composer (not auto-sent) — used by entry points that carry a
   // canned prompt, e.g. the item-detail helper pills.
   initialDraft?: string | null;
+  // Overrides the copy shown before any message is sent (e.g. onboarding).
+  emptyHint?: ReactNode;
 }
 
 export function ChatPane({
@@ -37,6 +45,7 @@ export function ChatPane({
   onStop,
   isStreaming,
   initialDraft,
+  emptyHint,
 }: ChatPaneProps) {
   const [draft, setDraft] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
@@ -78,9 +87,15 @@ export function ChatPane({
       <div className={messageList} ref={listRef}>
         {messages.length === 0 ? (
           <div className={empty}>
-            Ask for new goals, restructure existing ones, or clean things up.
-            <br />
-            The assistant proposes changes and updates the goals on the right.
+            {emptyHint ?? (
+              <>
+                Ask for new goals, restructure existing ones, or clean things
+                up.
+                <br />
+                The assistant proposes changes and updates the goals on the
+                right.
+              </>
+            )}
           </div>
         ) : (
           messages.map((m) => (

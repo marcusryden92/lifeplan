@@ -49,6 +49,7 @@ import { diffSubtreeHasChanges } from "./diffDraftTree";
 import {
   overlay,
   modal,
+  embeddedRoot,
   banner,
   editingLabel,
   bannerTitle,
@@ -99,6 +100,20 @@ interface AIDraftModalProps {
   onClose: () => void;
   focus?: AIDraftFocus | null;
   initialPrompt?: string | null;
+  // Programmatic session hint (e.g. "onboarding") — forwarded to the route for
+  // a prompt preamble, and used to tune the onboarding instance (empty-state
+  // hint, no History popover, no auto-resume).
+  intent?: string | null;
+  // Embedded mode (onboarding AI step): renders inline in the host's container
+  // with no Dialog overlay and no save/cancel banner. The host drives saving
+  // via the reported `save` fn and is told when saving finished via onSaved.
+  embedded?: boolean;
+  onSaved?: () => void;
+  onStateChange?: (state: {
+    hasChanges: boolean;
+    isStreaming: boolean;
+    save: () => void;
+  }) => void;
 }
 
 export function AIDraftModal({
@@ -106,6 +121,10 @@ export function AIDraftModal({
   onClose,
   focus,
   initialPrompt,
+  intent,
+  embedded = false,
+  onSaved,
+  onStateChange,
 }: AIDraftModalProps) {
   const { planner, categories, template, locations, updateAll, userId } =
     useCalendarProvider();
@@ -184,6 +203,7 @@ export function AIDraftModal({
     canonical,
     canonicalTemplates,
     canonicalWindows,
+    autoResume: intent !== "onboarding",
   });
 
   // Recompute on every working/canonical tick. Cheap: pure walks of
@@ -361,6 +381,7 @@ export function AIDraftModal({
         locations: locations.map((l) => ({ id: l.id, name: l.name })),
         // Local date, not server UTC — deadlines are user-local decisions.
         today: format(new Date(), "yyyy-MM-dd"),
+        intent,
         signal: controller.signal,
         onText: (delta) => {
           assistantText += delta;
@@ -511,6 +532,7 @@ export function AIDraftModal({
       focus,
       categories,
       locations,
+      intent,
     ],
   );
 
@@ -559,7 +581,8 @@ export function AIDraftModal({
         })
       : undefined;
     updateAll(nextPlanner, undefined, nextTemplates, nextCategories);
-    onClose();
+    if (embedded) onSaved?.();
+    else onClose();
   }, [
     workingForest,
     workingTemplates,
@@ -576,29 +599,24 @@ export function AIDraftModal({
     categories,
     updateAll,
     onClose,
+    embedded,
+    onSaved,
   ]);
 
-  return (
-    <Dialog.Root
-      open={open}
-      // Non-modal: the sidebar stays interactive while the assistant is open
-      // (theme toggle, nav). Dismissal is Esc / the Close button only.
-      modal={false}
-      onOpenChange={(next) => {
-        if (!next) requestClose();
-      }}
-    >
-      <Dialog.Overlay className={overlay} />
-      <Dialog.Content
-        className={modal}
-        aria-describedby={undefined}
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
-        <Dialog.Title className={a11yHiddenTitle}>AI Assistant</Dialog.Title>
-        <Backdrop variant="blob" />
-        <Grain />
+  // In embedded mode the host (onboarding) owns the Save action, so surface the
+  // current dirty/streaming state and a save handle it can call from its own
+  // footer.
+  useEffect(() => {
+    if (!embedded) return;
+    onStateChange?.({ hasChanges, isStreaming, save: handleSave });
+  }, [embedded, hasChanges, isStreaming, handleSave, onStateChange]);
 
+  const content = (
+    <>
+      <Backdrop variant="blob" />
+      <Grain />
+
+      {!embedded && (
         <div className={banner}>
           <span className={editingLabel}>ai assistant</span>
           <span className={bannerTitle}>{focusedGoalTitle ?? "All goals"}</span>
@@ -620,8 +638,9 @@ export function AIDraftModal({
             {hasChanges ? "Save changes" : "Save"}
           </Button>
         </div>
+      )}
 
-        <div className={mobilePaneSwitch}>
+      <div className={mobilePaneSwitch}>
           <SegmentedControl<MobilePane>
             options={[
               { key: "chat", label: "Chat" },
@@ -659,12 +678,14 @@ export function AIDraftModal({
                   : "send a prompt to begin"}
               </span>
               <span className={headerActionCluster}>
-                <ChatHistoryPopover
-                  currentConversationId={conversationId}
-                  disabled={isStreaming}
-                  onAdopt={adoptConversation}
-                  onDeletedCurrent={startNewConversation}
-                />
+                {intent !== "onboarding" && (
+                  <ChatHistoryPopover
+                    currentConversationId={conversationId}
+                    disabled={isStreaming}
+                    onAdopt={adoptConversation}
+                    onDeletedCurrent={startNewConversation}
+                  />
+                )}
                 {messages.length > 0 && !isStreaming && (
                   <button
                     type="button"
@@ -682,6 +703,11 @@ export function AIDraftModal({
               onStop={handleStop}
               isStreaming={isStreaming}
               initialDraft={open ? initialPrompt ?? null : null}
+              emptyHint={
+                intent === "onboarding"
+                  ? "Ask the assistant to help — it can turn what you jotted into real goals and set the deadlines and durations they need. Nothing is saved until you continue."
+                  : undefined
+              }
             />
           </div>
           <div
@@ -779,6 +805,7 @@ export function AIDraftModal({
           </div>
         </div>
 
+      {!embedded && (
         <ConfirmModal
           open={showDiscardConfirm}
           title="Discard changes?"
@@ -802,6 +829,33 @@ export function AIDraftModal({
             onClose();
           }}
         />
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className={embeddedRoot}>{content}</div>;
+  }
+
+  return (
+    <Dialog.Root
+      open={open}
+      // Non-modal: the sidebar stays interactive while the assistant is open
+      // (theme toggle, nav). Dismissal is Esc / the Close button only.
+      modal={false}
+      onOpenChange={(next) => {
+        if (!next) requestClose();
+      }}
+    >
+      <Dialog.Overlay className={overlay} />
+      <Dialog.Content
+        className={modal}
+        aria-describedby={undefined}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <Dialog.Title className={a11yHiddenTitle}>AI Assistant</Dialog.Title>
+        {content}
       </Dialog.Content>
     </Dialog.Root>
   );

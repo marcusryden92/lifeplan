@@ -1,10 +1,25 @@
 import { globalStyle } from "@vanilla-extract/css";
 import { vars } from "./tokens.css";
+import { themeLight, themeDark } from "./themes.css";
 import { backdropFilters, colorMixAlpha } from "./effects";
 import { radii } from "./scales";
 
 globalStyle("*, *::before, *::after", {
   boxSizing: "border-box",
+});
+
+// Tell the browser which palette to render native UI in (the caret, native
+// select/date/time pickers, spin buttons, autofill). Without this, native
+// controls paint light OS chrome on a dark theme and read as "not following
+// the theme." Set on the theme roots (applied to <body>) so every native
+// control inherits it — individual per-input colorScheme patches are no
+// longer needed.
+globalStyle(`.${themeLight}`, {
+  colorScheme: "light",
+});
+
+globalStyle(`.${themeDark}`, {
+  colorScheme: "dark",
 });
 
 globalStyle("html", {

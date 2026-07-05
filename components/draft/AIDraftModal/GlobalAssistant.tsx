@@ -29,6 +29,7 @@ export function GlobalAssistant() {
       onClose={close}
       focus={focus}
       initialPrompt={scope?.initialPrompt ?? null}
+      intent={scope?.intent ?? null}
     />
   );
 }

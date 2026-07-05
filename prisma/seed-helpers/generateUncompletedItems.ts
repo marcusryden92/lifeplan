@@ -40,7 +40,6 @@ const ROWS: UncompletedSeed[] = [
     duration: 30,
     hoursAgo: 96,
     color: "#3b82f6",
-    categoryId: CATEGORY_IDS.FUN,
     locationId: LOCATION_IDS.GYM,
   },
   {

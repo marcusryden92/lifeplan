@@ -122,6 +122,9 @@ interface DraftRequestBody {
   categories: DraftCategory[];
   locations: DraftLocationRef[];
   today: string;
+  // Programmatic session hint (e.g. "onboarding"). Prompt preamble only —
+  // never gates tool availability or apply semantics.
+  intent: string | null;
 }
 
 function parseRequestBody(raw: unknown): DraftRequestBody | string {
@@ -134,6 +137,7 @@ function parseRequestBody(raw: unknown): DraftRequestBody | string {
     categories,
     locations,
     today,
+    intent,
   } = raw as Record<string, unknown>;
 
   if (!Array.isArray(history) || history.length === 0) {
@@ -280,6 +284,7 @@ function parseRequestBody(raw: unknown): DraftRequestBody | string {
     categories: parsedCategories,
     locations: parsedLocations,
     today,
+    intent: typeof intent === "string" && intent.length > 0 ? intent : null,
   };
 }
 
@@ -359,6 +364,7 @@ function buildSystemPrompt({
   categories,
   locations,
   today,
+  intent,
 }: DraftRequestBody): string {
   const categoryList =
     categories.length > 0
@@ -386,6 +392,22 @@ ${JSON.stringify(focusedGoal, null, 2)}
 Scope your work to this goal unless the user asks for something broader.
 `
     : "";
+
+  const intentBlock =
+    intent === "onboarding"
+      ? `
+ONBOARDING SESSION
+The user just finished first-run setup and this is their first contact with the assistant. They may already have jotted a few raw items in a brain-dump step — those arrive as triaged top-level tasks, plans, and goals in the GOAL INDEX, most of them missing the details the scheduler needs. Your job is to turn what's there into a plan that can actually be scheduled, and to fill any gaps by interviewing.
+
+Work through the items warmly, one or two questions at a time — never a form or a wall of questions. For each:
+- A bare TASK needs a realistic duration and, if it's time-sensitive, a deadline. Set both with update_items once you know them.
+- A bare GOAL needs subtasks (add_items or propose_goals), a deadline if there is one, and a conversation about whether it's ready to start. Only set isReady (via update_items) once its subtasks and requirements are actually in place — readiness is a deliberate step, not a default.
+- A PLAN is a fixed-time commitment, but you CANNOT set its start time from here (there is no starts field in your tools). Ask when it happens: if it recurs weekly, offer to add a weekly template instead; if it's really a deadline-driven task, offer to convert it to a task (re-emit it via propose_goals with plannerType "task" — the start time is preserved on save); otherwise tell the user they can set the exact time on the item's page later.
+- Assign each item to one of the user's areas (categoryId on the top-level row) where it fits.
+
+Don't end the session leaving triaged items without what they need to schedule — a task with no duration, a goal with no subtasks. If little or nothing was dumped, interview the user about the current season of their life and draft 2-4 goals across their areas. Only propose category time windows if a natural rhythm surfaces (a fixed study block, gym mornings). Keep every message short and encouraging; nothing is committed until they press Save, so invite them to react and adjust.
+`
+      : "";
 
   return `You are a planning assistant for Circadium, a personal scheduling app.
 
@@ -425,7 +447,8 @@ Category time windows bound WHEN a category's goals and tasks may be scheduled (
 - strict: a strict category reserves its windows exclusively for its own items; other work is pushed out. This reshapes the whole schedule — only change strict when the user explicitly asks.
 - The full window list is always shown above under USER CATEGORIES — there is nothing to fetch. Window ids are minted by the app and reported back when you add.
 - Windows constrain scheduling; templates occupy time. "I work 9-17" as occupied time is a template; "work tasks should happen 9-17" is a window on the Work category.
-${focusBlock}
+- WORD CHOICE decides the tool, not the topic. If the user says "window" or "category window" (even "Work category windows"), use the window tools (add_time_windows / update_time_windows) and NEVER add_templates. If they say "template", "block", or "commitment", use the template tools. When genuinely ambiguous, ask which they mean rather than guessing.
+${focusBlock}${intentBlock}
 NODE STRUCTURE
 Each node in a goal tree has:
 - id: existing planner UUID. Echo it verbatim for retained nodes; OMIT the field (or set null) for new nodes.

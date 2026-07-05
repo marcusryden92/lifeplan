@@ -4,23 +4,18 @@ dotenv.config();
 import bcrypt from "bcryptjs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, UserRole } from "../generated/client";
-import { generateTemplates } from "./seed-helpers/generateTemplates";
-import {
-  generatePlanners,
-  plannerSeedData,
-} from "./seed-helpers/generatePlanners";
-import {
-  /* generatePlans, */ planSeedData,
-} from "./seed-helpers/generatePlans";
-import {
-  generateUncompletedItems,
-  uncompletedSeedData,
-} from "./seed-helpers/generateUncompletedItems";
-import {
-  generateLocations,
-  generateTravelTimes,
-} from "./seed-helpers/generateLocations";
-import { generateCategories } from "./seed-helpers/generateCategories";
+
+// User calendar data seeding is deactivated so a reseeded account lands in
+// first-run onboarding with an empty calendar. Re-enable the imports below
+// alongside the seeding blocks in main() to restore the demo dataset.
+// import { generateTemplates } from "./seed-helpers/generateTemplates";
+// import { generatePlanners } from "./seed-helpers/generatePlanners";
+// import { generateUncompletedItems } from "./seed-helpers/generateUncompletedItems";
+// import {
+//   generateLocations,
+//   generateTravelTimes,
+// } from "./seed-helpers/generateLocations";
+// import { generateCategories } from "./seed-helpers/generateCategories";
 
 // Prisma 7 requires a driver adapter at construction time. Matches the
 // pattern used by lib/db.ts so the seed talks to the DB the same way the app
@@ -41,6 +36,8 @@ async function main() {
     where: { email: "admin@lifeplan.com" },
     update: {
       name: "Admin User",
+      // Reset so a reseeded admin runs through first-run onboarding again.
+      onboardedAt: null,
     },
     create: {
       id: userId,
@@ -49,14 +46,16 @@ async function main() {
       emailVerified: new Date(),
       password: passwordHash,
       role: UserRole.ADMIN,
+      // onboardedAt left null: first login funnels through onboarding.
     },
   });
 
-  // Clear existing data (order matters for foreign keys). Engine output rows
-  // (categoryEvent + travelEvent) go first: categoryEvents would cascade with
-  // their Category but the explicit delete is cheap insurance; travelEvents
-  // would otherwise be left with null location FKs when Location is dropped
-  // below (onDelete: SetNull), producing orphans.
+  // Clear any existing calendar data so the account starts empty (onboarding
+  // begins from a blank calendar). Order matters for foreign keys. Engine
+  // output rows (categoryEvent + travelEvent) go first: categoryEvents would
+  // cascade with their Category but the explicit delete is cheap insurance;
+  // travelEvents would otherwise be left with null location FKs when Location
+  // is dropped below (onDelete: SetNull), producing orphans.
   await prisma.categoryEvent.deleteMany({});
   await prisma.travelEvent.deleteMany({});
   await prisma.planner.deleteMany({});
@@ -65,45 +64,33 @@ async function main() {
   await prisma.travelTime.deleteMany({});
   await prisma.location.deleteMany({});
 
-  // Seed locations first (templates reference them)
-  const locations = generateLocations(userId);
-  await prisma.location.createMany({ data: locations });
+  // User calendar data seeding is deactivated: onboarding needs an empty
+  // calendar. Re-enable this block (and the imports at the top) to restore the
+  // demo dataset of locations, travel times, categories, templates, planners,
+  // and past uncompleted items.
+  //
+  // const locations = generateLocations(userId);
+  // await prisma.location.createMany({ data: locations });
+  //
+  // const travelTimes = generateTravelTimes(userId);
+  // await prisma.travelTime.createMany({ data: travelTimes });
+  //
+  // const categories = generateCategories(userId);
+  // for (const category of categories) {
+  //   await prisma.category.create({ data: category });
+  // }
+  //
+  // const templates = generateTemplates(userId);
+  // await prisma.eventTemplate.createMany({ data: templates });
+  //
+  // const planners = generatePlanners(userId);
+  // await prisma.planner.createMany({ data: planners });
+  //
+  // const uncompleted = generateUncompletedItems(userId);
+  // await prisma.planner.createMany({ data: uncompleted });
 
-  // Seed travel times
-  const travelTimes = generateTravelTimes(userId);
-  await prisma.travelTime.createMany({ data: travelTimes });
-
-  // Seed categories (createMany doesn't support nested relations, so use individual creates)
-  const categories = generateCategories(userId);
-  for (const category of categories) {
-    await prisma.category.create({ data: category });
-  }
-
-  // Seed event templates
-  const templates = generateTemplates(userId);
-  await prisma.eventTemplate.createMany({ data: templates });
-
-  // Seed planner goals
-  const planners = generatePlanners(userId);
-  await prisma.planner.createMany({ data: planners });
-
-  // Seed uncompleted items (standalone top-level plans anchored to past
-  // `starts` times so the engine emits SimpleEvents that end before "now")
-  const uncompleted = generateUncompletedItems(userId);
-  await prisma.planner.createMany({ data: uncompleted });
-
-  // Seed plans (scheduled tasks)
-  /*  const plans = generatePlans(userId);
-  await prisma.planner.createMany({ data: plans }); */
-
-  console.log("âœ“ Seeding completed successfully");
-  console.log(`  - User: admin@lifeplan.com`);
-  console.log(`  - Locations: ${locations.length}`);
-  console.log(`  - Travel times: ${travelTimes.length}`);
-  console.log(`  - Event templates: ${templates.length}`);
-  console.log(`  - Planner goals: ${plannerSeedData.length}`);
-  console.log(`  - Planner plans: ${planSeedData.length}`);
-  console.log(`  - Uncompleted items: ${uncompletedSeedData.length}`);
+  console.log("Seeding completed: admin account only (empty calendar).");
+  console.log(`  - User: admin@lifeplan.com (not onboarded)`);
 }
 
 main()

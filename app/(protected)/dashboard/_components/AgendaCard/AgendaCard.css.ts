@@ -10,6 +10,10 @@ import { vars, themeTransition, backdropFilters, media, radii } from "@/lib/them
 // anyway since the agendaList content covers the body.
 export const leftCard = style({
   position: "relative",
+  // Contain the sticky header's high z-index within the card. Without a
+  // stacking context here, leftCardHeader's zIndex:100 leaks to the app level
+  // and paints over the AI assistant overlay (zIndex.floating).
+  isolation: "isolate",
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
