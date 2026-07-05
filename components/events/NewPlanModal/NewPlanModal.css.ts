@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, backdropFilters, popover, radii } from "@/lib/theme";
+import { space, vars, themeTransition, backdropFilters, popover, radii } from "@/lib/theme";
 
 export const FADE_MS = 180;
 
@@ -55,7 +55,7 @@ export const modalTitle = style({
 });
 
 export const timeRange = style({
-  marginTop: 6,
+  marginTop: space["1.5"],
   fontSize: 12.5,
   fontFamily: vars.font.ui,
   color: vars.muted,
@@ -65,7 +65,7 @@ export const timeRange = style({
 export const titleInput = style({
   display: "block",
   width: "100%",
-  marginTop: 16,
+  marginTop: space["4"],
   padding: "10px 12px",
   fontFamily: vars.font.ui,
   fontSize: 14,
@@ -82,7 +82,7 @@ export const modalActions = style({
   display: "flex",
   justifyContent: "flex-end",
   alignItems: "center",
-  gap: 8,
-  marginTop: 22,
+  gap: space["2"],
+  marginTop: space["6"],
   flexWrap: "wrap",
 });

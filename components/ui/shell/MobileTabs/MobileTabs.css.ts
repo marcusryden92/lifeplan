@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, buttonTransition, backdropFilters, radii } from "@/lib/theme";
+import { space, vars, buttonTransition, backdropFilters, radii } from "@/lib/theme";
 
 export const tabBar = style({
   position: "fixed",
@@ -24,7 +24,7 @@ export const tab = style({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: 2,
+  gap: space["0.5"],
   padding: "6px 8px",
   background: "transparent",
   border: "none",
@@ -54,7 +54,7 @@ export const tabUnderline = style({
   height: 2,
   borderRadius: 2,
   background: vars.ink,
-  marginTop: 2,
+  marginTop: space["0.5"],
 });
 
 export const captureTabWrapper = style({
@@ -77,7 +77,7 @@ export const captureButton = style({
   fontWeight: 600,
   display: "grid",
   placeItems: "center",
-  marginTop: -28,
+  marginTop: `-${space["7"]}`,
   boxShadow: `0 8px 24px ${vars.status.error}55, inset 0 1px 0 rgba(255,255,255,0.18)`,
   transition: buttonTransition,
   selectors: {

@@ -18,6 +18,7 @@ import {
   dayToggleOn,
   sectionToggleRow,
   previewNote,
+  locationOption,
   footerActions,
 } from "../onboarding.css";
 
@@ -181,13 +182,7 @@ export function WeekStep({
                 ]}
                 renderValue={(opt) =>
                   opt && opt.value ? (
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
+                    <span className={locationOption}>
                       <MapPin size={12} strokeWidth={2} />
                       {opt.label}
                     </span>

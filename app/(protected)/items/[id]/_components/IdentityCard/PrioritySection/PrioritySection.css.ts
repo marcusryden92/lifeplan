@@ -1,11 +1,11 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { space, vars, themeTransition } from "@/lib/theme";
 
 export const cardHeader = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 12,
+  gap: space["3"],
   padding: "12px 0",
   borderBottom: `1px solid ${vars.rule}`,
   transition: themeTransition,
@@ -23,7 +23,7 @@ export const cardTitle = style({
 
 export const priorityRow = style({
   display: "flex",
-  gap: 4,
+  gap: space["1"],
   flexWrap: "nowrap",
 });
 

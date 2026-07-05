@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { space, vars, themeTransition } from "@/lib/theme";
 
 export const card = style({
   padding: "12px 0",
@@ -23,8 +23,8 @@ export const nextCardHeaderRow = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 8,
-  marginBottom: 8,
+  gap: space["2"],
+  marginBottom: space["2"],
 });
 
 export const nextCardLink = style({
@@ -54,7 +54,7 @@ export const nextCardTitle = style({
 export const nextCardSub = style({
   fontSize: 12.5,
   color: vars.inkSoft,
-  marginTop: 2,
+  marginTop: space["0.5"],
   fontFamily: vars.font.ui,
   fontWeight: 500,
   transition: themeTransition,
@@ -69,7 +69,7 @@ export const nextCardBody = style({
 export const whyText = style({
   fontSize: 12.5,
   color: vars.inkSoft,
-  marginTop: 6,
+  marginTop: space["1.5"],
   lineHeight: 1.5,
   fontFamily: vars.font.ui,
   fontWeight: 500,

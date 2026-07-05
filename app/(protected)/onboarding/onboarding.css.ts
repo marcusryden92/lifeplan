@@ -8,6 +8,8 @@ import {
   zIndex,
   formInput,
   colorMixAlpha,
+  display,
+  text,
 } from "@/lib/theme";
 
 const spin = keyframes({ to: { transform: "rotate(360deg)" } });
@@ -115,39 +117,43 @@ export const segmentFilled = style({
   background: vars.accent.primary,
 });
 
-export const skipLink = style({
-  appearance: "none",
-  border: "none",
-  background: "transparent",
-  color: vars.muted,
-  fontSize: 13,
-  cursor: "pointer",
-  padding: `${space["1"]} ${space["2"]}`,
-  borderRadius: radii.sm,
-  selectors: {
-    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
+export const skipLink = style([
+  text.body,
+  {
+    appearance: "none",
+    border: "none",
+    background: "transparent",
+    color: vars.muted,
+    cursor: "pointer",
+    padding: `${space["1"]} ${space["2"]}`,
+    borderRadius: radii.sm,
+    selectors: {
+      "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
+    },
   },
-});
+]);
 
-export const title = style({
-  fontFamily: vars.font.display,
-  fontSize: 28,
-  lineHeight: 1.15,
-  fontWeight: 600,
-  color: vars.ink,
-  margin: 0,
-  "@media": {
-    [media.mobile]: { fontSize: 23 },
+export const title = style([
+  display.statCard,
+  {
+    lineHeight: 1.15,
+    color: vars.ink,
+    margin: 0,
+    "@media": {
+      [media.mobile]: { fontSize: 22 },
+    },
   },
-});
+]);
 
-export const subtitle = style({
-  fontSize: 15,
-  lineHeight: 1.5,
-  color: vars.muted,
-  margin: 0,
-  marginTop: space["1.5"],
-});
+export const subtitle = style([
+  text.bodyLg,
+  {
+    lineHeight: 1.5,
+    color: vars.muted,
+    margin: 0,
+    marginTop: space["1.5"],
+  },
+]);
 
 export const body = style({
   flex: 1,
@@ -185,25 +191,26 @@ export const welcomeCenter = style({
   marginBlock: "auto",
 });
 
-export const brand = style({
-  fontFamily: vars.font.display,
-  fontSize: 40,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  margin: 0,
-});
+export const brand = style([
+  display.bigStat,
+  {
+    color: vars.ink,
+    margin: 0,
+  },
+]);
 
-export const tagline = style({
-  fontSize: 16,
-  lineHeight: 1.55,
-  color: vars.muted,
-  maxWidth: 420,
-  margin: 0,
-});
+export const tagline = style([
+  text.bodyLg,
+  {
+    lineHeight: 1.55,
+    color: vars.muted,
+    maxWidth: 420,
+    margin: 0,
+  },
+]);
 
 // Roles picker — two columns (suggestions / selected), CategoryBadge tint
-export const areasColumns = style({
+export const roleColumns = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
   gap: space["4"],
@@ -215,49 +222,51 @@ export const areasColumns = style({
   },
 });
 
-export const areaColumn = style({
+export const roleColumn = style({
   display: "flex",
   flexDirection: "column",
-  // Rows size to their content, not the full column width, so an area reads
+  // Rows size to their content, not the full column width, so a role reads
   // as a compact badge instead of a full-width bar.
   alignItems: "flex-start",
   gap: space["2"],
   minWidth: 0,
 });
 
-export const areaColumnTitle = style({
-  fontSize: 12.5,
-  fontWeight: 500,
-  color: vars.muted,
-  textTransform: "uppercase",
-  letterSpacing: "0.04em",
-});
+export const roleColumnTitle = style([
+  text.bodySm,
+  {
+    color: vars.muted,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+  },
+]);
 
-// Same tint language as CategoryBadge (per-row color via the --area-color
+// Same tint language as CategoryBadge (per-row color via the --role-color
 // custom property) but at a readable size and in sentence case.
-export const areaRow = style({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: space["2"],
-  maxWidth: "100%",
-  padding: `${space["1.5"]} ${space["2.5"]}`,
-  borderRadius: radii.md,
-  border: "1px solid var(--area-color)",
-  background: `color-mix(in srgb, var(--area-color) ${colorMixAlpha.lightFill}%, transparent)`,
-  color: vars.ink,
-  fontSize: 13.5,
-  fontWeight: 500,
-  cursor: "pointer",
-  textAlign: "left",
-  transition: "background 150ms ease",
-  selectors: {
-    "&:hover": {
-      background: `color-mix(in srgb, var(--area-color) ${colorMixAlpha.hoverFill}%, transparent)`,
+export const roleRow = style([
+  text.row,
+  {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: space["2"],
+    maxWidth: "100%",
+    padding: `${space["1.5"]} ${space["2.5"]}`,
+    borderRadius: radii.md,
+    border: "1px solid var(--role-color)",
+    background: `color-mix(in srgb, var(--role-color) ${colorMixAlpha.lightFill}%, transparent)`,
+    color: vars.ink,
+    cursor: "pointer",
+    textAlign: "left",
+    transition: "background 150ms ease",
+    selectors: {
+      "&:hover": {
+        background: `color-mix(in srgb, var(--role-color) ${colorMixAlpha.hoverFill}%, transparent)`,
+      },
     },
   },
-});
+]);
 
-export const areaRowLabel = style({
+export const roleRowLabel = style({
   flex: 1,
   minWidth: 0,
   overflow: "hidden",
@@ -267,36 +276,36 @@ export const areaRowLabel = style({
 
 // A selected row is a drag-to-reorder handle + remove button, not a single
 // click target, so it drops the pointer cursor.
-export const areaRowSelected = style({
+export const roleRowSelected = style({
   cursor: "default",
 });
 
-export const areaRowDragging = style({
+export const roleRowDragging = style({
   opacity: 0.4,
 });
 
 // Drop-position indicators, mirroring the categories rail: a 2px accent line at
 // the leading/trailing edge of the row the pointer would drop before/after.
-export const areaRowDropBefore = style({
+export const roleRowDropBefore = style({
   boxShadow: `inset 0 2px 0 0 ${vars.accent.primary}`,
 });
 
-export const areaRowDropAfter = style({
+export const roleRowDropAfter = style({
   boxShadow: `inset 0 -2px 0 0 ${vars.accent.primary}`,
 });
 
-export const areaRowGrip = style({
+export const roleRowGrip = style({
   display: "inline-flex",
   flexShrink: 0,
   cursor: "grab",
-  color: "var(--area-color)",
+  color: "var(--role-color)",
   opacity: 0.75,
   selectors: {
     "&:active": { cursor: "grabbing" },
   },
 });
 
-export const areaRowRemove = style({
+export const roleRowRemove = style({
   appearance: "none",
   border: "none",
   background: "transparent",
@@ -304,25 +313,27 @@ export const areaRowRemove = style({
   display: "inline-flex",
   flexShrink: 0,
   cursor: "pointer",
-  color: "var(--area-color)",
+  color: "var(--role-color)",
   opacity: 0.75,
   selectors: {
     "&:hover": { opacity: 1 },
   },
 });
 
-export const areaRowIcon = style({
+export const roleRowIcon = style({
   display: "inline-flex",
   flexShrink: 0,
-  color: "var(--area-color)",
+  color: "var(--role-color)",
 });
 
-export const areaEmptyNote = style({
-  fontSize: 13,
-  color: vars.muted,
-  fontStyle: "italic",
-  paddingBlock: space["2"],
-});
+export const roleEmptyNote = style([
+  text.body,
+  {
+    color: vars.muted,
+    fontStyle: "italic",
+    paddingBlock: space["2"],
+  },
+]);
 
 export const customRow = style({
   display: "flex",
@@ -330,10 +341,7 @@ export const customRow = style({
   alignItems: "center",
 });
 
-export const selectionCaption = style({
-  fontSize: 13,
-  color: vars.muted,
-});
+export const selectionCaption = style([text.body, { color: vars.muted }]);
 
 // Brain dump — jotted rows with an inline type control
 export const dumpList = style({
@@ -352,16 +360,17 @@ export const dumpRow = style({
   background: vars.glass.bgSoft,
 });
 
-export const dumpRowTitle = style({
-  flex: 1,
-  minWidth: 0,
-  fontFamily: vars.font.ui,
-  fontSize: 14,
-  color: vars.ink,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-});
+export const dumpRowTitle = style([
+  text.bodyLg,
+  {
+    flex: 1,
+    minWidth: 0,
+    color: vars.ink,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+]);
 
 export const dumpRowControl = style({
   flexShrink: 0,
@@ -384,12 +393,14 @@ export const dumpRemove = style({
   },
 });
 
-export const dumpEmpty = style({
-  fontSize: 13,
-  color: vars.muted,
-  fontStyle: "italic",
-  paddingBlock: space["2"],
-});
+export const dumpEmpty = style([
+  text.body,
+  {
+    color: vars.muted,
+    fontStyle: "italic",
+    paddingBlock: space["2"],
+  },
+]);
 
 // Shared inputs — built on the app-wide formInput recipe so onboarding fields
 // match every other form surface (glass fill, glass stroke, accent focus).
@@ -404,16 +415,9 @@ export const fieldStack = style({
   gap: space["1.5"],
 });
 
-export const fieldLabel = style({
-  fontSize: 13,
-  fontWeight: 500,
-  color: vars.ink,
-});
+export const fieldLabel = style([text.body, { color: vars.ink }]);
 
-export const fieldHelp = style({
-  fontSize: 12.5,
-  color: vars.muted,
-});
+export const fieldHelp = style([text.bodySm, { color: vars.muted }]);
 
 // Week form
 export const timeRow = style({
@@ -431,8 +435,14 @@ export const timeInput = style([
   },
 ]);
 
-export const timeDash = style({
-  color: vars.muted,
+export const timeDash = style([text.body, { color: vars.muted }]);
+
+// The location value rendered inside the Week step's Combobox — a MapPin icon
+// beside the name.
+export const locationOption = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: space["1.5"],
 });
 
 export const dayToggles = style({
@@ -441,29 +451,30 @@ export const dayToggles = style({
   flexWrap: "wrap",
 });
 
-export const dayToggle = style({
-  width: 40,
-  height: 34,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: radii.md,
-  border: `1px solid ${vars.glass.stroke}`,
-  background: vars.glass.bgSoft,
-  color: vars.inkSoft,
-  fontSize: 12.5,
-  cursor: "pointer",
-  transition: "background 150ms ease",
-  selectors: {
-    "&:hover": { background: vars.interactive.hoverFill },
+export const dayToggle = style([
+  text.bodySm,
+  {
+    width: 40,
+    height: 34,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: radii.md,
+    border: `1px solid ${vars.glass.stroke}`,
+    background: vars.glass.bgSoft,
+    color: vars.inkSoft,
+    cursor: "pointer",
+    transition: "background 150ms ease",
+    selectors: {
+      "&:hover": { background: vars.interactive.hoverFill },
+    },
   },
-});
+]);
 
 export const dayToggleOn = style({
   borderColor: "transparent",
   background: vars.accent.primary,
   color: vars.textOnAccent,
-  fontWeight: 500,
 });
 
 export const sectionToggleRow = style({
@@ -473,11 +484,13 @@ export const sectionToggleRow = style({
   gap: space["3"],
 });
 
-export const previewNote = style({
-  fontSize: 13,
-  color: vars.muted,
-  fontStyle: "italic",
-});
+export const previewNote = style([
+  text.body,
+  {
+    color: vars.muted,
+    fontStyle: "italic",
+  },
+]);
 
 // Places — multi-row location editor
 export const locationRows = style({
@@ -515,27 +528,18 @@ export const addressIcon = style({
   pointerEvents: "none",
 });
 
-// Boxed input matching the formInput recipe, but written explicitly so the
-// left padding that clears the MapPin icon is never overridden by recipe
-// class ordering (composing the recipe let its 12px padding win, so the icon
-// sat on top of the text).
-export const addressInput = style({
-  fontFamily: vars.font.ui,
-  fontSize: 13.5,
-  fontWeight: 500,
-  color: vars.ink,
-  width: "100%",
-  outline: "none",
-  padding: "9px 36px 9px 38px",
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: radii["sm+2"],
-  transition: "border-color 150ms ease",
-  selectors: {
-    "&::placeholder": { color: vars.muted },
-    "&:focus": { borderColor: vars.accent.primary },
+// The boxed formInput recipe, but the MapPin icon (left) and spinner (right)
+// need wider asymmetric padding than the recipe's uniform 12px. `&&` doubles
+// specificity so the override beats the recipe's padding regardless of
+// stylesheet order — otherwise the icon sits on top of the text.
+export const addressInput = style([
+  formInput({ variant: "boxed" }),
+  {
+    selectors: {
+      "&&": { padding: "9px 36px 9px 38px" },
+    },
   },
-});
+]);
 
 export const addressSelected = style({
   borderColor: vars.accent.primary,
@@ -549,94 +553,4 @@ export const addressSpinner = style({
   animation: `${spin} 0.8s linear infinite`,
 });
 
-// Places slots (legacy single-slot styles, still used elsewhere)
-export const slotStack = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["2.5"],
-});
-
-export const slot = style({
-  display: "flex",
-  alignItems: "center",
-  gap: space["3"],
-  padding: space["3"],
-  borderRadius: radii.lg,
-  border: `1px solid ${vars.rule}`,
-  background: vars.paper,
-});
-
-export const slotMeta = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: 2,
-  minWidth: 0,
-  flex: 1,
-});
-
-export const slotLabel = style({
-  fontSize: 13,
-  fontWeight: 500,
-  color: vars.ink,
-});
-
-export const slotValue = style({
-  fontSize: 13,
-  color: vars.muted,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-});
-
-export const slotEmpty = style({
-  fontSize: 13,
-  color: vars.muted,
-  fontStyle: "italic",
-});
-
-// AI offer
-export const offerCard = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["3"],
-  padding: space["4"],
-  borderRadius: radii.lg,
-  border: `1px solid ${vars.rule}`,
-  background: vars.glass.bgSoft,
-});
-
-export const offerList = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["2"],
-  margin: 0,
-  padding: 0,
-  listStyle: "none",
-});
-
-export const offerItem = style({
-  display: "flex",
-  alignItems: "center",
-  gap: space["2"],
-  fontSize: 14,
-  color: vars.ink,
-});
-
-export const offerDot = style({
-  width: 6,
-  height: 6,
-  borderRadius: radii.pill,
-  background: vars.accent.primary,
-  flexShrink: 0,
-});
-
-export const aiActions = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["2"],
-});
-
-export const errorText = style({
-  fontSize: 13,
-  color: vars.status.error,
-});
+export const errorText = style([text.body, { color: vars.status.error }]);

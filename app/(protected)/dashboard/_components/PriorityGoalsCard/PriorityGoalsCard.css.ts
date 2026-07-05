@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, media, radii } from "@/lib/theme";
+import { space, vars, themeTransition, media, radii } from "@/lib/theme";
 
 
 export const goalsCard = style({
@@ -20,7 +20,7 @@ export const goalsHeader = style({
   display: "flex",
   alignItems: "baseline",
   justifyContent: "space-between",
-  marginBottom: 8,
+  marginBottom: space["2"],
 });
 
 export const goalsTitle = style({
@@ -46,7 +46,7 @@ export const goalRow = style({
 export const goalHead = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
 });
 
 export const goalName = style({
@@ -69,7 +69,7 @@ export const goalFraction = style({
 });
 
 export const goalTrack = style({
-  marginTop: 8,
+  marginTop: space["2"],
   height: 6,
   borderRadius: radii.pill,
   background: `color-mix(in srgb, ${vars.ink} 10%, transparent)`,
@@ -84,11 +84,11 @@ export const goalFill = style({
 });
 
 export const goalFooter = style({
-  marginTop: 7,
+  marginTop: space["2"],
   display: "flex",
   alignItems: "baseline",
   justifyContent: "space-between",
-  gap: 10,
+  gap: space["2.5"],
 });
 
 export const goalNext = style({

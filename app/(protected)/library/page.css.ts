@@ -1,5 +1,5 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition, media, radii } from "@/lib/theme";
+import { space, vars, themeTransition, media, radii } from "@/lib/theme";
 
 
 export const page = style({
@@ -18,14 +18,14 @@ export const page = style({
 export const subHeader = style({
   display: "flex",
   alignItems: "baseline",
-  gap: 12,
+  gap: space["3"],
   padding: "20px 28px 18px",
   flexShrink: 0,
   "@media": {
     [media.mobile]: {
       padding: "16px 16px 12px",
       flexWrap: "wrap",
-      gap: 10,
+      gap: space["2.5"],
     },
   },
 });
@@ -59,14 +59,14 @@ export const spacer = style({
 
 export const actionCluster = style({
   display: "flex",
-  gap: 8,
+  gap: space["2"],
   flexShrink: 0,
 });
 
 export const mainGrid = style({
   display: "grid",
   gridTemplateColumns: "260px 1fr",
-  gap: 16,
+  gap: space["4"],
   padding: "0 28px 28px",
   flex: 1,
   minHeight: 0,
@@ -78,7 +78,7 @@ export const mainGrid = style({
     },
     [media.mobile]: {
       padding: "0 16px 24px",
-      gap: 14,
+      gap: space["3.5"],
     },
   },
 });
@@ -128,7 +128,7 @@ export const railSectionHead = style({
 export const railRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   padding: "5px 8px",
   borderRadius: radii.sm,
   cursor: "pointer",
@@ -234,7 +234,7 @@ export const mainCard = style([
 export const filterStrip = style({
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: space["2.5"],
   padding: "14px 0",
   borderBottom: `1px solid ${vars.rule}`,
   flexShrink: 0,
@@ -243,14 +243,14 @@ export const filterStrip = style({
 export const filterRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   flexWrap: "wrap",
 });
 
 export const searchWrap = style({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   padding: "6px 12px",
   borderRadius: radii.pill,
   border: `1px solid ${vars.glass.stroke}`,
@@ -278,7 +278,7 @@ export const searchInput = style({
 export const breadcrumb = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   padding: "12px 0",
   borderBottom: `1px solid ${vars.rule}`,
   fontSize: 13,
@@ -331,8 +331,8 @@ export const tableHead = style({
 export const headerCell = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 5,
-  paddingRight: 12,
+  gap: space["1.5"],
+  paddingRight: space["3"],
   fontFamily: vars.font.ui,
   fontSize: 9.5,
   fontWeight: 600,
@@ -371,7 +371,7 @@ export const headerCellIconIdle = style({
 export const showCompletedToggle = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   fontFamily: vars.font.ui,
   fontSize: 11,
   fontWeight: 600,
@@ -434,7 +434,7 @@ globalStyle(
 export const cellTitle = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   minWidth: 0,
 });
 
@@ -462,7 +462,7 @@ export const cellOverdue = style({
 export const cellLocation = style({
   display: "flex",
   alignItems: "center",
-  gap: 4,
+  gap: space["1"],
   color: vars.inkSoft,
   fontSize: 12.5,
   minWidth: 0,
@@ -504,7 +504,7 @@ export const emptyStateTitle = style({
   fontWeight: 500,
   letterSpacing: "-0.02em",
   color: vars.ink,
-  marginBottom: 8,
+  marginBottom: space["2"],
   transition: themeTransition,
 });
 

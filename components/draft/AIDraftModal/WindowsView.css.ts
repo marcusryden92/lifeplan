@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii } from "@/lib/theme";
 
 export const wrap = style({
   flex: 1,
@@ -8,13 +8,13 @@ export const wrap = style({
   borderRadius: radii["md+2"],
   border: `1px solid ${vars.rule}`,
   background: vars.paper,
-  padding: 10,
+  padding: space["2.5"],
   transition: themeTransition,
   userSelect: "text",
 });
 
 export const empty = style({
-  padding: 24,
+  padding: space["6"],
   color: vars.muted,
   fontFamily: vars.font.ui,
   fontSize: 12,
@@ -26,7 +26,7 @@ export const categoryGroup = style({
   flexDirection: "column",
   selectors: {
     "& + &": {
-      marginTop: 12,
+      marginTop: space["3"],
     },
   },
 });
@@ -34,7 +34,7 @@ export const categoryGroup = style({
 export const categoryHeader = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   padding: "2px 8px 4px",
 });
 
@@ -103,6 +103,6 @@ export const rowSpacer = style({ flex: 1 });
 export const metaCluster = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   flexShrink: 0,
 });

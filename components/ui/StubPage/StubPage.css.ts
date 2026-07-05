@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/lib/theme";
+import { space, vars } from "@/lib/theme";
 
 export const root = style({
   padding: "40px 0",
@@ -13,7 +13,7 @@ export const title = style({
   fontSize: 18,
   color: vars.ink,
   margin: 0,
-  marginBottom: 8,
+  marginBottom: space["2"],
 });
 
 export const body = style({

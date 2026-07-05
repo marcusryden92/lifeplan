@@ -152,7 +152,7 @@ describe("category window cascade", () => {
     const placed = events.find((e: SimpleEvent) => e.id === "task-project");
     expect(placed).toBeDefined();
     // The only slots it can occupy are work's Tuesday windows.
-    expect(isWithinWindow(placed!.start as string, TUESDAY)).toBe(true);
+    expect(isWithinWindow(placed!.start, TUESDAY)).toBe(true);
   });
 
   it("keeps a confined subcategory's items out of ancestor windows", () => {
@@ -175,8 +175,8 @@ describe("category window cascade", () => {
     expect(placed).toBeDefined();
     // Confined + no own windows ⇒ unconstrained free time, and the strict work
     // window excludes it. It lands in free Monday time before the first window.
-    expect(isWithinWindow(placed!.start as string, TUESDAY)).toBe(false);
-    expect(new Date(placed!.start as string).getTime()).toBeLessThan(
+    expect(isWithinWindow(placed!.start, TUESDAY)).toBe(false);
+    expect(new Date(placed!.start).getTime()).toBeLessThan(
       new Date("2026-01-06T09:00:00").getTime(),
     );
   });
@@ -206,6 +206,6 @@ describe("category window cascade", () => {
 
     const placed = events.find((e: SimpleEvent) => e.id === "task-work");
     expect(placed).toBeDefined();
-    expect(isWithinWindow(placed!.start as string, WEDNESDAY)).toBe(false);
+    expect(isWithinWindow(placed!.start, WEDNESDAY)).toBe(false);
   });
 });

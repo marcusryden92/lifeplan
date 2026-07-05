@@ -1,10 +1,10 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, DURATIONS, radii } from "@/lib/theme";
+import { space, vars, DURATIONS, radii } from "@/lib/theme";
 
 export const segmentedControl = style({
   position: "relative",
   display: "inline-grid",
-  padding: 3,
+  padding: space["1"],
   borderRadius: radii.pill,
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,
@@ -33,7 +33,7 @@ export const segmentedButton = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: 5,
+  gap: space["1.5"],
   fontSize: 11,
   fontFamily: vars.font.ui,
   fontWeight: 700,

@@ -1,10 +1,10 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii } from "@/lib/theme";
 
 export const fieldStack = style({
   display: "flex",
   flexDirection: "column",
-  gap: 7,
+  gap: space["2"],
   minWidth: 0,
 });
 
@@ -22,7 +22,7 @@ export const typePicker = style({
   position: "relative",
   display: "inline-grid",
   gridTemplateColumns: "1fr 1fr 1fr",
-  padding: 3,
+  padding: space["1"],
   borderRadius: radii.pill,
   background: vars.glass.bgSoft,
   border: `1px solid ${vars.glass.stroke}`,

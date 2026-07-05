@@ -1,3 +1,4 @@
+import { space } from "@/lib/theme";
 import {
   Caption,
   CategoryDot,
@@ -33,7 +34,7 @@ export function PriorityGoalsCard({ isLoaded, goals, onOpenGoal }: Props) {
       <div className={goalsHeader}>
         <div>
           <h2 className={goalsTitle}>Priority goals</h2>
-          <Caption style={{ marginTop: 3, display: "inline-block" }}>
+          <Caption style={{ marginTop: space["1"], display: "inline-block" }}>
             scored by the calendar engine
           </Caption>
         </div>

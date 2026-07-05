@@ -10,19 +10,19 @@ import {
   type RoleSelection,
 } from "../_lib/starterCategories";
 import {
-  areasColumns,
-  areaColumn,
-  areaColumnTitle,
-  areaRow,
-  areaRowLabel,
-  areaRowIcon,
-  areaRowSelected,
-  areaRowDragging,
-  areaRowDropBefore,
-  areaRowDropAfter,
-  areaRowGrip,
-  areaRowRemove,
-  areaEmptyNote,
+  roleColumns,
+  roleColumn,
+  roleColumnTitle,
+  roleRow,
+  roleRowLabel,
+  roleRowIcon,
+  roleRowSelected,
+  roleRowDragging,
+  roleRowDropBefore,
+  roleRowDropAfter,
+  roleRowGrip,
+  roleRowRemove,
+  roleEmptyNote,
   customRow,
   input,
   selectionCaption,
@@ -41,8 +41,8 @@ type RolesStepProps = {
   onSkip: () => void;
 };
 
-function areaColorVar(color: string): CSSProperties {
-  return { ["--area-color"]: color } as CSSProperties;
+function roleColorVar(color: string): CSSProperties {
+  return { ["--role-color"]: color } as CSSProperties;
 }
 
 // Transparent 1x1 GIF used as the drag image so the browser doesn't paint its
@@ -142,29 +142,29 @@ export function RolesStep({
         </>
       }
     >
-      <div className={areasColumns}>
-        <div className={areaColumn}>
-          <span className={areaColumnTitle}>Suggestions</span>
+      <div className={roleColumns}>
+        <div className={roleColumn}>
+          <span className={roleColumnTitle}>Suggestions</span>
           {availablePresets.map((preset) => (
             <button
               key={preset.key}
               type="button"
-              className={areaRow}
-              style={areaColorVar(preset.color)}
+              className={roleRow}
+              style={roleColorVar(preset.color)}
               onClick={() => addPreset(preset.key, preset.name, preset.color)}
             >
-              <span className={areaRowLabel}>{preset.name}</span>
-              <span className={areaRowIcon}>
+              <span className={roleRowLabel}>{preset.name}</span>
+              <span className={roleRowIcon}>
                 <Plus size={15} strokeWidth={2.2} />
               </span>
             </button>
           ))}
         </div>
 
-        <div className={areaColumn}>
-          <span className={areaColumnTitle}>Your roles</span>
+        <div className={roleColumn}>
+          <span className={roleColumnTitle}>Your roles</span>
           {selections.length === 0 ? (
-            <span className={areaEmptyNote}>
+            <span className={roleEmptyNote}>
               Nothing yet — add from the left or type your own.
             </span>
           ) : (
@@ -174,16 +174,16 @@ export function RolesStep({
               return (
                 <div
                   key={sel.key}
-                  className={`${areaRow} ${areaRowSelected} ${
-                    draggedKey === sel.key ? areaRowDragging : ""
+                  className={`${roleRow} ${roleRowSelected} ${
+                    draggedKey === sel.key ? roleRowDragging : ""
                   } ${
                     dropZone === "before"
-                      ? areaRowDropBefore
+                      ? roleRowDropBefore
                       : dropZone === "after"
-                        ? areaRowDropAfter
+                        ? roleRowDropAfter
                         : ""
                   }`}
-                  style={areaColorVar(sel.color)}
+                  style={roleColorVar(sel.color)}
                   draggable
                   onDragStart={(e) => {
                     e.dataTransfer.effectAllowed = "move";
@@ -226,13 +226,13 @@ export function RolesStep({
                     endDrag();
                   }}
                 >
-                  <span className={areaRowGrip} aria-hidden>
+                  <span className={roleRowGrip} aria-hidden>
                     <GripVertical size={14} strokeWidth={2} />
                   </span>
-                  <span className={areaRowLabel}>{sel.name}</span>
+                  <span className={roleRowLabel}>{sel.name}</span>
                   <button
                     type="button"
-                    className={areaRowRemove}
+                    className={roleRowRemove}
                     onClick={() => removeSelection(sel.key)}
                     aria-label={`Remove ${sel.name}`}
                   >

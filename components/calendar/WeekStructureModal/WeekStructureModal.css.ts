@@ -1,5 +1,5 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition, radii, media } from "@/lib/theme";
+import { space, vars, themeTransition, radii, media } from "@/lib/theme";
 
 // Modal fade duration in ms â€” used by both CSS transition and the JS unmount timer.
 export const MODAL_FADE_MS = 220;
@@ -45,7 +45,7 @@ export const banner = style({
   flexShrink: 0,
   display: "flex",
   alignItems: "center",
-  gap: 14,
+  gap: space["3.5"],
   padding: "8px 22px",
   background: vars.ink,
   color: vars.paper,
@@ -56,7 +56,7 @@ export const banner = style({
     },
     [media.mobile]: {
       padding: "8px 14px",
-      gap: 10,
+      gap: space["2.5"],
     },
   },
 });
@@ -75,7 +75,7 @@ export const modeToggle = style({
   position: "relative",
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
-  padding: 3,
+  padding: space["1"],
   borderRadius: radii.pill,
   background: `color-mix(in srgb, ${vars.paper} 10%, transparent)`,
   border: `1px solid color-mix(in srgb, ${vars.paper} 18%, transparent)`,
@@ -172,8 +172,8 @@ export const gridHeader = style({
   display: "flex",
   alignItems: "baseline",
   flexWrap: "wrap",
-  gap: 12,
-  marginBottom: 8,
+  gap: space["3"],
+  marginBottom: space["2"],
   flexShrink: 0,
 });
 
@@ -202,7 +202,7 @@ export const dayNav = style({
     [media.mobile]: {
       display: "inline-flex",
       alignItems: "center",
-      gap: 6,
+      gap: space["1.5"],
       marginLeft: "auto",
     },
   },
@@ -286,7 +286,7 @@ export const errorBanner = style({
   fontSize: 12,
   display: "flex",
   alignItems: "flex-start",
-  gap: 8,
+  gap: space["2"],
 });
 
 export const errorBannerMessage = style({ flex: 1 });

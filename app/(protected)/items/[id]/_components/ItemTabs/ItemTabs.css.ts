@@ -1,10 +1,10 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { space, vars, themeTransition } from "@/lib/theme";
 
 export const tabsStrip = style({
   display: "flex",
-  gap: 6,
-  marginTop: 22,
+  gap: space["1.5"],
+  marginTop: space["6"],
   borderBottom: `1px solid ${vars.rule}`,
   flexWrap: "wrap",
 });
@@ -16,12 +16,12 @@ export const tab = style({
   fontWeight: 600,
   color: vars.inkSoft,
   borderBottom: "2px solid transparent",
-  marginBottom: -1,
+  marginBottom: `-${space["px"]}`,
   cursor: "pointer",
   textDecoration: "none",
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   transition: themeTransition,
   selectors: {
     "&:hover": {
@@ -56,7 +56,7 @@ export const assistantTrigger = style({
   border: "none",
   background: "transparent",
   padding: "10px 14px",
-  marginBottom: -1,
+  marginBottom: `-${space["px"]}`,
   fontFamily: vars.font.ui,
   fontSize: 12.5,
   fontWeight: 600,
@@ -65,7 +65,7 @@ export const assistantTrigger = style({
   cursor: "pointer",
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   borderBottom: "2px solid transparent",
   transition: themeTransition,
   selectors: {

@@ -2,7 +2,7 @@
 
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui";
-import { vars } from "@/lib/theme";
+import { space, vars } from "@/lib/theme";
 import { useItem } from "../../ItemContext";
 
 export function DeleteRow() {
@@ -13,8 +13,8 @@ export function DeleteRow() {
       style={{
         display: "flex",
         justifyContent: "flex-start",
-        marginTop: 20,
-        paddingTop: 16,
+        marginTop: space["5"],
+        paddingTop: space["4"],
         borderTop: `1px solid ${vars.rule}`,
       }}
     >
@@ -23,7 +23,7 @@ export function DeleteRow() {
         size="sm"
         onClick={requestDelete}
         aria-label="Delete item"
-        style={{ marginLeft: -14 }}
+        style={{ marginLeft: `-${space["3.5"]}` }}
       >
         <Trash2 size={12} strokeWidth={2.2} />
         Delete item

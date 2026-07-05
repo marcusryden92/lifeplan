@@ -1,5 +1,6 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
+  space,
   vars,
   DURATIONS,
   popover,
@@ -76,7 +77,7 @@ export const dialog = style([
 export const inputRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: space["3"],
   padding: "14px 18px",
   borderBottom: `1px solid ${vars.rule}`,
 });
@@ -131,7 +132,7 @@ export const groupLabel = style({
 export const item = style({
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: space["3"],
   padding: "9px 18px",
   cursor: "pointer",
   border: "none",
@@ -165,7 +166,7 @@ export const itemIcon = style({
 export const itemBody = style({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: space["0.5"],
   minWidth: 0,
   flex: 1,
 });
@@ -199,7 +200,7 @@ export const footer = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 12,
+  gap: space["3"],
   padding: "8px 14px",
   borderTop: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
@@ -227,5 +228,5 @@ export const kbd = style({
   border: `1px solid ${vars.rule}`,
   borderRadius: 5,
   padding: "1px 5px",
-  marginRight: 4,
+  marginRight: space["1"],
 });

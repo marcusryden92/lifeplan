@@ -1,5 +1,6 @@
 "use client";
 
+import { space } from "@/lib/theme";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { format } from "date-fns";
@@ -90,7 +91,7 @@ export function NewPlanModal({
           <div className={hintsRow} style={{ justifyContent: "flex-end" }}>
             <Button variant="glass" size="sm" onClick={onCancel}>
               Cancel
-              <Kbd style={{ marginLeft: 8 }}>esc</Kbd>
+              <Kbd style={{ marginLeft: space["2"] }}>esc</Kbd>
             </Button>
             <Button
               variant="glassInk"
@@ -99,7 +100,7 @@ export function NewPlanModal({
               disabled={!canSubmit}
             >
               Create
-              <Kbd style={{ marginLeft: 8 }}>
+              <Kbd style={{ marginLeft: space["2"] }}>
                 <CornerDownLeft size={11} strokeWidth={2.4} />
               </Kbd>
             </Button>

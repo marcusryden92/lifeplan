@@ -1,5 +1,6 @@
 "use client";
 
+import { space } from "@/lib/theme";
 import { useMemo } from "react";
 import { MapPin, RotateCcw } from "lucide-react";
 import { useSelector } from "react-redux";
@@ -40,7 +41,7 @@ export function LocationSection() {
       ...locations.map((l) => ({
         value: l.id,
         label: (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: space["2"] }}>
             <MapPin size={12} strokeWidth={2} />
             <span>{l.name}</span>
           </span>
@@ -85,7 +86,7 @@ export function LocationSection() {
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: 6,
+                    gap: space["1.5"],
                   }}
                 >
                   <MapPin size={12} strokeWidth={2} />
@@ -113,7 +114,7 @@ export function LocationSection() {
       )}
       <div
         style={{
-          marginTop: 6,
+          marginTop: space["1.5"],
           visibility: isGoal ? "visible" : "hidden",
         }}
         aria-hidden={!isGoal}

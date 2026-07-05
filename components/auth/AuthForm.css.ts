@@ -1,16 +1,16 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, formInput, colorMixAlpha, themeTransition, radii } from "@/lib/theme";
+import { space, vars, formInput, colorMixAlpha, themeTransition, radii } from "@/lib/theme";
 
 export const form = style({
   display: "flex",
   flexDirection: "column",
-  gap: 12,
+  gap: space["3"],
 });
 
 export const field = style({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: space["1"],
 });
 
 export const label = style({
@@ -41,13 +41,13 @@ export const fieldError = style({
   fontSize: 11,
   color: vars.status.error,
   fontFamily: vars.font.ui,
-  marginTop: 2,
+  marginTop: space["0.5"],
 });
 
 export const forgotRow = style({
   display: "flex",
   justifyContent: "flex-end",
-  marginTop: -2,
+  marginTop: `-${space["0.5"]}`,
 });
 
 export const forgotLink = style({
@@ -68,7 +68,7 @@ const alertBase = style({
   borderRadius: radii.sm,
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
 });
 
 export const alertError = style([
@@ -92,5 +92,5 @@ export const alertSuccess = style([
 export const submit = style({
   width: "100%",
   justifyContent: "center",
-  marginTop: 4,
+  marginTop: space["1"],
 });

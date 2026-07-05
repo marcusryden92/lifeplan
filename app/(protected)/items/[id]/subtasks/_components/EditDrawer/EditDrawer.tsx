@@ -1,5 +1,6 @@
 "use client";
 
+import { space } from "@/lib/theme";
 import {
   useEffect,
   useMemo,
@@ -204,7 +205,7 @@ export function EditDrawer() {
     ...locations.map((l) => ({
       value: l.id,
       label: (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: space["2"] }}>
           <MapPin size={12} strokeWidth={2} />
           <span>{l.name}</span>
         </span>
@@ -295,7 +296,7 @@ export function EditDrawer() {
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
-                    gap: 6,
+                    gap: space["1.5"],
                   }}
                 >
                   <MapPin size={12} strokeWidth={2} />

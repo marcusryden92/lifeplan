@@ -1,5 +1,5 @@
 import { globalStyle, style } from "@vanilla-extract/css";
-import { vars } from "@/lib/theme";
+import { space, vars } from "@/lib/theme";
 import {
   agendaTime,
   agendaDur,
@@ -15,7 +15,7 @@ export const uncompletedActions = style({
   display: "inline-flex",
   alignItems: "center",
   alignSelf: "center",
-  gap: 6,
+  gap: space["1.5"],
 });
 
 // 500ms confirmation flash on the row before Complete/Postpone fires.

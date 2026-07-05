@@ -1,5 +1,6 @@
 ﻿import { style } from "@vanilla-extract/css";
 import {
+  space,
   vars,
   themeTransition,
   collapseTransition,
@@ -31,7 +32,7 @@ export const subHeader = style({
   // Gap matches MAIN_GRID_GAP so the action cluster's right edge lines up with
   // the calendar card's right edge (the wedge below absorbs the engine column
   // width minus this gap pair).
-  gap: 16,
+  gap: space["4"],
   padding: "20px 28px 18px",
   flexShrink: 0,
   minWidth: 0,
@@ -41,7 +42,7 @@ export const subHeader = style({
     },
     [media.mobile]: {
       padding: "16px 16px 12px",
-      gap: 10,
+      gap: space["2.5"],
     },
   },
 });
@@ -70,7 +71,7 @@ export const dayHeaderStack = style({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: 1,
+  gap: space["px"],
   padding: "4px 0",
 });
 
@@ -105,8 +106,8 @@ export const dayHeaderLabelToday = style({
 
 export const navCluster = style({
   display: "flex",
-  gap: 4,
-  marginLeft: 6,
+  gap: space["1"],
+  marginLeft: space["1.5"],
 });
 
 export const spacer = style({
@@ -118,7 +119,7 @@ export const spacer = style({
 export const hoverChip = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   fontSize: 12,
   color: vars.inkSoft,
   fontFamily: vars.font.ui,
@@ -144,7 +145,7 @@ export const hoverChipName = style({
 export const actionCluster = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   flexShrink: 0,
 });
 
@@ -170,7 +171,7 @@ export const headerConsoleSpacer = style({
   minWidth: 0,
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   paddingLeft: ENGINE_COL_INNER_PAD,
   overflow: "hidden",
   transition: collapseTransition,
@@ -191,7 +192,7 @@ export const headerConsoleSpacer = style({
 export const headerEngineLabel = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   whiteSpace: "nowrap",
   opacity: 1,
   transition: collapseTransition,
@@ -276,7 +277,7 @@ export const mainGrid = style({
     [media.mobile]: {
       gridTemplateColumns: "1fr",
       padding: "0 16px 24px",
-      gap: 14,
+      gap: space["3.5"],
       flex: "0 0 auto",
       minHeight: "auto",
     },
@@ -340,15 +341,15 @@ export const engineContainer = style({
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
-  paddingBottom: "50px",
-  paddingLeft: "16px",
+  paddingBottom: space["12"],
+  paddingLeft: space["4"],
   width: 340,
   minWidth: 340,
   boxSizing: "border-box",
   "@media": {
     // Panel chrome for the overlay state — floats over the calendar card.
     [media.laptop]: {
-      padding: 16,
+      padding: space["4"],
       background: vars.paper,
       border: `1px solid ${vars.rule}`,
       borderRadius: radii.lg,
@@ -370,10 +371,10 @@ export const engineHeader = style({
   padding: "0 0 14px",
   flexShrink: 0,
   borderBottom: `1px solid ${vars.rule}`,
-  marginBottom: 14,
+  marginBottom: space["3.5"],
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: space["1"],
 });
 
 export const engineTitle = style({
@@ -404,21 +405,21 @@ export const engineSummary = style({
 export const engineList = style({
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: space["2.5"],
   minHeight: 0,
   flex: 1,
   overflowY: "auto",
-  paddingRight: 4,
+  paddingRight: space["1"],
 });
 
 export const engineControls = style({
   flexShrink: 0,
-  marginTop: 14,
-  paddingTop: 14,
+  marginTop: space["3.5"],
+  paddingTop: space["3.5"],
   borderTop: `1px solid ${vars.rule}`,
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: space["3.5"],
   transition: themeTransition,
 });
 
@@ -435,14 +436,14 @@ export const engineControlsTitle = style({
 export const controlRow = style({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: space["1.5"],
 });
 
 export const controlHead = style({
   display: "flex",
   alignItems: "baseline",
   justifyContent: "space-between",
-  gap: 8,
+  gap: space["2"],
 });
 
 export const controlLabel = style({
@@ -596,13 +597,13 @@ export const engineGoToBtn = style({
 export const engineCardHead = style({
   display: "flex",
   alignItems: "flex-start",
-  gap: 8,
+  gap: space["2"],
   flexWrap: "wrap",
   // Reserve space for the absolute-positioned buttons in the top-right
   // corner (dismiss + optional go-to) so a long title wraps before it slides
   // under either. Sized for both buttons; cards without a go-to have a bit
   // of extra breathing room, which reads consistently.
-  paddingRight: 48,
+  paddingRight: space["12"],
 });
 
 export const engineTag = style({
@@ -630,7 +631,7 @@ export const engineCardTitle = style({
 export const engineCardBody = style({
   fontSize: 11.5,
   color: vars.inkSoft,
-  marginTop: 6,
+  marginTop: space["1.5"],
   lineHeight: 1.45,
   fontFamily: vars.font.ui,
   fontWeight: 500,

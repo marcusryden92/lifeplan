@@ -1,5 +1,6 @@
 "use client";
 
+import { space, radii } from "@/lib/theme";
 import { useMemo } from "react";
 import { Caption, CategoryBadge, Combobox } from "@/components/ui";
 import { useItem } from "../../ItemContext";
@@ -14,13 +15,13 @@ export function CategorySection() {
       ...categories.map((c) => ({
         value: c.id,
         label: (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: space["2"] }}>
             {c.color && (
               <span
                 style={{
                   width: 9,
                   height: 9,
-                  borderRadius: 999,
+                  borderRadius: radii["pill"],
                   background: c.color,
                   flexShrink: 0,
                 }}

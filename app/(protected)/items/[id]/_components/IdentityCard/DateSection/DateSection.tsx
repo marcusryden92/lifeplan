@@ -1,5 +1,6 @@
 "use client";
 
+import { space } from "@/lib/theme";
 import { type ChangeEvent } from "react";
 import { X } from "lucide-react";
 import { format } from "date-fns";
@@ -28,7 +29,7 @@ export function DateSection() {
   return (
     <div className={fieldStack}>
       <span className={fieldLabel}>{isPlan ? "Scheduled" : "Deadline"}</span>
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: space["1"] }}>
         <div className={dateInputWrap}>
           <input
             type="datetime-local"

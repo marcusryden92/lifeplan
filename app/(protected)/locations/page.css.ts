@@ -1,5 +1,5 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition, colorMixAlpha, media, radii } from "@/lib/theme";
+import { space, vars, themeTransition, colorMixAlpha, media, radii } from "@/lib/theme";
 
 
 export const page = style({
@@ -16,12 +16,12 @@ export const page = style({
 export const subHeader = style({
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: space["3"],
   padding: "20px 28px 18px",
   flexShrink: 0,
   flexWrap: "wrap",
   "@media": {
-    [media.mobile]: { padding: "16px 16px 12px", gap: 10 },
+    [media.mobile]: { padding: "16px 16px 12px", gap: space["2.5"] },
   },
 });
 
@@ -53,7 +53,7 @@ export const spacer = style({ flex: 1 });
 export const headActions = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   flexShrink: 0,
   flexWrap: "wrap",
   // marginLeft: auto keeps the cluster right-aligned even when the parent
@@ -97,7 +97,7 @@ export const errorBanner = style([
 export const mainGrid = style({
   display: "grid",
   gridTemplateColumns: "300px 1fr",
-  gap: 16,
+  gap: space["4"],
   padding: "0 28px 28px",
   flex: 1,
   minHeight: 0,
@@ -109,7 +109,7 @@ export const mainGrid = style({
     },
     [media.mobile]: {
       padding: "0 16px 24px",
-      gap: 14,
+      gap: space["3.5"],
     },
   },
 });
@@ -152,13 +152,13 @@ export const railBody = style({
   overflow: "auto",
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: space["1"],
 });
 
 export const railRow = style({
   display: "flex",
   alignItems: "flex-start",
-  gap: 8,
+  gap: space["2"],
   padding: "8px 8px",
   borderRadius: radii.sm,
   cursor: "pointer",
@@ -183,13 +183,13 @@ export const railRowPin = style({
   height: 16,
   color: vars.muted,
   flexShrink: 0,
-  marginTop: 2,
+  marginTop: space["0.5"],
 });
 
 export const railRowMeta = style({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: space["0.5"],
   flex: 1,
   minWidth: 0,
 });
@@ -211,16 +211,16 @@ export const railRowAddress = style({
 });
 
 export const railRowTags = style({
-  marginTop: 4,
+  marginTop: space["1"],
   display: "flex",
   flexWrap: "wrap",
-  gap: 3,
+  gap: space["1"],
 });
 
 export const railRowTag = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: space["1"],
   padding: "2px 6px",
   borderRadius: 4,
   fontSize: 9.5,
@@ -242,14 +242,14 @@ export const railRowTagDot = style({
 
 export const railFooter = style({
   flexShrink: 0,
-  marginTop: 8,
-  paddingTop: 8,
-  paddingLeft: 4,
-  paddingRight: 4,
+  marginTop: space["2"],
+  paddingTop: space["2"],
+  paddingLeft: space["1"],
+  paddingRight: space["1"],
   borderTop: `1px solid ${vars.rule}`,
   display: "flex",
   flexDirection: "column",
-  gap: 8,
+  gap: space["2"],
   transition: themeTransition,
 });
 
@@ -267,7 +267,7 @@ export const railNewButton = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: 6,
+  gap: space["1.5"],
   padding: "8px 10px",
   borderRadius: radii.sm,
   border: `1px dashed ${vars.rule}`,
@@ -297,7 +297,7 @@ export const matrixPane = style([
     border: `1px solid ${vars.rule}`,
     borderRadius: radii["md+2"],
     padding: "16px 18px",
-    gap: 12,
+    gap: space["3"],
     overflow: "auto",
     transition: themeTransition,
     "@media": {
@@ -309,7 +309,7 @@ export const matrixPane = style([
 export const matrixHead = style({
   display: "flex",
   alignItems: "baseline",
-  gap: 12,
+  gap: space["3"],
   flexWrap: "wrap",
 });
 
@@ -334,7 +334,7 @@ export const matrixSubtitle = style({
 export const matrixLegend = style({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: space["2.5"],
   fontSize: 11,
   color: vars.muted,
   fontFamily: vars.font.ui,
@@ -346,7 +346,7 @@ export const legendDot = style({
   width: 8,
   height: 8,
   borderRadius: 2,
-  marginRight: 4,
+  marginRight: space["1"],
   verticalAlign: "middle",
 });
 
@@ -365,13 +365,13 @@ export const matrixEmpty = style({
   color: vars.muted,
   textAlign: "center",
   flexDirection: "column",
-  gap: 8,
+  gap: space["2"],
 });
 
 export const matrixFooter = style({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: space["2.5"],
   marginTop: "auto",
   padding: "8px 12px",
   borderRadius: radii.sm,

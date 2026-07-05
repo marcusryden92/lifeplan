@@ -2,7 +2,7 @@ import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "./tokens.css";
 import { backdropFilters } from "./effects";
 import { themeTransition, buttonTransition } from "./transitions";
-import { radii } from "./scales";
+import { radii, space } from "./scales";
 
 export const glass = recipe({
   base: {
@@ -111,7 +111,7 @@ export const pillBtn = recipe({
     border: "1px solid transparent",
     display: "inline-flex",
     alignItems: "center",
-    gap: 8,
+    gap: space["2"],
     transition: buttonTransition,
     selectors: {
       "&:active": { transform: "scale(0.98)" },
@@ -212,7 +212,7 @@ export const badge = recipe({
     border: "1px solid transparent",
     display: "inline-flex",
     alignItems: "center",
-    gap: 6,
+    gap: space["1.5"],
     whiteSpace: "nowrap",
     lineHeight: 1,
     transition: themeTransition,

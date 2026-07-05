@@ -1,5 +1,5 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { vars, colorMixAlpha, radii, borderWidth } from "@/lib/theme";
+import { space, vars, colorMixAlpha, radii, borderWidth } from "@/lib/theme";
 
 const tileBase = style({
   display: "flex",
@@ -49,14 +49,14 @@ export const tilePadding = styleVariants({
 export const tileInner = style({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: space["0.5"],
 });
 
 const titleBase = style({
   fontWeight: 500,
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   minWidth: 0,
   overflow: "hidden",
   textOverflow: "ellipsis",
@@ -95,12 +95,12 @@ export const minutes = style({
   fontWeight: 500,
   opacity: 0.7,
   fontVariantNumeric: "tabular-nums",
-  paddingRight: 4,
+  paddingRight: space["1"],
 });
 
 export const timeRow = style({
   display: "flex",
-  gap: 4,
+  gap: space["1"],
   fontSize: 10,
   fontWeight: 500,
   fontVariantNumeric: "tabular-nums",

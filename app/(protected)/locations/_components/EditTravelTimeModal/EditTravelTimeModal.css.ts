@@ -1,5 +1,6 @@
 ﻿import { style } from "@vanilla-extract/css";
 import {
+  space,
   vars,
   themeTransition,
   themeDark,
@@ -43,7 +44,7 @@ export const modal = style([
     padding: "20px 22px",
     display: "flex",
     flexDirection: "column",
-    gap: 14,
+    gap: space["3.5"],
     fontFamily: vars.font.ui,
     color: vars.ink,
     transform: "translate(-50%, calc(-50% + 8px)) scale(0.985)",
@@ -59,7 +60,7 @@ export const modal = style([
 export const header = style({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: space["1"],
 });
 
 export const title = style({
@@ -80,14 +81,14 @@ export const subtitle = style({
 export const periodList = style({
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: space["2.5"],
 });
 
 export const periodRow = style({
   display: "grid",
   gridTemplateColumns: "70px 1fr auto auto",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
 });
 
 export const periodName = style({
@@ -147,8 +148,8 @@ export const revertBtn = style({
 export const footer = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  marginTop: 6,
+  gap: space["2"],
+  marginTop: space["1.5"],
   justifyContent: "flex-end",
 });
 

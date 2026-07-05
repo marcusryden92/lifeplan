@@ -1,5 +1,6 @@
 "use client";
 
+import { space } from "@/lib/theme";
 import { useMemo, useReducer, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { MapPin, Plus, RefreshCw } from "lucide-react";
@@ -396,7 +397,7 @@ export default function LocationsPage() {
             alignItems: "center",
             justifyContent: "center",
             padding: "0 28px 28px",
-            marginBottom: "50px",
+            marginBottom: space["12"],
           }}
         >
           <Loader size="md" label="Loading locations" />

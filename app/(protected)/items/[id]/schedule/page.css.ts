@@ -1,12 +1,12 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, media, radii } from "@/lib/theme";
+import { space, vars, themeTransition, media, radii } from "@/lib/theme";
 
 
 export const root = style({
-  paddingTop: 12,
+  paddingTop: space["3"],
   display: "flex",
   flexDirection: "column",
-  gap: 28,
+  gap: space["7"],
 });
 
 export const sectionLabel = style({
@@ -16,12 +16,12 @@ export const sectionLabel = style({
   letterSpacing: "0.08em",
   textTransform: "uppercase",
   color: vars.muted,
-  marginBottom: 14,
+  marginBottom: space["3.5"],
   transition: themeTransition,
 });
 
 export const dayGroup = style({
-  marginBottom: 22,
+  marginBottom: space["6"],
   selectors: {
     "&:last-child": { marginBottom: 0 },
   },
@@ -30,8 +30,8 @@ export const dayGroup = style({
 export const dayHeader = style({
   display: "flex",
   alignItems: "baseline",
-  gap: 10,
-  marginBottom: 10,
+  gap: space["2.5"],
+  marginBottom: space["2.5"],
 });
 
 export const dayHeaderDate = style({
@@ -54,13 +54,13 @@ export const dayHeaderRelative = style({
 export const eventRow = style({
   display: "grid",
   gridTemplateColumns: "120px 1fr auto",
-  gap: 16,
+  gap: space["4"],
   padding: "10px 0",
   borderTop: `1px solid ${vars.rule}`,
   alignItems: "baseline",
   transition: themeTransition,
   "@media": {
-    [media.mobile]: { gridTemplateColumns: "92px 1fr auto", gap: 10 },
+    [media.mobile]: { gridTemplateColumns: "92px 1fr auto", gap: space["2.5"] },
   },
   selectors: {
     "&:last-child": { borderBottom: `1px solid ${vars.rule}` },

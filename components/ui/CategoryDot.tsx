@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from "react";
-import { categoryGlow } from "@/lib/theme";
+import { radii, categoryGlow } from "@/lib/theme";
 
 type Props = HTMLAttributes<HTMLSpanElement> & {
   color: string;
@@ -20,7 +20,7 @@ export const CategoryDot = forwardRef<HTMLSpanElement, Props>(
           display: "inline-block",
           width: size,
           height: size,
-          borderRadius: 999,
+          borderRadius: radii["pill"],
           background: color,
           boxShadow: glow ? categoryGlow(color) : undefined,
           flexShrink: 0,

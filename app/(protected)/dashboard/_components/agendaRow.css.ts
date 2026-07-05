@@ -1,12 +1,12 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii } from "@/lib/theme";
 
 // Row primitives shared by AgendaItemRow and UncompletedItemRow. Variants
 // (NOW/NEXT/TRAVEL, flash tints) live in the respective row files.
 export const agendaRow = style({
   display: "grid",
   gridTemplateColumns: "72px 1fr auto",
-  gap: 14,
+  gap: space["3.5"],
   alignItems: "baseline",
   padding: "10px 12px",
   margin: "4px 12px",
@@ -42,7 +42,7 @@ export const agendaTime = style({
 export const agendaDur = style({
   fontSize: 11,
   color: vars.muted,
-  marginTop: 2,
+  marginTop: space["0.5"],
   fontWeight: 600,
   transition: themeTransition,
 });
@@ -65,10 +65,10 @@ globalStyle(`${agendaRow} > :nth-child(2)`, {
 });
 
 export const agendaMeta = style({
-  marginTop: 4,
+  marginTop: space["1"],
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   flexWrap: "wrap",
 });
 

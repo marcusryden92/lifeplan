@@ -1,5 +1,6 @@
 "use client";
 
+import { space } from "@/lib/theme";
 import { useState } from "react";
 import { Button, ConfirmModal } from "@/components/ui";
 import { requestAccountDeletion } from "@/actions/deleteAccount";
@@ -98,7 +99,7 @@ export function DangerSection({ user }: DangerSectionProps) {
         onCancel={closeModal}
         onConfirm={handleConfirm}
         body={
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: space["3.5"] }}>
             <p style={{ margin: 0 }}>
               We&apos;ll email you a link that finalizes the deletion. The link
               expires in 30 minutes. Nothing is deleted until you click it.

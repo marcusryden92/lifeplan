@@ -1,5 +1,6 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
+  space,
   vars,
   themeTransition,
   themeDark,
@@ -16,8 +17,8 @@ const lockedShake = keyframes({
 
 
 export const progressBlock = style({
-  marginTop: 36,
-  marginBottom: 22,
+  marginTop: space["10"],
+  marginBottom: space["6"],
   height: 38,
   overflow: "hidden",
 });
@@ -38,7 +39,7 @@ export const progressMetaStrong = style({
 });
 
 export const progressTrack = style({
-  marginTop: 9,
+  marginTop: space["2.5"],
   height: 8,
   borderRadius: radii.pill,
   background: vars.rule,
@@ -62,7 +63,7 @@ export const completeRow = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 10,
+  gap: space["2.5"],
   height: "100%",
   width: "calc(50% - 24px)",
   "@media": {
@@ -73,7 +74,7 @@ export const completeRow = style({
 export const completeLeftGroup = style({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: space["2.5"],
 });
 
 export const completeCheckbox = style({
@@ -153,22 +154,22 @@ export const completeDateInputFaded = style({
 export const overviewGrid = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
-  gap: 48,
+  gap: space["12"],
   "@media": {
-    [media.tablet]: { gridTemplateColumns: "1fr", gap: 24 },
+    [media.tablet]: { gridTemplateColumns: "1fr", gap: space["6"] },
   },
 });
 
 export const leftCol = style({
   display: "flex",
   flexDirection: "column",
-  gap: 16,
+  gap: space["4"],
   minWidth: 0,
 });
 
 export const rightCol = style({
   display: "flex",
   flexDirection: "column",
-  gap: 16,
+  gap: space["4"],
   minWidth: 0,
 });

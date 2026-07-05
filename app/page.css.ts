@@ -1,5 +1,5 @@
 ﻿import { globalStyle, style } from "@vanilla-extract/css";
-import { vars, contentWidth, media, radii } from "@/lib/theme";
+import { space, vars, contentWidth, media, radii } from "@/lib/theme";
 
 
 // ---------- page chrome ----------
@@ -24,7 +24,7 @@ export const navBar = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 16,
+  gap: space["4"],
   padding: "8px clamp(12px, 1.6vw, 28px)",
   flexShrink: 0,
   "@media": {
@@ -45,7 +45,7 @@ export const navWordmark = style({
 export const navActions = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
 });
 
 // ---------- hero ----------
@@ -59,7 +59,7 @@ export const hero = style({
   isolation: "isolate",
   background: vars.paper,
   height: "calc((100vh - 29px) * 2 / 3)",
-  marginInline: 12,
+  marginInline: space["3"],
   "@media": {
     [media.mobile]: {
       borderRadius: radii.none,
@@ -78,9 +78,9 @@ export const introSection = style({
     "28px clamp(12px, 1.6vw, 28px) clamp(72px, 9vw, 120px) clamp(28px, 4vw, 80px)",
   display: "flex",
   flexDirection: "column",
-  gap: 22,
+  gap: space["6"],
   "@media": {
-    [media.mobile]: { padding: "32px 24px 64px", gap: 18 },
+    [media.mobile]: { padding: "32px 24px 64px", gap: space["5"] },
   },
 });
 
@@ -109,19 +109,19 @@ export const introSubhead = style({
   lineHeight: 1.25,
   color: vars.inkSoft,
   margin: 0,
-  marginTop: 4,
+  marginTop: space["1"],
 });
 
 export const introBody = style({
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: space["3.5"],
   fontFamily: vars.font.ui,
   fontSize: "clamp(15px, 1.15vw, 17px)",
   lineHeight: 1.6,
   color: vars.inkSoft,
   maxWidth: contentWidth.sm,
-  marginTop: 8,
+  marginTop: space["2"],
 });
 
 globalStyle(`${introBody} p`, { margin: 0 });
@@ -129,8 +129,8 @@ globalStyle(`${introBody} p`, { margin: 0 });
 export const introCta = style({
   display: "flex",
   alignItems: "center",
-  gap: 14,
-  marginTop: 12,
+  gap: space["3.5"],
+  marginTop: space["3"],
   flexWrap: "wrap",
 });
 
@@ -194,7 +194,7 @@ export const proseGrid = style({
   "@media": {
     [media.mobile]: {
       gridTemplateColumns: "1fr",
-      gap: 28,
+      gap: space["7"],
     },
   },
 });
@@ -202,7 +202,7 @@ export const proseGrid = style({
 export const proseAside = style({
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: space["3.5"],
   fontFamily: vars.font.ui,
   fontSize: 12,
   fontWeight: 600,
@@ -216,7 +216,7 @@ export const proseAside = style({
       position: "static",
       flexDirection: "row",
       alignItems: "center",
-      gap: 12,
+      gap: space["3"],
     },
   },
 });
@@ -236,7 +236,7 @@ globalStyle(`${proseNumber} span`, {
   fontWeight: 500,
   letterSpacing: "0.14em",
   color: vars.muted,
-  marginLeft: 8,
+  marginLeft: space["2"],
 });
 
 // Short horizontal hairline that ties the aside marker to the page rhythm.
@@ -266,7 +266,7 @@ export const proseHeading = style({
 export const proseBody = style({
   display: "flex",
   flexDirection: "column",
-  gap: 20,
+  gap: space["5"],
   fontFamily: vars.font.ui,
   maxWidth: 680,
 });
@@ -289,9 +289,9 @@ export const proseEmphasis = style({
   letterSpacing: "-0.015em",
   color: "currentColor",
   margin: 0,
-  marginTop: 8,
-  marginBottom: 8,
-  paddingLeft: 18,
+  marginTop: space["2"],
+  marginBottom: space["2"],
+  paddingLeft: space["5"],
   borderLeft: `2px solid ${vars.accent.primary}`,
 });
 
@@ -310,7 +310,7 @@ export const featuresHeader = style({
   marginBottom: "clamp(40px, 5vw, 64px)",
   display: "flex",
   flexDirection: "column",
-  gap: 12,
+  gap: space["3"],
 });
 
 export const featuresKicker = style({
@@ -353,7 +353,7 @@ export const featureRow = style({
   "@media": {
     [media.mobile]: {
       gridTemplateColumns: "1fr",
-      gap: 24,
+      gap: space["6"],
     },
   },
 });
@@ -391,7 +391,7 @@ globalStyle(`${featureIconWrap} svg`, { display: "block" });
 export const featureContent = style({
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: space["3.5"],
   maxWidth: contentWidth.xs,
 });
 
@@ -438,12 +438,12 @@ export const closeCard = style({
   background: vars.ink,
   color: vars.paper,
   padding: "clamp(72px, 9vw, 120px) clamp(32px, 6vw, 96px)",
-  marginInline: 12,
+  marginInline: space["3"],
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
   textAlign: "center",
-  gap: 14,
+  gap: space["3.5"],
   "@media": {
     [media.mobile]: { padding: "64px 28px", borderRadius: radii.none, marginInline: 0 },
   },
@@ -470,8 +470,8 @@ export const closeBody = style({
 
 export const closeActions = style({
   display: "flex",
-  gap: 10,
-  marginTop: 20,
+  gap: space["2.5"],
+  marginTop: space["5"],
   flexWrap: "wrap",
   justifyContent: "center",
 });
@@ -481,7 +481,7 @@ export const closeNote = style({
   fontSize: 12.5,
   color: "rgba(242,239,234,0.55)",
   margin: 0,
-  marginTop: 8,
+  marginTop: space["2"],
   letterSpacing: "0.01em",
 });
 
@@ -491,7 +491,7 @@ export const footer = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 16,
+  gap: space["4"],
   borderTop: `1px solid ${vars.rule}`,
   color: vars.muted,
   fontSize: 12,
@@ -507,7 +507,7 @@ export const footer = style({
 
 export const footerLinks = style({
   display: "flex",
-  gap: 18,
+  gap: space["5"],
 });
 
 export const footerLink = style({

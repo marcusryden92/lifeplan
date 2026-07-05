@@ -1,5 +1,5 @@
 import { createVar, style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition, radii, zIndex, media } from "@/lib/theme";
+import { space, vars, themeTransition, radii, zIndex, media } from "@/lib/theme";
 
 export const MODAL_FADE_MS = 220;
 
@@ -59,7 +59,7 @@ export const banner = style({
   flexShrink: 0,
   display: "flex",
   alignItems: "center",
-  gap: 14,
+  gap: space["3.5"],
   padding: "8px 22px",
   background: vars.ink,
   color: vars.paper,
@@ -216,8 +216,8 @@ export const paneDivider = style({
 export const paneHeader = style({
   display: "flex",
   alignItems: "baseline",
-  gap: 12,
-  marginBottom: 8,
+  gap: space["3"],
+  marginBottom: space["2"],
   flexShrink: 0,
 });
 
@@ -248,7 +248,7 @@ export const paneTab = style({
   cursor: "pointer",
   display: "inline-flex",
   alignItems: "baseline",
-  gap: 6,
+  gap: space["1.5"],
   color: vars.muted,
   transition: themeTransition,
   selectors: {
@@ -296,7 +296,7 @@ export const headerActionCluster = style({
   marginLeft: "auto",
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: space["1"],
 });
 
 // Small action button in a pane header ("Show all", "New chat", "History").
@@ -306,7 +306,7 @@ export const headerActionButton = style({
   border: "none",
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: space["1"],
   padding: "4px 8px",
   borderRadius: radii.sm,
   cursor: "pointer",
@@ -330,7 +330,7 @@ export const chatPlaceholder = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: 24,
+  padding: space["6"],
   borderRadius: radii["md+2"],
   border: `1px dashed ${vars.rule}`,
   color: vars.muted,
