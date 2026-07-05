@@ -112,6 +112,8 @@ export default function CategoriesPage() {
     selected && replace({ isStrict: !selected.isStrict });
   const handleToggleUseTimeWindows = () =>
     selected && replace({ useTimeWindows: !selected.useTimeWindows });
+  const handleToggleConfine = () =>
+    selected && replace({ confineToOwnWindows: !selected.confineToOwnWindows });
 
   // Reparenting recomputes sortOrder client-side (append to the new sibling
   // group) so we don't need a separate moveCategory server action.
@@ -203,6 +205,7 @@ export default function CategoriesPage() {
       sortOrder: siblingMax + 1,
       isStrict: false,
       useTimeWindows: false,
+      confineToOwnWindows: false,
       locationId: null,
       parentId,
       userId: "",
@@ -321,6 +324,7 @@ export default function CategoriesPage() {
               onChangeLocation={handleChangeLocation}
               onToggleStrict={handleToggleStrict}
               onToggleUseTimeWindows={handleToggleUseTimeWindows}
+              onToggleConfine={handleToggleConfine}
               onDelete={() => setDeletingId(selected.id)}
               onSelectSubCategory={setSelectedId}
               onOpenWindows={() => setWindowsOpen(true)}

@@ -13,6 +13,7 @@ export function scheduleSingleTask(
   perTemplateMasks: PerTemplateMask[],
   categories: Category[],
   plannerCategoryMap: Map<string, string | null>,
+  categoryEligibilityMap: Map<string, Set<string>>,
   currentDate: Date,
   capacityCache: Map<string, number>,
 ): {
@@ -30,6 +31,7 @@ export function scheduleSingleTask(
     categories,
     plannerCategoryMap,
     currentDate,
+    categoryEligibilityMap,
     capacityCache,
   );
 

@@ -79,21 +79,26 @@ function subtractIntervals(
 // Upper bound on the duration this specific task could ever occupy in a clean
 // week, accounting for:
 //   - templates carving the day into gap intervals,
-//   - strict categories whose categoryId differs from the task's — those
-//     subtract from any gap they overlap (the task can never use them),
-//   - if the task is categorized, the largest single window in its own
-//     category caps the result.
+//   - strict categories the task is NOT eligible for — those subtract from any
+//     gap they overlap (the task can never use them),
+//   - if the task is window-constrained, the largest single window across the
+//     categories it is eligible for caps the result.
 // Used to short-circuit TOO_LARGE at task entry before any slot-picking work.
 //
+// `eligibleCategoryIds` is the task's own effective category plus the
+// non-confined ancestors it cascades into (see buildCategoryEligibilityMap);
+// only members that actually bear windows constrain the ceiling.
+//
 // Cache is keyed by `categoryId ?? "anywhere"` because the calculation is
-// identical for all tasks that resolve to the same effective category. Caller
-// owns the cache (creates one per scheduling pass).
+// identical for all tasks that resolve to the same effective category (and thus
+// the same eligible set). Caller owns the cache (creates one per scheduling pass).
 export function maxEffectiveCapacityFor(
   task: Planner,
   perTemplateMasks: PerTemplateMask[],
   categories: Category[],
   plannerCategoryMap: Map<string, string | null>,
   currentDate: Date,
+  categoryEligibilityMap?: Map<string, Set<string>>,
   cache?: Map<string, number>,
 ): number {
   const taskCategoryId = plannerCategoryMap.get(task.id) ?? null;
@@ -101,15 +106,26 @@ export function maxEffectiveCapacityFor(
   const cached = cache?.get(cacheKey);
   if (cached !== undefined) return cached;
 
+  const eligibleCategoryIds = taskCategoryId
+    ? categoryEligibilityMap?.get(taskCategoryId)
+    : undefined;
+
+  // Window-bearing categories the task may occupy. Empty ⇒ unconstrained (the
+  // task uses free gaps only, ceiling stays Infinity).
+  const eligibleWindowCategories = eligibleCategoryIds
+    ? categories.filter((c) => eligibleCategoryIds.has(c.id))
+    : [];
+
   let categoryCeiling = Infinity;
-  if (taskCategoryId) {
-    const category = categories.find((c) => c.id === taskCategoryId);
-    if (category) {
-      categoryCeiling = largestWindowInCategory(category);
-      if (categoryCeiling === 0) {
-        cache?.set(cacheKey, 0);
-        return 0;
-      }
+  if (eligibleWindowCategories.length > 0) {
+    categoryCeiling = 0;
+    for (const category of eligibleWindowCategories) {
+      const w = largestWindowInCategory(category);
+      if (w > categoryCeiling) categoryCeiling = w;
+    }
+    if (categoryCeiling === 0) {
+      cache?.set(cacheKey, 0);
+      return 0;
     }
   }
 
@@ -123,7 +139,7 @@ export function maxEffectiveCapacityFor(
     const exclusions: Array<{ start: Date; end: Date }> = [];
     for (const cat of categories) {
       if (!cat.isStrict) continue;
-      if (cat.id === taskCategoryId) continue;
+      if (eligibleCategoryIds?.has(cat.id)) continue;
       for (const ts of cat.timeSlots) {
         const period = expandSlotForDay(ts, dayStart);
         if (period) exclusions.push(period);
@@ -165,24 +181,31 @@ export function largestCompatibleSlotForLargestTask(
   biggest: Planner | null,
   slots: Slot[],
   plannerCategoryMap: Map<string, string | null>,
+  categoryEligibilityMap: Map<string, Set<string>>,
   placementCutoffDate: Date | null | undefined,
   schedulableCategoryIds: Set<string>,
 ): number {
   if (!biggest) return 0;
 
   const rawCategoryId = plannerCategoryMap.get(biggest.id) ?? null;
-  const taskCategoryId =
-    rawCategoryId && schedulableCategoryIds.has(rawCategoryId)
-      ? rawCategoryId
-      : null;
+  // Window-bearing categories this task cascades into. Constrained only when
+  // that set is non-empty — mirrors findValidSlots / findAllFittingSlots.
+  const eligibleWindowIds = rawCategoryId
+    ? new Set(
+        Array.from(categoryEligibilityMap.get(rawCategoryId) ?? []).filter(
+          (id) => schedulableCategoryIds.has(id),
+        ),
+      )
+    : new Set<string>();
+  const constrained = eligibleWindowIds.size > 0;
   const cutoffMs = placementCutoffDate?.getTime();
 
   let largest = 0;
   for (const slot of slots) {
     if (slot.type !== "available" && slot.type !== "category") continue;
     if (cutoffMs !== undefined && slot.start.getTime() >= cutoffMs) break;
-    if (taskCategoryId) {
-      if (slot.type !== "category" || slot.categoryId !== taskCategoryId) {
+    if (constrained) {
+      if (slot.type !== "category" || !eligibleWindowIds.has(slot.categoryId)) {
         continue;
       }
     } else if (slot.type === "category" && slot.isStrictCategory) {

@@ -71,6 +71,7 @@ interface CategoryEditorProps {
   onChangeLocation: (locationId: string | null) => void;
   onToggleStrict: () => void;
   onToggleUseTimeWindows: () => void;
+  onToggleConfine: () => void;
   onDelete: () => void;
   onSelectSubCategory: (id: string) => void;
   onOpenWindows: () => void;
@@ -89,6 +90,7 @@ export function CategoryEditor({
   onChangeLocation,
   onToggleStrict,
   onToggleUseTimeWindows,
+  onToggleConfine,
   onDelete,
   onSelectSubCategory,
   onOpenWindows,
@@ -144,6 +146,9 @@ export function CategoryEditor({
   ];
 
   const currentLocation = locations.find((l) => l.id === category.locationId);
+  const parentCategory = category.parentId
+    ? categories.find((c) => c.id === category.parentId)
+    : undefined;
   const summary = [
     `${itemCount} item${itemCount === 1 ? "" : "s"}`,
     subCategories.length > 0
@@ -336,6 +341,32 @@ export function CategoryEditor({
             schedule wherever there&apos;s capacity. Turn on{" "}
             <strong>Uses time windows</strong> to add weekly windows or strict
             mode.
+          </div>
+        </div>
+      )}
+
+      {parentCategory && (
+        <div className={section}>
+          <div className={sectionTitle}>Window cascade</div>
+          <div className={strictRow}>
+            <button
+              type="button"
+              className={strictToggle}
+              data-on={category.confineToOwnWindows}
+              onClick={onToggleConfine}
+              aria-pressed={category.confineToOwnWindows}
+              aria-label="Toggle confine to own windows"
+            >
+              <span className={strictToggleThumb} />
+            </button>
+            <span className={strictLabel}>
+              {category.confineToOwnWindows ? "Confined" : "Cascades up"}
+            </span>
+          </div>
+          <div className={sectionHelp}>
+            {category.confineToOwnWindows
+              ? `Items in ${category.name} schedule only in its own windows.`
+              : `Items in ${category.name} may also schedule in ${parentCategory.name}'s windows.`}
           </div>
         </div>
       )}

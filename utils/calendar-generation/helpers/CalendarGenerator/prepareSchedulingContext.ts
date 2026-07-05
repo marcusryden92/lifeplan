@@ -22,6 +22,7 @@ export function prepareSchedulingContext(
   scheduledCategories: Category[],
   plannerLocationMap: Map<string, string | null>,
   plannerCategoryMap: Map<string, string | null>,
+  categoryEligibilityMap: Map<string, Set<string>>,
   schedulerRecorder: SchedulerRecorder | null,
   previousCalendarById?: Map<string, SimpleEvent>,
 ): SchedulingContext {
@@ -39,6 +40,7 @@ export function prepareSchedulingContext(
     categories: categoryById,
     plannerLocationMap,
     plannerCategoryMap,
+    categoryEligibilityMap,
     schedulerRecorder,
     previousCalendarById,
   };

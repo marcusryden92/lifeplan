@@ -1,6 +1,5 @@
 # P4 — Refactors / investigations
 
-- General responsiveness check
 - Category nesting in calendar / category windows
 
 # P5 — Medium features

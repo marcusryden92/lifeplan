@@ -15,6 +15,13 @@ model Category {
   // When false, other items can fill empty space in the time slots
   isStrict Boolean @default(false)
 
+  // When true, items in this category schedule only in its own windows and never
+  // cascade up into an ancestor category's windows. When false (default), a
+  // subcategory's items are also eligible for its non-confined ancestors' windows
+  // (a "project" item may use a "work" window). Also caps descendants: a confined
+  // category is the ceiling for any descendant climbing the chain.
+  confineToOwnWindows Boolean @default(false)
+
   // Optional location for this category (items without location inherit this)
   locationId String?
   location   Location? @relation(fields: [locationId], references: [id], onDelete: SetNull)

@@ -234,7 +234,7 @@
 
   ### Category system
 
-  - **Category** — hierarchical (`parentId`), with `icon`, `color`, `sortOrder`, `useTimeWindows`, `isStrict`, optional `locationId`.
+  - **Category** — hierarchical (`parentId`), with `icon`, `color`, `sortOrder`, `useTimeWindows`, `isStrict`, `confineToOwnWindows`, optional `locationId`.
   - **CategoryTimeWindow** — one row per weekly occurrence (`day` 0–6, `startTime`/`endTime` `"HH:MM"`). `categoryId` is nullable so windows can exist as unassigned drafts; the engine ignores those.
   - **CategoryEvent** — engine-materialized weekly occurrence with a composite id `` `${categoryTimeWindowId}|${YYYY-MM-DD-local}` ``. Carries `trespassingStart` / `trespassingEnd` flags stamped by the engine when its placement violated a category boundary; the renderer reads these directly for red-border display.
 
@@ -244,6 +244,13 @@
 
   - `isStrict: true` — only items belonging to this category can be scheduled in its windows. Other items are filtered out, and the capacity check subtracts the window from any overlapping gap.
   - `isStrict: false` — other items may fill empty space inside the window.
+
+  ### Window cascade (hierarchy)
+
+  An item is a member of its own category **and every ancestor** by extension: a `project` (nested under `work`) item may schedule in a `work` window, but a plain `work` item never lands in a `project` window (descendant, not ancestor). Membership is what `isStrict` gates against, so a strict `work` window still admits `project` items.
+
+  - `confineToOwnWindows: true` opts a category **out** of the upward cascade — its items schedule only in its own windows (dedicated collection time), and it becomes a ceiling for any descendant climbing the chain.
+  - The eligible window-category set per category is memoized once per engine pass by [buildCategoryEligibilityMap](utils/calendar-generation/helpers/CalendarGenerator/buildCategoryEligibilityMap.ts) (own id + non-confined ancestors up to a `confineToOwnWindows` ceiling) and threaded through `SchedulingContext`. Match sites — `findAllFittingSlots`, `maxEffectiveCapacityFor`, `largestCompatibleSlotForLargestTask` — test set membership, not id equality. The UI toggle lives in the category editor and only shows for sub-categories (no ancestor to cascade into ⇒ no effect).
 
   ### Engine messages
 
@@ -587,6 +594,7 @@
   - `add_draft_conversation` — DraftConversation: AI-assistant chat history (client-minted id, messages as Json, `@@index([userId])`, cascade delete)
   - `add_planner_sort_order` — `Planner.sortOrder` (double precision, fractional sibling key) + SQL backfill deriving per-sibling-group order from the legacy dependency chain
   - `drop_planner_dependency` — retires the `dependency` linked-list column; sibling/leaf order lives in `sortOrder`
+  - `add_category_confine_to_own_windows` — `Category.confineToOwnWindows` (default false); opts a subcategory out of the upward window cascade so its items stay pinned to its own windows
 
   Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 
