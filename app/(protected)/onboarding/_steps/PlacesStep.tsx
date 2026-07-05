@@ -111,7 +111,7 @@ export function PlacesStep({
     setBusy(true);
     setError(null);
     let currentLocations = locations;
-    const nextRows = [...rows];
+    let nextRows = [...rows];
     try {
       for (const row of toCreate) {
         const created = await locationActions.createLocation({
@@ -125,10 +125,14 @@ export function PlacesStep({
         markSynced("locations", currentLocations);
         const idx = nextRows.findIndex((r) => r.key === row.key);
         if (idx !== -1) {
-          nextRows[idx] = { ...nextRows[idx], createdId: serialized.id };
+          nextRows = nextRows.map((r, i) =>
+            i === idx ? { ...r, createdId: serialized.id } : r,
+          );
         }
+        // Persist the createdId after each success. If a later row throws, the
+        // rows already created stay marked so a retry doesn't duplicate them.
+        onRowsChange(nextRows);
       }
-      onRowsChange(nextRows);
       warmTravelTimes(currentLocations);
       onContinue();
     } catch (err) {

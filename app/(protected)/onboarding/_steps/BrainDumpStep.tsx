@@ -62,7 +62,7 @@ export function BrainDumpStep({
       stepIndex={stepIndex}
       totalSteps={totalSteps}
       title="Empty your head"
-      subtitle="Jot whatever you want to get done or make progress on. Mark each as a task, a fixed plan, or a goal. Areas, deadlines, and the details come next with the assistant."
+      subtitle="Jot whatever you want to get done or make progress on. Mark each as a task, a fixed plan, or a goal. Roles, deadlines, and the details come next with the assistant."
       onSkip={onSkip}
       footer={
         <>

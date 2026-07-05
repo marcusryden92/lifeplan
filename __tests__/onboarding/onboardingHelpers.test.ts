@@ -1,6 +1,7 @@
 import {
-  buildStarterCategories,
-  type AreaSelection,
+  buildRoleCategories,
+  reconcileRoleCategories,
+  type RoleSelection,
 } from "@/app/(protected)/onboarding/_lib/starterCategories";
 import {
   buildWeekTemplates,
@@ -10,25 +11,34 @@ import {
   type WeekFormInput,
 } from "@/app/(protected)/onboarding/_lib/weekTemplates";
 import { applyWorkCategory } from "@/app/(protected)/onboarding/_lib/workCategory";
-import { buildStarterCategories as buildAreas } from "@/app/(protected)/onboarding/_lib/starterCategories";
+import { buildRoleCategories as buildRoles } from "@/app/(protected)/onboarding/_lib/starterCategories";
 import {
+  applyBrainDump,
   buildBrainDumpRow,
   durationForType,
+  type CommittedDump,
   type DumpItem,
 } from "@/app/(protected)/onboarding/_lib/brainDumpRows";
 import { migrateProgress } from "@/app/(protected)/onboarding/_lib/onboardingProgress";
+import type { Planner } from "@/types/prisma";
+
+function candidateIdsFor(selections: RoleSelection[]): Map<string, string> {
+  return new Map(
+    selections.map((s, i) => [s.name.trim().toLowerCase(), `cand-${i}`]),
+  );
+}
 
 const USER_ID = "user-1";
 const NOW = "2026-07-05T00:00:00.000Z";
 
-describe("buildStarterCategories", () => {
-  const selections: AreaSelection[] = [
-    { key: "career", name: "Career", color: "#3b82f6" },
-    { key: "health", name: "Health", color: "#22c55e" },
+describe("buildRoleCategories", () => {
+  const selections: RoleSelection[] = [
+    { key: "professional", name: "Professional", color: "#3b82f6" },
+    { key: "self", name: "Self", color: "#22c55e" },
   ];
 
   it("builds one category per selection with onboarding defaults", () => {
-    const categories = buildStarterCategories(selections, USER_ID, NOW);
+    const categories = buildRoleCategories(selections, USER_ID, NOW);
     expect(categories).toHaveLength(2);
     for (const category of categories) {
       expect(category.userId).toBe(USER_ID);
@@ -43,18 +53,18 @@ describe("buildStarterCategories", () => {
       expect(typeof category.id).toBe("string");
       expect(category.id.length).toBeGreaterThan(0);
     }
-    expect(categories.map((c) => c.name)).toEqual(["Career", "Health"]);
+    expect(categories.map((c) => c.name)).toEqual(["Professional", "Self"]);
     expect(categories.map((c) => c.color)).toEqual(["#3b82f6", "#22c55e"]);
   });
 
   it("assigns unique ids and sequential sortOrder from the offset", () => {
-    const categories = buildStarterCategories(selections, USER_ID, NOW, 5);
+    const categories = buildRoleCategories(selections, USER_ID, NOW, 5);
     expect(categories.map((c) => c.sortOrder)).toEqual([5, 6]);
     expect(new Set(categories.map((c) => c.id)).size).toBe(2);
   });
 
-  it("trims whitespace from custom area names", () => {
-    const [category] = buildStarterCategories(
+  it("trims whitespace from custom role names", () => {
+    const [category] = buildRoleCategories(
       [{ key: "custom:reading", name: "  Reading  ", color: "#6366f1" }],
       USER_ID,
       NOW,
@@ -151,21 +161,21 @@ describe("applyWorkCategory", () => {
   };
 
   it("returns prev unchanged with no work hours", () => {
-    const prev = buildAreas([{ key: "health", name: "Health", color: "#22c55e" }], USER_ID, NOW);
+    const prev = buildRoles([{ key: "self", name: "Self", color: "#22c55e" }], USER_ID, NOW);
     expect(applyWorkCategory(prev, null, USER_ID, NOW)).toBe(prev);
     expect(
       applyWorkCategory(prev, { ...work, days: [] }, USER_ID, NOW),
     ).toBe(prev);
   });
 
-  it("creates Career and a Work sub-category with windows and useTimeWindows on", () => {
+  it("creates a Professional role and a Work sub-category with windows and useTimeWindows on", () => {
     const next = applyWorkCategory([], work, USER_ID, NOW);
-    const career = next.find((c) => c.name === "Career");
+    const professional = next.find((c) => c.name === "Professional");
     const workCat = next.find((c) => c.name === "Work");
-    expect(career).toBeDefined();
-    expect(career?.parentId).toBeNull();
+    expect(professional).toBeDefined();
+    expect(professional?.parentId).toBeNull();
     expect(workCat).toBeDefined();
-    expect(workCat?.parentId).toBe(career?.id);
+    expect(workCat?.parentId).toBe(professional?.id);
     expect(workCat?.useTimeWindows).toBe(true);
     expect(workCat?.isStrict).toBe(false);
     expect(workCat?.locationId).toBe("loc-work");
@@ -176,14 +186,14 @@ describe("applyWorkCategory", () => {
     expect(workCat?.timeSlots.every((w) => w.userId === USER_ID)).toBe(true);
   });
 
-  it("nests Work under an existing Career area instead of duplicating it", () => {
-    const prev = buildAreas(
-      [{ key: "career", name: "Career", color: "#3b82f6" }],
+  it("nests Work under an existing Professional role instead of duplicating it", () => {
+    const prev = buildRoles(
+      [{ key: "professional", name: "Professional", color: "#3b82f6" }],
       USER_ID,
       NOW,
     );
     const next = applyWorkCategory(prev, work, USER_ID, NOW);
-    expect(next.filter((c) => c.name === "Career")).toHaveLength(1);
+    expect(next.filter((c) => c.name === "Professional")).toHaveLength(1);
     const workCat = next.find((c) => c.name === "Work");
     expect(workCat?.parentId).toBe(prev[0].id);
   });
@@ -255,6 +265,195 @@ describe("buildBrainDumpRow", () => {
   });
 });
 
+describe("reconcileRoleCategories", () => {
+  const professional: RoleSelection = {
+    key: "professional",
+    name: "Professional",
+    color: "#3b82f6",
+  };
+  const self: RoleSelection = { key: "self", name: "Self", color: "#22c55e" };
+
+  it("creates categories with the supplied candidate ids and tracks them as owned", () => {
+    const selections = [professional, self];
+    const { categories, ownedIds } = reconcileRoleCategories(
+      [],
+      selections,
+      new Set(),
+      candidateIdsFor(selections),
+      USER_ID,
+      NOW,
+    );
+    expect(categories.map((c) => c.name)).toEqual(["Professional", "Self"]);
+    expect(categories.map((c) => c.id)).toEqual(["cand-0", "cand-1"]);
+    expect([...ownedIds]).toEqual(["cand-0", "cand-1"]);
+  });
+
+  it("removes an owned role the user deselected", () => {
+    const selections = [professional, self];
+    const first = reconcileRoleCategories(
+      [],
+      selections,
+      new Set(),
+      candidateIdsFor(selections),
+      USER_ID,
+      NOW,
+    );
+    const kept = [professional];
+    const second = reconcileRoleCategories(
+      first.categories,
+      kept,
+      first.ownedIds,
+      candidateIdsFor(kept),
+      USER_ID,
+      NOW,
+    );
+    expect(second.categories.map((c) => c.name)).toEqual(["Professional"]);
+    expect([...second.ownedIds]).toEqual(["cand-0"]);
+  });
+
+  it("restamps sortOrder on a post-commit reorder of owned roles", () => {
+    const selections = [professional, self];
+    const first = reconcileRoleCategories(
+      [],
+      selections,
+      new Set(),
+      candidateIdsFor(selections),
+      USER_ID,
+      NOW,
+    );
+    const reordered = [self, professional];
+    const second = reconcileRoleCategories(
+      first.categories,
+      reordered,
+      first.ownedIds,
+      candidateIdsFor(reordered),
+      USER_ID,
+      NOW,
+    );
+    const byName = new Map(second.categories.map((c) => [c.name, c.sortOrder]));
+    expect(byName.get("Self")).toBe(0);
+    expect(byName.get("Professional")).toBe(1);
+  });
+
+  it("keeps a deselected role that has children, protecting a Work category", () => {
+    const selections = [professional];
+    const first = reconcileRoleCategories(
+      [],
+      selections,
+      new Set(),
+      candidateIdsFor(selections),
+      USER_ID,
+      NOW,
+    );
+    const withWork = applyWorkCategory(
+      first.categories,
+      { start: "09:00", end: "17:00", days: WEEKDAYS, locationId: null },
+      USER_ID,
+      NOW,
+    );
+    // Deselect Professional entirely; its Work child must keep it alive.
+    const second = reconcileRoleCategories(
+      withWork,
+      [],
+      first.ownedIds,
+      new Map(),
+      USER_ID,
+      NOW,
+    );
+    expect(second.categories.some((c) => c.name === "Professional")).toBe(true);
+    expect(second.categories.some((c) => c.name === "Work")).toBe(true);
+  });
+
+  it("does not delete a pre-existing category the flow never created", () => {
+    const preexisting = buildRoles([self], USER_ID, NOW);
+    // Self is not in ownedIds; deselecting it must not remove it.
+    const { categories } = reconcileRoleCategories(
+      preexisting,
+      [],
+      new Set(),
+      new Map(),
+      USER_ID,
+      NOW,
+    );
+    expect(categories.map((c) => c.name)).toEqual(["Self"]);
+  });
+});
+
+function dumpRow(overrides: Partial<Planner> & { id: string }): Planner {
+  return buildBrainDumpRow(
+    { id: overrides.id, title: overrides.title ?? "row", type: "task" },
+    USER_ID,
+    NOW,
+  );
+}
+
+describe("applyBrainDump", () => {
+  it("appends new jots and drops removed ones with their subtrees", () => {
+    const items: DumpItem[] = [
+      { id: "a", title: "Alpha", type: "task" },
+      { id: "b", title: "Beta", type: "goal" },
+    ];
+    const committed = new Map<string, CommittedDump>();
+    const next = applyBrainDump([], items, committed, USER_ID, NOW);
+    expect(next.map((p) => p.id).sort()).toEqual(["a", "b"]);
+
+    // Drop "a"; it was committed, so it leaves.
+    const afterRemove = applyBrainDump(
+      next,
+      [items[1]],
+      new Map([
+        ["a", { title: "Alpha", type: "task" }],
+        ["b", { title: "Beta", type: "goal" }],
+      ]),
+      USER_ID,
+      NOW,
+    );
+    expect(afterRemove.map((p) => p.id)).toEqual(["b"]);
+  });
+
+  it("removes a committed goal together with its AI-attached children", () => {
+    const goal = dumpRow({ id: "g" });
+    const child: Planner = { ...dumpRow({ id: "c" }), parentId: "g" };
+    const committed = new Map<string, CommittedDump>([
+      ["g", { title: goal.title, type: "task" }],
+    ]);
+    const next = applyBrainDump([goal, child], [], committed, USER_ID, NOW);
+    expect(next).toEqual([]);
+  });
+
+  it("preserves an AI edit when the dump value is unchanged since the last commit", () => {
+    // The AI promoted "g" from task to goal, refined title and duration.
+    const aiEdited: Planner = {
+      ...dumpRow({ id: "g" }),
+      title: "Refined by AI",
+      plannerType: "goal",
+      duration: 0,
+    };
+    const items: DumpItem[] = [{ id: "g", title: "Original jot", type: "task" }];
+    const committed = new Map<string, CommittedDump>([
+      ["g", { title: "Original jot", type: "task" }],
+    ]);
+    const next = applyBrainDump([aiEdited], items, committed, USER_ID, NOW);
+    const row = next.find((p) => p.id === "g");
+    expect(row?.title).toBe("Refined by AI");
+    expect(row?.plannerType).toBe("goal");
+    expect(row?.duration).toBe(0);
+  });
+
+  it("applies a genuine dump edit over the previous commit", () => {
+    const existing = dumpRow({ id: "g" });
+    const items: DumpItem[] = [{ id: "g", title: "Renamed", type: "goal" }];
+    const committed = new Map<string, CommittedDump>([
+      ["g", { title: "row", type: "task" }],
+    ]);
+    const next = applyBrainDump([existing], items, committed, USER_ID, NOW);
+    const row = next.find((p) => p.id === "g");
+    expect(row?.title).toBe("Renamed");
+    expect(row?.plannerType).toBe("goal");
+    expect(row?.duration).toBe(0);
+  });
+});
+
 describe("migrateProgress", () => {
   it("returns null for a non-object payload", () => {
     expect(migrateProgress(null)).toBeNull();
@@ -267,11 +466,12 @@ describe("migrateProgress", () => {
       weekTemplateIds: ["t-1", "t-2"],
     });
     expect(migrated).toEqual({
-      version: 2,
+      version: 3,
       stepIndex: 5,
+      roleCommittedIds: [],
       weekTemplateIds: ["t-1", "t-2"],
       dumpItems: [],
-      dumpCommittedIds: [],
+      dumpCommitted: [],
     });
   });
 
@@ -279,7 +479,7 @@ describe("migrateProgress", () => {
     expect(migrateProgress({ stepIndex: 1 })?.stepIndex).toBe(1);
   });
 
-  it("passes a v2 payload through, defaulting missing fields", () => {
+  it("rebuilds v2 dumpCommittedIds into snapshots from the persisted jots", () => {
     const dumpItems: DumpItem[] = [{ id: "d-1", title: "Ship", type: "goal" }];
     const migrated = migrateProgress({
       version: 2,
@@ -289,23 +489,45 @@ describe("migrateProgress", () => {
       dumpCommittedIds: ["d-1"],
     });
     expect(migrated).toEqual({
-      version: 2,
+      version: 3,
       stepIndex: 4,
+      roleCommittedIds: [],
       weekTemplateIds: [],
       dumpItems,
-      dumpCommittedIds: ["d-1"],
+      dumpCommitted: [{ id: "d-1", title: "Ship", type: "goal" }],
     });
   });
 
-  it("drops non-string ids from the persisted arrays", () => {
-    const migrated = migrateProgress({
-      version: 2,
+  it("passes a v3 payload through", () => {
+    const payload = {
+      version: 3,
       stepIndex: 4,
+      roleCommittedIds: ["cat-1"],
+      weekTemplateIds: ["t-1"],
+      dumpItems: [{ id: "d-1", title: "Ship", type: "goal" }],
+      dumpCommitted: [{ id: "d-1", title: "Ship", type: "goal" }],
+    };
+    expect(migrateProgress(payload)).toEqual(payload);
+  });
+
+  it("drops non-string ids and malformed dump items", () => {
+    const migrated = migrateProgress({
+      version: 3,
+      stepIndex: 4,
+      roleCommittedIds: ["a", 2, null],
       weekTemplateIds: ["ok", 3, null],
-      dumpItems: [],
-      dumpCommittedIds: ["keep", undefined],
+      dumpItems: [
+        { id: "d-1", title: "Ok", type: "task" },
+        { id: "", title: "no id", type: "task" },
+        { id: "d-2", title: "bad type", type: "nope" },
+      ],
+      dumpCommitted: [{ id: "d-1", title: "Ok", type: "task" }, "junk"],
     });
+    expect(migrated?.roleCommittedIds).toEqual(["a"]);
     expect(migrated?.weekTemplateIds).toEqual(["ok"]);
-    expect(migrated?.dumpCommittedIds).toEqual(["keep"]);
+    expect(migrated?.dumpItems).toEqual([{ id: "d-1", title: "Ok", type: "task" }]);
+    expect(migrated?.dumpCommitted).toEqual([
+      { id: "d-1", title: "Ok", type: "task" },
+    ]);
   });
 });

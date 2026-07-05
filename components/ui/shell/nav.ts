@@ -48,7 +48,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     key: "categories",
-    label: "Categories",
+    label: "Roles",
     icon: Layers,
     href: "/categories",
     kind: "route",

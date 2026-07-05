@@ -3,11 +3,13 @@ import type { Category, CategoryTimeWindow } from "@/types/prisma";
 import type { WorkInput } from "./weekTemplates";
 
 // Work hours are modelled as time windows on a "Work" category nested under the
-// "Career" life area — not as blocking templates. That way the engine schedules
-// Career/Work tasks into those hours instead of treating work as a fixed event.
-const CAREER_NAME = "Career";
+// "Professional" role — not as blocking templates. That way the engine
+// schedules work tasks into those hours instead of treating work as a fixed
+// event. "Professional" matches the Covey role preset so the Week step reuses
+// that role instead of minting a stray one.
+const PROFESSIONAL_ROLE_NAME = "Professional";
 const WORK_NAME = "Work";
-const CAREER_COLOR = "#3b82f6";
+const PROFESSIONAL_COLOR = "#3b82f6";
 const END_OF_DAY = "23:59";
 
 function toMinutes(hhmm: string): number {
@@ -60,10 +62,11 @@ function buildWorkWindows(
   return windows;
 }
 
-// Ensures a Career area and a Work sub-category exist, rebuilding the Work
-// category's windows from the form. Find-by-name/parent keeps it idempotent
-// across Back/forward re-commits — the windows are replaced wholesale, never
-// stacked. Returns prev unchanged when there are no work hours to apply.
+// Ensures a Professional role and a Work sub-category exist, rebuilding the
+// Work category's windows from the form. Find-by-name/parent keeps it
+// idempotent across Back/forward re-commits — the windows are replaced
+// wholesale, never stacked. Returns prev unchanged when there are no work hours
+// to apply.
 export function applyWorkCategory(
   prev: Category[],
   work: WorkInput | null,
@@ -74,15 +77,17 @@ export function applyWorkCategory(
 
   const next = [...prev];
 
-  let careerIdx = next.findIndex(
-    (c) => !c.parentId && c.name.trim().toLowerCase() === CAREER_NAME.toLowerCase(),
+  let roleIdx = next.findIndex(
+    (c) =>
+      !c.parentId &&
+      c.name.trim().toLowerCase() === PROFESSIONAL_ROLE_NAME.toLowerCase(),
   );
-  if (careerIdx === -1) {
+  if (roleIdx === -1) {
     next.push({
       id: uuidv4(),
-      name: CAREER_NAME,
+      name: PROFESSIONAL_ROLE_NAME,
       icon: null,
-      color: CAREER_COLOR,
+      color: PROFESSIONAL_COLOR,
       sortOrder: next.length,
       useTimeWindows: false,
       isStrict: false,
@@ -94,13 +99,13 @@ export function applyWorkCategory(
       createdAt: nowIso,
       updatedAt: nowIso,
     });
-    careerIdx = next.length - 1;
+    roleIdx = next.length - 1;
   }
-  const careerId = next[careerIdx].id;
+  const roleId = next[roleIdx].id;
 
   const workIdx = next.findIndex(
     (c) =>
-      c.parentId === careerId &&
+      c.parentId === roleId &&
       c.name.trim().toLowerCase() === WORK_NAME.toLowerCase(),
   );
   if (workIdx === -1) {
@@ -110,12 +115,12 @@ export function applyWorkCategory(
       name: WORK_NAME,
       icon: null,
       color: null,
-      sortOrder: next.filter((c) => c.parentId === careerId).length,
+      sortOrder: next.filter((c) => c.parentId === roleId).length,
       useTimeWindows: true,
       isStrict: false,
       confineToOwnWindows: false,
       locationId: work.locationId ?? null,
-      parentId: careerId,
+      parentId: roleId,
       userId,
       timeSlots: buildWorkWindows(work, workId, userId),
       createdAt: nowIso,

@@ -202,7 +202,7 @@ export const tagline = style({
   margin: 0,
 });
 
-// Areas picker — two columns (suggestions / selected), CategoryBadge tint
+// Roles picker — two columns (suggestions / selected), CategoryBadge tint
 export const areasColumns = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
@@ -272,7 +272,17 @@ export const areaRowSelected = style({
 });
 
 export const areaRowDragging = style({
-  opacity: 0.5,
+  opacity: 0.4,
+});
+
+// Drop-position indicators, mirroring the categories rail: a 2px accent line at
+// the leading/trailing edge of the row the pointer would drop before/after.
+export const areaRowDropBefore = style({
+  boxShadow: `inset 0 2px 0 0 ${vars.accent.primary}`,
+});
+
+export const areaRowDropAfter = style({
+  boxShadow: `inset 0 -2px 0 0 ${vars.accent.primary}`,
 });
 
 export const areaRowGrip = style({

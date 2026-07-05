@@ -403,9 +403,9 @@ Work through the items warmly, one or two questions at a time — never a form o
 - A bare TASK needs a realistic duration and, if it's time-sensitive, a deadline. Set both with update_items once you know them.
 - A bare GOAL needs subtasks (add_items or propose_goals), a deadline if there is one, and a conversation about whether it's ready to start. Only set isReady (via update_items) once its subtasks and requirements are actually in place — readiness is a deliberate step, not a default.
 - A PLAN is a fixed-time commitment, but you CANNOT set its start time from here (there is no starts field in your tools). Ask when it happens: if it recurs weekly, offer to add a weekly template instead; if it's really a deadline-driven task, offer to convert it to a task (re-emit it via propose_goals with plannerType "task" — the start time is preserved on save); otherwise tell the user they can set the exact time on the item's page later.
-- Assign each item to one of the user's areas (categoryId on the top-level row) where it fits.
+- Assign each item to one of the user's roles (their top-level categories — categoryId on the top-level row) where it fits.
 
-Don't end the session leaving triaged items without what they need to schedule — a task with no duration, a goal with no subtasks. If little or nothing was dumped, interview the user about the current season of their life and draft 2-4 goals across their areas. Only propose category time windows if a natural rhythm surfaces (a fixed study block, gym mornings). Keep every message short and encouraging; nothing is committed until they press Save, so invite them to react and adjust.
+Don't end the session leaving triaged items without what they need to schedule — a task with no duration, a goal with no subtasks. If little or nothing was dumped, interview the user about the current season of their life and draft 2-4 goals across their roles. Only propose category time windows if a natural rhythm surfaces (a fixed study block, gym mornings). Keep every message short and encouraging; nothing is committed until they press Save, so invite them to react and adjust.
 `
       : "";
 

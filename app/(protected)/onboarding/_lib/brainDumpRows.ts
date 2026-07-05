@@ -1,4 +1,5 @@
 import type { Planner } from "@/types/prisma";
+import { getTaskTreeIds } from "@/utils/goalPageHandlers";
 import {
   DEFAULT_DRAFT_DURATION_MIN,
   type TriageType,
@@ -49,4 +50,59 @@ export function buildBrainDumpRow(
     createdAt: nowIso,
     updatedAt: nowIso,
   };
+}
+
+// A snapshot of what this flow last committed for a dump id — the guard that
+// keeps a re-commit from clobbering edits the AI step made to the same row.
+export type CommittedDump = { title: string; type: TriageType };
+
+// Reconciles the planner array to the current brain-dump jots. New jots are
+// appended; jots dropped since the last commit take their subtrees with them
+// (the AI step may have attached children on a Back/forward loop). An existing
+// row is patched ONLY for a field the user actually changed in the dump since
+// the last commit — measured against `committed`, not the live row — so a
+// title/type the AI refined survives a return trip through this step.
+export function applyBrainDump(
+  prev: Planner[],
+  items: DumpItem[],
+  committed: ReadonlyMap<string, CommittedDump>,
+  userId: string,
+  nowIso: string,
+): Planner[] {
+  const currentIds = new Set(items.map((it) => it.id));
+
+  let next = prev;
+  const removedIds = [...committed.keys()].filter((id) => !currentIds.has(id));
+  if (removedIds.length > 0) {
+    const toRemove = new Set(
+      removedIds.flatMap((id) => getTaskTreeIds(prev, id)),
+    );
+    next = next.filter((p) => !toRemove.has(p.id));
+  }
+
+  const byId = new Map(next.map((p) => [p.id, p] as const));
+  const appended: Planner[] = [];
+  for (const item of items) {
+    const existing = byId.get(item.id);
+    if (!existing) {
+      appended.push(buildBrainDumpRow(item, userId, nowIso));
+      continue;
+    }
+    const snapshot = committed.get(item.id);
+    const title = item.title.trim();
+    const titleChanged = !snapshot || snapshot.title !== title;
+    const typeChanged = !snapshot || snapshot.type !== item.type;
+    // Unchanged since the last commit: leave the row alone so any AI edit
+    // (retype to goal, refined duration, attached children) is preserved.
+    if (!titleChanged && !typeChanged) continue;
+    byId.set(item.id, {
+      ...existing,
+      title: titleChanged ? title : existing.title,
+      plannerType: typeChanged ? item.type : existing.plannerType,
+      duration: typeChanged ? durationForType(item.type) : existing.duration,
+      updatedAt: nowIso,
+    });
+  }
+
+  return [...next.map((p) => byId.get(p.id) ?? p), ...appended];
 }

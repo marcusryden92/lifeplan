@@ -81,7 +81,7 @@ export function OnboardingAIStep({
         <div>
           <h1 className={titleCls}>Plan your first goals with AI</h1>
           <p className={subtitleCls}>
-            Chat to draft goals across your areas, then Save &amp; continue to
+            Chat to draft goals across your roles, then Save &amp; continue to
             keep them. Nothing is added until you do.
           </p>
         </div>

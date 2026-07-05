@@ -3,20 +3,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import type { Category, EventTemplate, Planner } from "@/types/prisma";
+import type { Category, EventTemplate } from "@/types/prisma";
 import { completeOnboarding } from "@/actions/onboarding";
-import { getTaskTreeIds } from "@/utils/goalPageHandlers";
 import {
-  buildStarterCategories,
-  STARTER_AREA_PRESETS,
-  CUSTOM_AREA_COLORS,
-  type AreaSelection,
+  reconcileRoleCategories,
+  STARTER_ROLE_PRESETS,
+  CUSTOM_ROLE_COLORS,
+  type RoleSelection,
 } from "./_lib/starterCategories";
 import { buildWeekTemplates, type WeekFormInput } from "./_lib/weekTemplates";
 import { applyWorkCategory } from "./_lib/workCategory";
 import {
-  buildBrainDumpRow,
-  durationForType,
+  applyBrainDump,
+  type CommittedDump,
   type DumpItem,
 } from "./_lib/brainDumpRows";
 import {
@@ -29,7 +28,7 @@ import {
   type LocationRow,
 } from "./_components/LocationRows";
 import { WelcomeStep } from "./_steps/WelcomeStep";
-import { AreasStep } from "./_steps/AreasStep";
+import { RolesStep } from "./_steps/RolesStep";
 import { PlacesStep } from "./_steps/PlacesStep";
 import { WeekStep, type WeekUIState } from "./_steps/WeekStep";
 import { BrainDumpStep } from "./_steps/BrainDumpStep";
@@ -72,12 +71,12 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     return 0;
   });
 
-  // Prefill picked areas from existing top-level categories (returning user).
-  const [areas, setAreas] = useState<AreaSelection[]>(() =>
+  // Prefill picked roles from existing top-level categories (returning user).
+  const [roles, setRoles] = useState<RoleSelection[]>(() =>
     categories
       .filter((c) => !c.parentId)
       .map((c) => {
-        const preset = STARTER_AREA_PRESETS.find(
+        const preset = STARTER_ROLE_PRESETS.find(
           (p) => p.name.toLowerCase() === c.name.trim().toLowerCase(),
         );
         return preset
@@ -85,7 +84,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
           : {
               key: `custom:${c.name.trim().toLowerCase()}`,
               name: c.name.trim(),
-              color: c.color ?? CUSTOM_AREA_COLORS[0],
+              color: c.color ?? CUSTOM_ROLE_COLORS[0],
             };
       }),
   );
@@ -120,15 +119,24 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
 
   const [finishing, setFinishing] = useState(false);
 
-  // Ids this flow committed, so re-committing (Back/forward, or a resumed
-  // session) replaces them instead of stacking duplicates.
+  // What this flow committed, so re-committing (Back/forward, or a resumed
+  // session) reconciles instead of stacking duplicates. Roles and week track
+  // owned ids for removal/replace; the dump tracks a per-id snapshot so a
+  // re-commit only overwrites fields the user actually re-edited.
+  const roleCommittedIds = useRef<Set<string>>(new Set());
   const weekTemplateIds = useRef<Set<string>>(new Set());
-  const dumpCommittedIds = useRef<Set<string>>(new Set());
+  const dumpCommitted = useRef<Map<string, CommittedDump>>(new Map());
   useEffect(() => {
     const progress = readProgress();
     if (progress) {
+      roleCommittedIds.current = new Set(progress.roleCommittedIds);
       weekTemplateIds.current = new Set(progress.weekTemplateIds);
-      dumpCommittedIds.current = new Set(progress.dumpCommittedIds);
+      dumpCommitted.current = new Map(
+        progress.dumpCommitted.map((d) => [
+          d.id,
+          { title: d.title, type: d.type },
+        ]),
+      );
     }
   }, []);
 
@@ -138,11 +146,16 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         localStorage.setItem(
           PROGRESS_KEY,
           JSON.stringify({
-            version: 2,
+            version: 3,
             stepIndex: step,
+            roleCommittedIds: [...roleCommittedIds.current],
             weekTemplateIds: [...weekTemplateIds.current],
             dumpItems,
-            dumpCommittedIds: [...dumpCommittedIds.current],
+            dumpCommitted: [...dumpCommitted.current].map(([id, s]) => ({
+              id,
+              title: s.title,
+              type: s.type,
+            })),
           } satisfies StoredProgress),
         );
       } catch {
@@ -162,21 +175,30 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
   );
   const goBack = useCallback(() => setStepIndex((i) => Math.max(i - 1, 0)), []);
 
-  const commitAreas = useCallback(() => {
-    if (areas.length === 0) return;
+  const commitRoles = useCallback(() => {
+    if (!userId) return;
     const nowIso = new Date().toISOString();
+    // A stable candidate id per selection keeps the reconcile pure so a
+    // double-invoked updater can't mint two different ids for the same role.
+    const candidateIds = new Map(
+      roles.map((r) => [r.name.trim().toLowerCase(), uuidv4()] as const),
+    );
     updateAll(undefined, undefined, undefined, (prev) => {
-      const existing = new Set(prev.map((c) => c.name.trim().toLowerCase()));
-      const fresh = areas.filter(
-        (a) => !existing.has(a.name.trim().toLowerCase()),
+      const { categories, ownedIds } = reconcileRoleCategories(
+        prev,
+        roles,
+        roleCommittedIds.current,
+        candidateIds,
+        userId,
+        nowIso,
       );
-      if (fresh.length === 0) return prev;
-      const built = buildStarterCategories(fresh, userId, nowIso, prev.length);
-      return [...prev, ...built];
+      roleCommittedIds.current = ownedIds;
+      return categories;
     });
-  }, [areas, updateAll, userId]);
+  }, [roles, updateAll, userId]);
 
   const commitWeek = useCallback(() => {
+    if (!userId) return;
     const form: WeekFormInput = {
       sleep: week.sleepEnabled
         ? { start: week.sleepStart, end: week.sleepEnd }
@@ -191,12 +213,15 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         : null,
     };
     const nowIso = new Date().toISOString();
-    const templateUpdater = (prev: EventTemplate[]) => {
-      const kept = prev.filter((t) => !weekTemplateIds.current.has(t.id));
-      const built = buildWeekTemplates(form, userId, nowIso);
-      weekTemplateIds.current = new Set(built.map((t) => t.id));
-      return [...kept, ...built];
-    };
+    // Mint the templates and advance the owned-id set once, outside the
+    // updater, so the updater stays a pure function of its previous value.
+    const built = buildWeekTemplates(form, userId, nowIso);
+    const prevOwned = weekTemplateIds.current;
+    weekTemplateIds.current = new Set(built.map((t) => t.id));
+    const templateUpdater = (prev: EventTemplate[]) => [
+      ...prev.filter((t) => !prevOwned.has(t.id)),
+      ...built,
+    ];
     // Sleep rides as a template; work hours become windows on a Work category
     // (nested under Career). Both go in one updateAll so they share a regen.
     const categoriesUpdater = form.work
@@ -206,62 +231,37 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
   }, [week, updateAll, userId]);
 
   const commitBrainDump = useCallback(() => {
+    if (!userId) return;
     const nowIso = new Date().toISOString();
-    const currentIds = dumpItems.map((it) => it.id);
-    const currentIdSet = new Set(currentIds);
-    updatePlannerArray((prev) => {
-      // Removals: committed ids no longer in the list drop with their subtrees
-      // (the AI step may have attached children on a Back/forward loop).
-      const removedIds = [...dumpCommittedIds.current].filter(
-        (id) => !currentIdSet.has(id),
-      );
-      let next = prev;
-      if (removedIds.length > 0) {
-        const toRemove = new Set(
-          removedIds.flatMap((id) => getTaskTreeIds(prev, id)),
-        );
-        next = next.filter((p) => !toRemove.has(p.id));
-      }
-
-      // Upsert by id: patch title/type on existing rows (re-defaulting duration
-      // only when the type changed, so AI-set durations survive), append new.
-      const byId = new Map(next.map((p) => [p.id, p] as const));
-      const appended: Planner[] = [];
-      for (const item of dumpItems) {
-        const existing = byId.get(item.id);
-        if (existing) {
-          const typeChanged = existing.plannerType !== item.type;
-          byId.set(item.id, {
-            ...existing,
-            title: item.title.trim(),
-            plannerType: item.type,
-            duration: typeChanged
-              ? durationForType(item.type)
-              : existing.duration,
-            updatedAt: nowIso,
-          });
-        } else {
-          appended.push(buildBrainDumpRow(item, userId, nowIso));
-        }
-      }
-
-      dumpCommittedIds.current = new Set(currentIds);
-      return [...next.map((p) => byId.get(p.id) ?? p), ...appended];
-    });
+    const items = dumpItems;
+    const prevCommitted = dumpCommitted.current;
+    updatePlannerArray((prev) =>
+      applyBrainDump(prev, items, prevCommitted, userId, nowIso),
+    );
+    dumpCommitted.current = new Map(
+      items.map((it) => [it.id, { title: it.title.trim(), type: it.type }]),
+    );
   }, [dumpItems, updatePlannerArray, userId]);
 
   const finish = useCallback(async () => {
     setFinishing(true);
+    let stamped = false;
     try {
       await completeOnboarding();
+      stamped = true;
     } catch {
       // Don't trap the user if the stamp fails; the dashboard checklist still
       // covers resuming the individual surfaces.
     }
-    try {
-      localStorage.removeItem(PROGRESS_KEY);
-    } catch {
-      // best-effort
+    // Only clear progress once the stamp landed — otherwise the server gate
+    // re-shows onboarding on the next load, and we want it to resume where the
+    // user was (with their jots) rather than restart from scratch.
+    if (stamped) {
+      try {
+        localStorage.removeItem(PROGRESS_KEY);
+      } catch {
+        // best-effort
+      }
     }
     onComplete();
   }, [onComplete]);
@@ -279,14 +279,14 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
       );
     case 1:
       return (
-        <AreasStep
+        <RolesStep
           stepIndex={1}
           totalSteps={TOTAL_STEPS}
-          selections={areas}
-          onChange={setAreas}
+          selections={roles}
+          onChange={setRoles}
           onBack={goBack}
           onContinue={() => {
-            commitAreas();
+            commitRoles();
             goNext();
           }}
           onSkip={goNext}

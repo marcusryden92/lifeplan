@@ -55,8 +55,8 @@ export function SetupChecklist() {
 
   const items: ChecklistItem[] = [
     {
-      key: "areas",
-      label: "Pick your life areas",
+      key: "roles",
+      label: "Choose your roles",
       done: categories.length > 0,
       action: () => router.push("/categories"),
     },
