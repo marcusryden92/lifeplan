@@ -16,7 +16,7 @@ export const sidebar = style({
   background: vars.glass.bg,
   backdropFilter: backdropFilters.panel,
   WebkitBackdropFilter: backdropFilters.panel,
-  padding: "15px",
+  padding: space["4"],
   display: "flex",
   flexDirection: "column",
   gap: space["2"],
@@ -56,7 +56,7 @@ export const brandText = style({
   flex: 1,
   minWidth: 0,
   maxWidth: "100%",
-  paddingLeft: 12,
+  paddingLeft: space["3"],
   boxSizing: "border-box",
   overflow: "hidden",
   transition: collapseTransition,
@@ -119,7 +119,7 @@ export const navLabel = style({
   flex: 1,
   minWidth: 0,
   maxWidth: "100%",
-  paddingLeft: 12,
+  paddingLeft: space["3"],
   boxSizing: "border-box",
   transition: collapseTransition,
   selectors: {
@@ -169,7 +169,7 @@ export const userMenu = style([
     width: 200,
     display: "flex",
     flexDirection: "column",
-    padding: 6,
+    padding: space["1.5"],
     zIndex: 100,
   },
 ]);
@@ -177,7 +177,7 @@ export const userMenu = style([
 export const userMenuItem = style({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: space["2.5"],
   padding: "8px 10px",
   border: "none",
   borderRadius: radii.sm,
@@ -228,7 +228,7 @@ export const footerText = style({
   flex: 1,
   minWidth: 0,
   maxWidth: "100%",
-  paddingLeft: 12,
+  paddingLeft: space["3"],
   boxSizing: "border-box",
   transition: collapseTransition,
   selectors: {

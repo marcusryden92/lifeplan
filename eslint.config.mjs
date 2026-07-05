@@ -5,6 +5,7 @@ import tseslintPlugin from "@typescript-eslint/eslint-plugin";
 import reactPlugin from "eslint-plugin-react";
 import pluginNext from "@next/eslint-plugin-next";
 import jestPlugin from "eslint-plugin-jest";
+import { themeTokens } from "./eslint-local-rules/theme-tokens.mjs";
 
 export default [
   {
@@ -22,6 +23,7 @@ export default [
       ".vscode/",
       "coverage/",
       "notes/",
+      "eslint-local-rules/",
     ],
   },
   {
@@ -47,9 +49,11 @@ export default [
       "@typescript-eslint": tseslintPlugin,
       react: reactPlugin,
       "@next/next": pluginNext,
+      theme: themeTokens,
     },
     rules: {
       ...js.configs.recommended.rules,
+      "theme/no-raw-scale-values": "error",
       ...tseslintPlugin.configs.recommended.rules,
       ...tseslintPlugin.configs["recommended-type-checked"].rules,
       ...reactPlugin.configs.recommended.rules,

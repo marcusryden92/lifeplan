@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, glass, media, radii } from "@/lib/theme";
+import { space, vars, themeTransition, glass, media, radii } from "@/lib/theme";
 
 
 export const page = style({
@@ -12,11 +12,11 @@ export const page = style({
 export const subHeader = style({
   display: "flex",
   alignItems: "baseline",
-  gap: 12,
+  gap: space["3"],
   padding: "20px 28px 18px",
   flexShrink: 0,
   "@media": {
-    [media.mobile]: { padding: "16px 16px 12px", flexWrap: "wrap", gap: 10 },
+    [media.mobile]: { padding: "16px 16px 12px", flexWrap: "wrap", gap: space["2.5"] },
   },
 });
 
@@ -46,7 +46,7 @@ export const spacer = style({ flex: 1 });
 export const userBadge = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   fontFamily: vars.font.ui,
   fontSize: 11,
   color: vars.muted,
@@ -58,17 +58,19 @@ export const userBadge = style({
 export const mainGrid = style({
   display: "grid",
   gridTemplateColumns: "240px 1fr",
-  gap: 16,
+  gap: space["4"],
   padding: "0 28px 28px",
   flex: 1,
   minHeight: 0,
   "@media": {
-    [media.mobile]: {
+    [media.tablet]: {
       gridTemplateColumns: "1fr",
-      padding: "0 16px 24px",
-      gap: 14,
       flex: "0 0 auto",
       minHeight: "auto",
+    },
+    [media.mobile]: {
+      padding: "0 16px 24px",
+      gap: space["3.5"],
     },
   },
 });
@@ -76,8 +78,8 @@ export const mainGrid = style({
 export const subnav = style({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
-  paddingRight: 4,
+  gap: space["1"],
+  paddingRight: space["1"],
   overflowY: "auto",
   minHeight: 0,
 });
@@ -85,7 +87,7 @@ export const subnav = style({
 export const subnavItem = style({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: space["2.5"],
   padding: "10px 12px",
   borderRadius: radii["sm+2"],
   border: `1px solid transparent`,
@@ -132,19 +134,19 @@ export const scrollWrap = style({
   flex: 1,
   minHeight: 0,
   overflowY: "auto",
-  paddingRight: 16,
-  paddingTop: 16,
-  paddingBottom: 16,
+  paddingRight: space["4"],
+  paddingTop: space["4"],
+  paddingBottom: space["4"],
   display: "flex",
   flexDirection: "column",
-  gap: 18,
+  gap: space["5"],
 });
 
 export const sectionHead = style({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
-  paddingBottom: 12,
+  gap: space["1"],
+  paddingBottom: space["3"],
   flexShrink: 0,
 });
 
@@ -177,11 +179,11 @@ export const pinstripeRule = style({
 export const card = style([
   glass({ fill: "deep", radius: "md", shadow: "none" }),
   {
-    padding: 20,
+    padding: space["5"],
     display: "flex",
     flexDirection: "column",
-    gap: 14,
-    "@media": { [media.mobile]: { padding: 16, borderRadius: radii["md+2"] } },
+    gap: space["3.5"],
+    "@media": { [media.mobile]: { padding: space["4"], borderRadius: radii["md+2"] } },
   },
 ]);
 
@@ -198,14 +200,14 @@ export const cardTitle = style({
 export const fieldGrid = style({
   display: "grid",
   gridTemplateColumns: "repeat(2, 1fr)",
-  gap: 12,
+  gap: space["3"],
   "@media": { [media.mobile]: { gridTemplateColumns: "1fr" } },
 });
 
 export const field = style({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: space["1.5"],
 });
 
 export const fieldLabel = style({
@@ -247,7 +249,7 @@ export const fieldNote = style({
 export const rowSplit = style({
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: space["3"],
 });
 
 export const rowGrow = style({ flex: 1, minWidth: 0 });
@@ -255,7 +257,7 @@ export const rowGrow = style({ flex: 1, minWidth: 0 });
 export const toggleRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: space["3"],
 });
 
 export const toggleMain = style({ flex: 1, minWidth: 0 });
@@ -272,7 +274,7 @@ export const toggleBody = style({
   fontFamily: vars.font.ui,
   fontSize: 11.5,
   color: vars.muted,
-  marginTop: 2,
+  marginTop: space["0.5"],
   transition: themeTransition,
 });
 
@@ -312,14 +314,15 @@ export const toggleKnobOn = style({
 export const transportRow = style({
   display: "grid",
   gridTemplateColumns: "repeat(4, 1fr)",
-  gap: 6,
+  gap: space["1.5"],
+  "@media": { [media.mobile]: { gridTemplateColumns: "repeat(2, 1fr)" } },
 });
 
 export const transportBtn = style({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   padding: "12px 8px",
   borderRadius: radii["sm+2"],
   border: `1px solid ${vars.rule}`,
@@ -347,7 +350,7 @@ export const transportBtnActive = style({
 export const providerRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: space["3"],
   padding: "10px 12px",
   borderRadius: radii["sm+2"],
   border: `1px solid ${vars.rule}`,
@@ -388,7 +391,7 @@ export const providerStatus = style({
 export const footerRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   justifyContent: "flex-end",
 });
 
@@ -417,7 +420,7 @@ export const comingSoon = style({
   color: vars.muted,
   fontFamily: vars.font.ui,
   fontSize: 13,
-  gap: 6,
+  gap: space["1.5"],
 });
 
 export const comingSoonTitle = style({

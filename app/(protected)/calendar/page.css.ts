@@ -1,5 +1,6 @@
 ﻿import { style } from "@vanilla-extract/css";
 import {
+  space,
   vars,
   themeTransition,
   collapseTransition,
@@ -8,6 +9,7 @@ import {
   glass,
   media,
   radii,
+  zIndex,
 } from "@/lib/theme";
 
 
@@ -30,14 +32,17 @@ export const subHeader = style({
   // Gap matches MAIN_GRID_GAP so the action cluster's right edge lines up with
   // the calendar card's right edge (the wedge below absorbs the engine column
   // width minus this gap pair).
-  gap: 16,
+  gap: space["4"],
   padding: "20px 28px 18px",
   flexShrink: 0,
+  minWidth: 0,
   "@media": {
+    [media.tablet]: {
+      flexWrap: "wrap",
+    },
     [media.mobile]: {
       padding: "16px 16px 12px",
-      flexWrap: "wrap",
-      gap: 10,
+      gap: space["2.5"],
     },
   },
 });
@@ -66,7 +71,7 @@ export const dayHeaderStack = style({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: 1,
+  gap: space["px"],
   padding: "4px 0",
 });
 
@@ -101,18 +106,46 @@ export const dayHeaderLabelToday = style({
 
 export const navCluster = style({
   display: "flex",
-  gap: 4,
-  marginLeft: 6,
+  gap: space["1"],
+  marginLeft: space["1.5"],
 });
 
 export const spacer = style({
   flex: 1,
 });
 
+// Hovered-category chip in the header. Shrinks and truncates before it can
+// push the fixed clusters to its right out of the row.
+export const hoverChip = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: space["1.5"],
+  fontSize: 12,
+  color: vars.inkSoft,
+  fontFamily: vars.font.ui,
+  fontWeight: 600,
+  letterSpacing: "0.01em",
+  minWidth: 0,
+  flexShrink: 1,
+});
+
+export const hoverChipDot = style({
+  width: 8,
+  height: 8,
+  borderRadius: radii.pill,
+  flexShrink: 0,
+});
+
+export const hoverChipName = style({
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+});
+
 export const actionCluster = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   flexShrink: 0,
 });
 
@@ -129,12 +162,16 @@ const ENGINE_COL_INNER_PAD = 18;
 // expanded, the wedge's left edge sits on the engine column's left edge AND
 // actionCluster's right edge sits on the calendar card's right edge. With
 // SUBHEADER_FLEX_GAP === MAIN_GRID_GAP, both conditions resolve cleanly.
+// Below the laptop breakpoint the engine console is an overlay, not a docked
+// column, so there is nothing to align with — the wedge goes away entirely
+// (it is also the item whose fixed width used to push the cog off-viewport).
 export const headerConsoleSpacer = style({
   width: ENGINE_COL_WIDTH + MAIN_GRID_GAP - COG_WIDTH - SUBHEADER_FLEX_GAP * 2,
-  flexShrink: 0,
+  flexShrink: 1,
+  minWidth: 0,
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   paddingLeft: ENGINE_COL_INNER_PAD,
   overflow: "hidden",
   transition: collapseTransition,
@@ -148,14 +185,14 @@ export const headerConsoleSpacer = style({
     },
   },
   "@media": {
-    [media.mobile]: { display: "none" },
+    [media.laptop]: { display: "none" },
   },
 });
 
 export const headerEngineLabel = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   whiteSpace: "nowrap",
   opacity: 1,
   transition: collapseTransition,
@@ -214,6 +251,7 @@ export const calendarRegion = style({
 });
 
 export const mainGrid = style({
+  position: "relative",
   display: "grid",
   gridTemplateColumns: "1fr auto",
   gap: MAIN_GRID_GAP,
@@ -230,10 +268,16 @@ export const mainGrid = style({
     },
   },
   "@media": {
+    // Engine column is an absolute overlay here (out of flow), so the grid
+    // collapses to the calendar track alone.
+    [media.laptop]: {
+      gridTemplateColumns: "1fr",
+      gap: 0,
+    },
     [media.mobile]: {
       gridTemplateColumns: "1fr",
       padding: "0 16px 24px",
-      gap: 14,
+      gap: space["3.5"],
       flex: "0 0 auto",
       minHeight: "auto",
     },
@@ -274,6 +318,22 @@ export const engineCol = style({
       transition: "none",
     },
   },
+  "@media": {
+    // Between mobile and laptop there is no room for a docked 340px column
+    // next to a usable week grid — the console floats over the calendar's
+    // right edge instead. Mobile returns it to flow, stacked under the grid.
+    [media.laptop]: {
+      position: "absolute",
+      top: 0,
+      right: 28,
+      bottom: 28,
+      zIndex: zIndex.raised,
+    },
+    [media.mobile]: {
+      position: "static",
+      width: "auto",
+    },
+  },
 });
 
 export const engineContainer = style({
@@ -281,21 +341,40 @@ export const engineContainer = style({
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
-  paddingBottom: "50px",
-  paddingLeft: "16px",
+  paddingBottom: space["12"],
+  paddingLeft: space["4"],
   width: 340,
   minWidth: 340,
   boxSizing: "border-box",
+  "@media": {
+    // Panel chrome for the overlay state — floats over the calendar card.
+    [media.laptop]: {
+      padding: space["4"],
+      background: vars.paper,
+      border: `1px solid ${vars.rule}`,
+      borderRadius: radii.lg,
+      boxShadow: vars.shadow.panel,
+    },
+    [media.mobile]: {
+      width: "auto",
+      minWidth: 0,
+      padding: "0 0 24px",
+      background: "transparent",
+      border: "none",
+      borderRadius: 0,
+      boxShadow: "none",
+    },
+  },
 });
 
 export const engineHeader = style({
   padding: "0 0 14px",
   flexShrink: 0,
   borderBottom: `1px solid ${vars.rule}`,
-  marginBottom: 14,
+  marginBottom: space["3.5"],
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: space["1"],
 });
 
 export const engineTitle = style({
@@ -326,21 +405,21 @@ export const engineSummary = style({
 export const engineList = style({
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: space["2.5"],
   minHeight: 0,
   flex: 1,
   overflowY: "auto",
-  paddingRight: 4,
+  paddingRight: space["1"],
 });
 
 export const engineControls = style({
   flexShrink: 0,
-  marginTop: 14,
-  paddingTop: 14,
+  marginTop: space["3.5"],
+  paddingTop: space["3.5"],
   borderTop: `1px solid ${vars.rule}`,
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: space["3.5"],
   transition: themeTransition,
 });
 
@@ -357,14 +436,14 @@ export const engineControlsTitle = style({
 export const controlRow = style({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: space["1.5"],
 });
 
 export const controlHead = style({
   display: "flex",
   alignItems: "baseline",
   justifyContent: "space-between",
-  gap: 8,
+  gap: space["2"],
 });
 
 export const controlLabel = style({
@@ -518,13 +597,13 @@ export const engineGoToBtn = style({
 export const engineCardHead = style({
   display: "flex",
   alignItems: "flex-start",
-  gap: 8,
+  gap: space["2"],
   flexWrap: "wrap",
   // Reserve space for the absolute-positioned buttons in the top-right
   // corner (dismiss + optional go-to) so a long title wraps before it slides
   // under either. Sized for both buttons; cards without a go-to have a bit
   // of extra breathing room, which reads consistently.
-  paddingRight: 48,
+  paddingRight: space["12"],
 });
 
 export const engineTag = style({
@@ -552,7 +631,7 @@ export const engineCardTitle = style({
 export const engineCardBody = style({
   fontSize: 11.5,
   color: vars.inkSoft,
-  marginTop: 6,
+  marginTop: space["1.5"],
   lineHeight: 1.45,
   fontFamily: vars.font.ui,
   fontWeight: 500,

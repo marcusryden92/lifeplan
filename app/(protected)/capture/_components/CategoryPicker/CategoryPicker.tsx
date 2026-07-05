@@ -1,5 +1,6 @@
 "use client";
 
+import { radii } from "@/lib/theme";
 import {
   useCallback,
   useEffect,
@@ -147,7 +148,7 @@ export function CategoryPicker({
                       display: "inline-block",
                       width: 10,
                       height: 10,
-                      borderRadius: 999,
+                      borderRadius: radii["pill"],
                       border: "1px dashed currentColor",
                       opacity: 0.5,
                       flexShrink: 0,

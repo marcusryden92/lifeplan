@@ -1,11 +1,14 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
+  space,
   vars,
   themeTransition,
   interactiveTransition,
   colorMixAlpha,
   DURATIONS,
   radii,
+  media,
+  zIndex,
 } from "@/lib/theme";
 
 // Quick-shake when a locked completion checkbox is clicked. Subtle horizontal
@@ -24,7 +27,7 @@ export const rootList = style({
   minHeight: 0,
   overflowY: "auto",
   overflowX: "hidden",
-  paddingRight: 4,
+  paddingRight: space["1"],
   selectors: {
     "&::-webkit-scrollbar": { width: 6 },
     "&::-webkit-scrollbar-thumb": {
@@ -39,14 +42,14 @@ export const sublist = style({
   flexDirection: "column",
   flex: 1,
   width: "100%",
-  marginBottom: 2,
+  marginBottom: space["0.5"],
 });
 
 export const nested = style({
   // marginLeft aligns this list's left border with the parent row's chevron
   // icon center: grip (22) + grip marginRight (2) + chevron half-width (11) = 35.
-  marginLeft: 35,
-  paddingLeft: 12,
+  marginLeft: space["8"],
+  paddingLeft: space["3"],
   borderLeft: `1px solid ${vars.rule}`,
   overflow: "hidden",
   transition: `${themeTransition}, padding ${DURATIONS.collapse}s ease`,
@@ -68,7 +71,7 @@ export const itemRow = style({
 });
 
 export const itemRowWithSubtasks = style({
-  paddingBottom: 2,
+  paddingBottom: space["0.5"],
 });
 
 export const draggable = style({
@@ -129,7 +132,7 @@ export const completeBtn = style({
   justifyContent: "center",
   width: 22,
   height: 26,
-  marginRight: 2,
+  marginRight: space["0.5"],
   border: "none",
   background: "transparent",
   cursor: "pointer",
@@ -186,7 +189,7 @@ export const chevronBtn = style({
   justifyContent: "center",
   width: 22,
   height: 26,
-  marginRight: 2,
+  marginRight: space["0.5"],
   border: "none",
   background: "transparent",
   color: vars.muted,
@@ -212,7 +215,7 @@ export const gripBtn = style({
   justifyContent: "center",
   width: 22,
   height: 26,
-  marginRight: 2,
+  marginRight: space["0.5"],
   border: "none",
   background: "transparent",
   color: vars.muted,
@@ -223,6 +226,53 @@ export const gripBtn = style({
     [`${draggable}:hover &`]: { opacity: 1 },
     "&:hover": { color: vars.ink },
     "&:active": { cursor: "grabbing" },
+  },
+  // No hover on touch: the handle is always visible on mobile, where it
+  // opens the move menu instead of starting a mouse drag.
+  "@media": {
+    [media.mobile]: { opacity: 1, cursor: "pointer" },
+  },
+});
+
+export const gripWrap = style({
+  position: "relative",
+  display: "inline-flex",
+});
+
+// Touch-reorder menu anchored to the grip on mobile (the mouse drag system
+// never fires on touch). Plain popover panel; rendered only while open.
+export const moveMenu = style({
+  position: "absolute",
+  top: "100%",
+  left: 0,
+  zIndex: zIndex.floating,
+  minWidth: 170,
+  display: "flex",
+  flexDirection: "column",
+  padding: space["1"],
+  background: vars.paper,
+  border: `1px solid ${vars.rule}`,
+  borderRadius: radii["sm+2"],
+  boxShadow: vars.shadow.panelSm,
+});
+
+export const moveMenuItem = style({
+  appearance: "none",
+  border: "none",
+  background: "transparent",
+  textAlign: "left",
+  padding: "8px 10px",
+  borderRadius: radii.sm,
+  fontFamily: vars.font.ui,
+  fontSize: 12.5,
+  fontWeight: 500,
+  color: vars.ink,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  transition: interactiveTransition("background-color", "color"),
+  selectors: {
+    "&:hover:not(:disabled)": { background: vars.interactive.hoverFill },
+    "&:disabled": { color: vars.muted, cursor: "default" },
   },
 });
 
@@ -256,7 +306,7 @@ export const headerRowDragged = style({
 export const headerInner = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   flex: 1,
   minWidth: 0,
 });
@@ -306,7 +356,7 @@ export const taskTitleFocused = style({
 export const iconRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
 });
 
 export const iconBtn = style({
@@ -351,8 +401,8 @@ export const durationText = style({
   color: vars.inkSoft,
   fontVariantNumeric: "tabular-nums",
   flexShrink: 0,
-  paddingLeft: 12,
-  paddingRight: 4,
+  paddingLeft: space["3"],
+  paddingRight: space["1"],
   transition: themeTransition,
 });
 
@@ -363,7 +413,7 @@ export const durationTextFocused = style({
 export const editForm = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   flex: 1,
   minWidth: 0,
 });
@@ -405,7 +455,7 @@ export const editDurationInput = style({
 export const addSubtaskTrigger = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   border: "none",
   background: "transparent",
   fontFamily: vars.font.ui,
@@ -422,21 +472,21 @@ export const addSubtaskTrigger = style({
 });
 
 export const addRowRoot = style({
-  paddingTop: 16,
-  paddingRight: 14,
-  marginTop: 8,
+  paddingTop: space["4"],
+  paddingRight: space["3.5"],
+  marginTop: space["2"],
   borderTop: `1px solid ${vars.rule}`,
   transition: themeTransition,
 });
 
 export const addRowInline = style({
-  paddingLeft: 4,
+  paddingLeft: space["1"],
 });
 
 export const addRowForm = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
 });
 
 export const dropDivider = style({

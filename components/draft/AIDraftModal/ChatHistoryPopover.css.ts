@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, radii, zIndex, popover } from "@/lib/theme";
+import { space, vars, themeTransition, radii, zIndex, popover } from "@/lib/theme";
 
 export const menu = style([
   popover(),
@@ -8,10 +8,10 @@ export const menu = style([
     width: 280,
     maxHeight: 320,
     overflowY: "auto",
-    padding: 4,
+    padding: space["1"],
     display: "flex",
     flexDirection: "column",
-    gap: 1,
+    gap: space["px"],
   },
 ]);
 
@@ -26,7 +26,7 @@ export const stateRow = style({
 export const conversationRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 2,
+  gap: space["0.5"],
 });
 
 export const conversationButton = style({
@@ -38,7 +38,7 @@ export const conversationButton = style({
   display: "flex",
   flexDirection: "column",
   alignItems: "stretch",
-  gap: 1,
+  gap: space["px"],
   padding: "6px 8px",
   borderRadius: radii.sm,
   cursor: "pointer",

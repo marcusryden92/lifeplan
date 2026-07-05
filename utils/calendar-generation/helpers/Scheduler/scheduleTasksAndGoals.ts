@@ -34,6 +34,8 @@ export function scheduleTasksAndGoals(
 
   const plannerCategoryMap =
     context.plannerCategoryMap ?? new Map<string, string | null>();
+  const categoryEligibilityMap =
+    context.categoryEligibilityMap ?? new Map<string, Set<string>>();
   const capacityCache = new Map<string, number>();
   // `categories` is already filtered to window-bearing categories upstream
   // (CalendarGenerator.scheduledCategories) — the watermark must resolve
@@ -91,6 +93,7 @@ export function scheduleTasksAndGoals(
       biggestCandidate,
       slotManager.slots,
       plannerCategoryMap,
+      categoryEligibilityMap,
       context.placementCutoffDate,
       schedulableCategoryIds,
     );
@@ -130,6 +133,7 @@ export function scheduleTasksAndGoals(
           perTemplateMasks,
           categories,
           plannerCategoryMap,
+          categoryEligibilityMap,
           context.currentDate,
           capacityCache,
         );
@@ -152,6 +156,7 @@ export function scheduleTasksAndGoals(
           perTemplateMasks,
           categories,
           plannerCategoryMap,
+          categoryEligibilityMap,
           context.currentDate,
           capacityCache,
         );

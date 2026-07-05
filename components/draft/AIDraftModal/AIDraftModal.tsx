@@ -2,9 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { v4 as uuidv4 } from "uuid";
 import { format } from "date-fns";
-import { Button, Backdrop, Grain, ConfirmModal } from "@/components/ui";
+import {
+  Button,
+  Backdrop,
+  Grain,
+  ConfirmModal,
+  SegmentedControl,
+} from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { plannerForestToJson } from "./plannerForestToJson";
 import { JsonForestView } from "./JsonTreeView";
@@ -42,13 +49,17 @@ import { diffSubtreeHasChanges } from "./diffDraftTree";
 import {
   overlay,
   modal,
+  embeddedRoot,
   banner,
   editingLabel,
   bannerTitle,
   bannerSpacer,
   cancelButtonStyle,
   body,
+  mobilePaneSwitch,
+  paneMobileHidden,
   chatPane,
+  chatBasisVar,
   treePane,
   paneDivider,
   paneHeader,
@@ -63,6 +74,7 @@ import {
 } from "./AIDraftModal.css";
 
 type DraftPaneTab = "goals" | "week" | "windows";
+type MobilePane = "chat" | "review";
 
 export interface AIDraftFocus {
   rootId: string | null;
@@ -88,6 +100,20 @@ interface AIDraftModalProps {
   onClose: () => void;
   focus?: AIDraftFocus | null;
   initialPrompt?: string | null;
+  // Programmatic session hint (e.g. "onboarding") — forwarded to the route for
+  // a prompt preamble, and used to tune the onboarding instance (empty-state
+  // hint, no History popover, no auto-resume).
+  intent?: string | null;
+  // Embedded mode (onboarding AI step): renders inline in the host's container
+  // with no Dialog overlay and no save/cancel banner. The host drives saving
+  // via the reported `save` fn and is told when saving finished via onSaved.
+  embedded?: boolean;
+  onSaved?: () => void;
+  onStateChange?: (state: {
+    hasChanges: boolean;
+    isStreaming: boolean;
+    save: () => void;
+  }) => void;
 }
 
 export function AIDraftModal({
@@ -95,6 +121,10 @@ export function AIDraftModal({
   onClose,
   focus,
   initialPrompt,
+  intent,
+  embedded = false,
+  onSaved,
+  onStateChange,
 }: AIDraftModalProps) {
   const { planner, categories, template, locations, updateAll, userId } =
     useCalendarProvider();
@@ -104,8 +134,8 @@ export function AIDraftModal({
   const [streamStatus, setStreamStatus] = useState<string | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
 
-  const onDividerMouseDown = useCallback(
-    (e: React.MouseEvent) => {
+  const onDividerPointerDown = useCallback(
+    (e: React.PointerEvent) => {
       e.preventDefault();
       const bodyRect = bodyRef.current?.getBoundingClientRect();
       if (!bodyRect) return;
@@ -114,7 +144,7 @@ export function AIDraftModal({
       const bodyWidth = bodyRect.width;
       setIsDraggingDivider(true);
 
-      const onMove = (ev: MouseEvent) => {
+      const onMove = (ev: PointerEvent) => {
         const deltaX = ev.clientX - startX;
         const deltaPct = (deltaX / bodyWidth) * 100;
         // Clamp to keep both panes usable; matches the CSS minWidth on each.
@@ -122,14 +152,24 @@ export function AIDraftModal({
       };
       const onUp = () => {
         setIsDraggingDivider(false);
-        window.removeEventListener("mousemove", onMove);
-        window.removeEventListener("mouseup", onUp);
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
       };
-      window.addEventListener("mousemove", onMove);
-      window.addEventListener("mouseup", onUp);
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+      window.addEventListener("pointercancel", onUp);
     },
     [chatBasisPct],
   );
+
+  const onDividerKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const step =
+      e.key === "ArrowLeft" ? -4 : e.key === "ArrowRight" ? 4 : null;
+    if (step === null) return;
+    e.preventDefault();
+    setChatBasisPct((prev) => Math.max(20, Math.min(80, prev + step)));
+  }, []);
 
   const canonical = useMemo(() => plannerForestToJson(planner), [planner]);
   const canonicalTemplates = useMemo(
@@ -163,6 +203,7 @@ export function AIDraftModal({
     canonical,
     canonicalTemplates,
     canonicalWindows,
+    autoResume: intent !== "onboarding",
   });
 
   // Recompute on every working/canonical tick. Cheap: pure walks of
@@ -176,6 +217,8 @@ export function AIDraftModal({
   const goalChangeCount = diffedGoals.filter(diffSubtreeHasChanges).length;
   const templateChangeCount = countTemplateChanges(diffedTemplates);
   const windowChangeCount = countWindowChanges(diffedWindows);
+  const reviewChangeCount =
+    goalChangeCount + templateChangeCount + windowChangeCount;
 
   // Goals / Week tabs. During a stream the pane follows the assistant's work
   // (last streamed domain wins) unless the user clicked a tab this turn; the
@@ -189,10 +232,15 @@ export function AIDraftModal({
   const autoSwitchTab = useCallback((tab: DraftPaneTab) => {
     if (!tabPinnedRef.current) setActiveTab(tab);
   }, []);
+  // On mobile only one pane renders at a time (CSS hides the other); this is
+  // a render filter only — the hidden pane stays mounted so streams and
+  // working state keep flowing.
+  const [mobilePane, setMobilePane] = useState<MobilePane>("chat");
   useEffect(() => {
     if (open) {
       setActiveTab("goals");
       tabPinnedRef.current = false;
+      setMobilePane("chat");
     }
   }, [open]);
 
@@ -333,6 +381,7 @@ export function AIDraftModal({
         locations: locations.map((l) => ({ id: l.id, name: l.name })),
         // Local date, not server UTC — deadlines are user-local decisions.
         today: format(new Date(), "yyyy-MM-dd"),
+        intent,
         signal: controller.signal,
         onText: (delta) => {
           assistantText += delta;
@@ -483,6 +532,7 @@ export function AIDraftModal({
       focus,
       categories,
       locations,
+      intent,
     ],
   );
 
@@ -531,7 +581,8 @@ export function AIDraftModal({
         })
       : undefined;
     updateAll(nextPlanner, undefined, nextTemplates, nextCategories);
-    onClose();
+    if (embedded) onSaved?.();
+    else onClose();
   }, [
     workingForest,
     workingTemplates,
@@ -548,29 +599,24 @@ export function AIDraftModal({
     categories,
     updateAll,
     onClose,
+    embedded,
+    onSaved,
   ]);
 
-  return (
-    <Dialog.Root
-      open={open}
-      // Non-modal: the sidebar stays interactive while the assistant is open
-      // (theme toggle, nav). Dismissal is Esc / the Close button only.
-      modal={false}
-      onOpenChange={(next) => {
-        if (!next) requestClose();
-      }}
-    >
-      <Dialog.Overlay className={overlay} />
-      <Dialog.Content
-        className={modal}
-        aria-describedby={undefined}
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
-      >
-        <Dialog.Title className={a11yHiddenTitle}>AI Assistant</Dialog.Title>
-        <Backdrop variant="blob" />
-        <Grain />
+  // In embedded mode the host (onboarding) owns the Save action, so surface the
+  // current dirty/streaming state and a save handle it can call from its own
+  // footer.
+  useEffect(() => {
+    if (!embedded) return;
+    onStateChange?.({ hasChanges, isStreaming, save: handleSave });
+  }, [embedded, hasChanges, isStreaming, handleSave, onStateChange]);
 
+  const content = (
+    <>
+      <Backdrop variant="blob" />
+      <Grain />
+
+      {!embedded && (
         <div className={banner}>
           <span className={editingLabel}>ai assistant</span>
           <span className={bannerTitle}>{focusedGoalTitle ?? "All goals"}</span>
@@ -592,9 +638,38 @@ export function AIDraftModal({
             {hasChanges ? "Save changes" : "Save"}
           </Button>
         </div>
+      )}
+
+      <div className={mobilePaneSwitch}>
+          <SegmentedControl<MobilePane>
+            options={[
+              { key: "chat", label: "Chat" },
+              {
+                key: "review",
+                label: (
+                  <>
+                    Review
+                    {reviewChangeCount > 0 && (
+                      <span className={tabChangeCount}>
+                        {reviewChangeCount}
+                      </span>
+                    )}
+                  </>
+                ),
+              },
+            ]}
+            value={mobilePane}
+            onChange={setMobilePane}
+          />
+        </div>
 
         <div className={body} ref={bodyRef}>
-          <div className={chatPane} style={{ flex: `0 0 ${chatBasisPct}%` }}>
+          <div
+            className={`${chatPane} ${
+              mobilePane === "chat" ? "" : paneMobileHidden
+            }`}
+            style={assignInlineVars({ [chatBasisVar]: `${chatBasisPct}%` })}
+          >
             <div className={paneHeader}>
               <h2 className={paneTitle}>Chat</h2>
               <span className={paneSubtitle}>
@@ -603,12 +678,14 @@ export function AIDraftModal({
                   : "send a prompt to begin"}
               </span>
               <span className={headerActionCluster}>
-                <ChatHistoryPopover
-                  currentConversationId={conversationId}
-                  disabled={isStreaming}
-                  onAdopt={adoptConversation}
-                  onDeletedCurrent={startNewConversation}
-                />
+                {intent !== "onboarding" && (
+                  <ChatHistoryPopover
+                    currentConversationId={conversationId}
+                    disabled={isStreaming}
+                    onAdopt={adoptConversation}
+                    onDeletedCurrent={startNewConversation}
+                  />
+                )}
                 {messages.length > 0 && !isStreaming && (
                   <button
                     type="button"
@@ -626,17 +703,28 @@ export function AIDraftModal({
               onStop={handleStop}
               isStreaming={isStreaming}
               initialDraft={open ? initialPrompt ?? null : null}
+              emptyHint={
+                intent === "onboarding"
+                  ? "Ask the assistant to help — it can turn what you jotted into real goals and set the deadlines and durations they need. Nothing is saved until you continue."
+                  : undefined
+              }
             />
           </div>
           <div
             className={paneDivider}
             data-dragging={isDraggingDivider ? "true" : undefined}
-            onMouseDown={onDividerMouseDown}
+            onPointerDown={onDividerPointerDown}
+            onKeyDown={onDividerKeyDown}
             role="separator"
             aria-orientation="vertical"
             aria-label="Resize chat / tree panes"
+            tabIndex={0}
           />
-          <div className={treePane} style={{ flex: "1 1 0" }}>
+          <div
+            className={`${treePane} ${
+              mobilePane === "review" ? "" : paneMobileHidden
+            }`}
+          >
             <div className={paneHeader}>
               <button
                 type="button"
@@ -717,6 +805,7 @@ export function AIDraftModal({
           </div>
         </div>
 
+      {!embedded && (
         <ConfirmModal
           open={showDiscardConfirm}
           title="Discard changes?"
@@ -740,6 +829,33 @@ export function AIDraftModal({
             onClose();
           }}
         />
+      )}
+    </>
+  );
+
+  if (embedded) {
+    return <div className={embeddedRoot}>{content}</div>;
+  }
+
+  return (
+    <Dialog.Root
+      open={open}
+      // Non-modal: the sidebar stays interactive while the assistant is open
+      // (theme toggle, nav). Dismissal is Esc / the Close button only.
+      modal={false}
+      onOpenChange={(next) => {
+        if (!next) requestClose();
+      }}
+    >
+      <Dialog.Overlay className={overlay} />
+      <Dialog.Content
+        className={modal}
+        aria-describedby={undefined}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <Dialog.Title className={a11yHiddenTitle}>AI Assistant</Dialog.Title>
+        {content}
       </Dialog.Content>
     </Dialog.Root>
   );

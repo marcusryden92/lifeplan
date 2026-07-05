@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii } from "@/lib/theme";
 
 export const wrap = style({
   flex: 1,
@@ -8,13 +8,13 @@ export const wrap = style({
   borderRadius: radii["md+2"],
   border: `1px solid ${vars.rule}`,
   background: vars.paper,
-  padding: 10,
+  padding: space["2.5"],
   transition: themeTransition,
   userSelect: "text",
 });
 
 export const empty = style({
-  padding: 24,
+  padding: space["6"],
   color: vars.muted,
   fontFamily: vars.font.ui,
   fontSize: 12,
@@ -26,7 +26,7 @@ export const dayGroup = style({
   flexDirection: "column",
   selectors: {
     "& + &": {
-      marginTop: 10,
+      marginTop: space["2.5"],
     },
   },
 });
@@ -68,7 +68,7 @@ export const timeRange = style({
 });
 
 export const overnightMarker = style({
-  marginLeft: 3,
+  marginLeft: space["1"],
   fontSize: 9,
   fontWeight: 700,
   color: vars.muted,
@@ -100,7 +100,7 @@ export const templateTitleDeleted = style([
 export const metaCluster = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   flexShrink: 0,
 });
 

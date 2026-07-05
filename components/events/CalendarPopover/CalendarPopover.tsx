@@ -3,8 +3,9 @@
 import { type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import usePopoverPosition from "@/hooks/usePopoverPosition";
-import { popover } from "@/lib/theme";
-import { calendarPopover } from "./CalendarPopover.css";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { space, popover } from "@/lib/theme";
+import { calendarPopover, calendarPopoverSheet } from "./CalendarPopover.css";
 
 interface RenderArgs {
   startDrag: (e: React.MouseEvent) => void;
@@ -31,7 +32,7 @@ const srOnlyStyle: React.CSSProperties = {
   width: 1,
   height: 1,
   padding: 0,
-  margin: -1,
+  margin: `-${space["px"]}`,
   overflow: "hidden",
   clip: "rect(0, 0, 0, 0)",
   whiteSpace: "nowrap",
@@ -48,12 +49,22 @@ export function CalendarPopover({
   onClickOutside,
   children,
 }: CalendarPopoverProps) {
+  // The stylesheet already caps the rendered box at calc(100vw - 20px); the
+  // position math must reason about the same clamped width or narrow
+  // viewports get placements biased by a box wider than what paints.
+  const effectiveWidth =
+    typeof window === "undefined"
+      ? width
+      : Math.min(width, window.innerWidth - 20);
   const { position, isPositioned, isDragging, popoverRef, startDrag } =
     usePopoverPosition({
       eventRect: anchorRect,
-      dimensions: { width, height },
-      padding: 16,
+      dimensions: { width: effectiveWidth, height },
+      padding: space["4"],
     });
+  // Mobile skips anchored positioning entirely and presents as a bottom
+  // sheet — a floating box anchored to a tiny tile is a desktop idiom.
+  const isMobile = useIsMobile();
 
   return (
     <Dialog.Root
@@ -77,7 +88,9 @@ export function CalendarPopover({
         />
         <Dialog.Content
           ref={popoverRef}
-          className={`${popover({ size: "lg" })} ${calendarPopover}`}
+          className={`${popover({ size: "lg" })} ${calendarPopover} ${
+            isMobile ? calendarPopoverSheet : ""
+          }`}
           aria-describedby={undefined}
           onOpenAutoFocus={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => {
@@ -89,13 +102,17 @@ export function CalendarPopover({
           onPointerDownOutside={() => {
             (onClickOutside ?? onClose)();
           }}
-          style={{
-            top: `${position.top}px`,
-            left: `${position.left}px`,
-            width: `${width}px`,
-            visibility: isPositioned ? "visible" : "hidden",
-            cursor: isDragging ? "grabbing" : "auto",
-          }}
+          style={
+            isMobile
+              ? undefined
+              : {
+                  top: `${position.top}px`,
+                  left: `${position.left}px`,
+                  width: `${effectiveWidth}px`,
+                  visibility: isPositioned ? "visible" : "hidden",
+                  cursor: isDragging ? "grabbing" : "auto",
+                }
+          }
         >
           <Dialog.Title style={srOnlyStyle}>{title}</Dialog.Title>
           {children({ startDrag, close: onClose, isDragging })}

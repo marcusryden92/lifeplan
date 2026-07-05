@@ -1,5 +1,6 @@
 "use client";
 
+import { space } from "@/lib/theme";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   useEffect,
@@ -285,11 +286,11 @@ export function SearchPalette() {
               <span className={kbd}>↑</span>
               <span className={kbd}>↓</span>
               navigate ·
-              <span className={kbd} style={{ marginLeft: 6 }}>
+              <span className={kbd} style={{ marginLeft: space["1.5"] }}>
                 <CornerDownLeft size={9} strokeWidth={2.4} />
               </span>
               open ·
-              <span className={kbd} style={{ marginLeft: 6 }}>esc</span>
+              <span className={kbd} style={{ marginLeft: space["1.5"] }}>esc</span>
               close
             </span>
             <span>across items, categories, locations</span>

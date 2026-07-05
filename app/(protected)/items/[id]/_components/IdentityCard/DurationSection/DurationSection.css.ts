@@ -1,10 +1,10 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii } from "@/lib/theme";
 
 export const fieldStack = style({
   display: "flex",
   flexDirection: "column",
-  gap: 7,
+  gap: space["2"],
   minWidth: 0,
 });
 

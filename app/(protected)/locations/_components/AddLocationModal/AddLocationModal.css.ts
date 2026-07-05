@@ -1,5 +1,6 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
+  space,
   vars,
   themeTransition,
   popover,
@@ -45,7 +46,7 @@ export const modal = style([
     padding: "22px 24px",
     display: "flex",
     flexDirection: "column",
-    gap: 14,
+    gap: space["3.5"],
     fontFamily: vars.font.ui,
     color: vars.ink,
     transform: "translate(-50%, calc(-50% + 8px)) scale(0.985)",
@@ -61,7 +62,7 @@ export const modal = style([
 export const header = style({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: space["1"],
 });
 
 export const title = style({
@@ -81,7 +82,7 @@ export const subtitle = style({
 export const fieldStack = style({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: space["1.5"],
 });
 
 export const fieldLabel = style({
@@ -131,7 +132,7 @@ export const plainInput = style([formInput({ variant: "boxed" })]);
 export const selectedHint = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: space["1"],
   fontSize: 11,
   color: vars.status.success,
   fontWeight: 600,
@@ -165,9 +166,9 @@ export const errorBlock = style({
 export const footer = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   justifyContent: "flex-end",
-  marginTop: 4,
+  marginTop: space["1"],
   position: "relative",
   zIndex: 0,
 });

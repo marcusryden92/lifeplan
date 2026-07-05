@@ -1,0 +1,533 @@
+import {
+  buildRoleCategories,
+  reconcileRoleCategories,
+  type RoleSelection,
+} from "@/app/(protected)/onboarding/_lib/starterCategories";
+import {
+  buildWeekTemplates,
+  expandDailyRange,
+  ALL_WEEK_DAYS,
+  WEEKDAYS,
+  type WeekFormInput,
+} from "@/app/(protected)/onboarding/_lib/weekTemplates";
+import { applyWorkCategory } from "@/app/(protected)/onboarding/_lib/workCategory";
+import { buildRoleCategories as buildRoles } from "@/app/(protected)/onboarding/_lib/starterCategories";
+import {
+  applyBrainDump,
+  buildBrainDumpRow,
+  durationForType,
+  type CommittedDump,
+  type DumpItem,
+} from "@/app/(protected)/onboarding/_lib/brainDumpRows";
+import { migrateProgress } from "@/app/(protected)/onboarding/_lib/onboardingProgress";
+import type { Planner } from "@/types/prisma";
+
+function candidateIdsFor(selections: RoleSelection[]): Map<string, string> {
+  return new Map(
+    selections.map((s, i) => [s.name.trim().toLowerCase(), `cand-${i}`]),
+  );
+}
+
+const USER_ID = "user-1";
+const NOW = "2026-07-05T00:00:00.000Z";
+
+describe("buildRoleCategories", () => {
+  const selections: RoleSelection[] = [
+    { key: "professional", name: "Professional", color: "#3b82f6" },
+    { key: "self", name: "Self", color: "#22c55e" },
+  ];
+
+  it("builds one category per selection with onboarding defaults", () => {
+    const categories = buildRoleCategories(selections, USER_ID, NOW);
+    expect(categories).toHaveLength(2);
+    for (const category of categories) {
+      expect(category.userId).toBe(USER_ID);
+      expect(category.parentId).toBeNull();
+      expect(category.locationId).toBeNull();
+      expect(category.useTimeWindows).toBe(false);
+      expect(category.isStrict).toBe(false);
+      expect(category.confineToOwnWindows).toBe(false);
+      expect(category.timeSlots).toEqual([]);
+      expect(category.createdAt).toBe(NOW);
+      expect(category.updatedAt).toBe(NOW);
+      expect(typeof category.id).toBe("string");
+      expect(category.id.length).toBeGreaterThan(0);
+    }
+    expect(categories.map((c) => c.name)).toEqual(["Professional", "Self"]);
+    expect(categories.map((c) => c.color)).toEqual(["#3b82f6", "#22c55e"]);
+  });
+
+  it("assigns unique ids and sequential sortOrder from the offset", () => {
+    const categories = buildRoleCategories(selections, USER_ID, NOW, 5);
+    expect(categories.map((c) => c.sortOrder)).toEqual([5, 6]);
+    expect(new Set(categories.map((c) => c.id)).size).toBe(2);
+  });
+
+  it("trims whitespace from custom role names", () => {
+    const [category] = buildRoleCategories(
+      [{ key: "custom:reading", name: "  Reading  ", color: "#6366f1" }],
+      USER_ID,
+      NOW,
+    );
+    expect(category.name).toBe("Reading");
+  });
+});
+
+describe("expandDailyRange", () => {
+  it("keeps a within-day range as one block per day", () => {
+    const blocks = expandDailyRange(WEEKDAYS, "09:00", "17:00");
+    expect(blocks).toHaveLength(5);
+    for (const block of blocks) {
+      expect(block.startTime).toBe("09:00");
+      expect(block.duration).toBe(480);
+    }
+    expect(blocks.map((b) => b.startDay)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("splits a midnight-crossing range into an evening and a morning block", () => {
+    const blocks = expandDailyRange([1], "23:00", "07:00");
+    expect(blocks).toEqual([
+      { startDay: 1, startTime: "23:00", duration: 60 },
+      { startDay: 1, startTime: "00:00", duration: 420 },
+    ]);
+  });
+
+  it("drops the zero-length morning piece when the range ends at midnight", () => {
+    const blocks = expandDailyRange([2], "23:00", "00:00");
+    expect(blocks).toEqual([
+      { startDay: 2, startTime: "23:00", duration: 60 },
+    ]);
+  });
+
+  it("returns nothing for an empty day set", () => {
+    expect(expandDailyRange([], "09:00", "17:00")).toEqual([]);
+  });
+});
+
+describe("buildWeekTemplates", () => {
+  it("expands overnight sleep into 14 daily blocks", () => {
+    const input: WeekFormInput = {
+      sleep: { start: "23:00", end: "07:00" },
+      work: null,
+    };
+    const templates = buildWeekTemplates(input, USER_ID, NOW);
+    expect(templates).toHaveLength(ALL_WEEK_DAYS.length * 2);
+    expect(templates.every((t) => t.title === "Sleep")).toBe(true);
+    expect(templates.every((t) => t.locationId === null)).toBe(true);
+    expect(templates.every((t) => t.userId === USER_ID)).toBe(true);
+    const evening = templates.filter((t) => t.startTime === "23:00");
+    const morning = templates.filter((t) => t.startTime === "00:00");
+    expect(evening).toHaveLength(7);
+    expect(morning).toHaveLength(7);
+    expect(evening.every((t) => t.duration === 60)).toBe(true);
+    expect(morning.every((t) => t.duration === 420)).toBe(true);
+  });
+
+  it("ignores work hours — they become Work category windows, not templates", () => {
+    const input: WeekFormInput = {
+      sleep: null,
+      work: {
+        start: "09:00",
+        end: "17:00",
+        days: WEEKDAYS,
+        locationId: "loc-work",
+      },
+    };
+    expect(buildWeekTemplates(input, USER_ID, NOW)).toEqual([]);
+  });
+
+  it("emits nothing when both sections are disabled", () => {
+    expect(buildWeekTemplates({ sleep: null, work: null }, USER_ID, NOW)).toEqual(
+      [],
+    );
+  });
+
+  it("mints unique ids across every emitted template", () => {
+    const templates = buildWeekTemplates(
+      { sleep: { start: "23:00", end: "07:00" }, work: null },
+      USER_ID,
+      NOW,
+    );
+    expect(new Set(templates.map((t) => t.id)).size).toBe(templates.length);
+  });
+});
+
+describe("applyWorkCategory", () => {
+  const work = {
+    start: "09:00",
+    end: "17:00",
+    days: WEEKDAYS,
+    locationId: "loc-work",
+  };
+
+  it("returns prev unchanged with no work hours", () => {
+    const prev = buildRoles([{ key: "self", name: "Self", color: "#22c55e" }], USER_ID, NOW);
+    expect(applyWorkCategory(prev, null, USER_ID, NOW)).toBe(prev);
+    expect(
+      applyWorkCategory(prev, { ...work, days: [] }, USER_ID, NOW),
+    ).toBe(prev);
+  });
+
+  it("creates a Professional role and a Work sub-category with windows and useTimeWindows on", () => {
+    const next = applyWorkCategory([], work, USER_ID, NOW);
+    const professional = next.find((c) => c.name === "Professional");
+    const workCat = next.find((c) => c.name === "Work");
+    expect(professional).toBeDefined();
+    expect(professional?.parentId).toBeNull();
+    expect(workCat).toBeDefined();
+    expect(workCat?.parentId).toBe(professional?.id);
+    expect(workCat?.useTimeWindows).toBe(true);
+    expect(workCat?.isStrict).toBe(false);
+    expect(workCat?.locationId).toBe("loc-work");
+    expect(workCat?.timeSlots).toHaveLength(5);
+    expect(workCat?.timeSlots.every((w) => w.startTime === "09:00")).toBe(true);
+    expect(workCat?.timeSlots.every((w) => w.endTime === "17:00")).toBe(true);
+    expect(workCat?.timeSlots.every((w) => w.categoryId === workCat?.id)).toBe(true);
+    expect(workCat?.timeSlots.every((w) => w.userId === USER_ID)).toBe(true);
+  });
+
+  it("nests Work under an existing Professional role instead of duplicating it", () => {
+    const prev = buildRoles(
+      [{ key: "professional", name: "Professional", color: "#3b82f6" }],
+      USER_ID,
+      NOW,
+    );
+    const next = applyWorkCategory(prev, work, USER_ID, NOW);
+    expect(next.filter((c) => c.name === "Professional")).toHaveLength(1);
+    const workCat = next.find((c) => c.name === "Work");
+    expect(workCat?.parentId).toBe(prev[0].id);
+  });
+
+  it("replaces Work windows wholesale on re-apply (idempotent Back/forward)", () => {
+    const once = applyWorkCategory([], work, USER_ID, NOW);
+    const twice = applyWorkCategory(once, { ...work, days: [1, 2] }, USER_ID, NOW);
+    expect(twice.filter((c) => c.name === "Work")).toHaveLength(1);
+    const workCat = twice.find((c) => c.name === "Work");
+    expect(workCat?.timeSlots).toHaveLength(2);
+    expect(workCat?.timeSlots.map((w) => w.day).sort()).toEqual([1, 2]);
+  });
+
+  it("splits an overnight shift at midnight", () => {
+    const next = applyWorkCategory(
+      [],
+      { start: "22:00", end: "06:00", days: [1], locationId: null },
+      USER_ID,
+      NOW,
+    );
+    const workCat = next.find((c) => c.name === "Work");
+    expect(workCat?.timeSlots).toEqual([
+      expect.objectContaining({ day: 1, startTime: "22:00", endTime: "23:59" }),
+      expect.objectContaining({ day: 1, startTime: "00:00", endTime: "06:00" }),
+    ]);
+  });
+});
+
+describe("buildBrainDumpRow", () => {
+  const base: Omit<DumpItem, "type"> = { id: "row-1", title: "  Write book  " };
+
+  it("keeps the jotted id and trims the title", () => {
+    const row = buildBrainDumpRow({ ...base, type: "task" }, USER_ID, NOW);
+    expect(row.id).toBe("row-1");
+    expect(row.title).toBe("Write book");
+  });
+
+  it("stamps triaged, not-ready planning defaults for every type", () => {
+    for (const type of ["task", "plan", "goal"] as const) {
+      const row = buildBrainDumpRow({ ...base, type }, USER_ID, NOW);
+      expect(row.plannerType).toBe(type);
+      expect(row.isTriaged).toBe(true);
+      expect(row.isReady).toBe(false);
+      expect(row.parentId).toBeNull();
+      expect(row.deadline).toBeNull();
+      expect(row.starts).toBeNull();
+      expect(row.categoryId).toBeNull();
+      expect(row.locationId).toBeNull();
+      expect(row.useParentLocation).toBe(false);
+      expect(row.userId).toBe(USER_ID);
+      expect(row.createdAt).toBe(NOW);
+      expect(row.updatedAt).toBe(NOW);
+    }
+  });
+
+  it("gives tasks and plans a placeholder duration, goals zero", () => {
+    expect(durationForType("task")).toBe(30);
+    expect(durationForType("plan")).toBe(30);
+    expect(durationForType("goal")).toBe(0);
+    expect(
+      buildBrainDumpRow({ ...base, type: "task" }, USER_ID, NOW).duration,
+    ).toBe(30);
+    expect(
+      buildBrainDumpRow({ ...base, type: "plan" }, USER_ID, NOW).duration,
+    ).toBe(30);
+    expect(
+      buildBrainDumpRow({ ...base, type: "goal" }, USER_ID, NOW).duration,
+    ).toBe(0);
+  });
+});
+
+describe("reconcileRoleCategories", () => {
+  const professional: RoleSelection = {
+    key: "professional",
+    name: "Professional",
+    color: "#3b82f6",
+  };
+  const self: RoleSelection = { key: "self", name: "Self", color: "#22c55e" };
+
+  it("creates categories with the supplied candidate ids and tracks them as owned", () => {
+    const selections = [professional, self];
+    const { categories, ownedIds } = reconcileRoleCategories(
+      [],
+      selections,
+      new Set(),
+      candidateIdsFor(selections),
+      USER_ID,
+      NOW,
+    );
+    expect(categories.map((c) => c.name)).toEqual(["Professional", "Self"]);
+    expect(categories.map((c) => c.id)).toEqual(["cand-0", "cand-1"]);
+    expect([...ownedIds]).toEqual(["cand-0", "cand-1"]);
+  });
+
+  it("removes an owned role the user deselected", () => {
+    const selections = [professional, self];
+    const first = reconcileRoleCategories(
+      [],
+      selections,
+      new Set(),
+      candidateIdsFor(selections),
+      USER_ID,
+      NOW,
+    );
+    const kept = [professional];
+    const second = reconcileRoleCategories(
+      first.categories,
+      kept,
+      first.ownedIds,
+      candidateIdsFor(kept),
+      USER_ID,
+      NOW,
+    );
+    expect(second.categories.map((c) => c.name)).toEqual(["Professional"]);
+    expect([...second.ownedIds]).toEqual(["cand-0"]);
+  });
+
+  it("restamps sortOrder on a post-commit reorder of owned roles", () => {
+    const selections = [professional, self];
+    const first = reconcileRoleCategories(
+      [],
+      selections,
+      new Set(),
+      candidateIdsFor(selections),
+      USER_ID,
+      NOW,
+    );
+    const reordered = [self, professional];
+    const second = reconcileRoleCategories(
+      first.categories,
+      reordered,
+      first.ownedIds,
+      candidateIdsFor(reordered),
+      USER_ID,
+      NOW,
+    );
+    const byName = new Map(second.categories.map((c) => [c.name, c.sortOrder]));
+    expect(byName.get("Self")).toBe(0);
+    expect(byName.get("Professional")).toBe(1);
+  });
+
+  it("keeps a deselected role that has children, protecting a Work category", () => {
+    const selections = [professional];
+    const first = reconcileRoleCategories(
+      [],
+      selections,
+      new Set(),
+      candidateIdsFor(selections),
+      USER_ID,
+      NOW,
+    );
+    const withWork = applyWorkCategory(
+      first.categories,
+      { start: "09:00", end: "17:00", days: WEEKDAYS, locationId: null },
+      USER_ID,
+      NOW,
+    );
+    // Deselect Professional entirely; its Work child must keep it alive.
+    const second = reconcileRoleCategories(
+      withWork,
+      [],
+      first.ownedIds,
+      new Map(),
+      USER_ID,
+      NOW,
+    );
+    expect(second.categories.some((c) => c.name === "Professional")).toBe(true);
+    expect(second.categories.some((c) => c.name === "Work")).toBe(true);
+  });
+
+  it("does not delete a pre-existing category the flow never created", () => {
+    const preexisting = buildRoles([self], USER_ID, NOW);
+    // Self is not in ownedIds; deselecting it must not remove it.
+    const { categories } = reconcileRoleCategories(
+      preexisting,
+      [],
+      new Set(),
+      new Map(),
+      USER_ID,
+      NOW,
+    );
+    expect(categories.map((c) => c.name)).toEqual(["Self"]);
+  });
+});
+
+function dumpRow(overrides: Partial<Planner> & { id: string }): Planner {
+  return buildBrainDumpRow(
+    { id: overrides.id, title: overrides.title ?? "row", type: "task" },
+    USER_ID,
+    NOW,
+  );
+}
+
+describe("applyBrainDump", () => {
+  it("appends new jots and drops removed ones with their subtrees", () => {
+    const items: DumpItem[] = [
+      { id: "a", title: "Alpha", type: "task" },
+      { id: "b", title: "Beta", type: "goal" },
+    ];
+    const committed = new Map<string, CommittedDump>();
+    const next = applyBrainDump([], items, committed, USER_ID, NOW);
+    expect(next.map((p) => p.id).sort()).toEqual(["a", "b"]);
+
+    // Drop "a"; it was committed, so it leaves.
+    const afterRemove = applyBrainDump(
+      next,
+      [items[1]],
+      new Map([
+        ["a", { title: "Alpha", type: "task" }],
+        ["b", { title: "Beta", type: "goal" }],
+      ]),
+      USER_ID,
+      NOW,
+    );
+    expect(afterRemove.map((p) => p.id)).toEqual(["b"]);
+  });
+
+  it("removes a committed goal together with its AI-attached children", () => {
+    const goal = dumpRow({ id: "g" });
+    const child: Planner = { ...dumpRow({ id: "c" }), parentId: "g" };
+    const committed = new Map<string, CommittedDump>([
+      ["g", { title: goal.title, type: "task" }],
+    ]);
+    const next = applyBrainDump([goal, child], [], committed, USER_ID, NOW);
+    expect(next).toEqual([]);
+  });
+
+  it("preserves an AI edit when the dump value is unchanged since the last commit", () => {
+    // The AI promoted "g" from task to goal, refined title and duration.
+    const aiEdited: Planner = {
+      ...dumpRow({ id: "g" }),
+      title: "Refined by AI",
+      plannerType: "goal",
+      duration: 0,
+    };
+    const items: DumpItem[] = [{ id: "g", title: "Original jot", type: "task" }];
+    const committed = new Map<string, CommittedDump>([
+      ["g", { title: "Original jot", type: "task" }],
+    ]);
+    const next = applyBrainDump([aiEdited], items, committed, USER_ID, NOW);
+    const row = next.find((p) => p.id === "g");
+    expect(row?.title).toBe("Refined by AI");
+    expect(row?.plannerType).toBe("goal");
+    expect(row?.duration).toBe(0);
+  });
+
+  it("applies a genuine dump edit over the previous commit", () => {
+    const existing = dumpRow({ id: "g" });
+    const items: DumpItem[] = [{ id: "g", title: "Renamed", type: "goal" }];
+    const committed = new Map<string, CommittedDump>([
+      ["g", { title: "row", type: "task" }],
+    ]);
+    const next = applyBrainDump([existing], items, committed, USER_ID, NOW);
+    const row = next.find((p) => p.id === "g");
+    expect(row?.title).toBe("Renamed");
+    expect(row?.plannerType).toBe("goal");
+    expect(row?.duration).toBe(0);
+  });
+});
+
+describe("migrateProgress", () => {
+  it("returns null for a non-object payload", () => {
+    expect(migrateProgress(null)).toBeNull();
+    expect(migrateProgress("nope")).toBeNull();
+  });
+
+  it("maps a versionless AI-step payload to the new AI index and empties the dump", () => {
+    const migrated = migrateProgress({
+      stepIndex: 4,
+      weekTemplateIds: ["t-1", "t-2"],
+    });
+    expect(migrated).toEqual({
+      version: 3,
+      stepIndex: 5,
+      roleCommittedIds: [],
+      weekTemplateIds: ["t-1", "t-2"],
+      dumpItems: [],
+      dumpCommitted: [],
+    });
+  });
+
+  it("leaves an early versionless step index untouched", () => {
+    expect(migrateProgress({ stepIndex: 1 })?.stepIndex).toBe(1);
+  });
+
+  it("rebuilds v2 dumpCommittedIds into snapshots from the persisted jots", () => {
+    const dumpItems: DumpItem[] = [{ id: "d-1", title: "Ship", type: "goal" }];
+    const migrated = migrateProgress({
+      version: 2,
+      stepIndex: 4,
+      weekTemplateIds: [],
+      dumpItems,
+      dumpCommittedIds: ["d-1"],
+    });
+    expect(migrated).toEqual({
+      version: 3,
+      stepIndex: 4,
+      roleCommittedIds: [],
+      weekTemplateIds: [],
+      dumpItems,
+      dumpCommitted: [{ id: "d-1", title: "Ship", type: "goal" }],
+    });
+  });
+
+  it("passes a v3 payload through", () => {
+    const payload = {
+      version: 3,
+      stepIndex: 4,
+      roleCommittedIds: ["cat-1"],
+      weekTemplateIds: ["t-1"],
+      dumpItems: [{ id: "d-1", title: "Ship", type: "goal" }],
+      dumpCommitted: [{ id: "d-1", title: "Ship", type: "goal" }],
+    };
+    expect(migrateProgress(payload)).toEqual(payload);
+  });
+
+  it("drops non-string ids and malformed dump items", () => {
+    const migrated = migrateProgress({
+      version: 3,
+      stepIndex: 4,
+      roleCommittedIds: ["a", 2, null],
+      weekTemplateIds: ["ok", 3, null],
+      dumpItems: [
+        { id: "d-1", title: "Ok", type: "task" },
+        { id: "", title: "no id", type: "task" },
+        { id: "d-2", title: "bad type", type: "nope" },
+      ],
+      dumpCommitted: [{ id: "d-1", title: "Ok", type: "task" }, "junk"],
+    });
+    expect(migrated?.roleCommittedIds).toEqual(["a"]);
+    expect(migrated?.weekTemplateIds).toEqual(["ok"]);
+    expect(migrated?.dumpItems).toEqual([{ id: "d-1", title: "Ok", type: "task" }]);
+    expect(migrated?.dumpCommitted).toEqual([
+      { id: "d-1", title: "Ok", type: "task" },
+    ]);
+  });
+});

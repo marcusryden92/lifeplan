@@ -133,6 +133,14 @@ export interface SchedulingContext {
   /** Effective planner -> categoryId map (resolved by walking up parent chain) */
   plannerCategoryMap?: Map<string, string | null>;
   /**
+   * categoryId -> set of category ids whose windows that category's items may
+   * occupy (itself + non-confined ancestors, up to a confineToOwnWindows
+   * ceiling). Built once per pass from the full category list; the match sites
+   * intersect against the window-bearing categories. See
+   * buildCategoryEligibilityMap.
+   */
+  categoryEligibilityMap?: Map<string, Set<string>>;
+  /**
    * Optional per-task recorder for dynamic scheduling traces (mirrors the
    * staticEventTravelPass recorder). When attached, every scheduleTask
    * call appends a record describing the decision branching, actions

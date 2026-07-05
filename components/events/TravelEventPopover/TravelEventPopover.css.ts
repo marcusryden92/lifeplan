@@ -1,5 +1,5 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { vars, colorMixAlpha, radii, borderWidth } from "@/lib/theme";
+import { space, vars, colorMixAlpha, radii, borderWidth } from "@/lib/theme";
 
 // Mirrors the drag state CalendarPopover exposes via its render prop.
 export const headerCursor = styleVariants({
@@ -26,7 +26,7 @@ export const travelTitle = style({
   cursor: "default",
   display: "inline-flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
 });
 
 export const titleIcon = style({
@@ -41,7 +41,7 @@ export const mutedText = style({
 export const estimateRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   fontSize: 12,
   color: vars.inkSoft,
   fontFamily: vars.font.ui,
@@ -55,7 +55,7 @@ export const estimateValue = style({
 const alertBoxBase = style({
   display: "flex",
   alignItems: "flex-start",
-  gap: 10,
+  gap: space["2.5"],
   padding: "10px 12px",
   borderRadius: radii["sm+2"],
 });
@@ -78,7 +78,7 @@ export const alertBox = styleVariants({
 });
 
 export const alertIcon = style({
-  marginTop: 1,
+  marginTop: space["px"],
   flexShrink: 0,
 });
 
@@ -92,7 +92,7 @@ export const alertText = style({
 export const footerActions = style({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
-  paddingTop: 8,
+  gap: space["0.5"],
+  paddingTop: space["2"],
   borderTop: `${borderWidth.hairline}px solid ${vars.rule}`,
 });

@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, backdropFilters, media, radii } from "@/lib/theme";
+import { space, vars, themeTransition, backdropFilters, media, radii } from "@/lib/theme";
 
 
 // Deliberately does NOT use the glass() recipe: a parent backdrop-filter
@@ -10,6 +10,10 @@ import { vars, themeTransition, backdropFilters, media, radii } from "@/lib/them
 // anyway since the agendaList content covers the body.
 export const leftCard = style({
   position: "relative",
+  // Contain the sticky header's high z-index within the card. Without a
+  // stacking context here, leftCardHeader's zIndex:100 leaks to the app level
+  // and paints over the AI assistant overlay (zIndex.floating).
+  isolation: "isolate",
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
@@ -44,7 +48,7 @@ export const leftCardHeader = style({
   display: "flex",
   alignItems: "baseline",
   justifyContent: "space-between",
-  gap: 12,
+  gap: space["3"],
   transition: themeTransition,
   "@media": {
     [media.mobile]: {
@@ -67,8 +71,8 @@ export const leftCardTitle = style({
 export const agendaList = style({
   flex: 1,
   overflow: "auto",
-  paddingTop: 78,
-  marginBottom: 8,
+  paddingTop: space["20"],
+  marginBottom: space["2"],
   selectors: {
     "&::-webkit-scrollbar": {
       width: 7,
@@ -105,7 +109,7 @@ export const agendaEmpty = style({
 // then the group sub-headers inside. Distinct visual weight clears up the
 // "is this a section or just another group?" ambiguity.
 export const agendaSection = style({
-  marginTop: 14,
+  marginTop: space["3.5"],
   ":first-child": {
     marginTop: 0,
   },
@@ -114,11 +118,11 @@ export const agendaSection = style({
 export const agendaSectionHeader = style({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: space["2.5"],
   padding: "10px 0",
-  marginLeft: 12,
-  marginRight: 12,
-  marginBottom: 14,
+  marginLeft: space["3"],
+  marginRight: space["3"],
+  marginBottom: space["3.5"],
 });
 
 export const agendaSectionHeaderText = style({
@@ -146,12 +150,12 @@ export const agendaGroup = style({
 export const agendaGroupHeader = style({
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   padding: "10px 0 6px",
-  marginLeft: 12,
-  marginRight: 12,
+  marginLeft: space["3"],
+  marginRight: space["3"],
   borderBottom: `1px solid ${vars.rule}`,
-  marginBottom: 10,
+  marginBottom: space["2.5"],
 });
 
 export const agendaGroupHeaderText = style({

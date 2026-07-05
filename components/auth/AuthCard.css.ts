@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { space, vars, themeTransition } from "@/lib/theme";
 
 // Flat form stack. The formPanel already paints paper; the auth content
 // sits directly on it with no chrome, mirroring the landing's editorial
@@ -8,7 +8,7 @@ export const card = style({
   width: "min(420px, calc(100vw - 32px))",
   display: "flex",
   flexDirection: "column",
-  gap: 20,
+  gap: space["5"],
   color: vars.ink,
   fontFamily: vars.font.ui,
   position: "relative",
@@ -17,8 +17,8 @@ export const card = style({
 export const brandRow = style({
   display: "flex",
   flexDirection: "column",
-  gap: 8,
-  marginBottom: 8,
+  gap: space["2"],
+  marginBottom: space["2"],
 });
 
 // Small wordmark — eyebrow-style label above the headline, matching the
@@ -50,19 +50,19 @@ export const subtitle = style({
   fontSize: 13,
   color: vars.inkSoft,
   lineHeight: 1.5,
-  marginTop: 2,
+  marginTop: space["0.5"],
 });
 
 export const body = style({
   display: "flex",
   flexDirection: "column",
-  gap: 12,
+  gap: space["3"],
 });
 
 export const divider = style({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: space["2.5"],
   margin: "4px 0",
 });
 
@@ -86,11 +86,11 @@ export const altRow = style({
   textAlign: "center",
   fontSize: 12,
   color: vars.muted,
-  marginTop: 2,
+  marginTop: space["0.5"],
 });
 
 export const altLink = style({
-  marginLeft: 6,
+  marginLeft: space["1.5"],
   color: vars.ink,
   fontWeight: 600,
   textDecoration: "none",

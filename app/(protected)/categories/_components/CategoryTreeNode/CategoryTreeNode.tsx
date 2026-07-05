@@ -157,7 +157,11 @@ export function CategoryTreeNode({
           role="button"
           tabIndex={-1}
           className={railRowAddChild}
-          aria-label={`Add sub-category to ${node.name}`}
+          aria-label={
+            depth === 0
+              ? `Add category to ${node.name}`
+              : `Add sub-category to ${node.name}`
+          }
           onClick={(e) => {
             e.stopPropagation();
             onAddChild(node.id);

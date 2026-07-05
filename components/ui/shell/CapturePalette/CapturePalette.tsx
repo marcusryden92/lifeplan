@@ -1,5 +1,6 @@
 "use client";
 
+import { space } from "@/lib/theme";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -119,7 +120,7 @@ export function CapturePalette() {
           <div className={hintsRow} style={{ justifyContent: "flex-end" }}>
             <Button variant="glass" size="sm" onClick={() => setOpen(false)}>
               Cancel
-              <Kbd style={{ marginLeft: 8 }}>esc</Kbd>
+              <Kbd style={{ marginLeft: space["2"] }}>esc</Kbd>
             </Button>
             <Button
               variant="glass"
@@ -128,12 +129,12 @@ export function CapturePalette() {
               disabled={!canSubmit}
             >
               Save & triage
-              <Kbd style={{ marginLeft: 8 }}>
+              <Kbd style={{ marginLeft: space["2"] }}>
                 {modKey}
                 <CornerDownLeft
                   size={11}
                   strokeWidth={2.4}
-                  style={{ marginLeft: 3 }}
+                  style={{ marginLeft: space["1"] }}
                 />
               </Kbd>
             </Button>
@@ -144,7 +145,7 @@ export function CapturePalette() {
               disabled={!canSubmit}
             >
               Save
-              <Kbd style={{ marginLeft: 8 }}>
+              <Kbd style={{ marginLeft: space["2"] }}>
                 <CornerDownLeft size={11} strokeWidth={2.4} />
               </Kbd>
             </Button>

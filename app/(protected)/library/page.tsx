@@ -1,5 +1,6 @@
 "use client";
 
+import { space } from "@/lib/theme";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -434,7 +435,7 @@ export default function LibraryPage() {
             {categoryTree.length === 0 ? (
               <div
                 style={{
-                  padding: "8px",
+                  padding: space["2"],
                   fontSize: 12.5,
                   color: vars.muted,
                 }}
@@ -468,7 +469,7 @@ export default function LibraryPage() {
                   key={i}
                   style={{
                     display: "inline-flex",
-                    gap: 8,
+                    gap: space["2"],
                     alignItems: "center",
                   }}
                 >

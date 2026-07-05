@@ -9,7 +9,7 @@ import {
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Check, SquarePen } from "lucide-react";
 import { Button, Caption, Loader } from "@/components/ui";
-import { vars, interactiveTransition } from "@/lib/theme";
+import { space, vars, interactiveTransition } from "@/lib/theme";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
 import { useFlashValue } from "@/hooks/useFlashAnimation";
@@ -195,7 +195,7 @@ export default function ItemDetailLayout({
               <ArrowLeft size={12} strokeWidth={2.4} />
               Library
             </button>
-            <p style={{ marginTop: 14 }}>
+            <p style={{ marginTop: space["3.5"] }}>
               <Caption>Item not found.</Caption>
             </p>
           </div>

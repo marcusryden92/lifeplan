@@ -112,6 +112,8 @@ export default function CategoriesPage() {
     selected && replace({ isStrict: !selected.isStrict });
   const handleToggleUseTimeWindows = () =>
     selected && replace({ useTimeWindows: !selected.useTimeWindows });
+  const handleToggleConfine = () =>
+    selected && replace({ confineToOwnWindows: !selected.confineToOwnWindows });
 
   // Reparenting recomputes sortOrder client-side (append to the new sibling
   // group) so we don't need a separate moveCategory server action.
@@ -197,12 +199,13 @@ export default function CategoriesPage() {
       .reduce((max, c) => Math.max(max, c.sortOrder), -1);
     const created: Category = {
       id,
-      name: parentId ? "New sub-category" : "New category",
+      name: parentId ? "New category" : "New role",
       icon: null,
       color: swatch,
       sortOrder: siblingMax + 1,
       isStrict: false,
       useTimeWindows: false,
+      confineToOwnWindows: false,
       locationId: null,
       parentId,
       userId: "",
@@ -226,16 +229,18 @@ export default function CategoriesPage() {
     });
   };
 
-  const deletingName = deletingId
-    ? categories.find((c) => c.id === deletingId)?.name ?? "this category"
-    : "";
+  const deletingCategory = deletingId
+    ? categories.find((c) => c.id === deletingId)
+    : undefined;
+  const deletingName = deletingCategory?.name ?? "this role";
+  const deletingIsRole = deletingCategory ? !deletingCategory.parentId : true;
 
   return (
     <div className={page}>
       <div className={subHeader}>
-        <h1 className={pageTitle}>Categories</h1>
+        <h1 className={pageTitle}>Roles</h1>
         <span className={titleSummary}>
-          {categories.length} categor{categories.length === 1 ? "y" : "ies"} ·{" "}
+          {tree.length} role{tree.length === 1 ? "" : "s"} ·{" "}
           {planner.filter((i) => !i.parentId && i.categoryId).length} categorized
         </span>
       </div>
@@ -244,7 +249,7 @@ export default function CategoriesPage() {
 
       <div className={mainGrid}>
         <aside className={rail}>
-          <div className={railHead}>Categories</div>
+          <div className={railHead}>Roles</div>
           <div className={railBody}>
             {!isLoaded ? (
               <div
@@ -257,7 +262,7 @@ export default function CategoriesPage() {
                   padding: "16px 8px",
                 }}
               >
-                <Loader size="md" label="Loading categories" />
+                <Loader size="md" label="Loading roles" />
               </div>
             ) : tree.length === 0 ? (
               <div
@@ -267,7 +272,7 @@ export default function CategoriesPage() {
                   color: vars.muted,
                 }}
               >
-                No categories yet — create one.
+                No roles yet — create one.
               </div>
             ) : (
               tree.map((node) => (
@@ -297,7 +302,7 @@ export default function CategoriesPage() {
               onClick={() => handleCreate()}
             >
               <Plus size={13} strokeWidth={2.4} />
-              New category
+              New role
             </button>
           </div>
         </aside>
@@ -305,7 +310,7 @@ export default function CategoriesPage() {
         <section className={mainCard}>
           {!isLoaded ? (
             <div className={emptyMain}>
-              <Loader size="md" label="Loading categories" />
+              <Loader size="md" label="Loading roles" />
             </div>
           ) : selected ? (
             <CategoryEditor
@@ -321,13 +326,14 @@ export default function CategoriesPage() {
               onChangeLocation={handleChangeLocation}
               onToggleStrict={handleToggleStrict}
               onToggleUseTimeWindows={handleToggleUseTimeWindows}
+              onToggleConfine={handleToggleConfine}
               onDelete={() => setDeletingId(selected.id)}
               onSelectSubCategory={setSelectedId}
               onOpenWindows={() => setWindowsOpen(true)}
             />
           ) : (
             <div className={emptyMain}>
-              Pick a category from the left, or create a new one to begin.
+              Pick a role from the left, or create a new one to begin.
             </div>
           )}
         </section>
@@ -342,14 +348,14 @@ export default function CategoriesPage() {
 
       <ConfirmModal
         open={!!deletingId}
-        title="Delete category?"
+        title={deletingIsRole ? "Delete role?" : "Delete category?"}
         tone="danger"
         confirmLabel="Delete"
         body={
           <>
             <p style={{ margin: 0 }}>
-              Delete &ldquo;{deletingName}&rdquo;? This also deletes all
-              sub-categories. Items in this category become uncategorized.
+              Delete &ldquo;{deletingName}&rdquo;? This also deletes everything
+              nested under it. Items in it become uncategorized.
             </p>
           </>
         }

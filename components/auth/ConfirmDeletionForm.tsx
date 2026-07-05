@@ -1,5 +1,6 @@
 "use client";
 
+import { space } from "@/lib/theme";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
@@ -70,7 +71,7 @@ export function ConfirmDeletionForm() {
       )}
 
       {token && sessionStatus === "authenticated" && !done && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: space["3"] }}>
           <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
             Clicking below permanently deletes your account and every planner,
             category, location, template, and calendar event tied to it. There

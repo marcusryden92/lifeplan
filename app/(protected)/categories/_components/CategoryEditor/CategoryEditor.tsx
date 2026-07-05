@@ -71,6 +71,7 @@ interface CategoryEditorProps {
   onChangeLocation: (locationId: string | null) => void;
   onToggleStrict: () => void;
   onToggleUseTimeWindows: () => void;
+  onToggleConfine: () => void;
   onDelete: () => void;
   onSelectSubCategory: (id: string) => void;
   onOpenWindows: () => void;
@@ -89,6 +90,7 @@ export function CategoryEditor({
   onChangeLocation,
   onToggleStrict,
   onToggleUseTimeWindows,
+  onToggleConfine,
   onDelete,
   onSelectSubCategory,
   onOpenWindows,
@@ -109,6 +111,19 @@ export function CategoryEditor({
 
   const color = category.color || FALLBACK_COLOR;
   const initial = category.name.charAt(0).toUpperCase() || "?";
+
+  // Top-level categories are "roles"; nested ones stay "categories" (with
+  // "sub-category" for a category's own children).
+  const isRole = !category.parentId;
+  const selfNoun = isRole ? "role" : "category";
+  const childCountLabel =
+    subCategories.length === 1
+      ? isRole
+        ? "category"
+        : "sub-category"
+      : isRole
+        ? "categories"
+        : "sub-categories";
 
   const parentOptions = [
     { value: null as string | null, label: <Caption>Top-level</Caption> },
@@ -144,10 +159,13 @@ export function CategoryEditor({
   ];
 
   const currentLocation = locations.find((l) => l.id === category.locationId);
+  const parentCategory = category.parentId
+    ? categories.find((c) => c.id === category.parentId)
+    : undefined;
   const summary = [
     `${itemCount} item${itemCount === 1 ? "" : "s"}`,
     subCategories.length > 0
-      ? `${subCategories.length} sub-categor${subCategories.length === 1 ? "y" : "ies"}`
+      ? `${subCategories.length} ${childCountLabel}`
       : null,
     category.isStrict ? "strict" : null,
   ]
@@ -173,7 +191,7 @@ export function CategoryEditor({
                   if (e.key === "Enter") commitName();
                   else if (e.key === "Escape") cancelName();
                 }}
-                aria-label="Category name"
+                aria-label={isRole ? "Role name" : "Category name"}
               />
             ) : (
               <>
@@ -188,7 +206,7 @@ export function CategoryEditor({
                   type="button"
                   className={headerNamePencil}
                   onClick={() => startNameEdit()}
-                  aria-label="Rename category"
+                  aria-label={isRole ? "Rename role" : "Rename category"}
                 >
                   <SquarePen size={14} strokeWidth={2} />
                 </button>
@@ -202,7 +220,7 @@ export function CategoryEditor({
             variant="ghost"
             size="sm"
             onClick={onDelete}
-            aria-label="Delete category"
+            aria-label={isRole ? "Delete role" : "Delete category"}
           >
             <Trash2 size={12} strokeWidth={2.2} />
             Delete
@@ -230,12 +248,12 @@ export function CategoryEditor({
             </div>
           </div>
           <div className={fieldStack}>
-            <span className={fieldLabel}>Parent category</span>
+            <span className={fieldLabel}>Parent</span>
             <Combobox
               value={category.parentId ?? null}
               options={parentOptions}
               onChange={(v) => onChangeParent(v)}
-              ariaLabel="Parent category"
+              ariaLabel="Parent"
             />
           </div>
         </div>
@@ -261,7 +279,7 @@ export function CategoryEditor({
             ariaLabel="Default location"
           />
           <div className={sectionHelp}>
-            Items in this category inherit this location unless overridden.
+            Items in this {selfNoun} inherit this location unless overridden.
           </div>
         </div>
         <div className={section}>
@@ -283,8 +301,8 @@ export function CategoryEditor({
           </div>
           <div className={sectionHelp}>
             {category.useTimeWindows
-              ? "Items in this category schedule into the weekly windows below."
-              : "Items in this category schedule freely — it's used for classification only."}
+              ? `Items in this ${selfNoun} schedule into the weekly windows below.`
+              : `Items in this ${selfNoun} schedule freely — it's used for classification only.`}
           </div>
         </div>
       </div>
@@ -332,7 +350,7 @@ export function CategoryEditor({
         <div className={section}>
           <div className={sectionTitle}>Time windows</div>
           <div className={classificationNote}>
-            This category doesn&apos;t use time-window scheduling. Items in it
+            This {selfNoun} doesn&apos;t use time-window scheduling. Items in it
             schedule wherever there&apos;s capacity. Turn on{" "}
             <strong>Uses time windows</strong> to add weekly windows or strict
             mode.
@@ -340,10 +358,36 @@ export function CategoryEditor({
         </div>
       )}
 
+      {parentCategory && (
+        <div className={section}>
+          <div className={sectionTitle}>Window cascade</div>
+          <div className={strictRow}>
+            <button
+              type="button"
+              className={strictToggle}
+              data-on={category.confineToOwnWindows}
+              onClick={onToggleConfine}
+              aria-pressed={category.confineToOwnWindows}
+              aria-label="Toggle confine to own windows"
+            >
+              <span className={strictToggleThumb} />
+            </button>
+            <span className={strictLabel}>
+              {category.confineToOwnWindows ? "Confined" : "Cascades up"}
+            </span>
+          </div>
+          <div className={sectionHelp}>
+            {category.confineToOwnWindows
+              ? `Items in ${category.name} schedule only in its own windows.`
+              : `Items in ${category.name} may also schedule in ${parentCategory.name}'s windows.`}
+          </div>
+        </div>
+      )}
+
       {subCategories.length > 0 && (
         <div className={section}>
           <div className={sectionTitle}>
-            Sub-categories · {subCategories.length}
+            {isRole ? "Categories" : "Sub-categories"} · {subCategories.length}
           </div>
           <div className={subCategoriesList}>
             {subCategories.map((s) => {

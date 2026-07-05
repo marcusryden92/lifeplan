@@ -1,5 +1,6 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
+  space,
   vars,
   DURATIONS,
   popover,
@@ -50,7 +51,7 @@ export const dialog = style([
     padding: "18px 20px 20px",
     display: "flex",
     flexDirection: "column",
-    gap: 12,
+    gap: space["3"],
     animationName: slideUp,
     animationDuration: `${DURATIONS.modal}s`,
     animationTimingFunction: "ease",
@@ -75,7 +76,7 @@ export const header = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 12,
+  gap: space["3"],
 });
 
 export const input = style([formInput({ variant: "underline" })]);
@@ -83,7 +84,7 @@ export const input = style([formInput({ variant: "underline" })]);
 export const hintsRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: space["3"],
   flexWrap: "wrap",
 });
 

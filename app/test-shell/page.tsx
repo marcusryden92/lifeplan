@@ -1,5 +1,6 @@
 "use client";
 
+import { space } from "@/lib/theme";
 import {
   AppShell,
   Glass,
@@ -34,12 +35,12 @@ export default function TestShellPage() {
       >
         <header>
           <Caption>good morning</Caption>
-          <h1 className={display.hero} style={{ margin: 0, marginTop: 4 }}>
+          <h1 className={display.hero} style={{ margin: 0, marginTop: space["1"] }}>
             Good morning, Marcus
           </h1>
           <p
             className={text.body}
-            style={{ color: vars.inkSoft, marginTop: 6 }}
+            style={{ color: vars.inkSoft, marginTop: space["1.5"] }}
           >
             6 things on today · 4h 40m planned work · 1 overdue · 4 in inbox to
             triage.

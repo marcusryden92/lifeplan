@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii } from "@/lib/theme";
 
 export const comboboxWrap = style({
   position: "relative",
@@ -9,7 +9,7 @@ export const comboboxWrap = style({
 export const comboboxTrigger = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   padding: "5px 10px",
   borderRadius: radii.pill,
   background: vars.glass.bgDeep,
@@ -56,17 +56,17 @@ export const comboboxMenu = style({
   borderRadius: radii.md,
   boxShadow: vars.shadow.panel,
   zIndex: 100,
-  padding: 4,
+  padding: space["1"],
   display: "flex",
   flexDirection: "column",
-  gap: 1,
+  gap: space["px"],
   transition: themeTransition,
 });
 
 export const comboboxOption = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   padding: "7px 10px",
   borderRadius: radii.sm,
   background: "transparent",

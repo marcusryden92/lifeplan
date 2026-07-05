@@ -1,11 +1,11 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, interactiveTransition, media, radii } from "@/lib/theme";
+import { space, vars, themeTransition, interactiveTransition, media, radii } from "@/lib/theme";
 
 
 export const editor = style({
   display: "flex",
   flexDirection: "column",
-  gap: 22,
+  gap: space["6"],
   padding: "20px 28px 28px",
   overflow: "auto",
   flex: 1,
@@ -13,7 +13,7 @@ export const editor = style({
   "@media": {
     [media.mobile]: {
       padding: "16px 16px 24px",
-      gap: 16,
+      gap: space["4"],
     },
   },
 });
@@ -21,8 +21,8 @@ export const editor = style({
 export const header = style({
   display: "flex",
   alignItems: "center",
-  gap: 16,
-  paddingBottom: 16,
+  gap: space["4"],
+  paddingBottom: space["4"],
   borderBottom: `1px solid ${vars.rule}`,
   transition: themeTransition,
 });
@@ -30,7 +30,7 @@ export const header = style({
 export const headerActions = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   flexShrink: 0,
 });
 
@@ -63,7 +63,7 @@ const NAME_BORDER = 2;
 export const headerNameRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: space["2.5"],
   minWidth: 0,
 });
 
@@ -132,7 +132,7 @@ export const headerNamePencil = style({
 });
 
 export const headerSummary = style({
-  marginTop: 6,
+  marginTop: space["1.5"],
   fontFamily: vars.font.ui,
   fontSize: 12.5,
   color: vars.muted,
@@ -146,7 +146,7 @@ export const sectionTitle = style({
   fontWeight: 500,
   letterSpacing: "-0.02em",
   color: vars.ink,
-  marginBottom: 14,
+  marginBottom: space["3.5"],
   transition: themeTransition,
 });
 
@@ -158,9 +158,9 @@ export const section = style({
 export const sectionPair = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
-  gap: 32,
+  gap: space["8"],
   "@media": {
-    [media.mobile]: { gridTemplateColumns: "1fr", gap: 22 },
+    [media.mobile]: { gridTemplateColumns: "1fr", gap: space["6"] },
   },
 });
 
@@ -176,7 +176,7 @@ export const fieldGrid = style({
 export const fieldStack = style({
   display: "flex",
   flexDirection: "column",
-  gap: 7,
+  gap: space["2"],
   minWidth: 0,
 });
 
@@ -192,7 +192,7 @@ export const fieldLabel = style({
 
 export const swatchRow = style({
   display: "flex",
-  gap: 6,
+  gap: space["1.5"],
   flexWrap: "wrap",
 });
 
@@ -218,7 +218,7 @@ export const swatchChip = style({
 export const strictRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: space["3"],
 });
 
 export const strictToggle = style({
@@ -229,7 +229,7 @@ export const strictToggle = style({
   borderRadius: radii.pill,
   background: `color-mix(in srgb, ${vars.ink} 6%, transparent)`,
   cursor: "pointer",
-  padding: 2,
+  padding: space["0.5"],
   alignItems: "center",
   flexShrink: 0,
   transition: themeTransition,
@@ -264,7 +264,7 @@ export const strictLabel = style({
 });
 
 export const sectionHelp = style({
-  marginTop: 10,
+  marginTop: space["2.5"],
   fontFamily: vars.font.ui,
   fontSize: 12.5,
   color: vars.inkSoft,
@@ -273,7 +273,7 @@ export const sectionHelp = style({
 });
 
 export const windowsSubsection = style({
-  marginBottom: 18,
+  marginBottom: space["5"],
 });
 
 export const subsectionLabel = style({
@@ -283,7 +283,7 @@ export const subsectionLabel = style({
   letterSpacing: "0.14em",
   textTransform: "uppercase",
   color: vars.muted,
-  marginBottom: 8,
+  marginBottom: space["2"],
   display: "block",
   transition: themeTransition,
 });
@@ -303,20 +303,23 @@ export const classificationNote = style({
 export const windowsActions = style({
   display: "flex",
   justifyContent: "flex-end",
-  marginTop: 10,
+  marginTop: space["2.5"],
 });
 
 export const subCategoriesList = style({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: space["1.5"],
 });
 
 export const subCategoryRow = style({
   display: "grid",
   gridTemplateColumns: "14px 1fr 130px 90px",
   alignItems: "center",
-  gap: 12,
+  gap: space["3"],
+  "@media": {
+    [media.mobile]: { gridTemplateColumns: "14px 1fr auto auto", gap: space["2"] },
+  },
   padding: "8px 12px",
   border: `1px solid ${vars.rule}`,
   borderRadius: radii["sm+2"],
@@ -363,13 +366,13 @@ export const subCategoryMeta = style({
 export const inlineRow = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
 });
 
 export const inlineRowTight = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
 });
 
 export const parentOptionDot = style({

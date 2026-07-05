@@ -100,6 +100,21 @@ describe("updateDraftItems", () => {
     });
   });
 
+  it("converts a leaf task to a goal and rejects setting plannerType to plan", () => {
+    const result = updateDraftItems(
+      makeForest(),
+      [
+        { id: "a1", plannerType: "goal" },
+        { id: "b1", plannerType: "plan" as "task" },
+      ],
+      VALID_CATEGORY_IDS,
+    );
+    expect(result.forest.goals[0].children[0].plannerType).toBe("goal");
+    expect(result.failures).toEqual([
+      { id: "b1", reason: 'plannerType must be "task" or "goal"' },
+    ]);
+  });
+
   it("rejects categoryId on non-roots and unknown categories, allows clearing on roots", () => {
     const result = updateDraftItems(
       makeForest(),
@@ -246,6 +261,16 @@ describe("addDraftItems", () => {
     expect(added.children[0].title).toBe("Find a podcast");
     expect(added.children[0].id).not.toBe("");
     expect(added.children[0].id).not.toBe(added.id);
+  });
+
+  it("promotes a leaf task to a goal when it gains a child", () => {
+    const result = addDraftItems(makeForest(), {
+      parentId: "a1",
+      items: [{ title: "sub", plannerType: "task", duration: 10 }],
+    });
+    expect(result.failures).toEqual([]);
+    const a1 = result.forest.goals[0].children.find((c) => c.id === "a1")!;
+    expect(a1.plannerType).toBe("goal");
   });
 
   it("rejects unknown parents and empty item lists", () => {

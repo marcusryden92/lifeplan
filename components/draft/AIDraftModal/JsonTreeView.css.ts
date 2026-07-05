@@ -1,5 +1,5 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii } from "@/lib/theme";
 
 export const wrap = style({
   flex: 1,
@@ -8,7 +8,7 @@ export const wrap = style({
   borderRadius: radii["md+2"],
   border: `1px solid ${vars.rule}`,
   background: vars.paper,
-  padding: 10,
+  padding: space["2.5"],
   transition: themeTransition,
   // Opt back in from the global user-select: none — goal titles and fields
   // should be copyable.
@@ -16,7 +16,7 @@ export const wrap = style({
 });
 
 export const empty = style({
-  padding: 24,
+  padding: space["6"],
   color: vars.muted,
   fontFamily: vars.font.ui,
   fontSize: 12,
@@ -45,7 +45,7 @@ const rowBase = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 10,
+  gap: space["2.5"],
   padding: "4px 8px",
   minWidth: 0,
   borderRadius: radii.sm,
@@ -169,7 +169,7 @@ export const statusBadge = styleVariants({
 export const metaCluster = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   flexShrink: 0,
 });
 
@@ -212,8 +212,8 @@ export const changedFields = style({
 
 // Left-indent border matches the drag-and-drop nested list convention.
 export const childrenWrap = style({
-  marginLeft: 12,
-  paddingLeft: 10,
+  marginLeft: space["3"],
+  paddingLeft: space["2.5"],
   borderLeft: `1px solid ${vars.rule}`,
   transition: themeTransition,
 });
@@ -223,7 +223,7 @@ export const goalBlock = style({
   flexDirection: "column",
   selectors: {
     "& + &": {
-      marginTop: 6,
+      marginTop: space["1.5"],
     },
   },
 });
@@ -249,7 +249,7 @@ export const categoryGroup = style({
   flexDirection: "column",
   selectors: {
     "& + &": {
-      marginTop: 12,
+      marginTop: space["3"],
     },
   },
 });
@@ -257,7 +257,7 @@ export const categoryGroup = style({
 export const categoryGroupHeader = style({
   display: "flex",
   alignItems: "center",
-  gap: 7,
+  gap: space["2"],
   padding: "2px 8px 4px",
   fontFamily: vars.font.ui,
   fontSize: 10,

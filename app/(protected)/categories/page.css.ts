@@ -1,5 +1,6 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
 import {
+  space,
   vars,
   themeTransition,
   interactiveTransition,
@@ -26,14 +27,14 @@ export const page = style({
 export const subHeader = style({
   display: "flex",
   alignItems: "baseline",
-  gap: 12,
+  gap: space["3"],
   padding: "20px 28px 18px",
   flexShrink: 0,
   "@media": {
     [media.mobile]: {
       padding: "16px 16px 12px",
       flexWrap: "wrap",
-      gap: 10,
+      gap: space["2.5"],
     },
   },
 });
@@ -67,24 +68,26 @@ export const spacer = style({
 
 export const actionCluster = style({
   display: "flex",
-  gap: 8,
+  gap: space["2"],
   flexShrink: 0,
 });
 
 export const mainGrid = style({
   display: "grid",
   gridTemplateColumns: "260px 1fr",
-  gap: 16,
+  gap: space["4"],
   padding: "0 28px 28px",
   flex: 1,
   minHeight: 0,
   "@media": {
-    [media.mobile]: {
+    [media.tablet]: {
       gridTemplateColumns: "1fr",
-      padding: "0 16px 24px",
-      gap: 14,
       flex: "0 0 auto",
       minHeight: "auto",
+    },
+    [media.mobile]: {
+      padding: "0 16px 24px",
+      gap: space["3.5"],
     },
   },
 });
@@ -132,7 +135,7 @@ export const railBody = style({
 export const railRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   padding: "5px 8px",
   borderRadius: radii.sm,
   cursor: "pointer",
@@ -257,10 +260,10 @@ export const treeChevronSpacer = style({
 
 export const railFooter = style({
   flexShrink: 0,
-  marginTop: 8,
-  paddingTop: 8,
-  paddingLeft: 4,
-  paddingRight: 4,
+  marginTop: space["2"],
+  paddingTop: space["2"],
+  paddingLeft: space["1"],
+  paddingRight: space["1"],
   borderTop: `1px solid ${vars.rule}`,
   transition: themeTransition,
 });
@@ -270,7 +273,7 @@ export const railNewButton = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: 6,
+  gap: space["1.5"],
   padding: "8px 10px",
   borderRadius: radii.sm,
   border: `1px dashed ${vars.rule}`,

@@ -1,12 +1,12 @@
 import { style, keyframes, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii } from "@/lib/theme";
 
 export const wrap = style({
   flex: 1,
   minHeight: 0,
   display: "flex",
   flexDirection: "column",
-  gap: 12,
+  gap: space["3"],
 });
 
 // Message list has no background of its own — it sits directly on the darker
@@ -18,7 +18,7 @@ export const messageList = style({
   overflow: "auto",
   display: "flex",
   flexDirection: "column",
-  gap: 12,
+  gap: space["3"],
   padding: "6px 6px",
   transition: themeTransition,
   // Opt back in from the global user-select: none — chat text is copyable.
@@ -31,7 +31,7 @@ export const empty = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: 24,
+  padding: space["6"],
   color: vars.muted,
   fontFamily: vars.font.ui,
   fontSize: 12,
@@ -44,7 +44,7 @@ export const empty = style({
 const messageBase = style({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: space["1"],
   fontSize: 13,
   lineHeight: 1.6,
   color: vars.ink,
@@ -107,7 +107,7 @@ globalStyle(`${markdownBody} > :last-child, ${markdownBody} li > :last-child`, {
 });
 globalStyle(`${markdownBody} ul, ${markdownBody} ol`, {
   margin: "4px 0 8px",
-  paddingLeft: 20,
+  paddingLeft: space["5"],
 });
 globalStyle(`${markdownBody} li`, {
   margin: "2px 0",
@@ -151,7 +151,7 @@ globalStyle(`${markdownBody} a`, {
 });
 globalStyle(`${markdownBody} blockquote`, {
   margin: "4px 0 8px",
-  paddingLeft: 10,
+  paddingLeft: space["2.5"],
   borderLeft: `2px solid ${vars.rule}`,
   color: vars.inkSoft,
 });
@@ -179,8 +179,8 @@ const dotPulse = keyframes({
 export const streamingDots = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 3,
-  marginLeft: 6,
+  gap: space["1"],
+  marginLeft: space["1.5"],
   verticalAlign: "middle",
 });
 
@@ -202,8 +202,8 @@ export const composer = style({
   flexShrink: 0,
   display: "flex",
   alignItems: "flex-end",
-  gap: 8,
-  padding: 8,
+  gap: space["2"],
+  padding: space["2"],
   borderRadius: radii["md+2"],
   border: `1px solid ${vars.rule}`,
   background: vars.paper,

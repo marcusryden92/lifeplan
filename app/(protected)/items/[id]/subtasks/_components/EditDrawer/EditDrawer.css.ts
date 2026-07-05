@@ -1,10 +1,12 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
+  space,
   vars,
   themeTransition,
   themeDark,
   interactiveTransition,
   radii,
+  media,
 } from "@/lib/theme";
 
 const lockedShake = keyframes({
@@ -16,7 +18,7 @@ const lockedShake = keyframes({
 export const drawer = style({
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: space["3.5"],
   padding: "16px 18px",
   borderLeft: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
@@ -25,6 +27,14 @@ export const drawer = style({
   minHeight: 0,
   overflow: "auto",
   transition: themeTransition,
+  // Inside the mobile bottom sheet (see drawerSlotOpen) the side-column
+  // chrome comes off; the sheet owns the border and radius.
+  "@media": {
+    [media.mobile]: {
+      borderLeft: "none",
+      borderBottomRightRadius: 0,
+    },
+  },
 });
 
 export const drawerHeader = style({
@@ -57,7 +67,7 @@ export const drawerClose = style({
 export const drawerBody = style({
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: space["3.5"],
 });
 
 export const drawerTitleInput = style({
@@ -81,7 +91,7 @@ export const drawerTitleInput = style({
 export const fieldStack = style({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: space["1.5"],
 });
 
 export const fieldLabel = style({
@@ -97,7 +107,7 @@ export const fieldLabel = style({
 export const durationStepper = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
 });
 
 export const stepperBtn = style({
@@ -193,7 +203,7 @@ export const dateClearBtn = style({
 export const completeHeader = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
 });
 
 export const completeCheckbox = style({
@@ -242,9 +252,9 @@ export const drawerFooter = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 8,
+  gap: space["2"],
   marginTop: "auto",
-  paddingTop: 16,
+  paddingTop: space["4"],
   borderTop: `1px solid ${vars.rule}`,
   transition: themeTransition,
 });
@@ -252,5 +262,5 @@ export const drawerFooter = style({
 export const footerActionGroup = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
 });

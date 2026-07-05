@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import type { DraftNode } from "./plannerTreeToJson";
 import type { DraftForest } from "./plannerForestToJson";
-import { normalizeDraftTree } from "./normalizeDraftTree";
+import { normalizeDraftTree, coerceParentTypes } from "./normalizeDraftTree";
 
 // Deterministic operations on a DraftForest, executed server-side on the
 // assistant's working copy so the model states intent (ids + fields) and code
@@ -37,11 +37,19 @@ export interface DraftSearchHit {
 export interface DraftItemUpdate {
   id: string;
   title?: string;
+  // "task" | "goal" only — plans need a fixed start time the draft contract
+  // doesn't carry, so a node can never be turned INTO a plan here. A node with
+  // children is forced back to "goal" regardless (coerceParentTypes).
+  plannerType?: DraftNode["plannerType"];
   duration?: number;
   deadline?: string | null;
   priority?: number;
   isReady?: boolean | null;
   categoryId?: string | null;
+}
+
+function coerceForestTypes(forest: DraftForest): DraftForest {
+  return { ...forest, goals: forest.goals.map(coerceParentTypes) };
 }
 
 export interface DraftMoveArgs {
@@ -163,6 +171,16 @@ export function updateDraftItems(
       }
       node.title = trimmed;
     }
+    if (update.plannerType !== undefined) {
+      if (update.plannerType !== "task" && update.plannerType !== "goal") {
+        failures.push({
+          id,
+          reason: 'plannerType must be "task" or "goal"',
+        });
+        continue;
+      }
+      node.plannerType = update.plannerType;
+    }
     if (update.duration !== undefined) {
       if (typeof update.duration !== "number" || !isFinite(update.duration)) {
         failures.push({ id, reason: "duration must be a number of minutes" });
@@ -227,7 +245,7 @@ export function updateDraftItems(
   }
 
   return {
-    forest: next,
+    forest: coerceForestTypes(next),
     updatedRootIds: [...updatedRootIds],
     deletedGoalIds: [],
     failures,
@@ -287,7 +305,7 @@ export function moveDraftItem(
   }
 
   return {
-    forest: next,
+    forest: coerceForestTypes(next),
     updatedRootIds: [itemLoc.root.id],
     deletedGoalIds: [],
     failures: [],
@@ -324,7 +342,7 @@ export function deleteDraftItems(
   }
 
   return {
-    forest: next,
+    forest: coerceForestTypes(next),
     updatedRootIds: [...updatedRootIds].filter(
       (id) => !deletedGoalIds.includes(id),
     ),
@@ -368,7 +386,7 @@ export function addDraftItems(
   target.splice(index, 0, ...items);
 
   return {
-    forest: next,
+    forest: coerceForestTypes(next),
     updatedRootIds: [parentLoc.root.id],
     deletedGoalIds: [],
     failures: [],

@@ -1,5 +1,6 @@
 ﻿import { style } from "@vanilla-extract/css";
 import {
+  space,
   vars,
   themeTransition,
   interactiveTransition,
@@ -45,13 +46,13 @@ export const innerWrap = style({
 export const backRow = style({
   display: "flex",
   alignItems: "center",
-  paddingBottom: 6,
+  paddingBottom: space["1.5"],
 });
 
 export const backLink = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   fontFamily: vars.font.ui,
   fontSize: 12,
   fontWeight: 600,
@@ -72,13 +73,13 @@ export const titleBlock = style({
   display: "flex",
   alignItems: "flex-end",
   justifyContent: "space-between",
-  gap: 24,
-  marginTop: 14,
+  gap: space["6"],
+  marginTop: space["3.5"],
   "@media": {
     [media.mobile]: {
       flexDirection: "column",
       alignItems: "stretch",
-      gap: 14,
+      gap: space["3.5"],
     },
   },
 });
@@ -144,7 +145,7 @@ export const editableTitleWrap = style({
 export const titleHoverRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: space["3"],
   minWidth: 0,
 });
 
@@ -155,7 +156,7 @@ export const renamePencil = style({
   alignSelf: "flex-start",
   width: 30,
   height: 30,
-  marginTop: 4,
+  marginTop: space["1"],
   borderRadius: radii.pill,
   border: "none",
   background: "transparent",
@@ -172,7 +173,7 @@ export const renamePencil = style({
 
 export const headActions = style({
   display: "flex",
-  gap: 16,
+  gap: space["4"],
   flexShrink: 0,
   alignItems: "flex-end",
 });
@@ -198,7 +199,7 @@ export const readyHint = style({
 
 export const headActionsCluster = style({
   display: "flex",
-  gap: 8,
+  gap: space["2"],
   alignItems: "center",
 });
 

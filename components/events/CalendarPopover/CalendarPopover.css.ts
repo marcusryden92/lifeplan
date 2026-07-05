@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, interactiveTransition, radii } from "@/lib/theme";
+import { space, vars, interactiveTransition, radii } from "@/lib/theme";
 
 // Layout-only â€” the popover() recipe owns the glass surface (fill, blur,
 // stroke, shadow, radius). This file adds the calendar-popover-specific
@@ -14,10 +14,26 @@ export const calendarPopover = style({
   color: vars.ink,
 });
 
+// Mobile presentation: a bottom sheet instead of an anchored floating box.
+// Applied alongside calendarPopover when the component detects mobile (the
+// anchored inline top/left/width are skipped there, so these win).
+export const calendarPopoverSheet = style({
+  left: 0,
+  right: 0,
+  bottom: 0,
+  top: "auto",
+  width: "auto",
+  maxWidth: "100vw",
+  maxHeight: "75vh",
+  overflowY: "auto",
+  borderBottomLeftRadius: 0,
+  borderBottomRightRadius: 0,
+});
+
 export const header = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   padding: "10px 12px",
   borderBottom: `1px solid ${vars.rule}`,
 });
@@ -44,7 +60,7 @@ export const dragHandle = style({
 export const headerBadges = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   flex: 1,
   minWidth: 0,
   flexWrap: "wrap",
@@ -54,7 +70,7 @@ export const closeBtn = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: 4,
+  padding: space["1"],
   borderRadius: radii.xs,
   border: "none",
   background: "transparent",
@@ -76,7 +92,7 @@ const TITLE_BORDER = 2;
 export const titleRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   padding: "12px 14px 0",
 });
 
@@ -126,7 +142,7 @@ export const renamePencil = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: 4,
+  padding: space["1"],
   borderRadius: radii.xs,
   border: "none",
   background: "transparent",
@@ -143,13 +159,13 @@ export const body = style({
   padding: "10px 14px 14px",
   display: "flex",
   flexDirection: "column",
-  gap: 12,
+  gap: space["3"],
 });
 
 export const metaRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   fontSize: 12.5,
   color: vars.inkSoft,
   fontFamily: vars.font.ui,

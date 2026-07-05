@@ -45,14 +45,16 @@
   │   ├── page.tsx                      # Landing
   │   ├── globals.css, page.css.ts
   │   ├── (protected)/                  # Auth-gated routes
-  │   │   ├── layout.tsx                # StoreProvider > UserProvider > CalendarProvider > AppShell
+  │   │   ├── layout.tsx                # Async server component: reads onboardedAt, computes needsOnboarding
+  │   │   ├── ProtectedProviders.tsx    # Client: StoreProvider > UserProvider > CalendarProvider > AppShell (+ onboarding overlaySlot)
   │   │   ├── calendar/                 # FullCalendar surface
   │   │   ├── capture/                  # Quick-entry surface
-  │   │   ├── categories/               # Category management
-  │   │   ├── dashboard/                # Default landing after login
+  │   │   ├── categories/               # Role + category management (top-level categories are surfaced as "Roles")
+  │   │   ├── dashboard/                # Default landing after login (+ SetupChecklist fallback)
   │   │   ├── items/[id]/               # Item detail; sub-routes: schedule/, subtasks/
   │   │   ├── library/                  # Task/goal browser
   │   │   ├── locations/                # Location + travel-time management
+  │   │   ├── onboarding/               # First-run 6-step overlay (Welcome/Roles/Places/Week/BrainDump/AI); _lib builders, _steps, _components
   │   │   └── settings/
   │   ├── auth/                         # login/register/reset/new-password/new-verification/error
   │   ├── api/                          # auth/ + admin/ + draft/stream/ (SSE)
@@ -60,6 +62,7 @@
   │
   ├── actions/                          # Server actions (preferred backend surface)
   │   ├── login.ts, register.ts, reset.ts, newPassword.ts, newVerificationAction.ts, settings.ts
+  │   ├── onboarding.ts                 # completeOnboarding() — stamps User.onboardedAt
   │   ├── scheduling.ts                 # UserSchedulingPreferences + TaskPreferences
   │   ├── categories.ts                 # Category CRUD + planner-category assignment
   │   ├── locations.ts                  # Location + Google Places integration
@@ -104,6 +107,7 @@
   │   ├── useCalendarStateActions       # updatePlannerArray / updateTemplateArray / updateAll
   │   ├── useManuallyRefreshCalendar    # User-triggered regen
   │   ├── useServerAction               # useTransition + status pattern for mutations
+  │   ├── useIsMobile                   # matchMedia on breakpoints.mobile — for JS-level mobile treatments (view types, bottom sheets)
   │   ├── useKeyboardShortcuts, useListKeyboardNav, useClickOutside, usePopoverPosition,
   │   │   useFlashAnimation, usePlatform, useTitleEditor
   │
@@ -130,7 +134,7 @@
   │   ├── schemas/
   │   │   ├── schema.prisma             # Generator + datasource only
   │   │   └── models/
-  │   │       ├── user.prisma           # User (+ dataVersion OCC counter), Account, VerificationToken, PasswordResetToken, TwoFactorToken, TwoFactorConfirmation, AccountDeletionToken, UserRole
+  │   │       ├── user.prisma           # User (+ dataVersion OCC counter, onboardedAt gate), Account, VerificationToken, PasswordResetToken, TwoFactorToken, TwoFactorConfirmation, AccountDeletionToken, UserRole
   │   │       ├── calendar.prisma       # SimpleEvent, EventExtendedProps, Planner, EventTemplate, WeekDayType, PlannerType, EventType
   │   │       ├── category.prisma       # Category, CategoryTimeWindow, CategoryEvent
   │   │       ├── location.prisma       # Location, TravelTime, TravelEvent, TransportMode
@@ -233,7 +237,8 @@
 
   ### Category system
 
-  - **Category** — hierarchical (`parentId`), with `icon`, `color`, `sortOrder`, `useTimeWindows`, `isStrict`, optional `locationId`.
+  - **Category** — hierarchical (`parentId`), with `icon`, `color`, `sortOrder`, `useTimeWindows`, `isStrict`, `confineToOwnWindows`, optional `locationId`.
+  - **Roles vs. categories (user-facing wording).** Top-level categories (`parentId === null`) are surfaced to the user as **Roles** (Covey framing — the roles you play in life), everywhere they appear: the onboarding Roles step, the `/categories` page + editor + rail, and the nav label. Everything nested under a role stays a **category** ("sub-category" one level deeper). The **data model is unchanged** — it's all `Category` — and the **scheduling vocabulary stays "category"** deliberately (WeekStructureModal, the assistant's "category windows", `CategoryBadge`, the engine), because windows/strictness attach to categories at any depth. UI copy is level-aware via `isRole = !category.parentId`.
   - **CategoryTimeWindow** — one row per weekly occurrence (`day` 0–6, `startTime`/`endTime` `"HH:MM"`). `categoryId` is nullable so windows can exist as unassigned drafts; the engine ignores those.
   - **CategoryEvent** — engine-materialized weekly occurrence with a composite id `` `${categoryTimeWindowId}|${YYYY-MM-DD-local}` ``. Carries `trespassingStart` / `trespassingEnd` flags stamped by the engine when its placement violated a category boundary; the renderer reads these directly for red-border display.
 
@@ -243,6 +248,13 @@
 
   - `isStrict: true` — only items belonging to this category can be scheduled in its windows. Other items are filtered out, and the capacity check subtracts the window from any overlapping gap.
   - `isStrict: false` — other items may fill empty space inside the window.
+
+  ### Window cascade (hierarchy)
+
+  An item is a member of its own category **and every ancestor** by extension: a `project` (nested under `work`) item may schedule in a `work` window, but a plain `work` item never lands in a `project` window (descendant, not ancestor). Membership is what `isStrict` gates against, so a strict `work` window still admits `project` items.
+
+  - `confineToOwnWindows: true` opts a category **out** of the upward cascade — its items schedule only in its own windows (dedicated collection time), and it becomes a ceiling for any descendant climbing the chain.
+  - The eligible window-category set per category is memoized once per engine pass by [buildCategoryEligibilityMap](utils/calendar-generation/helpers/CalendarGenerator/buildCategoryEligibilityMap.ts) (own id + non-confined ancestors up to a `confineToOwnWindows` ceiling) and threaded through `SchedulingContext`. Match sites — `findAllFittingSlots`, `maxEffectiveCapacityFor`, `largestCompatibleSlotForLargestTask` — test set membership, not id equality. The UI toggle lives in the category editor and only shows for sub-categories (no ancestor to cascade into ⇒ no effect).
 
   ### Engine messages
 
@@ -256,7 +268,7 @@
 
   The engine takes `{ planners, templates, categories, previousCalendar, options }` and returns `{ events, categoryEvents, travelEvents }`. It is a stateful pipeline organized as an orchestrator + strategies + identity-tracked travel.
 
-  - Public entry: [utils/calendar-generation/calendarGeneration.ts](utils/calendar-generation/calendarGeneration.ts).
+  - Public entry: [utils/calendar-generation/calendarGeneration.ts](utils/calendar-generation/calendarGeneration.ts). It filters `isTriaged === false` rows out at the input boundary — untriaged Capture-inbox / brain-dump jots (duration 0, no `starts`) would otherwise fail validation and blank the whole calendar (any validation error returns empty events). A start-less **plan** is a validation *warning*, not an error (`validatePlanners.ts` / `buildPlanEvents` null-guards it), so triaged-but-timeless plans don't blank it either.
   - Module exports: [utils/calendar-generation/index.ts](utils/calendar-generation/index.ts).
   - Core classes (in [utils/calendar-generation/core/](utils/calendar-generation/core/)): `CalendarGenerator` (12-phase orchestrator; final phase emits EngineMessages), `Scheduler` (5-phase per-task pipeline), `TimeSlotManager` (thin holder for the sorted slot array), `TravelManager` (travel lookups + leg tracker).
   - Each phase delegates to function modules under [utils/calendar-generation/helpers/<Name>/](utils/calendar-generation/helpers/).
@@ -272,7 +284,9 @@
 
   One global assistant, always reachable: **mod+I**, the Sparkles button in the Sidebar, or the "AI assistant" button in `ItemTabs`. It operates on the whole **forest** of triaged top-level rows — restructuring existing goals, creating new goals with full subtrees, and deleting goals — on the user's **weekly templates** (EventTemplate rows: sleep, work hours, standing commitments), and on **category time windows + scheduling flags** (CategoryTimeWindow rows; `useTimeWindows`/`isStrict` on the category), so "set up my week and this goal" happens in one conversation. Untriaged Capture-inbox jots are excluded and never touched. Locations are read context only (they can't be created here — they need Google Places); category names/colors/hierarchy are likewise not editable by the assistant.
 
-  Mounting: `AssistantProvider` ([components/ui/shell/AssistantContext.tsx](components/ui/shell/AssistantContext.tsx)) wraps `AppShell` in the protected layout; [GlobalAssistant.tsx](components/draft/AIDraftModal/GlobalAssistant.tsx) is passed into AppShell's `assistantSlot` and renders the modal filling `mainColumn` (`position: absolute; inset: 0`) — the sidebar stays visible and interactive (`Dialog modal={false}`, outside-interaction dismissal prevented; Esc / Close only). Focus resolution: an explicit `AssistantScope.focusItemId` from the opener wins, else the `/items/[id]` route is detected; either maps to its root via `getRootParentId` and is sent as a prompt hint plus default tree-pane expansion. `AssistantScope.intent` is the reserved hook for onboarding ("draft-goals").
+  Mounting: `AssistantProvider` ([components/ui/shell/AssistantContext.tsx](components/ui/shell/AssistantContext.tsx)) wraps `AppShell` in the protected layout; [GlobalAssistant.tsx](components/draft/AIDraftModal/GlobalAssistant.tsx) is passed into AppShell's `assistantSlot` and renders the modal filling `mainColumn` (`position: absolute; inset: 0`) — the sidebar stays visible and interactive (`Dialog modal={false}`, outside-interaction dismissal prevented; Esc / Close only). Focus resolution: an explicit `AssistantScope.focusItemId` from the opener wins, else the `/items/[id]` route is detected; either maps to its root via `getRootParentId` and is sent as a prompt hint plus default tree-pane expansion.
+
+**Embedded mode (onboarding AI step).** `AIDraftModal` takes `embedded`/`intent`/`onSaved`/`onStateChange` props. `intent="onboarding"` (the value `AssistantScope.intent` reserves) both threads to the route for a prompt preamble (`intentBlock` — interview raw brain-dump jots into schedulable items, assign each to one of the user's *roles*) and tunes the instance: empty-state hint, no History popover, `autoResume: false`, a canned kickoff message. `embedded` renders inline via `embeddedRoot` (no Dialog overlay, no save/cancel banner); the host (`OnboardingAIStep`) owns the Save action, driving it through the reported `{hasChanges, isStreaming, save}` (`onStateChange`) and getting `onSaved` (not `onClose`) on save. NOTE: these props currently live in the working tree on `feature/onboarding` — commit `AIDraftModal.tsx` before merging or the onboarding step won't type-check.
 
   Split-pane modal ([components/draft/AIDraftModal/](components/draft/AIDraftModal/)):
 
@@ -408,6 +422,22 @@
 
   ---
 
+  ## First-run onboarding
+
+  A once-per-user guided setup at [app/(protected)/onboarding/](app/(protected)/onboarding/). NOT a route — it's a **server-gated overlay**: [layout.tsx](app/(protected)/layout.tsx) (async server component) reads `onboardedAt`, and `ProtectedProviders` threads `needsOnboarding` into AppShell's `overlaySlot` → `OnboardingOverlay`, whose initial visibility comes from the server prop (no dashboard flash, no client round-trip). Finishing or skipping stamps `onboardedAt` via `completeOnboarding()` and hides in place. Reseed leaves admin `onboardedAt: null`; the dashboard `SetupChecklist` is the skip/fallback path.
+
+  Six steps (`TOTAL_STEPS = 6`): Welcome, **Roles**, Places, Week, BrainDump, embedded-AI. It **commits as it advances** — each step writes real rows through the normal Redux → auto-sync path on Continue, and re-commits **reconcile** (never stack) so Back/forward is idempotent:
+
+  - **Roles** → `reconcileRoleCategories` (Covey `STARTER_ROLE_PRESETS`): creates top-level `Category` rows, restamps sortOrder/color on the roles this flow owns (reflecting the drag-reorder), removes deselected owned roles **childless-only**, leaves pre-existing user categories alone.
+  - **Week** → sleep = `EventTemplate` rows (`buildWeekTemplates`); work hours = time windows on a **Professional** role's Work sub-category (`applyWorkCategory`, `useTimeWindows`), matching the role preset so no stray "Career" is minted. Overnight ranges split at midnight.
+  - **BrainDump** → `applyBrainDump` upserts triaged Planner rows by dump id, patching only fields the user changed vs the last-committed snapshot so AI-step edits survive a return trip.
+  - **Places** → `createLocation` per row, persisting `createdId` markers incrementally so a partial failure doesn't duplicate on retry.
+  - **AI** → the embedded assistant (`intent="onboarding"`; see the AI-assistant section).
+
+  Progress + owned-id sets persist to `localStorage["circadium.onboarding.progress"]` (**StoredProgress v3**: `roleCommittedIds`, `weekTemplateIds`, `dumpItems`, per-id `dumpCommitted` snapshots); `migrateProgress` normalizes older blobs. Pure builders live in `_lib/` and are unit-tested ([__tests__/onboarding/](__tests__/onboarding/)); `_steps/` + `_components/` are UI. (Status: type-check + tests green; **not yet run live** as of the `feature/onboarding` branch.)
+
+  ---
+
   ## State & data flow
 
   ```
@@ -466,7 +496,7 @@
   | calendar | `/calendar` | FullCalendar surface |
   | capture | `/capture` | Quick-entry surface |
   | library | `/library` | Task/goal browser |
-  | categories | `/categories` | Category management |
+  | categories | `/categories` | Role + category management (nav label reads "Roles"; route path unchanged) |
   | locations | `/locations` | Location + travel-time management |
   | settings | `/settings` | (Mobile "More" tab) |
 
@@ -499,7 +529,7 @@
   - `space` (0–80px) — padding/margin/gap
   - `radii` — base tiers (`xs 6`, `sm 8`, `md 12`, `lg 16`, `xl 20`, `2xl 24`, `3xl 30`) + half-steps (`sm+2 10`, `md+2 14`, `lg+2 18`, `xl+2 22`) used by glass/popover recipes to sit intentionally rounder than a plain card at the same tier, plus `pill 999`. Values below 6 (2–5px) stay hardcoded as bespoke micro-corners.
   - `contentWidth` (`xs 520` … `2xl 1280`) — text measures + page containers. Prefer over raw `maxWidth: 1240`.
-  - `breakpoints` (`mobile 767`, `tablet 1023`) + `media` (prebuilt `@media` query strings: `mobile`, `tablet`, `tabletUp`, `desktopUp`). **Do not declare local `const MOBILE = "..."`** — import `media` from `@/lib/theme` and use `[media.mobile]` as the `@media` key.
+  - `breakpoints` (`mobile 767`, `tablet 1023`, `laptop 1279`) + `media` (prebuilt `@media` query strings: `mobile`, `tablet`, `laptop`, `tabletUp`, `desktopUp`, `wideUp`). `laptop` marks where a docked wide side panel (e.g. the calendar's 340px engine console) stops fitting and switches to an overlay. Rail+content page grids collapse to a stacked column at `tablet`, not `mobile` — the desktop sidebar persists through the tablet band. **Do not declare local `const MOBILE = "..."`** — import `media` from `@/lib/theme` and use `[media.mobile]` as the `@media` key.
   - `borderWidth` (`hairline 1`, `medium 2`, `thick 3`)
   - `zIndex` — semantic layers: `base 0`, `docked 5`, `raised 10`, `floating 30`, `palette 50`, `popoverOverPalette 60`, `modal 100`, `modalOver 150`, `toast 200`
 
@@ -586,6 +616,8 @@
   - `add_draft_conversation` — DraftConversation: AI-assistant chat history (client-minted id, messages as Json, `@@index([userId])`, cascade delete)
   - `add_planner_sort_order` — `Planner.sortOrder` (double precision, fractional sibling key) + SQL backfill deriving per-sibling-group order from the legacy dependency chain
   - `drop_planner_dependency` — retires the `dependency` linked-list column; sibling/leaf order lives in `sortOrder`
+  - `add_category_confine_to_own_windows` — `Category.confineToOwnWindows` (default false); opts a subcategory out of the upward window cascade so its items stay pinned to its own windows
+  - `add_user_onboarded_at` — nullable `User.onboardedAt`; the first-run onboarding gate ("needs onboarding" ⇔ `onboardedAt === null`). Backfills existing users to `NOW()` so only genuinely new accounts see it; the seed leaves admin `null`.
 
   Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 

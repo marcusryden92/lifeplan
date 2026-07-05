@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, media, radii } from "@/lib/theme";
+import { space, vars, themeTransition, media, radii } from "@/lib/theme";
 
 
 export const bezelFrame = style({
@@ -7,7 +7,7 @@ export const bezelFrame = style({
   height: "100vh",
   boxSizing: "border-box",
   background: vars.bezel,
-  padding: 5,
+  padding: space["1.5"],
   display: "flex",
   overflow: "hidden",
   transition: themeTransition,
@@ -55,9 +55,14 @@ export const mainColumn = style({
   minHeight: 0,
   overflow: "hidden",
   "@media": {
-    [media.mobile]: {
-      paddingBottom: 96,
+    // Pages collapse their rail grids to a single stacked column at the
+    // tablet breakpoint and grow past the viewport, so the column must
+    // scroll there too — not just on mobile.
+    [media.tablet]: {
       overflow: "auto",
+    },
+    [media.mobile]: {
+      paddingBottom: space["20"],
       WebkitOverflowScrolling: "touch",
     },
   },

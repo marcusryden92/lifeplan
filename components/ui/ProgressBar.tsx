@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from "react";
-import { progressTrack, categoryGradient, progressTransition } from "@/lib/theme";
+import { radii, progressTrack, categoryGradient, progressTransition } from "@/lib/theme";
 
 type Props = HTMLAttributes<HTMLDivElement> & {
   value: number;
@@ -41,7 +41,7 @@ export const ProgressBar = forwardRef<HTMLDivElement, Props>(
             width: `${pct}%`,
             height: "100%",
             background: categoryGradient(color),
-            borderRadius: 999,
+            borderRadius: radii["pill"],
             transition: progressTransition,
           }}
         />

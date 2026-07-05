@@ -156,7 +156,10 @@ function applyTreeToExistingRoot({
       ? {
           ...existing,
           title: node.title,
-          plannerType: normalizePlannerType(node.plannerType),
+          plannerType: normalizePlannerType(
+            node.plannerType,
+            node.children.length > 0,
+          ),
           duration: Math.max(1, Math.floor(node.duration)),
           deadline: node.deadline,
           priority: node.priority,
@@ -171,7 +174,10 @@ function applyTreeToExistingRoot({
           id: nodeId,
           title: node.title,
           parentId,
-          plannerType: normalizePlannerType(node.plannerType),
+          plannerType: normalizePlannerType(
+            node.plannerType,
+            node.children.length > 0,
+          ),
           isReady: workingTree.isReady,
           isTriaged: true,
           duration: Math.max(1, Math.floor(node.duration)),
@@ -202,6 +208,11 @@ function applyTreeToExistingRoot({
   const updatedRoot: Planner = {
     ...rootRow,
     title: workingTree.title,
+    plannerType: resolveRetainedRootType(
+      workingTree.plannerType,
+      workingTree.children.length > 0,
+      rootRow.plannerType,
+    ),
     duration: Math.max(1, Math.floor(workingTree.duration)),
     deadline: workingTree.deadline,
     priority: workingTree.priority,
@@ -253,7 +264,10 @@ function buildNewRootRows(
       id: childId,
       title: child.title,
       parentId,
-      plannerType: normalizePlannerType(child.plannerType),
+      plannerType: normalizePlannerType(
+        child.plannerType,
+        child.children.length > 0,
+      ),
       isReady: rootIsReady,
       isTriaged: true,
       duration: Math.max(1, Math.floor(child.duration)),
@@ -306,20 +320,45 @@ function buildNewRootRows(
   return rows;
 }
 
-function normalizePlannerType(raw: DraftNode["plannerType"]): PlannerType {
+// Structure wins over the model's label: any node that holds children is a
+// goal (goals hold subtasks; tasks and plans are leaves). This keeps a nested
+// item from persisting as a "task" just because the assistant mislabeled it.
+function normalizePlannerType(
+  raw: DraftNode["plannerType"],
+  hasChildren: boolean,
+): PlannerType {
+  if (hasChildren) return PlannerType.goal;
   if (raw === "goal") return PlannerType.goal;
   if (raw === "plan") return PlannerType.plan;
   return PlannerType.task;
 }
 
+// A retained root may now have its type edited from the assistant (task <->
+// goal, or plan -> task). The draft contract still can't MINT a plan (no
+// `starts`), so a working "plan" is honored only when the row was already a
+// plan — an unchanged plan root round-trips as "plan" and survives; anything
+// else falls back to task. Children still force goal.
+function resolveRetainedRootType(
+  working: DraftNode["plannerType"],
+  hasChildren: boolean,
+  existing: PlannerType,
+): PlannerType {
+  if (hasChildren) return PlannerType.goal;
+  if (working === "goal") return PlannerType.goal;
+  if (working === "plan") {
+    return existing === PlannerType.plan ? PlannerType.plan : PlannerType.task;
+  }
+  return PlannerType.task;
+}
+
 // New top-level rows must never be plans — a plan needs a fixed `starts`,
-// which the draft contract doesn't carry. The prompt forbids it; this is the
-// defensive coercion if the model does it anyway.
+// which the draft contract doesn't carry. A root with children is a goal; a
+// leaf root falls back to task (goal only when explicitly labeled).
 function normalizeRootType(
   raw: DraftNode["plannerType"],
   hasChildren: boolean,
 ): PlannerType {
+  if (hasChildren) return PlannerType.goal;
   if (raw === "goal") return PlannerType.goal;
-  if (raw === "task") return PlannerType.task;
-  return hasChildren ? PlannerType.goal : PlannerType.task;
+  return PlannerType.task;
 }

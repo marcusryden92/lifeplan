@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   ChevronRight,
   ChevronDown,
@@ -17,7 +17,11 @@ import DraggableItem from "@/components/draggable/DraggableItem";
 
 import { getRootParentId, getSubtasksById } from "@/utils/goalPageHandlers";
 import { toggleSubtaskCompletion } from "@/utils/goal-handlers/subtaskCompletion";
+import { moveToEdge, moveToMiddle } from "@/utils/goal-handlers/moveItem";
+import { sortSiblings } from "@/utils/goal-handlers/sortOrderKeys";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import useClickOutside from "@/hooks/useClickOutside";
 import DragDisableListWrapper from "@/components/draggable/DragDisableListWrapper";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import {
@@ -28,6 +32,9 @@ import {
   completeBtn,
   completeCircle,
   gripBtn,
+  gripWrap,
+  moveMenu,
+  moveMenuItem,
 } from "./lumenTasks.css";
 
 const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
@@ -89,6 +96,46 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
     [task.id, task.title, task.parentId, setCurrentlyClickedItem],
   );
 
+  // The hover-and-mouse drag system never fires on touch, so on mobile the
+  // grip opens an explicit move menu driven by the same moveItem handlers
+  // the drop targets use.
+  const isMobile = useIsMobile();
+  const [moveMenuOpen, setMoveMenuOpen] = useState(false);
+  const moveMenuRef = useRef<HTMLSpanElement>(null);
+  useClickOutside({
+    ref: moveMenuRef,
+    onClickOutside: () => setMoveMenuOpen(false),
+    isActive: moveMenuOpen,
+  });
+
+  const siblings = moveMenuOpen
+    ? sortSiblings(
+        task.parentId
+          ? getSubtasksById(planner, task.parentId)
+          : planner.filter((t) => !t.parentId),
+      )
+    : [];
+  const siblingIdx = siblings.findIndex((t) => t.id === task.id);
+  const prevSibling = siblingIdx > 0 ? siblings[siblingIdx - 1] : null;
+  const nextSibling =
+    siblingIdx !== -1 && siblingIdx < siblings.length - 1
+      ? siblings[siblingIdx + 1]
+      : null;
+  // Outdenting past the rendered tree root would promote the row to a
+  // top-level goal; stop at the root's children.
+  const canOutdent = !!task.parentId && task.parentId !== rootId;
+
+  const clickedItem = {
+    taskId: task.id,
+    taskTitle: task.title,
+    parentId: task.parentId || "",
+  };
+  const runMove = (e: React.MouseEvent, move: () => void) => {
+    e.stopPropagation();
+    move();
+    setMoveMenuOpen(false);
+  };
+
   return (
     <div
       className={`${itemRow} ${hasSubtasks ? itemRowWithSubtasks : ""}`}
@@ -98,13 +145,103 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
           taskId={task.id}
           parentId={task.parentId ?? undefined}
         >
-          <span
-            className={gripBtn}
-            onMouseDown={startDrag}
-            aria-label="Drag to reorder"
-            role="button"
-          >
-            <GripVertical size={16} strokeWidth={2} />
+          <span className={gripWrap} ref={moveMenuRef}>
+            <span
+              className={gripBtn}
+              onMouseDown={isMobile ? undefined : startDrag}
+              onClick={
+                isMobile
+                  ? (e) => {
+                      e.stopPropagation();
+                      setMoveMenuOpen((o) => !o);
+                    }
+                  : undefined
+              }
+              aria-label={isMobile ? "Move item" : "Drag to reorder"}
+              aria-expanded={isMobile ? moveMenuOpen : undefined}
+              role="button"
+            >
+              <GripVertical size={16} strokeWidth={2} />
+            </span>
+            {moveMenuOpen && (
+              <span className={moveMenu} role="menu">
+                <button
+                  type="button"
+                  className={moveMenuItem}
+                  disabled={!prevSibling}
+                  onClick={(e) =>
+                    runMove(e, () => {
+                      if (!prevSibling) return;
+                      moveToEdge({
+                        planner,
+                        updatePlannerArray,
+                        currentlyClickedItem: clickedItem,
+                        targetId: prevSibling.id,
+                        mouseLocationInItem: "top",
+                      });
+                    })
+                  }
+                >
+                  Move up
+                </button>
+                <button
+                  type="button"
+                  className={moveMenuItem}
+                  disabled={!nextSibling}
+                  onClick={(e) =>
+                    runMove(e, () => {
+                      if (!nextSibling) return;
+                      moveToEdge({
+                        planner,
+                        updatePlannerArray,
+                        currentlyClickedItem: clickedItem,
+                        targetId: nextSibling.id,
+                        mouseLocationInItem: "bottom",
+                      });
+                    })
+                  }
+                >
+                  Move down
+                </button>
+                <button
+                  type="button"
+                  className={moveMenuItem}
+                  disabled={!prevSibling}
+                  onClick={(e) =>
+                    runMove(e, () => {
+                      if (!prevSibling) return;
+                      moveToMiddle({
+                        planner,
+                        updatePlannerArray,
+                        currentlyClickedItem: clickedItem,
+                        currentlyHoveredItem: prevSibling.id,
+                      });
+                    })
+                  }
+                >
+                  Nest under previous
+                </button>
+                <button
+                  type="button"
+                  className={moveMenuItem}
+                  disabled={!canOutdent}
+                  onClick={(e) =>
+                    runMove(e, () => {
+                      if (!canOutdent || !task.parentId) return;
+                      moveToEdge({
+                        planner,
+                        updatePlannerArray,
+                        currentlyClickedItem: clickedItem,
+                        targetId: task.parentId,
+                        mouseLocationInItem: "bottom",
+                      });
+                    })
+                  }
+                >
+                  Move out one level
+                </button>
+              </span>
+            )}
           </span>
 
           {hasSubtasks ? (

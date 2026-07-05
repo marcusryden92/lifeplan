@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, media } from "@/lib/theme";
+import { space, vars, media } from "@/lib/theme";
 
 
 export const masthead = style({
@@ -7,7 +7,7 @@ export const masthead = style({
   borderBottom: `1px solid ${vars.rule}`,
   display: "flex",
   alignItems: "baseline",
-  gap: 18,
+  gap: space["5"],
   background: vars.glass.bgSoft,
   backdropFilter: "blur(20px)",
   WebkitBackdropFilter: "blur(20px)",

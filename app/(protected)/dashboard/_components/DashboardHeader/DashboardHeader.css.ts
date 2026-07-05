@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, media } from "@/lib/theme";
+import { space, vars, themeTransition, media } from "@/lib/theme";
 
 
 export const headerRow = style({
@@ -8,13 +8,13 @@ export const headerRow = style({
   display: "flex",
   alignItems: "flex-end",
   justifyContent: "space-between",
-  gap: 24,
+  gap: space["6"],
   "@media": {
     [media.mobile]: {
       padding: "22px 18px 16px",
       flexDirection: "column",
       alignItems: "flex-start",
-      gap: 14,
+      gap: space["3.5"],
     },
   },
 });
@@ -34,7 +34,7 @@ export const greeting = style({
 });
 
 export const summaryLine = style({
-  marginTop: 10,
+  marginTop: space["2.5"],
   fontSize: 14,
   color: vars.inkSoft,
   fontWeight: 500,
@@ -57,7 +57,7 @@ export const summaryError = style({
 
 export const headerActions = style({
   display: "flex",
-  gap: 8,
+  gap: space["2"],
   flexShrink: 0,
   "@media": {
     [media.mobile]: { width: "100%" },

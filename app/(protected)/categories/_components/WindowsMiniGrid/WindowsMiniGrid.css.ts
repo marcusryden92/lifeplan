@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii } from "@/lib/theme";
 
 export const wrap = style({
   position: "relative",
@@ -8,7 +8,7 @@ export const wrap = style({
   border: `1px solid ${vars.rule}`,
   borderRadius: radii["md+2"],
   background: vars.glass.bgSoft,
-  padding: 10,
+  padding: space["2.5"],
   cursor: "pointer",
   transition: themeTransition,
   selectors: {
@@ -23,7 +23,7 @@ export const dayHeader = style({
   display: "grid",
   gridTemplateColumns: "36px repeat(7, 1fr)",
   gap: 0,
-  marginBottom: 4,
+  marginBottom: space["1"],
 });
 
 export const dayLabel = style({
@@ -61,8 +61,8 @@ export const hourLabel = style({
   fontWeight: 500,
   color: vars.muted,
   fontVariantNumeric: "tabular-nums",
-  paddingRight: 6,
-  paddingTop: 1,
+  paddingRight: space["1.5"],
+  paddingTop: space["px"],
   textAlign: "right",
   transition: themeTransition,
 });

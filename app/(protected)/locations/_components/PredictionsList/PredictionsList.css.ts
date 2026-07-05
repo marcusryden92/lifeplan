@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, popover } from "@/lib/theme";
+import { space, vars, popover } from "@/lib/theme";
 
 // Absolute-positioned overlay anchored to its position: relative wrap.
 // The parent modal must use `overflow: visible` for this to escape its box.
@@ -29,7 +29,7 @@ export const predictionRow = style({
   cursor: "pointer",
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: space["0.5"],
   fontFamily: vars.font.ui,
   color: vars.ink,
   borderBottom: `1px solid ${vars.glass.stroke}`,

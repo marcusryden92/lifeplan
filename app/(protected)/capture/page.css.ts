@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, popover, glass, media, radii } from "@/lib/theme";
+import { space, vars, themeTransition, popover, glass, media, radii } from "@/lib/theme";
 
 
 export const page = style({
@@ -12,11 +12,11 @@ export const page = style({
 export const subHeader = style({
   display: "flex",
   alignItems: "baseline",
-  gap: 12,
+  gap: space["3"],
   padding: "20px 28px 18px",
   flexShrink: 0,
   "@media": {
-    [media.mobile]: { padding: "16px 16px 12px", flexWrap: "wrap", gap: 10 },
+    [media.mobile]: { padding: "16px 16px 12px", flexWrap: "wrap", gap: space["2.5"] },
   },
 });
 
@@ -46,7 +46,7 @@ export const spacer = style({ flex: 1 });
 export const kbdHint = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   fontFamily: vars.font.ui,
   fontSize: 11,
   color: vars.muted,
@@ -56,17 +56,21 @@ export const kbdHint = style({
 export const mainGrid = style({
   display: "grid",
   gridTemplateColumns: "300px 1fr",
-  gap: 16,
+  gap: space["4"],
   padding: "0 28px 28px",
   flex: 1,
   minHeight: 0,
   "@media": {
-    [media.mobile]: {
+    // The desktop sidebar persists through the tablet band, so the rail
+    // stacks over the content well before the mobile layout kicks in.
+    [media.tablet]: {
       gridTemplateColumns: "1fr",
-      padding: "0 16px 24px",
-      gap: 14,
       flex: "0 0 auto",
       minHeight: "auto",
+    },
+    [media.mobile]: {
+      padding: "0 16px 24px",
+      gap: space["3.5"],
     },
   },
 });
@@ -75,7 +79,7 @@ export const queueRail = style({
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
-  gap: 12,
+  gap: space["3"],
 });
 
 export const queueHead = style({
@@ -97,7 +101,7 @@ export const queueTitle = style({
 export const quickAdd = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   padding: "8px 12px",
   borderRadius: radii.pill,
   border: `1px solid ${vars.glass.stroke}`,
@@ -119,9 +123,9 @@ export const quickAddInput = style({
 export const queueList = style({
   display: "flex",
   flexDirection: "column",
-  gap: 6,
+  gap: space["1.5"],
   overflowY: "auto",
-  paddingRight: 4,
+  paddingRight: space["1"],
   flex: 1,
   minHeight: 0,
 });
@@ -130,9 +134,9 @@ export const queueRow = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  gap: 8,
+  gap: space["2"],
   padding: "10px 12px",
-  borderRadius: radii["sm+2"],
+  borderRadius: radii.sm,
   cursor: "pointer",
   border: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
@@ -186,15 +190,15 @@ export const main = style({
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
-  gap: 14,
+  gap: space["3.5"],
   overflowY: "auto",
-  paddingRight: 4,
+  paddingRight: space["1"],
 });
 
 export const breadcrumb = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   fontFamily: vars.font.ui,
   fontSize: 11.5,
   color: vars.muted,
@@ -204,11 +208,11 @@ export const breadcrumb = style({
 export const card = style([
   glass({ fill: "deep", radius: "lg", shadow: "none" }),
   {
-    padding: 28,
+    padding: space["7"],
     display: "flex",
     flexDirection: "column",
-    gap: 18,
-    "@media": { [media.mobile]: { padding: 20, borderRadius: radii["lg+2"] } },
+    gap: space["5"],
+    "@media": { [media.mobile]: { padding: space["5"], borderRadius: radii["lg+2"] } },
   },
 ]);
 
@@ -227,7 +231,7 @@ export const itemTitle = style({
 export const typeGrid = style({
   display: "grid",
   gridTemplateColumns: "repeat(4, 1fr)",
-  gap: 8,
+  gap: space["2"],
   "@media": { [media.mobile]: { gridTemplateColumns: "repeat(2, 1fr)" } },
 });
 
@@ -236,9 +240,9 @@ export const typeCard = style({
   flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
-  gap: 4,
+  gap: space["1"],
   padding: "14px 10px",
-  borderRadius: radii.md,
+  borderRadius: radii.sm,
   border: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
   color: vars.ink,
@@ -297,7 +301,7 @@ export const typeCardKbd = style({
 export const fieldGrid = style({
   display: "grid",
   gridTemplateColumns: "repeat(3, 1fr)",
-  gap: 12,
+  gap: space["3"],
   "@media": { [media.mobile]: { gridTemplateColumns: "1fr" } },
 });
 
@@ -305,9 +309,9 @@ export const field = style({
   display: "flex",
   flexDirection: "column",
   justifyContent: "center",
-  gap: 6,
+  gap: space["1.5"],
   padding: "10px 14px",
-  borderRadius: radii["sm+2"],
+  borderRadius: radii.sm,
   border: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
   minHeight: 72,
@@ -328,10 +332,9 @@ export const fieldInput = style({
   border: "none",
   outline: "none",
   background: "transparent",
-  fontFamily: vars.font.display,
-  fontSize: 20,
+  fontFamily: vars.font.ui,
+  fontSize: 15,
   fontWeight: 500,
-  letterSpacing: "-0.02em",
   color: vars.ink,
   width: "100%",
   height: 26,
@@ -347,7 +350,7 @@ export const fieldInput = style({
 export const categoryTrigger = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   width: "100%",
   height: 26,
   padding: 0,
@@ -355,10 +358,9 @@ export const categoryTrigger = style({
   background: "transparent",
   cursor: "pointer",
   textAlign: "left",
-  fontFamily: vars.font.display,
-  fontSize: 20,
+  fontFamily: vars.font.ui,
+  fontSize: 15,
   fontWeight: 500,
-  letterSpacing: "-0.02em",
   color: vars.ink,
   transition: themeTransition,
 });
@@ -397,14 +399,14 @@ export const categoryDropdown = style([
     flexDirection: "column",
     maxHeight: 220,
     overflow: "auto",
-    padding: 4,
+    padding: space["1"],
   },
 ]);
 
 export const categoryDropdownItem = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
+  gap: space["2"],
   width: "100%",
   padding: "8px 10px",
   border: "none",
@@ -434,14 +436,14 @@ export const categoryDropdownItemMuted = style({
 export const actionRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 10,
+  gap: space["2.5"],
   flexWrap: "wrap",
 });
 
 export const footerHint = style({
   display: "flex",
   alignItems: "center",
-  gap: 12,
+  gap: space["3"],
   flexWrap: "wrap",
   fontFamily: vars.font.ui,
   fontSize: 11,
@@ -461,7 +463,7 @@ export const emptyMain = style({
   color: vars.muted,
   fontFamily: vars.font.ui,
   fontSize: 14,
-  gap: 8,
+  gap: space["2"],
 });
 
 export const emptyMainTitle = style({

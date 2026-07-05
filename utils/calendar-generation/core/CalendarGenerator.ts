@@ -23,6 +23,7 @@ import {
   expandTemplates,
   buildLocationMap,
   buildPlannerCategoryMap,
+  buildCategoryEligibilityMap,
   prepareSchedulingContext,
   buildSchedulingStrategy,
   prepareCandidates,
@@ -180,6 +181,11 @@ export class CalendarGenerator {
       input.categories || [],
     );
     const plannerCategoryMap = buildPlannerCategoryMap(input.planners);
+    // Eligibility uses the FULL category list (not just scheduledCategories) so
+    // the parent chain can be walked through classification-only ancestors.
+    const categoryEligibilityMap = buildCategoryEligibilityMap(
+      input.categories ?? [],
+    );
 
     // Phase 6a: Build available slots over the full scheduling timeline
     const schedulingStartDate = setTimeOnDate(currentDate, "00:00");
@@ -250,6 +256,7 @@ export class CalendarGenerator {
       this.scheduledCategories,
       plannerLocationMap,
       plannerCategoryMap,
+      categoryEligibilityMap,
       schedulerRecorder,
       previousById,
     );

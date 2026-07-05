@@ -42,6 +42,7 @@ function makeCategory(overrides: Partial<Category> = {}): Category {
     sortOrder: 0,
     useTimeWindows: true,
     isStrict: false,
+    confineToOwnWindows: false,
     locationId: null,
     parentId: null,
     userId: USER_ID,

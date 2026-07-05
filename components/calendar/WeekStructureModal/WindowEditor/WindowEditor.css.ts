@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii } from "@/lib/theme";
 
 export const selectedPanel = style({
   flexShrink: 0,
@@ -11,8 +11,8 @@ export const selectedPanel = style({
 export const selectedHeaderRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  marginBottom: 10,
+  gap: space["2"],
+  marginBottom: space["2.5"],
 });
 
 export const selectedSwatch = style({
@@ -39,21 +39,21 @@ export const selectedTitle = style({
 export const fieldGrid = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
-  gap: 8,
-  marginBottom: 8,
+  gap: space["2"],
+  marginBottom: space["2"],
 });
 
 export const field = style({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: space["1"],
 });
 
 export const fieldWithMargin = style({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
-  marginBottom: 8,
+  gap: space["1"],
+  marginBottom: space["2"],
 });
 
 export const fieldLabel = style({
@@ -78,12 +78,12 @@ export const fieldStatic = style({
 export const categoryRow = style({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: space["1"],
   maxHeight: 140,
   overflow: "auto",
   border: `1px solid ${vars.rule}`,
   borderRadius: radii.sm,
-  padding: 4,
+  padding: space["1"],
 });
 
 export const categoryOption = style({
@@ -97,7 +97,7 @@ export const categoryOption = style({
   color: vars.ink,
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  gap: space["1.5"],
   cursor: "pointer",
   textAlign: "left",
   width: "100%",
@@ -122,14 +122,14 @@ export const categoryDot = style({
 
 export const selectedActions = style({
   display: "flex",
-  gap: 6,
-  marginTop: 10,
+  gap: space["1.5"],
+  marginTop: space["2.5"],
   flexWrap: "wrap",
 });
 
 export const unassignedHint = style({
   fontSize: 10.5,
   color: vars.muted,
-  marginTop: 6,
+  marginTop: space["1.5"],
   fontFamily: vars.font.ui,
 });

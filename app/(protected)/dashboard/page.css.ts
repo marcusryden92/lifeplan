@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { media } from "@/lib/theme";
+import { space, media } from "@/lib/theme";
 
 export const page = style({
   display: "flex",
@@ -17,17 +17,19 @@ export const page = style({
 export const gridWrap = style({
   display: "grid",
   gridTemplateColumns: "1.4fr 1fr",
-  gap: 18,
+  gap: space["5"],
   padding: "0 28px 28px",
   flex: 1,
   minHeight: 0,
   "@media": {
-    [media.mobile]: {
+    [media.tablet]: {
       gridTemplateColumns: "1fr",
-      padding: "0 16px 24px",
-      gap: 14,
       flex: "0 0 auto",
       minHeight: "auto",
+    },
+    [media.mobile]: {
+      padding: "0 16px 24px",
+      gap: space["3.5"],
     },
   },
 });
@@ -35,6 +37,6 @@ export const gridWrap = style({
 export const rightCol = style({
   display: "flex",
   flexDirection: "column",
-  gap: 14,
+  gap: space["3.5"],
   minHeight: 0,
 });

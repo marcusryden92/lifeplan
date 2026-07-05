@@ -26,6 +26,19 @@ export function findValidSlots(
   const effectiveCategoryId =
     context.plannerCategoryMap?.get(task.id) ?? task.categoryId;
 
+  // Categories whose windows this task's items may occupy: its own effective
+  // category plus any non-confined ancestor it cascades into. The task is only
+  // actually window-constrained when at least one of those bears windows (is in
+  // context.categories, the window-bearing set) — otherwise it schedules freely
+  // in Available time, same as an uncategorized task.
+  const eligibleCategoryIds = effectiveCategoryId
+    ? context.categoryEligibilityMap?.get(effectiveCategoryId)
+    : undefined;
+  const hasWindowConstraint =
+    !!eligibleCategoryIds &&
+    !!context.categories &&
+    Array.from(eligibleCategoryIds).some((id) => context.categories!.has(id));
+
   const constraintForTask =
     effectiveCategoryId && context.categories
       ? context.categories.get(effectiveCategoryId) || undefined
@@ -38,7 +51,7 @@ export function findValidSlots(
     task.duration,
     afterTime || context.currentDate,
     undefined,
-    constraintForTask,
+    hasWindowConstraint ? eligibleCategoryIds : undefined,
     context.placementCutoffDate,
   );
 

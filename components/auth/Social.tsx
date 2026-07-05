@@ -1,5 +1,6 @@
 "use client";
 
+import { space } from "@/lib/theme";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
 import { useSearchParams } from "next/navigation";
@@ -18,7 +19,7 @@ export const Social = () => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: space["1.5"] }}>
       <Button
         variant="glass"
         size="md"

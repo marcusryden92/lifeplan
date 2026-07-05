@@ -12,7 +12,7 @@ import {
 
 // How an entry point scopes the assistant session. All fields optional: a
 // bare open (mod+I, sidebar button) resolves focus from the current route.
-// `intent` is the programmatic hook for flows like onboarding ("draft-goals")
+// `intent` is the programmatic hook for flows like onboarding ("onboarding")
 // — carried through so the session can key a prompt preamble off it.
 export type AssistantScope = {
   focusItemId?: string;

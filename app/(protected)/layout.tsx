@@ -1,38 +1,35 @@
-"use client";
+import { type ReactNode } from "react";
+import { auth } from "@/auth";
+import { db } from "@/lib/db";
+import { ProtectedProviders } from "./ProtectedProviders";
 
-import type { ReactNode } from "react";
-import StoreProvider from "@/context/StoreProvider";
-import UserProvider from "@/context/UserProvider";
-import CalendarProvider from "@/context/CalendarProvider";
-import { AppShell, AssistantProvider } from "@/components/ui";
-import { GlobalAssistant } from "@/components/draft/AIDraftModal";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+// Server component: resolve whether the user still needs first-run setup before
+// the first paint, so the onboarding overlay renders in its correct state
+// immediately instead of popping in after a client round-trip.
+export default async function CircadiumLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  let needsOnboarding = false;
+  try {
+    const session = await auth();
+    if (session?.user?.id) {
+      const user = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { onboardedAt: true },
+      });
+      needsOnboarding = user?.onboardedAt == null;
+    }
+  } catch {
+    // If the session/DB check fails, don't trap the user in setup — fall
+    // through to the app; the dashboard SetupChecklist still covers resuming it.
+    needsOnboarding = false;
+  }
 
-export default function CircadiumLayout({ children }: { children: ReactNode }) {
   return (
-    <StoreProvider>
-      <UserProvider>
-        <CalendarProvider>
-          <CircadiumShell>{children}</CircadiumShell>
-        </CalendarProvider>
-      </UserProvider>
-    </StoreProvider>
-  );
-}
-
-function CircadiumShell({ children }: { children: ReactNode }) {
-  const user = useCurrentUser();
-  const userName = user?.name ?? user?.email ?? "";
-  const userInitial = userName.trim().charAt(0).toUpperCase() || "?";
-  return (
-    <AssistantProvider>
-      <AppShell
-        userName={userName}
-        userInitial={userInitial}
-        assistantSlot={<GlobalAssistant />}
-      >
-        {children}
-      </AppShell>
-    </AssistantProvider>
+    <ProtectedProviders needsOnboarding={needsOnboarding}>
+      {children}
+    </ProtectedProviders>
   );
 }

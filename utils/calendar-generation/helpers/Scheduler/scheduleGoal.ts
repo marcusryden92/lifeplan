@@ -18,6 +18,7 @@ export function scheduleGoal(
   perTemplateMasks: PerTemplateMask[],
   categories: Category[],
   plannerCategoryMap: Map<string, string | null>,
+  categoryEligibilityMap: Map<string, Set<string>>,
   currentDate: Date,
   capacityCache: Map<string, number>,
 ): { scheduled: boolean; permanentFailure: boolean } {
@@ -38,6 +39,7 @@ export function scheduleGoal(
       categories,
       plannerCategoryMap,
       currentDate,
+      categoryEligibilityMap,
       capacityCache,
     );
 

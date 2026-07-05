@@ -1,6 +1,6 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars, themeTransition, interactiveTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, interactiveTransition, radii } from "@/lib/theme";
 
 export const matrixWrap = style({
   border: `1px solid ${vars.glass.stroke}`,
@@ -76,7 +76,7 @@ export const headerCellInner = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: 5,
+  gap: space["1.5"],
   // Lifted above the header's ::before trace overlay so the text isn't
   // painted underneath the tint.
   position: "relative",
@@ -117,7 +117,7 @@ export const cellButton = style({
   flexDirection: "column",
   alignItems: "flex-start",
   justifyContent: "center",
-  gap: 2,
+  gap: space["0.5"],
   width: "100%",
   height: "100%",
   minHeight: CELL_MIN_HEIGHT,
@@ -151,7 +151,7 @@ export const cellSelf = style({
 export const periodRow = style({
   display: "inline-flex",
   alignItems: "baseline",
-  gap: 6,
+  gap: space["1.5"],
   lineHeight: 1.2,
 });
 
@@ -174,7 +174,7 @@ export const singleValue = style({
   display: "flex",
   alignItems: "baseline",
   justifyContent: "center",
-  gap: 5,
+  gap: space["1.5"],
   width: "100%",
   lineHeight: 1.2,
 });
@@ -225,7 +225,7 @@ export const missingBlock = style({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
-  gap: 2,
+  gap: space["0.5"],
 });
 
 export const missingLabel = style({
@@ -239,7 +239,7 @@ export const missingLabel = style({
 export const missingHint = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: 3,
+  gap: space["1"],
   fontSize: 10,
   color: vars.muted,
   fontWeight: 500,

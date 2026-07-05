@@ -1,5 +1,5 @@
-import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, radii, zIndex } from "@/lib/theme";
+import { createVar, style, globalStyle } from "@vanilla-extract/css";
+import { space, vars, themeTransition, radii, zIndex, media } from "@/lib/theme";
 
 export const MODAL_FADE_MS = 220;
 
@@ -39,13 +39,27 @@ export const modal = style({
   },
 });
 
+// Embedded mode (onboarding AI step): fills its parent container instead of
+// the app main column, with no Dialog overlay/animation. The host provides its
+// own framing and save action.
+export const embeddedRoot = style({
+  position: "relative",
+  width: "100%",
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+  overflow: "hidden",
+  isolation: "isolate",
+  background: vars.paper,
+});
+
 export const banner = style({
   position: "relative",
   zIndex: 1,
   flexShrink: 0,
   display: "flex",
   alignItems: "center",
-  gap: 14,
+  gap: space["3.5"],
   padding: "8px 22px",
   background: vars.ink,
   color: vars.paper,
@@ -68,6 +82,10 @@ export const bannerTitle = style({
   fontWeight: 500,
   color: `color-mix(in srgb, ${vars.paper} 85%, transparent)`,
   transition: themeTransition,
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 });
 
 export const bannerSpacer = style({ flex: 1 });
@@ -98,12 +116,43 @@ export const body = style({
   overflow: "hidden",
 });
 
+// Mobile shows one pane at a time — this row hosts the Chat / Review
+// segmented switch. Hidden on wider layouts where both panes render
+// side by side.
+export const mobilePaneSwitch = style({
+  display: "none",
+  "@media": {
+    [media.mobile]: {
+      display: "flex",
+      flexShrink: 0,
+      padding: "10px 14px 0",
+    },
+  },
+});
+
+globalStyle(`${mobilePaneSwitch} > *`, {
+  flex: 1,
+});
+
+export const paneMobileHidden = style({
+  "@media": {
+    [media.mobile]: {
+      display: "none",
+    },
+  },
+});
+
+// Set inline (via assignInlineVars) from the divider drag; a var instead of an
+// inline flex style so the mobile media query below can still win.
+export const chatBasisVar = createVar();
+
 export const chatPane = style({
   position: "relative",
   display: "flex",
   flexDirection: "column",
   minHeight: 0,
   minWidth: 240,
+  flex: `0 0 ${chatBasisVar}`,
   padding: "14px 18px",
   // Subtle darker surface behind the chat — makes the assistant text and
   // composer sit on a differentiated surface without breaking the modal's
@@ -111,6 +160,16 @@ export const chatPane = style({
   // ink, in dark mode this reads as a slightly deeper paper.
   background: `color-mix(in srgb, ${vars.ink} 4%, ${vars.paper})`,
   transition: themeTransition,
+  "@media": {
+    [media.tablet]: {
+      minWidth: 180,
+    },
+    [media.mobile]: {
+      minWidth: 0,
+      flex: "1 1 auto",
+      padding: "10px 14px",
+    },
+  },
 });
 
 export const treePane = style({
@@ -119,15 +178,27 @@ export const treePane = style({
   flexDirection: "column",
   minHeight: 0,
   minWidth: 240,
+  flex: "1 1 0",
   padding: "14px 18px",
+  "@media": {
+    [media.tablet]: {
+      minWidth: 180,
+    },
+    [media.mobile]: {
+      minWidth: 0,
+      padding: "10px 14px",
+    },
+  },
 });
 
 // Drag handle between the two panes. Thin bar with a wider hover target and
-// a col-resize cursor. Sits inside `.body` (which is display: flex).
+// a col-resize cursor. Sits inside `.body` (which is display: flex). On
+// mobile only one pane shows at a time, so the handle goes away.
 export const paneDivider = style({
   position: "relative",
   flex: "0 0 4px",
   cursor: "col-resize",
+  touchAction: "none",
   background: vars.rule,
   transition: themeTransition,
   selectors: {
@@ -135,13 +206,18 @@ export const paneDivider = style({
       background: vars.accent.primary,
     },
   },
+  "@media": {
+    [media.mobile]: {
+      display: "none",
+    },
+  },
 });
 
 export const paneHeader = style({
   display: "flex",
   alignItems: "baseline",
-  gap: 12,
-  marginBottom: 8,
+  gap: space["3"],
+  marginBottom: space["2"],
   flexShrink: 0,
 });
 
@@ -172,7 +248,7 @@ export const paneTab = style({
   cursor: "pointer",
   display: "inline-flex",
   alignItems: "baseline",
-  gap: 6,
+  gap: space["1.5"],
   color: vars.muted,
   transition: themeTransition,
   selectors: {
@@ -220,7 +296,7 @@ export const headerActionCluster = style({
   marginLeft: "auto",
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: space["1"],
 });
 
 // Small action button in a pane header ("Show all", "New chat", "History").
@@ -230,7 +306,7 @@ export const headerActionButton = style({
   border: "none",
   display: "inline-flex",
   alignItems: "center",
-  gap: 4,
+  gap: space["1"],
   padding: "4px 8px",
   borderRadius: radii.sm,
   cursor: "pointer",
@@ -254,7 +330,7 @@ export const chatPlaceholder = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: 24,
+  padding: space["6"],
   borderRadius: radii["md+2"],
   border: `1px dashed ${vars.rule}`,
   color: vars.muted,

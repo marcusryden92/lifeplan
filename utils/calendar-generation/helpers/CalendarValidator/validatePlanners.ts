@@ -69,11 +69,12 @@ export function validatePlanner(planner: Planner): ValidationResult {
   }
 
   if (planner.plannerType === PlannerType.plan) {
+    // A start-less plan is a warning, not an error: buildPlanEvents null-guards
+    // it (nothing renders until the user sets a time), and a single hard error
+    // here would blank the entire calendar. Triaged plans drafted without a
+    // time (e.g. the onboarding brain-dump) rely on this.
     if (!planner.starts) {
-      errors.push({
-        field: "starts",
-        message: "Plan items must have a start time",
-      });
+      warnings.push(`Plan "${planner.title}" has no start time yet`);
     }
   }
 

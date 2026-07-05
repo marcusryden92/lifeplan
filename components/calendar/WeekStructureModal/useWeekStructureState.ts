@@ -7,6 +7,7 @@ import type { AppDispatch } from "@/redux/store";
 import {
   upsertTemplate,
   removeTemplate,
+  upsertCategory,
   upsertTimeWindow,
   removeTimeWindow,
 } from "@/redux/slices/calendarSourceSlice";
@@ -91,6 +92,28 @@ export function useWeekStructureState({
       const ownerLookup = new Map<string, CategoryTimeWindow>();
       for (const c of categories) {
         for (const ts of c.timeSlots) ownerLookup.set(ts.id, ts);
+      }
+
+      // Drawing a window for a category implies you want the engine to use it,
+      // so auto-enable useTimeWindows for any category that GAINS a window this
+      // save (added or reassigned into it) — not merely any category that has
+      // one, so an unrelated save can't re-enable a category the user turned
+      // off. Flip before the window writes (which mutate the same category's
+      // timeSlots — enabling first avoids clobbering them); the updatedAt bump
+      // is what lets the category diff carry the flag change.
+      const now = new Date().toISOString();
+      const categoriesGainingWindows = new Set<string>();
+      for (const w of winsWorking) {
+        if (!w.categoryId) continue;
+        const before = initialMap.get(w.id);
+        if (!before || before.categoryId !== w.categoryId) {
+          categoriesGainingWindows.add(w.categoryId);
+        }
+      }
+      for (const c of categories) {
+        if (categoriesGainingWindows.has(c.id) && !c.useTimeWindows) {
+          dispatch(upsertCategory({ ...c, useTimeWindows: true, updatedAt: now }));
+        }
       }
 
       for (const w of winsInitial) {

@@ -1,5 +1,5 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii, media } from "@/lib/theme";
 
 // Modal fade duration in ms â€” used by both CSS transition and the JS unmount timer.
 export const MODAL_FADE_MS = 220;
@@ -45,11 +45,20 @@ export const banner = style({
   flexShrink: 0,
   display: "flex",
   alignItems: "center",
-  gap: 14,
+  gap: space["3.5"],
   padding: "8px 22px",
   background: vars.ink,
   color: vars.paper,
   transition: themeTransition,
+  "@media": {
+    [media.tablet]: {
+      flexWrap: "wrap",
+    },
+    [media.mobile]: {
+      padding: "8px 14px",
+      gap: space["2.5"],
+    },
+  },
 });
 
 export const editingLabel = style({
@@ -66,7 +75,7 @@ export const modeToggle = style({
   position: "relative",
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
-  padding: 3,
+  padding: space["1"],
   borderRadius: radii.pill,
   background: `color-mix(in srgb, ${vars.paper} 10%, transparent)`,
   border: `1px solid color-mix(in srgb, ${vars.paper} 18%, transparent)`,
@@ -131,6 +140,13 @@ export const body = style({
   display: "flex",
   minHeight: 0,
   overflow: "hidden",
+  // Below the tablet breakpoint the fixed editor rail would crush the week
+  // grid, so it becomes a bottom panel instead.
+  "@media": {
+    [media.tablet]: {
+      flexDirection: "column",
+    },
+  },
 });
 
 export const gridCol = style({
@@ -142,13 +158,22 @@ export const gridCol = style({
   minWidth: 0,
   padding: "14px 18px",
   borderRight: `1px solid ${vars.rule}`,
+  "@media": {
+    [media.tablet]: {
+      borderRight: "none",
+    },
+    [media.mobile]: {
+      padding: "12px 14px",
+    },
+  },
 });
 
 export const gridHeader = style({
   display: "flex",
   alignItems: "baseline",
-  gap: 12,
-  marginBottom: 8,
+  flexWrap: "wrap",
+  gap: space["3"],
+  marginBottom: space["2"],
   flexShrink: 0,
 });
 
@@ -169,6 +194,48 @@ export const gridSubtitle = style({
   fontVariantNumeric: "tabular-nums",
 });
 
+// Mobile swaps the 7-column drawable week for a single-day view; this is the
+// prev / weekday / next switcher in the grid header. Hidden on wider layouts.
+export const dayNav = style({
+  display: "none",
+  "@media": {
+    [media.mobile]: {
+      display: "inline-flex",
+      alignItems: "center",
+      gap: space["1.5"],
+      marginLeft: "auto",
+    },
+  },
+});
+
+export const dayNavBtn = style({
+  appearance: "none",
+  border: `1px solid ${vars.rule}`,
+  background: "transparent",
+  color: vars.ink,
+  width: 26,
+  height: 26,
+  borderRadius: radii.sm,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  padding: 0,
+  transition: themeTransition,
+  selectors: {
+    "&:hover": { background: vars.interactive.hoverFill },
+  },
+});
+
+export const dayNavLabel = style({
+  fontFamily: vars.font.ui,
+  fontSize: 12,
+  fontWeight: 600,
+  color: vars.ink,
+  minWidth: 78,
+  textAlign: "center",
+});
+
 export const calendarWrap = style({
   flex: 1,
   minHeight: 0,
@@ -186,6 +253,14 @@ export const rail = style({
   flexDirection: "column",
   minHeight: 0,
   overflow: "hidden",
+  "@media": {
+    [media.tablet]: {
+      width: "auto",
+      maxHeight: "45%",
+      overflowY: "auto",
+      borderTop: `1px solid ${vars.rule}`,
+    },
+  },
 });
 
 export const emptyPanel = style({
@@ -211,7 +286,7 @@ export const errorBanner = style({
   fontSize: 12,
   display: "flex",
   alignItems: "flex-start",
-  gap: 8,
+  gap: space["2"],
 });
 
 export const errorBannerMessage = style({ flex: 1 });

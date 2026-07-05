@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, backdropFilters, popover } from "@/lib/theme";
+import { space, vars, themeTransition, backdropFilters, popover } from "@/lib/theme";
 
 export const CONFIRM_FADE_MS = 180;
 
@@ -51,7 +51,7 @@ export const modalTitle = style({
 });
 
 export const modalBody = style({
-  marginTop: 10,
+  marginTop: space["2.5"],
   fontSize: 13.5,
   color: vars.inkSoft,
   fontFamily: vars.font.ui,
@@ -63,7 +63,7 @@ export const modalActions = style({
   display: "flex",
   justifyContent: "flex-end",
   alignItems: "center",
-  gap: 8,
-  marginTop: 22,
+  gap: space["2"],
+  marginTop: space["6"],
   flexWrap: "wrap",
 });

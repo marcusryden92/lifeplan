@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii } from "@/lib/theme";
 
 export const selectedPanel = style({
   flexShrink: 0,
@@ -11,8 +11,8 @@ export const selectedPanel = style({
 export const selectedHeaderRow = style({
   display: "flex",
   alignItems: "center",
-  gap: 8,
-  marginBottom: 10,
+  gap: space["2"],
+  marginBottom: space["2.5"],
 });
 
 export const selectedSwatch = style({
@@ -39,21 +39,21 @@ export const selectedTitle = style({
 export const fieldGrid = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
-  gap: 8,
-  marginBottom: 8,
+  gap: space["2"],
+  marginBottom: space["2"],
 });
 
 export const field = style({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
+  gap: space["1"],
 });
 
 export const fieldWithMargin = style({
   display: "flex",
   flexDirection: "column",
-  gap: 4,
-  marginBottom: 8,
+  gap: space["1"],
+  marginBottom: space["2"],
 });
 
 export const fieldLabel = style({
@@ -96,7 +96,7 @@ export const fieldStatic = style({
 
 export const swatchRow = style({
   display: "flex",
-  gap: 6,
+  gap: space["1.5"],
   flexWrap: "wrap",
 });
 
@@ -116,7 +116,7 @@ export const swatchChip = style({
 
 export const selectedActions = style({
   display: "flex",
-  gap: 6,
-  marginTop: 10,
+  gap: space["1.5"],
+  marginTop: space["2.5"],
   flexWrap: "wrap",
 });

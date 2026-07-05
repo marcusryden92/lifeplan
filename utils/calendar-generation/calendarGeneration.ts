@@ -79,6 +79,13 @@ export function generateCalendar(
 
   const bufferTimeMinutes = opts.bufferTimeMinutes ?? 10;
 
+  // Untriaged rows are Capture-inbox jots (duration 0, no start time) — they
+  // are not real scheduling input, and letting them through poisons the whole
+  // regen: validatePlanners errors on a zero-duration task or a start-less
+  // plan, and the generator returns empty events on any validation failure.
+  // Drop them once here, at the input boundary.
+  const scheduledPlanners = planner.filter((p) => p.isTriaged !== false);
+
   // Logging configuration - set enableLogging to false to disable all logging.
   // dateRangeStart / dateRangeEnd limit event-based logs (finalEvents,
   // leanCalendar, travelDebug, the [travel] dump in assembleFinalEvents) to
@@ -110,7 +117,7 @@ export function generateCalendar(
     userId,
     weekStartDay,
     templates: template,
-    planners: planner,
+    planners: scheduledPlanners,
     previousCalendar: prevCalendar,
     previousEngineMessages: opts.previousEngineMessages,
     categories: opts.categories,
