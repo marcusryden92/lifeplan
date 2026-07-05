@@ -402,7 +402,7 @@ The user just finished first-run setup and this is their first contact with the 
 Work through the items warmly, one or two questions at a time — never a form or a wall of questions. For each:
 - A bare TASK needs a realistic duration and, if it's time-sensitive, a deadline. Set both with update_items once you know them.
 - A bare GOAL needs subtasks (add_items or propose_goals), a deadline if there is one, and a conversation about whether it's ready to start. Only set isReady (via update_items) once its subtasks and requirements are actually in place — readiness is a deliberate step, not a default.
-- A PLAN is a fixed-time commitment, but you CANNOT set its start time from here (there is no starts field in your tools). Ask when it happens: if it recurs weekly, offer to add a weekly template instead; if it's really a deadline-driven task, offer to convert it to a task (re-emit it via propose_goals with plannerType "task" — the start time is preserved on save); otherwise tell the user they can set the exact time on the item's page later.
+- A PLAN is a fixed-time commitment, but you CANNOT set its start time from here (there is no starts field in your tools). Ask when it happens: if it recurs weekly, offer to add a weekly template instead; if it's really a deadline-driven task, offer to convert it to a task (update_items with plannerType "task" — the start time is preserved on save); otherwise tell the user they can set the exact time on the item's page later.
 - Assign each item to one of the user's roles (their top-level categories — categoryId on the top-level row) where it fits.
 
 Don't end the session leaving triaged items without what they need to schedule — a task with no duration, a goal with no subtasks. If little or nothing was dumped, interview the user about the current season of their life and draft 2-4 goals across their roles. Only propose category time windows if a natural rhythm surfaces (a fixed study block, gym mornings). Keep every message short and encouraging; nothing is committed until they press Save, so invite them to react and adjust.
@@ -453,7 +453,7 @@ NODE STRUCTURE
 Each node in a goal tree has:
 - id: existing planner UUID. Echo it verbatim for retained nodes; OMIT the field (or set null) for new nodes.
 - title: short human-readable name.
-- plannerType: "task" | "plan" | "goal". Leaves are "task"; intermediate branches are "goal". Never create new "plan" nodes — plans need a fixed start time this contract doesn't carry.
+- plannerType: "task" | "plan" | "goal". Leaves are "task"; any node with subtasks is a "goal" — the app enforces this automatically, so you never need to fix a parent's type by hand. Change a leaf's type with update_items (task <-> goal, or plan -> task). Never create new "plan" nodes — plans need a fixed start time this contract doesn't carry.
 - duration: minutes required for that leaf task. For a "goal" node, duration is a rough estimate (children sum to the real total).
 - deadline: ISO date string or null.
 - priority: integer.
@@ -475,7 +475,7 @@ Reading:
 - get_goal_trees: fetch complete trees by id. Required before propose_goals may modify a goal (proposals are complete-tree replacements; editing blind would silently delete subtasks). The focused goal (if any) is already provided. Tool results are NOT retained between user messages — re-fetch each message.
 
 Editing — deterministic operations. PREFER these for small changes; each applies immediately to the user's review pane as a pending change (nothing is saved without their confirmation):
-- update_items: change fields (title, duration, deadline, priority, isReady; categoryId on top-level goals only) on items by id. No fetch needed.
+- update_items: change fields (title, plannerType task/goal, duration, deadline, priority, isReady; categoryId on top-level goals only) on items by id. No fetch needed. Use this to convert an item's type — you no longer need propose_goals just to change a task into a goal or a plan into a task.
 - move_item: move or reorder an item within its own goal (new parent + position). Cross-goal moves and moving top-level goals are not supported.
 - add_items: insert new subtasks under an existing parent. Added items are assigned draft ids on insertion — fetch the goal tree if you need to reference them.
 - delete_items: remove items (with their subtrees) or whole goals by id.
@@ -607,7 +607,7 @@ const searchItemsTool: Anthropic.Tool = {
 const updateItemsTool: Anthropic.Tool = {
   name: "update_items",
   description:
-    "Change fields on existing items by id — title, duration (minutes), deadline (ISO date or null to clear), priority, isReady, and categoryId (top-level goals only; null to clear). Structural changes (adding, moving, removing items) use the other tools.",
+    'Change fields on existing items by id — title, plannerType ("task" or "goal"; convert a leaf task into an empty goal or vice versa, or turn a plan into a task), duration (minutes), deadline (ISO date or null to clear), priority, isReady, and categoryId (top-level goals only; null to clear). An item with subtasks is always a goal — that is enforced automatically, so you never set plannerType just to fix a parent. Structural changes (adding, moving, removing items) use the other tools.',
   input_schema: {
     type: "object",
     properties: {
@@ -618,6 +618,7 @@ const updateItemsTool: Anthropic.Tool = {
           properties: {
             id: { type: "string" },
             title: { type: "string" },
+            plannerType: { type: "string", enum: ["task", "goal"] },
             duration: { type: "integer" },
             deadline: { type: ["string", "null"] },
             priority: { type: "integer" },

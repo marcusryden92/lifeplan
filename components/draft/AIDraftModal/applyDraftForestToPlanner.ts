@@ -208,6 +208,11 @@ function applyTreeToExistingRoot({
   const updatedRoot: Planner = {
     ...rootRow,
     title: workingTree.title,
+    plannerType: resolveRetainedRootType(
+      workingTree.plannerType,
+      workingTree.children.length > 0,
+      rootRow.plannerType,
+    ),
     duration: Math.max(1, Math.floor(workingTree.duration)),
     deadline: workingTree.deadline,
     priority: workingTree.priority,
@@ -325,6 +330,24 @@ function normalizePlannerType(
   if (hasChildren) return PlannerType.goal;
   if (raw === "goal") return PlannerType.goal;
   if (raw === "plan") return PlannerType.plan;
+  return PlannerType.task;
+}
+
+// A retained root may now have its type edited from the assistant (task <->
+// goal, or plan -> task). The draft contract still can't MINT a plan (no
+// `starts`), so a working "plan" is honored only when the row was already a
+// plan — an unchanged plan root round-trips as "plan" and survives; anything
+// else falls back to task. Children still force goal.
+function resolveRetainedRootType(
+  working: DraftNode["plannerType"],
+  hasChildren: boolean,
+  existing: PlannerType,
+): PlannerType {
+  if (hasChildren) return PlannerType.goal;
+  if (working === "goal") return PlannerType.goal;
+  if (working === "plan") {
+    return existing === PlannerType.plan ? PlannerType.plan : PlannerType.task;
+  }
   return PlannerType.task;
 }
 

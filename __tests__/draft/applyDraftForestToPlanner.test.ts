@@ -306,6 +306,76 @@ describe("applyDraftForestToPlanner", () => {
     );
   });
 
+  it("converts a top-level plan to a task while preserving its start time", () => {
+    const planner = [
+      ...makePlanner(),
+      row({ id: "plan-1", plannerType: "plan", starts: TS }),
+    ];
+    const workingForest = clone(plannerForestToJson(planner));
+    const plan = workingForest.goals.find((g) => g.id === "plan-1")!;
+    plan.plannerType = "task";
+
+    const result = applyDraftForestToPlanner({
+      planner,
+      workingForest,
+      userId: USER_ID,
+      validCategoryIds: VALID_CATEGORY_IDS,
+    });
+
+    const converted = byId(result, "plan-1");
+    expect(converted.plannerType).toBe("task");
+    expect(converted.starts).toBe(TS);
+  });
+
+  it("keeps an unchanged top-level plan a plan when a sibling goal changes", () => {
+    const planner = [
+      ...makePlanner(),
+      row({ id: "plan-1", plannerType: "plan", starts: TS }),
+    ];
+    const workingForest = clone(plannerForestToJson(planner));
+    // Touch a different goal so the plan round-trips through apply unchanged.
+    workingForest.goals.find((g) => g.id === "goal-a")!.title = "renamed";
+
+    const result = applyDraftForestToPlanner({
+      planner,
+      workingForest,
+      userId: USER_ID,
+      validCategoryIds: VALID_CATEGORY_IDS,
+    });
+
+    expect(byId(result, "plan-1").plannerType).toBe("plan");
+  });
+
+  it("promotes a top-level task to a goal once it gains a subtask", () => {
+    const planner = makePlanner();
+    const workingForest = clone(plannerForestToJson(planner));
+    const loose = workingForest.goals.find((g) => g.id === "goal-c")!;
+    loose.plannerType = "goal";
+    loose.children.push({
+      id: "",
+      title: "first step",
+      plannerType: "task",
+      duration: 15,
+      deadline: null,
+      priority: 0,
+      isReady: null,
+      categoryId: null,
+      children: [],
+    });
+
+    const result = applyDraftForestToPlanner({
+      planner,
+      workingForest,
+      userId: USER_ID,
+      validCategoryIds: VALID_CATEGORY_IDS,
+    });
+
+    expect(byId(result, "goal-c").plannerType).toBe("goal");
+    expect(result.find((p) => p.title === "first step")!.parentId).toBe(
+      "goal-c",
+    );
+  });
+
   it("deletes a removed goal's whole subtree and leaves the rest untouched", () => {
     const planner = makePlanner();
     const workingForest = clone(plannerForestToJson(planner));

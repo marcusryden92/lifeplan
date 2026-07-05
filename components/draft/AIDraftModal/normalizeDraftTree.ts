@@ -33,12 +33,27 @@ export function normalizeDraftTree(raw: unknown): DraftNode | null {
   return {
     id,
     title,
-    plannerType,
+    // Structure decides type: a node holding children is always a goal.
+    plannerType: children.length > 0 ? "goal" : plannerType,
     duration,
     deadline,
     priority,
     isReady,
     categoryId,
     children,
+  };
+}
+
+// The same hasChildren-implies-goal rule applied to an already-built tree (the
+// ops mutate DraftNodes in place rather than re-parsing them, so a former leaf
+// that just gained children needs its type corrected). Mirrors the save-time
+// normalizePlannerType so the review pane, the model's fetched trees, and the
+// persisted rows all agree that anything with subtasks is a goal.
+export function coerceParentTypes(node: DraftNode): DraftNode {
+  if (node.children.length === 0) return node;
+  return {
+    ...node,
+    plannerType: "goal",
+    children: node.children.map(coerceParentTypes),
   };
 }
