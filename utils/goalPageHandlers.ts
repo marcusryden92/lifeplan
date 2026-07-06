@@ -73,11 +73,14 @@ interface DuplicateSubtreeInterface {
 
 // Clone a subtask and all of its descendants with fresh IDs. Descendants keep
 // their sortOrder (relative order clones for free); the copy's root is
-// appended after the last sibling. Root of the copy gets a "(copy)" suffix.
+// appended after the last sibling.
 export function duplicateSubtree({
   planner,
   taskId,
-}: DuplicateSubtreeInterface): { newPlanner: Planner[]; newRootId: string } | null {
+}: DuplicateSubtreeInterface): {
+  newPlanner: Planner[];
+  newRootId: string;
+} | null {
   const original = planner.find((p) => p.id === taskId);
   if (!original || !original.parentId) return null;
 
@@ -103,7 +106,7 @@ export function duplicateSubtree({
       id: newId,
       parentId,
       sortOrder: isRoot ? rootSortOrder : t.sortOrder,
-      title: isRoot ? `${t.title} (copy)` : t.title,
+      title: t.title,
       completedStartTime: null,
       completedEndTime: null,
       createdAt: now,
@@ -395,4 +398,3 @@ export function buildInheritedLocationMap(
 
   return result;
 }
-
