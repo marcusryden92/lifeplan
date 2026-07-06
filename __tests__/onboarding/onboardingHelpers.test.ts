@@ -1,16 +1,22 @@
 import {
   buildRoleCategories,
   reconcileRoleCategories,
+  prefillRoleSelections,
   type RoleSelection,
 } from "@/app/(protected)/onboarding/_lib/starterCategories";
 import {
   buildWeekTemplates,
   expandDailyRange,
+  reconcileWeekTemplateRows,
   ALL_WEEK_DAYS,
   WEEKDAYS,
+  DEFAULT_WEEK,
   type WeekFormInput,
 } from "@/app/(protected)/onboarding/_lib/weekTemplates";
-import { applyWorkCategory } from "@/app/(protected)/onboarding/_lib/workCategory";
+import {
+  applyWorkCategory,
+  clearWorkCategoryWindows,
+} from "@/app/(protected)/onboarding/_lib/workCategory";
 import { buildRoleCategories as buildRoles } from "@/app/(protected)/onboarding/_lib/starterCategories";
 import {
   applyBrainDump,
@@ -84,11 +90,19 @@ describe("expandDailyRange", () => {
     expect(blocks.map((b) => b.startDay)).toEqual([1, 2, 3, 4, 5]);
   });
 
-  it("splits a midnight-crossing range into an evening and a morning block", () => {
+  it("splits a midnight-crossing range into an evening block and a morning block on the following day", () => {
     const blocks = expandDailyRange([1], "23:00", "07:00");
     expect(blocks).toEqual([
       { startDay: 1, startTime: "23:00", duration: 60 },
-      { startDay: 1, startTime: "00:00", duration: 420 },
+      { startDay: 2, startTime: "00:00", duration: 420 },
+    ]);
+  });
+
+  it("wraps the morning piece of a Saturday overnight to Sunday", () => {
+    const blocks = expandDailyRange([6], "23:00", "07:00");
+    expect(blocks).toEqual([
+      { startDay: 6, startTime: "23:00", duration: 60 },
+      { startDay: 0, startTime: "00:00", duration: 420 },
     ]);
   });
 
@@ -150,6 +164,32 @@ describe("buildWeekTemplates", () => {
     );
     expect(new Set(templates.map((t) => t.id)).size).toBe(templates.length);
   });
+
+  it("emits a within-day routine as one short block per day", () => {
+    const templates = buildWeekTemplates(
+      { sleep: null, work: null, morning: { start: "07:00", end: "07:30" } },
+      USER_ID,
+      NOW,
+    );
+    expect(templates).toHaveLength(ALL_WEEK_DAYS.length);
+    expect(templates.every((t) => t.title === "Morning routine")).toBe(true);
+    expect(templates.every((t) => t.duration === 30)).toBe(true);
+  });
+
+  it("drops a routine whose end is not after its start instead of wrapping overnight", () => {
+    // "10:00" meant as 10 PM but read as 10 AM: end <= start. A within-day
+    // routine must not balloon into a multi-hour overnight block.
+    const templates = buildWeekTemplates(
+      {
+        sleep: null,
+        work: null,
+        evening: { start: "21:30", end: "10:00" },
+      },
+      USER_ID,
+      NOW,
+    );
+    expect(templates).toEqual([]);
+  });
 });
 
 describe("applyWorkCategory", () => {
@@ -207,7 +247,7 @@ describe("applyWorkCategory", () => {
     expect(workCat?.timeSlots.map((w) => w.day).sort()).toEqual([1, 2]);
   });
 
-  it("splits an overnight shift at midnight", () => {
+  it("splits an overnight shift at midnight with the morning piece on the following day", () => {
     const next = applyWorkCategory(
       [],
       { start: "22:00", end: "06:00", days: [1], locationId: null },
@@ -217,8 +257,72 @@ describe("applyWorkCategory", () => {
     const workCat = next.find((c) => c.name === "Work");
     expect(workCat?.timeSlots).toEqual([
       expect.objectContaining({ day: 1, startTime: "22:00", endTime: "23:59" }),
-      expect.objectContaining({ day: 1, startTime: "00:00", endTime: "06:00" }),
+      expect.objectContaining({ day: 2, startTime: "00:00", endTime: "06:00" }),
     ]);
+  });
+});
+
+describe("clearWorkCategoryWindows", () => {
+  const work = {
+    start: "09:00",
+    end: "17:00",
+    days: WEEKDAYS,
+    locationId: null,
+  };
+
+  it("clears the Work category's windows and disables useTimeWindows", () => {
+    const applied = applyWorkCategory([], work, USER_ID, NOW);
+    const LATER = "2026-07-06T00:00:00.000Z";
+    const cleared = clearWorkCategoryWindows(applied, LATER);
+    const workCat = cleared.find((c) => c.name === "Work");
+    expect(workCat?.timeSlots).toEqual([]);
+    expect(workCat?.useTimeWindows).toBe(false);
+    expect(workCat?.updatedAt).toBe(LATER);
+    // The Professional role itself is untouched.
+    const role = cleared.find((c) => c.name === "Professional");
+    expect(role?.updatedAt).toBe(NOW);
+  });
+
+  it("returns prev unchanged when there is nothing to clear", () => {
+    const applied = applyWorkCategory([], work, USER_ID, NOW);
+    const cleared = clearWorkCategoryWindows(applied, NOW);
+    const twice = clearWorkCategoryWindows(cleared, "2026-07-07T00:00:00.000Z");
+    expect(twice).toBe(cleared);
+    expect(clearWorkCategoryWindows([], NOW)).toEqual([]);
+  });
+});
+
+describe("reconcileWeekTemplateRows", () => {
+  const input: WeekFormInput = {
+    sleep: { start: "23:00", end: "07:00" },
+    work: null,
+  };
+
+  it("reuses the previous row object for an unchanged block", () => {
+    const first = buildWeekTemplates(input, USER_ID, NOW);
+    const second = buildWeekTemplates(input, USER_ID, "2026-07-06T00:00:00.000Z");
+    const reconciled = reconcileWeekTemplateRows(first, second);
+    expect(reconciled).toHaveLength(second.length);
+    for (const row of reconciled) {
+      expect(first).toContain(row);
+    }
+  });
+
+  it("keeps fresh rows for changed blocks and never reuses one row twice", () => {
+    const first = buildWeekTemplates(input, USER_ID, NOW);
+    const changed = buildWeekTemplates(
+      { sleep: { start: "22:00", end: "07:00" }, work: null },
+      USER_ID,
+      "2026-07-06T00:00:00.000Z",
+    );
+    const reconciled = reconcileWeekTemplateRows(first, changed);
+    // Evening pieces moved to 22:00 (fresh rows); the 00:00-07:00 morning
+    // pieces are unchanged and reused.
+    const evening = reconciled.filter((t) => t.startTime === "22:00");
+    const morning = reconciled.filter((t) => t.startTime === "00:00");
+    expect(evening.every((t) => !first.includes(t))).toBe(true);
+    expect(morning.every((t) => first.includes(t))).toBe(true);
+    expect(new Set(reconciled.map((t) => t.id)).size).toBe(reconciled.length);
   });
 });
 
@@ -377,6 +481,105 @@ describe("reconcileRoleCategories", () => {
     );
     expect(categories.map((c) => c.name)).toEqual(["Self"]);
   });
+
+  it("never adopts a matched pre-existing category: no restamp, no later removal", () => {
+    const preexisting = buildRoles([self], USER_ID, NOW);
+    // The user selects the name of a category they already had.
+    const first = reconcileRoleCategories(
+      preexisting,
+      [professional, self],
+      new Set(),
+      candidateIdsFor([professional, self]),
+      USER_ID,
+      NOW,
+    );
+    expect(first.ownedIds.has(preexisting[0].id)).toBe(false);
+    const matched = first.categories.find((c) => c.id === preexisting[0].id);
+    expect(matched?.updatedAt).toBe(NOW);
+    expect(matched?.sortOrder).toBe(preexisting[0].sortOrder);
+    // Deselecting it afterwards must not remove it.
+    const second = reconcileRoleCategories(
+      first.categories,
+      [professional],
+      first.ownedIds,
+      candidateIdsFor([professional]),
+      USER_ID,
+      NOW,
+    );
+    expect(second.categories.some((c) => c.id === preexisting[0].id)).toBe(true);
+  });
+
+  it("keeps ownership of a deselected role kept alive by children", () => {
+    const first = reconcileRoleCategories(
+      [],
+      [professional],
+      new Set(),
+      candidateIdsFor([professional]),
+      USER_ID,
+      NOW,
+    );
+    const withWork = applyWorkCategory(
+      first.categories,
+      { start: "09:00", end: "17:00", days: WEEKDAYS, locationId: null },
+      USER_ID,
+      NOW,
+    );
+    const deselected = reconcileRoleCategories(
+      withWork,
+      [],
+      first.ownedIds,
+      new Map(),
+      USER_ID,
+      NOW,
+    );
+    // Kept alive by the Work child, and still owned so a reselect manages it.
+    expect(deselected.categories.some((c) => c.name === "Professional")).toBe(
+      true,
+    );
+    expect(deselected.ownedIds).toEqual(first.ownedIds);
+    const reselected = reconcileRoleCategories(
+      deselected.categories,
+      [{ ...professional, color: "#000000" }],
+      deselected.ownedIds,
+      candidateIdsFor([professional]),
+      USER_ID,
+      "2026-07-06T00:00:00.000Z",
+    );
+    const role = reselected.categories.find((c) => c.name === "Professional");
+    expect(role?.color).toBe("#000000");
+  });
+});
+
+describe("prefillRoleSelections", () => {
+  it("maps top-level categories to selections in sortOrder, matching presets by name", () => {
+    const categories = buildRoleCategories(
+      [
+        { key: "custom:reading", name: "Reading", color: "#111111" },
+        { key: "self", name: "Self", color: "#8b5cf6" },
+      ],
+      USER_ID,
+      NOW,
+    );
+    // Reverse sortOrder to prove the prefill sorts.
+    categories[0].sortOrder = 1;
+    categories[1].sortOrder = 0;
+    const selections = prefillRoleSelections(categories);
+    expect(selections.map((s) => s.name)).toEqual(["Self", "Reading"]);
+    expect(selections[0].key).toBe("self");
+    expect(selections[1].key).toBe("custom:reading");
+  });
+
+  it("ignores sub-categories", () => {
+    const [role] = buildRoleCategories(
+      [{ key: "professional", name: "Professional", color: "#3b82f6" }],
+      USER_ID,
+      NOW,
+    );
+    const child = { ...role, id: "child-1", name: "Work", parentId: role.id };
+    expect(prefillRoleSelections([role, child]).map((s) => s.name)).toEqual([
+      "Professional",
+    ]);
+  });
 });
 
 function dumpRow(overrides: Partial<Planner> & { id: string }): Planner {
@@ -466,10 +669,12 @@ describe("migrateProgress", () => {
       weekTemplateIds: ["t-1", "t-2"],
     });
     expect(migrated).toEqual({
-      version: 3,
+      version: 4,
       stepIndex: 5,
       roleCommittedIds: [],
       weekTemplateIds: ["t-1", "t-2"],
+      week: null,
+      weekWorkApplied: false,
       dumpItems: [],
       dumpCommitted: [],
     });
@@ -489,16 +694,18 @@ describe("migrateProgress", () => {
       dumpCommittedIds: ["d-1"],
     });
     expect(migrated).toEqual({
-      version: 3,
+      version: 4,
       stepIndex: 4,
       roleCommittedIds: [],
       weekTemplateIds: [],
+      week: null,
+      weekWorkApplied: false,
       dumpItems,
       dumpCommitted: [{ id: "d-1", title: "Ship", type: "goal" }],
     });
   });
 
-  it("passes a v3 payload through", () => {
+  it("migrates a v3 payload with a null week snapshot and no work flag", () => {
     const payload = {
       version: 3,
       stepIndex: 4,
@@ -507,7 +714,40 @@ describe("migrateProgress", () => {
       dumpItems: [{ id: "d-1", title: "Ship", type: "goal" }],
       dumpCommitted: [{ id: "d-1", title: "Ship", type: "goal" }],
     };
+    expect(migrateProgress(payload)).toEqual({
+      ...payload,
+      version: 4,
+      week: null,
+      weekWorkApplied: false,
+    });
+  });
+
+  it("passes a v4 payload through, keeping a valid week snapshot", () => {
+    const payload = {
+      version: 4,
+      stepIndex: 3,
+      roleCommittedIds: ["cat-1"],
+      weekTemplateIds: ["t-1"],
+      week: { ...DEFAULT_WEEK, workEnabled: true, workLocationId: "loc-1" },
+      weekWorkApplied: true,
+      dumpItems: [],
+      dumpCommitted: [],
+    };
     expect(migrateProgress(payload)).toEqual(payload);
+  });
+
+  it("rejects a malformed week snapshot instead of half-restoring it", () => {
+    const migrated = migrateProgress({
+      version: 4,
+      stepIndex: 3,
+      roleCommittedIds: [],
+      weekTemplateIds: [],
+      week: { ...DEFAULT_WEEK, sleepStart: "25:0", workDays: [1, "x"] },
+      weekWorkApplied: false,
+      dumpItems: [],
+      dumpCommitted: [],
+    });
+    expect(migrated?.week).toBeNull();
   });
 
   it("drops non-string ids and malformed dump items", () => {

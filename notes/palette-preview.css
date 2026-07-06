@@ -1,0 +1,78 @@
+/* Item/template color palette preview — temp scratch, safe to delete.
+   Mirrors data/calendarColors.ts (CALENDAR_COLOR_GROUPS). */
+
+:root {
+  /* Reds */
+  --red-1: #FCA5A5;
+  --red-2: #F87171;
+  --red-3: #EF4444;
+  --red-4: #DC2626;
+  --red-5: #991B1B;
+
+  /* Oranges */
+  --orange-1: #FDBA74;
+  --orange-2: #FB923C;
+  --orange-3: #F97316;
+  --orange-4: #EA580C;
+  --orange-5: #C2410C;
+
+  /* Yellows */
+  --yellow-1: #FDE68A;
+  --yellow-2: #FCD34D;
+  --yellow-3: #FBBF24;
+  --yellow-4: #F59E0B;
+  --yellow-5: #D97706;
+
+  /* Greens */
+  --green-1: #86EFAC;
+  --green-2: #4ADE80;
+  --green-3: #22C55E;
+  --green-4: #16A34A;
+  --green-5: #15803D;
+
+  /* Teals */
+  --teal-1: #5EEAD4;
+  --teal-2: #2DD4BF;
+  --teal-3: #14B8A6;
+  --teal-4: #0D9488;
+  --teal-5: #0F766E;
+
+  /* Blues */
+  --blue-1: #93C5FD;
+  --blue-2: #60A5FA;
+  --blue-3: #3B82F6;
+  --blue-4: #2563EB;
+  --blue-5: #1E3A8A;
+
+  /* Purples */
+  --purple-1: #C4B5FD;
+  --purple-2: #A78BFA;
+  --purple-3: #8B5CF6;
+  --purple-4: #7C3AED;
+  --purple-5: #6D28D9;
+
+  /* Pinks */
+  --pink-1: #F9A8D4;
+  --pink-2: #F472B6;
+  --pink-3: #EC4899;
+  --pink-4: #DB2777;
+  --pink-5: #BE185D;
+
+  /* Beige */
+  --beige-1: #F5EBDC;
+  --beige-2: #EAD9C0;
+  --beige-3: #DCC6A0;
+  --beige-4: #C9A87C;
+  --beige-5: #A98467;
+
+  /* Cool grays */
+  --gray-1: #E2E8F0;
+  --gray-2: #CBD5E1;
+  --gray-3: #94A3B8;
+  --gray-4: #64748B;
+  --gray-5: #334155;
+
+  /* Mono */
+  --black: #000000;
+  --white: #FFFFFF;
+}

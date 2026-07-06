@@ -1,3 +1,24 @@
+import { FALLBACK_COLORS } from "@/data/calendarColors";
+
+// A 6- or 3-digit hex string ("#rgb" / "#rrggbb"), the shape the calendar
+// stores and renders. Anything else (null, "black", garbage) is not usable as
+// a stored item color and should fall back.
+export function isHexColor(value: unknown): value is string {
+  return typeof value === "string" && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
+}
+
+// Deterministic palette pick from a seed (an item id or title). Used when a new
+// item has no explicit color and no category color to inherit — anything but
+// the silent `calendarColors[0]` (red) default that made every AI/library item
+// come out red. Deterministic so a given item keeps its color across regens.
+export function fallbackCalendarColor(seed: string): string {
+  let hash = 5381;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 33 + seed.charCodeAt(i)) >>> 0;
+  }
+  return FALLBACK_COLORS[hash % FALLBACK_COLORS.length];
+}
+
 // Threshold against perceivedBrightness — below this the fill reads as dark
 // and wants a lighter stroke; above, the fill reads as light and wants a
 // darker stroke. 140 is the YIQ midpoint that sorts saturated mid-tones

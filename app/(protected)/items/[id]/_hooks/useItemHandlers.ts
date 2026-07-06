@@ -76,6 +76,23 @@ export function useItemHandlers(
     [item, updatePlannerArray],
   );
 
+  const handleColorChange = useCallback(
+    (color: string) => {
+      if (!item) return;
+      // A goal and its subtasks read as one block on the calendar, so recolor
+      // the whole subtree, not just this row.
+      const treeIds = new Set(getTaskTreeIds(planner, item.id));
+      updatePlannerArray((prev: Planner[]) =>
+        prev.map((p) =>
+          treeIds.has(p.id)
+            ? { ...p, color, updatedAt: new Date().toISOString() }
+            : p,
+        ),
+      );
+    },
+    [item, planner, updatePlannerArray],
+  );
+
   const handleDateChange = useCallback(
     (date: Date | undefined) => {
       if (!item) return;
@@ -226,6 +243,7 @@ export function useItemHandlers(
     handleDelete,
     handleToggleReady,
     handleUpdateField,
+    handleColorChange,
     handleDateChange,
     handleCategoryChange,
     handleLocationChange,

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import {
   frameWrap,
   card,
+  cardWide,
   topRow,
   progress,
   segment,
@@ -23,6 +24,10 @@ type StepFrameProps = {
   children: ReactNode;
   footer: ReactNode;
   onSkip?: () => void;
+  skipDisabled?: boolean;
+  // Breaks out of the narrow form width — used by the embedded AI step's
+  // split-pane workspace.
+  wide?: boolean;
 };
 
 export function StepFrame({
@@ -33,10 +38,12 @@ export function StepFrame({
   children,
   footer: footerNode,
   onSkip,
+  skipDisabled = false,
+  wide = false,
 }: StepFrameProps) {
   return (
     <div className={frameWrap}>
-      <div className={card}>
+      <div className={wide ? `${card} ${cardWide}` : card}>
         <div className={topRow}>
           <div className={progress}>
             {Array.from({ length: totalSteps }).map((_, i) => (
@@ -47,7 +54,12 @@ export function StepFrame({
             ))}
           </div>
           {onSkip && (
-            <button type="button" className={skipLink} onClick={onSkip}>
+            <button
+              type="button"
+              className={skipLink}
+              onClick={onSkip}
+              disabled={skipDisabled}
+            >
               Skip
             </button>
           )}

@@ -401,7 +401,7 @@ The user just finished first-run setup and this is their first contact with the 
 
 Work through the items warmly, one or two questions at a time — never a form or a wall of questions. For each:
 - A bare TASK needs a realistic duration and, if it's time-sensitive, a deadline. Set both with update_items once you know them.
-- A bare GOAL needs subtasks (add_items or propose_goals), a deadline if there is one, and a conversation about whether it's ready to start. Only set isReady (via update_items) once its subtasks and requirements are actually in place — readiness is a deliberate step, not a default.
+- A bare GOAL needs subtasks (add_items or propose_goals) and, where there is one, a deadline. Once it has both, mark it ready to schedule by default (via update_items) so the user doesn't have to — no need to ask permission for the obvious case. If it's still missing subtasks or a deadline, leave it unready and say, in plain words, what it needs first.
 - A PLAN is a fixed-time commitment, but you CANNOT set its start time from here (there is no starts field in your tools). Ask when it happens: if it recurs weekly, offer to add a weekly template instead; if it's really a deadline-driven task, offer to convert it to a task (update_items with plannerType "task" — the start time is preserved on save); otherwise tell the user they can set the exact time on the item's page later.
 - Assign each item to one of the user's roles (their top-level categories — categoryId on the top-level row) where it fits.
 
@@ -415,6 +415,7 @@ The user's planning library is a forest of top-level goals (and loose tasks), ea
 
 STYLE
 The chat renders markdown — bold, lists, and inline code are fine; avoid headings and tables in casual replies. Keep responses short and conversational; the tree pane shows the details, so don't enumerate what the user can already see there.
+Speak in plain, everyday language — never the app's internal field names. The user has no idea what "isReady", "categoryId", "plannerType", "duration", "parentId", or a node id mean, and hearing them is confusing. Never say things like "isReady is false" or "I set categoryId". Say "this goal isn't ready to schedule yet", "I filed it under Work", "I set it to 30 minutes", "I made it a task". Talk about goals, tasks, deadlines, roles, and being ready to schedule — not database fields or ids.
 
 Today's date is ${today}. Ground all deadlines relative to it.
 
@@ -457,8 +458,9 @@ Each node in a goal tree has:
 - duration: minutes required for that leaf task. For a "goal" node, duration is a rough estimate (children sum to the real total).
 - deadline: ISO date string or null.
 - priority: integer.
-- isReady: top-level goals only — true marks the goal ready for scheduling, and requires at least one subtask AND a deadline (the app blocks it otherwise). OMIT this field (or use null) on all child nodes; readiness cascades from the root (every row in a subtree carries the root's value, stamped on save), and readying is the user's decision.
+- isReady: top-level goals only — true marks the goal ready for scheduling, and requires at least one subtask AND a deadline (the app blocks it otherwise). Default a goal you create to ready (isReady true) whenever it has subtasks and a deadline, so it starts scheduling immediately and the user doesn't have to turn it on by hand. If it has no deadline or no subtasks, leave it unready and, in plain words, tell the user what it still needs before it can be scheduled. OMIT this field (or use null) on all child nodes; readiness cascades from the root (every row in a subtree carries the root's value, stamped on save).
 - categoryId: top-level goals only — one of the user's category ids, or null. Echo it verbatim for retained goals (null on a retained goal means "leave as is"); pick a fitting category for new goals, or null if none fits. Never set it on child nodes; they inherit.
+- color: top-level goals only — a 6-digit hex color for the whole goal (its subtasks inherit it on the calendar). Give every NEW goal a fitting color and vary colors across goals so the calendar doesn't come out all one shade. Good palette: #1976D2 blue, #2E7D32 green, #F77F00 orange, #6C5CE7 violet, #16A085 teal, #E63946 red, #FFB703 amber, #1D3557 navy, #8E44AD purple, #D81B60 pink. Echo the existing color verbatim for retained goals (null means "leave as is"). Never set it on child nodes; they inherit.
 - children: ordered array of sub-nodes. Empty for leaves.
 
 ID PRESERVATION (IMPORTANT)
@@ -542,6 +544,11 @@ const proposeGoalsTool: Anthropic.Tool = {
             type: ["string", "null"],
             description:
               "Top-level goals only: one of the user's category ids, or null. Never set on child nodes.",
+          },
+          color: {
+            type: ["string", "null"],
+            description:
+              'Top-level goals only: a 6-digit hex color (e.g. "#1976D2") for the whole goal; its subtasks inherit it. Never set on child nodes.',
           },
           children: {
             type: "array",

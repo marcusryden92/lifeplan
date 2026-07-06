@@ -1,7 +1,3 @@
-# P4 — Refactors / investigations
-
-- Category nesting in calendar / category windows
-
 # P5 — Medium features
 
 - Onboarding flow (6-step)

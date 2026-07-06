@@ -19,14 +19,7 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 import { useSelector } from "react-redux";
-import {
-  Button,
-  Caption,
-  Loader,
-  Switch,
-  useCapture,
-  vars,
-} from "@/components/ui";
+import { Button, Caption, Loader, Switch, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { RootState } from "@/redux/store";
 import {
@@ -45,6 +38,7 @@ import {
   type Selection,
 } from "./_components/CategoryTreeNode";
 import { ItemRow } from "./_components/ItemRow";
+import { NewItemModal } from "./_components/NewItemModal";
 import {
   page,
   subHeader,
@@ -156,7 +150,7 @@ export default function LibraryPage() {
   const { planner, categories } = useCalendarProvider();
   const isLoaded = useSelector((state: RootState) => state.calendarSource.isLoaded);
   const now = useMemo(() => new Date(), []);
-  const { setOpen: setCaptureOpen } = useCapture();
+  const [newItemOpen, setNewItemOpen] = useState(false);
 
   const [selection, setSelection] = useState<Selection>({ kind: "all" });
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -381,7 +375,7 @@ export default function LibraryPage() {
           <Button
             variant="solid"
             size="sm"
-            onClick={() => setCaptureOpen(true)}
+            onClick={() => setNewItemOpen(true)}
           >
             <Plus size={13} strokeWidth={2.4} />
             New item
@@ -622,6 +616,8 @@ export default function LibraryPage() {
           )}
         </section>
       </div>
+
+      <NewItemModal open={newItemOpen} onOpenChange={setNewItemOpen} />
     </div>
   );
 }

@@ -5,7 +5,57 @@ import type { WeekDayIntegers } from "@/types/calendarTypes";
 export const ALL_WEEK_DAYS: WeekDayIntegers[] = [0, 1, 2, 3, 4, 5, 6];
 export const WEEKDAYS: WeekDayIntegers[] = [1, 2, 3, 4, 5];
 
-const SLEEP_COLOR = "#6366f1";
+// All drawn from the calendar palette (data/calendarColors).
+const SLEEP_COLOR = "#1D3557"; // navy — deep blue for night
+const EXERCISE_COLOR = "#2E7D32"; // forest green
+const MORNING_COLOR = "#FFB703"; // amber — sunrise
+const EVENING_COLOR = "#6C5CE7"; // violet — dusk
+
+// The Week step's whole form state. Lives in _lib (not the step component)
+// because it is persisted in StoredProgress: without it, a resumed session
+// would re-commit from defaults and silently delete previously committed
+// blocks (weekTemplateIds survives a reload, so the reconcile is destructive).
+export type WeekUIState = {
+  sleepEnabled: boolean;
+  sleepStart: string;
+  sleepEnd: string;
+  workEnabled: boolean;
+  workStart: string;
+  workEnd: string;
+  workDays: WeekDayIntegers[];
+  workLocationId: string | null;
+  exerciseEnabled: boolean;
+  exerciseStart: string;
+  exerciseEnd: string;
+  exerciseDays: WeekDayIntegers[];
+  morningEnabled: boolean;
+  morningStart: string;
+  morningEnd: string;
+  eveningEnabled: boolean;
+  eveningStart: string;
+  eveningEnd: string;
+};
+
+export const DEFAULT_WEEK: WeekUIState = {
+  sleepEnabled: true,
+  sleepStart: "23:00",
+  sleepEnd: "07:00",
+  workEnabled: false,
+  workStart: "09:00",
+  workEnd: "17:00",
+  workDays: [1, 2, 3, 4, 5],
+  workLocationId: null,
+  exerciseEnabled: false,
+  exerciseStart: "18:00",
+  exerciseEnd: "19:00",
+  exerciseDays: [1, 3, 5],
+  morningEnabled: false,
+  morningStart: "07:00",
+  morningEnd: "07:30",
+  eveningEnabled: false,
+  eveningStart: "21:30",
+  eveningEnd: "22:00",
+};
 
 export type SleepInput = { start: string; end: string };
 export type WorkInput = {
@@ -14,10 +64,20 @@ export type WorkInput = {
   days: WeekDayIntegers[];
   locationId: string | null;
 };
+export type ExerciseInput = {
+  start: string;
+  end: string;
+  days: WeekDayIntegers[];
+};
+export type RitualInput = { start: string; end: string };
 
 export type WeekFormInput = {
   sleep: SleepInput | null;
   work: WorkInput | null;
+  // Optional so existing callers/tests that only set sleep + work keep working.
+  exercise?: ExerciseInput | null;
+  morning?: RitualInput | null;
+  evening?: RitualInput | null;
 };
 
 type RawBlock = {
@@ -36,10 +96,17 @@ function toMinutes(hhmm: string): number {
 // duration crosses midnight, but WeekStructureModal's grid renders one as a
 // negative-duration event — matching its single-day shape keeps the two
 // authoring surfaces in agreement.
+//
+// `allowOvernight` is true only for sleep, which legitimately wraps past
+// midnight (23:00-07:00). For within-day blocks (work, exercise, routines) an
+// end that isn't after the start is user error — e.g. a "10:00" meant as 10 PM
+// — and wrapping it would balloon the block across the day, so those ranges are
+// simply dropped rather than expanded overnight.
 export function expandDailyRange(
   days: WeekDayIntegers[],
   start: string,
   end: string,
+  allowOvernight: boolean = true,
 ): RawBlock[] {
   const startMin = toMinutes(start);
   const endMin = toMinutes(end);
@@ -50,14 +117,19 @@ export function expandDailyRange(
       blocks.push({ startDay: day, startTime: start, duration: endMin - startMin });
       continue;
     }
+    if (!allowOvernight) continue;
     // Crosses midnight: an evening piece to 24:00 and a morning piece from
-    // 00:00, dropping either if it would be zero-length.
+    // 00:00 on the FOLLOWING day, dropping either if it would be zero-length.
     const eveningDuration = 24 * 60 - startMin;
     if (eveningDuration > 0) {
       blocks.push({ startDay: day, startTime: start, duration: eveningDuration });
     }
     if (endMin > 0) {
-      blocks.push({ startDay: day, startTime: "00:00", duration: endMin });
+      blocks.push({
+        startDay: ((day + 1) % 7) as WeekDayIntegers,
+        startTime: "00:00",
+        duration: endMin,
+      });
     }
   }
 
@@ -104,5 +176,63 @@ export function buildWeekTemplates(
     }
   }
 
+  if (input.exercise && input.exercise.days.length > 0) {
+    for (const block of expandDailyRange(
+      input.exercise.days,
+      input.exercise.start,
+      input.exercise.end,
+      false,
+    )) {
+      push(block, "Exercise", EXERCISE_COLOR, null);
+    }
+  }
+
+  if (input.morning) {
+    for (const block of expandDailyRange(
+      ALL_WEEK_DAYS,
+      input.morning.start,
+      input.morning.end,
+      false,
+    )) {
+      push(block, "Morning routine", MORNING_COLOR, null);
+    }
+  }
+
+  if (input.evening) {
+    for (const block of expandDailyRange(
+      ALL_WEEK_DAYS,
+      input.evening.start,
+      input.evening.end,
+      false,
+    )) {
+      push(block, "Evening routine", EVENING_COLOR, null);
+    }
+  }
+
   return templates;
+}
+
+// Swaps freshly minted rows for the previously committed row when the block is
+// unchanged, so a Back/forward pass through the Week step produces an empty
+// sync diff instead of a delete+create per block. Matching consumes the pool so
+// two identical blocks can't reuse the same previous row.
+export function reconcileWeekTemplateRows(
+  prevOwned: EventTemplate[],
+  built: EventTemplate[],
+): EventTemplate[] {
+  const pool = [...prevOwned];
+  return built.map((row) => {
+    const idx = pool.findIndex(
+      (p) =>
+        p.title === row.title &&
+        p.startDay === row.startDay &&
+        p.startTime === row.startTime &&
+        p.duration === row.duration &&
+        p.color === row.color &&
+        p.locationId === row.locationId,
+    );
+    if (idx === -1) return row;
+    const [match] = pool.splice(idx, 1);
+    return match;
+  });
 }

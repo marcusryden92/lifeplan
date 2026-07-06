@@ -24,6 +24,8 @@ export function normalizeDraftTree(raw: unknown): DraftNode | null {
     typeof node.categoryId === "string" && node.categoryId.length > 0
       ? node.categoryId
       : null;
+  const color =
+    typeof node.color === "string" && node.color.length > 0 ? node.color : null;
 
   const rawChildren = Array.isArray(node.children) ? node.children : [];
   const children = rawChildren
@@ -40,6 +42,7 @@ export function normalizeDraftTree(raw: unknown): DraftNode | null {
     priority,
     isReady,
     categoryId,
+    color,
     children,
   };
 }

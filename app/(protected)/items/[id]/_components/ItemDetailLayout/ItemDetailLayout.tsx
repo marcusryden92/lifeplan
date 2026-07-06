@@ -122,6 +122,7 @@ export default function ItemDetailLayout({
     handleSaveTitle,
     handleToggleReady,
     handleUpdateField,
+    handleColorChange,
     handleDateChange,
     handleCategoryChange,
     handleLocationChange,
@@ -277,6 +278,7 @@ export default function ItemDetailLayout({
           categoryHasLocation,
           saveTitle: handleSaveTitle,
           updateField: handleUpdateField,
+          changeColor: handleColorChange,
           setPlannerType: (t: PlannerType) =>
             handleUpdateField("plannerType", t),
           changeCategory: handleCategoryChange,

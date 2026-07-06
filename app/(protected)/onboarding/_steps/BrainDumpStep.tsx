@@ -27,6 +27,7 @@ type BrainDumpStepProps = {
   onBack: () => void;
   onContinue: () => void;
   onSkip: () => void;
+  continueDisabled?: boolean;
 };
 
 const TYPE_SEGMENTS = TYPE_OPTIONS.map((o) => ({ key: o.key, label: o.label }));
@@ -39,6 +40,7 @@ export function BrainDumpStep({
   onBack,
   onContinue,
   onSkip,
+  continueDisabled = false,
 }: BrainDumpStepProps) {
   const [jot, setJot] = useState("");
 
@@ -70,7 +72,11 @@ export function BrainDumpStep({
             Back
           </Button>
           <div className={footerActions}>
-            <Button variant="glassInk" onClick={onContinue}>
+            <Button
+              variant="glassInk"
+              onClick={onContinue}
+              disabled={continueDisabled}
+            >
               Continue
             </Button>
           </div>

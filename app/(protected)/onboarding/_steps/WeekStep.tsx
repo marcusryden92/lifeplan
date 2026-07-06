@@ -5,7 +5,11 @@ import { Button, Switch, Combobox } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 import { StepFrame } from "../_components/StepFrame";
-import { ALL_WEEK_DAYS, expandDailyRange } from "../_lib/weekTemplates";
+import {
+  ALL_WEEK_DAYS,
+  expandDailyRange,
+  type WeekUIState,
+} from "../_lib/weekTemplates";
 import {
   fieldStack,
   fieldLabel,
@@ -22,16 +26,7 @@ import {
   footerActions,
 } from "../onboarding.css";
 
-export type WeekUIState = {
-  sleepEnabled: boolean;
-  sleepStart: string;
-  sleepEnd: string;
-  workEnabled: boolean;
-  workStart: string;
-  workEnd: string;
-  workDays: WeekDayIntegers[];
-  workLocationId: string | null;
-};
+export type { WeekUIState } from "../_lib/weekTemplates";
 
 const DAY_BUTTONS: { day: WeekDayIntegers; label: string }[] = [
   { day: 1, label: "M" },
@@ -51,6 +46,7 @@ type WeekStepProps = {
   onBack: () => void;
   onContinue: () => void;
   onSkip: () => void;
+  continueDisabled?: boolean;
 };
 
 export function WeekStep({
@@ -61,16 +57,20 @@ export function WeekStep({
   onBack,
   onContinue,
   onSkip,
+  continueDisabled = false,
 }: WeekStepProps) {
   const { locations } = useCalendarProvider();
   const patch = (next: Partial<WeekUIState>) => onChange({ ...value, ...next });
 
-  const toggleDay = (day: WeekDayIntegers) => {
-    const has = value.workDays.includes(day);
+  const toggleDayIn = (
+    key: "workDays" | "exerciseDays",
+    day: WeekDayIntegers,
+  ) => {
+    const current = value[key];
     patch({
-      workDays: has
-        ? value.workDays.filter((d) => d !== day)
-        : [...value.workDays, day],
+      [key]: current.includes(day)
+        ? current.filter((d) => d !== day)
+        : [...current, day],
     });
   };
 
@@ -80,14 +80,39 @@ export function WeekStep({
   const workBlocks = value.workEnabled
     ? expandDailyRange(value.workDays, value.workStart, value.workEnd).length
     : 0;
-  const totalBlocks = sleepBlocks + workBlocks;
+  const exerciseBlocks = value.exerciseEnabled
+    ? expandDailyRange(
+        value.exerciseDays,
+        value.exerciseStart,
+        value.exerciseEnd,
+        false,
+      ).length
+    : 0;
+  const morningBlocks = value.morningEnabled
+    ? expandDailyRange(
+        ALL_WEEK_DAYS,
+        value.morningStart,
+        value.morningEnd,
+        false,
+      ).length
+    : 0;
+  const eveningBlocks = value.eveningEnabled
+    ? expandDailyRange(
+        ALL_WEEK_DAYS,
+        value.eveningStart,
+        value.eveningEnd,
+        false,
+      ).length
+    : 0;
+  const totalBlocks =
+    sleepBlocks + workBlocks + exerciseBlocks + morningBlocks + eveningBlocks;
 
   return (
     <StepFrame
       stepIndex={stepIndex}
       totalSteps={totalSteps}
       title="Sketch your week"
-      subtitle="Two anchors so the first generated week looks like your life. Refine the full grid anytime in Calendar."
+      subtitle="A few anchors so the first generated week looks like your life. Refine the full grid anytime in Calendar."
       onSkip={onSkip}
       footer={
         <>
@@ -95,7 +120,11 @@ export function WeekStep({
             Back
           </Button>
           <div className={footerActions}>
-            <Button variant="glassInk" onClick={onContinue}>
+            <Button
+              variant="glassInk"
+              onClick={onContinue}
+              disabled={continueDisabled}
+            >
               Continue
             </Button>
           </div>
@@ -162,7 +191,7 @@ export function WeekStep({
                     key={day}
                     type="button"
                     className={`${dayToggle} ${on ? dayToggleOn : ""}`}
-                    onClick={() => toggleDay(day)}
+                    onClick={() => toggleDayIn("workDays", day)}
                   >
                     {label}
                   </button>
@@ -195,11 +224,109 @@ export function WeekStep({
               />
             ) : (
               <span className={fieldHelp}>
-                Add a place on the previous step to attach a location to these
+                Add a location on the previous step to attach one to these
                 blocks.
               </span>
             )}
           </>
+        )}
+      </div>
+
+      <div className={fieldStack}>
+        <div className={sectionToggleRow}>
+          <span className={fieldLabel}>Do you exercise on set days?</span>
+          <Switch
+            checked={value.exerciseEnabled}
+            onCheckedChange={(checked) => patch({ exerciseEnabled: checked })}
+          />
+        </div>
+        {value.exerciseEnabled && (
+          <>
+            <div className={timeRow}>
+              <input
+                type="time"
+                className={timeInput}
+                value={value.exerciseStart}
+                onChange={(e) => patch({ exerciseStart: e.target.value })}
+              />
+              <span className={timeDash}>to</span>
+              <input
+                type="time"
+                className={timeInput}
+                value={value.exerciseEnd}
+                onChange={(e) => patch({ exerciseEnd: e.target.value })}
+              />
+            </div>
+            <div className={dayToggles}>
+              {DAY_BUTTONS.map(({ day, label }) => {
+                const on = value.exerciseDays.includes(day);
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    className={`${dayToggle} ${on ? dayToggleOn : ""}`}
+                    onClick={() => toggleDayIn("exerciseDays", day)}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className={fieldStack}>
+        <div className={sectionToggleRow}>
+          <span className={fieldLabel}>A morning routine?</span>
+          <Switch
+            checked={value.morningEnabled}
+            onCheckedChange={(checked) => patch({ morningEnabled: checked })}
+          />
+        </div>
+        {value.morningEnabled && (
+          <div className={timeRow}>
+            <input
+              type="time"
+              className={timeInput}
+              value={value.morningStart}
+              onChange={(e) => patch({ morningStart: e.target.value })}
+            />
+            <span className={timeDash}>to</span>
+            <input
+              type="time"
+              className={timeInput}
+              value={value.morningEnd}
+              onChange={(e) => patch({ morningEnd: e.target.value })}
+            />
+          </div>
+        )}
+      </div>
+
+      <div className={fieldStack}>
+        <div className={sectionToggleRow}>
+          <span className={fieldLabel}>An evening routine?</span>
+          <Switch
+            checked={value.eveningEnabled}
+            onCheckedChange={(checked) => patch({ eveningEnabled: checked })}
+          />
+        </div>
+        {value.eveningEnabled && (
+          <div className={timeRow}>
+            <input
+              type="time"
+              className={timeInput}
+              value={value.eveningStart}
+              onChange={(e) => patch({ eveningStart: e.target.value })}
+            />
+            <span className={timeDash}>to</span>
+            <input
+              type="time"
+              className={timeInput}
+              value={value.eveningEnd}
+              onChange={(e) => patch({ eveningEnd: e.target.value })}
+            />
+          </div>
         )}
       </div>
 

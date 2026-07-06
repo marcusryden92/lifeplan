@@ -17,6 +17,10 @@ export interface DraftNode {
   priority: number;
   isReady: boolean | null;
   categoryId: string | null;
+  // Meaningful on top-level goal roots only, like categoryId — children inherit
+  // the root's color at save time and always carry null here. Optional so the
+  // many hand-built DraftNode literals (tests, ops) don't all need updating.
+  color?: string | null;
   children: DraftNode[];
 }
 
@@ -27,7 +31,11 @@ export function plannerTreeToJson(
   const root = planner.find((p) => p.id === rootId);
   if (!root) return null;
   const node = buildDraftNode(planner, root);
-  return { ...node, categoryId: root.categoryId ?? null };
+  return {
+    ...node,
+    categoryId: root.categoryId ?? null,
+    color: root.color ?? null,
+  };
 }
 
 export function buildDraftNode(planner: Planner[], node: Planner): DraftNode {
@@ -41,6 +49,7 @@ export function buildDraftNode(planner: Planner[], node: Planner): DraftNode {
     priority: node.priority,
     isReady: node.isReady ?? null,
     categoryId: null,
+    color: null,
     children: orderedChildren.map((child) => buildDraftNode(planner, child)),
   };
 }

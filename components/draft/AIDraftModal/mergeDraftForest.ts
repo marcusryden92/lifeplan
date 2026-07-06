@@ -29,6 +29,11 @@ export function mergeDraftForest(
         categoryId: proposal.trustNullCategoryId
           ? goal.categoryId
           : goal.categoryId ?? baseGoal.categoryId,
+        // Same "null means unspecified, keep base" rule as categoryId, unless
+        // the tree came from a deterministic edit op (authoritative nulls).
+        color: proposal.trustNullCategoryId
+          ? goal.color ?? null
+          : goal.color ?? baseGoal.color ?? null,
       });
     } else {
       appended.push(goal);

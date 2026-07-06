@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import type { Category, CategoryTimeWindow } from "@/types/prisma";
+import type { WeekDayIntegers } from "@/types/calendarTypes";
 import type { WorkInput } from "./weekTemplates";
 
 // Work hours are modelled as time windows on a "Work" category nested under the
@@ -19,7 +20,8 @@ function toMinutes(hhmm: string): number {
 
 // One window per picked day, split at midnight for the rare overnight shift so
 // every row stays within a single day (WeekStructureModal can't render an
-// overnight window; the "23:59" end mirrors the assistant's sentinel).
+// overnight window; the "23:59" end mirrors the assistant's sentinel). The
+// post-midnight piece belongs to the FOLLOWING day.
 function buildWorkWindows(
   work: WorkInput,
   categoryId: string,
@@ -51,7 +53,7 @@ function buildWorkWindows(
     if (endMin > 0) {
       windows.push({
         id: uuidv4(),
-        day,
+        day: ((day + 1) % 7) as WeekDayIntegers,
         startTime: "00:00",
         endTime: work.end,
         categoryId,
@@ -137,5 +139,38 @@ export function applyWorkCategory(
     };
   }
 
+  return next;
+}
+
+// The inverse of applyWorkCategory for the off-toggle: when the user disables
+// work hours after a commit, the windows this flow put on the Work category are
+// cleared instead of lingering. Only called when the flow actually applied work
+// windows (the weekWorkApplied progress flag), so a pre-existing Work category
+// the flow never touched is never stripped.
+export function clearWorkCategoryWindows(
+  prev: Category[],
+  nowIso: string,
+): Category[] {
+  const role = prev.find(
+    (c) =>
+      !c.parentId &&
+      c.name.trim().toLowerCase() === PROFESSIONAL_ROLE_NAME.toLowerCase(),
+  );
+  if (!role) return prev;
+  const workIdx = prev.findIndex(
+    (c) =>
+      c.parentId === role.id &&
+      c.name.trim().toLowerCase() === WORK_NAME.toLowerCase(),
+  );
+  if (workIdx === -1) return prev;
+  const work = prev[workIdx];
+  if (work.timeSlots.length === 0 && !work.useTimeWindows) return prev;
+  const next = [...prev];
+  next[workIdx] = {
+    ...work,
+    useTimeWindows: false,
+    timeSlots: [],
+    updatedAt: nowIso,
+  };
   return next;
 }
