@@ -16,6 +16,7 @@ import { useFlashValue } from "@/hooks/useFlashAnimation";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { DraggableContextProvider } from "@/components/draggable/DraggableContext";
 import {
+  getEffectiveCategoryId,
   getSubtasksById,
   getTaskTreeIds,
   getTreeBottomLayer,
@@ -97,10 +98,14 @@ export default function ItemDetailLayout({
     return item.completedEndTime ? item.duration : 0;
   }, [item, planner]);
 
+  // Subitems inherit their category from the nearest ancestor that has one —
+  // resolve the effective id, not the row's own (usually null on children).
   const category = useMemo(() => {
-    if (!item?.categoryId) return null;
-    return categories.find((c) => c.id === item.categoryId) ?? null;
-  }, [item, categories]);
+    if (!item) return null;
+    const effectiveId = getEffectiveCategoryId(planner, item.id);
+    if (!effectiveId) return null;
+    return categories.find((c) => c.id === effectiveId) ?? null;
+  }, [item, planner, categories]);
   const categoryHasLocation = !!category?.locationId;
 
   const handlers = useItemHandlers(

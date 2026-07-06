@@ -175,9 +175,10 @@ describe("applyDraftForestToPlanner", () => {
     expect(buy.sortOrder).toBe(1024);
     expect(basics.sortOrder).toBe(2048);
     expect(lesson.sortOrder).toBe(1024);
-    // Children inherit the root's category.
-    expect(buy.categoryId).toBe("cat-2");
-    expect(lesson.categoryId).toBe("cat-2");
+    // categoryId lives on the root only — children inherit at read time via
+    // the parent-chain walk, so their rows stay null.
+    expect(buy.categoryId).toBeNull();
+    expect(lesson.categoryId).toBeNull();
     // New subtasks are NOT ready by default — readying is a user decision,
     // and the whole subtree carries the root's value.
     expect(buy.isReady).toBe(false);
@@ -423,6 +424,27 @@ describe("applyDraftForestToPlanner", () => {
       validCategoryIds: VALID_CATEGORY_IDS,
     });
     expect(byId(bogusResult, "goal-a").categoryId).toBe("cat-1");
+  });
+
+  it("clears stale explicit categoryId on retained descendants", () => {
+    const planner = makePlanner().map((p) =>
+      p.id === "a1" ? { ...p, categoryId: "cat-1" } : p,
+    );
+    const workingForest = clone(plannerForestToJson(planner));
+    const goalA = workingForest.goals.find((g) => g.id === "goal-a")!;
+    goalA.categoryId = "cat-2";
+    goalA.title = "forces apply";
+
+    const result = applyDraftForestToPlanner({
+      planner,
+      workingForest,
+      userId: USER_ID,
+      validCategoryIds: VALID_CATEGORY_IDS,
+    });
+
+    expect(byId(result, "goal-a").categoryId).toBe("cat-2");
+    expect(byId(result, "a1").categoryId).toBeNull();
+    expect(byId(result, "a2").categoryId).toBeNull();
   });
 
   it("removes a leaf from a retained goal without touching other goals", () => {

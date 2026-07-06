@@ -113,35 +113,40 @@ export function useItemHandlers(
         ? !!categories.find((c) => c.id === categoryId)?.locationId
         : false;
 
-      updatePlannerArray((prev: Planner[]) =>
-        prev.map((p) => {
-          if (p.id !== item.id) {
-            if (
-              item.plannerType === "goal" &&
-              newCategoryHasLocation &&
-              !p.locationId
-            ) {
-              const descendantIds = getTaskTreeIds(planner, item.id);
-              if (descendantIds.includes(p.id)) {
-                return { ...p, useParentLocation: true };
-              }
+      updatePlannerArray((prev: Planner[]) => {
+        const now = new Date().toISOString();
+        const descendantIds = new Set(getTaskTreeIds(prev, item.id));
+        descendantIds.delete(item.id);
+        return prev.map((p) => {
+          if (p.id === item.id) {
+            const updated: Planner = {
+              ...p,
+              categoryId,
+              updatedAt: now,
+            };
+            if (newCategoryHasLocation && !p.locationId) {
+              updated.useParentLocation = true;
             }
-            return p;
+            return updated;
           }
+          if (!descendantIds.has(p.id)) return p;
+          // Descendants never carry their own category — clear stale explicit
+          // values so the whole subtree inherits the root's new one.
+          const inheritLocation =
+            newCategoryHasLocation && !p.locationId && !p.useParentLocation;
+          if (p.categoryId === null && !inheritLocation) return p;
           const updated: Planner = {
             ...p,
-            categoryId,
-            updatedAt: new Date().toISOString(),
+            categoryId: null,
+            updatedAt: now,
           };
-          if (newCategoryHasLocation && !p.locationId) {
-            updated.useParentLocation = true;
-          }
+          if (inheritLocation) updated.useParentLocation = true;
           return updated;
-        }),
-      );
+        });
+      });
       updateAll();
     },
-    [item, planner, categories, updatePlannerArray, updateAll],
+    [item, categories, updatePlannerArray, updateAll],
   );
 
   const handleLocationChange = useCallback(

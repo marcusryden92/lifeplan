@@ -35,6 +35,23 @@ export function CategorySection() {
     [categories],
   );
 
+  // Subitems inherit the root's category — show it, but only the top-level
+  // item owns the picker.
+  if (item.parentId) {
+    return (
+      <div className={fieldStack}>
+        <span className={fieldLabel}>Area</span>
+        {category ? (
+          <CategoryBadge color={category.color ?? "#888"}>
+            {category.name}
+          </CategoryBadge>
+        ) : (
+          <Caption>No category</Caption>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={fieldStack}>
       <span className={fieldLabel}>Area</span>

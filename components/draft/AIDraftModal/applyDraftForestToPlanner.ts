@@ -139,21 +139,6 @@ function applyTreeToExistingRoot({
       ? workingTree.categoryId
       : rootRow.categoryId;
 
-  function inheritFromCanonical(startId: string | null): string | null {
-    const visited = new Set<string>();
-    let currentId = startId;
-    while (currentId && !visited.has(currentId)) {
-      visited.add(currentId);
-      const row = canonicalById.get(currentId);
-      if (!row) return null;
-      if (row.categoryId) return row.categoryId;
-      currentId = row.parentId ?? null;
-    }
-    return null;
-  }
-  const rootEffectiveCategoryId =
-    nextCategoryId ?? inheritFromCanonical(rootRow.parentId ?? null);
-
   // Root row color: the assistant may recolor a goal (isHexColor gate), else
   // the existing color stands. New descendants added this turn inherit it so
   // the goal stays one color; retained descendants keep their own.
@@ -164,22 +149,17 @@ function applyTreeToExistingRoot({
   const newRows: Planner[] = [];
 
   // Preorder traversal that mints/reuses ids, builds Planner rows, and stamps
-  // sibling sortOrder from array position. The effective category is passed
-  // down: a retained node's own category wins, otherwise the inherited one
-  // flows on.
-  function processNode(
-    node: DraftNode,
-    parentId: string,
-    sortOrder: number,
-    inheritedCategoryId: string | null,
-  ): void {
+  // sibling sortOrder from array position. Descendants never carry their own
+  // categoryId — the category lives on the root and the engine/UI resolve it
+  // by walking the parent chain — so retained rows are cleared here too,
+  // healing rows stamped before that invariant held.
+  function processNode(node: DraftNode, parentId: string, sortOrder: number): void {
     const canRetain = node.id.length > 0 && oldDescendantIds.has(node.id);
     const nodeId = canRetain ? node.id : uuidv4();
     const existing = canonicalById.get(nodeId);
-    const effectiveCategoryId = existing?.categoryId ?? inheritedCategoryId;
 
     node.children.forEach((child, i) => {
-      processNode(child, nodeId, (i + 1) * SORT_ORDER_STEP, effectiveCategoryId);
+      processNode(child, nodeId, (i + 1) * SORT_ORDER_STEP);
     });
 
     const row: Planner = existing
@@ -198,6 +178,7 @@ function applyTreeToExistingRoot({
           isReady: workingTree.isReady,
           parentId,
           sortOrder,
+          categoryId: null,
           updatedAt: now,
         }
       : {
@@ -221,7 +202,7 @@ function applyTreeToExistingRoot({
           color: nextColor,
           locationId: null,
           useParentLocation: false,
-          categoryId: inheritedCategoryId,
+          categoryId: null,
           createdAt: now,
           updatedAt: now,
         };
@@ -229,7 +210,7 @@ function applyTreeToExistingRoot({
   }
 
   workingTree.children.forEach((child, i) => {
-    processNode(child, rootId, (i + 1) * SORT_ORDER_STEP, rootEffectiveCategoryId);
+    processNode(child, rootId, (i + 1) * SORT_ORDER_STEP);
   });
 
   // Root row: update the fields the assistant may have changed. Preserve
@@ -321,9 +302,9 @@ function buildNewRootRows(
       color: rootColor,
       locationId: null,
       useParentLocation: false,
-      // Every row in a new goal inherits the root's category; the draft
-      // contract carries categoryId on roots only.
-      categoryId: rootCategoryId,
+      // categoryId lives on the root only; descendants inherit via the
+      // parent-chain walk (buildPlannerCategoryMap / getEffectiveCategoryId).
+      categoryId: null,
       createdAt: now,
       updatedAt: now,
     });
