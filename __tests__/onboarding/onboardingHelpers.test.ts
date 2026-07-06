@@ -677,6 +677,7 @@ describe("migrateProgress", () => {
       weekWorkApplied: false,
       dumpItems: [],
       dumpCommitted: [],
+      aiConversationId: null,
     });
   });
 
@@ -702,6 +703,7 @@ describe("migrateProgress", () => {
       weekWorkApplied: false,
       dumpItems,
       dumpCommitted: [{ id: "d-1", title: "Ship", type: "goal" }],
+      aiConversationId: null,
     });
   });
 
@@ -719,6 +721,7 @@ describe("migrateProgress", () => {
       version: 4,
       week: null,
       weekWorkApplied: false,
+      aiConversationId: null,
     });
   });
 
@@ -732,6 +735,7 @@ describe("migrateProgress", () => {
       weekWorkApplied: true,
       dumpItems: [],
       dumpCommitted: [],
+      aiConversationId: "conv-1",
     };
     expect(migrateProgress(payload)).toEqual(payload);
   });

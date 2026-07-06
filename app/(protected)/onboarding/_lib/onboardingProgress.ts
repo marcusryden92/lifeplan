@@ -28,6 +28,10 @@ export type StoredProgress = {
   weekWorkApplied: boolean;
   dumpItems: DumpItem[];
   dumpCommitted: StoredCommittedDump[];
+  // The AI step's DB conversation id, so a refresh mid-interview resumes the
+  // same chat. Null until the step first reports one; cleared on an explicit
+  // discard (Back with unsaved proposals).
+  aiConversationId: string | null;
 };
 
 const TRIAGE_TYPES: ReadonlySet<string> = new Set<TriageType>([
@@ -167,6 +171,7 @@ export function migrateProgress(raw: unknown): StoredProgress | null {
       weekWorkApplied: false,
       dumpItems: [],
       dumpCommitted: [],
+      aiConversationId: null,
     };
   }
 
@@ -204,6 +209,10 @@ export function migrateProgress(raw: unknown): StoredProgress | null {
     weekWorkApplied: obj.weekWorkApplied === true,
     dumpItems,
     dumpCommitted,
+    aiConversationId:
+      typeof obj.aiConversationId === "string" && obj.aiConversationId
+        ? obj.aiConversationId
+        : null,
   };
 }
 

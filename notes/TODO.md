@@ -1,9 +1,8 @@
 # P5 — Medium features
 
-- Onboarding flow (6-step)
-- Custom Claude API key
 - Bulk-actions floating bar in Library
-- File-view / mind-map style: displays categories + sub-categories + items together
+
+- Custom Claude API key
 
 - Change week start day in settings
 - Change date picker / date picker styles
@@ -11,9 +10,13 @@
 - Add RRule exceptions to plans, templates, categories
 - Splitting large tasks into smaller chunks when generating calendar (important for cases like 20 × 30-min "reading" — currently painful)
 - Maximum time of a goal per day
+- Allowed days/time spans in any day for goals
+- Habits - dynamic items that schedule every week
 - Allow moving/pinning of dynamic objects (temporarily acting like a plan)
-- Multiple templates of different time spans (3 days, 2 weeks etc)
+
 - Add inter-goal dependencies (with cycle detection)
+- File-view / mind-map style: displays categories + sub-categories + items together
+- Multiple templates of different time spans (3 days, 2 weeks etc)
 - Categorization of goals (tags) — may be redundant with categories; revisit
 
 # Future / deferred

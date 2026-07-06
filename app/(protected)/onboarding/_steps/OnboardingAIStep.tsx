@@ -20,6 +20,11 @@ type OnboardingAIStepProps = {
   onFinish: () => void;
   onSkip: () => void;
   finishing: boolean;
+  // The persisted conversation id from a previous visit to this step, so a
+  // refresh mid-interview resumes the same chat; null starts fresh. Reported
+  // back (or cleared on an explicit discard) via onConversationIdChange.
+  resumeConversationId: string | null;
+  onConversationIdChange: (id: string | null) => void;
 };
 
 export function OnboardingAIStep({
@@ -29,6 +34,8 @@ export function OnboardingAIStep({
   onFinish,
   onSkip,
   finishing,
+  resumeConversationId,
+  onConversationIdChange,
 }: OnboardingAIStepProps) {
   const [assistant, setAssistant] = useState<AssistantState>({
     hasChanges: false,
@@ -91,6 +98,8 @@ export function OnboardingAIStep({
           intent="onboarding"
           onSaved={onFinish}
           onStateChange={setAssistant}
+          resumeConversationId={resumeConversationId}
+          onConversationIdChange={onConversationIdChange}
         />
       </div>
 
@@ -104,6 +113,9 @@ export function OnboardingAIStep({
         onCancel={() => setShowBackConfirm(false)}
         onConfirm={() => {
           setShowBackConfirm(false);
+          // The dialog promises the conversation is discarded — drop the
+          // stored id so returning to this step starts a fresh interview.
+          onConversationIdChange(null);
           onBack();
         }}
       />

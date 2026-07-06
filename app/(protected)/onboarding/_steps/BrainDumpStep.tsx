@@ -3,15 +3,13 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
-import { Button, SegmentedControl } from "@/components/ui";
-import { TYPE_OPTIONS, type TriageType } from "@/app/(protected)/capture/_constants";
+import { Button } from "@/components/ui";
 import { StepFrame } from "../_components/StepFrame";
 import type { DumpItem } from "../_lib/brainDumpRows";
 import {
   dumpList,
   dumpRow,
   dumpRowTitle,
-  dumpRowControl,
   dumpRemove,
   dumpEmpty,
   customRow,
@@ -29,8 +27,6 @@ type BrainDumpStepProps = {
   onSkip: () => void;
   continueDisabled?: boolean;
 };
-
-const TYPE_SEGMENTS = TYPE_OPTIONS.map((o) => ({ key: o.key, label: o.label }));
 
 export function BrainDumpStep({
   stepIndex,
@@ -51,10 +47,6 @@ export function BrainDumpStep({
     setJot("");
   };
 
-  const setType = (id: string, type: TriageType) => {
-    onChange(items.map((it) => (it.id === id ? { ...it, type } : it)));
-  };
-
   const removeItem = (id: string) => {
     onChange(items.filter((it) => it.id !== id));
   };
@@ -64,7 +56,7 @@ export function BrainDumpStep({
       stepIndex={stepIndex}
       totalSteps={totalSteps}
       title="Empty your head"
-      subtitle="Jot whatever you want to get done or make progress on. Mark each as a task, a fixed plan, or a goal. Roles, deadlines, and the details come next with the assistant."
+      subtitle="Write down the things on your mind that you need to do — big or small, vague or specific. The assistant sorts them out with you next: what's a quick task, what's a bigger goal, what needs a deadline."
       onSkip={onSkip}
       footer={
         <>
@@ -114,13 +106,6 @@ export function BrainDumpStep({
           {items.map((item) => (
             <div key={item.id} className={dumpRow}>
               <span className={dumpRowTitle}>{item.title}</span>
-              <span className={dumpRowControl}>
-                <SegmentedControl<TriageType>
-                  options={TYPE_SEGMENTS}
-                  value={item.type}
-                  onChange={(next) => setType(item.id, next)}
-                />
-              </span>
               <button
                 type="button"
                 className={dumpRemove}

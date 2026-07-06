@@ -47,6 +47,11 @@ export interface UseAIDraftStateArgs {
   // Adopt the most recent conversation on first open. Off for the onboarding
   // instance, which always starts on a fresh chat.
   autoResume?: boolean;
+  // Adopt this specific conversation on first open (takes precedence over the
+  // most-recent lookup). Used by the onboarding instance to survive a page
+  // refresh without ever adopting an unrelated conversation. A missing or
+  // deleted id degrades silently to a fresh chat.
+  resumeConversationId?: string | null;
 }
 
 export interface UseAIDraftStateReturn {
@@ -71,6 +76,10 @@ export interface UseAIDraftStateReturn {
     id: string;
     messages: DraftConversationMessage[];
   }) => void;
+  // True once the first-open resume attempt has resolved (adopted, skipped,
+  // or failed). Auto-sends must wait for it or they race the adoption and
+  // fork a second conversation.
+  resumeSettled: boolean;
 }
 
 export function useAIDraftState({
@@ -80,6 +89,7 @@ export function useAIDraftState({
   canonicalTemplates,
   canonicalWindows,
   autoResume = true,
+  resumeConversationId = null,
 }: UseAIDraftStateArgs): UseAIDraftStateReturn {
   const [workingForest, setWorkingForestState] =
     useState<DraftForest>(canonical);
@@ -210,10 +220,12 @@ export function useAIDraftState({
     return () => clearTimeout(timer);
   }, [messages, conversationId]);
 
-  // Auto-resume: on the first open of a fresh page load, adopt the most
-  // recent conversation so "shut down and reopen" lands where the user
-  // left off. Any failure degrades silently to an empty chat.
+  // Resume on the first open of a fresh page load: a specific conversation
+  // when the caller pinned one, else the most recent so "shut down and
+  // reopen" lands where the user left off. Any failure degrades silently to
+  // an empty chat.
   const resumeAttemptedRef = useRef(false);
+  const [resumeSettled, setResumeSettled] = useState(false);
   const messageCountRef = useRef(0);
   useEffect(() => {
     messageCountRef.current = messages.length;
@@ -221,27 +233,35 @@ export function useAIDraftState({
   useEffect(() => {
     if (!open || resumeAttemptedRef.current) return;
     resumeAttemptedRef.current = true;
-    if (!autoResume) return;
-    if (messageCountRef.current > 0) return;
+    if ((!autoResume && !resumeConversationId) || messageCountRef.current > 0) {
+      setResumeSettled(true);
+      return;
+    }
     let cancelled = false;
     void (async () => {
       try {
-        const list = await listDraftConversations();
-        if (cancelled || list.length === 0) return;
-        const conversation = await getDraftConversation(list[0].id);
+        let targetId = resumeConversationId;
+        if (!targetId) {
+          const list = await listDraftConversations();
+          if (cancelled || list.length === 0) return;
+          targetId = list[0].id;
+        }
+        const conversation = await getDraftConversation(targetId);
         if (cancelled || messageCountRef.current > 0) return;
         adoptConversation({
           id: conversation.id,
           messages: conversation.messages,
         });
       } catch {
-        // No history or fetch failure — start empty.
+        // No history, deleted conversation, or fetch failure — start empty.
+      } finally {
+        if (!cancelled) setResumeSettled(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [open, autoResume, adoptConversation]);
+  }, [open, autoResume, resumeConversationId, adoptConversation]);
 
   return {
     workingForest,
@@ -260,5 +280,6 @@ export function useAIDraftState({
     conversationId,
     startNewConversation,
     adoptConversation,
+    resumeSettled,
   };
 }

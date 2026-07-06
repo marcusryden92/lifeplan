@@ -1,7 +1,7 @@
 "use client";
 
 import { space } from "@/lib/theme";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -17,9 +17,18 @@ import {
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
+  Check,
+  Minus,
 } from "lucide-react";
 import { useSelector } from "react-redux";
-import { Button, Caption, Loader, Switch, vars } from "@/components/ui";
+import {
+  Button,
+  Caption,
+  ConfirmModal,
+  Loader,
+  Switch,
+  vars,
+} from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { RootState } from "@/redux/store";
 import {
@@ -39,6 +48,13 @@ import {
 } from "./_components/CategoryTreeNode";
 import { ItemRow } from "./_components/ItemRow";
 import { NewItemModal } from "./_components/NewItemModal";
+import { BulkActionBar } from "./_components/BulkActionBar";
+import {
+  assignCategoryToSubtrees,
+  deleteSubtrees,
+  setColorOnSubtrees,
+  setPriorityOnRoots,
+} from "@/utils/plannerBulkActions";
 import {
   page,
   subHeader,
@@ -66,6 +82,8 @@ import {
   breadcrumbCurrent,
   tableWrap,
   tableHead,
+  cellCheck,
+  rowCheckbox,
   headerCell,
   headerCellSortable,
   headerCellActive,
@@ -147,12 +165,16 @@ function SortHeader({
 
 export default function LibraryPage() {
   const router = useRouter();
-  const { planner, categories } = useCalendarProvider();
+  const { planner, categories, updatePlannerArray } = useCalendarProvider();
   const isLoaded = useSelector((state: RootState) => state.calendarSource.isLoaded);
   const now = useMemo(() => new Date(), []);
   const [newItemOpen, setNewItemOpen] = useState(false);
 
   const [selection, setSelection] = useState<Selection>({ kind: "all" });
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleteTargetIds, setDeleteTargetIds] = useState<string[] | null>(
+    null,
+  );
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
@@ -317,6 +339,93 @@ export default function LibraryPage() {
       return next;
     });
   };
+
+  // Selected rows that get deleted elsewhere (another tab, the AI assistant)
+  // must not linger as ghost targets for bulk actions.
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const rootIdSet = new Set(
+        planner.filter((p) => !p.parentId).map((p) => p.id),
+      );
+      const next = new Set([...prev].filter((id) => rootIdSet.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [planner]);
+
+  useEffect(() => {
+    if (selectedIds.size === 0) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented) return;
+      setSelectedIds(new Set());
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedIds.size]);
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
+
+  const allVisibleSelected =
+    filteredItems.length > 0 &&
+    filteredItems.every((i) => selectedIds.has(i.id));
+  const someVisibleSelected = filteredItems.some((i) => selectedIds.has(i.id));
+
+  const toggleSelectAll = () => {
+    setSelectedIds(
+      allVisibleSelected ? new Set() : new Set(filteredItems.map((i) => i.id)),
+    );
+  };
+
+  const selectedTargets = useMemo(() => [...selectedIds], [selectedIds]);
+
+  const handleAssignCategory = (categoryId: string | null) => {
+    const categoryHasLocation = categoryId
+      ? !!categoryIndex.get(categoryId)?.locationId
+      : false;
+    updatePlannerArray((prev) =>
+      assignCategoryToSubtrees(
+        prev,
+        selectedTargets,
+        categoryId,
+        categoryHasLocation,
+      ),
+    );
+  };
+
+  const handleSetColor = (color: string) => {
+    updatePlannerArray((prev) =>
+      setColorOnSubtrees(prev, selectedTargets, color),
+    );
+  };
+
+  const handleSetPriority = (priority: number) => {
+    updatePlannerArray((prev) =>
+      setPriorityOnRoots(prev, selectedTargets, priority),
+    );
+  };
+
+  const confirmDelete = () => {
+    if (!deleteTargetIds || deleteTargetIds.length === 0) return;
+    updatePlannerArray((prev) => deleteSubtrees(prev, deleteTargetIds));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const id of deleteTargetIds) next.delete(id);
+      return next;
+    });
+    setDeleteTargetIds(null);
+  };
+
+  const deleteTargetTitle =
+    deleteTargetIds?.length === 1
+      ? planner.find((p) => p.id === deleteTargetIds[0])?.title
+      : undefined;
 
   const goalProgressByItemId = useMemo(() => {
     const map = new Map<string, number>();
@@ -552,6 +661,35 @@ export default function LibraryPage() {
           ) : (
             <div className={tableWrap}>
               <div className={tableHead}>
+                <span className={cellCheck}>
+                  <button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={
+                      allVisibleSelected
+                        ? true
+                        : someVisibleSelected
+                          ? "mixed"
+                          : false
+                    }
+                    aria-label="Select all"
+                    data-checked={
+                      allVisibleSelected
+                        ? "true"
+                        : someVisibleSelected
+                          ? "mixed"
+                          : undefined
+                    }
+                    className={rowCheckbox}
+                    onClick={toggleSelectAll}
+                  >
+                    {allVisibleSelected ? (
+                      <Check size={11} strokeWidth={3} aria-hidden />
+                    ) : someVisibleSelected ? (
+                      <Minus size={11} strokeWidth={3} aria-hidden />
+                    ) : null}
+                  </button>
+                </span>
                 <SortHeader
                   k="title"
                   label="Title"
@@ -610,12 +748,45 @@ export default function LibraryPage() {
                   remainingDuration={remainingDurationByItemId.get(item.id)}
                   onClick={() => router.push(`/items/${item.id}`)}
                   now={now}
+                  selected={selectedIds.has(item.id)}
+                  onToggleSelect={() => toggleSelect(item.id)}
+                  onDelete={() => setDeleteTargetIds([item.id])}
                 />
               ))}
             </div>
           )}
         </section>
       </div>
+
+      {selectedIds.size > 0 && (
+        <BulkActionBar
+          count={selectedIds.size}
+          categories={categories}
+          onAssignCategory={handleAssignCategory}
+          onSetColor={handleSetColor}
+          onSetPriority={handleSetPriority}
+          onDelete={() => setDeleteTargetIds(selectedTargets)}
+          onClear={() => setSelectedIds(new Set())}
+        />
+      )}
+
+      <ConfirmModal
+        open={deleteTargetIds !== null}
+        title={
+          deleteTargetIds?.length === 1
+            ? "Delete item?"
+            : `Delete ${deleteTargetIds?.length ?? 0} items?`
+        }
+        body={
+          deleteTargetTitle
+            ? `This permanently removes "${deleteTargetTitle}" and all of its subtasks.`
+            : `This permanently removes ${deleteTargetIds?.length ?? 0} items and all of their subtasks.`
+        }
+        confirmLabel="Delete"
+        tone="danger"
+        onCancel={() => setDeleteTargetIds(null)}
+        onConfirm={confirmDelete}
+      />
 
       <NewItemModal open={newItemOpen} onOpenChange={setNewItemOpen} />
     </div>

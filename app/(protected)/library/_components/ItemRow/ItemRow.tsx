@@ -1,12 +1,18 @@
-import { ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Check, ChevronRight, MoreHorizontal, Trash2 } from "lucide-react";
+import * as Popover from "@radix-ui/react-popover";
 import { format } from "date-fns";
 import { Caption, CategoryDot, TypeBadge, vars } from "@/components/ui";
+import { popover as popoverRecipe } from "@/lib/theme";
 import { isItemOverdue } from "@/utils/plannerStatus";
 import { formatDurationCompact } from "@/utils/timeFormatting";
 import { plannerTypeBadgeTone } from "@/utils/badgeTone";
 import type { Planner, Category } from "@/types/prisma";
 import {
   tableRow,
+  tableRowSelected,
+  cellCheck,
+  rowCheckbox,
   cellTitle,
   titleText,
   cellMuted,
@@ -14,7 +20,11 @@ import {
   cellLocation,
   cellProgress,
   cellProgressPct,
-  cellChevron,
+  rowActions,
+  rowMenuBtn,
+  rowMenu,
+  rowMenuItem,
+  rowMenuItemDanger,
 } from "../../page.css";
 
 export function ItemRow({
@@ -24,6 +34,9 @@ export function ItemRow({
   remainingDuration,
   onClick,
   now,
+  selected,
+  onToggleSelect,
+  onDelete,
 }: {
   item: Planner;
   category?: Category;
@@ -31,7 +44,11 @@ export function ItemRow({
   remainingDuration?: number;
   onClick: () => void;
   now: Date;
+  selected: boolean;
+  onToggleSelect: () => void;
+  onDelete: () => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const isOverdue = isItemOverdue(item, now);
 
   const showProgressInstead =
@@ -43,7 +60,24 @@ export function ItemRow({
       : "Draft";
 
   return (
-    <div className={tableRow} onClick={onClick} role="button">
+    <div
+      className={`${tableRow} ${selected ? tableRowSelected : ""}`}
+      onClick={onClick}
+      role="button"
+    >
+      <div className={cellCheck} onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={selected}
+          aria-label={`Select ${item.title}`}
+          data-checked={selected ? "true" : undefined}
+          className={rowCheckbox}
+          onClick={onToggleSelect}
+        >
+          {selected && <Check size={11} strokeWidth={3} aria-hidden />}
+        </button>
+      </div>
       <div className={cellTitle}>
         <span className={titleText}>{item.title}</span>
       </div>
@@ -92,7 +126,43 @@ export function ItemRow({
           <Caption>{statusLabel}</Caption>
         )}
       </div>
-      <div className={cellChevron}>
+      <div className={rowActions}>
+        <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              className={rowMenuBtn}
+              aria-label={`Actions for ${item.title}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal size={14} strokeWidth={2} />
+            </button>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              className={popoverRecipe({ size: "sm" })}
+              side="bottom"
+              align="end"
+              sideOffset={4}
+              collisionPadding={8}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className={rowMenu}>
+                <button
+                  type="button"
+                  className={`${rowMenuItem} ${rowMenuItemDanger}`}
+                  onClick={() => {
+                    setMenuOpen(false);
+                    onDelete();
+                  }}
+                >
+                  <Trash2 size={13} strokeWidth={2} aria-hidden />
+                  Delete
+                </button>
+              </div>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
         <ChevronRight size={14} strokeWidth={2} />
       </div>
     </div>

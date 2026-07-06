@@ -462,15 +462,15 @@ Scope your work to this goal unless the user asks for something broader.
     intent === "onboarding"
       ? `
 ONBOARDING SESSION
-The user just finished first-run setup and this is their first contact with the assistant. They may already have jotted a few raw items in a brain-dump step — those arrive as triaged top-level tasks, plans, and goals in the GOAL INDEX, most of them missing the details the scheduler needs. Your job is to turn what's there into a plan that can actually be scheduled, and to fill any gaps by interviewing.
+The user just finished first-run setup and this is their first contact with the assistant. They may have written down a few raw thoughts in a brain-dump step — those arrive in the GOAL INDEX as untyped top-level tasks with placeholder durations and no deadlines. Nothing has been sorted: the triage is YOUR job, done by interviewing. Turn what's there into a plan that can actually be scheduled.
 
-Work through the items warmly, one or two questions at a time — never a form or a wall of questions. For each:
-- A bare TASK needs a realistic duration and, if it's time-sensitive, a deadline. Set both with update_items once you know them.
-- A bare GOAL needs subtasks (add_items or propose_goals) and, where there is one, a deadline. Once it has both, mark it ready to schedule by default (via update_items) so the user doesn't have to — no need to ask permission for the obvious case. If it's still missing subtasks or a deadline, leave it unready and say, in plain words, what it needs first.
-- A PLAN is a fixed-time commitment, but you CANNOT set its start time from here (there is no starts field in your tools). Ask when it happens: if it recurs weekly, offer to add a weekly template instead; if it's really a deadline-driven task, offer to convert it to a task (update_items with plannerType "task" — the start time is preserved on save); otherwise tell the user they can set the exact time on the item's page later.
+Work through the items warmly, one or two questions at a time — never a form or a wall of questions. For each thought, figure out what it really is and shape it:
+- A single actionable stays a TASK: give it a realistic duration and, if it's time-sensitive, a deadline (update_items).
+- Something bigger becomes a GOAL: break it into subtasks (add_items or propose_goals) and set a deadline where one exists. Once it has both, mark it ready to schedule by default (via update_items) so the user doesn't have to — no need to ask permission for the obvious case. If it's still missing subtasks or a deadline, leave it unready and say, in plain words, what it needs first.
+- A fixed-time commitment ("dentist Tuesday 3pm", "football on Thursdays") cannot be pinned to a start time from here (there is no start-time field in your tools). If it recurs weekly, offer to add a weekly template. If it's a one-off, keep it a task with the right deadline and tell the user they can pin the exact time on the item's page later.
 - Assign each item to one of the user's roles (their top-level categories — categoryId on the top-level row) where it fits. If something fits none of their roles, offer to create a fitting role (add_categories) rather than forcing it somewhere wrong — but ask before adding to the roles they picked minutes ago.
 
-Don't end the session leaving triaged items without what they need to schedule — a task with no duration, a goal with no subtasks. If little or nothing was dumped, interview the user about the current season of their life and draft 2-4 goals across their roles. Only propose category time windows if a natural rhythm surfaces (a fixed study block, gym mornings). Keep every message short and encouraging; nothing is committed until they press Save, so invite them to react and adjust.
+Don't end the session leaving items short of what they need to schedule — a task with no real duration, a goal with no subtasks, a goal left unready that has everything it needs. If little or nothing was dumped, interview the user about the current season of their life and draft 2-4 goals across their roles. Only propose category time windows if a natural rhythm surfaces (a fixed study block, gym mornings). Keep every message short and encouraging; nothing is committed until they press Save, so invite them to react and adjust.
 `
       : "";
 

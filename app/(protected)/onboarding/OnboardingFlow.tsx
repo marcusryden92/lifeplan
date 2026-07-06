@@ -110,6 +110,9 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
       ]),
     ),
   );
+  const aiConversationId = useRef<string | null>(
+    initialProgress?.aiConversationId ?? null,
+  );
 
   // Touched flags gate the data-driven prefills: once the user has edited a
   // step's state, a late-arriving snapshot must not overwrite it.
@@ -193,6 +196,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
           title: s.title,
           type: s.type,
         })),
+        aiConversationId: aiConversationId.current,
       });
     },
     [dumpItems, week, userId],
@@ -201,6 +205,15 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
   useEffect(() => {
     persistProgress(stepIndex);
   }, [stepIndex, persistProgress]);
+
+  const handleAiConversationIdChange = useCallback(
+    (id: string | null) => {
+      if (aiConversationId.current === id) return;
+      aiConversationId.current = id;
+      persistProgress(stepIndex);
+    },
+    [persistProgress, stepIndex],
+  );
 
   const goNext = useCallback(
     () => setStepIndex((i) => Math.min(i + 1, TOTAL_STEPS - 1)),
@@ -403,6 +416,8 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
           onFinish={finish}
           onSkip={finish}
           finishing={finishing}
+          resumeConversationId={aiConversationId.current}
+          onConversationIdChange={handleAiConversationIdChange}
         />
       );
   }

@@ -310,7 +310,7 @@ export const tableWrap = style({
 // almost-always-horizontal-scrolling table.
 export const tableHead = style({
   display: "grid",
-  gridTemplateColumns: "1fr 80px 100px 110px 130px 120px 90px 30px",
+  gridTemplateColumns: "28px 1fr 80px 100px 110px 130px 120px 90px 52px",
   padding: "12px 8px 10px",
   borderBottom: `1px solid ${vars.rule}`,
   position: "sticky",
@@ -320,10 +320,10 @@ export const tableHead = style({
   transition: themeTransition,
   "@media": {
     [media.tablet]: {
-      gridTemplateColumns: "1fr 80px 100px 130px 90px 30px",
+      gridTemplateColumns: "28px 1fr 80px 100px 130px 90px 52px",
     },
     [media.mobile]: {
-      gridTemplateColumns: "1fr 80px 110px 30px",
+      gridTemplateColumns: "28px 1fr 80px 110px 52px",
     },
   },
 });
@@ -385,7 +385,7 @@ export const showCompletedToggle = style({
 
 export const tableRow = style({
   display: "grid",
-  gridTemplateColumns: "1fr 80px 100px 110px 130px 120px 90px 30px",
+  gridTemplateColumns: "28px 1fr 80px 100px 110px 130px 120px 90px 52px",
   padding: "12px 8px",
   alignItems: "center",
   borderBottom: `1px solid ${vars.rule}`,
@@ -402,19 +402,28 @@ export const tableRow = style({
   },
   "@media": {
     [media.tablet]: {
-      gridTemplateColumns: "1fr 80px 100px 130px 90px 30px",
+      gridTemplateColumns: "28px 1fr 80px 100px 130px 90px 52px",
     },
     [media.mobile]: {
-      gridTemplateColumns: "1fr 80px 110px 30px",
+      gridTemplateColumns: "28px 1fr 80px 110px 52px",
     },
   },
 });
 
-// Priority (4th) and Category (6th) go first; Duration (3rd) and Status
-// (7th) follow on mobile. Cells are positional in both the head and the
-// rows, so the hide rules match by child index.
+export const tableRowSelected = style({
+  background: vars.interactive.selectedFill,
+  selectors: {
+    "&:hover": {
+      background: vars.interactive.selectedFill,
+    },
+  },
+});
+
+// Priority (5th) and Category (7th) go first; Duration (4th) and Status
+// (8th) follow on mobile. Cells are positional in both the head and the
+// rows, so the hide rules match by child index (checkbox is 1st).
 globalStyle(
-  `${tableHead} > :nth-child(4), ${tableHead} > :nth-child(6), ${tableRow} > :nth-child(4), ${tableRow} > :nth-child(6)`,
+  `${tableHead} > :nth-child(5), ${tableHead} > :nth-child(7), ${tableRow} > :nth-child(5), ${tableRow} > :nth-child(7)`,
   {
     "@media": {
       [media.tablet]: { display: "none" },
@@ -423,13 +432,42 @@ globalStyle(
 );
 
 globalStyle(
-  `${tableHead} > :nth-child(3), ${tableHead} > :nth-child(7), ${tableRow} > :nth-child(3), ${tableRow} > :nth-child(7)`,
+  `${tableHead} > :nth-child(4), ${tableHead} > :nth-child(8), ${tableRow} > :nth-child(4), ${tableRow} > :nth-child(8)`,
   {
     "@media": {
       [media.mobile]: { display: "none" },
     },
   },
 );
+
+export const cellCheck = style({
+  display: "flex",
+  alignItems: "center",
+});
+
+export const rowCheckbox = style({
+  width: 15,
+  height: 15,
+  padding: 0,
+  borderRadius: 4,
+  border: `1px solid ${vars.rule}`,
+  background: "transparent",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: vars.textOnAccent,
+  cursor: "pointer",
+  transition: themeTransition,
+  selectors: {
+    '&[data-checked="true"], &[data-checked="mixed"]': {
+      background: vars.accent.primary,
+      borderColor: vars.accent.primary,
+    },
+    '&:hover:not([data-checked="true"])': {
+      borderColor: vars.inkSoft,
+    },
+  },
+});
 
 export const cellTitle = style({
   display: "flex",
@@ -488,6 +526,89 @@ export const cellChevron = style({
   color: vars.muted,
   display: "flex",
   justifyContent: "center",
+});
+
+export const rowActions = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: space["2.5"],
+  color: vars.muted,
+});
+
+export const rowMenuBtn = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 24,
+  height: 24,
+  padding: 0,
+  border: "none",
+  borderRadius: radii["xs"],
+  background: "transparent",
+  color: vars.muted,
+  cursor: "pointer",
+  opacity: 0,
+  transition: themeTransition,
+  selectors: {
+    [`${tableRow}:hover &`]: {
+      opacity: 1,
+    },
+    "&:focus-visible": {
+      opacity: 1,
+    },
+    '&[data-state="open"]': {
+      opacity: 1,
+      color: vars.ink,
+      background: vars.interactive.hoverFill,
+    },
+    "&:hover": {
+      color: vars.ink,
+      background: vars.interactive.hoverFill,
+    },
+  },
+  "@media": {
+    "(hover: none)": {
+      opacity: 1,
+    },
+  },
+});
+
+export const rowMenu = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["0.5"],
+  minWidth: 130,
+});
+
+export const rowMenuItem = style({
+  display: "flex",
+  alignItems: "center",
+  gap: space["2"],
+  padding: "6px 8px",
+  border: "none",
+  borderRadius: radii["xs"],
+  background: "transparent",
+  color: vars.ink,
+  fontFamily: vars.font.ui,
+  fontSize: 13,
+  textAlign: "left",
+  cursor: "pointer",
+  transition: themeTransition,
+  selectors: {
+    "&:hover": {
+      background: vars.interactive.hoverFill,
+    },
+  },
+});
+
+export const rowMenuItemDanger = style({
+  color: vars.status.error,
+  selectors: {
+    "&:hover": {
+      background: `color-mix(in srgb, ${vars.status.error} 12%, transparent)`,
+    },
+  },
 });
 
 export const emptyState = style({

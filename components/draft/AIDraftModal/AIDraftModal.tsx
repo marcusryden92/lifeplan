@@ -114,6 +114,11 @@ interface AIDraftModalProps {
     isStreaming: boolean;
     save: () => void;
   }) => void;
+  // Adopt this specific conversation on first open (survives a page refresh
+  // mid-onboarding); a missing id degrades to a fresh chat + kickoff.
+  resumeConversationId?: string | null;
+  // Reports the active conversation id so the host can persist it for resume.
+  onConversationIdChange?: (id: string) => void;
 }
 
 export function AIDraftModal({
@@ -125,6 +130,8 @@ export function AIDraftModal({
   embedded = false,
   onSaved,
   onStateChange,
+  resumeConversationId = null,
+  onConversationIdChange,
 }: AIDraftModalProps) {
   const {
     planner,
@@ -205,6 +212,7 @@ export function AIDraftModal({
     conversationId,
     startNewConversation,
     adoptConversation,
+    resumeSettled,
   } = useAIDraftState({
     open,
     ready: isLoaded,
@@ -212,7 +220,16 @@ export function AIDraftModal({
     canonicalTemplates,
     canonicalWindows,
     autoResume: intent !== "onboarding",
+    resumeConversationId,
   });
+
+  // Wait for the resume attempt: reporting the freshly minted id while the
+  // stored conversation is still being fetched would overwrite the very id
+  // the host needs for the next refresh.
+  useEffect(() => {
+    if (!resumeSettled) return;
+    onConversationIdChange?.(conversationId);
+  }, [resumeSettled, conversationId, onConversationIdChange]);
 
   // Recompute on every working/canonical tick. Cheap: pure walks of
   // personal-scale data, no memo cost worth introducing.
@@ -546,6 +563,32 @@ export function AIDraftModal({
       intent,
     ],
   );
+
+  // Onboarding auto-kickoff: the brain-dump step promises the assistant will
+  // do the sorting, so open the interview unprompted instead of waiting for
+  // the user to compose a first message. Fires once per mount, only on a
+  // fresh conversation once the resume attempt has settled (a refresh
+  // mid-onboarding resumes the stored conversation instead), and only after
+  // hydration (sends are dropped before isLoaded).
+  const kickoffSentRef = useRef(false);
+  useEffect(() => {
+    if (intent !== "onboarding" || !open || !isLoaded || !resumeSettled) return;
+    if (kickoffSentRef.current || messages.length > 0) return;
+    kickoffSentRef.current = true;
+    void handleSend(
+      canonical.goals.length > 0
+        ? "Please help me sort out the things I wrote down and get them ready to schedule."
+        : "I haven't written anything down yet — help me figure out what I should be working on.",
+    );
+  }, [
+    intent,
+    open,
+    isLoaded,
+    resumeSettled,
+    messages.length,
+    canonical.goals.length,
+    handleSend,
+  ]);
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort();

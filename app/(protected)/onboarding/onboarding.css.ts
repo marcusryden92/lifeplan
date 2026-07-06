@@ -128,7 +128,7 @@ export const skipLink = style([
     background: "transparent",
     color: vars.muted,
     cursor: "pointer",
-    padding: `${space["1"]} ${space["2"]}`,
+    padding: `${space["1"]}px ${space["2"]}px`,
     borderRadius: radii.sm,
     selectors: {
       "&:hover:not(:disabled)": {
@@ -260,7 +260,7 @@ export const roleRow = style([
     alignItems: "center",
     gap: space["2"],
     maxWidth: "100%",
-    padding: `${space["1.5"]} ${space["2.5"]}`,
+    padding: `${space["1.5"]}px ${space["2.5"]}px`,
     borderRadius: radii.md,
     border: "1px solid var(--role-color)",
     background: `color-mix(in srgb, var(--role-color) ${colorMixAlpha.lightFill}%, transparent)`,
@@ -376,7 +376,7 @@ export const customRow = style({
 
 export const selectionCaption = style([text.body, { color: vars.muted }]);
 
-// Brain dump — jotted rows with an inline type control
+// Brain dump — jotted rows, plain capture (the assistant does the triage)
 export const dumpList = style({
   display: "flex",
   flexDirection: "column",
@@ -387,17 +387,10 @@ export const dumpRow = style({
   display: "flex",
   alignItems: "center",
   gap: space["2.5"],
-  padding: `${space["2"]} ${space["2.5"]}`,
+  padding: `${space["2"]}px ${space["2.5"]}px`,
   borderRadius: radii.sm,
   border: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bgSoft,
-  "@media": {
-    [media.mobile]: {
-      // The fixed-width type control doesn't fit beside a title on narrow
-      // screens; let it wrap to its own line instead of crushing the title.
-      flexWrap: "wrap",
-    },
-  },
 });
 
 
@@ -412,19 +405,6 @@ export const dumpRowTitle = style([
     whiteSpace: "nowrap",
   },
 ]);
-
-export const dumpRowControl = style({
-  flexShrink: 0,
-  width: 190,
-  "@media": {
-    [media.mobile]: {
-      // Wraps onto its own line (order pushes it past the remove button, so
-      // title + remove stay together on the first line).
-      flexBasis: "100%",
-      order: 3,
-    },
-  },
-});
 
 export const dumpRemove = style({
   appearance: "none",

@@ -6,6 +6,7 @@ import {
   getTaskTreeIds,
 } from "@/utils/goalPageHandlers";
 import { toggleGoalIsReady } from "@/utils/goal-handlers/toggleGoalIsReady";
+import { assignCategoryToSubtrees } from "@/utils/plannerBulkActions";
 import type { Planner, Category } from "@/types/prisma";
 import type { Dispatch, SetStateAction } from "react";
 
@@ -113,37 +114,14 @@ export function useItemHandlers(
         ? !!categories.find((c) => c.id === categoryId)?.locationId
         : false;
 
-      updatePlannerArray((prev: Planner[]) => {
-        const now = new Date().toISOString();
-        const descendantIds = new Set(getTaskTreeIds(prev, item.id));
-        descendantIds.delete(item.id);
-        return prev.map((p) => {
-          if (p.id === item.id) {
-            const updated: Planner = {
-              ...p,
-              categoryId,
-              updatedAt: now,
-            };
-            if (newCategoryHasLocation && !p.locationId) {
-              updated.useParentLocation = true;
-            }
-            return updated;
-          }
-          if (!descendantIds.has(p.id)) return p;
-          // Descendants never carry their own category — clear stale explicit
-          // values so the whole subtree inherits the root's new one.
-          const inheritLocation =
-            newCategoryHasLocation && !p.locationId && !p.useParentLocation;
-          if (p.categoryId === null && !inheritLocation) return p;
-          const updated: Planner = {
-            ...p,
-            categoryId: null,
-            updatedAt: now,
-          };
-          if (inheritLocation) updated.useParentLocation = true;
-          return updated;
-        });
-      });
+      updatePlannerArray((prev: Planner[]) =>
+        assignCategoryToSubtrees(
+          prev,
+          [item.id],
+          categoryId,
+          newCategoryHasLocation,
+        ),
+      );
       updateAll();
     },
     [item, categories, updatePlannerArray, updateAll],
