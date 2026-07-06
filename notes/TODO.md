@@ -1,8 +1,6 @@
 # P5 — Medium features
 
-- Bulk-actions floating bar in Library
 
-- Custom Claude API key
 
 - Change week start day in settings
 - Change date picker / date picker styles
@@ -13,6 +11,8 @@
 - Allowed days/time spans in any day for goals
 - Habits - dynamic items that schedule every week
 - Allow moving/pinning of dynamic objects (temporarily acting like a plan)
+
+- Custom Claude API key
 
 - Add inter-goal dependencies (with cycle detection)
 - File-view / mind-map style: displays categories + sub-categories + items together
