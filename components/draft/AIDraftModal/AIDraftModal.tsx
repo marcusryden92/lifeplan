@@ -723,9 +723,16 @@ export function AIDraftModal({
               isStreaming={isStreaming}
               initialDraft={open ? initialPrompt ?? null : null}
               emptyHint={
-                intent === "onboarding"
-                  ? "Ask the assistant to help — it can turn what you jotted into real goals and set the deadlines and durations they need. Nothing is saved until you continue."
-                  : undefined
+                intent === "onboarding" ? (
+                  <>
+                    The assistant can create, edit, and expand your goals and
+                    items — just describe what you want.
+                    <br />
+                    Ask it to turn what you jotted down into real goals, break
+                    them into steps, or set deadlines and durations. Nothing is
+                    saved until you continue.
+                  </>
+                ) : undefined
               }
             />
           </div>
