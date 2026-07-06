@@ -70,6 +70,7 @@ function diffNode(working: DraftNode, canonical: DraftNode): DiffNode {
     priority: working.priority,
     isReady: working.isReady,
     categoryId: working.categoryId,
+    color: working.color ?? null,
     status,
     children: diffedChildren,
     changedFields,
@@ -86,6 +87,7 @@ export function markSubtree(node: DraftNode, status: DiffStatus): DiffNode {
     priority: node.priority,
     isReady: node.isReady,
     categoryId: node.categoryId,
+    color: node.color ?? null,
     status,
     changedFields: [],
     children: node.children.map((c) => markSubtree(c, status)),
@@ -101,6 +103,7 @@ function fieldsThatChanged(a: DraftNode, b: DraftNode): string[] {
   if (a.priority !== b.priority) changed.push("priority");
   if (a.isReady !== b.isReady) changed.push("isReady");
   if (a.categoryId !== b.categoryId) changed.push("categoryId");
+  if ((a.color ?? null) !== (b.color ?? null)) changed.push("color");
   return changed;
 }
 

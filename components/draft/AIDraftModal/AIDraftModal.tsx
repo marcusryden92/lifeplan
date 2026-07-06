@@ -559,6 +559,7 @@ export function AIDraftModal({
           workingForest,
           userId,
           validCategoryIds: new Set(categories.map((c) => c.id)),
+          categoryColorById: new Map(categories.map((c) => [c.id, c.color])),
         })
       : undefined;
     const now = new Date().toISOString();

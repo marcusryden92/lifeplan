@@ -6,6 +6,7 @@ import { SORT_ORDER_STEP } from "@/utils/goal-handlers/sortOrderKeys";
 import { plannerTreeToJson, type DraftNode } from "./plannerTreeToJson";
 import type { DraftForest } from "./plannerForestToJson";
 import { draftTreesEqual } from "./diffDraftTree";
+import { fallbackCalendarColor, isHexColor } from "@/utils/colorUtils";
 
 interface ApplyForestArgs {
   planner: Planner[];
@@ -14,6 +15,27 @@ interface ApplyForestArgs {
   // The user's category ids. A model-supplied categoryId outside this set is
   // ignored (existing value kept / null for new roots).
   validCategoryIds: ReadonlySet<string>;
+  // Category id -> its hex color, used to color a new goal after its own
+  // color and before the deterministic palette fallback. Optional so callers
+  // that don't care about coloring can omit it.
+  categoryColorById?: ReadonlyMap<string, string | null>;
+}
+
+// A new top-level item's color: the model's explicit pick, else its category's
+// color, else a deterministic palette color keyed on its id — never the silent
+// red default. Cascades to the goal's whole subtree at save time.
+function resolveNewRootColor(
+  node: DraftNode,
+  rootId: string,
+  rootCategoryId: string | null,
+  categoryColorById: ReadonlyMap<string, string | null> | undefined,
+): string {
+  if (isHexColor(node.color)) return node.color;
+  const categoryColor = rootCategoryId
+    ? categoryColorById?.get(rootCategoryId)
+    : null;
+  if (isHexColor(categoryColor)) return categoryColor;
+  return fallbackCalendarColor(rootId);
 }
 
 // Reverse of plannerForestToJson: takes the accepted working forest and
@@ -29,6 +51,7 @@ export function applyDraftForestToPlanner({
   workingForest,
   userId,
   validCategoryIds,
+  categoryColorById,
 }: ApplyForestArgs): Planner[] {
   const now = new Date().toISOString();
   let current = planner;
@@ -70,7 +93,7 @@ export function applyDraftForestToPlanner({
     } else {
       current = [
         ...current,
-        ...buildNewRootRows(goal, userId, validCategoryIds, now),
+        ...buildNewRootRows(goal, userId, validCategoryIds, categoryColorById, now),
       ];
     }
   }
@@ -131,6 +154,13 @@ function applyTreeToExistingRoot({
   const rootEffectiveCategoryId =
     nextCategoryId ?? inheritFromCanonical(rootRow.parentId ?? null);
 
+  // Root row color: the assistant may recolor a goal (isHexColor gate), else
+  // the existing color stands. New descendants added this turn inherit it so
+  // the goal stays one color; retained descendants keep their own.
+  const nextColor = isHexColor(workingTree.color)
+    ? workingTree.color
+    : rootRow.color;
+
   const newRows: Planner[] = [];
 
   // Preorder traversal that mints/reuses ids, builds Planner rows, and stamps
@@ -188,7 +218,7 @@ function applyTreeToExistingRoot({
           completedEndTime: null,
           priority: node.priority,
           userId,
-          color: null,
+          color: nextColor,
           locationId: null,
           useParentLocation: false,
           categoryId: inheritedCategoryId,
@@ -203,8 +233,8 @@ function applyTreeToExistingRoot({
   });
 
   // Root row: update the fields the assistant may have changed. Preserve
-  // sortOrder, parentId, locationId, color — those are part of root's
-  // position/identity in the outer tree, not its subtask structure.
+  // sortOrder, parentId, locationId — those are part of root's position/identity
+  // in the outer tree, not its subtask structure.
   const updatedRoot: Planner = {
     ...rootRow,
     title: workingTree.title,
@@ -218,6 +248,7 @@ function applyTreeToExistingRoot({
     priority: workingTree.priority,
     isReady: workingTree.isReady,
     categoryId: nextCategoryId,
+    color: nextColor,
     updatedAt: now,
   };
 
@@ -237,6 +268,7 @@ function buildNewRootRows(
   node: DraftNode,
   userId: string,
   validCategoryIds: ReadonlySet<string>,
+  categoryColorById: ReadonlyMap<string, string | null> | undefined,
   now: string,
 ): Planner[] {
   const rootId = uuidv4();
@@ -244,6 +276,14 @@ function buildNewRootRows(
     node.categoryId && validCategoryIds.has(node.categoryId)
       ? node.categoryId
       : null;
+  // Every row in a new goal shares one color (the root's), the same way they
+  // share the root's category — so the goal reads as one block on the calendar.
+  const rootColor = resolveNewRootColor(
+    node,
+    rootId,
+    rootCategoryId,
+    categoryColorById,
+  );
 
   const rows: Planner[] = [];
 
@@ -278,7 +318,7 @@ function buildNewRootRows(
       completedEndTime: null,
       priority: child.priority,
       userId,
-      color: null,
+      color: rootColor,
       locationId: null,
       useParentLocation: false,
       // Every row in a new goal inherits the root's category; the draft
@@ -304,7 +344,7 @@ function buildNewRootRows(
     completedEndTime: null,
     priority: node.priority,
     userId,
-    color: null,
+    color: rootColor,
     locationId: null,
     useParentLocation: false,
     categoryId: rootCategoryId,
