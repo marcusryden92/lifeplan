@@ -25,7 +25,7 @@ import {
   errorText,
 } from "../onboarding.css";
 
-type PlacesStepProps = {
+type LocationsStepProps = {
   stepIndex: number;
   totalSteps: number;
   rows: LocationRow[];
@@ -33,6 +33,7 @@ type PlacesStepProps = {
   onBack: () => void;
   onContinue: () => void;
   onSkip: () => void;
+  continueDisabled?: boolean;
 };
 
 function upsertIntoList(
@@ -46,7 +47,17 @@ function upsertIntoList(
   return next;
 }
 
-export function PlacesStep({
+// A row the user started but that can't be created yet: an address typed or
+// picked without both a name and a selected suggestion. Continuing would
+// silently drop it, so these block with a message instead.
+function isIncomplete(row: LocationRow): boolean {
+  if (row.createdId) return false;
+  const hasInput = row.query.trim().length > 0 || row.selected !== null;
+  const isCreatable = row.name.trim().length > 0 && row.selected !== null;
+  return hasInput && !isCreatable;
+}
+
+export function LocationsStep({
   stepIndex,
   totalSteps,
   rows,
@@ -54,7 +65,8 @@ export function PlacesStep({
   onBack,
   onContinue,
   onSkip,
-}: PlacesStepProps) {
+  continueDisabled = false,
+}: LocationsStepProps) {
   const dispatch = useDispatch();
   const { locations, markSynced } = useCalendarProvider();
   const transportMode = useSelector(
@@ -99,6 +111,19 @@ export function PlacesStep({
   };
 
   const handleContinue = async () => {
+    const incomplete = rows.filter(isIncomplete);
+    if (incomplete.length > 0) {
+      const names = incomplete
+        .map((r) => r.name.trim())
+        .filter((n) => n.length > 0);
+      setError(
+        names.length > 0
+          ? `${names.join(", ")} ${names.length === 1 ? "needs" : "need"} both a name and an address picked from the suggestions — finish or clear the row to continue.`
+          : "A location needs both a name and an address picked from the suggestions — finish or clear the row to continue.",
+      );
+      return;
+    }
+
     const toCreate = rows.filter(
       (r) => r.selected && !r.createdId && r.name.trim().length > 0,
     );
@@ -148,8 +173,8 @@ export function PlacesStep({
     <StepFrame
       stepIndex={stepIndex}
       totalSteps={totalSteps}
-      title="Add your places"
-      subtitle="Where you spend your time. We weave travel time between them — skip this and add places later if you like."
+      title="Add your locations"
+      subtitle="Where you spend your time. We weave travel time between them — skip this and add locations later if you like."
       onSkip={onSkip}
       footer={
         <>
@@ -157,7 +182,11 @@ export function PlacesStep({
             Back
           </Button>
           <div className={footerActions}>
-            <Button variant="glassInk" onClick={handleContinue} disabled={busy}>
+            <Button
+              variant="glassInk"
+              onClick={handleContinue}
+              disabled={busy || continueDisabled}
+            >
               {busy ? "Adding…" : "Continue"}
             </Button>
           </div>
@@ -172,7 +201,7 @@ export function PlacesStep({
           onChange={handleTransportChange}
         />
         <span className={fieldHelp}>
-          The default travel mode for estimating time between places.
+          The default travel mode for estimating time between locations.
         </span>
       </div>
 

@@ -34,6 +34,28 @@ export type RoleSelection = {
   color: string;
 };
 
+// Maps existing top-level categories to Roles-step selections (returning user
+// or a resumed session), in sortOrder so a re-commit's positional restamp
+// reflects the real order. Must run AFTER the calendar data has hydrated —
+// calling it at mount races the initial fetch and prefills nothing.
+export function prefillRoleSelections(categories: Category[]): RoleSelection[] {
+  return categories
+    .filter((c) => !c.parentId)
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .map((c) => {
+      const preset = STARTER_ROLE_PRESETS.find(
+        (p) => p.name.toLowerCase() === c.name.trim().toLowerCase(),
+      );
+      return preset
+        ? { key: preset.key, name: preset.name, color: preset.color }
+        : {
+            key: `custom:${c.name.trim().toLowerCase()}`,
+            name: c.name.trim(),
+            color: c.color ?? CUSTOM_ROLE_COLORS[0],
+          };
+    });
+}
+
 // Builds a single top-level role Category. Onboarding roles start with no time
 // windows (useTimeWindows false) — they carry classification and color, and the
 // week/AI steps or later editing add scheduling geometry to categories nested
@@ -85,8 +107,11 @@ export interface ReconcileRolesResult {
 // sortOrder/color on the roles this flow owns (reflecting reorders), and removes
 // owned roles the user deselected. Removal is childless-only — a deselected
 // "Professional" that already carries a Week-step "Work" category is kept so its
-// children are never orphaned. Pre-existing categories the flow never created
-// (returning-user data) are left untouched on deselect.
+// children are never orphaned.
+//
+// Ownership is strictly creation-based: a pre-existing category matched by name
+// is never adopted, restamped, or removed — the flow must not delete or mutate
+// data it didn't create, even when the user deselects that name here.
 //
 // `candidateIds` supplies a stable id per selection (keyed by lowercased name)
 // so this stays a pure function of `prev` — the caller mints them once, outside
@@ -142,12 +167,18 @@ export function reconcileRoleCategories(
           ? { ...c, sortOrder: index, color: selection.color, updatedAt: nowIso }
           : c,
       );
+      nextOwned.add(existing.id);
     }
-    // Keep tracking the matched role as owned so a later deselect can remove
-    // it; a pre-existing user category adopted here is only ever removed while
-    // childless.
-    nextOwned.add(existing.id);
+    // A matched pre-existing category stays unowned: selecting its name here
+    // must not grant the flow the right to restamp or later delete it.
   });
+
+  // Ownership survives deselection when the row itself survived (kept alive by
+  // children): the flow created it, so a later reselect may manage it again.
+  for (const id of ownedIds) {
+    if (nextOwned.has(id)) continue;
+    if (next.some((c) => c.id === id)) nextOwned.add(id);
+  }
 
   return { categories: next, ownedIds: nextOwned };
 }

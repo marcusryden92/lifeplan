@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type CSSProperties } from "react";
-import { GripVertical, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui";
 import { StepFrame } from "../_components/StepFrame";
 import {
@@ -16,11 +16,12 @@ import {
   roleRow,
   roleRowLabel,
   roleRowIcon,
-  roleRowSelected,
+  roleSelectedList,
+  roleSelectedRow,
+  roleDot,
   roleRowDragging,
   roleRowDropBefore,
   roleRowDropAfter,
-  roleRowGrip,
   roleRowRemove,
   roleEmptyNote,
   customRow,
@@ -39,6 +40,9 @@ type RolesStepProps = {
   onBack: () => void;
   onContinue: () => void;
   onSkip: () => void;
+  // True while the initial calendar snapshot is still loading — committing
+  // before it lands would be wholesale-replaced by the fetch.
+  continueDisabled?: boolean;
 };
 
 function roleColorVar(color: string): CSSProperties {
@@ -64,6 +68,7 @@ export function RolesStep({
   onBack,
   onContinue,
   onSkip,
+  continueDisabled = false,
 }: RolesStepProps) {
   const [customName, setCustomName] = useState("");
   const [draggedKey, setDraggedKey] = useState<string | null>(null);
@@ -73,6 +78,13 @@ export function RolesStep({
   } | null>(null);
 
   const selectedKeys = new Set(selections.map((s) => s.key));
+  // Dedupe by normalized name, not key: the preset "Self" (key `self`) and a
+  // typed custom "Self" (key `custom:self`) are the same role to the user, and
+  // the commit reconciles by name anyway.
+  const hasName = (name: string) =>
+    selections.some(
+      (s) => s.name.trim().toLowerCase() === name.trim().toLowerCase(),
+    );
 
   // Reorder relative to a target row: pull the source out first, then insert
   // before/after the target in the remaining list so the math is correct in
@@ -96,7 +108,7 @@ export function RolesStep({
   };
 
   const addPreset = (key: string, name: string, color: string) => {
-    if (selectedKeys.has(key)) return;
+    if (selectedKeys.has(key) || hasName(name)) return;
     onChange([...selections, { key, name, color }]);
   };
 
@@ -107,11 +119,11 @@ export function RolesStep({
   const addCustom = () => {
     const name = customName.trim();
     if (!name) return;
-    const key = `custom:${name.toLowerCase()}`;
-    if (selectedKeys.has(key)) {
+    if (hasName(name)) {
       setCustomName("");
       return;
     }
+    const key = `custom:${name.toLowerCase()}`;
     const color =
       CUSTOM_ROLE_COLORS[selections.length % CUSTOM_ROLE_COLORS.length];
     onChange([...selections, { key, name, color }]);
@@ -119,7 +131,7 @@ export function RolesStep({
   };
 
   const availablePresets = STARTER_ROLE_PRESETS.filter(
-    (preset) => !selectedKeys.has(preset.key),
+    (preset) => !selectedKeys.has(preset.key) && !hasName(preset.name),
   );
 
   return (
@@ -135,7 +147,11 @@ export function RolesStep({
             Back
           </Button>
           <div className={footerActions}>
-            <Button variant="glassInk" onClick={onContinue}>
+            <Button
+              variant="glassInk"
+              onClick={onContinue}
+              disabled={continueDisabled}
+            >
               Continue
             </Button>
           </div>
@@ -168,79 +184,79 @@ export function RolesStep({
               Nothing yet — add from the left or type your own.
             </span>
           ) : (
-            selections.map((sel) => {
-              const dropZone =
-                dragOver?.key === sel.key ? dragOver.zone : null;
-              return (
-                <div
-                  key={sel.key}
-                  className={`${roleRow} ${roleRowSelected} ${
-                    draggedKey === sel.key ? roleRowDragging : ""
-                  } ${
-                    dropZone === "before"
-                      ? roleRowDropBefore
-                      : dropZone === "after"
-                        ? roleRowDropAfter
-                        : ""
-                  }`}
-                  style={roleColorVar(sel.color)}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.effectAllowed = "move";
-                    // Firefox needs data set or the drag won't start; the value
-                    // is unused (source comes from draggedKey state).
-                    e.dataTransfer.setData("text/plain", sel.key);
-                    if (TRANSPARENT_DRAG_IMAGE) {
-                      e.dataTransfer.setDragImage(TRANSPARENT_DRAG_IMAGE, 0, 0);
-                    }
-                    setDraggedKey(sel.key);
-                  }}
-                  onDragEnd={endDrag}
-                  onDragOver={(e) => {
-                    if (!draggedKey) return;
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = "move";
-                    if (draggedKey === sel.key) {
+            <div className={roleSelectedList}>
+              {selections.map((sel) => {
+                const dropZone =
+                  dragOver?.key === sel.key ? dragOver.zone : null;
+                return (
+                  <div
+                    key={sel.key}
+                    className={`${roleSelectedRow} ${
+                      draggedKey === sel.key ? roleRowDragging : ""
+                    } ${
+                      dropZone === "before"
+                        ? roleRowDropBefore
+                        : dropZone === "after"
+                          ? roleRowDropAfter
+                          : ""
+                    }`}
+                    style={roleColorVar(sel.color)}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.effectAllowed = "move";
+                      // Firefox needs data set or the drag won't start; the
+                      // value is unused (source comes from draggedKey state).
+                      e.dataTransfer.setData("text/plain", sel.key);
+                      if (TRANSPARENT_DRAG_IMAGE) {
+                        e.dataTransfer.setDragImage(TRANSPARENT_DRAG_IMAGE, 0, 0);
+                      }
+                      setDraggedKey(sel.key);
+                    }}
+                    onDragEnd={endDrag}
+                    onDragOver={(e) => {
+                      if (!draggedKey) return;
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      if (draggedKey === sel.key) {
+                        if (dragOver?.key === sel.key) setDragOver(null);
+                        return;
+                      }
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const zone: DragZone =
+                        e.clientY - rect.top < rect.height / 2
+                          ? "before"
+                          : "after";
+                      if (dragOver?.key !== sel.key || dragOver.zone !== zone) {
+                        setDragOver({ key: sel.key, zone });
+                      }
+                    }}
+                    onDragLeave={(e) => {
+                      const next = e.relatedTarget as Node | null;
+                      if (next && e.currentTarget.contains(next)) return;
                       if (dragOver?.key === sel.key) setDragOver(null);
-                      return;
-                    }
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const zone: DragZone =
-                      e.clientY - rect.top < rect.height / 2
-                        ? "before"
-                        : "after";
-                    if (dragOver?.key !== sel.key || dragOver.zone !== zone) {
-                      setDragOver({ key: sel.key, zone });
-                    }
-                  }}
-                  onDragLeave={(e) => {
-                    const next = e.relatedTarget as Node | null;
-                    if (next && e.currentTarget.contains(next)) return;
-                    if (dragOver?.key === sel.key) setDragOver(null);
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (draggedKey && dragOver && draggedKey !== sel.key) {
-                      moveRelative(draggedKey, sel.key, dragOver.zone);
-                    }
-                    endDrag();
-                  }}
-                >
-                  <span className={roleRowGrip} aria-hidden>
-                    <GripVertical size={14} strokeWidth={2} />
-                  </span>
-                  <span className={roleRowLabel}>{sel.name}</span>
-                  <button
-                    type="button"
-                    className={roleRowRemove}
-                    onClick={() => removeSelection(sel.key)}
-                    aria-label={`Remove ${sel.name}`}
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedKey && dragOver && draggedKey !== sel.key) {
+                        moveRelative(draggedKey, sel.key, dragOver.zone);
+                      }
+                      endDrag();
+                    }}
                   >
-                    <X size={15} strokeWidth={2.2} />
-                  </button>
-                </div>
-              );
-            })
+                    <span className={roleDot} aria-hidden />
+                    <span className={roleRowLabel}>{sel.name}</span>
+                    <button
+                      type="button"
+                      className={roleRowRemove}
+                      onClick={() => removeSelection(sel.key)}
+                      aria-label={`Remove ${sel.name}`}
+                    >
+                      <X size={13} strokeWidth={2.2} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           )}
 
           <div className={customRow}>

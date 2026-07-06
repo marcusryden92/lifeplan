@@ -10,6 +10,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { useSession } from "next-auth/react";
 import { assignInlineVars } from "@vanilla-extract/dynamic";
 import { themeLight, themeDark, vars, type ThemeVars } from "@/lib/theme";
 
@@ -24,6 +25,10 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+// The preference is stored per user (`theme.dark.<userId>`) so accounts
+// sharing a browser keep their own theme; the unscoped key serves logged-out
+// surfaces and doubles as the pre-scoping fallback a signed-in user reads
+// once before their scoped value exists.
 const STORAGE_KEY = "theme.dark";
 
 type UserVarOverrides = Parameters<typeof assignInlineVars<ThemeVars>>[1];
@@ -39,28 +44,38 @@ export function ThemeProvider({
   defaultTheme = "light",
   userVars,
 }: ThemeProviderProps) {
+  // The root layout passes the server session into SessionProvider, so the
+  // user id is available synchronously on the first client render — the
+  // scoped key is read before the first paint-affecting effect, no theme
+  // flash on login.
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+  const storageKey = userId ? `${STORAGE_KEY}.${userId}` : STORAGE_KEY;
+
   const [dark, setDark] = useState(defaultTheme === "dark");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
+      const stored =
+        window.localStorage.getItem(storageKey) ??
+        window.localStorage.getItem(STORAGE_KEY);
       if (stored === "1") setDark(true);
       else if (stored === "0") setDark(false);
     } catch {
       // localStorage unavailable; keep default
     }
     setHydrated(true);
-  }, []);
+  }, [storageKey]);
 
   useEffect(() => {
     if (!hydrated) return;
     try {
-      window.localStorage.setItem(STORAGE_KEY, dark ? "1" : "0");
+      window.localStorage.setItem(storageKey, dark ? "1" : "0");
     } catch {
       // ignore
     }
-  }, [dark, hydrated]);
+  }, [dark, hydrated, storageKey]);
 
   useEffect(() => {
     const body = document.body;

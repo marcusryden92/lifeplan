@@ -39,6 +39,10 @@ import { buildInheritedLocationMap, InheritedLocationInfo } from "@/utils/goalPa
 type CalendarContextType = {
   userId: string;
   userSettings: UserSettings;
+  // True once the initial server snapshot has hydrated Redux. Consumers that
+  // commit against prev-state (onboarding) must wait for this — an update
+  // dispatched before hydration is wholesale-replaced when the fetch lands.
+  isLoaded: boolean;
   weekStartDay: WeekDayIntegers;
   planner: Planner[];
   calendar: SimpleEvent[];
@@ -238,6 +242,7 @@ export default function CalendarProvider({
         ? {
             userId,
             userSettings: USER_SETTINGS,
+            isLoaded: isCalendarLoaded,
             weekStartDay,
             planner,
             calendar,
@@ -256,6 +261,7 @@ export default function CalendarProvider({
         : null,
     [
       userId,
+      isCalendarLoaded,
       weekStartDay,
       planner,
       calendar,

@@ -5,7 +5,11 @@ import { Button, Switch, Combobox } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 import { StepFrame } from "../_components/StepFrame";
-import { ALL_WEEK_DAYS, expandDailyRange } from "../_lib/weekTemplates";
+import {
+  ALL_WEEK_DAYS,
+  expandDailyRange,
+  type WeekUIState,
+} from "../_lib/weekTemplates";
 import {
   fieldStack,
   fieldLabel,
@@ -22,26 +26,7 @@ import {
   footerActions,
 } from "../onboarding.css";
 
-export type WeekUIState = {
-  sleepEnabled: boolean;
-  sleepStart: string;
-  sleepEnd: string;
-  workEnabled: boolean;
-  workStart: string;
-  workEnd: string;
-  workDays: WeekDayIntegers[];
-  workLocationId: string | null;
-  exerciseEnabled: boolean;
-  exerciseStart: string;
-  exerciseEnd: string;
-  exerciseDays: WeekDayIntegers[];
-  morningEnabled: boolean;
-  morningStart: string;
-  morningEnd: string;
-  eveningEnabled: boolean;
-  eveningStart: string;
-  eveningEnd: string;
-};
+export type { WeekUIState } from "../_lib/weekTemplates";
 
 const DAY_BUTTONS: { day: WeekDayIntegers; label: string }[] = [
   { day: 1, label: "M" },
@@ -61,6 +46,7 @@ type WeekStepProps = {
   onBack: () => void;
   onContinue: () => void;
   onSkip: () => void;
+  continueDisabled?: boolean;
 };
 
 export function WeekStep({
@@ -71,6 +57,7 @@ export function WeekStep({
   onBack,
   onContinue,
   onSkip,
+  continueDisabled = false,
 }: WeekStepProps) {
   const { locations } = useCalendarProvider();
   const patch = (next: Partial<WeekUIState>) => onChange({ ...value, ...next });
@@ -133,7 +120,11 @@ export function WeekStep({
             Back
           </Button>
           <div className={footerActions}>
-            <Button variant="glassInk" onClick={onContinue}>
+            <Button
+              variant="glassInk"
+              onClick={onContinue}
+              disabled={continueDisabled}
+            >
               Continue
             </Button>
           </div>
@@ -233,7 +224,7 @@ export function WeekStep({
               />
             ) : (
               <span className={fieldHelp}>
-                Add a place on the previous step to attach a location to these
+                Add a location on the previous step to attach one to these
                 blocks.
               </span>
             )}

@@ -3,24 +3,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import type { Category, EventTemplate } from "@/types/prisma";
+import type { EventTemplate } from "@/types/prisma";
 import { completeOnboarding } from "@/actions/onboarding";
 import {
   reconcileRoleCategories,
-  STARTER_ROLE_PRESETS,
-  CUSTOM_ROLE_COLORS,
+  prefillRoleSelections,
   type RoleSelection,
 } from "./_lib/starterCategories";
-import { buildWeekTemplates, type WeekFormInput } from "./_lib/weekTemplates";
-import { applyWorkCategory } from "./_lib/workCategory";
+import {
+  buildWeekTemplates,
+  reconcileWeekTemplateRows,
+  DEFAULT_WEEK,
+  type WeekFormInput,
+  type WeekUIState,
+} from "./_lib/weekTemplates";
+import { applyWorkCategory, clearWorkCategoryWindows } from "./_lib/workCategory";
 import {
   applyBrainDump,
   type CommittedDump,
   type DumpItem,
 } from "./_lib/brainDumpRows";
 import {
-  PROGRESS_KEY,
-  migrateProgress,
+  loadProgress,
+  saveProgress,
+  clearProgress,
   type StoredProgress,
 } from "./_lib/onboardingProgress";
 import {
@@ -29,102 +35,56 @@ import {
 } from "./_components/LocationRows";
 import { WelcomeStep } from "./_steps/WelcomeStep";
 import { RolesStep } from "./_steps/RolesStep";
-import { PlacesStep } from "./_steps/PlacesStep";
-import { WeekStep, type WeekUIState } from "./_steps/WeekStep";
+import { LocationsStep } from "./_steps/LocationsStep";
+import { WeekStep } from "./_steps/WeekStep";
 import { BrainDumpStep } from "./_steps/BrainDumpStep";
 import { OnboardingAIStep } from "./_steps/OnboardingAIStep";
 
 const TOTAL_STEPS = 6;
 
-const DEFAULT_WEEK: WeekUIState = {
-  sleepEnabled: true,
-  sleepStart: "23:00",
-  sleepEnd: "07:00",
-  workEnabled: false,
-  workStart: "09:00",
-  workEnd: "17:00",
-  workDays: [1, 2, 3, 4, 5],
-  workLocationId: null,
-  exerciseEnabled: false,
-  exerciseStart: "18:00",
-  exerciseEnd: "19:00",
-  exerciseDays: [1, 3, 5],
-  morningEnabled: false,
-  morningStart: "07:00",
-  morningEnd: "07:30",
-  eveningEnabled: false,
-  eveningStart: "21:30",
-  eveningEnd: "22:00",
-};
-
-function readProgress(): StoredProgress | null {
-  try {
-    const raw = localStorage.getItem(PROGRESS_KEY);
-    if (!raw) return null;
-    return migrateProgress(JSON.parse(raw));
-  } catch {
-    return null;
-  }
-}
-
 export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
-  const { categories, locations, userId, updateAll, updatePlannerArray } =
-    useCalendarProvider();
+  const {
+    categories,
+    template,
+    locations,
+    userId,
+    isLoaded,
+    updateAll,
+    updatePlannerArray,
+  } = useCalendarProvider();
+
+  // Parsed once per mount; every initializer below reads from this instead of
+  // re-reading localStorage.
+  const [initialProgress] = useState<StoredProgress | null>(() =>
+    loadProgress(userId),
+  );
 
   // Resume where the user left off; steps are non-destructive so a stale index
   // is harmless.
   const [stepIndex, setStepIndex] = useState<number>(() => {
-    const progress = readProgress();
-    if (progress && typeof progress.stepIndex === "number") {
-      return Math.min(Math.max(progress.stepIndex, 0), TOTAL_STEPS - 1);
+    if (initialProgress && typeof initialProgress.stepIndex === "number") {
+      return Math.min(Math.max(initialProgress.stepIndex, 0), TOTAL_STEPS - 1);
     }
     return 0;
   });
 
-  // Prefill picked roles from existing top-level categories (returning user).
-  const [roles, setRoles] = useState<RoleSelection[]>(() =>
-    categories
-      .filter((c) => !c.parentId)
-      .map((c) => {
-        const preset = STARTER_ROLE_PRESETS.find(
-          (p) => p.name.toLowerCase() === c.name.trim().toLowerCase(),
-        );
-        return preset
-          ? { key: preset.key, name: preset.name, color: preset.color }
-          : {
-              key: `custom:${c.name.trim().toLowerCase()}`,
-              name: c.name.trim(),
-              color: c.color ?? CUSTOM_ROLE_COLORS[0],
-            };
-      }),
+  // Step form state. Prefills that depend on server data (existing roles,
+  // existing locations, the Work location auto-pick) run as effects below —
+  // the overlay mounts before the initial fetch resolves, so a mount-time
+  // initializer would always see empty arrays.
+  const [roles, setRoles] = useState<RoleSelection[]>([]);
+  const [locationRows, setLocationRows] = useState<LocationRow[]>([
+    makeEmptyRow("Home"),
+    makeEmptyRow("Work"),
+  ]);
+  const [week, setWeek] = useState<WeekUIState>(
+    () => initialProgress?.week ?? DEFAULT_WEEK,
   );
-
-  const [locationRows, setLocationRows] = useState<LocationRow[]>(() => {
-    if (locations.length > 0) {
-      return [
-        ...locations.map((l) => ({
-          key: uuidv4(),
-          name: l.name,
-          query: l.address,
-          selected: null,
-          createdId: l.id,
-        })),
-        makeEmptyRow(),
-      ];
-    }
-    return [makeEmptyRow("Home"), makeEmptyRow("Work")];
-  });
-
-  const [week, setWeek] = useState<WeekUIState>(() => ({
-    ...DEFAULT_WEEK,
-    workLocationId:
-      locations.find((l) => l.name.trim().toLowerCase() === "work")?.id ?? null,
-  }));
 
   // Brain-dump jots; the id on each becomes the Planner row id (idempotency
   // key), so re-committing on Back/forward upserts instead of duplicating.
   const [dumpItems, setDumpItems] = useState<DumpItem[]>(
-    () => readProgress()?.dumpItems ?? [],
+    () => initialProgress?.dumpItems ?? [],
   );
 
   const [finishing, setFinishing] = useState(false);
@@ -133,46 +93,109 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
   // session) reconciles instead of stacking duplicates. Roles and week track
   // owned ids for removal/replace; the dump tracks a per-id snapshot so a
   // re-commit only overwrites fields the user actually re-edited.
-  const roleCommittedIds = useRef<Set<string>>(new Set());
-  const weekTemplateIds = useRef<Set<string>>(new Set());
-  const dumpCommitted = useRef<Map<string, CommittedDump>>(new Map());
-  useEffect(() => {
-    const progress = readProgress();
-    if (progress) {
-      roleCommittedIds.current = new Set(progress.roleCommittedIds);
-      weekTemplateIds.current = new Set(progress.weekTemplateIds);
-      dumpCommitted.current = new Map(
-        progress.dumpCommitted.map((d) => [
-          d.id,
-          { title: d.title, type: d.type },
-        ]),
-      );
-    }
+  const roleCommittedIds = useRef<Set<string>>(
+    new Set(initialProgress?.roleCommittedIds ?? []),
+  );
+  const weekTemplateIds = useRef<Set<string>>(
+    new Set(initialProgress?.weekTemplateIds ?? []),
+  );
+  const weekWorkApplied = useRef<boolean>(
+    initialProgress?.weekWorkApplied ?? false,
+  );
+  const dumpCommitted = useRef<Map<string, CommittedDump>>(
+    new Map(
+      (initialProgress?.dumpCommitted ?? []).map((d) => [
+        d.id,
+        { title: d.title, type: d.type },
+      ]),
+    ),
+  );
+
+  // Touched flags gate the data-driven prefills: once the user has edited a
+  // step's state, a late-arriving snapshot must not overwrite it.
+  const rolesTouched = useRef(false);
+  const rowsTouched = useRef(false);
+  const weekTouched = useRef(initialProgress?.week != null);
+
+  const handleRolesChange = useCallback((next: RoleSelection[]) => {
+    rolesTouched.current = true;
+    setRoles(next);
   }, []);
+  const handleRowsChange = useCallback((next: LocationRow[]) => {
+    rowsTouched.current = true;
+    setLocationRows(next);
+  }, []);
+  const handleWeekChange = useCallback((next: WeekUIState) => {
+    weekTouched.current = true;
+    setWeek(next);
+  }, []);
+
+  // Prefill picked roles from existing top-level categories once the initial
+  // snapshot lands (returning user, or a resumed session whose roles were
+  // already committed). Without this a resumed Roles step renders empty and a
+  // Continue would deselect-and-delete every owned role.
+  const rolesPrefilled = useRef(false);
+  useEffect(() => {
+    if (!isLoaded || rolesPrefilled.current) return;
+    rolesPrefilled.current = true;
+    if (rolesTouched.current) return;
+    const prefill = prefillRoleSelections(categories);
+    if (prefill.length > 0) setRoles(prefill);
+  }, [isLoaded, categories]);
+
+  // Prefill location rows from existing locations when they hydrate (they load
+  // asynchronously via UserProvider, independent of the calendar fetch).
+  const rowsPrefilled = useRef(false);
+  useEffect(() => {
+    if (rowsPrefilled.current || rowsTouched.current) return;
+    if (locations.length === 0) return;
+    rowsPrefilled.current = true;
+    setLocationRows([
+      ...locations.map((l) => ({
+        key: uuidv4(),
+        name: l.name,
+        query: l.address,
+        selected: null,
+        createdId: l.id,
+      })),
+      makeEmptyRow(),
+    ]);
+  }, [locations]);
+
+  // Auto-pick a location named "Work" for the work-hours block the first time
+  // one exists — including the one the user just created on the Locations
+  // step. Never fires once the user has edited the Week form.
+  const workLocationAutoPicked = useRef(initialProgress?.week != null);
+  useEffect(() => {
+    if (workLocationAutoPicked.current || weekTouched.current) return;
+    const workLocation = locations.find(
+      (l) => l.name.trim().toLowerCase() === "work",
+    );
+    if (!workLocation) return;
+    workLocationAutoPicked.current = true;
+    setWeek((prev) =>
+      prev.workLocationId ? prev : { ...prev, workLocationId: workLocation.id },
+    );
+  }, [locations]);
 
   const persistProgress = useCallback(
     (step: number) => {
-      try {
-        localStorage.setItem(
-          PROGRESS_KEY,
-          JSON.stringify({
-            version: 3,
-            stepIndex: step,
-            roleCommittedIds: [...roleCommittedIds.current],
-            weekTemplateIds: [...weekTemplateIds.current],
-            dumpItems,
-            dumpCommitted: [...dumpCommitted.current].map(([id, s]) => ({
-              id,
-              title: s.title,
-              type: s.type,
-            })),
-          } satisfies StoredProgress),
-        );
-      } catch {
-        // Progress persistence is best-effort.
-      }
+      saveProgress(userId, {
+        version: 4,
+        stepIndex: step,
+        roleCommittedIds: [...roleCommittedIds.current],
+        weekTemplateIds: [...weekTemplateIds.current],
+        week: weekTouched.current ? week : null,
+        weekWorkApplied: weekWorkApplied.current,
+        dumpItems,
+        dumpCommitted: [...dumpCommitted.current].map(([id, s]) => ({
+          id,
+          title: s.title,
+          type: s.type,
+        })),
+      });
     },
-    [dumpItems],
+    [dumpItems, week, userId],
   );
 
   useEffect(() => {
@@ -186,29 +209,29 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
   const goBack = useCallback(() => setStepIndex((i) => Math.max(i - 1, 0)), []);
 
   const commitRoles = useCallback(() => {
-    if (!userId) return;
     const nowIso = new Date().toISOString();
-    // A stable candidate id per selection keeps the reconcile pure so a
-    // double-invoked updater can't mint two different ids for the same role.
+    // A stable candidate id per selection keeps the reconcile deterministic;
+    // the whole reconcile runs here (against the provider's current
+    // categories) so the owned-id set advances in the same synchronous pass —
+    // no side effects inside a state updater. Safe because commits are gated
+    // on isLoaded and this flow is the only categories writer while the
+    // overlay is up.
     const candidateIds = new Map(
       roles.map((r) => [r.name.trim().toLowerCase(), uuidv4()] as const),
     );
-    updateAll(undefined, undefined, undefined, (prev) => {
-      const { categories, ownedIds } = reconcileRoleCategories(
-        prev,
-        roles,
-        roleCommittedIds.current,
-        candidateIds,
-        userId,
-        nowIso,
-      );
-      roleCommittedIds.current = ownedIds;
-      return categories;
-    });
-  }, [roles, updateAll, userId]);
+    const { categories: nextCategories, ownedIds } = reconcileRoleCategories(
+      categories,
+      roles,
+      roleCommittedIds.current,
+      candidateIds,
+      userId,
+      nowIso,
+    );
+    roleCommittedIds.current = ownedIds;
+    updateAll(undefined, undefined, undefined, nextCategories);
+  }, [roles, categories, updateAll, userId]);
 
   const commitWeek = useCallback(() => {
-    if (!userId) return;
     const form: WeekFormInput = {
       sleep: week.sleepEnabled
         ? { start: week.sleepStart, end: week.sleepEnd }
@@ -236,25 +259,39 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         : null,
     };
     const nowIso = new Date().toISOString();
-    // Mint the templates and advance the owned-id set once, outside the
-    // updater, so the updater stays a pure function of its previous value.
-    const built = buildWeekTemplates(form, userId, nowIso);
+    // Mint templates outside the updater, reusing the previously committed row
+    // for any unchanged block so a Back/forward pass produces an empty diff
+    // instead of a delete+create per block.
     const prevOwned = weekTemplateIds.current;
+    const prevOwnedRows = template.filter((t) => prevOwned.has(t.id));
+    const built = reconcileWeekTemplateRows(
+      prevOwnedRows,
+      buildWeekTemplates(form, userId, nowIso),
+    );
     weekTemplateIds.current = new Set(built.map((t) => t.id));
     const templateUpdater = (prev: EventTemplate[]) => [
       ...prev.filter((t) => !prevOwned.has(t.id)),
       ...built,
     ];
     // Sleep rides as a template; work hours become windows on a Work category
-    // (nested under Career). Both go in one updateAll so they share a regen.
-    const categoriesUpdater = form.work
-      ? (prev: Category[]) => applyWorkCategory(prev, form.work, userId, nowIso)
-      : undefined;
-    updateAll(undefined, undefined, templateUpdater, categoriesUpdater);
-  }, [week, updateAll, userId]);
+    // (nested under Professional). Disabling work after a commit clears the
+    // windows this flow applied — the reconcile has to work in both
+    // directions. Both go in one updateAll so they share a regen.
+    const hasWork = Boolean(form.work && form.work.days.length > 0);
+    updateAll(
+      undefined,
+      undefined,
+      templateUpdater,
+      hasWork
+        ? (prev) => applyWorkCategory(prev, form.work, userId, nowIso)
+        : weekWorkApplied.current
+          ? (prev) => clearWorkCategoryWindows(prev, nowIso)
+          : undefined,
+    );
+    weekWorkApplied.current = hasWork;
+  }, [week, template, updateAll, userId]);
 
   const commitBrainDump = useCallback(() => {
-    if (!userId) return;
     const nowIso = new Date().toISOString();
     const items = dumpItems;
     const prevCommitted = dumpCommitted.current;
@@ -273,21 +310,17 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
       await completeOnboarding();
       stamped = true;
     } catch {
-      // Don't trap the user if the stamp fails; the dashboard checklist still
-      // covers resuming the individual surfaces.
+      // Don't trap the user if the stamp fails; every surface this flow sets
+      // up (roles, locations, week, capture) is reachable on its own.
     }
     // Only clear progress once the stamp landed — otherwise the server gate
     // re-shows onboarding on the next load, and we want it to resume where the
     // user was (with their jots) rather than restart from scratch.
     if (stamped) {
-      try {
-        localStorage.removeItem(PROGRESS_KEY);
-      } catch {
-        // best-effort
-      }
+      clearProgress(userId);
     }
     onComplete();
-  }, [onComplete]);
+  }, [onComplete, userId]);
 
   switch (stepIndex) {
     case 0:
@@ -306,8 +339,9 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
           stepIndex={1}
           totalSteps={TOTAL_STEPS}
           selections={roles}
-          onChange={setRoles}
+          onChange={handleRolesChange}
           onBack={goBack}
+          continueDisabled={!isLoaded}
           onContinue={() => {
             commitRoles();
             goNext();
@@ -317,12 +351,13 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
       );
     case 2:
       return (
-        <PlacesStep
+        <LocationsStep
           stepIndex={2}
           totalSteps={TOTAL_STEPS}
           rows={locationRows}
-          onRowsChange={setLocationRows}
+          onRowsChange={handleRowsChange}
           onBack={goBack}
+          continueDisabled={!isLoaded}
           onContinue={goNext}
           onSkip={goNext}
         />
@@ -333,8 +368,9 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
           stepIndex={3}
           totalSteps={TOTAL_STEPS}
           value={week}
-          onChange={setWeek}
+          onChange={handleWeekChange}
           onBack={goBack}
+          continueDisabled={!isLoaded}
           onContinue={() => {
             commitWeek();
             goNext();
@@ -350,6 +386,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
           items={dumpItems}
           onChange={setDumpItems}
           onBack={goBack}
+          continueDisabled={!isLoaded}
           onContinue={() => {
             commitBrainDump();
             goNext();

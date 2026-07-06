@@ -2,23 +2,10 @@
 
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, ConfirmModal } from "@/components/ui";
 import { AIDraftModal } from "@/components/draft/AIDraftModal/AIDraftModal";
-import {
-  frameWrap,
-  card,
-  cardWide,
-  topRow,
-  progress,
-  segment,
-  segmentFilled,
-  skipLink,
-  title as titleCls,
-  subtitle as subtitleCls,
-  aiWorkspace,
-  footer,
-  footerActions,
-} from "../onboarding.css";
+import { StepFrame } from "../_components/StepFrame";
+import { aiWorkspace, footerActions } from "../onboarding.css";
 
 type AssistantState = {
   hasChanges: boolean;
@@ -48,6 +35,7 @@ export function OnboardingAIStep({
     isStreaming: false,
     save: () => {},
   });
+  const [showBackConfirm, setShowBackConfirm] = useState(false);
 
   // Save & continue applies the assistant's proposals (which calls onSaved =
   // onFinish); with nothing proposed it just finishes.
@@ -56,52 +44,27 @@ export function OnboardingAIStep({
     else onFinish();
   };
 
+  // Leaving this step unmounts the assistant, which discards unsaved
+  // proposals and the conversation — confirm instead of losing them silently.
+  const handleBack = () => {
+    if (assistant.hasChanges) setShowBackConfirm(true);
+    else onBack();
+  };
+
   return (
-    <div className={frameWrap}>
-      <div className={`${card} ${cardWide}`}>
-        <div className={topRow}>
-          <div className={progress}>
-            {Array.from({ length: totalSteps }).map((_, i) => (
-              <span
-                key={i}
-                className={`${segment} ${i <= stepIndex ? segmentFilled : ""}`}
-              />
-            ))}
-          </div>
-          <button
-            type="button"
-            className={skipLink}
-            onClick={onSkip}
-            disabled={finishing}
-          >
-            Skip
-          </button>
-        </div>
-
-        <div>
-          <h1 className={titleCls}>Plan your first goals with AI</h1>
-          <p className={subtitleCls}>
-            Chat to draft goals across your roles, then Save &amp; continue to
-            keep them. Nothing is added until you do.
-          </p>
-        </div>
-
-        <div className={aiWorkspace}>
-          <AIDraftModal
-            embedded
-            open
-            onClose={() => {}}
-            focus={null}
-            intent="onboarding"
-            onSaved={onFinish}
-            onStateChange={setAssistant}
-          />
-        </div>
-
-        <div className={footer}>
+    <StepFrame
+      stepIndex={stepIndex}
+      totalSteps={totalSteps}
+      wide
+      title="Plan your first goals with AI"
+      subtitle="Chat to draft goals across your roles, then Save & continue to keep them. Nothing is added until you do."
+      onSkip={onSkip}
+      skipDisabled={finishing}
+      footer={
+        <>
           <Button
             variant="glass"
-            onClick={onBack}
+            onClick={handleBack}
             disabled={finishing || assistant.isStreaming}
           >
             Back
@@ -116,8 +79,34 @@ export function OnboardingAIStep({
               {assistant.hasChanges ? "Save & continue" : "Finish"}
             </Button>
           </div>
-        </div>
+        </>
+      }
+    >
+      <div className={aiWorkspace}>
+        <AIDraftModal
+          embedded
+          open
+          onClose={() => {}}
+          focus={null}
+          intent="onboarding"
+          onSaved={onFinish}
+          onStateChange={setAssistant}
+        />
       </div>
-    </div>
+
+      <ConfirmModal
+        open={showBackConfirm}
+        title="Discard the draft?"
+        body="Going back closes the assistant and discards its unsaved proposals and this conversation."
+        confirmLabel="Discard and go back"
+        cancelLabel="Stay here"
+        tone="danger"
+        onCancel={() => setShowBackConfirm(false)}
+        onConfirm={() => {
+          setShowBackConfirm(false);
+          onBack();
+        }}
+      />
+    </StepFrame>
   );
 }

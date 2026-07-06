@@ -5,7 +5,6 @@ import { usePlatform } from "@/hooks/usePlatform";
 import { DashboardHeader } from "./_components/DashboardHeader/DashboardHeader";
 import { AgendaCard } from "./_components/AgendaCard/AgendaCard";
 import { PriorityGoalsCard } from "./_components/PriorityGoalsCard/PriorityGoalsCard";
-import { SetupChecklist } from "./_components/SetupChecklist/SetupChecklist";
 import { useDashboardData } from "./_hooks/useDashboardData";
 import { page, gridWrap, rightCol } from "./page.css";
 
@@ -34,8 +33,6 @@ export function DashboardClient() {
         modKey={modKey}
         onCaptureClick={() => setCaptureOpen(true)}
       />
-
-      <SetupChecklist />
 
       <div className={gridWrap}>
         <AgendaCard

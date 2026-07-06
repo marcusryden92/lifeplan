@@ -1,9 +1,16 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Backdrop, Grain } from "@/components/ui";
 import { OnboardingFlow } from "./OnboardingFlow";
 import { overlayRoot } from "./onboarding.css";
+
+// The shell's global palette shortcuts (assistant mod+I, capture mod+K,
+// search mod+J) stay registered while the overlay covers the app; swallowing
+// them here (capture phase beats the providers' bubble-phase window
+// listeners) keeps a palette or a second assistant from opening over the
+// setup flow.
+const SUPPRESSED_SHORTCUT_KEYS = new Set(["i", "j", "k"]);
 
 // Rendered in the shell's overlay slot. Its initial visibility is resolved on
 // the server (the protected layout reads onboardedAt), so on a fresh load the
@@ -18,6 +25,19 @@ export function OnboardingOverlay({
   const [show, setShow] = useState(initialNeedsOnboarding);
 
   const handleComplete = useCallback(() => setShow(false), []);
+
+  useEffect(() => {
+    if (!show) return;
+    const suppress = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && SUPPRESSED_SHORTCUT_KEYS.has(e.key.toLowerCase())) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      }
+    };
+    window.addEventListener("keydown", suppress, true);
+    return () => window.removeEventListener("keydown", suppress, true);
+  }, [show]);
 
   if (!show) return null;
 

@@ -28,6 +28,9 @@ export const overlayRoot = style({
   padding: space["6"],
   background: vars.paper,
   overflowY: "auto",
+  // Reserve the scrollbar track even while it's hidden so content doesn't
+  // shift sideways the moment a step grows past the fold.
+  scrollbarGutter: "stable",
   "@media": {
     [media.mobile]: {
       padding: space["4"],
@@ -128,7 +131,11 @@ export const skipLink = style([
     padding: `${space["1"]} ${space["2"]}`,
     borderRadius: radii.sm,
     selectors: {
-      "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
+      "&:hover:not(:disabled)": {
+        color: vars.ink,
+        background: vars.interactive.hoverFill,
+      },
+      "&:disabled": { opacity: 0.5, cursor: "default" },
     },
   },
 ]);
@@ -159,6 +166,9 @@ export const body = style({
   flex: 1,
   minHeight: 0,
   overflowY: "auto",
+  // Same rationale as overlayRoot: adding a jot or a location row must not
+  // pop a scrollbar in and reflow the whole step.
+  scrollbarGutter: "stable",
   display: "flex",
   flexDirection: "column",
   gap: space["4"],
@@ -274,10 +284,42 @@ export const roleRowLabel = style({
   whiteSpace: "nowrap",
 });
 
-// A selected row is a drag-to-reorder handle + remove button, not a single
-// click target, so it drops the pointer cursor.
-export const roleRowSelected = style({
-  cursor: "default",
+// The selected list speaks the categories rail's reorder language instead of
+// the tinted-chip look: full-width neutral rows with a color dot, hover fill,
+// and 2px accent drop lines. The whole row is the drag handle. Rows stack
+// tightly (rail-style) so the drop lines sit between neighbors, not in a gap.
+export const roleSelectedList = style({
+  display: "flex",
+  flexDirection: "column",
+  alignSelf: "stretch",
+  gap: space["0.5"],
+});
+
+export const roleSelectedRow = style([
+  text.row,
+  {
+    display: "flex",
+    alignItems: "center",
+    alignSelf: "stretch",
+    gap: space["2"],
+    padding: "5px 8px",
+    borderRadius: radii.sm,
+    color: vars.ink,
+    cursor: "grab",
+    selectors: {
+      "&:hover": { background: vars.interactive.hoverFill },
+      "&:active": { cursor: "grabbing" },
+    },
+  },
+]);
+
+export const roleDot = style({
+  display: "inline-block",
+  width: 9,
+  height: 9,
+  borderRadius: radii.pill,
+  background: "var(--role-color)",
+  flexShrink: 0,
 });
 
 export const roleRowDragging = style({
@@ -294,29 +336,20 @@ export const roleRowDropAfter = style({
   boxShadow: `inset 0 -2px 0 0 ${vars.accent.primary}`,
 });
 
-export const roleRowGrip = style({
-  display: "inline-flex",
-  flexShrink: 0,
-  cursor: "grab",
-  color: "var(--role-color)",
-  opacity: 0.75,
-  selectors: {
-    "&:active": { cursor: "grabbing" },
-  },
-});
-
+// Stays visible (not hover-revealed like the rail's add-child button) because
+// removal must remain reachable on touch, where hover doesn't exist.
 export const roleRowRemove = style({
   appearance: "none",
   border: "none",
   background: "transparent",
-  padding: 0,
+  padding: space["0.5"],
+  borderRadius: radii.xs,
   display: "inline-flex",
   flexShrink: 0,
   cursor: "pointer",
-  color: "var(--role-color)",
-  opacity: 0.75,
+  color: vars.muted,
   selectors: {
-    "&:hover": { opacity: 1 },
+    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
   },
 });
 
@@ -358,7 +391,15 @@ export const dumpRow = style({
   borderRadius: radii.sm,
   border: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bgSoft,
+  "@media": {
+    [media.mobile]: {
+      // The fixed-width type control doesn't fit beside a title on narrow
+      // screens; let it wrap to its own line instead of crushing the title.
+      flexWrap: "wrap",
+    },
+  },
 });
+
 
 export const dumpRowTitle = style([
   text.bodyLg,
@@ -375,6 +416,14 @@ export const dumpRowTitle = style([
 export const dumpRowControl = style({
   flexShrink: 0,
   width: 190,
+  "@media": {
+    [media.mobile]: {
+      // Wraps onto its own line (order pushes it past the remove button, so
+      // title + remove stay together on the first line).
+      flexBasis: "100%",
+      order: 3,
+    },
+  },
 });
 
 export const dumpRemove = style({

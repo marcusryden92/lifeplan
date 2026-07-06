@@ -23,7 +23,7 @@ export default async function CircadiumLayout({
     }
   } catch {
     // If the session/DB check fails, don't trap the user in setup — fall
-    // through to the app; the dashboard SetupChecklist still covers resuming it.
+    // through to the app; every onboarding surface is reachable individually.
     needsOnboarding = false;
   }
 
