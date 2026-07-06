@@ -50,10 +50,17 @@ function toMinutes(hhmm: string): number {
 // duration crosses midnight, but WeekStructureModal's grid renders one as a
 // negative-duration event — matching its single-day shape keeps the two
 // authoring surfaces in agreement.
+//
+// `allowOvernight` is true only for sleep, which legitimately wraps past
+// midnight (23:00-07:00). For within-day blocks (work, exercise, routines) an
+// end that isn't after the start is user error — e.g. a "10:00" meant as 10 PM
+// — and wrapping it would balloon the block across the day, so those ranges are
+// simply dropped rather than expanded overnight.
 export function expandDailyRange(
   days: WeekDayIntegers[],
   start: string,
   end: string,
+  allowOvernight: boolean = true,
 ): RawBlock[] {
   const startMin = toMinutes(start);
   const endMin = toMinutes(end);
@@ -64,6 +71,7 @@ export function expandDailyRange(
       blocks.push({ startDay: day, startTime: start, duration: endMin - startMin });
       continue;
     }
+    if (!allowOvernight) continue;
     // Crosses midnight: an evening piece to 24:00 and a morning piece from
     // 00:00, dropping either if it would be zero-length.
     const eveningDuration = 24 * 60 - startMin;
@@ -123,6 +131,7 @@ export function buildWeekTemplates(
       input.exercise.days,
       input.exercise.start,
       input.exercise.end,
+      false,
     )) {
       push(block, "Exercise", EXERCISE_COLOR, null);
     }
@@ -133,6 +142,7 @@ export function buildWeekTemplates(
       ALL_WEEK_DAYS,
       input.morning.start,
       input.morning.end,
+      false,
     )) {
       push(block, "Morning routine", MORNING_COLOR, null);
     }
@@ -143,6 +153,7 @@ export function buildWeekTemplates(
       ALL_WEEK_DAYS,
       input.evening.start,
       input.evening.end,
+      false,
     )) {
       push(block, "Evening routine", EVENING_COLOR, null);
     }

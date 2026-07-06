@@ -9,16 +9,18 @@ import {
 } from "@/lib/theme";
 
 const SWATCH_SIZE = 16;
-const GRID_COLS = 8;
-const GRID_GAP = 4;
-const POPUP_PAD = 10;
-// Visible-row cap before the grid scrolls (keeps the popup compact even if a
-// user grows the palette to 36+ swatches).
-const VISIBLE_ROWS = 4;
-const POPUP_MAX_HEIGHT =
-  VISIBLE_ROWS * (SWATCH_SIZE + GRID_GAP) - GRID_GAP + POPUP_PAD * 2;
+const SWATCH_GAP = 5;
+// Widest family is five swatches; size the popup so each family sits on its
+// own line, grouping the palette by hue without labels.
+const SWATCHES_PER_ROW = 5;
+const POPUP_PAD = 12;
 const POPUP_WIDTH =
-  GRID_COLS * SWATCH_SIZE + (GRID_COLS - 1) * GRID_GAP + POPUP_PAD * 2;
+  SWATCHES_PER_ROW * SWATCH_SIZE +
+  (SWATCHES_PER_ROW - 1) * SWATCH_GAP +
+  POPUP_PAD * 2;
+// Cap the height so the full grouped palette scrolls rather than growing the
+// popover past the viewport.
+const POPUP_MAX_HEIGHT = 288;
 
 // alignSelf prevents the popover's flex-column body from stretching this
 // control across the full width — it sizes to its content.
@@ -52,7 +54,7 @@ export const triggerLabel = style({
 });
 
 // Layered on top of the popover() recipe, which owns the glass surface; this
-// class adds the swatch-grid geometry and scroll behavior.
+// class adds the grouped-swatch layout and scroll behavior.
 export const popup = style({
   width: POPUP_WIDTH,
   maxHeight: POPUP_MAX_HEIGHT,
@@ -61,10 +63,19 @@ export const popup = style({
   scrollbarGutter: "stable",
   padding: POPUP_PAD,
   zIndex: zIndex.popoverOverPalette,
-  display: "grid",
-  gridTemplateColumns: `repeat(${GRID_COLS}, ${SWATCH_SIZE}px)`,
-  gap: GRID_GAP,
-  justifyContent: "center",
+  display: "flex",
+  flexDirection: "column",
+  // Inter-group gap sits wider than the within-family swatch gap so each hue
+  // family reads as its own block without needing a label.
+  gap: space["2.5"],
+});
+
+// One color family — its swatches on a single wrapping row.
+export const groupSwatches = style({
+  display: "flex",
+  flexWrap: "wrap",
+  gap: SWATCH_GAP,
+  minWidth: 0,
 });
 
 // Swatch background is the per-color value — set inline by the component.

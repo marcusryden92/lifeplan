@@ -150,6 +150,32 @@ describe("buildWeekTemplates", () => {
     );
     expect(new Set(templates.map((t) => t.id)).size).toBe(templates.length);
   });
+
+  it("emits a within-day routine as one short block per day", () => {
+    const templates = buildWeekTemplates(
+      { sleep: null, work: null, morning: { start: "07:00", end: "07:30" } },
+      USER_ID,
+      NOW,
+    );
+    expect(templates).toHaveLength(ALL_WEEK_DAYS.length);
+    expect(templates.every((t) => t.title === "Morning routine")).toBe(true);
+    expect(templates.every((t) => t.duration === 30)).toBe(true);
+  });
+
+  it("drops a routine whose end is not after its start instead of wrapping overnight", () => {
+    // "10:00" meant as 10 PM but read as 10 AM: end <= start. A within-day
+    // routine must not balloon into a multi-hour overnight block.
+    const templates = buildWeekTemplates(
+      {
+        sleep: null,
+        work: null,
+        evening: { start: "21:30", end: "10:00" },
+      },
+      USER_ID,
+      NOW,
+    );
+    expect(templates).toEqual([]);
+  });
 });
 
 describe("applyWorkCategory", () => {

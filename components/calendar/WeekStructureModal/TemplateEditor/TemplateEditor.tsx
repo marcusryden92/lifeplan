@@ -3,6 +3,7 @@
 import { Button, vars } from "@/components/ui";
 import type { EventTemplate } from "@/types/prisma";
 import { PopoverLocationPicker } from "@/components/events/PopoverLocationPicker";
+import { PopoverColorPicker } from "@/components/events/PopoverColorPicker";
 import { calendarColors } from "@/data/calendarColors";
 import { addMinutesToHHMM } from "../timeWindow";
 import {
@@ -16,8 +17,6 @@ import {
   fieldLabel,
   fieldInput,
   fieldStatic,
-  swatchRow,
-  swatchChip,
   selectedActions,
 } from "./TemplateEditor.css";
 
@@ -76,19 +75,10 @@ export function TemplateEditor({
 
       <div className={fieldWithMargin}>
         <span className={fieldLabel}>color</span>
-        <div className={swatchRow}>
-          {calendarColors.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={swatchChip}
-              data-active={template.color === c}
-              style={{ background: c }}
-              onClick={() => onUpdate({ color: c })}
-              aria-label={`color ${c}`}
-            />
-          ))}
-        </div>
+        <PopoverColorPicker
+          currentColor={template.color || calendarColors[0]}
+          onChange={(c) => onUpdate({ color: c })}
+        />
       </div>
 
       <div className={selectedActions}>

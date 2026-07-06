@@ -6,6 +6,7 @@ import { CategorySection } from "./CategorySection";
 import { DateSection } from "./DateSection";
 import { DurationSection } from "./DurationSection";
 import { LocationSection } from "./LocationSection";
+import { ColorSection } from "./ColorSection";
 import { DeleteRow } from "./DeleteRow";
 import { card, cardBody, fieldGrid } from "./IdentityCard.css";
 
@@ -20,6 +21,7 @@ export function IdentityCard() {
           <DateSection />
           <DurationSection />
           <LocationSection />
+          <ColorSection />
         </div>
         <DeleteRow />
       </div>

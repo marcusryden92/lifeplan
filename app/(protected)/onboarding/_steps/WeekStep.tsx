@@ -94,14 +94,28 @@ export function WeekStep({
     ? expandDailyRange(value.workDays, value.workStart, value.workEnd).length
     : 0;
   const exerciseBlocks = value.exerciseEnabled
-    ? expandDailyRange(value.exerciseDays, value.exerciseStart, value.exerciseEnd)
-        .length
+    ? expandDailyRange(
+        value.exerciseDays,
+        value.exerciseStart,
+        value.exerciseEnd,
+        false,
+      ).length
     : 0;
   const morningBlocks = value.morningEnabled
-    ? expandDailyRange(ALL_WEEK_DAYS, value.morningStart, value.morningEnd).length
+    ? expandDailyRange(
+        ALL_WEEK_DAYS,
+        value.morningStart,
+        value.morningEnd,
+        false,
+      ).length
     : 0;
   const eveningBlocks = value.eveningEnabled
-    ? expandDailyRange(ALL_WEEK_DAYS, value.eveningStart, value.eveningEnd).length
+    ? expandDailyRange(
+        ALL_WEEK_DAYS,
+        value.eveningStart,
+        value.eveningEnd,
+        false,
+      ).length
     : 0;
   const totalBlocks =
     sleepBlocks + workBlocks + exerciseBlocks + morningBlocks + eveningBlocks;

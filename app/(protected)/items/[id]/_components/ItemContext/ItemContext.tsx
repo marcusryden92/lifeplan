@@ -24,6 +24,7 @@ export interface ItemContextValue {
   // Mutations (all sync from caller perspective; the hook handles async DB calls inside)
   saveTitle: (newTitle: string) => void;
   updateField: (field: keyof Planner, value: unknown) => void;
+  changeColor: (color: string) => void;
   setPlannerType: (type: PlannerType) => void;
   changeCategory: (categoryId: string | null) => void;
   changeLocation: (locationId: string | null) => void;

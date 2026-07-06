@@ -94,25 +94,6 @@ export const fieldStatic = style({
   transition: themeTransition,
 });
 
-export const swatchRow = style({
-  display: "flex",
-  gap: space["1.5"],
-  flexWrap: "wrap",
-});
-
-export const swatchChip = style({
-  width: 22,
-  height: 22,
-  borderRadius: radii.xs,
-  cursor: "pointer",
-  border: `1px solid ${vars.rule}`,
-  padding: 0,
-  selectors: {
-    "&[data-active='true']": {
-      boxShadow: `0 0 0 2px ${vars.ink}`,
-    },
-  },
-});
 
 export const selectedActions = style({
   display: "flex",

@@ -1,4 +1,4 @@
-import { calendarColors } from "@/data/calendarColors";
+import { FALLBACK_COLORS } from "@/data/calendarColors";
 
 // A 6- or 3-digit hex string ("#rgb" / "#rrggbb"), the shape the calendar
 // stores and renders. Anything else (null, "black", garbage) is not usable as
@@ -16,7 +16,7 @@ export function fallbackCalendarColor(seed: string): string {
   for (let i = 0; i < seed.length; i++) {
     hash = (hash * 33 + seed.charCodeAt(i)) >>> 0;
   }
-  return calendarColors[hash % calendarColors.length];
+  return FALLBACK_COLORS[hash % FALLBACK_COLORS.length];
 }
 
 // Threshold against perceivedBrightness — below this the fill reads as dark
