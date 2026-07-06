@@ -27,8 +27,12 @@ export interface StreamDraftFocus {
 export interface StreamDraftCategory {
   id: string;
   name: string;
+  color: string | null;
+  parentId: string | null;
+  locationId: string | null;
   isStrict: boolean;
   useTimeWindows: boolean;
+  confineToOwnWindows: boolean;
   timeSlots: { id: string; day: number; startTime: string; endTime: string }[];
 }
 

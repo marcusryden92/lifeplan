@@ -48,6 +48,23 @@ export const categoryName = style({
   transition: themeTransition,
 });
 
+export const categoryNameDeleted = style([
+  categoryName,
+  {
+    textDecoration: "line-through",
+    textDecorationThickness: 1.5,
+    color: vars.muted,
+  },
+]);
+
+export const categoryParentNote = style({
+  fontFamily: vars.font.ui,
+  fontSize: 10,
+  color: vars.muted,
+  whiteSpace: "nowrap",
+  transition: themeTransition,
+});
+
 export const flagChip = style({
   fontFamily: vars.font.ui,
   fontSize: 9.5,

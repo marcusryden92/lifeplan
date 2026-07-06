@@ -1,9 +1,10 @@
 import type { Category } from "@/types/prisma";
 import { isValidStartDay, isValidTime } from "./draftTemplates";
 
-// The assistant's contract for category time windows plus the two category
-// flags that govern them. A trimmed mirror of Category.timeSlots +
-// useTimeWindows/isStrict: userId is a server concern re-attached at Save.
+// The assistant's contract for category time windows plus the categories
+// themselves. A trimmed mirror of Category: userId, icon, and sortOrder are
+// server concerns re-attached at Save (the assistant never orders categories;
+// new ones append after their siblings).
 export interface DraftTimeWindow {
   // Route-minted uuid for new rows; becomes the real DB id at Save
   // (WeekStructureModal set the client-minted-uuid precedent).
@@ -20,25 +21,39 @@ export interface DraftTimeWindow {
   endTime: string;
 }
 
-export interface DraftCategorySettings {
+// Full assistant-editable category record. Route-minted uuids on new
+// categories become the DB ids at Save, same as windows and templates.
+export interface DraftCategoryRecord {
   id: string;
+  name: string;
+  color: string | null;
+  parentId: string | null;
+  locationId: string | null;
   useTimeWindows: boolean;
   isStrict: boolean;
+  confineToOwnWindows: boolean;
 }
 
-// The windows domain travels as one state: ops on windows can flip a flag
-// (auto-enable) and flag edits change what the windows mean, so the SSE
-// event and working copy carry both arrays together.
+// The categories domain travels as one state: ops on windows can flip a flag
+// (auto-enable), category deletes take their windows along, and category
+// edits change what the windows mean — so the SSE event and working copy
+// carry both arrays together.
 export interface DraftWindowsState {
   windows: DraftTimeWindow[];
-  settings: DraftCategorySettings[];
+  categories: DraftCategoryRecord[];
 }
+
+export const MAX_DRAFT_CATEGORY_NAME_CHARS = 60;
 
 export function isValidWindowRange(
   startTime: unknown,
   endTime: unknown,
 ): boolean {
   return isValidTime(startTime) && isValidTime(endTime) && startTime < endTime;
+}
+
+export function isValidCategoryColor(value: unknown): value is string {
+  return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value);
 }
 
 export function categoriesToDraftWindows(
@@ -56,10 +71,15 @@ export function categoriesToDraftWindows(
           endTime: w.endTime,
         })),
     ),
-    settings: categories.map((c) => ({
+    categories: categories.map((c) => ({
       id: c.id,
+      name: c.name,
+      color: c.color ?? null,
+      parentId: c.parentId ?? null,
+      locationId: c.locationId ?? null,
       useTimeWindows: c.useTimeWindows,
       isStrict: c.isStrict,
+      confineToOwnWindows: c.confineToOwnWindows,
     })),
   };
 }
@@ -82,18 +102,36 @@ export function normalizeDraftTimeWindow(raw: unknown): DraftTimeWindow | null {
   };
 }
 
-function normalizeDraftCategorySettings(
+function normalizeDraftCategoryRecord(
   raw: unknown,
-): DraftCategorySettings | null {
+): DraftCategoryRecord | null {
   if (typeof raw !== "object" || raw === null) return null;
   const obj = raw as Record<string, unknown>;
   if (typeof obj.id !== "string" || obj.id.length === 0) return null;
+  if (
+    typeof obj.name !== "string" ||
+    obj.name.trim().length === 0 ||
+    obj.name.length > MAX_DRAFT_CATEGORY_NAME_CHARS
+  ) {
+    return null;
+  }
+  if (obj.color !== null && !isValidCategoryColor(obj.color)) return null;
+  if (obj.parentId !== null && typeof obj.parentId !== "string") return null;
+  if (obj.locationId !== null && typeof obj.locationId !== "string") {
+    return null;
+  }
   if (typeof obj.useTimeWindows !== "boolean") return null;
   if (typeof obj.isStrict !== "boolean") return null;
+  if (typeof obj.confineToOwnWindows !== "boolean") return null;
   return {
     id: obj.id,
+    name: obj.name,
+    color: obj.color,
+    parentId: obj.parentId,
+    locationId: obj.locationId,
     useTimeWindows: obj.useTimeWindows,
     isStrict: obj.isStrict,
+    confineToOwnWindows: obj.confineToOwnWindows,
   };
 }
 
@@ -101,19 +139,45 @@ export function normalizeDraftWindowsState(
   raw: unknown,
 ): DraftWindowsState | null {
   if (typeof raw !== "object" || raw === null) return null;
-  const { windows, settings } = raw as {
+  const { windows, categories } = raw as {
     windows?: unknown;
-    settings?: unknown;
+    categories?: unknown;
   };
-  if (!Array.isArray(windows) || !Array.isArray(settings)) return null;
+  if (!Array.isArray(windows) || !Array.isArray(categories)) return null;
   return {
     windows: windows
       .map((entry) => normalizeDraftTimeWindow(entry))
       .filter((w): w is DraftTimeWindow => w !== null),
-    settings: settings
-      .map((entry) => normalizeDraftCategorySettings(entry))
-      .filter((s): s is DraftCategorySettings => s !== null),
+    categories: categories
+      .map((entry) => normalizeDraftCategoryRecord(entry))
+      .filter((c): c is DraftCategoryRecord => c !== null),
   };
+}
+
+// All ids reachable from `id` by following parentId downward, `id` included.
+// Used for cascade deletes and reparent cycle checks.
+export function collectCategorySubtreeIds(
+  categories: DraftCategoryRecord[],
+  id: string,
+): Set<string> {
+  const childrenByParent = new Map<string, string[]>();
+  for (const c of categories) {
+    if (!c.parentId) continue;
+    const list = childrenByParent.get(c.parentId);
+    if (list) list.push(c.id);
+    else childrenByParent.set(c.parentId, [c.id]);
+  }
+  const result = new Set<string>();
+  const queue = [id];
+  while (queue.length > 0) {
+    const current = queue.pop() as string;
+    if (result.has(current)) continue;
+    result.add(current);
+    for (const child of childrenByParent.get(current) ?? []) {
+      queue.push(child);
+    }
+  }
+  return result;
 }
 
 export interface WindowOverlap {
@@ -155,34 +219,46 @@ function draftWindowEquals(a: DraftTimeWindow, b: DraftTimeWindow): boolean {
   );
 }
 
-// Order-insensitive on both arrays: neither window order nor settings order
-// is semantic (sync diffs windows by id; settings match categories by id).
+export function draftCategoryRecordEquals(
+  a: DraftCategoryRecord,
+  b: DraftCategoryRecord,
+): boolean {
+  return (
+    a.name === b.name &&
+    a.color === b.color &&
+    a.parentId === b.parentId &&
+    a.locationId === b.locationId &&
+    a.useTimeWindows === b.useTimeWindows &&
+    a.isStrict === b.isStrict &&
+    a.confineToOwnWindows === b.confineToOwnWindows
+  );
+}
+
+// Order-insensitive on both arrays: neither window order nor category order
+// is semantic (sync diffs windows by id; categories match by id and the
+// assistant never reorders them).
 export function draftWindowsStateEqual(
   a: DraftWindowsState,
   b: DraftWindowsState,
 ): boolean {
   if (
     a.windows.length !== b.windows.length ||
-    a.settings.length !== b.settings.length
+    a.categories.length !== b.categories.length
   ) {
     return false;
   }
   const windowsById = new Map(b.windows.map((w) => [w.id, w]));
   if (windowsById.size !== b.windows.length) return false;
-  const settingsById = new Map(b.settings.map((s) => [s.id, s]));
-  if (settingsById.size !== b.settings.length) return false;
+  const categoriesById = new Map(b.categories.map((c) => [c.id, c]));
+  if (categoriesById.size !== b.categories.length) return false;
   return (
     a.windows.every((w) => {
       const other = windowsById.get(w.id);
       return other !== undefined && draftWindowEquals(w, other);
     }) &&
-    a.settings.every((s) => {
-      const other = settingsById.get(s.id);
-      return (
-        other !== undefined &&
-        other.useTimeWindows === s.useTimeWindows &&
-        other.isStrict === s.isStrict
-      );
+    a.categories.every((c) => {
+      const other = categoriesById.get(c.id);
+      return other !== undefined && draftCategoryRecordEquals(c, other);
     })
   );
 }

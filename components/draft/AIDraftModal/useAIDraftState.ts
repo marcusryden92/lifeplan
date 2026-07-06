@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { v4 as uuidv4 } from "uuid";
 import {
   getDraftConversation,
@@ -27,6 +34,13 @@ export interface ChatMessage {
 
 export interface UseAIDraftStateArgs {
   open: boolean;
+  // True once the initial calendar snapshot has hydrated. Seeding waits for
+  // it: a modal that is open before hydration (onboarding resumed on the AI
+  // step, or mod+I in the first moments after load) would otherwise adopt an
+  // EMPTY canonical as the working copy — every real item then diffs as
+  // deleted, the model is sent an empty forest, and a save would actually
+  // delete everything.
+  ready: boolean;
   canonical: DraftForest;
   canonicalTemplates: DraftTemplate[];
   canonicalWindows: DraftWindowsState;
@@ -61,6 +75,7 @@ export interface UseAIDraftStateReturn {
 
 export function useAIDraftState({
   open,
+  ready,
   canonical,
   canonicalTemplates,
   canonicalWindows,
@@ -81,8 +96,12 @@ export function useAIDraftState({
   // drafts follow WeekStructureModal's discard-on-close semantics. The chat
   // itself persists across close/reopen (the modal stays mounted in the
   // shell); "New chat" is the explicit reset.
-  useEffect(() => {
-    if (open) {
+  //
+  // Waits for `ready` so an open-before-hydration modal reseeds the moment
+  // the real data lands; layout effect so the reseed commits before paint
+  // (no flash of every item badged as deleted).
+  useLayoutEffect(() => {
+    if (open && ready) {
       setWorkingForestState(canonical);
       setWorkingTemplatesState(canonicalTemplates);
       setWorkingWindowsState(canonicalWindows);
@@ -90,7 +109,7 @@ export function useAIDraftState({
     // canonical* intentionally excluded — re-running on every planner,
     // template, or category change while the modal is open would blow away
     // in-flight AI edits.
-  }, [open]);
+  }, [open, ready]);
 
   const setWorkingForest = useCallback((forest: DraftForest) => {
     setWorkingForestState(forest);
@@ -104,20 +123,23 @@ export function useAIDraftState({
     setWorkingWindowsState(state);
   }, []);
 
+  // All three gate on `ready`: until the working copies have been seeded from
+  // hydrated data, any apparent diff is the stale pre-hydration seed and must
+  // not enable Save.
   const hasForestChanges = useMemo(() => {
-    if (workingForest === canonical) return false;
+    if (!ready || workingForest === canonical) return false;
     return !draftForestsEqual(workingForest, canonical);
-  }, [workingForest, canonical]);
+  }, [ready, workingForest, canonical]);
 
   const hasTemplateChanges = useMemo(() => {
-    if (workingTemplates === canonicalTemplates) return false;
+    if (!ready || workingTemplates === canonicalTemplates) return false;
     return !draftTemplatesEqual(workingTemplates, canonicalTemplates);
-  }, [workingTemplates, canonicalTemplates]);
+  }, [ready, workingTemplates, canonicalTemplates]);
 
   const hasWindowChanges = useMemo(() => {
-    if (workingWindows === canonicalWindows) return false;
+    if (!ready || workingWindows === canonicalWindows) return false;
     return !draftWindowsStateEqual(workingWindows, canonicalWindows);
-  }, [workingWindows, canonicalWindows]);
+  }, [ready, workingWindows, canonicalWindows]);
 
   const hasChanges = hasForestChanges || hasTemplateChanges || hasWindowChanges;
 

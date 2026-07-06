@@ -126,8 +126,15 @@ export function AIDraftModal({
   onSaved,
   onStateChange,
 }: AIDraftModalProps) {
-  const { planner, categories, template, locations, updateAll, userId } =
-    useCalendarProvider();
+  const {
+    planner,
+    categories,
+    template,
+    locations,
+    updateAll,
+    userId,
+    isLoaded,
+  } = useCalendarProvider();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [chatBasisPct, setChatBasisPct] = useState(50);
   const [isDraggingDivider, setIsDraggingDivider] = useState(false);
@@ -200,6 +207,7 @@ export function AIDraftModal({
     adoptConversation,
   } = useAIDraftState({
     open,
+    ready: isLoaded,
     canonical,
     canonicalTemplates,
     canonicalWindows,
@@ -305,6 +313,9 @@ export function AIDraftModal({
 
   const handleSend = useCallback(
     async (content: string) => {
+      // Pre-hydration the working forest is a stale empty seed — a send would
+      // show the model no goals. The window is sub-second; drop the click.
+      if (!isLoaded) return;
       const userMessageId = uuidv4();
       const assistantMessageId = uuidv4();
 
@@ -350,34 +361,33 @@ export function AIDraftModal({
       let sawWindows = false;
       let sawShow = false;
       let finished = false;
-      // Categories ride from the WORKING windows state, not the provider —
-      // pending window/flag drafts must be visible to the model on the next
-      // turn (names still come from the provider; only the assistant-editable
-      // parts are draft-backed).
+      // Categories ride from the WORKING state, not the provider — pending
+      // drafts (created categories, renames, moved windows, flag changes)
+      // must be visible to the model on the next turn.
       const windowsState = workingWindowsRef.current;
-      const settingsById = new Map(windowsState.settings.map((s) => [s.id, s]));
       await streamDraft({
         currentForest: turnStartForest,
         currentTemplates: workingTemplatesRef.current,
         history,
         focus: streamFocus,
-        categories: categories.map((c) => {
-          const setting = settingsById.get(c.id);
-          return {
-            id: c.id,
-            name: c.name,
-            isStrict: setting?.isStrict ?? c.isStrict,
-            useTimeWindows: setting?.useTimeWindows ?? c.useTimeWindows,
-            timeSlots: windowsState.windows
-              .filter((w) => w.categoryId === c.id)
-              .map((w) => ({
-                id: w.id,
-                day: w.day,
-                startTime: w.startTime,
-                endTime: w.endTime,
-              })),
-          };
-        }),
+        categories: windowsState.categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+          color: c.color,
+          parentId: c.parentId,
+          locationId: c.locationId,
+          isStrict: c.isStrict,
+          useTimeWindows: c.useTimeWindows,
+          confineToOwnWindows: c.confineToOwnWindows,
+          timeSlots: windowsState.windows
+            .filter((w) => w.categoryId === c.id)
+            .map((w) => ({
+              id: w.id,
+              day: w.day,
+              startTime: w.startTime,
+              endTime: w.endTime,
+            })),
+        })),
         locations: locations.map((l) => ({ id: l.id, name: l.name })),
         // Local date, not server UTC — deadlines are user-local decisions.
         today: format(new Date(), "yyyy-MM-dd"),
@@ -465,7 +475,7 @@ export function AIDraftModal({
           const touchedTabs = [
             sawForest ? "Goals" : null,
             sawTemplates ? "Week" : null,
-            sawWindows ? "Windows" : null,
+            sawWindows ? "Categories" : null,
           ].filter((t): t is string => t !== null);
           const fallback =
             touchedTabs.length > 0
@@ -523,6 +533,7 @@ export function AIDraftModal({
       }
     },
     [
+      isLoaded,
       appendMessage,
       updateMessage,
       setWorkingForest,
@@ -550,33 +561,39 @@ export function AIDraftModal({
   }, [hasChanges, onClose]);
 
   const handleSave = useCallback(() => {
-    if (!hasChanges || !userId) return;
+    if (!hasChanges || !userId || !isLoaded) return;
     // Clean domains pass undefined so their state keeps identity — one
     // updateAll call means one engine regen and one sync for both domains.
-    const nextPlanner = hasForestChanges
-      ? applyDraftForestToPlanner({
-          planner,
-          workingForest,
-          userId,
-          validCategoryIds: new Set(categories.map((c) => c.id)),
-          categoryColorById: new Map(categories.map((c) => [c.id, c.color])),
-        })
-      : undefined;
     const now = new Date().toISOString();
-    const nextTemplates = hasTemplateChanges
-      ? applyDraftTemplates({
-          current: template,
-          canonical: canonicalTemplates,
-          working: workingTemplates,
-          userId,
-          now,
-        })
-      : undefined;
+    // Categories first: the forest apply validates goal categoryIds against
+    // the SAVED category set, so a goal filed under a category created in
+    // this same conversation keeps its assignment instead of being nulled.
     const nextCategories = hasWindowChanges
       ? applyDraftWindows({
           currentCategories: categories,
           canonical: canonicalWindows,
           working: workingWindows,
+          userId,
+          now,
+        })
+      : undefined;
+    const categoriesForForest = nextCategories ?? categories;
+    const nextPlanner = hasForestChanges
+      ? applyDraftForestToPlanner({
+          planner,
+          workingForest,
+          userId,
+          validCategoryIds: new Set(categoriesForForest.map((c) => c.id)),
+          categoryColorById: new Map(
+            categoriesForForest.map((c) => [c.id, c.color]),
+          ),
+        })
+      : undefined;
+    const nextTemplates = hasTemplateChanges
+      ? applyDraftTemplates({
+          current: template,
+          canonical: canonicalTemplates,
+          working: workingTemplates,
           userId,
           now,
         })
@@ -595,6 +612,7 @@ export function AIDraftModal({
     hasTemplateChanges,
     hasWindowChanges,
     userId,
+    isLoaded,
     planner,
     template,
     categories,
@@ -755,7 +773,7 @@ export function AIDraftModal({
                 data-active={activeTab === "windows" ? "true" : undefined}
                 onClick={() => selectTab("windows")}
               >
-                <span className={paneTabLabel}>Windows</span>
+                <span className={paneTabLabel}>Categories</span>
                 {windowChangeCount > 0 && (
                   <span className={tabChangeCount}>{windowChangeCount}</span>
                 )}
@@ -801,7 +819,7 @@ export function AIDraftModal({
                 locations={locations}
               />
             ) : (
-              <WindowsView diffed={diffedWindows} categories={categories} />
+              <WindowsView diffed={diffedWindows} />
             )}
           </div>
         </div>

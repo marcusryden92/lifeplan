@@ -30,15 +30,18 @@ import {
 } from "@/components/draft/AIDraftModal/draftTemplateOps";
 import {
   findWindowOverlaps,
+  isValidCategoryColor,
   type DraftWindowsState,
   type DraftTimeWindow,
 } from "@/components/draft/AIDraftModal/draftWindows";
 import {
+  addDraftCategories,
   addDraftTimeWindows,
+  deleteDraftCategories,
   deleteDraftTimeWindows,
-  updateDraftCategorySettings,
+  updateDraftCategories,
   updateDraftTimeWindows,
-  type DraftCategorySettingsUpdate,
+  type DraftCategoryUpdate,
   type DraftTimeWindowUpdate,
   type DraftWindowOpsResult,
 } from "@/components/draft/AIDraftModal/draftWindowOps";
@@ -99,8 +102,12 @@ interface RequestTimeWindow {
 interface DraftCategory {
   id: string;
   name: string;
+  color: string | null;
+  parentId: string | null;
+  locationId: string | null;
   isStrict: boolean;
   useTimeWindows: boolean;
+  confineToOwnWindows: boolean;
   timeSlots: RequestTimeWindow[];
 }
 
@@ -184,15 +191,39 @@ function parseRequestBody(raw: unknown): DraftRequestBody | string {
     if (typeof entry !== "object" || entry === null) {
       return "category entries must be objects";
     }
-    const { id, name, isStrict, useTimeWindows, timeSlots } = entry as Record<
-      string,
-      unknown
-    >;
+    const {
+      id,
+      name,
+      color,
+      parentId,
+      locationId,
+      isStrict,
+      useTimeWindows,
+      confineToOwnWindows,
+      timeSlots,
+    } = entry as Record<string, unknown>;
     if (typeof id !== "string" || id.length === 0) {
       return "category ids must be non-empty strings";
     }
     if (typeof name !== "string" || name.length > MAX_CATEGORY_NAME_CHARS) {
       return "category names must be short strings";
+    }
+    if (color !== undefined && color !== null && !isValidCategoryColor(color)) {
+      return "category colors must be 6-digit hex strings";
+    }
+    if (
+      parentId !== undefined &&
+      parentId !== null &&
+      (typeof parentId !== "string" || parentId.length === 0)
+    ) {
+      return "category parentIds must be non-empty strings or null";
+    }
+    if (
+      locationId !== undefined &&
+      locationId !== null &&
+      (typeof locationId !== "string" || locationId.length === 0)
+    ) {
+      return "category locationIds must be non-empty strings or null";
     }
     const parsedSlots: RequestTimeWindow[] = [];
     if (timeSlots !== undefined) {
@@ -222,8 +253,12 @@ function parseRequestBody(raw: unknown): DraftRequestBody | string {
     parsedCategories.push({
       id,
       name,
+      color: typeof color === "string" ? color : null,
+      parentId: typeof parentId === "string" ? parentId : null,
+      locationId: typeof locationId === "string" ? locationId : null,
       isStrict: isStrict === true,
       useTimeWindows: useTimeWindows === true,
+      confineToOwnWindows: confineToOwnWindows === true,
       timeSlots: parsedSlots,
     });
   }
@@ -323,15 +358,48 @@ function buildGoalIndex(
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function formatCategoryLine(category: DraftCategory): string {
-  const flags = `strict: ${category.isStrict ? "yes" : "no"} | windows: ${
-    category.useTimeWindows ? "on" : "off"
-  }`;
-  let line = `- ${category.id}: ${category.name} | ${flags}`;
-  for (const w of category.timeSlots) {
-    line += `\n  - ${w.id} | ${DAY_NAMES[w.day]} ${w.startTime}-${w.endTime}`;
+// Nested list: top-level categories are the user's roles, children indented
+// beneath their parent so the model can reason about the hierarchy it is
+// allowed to edit.
+function buildCategoryList(
+  categories: DraftCategory[],
+  locations: DraftLocationRef[],
+): string {
+  if (categories.length === 0) return "(the user has no categories yet)";
+  const locationNameById = new Map(locations.map((l) => [l.id, l.name]));
+  const ids = new Set(categories.map((c) => c.id));
+  const byParent = new Map<string | null, DraftCategory[]>();
+  for (const c of categories) {
+    const key = c.parentId !== null && ids.has(c.parentId) ? c.parentId : null;
+    const list = byParent.get(key);
+    if (list) list.push(c);
+    else byParent.set(key, [c]);
   }
-  return line;
+  const lines: string[] = [];
+  const emit = (category: DraftCategory, depth: number) => {
+    const indent = "  ".repeat(depth);
+    const parts = [`${category.id}: ${category.name}`];
+    if (category.color) parts.push(category.color);
+    if (category.locationId) {
+      parts.push(
+        `@ ${locationNameById.get(category.locationId) ?? category.locationId}`,
+      );
+    }
+    parts.push(`windows: ${category.useTimeWindows ? "on" : "off"}`);
+    parts.push(`strict: ${category.isStrict ? "yes" : "no"}`);
+    if (category.confineToOwnWindows) parts.push("own-windows-only");
+    lines.push(`${indent}- ${parts.join(" | ")}`);
+    for (const w of category.timeSlots) {
+      lines.push(
+        `${indent}  - window ${w.id} | ${DAY_NAMES[w.day]} ${w.startTime}-${w.endTime}`,
+      );
+    }
+    for (const child of byParent.get(category.id) ?? []) {
+      emit(child, depth + 1);
+    }
+  };
+  for (const root of byParent.get(null) ?? []) emit(root, 0);
+  return lines.join("\n");
 }
 
 function buildTemplateList(
@@ -366,10 +434,7 @@ function buildSystemPrompt({
   today,
   intent,
 }: DraftRequestBody): string {
-  const categoryList =
-    categories.length > 0
-      ? categories.map(formatCategoryLine).join("\n")
-      : "(the user has no categories yet)";
+  const categoryList = buildCategoryList(categories, locations);
 
   const locationList =
     locations.length > 0
@@ -403,7 +468,7 @@ Work through the items warmly, one or two questions at a time — never a form o
 - A bare TASK needs a realistic duration and, if it's time-sensitive, a deadline. Set both with update_items once you know them.
 - A bare GOAL needs subtasks (add_items or propose_goals) and, where there is one, a deadline. Once it has both, mark it ready to schedule by default (via update_items) so the user doesn't have to — no need to ask permission for the obvious case. If it's still missing subtasks or a deadline, leave it unready and say, in plain words, what it needs first.
 - A PLAN is a fixed-time commitment, but you CANNOT set its start time from here (there is no starts field in your tools). Ask when it happens: if it recurs weekly, offer to add a weekly template instead; if it's really a deadline-driven task, offer to convert it to a task (update_items with plannerType "task" — the start time is preserved on save); otherwise tell the user they can set the exact time on the item's page later.
-- Assign each item to one of the user's roles (their top-level categories — categoryId on the top-level row) where it fits.
+- Assign each item to one of the user's roles (their top-level categories — categoryId on the top-level row) where it fits. If something fits none of their roles, offer to create a fitting role (add_categories) rather than forcing it somewhere wrong — but ask before adding to the roles they picked minutes ago.
 
 Don't end the session leaving triaged items without what they need to schedule — a task with no duration, a goal with no subtasks. If little or nothing was dumped, interview the user about the current season of their life and draft 2-4 goals across their roles. Only propose category time windows if a natural rhythm surfaces (a fixed study block, gym mornings). Keep every message short and encouraging; nothing is committed until they press Save, so invite them to react and adjust.
 `
@@ -411,7 +476,7 @@ Don't end the session leaving triaged items without what they need to schedule �
 
   return `You are a planning assistant for Circadium, a personal scheduling app.
 
-The user's planning library is a forest of top-level goals (and loose tasks), each with a tree of subtasks. You help them restructure existing goals, create new goals with fully worked-out contents, and remove goals. You also manage their weekly template blocks — the fixed recurring commitments (sleep, work hours, standing sessions) the scheduler plans around — and their category time windows, the weekly hours a category's items are allowed to schedule in.
+The user's planning library is a forest of top-level goals (and loose tasks), each with a tree of subtasks. You help them restructure existing goals, create new goals with fully worked-out contents, and remove goals. You also manage their weekly template blocks — the fixed recurring commitments (sleep, work hours, standing sessions) the scheduler plans around — their categories themselves (the roles and groupings items are filed under: create, rename, recolor, reorganize, relocate, delete), and their category time windows, the weekly hours a category's items are allowed to schedule in.
 
 STYLE
 The chat renders markdown — bold, lists, and inline code are fine; avoid headings and tables in casual replies. Keep responses short and conversational; the tree pane shows the details, so don't enumerate what the user can already see there.
@@ -424,11 +489,18 @@ ${buildGoalIndex(currentForest, categories)}
 
 This index is a summary. Use search_items to find specific items (including subtasks) by name, and get_goal_trees to read a goal's complete tree.
 
-USER CATEGORIES (id: name | flags; indented lines are the category's time windows: windowId | day range)
+USER CATEGORIES (nesting = hierarchy; each line: id: name | color | @location | flags; "window" lines are that category's time windows)
 ${categoryList}
 
 USER LOCATIONS (id: name) — read-only; you cannot create locations, only reference these ids
 ${locationList}
+
+Categories organize the library: top-level categories are the user's ROLES (the hats they wear in life — the user-facing word is "role"); sub-categories group work within a role. Category rules:
+- add_categories creates categories: parentId null makes a new role, a parent id nests beneath it. Ids are minted by the app and reported back. Give a new role a hex color from the palette below; sub-categories may inherit (null).
+- update_categories edits name, color, parentId (reorganize; null promotes to a role), locationId (where this work usually happens — items inherit it), and the scheduling flags. Moving a category under itself or a descendant is rejected.
+- delete_categories removes a category AND its whole subtree and their windows. Items filed under them are NOT deleted — they just become uncategorized. Only delete when the user explicitly asks, and confirm first if anything is filed under it.
+- The scheduling flags: useTimeWindows (whether its windows constrain scheduling), isStrict (its windows are reserved exclusively for its own items), confineToOwnWindows (its items schedule ONLY in its own windows instead of also using ancestors'). isStrict and confineToOwnWindows reshape the whole schedule — only change them when the user explicitly asks.
+- Do not rename or recolor categories the user didn't ask you to touch, and never invent a taxonomy wholesale without being asked — the hierarchy is the user's own mental model.
 
 WEEKLY TEMPLATES (id | day start +duration | title | location | color)
 ${buildTemplateList(currentTemplates, locations)}
@@ -483,7 +555,7 @@ Editing — deterministic operations. PREFER these for small changes; each appli
 - delete_items: remove items (with their subtrees) or whole goals by id.
 - add_templates / update_templates / delete_templates: manage the user's weekly template blocks. Batch related blocks into one call (e.g. all three gym sessions). Updates are partial patches by id; null clears color or locationId.
 - add_time_windows / update_time_windows / delete_time_windows: manage category time windows by id. Batch related windows into one call (e.g. all five weekday windows).
-- update_categories: toggle a category's windows flag (useTimeWindows) or strict flag (isStrict). Strict changes need an explicit user request.
+- add_categories / update_categories / delete_categories: manage the categories themselves — create roles and sub-categories, rename, recolor, reorganize (parentId), set a location, toggle scheduling flags, delete (subtree + windows; only on explicit request). To create a parent and its children, create the parent first and use its reported id in the next call.
 
 Building:
 - propose_goals: create new top-level goals, or restructure a goal wholesale. Complete trees ONLY for goals you create or modify — never re-emit untouched goals, and never use this for small edits (use the editing tools instead). Emit each goal's id as its FIRST field; new nodes omit id (draft ids are assigned and reported back). deletedGoalIds removes whole goals. The order of the goals array is not meaningful.
@@ -491,7 +563,7 @@ Building:
 Display:
 - show_goals: bring existing goals into the user's tree pane without changing them. Pass ids, or all: true.
 
-The user's tree pane starts nearly empty: it displays only the focused goal, goals you change, and goals you show. Template changes appear on a separate Week tab that always shows the full weekly schedule; window and flag changes appear on a Windows tab grouped by category.
+The user's tree pane starts nearly empty: it displays only the focused goal, goals you change, and goals you show. Template changes appear on a separate Week tab that always shows the full weekly schedule; category and window changes appear on a Categories tab grouped by category.
 
 Always write at least one short sentence of prose before calling any tool — never reply with a bare tool call. If the user is only asking a question, answer in prose (using the reading tools if needed) and don't make changes.`;
 }
@@ -872,10 +944,47 @@ const deleteTimeWindowsTool: Anthropic.Tool = {
   } as Anthropic.Tool["input_schema"],
 };
 
+const addCategoriesTool: Anthropic.Tool = {
+  name: "add_categories",
+  description:
+    "Create categories. parentId null (or omitted) creates a top-level category — a ROLE in the user's vocabulary; a parent id nests a sub-category beneath it and must be an id you already have. Ids are minted by the app and reported back, so to create a parent and its children, create the parent first and use its reported id in a follow-up call. New categories start with windows off and strict off.",
+  input_schema: {
+    type: "object",
+    properties: {
+      categories: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string" },
+            color: {
+              type: ["string", "null"],
+              description:
+                '6-digit hex like "#1976D2"; null inherits/derives at render.',
+            },
+            parentId: {
+              type: ["string", "null"],
+              description:
+                "Existing category id to nest under; null for a top-level role.",
+            },
+            locationId: {
+              type: ["string", "null"],
+              description:
+                "One of the user's location ids — where this category's work usually happens (items inherit it).",
+            },
+          },
+          required: ["name"],
+        },
+      },
+    },
+    required: ["categories"],
+  } as Anthropic.Tool["input_schema"],
+};
+
 const updateCategoriesTool: Anthropic.Tool = {
   name: "update_categories",
   description:
-    "Toggle category scheduling flags by category id: useTimeWindows (whether the category's windows constrain scheduling) and isStrict (whether its windows are reserved exclusively for its own items). Only change isStrict when the user explicitly asks. Category names, colors, and hierarchy are not editable here.",
+    "Edit categories by id: name, color (6-digit hex or null), parentId (reorganize the hierarchy; null promotes to a top-level role; moving under itself or a descendant is rejected), locationId (or null), and the scheduling flags useTimeWindows, isStrict, and confineToOwnWindows. Partial patches — omit fields you are not changing. Only change isStrict or confineToOwnWindows when the user explicitly asks.",
   input_schema: {
     type: "object",
     properties: {
@@ -885,14 +994,35 @@ const updateCategoriesTool: Anthropic.Tool = {
           type: "object",
           properties: {
             id: { type: "string" },
+            name: { type: "string" },
+            color: { type: ["string", "null"] },
+            parentId: { type: ["string", "null"] },
+            locationId: { type: ["string", "null"] },
             useTimeWindows: { type: "boolean" },
             isStrict: { type: "boolean" },
+            confineToOwnWindows: { type: "boolean" },
           },
           required: ["id"],
         },
       },
     },
     required: ["updates"],
+  } as Anthropic.Tool["input_schema"],
+};
+
+const deleteCategoriesTool: Anthropic.Tool = {
+  name: "delete_categories",
+  description:
+    "Delete categories by id, together with their whole subtree of sub-categories and all their time windows. Items filed under them are NOT deleted — they become uncategorized. Only use on an explicit user request, and confirm first when anything is filed under the category.",
+  input_schema: {
+    type: "object",
+    properties: {
+      categoryIds: {
+        type: "array",
+        items: { type: "string" },
+      },
+    },
+    required: ["categoryIds"],
   } as Anthropic.Tool["input_schema"],
 };
 
@@ -943,8 +1073,8 @@ export async function POST(req: Request) {
   // full list rides in the prompt and ops emit the whole next array.
   let workingTemplates: DraftTemplate[] = parsed.currentTemplates;
 
-  // And for category windows + flags: flattened from the request categories,
-  // ops emit the whole next state.
+  // And for the categories domain (records + their windows): built from the
+  // request categories, ops emit the whole next state.
   let workingWindows: DraftWindowsState = {
     windows: parsed.categories.flatMap((c) =>
       c.timeSlots.map(
@@ -957,19 +1087,29 @@ export async function POST(req: Request) {
         }),
       ),
     ),
-    settings: parsed.categories.map((c) => ({
+    categories: parsed.categories.map((c) => ({
       id: c.id,
+      name: c.name,
+      color: c.color,
+      parentId: c.parentId,
+      locationId: c.locationId,
       useTimeWindows: c.useTimeWindows,
       isStrict: c.isStrict,
+      confineToOwnWindows: c.confineToOwnWindows,
     })),
   };
 
   const existingGoalIds = new Set(
     parsed.currentForest.goals.map((g) => g.id).filter((id) => id.length > 0),
   );
-  const validCategoryIds = new Set(parsed.categories.map((c) => c.id));
   const validLocationIds = new Set(parsed.locations.map((l) => l.id));
-  const categoryNameById = new Map(parsed.categories.map((c) => [c.id, c.name]));
+  // Category ids and names must be read from the working state, not the
+  // request snapshot — categories created or renamed by earlier tool calls in
+  // this same request are immediately referenceable.
+  const currentCategoryIds = () =>
+    new Set(workingWindows.categories.map((c) => c.id));
+  const categoryName = (id: string): string =>
+    workingWindows.categories.find((c) => c.id === id)?.name ?? id;
 
   // Trees the model may legitimately modify this request: the focused goal is
   // pre-fetched in the prompt; everything else must go through get_goal_trees
@@ -1092,7 +1232,7 @@ export async function POST(req: Request) {
       // overlaps in the user's data don't nag on every op.
       const MAX_REPORTED_OVERLAPS = 5;
       const describeWindow = (w: DraftTimeWindow): string =>
-        `"${categoryNameById.get(w.categoryId) ?? w.categoryId}" ${
+        `"${categoryName(w.categoryId)}" ${
           DAY_NAMES[w.day]
         } ${w.startTime}-${w.endTime} (${w.id})`;
       const buildOverlapNote = (
@@ -1112,7 +1252,7 @@ export async function POST(req: Request) {
         return ` OVERLAP WARNING: ${listed}${more}. Category windows must never overlap — adjust or delete the conflicting windows now.`;
       };
 
-      // Windows sibling of applyTemplateOpResult — same full-state contract.
+      // Categories sibling of applyTemplateOpResult — same full-state contract.
       const applyWindowOpResult = (
         result: DraftWindowOpsResult,
         appliedVerb: string,
@@ -1121,19 +1261,19 @@ export async function POST(req: Request) {
         if (result.changed) {
           send("windows", {
             windows: workingWindows.windows,
-            settings: workingWindows.settings,
+            categories: workingWindows.categories,
           });
         }
         const parts: string[] = [];
         if (result.changed) {
           parts.push(
-            `${appliedVerb} — the user sees it as a pending change on the Windows tab.`,
+            `${appliedVerb} — the user sees it as a pending change on the Categories tab.`,
           );
         }
         if (result.autoEnabledCategoryIds.length > 0) {
           parts.push(
             `Auto-enabled windows for: ${result.autoEnabledCategoryIds
-              .map((id) => categoryNameById.get(id) ?? id)
+              .map((id) => categoryName(id))
               .join(", ")} — tell the user.`,
           );
         }
@@ -1211,7 +1351,9 @@ export async function POST(req: Request) {
                 addTimeWindowsTool,
                 updateTimeWindowsTool,
                 deleteTimeWindowsTool,
+                addCategoriesTool,
                 updateCategoriesTool,
+                deleteCategoriesTool,
                 proposeGoalsTool,
                 showGoalsTool,
               ],
@@ -1343,7 +1485,7 @@ export async function POST(req: Request) {
                   ).slice(0, MAX_OP_ITEMS) as DraftItemUpdate[];
                   send("status", { tool: tu.name, count: updates.length });
                   content = applyOpResult(
-                    updateDraftItems(workingForest, updates, validCategoryIds),
+                    updateDraftItems(workingForest, updates, currentCategoryIds()),
                     `Updated ${updates.length} item(s)`,
                   );
                   break;
@@ -1463,11 +1605,7 @@ export async function POST(req: Request) {
                   const before = new Set(
                     workingWindows.windows.map((w) => w.id),
                   );
-                  const result = addDraftTimeWindows(
-                    workingWindows,
-                    items,
-                    validCategoryIds,
-                  );
+                  const result = addDraftTimeWindows(workingWindows, items);
                   const minted = result.state.windows.filter(
                     (w) => !before.has(w.id),
                   );
@@ -1476,10 +1614,9 @@ export async function POST(req: Request) {
                       ? ` Assigned ids: ${minted
                           .map(
                             (w) =>
-                              `"${
-                                categoryNameById.get(w.categoryId) ??
-                                w.categoryId
-                              } ${DAY_NAMES[w.day]}" = ${w.id}`,
+                              `"${categoryName(w.categoryId)} ${
+                                DAY_NAMES[w.day]
+                              }" = ${w.id}`,
                           )
                           .join(", ")}.`
                       : "";
@@ -1503,7 +1640,6 @@ export async function POST(req: Request) {
                   const result = updateDraftTimeWindows(
                     workingWindows,
                     updates,
-                    validCategoryIds,
                   );
                   content =
                     applyWindowOpResult(
@@ -1532,21 +1668,83 @@ export async function POST(req: Request) {
                   );
                   break;
                 }
+                case "add_categories": {
+                  const items = (
+                    Array.isArray(input?.categories) ? input.categories : []
+                  ).slice(0, MAX_OP_ITEMS);
+                  send("status", { tool: tu.name, count: items.length });
+                  const before = currentCategoryIds();
+                  const result = addDraftCategories(
+                    workingWindows,
+                    items,
+                    validLocationIds,
+                  );
+                  const minted = result.state.categories.filter(
+                    (c) => !before.has(c.id),
+                  );
+                  const mintedNote =
+                    minted.length > 0
+                      ? ` Assigned ids: ${minted
+                          .map((c) => `"${c.name}" = ${c.id}`)
+                          .join(
+                            ", ",
+                          )}. Use these ids for windows, sub-categories, and filing items.`
+                      : "";
+                  content =
+                    applyWindowOpResult(
+                      result,
+                      `Created ${minted.length} categor${
+                        minted.length === 1 ? "y" : "ies"
+                      }`,
+                    ) + mintedNote;
+                  break;
+                }
                 case "update_categories": {
                   const updates = (
                     Array.isArray(input?.updates) ? input.updates : []
-                  ).slice(0, MAX_OP_ITEMS) as DraftCategorySettingsUpdate[];
+                  ).slice(0, MAX_OP_ITEMS) as DraftCategoryUpdate[];
                   send("status", { tool: tu.name, count: updates.length });
                   content = applyWindowOpResult(
-                    updateDraftCategorySettings(
+                    updateDraftCategories(
                       workingWindows,
                       updates,
-                      validCategoryIds,
+                      validLocationIds,
                     ),
                     `Updated ${updates.length} categor${
                       updates.length === 1 ? "y" : "ies"
                     }`,
                   );
+                  break;
+                }
+                case "delete_categories": {
+                  const categoryIds = parseStringArray(
+                    input?.categoryIds,
+                  ).slice(0, MAX_OP_ITEMS);
+                  send("status", { tool: tu.name, count: categoryIds.length });
+                  const before = workingWindows.categories;
+                  const result = deleteDraftCategories(
+                    workingWindows,
+                    categoryIds,
+                  );
+                  const afterIds = new Set(
+                    result.state.categories.map((c) => c.id),
+                  );
+                  const removed = before.filter((c) => !afterIds.has(c.id));
+                  const removedNote =
+                    removed.length > 0
+                      ? ` Removed (with sub-categories and windows): ${removed
+                          .map((c) => `"${c.name}"`)
+                          .join(
+                            ", ",
+                          )}. Items filed under them are kept and become uncategorized.`
+                      : "";
+                  content =
+                    applyWindowOpResult(
+                      result,
+                      `Deleted ${removed.length} categor${
+                        removed.length === 1 ? "y" : "ies"
+                      }`,
+                    ) + removedNote;
                   break;
                 }
                 case "propose_goals": {

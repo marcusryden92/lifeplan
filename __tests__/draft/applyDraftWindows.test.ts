@@ -31,6 +31,7 @@ function category(overrides: Partial<Category> = {}): Category {
     sortOrder: 0,
     useTimeWindows: true,
     isStrict: false,
+    confineToOwnWindows: false,
     locationId: null,
     parentId: null,
     userId: USER_ID,
@@ -64,7 +65,7 @@ describe("applyDraftWindows", () => {
     const canonical = draftState(current);
     const working: DraftWindowsState = {
       windows: [{ ...canonical.windows[0], endTime: "16:00" }],
-      settings: canonical.settings,
+      categories: canonical.categories,
     };
     const result = applyDraftWindows({
       currentCategories: current,
@@ -84,7 +85,7 @@ describe("applyDraftWindows", () => {
     const canonical = draftState(current);
     const working: DraftWindowsState = {
       windows: canonical.windows,
-      settings: [{ ...canonical.settings[0], isStrict: true }],
+      categories: [{ ...canonical.categories[0], isStrict: true }],
     };
     const result = applyDraftWindows({
       currentCategories: current,
@@ -110,7 +111,7 @@ describe("applyDraftWindows", () => {
           endTime: "12:00",
         },
       ],
-      settings: canonical.settings,
+      categories: canonical.categories,
     };
     const result = applyDraftWindows({
       currentCategories: current,
@@ -135,7 +136,7 @@ describe("applyDraftWindows", () => {
     const canonical = draftState(current);
     const working: DraftWindowsState = {
       windows: [{ ...canonical.windows[0], categoryId: "category-gym" }],
-      settings: canonical.settings,
+      categories: canonical.categories,
     };
     const result = applyDraftWindows({
       currentCategories: current,
@@ -178,5 +179,157 @@ describe("applyDraftWindows", () => {
     });
     expect(untouched[0].isStrict).toBe(true);
     expect(untouched[0]).toBe(current[0]);
+  });
+
+  it("creates a new category row keeping the draft id, appending sortOrder, and attaching its windows", () => {
+    const current = [category()];
+    const canonical = draftState(current);
+    const working: DraftWindowsState = {
+      windows: [
+        ...canonical.windows,
+        {
+          id: "new-window",
+          categoryId: "draft-study",
+          day: 2,
+          startTime: "19:00",
+          endTime: "21:00",
+        },
+      ],
+      categories: [
+        ...canonical.categories,
+        {
+          id: "draft-study",
+          name: "Study",
+          color: "#16A085",
+          parentId: null,
+          locationId: null,
+          useTimeWindows: true,
+          isStrict: false,
+          confineToOwnWindows: false,
+        },
+      ],
+    };
+    const result = applyDraftWindows({
+      currentCategories: current,
+      canonical,
+      working,
+      userId: USER_ID,
+      now: NOW,
+    });
+    expect(result).toHaveLength(2);
+    const study = result.find((c) => c.id === "draft-study");
+    expect(study).toMatchObject({
+      name: "Study",
+      color: "#16A085",
+      sortOrder: 1,
+      userId: USER_ID,
+      createdAt: NOW,
+      updatedAt: NOW,
+    });
+    expect(study?.timeSlots).toHaveLength(1);
+    expect(study?.timeSlots[0]).toMatchObject({
+      id: "new-window",
+      userId: USER_ID,
+    });
+    expect(result[0]).toBe(current[0]);
+  });
+
+  it("renames and reparents restamp updatedAt; untouched fields keep concurrent values", () => {
+    const current = [
+      category(),
+      category({ id: "category-gym", name: "Gym", timeSlots: [] }),
+    ];
+    const canonical = draftState(current);
+    const working: DraftWindowsState = {
+      windows: canonical.windows,
+      categories: canonical.categories.map((c) =>
+        c.id === "category-gym"
+          ? { ...c, name: "Fitness", parentId: "category-work" }
+          : c,
+      ),
+    };
+    const result = applyDraftWindows({
+      currentCategories: current,
+      canonical,
+      working,
+      userId: USER_ID,
+      now: NOW,
+    });
+    const gym = result.find((c) => c.id === "category-gym");
+    expect(gym).toMatchObject({
+      name: "Fitness",
+      parentId: "category-work",
+      updatedAt: NOW,
+    });
+    expect(result.find((c) => c.id === "category-work")).toBe(current[0]);
+  });
+
+  it("deletes a category the assistant removed, cascading over the current tree", () => {
+    const opened = [category(), category({ id: "category-gym", name: "Gym", timeSlots: [] })];
+    const canonical = draftState(opened);
+    // Concurrent child created elsewhere under Gym while the modal was open.
+    const concurrentChild = category({
+      id: "category-yoga",
+      name: "Yoga",
+      parentId: "category-gym",
+      timeSlots: [],
+    });
+    const current = [...opened, concurrentChild];
+    const working: DraftWindowsState = {
+      windows: canonical.windows,
+      categories: canonical.categories.filter((c) => c.id !== "category-gym"),
+    };
+    const result = applyDraftWindows({
+      currentCategories: current,
+      canonical,
+      working,
+      userId: USER_ID,
+      now: NOW,
+    });
+    expect(result.map((c) => c.id)).toEqual(["category-work"]);
+  });
+
+  it("preserves a concurrent category the assistant never saw", () => {
+    const opened = [category()];
+    const canonical = draftState(opened);
+    const concurrent = category({
+      id: "category-new",
+      name: "Made elsewhere",
+      timeSlots: [],
+    });
+    const current = [category(), concurrent];
+    const result = applyDraftWindows({
+      currentCategories: current,
+      canonical,
+      working: canonical,
+      userId: USER_ID,
+      now: NOW,
+    });
+    expect(result).toContain(concurrent);
+  });
+
+  it("does not resurrect a category deleted concurrently elsewhere", () => {
+    const opened = [
+      category(),
+      category({ id: "category-gym", name: "Gym", timeSlots: [] }),
+    ];
+    const canonical = draftState(opened);
+    // Gym was deleted in another tab while the modal was open; the assistant
+    // renamed it in its draft. The concurrent delete wins.
+    const current = [category()];
+    const working: DraftWindowsState = {
+      windows: canonical.windows,
+      categories: canonical.categories.map((c) =>
+        c.id === "category-gym" ? { ...c, name: "Fitness" } : c,
+      ),
+    };
+    const result = applyDraftWindows({
+      currentCategories: current,
+      canonical,
+      working,
+      userId: USER_ID,
+      now: NOW,
+    });
+    expect(result.map((c) => c.id)).toEqual(["category-work"]);
   });
 });

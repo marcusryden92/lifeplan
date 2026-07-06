@@ -1,21 +1,24 @@
 import {
+  addDraftCategories,
   addDraftTimeWindows,
+  deleteDraftCategories,
   deleteDraftTimeWindows,
-  updateDraftCategorySettings,
+  updateDraftCategories,
   updateDraftTimeWindows,
 } from "@/components/draft/AIDraftModal/draftWindowOps";
 import {
   draftWindowsStateEqual,
   findWindowOverlaps,
   normalizeDraftWindowsState,
-  type DraftCategorySettings,
+  type DraftCategoryRecord,
   type DraftTimeWindow,
   type DraftWindowsState,
 } from "@/components/draft/AIDraftModal/draftWindows";
 
 const CATEGORY_WORK = "category-work";
 const CATEGORY_GYM = "category-gym";
-const VALID_CATEGORIES = new Set([CATEGORY_WORK, CATEGORY_GYM]);
+const LOCATION_OFFICE = "location-office";
+const VALID_LOCATIONS = new Set([LOCATION_OFFICE]);
 
 function window(overrides: Partial<DraftTimeWindow> = {}): DraftTimeWindow {
   return {
@@ -28,13 +31,18 @@ function window(overrides: Partial<DraftTimeWindow> = {}): DraftTimeWindow {
   };
 }
 
-function settings(
-  overrides: Partial<DraftCategorySettings> = {},
-): DraftCategorySettings {
+function record(
+  overrides: Partial<DraftCategoryRecord> = {},
+): DraftCategoryRecord {
   return {
     id: CATEGORY_WORK,
+    name: "Work",
+    color: "#1976D2",
+    parentId: null,
+    locationId: null,
     useTimeWindows: true,
     isStrict: false,
+    confineToOwnWindows: false,
     ...overrides,
   };
 }
@@ -42,9 +50,9 @@ function settings(
 function state(overrides: Partial<DraftWindowsState> = {}): DraftWindowsState {
   return {
     windows: [window()],
-    settings: [
-      settings(),
-      settings({ id: CATEGORY_GYM, useTimeWindows: false }),
+    categories: [
+      record(),
+      record({ id: CATEGORY_GYM, name: "Gym", useTimeWindows: false }),
     ],
     ...overrides,
   };
@@ -52,19 +60,15 @@ function state(overrides: Partial<DraftWindowsState> = {}): DraftWindowsState {
 
 describe("addDraftTimeWindows", () => {
   it("mints fresh ids and discards model-supplied ones", () => {
-    const result = addDraftTimeWindows(
-      state(),
-      [
-        {
-          id: "model-made-this-up",
-          categoryId: CATEGORY_WORK,
-          day: 2,
-          startTime: "08:00",
-          endTime: "12:00",
-        },
-      ],
-      VALID_CATEGORIES,
-    );
+    const result = addDraftTimeWindows(state(), [
+      {
+        id: "model-made-this-up",
+        categoryId: CATEGORY_WORK,
+        day: 2,
+        startTime: "08:00",
+        endTime: "12:00",
+      },
+    ]);
     expect(result.failures).toHaveLength(0);
     expect(result.changed).toBe(true);
     expect(result.state.windows).toHaveLength(2);
@@ -74,29 +78,39 @@ describe("addDraftTimeWindows", () => {
   });
 
   it("auto-enables useTimeWindows on the target category and reports it", () => {
-    const result = addDraftTimeWindows(
-      state(),
-      [{ categoryId: CATEGORY_GYM, day: 3, startTime: "18:00", endTime: "20:00" }],
-      VALID_CATEGORIES,
-    );
-    const gym = result.state.settings.find((s) => s.id === CATEGORY_GYM);
+    const result = addDraftTimeWindows(state(), [
+      { categoryId: CATEGORY_GYM, day: 3, startTime: "18:00", endTime: "20:00" },
+    ]);
+    const gym = result.state.categories.find((c) => c.id === CATEGORY_GYM);
     expect(gym?.useTimeWindows).toBe(true);
     expect(result.autoEnabledCategoryIds).toEqual([CATEGORY_GYM]);
   });
 
-  it("collects per-row validation failures without dropping valid rows", () => {
-    const result = addDraftTimeWindows(
+  it("accepts a category created earlier in the same working state", () => {
+    const created = addDraftCategories(
       state(),
-      [
-        { categoryId: "nope", day: 1, startTime: "09:00", endTime: "10:00" },
-        { categoryId: CATEGORY_WORK, day: 7, startTime: "09:00", endTime: "10:00" },
-        { categoryId: CATEGORY_WORK, day: 1, startTime: "24:00", endTime: "10:00" },
-        { categoryId: CATEGORY_WORK, day: 1, startTime: "17:00", endTime: "09:00" },
-        { categoryId: CATEGORY_WORK, day: 1, startTime: "09:00", endTime: "09:00" },
-        { categoryId: CATEGORY_WORK, day: 5, startTime: "10:00", endTime: "23:59" },
-      ],
-      VALID_CATEGORIES,
+      [{ name: "Study" }],
+      VALID_LOCATIONS,
     );
+    const studyId = created.state.categories.find(
+      (c) => c.name === "Study",
+    )?.id as string;
+    const result = addDraftTimeWindows(created.state, [
+      { categoryId: studyId, day: 2, startTime: "19:00", endTime: "21:00" },
+    ]);
+    expect(result.failures).toHaveLength(0);
+    expect(result.autoEnabledCategoryIds).toEqual([studyId]);
+  });
+
+  it("collects per-row validation failures without dropping valid rows", () => {
+    const result = addDraftTimeWindows(state(), [
+      { categoryId: "nope", day: 1, startTime: "09:00", endTime: "10:00" },
+      { categoryId: CATEGORY_WORK, day: 7, startTime: "09:00", endTime: "10:00" },
+      { categoryId: CATEGORY_WORK, day: 1, startTime: "24:00", endTime: "10:00" },
+      { categoryId: CATEGORY_WORK, day: 1, startTime: "17:00", endTime: "09:00" },
+      { categoryId: CATEGORY_WORK, day: 1, startTime: "09:00", endTime: "09:00" },
+      { categoryId: CATEGORY_WORK, day: 5, startTime: "10:00", endTime: "23:59" },
+    ]);
     expect(result.failures).toHaveLength(5);
     expect(result.state.windows).toHaveLength(2);
     expect(result.state.windows[1].endTime).toBe("23:59");
@@ -104,22 +118,18 @@ describe("addDraftTimeWindows", () => {
 
   it("does not mutate the input state", () => {
     const input = state();
-    addDraftTimeWindows(
-      input,
-      [{ categoryId: CATEGORY_GYM, day: 3, startTime: "18:00", endTime: "20:00" }],
-      VALID_CATEGORIES,
-    );
+    addDraftTimeWindows(input, [
+      { categoryId: CATEGORY_GYM, day: 3, startTime: "18:00", endTime: "20:00" },
+    ]);
     expect(input).toEqual(state());
   });
 });
 
 describe("updateDraftTimeWindows", () => {
   it("applies partial patches including reparenting", () => {
-    const result = updateDraftTimeWindows(
-      state(),
-      [{ id: "win-1", categoryId: CATEGORY_GYM, startTime: "10:00" }],
-      VALID_CATEGORIES,
-    );
+    const result = updateDraftTimeWindows(state(), [
+      { id: "win-1", categoryId: CATEGORY_GYM, startTime: "10:00" },
+    ]);
     expect(result.failures).toHaveLength(0);
     expect(result.state.windows[0]).toMatchObject({
       categoryId: CATEGORY_GYM,
@@ -129,31 +139,25 @@ describe("updateDraftTimeWindows", () => {
   });
 
   it("validates the patched start/end pair together", () => {
-    const result = updateDraftTimeWindows(
-      state(),
-      [{ id: "win-1", startTime: "18:00" }],
-      VALID_CATEGORIES,
-    );
+    const result = updateDraftTimeWindows(state(), [
+      { id: "win-1", startTime: "18:00" },
+    ]);
     expect(result.failures).toHaveLength(1);
     expect(result.state.windows[0].startTime).toBe("09:00");
   });
 
   it("fails on unknown id and unknown categoryId", () => {
-    const result = updateDraftTimeWindows(
-      state(),
-      [
-        { id: "ghost", day: 2 },
-        { id: "win-1", categoryId: "nope" },
-      ],
-      VALID_CATEGORIES,
-    );
+    const result = updateDraftTimeWindows(state(), [
+      { id: "ghost", day: 2 },
+      { id: "win-1", categoryId: "nope" },
+    ]);
     expect(result.failures).toHaveLength(2);
     expect(result.state.windows[0].categoryId).toBe(CATEGORY_WORK);
   });
 
   it("does not mutate the input state", () => {
     const input = state();
-    updateDraftTimeWindows(input, [{ id: "win-1", day: 4 }], VALID_CATEGORIES);
+    updateDraftTimeWindows(input, [{ id: "win-1", day: 4 }]);
     expect(input.windows[0].day).toBe(1);
   });
 });
@@ -171,37 +175,187 @@ describe("deleteDraftTimeWindows", () => {
   });
 });
 
-describe("updateDraftCategorySettings", () => {
-  it("patches flags by category id", () => {
-    const result = updateDraftCategorySettings(
+describe("addDraftCategories", () => {
+  it("mints ids, trims names, and defaults flags off", () => {
+    const result = addDraftCategories(
       state(),
-      [{ id: CATEGORY_WORK, isStrict: true }],
-      VALID_CATEGORIES,
+      [{ name: "  Study  ", color: "#16A085" }],
+      VALID_LOCATIONS,
     );
     expect(result.failures).toHaveLength(0);
     expect(result.changed).toBe(true);
-    const work = result.state.settings.find((s) => s.id === CATEGORY_WORK);
-    expect(work).toMatchObject({ useTimeWindows: true, isStrict: true });
+    const study = result.state.categories.find((c) => c.name === "Study");
+    expect(study).toMatchObject({
+      color: "#16A085",
+      parentId: null,
+      locationId: null,
+      useTimeWindows: false,
+      isStrict: false,
+      confineToOwnWindows: false,
+    });
+    expect(study?.id.length).toBeGreaterThan(0);
   });
 
-  it("fails on unknown category and empty patches", () => {
-    const result = updateDraftCategorySettings(
+  it("nests under an existing parent and accepts a valid location", () => {
+    const result = addDraftCategories(
       state(),
-      [{ id: "nope", isStrict: true }, { id: CATEGORY_WORK }],
-      VALID_CATEGORIES,
+      [{ name: "Deep work", parentId: CATEGORY_WORK, locationId: LOCATION_OFFICE }],
+      VALID_LOCATIONS,
     );
-    expect(result.failures).toHaveLength(2);
+    const child = result.state.categories.find((c) => c.name === "Deep work");
+    expect(child?.parentId).toBe(CATEGORY_WORK);
+    expect(child?.locationId).toBe(LOCATION_OFFICE);
+  });
+
+  it("rejects unknown parent, unknown location, bad color, and empty name", () => {
+    const result = addDraftCategories(
+      state(),
+      [
+        { name: "A", parentId: "ghost" },
+        { name: "B", locationId: "ghost" },
+        { name: "C", color: "blue" },
+        { name: "   " },
+      ],
+      VALID_LOCATIONS,
+    );
+    expect(result.failures).toHaveLength(4);
+    expect(result.changed).toBe(false);
+  });
+
+  it("rejects a duplicate name among same-parent siblings but allows it elsewhere", () => {
+    const duplicate = addDraftCategories(
+      state(),
+      [{ name: "work" }],
+      VALID_LOCATIONS,
+    );
+    expect(duplicate.failures).toHaveLength(1);
+    const nested = addDraftCategories(
+      state(),
+      [{ name: "Work", parentId: CATEGORY_GYM }],
+      VALID_LOCATIONS,
+    );
+    expect(nested.failures).toHaveLength(0);
+  });
+});
+
+describe("updateDraftCategories", () => {
+  it("patches name, color, location, and flags by id", () => {
+    const result = updateDraftCategories(
+      state(),
+      [
+        {
+          id: CATEGORY_WORK,
+          name: "Career",
+          color: null,
+          locationId: LOCATION_OFFICE,
+          isStrict: true,
+        },
+      ],
+      VALID_LOCATIONS,
+    );
+    expect(result.failures).toHaveLength(0);
+    const work = result.state.categories.find((c) => c.id === CATEGORY_WORK);
+    expect(work).toMatchObject({
+      name: "Career",
+      color: null,
+      locationId: LOCATION_OFFICE,
+      useTimeWindows: true,
+      isStrict: true,
+    });
+  });
+
+  it("reparents and rejects cycles", () => {
+    const withChild = addDraftCategories(
+      state(),
+      [{ name: "Deep work", parentId: CATEGORY_WORK }],
+      VALID_LOCATIONS,
+    );
+    const childId = withChild.state.categories.find(
+      (c) => c.name === "Deep work",
+    )?.id as string;
+
+    const moved = updateDraftCategories(
+      withChild.state,
+      [{ id: childId, parentId: CATEGORY_GYM }],
+      VALID_LOCATIONS,
+    );
+    expect(moved.failures).toHaveLength(0);
+    expect(
+      moved.state.categories.find((c) => c.id === childId)?.parentId,
+    ).toBe(CATEGORY_GYM);
+
+    const selfParent = updateDraftCategories(
+      withChild.state,
+      [{ id: CATEGORY_WORK, parentId: CATEGORY_WORK }],
+      VALID_LOCATIONS,
+    );
+    expect(selfParent.failures).toHaveLength(1);
+
+    const cycle = updateDraftCategories(
+      withChild.state,
+      [{ id: CATEGORY_WORK, parentId: childId }],
+      VALID_LOCATIONS,
+    );
+    expect(cycle.failures).toHaveLength(1);
+  });
+
+  it("fails on unknown category, unknown location, and empty patches", () => {
+    const result = updateDraftCategories(
+      state(),
+      [
+        { id: "nope", isStrict: true },
+        { id: CATEGORY_WORK, locationId: "ghost" },
+        { id: CATEGORY_WORK },
+      ],
+      VALID_LOCATIONS,
+    );
+    expect(result.failures).toHaveLength(3);
     expect(result.changed).toBe(false);
   });
 
   it("does not mutate the input state", () => {
     const input = state();
-    updateDraftCategorySettings(
+    updateDraftCategories(
       input,
       [{ id: CATEGORY_WORK, isStrict: true }],
-      VALID_CATEGORIES,
+      VALID_LOCATIONS,
     );
-    expect(input.settings[0].isStrict).toBe(false);
+    expect(input.categories[0].isStrict).toBe(false);
+  });
+});
+
+describe("deleteDraftCategories", () => {
+  it("cascades over the subtree and removes their windows", () => {
+    const withChild = addDraftCategories(
+      state({
+        windows: [
+          window(),
+          window({ id: "win-gym", categoryId: CATEGORY_GYM, day: 3 }),
+        ],
+      }),
+      [{ name: "Deep work", parentId: CATEGORY_WORK }],
+      VALID_LOCATIONS,
+    );
+    const childId = withChild.state.categories.find(
+      (c) => c.name === "Deep work",
+    )?.id as string;
+    const withChildWindow = addDraftTimeWindows(withChild.state, [
+      { categoryId: childId, day: 4, startTime: "09:00", endTime: "11:00" },
+    ]);
+
+    const result = deleteDraftCategories(withChildWindow.state, [
+      CATEGORY_WORK,
+    ]);
+    expect(result.changed).toBe(true);
+    expect(result.state.categories.map((c) => c.id)).toEqual([CATEGORY_GYM]);
+    expect(result.state.windows.map((w) => w.id)).toEqual(["win-gym"]);
+  });
+
+  it("reports unknown ids without dropping valid deletes", () => {
+    const result = deleteDraftCategories(state(), ["ghost", CATEGORY_GYM]);
+    expect(result.failures).toHaveLength(1);
+    expect(result.failures[0].id).toBe("ghost");
+    expect(result.state.categories.map((c) => c.id)).toEqual([CATEGORY_WORK]);
   });
 });
 
@@ -258,12 +412,12 @@ describe("draftWindowsStateEqual / normalizeDraftWindowsState", () => {
     });
     const b = state({
       windows: [window({ id: "win-2", day: 2 }), window()],
-      settings: [...state().settings].reverse(),
+      categories: [...state().categories].reverse(),
     });
     expect(draftWindowsStateEqual(a, b)).toBe(true);
   });
 
-  it("detects window field, flag, and membership changes", () => {
+  it("detects window field, category field, and membership changes", () => {
     expect(
       draftWindowsStateEqual(
         state(),
@@ -275,9 +429,20 @@ describe("draftWindowsStateEqual / normalizeDraftWindowsState", () => {
       draftWindowsStateEqual(
         state(),
         state({
-          settings: [
-            settings({ isStrict: true }),
-            settings({ id: CATEGORY_GYM, useTimeWindows: false }),
+          categories: [
+            record({ name: "Career" }),
+            record({ id: CATEGORY_GYM, name: "Gym", useTimeWindows: false }),
+          ],
+        }),
+      ),
+    ).toBe(false);
+    expect(
+      draftWindowsStateEqual(
+        state(),
+        state({
+          categories: [
+            record({ parentId: CATEGORY_GYM }),
+            record({ id: CATEGORY_GYM, name: "Gym", useTimeWindows: false }),
           ],
         }),
       ),
@@ -291,10 +456,14 @@ describe("draftWindowsStateEqual / normalizeDraftWindowsState", () => {
         { id: "x", categoryId: CATEGORY_WORK, day: 1, startTime: "17:00", endTime: "09:00" },
         "not an object",
       ],
-      settings: [settings(), { id: "", useTimeWindows: true, isStrict: false }],
+      categories: [
+        record(),
+        record({ id: "", name: "no id" }),
+        record({ id: "bad-color", color: "blue" as unknown as string }),
+      ],
     });
     expect(normalized?.windows).toHaveLength(1);
-    expect(normalized?.settings).toHaveLength(1);
+    expect(normalized?.categories).toHaveLength(1);
   });
 
   it("returns null for payloads missing either array", () => {

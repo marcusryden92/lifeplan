@@ -282,7 +282,7 @@
 
   ## AI assistant (goal-forest + weekly-template + category-window planning)
 
-  One global assistant, always reachable: **mod+I**, the Sparkles button in the Sidebar, or the "AI assistant" button in `ItemTabs`. It operates on the whole **forest** of triaged top-level rows — restructuring existing goals, creating new goals with full subtrees, and deleting goals — on the user's **weekly templates** (EventTemplate rows: sleep, work hours, standing commitments), and on **category time windows + scheduling flags** (CategoryTimeWindow rows; `useTimeWindows`/`isStrict` on the category), so "set up my week and this goal" happens in one conversation. Untriaged Capture-inbox jots are excluded and never touched. Locations are read context only (they can't be created here — they need Google Places); category names/colors/hierarchy are likewise not editable by the assistant.
+  One global assistant, always reachable: **mod+I**, the Sparkles button in the Sidebar, or the "AI assistant" button in `ItemTabs`. It operates on the whole **forest** of triaged top-level rows — restructuring existing goals, creating new goals with full subtrees, and deleting goals — on the user's **weekly templates** (EventTemplate rows: sleep, work hours, standing commitments), and on the full **categories domain**: the category records themselves (create/rename/recolor/reparent/relocate/delete, plus the `useTimeWindows`/`isStrict`/`confineToOwnWindows` flags) and their **time windows** (CategoryTimeWindow rows) — so "set up my week and this goal" happens in one conversation. Untriaged Capture-inbox jots are excluded and never touched. Locations are read context only (they can't be created here — they need Google Places), though categories and items may be assigned to existing ones.
 
   Mounting: `AssistantProvider` ([components/ui/shell/AssistantContext.tsx](components/ui/shell/AssistantContext.tsx)) wraps `AppShell` in the protected layout; [GlobalAssistant.tsx](components/draft/AIDraftModal/GlobalAssistant.tsx) is passed into AppShell's `assistantSlot` and renders the modal filling `mainColumn` (`position: absolute; inset: 0`) — the sidebar stays visible and interactive (`Dialog modal={false}`, outside-interaction dismissal prevented; Esc / Close only). Focus resolution: an explicit `AssistantScope.focusItemId` from the opener wins, else the `/items/[id]` route is detected; either maps to its root via `getRootParentId` and is sent as a prompt hint plus default tree-pane expansion.
 
@@ -291,10 +291,10 @@
   Split-pane modal ([components/draft/AIDraftModal/](components/draft/AIDraftModal/)):
 
   - **Left**: chat pane. User bubbles right, assistant responses left-aligned as plain text; `initialDraft` prefills the composer without sending. The chat pane sits on `color-mix(ink 4%, paper)` so it reads as sunken relative to the tree pane. While a response streams the send button becomes a **Stop** button (aborts the fetch; the route forwards `req.signal` upstream; the interrupted bubble is finalized — "Stopped." if it had no prose yet). On abort, completed work stays but truncated tails roll back: the stamped `propose_goals` re-emit carries `complete: true` (fromOps trees count as complete), and the client refolds the turn from only the completed callIndexes, dropping any proposal whose finalized emit hadn't arrived. **Conversations persist to the DB** — a `DraftConversation` row (client-minted uuid id, title from the first user message, whole message array as Json) upserted by a debounced effect in `useAIDraftState` whenever the chat settles, guarded by a last-persisted snapshot so loading a conversation never bumps its own `updatedAt`. Server surface: [actions/draftConversations.ts](actions/draftConversations.ts) (list/get/upsert/delete, capped at 50 conversations, NOT part of the diff sync). The header has a **History** popover (list + load + delete, via `ChatHistoryPopover`) and a **New chat** reset; on the first open of a fresh page load the most recent conversation auto-resumes. The client sends only the trailing 40-message window to stay under the route's history cap; working drafts still reseed from canonical on each open.
-  - **Right**: a tabbed review pane — **Goals / Week / Windows** tab buttons in the pane header, each with a change-count badge; during a stream the pane auto-follows the domain the assistant is editing unless the user clicked a tab this turn (pin resets per send).
+  - **Right**: a tabbed review pane — **Goals / Week / Categories** tab buttons in the pane header (internal tab key is still `windows`), each with a change-count badge; during a stream the pane auto-follows the domain the assistant is editing unless the user clicked a tab this turn (pin resets per send).
     - **Goals tab**: `JsonForestView` — one collapsible section per top-level goal (chevron + title + `CategoryBadge` + goal-level diff badge), the focused goal and changed goals expanded by default, with the per-node diff overlay from [diffDraftTree.ts](components/draft/AIDraftModal/diffDraftTree.ts); deleted nodes/goals stay visible in place. **Display is relevance-scoped**: the pane shows only the focused goal, goals the AI touched, and goals brought into view via the `show_goals` tool (display-only tool → SSE `show` event), plus a "Show all" header toggle. Show-all mode groups goals under category headers (provider order, uncategorized last); the relevance-scoped view stays flat. The full forest is still sent to the model and held in working state — visibility is a render filter only, so Save/delete semantics are unaffected.
     - **Week tab**: `TemplateWeekView` — Monday-first day-grouped template list with the same diff language (status badges + friendly changedFields), color dot, HH:MM–HH:MM range with a `+1d` overnight marker, location name ("Anywhere" when null). Always shows all templates — no relevance filter.
-    - **Windows tab**: `WindowsView` — category-grouped (provider order) window list: `CategoryDot` + name + flag chips (`windows on/off`, `strict`; accent-outlined when changed), rows Monday-first with day + HH:MM–HH:MM and the shared status-badge diff language. Categories with no windows and no flag changes are omitted. The change badge counts window rows plus flag changes.
+    - **Categories tab**: `WindowsView` — grouped by the diffed category records (working order, canonical-deleted appended): `CategoryDot` + name (struck through when deleted) + "under X" note on creates/moves + flag chips (`windows on/off`, `strict`, `own windows only`; accent-outlined when changed) + friendly changed-field text (renamed/color/moved/location) + status badge, windows beneath rows Monday-first with day + HH:MM–HH:MM and the shared status-badge diff language. Categories with no windows and no changes of their own are omitted. The change badge counts window rows plus changed category records.
   - **Draggable divider** between the panes (state clamped 20/80%; both panes have `minWidth: 240px`).
 
   Data flow per turn:
@@ -309,9 +309,10 @@
         ▼
   POST /api/draft/stream                    ← auth-gated, Sonnet 4.6
     body: { currentForest, currentTemplates, history, focus?,
-            categories (id+name+isStrict+useTimeWindows+timeSlots WITH window
-            ids — built from the WORKING windows state so pending drafts stay
-            visible to the model on later turns),
+            categories (full records: id+name+color+parentId+locationId+flags
+            +timeSlots WITH window ids — built ENTIRELY from the WORKING
+            categories state so pending drafts, including created categories,
+            stay visible to the model on later turns),
             locations (id+name), today (local) }
     (full forest goes to OUR server only — Anthropic gets a compact per-goal
      INDEX line + the focused goal's tree; everything else is fetched on
@@ -334,17 +335,23 @@
                route-minted uuids that become the real DB ids at Save;
                locationId validated against the user's set; overlap is
                allowed (engine warns), never rejected.
-      windows: add_time_windows, update_time_windows, delete_time_windows,
-             update_categories({id, useTimeWindows?, isStrict?})
+      categories: add_time_windows, update_time_windows, delete_time_windows,
+             add_categories, delete_categories,
+             update_categories({id, name?, color?, parentId?, locationId?,
+                                useTimeWindows?, isStrict?, confineToOwnWindows?})
              ← deterministic ops (draftWindowOps.ts) on the request's
-               workingWindows state {windows, settings}; each change emits an
+               workingWindows state {windows, categories}; each change emits an
                SSE `windows` event carrying the FULL authoritative state
-               (same contract as templates). Window uuids are route-minted
-               and become the DB ids at Save; within-day only (startTime <
-               endTime, "23:59" end-of-day sentinel — the engine supports
-               overnight windows but WeekStructureModal's grid can't render
-               them); add auto-enables useTimeWindows on the target category
-               (reported in the tool result).
+               (same contract as templates). Window AND category uuids are
+               route-minted and become the DB ids at Save. Windows are
+               within-day only (startTime < endTime, "23:59" end-of-day
+               sentinel — the engine supports overnight windows but
+               WeekStructureModal's grid can't render them); add auto-enables
+               useTimeWindows on the target category (reported in the tool
+               result). Category ops validate parentId against the working
+               set (drafts included; self/descendant reparent rejected),
+               locationId against the user's locations, reject duplicate
+               sibling names, and delete cascades the subtree + its windows.
       build: propose_goals({goals, deletedGoalIds})   ← new goals + wholesale restructures
       show:  show_goals({goalIds | all})
         │
@@ -385,13 +392,21 @@
     keeping the route-minted uuid; UNTOUCHED rows return by object identity
     (the template diff compares timestamps, so identity = sync no-op); rows
     created elsewhere while the modal was open are preserved
-  windows dirty → applyDraftWindows({currentCategories, canonical, working, userId, now})
-    rebuilds each category's timeSlots from the working windows (reparenting
-    honored, userId stamped, new rows keep the route-minted uuid); flag deltas
-    the assistant made restamp the category's updatedAt, window-only changes
-    do NOT touch the category row (the category diff strips timeSlots but
-    compares updatedAt); untouched categories return by object identity;
-    concurrent rows/flag edits made elsewhere are preserved
+  categories dirty → applyDraftWindows({currentCategories, canonical, working, userId, now})
+    full category CRUD against the live array: assistant deletes cascade over
+    the CURRENT tree (matching the DB's parentId cascade; concurrent children
+    go too), per-field record deltas (name/color/parentId/locationId/flags)
+    apply only where the assistant actually changed them (concurrent edits
+    elsewhere win on untouched fields) and restamp updatedAt, new rows keep
+    the route-minted uuid with sortOrder appended after their siblings, and a
+    category deleted concurrently elsewhere is never resurrected. Each
+    surviving category's timeSlots are rebuilt from the working windows
+    (reparenting honored, userId stamped); window-only changes do NOT touch
+    the category row (the category diff strips timeSlots but compares
+    updatedAt); untouched categories return by object identity; concurrent
+    rows made elsewhere are preserved. Runs BEFORE applyDraftForestToPlanner
+    in handleSave so goal categoryIds validate against the SAVED category set
+    (a goal filed under a category created this conversation keeps it)
         │
         ▼
   updateAll(nextPlanner, undefined, nextTemplates, nextCategories) → ONE engine
@@ -402,6 +417,7 @@
 
   Contracts worth not breaking:
 
+  - **Working drafts seed only after hydration** — `useAIDraftState` adopts canonical as the working copy on `open && ready` (`ready` = CalendarProvider's `isLoaded`), and the dirty flags return false until then. A modal open before the initial snapshot lands (onboarding resumed on the AI step, mod+I right after load) would otherwise seed an EMPTY working forest: every real item diffs as deleted, the model is sent an empty forest, and Save would actually delete everything. Send and save are guarded on `isLoaded` too.
   - **UUID preservation is load-bearing** — see the `preserve-planner-ids` memory note. The AI is instructed to echo existing ids; the reverse parser only trusts an id inside the subtree of the goal being applied (any other id becomes a fresh UUID). Inter-goal dependencies (planned) will reference these ids.
   - **`sortOrder` is never emitted by the AI** — sibling order is array position (top-level goal order is NOT semantic; goals match by id). The reverse parser stamps fresh fractional keys from array position at each level.
   - **Goal-granular deltas** — the model never re-emits untouched goals; unchanged goals are skipped at apply time so they see zero `updatedAt` churn and no phantom sync diffs.
@@ -413,13 +429,15 @@
   - **Streaming path is a Route handler**, not a server action. See the note in "Code style rules" — SSE bytes don't fit the server-action return shape.
   - **Template draft ids ARE the DB ids** — unlike goal draft ids (re-minted at Save), a route-minted template uuid survives into the EventTemplate row (WeekStructureModal set the uuidv4-id precedent). applyDraftTemplates must keep returning untouched rows by object identity: the template sync diff does not strip timestamps, so a fresh object with a fresh updatedAt would produce a phantom update on every save.
   - **Template ops never reject overlap** — overlapping templates are an engine warning by design; the assistant flags them in prose instead.
-  - **Window draft ids ARE the DB ids** — like templates: route-minted uuids survive into CategoryTimeWindow rows (WeekStructureModal mints client-side uuids at save, same precedent). Windows carry no timestamps, so the sync diff is purely value-based — but applyDraftWindows must stamp `userId` on rebuilt rows (the diff compares it) and must NOT restamp a category's `updatedAt` for window-only changes (the category diff strips timeSlots but compares updatedAt — a spurious restamp is a phantom category update).
+  - **Window AND category draft ids ARE the DB ids** — like templates: route-minted uuids survive into CategoryTimeWindow and Category rows (WeekStructureModal mints client-side uuids at save, same precedent). Windows carry no timestamps, so the sync diff is purely value-based — but applyDraftWindows must stamp `userId` on rebuilt rows (the diff compares it) and must NOT restamp a category's `updatedAt` for window-only changes (the category diff strips timeSlots but compares updatedAt — a spurious restamp is a phantom category update).
   - **Assistant windows are within-day** (`startTime < endTime`, `"23:59"` sentinel). The engine's `expandSlotForDay` supports overnight windows (endTime <= startTime), but the WeekStructureModal serializers would render one as a negative-duration event — don't loosen the op validator without fixing that renderer.
   - **Window overlap is checker-enforced via the model, not op-rejected** — unlike templates (overlap allowed by design), windows must never overlap. `findWindowOverlaps` (draftWindows.ts) runs after add/update window ops; collisions involving the touched windows are appended to the tool_result (`"Work" Sat 10:00-14:00 overlaps "Fun" Sat 12:00-16:00`) and the prompt instructs the model to resolve them before ending its turn. Ops still accept the state so a batch can be fixed by a follow-up call; pre-existing overlaps in user data are not re-reported on unrelated ops.
-  - **`update_categories` is flags-only** (useTimeWindows, isStrict) — names, colors, hierarchy, and locationId stay human-edited. The prompt tells the model to touch isStrict only on explicit user request; add_time_windows auto-enables useTimeWindows deterministically.
+  - **The assistant has full category CRUD, prompt-gated where it reshapes things** — `add_categories`/`update_categories`/`delete_categories` cover name, color, parentId, locationId, and all three scheduling flags. The prompt reserves `isStrict`/`confineToOwnWindows` changes and any delete for explicit user requests (deletes cascade the subtree + windows; items become uncategorized via the DB's `SetNull`, never deleted). `add_time_windows` still auto-enables `useTimeWindows` deterministically. Locations remain read-only (creation needs Google Places) — only assignable by id.
+  - **Category apply is per-field, concurrent-safe** — applyDraftWindows applies only the fields the assistant actually changed (canonical vs working), so edits made elsewhere while the modal was open survive on untouched fields; a concurrent delete elsewhere wins over an assistant edit (no resurrection), and an assistant delete cascades over the current tree exactly like the DB's `parentId` cascade will.
+  - **Categories apply before the forest at Save** — handleSave computes `nextCategories` first and validates goal `categoryId`s against it, so filing a goal under a category created in the same conversation survives the save.
   - **BYOK is deferred** — one key in `.env` for now (see TODO). If/when we ship publicly, wire per-user keys before enabling the feature.
 
-  Unit tests: [__tests__/draft/](__tests__/draft/) covers forest apply (UUID preservation, subtree deletion, sortOrder stamping, categoryId validation), merge, diff, and forest equality with hand-built planner arrays, plus the template domain: ops (minting, per-field validation, locationId gating), save-time apply (object-identity no-op rule, concurrent-row preservation), and diff/day-grouping — and the windows domain: ops (minting, auto-enable, range/reparent validation, settings patches), save-time apply (category identity, flag-vs-window updatedAt rules, userId stamping, concurrent-edit preservation), and diff/category-grouping.
+  Unit tests: [__tests__/draft/](__tests__/draft/) covers forest apply (UUID preservation, subtree deletion, sortOrder stamping, categoryId validation), merge, diff, and forest equality with hand-built planner arrays, plus the template domain: ops (minting, per-field validation, locationId gating), save-time apply (object-identity no-op rule, concurrent-row preservation), and diff/day-grouping — and the categories domain: ops (window + category minting, auto-enable, range validation, category field patches, reparent cycle rejection, sibling-name dedupe, cascade delete), save-time apply (category identity, flag-vs-window updatedAt rules, userId stamping, concurrent-edit preservation, create/delete/no-resurrection semantics), and diff/category-grouping.
 
   ---
 
@@ -475,7 +493,7 @@
   - **Every FullCalendar option must be identity-stable across renders** — the React connector shallow-diffs its props, so a fresh inline arrow/object/array counts as a changed option and triggers an internal option reset; one landing mid-drag kills the interaction without firing `eventDrop` (the tile stays painted at the drop position, nothing dispatched, refresh reverts it). [Calendar.tsx](app/(protected)/calendar/_components/Calendar.tsx) is memoized with all callbacks in `useCallback` and static options hoisted to module scope; `dayHeaderContent` is a module-level function in [page.tsx](app/(protected)/calendar/page.tsx). Hover-label changes re-render the page continuously during drags (the drag mirror fires `onMouseEnter`), so this is load-bearing, not style.
   - **Event identity is stable across regens** ([stabilizeEvent](utils/calendar-generation/helpers/EventAssembler/stabilizeEvent.ts)): builders reuse the previous emit's `extendedProps.id`/`createdAt` and return the previous object when nothing changed, so an idle regen produces an empty diff. Do not reintroduce per-regen uuids/timestamps in event builders — every non-empty sync bumps the OCC `dataVersion`, and constant churn makes a second open window's syncs permanently stale (its edits get discarded by `adoptFreshServerState`). Plans are never memoized from `previousCalendar` for the same reason a `starts` drag must always re-derive them.
   - **Planner tree walks are memoized per array** — `getTreeBottomLayer` / `getSortedTreeBottomLayer` in [utils/goalPageHandlers.ts](utils/goalPageHandlers.ts) share a `WeakMap` index keyed on the planner-array reference (children sorted by `sortOrder` at build time + bottom-layer cache). Safe because planner updates are immutable everywhere; never mutate a planner array in place or the cache serves stale trees.
-  - **CalendarProvider** ([context/CalendarProvider.tsx](context/CalendarProvider.tsx)) — owns the data context, fires regen on `bufferTimeMinutes` change, fires a one-time "cold-load autoregen" when categories/locations exist but no engine output materialized yet (see the inline comment for the conditions).
+  - **CalendarProvider** ([context/CalendarProvider.tsx](context/CalendarProvider.tsx)) — owns the data context, fires regen on `bufferTimeMinutes` change, fires a one-time "cold-load autoregen" when categories/locations exist but no engine output materialized yet (see the inline comment for the conditions). It exposes `isLoaded` (true once the initial snapshot has hydrated Redux): consumers that commit against prev-state — onboarding is the archetype — must gate on it, because an update dispatched before hydration is wholesale-replaced when the fetch lands.
   - **Sync** uses **optimistic concurrency control** via `User.dataVersion`. The client sends the version it knows; if the DB has moved on, the transaction aborts and the client adopts a fresh snapshot wholesale. Partial application across a DAG-shaped dataset is unsafe.
   - **CategoryEvent**, **TravelEvent**, and **EngineMessage** are all written by the engine on every regen but use **deterministic IDs**, so the diff lands as creates/deletes only when an actual placement shifted (or, for EngineMessage, only when the underlying situation changed or the user flipped `dismissed`). Don't switch them to autogenerated IDs.
   - The 60-second transaction timeout in `syncCalendarData` exists because the first regen after a fresh load runs hundreds of writes on top of the usual diff.
@@ -551,6 +569,9 @@
   - Category color resolution lives in [lib/theme/categoryColor.ts](lib/theme/categoryColor.ts).
   - The 45° pinstripe pattern is reserved for marking category-affiliated items on the calendar — do not use it as a screen-level backdrop.
   - `colorMixAlpha` in [effects.ts](lib/theme/effects.ts) names the recurring `color-mix(in srgb, X N%, transparent)` percentages so consumers tune a hierarchy step, not a magic number.
+  - The theme preference persists per user (`theme.dark.<userId>`, written by [ThemeProvider](components/ui/ThemeProvider.tsx)); the unscoped `theme.dark` serves logged-out pages and is the one-time fallback before a scoped value exists. Any new localStorage preference tied to account data should be user-scoped the same way (see onboarding progress and its legacy-adoption pattern).
+  - **Drag-reorder language is shared**: full-width neutral rows, `interactive.hoverFill` on hover, dragged row at 0.4 opacity, 2px `accent.primary` inset lines for before/after drop zones (categories rail and the onboarding Roles step both speak it). Don't invent a second visual grammar for reordering.
+  - Scroll containers whose content grows with user input should set `scrollbar-gutter: stable` so the scrollbar appearing doesn't reflow the layout (see the onboarding overlay + step body).
 
   ---
 
