@@ -45,6 +45,16 @@ const DEFAULT_WEEK: WeekUIState = {
   workEnd: "17:00",
   workDays: [1, 2, 3, 4, 5],
   workLocationId: null,
+  exerciseEnabled: false,
+  exerciseStart: "18:00",
+  exerciseEnd: "19:00",
+  exerciseDays: [1, 3, 5],
+  morningEnabled: false,
+  morningStart: "07:00",
+  morningEnd: "07:30",
+  eveningEnabled: false,
+  eveningStart: "21:30",
+  eveningEnd: "22:00",
 };
 
 function readProgress(): StoredProgress | null {
@@ -210,6 +220,19 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
             days: week.workDays,
             locationId: week.workLocationId,
           }
+        : null,
+      exercise: week.exerciseEnabled
+        ? {
+            start: week.exerciseStart,
+            end: week.exerciseEnd,
+            days: week.exerciseDays,
+          }
+        : null,
+      morning: week.morningEnabled
+        ? { start: week.morningStart, end: week.morningEnd }
+        : null,
+      evening: week.eveningEnabled
+        ? { start: week.eveningStart, end: week.eveningEnd }
         : null,
     };
     const nowIso = new Date().toISOString();

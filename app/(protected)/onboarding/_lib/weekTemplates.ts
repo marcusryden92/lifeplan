@@ -5,7 +5,11 @@ import type { WeekDayIntegers } from "@/types/calendarTypes";
 export const ALL_WEEK_DAYS: WeekDayIntegers[] = [0, 1, 2, 3, 4, 5, 6];
 export const WEEKDAYS: WeekDayIntegers[] = [1, 2, 3, 4, 5];
 
-const SLEEP_COLOR = "#6366f1";
+// All drawn from the calendar palette (data/calendarColors).
+const SLEEP_COLOR = "#1D3557"; // navy — deep blue for night
+const EXERCISE_COLOR = "#2E7D32"; // forest green
+const MORNING_COLOR = "#FFB703"; // amber — sunrise
+const EVENING_COLOR = "#6C5CE7"; // violet — dusk
 
 export type SleepInput = { start: string; end: string };
 export type WorkInput = {
@@ -14,10 +18,20 @@ export type WorkInput = {
   days: WeekDayIntegers[];
   locationId: string | null;
 };
+export type ExerciseInput = {
+  start: string;
+  end: string;
+  days: WeekDayIntegers[];
+};
+export type RitualInput = { start: string; end: string };
 
 export type WeekFormInput = {
   sleep: SleepInput | null;
   work: WorkInput | null;
+  // Optional so existing callers/tests that only set sleep + work keep working.
+  exercise?: ExerciseInput | null;
+  morning?: RitualInput | null;
+  evening?: RitualInput | null;
 };
 
 type RawBlock = {
@@ -101,6 +115,36 @@ export function buildWeekTemplates(
       input.sleep.end,
     )) {
       push(block, "Sleep", SLEEP_COLOR, null);
+    }
+  }
+
+  if (input.exercise && input.exercise.days.length > 0) {
+    for (const block of expandDailyRange(
+      input.exercise.days,
+      input.exercise.start,
+      input.exercise.end,
+    )) {
+      push(block, "Exercise", EXERCISE_COLOR, null);
+    }
+  }
+
+  if (input.morning) {
+    for (const block of expandDailyRange(
+      ALL_WEEK_DAYS,
+      input.morning.start,
+      input.morning.end,
+    )) {
+      push(block, "Morning routine", MORNING_COLOR, null);
+    }
+  }
+
+  if (input.evening) {
+    for (const block of expandDailyRange(
+      ALL_WEEK_DAYS,
+      input.evening.start,
+      input.evening.end,
+    )) {
+      push(block, "Evening routine", EVENING_COLOR, null);
     }
   }
 

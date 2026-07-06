@@ -6,8 +6,12 @@ export const root = style({
   width: 32,
   height: 18,
   borderRadius: radii.pill,
-  border: `1px solid ${vars.glass.stroke}`,
-  background: vars.glass.bgSoft,
+  // The off track sat on glass.bgSoft, which vanished against opaque surfaces
+  // (onboarding, cards). A 20% ink-over-paper mix reads as a clear gray track
+  // on both themes (ink/paper invert together) while the checked ink track
+  // still stands apart.
+  border: `1px solid ${vars.rule}`,
+  background: `color-mix(in srgb, ${vars.ink} 20%, ${vars.paper})`,
   cursor: "pointer",
   flexShrink: 0,
   padding: 0,
@@ -34,6 +38,9 @@ export const thumb = style({
   height: 14,
   borderRadius: radii.pill,
   background: vars.paper,
+  // A small drop shadow lifts the paper thumb off both the gray off-track and
+  // the ink checked-track so the control always reads.
+  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.28)",
   transform: "translateX(1px)",
   transition: interactive2Transition("transform"),
   willChange: "transform",

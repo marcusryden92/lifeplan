@@ -451,30 +451,39 @@ export const dayToggles = style({
   flexWrap: "wrap",
 });
 
+// Circular day dots that speak the app's toggle vocabulary: an unselected
+// glass chip that reads as muted, selected as a solid ink pill (the same
+// selected treatment as Switch's checked track and the SegmentedControl thumb).
 export const dayToggle = style([
   text.bodySm,
   {
-    width: 40,
-    height: 34,
+    width: 36,
+    height: 36,
+    fontWeight: 600,
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: radii.md,
+    borderRadius: radii.pill,
     border: `1px solid ${vars.glass.stroke}`,
     background: vars.glass.bgSoft,
-    color: vars.inkSoft,
+    color: vars.muted,
     cursor: "pointer",
-    transition: "background 150ms ease",
+    transition:
+      "background 150ms ease, color 150ms ease, border-color 150ms ease",
     selectors: {
-      "&:hover": { background: vars.interactive.hoverFill },
+      "&:hover": { background: vars.interactive.hoverFill, color: vars.ink },
     },
   },
 ]);
 
 export const dayToggleOn = style({
-  borderColor: "transparent",
-  background: vars.accent.primary,
-  color: vars.textOnAccent,
+  borderColor: vars.ink,
+  background: vars.ink,
+  color: vars.paper,
+  selectors: {
+    // Hold the selected look on hover rather than fading to the hover fill.
+    "&:hover": { background: vars.ink, color: vars.paper },
+  },
 });
 
 export const sectionToggleRow = style({
