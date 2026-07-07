@@ -56,6 +56,10 @@ model CategoryTimeWindow {
   startTime String // HH:MM (24-hour)
   endTime   String // HH:MM (24-hour); if <= startTime the slot spans midnight
 
+  // JSON PlanOccurrenceException[]; per-occurrence moved/deleted overrides
+  // keyed by the occurrence's original local start
+  recurrenceExceptions String?
+
   // categoryId is nullable so the user can place windows on the calendar before
   // deciding which category they belong to (drafted, unassigned windows).
   categoryId String?

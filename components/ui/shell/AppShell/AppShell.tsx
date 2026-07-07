@@ -32,6 +32,9 @@ type Props = {
   // clips to the shell rounding and covers the sidebar (onboarding). Same
   // slot rationale as assistantSlot.
   overlaySlot?: ReactNode;
+  // Rendered after overlaySlot as the topmost canvas child — the first-run
+  // data-load screen. Sits above everything and clips to the shell rounding.
+  loadingSlot?: ReactNode;
 };
 
 export function AppShell({
@@ -41,6 +44,7 @@ export function AppShell({
   userInitial,
   assistantSlot,
   overlaySlot,
+  loadingSlot,
 }: Props) {
   return (
     <CaptureProvider>
@@ -64,6 +68,7 @@ export function AppShell({
             <CapturePalette />
             <SearchPalette />
             {overlaySlot}
+            {loadingSlot}
           </div>
         </div>
       </SearchProvider>

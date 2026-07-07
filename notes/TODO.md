@@ -1,7 +1,5 @@
 # P5 — Medium features
 
-
-- Add RRule exceptions to templates 
 - RRule to categories
 
 - Splitting large tasks into smaller chunks when generating calendar (important for cases like 20 × 30-min "reading" — currently painful)

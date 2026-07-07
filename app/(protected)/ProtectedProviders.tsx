@@ -5,6 +5,7 @@ import StoreProvider from "@/context/StoreProvider";
 import UserProvider from "@/context/UserProvider";
 import CalendarProvider from "@/context/CalendarProvider";
 import { AppShell, AssistantProvider } from "@/components/ui";
+import { AppLoadingScreen } from "@/components/ui/AppLoadingScreen";
 import { GlobalAssistant } from "@/components/draft/AIDraftModal";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { OnboardingOverlay } from "./onboarding/OnboardingOverlay";
@@ -51,6 +52,7 @@ function CircadiumShell({
         overlaySlot={
           <OnboardingOverlay initialNeedsOnboarding={needsOnboarding} />
         }
+        loadingSlot={<AppLoadingScreen />}
       >
         {children}
       </AppShell>

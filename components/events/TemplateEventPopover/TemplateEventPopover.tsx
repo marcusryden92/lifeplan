@@ -68,9 +68,14 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState<string>(event.title || "");
 
+  // A moved one-off occurrence's event.id is a composite `templateId|key`;
+  // the template row id rides in extendedProps.eventId.
+  const templateId =
+    (event.extendedProps?.eventId as string | undefined) ?? event.id;
+
   const templateItem = useMemo(
-    () => template.find((t) => t.id === event.id),
-    [template, event.id],
+    () => template.find((t) => t.id === templateId),
+    [template, templateId],
   );
 
   const currentColor =
@@ -78,7 +83,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
 
   const applyColor = (color: string) => {
     updateTemplateArray((prev) =>
-      prev.map((t) => (t.id === event.id ? { ...t, color } : t)),
+      prev.map((t) => (t.id === templateId ? { ...t, color } : t)),
     );
   };
 
@@ -91,7 +96,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
 
   const handleLocationChange = (locationId: string | null) => {
     updateTemplateArray((prev) =>
-      prev.map((t) => (t.id === event.id ? { ...t, locationId } : t)),
+      prev.map((t) => (t.id === templateId ? { ...t, locationId } : t)),
     );
   };
 
@@ -227,7 +232,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
               <PopoverAction
                 onClick={onDelete}
                 icon={<Trash2 size={13} strokeWidth={2} />}
-                label="Delete all occurrences"
+                label="Delete"
                 variant="danger"
               />
             </div>

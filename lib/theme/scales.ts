@@ -123,6 +123,8 @@ export const zIndex = {
   modal: 100,
   modalOver: 150,
   toast: 200,
+  // First-run data-load overlay; sits above every other layer.
+  appLoading: 300,
 } as const;
 
 export type Space = typeof space;
