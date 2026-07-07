@@ -170,7 +170,7 @@ export const weekHeaderCell = style({
 export const dayGrid = style({
   display: "grid",
   gridTemplateColumns: "repeat(7, 1fr)",
-  gap: 2,
+  gap: space["0.5"],
 });
 
 export const dayCell = style({

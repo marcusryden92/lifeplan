@@ -38,6 +38,8 @@ export function buildBrainDumpRow(
     duration: durationForType(item.type),
     deadline: null,
     starts: null,
+    recurrence: null,
+    recurrenceExceptions: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

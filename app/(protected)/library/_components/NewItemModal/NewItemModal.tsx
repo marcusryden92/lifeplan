@@ -79,6 +79,8 @@ export function NewItemModal({
       duration: resolvedDuration,
       deadline: null,
       starts: null,
+      recurrence: null,
+      recurrenceExceptions: null,
       sortOrder: 0,
       completedStartTime: null,
       completedEndTime: null,

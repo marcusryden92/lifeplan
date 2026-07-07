@@ -5,6 +5,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { Caption } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { plannerIdFromEventId } from "@/utils/planRecurrence";
 import { useItem } from "../ItemContext";
 import {
   card,
@@ -26,7 +27,7 @@ export function NextOnCalendarCard() {
     const isGoal = item.plannerType === "goal";
     const candidates = calendar
       .filter((e) => {
-        if (e.id === item.id) return true;
+        if (plannerIdFromEventId(e.id) === item.id) return true;
         if (!isGoal) return false;
         const ext = e.extendedProps as { parentId?: string | null } | undefined;
         return ext?.parentId === item.id;

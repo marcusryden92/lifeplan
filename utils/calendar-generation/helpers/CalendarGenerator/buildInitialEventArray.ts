@@ -39,6 +39,7 @@ export function buildInitialEventArray(
     planners,
     memoizedEventIds,
     previousById,
+    currentDate,
   );
   eventArray.push(...planEvents);
 

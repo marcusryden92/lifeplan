@@ -40,6 +40,8 @@ model Planner {
   duration           Int
   deadline           String?
   starts             String?
+  recurrence           String? // JSON PlanRecurrenceRule ({freq, interval, until}); plans only — non-null makes the plan recurring, anchored on starts
+  recurrenceExceptions String? // JSON PlanOccurrenceException[]; per-occurrence moved/deleted overrides keyed by the occurrence's original local start
   sortOrder          Float       @default(0) // Fractional key ordering siblings within a parentId group; 0 on top-level roots (order non-semantic)
   completedStartTime String?
   completedEndTime   String?

@@ -53,11 +53,11 @@ export const panel = style([
 export const column = style({
   display: "flex",
   flexDirection: "column",
-  gap: 2,
+  gap: space["0.5"],
   height: 208,
   overflowY: "auto",
   scrollbarWidth: "thin",
-  paddingRight: 2,
+  paddingRight: space["0.5"],
 });
 
 export const option = style({

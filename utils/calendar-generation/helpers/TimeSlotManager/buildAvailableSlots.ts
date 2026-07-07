@@ -16,6 +16,7 @@ import { logInitialSlotContext } from "../../utils/loggingUtils";
 import { SCHEDULING_CONFIG } from "../../constants";
 import { inheritLocationFromCategoryPeriods } from "./inheritLocationFromCategoryPeriods";
 import { splitSlotsAtCategoryBoundaries } from "./splitSlotsAtCategoryBoundaries";
+import { plannerIdFromEventId } from "../../../planRecurrence";
 
 interface BuildSlotsOptions {
   startDate: Date;
@@ -91,7 +92,9 @@ export function buildAvailableSlots({
     startingLocationOverride !== undefined
       ? startingLocationOverride
       : lastEventBeforeRange
-        ? (plannerLocationMap?.get(lastEventBeforeRange.id) ?? null)
+        ? (plannerLocationMap?.get(
+            plannerIdFromEventId(lastEventBeforeRange.id),
+          ) ?? null)
         : null;
 
   const gaps = findGaps(
@@ -123,7 +126,8 @@ export function buildAvailableSlots({
         (event.extendedProps?.eventType as
           | Exclude<EventType, "travel">
           | undefined) ?? EventType.planner,
-      locationId: plannerLocationMap?.get(event.id) ?? null,
+      locationId:
+        plannerLocationMap?.get(plannerIdFromEventId(event.id)) ?? null,
     };
   });
 

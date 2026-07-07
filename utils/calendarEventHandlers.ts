@@ -14,6 +14,14 @@ import { getDuration } from "./calendarUtils";
 import { getPlannerAndCalendarForCompletedTask } from "@/utils/taskHelpers";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { assert } from "./assert/assert";
+import {
+  parseRecurrenceExceptions,
+  serializeRecurrenceExceptions,
+  shiftRecurrenceExceptions,
+  upsertDeletedException,
+  upsertMovedException,
+  plannerIdFromEventId,
+} from "./planRecurrence";
 
 export const createPlanFromSelection = (
   userId: string | undefined,
@@ -36,6 +44,8 @@ export const createPlanFromSelection = (
     duration,
     deadline: null,
     starts: start.toISOString(),
+    recurrence: null,
+    recurrenceExceptions: null,
     sortOrder: 0,
     priority: 5,
     completedStartTime: null,
@@ -76,10 +86,14 @@ export const handleEventResize = (
   const start = event.start;
   const end = event.end;
 
+  // Occurrence events resolve to their plan row; resizing one occurrence
+  // resizes the series (duration lives on the planner).
+  const plannerId = plannerIdFromEventId(event.id);
+
   updateAll(
     (prevPlanner) =>
       prevPlanner.map((p) =>
-        p.id === event.id ? { ...p, duration: getDuration(start, end) } : p,
+        p.id === plannerId ? { ...p, duration: getDuration(start, end) } : p,
       ),
     (prevEvents) =>
       prevEvents.map((ev) =>
@@ -126,6 +140,115 @@ export const handleEventDrop = (
   );
 };
 
+type UpdatePlannerArrayFn = (
+  planner: Planner[] | ((prev: Planner[]) => Planner[]),
+  options?: { engineMode?: "inline" | "worker" },
+) => void;
+
+type UpdateAllFn = (
+  planner?: Planner[] | ((prev: Planner[]) => Planner[]),
+  calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
+  template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
+  categories?: Category[] | ((prev: Category[]) => Category[]),
+  options?: { engineMode?: "inline" | "worker" },
+) => void;
+
+// "Move just this occurrence": a moved exception keyed by the occurrence's
+// original rule position. Re-moving the same occurrence updates the entry.
+export const applyOccurrenceMove = (
+  updatePlannerArray: UpdatePlannerArrayFn,
+  planId: string,
+  occurrenceKey: string,
+  newStart: Date,
+) => {
+  updatePlannerArray(
+    (prev) =>
+      prev.map((p) =>
+        p.id === planId
+          ? {
+              ...p,
+              recurrenceExceptions: serializeRecurrenceExceptions(
+                upsertMovedException(
+                  parseRecurrenceExceptions(p.recurrenceExceptions),
+                  occurrenceKey,
+                  newStart.toISOString(),
+                ),
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : p,
+      ),
+    { engineMode: "inline" },
+  );
+};
+
+// "Move every occurrence": shift the series anchor by the drag delta.
+// Exception keys derive from the anchor, so they shift by the same delta.
+export const applySeriesMove = (
+  updatePlannerArray: UpdatePlannerArrayFn,
+  planId: string,
+  deltaMs: number,
+) => {
+  updatePlannerArray(
+    (prev) =>
+      prev.map((p) =>
+        p.id === planId && p.starts
+          ? {
+              ...p,
+              starts: new Date(
+                new Date(p.starts).getTime() + deltaMs,
+              ).toISOString(),
+              recurrenceExceptions: serializeRecurrenceExceptions(
+                shiftRecurrenceExceptions(
+                  parseRecurrenceExceptions(p.recurrenceExceptions),
+                  deltaMs,
+                ),
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : p,
+      ),
+    { engineMode: "inline" },
+  );
+};
+
+// "Delete just this occurrence": a deleted exception; the calendar row is
+// filtered optimistically so the tile disappears before the regen confirms.
+export const applyOccurrenceDelete = (
+  updateAll: UpdateAllFn,
+  planId: string,
+  occurrenceKey: string,
+  occurrenceEventId: string,
+) => {
+  updateAll(
+    (prev) =>
+      prev.map((p) =>
+        p.id === planId
+          ? {
+              ...p,
+              recurrenceExceptions: serializeRecurrenceExceptions(
+                upsertDeletedException(
+                  parseRecurrenceExceptions(p.recurrenceExceptions),
+                  occurrenceKey,
+                ),
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : p,
+      ),
+    (prev) => prev.filter((e) => e.id !== occurrenceEventId),
+  );
+};
+
+// "Delete every occurrence": remove the plan row and all of its occurrence
+// events (their ids share the plan-id prefix).
+export const applySeriesDelete = (updateAll: UpdateAllFn, planId: string) => {
+  updateAll(
+    (prev) => prev.filter((p) => p.id !== planId),
+    (prev) => prev.filter((e) => plannerIdFromEventId(e.id) !== planId),
+  );
+};
+
 export const handleEventCopy = (
   event: EventImpl,
   updateAll: (
@@ -144,7 +267,9 @@ export const handleEventCopy = (
   const now = new Date().toISOString();
 
   updateAll((prevPlanner) => {
-    const item = prevPlanner.find((p) => p.id === event.id);
+    const item = prevPlanner.find(
+      (p) => p.id === plannerIdFromEventId(event.id),
+    );
 
     return item
       ? [
@@ -172,8 +297,9 @@ export const handleUpdateTitle = (
     manuallyUpdatedCalendar?: SimpleEvent[],
   ) => void,
 ) => {
+  const plannerId = plannerIdFromEventId(taskId);
   const updatedEvents = calendar?.map((calEvent) => {
-    if (calEvent.id === taskId) {
+    if (plannerIdFromEventId(calEvent.id) === plannerId) {
       return { ...calEvent, title: title };
     }
     return calEvent;
@@ -183,7 +309,7 @@ export const handleUpdateTitle = (
 
   updateAll((prev) =>
     prev.map((item) => {
-      if (item.id === taskId) {
+      if (item.id === plannerId) {
         return { ...item, title };
       }
       return item;

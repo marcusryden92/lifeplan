@@ -24,6 +24,7 @@ import {
   setUseParentLocation,
 } from "@/actions/locations";
 import { formatTime } from "@/utils/calendarUtils";
+import { plannerIdFromEventId } from "@/utils/planRecurrence";
 import { PlannerType } from "@/types/prisma";
 import { calendarColors } from "@/data/calendarColors";
 import { getCompleteTaskTreeIds, getRootParentId } from "@/utils/goalPageHandlers";
@@ -89,24 +90,30 @@ const EventPopover: React.FC<EventPopoverProps> = ({
     inheritedLocationMap,
   } = useCalendarProvider();
 
+  // Recurring-plan occurrence events carry composite ids; resolve to the
+  // owning planner row for every row-level lookup below.
+  const plannerId = plannerIdFromEventId(event.id);
+
   const currentColor =
-    (planner.find((p) => p.id === event.id)?.color as string | undefined) ??
+    (planner.find((p) => p.id === plannerId)?.color as string | undefined) ??
     calendarColors[0];
 
   const applyColor = (color: string) => {
-    const tree = getCompleteTaskTreeIds(planner, event.id);
+    const tree = getCompleteTaskTreeIds(planner, plannerId);
     const newPlanner = planner.map((item) =>
       tree.includes(item.id) ? { ...item, color } : item,
     );
     const newCalendar = calendar.map((item) =>
-      tree.includes(item.id) ? { ...item, backgroundColor: color } : item,
+      tree.includes(plannerIdFromEventId(item.id))
+        ? { ...item, backgroundColor: color }
+        : item,
     );
     updateAll(newPlanner, newCalendar);
   };
 
   const plannerItem = useMemo(
-    () => planner.find((p) => p.id === event.id),
-    [planner, event.id],
+    () => planner.find((p) => p.id === plannerId),
+    [planner, plannerId],
   );
 
   const inheritedInfo = plannerItem
@@ -127,11 +134,11 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   const handleLocationChange = async (locationId: string | null) => {
     updatePlannerArray((prev) =>
       prev.map((p) =>
-        p.id === event.id ? { ...p, locationId: locationId } : p,
+        p.id === plannerId ? { ...p, locationId: locationId } : p,
       ),
     );
     try {
-      await assignLocationToPlanner(event.id, locationId);
+      await assignLocationToPlanner(plannerId, locationId);
     } catch (error) {
       console.error("Failed to update location:", error);
     }
@@ -178,7 +185,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
 
   const openFullEditor = () => {
     setShowPopover(false);
-    const rootId = getRootParentId(planner, event.id) ?? event.id;
+    const rootId = getRootParentId(planner, plannerId) ?? plannerId;
     router.push(`/items/${rootId}`);
   };
 

@@ -31,8 +31,16 @@ import {
   createPlanFromSelection,
   handleEventResize,
   handleEventDrop,
+  applyOccurrenceMove,
+  applySeriesMove,
 } from "@/utils/calendarEventHandlers";
+import {
+  occurrenceKeyFromEventId,
+  plannerIdFromEventId,
+  planIsRecurring,
+} from "@/utils/planRecurrence";
 import { NewPlanModal } from "@/components/events/NewPlanModal";
+import { RecurrenceScopeModal } from "@/components/events/RecurrenceScopeModal";
 import type FullCalendarComponent from "@fullcalendar/react";
 
 import {
@@ -98,10 +106,18 @@ function Calendar({
     categories,
     categoryEvents,
     travelEvents,
+    planner,
     updateTemplateArray,
     updatePlannerArray,
     updateAll,
   } = useCalendarProvider();
+
+  // Read through a ref inside FullCalendar callbacks so their identity stays
+  // stable across planner updates (see the option-stability note below).
+  const plannerRef = useRef(planner);
+  useEffect(() => {
+    plannerRef.current = planner;
+  }, [planner]);
 
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
@@ -111,6 +127,14 @@ function Calendar({
   const [pendingPlan, setPendingPlan] = useState<{
     start: Date;
     end: Date;
+  } | null>(null);
+  const [pendingOccurrenceMove, setPendingOccurrenceMove] = useState<{
+    planId: string;
+    planTitle: string;
+    occurrenceKey: string;
+    newStart: Date;
+    deltaMs: number;
+    revert: () => void;
   } | null>(null);
 
   // Navigate the existing instance when the requested date changes. The
@@ -178,8 +202,32 @@ function Calendar({
     (resizeInfo: EventResizeDoneArg) => handleEventResize(updateAll, resizeInfo),
     [updateAll],
   );
+  // Dropping a recurring-plan occurrence defers to a scope prompt (this
+  // occurrence vs the whole series); the tile stays at the drop position while
+  // the modal is open, and revert() snaps it back on cancel.
   const onEventDrop = useCallback(
-    (dropInfo: EventDropArg) => handleEventDrop(updatePlannerArray, dropInfo),
+    (dropInfo: EventDropArg) => {
+      const { event, oldEvent, revert } = dropInfo;
+      const occurrenceKey = occurrenceKeyFromEventId(event.id);
+      if (occurrenceKey !== null) {
+        const planId = plannerIdFromEventId(event.id);
+        const plan = plannerRef.current.find((p) => p.id === planId);
+        if (!plan || !planIsRecurring(plan) || !event.start || !oldEvent.start) {
+          revert();
+          return;
+        }
+        setPendingOccurrenceMove({
+          planId,
+          planTitle: plan.title,
+          occurrenceKey,
+          newStart: event.start,
+          deltaMs: event.start.getTime() - oldEvent.start.getTime(),
+          revert,
+        });
+        return;
+      }
+      handleEventDrop(updatePlannerArray, dropInfo);
+    },
     [updatePlannerArray],
   );
   const renderEventContent = useCallback(
@@ -274,6 +322,36 @@ function Calendar({
         eventResize={onEventResize}
         eventDrop={onEventDrop}
         eventContent={renderEventContent}
+      />
+      <RecurrenceScopeModal
+        open={pendingOccurrenceMove !== null}
+        mode="move"
+        planTitle={pendingOccurrenceMove?.planTitle ?? ""}
+        onThisOccurrence={() => {
+          if (pendingOccurrenceMove) {
+            applyOccurrenceMove(
+              updatePlannerArray,
+              pendingOccurrenceMove.planId,
+              pendingOccurrenceMove.occurrenceKey,
+              pendingOccurrenceMove.newStart,
+            );
+          }
+          setPendingOccurrenceMove(null);
+        }}
+        onAllOccurrences={() => {
+          if (pendingOccurrenceMove) {
+            applySeriesMove(
+              updatePlannerArray,
+              pendingOccurrenceMove.planId,
+              pendingOccurrenceMove.deltaMs,
+            );
+          }
+          setPendingOccurrenceMove(null);
+        }}
+        onCancel={() => {
+          pendingOccurrenceMove?.revert();
+          setPendingOccurrenceMove(null);
+        }}
       />
       <NewPlanModal
         open={pendingPlan !== null}

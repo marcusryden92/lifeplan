@@ -51,6 +51,12 @@ export function handlePlannerChanges(
           { name: "duration", cast: "int", extract: (r) => r.duration },
           { name: "deadline", cast: "text", extract: (r) => r.deadline },
           { name: "starts", cast: "text", extract: (r) => r.starts },
+          { name: "recurrence", cast: "text", extract: (r) => r.recurrence },
+          {
+            name: "recurrenceExceptions",
+            cast: "text",
+            extract: (r) => r.recurrenceExceptions,
+          },
           {
             name: "sortOrder",
             cast: "double precision",

@@ -13,6 +13,7 @@ import { DateTimePicker } from "@/components/ui";
 import { vars } from "@/lib/theme";
 import { useItem } from "../ItemContext";
 import { IdentityCard } from "../IdentityCard";
+import { RecurrenceExceptionsCard } from "../RecurrenceExceptionsCard";
 import { NextOnCalendarCard, EngineNotesCard } from "../SideCards";
 import { SHAKE_DURATION_MS } from "../../_constants";
 import {
@@ -145,6 +146,7 @@ export default function ItemOverviewPage() {
       <div className={overviewGrid}>
         <div className={leftCol}>
           <IdentityCard />
+          <RecurrenceExceptionsCard />
         </div>
         <div className={rightCol}>
           <NextOnCalendarCard />

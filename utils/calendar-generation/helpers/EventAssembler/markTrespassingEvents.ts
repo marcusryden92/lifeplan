@@ -4,6 +4,7 @@ import {
   detectTrespassingEvents,
   IntervalWithId,
 } from "../../utils/intervalUtils";
+import { plannerIdFromEventId } from "../../../planRecurrence";
 
 export function markTrespassingEvents(
   events: SimpleEvent[],
@@ -16,8 +17,9 @@ export function markTrespassingEvents(
         e.extendedProps?.eventType !== EventType.category,
     )
     .map((e) => {
-      const plannerId =
-        (e.extendedProps as { eventId?: string })?.eventId || e.id;
+      const plannerId = plannerIdFromEventId(
+        (e.extendedProps as { eventId?: string })?.eventId || e.id,
+      );
       const locationId = plannerLocationMap.get(plannerId) ?? null;
 
       return {

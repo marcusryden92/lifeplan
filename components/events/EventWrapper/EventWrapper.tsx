@@ -4,6 +4,7 @@ import { Pin } from "lucide-react";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
+import { plannerIdFromEventId } from "@/utils/planRecurrence";
 import { colorMixAlpha } from "@/lib/theme";
 import { computeTemplateBorder } from "@/utils/colorUtils";
 import { getEventTier } from "@/utils/eventTier";
@@ -120,7 +121,9 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
         if (!setHoverLabel) return;
         // Walk planner-parent chain to find effective categoryId (subtasks
         // inherit from their goal ancestor).
-        let cursor = planner.find((p) => p.id === event.id);
+        let cursor = planner.find(
+          (p) => p.id === plannerIdFromEventId(event.id),
+        );
         let catId: string | null | undefined = cursor?.categoryId;
         const seen = new Set<string>();
         while (cursor && !catId && cursor.parentId && !seen.has(cursor.id)) {

@@ -24,6 +24,8 @@ function row(overrides: Partial<Planner> & { id: string }): Planner {
     duration: 30,
     deadline: null,
     starts: null,
+    recurrence: null,
+    recurrenceExceptions: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

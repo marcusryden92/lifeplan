@@ -7,6 +7,7 @@
 
 import { SimpleEvent } from "@/types/prisma";
 import { AvailableSlot } from "../models/TimeSlot";
+import { plannerIdFromEventId } from "../../planRecurrence";
 
 export interface OccupiedInterval {
   start: Date;
@@ -328,7 +329,8 @@ export function eventsToIntervals(
   plannerLocationMap?: Map<string, string | null>,
 ): OccupiedInterval[] {
   return events.map((event) => {
-    const locationId = plannerLocationMap?.get(event.id) ?? null;
+    const locationId =
+      plannerLocationMap?.get(plannerIdFromEventId(event.id)) ?? null;
     return {
       start: new Date(event.start),
       end: new Date(event.end),

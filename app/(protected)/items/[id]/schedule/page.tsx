@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { getTaskTreeIds } from "@/utils/goalPageHandlers";
 import { bucketEventsByDay, getDuration } from "@/utils/calendarUtils";
+import { plannerIdFromEventId } from "@/utils/planRecurrence";
 import { formatDurationCompact, relativeDayLabel } from "@/utils/timeFormatting";
 import { useItem } from "../_components/ItemContext";
 import type { SimpleEvent } from "@/types/prisma";
@@ -36,7 +37,7 @@ export default function ItemSchedulePage() {
   const itemEvents = useMemo(() => {
     return calendar
       .filter((e) => {
-        if (treeIds.has(e.id)) return true;
+        if (treeIds.has(plannerIdFromEventId(e.id))) return true;
         const ext = e.extendedProps as { parentId?: string | null } | undefined;
         return !!ext?.parentId && treeIds.has(ext.parentId);
       })

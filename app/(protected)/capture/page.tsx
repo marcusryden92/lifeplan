@@ -187,6 +187,8 @@ export default function CapturePage() {
         duration: 0,
         deadline: null,
         starts: null,
+        recurrence: null,
+        recurrenceExceptions: null,
         sortOrder: 0,
         completedStartTime: null,
         completedEndTime: null,

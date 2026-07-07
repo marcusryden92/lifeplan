@@ -78,7 +78,7 @@
   │   ├── calendar/                     # WeekStructureModal + editors (Template, Window, Event tile)
   │   ├── draft/AIDraftModal/           # Global AI assistant — chat (+ DB-backed history popover) + tabbed Goals/Week/Windows diff view (goal forest, weekly templates, category windows/flags); mounted in the AppShell assistant slot, opened anywhere via mod+I / sidebar / item-detail entry points
   │   ├── draggable/                    # DragBox, DraggableItem, TaskDivider, DraggableContext
-  │   ├── events/                       # Calendar event renderers + popovers (Event, Template, Travel, CategoryWrapper, NewPlanModal, color/location pickers)
+  │   ├── events/                       # Calendar event renderers + popovers (Event, Template, Travel, CategoryWrapper, NewPlanModal, RecurrenceScopeModal, color/location pickers)
   │   ├── landing/VectorField/          # Landing-page visual
   │   ├── tasks/                        # TaskItem, TaskList, task-item-subcomponents/
   │   └── ui/                           # Custom design-system primitives (NOT pure shadcn)
@@ -143,7 +143,7 @@
   │   │       └── draftConversation.prisma # DraftConversation — AI-assistant chat history (messages as Json)
   │   ├── migrations/                   # 0_init … drop_planner_dependency — see "Migration history" below for the full list
   │   ├── seed.ts                       # Wholesale reseed (admin@lifeplan.com / "password")
-  │   └── seed-helpers/                 # generateCategories, generateLocations (+ TravelTimes), generatePlanners, generatePlans, generateTemplates, generateUncompletedItems
+  │   └── seed-helpers/                 # generateCategories, generateLocations (+ TravelTimes), generatePlanners, generatePlans, generateTemplates
   │
   ├── redux/
   │   ├── store.ts                      # { user, calendarSource, engineOutput, schedulingSettings }
@@ -172,6 +172,8 @@
   │   ├── assert/                       # assert.ts (+ assert.js in tsconfig include)
   │   ├── renderEngineMessage.ts        # Maps persisted EngineMessage rows into console-friendly {tag, tone, title, body, goToDate}
   │   ├── plannerBulkActions.ts         # Pure subtree ops shared by the Library bulk bar + item detail (delete, category with descendant clear, color cascade, priority)
+  │   ├── planRecurrence.ts             # Recurring plans: rule/exception parse + serialize, occurrence expansion, composite occurrence ids (plannerIdFromEventId)
+  │   ├── plannerCompletion.ts          # Type-aware completion checks (plannerIsCompleted / plannerCompletedEnd) — completion never applies to plans
   │   └── (loose helpers)               # generalUtils, badgeTone, calendarEventHandlers, categoryUtils,
   │                                     # colorUtils, dateUtils, engineTones, eventTier, goalPageHandlers,
   │                                     # plannerStatus, taskArrayUtils, taskHelpers, templateBuilderUtils,
@@ -181,7 +183,7 @@
   │   ├── calendar-generation/          # Engine regression tests + fixtures/ (trimmed live-data snapshots)
   │   ├── draft/                        # Assistant draft-domain unit tests (forest, templates, windows)
   │   ├── goal-handlers/                # toggleGoalIsReady cascade + sortOrderKeys/moveItem tests
-  │   └── utils/                        # plannerBulkActions unit tests
+  │   └── utils/                        # plannerBulkActions + planRecurrence unit tests
   │
   ├── documentation/
   │   └── calendar-generation-deep-dive.md
@@ -228,7 +230,7 @@
   ### Templates, plans, completed
 
   - **EventTemplate** — recurring weekly blocks (`startDay`, `startTime`, `duration`, optional `locationId`).
-  - **plan** — a Planner row with `plannerType: "plan"` and a fixed `starts` timestamp. Anchors the calendar.
+  - **plan** — a Planner row with `plannerType: "plan"` and a fixed `starts` timestamp. Anchors the calendar. A plan may **recur**: `Planner.recurrence` (JSON `{freq: daily|weekly|monthly, interval, until}`, edited in the item-detail "Repeats" section) expands into one concrete occurrence event per repetition, materialized by the engine with deterministic composite ids `` `${planId}|${localStartKey}` `` (CategoryEvent pattern; bounded by `PLAN_RECURRENCE_WINDOW_DAYS`/`MAX_PLAN_OCCURRENCES`). `Planner.recurrenceExceptions` (JSON array) holds per-occurrence overrides — `moved` (new start, keyed by the occurrence's original local start, key survives re-moves) and `deleted` — created from the calendar via scope prompts (drag or delete an occurrence → "just this occurrence / every occurrence"); they're listed with restore actions in the item-detail Exceptions card. Series-level edits: "every occurrence" moves shift `starts` by the drag delta and shift exception keys with it. All of this lives in [utils/planRecurrence.ts](utils/planRecurrence.ts); anything resolving a planner row from an event id must go through `plannerIdFromEventId` (occurrence ids are composite).
   - **completed** — any task/goal with `completedStartTime` / `completedEndTime` set. Rendered at the actual completion window, not the originally-scheduled one. Completion does not apply to plans: a plan always renders at its `starts` anchor and is excluded from the dashboard's uncompleted rollover list. Because the item-detail type picker can retype a completed item to plan (leaving stale completion times on the row), completion checks are type-aware — `plannerIsCompleted` / `plannerCompletedEnd` in [utils/plannerCompletion.ts](utils/plannerCompletion.ts) — rather than trusting the timestamps alone.
 
   ### Location & travel
@@ -643,6 +645,7 @@
   - `add_category_confine_to_own_windows` — `Category.confineToOwnWindows` (default false); opts a subcategory out of the upward window cascade so its items stay pinned to its own windows
   - `add_user_onboarded_at` — nullable `User.onboardedAt`; the first-run onboarding gate ("needs onboarding" ⇔ `onboardedAt === null`). Backfills existing users to `NOW()` so only genuinely new accounts see it; the seed leaves admin `null`.
   - `add_week_start_day` — `UserSchedulingPreferences.weekStartDay` (0=Sunday .. 6=Saturday, default 1). Settings-owned preference; feeds FullCalendar `firstDay`, the engine's week bucketing, and every day-ordered UI list via `orderedWeekDays` in [utils/calendarUtils.ts](utils/calendarUtils.ts).
+  - `add_plan_recurrence` — `Planner.recurrence` + `Planner.recurrenceExceptions` (nullable JSON strings). Recurring plans; the engine materializes occurrence events with composite ids and applies per-occurrence moved/deleted exceptions (see [utils/planRecurrence.ts](utils/planRecurrence.ts)).
 
   Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 
@@ -704,8 +707,11 @@
   - **completed-task-not-rescheduled** — a completed task under a ready goal must render only at its completion window, never re-enter the candidate list (guards the `prepareCandidates` completed filter).
   - **ready-gate** — a NOT-ready goal's subtree schedules nothing (its tasks are never individual candidates), while standalone tasks still place. Readiness is the scheduling gate and cascades: `toggleGoalIsReady` / `setGoalIsReady` / the assistant apply / `addSubtask` stamp the whole subtree with the root's value.
   - **ready-goal-watermark** — a ready goal must place every leaf despite the three watermark starvation modes: subtree-aggregate sizing (goals size as their largest uncompleted, still-placeable leaf), a windowless classification-only `categoryId` (the watermark resolves constraints against the same window-bearing category set placement uses), and a memoized past leaf inflating the goal's size. An exhausted expansion budget must surface `NO_SLOTS` failures instead of exiting silently.
+  - **stable-regen** — an idle regen must produce an empty diff: unchanged placements return the previous emit by object identity (`stabilizeEvent`), and a plan `starts` drag re-derives rather than memoizes.
+  - **category-window-cascade** — window-eligibility membership: items schedule in ancestor windows via the upward cascade, never in descendant windows, with `confineToOwnWindows` acting as both opt-out and ceiling.
+  - **recurring-plan-events** — `buildPlanEvents` expansion: deterministic composite occurrence ids, moved/deleted exceptions applied, and identity-stable re-emits across regens.
 
-  All but the seam test run against trimmed live-data snapshots in `fixtures/` — synthetic minimal fixtures don't produce a valid slot fabric, so new engine tests should extend the fixture pattern rather than hand-building planners. Tests use jest fake timers (`{ doNotFake: ["queueMicrotask"] }` + `setSystemTime`) for a deterministic "now", and map fixture template `startDay` weekday names to the integers the engine expects.
+  Most full-pipeline tests (completed-task-not-rescheduled, ready-gate, ready-goal-watermark, stable-regen) run against trimmed live-data snapshots in `fixtures/` — synthetic minimal fixtures rarely produce a valid slot fabric, so new tests that exercise the whole scheduler should extend the fixture pattern rather than hand-building planners (expansion-seam and category-window-cascade are the deliberate exceptions: they run `generateCalendar` on hand-built minimal inputs shaped for their specific geometry). recurring-plan-events is a module-level unit test of `buildPlanEvents` — no slot fabric needed. Tests use jest fake timers (`{ doNotFake: ["queueMicrotask"] }` + `setSystemTime`) for a deterministic "now", and map fixture template `startDay` weekday names to the integers the engine expects.
 
   Run with `pnpm test` / `pnpm test:watch`. Type-checking covers both the app and the test project: `pnpm type-check` (also chained into `pnpm lint`).
 

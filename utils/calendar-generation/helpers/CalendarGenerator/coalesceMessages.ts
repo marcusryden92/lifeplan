@@ -23,6 +23,7 @@ import {
 import { SchedulingFailure } from "../../models/SchedulingModels";
 import { SchedulingFailureReason } from "../../constants";
 import { taskIsCompleted } from "../../../taskHelpers";
+import { plannerIdFromEventId } from "../../../planRecurrence";
 import {
   EngineMessageEmit,
   insufficientTravelId,
@@ -159,7 +160,7 @@ function emitScheduledLateMessages(
 
   for (const event of finalEvents) {
     if (event.extendedProps?.eventType !== "planner") continue;
-    const plannerId = event.id;
+    const plannerId = plannerIdFromEventId(event.id);
     const planner = plannerById.get(plannerId);
     if (!planner) continue;
     if (taskIsCompleted(planner)) continue;

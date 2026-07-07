@@ -12,7 +12,15 @@ import {
   handleClickCompleteTask,
   handleClickDelete,
   handlePostponeTask,
+  applyOccurrenceDelete,
+  applySeriesDelete,
 } from "@/utils/calendarEventHandlers";
+import {
+  occurrenceKeyFromEventId,
+  plannerIdFromEventId,
+  planIsRecurring,
+} from "@/utils/planRecurrence";
+import { RecurrenceScopeModal } from "../RecurrenceScopeModal";
 import { PlannerType } from "@/types/prisma";
 import { hoverActions, actionGroup, iconButton } from "./EventContent.css";
 
@@ -30,6 +38,7 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
   const [showPopover, setShowPopover] = useState<boolean>(false);
   const [eventRect, setEventRect] = useState<DOMRect | null>(null);
   const [onHover, setOnHover] = useState<boolean>(false);
+  const [showDeleteScope, setShowDeleteScope] = useState<boolean>(false);
 
   // Completion is derived from the event data; the override only bridges the
   // gap between the optimistic click and the regen/sync confirming it. State
@@ -56,7 +65,21 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
   const displayPostponeButton =
     !isCompleted && floorMinutes(currentTime) > floorMinutes(startTime);
 
+  const occurrenceKey = occurrenceKeyFromEventId(event.id);
+  const occurrencePlanId =
+    occurrenceKey !== null ? plannerIdFromEventId(event.id) : null;
+  const occurrencePlan = occurrencePlanId
+    ? planner.find((p) => p.id === occurrencePlanId)
+    : undefined;
+  const isRecurringOccurrence =
+    !!occurrencePlan && planIsRecurring(occurrencePlan);
+
   const onDelete = () => {
+    if (isRecurringOccurrence) {
+      setShowPopover(false);
+      setShowDeleteScope(true);
+      return;
+    }
     handleClickDelete(
       event,
       elementRef,
@@ -147,6 +170,32 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
           onComplete={onComplete}
           onPostpone={onPostpone}
           setShowPopover={setShowPopover}
+        />
+      )}
+
+      {isRecurringOccurrence && (
+        <RecurrenceScopeModal
+          open={showDeleteScope}
+          mode="delete"
+          planTitle={occurrencePlan.title}
+          onThisOccurrence={() => {
+            if (occurrencePlanId && occurrenceKey !== null) {
+              applyOccurrenceDelete(
+                updateAll,
+                occurrencePlanId,
+                occurrenceKey,
+                event.id,
+              );
+            }
+            setShowDeleteScope(false);
+          }}
+          onAllOccurrences={() => {
+            if (occurrencePlanId) {
+              applySeriesDelete(updateAll, occurrencePlanId);
+            }
+            setShowDeleteScope(false);
+          }}
+          onCancel={() => setShowDeleteScope(false)}
         />
       )}
     </EventWrapper>

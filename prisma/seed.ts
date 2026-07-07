@@ -10,7 +10,6 @@ import { PrismaClient, UserRole } from "../generated/client";
 // alongside the seeding blocks in main() to restore the demo dataset.
 // import { generateTemplates } from "./seed-helpers/generateTemplates";
 // import { generatePlanners } from "./seed-helpers/generatePlanners";
-// import { generateUncompletedItems } from "./seed-helpers/generateUncompletedItems";
 // import {
 //   generateLocations,
 //   generateTravelTimes,
@@ -85,9 +84,6 @@ async function main() {
   //
   // const planners = generatePlanners(userId);
   // await prisma.planner.createMany({ data: planners });
-  //
-  // const uncompleted = generateUncompletedItems(userId);
-  // await prisma.planner.createMany({ data: uncompleted });
 
   console.log("Seeding completed: admin account only (empty calendar).");
   console.log(`  - User: admin@lifeplan.com (not onboarded)`);

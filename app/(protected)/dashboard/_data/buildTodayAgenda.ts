@@ -9,6 +9,7 @@ import { EventType } from "@/types/prisma";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import { endOfDay, startOfDay } from "@/utils/dateUtils";
 import { plannerCompletedEnd } from "@/utils/plannerCompletion";
+import { plannerIdFromEventId } from "@/utils/planRecurrence";
 import {
   getEffectiveCategoryId,
   type InheritedLocationInfo,
@@ -56,7 +57,7 @@ export function buildTodayAgenda(args: {
     if (event.extendedProps?.eventType !== EventType.planner) continue;
     const start = new Date(event.start);
     if (!withinToday(start, dayStart, dayEnd)) continue;
-    const planner = plannerById.get(event.id);
+    const planner = plannerById.get(plannerIdFromEventId(event.id));
     if (!planner) continue;
     const end = new Date(event.end);
     const durationMinutes = Math.max(
