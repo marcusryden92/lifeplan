@@ -3,7 +3,6 @@ import {
   space,
   vars,
   themeTransition,
-  themeDark,
   interactiveTransition,
   media,
   radii,
@@ -126,27 +125,12 @@ export const completeLabel = style({
   flexShrink: 0,
 });
 
-export const completeDateInput = style({
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: radii.sm,
-  padding: "0 32px 0 12px",
-  fontFamily: vars.font.ui,
-  fontSize: 13.5,
-  color: vars.ink,
-  outline: "none",
-  fontVariantNumeric: "tabular-nums",
-  colorScheme: "light",
-  height: 34,
-  boxSizing: "border-box",
-  transition: themeTransition,
-  selectors: {
-    "&:focus": { borderColor: vars.accent.primary },
-    [`.${themeDark} &`]: { colorScheme: "dark" },
-  },
+export const completeDateWrap = style({
+  width: 250,
+  maxWidth: "100%",
 });
 
-export const completeDateInputFaded = style({
+export const completeDateWrapFaded = style({
   opacity: 0.4,
   transition: "opacity 160ms ease",
 });

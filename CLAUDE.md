@@ -84,7 +84,7 @@
   │   └── ui/                           # Custom design-system primitives (NOT pure shadcn)
   │       ├── Button, Glass, Backdrop, Grain, Masthead, ProgressBar, Loader,
   │       │   StatusTag, TypeBadge, CategoryBadge, CategoryDot, ConicDot, Caption,
-  │       │   Combobox, SegmentedControl, ConfirmModal, Switch, StubPage, Kbd,
+  │       │   Combobox, SegmentedControl, DateTimePicker, ConfirmModal, Switch, StubPage, Kbd,
   │       │   ThemeProvider, useResolvedCategoryColor, CenteredLoader
   │       └── shell/                    # AppShell architecture
   │           ├── AppShell/             # Outer bezel + canvas + content row (+ assistantSlot inside mainColumn)
@@ -642,6 +642,7 @@
   - `drop_planner_dependency` — retires the `dependency` linked-list column; sibling/leaf order lives in `sortOrder`
   - `add_category_confine_to_own_windows` — `Category.confineToOwnWindows` (default false); opts a subcategory out of the upward window cascade so its items stay pinned to its own windows
   - `add_user_onboarded_at` — nullable `User.onboardedAt`; the first-run onboarding gate ("needs onboarding" ⇔ `onboardedAt === null`). Backfills existing users to `NOW()` so only genuinely new accounts see it; the seed leaves admin `null`.
+  - `add_week_start_day` — `UserSchedulingPreferences.weekStartDay` (0=Sunday .. 6=Saturday, default 1). Settings-owned preference; feeds FullCalendar `firstDay`, the engine's week bucketing, and every day-ordered UI list via `orderedWeekDays` in [utils/calendarUtils.ts](utils/calendarUtils.ts).
 
   Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { type ChangeEvent } from "react";
 import { Check } from "lucide-react";
 import { formatMinutesToHours } from "@/utils/taskArrayUtils";
 import { useFlashBoolean } from "@/hooks/useFlashAnimation";
@@ -10,6 +9,7 @@ import {
   setSubtaskCompletedAt,
 } from "@/utils/goal-handlers/subtaskCompletion";
 import { formatDatetimeLocal, parseDatetimeLocal } from "@/utils/datetime";
+import { DateTimePicker } from "@/components/ui";
 import { vars } from "@/lib/theme";
 import { useItem } from "../ItemContext";
 import { IdentityCard } from "../IdentityCard";
@@ -28,8 +28,8 @@ import {
   completeLeftGroup,
   completeCheckbox,
   completeLabel,
-  completeDateInput,
-  completeDateInputFaded,
+  completeDateWrap,
+  completeDateWrapFaded,
 } from "./ItemDetailPage.css";
 
 export default function ItemOverviewPage() {
@@ -42,7 +42,7 @@ export default function ItemOverviewPage() {
     completedSubtasks,
     totalSubtasks,
   } = useItem();
-  const { updatePlannerArray } = useCalendarProvider();
+  const { updatePlannerArray, weekStartDay } = useCalendarProvider();
   const isGoal = item.plannerType === "goal";
   const isTask = item.plannerType === "task";
   const areaColor = category?.color ?? vars.accent.primary;
@@ -65,12 +65,12 @@ export default function ItemOverviewPage() {
     updatePlannerArray((prev) => toggleSubtaskCompletion(prev, item.id));
   };
 
-  const onCompletedAtChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const onCompletedAtChange = (value: string) => {
     if (completionLocked) {
       flashShake();
       return;
     }
-    const iso = parseDatetimeLocal(e.target.value) || null;
+    const iso = parseDatetimeLocal(value) || null;
     updatePlannerArray((prev) => setSubtaskCompletedAt(prev, item.id, iso));
   };
 
@@ -122,17 +122,22 @@ export default function ItemOverviewPage() {
               </button>
               <span className={completeLabel}>Completed at</span>
             </div>
-            <input
-              type="datetime-local"
-              className={`${completeDateInput} ${
-                isCompleted && !completionLocked ? "" : completeDateInputFaded
+            <div
+              className={`${completeDateWrap} ${
+                isCompleted && !completionLocked ? "" : completeDateWrapFaded
               }`}
-              value={completedValue}
-              onChange={onCompletedAtChange}
               title={
                 completionLocked ? "Mark ready before completing" : undefined
               }
-            />
+            >
+              <DateTimePicker
+                value={completedValue}
+                onChange={onCompletedAtChange}
+                weekStartsOn={weekStartDay}
+                clearable={isCompleted && !completionLocked}
+                ariaLabel="Completed at"
+              />
+            </div>
           </div>
         )}
       </div>

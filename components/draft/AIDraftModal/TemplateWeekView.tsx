@@ -1,5 +1,7 @@
 "use client";
 
+import { useSelector } from "react-redux";
+import type { RootState } from "@/redux/store";
 import {
   groupTemplatesByDay,
   type DiffTemplate,
@@ -43,6 +45,10 @@ export function TemplateWeekView({
   templates,
   locations,
 }: TemplateWeekViewProps) {
+  const weekStartDay = useSelector(
+    (state: RootState) => state.schedulingSettings.weekStartDay,
+  );
+
   if (templates.length === 0) {
     return (
       <div className={wrap}>
@@ -54,7 +60,7 @@ export function TemplateWeekView({
   }
 
   const locationNameById = new Map(locations.map((l) => [l.id, l.name]));
-  const groups = groupTemplatesByDay(templates);
+  const groups = groupTemplatesByDay(templates, weekStartDay);
 
   return (
     <div className={wrap}>

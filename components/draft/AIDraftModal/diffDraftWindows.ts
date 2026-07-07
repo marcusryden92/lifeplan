@@ -4,6 +4,8 @@ import type {
   DraftTimeWindow,
   DraftWindowsState,
 } from "./draftWindows";
+import type { WeekDayIntegers } from "@/types/calendarTypes";
+import { orderedWeekDays } from "@/utils/calendarUtils";
 
 export interface DiffWindow extends DraftTimeWindow {
   status: DiffStatus;
@@ -106,7 +108,7 @@ export function diffDraftWindows(
 
 export interface WindowCategoryGroup {
   category: DiffCategoryRecord;
-  // Sorted Monday-first, then by startTime.
+  // Sorted from the user's week start, then by startTime.
   rows: DiffWindow[];
 }
 
@@ -116,8 +118,11 @@ export interface WindowCategoryGroup {
 // taxonomy.
 export function groupWindowsByCategory(
   diffed: DiffWindowsState,
+  weekStartDay: WeekDayIntegers = 1,
 ): WindowCategoryGroup[] {
-  const dayRank = new Map([1, 2, 3, 4, 5, 6, 0].map((d, i) => [d, i]));
+  const dayRank = new Map<number, number>(
+    orderedWeekDays(weekStartDay).map((d, i) => [d, i]),
+  );
 
   return diffed.categories
     .map((category) => {

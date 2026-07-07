@@ -2,9 +2,6 @@
 
 
 
-- Change week start day in settings
-- Change date picker / date picker styles
-
 - Add RRule exceptions to plans, templates, categories
 - Splitting large tasks into smaller chunks when generating calendar (important for cases like 20 × 30-min "reading" — currently painful)
 - Maximum time of a goal per day

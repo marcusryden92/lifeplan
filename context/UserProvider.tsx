@@ -12,6 +12,7 @@ import {
   setLocations,
 } from "@/redux/slices/schedulingSettingsSlice";
 import { fetchAllSchedulingData } from "@/actions/scheduling";
+import { normalizeWeekStartDay } from "@/utils/calendarUtils";
 import { User } from "@/types/user";
 import React from "react";
 
@@ -29,6 +30,7 @@ export default function UserProvider({ children }: { children: ReactNode }) {
         dispatch(
           setSchedulingSettings({
             bufferTimeMinutes: data.preferences.bufferTimeMinutes,
+            weekStartDay: normalizeWeekStartDay(data.preferences.weekStartDay),
           })
         );
         dispatch(setDefaultTransportMode(data.preferences.defaultTransportMode));

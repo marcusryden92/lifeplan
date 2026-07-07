@@ -22,11 +22,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import type { Category, EventTemplate } from "@/types/prisma";
 import { getWeekFirstDate } from "@/utils/calendarUtils";
 
-import {
-  REFERENCE_WEEK_DATE,
-  TEMPLATE_PALETTE,
-  WEEK_START_DAY,
-} from "./constants";
+import { REFERENCE_WEEK_DATE, TEMPLATE_PALETTE } from "./constants";
 import {
   dateToWeekDay,
   durationMinutes,
@@ -88,7 +84,7 @@ export function WeekStructureModal({
   initialMode = "templates",
   focusedCategoryId = null,
 }: WeekStructureModalProps) {
-  const { userId, categories } = useCalendarProvider();
+  const { userId, categories, weekStartDay } = useCalendarProvider();
   const calendarRef = useRef<FullCalendar>(null);
 
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -124,8 +120,8 @@ export function WeekStructureModal({
   }, [categories]);
 
   const weekStart = useMemo(
-    () => getWeekFirstDate(WEEK_START_DAY, REFERENCE_WEEK_DATE),
-    [],
+    () => getWeekFirstDate(weekStartDay, REFERENCE_WEEK_DATE),
+    [weekStartDay],
   );
 
   // Mobile shows one drawable day at a time — seven ~45px columns are too
@@ -135,9 +131,9 @@ export function WeekStructureModal({
   const [mobileDayIdx, setMobileDayIdx] = useState(0);
   useEffect(() => {
     if (open) {
-      setMobileDayIdx((new Date().getDay() - WEEK_START_DAY + 7) % 7);
+      setMobileDayIdx((new Date().getDay() - weekStartDay + 7) % 7);
     }
-  }, [open]);
+  }, [open, weekStartDay]);
   useEffect(() => {
     if (!open) return;
     // Deferred: FullCalendar flushSyncs on API calls, which React warns about
@@ -157,17 +153,34 @@ export function WeekStructureModal({
   const events = useMemo(() => {
     const out = [];
     for (const tpl of tplsWorking) {
-      out.push(templateToEvent(tpl, weekStart, mode === "templates"));
+      out.push(
+        templateToEvent(tpl, weekStart, weekStartDay, mode === "templates"),
+      );
     }
     for (const win of winsWorking) {
       const focused =
         focusedCategoryId === null || win.categoryId === focusedCategoryId;
       out.push(
-        windowToEvent(win, weekStart, categoryById, mode === "windows", focused),
+        windowToEvent(
+          win,
+          weekStart,
+          weekStartDay,
+          categoryById,
+          mode === "windows",
+          focused,
+        ),
       );
     }
     return out;
-  }, [tplsWorking, winsWorking, weekStart, categoryById, mode, focusedCategoryId]);
+  }, [
+    tplsWorking,
+    winsWorking,
+    weekStart,
+    weekStartDay,
+    categoryById,
+    mode,
+    focusedCategoryId,
+  ]);
 
   const selectedTemplate = useMemo(
     () =>
@@ -529,7 +542,7 @@ export function WeekStructureModal({
                 plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
                 events={events}
                 initialView="timeGridWeek"
-                firstDay={WEEK_START_DAY}
+                firstDay={weekStartDay}
                 snapDuration="00:15:00"
                 slotDuration="00:30:00"
                 scrollTime="06:00:00"

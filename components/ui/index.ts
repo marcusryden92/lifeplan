@@ -21,6 +21,8 @@ export { Combobox } from "./Combobox";
 export type { ComboboxOption } from "./Combobox";
 export { SegmentedControl } from "./SegmentedControl";
 export type { SegmentedOption } from "./SegmentedControl";
+export { DateTimePicker } from "./DateTimePicker";
+export type { DateTimePickerProps } from "./DateTimePicker";
 export { CenteredLoader } from "./CenteredLoader";
 export { StubPage } from "./StubPage";
 export {

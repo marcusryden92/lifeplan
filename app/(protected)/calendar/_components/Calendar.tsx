@@ -92,6 +92,7 @@ function Calendar({
 }: CalendarProps) {
   const {
     userId,
+    weekStartDay,
     calendar,
     template,
     categories,
@@ -258,7 +259,7 @@ function Calendar({
         scrollTime={"05:00:00"}
         allDaySlot={false}
         snapDuration={"00:00:01"}
-        firstDay={1}
+        firstDay={weekStartDay}
         nowIndicator={true}
         height={"100%"}
         slotLabelFormat={TIME_FORMAT}

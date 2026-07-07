@@ -1,5 +1,7 @@
 import type { DiffStatus } from "./diffDraftTree";
 import type { DraftTemplate } from "./draftTemplates";
+import type { WeekDayIntegers } from "@/types/calendarTypes";
+import { orderedWeekDays } from "@/utils/calendarUtils";
 
 export interface DiffTemplate extends DraftTemplate {
   status: DiffStatus;
@@ -54,12 +56,14 @@ export interface TemplateDayGroup {
   rows: DiffTemplate[];
 }
 
-// Monday-first (matches the WeekStructureModal grid); days without rows are
-// omitted. Rows within a day sort by startTime, ties by title.
+// Ordered from the user's week start (matches the WeekStructureModal grid);
+// days without rows are omitted. Rows within a day sort by startTime, ties by
+// title.
 export function groupTemplatesByDay(
   templates: DiffTemplate[],
+  weekStartDay: WeekDayIntegers = 1,
 ): TemplateDayGroup[] {
-  const dayOrder = [1, 2, 3, 4, 5, 6, 0];
+  const dayOrder = orderedWeekDays(weekStartDay);
   return dayOrder
     .map((day) => ({
       day,

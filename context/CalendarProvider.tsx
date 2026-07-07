@@ -128,7 +128,9 @@ export default function CalendarProvider({
 
   const userId = user?.id;
 
-  const weekStartDay: WeekDayIntegers = 1;
+  const weekStartDay: WeekDayIntegers = useSelector(
+    (state: RootState) => state.schedulingSettings.weekStartDay,
+  );
 
   const { updatePlannerArray, updateTemplateArray, updateAll } =
     useCalendarStateActions(dispatch);
@@ -151,7 +153,8 @@ export default function CalendarProvider({
   );
   const isInitialMount = useRef(true);
 
-  // Regenerate calendar when bufferTimeMinutes changes (preserves current event positions)
+  // Regenerate calendar when bufferTimeMinutes or weekStartDay changes
+  // (preserves current event positions)
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -159,7 +162,7 @@ export default function CalendarProvider({
     }
     if (!userId) return;
     updateAll();
-  }, [bufferTimeMinutes, updateAll, userId]);
+  }, [bufferTimeMinutes, weekStartDay, updateAll, userId]);
 
   // Empty-state autoregen, fired exactly once per cold load. Snapshots
   // isCalendarLoaded at mount: if redux retained the loaded state from a

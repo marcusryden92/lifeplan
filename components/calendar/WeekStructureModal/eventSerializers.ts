@@ -2,7 +2,7 @@ import type { EventInput } from "@fullcalendar/core";
 import type { Category, EventTemplate } from "@/types/prisma";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 import { shiftDate, setTimeOnDate } from "@/utils/calendarUtils";
-import { TEMPLATE_PALETTE, UNASSIGNED_COLOR, WEEK_START_DAY } from "./constants";
+import { TEMPLATE_PALETTE, UNASSIGNED_COLOR } from "./constants";
 import type { WorkingWindow } from "./timeWindow";
 
 // EventTemplate.startDay arrives as either a WeekDayType string ("monday",...)
@@ -29,9 +29,10 @@ export function startDayAsInt(tpl: EventTemplate): WeekDayIntegers {
 export function templateToEvent(
   tpl: EventTemplate,
   weekStart: Date,
+  weekStartDay: WeekDayIntegers,
   active: boolean,
 ): EventInput {
-  const offset = (startDayAsInt(tpl) - WEEK_START_DAY + 7) % 7;
+  const offset = (startDayAsInt(tpl) - weekStartDay + 7) % 7;
   const baseDate = shiftDate(weekStart, offset);
   const start = setTimeOnDate(baseDate, tpl.startTime);
   const end = new Date(start);
@@ -56,6 +57,7 @@ export function templateToEvent(
 export function windowToEvent(
   win: WorkingWindow,
   weekStart: Date,
+  weekStartDay: WeekDayIntegers,
   categoryById: Map<string, Category>,
   active: boolean,
   focused: boolean,
@@ -63,7 +65,7 @@ export function windowToEvent(
   const category = win.categoryId ? categoryById.get(win.categoryId) : null;
   const color = category?.color || UNASSIGNED_COLOR;
   const title = category?.name || "Unassigned";
-  const offset = (win.day - WEEK_START_DAY + 7) % 7;
+  const offset = (win.day - weekStartDay + 7) % 7;
   const baseDate = shiftDate(weekStart, offset);
   const start = setTimeOnDate(baseDate, win.startTime);
   const end =

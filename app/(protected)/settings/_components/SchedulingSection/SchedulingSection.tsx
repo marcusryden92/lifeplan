@@ -10,13 +10,17 @@ import {
 } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
 import { updateDefaultTransportMode } from "@/actions/locations";
+import { updateWeekStartDay } from "@/actions/scheduling";
 import {
   setDefaultTransportMode,
   setEnableTravelEvents,
+  setWeekStartDay,
 } from "@/redux/slices/schedulingSettingsSlice";
 import type { AppDispatch, RootState } from "@/redux/store";
 import type { TransportMode } from "@/generated/client";
+import type { WeekDayIntegers } from "@/types/calendarTypes";
 import { useServerAction } from "@/hooks/useServerAction";
+import { SegmentedControl } from "@/components/ui";
 import { StatusLine } from "../StatusLine";
 import {
   card,
@@ -45,6 +49,14 @@ const MODES: { value: TransportMode; label: string; Icon: LucideIcon }[] = [
   { value: "WALKING", label: "Walking", Icon: Footprints },
 ];
 
+type WeekStartKey = "1" | "6" | "0";
+
+const WEEK_START_OPTIONS: { key: WeekStartKey; label: string }[] = [
+  { key: "1", label: "Monday" },
+  { key: "6", label: "Saturday" },
+  { key: "0", label: "Sunday" },
+];
+
 export function SchedulingSection() {
   const dispatch = useDispatch<AppDispatch>();
   const transportMode = useSelector(
@@ -55,6 +67,9 @@ export function SchedulingSection() {
   );
   const bufferTimeMinutes = useSelector(
     (state: RootState) => state.schedulingSettings.bufferTimeMinutes,
+  );
+  const weekStartDay = useSelector(
+    (state: RootState) => state.schedulingSettings.weekStartDay,
   );
 
   const saveMode = useCallback(async (mode: TransportMode) => {
@@ -75,6 +90,26 @@ export function SchedulingSection() {
       return;
     }
     setSuccess("Transport mode updated.");
+  };
+
+  const saveWeekStart = useCallback(async (day: WeekDayIntegers) => {
+    await updateWeekStartDay(day);
+    return day;
+  }, []);
+
+  const weekStartAction = useServerAction(saveWeekStart);
+
+  const setWeekStart = async (key: WeekStartKey) => {
+    const day = Number(key) as WeekDayIntegers;
+    if (day === weekStartDay) return;
+    dispatch(setWeekStartDay(day));
+    weekStartAction.clear();
+    const result = await weekStartAction.run(day);
+    if (result === undefined) {
+      weekStartAction.setError("Failed to save week start day.");
+      return;
+    }
+    weekStartAction.setSuccess("Week start day updated.");
   };
 
   const toggleTravelEvents = () => {
@@ -108,6 +143,22 @@ export function SchedulingSection() {
         </div>
         <div className={footerRow}>
           <StatusLine status={status} />
+        </div>
+      </div>
+
+      <div className={card}>
+        <span className={cardTitle}>Week starts on</span>
+        <span className={fieldNote}>
+          The first day of the week on the calendar and everywhere days are
+          listed.
+        </span>
+        <SegmentedControl
+          options={WEEK_START_OPTIONS}
+          value={String(weekStartDay) as WeekStartKey}
+          onChange={setWeekStart}
+        />
+        <div className={footerRow}>
+          <StatusLine status={weekStartAction.status} />
         </div>
       </div>
 

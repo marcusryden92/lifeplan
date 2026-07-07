@@ -71,7 +71,10 @@ const SECTION_META: Record<SectionId, { title: string; sub: string }> = {
     title: "Account",
     sub: "email · password · two-factor · linked sign-ins",
   },
-  scheduling: { title: "Scheduling", sub: "transport mode · travel events" },
+  scheduling: {
+    title: "Scheduling",
+    sub: "transport mode · week start · travel events",
+  },
   notifications: { title: "Notifications", sub: "alerts · email digests" },
   integrations: {
     title: "Integrations",

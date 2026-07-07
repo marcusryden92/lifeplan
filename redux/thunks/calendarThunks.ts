@@ -41,7 +41,8 @@ export const updateAllCalendarStates =
   async (dispatch: AppDispatch, getState: () => RootState): Promise<void> => {
     const state = getState();
     const userId: string | undefined = state.user?.user?.id;
-    const weekStartDay: WeekDayIntegers = 1;
+    const weekStartDay: WeekDayIntegers =
+      state.schedulingSettings.weekStartDay;
 
     const currentPlanner: Planner[] = state.calendarSource.planner;
     const calendar: SimpleEvent[] = state.engineOutput.calendar;

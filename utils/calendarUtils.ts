@@ -42,6 +42,19 @@ export const weekdayToInt = (d: WeekDayType): WeekDayIntegers =>
 export const intToWeekday = (i: WeekDayIntegers): WeekDayType =>
   WEEKDAY_NAME_BY_INT[i];
 
+export const normalizeWeekStartDay = (value: number): WeekDayIntegers =>
+  Number.isInteger(value) && value >= 0 && value <= 6
+    ? (value as WeekDayIntegers)
+    : 1;
+
+export const orderedWeekDays = (
+  weekStartDay: WeekDayIntegers,
+): WeekDayIntegers[] =>
+  Array.from(
+    { length: 7 },
+    (_, i) => ((weekStartDay + i) % 7) as WeekDayIntegers,
+  );
+
 export const shiftDate = (date: Date, days: number): Date =>
   dateTimeService.shiftDays(date, days);
 

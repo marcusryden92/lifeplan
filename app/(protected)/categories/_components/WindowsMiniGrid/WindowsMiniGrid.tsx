@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useSelector } from "react-redux";
+import type { RootState } from "@/redux/store";
 import type { CategoryTimeWindow } from "@/types/prisma";
+import { orderedWeekDays } from "@/utils/calendarUtils";
 import {
   wrap,
   scrollArea,
@@ -22,8 +25,9 @@ interface WindowsMiniGridProps {
   onOpen: () => void;
 }
 
-const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const WEEK_START_DAY = 1;
+// Indexed by day integer (0=Sunday .. 6=Saturday); column order comes from
+// the user's week-start preference.
+const DAY_LABELS_BY_INT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // Full-24h grid keeps height constant across categories so the surrounding
 // layout doesn't shift when selecting between categories with different
@@ -54,6 +58,10 @@ export function WindowsMiniGrid({
   onOpen,
 }: WindowsMiniGridProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const weekStartDay = useSelector(
+    (state: RootState) => state.schedulingSettings.weekStartDay,
+  );
+  const dayOrder = useMemo(() => orderedWeekDays(weekStartDay), [weekStartDay]);
 
   useEffect(() => {
     if (!scrollRef.current) return;
@@ -100,9 +108,9 @@ export function WindowsMiniGrid({
     >
       <div className={dayHeader}>
         <span />
-        {DAY_LABELS.map((d) => (
-          <div key={d} className={dayLabel}>
-            {d}
+        {dayOrder.map((dayInt) => (
+          <div key={dayInt} className={dayLabel}>
+            {DAY_LABELS_BY_INT[dayInt]}
           </div>
         ))}
       </div>
@@ -125,11 +133,10 @@ export function WindowsMiniGrid({
               </span>
             ))}
           </div>
-          {DAY_LABELS.map((_, colIdx) => {
-            const dayInt = (colIdx + WEEK_START_DAY) % 7;
+          {dayOrder.map((dayInt) => {
             const dayWindows = windows.filter((w) => w.day === dayInt);
             return (
-              <div key={colIdx} className={dayCol}>
+              <div key={dayInt} className={dayCol}>
                 {hours.map((h) => (
                   <div
                     key={h}

@@ -4,6 +4,7 @@ import { MapPin } from "lucide-react";
 import { Button, Switch, Combobox } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
+import { orderedWeekDays } from "@/utils/calendarUtils";
 import { StepFrame } from "../_components/StepFrame";
 import {
   ALL_WEEK_DAYS,
@@ -28,15 +29,9 @@ import {
 
 export type { WeekUIState } from "../_lib/weekTemplates";
 
-const DAY_BUTTONS: { day: WeekDayIntegers; label: string }[] = [
-  { day: 1, label: "M" },
-  { day: 2, label: "T" },
-  { day: 3, label: "W" },
-  { day: 4, label: "T" },
-  { day: 5, label: "F" },
-  { day: 6, label: "S" },
-  { day: 0, label: "S" },
-];
+// Indexed by day integer (0=Sunday .. 6=Saturday); button order follows the
+// user's week-start preference.
+const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
 
 type WeekStepProps = {
   stepIndex: number;
@@ -59,7 +54,11 @@ export function WeekStep({
   onSkip,
   continueDisabled = false,
 }: WeekStepProps) {
-  const { locations } = useCalendarProvider();
+  const { locations, weekStartDay } = useCalendarProvider();
+  const dayButtons = orderedWeekDays(weekStartDay).map((day) => ({
+    day,
+    label: DAY_LETTERS[day],
+  }));
   const patch = (next: Partial<WeekUIState>) => onChange({ ...value, ...next });
 
   const toggleDayIn = (
@@ -184,7 +183,7 @@ export function WeekStep({
               />
             </div>
             <div className={dayToggles}>
-              {DAY_BUTTONS.map(({ day, label }) => {
+              {dayButtons.map(({ day, label }) => {
                 const on = value.workDays.includes(day);
                 return (
                   <button
@@ -258,7 +257,7 @@ export function WeekStep({
               />
             </div>
             <div className={dayToggles}>
-              {DAY_BUTTONS.map(({ day, label }) => {
+              {dayButtons.map(({ day, label }) => {
                 const on = value.exerciseDays.includes(day);
                 return (
                   <button

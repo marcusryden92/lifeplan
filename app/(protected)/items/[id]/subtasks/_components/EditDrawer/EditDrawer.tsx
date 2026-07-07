@@ -26,7 +26,7 @@ import {
 } from "@/utils/goal-handlers/subtaskCompletion";
 import { getRootParentId, getSubtasksById } from "@/utils/goalPageHandlers";
 import { Check } from "lucide-react";
-import { Combobox, ConfirmModal } from "@/components/ui";
+import { Combobox, ConfirmModal, DateTimePicker } from "@/components/ui";
 import { formatDatetimeLocal, parseDatetimeLocal } from "@/utils/datetime";
 import { SHAKE_DURATION_MS } from "../../../_constants";
 
@@ -42,9 +42,6 @@ import {
   durationStepper,
   stepperBtn,
   stepperValue,
-  dateInput,
-  dateInputWrap,
-  dateClearBtn,
   dateInputFaded,
   completeHeader,
   completeCheckbox,
@@ -53,7 +50,8 @@ import {
 } from "./EditDrawer.css";
 
 export function EditDrawer() {
-  const { planner, updatePlannerArray, updateAll } = useCalendarProvider();
+  const { planner, updatePlannerArray, updateAll, weekStartDay } =
+    useCalendarProvider();
   const { focusedTask, setFocusedTask } = useDraggableContext();
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
@@ -168,8 +166,8 @@ export function EditDrawer() {
     );
   };
 
-  const onDateInput = (e: ChangeEvent<HTMLInputElement>) =>
-    setDeadline(parseDatetimeLocal(e.target.value) || null);
+  const onDateInput = (value: string) =>
+    setDeadline(parseDatetimeLocal(value) || null);
 
   const onLocationChange = async (locationId: string | null) => {
     await assignLocationToPlanner(task.id, locationId);
@@ -181,12 +179,12 @@ export function EditDrawer() {
   const dateValue = formatDatetimeLocal(task.deadline);
   const completedValue = formatDatetimeLocal(task.completedEndTime);
 
-  const onCompletedAtChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const onCompletedAtChange = (value: string) => {
     if (completionLocked) {
       flashShake();
       return;
     }
-    const iso = parseDatetimeLocal(e.target.value) || null;
+    const iso = parseDatetimeLocal(value) || null;
     updatePlannerArray((prev) => setSubtaskCompletedAt(prev, task.id, iso));
   };
 
@@ -312,24 +310,12 @@ export function EditDrawer() {
 
         <div className={fieldStack}>
           <span className={fieldLabel}>Deadline</span>
-          <div className={dateInputWrap}>
-            <input
-              type="datetime-local"
-              className={dateInput}
-              value={dateValue}
-              onChange={onDateInput}
-            />
-            {dateValue && (
-              <button
-                type="button"
-                className={dateClearBtn}
-                onClick={() => setDeadline(null)}
-                aria-label="Clear deadline"
-              >
-                <X size={12} strokeWidth={2.4} />
-              </button>
-            )}
-          </div>
+          <DateTimePicker
+            value={dateValue}
+            onChange={onDateInput}
+            weekStartsOn={weekStartDay}
+            ariaLabel="Deadline"
+          />
           {task.deadline && (
             <Caption>
               {format(new Date(task.deadline), "EEE MMM d · HH:mm")}
@@ -359,19 +345,22 @@ export function EditDrawer() {
               </button>
               <span className={fieldLabel}>Completed at</span>
             </div>
-            <input
-              type="datetime-local"
-              className={`${dateInput} ${
-                isCompleted && !completionLocked ? "" : dateInputFaded
-              }`}
-              value={completedValue}
-              onChange={onCompletedAtChange}
+            <div
+              className={isCompleted && !completionLocked ? "" : dateInputFaded}
               title={
                 completionLocked
                   ? "Mark the goal ready before completing subtasks"
                   : undefined
               }
-            />
+            >
+              <DateTimePicker
+                value={completedValue}
+                onChange={onCompletedAtChange}
+                weekStartsOn={weekStartDay}
+                clearable={isCompleted && !completionLocked}
+                ariaLabel="Completed at"
+              />
+            </div>
             {task.completedEndTime && (
               <Caption>
                 {format(new Date(task.completedEndTime), "EEE MMM d · HH:mm")}

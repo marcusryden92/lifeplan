@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import type { TransportMode } from "@/generated/client";
+import type { WeekDayIntegers } from "@/types/calendarTypes";
 import type { TravelTimeEntry } from "@/utils/calendar-generation/models/SchedulingModels";
 import {
   DEFAULT_STRATEGY_WEIGHTS,
@@ -73,6 +74,7 @@ export type DebugStrategyConfig = {
 
 export type SchedulingSettings = {
   bufferTimeMinutes: number;
+  weekStartDay: WeekDayIntegers;
   enableTravelEvents: boolean;
   // Store as array for Redux serialization - convert to Map when needed
   travelTimeMatrix: SerializedTravelTimeEntry[] | null;
@@ -90,6 +92,7 @@ export type SchedulingSettings = {
 
 const initialState: SchedulingSettings = {
   bufferTimeMinutes: 10, // Default value
+  weekStartDay: 1, // Monday
   enableTravelEvents: false, // Travel events disabled by default
   travelTimeMatrix: null,
   allTravelTimes: [],
@@ -134,13 +137,23 @@ const schedulingSettingsSlice = createSlice({
   reducers: {
     setSchedulingSettings: (
       state,
-      action: PayloadAction<{ bufferTimeMinutes: number; enableTravelEvents?: boolean }>
+      action: PayloadAction<{
+        bufferTimeMinutes: number;
+        weekStartDay?: WeekDayIntegers;
+        enableTravelEvents?: boolean;
+      }>
     ) => {
       state.bufferTimeMinutes = action.payload.bufferTimeMinutes;
+      if (action.payload.weekStartDay !== undefined) {
+        state.weekStartDay = action.payload.weekStartDay;
+      }
       if (action.payload.enableTravelEvents !== undefined) {
         state.enableTravelEvents = action.payload.enableTravelEvents;
       }
       state.isLoaded = true;
+    },
+    setWeekStartDay: (state, action: PayloadAction<WeekDayIntegers>) => {
+      state.weekStartDay = action.payload;
     },
     setBufferTimeMinutes: (state, action: PayloadAction<number>) => {
       state.bufferTimeMinutes = action.payload;
@@ -233,6 +246,7 @@ const schedulingSettingsSlice = createSlice({
 
 export const {
   setSchedulingSettings,
+  setWeekStartDay,
   setBufferTimeMinutes,
   setEnableTravelEvents,
   setTravelTimeMatrix,

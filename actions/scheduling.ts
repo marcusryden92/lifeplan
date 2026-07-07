@@ -30,6 +30,7 @@ export async function fetchAllSchedulingData(): Promise<{
   preferences: {
     bufferTimeMinutes: number;
     defaultTransportMode: TransportMode;
+    weekStartDay: number;
   };
   travelTimes: Array<{
     key: string;
@@ -101,6 +102,7 @@ export async function fetchAllSchedulingData(): Promise<{
     preferences: {
       bufferTimeMinutes: prefs?.bufferTimeMinutes ?? 10,
       defaultTransportMode,
+      weekStartDay: prefs?.weekStartDay ?? 1,
     },
     travelTimes: travelTimeMatrix,
     allTravelTimes,
@@ -123,6 +125,23 @@ export async function updateUserSchedulingPreferences(data: {
       userId: session.user.id,
       bufferTimeMinutes: data.bufferTimeMinutes,
     },
+  });
+
+  return prefs;
+}
+
+export async function updateWeekStartDay(weekStartDay: number) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  if (!Number.isInteger(weekStartDay) || weekStartDay < 0 || weekStartDay > 6) {
+    throw new Error("weekStartDay must be an integer 0-6");
+  }
+
+  const prefs = await db.userSchedulingPreferences.upsert({
+    where: { userId: session.user.id },
+    update: { weekStartDay },
+    create: { userId: session.user.id, weekStartDay },
   });
 
   return prefs;

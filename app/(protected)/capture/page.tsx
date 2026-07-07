@@ -11,7 +11,14 @@ import { useRouter } from "next/navigation";
 import { formatDistanceToNowStrict } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { CornerDownLeft, Plus, Sparkles } from "lucide-react";
-import { Button, Caption, Kbd, Loader, vars } from "@/components/ui";
+import {
+  Button,
+  Caption,
+  DateTimePicker,
+  Kbd,
+  Loader,
+  vars,
+} from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useSelector } from "react-redux";
 import { usePlatform } from "@/hooks/usePlatform";
@@ -70,8 +77,14 @@ import {
 
 export default function CapturePage() {
   const router = useRouter();
-  const { userId, planner, categories, updatePlannerArray, updateAll } =
-    useCalendarProvider();
+  const {
+    userId,
+    planner,
+    categories,
+    updatePlannerArray,
+    updateAll,
+    weekStartDay,
+  } = useCalendarProvider();
   const isLoaded = useSelector((state: RootState) => state.calendarSource.isLoaded);
   const { modKey } = usePlatform();
 
@@ -443,25 +456,28 @@ export default function CapturePage() {
                   {draft.type === "plan" ? (
                     <div className={field}>
                       <span className={fieldLabel}>scheduled</span>
-                      <input
-                        className={fieldInput}
-                        type="datetime-local"
+                      <DateTimePicker
+                        variant="bare"
                         value={draft.starts}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, starts: e.target.value }))
+                        onChange={(starts) =>
+                          setDraft((d) => ({ ...d, starts }))
                         }
+                        weekStartsOn={weekStartDay}
+                        ariaLabel="Scheduled time"
                       />
                     </div>
                   ) : (
                     <div className={field}>
                       <span className={fieldLabel}>deadline</span>
-                      <input
-                        className={fieldInput}
-                        type="date"
+                      <DateTimePicker
+                        mode="date"
+                        variant="bare"
                         value={draft.deadline}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, deadline: e.target.value }))
+                        onChange={(deadline) =>
+                          setDraft((d) => ({ ...d, deadline }))
                         }
+                        weekStartsOn={weekStartDay}
+                        ariaLabel="Deadline"
                       />
                     </div>
                   )}
