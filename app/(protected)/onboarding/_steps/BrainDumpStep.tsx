@@ -55,7 +55,7 @@ export function BrainDumpStep({
     <StepFrame
       stepIndex={stepIndex}
       totalSteps={totalSteps}
-      title="Empty your head"
+      title="Clear your mental desk"
       subtitle="Write down the things on your mind that you need to do — big or small, vague or specific. The assistant sorts them out with you next: what's a quick task, what's a bigger goal, what needs a deadline."
       onSkip={onSkip}
       footer={
@@ -100,7 +100,9 @@ export function BrainDumpStep({
       </div>
 
       {items.length === 0 ? (
-        <span className={dumpEmpty}>Nothing yet — jot your first item above.</span>
+        <span className={dumpEmpty}>
+          Nothing yet — jot your first item above.
+        </span>
       ) : (
         <div className={dumpList}>
           {items.map((item) => (

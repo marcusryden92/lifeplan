@@ -455,15 +455,6 @@ export const timeRow = style({
   gap: space["2.5"],
 });
 
-export const timeInput = style([
-  formInput({ variant: "boxed" }),
-  {
-    appearance: "none",
-    width: "auto",
-    fontVariantNumeric: "tabular-nums",
-  },
-]);
-
 export const timeDash = style([text.body, { color: vars.muted }]);
 
 // The location value rendered inside the Week step's Combobox — a MapPin icon

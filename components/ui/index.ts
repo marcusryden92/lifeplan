@@ -23,6 +23,8 @@ export { SegmentedControl } from "./SegmentedControl";
 export type { SegmentedOption } from "./SegmentedControl";
 export { DateTimePicker } from "./DateTimePicker";
 export type { DateTimePickerProps } from "./DateTimePicker";
+export { TimePicker } from "./TimePicker";
+export type { TimePickerProps } from "./TimePicker";
 export { CenteredLoader } from "./CenteredLoader";
 export { StubPage } from "./StubPage";
 export {

@@ -6,6 +6,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { addDays, addMonths, format, isSameDay, isSameMonth, startOfMonth } from "date-fns";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 import { orderedWeekDays } from "@/utils/calendarUtils";
+import { TimePicker } from "../TimePicker";
 import {
   wrap,
   triggerBoxed,
@@ -26,7 +27,6 @@ import {
   dayCellToday,
   dayCellSelected,
   footer,
-  timeInput,
   quickBtn,
 } from "./DateTimePicker.css";
 
@@ -221,12 +221,10 @@ export function DateTimePicker({
               {isDateOnly ? "Today" : "Now"}
             </button>
             {!isDateOnly && (
-              <input
-                type="time"
-                className={timeInput}
+              <TimePicker
                 value={selected ? toTimePart(selected) : ""}
-                onChange={(e) => onTimeChange(e.target.value)}
-                aria-label="Time"
+                onChange={onTimeChange}
+                ariaLabel="Time"
               />
             )}
           </div>

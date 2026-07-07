@@ -84,7 +84,7 @@
   │   └── ui/                           # Custom design-system primitives (NOT pure shadcn)
   │       ├── Button, Glass, Backdrop, Grain, Masthead, ProgressBar, Loader,
   │       │   StatusTag, TypeBadge, CategoryBadge, CategoryDot, ConicDot, Caption,
-  │       │   Combobox, SegmentedControl, DateTimePicker, ConfirmModal, Switch, StubPage, Kbd,
+  │       │   Combobox, SegmentedControl, DateTimePicker, TimePicker, ConfirmModal, Switch, StubPage, Kbd,
   │       │   ThemeProvider, useResolvedCategoryColor, CenteredLoader
   │       └── shell/                    # AppShell architecture
   │           ├── AppShell/             # Outer bezel + canvas + content row (+ assistantSlot inside mainColumn)

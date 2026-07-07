@@ -1,7 +1,7 @@
 "use client";
 
 import { MapPin } from "lucide-react";
-import { Button, Switch, Combobox } from "@/components/ui";
+import { Button, Switch, Combobox, TimePicker } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 import { orderedWeekDays } from "@/utils/calendarUtils";
@@ -16,7 +16,6 @@ import {
   fieldLabel,
   fieldHelp,
   timeRow,
-  timeInput,
   timeDash,
   dayToggles,
   dayToggle,
@@ -72,6 +71,34 @@ export function WeekStep({
         : [...current, day],
     });
   };
+
+  type TimeKey =
+    | "sleepStart"
+    | "sleepEnd"
+    | "workStart"
+    | "workEnd"
+    | "exerciseStart"
+    | "exerciseEnd"
+    | "morningStart"
+    | "morningEnd"
+    | "eveningStart"
+    | "eveningEnd";
+
+  const timeRange = (startKey: TimeKey, endKey: TimeKey, label: string) => (
+    <div className={timeRow}>
+      <TimePicker
+        value={value[startKey]}
+        onChange={(v) => patch({ [startKey]: v })}
+        ariaLabel={`${label} start`}
+      />
+      <span className={timeDash}>to</span>
+      <TimePicker
+        value={value[endKey]}
+        onChange={(v) => patch({ [endKey]: v })}
+        ariaLabel={`${label} end`}
+      />
+    </div>
+  );
 
   const sleepBlocks = value.sleepEnabled
     ? expandDailyRange(ALL_WEEK_DAYS, value.sleepStart, value.sleepEnd).length
@@ -138,23 +165,7 @@ export function WeekStep({
             onCheckedChange={(checked) => patch({ sleepEnabled: checked })}
           />
         </div>
-        {value.sleepEnabled && (
-          <div className={timeRow}>
-            <input
-              type="time"
-              className={timeInput}
-              value={value.sleepStart}
-              onChange={(e) => patch({ sleepStart: e.target.value })}
-            />
-            <span className={timeDash}>to</span>
-            <input
-              type="time"
-              className={timeInput}
-              value={value.sleepEnd}
-              onChange={(e) => patch({ sleepEnd: e.target.value })}
-            />
-          </div>
-        )}
+        {value.sleepEnabled && timeRange("sleepStart", "sleepEnd", "Sleep")}
       </div>
 
       <div className={fieldStack}>
@@ -167,21 +178,7 @@ export function WeekStep({
         </div>
         {value.workEnabled && (
           <>
-            <div className={timeRow}>
-              <input
-                type="time"
-                className={timeInput}
-                value={value.workStart}
-                onChange={(e) => patch({ workStart: e.target.value })}
-              />
-              <span className={timeDash}>to</span>
-              <input
-                type="time"
-                className={timeInput}
-                value={value.workEnd}
-                onChange={(e) => patch({ workEnd: e.target.value })}
-              />
-            </div>
+            {timeRange("workStart", "workEnd", "Work")}
             <div className={dayToggles}>
               {dayButtons.map(({ day, label }) => {
                 const on = value.workDays.includes(day);
@@ -241,21 +238,7 @@ export function WeekStep({
         </div>
         {value.exerciseEnabled && (
           <>
-            <div className={timeRow}>
-              <input
-                type="time"
-                className={timeInput}
-                value={value.exerciseStart}
-                onChange={(e) => patch({ exerciseStart: e.target.value })}
-              />
-              <span className={timeDash}>to</span>
-              <input
-                type="time"
-                className={timeInput}
-                value={value.exerciseEnd}
-                onChange={(e) => patch({ exerciseEnd: e.target.value })}
-              />
-            </div>
+            {timeRange("exerciseStart", "exerciseEnd", "Exercise")}
             <div className={dayToggles}>
               {dayButtons.map(({ day, label }) => {
                 const on = value.exerciseDays.includes(day);
@@ -283,23 +266,8 @@ export function WeekStep({
             onCheckedChange={(checked) => patch({ morningEnabled: checked })}
           />
         </div>
-        {value.morningEnabled && (
-          <div className={timeRow}>
-            <input
-              type="time"
-              className={timeInput}
-              value={value.morningStart}
-              onChange={(e) => patch({ morningStart: e.target.value })}
-            />
-            <span className={timeDash}>to</span>
-            <input
-              type="time"
-              className={timeInput}
-              value={value.morningEnd}
-              onChange={(e) => patch({ morningEnd: e.target.value })}
-            />
-          </div>
-        )}
+        {value.morningEnabled &&
+          timeRange("morningStart", "morningEnd", "Morning routine")}
       </div>
 
       <div className={fieldStack}>
@@ -310,23 +278,8 @@ export function WeekStep({
             onCheckedChange={(checked) => patch({ eveningEnabled: checked })}
           />
         </div>
-        {value.eveningEnabled && (
-          <div className={timeRow}>
-            <input
-              type="time"
-              className={timeInput}
-              value={value.eveningStart}
-              onChange={(e) => patch({ eveningStart: e.target.value })}
-            />
-            <span className={timeDash}>to</span>
-            <input
-              type="time"
-              className={timeInput}
-              value={value.eveningEnd}
-              onChange={(e) => patch({ eveningEnd: e.target.value })}
-            />
-          </div>
-        )}
+        {value.eveningEnabled &&
+          timeRange("eveningStart", "eveningEnd", "Evening routine")}
       </div>
 
       {totalBlocks > 0 && (

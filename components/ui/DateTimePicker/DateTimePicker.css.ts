@@ -3,7 +3,6 @@ import {
   space,
   vars,
   themeTransition,
-  themeDark,
   radii,
   zIndex,
   formInput,
@@ -224,24 +223,6 @@ export const footer = style({
   gap: space["2"],
   marginTop: space["3"],
 });
-
-export const timeInput = style([
-  formInput({ variant: "boxed" }),
-  {
-    width: "auto",
-    padding: "6px 10px",
-    fontSize: 12.5,
-    fontVariantNumeric: "tabular-nums",
-    // colorScheme drives the browser-rendered time-picker affordance; tie it
-    // to our theme instead of the OS preference.
-    colorScheme: "light",
-    selectors: {
-      [`.${themeDark} &`]: {
-        colorScheme: "dark",
-      },
-    },
-  },
-]);
 
 export const quickBtn = style({
   border: "none",
