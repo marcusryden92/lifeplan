@@ -26,6 +26,14 @@ import {
   upsertMovedException,
   plannerIdFromEventId,
 } from "./planRecurrence";
+import {
+  isChunkEventId,
+  isCompletedSegmentEventId,
+  isSplitEventId,
+  parseCompletedSegments,
+  segmentStartFromEventId,
+  serializeCompletedSegments,
+} from "./taskSplitting";
 
 export const createPlanFromSelection = (
   userId: string | undefined,
@@ -50,6 +58,8 @@ export const createPlanFromSelection = (
     starts: start.toISOString(),
     recurrence: null,
     recurrenceExceptions: null,
+    splitting: null,
+    completedSegments: null,
     sortOrder: 0,
     priority: 5,
     completedStartTime: null,
@@ -458,6 +468,67 @@ export const handleClickCompleteTask = (
     element.style.backgroundColor = color;
   }
 
+  // Split-task chunks complete per-chunk: the chunk's window is appended to
+  // the row's completedSegments (completed minutes are derived by summing),
+  // and un-completing a frozen segment removes that entry so its minutes
+  // reschedule. The row itself auto-completes when the segments cover its
+  // duration — no timestamps are stamped here.
+  if (isChunkEventId(event.id) || isCompletedSegmentEventId(event.id)) {
+    const plannerId = plannerIdFromEventId(event.id);
+    const start = event.start;
+    const end = event.end;
+    if (!start || !end) return;
+
+    if (isCompletedSegmentEventId(event.id)) {
+      const segmentStart = segmentStartFromEventId(event.id);
+      setIsCompleted(false);
+      updateAll(
+        (prev) =>
+          prev.map((item) =>
+            item.id === plannerId
+              ? {
+                  ...item,
+                  completedSegments: serializeCompletedSegments(
+                    parseCompletedSegments(item.completedSegments).filter(
+                      (s) => s.start !== segmentStart,
+                    ),
+                  ),
+                }
+              : item,
+          ),
+        (prev) => prev.filter((e) => e.id !== event.id),
+      );
+    } else {
+      // Completing mid-chunk credits only the elapsed time (floored to five
+      // minutes) so the unspent remainder reschedules; otherwise the whole
+      // scheduled window is credited.
+      const now = new Date();
+      const inEvent = now >= start && now <= end;
+      const minEnd = new Date(start.getTime() + 5 * 60 * 1000);
+      const segmentEnd = inEvent ? (now > minEnd ? now : minEnd) : end;
+      setIsCompleted(true);
+      updateAll(
+        (prev) =>
+          prev.map((item) =>
+            item.id === plannerId
+              ? {
+                  ...item,
+                  completedSegments: serializeCompletedSegments([
+                    ...parseCompletedSegments(item.completedSegments),
+                    {
+                      start: start.toISOString(),
+                      end: segmentEnd.toISOString(),
+                    },
+                  ]),
+                }
+              : item,
+          ),
+        (prev) => prev.filter((e) => e.id !== event.id),
+      );
+    }
+    return;
+  }
+
   if (isCompleted) {
     setIsCompleted(false);
 
@@ -525,16 +596,23 @@ export const handleClickDelete = (
 
   const updatedCalendar = calendar?.filter((e) => e.id !== event?.id);
 
+  // Chunk/segment tiles of a split task carry composite ids that match no
+  // planner row — Delete means "delete the item", so resolve to the owning
+  // row (deleting a single chunk would be a no-op: the regen re-derives it).
+  const rowId = isSplitEventId(event.id)
+    ? plannerIdFromEventId(event.id)
+    : event.id;
+
   setTimeout(() => {
     if (plannerType === PlannerType.goal) {
       deleteGoal({
         updateAll,
-        taskId: event.id,
+        taskId: rowId,
         manuallyUpdatedCalendar: updatedCalendar,
       });
     } else {
       updateAll(
-        (prev) => prev.filter((t) => t.id !== event.id),
+        (prev) => prev.filter((t) => t.id !== rowId),
         (prev) => prev.filter((t) => t.id !== event.id),
       );
     }

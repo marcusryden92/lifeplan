@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import type { DraftNode } from "./plannerTreeToJson";
 import type { DraftForest } from "./plannerForestToJson";
 import { normalizeDraftTree, coerceParentTypes } from "./normalizeDraftTree";
+import { normalizeTaskSplittingSettings } from "@/utils/taskSplitting";
 
 // Deterministic operations on a DraftForest, executed server-side on the
 // assistant's working copy so the model states intent (ids + fields) and code
@@ -46,6 +47,13 @@ export interface DraftItemUpdate {
   priority?: number;
   isReady?: boolean | null;
   categoryId?: string | null;
+  // Chunked scheduling on schedulable leaves: an object enables/updates it,
+  // null turns it off. Rejected on nodes with children (only leaves place).
+  splitting?: {
+    minMinutes: number;
+    maxMinutes: number;
+    maxMinutesPerDay?: number | null;
+  } | null;
 }
 
 function coerceForestTypes(forest: DraftForest): DraftForest {
@@ -218,6 +226,37 @@ export function updateDraftItems(
         continue;
       }
       node.categoryId = update.categoryId;
+    }
+    if (update.splitting !== undefined) {
+      if (update.splitting === null) {
+        node.splitting = null;
+      } else {
+        if (node.children.length > 0) {
+          failures.push({
+            id,
+            reason:
+              "splitting applies to schedulable leaf items only (this item has subtasks)",
+          });
+          continue;
+        }
+        if (node.plannerType === "plan") {
+          failures.push({
+            id,
+            reason: "splitting does not apply to plans (fixed start times)",
+          });
+          continue;
+        }
+        const normalized = normalizeTaskSplittingSettings(update.splitting);
+        if (!normalized) {
+          failures.push({
+            id,
+            reason:
+              "splitting requires minMinutes >= 5 and maxMinutes >= minMinutes (maxMinutesPerDay optional)",
+          });
+          continue;
+        }
+        node.splitting = normalized;
+      }
     }
     if (update.isReady !== undefined) {
       if (update.isReady !== null && typeof update.isReady !== "boolean") {

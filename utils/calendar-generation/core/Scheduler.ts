@@ -10,6 +10,7 @@ import { TimeSlotManager } from "./TimeSlotManager";
 import { TravelManager } from "./TravelManager";
 import { SchedulingStrategy } from "../strategies/SchedulingStrategy";
 import {
+  ChunkSizing,
   SchedulingContext,
   SchedulingResult,
   SchedulingFailure,
@@ -19,6 +20,7 @@ import { PerTemplateMask } from "../models/TemplateModels";
 import { scheduleTask } from "../helpers/Scheduler/scheduleTask";
 import { scheduleTasks } from "../helpers/Scheduler/scheduleTasks";
 import { scheduleTasksAndGoals } from "../helpers/Scheduler/scheduleTasksAndGoals";
+import type { SplitRelaxation } from "../helpers/Scheduler/scheduleSplitTask";
 import { TravelPassRecorder } from "../helpers/TravelManager/TravelPassRecorder";
 
 export class Scheduler {
@@ -58,6 +60,7 @@ export class Scheduler {
   scheduleTask(
     task: Planner,
     afterTime?: Date,
+    sizing?: ChunkSizing,
   ): { success: boolean; event?: SimpleEvent; failure?: SchedulingFailure } {
     const startTime = performance.now();
     this.metrics.tasksAttempted++;
@@ -69,6 +72,7 @@ export class Scheduler {
       this.strategy,
       this.context,
       afterTime,
+      sizing,
     );
 
     if (!result.success) {
@@ -103,6 +107,7 @@ export class Scheduler {
     success: boolean;
     newEvents: SimpleEvent[];
     failures: SchedulingFailure[];
+    splitRelaxations: SplitRelaxation[];
   } {
     return scheduleTasksAndGoals(
       this,

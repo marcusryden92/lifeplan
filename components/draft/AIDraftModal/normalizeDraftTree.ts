@@ -1,4 +1,5 @@
 import type { DraftNode } from "./plannerTreeToJson";
+import { normalizeTaskSplittingSettings } from "@/utils/taskSplitting";
 
 // Partial-JSON parses of a streaming tool input can hand back nodes with
 // missing fields — most commonly `children` still undefined because the array
@@ -26,6 +27,7 @@ export function normalizeDraftTree(raw: unknown): DraftNode | null {
       : null;
   const color =
     typeof node.color === "string" && node.color.length > 0 ? node.color : null;
+  const splitting = normalizeTaskSplittingSettings(node.splitting);
 
   const rawChildren = Array.isArray(node.children) ? node.children : [];
   const children = rawChildren
@@ -43,6 +45,7 @@ export function normalizeDraftTree(raw: unknown): DraftNode | null {
     isReady,
     categoryId,
     color,
+    splitting,
     children,
   };
 }

@@ -26,6 +26,8 @@ function plan(overrides: Partial<Planner> = {}): Planner {
     starts: ANCHOR.toISOString(),
     recurrence: null,
     recurrenceExceptions: null,
+    splitting: null,
+    completedSegments: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

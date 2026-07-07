@@ -84,6 +84,8 @@ function makeTask(id: string, categoryId: string | null): Planner {
     starts: null,
     recurrence: null,
     recurrenceExceptions: null,
+    splitting: null,
+    completedSegments: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

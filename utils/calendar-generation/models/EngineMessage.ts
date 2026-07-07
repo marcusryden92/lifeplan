@@ -20,6 +20,7 @@
  *   - SCHEDULED_LATE:      plannerId | scheduledStart
  *   - TASK_TOO_LARGE:      plannerId
  *   - TASK_UNSCHEDULABLE:  plannerId | reason
+ *   - SPLIT_CONSTRAINT_RELAXED: plannerId | kind | affectedCount | totalMinutes
  *   - SCHEDULED_OK:        placedCount
  *
  * Any change to a discriminating field (placement shift, new reason, new
@@ -42,6 +43,7 @@ export type EngineMessageType =
   | "TASK_UNSCHEDULABLE"
   | "SCHEDULED_LATE"
   | "INSUFFICIENT_TRAVEL"
+  | "SPLIT_CONSTRAINT_RELAXED"
   | "SCHEDULED_OK";
 
 /**
@@ -63,6 +65,11 @@ export type EngineMessagePayload =
       type: "TASK_UNSCHEDULABLE";
       plannerId: string;
       reason: SchedulingFailureReason;
+      // Split tasks only: a partial placement failed with these minutes
+      // still unplaced (the placed chunks stay on the calendar). Absent for
+      // plain tasks and total failures.
+      remainingMinutes?: number;
+      placedMinutes?: number;
     }
   | {
       type: "SCHEDULED_LATE";
@@ -81,6 +88,19 @@ export type EngineMessagePayload =
       dayOfWeek: number;
       timeOfDay: string;
       affectedCount: number;
+    }
+  | {
+      // A split task's constraints were compromised to place its minutes:
+      // "maxChunk" = a remainder below twice the minimum chunk can only
+      // place whole and exceeded the max chunk size; "dayCap" = the final
+      // pass placed chunks past the per-day cap rather than dropping them.
+      // One row per (plannerId, kind); count/minutes in the id so a change
+      // supersedes the prior row.
+      type: "SPLIT_CONSTRAINT_RELAXED";
+      plannerId: string;
+      kind: "maxChunk" | "dayCap";
+      affectedCount: number;
+      totalMinutes: number;
     }
   | {
       // Informational summary emitted once per regen when at least one
@@ -168,6 +188,20 @@ export function insufficientTravelId(fields: {
     fields.actualMinutes,
     fields.timeOfDay,
     fields.dayOfWeek,
+  )}`;
+}
+
+export function splitConstraintRelaxedId(fields: {
+  plannerId: string;
+  kind: "maxChunk" | "dayCap";
+  affectedCount: number;
+  totalMinutes: number;
+}): string {
+  return `SPLIT_CONSTRAINT_RELAXED${MESSAGE_ID_DELIM}${joinBody(
+    fields.plannerId,
+    fields.kind,
+    fields.affectedCount,
+    fields.totalMinutes,
   )}`;
 }
 

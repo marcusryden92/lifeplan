@@ -7,6 +7,14 @@ import { plannerTreeToJson, type DraftNode } from "./plannerTreeToJson";
 import type { DraftForest } from "./plannerForestToJson";
 import { draftTreesEqual } from "./diffDraftTree";
 import { fallbackCalendarColor, isHexColor } from "@/utils/colorUtils";
+import { serializeTaskSplitting } from "@/utils/taskSplitting";
+
+// Splitting rides the full-tree contract like deadline/priority: the node's
+// value (null when absent) becomes the row value. completedSegments is never
+// part of the draft contract — retained rows keep theirs untouched.
+function splittingColumn(node: DraftNode): string | null {
+  return node.splitting ? serializeTaskSplitting(node.splitting) : null;
+}
 
 interface ApplyForestArgs {
   planner: Planner[];
@@ -179,6 +187,7 @@ function applyTreeToExistingRoot({
           parentId,
           sortOrder,
           categoryId: null,
+          splitting: splittingColumn(node),
           updatedAt: now,
         }
       : {
@@ -196,6 +205,8 @@ function applyTreeToExistingRoot({
           starts: null,
           recurrence: null,
           recurrenceExceptions: null,
+          splitting: splittingColumn(node),
+          completedSegments: null,
           sortOrder,
           completedStartTime: null,
           completedEndTime: null,
@@ -232,6 +243,7 @@ function applyTreeToExistingRoot({
     isReady: workingTree.isReady,
     categoryId: nextCategoryId,
     color: nextColor,
+    splitting: splittingColumn(workingTree),
     updatedAt: now,
   };
 
@@ -298,6 +310,8 @@ function buildNewRootRows(
       starts: null,
       recurrence: null,
       recurrenceExceptions: null,
+      splitting: splittingColumn(child),
+      completedSegments: null,
       sortOrder,
       completedStartTime: null,
       completedEndTime: null,
@@ -326,6 +340,8 @@ function buildNewRootRows(
     starts: null,
     recurrence: null,
     recurrenceExceptions: null,
+    splitting: splittingColumn(node),
+    completedSegments: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

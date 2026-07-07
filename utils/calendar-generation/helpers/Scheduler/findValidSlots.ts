@@ -19,8 +19,11 @@ export function findValidSlots(
   slotManager: TimeSlotManager,
   context: SchedulingContext,
   afterTime?: Date,
+  fitDurationMinutes?: number,
 ): FindValidSlotsResult | { failure: SchedulingFailure } {
   const taskLocationId = context.plannerLocationMap?.get(task.id) ?? null;
+  // Chunked placements fit-test at the chunk minimum, not the full duration.
+  const fitMinutes = fitDurationMinutes ?? task.duration;
 
   // Resolve effective category from parent chain via pre-built map
   const effectiveCategoryId =
@@ -48,7 +51,7 @@ export function findValidSlots(
   const fittingSlots = findAllFittingSlots(
     slotManager.slots,
     slotManager.bufferTimeMinutes,
-    task.duration,
+    fitMinutes,
     afterTime || context.currentDate,
     undefined,
     hasWindowConstraint ? eligibleCategoryIds : undefined,
@@ -61,7 +64,7 @@ export function findValidSlots(
         taskId: task.id,
         taskTitle: task.title,
         reason: SchedulingFailureReason.NO_SLOTS,
-        details: `No available time slots found for ${task.duration} minutes`,
+        details: `No available time slots found for ${fitMinutes} minutes`,
       },
     };
   }

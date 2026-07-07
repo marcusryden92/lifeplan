@@ -32,9 +32,12 @@ export function reserveTaskSlot(
   context: SchedulingContext,
   absorbableTravel: TravelShardSpan | null = null,
   reclaimPrecedingGapTravel: TravelShardSpan | null = null,
+  durationMinutes?: number,
 ): ReservationResult | { failure: SchedulingFailure } {
   const recorder = context.schedulerRecorder;
   const bufferMinutes = slotManager.bufferTimeMinutes;
+  // Chunked placements reserve the granted size, not the row's full duration.
+  const reservedMinutes = durationMinutes ?? task.duration;
 
   // For a CategorySlot, the task lands in the category interior — the user is
   // at currentLocationId on both sides of the task. (Category entry/exit
@@ -89,7 +92,10 @@ export function reserveTaskSlot(
     effectiveSlotStart,
     offsetToTaskStart,
   );
-  const taskEndDate = dateTimeService.addDuration(taskStartDate, task.duration);
+  const taskEndDate = dateTimeService.addDuration(
+    taskStartDate,
+    reservedMinutes,
+  );
 
   recorder?.decision(
     SM.reserveTaskSlot.layout(

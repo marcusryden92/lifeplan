@@ -1,0 +1,253 @@
+import {
+  addIntervalMinutesByDay,
+  chunkEventId,
+  completedMinutesByDay,
+  completedSegmentEventId,
+  grantChunkMinutes,
+  isChunkEventId,
+  isCompletedSegmentEventId,
+  minChunkRequired,
+  parseCompletedSegments,
+  parseTaskSplitting,
+  segmentStartFromEventId,
+  serializeTaskSplitting,
+  splitRemainingMinutes,
+  taskIsSplittable,
+  type TaskSplittingSettings,
+} from "@/utils/taskSplitting";
+import { plannerIsCompleted } from "@/utils/plannerCompletion";
+import { plannerIdFromEventId } from "@/utils/planRecurrence";
+import type { Planner } from "@/types/prisma";
+
+const SETTINGS: TaskSplittingSettings = {
+  minMinutes: 30,
+  maxMinutes: 120,
+  maxMinutesPerDay: null,
+};
+
+function makePlanner(overrides: Partial<Planner>): Planner {
+  return {
+    id: "p1",
+    title: "p1",
+    parentId: null,
+    plannerType: "task",
+    isReady: null,
+    isTriaged: true,
+    duration: 300,
+    deadline: null,
+    starts: null,
+    recurrence: null,
+    recurrenceExceptions: null,
+    splitting: serializeTaskSplitting(SETTINGS),
+    completedSegments: null,
+    sortOrder: 0,
+    completedStartTime: null,
+    completedEndTime: null,
+    priority: 5,
+    userId: "u1",
+    color: null,
+    locationId: null,
+    useParentLocation: false,
+    categoryId: null,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+describe("parseTaskSplitting", () => {
+  it("accepts valid settings and normalizes the day cap up to min", () => {
+    const parsed = parseTaskSplitting(
+      JSON.stringify({ minMinutes: 30, maxMinutes: 120, maxMinutesPerDay: 10 }),
+    );
+    expect(parsed).toEqual({
+      minMinutes: 30,
+      maxMinutes: 120,
+      maxMinutesPerDay: 30,
+    });
+  });
+
+  it("rejects min below the floor, max below min, and malformed JSON", () => {
+    expect(
+      parseTaskSplitting(JSON.stringify({ minMinutes: 2, maxMinutes: 60 })),
+    ).toBeNull();
+    expect(
+      parseTaskSplitting(JSON.stringify({ minMinutes: 60, maxMinutes: 30 })),
+    ).toBeNull();
+    expect(parseTaskSplitting("not json")).toBeNull();
+    expect(parseTaskSplitting(null)).toBeNull();
+  });
+});
+
+describe("minChunkRequired (remainder invariant)", () => {
+  it("is min when the remainder can still be split", () => {
+    expect(minChunkRequired(300, SETTINGS)).toBe(30);
+    expect(minChunkRequired(60, SETTINGS)).toBe(30);
+  });
+
+  it("is the whole remainder when it cannot be split (below 2*min)", () => {
+    expect(minChunkRequired(59, SETTINGS)).toBe(59);
+    expect(minChunkRequired(45, SETTINGS)).toBe(45);
+    expect(minChunkRequired(10, SETTINGS)).toBe(10);
+  });
+
+  it("is zero for a spent remainder", () => {
+    expect(minChunkRequired(0, SETTINGS)).toBe(0);
+  });
+});
+
+describe("grantChunkMinutes", () => {
+  it("fills to max when the slot allows", () => {
+    expect(
+      grantChunkMinutes({ remaining: 300, headroom: 900, settings: SETTINGS }),
+    ).toBe(120);
+  });
+
+  it("takes the whole remainder when it fits under max", () => {
+    expect(
+      grantChunkMinutes({ remaining: 100, headroom: 900, settings: SETTINGS }),
+    ).toBe(100);
+  });
+
+  it("shrinks the chunk so the leftover never drops below min", () => {
+    // 130 remaining, headroom 120: naive grant of 120 leaves 10 < 30.
+    expect(
+      grantChunkMinutes({ remaining: 130, headroom: 120, settings: SETTINGS }),
+    ).toBe(100);
+  });
+
+  it("rejects a slot that cannot host a valid chunk", () => {
+    // 50 remaining is unsplittable (< 2*min) — only 50 whole works, headroom 40.
+    expect(
+      grantChunkMinutes({ remaining: 50, headroom: 40, settings: SETTINGS }),
+    ).toBe(0);
+    // Headroom below min entirely.
+    expect(
+      grantChunkMinutes({ remaining: 300, headroom: 20, settings: SETTINGS }),
+    ).toBe(0);
+  });
+
+  it("caps by the day budget", () => {
+    expect(
+      grantChunkMinutes({
+        remaining: 300,
+        headroom: 900,
+        settings: SETTINGS,
+        dayBudget: 45,
+      }),
+    ).toBe(45);
+    expect(
+      grantChunkMinutes({
+        remaining: 300,
+        headroom: 900,
+        settings: SETTINGS,
+        dayBudget: 10,
+      }),
+    ).toBe(0);
+  });
+
+  it("honors maxOverride for rule-forced whole placement", () => {
+    // 70 remaining with max 60: unsplittable, override lets it place whole.
+    const tight = { ...SETTINGS, minMinutes: 45, maxMinutes: 60 };
+    expect(
+      grantChunkMinutes({ remaining: 70, headroom: 900, settings: tight }),
+    ).toBe(0);
+    expect(
+      grantChunkMinutes({
+        remaining: 70,
+        headroom: 900,
+        settings: tight,
+        maxOverride: 70,
+      }),
+    ).toBe(70);
+  });
+});
+
+describe("segments and completion", () => {
+  const segment = {
+    start: "2026-01-04T10:00:00.000Z",
+    end: "2026-01-04T11:00:00.000Z",
+  };
+
+  it("derives remaining minutes from segments", () => {
+    const item = makePlanner({
+      completedSegments: JSON.stringify([segment]),
+    });
+    expect(splitRemainingMinutes(item)).toBe(240);
+  });
+
+  it("auto-completes when segments cover the duration", () => {
+    const item = makePlanner({
+      duration: 60,
+      completedSegments: JSON.stringify([segment]),
+    });
+    expect(plannerIsCompleted(item)).toBe(true);
+  });
+
+  it("keeps segments inert when splitting is disabled", () => {
+    const item = makePlanner({
+      duration: 60,
+      splitting: null,
+      completedSegments: JSON.stringify([segment]),
+    });
+    expect(taskIsSplittable(item)).toBe(false);
+    expect(plannerIsCompleted(item)).toBe(false);
+  });
+
+  it("drops malformed and inverted segments at parse", () => {
+    expect(
+      parseCompletedSegments(
+        JSON.stringify([
+          segment,
+          { start: segment.end, end: segment.start },
+          { start: "nonsense" },
+        ]),
+      ),
+    ).toEqual([segment]);
+  });
+
+  it("splits day attribution at local midnight", () => {
+    const map = new Map<string, number>();
+    addIntervalMinutesByDay(
+      map,
+      new Date(2026, 0, 4, 23, 0, 0),
+      new Date(2026, 0, 5, 1, 0, 0),
+    );
+    expect(map.get("2026-01-04")).toBe(60);
+    expect(map.get("2026-01-05")).toBe(60);
+  });
+
+  it("seeds day budgets from completed segments", () => {
+    const item = makePlanner({
+      completedSegments: JSON.stringify([segment]),
+    });
+    const byDay = completedMinutesByDay(item);
+    let total = 0;
+    byDay.forEach((minutes) => (total += minutes));
+    expect(total).toBe(60);
+  });
+});
+
+describe("split event ids", () => {
+  it("round-trips through plannerIdFromEventId", () => {
+    const chunk = chunkEventId("planner-1", 3);
+    expect(isChunkEventId(chunk)).toBe(true);
+    expect(plannerIdFromEventId(chunk)).toBe("planner-1");
+
+    const done = completedSegmentEventId("planner-1", {
+      start: "2026-01-04T10:00:00.000Z",
+      end: "2026-01-04T11:00:00.000Z",
+    });
+    expect(isCompletedSegmentEventId(done)).toBe(true);
+    expect(plannerIdFromEventId(done)).toBe("planner-1");
+    expect(segmentStartFromEventId(done)).toBe("2026-01-04T10:00:00.000Z");
+  });
+
+  it("does not cross-match kinds", () => {
+    expect(isChunkEventId(completedSegmentEventId("p", { start: "a", end: "b" }))).toBe(
+      false,
+    );
+    expect(isCompletedSegmentEventId(chunkEventId("p", 0))).toBe(false);
+    expect(isChunkEventId("plain-planner-id")).toBe(false);
+  });
+});

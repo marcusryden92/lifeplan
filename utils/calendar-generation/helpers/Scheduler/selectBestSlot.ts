@@ -10,6 +10,7 @@ import { TimeSlotManager } from "../../core/TimeSlotManager";
 import { TravelManager } from "../../core/TravelManager";
 import { SchedulingStrategy } from "../../strategies/SchedulingStrategy";
 import {
+  ChunkSizing,
   SchedulingContext,
   SchedulingFailure,
   ScoredSlot,
@@ -60,8 +61,13 @@ export function selectBestSlot(
   travelManager: TravelManager,
   strategy: SchedulingStrategy,
   context: SchedulingContext,
+  sizing?: ChunkSizing,
 ): SlotSelectionResult | { failure: SchedulingFailure } {
   const recorder = context.schedulerRecorder;
+
+  // Chunked placements fit-test at the chunk minimum; the actual reserved
+  // duration is granted per-slot from its headroom after acceptance.
+  const fitMinutes = sizing ? sizing.minMinutes : task.duration;
 
   // Score ALL slots using the strategy (includes location adjacency scoring)
   const scoredSlots = scoreSlots(task, validSlots, strategy, context);
@@ -77,6 +83,7 @@ export function selectBestSlot(
   let selectedReusableTravelStart: Date | null = null;
   let selectedAbsorbableTravel: TravelShardSpan | null = null;
   let selectedReclaimPrecedingGapTravel: TravelShardSpan | null = null;
+  let selectedGrantedMinutes = task.duration;
 
   let candidateIdx = 0;
   for (const scoredSlot of scoredSlots) {
@@ -92,6 +99,13 @@ export function selectBestSlot(
       ),
       2,
     );
+
+    // A day whose split budget can't host even a minimum chunk is off-limits
+    // before any travel math.
+    if (sizing?.dayBudget && sizing.dayBudget(slot.start) < sizing.minMinutes) {
+      recorder?.decision(SM.selectBestSlot.dayBudgetExhausted, 3);
+      continue;
+    }
 
     // Calculate travel times based on location
     // Null-location tasks ("everywhere") don't need travel - they're transparent
@@ -216,7 +230,7 @@ export function selectBestSlot(
       if (slotNextLoc && slotNextLoc !== taskLocationId) {
         const travelAfterDeparture = new Date(
           slot.start.getTime() +
-            (needTravelBefore + task.duration) * 60 * 1000,
+            (needTravelBefore + fitMinutes) * 60 * 1000,
         );
         needTravelAfter = travelManager.getTravelTime(
           taskLocationId,
@@ -274,7 +288,7 @@ export function selectBestSlot(
     // the standalone travel's end provides the leading boundary, so no
     // extra buffer at this slot's level).
     let requiredInside =
-      task.duration +
+      fitMinutes +
       (effectiveTravelAfter > 0 ? effectiveTravelAfter : 0) +
       bufferMinutes;
 
@@ -330,12 +344,59 @@ export function selectBestSlot(
         SM.selectBestSlot.capacityOK(effectiveCapacity, requiredInside),
         3,
       );
+
+      let grantedMinutes = task.duration;
+      let grantedTravelAfter = effectiveTravelAfter;
+
+      if (sizing) {
+        const dayBudgetMinutes = sizing.dayBudget
+          ? sizing.dayBudget(slot.start)
+          : Infinity;
+        // Everything in requiredInside except the task minutes themselves —
+        // buffers plus any travel placed inside the slot.
+        const overhead = requiredInside - fitMinutes;
+        let headroom = effectiveCapacity - overhead;
+        grantedMinutes = sizing.grant(headroom, dayBudgetMinutes);
+        if (grantedMinutes <= 0) {
+          recorder?.decision(SM.selectBestSlot.chunkGrantRejected, 3);
+          continue;
+        }
+
+        // Travel-after was priced at the minimum-size departure; a grown
+        // chunk departs later and can cross into a different rush-hour
+        // bucket. Re-quote at the granted departure and shrink the grant if
+        // the new price eats the headroom; converges because travel prices
+        // are step functions of the departure bucket.
+        if (grantedTravelAfter > 0 && slotNextLoc && taskLocationId) {
+          for (let i = 0; i < 3 && grantedMinutes > 0; i++) {
+            const departure = new Date(
+              slot.start.getTime() +
+                (needTravelBefore + grantedMinutes) * 60 * 1000,
+            );
+            const requote = travelManager.getTravelTime(
+              taskLocationId,
+              slotNextLoc,
+              departure,
+            );
+            if (requote <= grantedTravelAfter) break;
+            headroom -= requote - grantedTravelAfter;
+            grantedTravelAfter = requote;
+            grantedMinutes = sizing.grant(headroom, dayBudgetMinutes);
+          }
+          if (grantedMinutes <= 0) {
+            recorder?.decision(SM.selectBestSlot.chunkGrantRejected, 3);
+            continue;
+          }
+        }
+      }
+
       selectedSlot = slot;
       travelBefore = needTravelBefore;
-      travelAfter = effectiveTravelAfter;
+      travelAfter = grantedTravelAfter;
       selectedReusableTravelStart = reusableTravelStart;
       selectedAbsorbableTravel = canAbsorbPrevTravel ? absorbableTravel : null;
       selectedReclaimPrecedingGapTravel = reclaimPrecedingGapTravel;
+      selectedGrantedMinutes = grantedMinutes;
       break;
     }
     recorder?.decision(
@@ -364,5 +425,6 @@ export function selectBestSlot(
     taskLocationId,
     absorbableTravel: selectedAbsorbableTravel,
     reclaimPrecedingGapTravel: selectedReclaimPrecedingGapTravel,
+    grantedDurationMinutes: selectedGrantedMinutes,
   };
 }

@@ -6,6 +6,24 @@ import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { getTreeBottomLayer } from "../../../goalPageHandlers";
 import { taskIsCompleted } from "../../../taskHelpers";
+import {
+  parseTaskSplitting,
+  minChunkRequired,
+  splitRemainingMinutes,
+} from "../../../taskSplitting";
+
+// Split tasks are placed one chunk at a time, so for watermark/fit purposes
+// their size is the required minimum chunk (the whole remainder when it has
+// shrunk below 2*min), never the full duration — the aggregate would pin the
+// watermark exactly like the goal aggregate below. Applies to goal-typed
+// leaves too (goal subtree leaves are goal-typed rows); plans never split.
+function placementBlockMinutes(item: Planner): number {
+  const settings = parseTaskSplitting(item.splitting);
+  if (settings && item.plannerType !== PlannerType.plan) {
+    return minChunkRequired(splitRemainingMinutes(item), settings);
+  }
+  return item.duration;
+}
 
 // A goal candidate is never placed as one block — scheduleGoal places its
 // leaves one at a time — so for watermark/fit purposes its size is its
@@ -22,12 +40,12 @@ export function effectiveCandidateDuration(
   allPlanners: Planner[],
   excludedLeafIds?: Set<string>,
 ): number {
-  if (item.plannerType !== PlannerType.goal) return item.duration;
+  if (item.plannerType !== PlannerType.goal) return placementBlockMinutes(item);
   const leaves = getTreeBottomLayer(allPlanners, item.id).filter(
     (t) => !taskIsCompleted(t) && !excludedLeafIds?.has(t.id),
   );
   if (leaves.length === 0) return 0;
-  return Math.max(...leaves.map((l) => l.duration));
+  return Math.max(...leaves.map(placementBlockMinutes));
 }
 
 // Max usable duration in a single category window, ignoring everything else.

@@ -270,6 +270,8 @@ export const generatePlanners = (userId: string): Planner[] => {
       starts: null,
       recurrence: null,
       recurrenceExceptions: null,
+      splitting: null,
+      completedSegments: null,
       sortOrder,
       completedStartTime: null,
       completedEndTime: null,

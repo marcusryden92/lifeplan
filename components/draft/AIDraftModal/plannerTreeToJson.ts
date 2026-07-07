@@ -2,6 +2,10 @@ import type { Planner } from "@/types/prisma";
 import type { PlannerType } from "@/generated/client";
 import { getSubtasksById } from "@/utils/goalPageHandlers";
 import { sortSiblings } from "@/utils/goal-handlers/sortOrderKeys";
+import {
+  parseTaskSplitting,
+  type TaskSplittingSettings,
+} from "@/utils/taskSplitting";
 
 // The JSON shape sent to the AI and rendered in the right pane of the draft
 // modal. `sortOrder` is intentionally omitted — sibling order is array order,
@@ -21,6 +25,11 @@ export interface DraftNode {
   // the root's color at save time and always carry null here. Optional so the
   // many hand-built DraftNode literals (tests, ops) don't all need updating.
   color?: string | null;
+  // Chunked-scheduling settings on schedulable leaves (never plans; inert on
+  // parents). Part of the full-tree contract like deadline/priority: a
+  // retained node re-emitted without it clears it. Optional so hand-built
+  // literals stay valid; absent reads as null.
+  splitting?: TaskSplittingSettings | null;
   children: DraftNode[];
 }
 
@@ -50,6 +59,7 @@ export function buildDraftNode(planner: Planner[], node: Planner): DraftNode {
     isReady: node.isReady ?? null,
     categoryId: null,
     color: null,
+    splitting: parseTaskSplitting(node.splitting),
     children: orderedChildren.map((child) => buildDraftNode(planner, child)),
   };
 }

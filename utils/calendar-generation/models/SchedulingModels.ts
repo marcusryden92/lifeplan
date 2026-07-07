@@ -348,6 +348,29 @@ export interface FindValidSlotsResult {
   constraintForTask: Category | undefined;
 }
 
+/**
+ * Dynamic chunk sizing for split-task placement. When present, the pipeline
+ * fit-tests slots at minMinutes and lets `grant` decide the actual reserved
+ * duration from the selected slot's headroom — so chunk sizes derive from the
+ * calendar's real geometry instead of a fixed block size.
+ */
+export interface ChunkSizing {
+  /** Smallest chunk this placement may reserve; slots are fit-tested at this size. */
+  minMinutes: number;
+  /**
+   * Decides the reserved minutes for a slot that fit. Receives the largest
+   * task-minutes the slot can host (capacity minus travel and buffers) and
+   * the remaining day-cap budget for the slot's day (Infinity when uncapped).
+   * Returning 0 rejects the slot and selection moves to the next candidate.
+   */
+  grant: (headroomMinutes: number, dayBudgetMinutes: number) => number;
+  /**
+   * Remaining day-cap minutes for the local day a slot starts on. Slots whose
+   * day budget is below minMinutes are skipped outright.
+   */
+  dayBudget?: (slotStart: Date) => number;
+}
+
 export interface SlotSelectionResult {
   selectedSlot: PlaceableSlot;
   travelBefore: number;
@@ -362,6 +385,12 @@ export interface SlotSelectionResult {
    */
   absorbableTravel: TravelShardSpan | null;
   reclaimPrecedingGapTravel: TravelShardSpan | null;
+  /**
+   * Minutes the reservation will actually occupy. Equals task.duration for
+   * plain placements; for chunked placements it is what ChunkSizing.grant
+   * returned for the selected slot.
+   */
+  grantedDurationMinutes: number;
 }
 
 export interface ReservationResult {

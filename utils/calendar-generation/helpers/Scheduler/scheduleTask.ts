@@ -10,6 +10,7 @@ import { TimeSlotManager } from "../../core/TimeSlotManager";
 import { TravelManager } from "../../core/TravelManager";
 import { SchedulingStrategy } from "../../strategies/SchedulingStrategy";
 import {
+  ChunkSizing,
   SchedulingContext,
   SchedulingFailure,
 } from "../../models/SchedulingModels";
@@ -27,6 +28,7 @@ export function scheduleTask(
   strategy: SchedulingStrategy,
   context: SchedulingContext,
   afterTime?: Date,
+  sizing?: ChunkSizing,
 ): { success: boolean; event?: SimpleEvent; failure?: SchedulingFailure } {
   const recorder = context.schedulerRecorder;
   const taskLocationId = context.plannerLocationMap?.get(task.id) ?? null;
@@ -61,7 +63,13 @@ export function scheduleTask(
   }
 
   // Phase 2: Find valid slots
-  const slotsResult = findValidSlots(task, slotManager, context, afterTime);
+  const slotsResult = findValidSlots(
+    task,
+    slotManager,
+    context,
+    afterTime,
+    sizing?.minMinutes,
+  );
   if ("failure" in slotsResult) {
     recorder?.decision(SM.findValidSlots.noFittingSlots(task.duration), 1);
     recorder?.setOutcome({
@@ -87,6 +95,7 @@ export function scheduleTask(
     travelManager,
     strategy,
     context,
+    sizing,
   );
   if ("failure" in selectionResult) {
     recorder?.setOutcome({
@@ -111,6 +120,7 @@ export function scheduleTask(
     context,
     selectionResult.absorbableTravel,
     selectionResult.reclaimPrecedingGapTravel,
+    selectionResult.grantedDurationMinutes,
   );
   if ("failure" in reservationResult) {
     recorder?.setOutcome({

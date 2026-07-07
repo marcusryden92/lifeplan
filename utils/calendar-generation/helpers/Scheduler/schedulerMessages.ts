@@ -45,6 +45,10 @@ export const SM = {
       `slot prev=${prevLoc}, next=${nextLoc}, task=${taskLoc}`,
     travelBeforeNotNeeded: "No travel-before needed (prev == task location)",
     travelAfterNotNeeded: "No travel-after needed (next == task location)",
+    dayBudgetExhausted:
+      "Skipped: split day budget below the minimum chunk for this day",
+    chunkGrantRejected:
+      "Skipped: no valid chunk size for this slot's headroom/day budget",
     absorbPrevTravelAfter: (
       spanFrom: string,
       spanStart: string,

@@ -8,6 +8,7 @@ import { DurationSection } from "./DurationSection";
 import { LocationSection } from "./LocationSection";
 import { ColorSection } from "./ColorSection";
 import { RecurrenceSection } from "./RecurrenceSection";
+import { SplittingSection } from "./SplittingSection";
 import { DeleteRow } from "./DeleteRow";
 import { card, cardBody, fieldGrid } from "./IdentityCard.css";
 
@@ -22,6 +23,7 @@ export function IdentityCard() {
           <DateSection />
           <DurationSection />
           <RecurrenceSection />
+          <SplittingSection />
           <LocationSection />
           <ColorSection />
         </div>

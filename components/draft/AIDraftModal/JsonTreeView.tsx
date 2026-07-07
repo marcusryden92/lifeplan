@@ -282,6 +282,7 @@ const FIELD_LABELS: Record<string, string> = {
   plannerType: "type",
   isReady: "ready",
   categoryId: "category",
+  splitting: "chunking",
 };
 
 function formatChangedFields(fields: string[]): string {

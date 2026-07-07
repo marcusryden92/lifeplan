@@ -25,6 +25,10 @@ import {
 } from "@/actions/locations";
 import { formatTime } from "@/utils/calendarUtils";
 import { plannerIdFromEventId } from "@/utils/planRecurrence";
+import {
+  taskIsSplittable,
+  splitCompletedMinutes,
+} from "@/utils/taskSplitting";
 import { PlannerType } from "@/types/prisma";
 import { calendarColors } from "@/data/calendarColors";
 import { getCompleteTaskTreeIds, getRootParentId } from "@/utils/goalPageHandlers";
@@ -66,6 +70,16 @@ interface EventPopoverProps {
 
 const POPOVER_WIDTH = 340;
 const POPOVER_HEIGHT = 380;
+
+function formatSplitProgress(completed: number, total: number): string {
+  const fmt = (minutes: number) => {
+    if (minutes < 60) return `${minutes}m`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m === 0 ? `${h}h` : `${h}h ${m}m`;
+  };
+  return `${fmt(completed)} of ${fmt(total)} done`;
+}
 
 const EventPopover: React.FC<EventPopoverProps> = ({
   event,
@@ -338,6 +352,23 @@ const EventPopover: React.FC<EventPopoverProps> = ({
                 {formatTime(endTime)} · {durationLabel}
               </span>
             </div>
+
+            {plannerItem && taskIsSplittable(plannerItem) && (
+              <div className={metaRow}>
+                <Check
+                  size={13}
+                  strokeWidth={2}
+                  aria-hidden
+                  className={metaIcon}
+                />
+                <span>
+                  {formatSplitProgress(
+                    splitCompletedMinutes(plannerItem),
+                    plannerItem.duration,
+                  )}
+                </span>
+              </div>
+            )}
 
             {plannerItem && (
               <PopoverLocationPicker

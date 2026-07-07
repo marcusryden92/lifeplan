@@ -533,6 +533,7 @@ Each node in a goal tree has:
 - isReady: top-level goals only — true marks the goal ready for scheduling, and requires at least one subtask AND a deadline (the app blocks it otherwise). Default a goal you create to ready (isReady true) whenever it has subtasks and a deadline, so it starts scheduling immediately and the user doesn't have to turn it on by hand. If it has no deadline or no subtasks, leave it unready and, in plain words, tell the user what it still needs before it can be scheduled. OMIT this field (or use null) on all child nodes; readiness cascades from the root (every row in a subtree carries the root's value, stamped on save).
 - categoryId: top-level goals only — one of the user's category ids, or null. Echo it verbatim for retained goals (null on a retained goal means "leave as is"); pick a fitting category for new goals, or null if none fits. Never set it on child nodes; they inherit.
 - color: top-level goals only — a 6-digit hex color for the whole goal (its subtasks inherit it on the calendar). Give every NEW goal a fitting color and vary colors across goals so the calendar doesn't come out all one shade. Good palette: #1976D2 blue, #2E7D32 green, #F77F00 orange, #6C5CE7 violet, #16A085 teal, #E63946 red, #FFB703 amber, #1D3557 navy, #8E44AD purple, #D81B60 pink. Echo the existing color verbatim for retained goals (null means "leave as is"). Never set it on child nodes; they inherit.
+- splitting: schedulable leaves only (never plans, never nodes with subtasks) — {minMinutes, maxMinutes, maxMinutesPerDay} or null. Non-null makes the scheduler place the item as flexibly sized chunks (each between min and max, at most maxMinutesPerDay per day when set; maxMinutesPerDay null = no daily limit) instead of one continuous block — right for long, interruptible work like "read the textbook, 12h". minMinutes >= 5 and maxMinutes >= minMinutes. Echo it verbatim for retained nodes in propose_goals — a re-emitted tree that drops it turns chunking off. When the user speaks of it, call it splitting into chunks — never say "splitting field".
 - children: ordered array of sub-nodes. Empty for leaves.
 
 ID PRESERVATION (IMPORTANT)
@@ -549,7 +550,7 @@ Reading:
 - get_goal_trees: fetch complete trees by id. Required before propose_goals may modify a goal (proposals are complete-tree replacements; editing blind would silently delete subtasks). The focused goal (if any) is already provided. Tool results are NOT retained between user messages — re-fetch each message.
 
 Editing — deterministic operations. PREFER these for small changes; each applies immediately to the user's review pane as a pending change (nothing is saved without their confirmation):
-- update_items: change fields (title, plannerType task/goal, duration, deadline, priority, isReady; categoryId on top-level goals only) on items by id. No fetch needed. Use this to convert an item's type — you no longer need propose_goals just to change a task into a goal or a plan into a task.
+- update_items: change fields (title, plannerType task/goal, duration, deadline, priority, isReady; categoryId on top-level goals only; splitting on schedulable leaves — an object turns chunked scheduling on or adjusts it, null turns it off) on items by id. No fetch needed. Use this to convert an item's type — you no longer need propose_goals just to change a task into a goal or a plan into a task.
 - move_item: move or reorder an item within its own goal (new parent + position). Cross-goal moves and moving top-level goals are not supported.
 - add_items: insert new subtasks under an existing parent. Added items are assigned draft ids on insertion — fetch the goal tree if you need to reference them.
 - delete_items: remove items (with their subtrees) or whole goals by id.
@@ -622,6 +623,17 @@ const proposeGoalsTool: Anthropic.Tool = {
             description:
               'Top-level goals only: a 6-digit hex color (e.g. "#1976D2") for the whole goal; its subtasks inherit it. Never set on child nodes.',
           },
+          splitting: {
+            type: ["object", "null"],
+            description:
+              "Schedulable leaves only: chunked-scheduling settings. Echo verbatim for retained nodes — dropping it turns chunking off.",
+            properties: {
+              minMinutes: { type: "integer" },
+              maxMinutes: { type: "integer" },
+              maxMinutesPerDay: { type: ["integer", "null"] },
+            },
+            required: ["minMinutes", "maxMinutes"],
+          },
           children: {
             type: "array",
             items: { $ref: "#/$defs/draftNode" },
@@ -686,7 +698,7 @@ const searchItemsTool: Anthropic.Tool = {
 const updateItemsTool: Anthropic.Tool = {
   name: "update_items",
   description:
-    'Change fields on existing items by id — title, plannerType ("task" or "goal"; convert a leaf task into an empty goal or vice versa, or turn a plan into a task), duration (minutes), deadline (ISO date or null to clear), priority, isReady, and categoryId (top-level goals only; null to clear). An item with subtasks is always a goal — that is enforced automatically, so you never set plannerType just to fix a parent. Structural changes (adding, moving, removing items) use the other tools.',
+    'Change fields on existing items by id — title, plannerType ("task" or "goal"; convert a leaf task into an empty goal or vice versa, or turn a plan into a task), duration (minutes), deadline (ISO date or null to clear), priority, isReady, categoryId (top-level goals only; null to clear), and splitting (schedulable leaves only — an object enables/adjusts chunked scheduling, null turns it off). An item with subtasks is always a goal — that is enforced automatically, so you never set plannerType just to fix a parent. Structural changes (adding, moving, removing items) use the other tools.',
   input_schema: {
     type: "object",
     properties: {
@@ -703,6 +715,15 @@ const updateItemsTool: Anthropic.Tool = {
             priority: { type: "integer" },
             isReady: { type: ["boolean", "null"] },
             categoryId: { type: ["string", "null"] },
+            splitting: {
+              type: ["object", "null"],
+              properties: {
+                minMinutes: { type: "integer" },
+                maxMinutes: { type: "integer" },
+                maxMinutesPerDay: { type: ["integer", "null"] },
+              },
+              required: ["minMinutes", "maxMinutes"],
+            },
           },
           required: ["id"],
         },
@@ -753,6 +774,15 @@ const addItemsTool: Anthropic.Tool = {
           deadline: { type: ["string", "null"] },
           priority: { type: "integer" },
           isReady: { type: ["boolean", "null"] },
+          splitting: {
+            type: ["object", "null"],
+            properties: {
+              minMinutes: { type: "integer" },
+              maxMinutes: { type: "integer" },
+              maxMinutesPerDay: { type: ["integer", "null"] },
+            },
+            required: ["minMinutes", "maxMinutes"],
+          },
           children: {
             type: "array",
             items: { $ref: "#/$defs/newNode" },

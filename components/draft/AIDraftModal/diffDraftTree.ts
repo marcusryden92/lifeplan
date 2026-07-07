@@ -71,6 +71,7 @@ function diffNode(working: DraftNode, canonical: DraftNode): DiffNode {
     isReady: working.isReady,
     categoryId: working.categoryId,
     color: working.color ?? null,
+    splitting: working.splitting ?? null,
     status,
     children: diffedChildren,
     changedFields,
@@ -88,10 +89,22 @@ export function markSubtree(node: DraftNode, status: DiffStatus): DiffNode {
     isReady: node.isReady,
     categoryId: node.categoryId,
     color: node.color ?? null,
+    splitting: node.splitting ?? null,
     status,
     changedFields: [],
     children: node.children.map((c) => markSubtree(c, status)),
   };
+}
+
+function splittingEqual(a: DraftNode["splitting"], b: DraftNode["splitting"]): boolean {
+  const left = a ?? null;
+  const right = b ?? null;
+  if (left === null || right === null) return left === right;
+  return (
+    left.minMinutes === right.minMinutes &&
+    left.maxMinutes === right.maxMinutes &&
+    (left.maxMinutesPerDay ?? null) === (right.maxMinutesPerDay ?? null)
+  );
 }
 
 function fieldsThatChanged(a: DraftNode, b: DraftNode): string[] {
@@ -104,6 +117,7 @@ function fieldsThatChanged(a: DraftNode, b: DraftNode): string[] {
   if (a.isReady !== b.isReady) changed.push("isReady");
   if (a.categoryId !== b.categoryId) changed.push("categoryId");
   if ((a.color ?? null) !== (b.color ?? null)) changed.push("color");
+  if (!splittingEqual(a.splitting, b.splitting)) changed.push("splitting");
   return changed;
 }
 

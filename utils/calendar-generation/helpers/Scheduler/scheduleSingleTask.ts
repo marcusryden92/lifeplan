@@ -4,6 +4,12 @@ import { SchedulingFailure } from "../../models/SchedulingModels";
 import { SchedulingFailureReason } from "../../constants";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { maxEffectiveCapacityFor } from "./capacityCheck";
+import { parseTaskSplitting, minChunkRequired } from "../../../taskSplitting";
+import {
+  SplitPlacementState,
+  scheduleSplitTask,
+  splitRemainingForRun,
+} from "./scheduleSplitTask";
 
 export function scheduleSingleTask(
   task: Planner,
@@ -16,14 +22,18 @@ export function scheduleSingleTask(
   categoryEligibilityMap: Map<string, Set<string>>,
   currentDate: Date,
   capacityCache: Map<string, number>,
+  splitState: SplitPlacementState,
+  allowDayCapRelaxation = false,
 ): {
   scheduled: boolean;
   permanentFailure: boolean;
-  event?: SimpleEvent;
+  events: SimpleEvent[];
 } {
   if (scheduledTaskIds.has(task.id)) {
-    return { scheduled: true, permanentFailure: false };
+    return { scheduled: true, permanentFailure: false, events: [] };
   }
+
+  const splitSettings = parseTaskSplitting(task.splitting);
 
   const maxCapacity = maxEffectiveCapacityFor(
     task,
@@ -35,22 +45,56 @@ export function scheduleSingleTask(
     capacityCache,
   );
 
-  if (task.duration > maxCapacity) {
+  // A split task only needs room for its required minimum chunk, not the
+  // whole duration — it is TOO_LARGE only when not even that fits anywhere.
+  const requiredBlockMinutes = splitSettings
+    ? minChunkRequired(splitRemainingForRun(task, splitState), splitSettings)
+    : task.duration;
+
+  if (requiredBlockMinutes > maxCapacity) {
     failures.push({
       taskId: task.id,
       taskTitle: task.title,
       reason: SchedulingFailureReason.TOO_LARGE,
-      details: `Task duration (${task.duration} min) exceeds max effective capacity (${maxCapacity} min) given templates and category constraints`,
-      context: { duration: task.duration, maxCapacity },
+      details: `Task duration (${requiredBlockMinutes} min${splitSettings ? ", minimum chunk" : ""}) exceeds max effective capacity (${maxCapacity} min) given templates and category constraints`,
+      context: { duration: requiredBlockMinutes, maxCapacity },
     });
-    return { scheduled: false, permanentFailure: true };
+    return { scheduled: false, permanentFailure: true, events: [] };
+  }
+
+  if (splitSettings) {
+    const result = scheduleSplitTask({
+      task,
+      settings: splitSettings,
+      scheduler,
+      state: splitState,
+      allowDayCapRelaxation,
+    });
+    if (result.fullyPlaced) {
+      scheduledTaskIds.add(task.id);
+      return { scheduled: true, permanentFailure: false, events: result.events };
+    }
+    if (result.failure) {
+      failures.push(result.failure);
+    }
+    // Partial placements stay on the calendar; the task remains a candidate
+    // and resumes from its remainder after the next horizon expansion.
+    return {
+      scheduled: false,
+      permanentFailure: false,
+      events: result.events,
+    };
   }
 
   const result = scheduler.scheduleTask(task);
 
   if (result.success && result.event) {
     scheduledTaskIds.add(task.id);
-    return { scheduled: true, permanentFailure: false, event: result.event };
+    return {
+      scheduled: true,
+      permanentFailure: false,
+      events: [result.event],
+    };
   } else if (result.failure) {
     // NO_SLOTS was previously swallowed to let the outer loop retry the task
     // after other placements freed up room. Retries still apply — the caller
@@ -58,10 +102,10 @@ export function scheduleSingleTask(
     // engine console so a task that never fits doesn't disappear silently.
     failures.push(result.failure);
     if (result.failure.reason !== SchedulingFailureReason.NO_SLOTS) {
-      return { scheduled: false, permanentFailure: true };
+      return { scheduled: false, permanentFailure: true, events: [] };
     }
-    return { scheduled: false, permanentFailure: false };
+    return { scheduled: false, permanentFailure: false, events: [] };
   }
 
-  return { scheduled: false, permanentFailure: false };
+  return { scheduled: false, permanentFailure: false, events: [] };
 }

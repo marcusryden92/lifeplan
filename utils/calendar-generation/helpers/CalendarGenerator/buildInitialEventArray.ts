@@ -10,6 +10,7 @@ import {
   buildPlanEvents,
   buildCompletedEvents,
 } from "../EventAssembler";
+import { taskIsSplittable } from "../../../taskSplitting";
 
 export function buildInitialEventArray(
   userId: string,
@@ -29,8 +30,12 @@ export function buildInitialEventArray(
     previousCalendar.map((e) => [e.id, e]),
   );
 
+  const splitPlannerIds = new Set(
+    planners.filter(taskIsSplittable).map((p) => p.id),
+  );
+
   const { events: memoizedEvents, eventIds: memoizedEventIds } =
-    buildMemoizedEvents(previousCalendar, currentDate);
+    buildMemoizedEvents(previousCalendar, currentDate, splitPlannerIds);
 
   eventArray.push(...memoizedEvents);
 

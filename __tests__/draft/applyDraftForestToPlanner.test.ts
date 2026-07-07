@@ -19,6 +19,8 @@ function row(overrides: Partial<Planner> & { id: string }): Planner {
     starts: null,
     recurrence: null,
     recurrenceExceptions: null,
+    splitting: null,
+    completedSegments: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,
@@ -564,5 +566,126 @@ describe("applyDraftForestToPlanner", () => {
     expect(promoted.parentId).toBeNull();
     // The original a1 stays where it was.
     expect(byId(result, "a1").parentId).toBe("goal-a");
+  });
+
+  describe("splitting", () => {
+    const SPLIT_JSON = JSON.stringify({
+      minMinutes: 45,
+      maxMinutes: 120,
+      maxMinutesPerDay: null,
+    });
+
+    it("round-trips an existing row's splitting through an unrelated edit", () => {
+      const planner = makePlanner().map((p) =>
+        p.id === "a1"
+          ? {
+              ...p,
+              splitting: SPLIT_JSON,
+              completedSegments: JSON.stringify([
+                { start: TS, end: "2026-01-01T01:00:00.000Z" },
+              ]),
+            }
+          : p,
+      );
+      const workingForest = clone(plannerForestToJson(planner));
+      const goalA = workingForest.goals.find((g) => g.id === "goal-a")!;
+      goalA.children.find((c) => c.id === "a2")!.title = "renamed a2";
+
+      const result = applyDraftForestToPlanner({
+        planner,
+        workingForest,
+        userId: USER_ID,
+        validCategoryIds: VALID_CATEGORY_IDS,
+      });
+
+      expect(byId(result, "a1").splitting).toBe(SPLIT_JSON);
+      // completedSegments is never part of the draft contract.
+      expect(byId(result, "a1").completedSegments).toBe(
+        byId(planner, "a1").completedSegments,
+      );
+    });
+
+    it("applies splitting set on a retained node and clears it when nulled", () => {
+      const planner = makePlanner();
+      const workingForest = clone(plannerForestToJson(planner));
+      const goalA = workingForest.goals.find((g) => g.id === "goal-a")!;
+      goalA.children.find((c) => c.id === "a1")!.splitting = {
+        minMinutes: 45,
+        maxMinutes: 120,
+        maxMinutesPerDay: 60,
+      };
+
+      const applied = applyDraftForestToPlanner({
+        planner,
+        workingForest,
+        userId: USER_ID,
+        validCategoryIds: VALID_CATEGORY_IDS,
+      });
+      expect(JSON.parse(byId(applied, "a1").splitting!)).toEqual({
+        minMinutes: 45,
+        maxMinutes: 120,
+        maxMinutesPerDay: 60,
+      });
+
+      const clearedForest = clone(plannerForestToJson(applied));
+      const clearedGoalA = clearedForest.goals.find((g) => g.id === "goal-a")!;
+      clearedGoalA.children.find((c) => c.id === "a1")!.splitting = null;
+      const cleared = applyDraftForestToPlanner({
+        planner: applied,
+        workingForest: clearedForest,
+        userId: USER_ID,
+        validCategoryIds: VALID_CATEGORY_IDS,
+      });
+      expect(byId(cleared, "a1").splitting).toBeNull();
+    });
+
+    it("persists splitting on new nodes", () => {
+      const planner = makePlanner();
+      const workingForest = clone(plannerForestToJson(planner));
+      workingForest.goals.push({
+        id: "",
+        title: "Deep reading",
+        plannerType: "goal",
+        duration: 0,
+        deadline: "2026-12-01",
+        priority: 5,
+        isReady: null,
+        categoryId: null,
+        color: null,
+        children: [
+          {
+            id: "",
+            title: "Read the textbook",
+            plannerType: "task",
+            duration: 720,
+            deadline: null,
+            priority: 5,
+            isReady: null,
+            categoryId: null,
+            color: null,
+            splitting: {
+              minMinutes: 45,
+              maxMinutes: 120,
+              maxMinutesPerDay: null,
+            },
+            children: [],
+          },
+        ],
+      });
+
+      const result = applyDraftForestToPlanner({
+        planner,
+        workingForest,
+        userId: USER_ID,
+        validCategoryIds: VALID_CATEGORY_IDS,
+      });
+
+      const leaf = result.find((p) => p.title === "Read the textbook")!;
+      expect(JSON.parse(leaf.splitting!)).toEqual({
+        minMinutes: 45,
+        maxMinutes: 120,
+        maxMinutesPerDay: null,
+      });
+    });
   });
 });

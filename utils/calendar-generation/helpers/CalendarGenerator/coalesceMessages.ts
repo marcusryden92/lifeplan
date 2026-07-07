@@ -24,11 +24,13 @@ import { SchedulingFailure } from "../../models/SchedulingModels";
 import { SchedulingFailureReason } from "../../constants";
 import { taskIsCompleted } from "../../../taskHelpers";
 import { plannerIdFromEventId } from "../../../planRecurrence";
+import type { SplitRelaxation } from "../Scheduler/scheduleSplitTask";
 import {
   EngineMessageEmit,
   insufficientTravelId,
   scheduledLateId,
   scheduledOkId,
+  splitConstraintRelaxedId,
   taskTooLargeId,
   taskUnschedulableId,
 } from "../../models/EngineMessage";
@@ -41,6 +43,7 @@ export function buildEngineMessages(
   finalEvents: SimpleEvent[],
   currentDate: Date,
   previousMessages: EngineMessage[],
+  splitRelaxations: SplitRelaxation[] = [],
 ): EngineMessage[] {
   const priorDismissed = buildDismissedSet(previousMessages);
 
@@ -48,6 +51,7 @@ export function buildEngineMessages(
     ...emitSchedulerFailureMessages(schedulerFailures),
     ...emitScheduledLateMessages(planners, finalEvents, currentDate),
     ...emitInsufficientTravelMessages(travelEvents),
+    ...emitSplitRelaxationMessages(splitRelaxations),
     ...emitScheduledOkMessages(finalEvents),
   ];
 
@@ -115,6 +119,10 @@ function emitSchedulerFailureMessages(
       });
       continue;
     }
+    // Split-task partials report how much stayed unplaced; the placed
+    // chunks remain on the calendar.
+    const remainingMinutes = numberFromContext(f.context, "remainingMinutes");
+    const placedMinutes = numberFromContext(f.context, "placedMinutes");
     emits.push({
       id: taskUnschedulableId(f.taskId, f.reason),
       type: "TASK_UNSCHEDULABLE",
@@ -124,6 +132,59 @@ function emitSchedulerFailureMessages(
         type: "TASK_UNSCHEDULABLE",
         plannerId: f.taskId,
         reason: f.reason,
+        ...(remainingMinutes !== undefined ? { remainingMinutes } : {}),
+        ...(placedMinutes !== undefined ? { placedMinutes } : {}),
+      },
+    });
+  }
+  return emits;
+}
+
+/**
+ * SPLIT_CONSTRAINT_RELAXED coalesces per (plannerId, kind): N compromised
+ * chunks of one task fold into a single row carrying count and total minutes.
+ * Both ride in the id, so a changed compromise supersedes the prior row
+ * (fresh, undismissed) while an identical regen is a no-op diff.
+ */
+function emitSplitRelaxationMessages(
+  relaxations: SplitRelaxation[],
+): EngineMessageEmit[] {
+  type Bucket = {
+    plannerId: string;
+    kind: "maxChunk" | "dayCap";
+    affectedCount: number;
+    totalMinutes: number;
+  };
+  const buckets = new Map<string, Bucket>();
+  for (const r of relaxations) {
+    const key = `${r.plannerId}|${r.kind}`;
+    const existing = buckets.get(key);
+    if (existing) {
+      existing.affectedCount += 1;
+      existing.totalMinutes += r.chunkMinutes;
+    } else {
+      buckets.set(key, {
+        plannerId: r.plannerId,
+        kind: r.kind,
+        affectedCount: 1,
+        totalMinutes: r.chunkMinutes,
+      });
+    }
+  }
+
+  const emits: EngineMessageEmit[] = [];
+  for (const b of buckets.values()) {
+    emits.push({
+      id: splitConstraintRelaxedId(b),
+      type: "SPLIT_CONSTRAINT_RELAXED",
+      tone: "warn",
+      dismissed: false,
+      payload: {
+        type: "SPLIT_CONSTRAINT_RELAXED",
+        plannerId: b.plannerId,
+        kind: b.kind,
+        affectedCount: b.affectedCount,
+        totalMinutes: b.totalMinutes,
       },
     });
   }

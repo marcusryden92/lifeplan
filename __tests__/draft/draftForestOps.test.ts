@@ -284,3 +284,76 @@ describe("addDraftItems", () => {
     ).toBe("no valid items to add");
   });
 });
+
+describe("splitting via item ops", () => {
+  it("sets, normalizes, and clears splitting on a leaf", () => {
+    const enabled = updateDraftItems(
+      makeForest(),
+      [
+        {
+          id: "b1",
+          splitting: { minMinutes: 30.9, maxMinutes: 120, maxMinutesPerDay: 10 },
+        },
+      ],
+      VALID_CATEGORY_IDS,
+    );
+    expect(enabled.failures).toEqual([]);
+    const b1 =
+      enabled.forest.goals[0].children[1].children.find((c) => c.id === "b1")!;
+    // Floored min, day cap raised to min.
+    expect(b1.splitting).toEqual({
+      minMinutes: 30,
+      maxMinutes: 120,
+      maxMinutesPerDay: 30,
+    });
+
+    const cleared = updateDraftItems(
+      enabled.forest,
+      [{ id: "b1", splitting: null }],
+      VALID_CATEGORY_IDS,
+    );
+    expect(cleared.failures).toEqual([]);
+    const clearedB1 =
+      cleared.forest.goals[0].children[1].children.find((c) => c.id === "b1")!;
+    expect(clearedB1.splitting).toBeNull();
+  });
+
+  it("rejects splitting on parents and invalid bounds", () => {
+    const onParent = updateDraftItems(
+      makeForest(),
+      [{ id: "basics", splitting: { minMinutes: 30, maxMinutes: 60 } }],
+      VALID_CATEGORY_IDS,
+    );
+    expect(onParent.failures[0].reason).toContain("leaf items only");
+
+    const badBounds = updateDraftItems(
+      makeForest(),
+      [{ id: "b1", splitting: { minMinutes: 60, maxMinutes: 30 } }],
+      VALID_CATEGORY_IDS,
+    );
+    expect(badBounds.failures[0].reason).toContain("minMinutes");
+  });
+
+  it("carries splitting through add_items nodes", () => {
+    const result = addDraftItems(makeForest(), {
+      parentId: "goal-a",
+      items: [
+        {
+          title: "Read the textbook",
+          plannerType: "task",
+          duration: 720,
+          splitting: { minMinutes: 45, maxMinutes: 120, maxMinutesPerDay: null },
+        },
+      ],
+    });
+    expect(result.failures).toEqual([]);
+    const added = result.forest.goals[0].children.find(
+      (c) => c.title === "Read the textbook",
+    )!;
+    expect(added.splitting).toEqual({
+      minMinutes: 45,
+      maxMinutes: 120,
+      maxMinutesPerDay: null,
+    });
+  });
+});

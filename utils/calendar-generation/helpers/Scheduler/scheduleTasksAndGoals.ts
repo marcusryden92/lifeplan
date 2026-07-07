@@ -12,6 +12,10 @@ import {
   largestCompatibleSlotForLargestTask,
   effectiveCandidateDuration,
 } from "./capacityCheck";
+import {
+  SplitRelaxation,
+  createSplitPlacementState,
+} from "./scheduleSplitTask";
 
 export function scheduleTasksAndGoals(
   scheduler: Scheduler,
@@ -26,11 +30,15 @@ export function scheduleTasksAndGoals(
   success: boolean;
   newEvents: SimpleEvent[];
   failures: SchedulingFailure[];
+  splitRelaxations: SplitRelaxation[];
 } {
   const { slotManager, travelManager, context } = scheduler;
   const events: SimpleEvent[] = [];
   const failures: SchedulingFailure[] = [];
   const scheduledTaskIds = new Set<string>();
+  // Split-task bookkeeping shared across iterations: partially placed tasks
+  // resume from their remainder after horizon expansion instead of restarting.
+  const splitState = createSplitPlacementState();
 
   const plannerCategoryMap =
     context.plannerCategoryMap ?? new Map<string, string | null>();
@@ -136,12 +144,11 @@ export function scheduleTasksAndGoals(
           categoryEligibilityMap,
           context.currentDate,
           capacityCache,
+          splitState,
         );
 
-        if (result.scheduled) {
-          if (result.event) events.push(result.event);
-          resolvedIds.add(item.id);
-        } else if (result.permanentFailure) {
+        events.push(...result.events);
+        if (result.scheduled || result.permanentFailure) {
           resolvedIds.add(item.id);
         }
       } else if (item.plannerType === PlannerType.goal) {
@@ -159,6 +166,7 @@ export function scheduleTasksAndGoals(
           categoryEligibilityMap,
           context.currentDate,
           capacityCache,
+          splitState,
         );
 
         if (result.scheduled || result.permanentFailure) {
@@ -187,6 +195,63 @@ export function scheduleTasksAndGoals(
     }
   }
 
+  // Final compromise pass: with the expansion budget spent, retry what's left
+  // with the split day cap relaxed — placing a chunk over the user's per-day
+  // preference beats dropping the minutes entirely. Every compromise is
+  // recorded in splitState.relaxations and surfaced as an engine message.
+  // Non-split candidates get one last ordinary attempt, which is harmless.
+  if (candidates.length > 0) {
+    context.placementCutoffDate = computePlacementCutoff(slotManager.slots);
+    const resolvedIds = new Set<string>();
+    for (const item of candidates) {
+      if (item.plannerType === PlannerType.task) {
+        const result = scheduleSingleTask(
+          item,
+          scheduledTaskIds,
+          failures,
+          scheduler,
+          perTemplateMasks,
+          categories,
+          plannerCategoryMap,
+          categoryEligibilityMap,
+          context.currentDate,
+          capacityCache,
+          splitState,
+          true,
+        );
+        events.push(...result.events);
+        if (result.scheduled || result.permanentFailure) {
+          resolvedIds.add(item.id);
+        }
+      } else if (item.plannerType === PlannerType.goal) {
+        const result = scheduleGoal(
+          item,
+          allPlanners,
+          scheduledTaskIds,
+          memoizedEventIds,
+          failures,
+          events,
+          scheduler,
+          perTemplateMasks,
+          categories,
+          plannerCategoryMap,
+          categoryEligibilityMap,
+          context.currentDate,
+          capacityCache,
+          splitState,
+          true,
+        );
+        if (result.scheduled || result.permanentFailure) {
+          resolvedIds.add(item.id);
+        }
+      }
+    }
+    if (resolvedIds.size > 0) {
+      const remaining = candidates.filter((c) => !resolvedIds.has(c.id));
+      candidates.splice(0, candidates.length, ...remaining);
+    }
+  }
+
   // Candidates still standing when the expansion budget runs out must fail
   // loudly. This exit used to be silent (no event, no failure), which let a
   // starved run report SCHEDULED_OK while the sync deleted every previously
@@ -210,6 +275,7 @@ export function scheduleTasksAndGoals(
     success: finalFailures.length === 0 && candidates.length === 0,
     newEvents: events,
     failures: finalFailures,
+    splitRelaxations: splitState.relaxations,
   };
 }
 

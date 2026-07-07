@@ -40,6 +40,8 @@ export function buildBrainDumpRow(
     starts: null,
     recurrence: null,
     recurrenceExceptions: null,
+    splitting: null,
+    completedSegments: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

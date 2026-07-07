@@ -60,6 +60,7 @@ export function renderEngineMessage(
     "TASK_UNSCHEDULABLE",
     "SCHEDULED_LATE",
     "INSUFFICIENT_TRAVEL",
+    "SPLIT_CONSTRAINT_RELAXED",
     "SCHEDULED_OK",
   ];
   const rawType = (raw as { type: unknown }).type;
@@ -91,15 +92,28 @@ export function renderEngineMessage(
 
     case "TASK_UNSCHEDULABLE": {
       const planner = lookups.plannerById.get(payload.plannerId);
+      const isPartial =
+        typeof payload.remainingMinutes === "number" &&
+        payload.remainingMinutes > 0;
       const title = planner
-        ? `Couldn't place: "${planner.title}"`
+        ? isPartial
+          ? `Couldn't fully place: "${planner.title}"`
+          : `Couldn't place: "${planner.title}"`
         : `Couldn't place task`;
+      const partialNote = isPartial
+        ? ` ${formatMinutes(payload.remainingMinutes!)} still unplaced${
+            typeof payload.placedMinutes === "number" &&
+            payload.placedMinutes > 0
+              ? ` (${formatMinutes(payload.placedMinutes)} placed)`
+              : ""
+          }.`
+        : "";
       return {
         id: message.id,
         tag: "UNPLACED",
         tone,
         title,
-        body: unschedulableBody(payload.reason),
+        body: `${unschedulableBody(payload.reason)}${partialNote}`,
         goToDate: null,
       };
     }
@@ -136,6 +150,27 @@ export function renderEngineMessage(
         tag: "TRAVEL",
         tone,
         title,
+        body,
+        goToDate: null,
+      };
+    }
+
+    case "SPLIT_CONSTRAINT_RELAXED": {
+      const planner = lookups.plannerById.get(payload.plannerId);
+      const label = planner?.title ?? "Split task";
+      const chunkLabel =
+        payload.affectedCount === 1
+          ? "one chunk"
+          : `${payload.affectedCount} chunks`;
+      const body =
+        payload.kind === "maxChunk"
+          ? `The remainder couldn't be divided without going below the minimum chunk size, so ${chunkLabel} (${formatMinutes(payload.totalMinutes)}) exceeds the maximum chunk size.`
+          : `There wasn't room within the daily limit, so ${chunkLabel} (${formatMinutes(payload.totalMinutes)}) was placed past it rather than dropped.`;
+      return {
+        id: message.id,
+        tag: "SPLIT",
+        tone,
+        title: `"${label}" placed with a compromise`,
         body,
         goToDate: null,
       };

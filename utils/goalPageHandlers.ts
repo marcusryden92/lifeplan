@@ -48,6 +48,8 @@ export function addSubtask({
       starts: null,
       recurrence: null,
       recurrenceExceptions: null,
+      splitting: null,
+      completedSegments: null,
       sortOrder: appendKey(getSubtasksById(planner, task.id)),
       completedStartTime: null,
       completedEndTime: null,

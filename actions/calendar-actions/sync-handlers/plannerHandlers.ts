@@ -57,6 +57,12 @@ export function handlePlannerChanges(
             cast: "text",
             extract: (r) => r.recurrenceExceptions,
           },
+          { name: "splitting", cast: "text", extract: (r) => r.splitting },
+          {
+            name: "completedSegments",
+            cast: "text",
+            extract: (r) => r.completedSegments,
+          },
           {
             name: "sortOrder",
             cast: "double precision",
