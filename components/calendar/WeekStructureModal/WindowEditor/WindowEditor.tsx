@@ -1,7 +1,13 @@
 "use client";
 
+import { useMemo } from "react";
 import { Button, vars } from "@/components/ui";
 import type { Category } from "@/types/prisma";
+import { WindowExceptionEditor } from "@/components/events/WindowExceptionEditor";
+import {
+  parseRecurrenceExceptions,
+  serializeRecurrenceExceptions,
+} from "@/utils/planRecurrence";
 import { UNASSIGNED_COLOR } from "../constants";
 import type { WorkingWindow } from "../timeWindow";
 import {
@@ -19,6 +25,7 @@ import {
   categoryDot,
   selectedActions,
   unassignedHint,
+  exceptionsSection,
 } from "./WindowEditor.css";
 
 interface WindowEditorProps {
@@ -39,6 +46,10 @@ export function WindowEditor({
   const cat = win.categoryId
     ? categories.find((c) => c.id === win.categoryId)
     : null;
+  const exceptions = useMemo(
+    () => parseRecurrenceExceptions(win.recurrenceExceptions),
+    [win.recurrenceExceptions],
+  );
   return (
     <div className={selectedPanel}>
       <div className={selectedHeaderRow}>
@@ -99,6 +110,22 @@ export function WindowEditor({
           Delete
         </Button>
       </div>
+
+      {win.categoryId !== null && (
+        <div className={exceptionsSection}>
+          <span className={fieldLabel}>exceptions</span>
+          <WindowExceptionEditor
+            window={win}
+            exceptions={exceptions}
+            onChange={(next) =>
+              onUpdate({
+                recurrenceExceptions: serializeRecurrenceExceptions(next),
+              })
+            }
+            variant="rail"
+          />
+        </div>
+      )}
     </div>
   );
 }

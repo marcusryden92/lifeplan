@@ -37,6 +37,7 @@ function buildWorkWindows(
         day,
         startTime: work.start,
         endTime: work.end,
+        recurrenceExceptions: null,
         categoryId,
         userId,
       });
@@ -47,6 +48,7 @@ function buildWorkWindows(
       day,
       startTime: work.start,
       endTime: END_OF_DAY,
+      recurrenceExceptions: null,
       categoryId,
       userId,
     });
@@ -56,6 +58,7 @@ function buildWorkWindows(
         day: ((day + 1) % 7) as WeekDayIntegers,
         startTime: "00:00",
         endTime: work.end,
+        recurrenceExceptions: null,
         categoryId,
         userId,
       });

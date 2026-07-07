@@ -7,6 +7,7 @@ import { Slot } from "../../models/TimeSlot";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../../constants";
 import { buildAvailableSlots } from "../TimeSlotManager/buildAvailableSlots";
+import { deriveSchedulingHorizon } from "../TimeSlotManager/deriveSchedulingHorizon";
 import { dropPastAvailableSlots } from "../TimeSlotManager/dropPastAvailableSlots";
 import { staticEventTravelPass } from "../TravelManager/staticEventTravelPass";
 import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
@@ -53,16 +54,31 @@ export function expandSlots(
   );
 
   // Pickup time = end of the previously-deferred category. Fallback to today
-  // when no marker exists (initial-state inconsistency — the first
-  // CalendarGenerator pass should have set one, but be defensive).
+  // when no marker exists — a legitimate state, not just an inconsistency:
+  // markLastCategoryAsFinal can only stamp a CategorySlot, and a fabric with
+  // no category slots (no windowed categories, or every window occurrence
+  // covered by fixed events) has nothing to stamp. Nothing is preserved then
+  // and the whole region rebuilds, which is safe because a marker-less fabric
+  // holds no committed category-edge decisions.
   const pickupTime =
     pickupIdx >= 0
       ? slotManager.slots[pickupIdx].end
       : dateTimeService.startOfDay(context.currentDate);
 
+  // Growth target. With a marker, grow from the pickup (it sits near the
+  // horizon tail). Without one, pickupTime is today — growing from it would
+  // rebuild the SAME chunk and the horizon would never extend (the scheduler
+  // then burns its whole expansion budget on no-ops and fails NO_SLOTS on
+  // anything that needed room past the initial chunk). Grow from the current
+  // horizon end instead; the resume/preserve semantics above are unaffected.
+  const chunkBase =
+    pickupIdx >= 0
+      ? pickupTime
+      : deriveSchedulingHorizon(slotManager.slots, pickupTime);
+
   const chunkEnd = dateTimeService.endOfDay(
     dateTimeService.shiftDays(
-      pickupTime,
+      chunkBase,
       SCHEDULING_CONFIG.HORIZON_CHUNK_DAYS - 1,
     ),
   );

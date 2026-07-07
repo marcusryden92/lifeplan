@@ -1,6 +1,5 @@
-import type { Category } from "@/types/prisma";
 import { AvailableSlot, Slot } from "../../models/TimeSlot";
-import { expandSlotForDay } from "./expandSlotForDay";
+import type { CategoryWindowPeriod } from "./expandCategoryWindowPeriods";
 
 type Period = {
   start: Date;
@@ -10,40 +9,30 @@ type Period = {
   isStrict: boolean;
 };
 
-// Resolve all category periods that overlap a single available slot, clipped
-// to the slot's extent. Iterates day-by-day across the slot to evaluate each
-// recurring constraint rule.
+// Resolve all pre-expanded window periods that overlap a single available
+// slot, clipped to the slot's extent. Periods arrive exception-adjusted and
+// start-sorted from expandCategoryWindowPeriods.
 function findPeriodsForSlot(
   slot: AvailableSlot,
-  constraints: Category[],
+  windowPeriods: CategoryWindowPeriod[],
 ): Period[] {
   const slotStartMs = slot.start.getTime();
   const slotEndMs = slot.end.getTime();
 
-  const day = new Date(slotStartMs);
-  day.setHours(0, 0, 0, 0);
-
   const periods: Period[] = [];
 
-  while (day.getTime() < slotEndMs) {
-    for (const constraint of constraints) {
-      for (const timeSlot of constraint.timeSlots) {
-        const period = expandSlotForDay(timeSlot, day);
-        if (!period) continue;
-        const startMs = Math.max(period.start.getTime(), slotStartMs);
-        const endMs = Math.min(period.end.getTime(), slotEndMs);
-        if (startMs < endMs) {
-          periods.push({
-            start: new Date(startMs),
-            end: new Date(endMs),
-            locationId: constraint.locationId ?? null,
-            categoryId: constraint.id,
-            isStrict: constraint.isStrict,
-          });
-        }
-      }
+  for (const period of windowPeriods) {
+    const startMs = Math.max(period.start.getTime(), slotStartMs);
+    const endMs = Math.min(period.end.getTime(), slotEndMs);
+    if (startMs < endMs) {
+      periods.push({
+        start: new Date(startMs),
+        end: new Date(endMs),
+        locationId: period.locationId,
+        categoryId: period.categoryId,
+        isStrict: period.isStrict,
+      });
     }
-    day.setDate(day.getDate() + 1);
   }
 
   periods.sort((a, b) => a.start.getTime() - b.start.getTime());
@@ -142,11 +131,11 @@ function splitOneSlot(slot: AvailableSlot, periods: Period[]): Slot[] {
 }
 
 export function splitSlotsAtCategoryBoundaries(
-  constraints: Category[],
+  windowPeriods: CategoryWindowPeriod[],
   slots: AvailableSlot[],
 ): Slot[] {
-  if (!constraints.length || !slots.length) return slots;
+  if (!windowPeriods.length || !slots.length) return slots;
   return slots.flatMap((slot) =>
-    splitOneSlot(slot, findPeriodsForSlot(slot, constraints)),
+    splitOneSlot(slot, findPeriodsForSlot(slot, windowPeriods)),
   );
 }

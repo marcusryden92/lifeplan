@@ -236,6 +236,7 @@ export function WeekStructureModal({
           startTime,
           endTime,
           categoryId: null,
+          recurrenceExceptions: null,
         };
         setWinsWorking((prev) => [...prev, newWin]);
         setSelected({ kind: "windows", id });
@@ -314,6 +315,12 @@ export function WeekStructureModal({
                   day: newDay,
                   startTime: newStartTime,
                   endTime: newEndTime,
+                  // Same re-anchor rule as templates above: exception keys
+                  // point at the old weekly pattern.
+                  recurrenceExceptions:
+                    newDay !== w.day || newStartTime !== w.startTime
+                      ? null
+                      : w.recurrenceExceptions,
                 }
               : w,
           ),
@@ -363,7 +370,15 @@ export function WeekStructureModal({
         setWinsWorking((prev) =>
           prev.map((w) =>
             w.id === ext.windowId
-              ? { ...w, startTime: newStartTime, endTime: newEndTime }
+              ? {
+                  ...w,
+                  startTime: newStartTime,
+                  endTime: newEndTime,
+                  recurrenceExceptions:
+                    newStartTime !== w.startTime
+                      ? null
+                      : w.recurrenceExceptions,
+                }
               : w,
           ),
         );
@@ -412,7 +427,11 @@ export function WeekStructureModal({
       const src = winsWorking.find((w) => w.id === selected.id);
       if (!src) return;
       const id = `tmp-${uuidv4()}`;
-      setWinsWorking((prev) => [...prev, { ...src, id }]);
+      // Exceptions reference specific occurrences of the source rule.
+      setWinsWorking((prev) => [
+        ...prev,
+        { ...src, id, recurrenceExceptions: null },
+      ]);
       setSelected({ kind: "windows", id });
     }
   };

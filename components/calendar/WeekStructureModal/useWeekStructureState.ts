@@ -48,6 +48,7 @@ export function useWeekStructureState({
         startTime: ts.startTime,
         endTime: ts.endTime,
         categoryId: c.id,
+        recurrenceExceptions: ts.recurrenceExceptions ?? null,
       })),
     );
     setWinsInitial(initialWindows);
@@ -72,7 +73,14 @@ export function useWeekStructureState({
     for (const t of tplsInitial)
       if (!tplsWorking.find((w) => w.id === t.id)) n++;
     const wsig = (w: WorkingWindow) =>
-      JSON.stringify([w.id, w.day, w.startTime, w.endTime, w.categoryId]);
+      JSON.stringify([
+        w.id,
+        w.day,
+        w.startTime,
+        w.endTime,
+        w.categoryId,
+        w.recurrenceExceptions ?? null,
+      ]);
     const winSet = new Set(winsInitial.map(wsig));
     for (const w of winsWorking) if (!winSet.has(wsig(w))) n++;
     for (const w of winsInitial)
@@ -135,7 +143,9 @@ export function useWeekStructureState({
           orig.day === w.day &&
           orig.startTime === w.startTime &&
           orig.endTime === w.endTime &&
-          orig.categoryId === w.categoryId;
+          orig.categoryId === w.categoryId &&
+          (orig.recurrenceExceptions ?? null) ===
+            (w.recurrenceExceptions ?? null);
         if (!unchanged) {
           const payload: CategoryTimeWindow = {
             id,
@@ -143,6 +153,7 @@ export function useWeekStructureState({
             startTime: w.startTime,
             endTime: w.endTime,
             categoryId: w.categoryId,
+            recurrenceExceptions: w.recurrenceExceptions ?? null,
             userId: existing?.userId ?? "",
           };
           dispatch(upsertTimeWindow(payload));

@@ -1,10 +1,10 @@
 # P5 — Medium features
 
-- RRule to categories
-
 - Splitting large tasks into smaller chunks when generating calendar (important for cases like 20 × 30-min "reading" — currently painful)
+
 - Maximum time of a goal per day
 - Allowed days/time spans in any day for goals
+
 - Habits - dynamic items that schedule every week
 - Allow moving/pinning of dynamic objects (temporarily acting like a plan)
 

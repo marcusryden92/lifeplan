@@ -4,6 +4,11 @@ import { ChevronRight, Lock, MapPin, SquarePen, Trash2 } from "lucide-react";
 import { Button, Caption, Combobox } from "@/components/ui";
 import type { Category } from "@/types/prisma";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
+import { WindowExceptionEditor } from "@/components/events/WindowExceptionEditor";
+import {
+  parseRecurrenceExceptions,
+  serializeRecurrenceExceptions,
+} from "@/utils/planRecurrence";
 import { WindowsMiniGrid } from "../WindowsMiniGrid";
 import { useInlineEdit } from "./useInlineEdit";
 import {
@@ -43,6 +48,9 @@ import {
   parentOptionDot,
   lockIcon,
   subCategoryChevron,
+  windowExceptionsList,
+  windowExceptionBlock,
+  windowExceptionHeading,
 } from "./CategoryEditor.css";
 
 export const SWATCH_PALETTE = [
@@ -57,6 +65,8 @@ export const SWATCH_PALETTE = [
 ];
 
 const FALLBACK_COLOR = "#9ca3af";
+
+const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 interface CategoryEditorProps {
   category: Category;
@@ -75,6 +85,10 @@ interface CategoryEditorProps {
   onDelete: () => void;
   onSelectSubCategory: (id: string) => void;
   onOpenWindows: () => void;
+  onChangeWindowExceptions: (
+    windowId: string,
+    serialized: string | null,
+  ) => void;
 }
 
 export function CategoryEditor({
@@ -94,6 +108,7 @@ export function CategoryEditor({
   onDelete,
   onSelectSubCategory,
   onOpenWindows,
+  onChangeWindowExceptions,
 }: CategoryEditorProps) {
   const {
     editing: editingName,
@@ -345,6 +360,43 @@ export function CategoryEditor({
             color={color}
             onOpen={onOpenWindows}
           />
+          {category.timeSlots.length > 0 && (
+            <>
+              <span className={subsectionLabel}>Per-occurrence exceptions</span>
+              <div className={windowExceptionsList}>
+                {[...category.timeSlots]
+                  .sort(
+                    (a, b) =>
+                      ((a.day + 6) % 7) - ((b.day + 6) % 7) ||
+                      a.startTime.localeCompare(b.startTime),
+                  )
+                  .map((row) => (
+                    <div key={row.id} className={windowExceptionBlock}>
+                      <span className={windowExceptionHeading}>
+                        <span
+                          className={subCategoryDot}
+                          style={{ background: color }}
+                        />
+                        {DAY_LABELS[row.day]} {row.startTime}–{row.endTime}
+                      </span>
+                      <WindowExceptionEditor
+                        window={row}
+                        exceptions={parseRecurrenceExceptions(
+                          row.recurrenceExceptions,
+                        )}
+                        onChange={(next) =>
+                          onChangeWindowExceptions(
+                            row.id,
+                            serializeRecurrenceExceptions(next),
+                          )
+                        }
+                        variant="card"
+                      />
+                    </div>
+                  ))}
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <div className={section}>

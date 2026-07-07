@@ -34,6 +34,7 @@ function makeWindow(
   return {
     startTime: "09:00",
     endTime: "17:00",
+    recurrenceExceptions: null,
     categoryId: WORK_ID,
     userId: USER_ID,
     ...overrides,

@@ -17,6 +17,7 @@ function slot(overrides: Partial<CategoryTimeWindow> = {}): CategoryTimeWindow {
     day: 1 as WeekDayIntegers,
     startTime: "09:00",
     endTime: "17:00",
+    recurrenceExceptions: null,
     userId: USER_ID,
     ...overrides,
   };
@@ -331,5 +332,106 @@ describe("applyDraftWindows", () => {
       now: NOW,
     });
     expect(result.map((c) => c.id)).toEqual(["category-work"]);
+  });
+});
+
+describe("applyDraftWindows recurrence exceptions", () => {
+  const EXCEPTIONS = '[{"key":"2026-01-06T09:00","type":"deleted"}]';
+
+  it("preserves exceptions on untouched windows by object identity", () => {
+    const current = [
+      category({ timeSlots: [slot({ recurrenceExceptions: EXCEPTIONS })] }),
+    ];
+    const canonical = draftState(current);
+    const result = applyDraftWindows({
+      currentCategories: current,
+      canonical,
+      working: canonical,
+      userId: USER_ID,
+      now: NOW,
+    });
+    expect(result[0]).toBe(current[0]);
+    expect(result[0].timeSlots[0].recurrenceExceptions).toBe(EXCEPTIONS);
+  });
+
+  it("preserves exceptions on an endTime-only draft change", () => {
+    const current = [
+      category({ timeSlots: [slot({ recurrenceExceptions: EXCEPTIONS })] }),
+    ];
+    const canonical = draftState(current);
+    const working: DraftWindowsState = {
+      windows: [{ ...canonical.windows[0], endTime: "16:00" }],
+      categories: canonical.categories,
+    };
+    const result = applyDraftWindows({
+      currentCategories: current,
+      canonical,
+      working,
+      userId: USER_ID,
+      now: NOW,
+    });
+    expect(result[0].timeSlots[0].endTime).toBe("16:00");
+    expect(result[0].timeSlots[0].recurrenceExceptions).toBe(EXCEPTIONS);
+  });
+
+  it("clears exceptions when the assistant re-anchors day or startTime", () => {
+    const current = [
+      category({
+        timeSlots: [
+          slot({ recurrenceExceptions: EXCEPTIONS }),
+          slot({
+            id: "win-2",
+            day: 4 as WeekDayIntegers,
+            recurrenceExceptions: EXCEPTIONS,
+          }),
+        ],
+      }),
+    ];
+    const canonical = draftState(current);
+    const working: DraftWindowsState = {
+      windows: canonical.windows.map((w) =>
+        w.id === "win-1"
+          ? { ...w, day: 2 }
+          : { ...w, startTime: "10:00" },
+      ),
+      categories: canonical.categories,
+    };
+    const result = applyDraftWindows({
+      currentCategories: current,
+      canonical,
+      working,
+      userId: USER_ID,
+      now: NOW,
+    });
+    for (const row of result[0].timeSlots) {
+      expect(row.recurrenceExceptions).toBeNull();
+    }
+  });
+
+  it("new draft rows land with null exceptions", () => {
+    const current = [category()];
+    const canonical = draftState(current);
+    const working: DraftWindowsState = {
+      windows: [
+        ...canonical.windows,
+        {
+          id: "new-window",
+          categoryId: "category-work",
+          day: 3,
+          startTime: "08:00",
+          endTime: "12:00",
+        },
+      ],
+      categories: canonical.categories,
+    };
+    const result = applyDraftWindows({
+      currentCategories: current,
+      canonical,
+      working,
+      userId: USER_ID,
+      now: NOW,
+    });
+    const created = result[0].timeSlots.find((w) => w.id === "new-window");
+    expect(created?.recurrenceExceptions).toBeNull();
   });
 });

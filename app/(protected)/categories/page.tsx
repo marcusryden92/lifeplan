@@ -9,6 +9,7 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   upsertCategory,
   removeCategory,
+  upsertTimeWindow,
 } from "@/redux/slices/calendarSourceSlice";
 import type { AppDispatch, RootState } from "@/redux/store";
 import {
@@ -114,6 +115,18 @@ export default function CategoriesPage() {
     selected && replace({ useTimeWindows: !selected.useTimeWindows });
   const handleToggleConfine = () =>
     selected && replace({ confineToOwnWindows: !selected.confineToOwnWindows });
+
+  // Granular window dispatch, not upsertCategory with rebuilt timeSlots — the
+  // category row stays untouched (no updatedAt restamp, no phantom category
+  // update in the sync diff).
+  const handleChangeWindowExceptions = (
+    windowId: string,
+    serialized: string | null,
+  ) => {
+    const row = selected?.timeSlots.find((ts) => ts.id === windowId);
+    if (!row) return;
+    dispatch(upsertTimeWindow({ ...row, recurrenceExceptions: serialized }));
+  };
 
   // Reparenting recomputes sortOrder client-side (append to the new sibling
   // group) so we don't need a separate moveCategory server action.
@@ -330,6 +343,7 @@ export default function CategoriesPage() {
               onDelete={() => setDeletingId(selected.id)}
               onSelectSubCategory={setSelectedId}
               onOpenWindows={() => setWindowsOpen(true)}
+              onChangeWindowExceptions={handleChangeWindowExceptions}
             />
           ) : (
             <div className={emptyMain}>

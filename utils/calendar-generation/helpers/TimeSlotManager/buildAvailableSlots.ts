@@ -16,6 +16,7 @@ import { logInitialSlotContext } from "../../utils/loggingUtils";
 import { SCHEDULING_CONFIG } from "../../constants";
 import { inheritLocationFromCategoryPeriods } from "./inheritLocationFromCategoryPeriods";
 import { splitSlotsAtCategoryBoundaries } from "./splitSlotsAtCategoryBoundaries";
+import { expandCategoryWindowPeriods } from "./expandCategoryWindowPeriods";
 import { plannerIdFromEventId } from "../../../planRecurrence";
 
 interface BuildSlotsOptions {
@@ -73,10 +74,19 @@ export function buildAvailableSlots({
   ).filter((i) => i.end.getTime() > startDateMs);
   const occupiedIntervals = [...eventIntervals, ...templateIntervals];
 
-  // Assign location to locationless intervals that fall within a category period
-  // that has a location. Checked day-by-day to avoid global period expansion.
-  const adjustedIntervals = inheritLocationFromCategoryPeriods(
+  // Expand every window occurrence in range once, exceptions applied, so the
+  // location-inherit pass and the category split below agree on which
+  // occurrences exist (and agree with buildCategoryEvents downstream).
+  const windowPeriods = expandCategoryWindowPeriods(
     categories,
+    startDate,
+    endDate,
+  );
+
+  // Assign location to locationless intervals that fall within a category
+  // period that has a location.
+  const adjustedIntervals = inheritLocationFromCategoryPeriods(
+    windowPeriods,
     occupiedIntervals,
   );
 
@@ -104,7 +114,7 @@ export function buildAvailableSlots({
     startingLocation,
   );
 
-  const gapSlots = splitSlotsAtCategoryBoundaries(categories, gaps);
+  const gapSlots = splitSlotsAtCategoryBoundaries(windowPeriods, gaps);
 
   // Emit Occupied slots so the dispatcher sees the full slot stream.
   // Without these the walker would treat non-contiguous Category fragments

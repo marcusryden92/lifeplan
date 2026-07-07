@@ -184,7 +184,7 @@ This is the most consequential phase. It happens in three sub-steps:
 1. Filter events/templates inside the horizon.
 2. [inheritLocationFromCategoryPeriods](../utils/calendar-generation/helpers/TimeSlotManager/inheritLocationFromCategoryPeriods.ts) — for any Occupied interval fully inside a category period that has a location, stamp the category's location onto the interval so subsequent splits propagate location through it.
 3. Find gaps between Occupied intervals → `AvailableSlot[]`.
-4. [splitSlotsAtCategoryBoundaries](../utils/calendar-generation/helpers/TimeSlotManager/splitSlotsAtCategoryBoundaries.ts) — slice Available slots wherever a category period begins or ends. Inside a category window the fragment becomes a `CategorySlot`; outside it remains `AvailableSlot`. An entry-location cursor threads each split's `prevLocationId` / `nextLocationId`.
+4. [splitSlotsAtCategoryBoundaries](../utils/calendar-generation/helpers/TimeSlotManager/splitSlotsAtCategoryBoundaries.ts) — slice Available slots wherever a category period begins or ends. Inside a category window the fragment becomes a `CategorySlot`; outside it remains `AvailableSlot`. An entry-location cursor threads each split's `prevLocationId` / `nextLocationId`. Periods arrive pre-expanded (and exception-adjusted) from [expandCategoryWindowPeriods](../utils/calendar-generation/helpers/TimeSlotManager/expandCategoryWindowPeriods.ts), computed once per `buildAvailableSlots` call and shared with `inheritLocationFromCategoryPeriods`.
 5. Propagate "Anywhere" locations forward (`prevLocationId`) and backward (`nextLocationId`) through the array, so a gap surrounded by located events inherits both ends.
 6. Sort the unified slot array by start time.
 
@@ -270,9 +270,10 @@ Static placements (plans, templates, category-wrapper travel) are always flush w
 [helpers/TimeSlotManager/](../utils/calendar-generation/helpers/TimeSlotManager/):
 
 - `buildAvailableSlots` — initial 28-day slot build (see Phase 6a). Accepts a `startingLocationOverride` used at expansion seams.
-- `splitSlotsAtCategoryBoundaries` — carve Available at category period edges; outside-fragments stay Available, inside-fragments become CategorySlots; threads entry-location across fragments.
-- `inheritLocationFromCategoryPeriods` — stamp categories' locations onto Occupied intervals fully inside their windows.
-- `expandSlotForDay` — resolve a single `CategoryTimeWindow` to concrete bounds for a given day. Handles overnight slots by adding 24h when `endTime ≤ startTime`.
+- `expandCategoryWindowPeriods` — THE window-occurrence expansion: every window of the given categories resolved to concrete `CategoryWindowPeriod`s over a range, with per-occurrence exceptions (`CategoryTimeWindow.recurrenceExceptions`) applied — deleted occurrences vacated, moved ones re-emitted at their override with `originalStart` preserved. Moved occurrences are emitted by the range that CONTAINS the override, not the range iterating the original day (same containing-range rule as template `masksToIntervals` — chunked expansion would otherwise drop or duplicate a cross-seam move). Shared by the slot fabric (`splitSlotsAtCategoryBoundaries`, `inheritLocationFromCategoryPeriods`), CategoryEvent materialization (`buildCategoryEvents`), and wrapper recovery (`findCategoryWrapper`), so they cannot disagree on which occurrences exist. Capacity heuristics stay exception-unaware by design.
+- `splitSlotsAtCategoryBoundaries` — carve Available at pre-expanded category period edges; outside-fragments stay Available, inside-fragments become CategorySlots; threads entry-location across fragments.
+- `inheritLocationFromCategoryPeriods` — stamp period locations onto Occupied intervals fully inside pre-expanded window periods.
+- `expandSlotForDay` — resolve a single `CategoryTimeWindow` rule to concrete bounds for a given day, exception-unaware. Handles overnight slots by adding 24h when `endTime ≤ startTime`. Used by `expandCategoryWindowPeriods` and the clean-week capacity heuristics.
 - `findAllFittingSlots` — return all `PlaceableSlot[]` where `task.duration + bufferTimeMinutes` fits, respecting the task's eligible window-category set (own category + non-confined ancestors) and the per-iteration `placementCutoffDate`. Strict categories the task is not eligible for are filtered out for uncategorized tasks too.
 - `reserveSlotWithTravel` — atomic placement: removes any absorbed/reclaimed travel shards by `travelId`, splices in `[travel-before?, task, travel-after?]`, and reconstructs leftover Available/Category fragments via [restoreAbsorbedRange](../utils/calendar-generation/utils/timeSlotUtils.ts).
 - `dropPastAvailableSlots` — strip Available slots ending ≤ `now`.
@@ -385,8 +386,8 @@ The slot horizon is bounded — initial build covers `HORIZON_CHUNK_DAYS = 28` d
 
 ### The mechanism
 
-1. **Find the pickup point.** Search for the slot with `isFinal === true` (set by the previous static pass). Pickup time = `isFinal.end`. If no marker exists (defensive fallback), pickup is the start of today.
-2. **Compute chunk bounds.** `chunkEnd = endOfDay(pickupTime + HORIZON_CHUNK_DAYS - 1)`.
+1. **Find the pickup point.** Search for the slot with `isFinal === true` (set by the previous static pass). Pickup time = `isFinal.end`. The marker can only live on a `CategorySlot`, so a fabric with no category slots (no windowed categories, or every window occurrence covered by fixed events) legitimately has none — pickup then falls back to the start of today, nothing is preserved, and the whole region rebuilds (safe: a marker-less fabric holds no committed category-edge decisions).
+2. **Compute chunk bounds.** `chunkEnd = endOfDay(chunkBase + HORIZON_CHUNK_DAYS - 1)`, where `chunkBase` is the pickup time when a marker exists (it sits near the horizon tail) but the **current horizon end** (`deriveSchedulingHorizon`) when it doesn't — growing from the fallback pickup (today) would rebuild the same chunk forever, burning the expansion budget on no-ops and failing `NO_SLOTS` on anything that needed room past the initial chunk (guarded by [`expansion-without-categories.test.ts`](../__tests__/calendar-generation/expansion-without-categories.test.ts)).
 3. **Split the slot array.** Everything ending ≤ `pickupTime` is preserved verbatim (`preservedSlots`); everything after is discarded. The static pass's decisions on preserved slots are retained — they are not re-processed.
 4. **Compute `startingLocationOverride`.** From the last preserved slot's outgoing location, so the freshly-built region's seam Available starts with an honest `prev`.
 5. **Rebuild the new region.** Call `buildAvailableSlots({ startDate: pickupTime, ..., startingLocationOverride })` over the new chunk window.
@@ -410,8 +411,10 @@ Four tests live in [`__tests__/calendar-generation/`](../__tests__/calendar-gene
 - [`ready-goal-watermark.test.ts`](../__tests__/calendar-generation/ready-goal-watermark.test.ts) — guards the three watermark starvation modes: a ready root goal must place every leaf even when the subtree aggregate exceeds any slot, when its `categoryId` names a windowless (classification-only) category, and when a memoized past leaf would otherwise inflate the goal's effective size.
 - [`ready-gate.test.ts`](../__tests__/calendar-generation/ready-gate.test.ts) — guards the Phase 9 readiness gate: a NOT-ready goal's subtree schedules nothing, while standalone tasks next to it still place.
 - [`completed-task-not-rescheduled.test.ts`](../__tests__/calendar-generation/completed-task-not-rescheduled.test.ts) — guards the Phase 9 completed-task filter: a completed task under a ready goal renders exactly once, at its completion window, and never re-enters the scheduler.
+- [`category-window-recurrence-exceptions.test.ts`](../__tests__/calendar-generation/category-window-recurrence-exceptions.test.ts) — guards `expandCategoryWindowPeriods`: deleted occurrences vacate both the CategoryEvents and the slot fabric, moved occurrences keep their original-date id while relocating placement, and a move across the horizon seam emits exactly once (containing-range rule). The seam case leaves one window fragment uncovered so the marker-based pickup path is the one exercised.
+- [`expansion-without-categories.test.ts`](../__tests__/calendar-generation/expansion-without-categories.test.ts) — guards the marker-less growth path: with zero CategorySlots there is nothing for `markLastCategoryAsFinal` to stamp, so the chunk base must derive from the current horizon end rather than the fallback pickup (today) — otherwise expansion rebuilds the same chunk forever and an overflow task fails `NO_SLOTS` instead of placing past day 28.
 
-All but the seam test run against a trimmed live-data snapshot in `fixtures/` — hand-built minimal fixtures don't produce a valid slot fabric and fail silently, so new engine tests should extend the fixture pattern.
+All but the seam, window-exception, and marker-less-expansion tests run against a trimmed live-data snapshot in `fixtures/` — hand-built minimal fixtures don't produce a valid slot fabric and fail silently, so new engine tests should extend the fixture pattern.
 
 ---
 
@@ -552,7 +555,7 @@ The three match sites test set membership instead of id equality:
 
 ### Materialization
 
-Each generation, `buildCategoryEvents` materializes one `CategoryEvent` row per `CategoryTimeWindow` per matching local day across the horizon. IDs are composite (`` `${windowId}|${YYYY-MM-DD-local}` ``), keyed on the **local** calendar date — not the UTC instant — so day boundaries near midnight UTC don't desync the diff layer. `stampCategoryEventBorders` propagates trespass flags from category slots and insufficient-travel slots onto these rows.
+Each generation, `buildCategoryEvents` materializes one `CategoryEvent` row per `CategoryTimeWindow` per matching local day across the horizon, expanding through `expandCategoryWindowPeriods` (per-occurrence exceptions applied — deleted occurrences produce no row, moved ones carry the override in `start`/`end`). IDs are composite (`` `${windowId}|${YYYY-MM-DD-local}` ``), keyed on the **local** calendar date of the ORIGINAL rule-derived occurrence — not the UTC instant, and not the override date — so day boundaries near midnight UTC don't desync the diff layer and a moved occurrence keeps its identity. `stampCategoryEventBorders` propagates trespass flags from category slots and insufficient-travel slots onto these rows (containment-based, so moved occurrences stamp correctly).
 
 ---
 

@@ -26,6 +26,7 @@ function makeCategoryTimeWindow(
     day: 1,
     startTime: "09:00",
     endTime: "17:00",
+    recurrenceExceptions: null,
     categoryId: WORK_CATEGORY_ID,
     userId: USER_ID,
     ...overrides,

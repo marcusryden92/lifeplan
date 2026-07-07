@@ -133,3 +133,12 @@ export const unassignedHint = style({
   marginTop: space["1.5"],
   fontFamily: vars.font.ui,
 });
+
+export const exceptionsSection = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["1.5"],
+  marginTop: space["3"],
+  paddingTop: space["2.5"],
+  borderTop: `1px solid ${vars.rule}`,
+});

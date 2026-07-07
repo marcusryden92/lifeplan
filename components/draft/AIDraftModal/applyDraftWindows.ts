@@ -139,12 +139,17 @@ export function applyDraftWindows({
       if (windowFieldsEqual(row, draft)) {
         place(draft.categoryId, row);
       } else {
+        // A day/startTime change re-anchors the rule; exception keys point at
+        // the old occurrences and would resurrect or misplace them.
+        const reanchored =
+          draft.day !== row.day || draft.startTime !== row.startTime;
         place(draft.categoryId, {
           ...row,
           categoryId: draft.categoryId,
           day: draft.day as WeekDayIntegers,
           startTime: draft.startTime,
           endTime: draft.endTime,
+          recurrenceExceptions: reanchored ? null : row.recurrenceExceptions,
         });
       }
     }
@@ -158,6 +163,7 @@ export function applyDraftWindows({
       day: draft.day as WeekDayIntegers,
       startTime: draft.startTime,
       endTime: draft.endTime,
+      recurrenceExceptions: null,
       userId,
     });
   }

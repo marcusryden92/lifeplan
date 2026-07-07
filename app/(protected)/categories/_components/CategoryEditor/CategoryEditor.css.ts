@@ -409,3 +409,30 @@ export const emptyEditor = style({
   color: vars.muted,
   textAlign: "center",
 });
+
+export const windowExceptionsList = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["2.5"],
+  marginTop: space["2"],
+});
+
+export const windowExceptionBlock = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["2"],
+  padding: space["2.5"],
+  border: `1px solid ${vars.rule}`,
+  borderRadius: radii.md,
+});
+
+export const windowExceptionHeading = style({
+  fontFamily: vars.font.ui,
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: vars.ink,
+  fontVariantNumeric: "tabular-nums",
+  display: "flex",
+  alignItems: "center",
+  gap: space["1.5"],
+});

@@ -8,6 +8,7 @@ export type WorkingWindow = {
   startTime: string;
   endTime: string;
   categoryId: string | null;
+  recurrenceExceptions: string | null;
 };
 
 export function timeFromDate(date: Date): string {

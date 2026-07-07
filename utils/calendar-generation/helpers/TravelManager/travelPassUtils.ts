@@ -17,7 +17,7 @@ import {
 } from "../../models/TimeSlot";
 import { TravelManager } from "../../core/TravelManager";
 import { findTravelShardSpan } from "../../utils/timeSlotUtils";
-import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
+import { expandCategoryWindowPeriods } from "../TimeSlotManager/expandCategoryWindowPeriods";
 
 // ---------------------------------------------------------------------------
 // Bleed-trimmed category recovery
@@ -154,17 +154,20 @@ export function findCategoryWrapper(
   slot: CategorySlot,
   categories: Category[],
 ): { start: Date; end: Date } | null {
-  const category = categories.find((c) => c.id === slot.categoryId) as
-    | (Category & { timeSlots?: Parameters<typeof expandSlotForDay>[0][] })
-    | undefined;
-  if (!category?.timeSlots) return null;
+  const category = categories.find((c) => c.id === slot.categoryId);
+  if (!category?.timeSlots?.length) return null;
 
+  // Pad a day either side so overnight occurrences anchored the previous day
+  // and exception-moved occurrences containing this fragment stay findable.
   const day = new Date(slot.start);
   day.setHours(0, 0, 0, 0);
+  const rangeStart = new Date(day);
+  rangeStart.setDate(rangeStart.getDate() - 1);
+  const rangeEnd = new Date(day);
+  rangeEnd.setDate(rangeEnd.getDate() + 2);
 
-  for (const timeSlot of category.timeSlots) {
-    const period = expandSlotForDay(timeSlot, day);
-    if (!period) continue;
+  const periods = expandCategoryWindowPeriods([category], rangeStart, rangeEnd);
+  for (const period of periods) {
     if (
       period.start.getTime() <= slot.start.getTime() &&
       period.end.getTime() >= slot.end.getTime()
