@@ -1,4 +1,5 @@
 import type { Planner } from "@/types/prisma";
+import { plannerCompletedEnd } from "./plannerCompletion";
 
 const DAY_MS = 86400000;
 
@@ -30,22 +31,23 @@ export function isInSmartView(
 ): boolean {
   const today = startOfDay(now);
   const todayEnd = endOfDay(now);
+  const completedEnd = plannerCompletedEnd(item);
   switch (view) {
     case "today": {
       if (!item.deadline) return false;
       const dl = new Date(item.deadline);
-      return dl >= today && dl <= todayEnd && !item.completedEndTime;
+      return dl >= today && dl <= todayEnd && !completedEnd;
     }
     case "this-week": {
       if (!item.deadline) return false;
       const weekEnd = endOfDay(new Date(today.getTime() + 6 * DAY_MS));
       const dl = new Date(item.deadline);
-      return dl >= today && dl <= weekEnd && !item.completedEndTime;
+      return dl >= today && dl <= weekEnd && !completedEnd;
     }
     case "inbox":
-      return !item.categoryId && !item.completedEndTime;
+      return !item.categoryId && !completedEnd;
     case "overdue": {
-      if (!item.deadline || item.completedEndTime) return false;
+      if (!item.deadline || completedEnd) return false;
       return new Date(item.deadline) < today;
     }
     case "all-goals":
@@ -53,9 +55,9 @@ export function isInSmartView(
     case "all-plans":
       return item.plannerType === "plan";
     case "done-7d": {
-      if (!item.completedEndTime) return false;
+      if (!completedEnd) return false;
       const cutoff = new Date(today.getTime() - 7 * DAY_MS);
-      return new Date(item.completedEndTime) >= cutoff;
+      return new Date(completedEnd) >= cutoff;
     }
   }
 }

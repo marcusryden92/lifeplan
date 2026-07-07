@@ -5,6 +5,8 @@ import { EventType } from "@/generated/client";
 import { calendarColors } from "@/data/calendarColors";
 import { stabilizeEvent } from "./stabilizeEvent";
 
+// taskIsCompleted is type-aware: plans never count as completed, so stale
+// completion times on a retyped plan row never move it off its `starts` anchor.
 export function buildCompletedEvents(
   userId: string,
   planners: Planner[],

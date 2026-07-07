@@ -1,4 +1,6 @@
 import type { Planner } from "@/types/prisma";
+import { PlannerType } from "@/types/prisma";
+import { plannerCompletedEnd } from "@/utils/plannerCompletion";
 
 // Toggling completion for a leaf subtask is a two-step process: flip the
 // leaf's own completedStartTime/completedEndTime, then walk up the parent
@@ -11,7 +13,7 @@ export function toggleSubtaskCompletion(
   taskId: string,
 ): Planner[] {
   const task = planner.find((p) => p.id === taskId);
-  if (!task) return planner;
+  if (!task || task.plannerType === PlannerType.plan) return planner;
 
   const willComplete = !task.completedEndTime;
   const now = new Date();
@@ -45,7 +47,7 @@ export function setSubtaskCompletedAt(
   endIso: string | null,
 ): Planner[] {
   const task = planner.find((p) => p.id === taskId);
-  if (!task) return planner;
+  if (!task || task.plannerType === PlannerType.plan) return planner;
 
   const now = new Date();
   const next = planner.map((p) => {
@@ -91,7 +93,7 @@ function recomputeAncestors(
       continue;
     }
 
-    const allComplete = children.every((c) => !!c.completedEndTime);
+    const allComplete = children.every((c) => !!plannerCompletedEnd(c));
 
     if (allComplete) {
       const endTimes = children.map((c) =>

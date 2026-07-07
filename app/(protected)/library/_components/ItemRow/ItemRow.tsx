@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { Caption, CategoryDot, TypeBadge, vars } from "@/components/ui";
 import { popover as popoverRecipe } from "@/lib/theme";
 import { isItemOverdue } from "@/utils/plannerStatus";
+import { plannerCompletedEnd } from "@/utils/plannerCompletion";
 import { formatDurationCompact } from "@/utils/timeFormatting";
 import { plannerTypeBadgeTone } from "@/utils/badgeTone";
 import type { Planner, Category } from "@/types/prisma";
@@ -53,7 +54,7 @@ export function ItemRow({
 
   const showProgressInstead =
     goalProgress != null && goalProgress > 0 && goalProgress < 1;
-  const statusLabel = item.completedEndTime
+  const statusLabel = plannerCompletedEnd(item)
     ? "Done"
     : item.isReady
       ? "Ready"

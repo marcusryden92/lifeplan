@@ -31,10 +31,10 @@ export function buildUncompletedItems(args: {
     const planner = plannerById.get(event.id);
     if (!planner) continue;
     if (planner.completedEndTime) continue;
+    // Plans are excluded: they are fixed-time anchors, not completable items.
     if (
       planner.plannerType !== PlannerType.task &&
-      planner.plannerType !== PlannerType.goal &&
-      planner.plannerType !== PlannerType.plan
+      planner.plannerType !== PlannerType.goal
     ) {
       continue;
     }

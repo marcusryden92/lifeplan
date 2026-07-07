@@ -8,6 +8,7 @@ import type {
 import { EventType } from "@/types/prisma";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import { endOfDay, startOfDay } from "@/utils/dateUtils";
+import { plannerCompletedEnd } from "@/utils/plannerCompletion";
 import {
   getEffectiveCategoryId,
   type InheritedLocationInfo,
@@ -69,7 +70,7 @@ export function buildTodayAgenda(args: {
     const category = effectiveCategoryId
       ? categoryById.get(effectiveCategoryId)
       : undefined;
-    const completed = Boolean(planner.completedEndTime);
+    const completed = Boolean(plannerCompletedEnd(planner));
 
     const deadline = planner.deadline ? new Date(planner.deadline) : null;
     const pastDeadline =

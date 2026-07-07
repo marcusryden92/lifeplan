@@ -229,7 +229,7 @@
 
   - **EventTemplate** — recurring weekly blocks (`startDay`, `startTime`, `duration`, optional `locationId`).
   - **plan** — a Planner row with `plannerType: "plan"` and a fixed `starts` timestamp. Anchors the calendar.
-  - **completed** — any task/goal/plan with `completedStartTime` / `completedEndTime` set. Rendered at the actual completion window, not the originally-scheduled one.
+  - **completed** — any task/goal with `completedStartTime` / `completedEndTime` set. Rendered at the actual completion window, not the originally-scheduled one. Completion does not apply to plans: a plan always renders at its `starts` anchor and is excluded from the dashboard's uncompleted rollover list. Because the item-detail type picker can retype a completed item to plan (leaving stale completion times on the row), completion checks are type-aware — `plannerIsCompleted` / `plannerCompletedEnd` in [utils/plannerCompletion.ts](utils/plannerCompletion.ts) — rather than trusting the timestamps alone.
 
   ### Location & travel
 

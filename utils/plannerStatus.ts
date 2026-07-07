@@ -1,6 +1,7 @@
 import type { Planner, SimpleEvent } from "@/types/prisma";
 import { EventType } from "@/types/prisma";
 import { startOfDay } from "@/utils/dateUtils";
+import { plannerCompletedEnd } from "@/utils/plannerCompletion";
 
 /**
  * Items needing triage in the capture queue: top-level, not completed, not
@@ -9,13 +10,13 @@ import { startOfDay } from "@/utils/dateUtils";
  */
 export function isUnprocessed(item: Planner): boolean {
   if (item.parentId) return false;
-  if (item.completedEndTime) return false;
+  if (plannerCompletedEnd(item)) return false;
   return !item.isTriaged;
 }
 
 export function isItemOverdue(item: Planner, now: Date): boolean {
   if (!item.deadline) return false;
-  if (item.completedEndTime) return false;
+  if (plannerCompletedEnd(item)) return false;
   return new Date(item.deadline) < startOfDay(now);
 }
 
@@ -54,14 +55,14 @@ export function getGoalDurationProgress(
       if (node.id === goal.id) continue;
       const d = node.duration ?? 0;
       totalDuration += d;
-      if (node.completedEndTime) completedDuration += d;
+      if (plannerCompletedEnd(node)) completedDuration += d;
     } else {
       for (const c of children) stack.push(c);
     }
   }
 
   if (totalDuration === 0) {
-    return goal.completedEndTime ? 1 : 0;
+    return plannerCompletedEnd(goal) ? 1 : 0;
   }
   return completedDuration / totalDuration;
 }
@@ -96,7 +97,7 @@ export function getRolledUpRemainingDuration(
     const children = childrenByParent.get(node.id);
     if (!children || children.length === 0) {
       if (node.id === item.id) continue;
-      if (!node.completedEndTime) remaining += node.duration ?? 0;
+      if (!plannerCompletedEnd(node)) remaining += node.duration ?? 0;
     } else {
       for (const c of children) stack.push(c);
     }
@@ -136,7 +137,7 @@ export function getGoalLeafCounts(
     if (!children || children.length === 0) {
       if (node.id === goal.id) continue;
       total++;
-      if (node.completedEndTime) done++;
+      if (plannerCompletedEnd(node)) done++;
     } else {
       for (const c of children) stack.push(c);
     }

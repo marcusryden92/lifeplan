@@ -36,6 +36,7 @@ import {
   getCategoryAndDescendants,
 } from "@/utils/categoryUtils";
 import { isInSmartView, type SmartView } from "@/utils/dateUtils";
+import { plannerCompletedEnd } from "@/utils/plannerCompletion";
 import {
   getGoalDurationProgress,
   getRolledUpRemainingDuration,
@@ -259,7 +260,7 @@ export default function LibraryPage() {
     }
 
     if (!showCompleted) {
-      result = result.filter((i) => !i.completedEndTime);
+      result = result.filter((i) => !plannerCompletedEnd(i));
     }
 
     if (typeFilter !== "all") {

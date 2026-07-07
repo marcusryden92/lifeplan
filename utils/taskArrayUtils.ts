@@ -1,5 +1,6 @@
 import { Planner } from "@/types/prisma";
 import { getSubtasksById } from "./goalPageHandlers";
+import { plannerCompletedEnd } from "./plannerCompletion";
 
 export function getTaskById(
   planner: Planner[],
@@ -59,7 +60,7 @@ export function completedSubtaskDuration(
   const subtasks = getSubtasksById(planner, id);
 
   if (subtasks.length === 0) {
-    return task.completedEndTime ? task.duration || 0 : 0;
+    return plannerCompletedEnd(task) ? task.duration || 0 : 0;
   }
 
   let total = 0;

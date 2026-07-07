@@ -16,7 +16,10 @@ export const sidebar = style({
   background: vars.glass.bg,
   backdropFilter: backdropFilters.panel,
   WebkitBackdropFilter: backdropFilters.panel,
-  padding: space["4"],
+  // 15px (off-scale) centers the 30px navGlyph in the 60px collapsed rail
+  // (60 - 2*15 = 30); space["4"] (16px) leaves 28px and clips it off-center.
+  // eslint-disable-next-line theme/no-raw-scale-values
+  padding: "15px",
   display: "flex",
   flexDirection: "column",
   gap: space["2"],

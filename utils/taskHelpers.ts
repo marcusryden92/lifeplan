@@ -4,6 +4,7 @@ import { getMinuteDifference } from "./calendar-generation/utils/dateTimeService
 import { floorMinutes } from "./calendarUtils";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { assert } from "./assert/assert";
+import { plannerIsCompleted } from "./plannerCompletion";
 
 export function getPlannerAndCalendarForCompletedTask(
   planner: Planner[],
@@ -104,7 +105,5 @@ export function currentlyInEvent(event: SimpleEvent | EventImpl) {
 }
 
 export function taskIsCompleted(task: Planner) {
-  if (task.completedStartTime && task.completedEndTime) return true;
-
-  return false;
+  return plannerIsCompleted(task);
 }
