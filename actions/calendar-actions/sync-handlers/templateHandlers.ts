@@ -56,6 +56,11 @@ export function handleTemplateChanges(
           { name: "duration", cast: "int", extract: (r) => r.duration },
           { name: "color", cast: "text", extract: (r) => r.color },
           { name: "locationId", cast: "text", extract: (r) => r.locationId },
+          {
+            name: "recurrenceExceptions",
+            cast: "text",
+            extract: (r) => r.recurrenceExceptions,
+          },
         ],
       })
     );

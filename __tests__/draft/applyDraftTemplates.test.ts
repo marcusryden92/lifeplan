@@ -87,6 +87,7 @@ describe("applyDraftTemplates", () => {
         duration: 60,
         color: null,
         locationId: "loc-gym",
+        recurrenceExceptions: null,
         userId: USER,
         createdAt: SAVED_AT,
         updatedAt: SAVED_AT,
@@ -107,6 +108,42 @@ describe("applyDraftTemplates", () => {
     });
     expect(result).toHaveLength(1);
     expect(result[0]).toBe(current[0]);
+  });
+
+  it("clears recurrenceExceptions when an update re-anchors the series day/time", () => {
+    const exceptions = JSON.stringify([
+      { key: "2026-07-06T09:00", type: "deleted" },
+    ]);
+    const current = [row({ recurrenceExceptions: exceptions })];
+    const canonical = templatesToDraft(current);
+    const working = templatesToDraft(current);
+    working[0] = { ...working[0], startDay: 3 };
+    const result = applyDraftTemplates({
+      current,
+      canonical,
+      working,
+      userId: USER,
+      now: SAVED_AT,
+    });
+    expect(result[0].recurrenceExceptions).toBeNull();
+  });
+
+  it("preserves recurrenceExceptions when an update touches only other fields", () => {
+    const exceptions = JSON.stringify([
+      { key: "2026-07-06T09:00", type: "deleted" },
+    ]);
+    const current = [row({ recurrenceExceptions: exceptions })];
+    const canonical = templatesToDraft(current);
+    const working = templatesToDraft(current);
+    working[0] = { ...working[0], title: "Deep work" };
+    const result = applyDraftTemplates({
+      current,
+      canonical,
+      working,
+      userId: USER,
+      now: SAVED_AT,
+    });
+    expect(result[0].recurrenceExceptions).toBe(exceptions);
   });
 
   it("preserves rows created elsewhere while the modal was open", () => {

@@ -101,3 +101,12 @@ export const selectedActions = style({
   marginTop: space["2.5"],
   flexWrap: "wrap",
 });
+
+export const exceptionsSection = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["1.5"],
+  marginTop: space["3"],
+  paddingTop: space["2.5"],
+  borderTop: `1px solid ${vars.rule}`,
+});

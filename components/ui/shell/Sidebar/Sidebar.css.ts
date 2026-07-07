@@ -45,9 +45,16 @@ export const brand = style({
 export const brandLogo = style({
   width: 30,
   height: 30,
-  borderRadius: radii.pill,
-  background: vars.ink,
   flexShrink: 0,
+  backgroundColor: vars.ink,
+  WebkitMaskImage: "url(/logo.svg)",
+  maskImage: "url(/logo.svg)",
+  WebkitMaskSize: "contain",
+  maskSize: "contain",
+  WebkitMaskRepeat: "no-repeat",
+  maskRepeat: "no-repeat",
+  WebkitMaskPosition: "center",
+  maskPosition: "center",
 });
 
 export const brandText = style({

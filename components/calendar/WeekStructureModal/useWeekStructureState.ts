@@ -64,6 +64,7 @@ export function useWeekStructureState({
         t.duration,
         t.color,
         t.locationId ?? null,
+        t.recurrenceExceptions ?? null,
       ]);
     const tplSet = new Set(tplsInitial.map(sig));
     let n = 0;
@@ -175,7 +176,9 @@ export function useWeekStructureState({
           prev.startTime === t.startTime &&
           prev.duration === t.duration &&
           prev.color === t.color &&
-          (prev.locationId ?? null) === (t.locationId ?? null);
+          (prev.locationId ?? null) === (t.locationId ?? null) &&
+          (prev.recurrenceExceptions ?? null) ===
+            (t.recurrenceExceptions ?? null);
         if (!tplUnchanged) dispatch(upsertTemplate(t));
         return t;
       });

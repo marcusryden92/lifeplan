@@ -28,11 +28,13 @@ export default function useCalendarStateActions(dispatch: AppDispatch) {
 
   const updateTemplateArray = useCallback(
     (
-      template: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[])
+      template: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
+      options?: CalendarUpdateOptions,
     ) => {
       dispatch(
         updateAllCalendarStates({
           template,
+          engineMode: options?.engineMode,
         })
       );
     },

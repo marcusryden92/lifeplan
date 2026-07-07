@@ -1,5 +1,6 @@
 import { EventTemplate } from "@/types/prisma";
 import { PerTemplateMask } from "../../models/TemplateModels";
+import { parseRecurrenceExceptions } from "@/utils/planRecurrence";
 
 export function getPerTemplateMasks(
   templates: EventTemplate[],
@@ -22,6 +23,10 @@ export function getPerTemplateMasks(
 
     const t = template as unknown as Record<string, unknown>;
 
+    const recurrenceExceptions = parseRecurrenceExceptions(
+      template.recurrenceExceptions,
+    );
+
     masks.push({
       templateId: template.id,
       title: template.title,
@@ -30,6 +35,9 @@ export function getPerTemplateMasks(
       dayOfWeek: template.startDay,
       startMinutes,
       endMinutes,
+      recurrenceExceptions: recurrenceExceptions.length
+        ? recurrenceExceptions
+        : undefined,
       startDateISO: (() => {
         if (typeof t.startDateISO === "string") return t.startDateISO;
         if (typeof t.startDate === "string") return t.startDate;

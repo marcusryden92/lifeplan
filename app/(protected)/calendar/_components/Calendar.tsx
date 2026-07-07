@@ -33,6 +33,10 @@ import {
   handleEventDrop,
   applyOccurrenceMove,
   applySeriesMove,
+  applyTemplateOccurrenceMove,
+  applyTemplateSeriesMove,
+  applyTemplateOccurrenceDelete,
+  resolveTemplateOccurrence,
 } from "@/utils/calendarEventHandlers";
 import {
   occurrenceKeyFromEventId,
@@ -47,6 +51,7 @@ import {
   handleTemplateEventCopy,
   handleTemplateEventDelete,
   handleTemplateEventEdit,
+  handleTemplateEventResize,
 } from "@/utils/template-handlers/templateEventHandlers";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { RuntimeEventExtendedProps } from "@/types/ui";
@@ -118,6 +123,10 @@ function Calendar({
   useEffect(() => {
     plannerRef.current = planner;
   }, [planner]);
+  const templateRef = useRef(template);
+  useEffect(() => {
+    templateRef.current = template;
+  }, [template]);
 
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
@@ -136,6 +145,23 @@ function Calendar({
     deltaMs: number;
     revert: () => void;
   } | null>(null);
+  const [pendingTemplateScope, setPendingTemplateScope] = useState<
+    | {
+        mode: "move";
+        templateId: string;
+        templateTitle: string;
+        occurrenceKey: string;
+        newStart: Date;
+        revert: () => void;
+      }
+    | {
+        mode: "delete";
+        templateId: string;
+        templateTitle: string;
+        occurrenceKey: string;
+      }
+    | null
+  >(null);
 
   // Navigate the existing instance when the requested date changes. The
   // previous `key={initialDate.getTime()}` approach tore down and rebuilt the
@@ -199,8 +225,19 @@ function Calendar({
     [],
   );
   const onEventResize = useCallback(
-    (resizeInfo: EventResizeDoneArg) => handleEventResize(updateAll, resizeInfo),
-    [updateAll],
+    (resizeInfo: EventResizeDoneArg) => {
+      const eventType = (
+        resizeInfo.event.extendedProps as RuntimeEventExtendedProps | undefined
+      )?.eventType;
+      // Resizing a template occurrence resizes the whole series (duration lives
+      // on the template row) — same as resizing a plan occurrence.
+      if (eventType === EventType.template) {
+        handleTemplateEventResize(updateTemplateArray, resizeInfo);
+        return;
+      }
+      handleEventResize(updateAll, resizeInfo);
+    },
+    [updateAll, updateTemplateArray],
   );
   // Dropping a recurring-plan occurrence defers to a scope prompt (this
   // occurrence vs the whole series); the tile stays at the drop position while
@@ -208,8 +245,35 @@ function Calendar({
   const onEventDrop = useCallback(
     (dropInfo: EventDropArg) => {
       const { event, oldEvent, revert } = dropInfo;
-      const occurrenceKey = occurrenceKeyFromEventId(event.id);
-      if (occurrenceKey !== null) {
+
+      // Templates first: a moved template occurrence carries a composite
+      // `templateId|key` id, which would otherwise be misread as a plan
+      // occurrence below.
+      const eventType = (
+        event.extendedProps as RuntimeEventExtendedProps | undefined
+      )?.eventType;
+      if (eventType === EventType.template) {
+        // Key from the PRE-drag position — the post-drag one is the override.
+        const occurrence = resolveTemplateOccurrence(
+          event.id,
+          templateRef.current,
+          oldEvent.start,
+        );
+        if (!occurrence || !event.start) {
+          revert();
+          return;
+        }
+        setPendingTemplateScope({
+          mode: "move",
+          ...occurrence,
+          newStart: event.start,
+          revert,
+        });
+        return;
+      }
+
+      const occurrenceKeyValue = occurrenceKeyFromEventId(event.id);
+      if (occurrenceKeyValue !== null) {
         const planId = plannerIdFromEventId(event.id);
         const plan = plannerRef.current.find((p) => p.id === planId);
         if (!plan || !planIsRecurring(plan) || !event.start || !oldEvent.start) {
@@ -219,7 +283,7 @@ function Calendar({
         setPendingOccurrenceMove({
           planId,
           planTitle: plan.title,
-          occurrenceKey,
+          occurrenceKey: occurrenceKeyValue,
           newStart: event.start,
           deltaMs: event.start.getTime() - oldEvent.start.getTime(),
           revert,
@@ -277,10 +341,17 @@ function Calendar({
             onCopy={() =>
               handleTemplateEventCopy(updateTemplateArray, event, userId)
             }
-            onDelete={() =>
-              handleTemplateEventDelete(updateTemplateArray, event.id)
-            }
+            onDelete={() => {
+              const occurrence = resolveTemplateOccurrence(
+                event.id,
+                templateRef.current,
+                event.start,
+              );
+              if (!occurrence) return;
+              setPendingTemplateScope({ mode: "delete", ...occurrence });
+            }}
             hideHoverButtons
+            scopedDelete
           />
         );
       }
@@ -351,6 +422,50 @@ function Calendar({
         onCancel={() => {
           pendingOccurrenceMove?.revert();
           setPendingOccurrenceMove(null);
+        }}
+      />
+      <RecurrenceScopeModal
+        open={pendingTemplateScope !== null}
+        mode={pendingTemplateScope?.mode ?? "move"}
+        entityLabel="template"
+        planTitle={pendingTemplateScope?.templateTitle ?? ""}
+        onThisOccurrence={() => {
+          if (pendingTemplateScope?.mode === "move") {
+            applyTemplateOccurrenceMove(
+              updateTemplateArray,
+              pendingTemplateScope.templateId,
+              pendingTemplateScope.occurrenceKey,
+              pendingTemplateScope.newStart,
+            );
+          } else if (pendingTemplateScope?.mode === "delete") {
+            applyTemplateOccurrenceDelete(
+              updateTemplateArray,
+              pendingTemplateScope.templateId,
+              pendingTemplateScope.occurrenceKey,
+            );
+          }
+          setPendingTemplateScope(null);
+        }}
+        onAllOccurrences={() => {
+          if (pendingTemplateScope?.mode === "move") {
+            applyTemplateSeriesMove(
+              updateTemplateArray,
+              pendingTemplateScope.templateId,
+              pendingTemplateScope.newStart,
+            );
+          } else if (pendingTemplateScope?.mode === "delete") {
+            handleTemplateEventDelete(
+              updateTemplateArray,
+              pendingTemplateScope.templateId,
+            );
+          }
+          setPendingTemplateScope(null);
+        }}
+        onCancel={() => {
+          if (pendingTemplateScope?.mode === "move") {
+            pendingTemplateScope.revert();
+          }
+          setPendingTemplateScope(null);
         }}
       />
       <NewPlanModal

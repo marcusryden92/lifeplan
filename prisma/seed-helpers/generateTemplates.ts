@@ -37,6 +37,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       duration: 360,
       color: "#1D3557", // navy
       locationId: LOCATION_IDS.HOME,
+      recurrenceExceptions: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -56,6 +57,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
       duration: 180,
       color: "#1D3557", // navy
       locationId: LOCATION_IDS.HOME,
+      recurrenceExceptions: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });
@@ -71,6 +73,7 @@ export const generateTemplates = (userId: string): EventTemplate[] => {
     duration: 180,
     color: "#1D3557", // navy
     locationId: LOCATION_IDS.HOME,
+    recurrenceExceptions: null,
     createdAt: timestamp,
     updatedAt: timestamp,
   });

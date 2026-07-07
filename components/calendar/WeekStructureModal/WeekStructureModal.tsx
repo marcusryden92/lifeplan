@@ -222,6 +222,7 @@ export function WeekStructureModal({
           color:
             TEMPLATE_PALETTE[tplsWorking.length % TEMPLATE_PALETTE.length],
           locationId: null,
+          recurrenceExceptions: null,
           createdAt: now,
           updatedAt: now,
         } as unknown as EventTemplate;
@@ -292,6 +293,13 @@ export function WeekStructureModal({
                   startDay: newDay,
                   startTime: newStartTime,
                   duration: dur,
+                  // A series re-anchor invalidates per-occurrence exceptions —
+                  // their keys point at the old weekly pattern (stale exdates
+                  // resurrect deleted occurrences, moved one-offs go ghost).
+                  recurrenceExceptions:
+                    newDay !== t.startDay || newStartTime !== t.startTime
+                      ? null
+                      : t.recurrenceExceptions,
                   updatedAt: new Date().toISOString(),
                 } as EventTemplate)
               : t,
@@ -340,6 +348,12 @@ export function WeekStructureModal({
                   ...t,
                   startTime: newStartTime,
                   duration: dur,
+                  // Start-edge resize re-anchors the weekly start time — see
+                  // the exception clear in handleEventDrop above.
+                  recurrenceExceptions:
+                    newStartTime !== t.startTime
+                      ? null
+                      : t.recurrenceExceptions,
                   updatedAt: new Date().toISOString(),
                 } as EventTemplate)
               : t,

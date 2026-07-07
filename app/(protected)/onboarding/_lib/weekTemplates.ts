@@ -160,6 +160,7 @@ export function buildWeekTemplates(
       duration: block.duration,
       color,
       locationId,
+      recurrenceExceptions: null,
       userId,
       createdAt: nowIso,
       updatedAt: nowIso,

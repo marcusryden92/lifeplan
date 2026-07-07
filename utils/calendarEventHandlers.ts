@@ -14,7 +14,11 @@ import { getDuration } from "./calendarUtils";
 import { getPlannerAndCalendarForCompletedTask } from "@/utils/taskHelpers";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { assert } from "./assert/assert";
+import { getTimeFromDate } from "./templateBuilderUtils";
+import { WeekDayIntegers } from "@/types/calendarTypes";
 import {
+  occurrenceKey,
+  occurrenceKeyFromEventId,
   parseRecurrenceExceptions,
   serializeRecurrenceExceptions,
   shiftRecurrenceExceptions,
@@ -246,6 +250,117 @@ export const applySeriesDelete = (updateAll: UpdateAllFn, planId: string) => {
   updateAll(
     (prev) => prev.filter((p) => p.id !== planId),
     (prev) => prev.filter((e) => plannerIdFromEventId(e.id) !== planId),
+  );
+};
+
+type UpdateTemplateArrayFn = (
+  template: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
+  options?: { engineMode?: "inline" | "worker" },
+) => void;
+
+// Templates recur weekly on a fixed startDay/startTime, so an occurrence is
+// keyed by its local weekly start (occurrenceKey) exactly like a plan's. These
+// mirror applyOccurrenceMove / applySeriesMove / applyOccurrenceDelete above,
+// operating on the template row's recurrenceExceptions.
+
+// Resolves a template tile back to its row + occurrence key. A regular
+// occurrence has no key in its id — derive it from the tile's position; a
+// moved occurrence's key rides in its composite `templateId|key` id and must
+// win over the position so a re-move/re-delete updates the same exception.
+export const resolveTemplateOccurrence = (
+  eventId: string,
+  templates: EventTemplate[],
+  startForKey: Date | null,
+): {
+  templateId: string;
+  templateTitle: string;
+  occurrenceKey: string;
+} | null => {
+  const templateId = plannerIdFromEventId(eventId);
+  const template = templates.find((t) => t.id === templateId);
+  const key =
+    occurrenceKeyFromEventId(eventId) ??
+    (startForKey ? occurrenceKey(startForKey) : null);
+  if (!template || !key) return null;
+  return { templateId, templateTitle: template.title, occurrenceKey: key };
+};
+
+// "Move just this occurrence": a moved exception on the template.
+export const applyTemplateOccurrenceMove = (
+  updateTemplateArray: UpdateTemplateArrayFn,
+  templateId: string,
+  key: string,
+  newStart: Date,
+) => {
+  updateTemplateArray(
+    (prev) =>
+      prev.map((t) =>
+        t.id === templateId
+          ? {
+              ...t,
+              recurrenceExceptions: serializeRecurrenceExceptions(
+                upsertMovedException(
+                  parseRecurrenceExceptions(t.recurrenceExceptions),
+                  key,
+                  newStart.toISOString(),
+                ),
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : t,
+      ),
+    { engineMode: "inline" },
+  );
+};
+
+// "Move every occurrence": rewrite the template's weekly slot to the dragged
+// position. Prior exceptions were keyed to the old pattern, so they're cleared.
+export const applyTemplateSeriesMove = (
+  updateTemplateArray: UpdateTemplateArrayFn,
+  templateId: string,
+  newStart: Date,
+) => {
+  updateTemplateArray(
+    (prev) =>
+      prev.map((t) =>
+        t.id === templateId
+          ? {
+              ...t,
+              startDay: newStart.getDay() as WeekDayIntegers,
+              startTime: getTimeFromDate(newStart),
+              recurrenceExceptions: null,
+              updatedAt: new Date().toISOString(),
+            }
+          : t,
+      ),
+    { engineMode: "inline" },
+  );
+};
+
+// "Delete just this occurrence": a deleted exception; the exdate re-render
+// drops the tile once the template state updates.
+export const applyTemplateOccurrenceDelete = (
+  updateTemplateArray: UpdateTemplateArrayFn,
+  templateId: string,
+  key: string,
+) => {
+  updateTemplateArray(
+    (prev) =>
+      prev.map((t) =>
+        t.id === templateId
+          ? {
+              ...t,
+              recurrenceExceptions: serializeRecurrenceExceptions(
+                upsertDeletedException(
+                  parseRecurrenceExceptions(t.recurrenceExceptions),
+                  key,
+                ),
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : t,
+      ),
+    { engineMode: "inline" },
   );
 };
 

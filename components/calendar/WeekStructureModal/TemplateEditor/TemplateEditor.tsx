@@ -1,10 +1,17 @@
 "use client";
 
+import { useMemo } from "react";
 import { Button, vars } from "@/components/ui";
 import type { EventTemplate } from "@/types/prisma";
 import { PopoverLocationPicker } from "@/components/events/PopoverLocationPicker";
 import { PopoverColorPicker } from "@/components/events/PopoverColorPicker";
+import { RecurrenceExceptionList } from "@/components/events/RecurrenceExceptionList";
 import { calendarColors } from "@/data/calendarColors";
+import {
+  parseRecurrenceExceptions,
+  serializeRecurrenceExceptions,
+  removeException,
+} from "@/utils/planRecurrence";
 import { addMinutesToHHMM } from "../timeWindow";
 import {
   selectedPanel,
@@ -18,6 +25,7 @@ import {
   fieldInput,
   fieldStatic,
   selectedActions,
+  exceptionsSection,
 } from "./TemplateEditor.css";
 
 interface TemplateEditorProps {
@@ -33,6 +41,18 @@ export function TemplateEditor({
   onDuplicate,
   onDelete,
 }: TemplateEditorProps) {
+  const exceptions = useMemo(
+    () => parseRecurrenceExceptions(template.recurrenceExceptions),
+    [template.recurrenceExceptions],
+  );
+  const restoreException = (key: string) => {
+    onUpdate({
+      recurrenceExceptions: serializeRecurrenceExceptions(
+        removeException(exceptions, key),
+      ),
+    });
+  };
+
   return (
     <div className={selectedPanel}>
       <div className={selectedHeaderRow}>
@@ -94,6 +114,17 @@ export function TemplateEditor({
           Delete
         </Button>
       </div>
+
+      {exceptions.length > 0 && (
+        <div className={exceptionsSection}>
+          <span className={fieldLabel}>exceptions</span>
+          <RecurrenceExceptionList
+            exceptions={exceptions}
+            onRestore={restoreException}
+            variant="rail"
+          />
+        </div>
+      )}
     </div>
   );
 }

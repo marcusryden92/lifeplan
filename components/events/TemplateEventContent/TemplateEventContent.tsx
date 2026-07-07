@@ -22,6 +22,9 @@ interface TemplateEventContentProps {
    *  popover still opens — destructive edits are deferred to that surface
    *  (or future "delete all vs. add exception" prompts). */
   hideHoverButtons?: boolean;
+  /** When true, delete opens a scope prompt instead of removing the tile, so
+   *  skip the destructive red flash + delay and hand off immediately. */
+  scopedDelete?: boolean;
 }
 
 const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
@@ -30,6 +33,7 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
   onCopy,
   onDelete,
   hideHoverButtons = false,
+  scopedDelete = false,
 }) => {
   const { updateTemplateArray, userSettings } = useCalendarProvider();
 
@@ -45,6 +49,14 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
   const red = userSettings.styles.events.errorColor;
 
   const handleClickDelete = () => {
+    setShowPopover(false);
+    // Scoped delete hands off to a "this occurrence vs. every occurrence"
+    // prompt — flashing the tile red would falsely imply it was already
+    // deleted (and linger on cancel).
+    if (scopedDelete) {
+      onDelete();
+      return;
+    }
     const parentElement = elementRef.current?.closest(
       ".fc-event"
     ) as HTMLElement;
@@ -53,11 +65,12 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
       parentElement.style.border = `solid 2px ${red}`;
     }
     setTimeout(() => onDelete(), 500);
-    setShowPopover(false);
   };
 
   const handleEditTitle = (newTitle: string) => {
-    const id = event.id;
+    // A moved one-off occurrence's event.id is a composite `templateId|key`;
+    // the template row id rides in extendedProps.eventId.
+    const id = (event.extendedProps?.eventId as string | undefined) ?? event.id;
     onEditTitle(updateTemplateArray, newTitle, id);
     setShowPopover(false);
   };

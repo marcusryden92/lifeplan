@@ -1,8 +1,8 @@
 # P5 — Medium features
 
 
-- Add RRule option to plans
-- Add RRule exceptions to plans, templates, categories
+- Add RRule exceptions to templates 
+- RRule to categories
 
 - Splitting large tasks into smaller chunks when generating calendar (important for cases like 20 × 30-min "reading" — currently painful)
 - Maximum time of a goal per day

@@ -7,7 +7,7 @@
 
 import { SimpleEvent } from "@/types/prisma";
 import { AvailableSlot } from "../models/TimeSlot";
-import { plannerIdFromEventId } from "../../planRecurrence";
+import { plannerIdFromEventId, occurrenceKey } from "@/utils/planRecurrence";
 
 export interface OccupiedInterval {
   start: Date;
@@ -429,7 +429,16 @@ import type { PerTemplateMask } from "../models/TemplateModels";
 export type { PerTemplateMask };
 
 /**
- * Convert PerTemplateMasks to Intervals over a date range
+ * Convert PerTemplateMasks to Intervals over a date range.
+ *
+ * Per-occurrence recurrence exceptions (moved/deleted, keyed by the
+ * occurrence's original local start) are applied here: any exception vacates
+ * its original weekly slot, and each moved occurrence is emitted at its
+ * override start (same duration) by the range that CONTAINS that override.
+ * Emission cannot key off the original day's range membership — the override
+ * can land in a range that never iterates the original day (an occurrence
+ * dragged out of the past, or across a horizon-chunk seam), and the chunk
+ * that iterates the original day may not contain the override.
  */
 export function masksToIntervals(
   masks: PerTemplateMask[],
@@ -459,6 +468,11 @@ export function masksToIntervals(
         0,
       );
 
+      if (mask.recurrenceExceptions?.length) {
+        const key = occurrenceKey(start);
+        if (mask.recurrenceExceptions.some((e) => e.key === key)) continue;
+      }
+
       const endDayOffset = Math.floor(mask.endMinutes / 1440);
       const endTimeMinutes = mask.endMinutes % 1440;
       const end = new Date(dayStart);
@@ -468,6 +482,22 @@ export function masksToIntervals(
       intervals.push({
         start,
         end,
+        startLocationId: mask.locationId ?? null,
+        endLocationId: mask.locationId ?? null,
+      });
+    }
+  }
+
+  for (const mask of masks) {
+    if (!mask.recurrenceExceptions?.length) continue;
+    const durationMs = (mask.endMinutes - mask.startMinutes) * 60000;
+    for (const exception of mask.recurrenceExceptions) {
+      if (exception.type !== "moved") continue;
+      const start = new Date(exception.newStart);
+      if (start < startDate || start >= endDate) continue;
+      intervals.push({
+        start,
+        end: new Date(start.getTime() + durationMs),
         startLocationId: mask.locationId ?? null,
         endLocationId: mask.locationId ?? null,
       });

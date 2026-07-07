@@ -1,5 +1,5 @@
 import FullCalendar from "@fullcalendar/react";
-import { DateSelectArg, EventDropArg } from "@fullcalendar/core/index.js";
+import { DateSelectArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 import { EventTemplate } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
@@ -42,6 +42,7 @@ export const handleTemplateSelect = (
       duration: durationMinutes, // Add duration in minutes
       color: calendarColors[0],
       locationId: null,
+      recurrenceExceptions: null,
       createdAt: now.toISOString(),
       updatedAt: now.toISOString(),
     };
@@ -50,8 +51,15 @@ export const handleTemplateSelect = (
   }
 };
 
+// Resize edits the series duration ONLY — the start stays anchored to the
+// template's startDay/startTime. Deriving day/time from the resized tile
+// would re-anchor the whole series when the tile is a moved one-off
+// occurrence sitting at its exception's override position.
 export const handleTemplateEventResize = (
-  updateTemplateArray: React.Dispatch<React.SetStateAction<EventTemplate[]>>,
+  updateTemplateArray: (
+    template: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
+    options?: { engineMode?: "inline" | "worker" },
+  ) => void,
   resizeInfo: EventResizeStartArg
 ) => {
   const { event }: EventResizeStartArg = resizeInfo;
@@ -62,63 +70,20 @@ export const handleTemplateEventResize = (
   if (!startDate || !endDate) return;
 
   // Use extendedProps.eventId to get the original template ID
-  // (event.id is a compound ID like "templateId-date-time")
+  // (a moved occurrence's event.id is a composite `templateId|key`)
   const templateId = (event.extendedProps?.eventId as string) || event.id;
-
-  updateTemplateArray((prevEvents) =>
-    prevEvents.map((ev) => {
-      if (ev.id !== templateId) {
-        return ev;
-      }
-
-      // Calculate duration in minutes
-      const duration = Math.round(
-        (endDate.getTime() - startDate.getTime()) / (1000 * 60)
-      );
-
-      return {
-        ...ev,
-        startDay: dayOfWeek(startDate),
-        startTime: getTimeFromDate(startDate),
-        duration,
-        updatedAt: new Date().toISOString(),
-      };
-    })
+  const duration = Math.round(
+    (endDate.getTime() - startDate.getTime()) / (1000 * 60)
   );
-};
 
-export const handleTemplateEventDrop = (
-  updateTemplateArray: React.Dispatch<React.SetStateAction<EventTemplate[]>>,
-  dropInfo: EventDropArg
-) => {
-  const { event } = dropInfo;
-
-  const startDate = event.start;
-  const endDate = event.end;
-
-  if (!startDate || !endDate) return;
-
-  // Use extendedProps.eventId to get the original template ID
-  // (event.id is a compound ID like "templateId-date-time")
-  const templateId = (event.extendedProps?.eventId as string) || event.id;
-
-  updateTemplateArray((prevEvents) =>
-    prevEvents.map((ev) => {
-      if (ev.id !== templateId) return ev;
-
-      // Calculate duration in minutes
-      const duration = Math.round(
-        (endDate.getTime() - startDate.getTime()) / (1000 * 60)
-      );
-
-      return {
-        ...ev,
-        startDay: dayOfWeek(startDate),
-        startTime: getTimeFromDate(startDate),
-        duration,
-        updatedAt: new Date().toISOString(),
-      };
-    })
+  updateTemplateArray(
+    (prevEvents) =>
+      prevEvents.map((ev) =>
+        ev.id === templateId
+          ? { ...ev, duration, updatedAt: new Date().toISOString() }
+          : ev
+      ),
+    { engineMode: "inline" }
   );
 };
 
@@ -152,6 +117,7 @@ export const handleTemplateEventCopy = (
     duration,
     color: event.backgroundColor,
     locationId: (event.extendedProps?.locationId as string | null) ?? null,
+    recurrenceExceptions: null,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
   };

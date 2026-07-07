@@ -57,6 +57,13 @@ export function applyDraftTemplates({
       duration: draft.duration,
       color: draft.color,
       locationId: draft.locationId,
+      // A day/time change re-anchors the series; per-occurrence exceptions
+      // are keyed to the old weekly pattern and would go stale (ghost moved
+      // one-offs, resurrected deleted occurrences).
+      recurrenceExceptions:
+        draft.startDay !== row.startDay || draft.startTime !== row.startTime
+          ? null
+          : row.recurrenceExceptions,
       updatedAt: now,
     };
   });
@@ -71,6 +78,7 @@ export function applyDraftTemplates({
       duration: draft.duration,
       color: draft.color,
       locationId: draft.locationId,
+      recurrenceExceptions: null,
       userId,
       createdAt: now,
       updatedAt: now,
