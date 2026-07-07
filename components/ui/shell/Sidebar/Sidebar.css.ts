@@ -35,7 +35,7 @@ export const sidebar = style({
 });
 
 export const brand = style({
-  padding: "0 0 18px",
+  padding: "0 0 5px",
   display: "flex",
   alignItems: "center",
   whiteSpace: "nowrap",

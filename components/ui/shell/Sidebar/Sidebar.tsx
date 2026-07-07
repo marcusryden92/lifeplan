@@ -5,7 +5,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { signOut } from "next-auth/react";
-import { ChevronLeft, LogOut, Moon, Settings, Sparkles, Sun } from "lucide-react";
+import {
+  ChevronLeft,
+  LogOut,
+  Moon,
+  Settings,
+  Sparkles,
+  Sun,
+} from "lucide-react";
 import { useTheme } from "../../ThemeProvider";
 import { useAssistant } from "../AssistantContext";
 import { NAV_ITEMS } from "../nav";
@@ -74,6 +81,8 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
         <span className={brandLogo} aria-hidden />
         <span className={brandText}>Circadium</span>
       </div>
+
+      <div className={navDivider} aria-hidden />
 
       {NAV_ITEMS.map((item) => {
         const isActive = item.href
