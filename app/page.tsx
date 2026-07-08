@@ -1,29 +1,38 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  CalendarClock,
-  ListTree,
-  Route,
-  Workflow,
-  type LucideIcon,
-} from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, Grain } from "@/components/ui";
 import { themeLight } from "@/lib/theme";
 import { VectorField } from "@/components/landing/VectorField";
+import { Reveal } from "@/components/landing/Reveal";
+import {
+  FeatureVignette,
+  type FeatureVignetteKind,
+} from "@/components/landing/FeatureVignettes";
+import { ReflowDemo } from "@/components/landing/ReflowDemo";
 import {
   page,
-  navBar,
-  navWordmark,
-  navActions,
   hero,
-  introSection,
-  introHeadline,
-  introSubhead,
-  introBody,
-  introCta,
-  introCtaNote,
+  heroScrim,
+  heroNav,
+  heroWordmark,
+  navActions,
+  heroSignIn,
+  heroContent,
+  heroHeadline,
+  heroSubhead,
+  heroCta,
+  heroCtaNote,
+  pillNav,
+  pillNavVisible,
+  pillNavSecondary,
+  pillNavWordmark,
+  leadSection,
+  leadInner,
+  leadText,
+  leadEmphasis,
   prose,
   proseSection,
   proseSectionDark,
@@ -43,13 +52,14 @@ import {
   featureRow,
   featureRowReverse,
   featureVisual,
-  featureIconWrap,
   featureContent,
   featureIndex,
   featureName,
   featureBody,
   closeSection,
   closeCard,
+  closeScrim,
+  closeInner,
   closeHeading,
   closeBody,
   closeActions,
@@ -66,32 +76,33 @@ type Section = {
   kicker: string;
   body: Line[];
   dark?: boolean;
+  demo?: boolean;
 };
 
 type Feature = {
-  Icon: LucideIcon;
+  kind: FeatureVignetteKind;
   name: string;
   body: string;
 };
 
 const FEATURES: Feature[] = [
   {
-    Icon: Workflow,
+    kind: "engine",
     name: "A scheduling engine",
     body: "Tell Circadium what matters. It returns a week that respects your goals, your deadlines, and the constraints around them — without you arranging a single block.",
   },
   {
-    Icon: Route,
+    kind: "travel",
     name: "Locations & travel",
     body: "Every place you work from, every commute between them. The engine knows what's reachable and routes time across driving, transit, cycling, and walking.",
   },
   {
-    Icon: CalendarClock,
+    kind: "windows",
     name: "Time-aware categories",
     body: "Define when each part of life is allowed to happen. Strict windows that block everything else, soft ones that only suggest. Deep work mornings, errands after five.",
   },
   {
-    Icon: ListTree,
+    kind: "goals",
     name: "Goals with subtasks",
     body: "Break large goals into ordered steps. Mark dependencies between them. The engine schedules subtasks in the order they have to happen, not just the order you wrote them.",
   },
@@ -119,26 +130,9 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    kicker: "The approach",
-    heading: "Built around reality.",
-    body: [
-      { text: "Your schedule doesn't exist in a vacuum." },
-      {
-        text: "Work happens in places. Meetings take time. Commutes exist. Energy changes throughout the day.",
-      },
-      {
-        text: "Circadium accounts for where things happen, how long it takes to get there, when you're available, and how you prefer to spend your time.",
-      },
-      {
-        text: "Deep work in the morning. Meetings in the afternoon. Gym after work. Client visits across town.",
-      },
-      { text: "The result isn't a perfectly optimized calendar." },
-      { text: "It's a week you can actually live.", emphasis: true },
-    ],
-  },
-  {
     kicker: "The friction",
     dark: true,
+    demo: true,
     heading: "Stop rebuilding your week by hand.",
     body: [
       { text: "Most planning systems break the moment something changes." },
@@ -179,55 +173,95 @@ const SECTIONS: Section[] = [
   },
 ];
 
+const SECTION_TOTAL = String(SECTIONS.length).padStart(2, "0");
+
 export default function Home() {
   const router = useRouter();
+  const heroRef = useRef<HTMLElement>(null);
+  const [pastHero, setPastHero] = useState(false);
   const goLogin = () => router.push("/auth/login");
   const goRegister = () => router.push("/auth/register");
 
+  useEffect(() => {
+    const node = heroRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      ([entry]) => setPastHero(!entry.isIntersecting),
+      { threshold: 0 },
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, []);
+
   return (
     <main className={`${themeLight} ${page} custom-scrollbar`}>
-      <nav className={navBar}>
-        <Link href="/" className={navWordmark}>
+      <div className={pastHero ? `${pillNav} ${pillNavVisible}` : pillNav}>
+        <Link href="/" className={pillNavWordmark}>
           Circadium
         </Link>
-        <div className={navActions}>
-          <Button variant="ghost" size="md" onClick={goLogin}>
-            Sign in
-          </Button>
-          <Button variant="solid" size="md" onClick={goRegister}>
-            Start free
-          </Button>
-        </div>
-      </nav>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={pillNavSecondary}
+          onClick={goLogin}
+        >
+          Sign in
+        </Button>
+        <Button variant="solid" size="sm" onClick={goRegister}>
+          Start free
+        </Button>
+      </div>
 
-      <section className={hero}>
+      <section ref={heroRef} className={hero}>
         <VectorField />
+        <div className={heroScrim} aria-hidden />
+        <header className={heroNav}>
+          <Link href="/" className={heroWordmark}>
+            Circadium
+          </Link>
+          <div className={navActions}>
+            <button type="button" className={heroSignIn} onClick={goLogin}>
+              Sign in
+            </button>
+            <Button variant="solidLight" size="md" onClick={goRegister}>
+              Start free
+            </Button>
+          </div>
+        </header>
+        <div className={heroContent}>
+          <h1 className={heroHeadline}>
+            The app that makes you <em>less</em> productive.
+          </h1>
+          <p className={heroSubhead}>
+            Because productivity isn&apos;t the goal.
+          </p>
+          <div className={heroCta}>
+            <Button variant="solidLight" size="lg" onClick={goRegister}>
+              Start free →
+            </Button>
+            <span className={heroCtaNote}>Free while in beta.</span>
+          </div>
+        </div>
       </section>
 
-      <section className={introSection}>
-        <h2 className={introHeadline}>
-          The app that makes you <em>less</em> productive.
-        </h2>
-        <p className={introSubhead}>
-          Because productivity isn&apos;t the goal.
-        </p>
-        <div className={introBody}>
-          <p>
-            A productive day can still be a wasted day. You can clear your
-            inbox, finish a dozen tasks, attend every meeting, and make no
-            meaningful progress on what actually matters.
-          </p>
-          <p>
-            Circadium computes a week around your goals, commitments, locations,
-            and constraints — then adapts as life changes.
-          </p>
-        </div>
-        <div className={introCta}>
-          <Button variant="solid" size="lg" onClick={goRegister}>
-            Start free →
-          </Button>
-          <span className={introCtaNote}>Free while in beta.</span>
-        </div>
+      <section className={leadSection}>
+        <Reveal>
+          <div className={leadInner}>
+            <p className={leadText}>
+              A productive day can still be a wasted day. You can clear your
+              inbox, finish a dozen tasks, attend every meeting, and make no
+              meaningful progress on what actually matters.
+            </p>
+            <p className={leadText}>
+              Circadium computes a week around your goals, commitments,
+              locations, and constraints — then adapts as life changes.
+            </p>
+            <p className={leadEmphasis}>
+              The result isn&apos;t a perfectly optimized calendar. It&apos;s a
+              week you can actually live.
+            </p>
+          </div>
+        </Reveal>
       </section>
 
       <div className={prose}>
@@ -236,46 +270,50 @@ export default function Home() {
             key={s.heading}
             className={s.dark ? proseSectionDark : proseSection}
           >
-            <div className={proseGrid}>
-              <aside className={proseAside}>
-                <span className={proseNumber}>
-                  {String(i + 1).padStart(2, "0")}
-                  <span aria-hidden> / 04</span>
-                </span>
-                <span className={proseRule} aria-hidden />
-                <span>{s.kicker}</span>
-              </aside>
-              <div>
-                <h2 className={proseHeading}>{s.heading}</h2>
-                <div className={proseBody}>
-                  {s.body.map((line, j) => (
-                    <p
-                      key={j}
-                      className={line.emphasis ? proseEmphasis : proseLine}
-                    >
-                      {line.text}
-                    </p>
-                  ))}
+            {s.dark ? <Grain /> : null}
+            <Reveal>
+              <div className={proseGrid}>
+                <aside className={proseAside}>
+                  <span className={proseNumber}>
+                    {String(i + 1).padStart(2, "0")}
+                    <span aria-hidden> / {SECTION_TOTAL}</span>
+                  </span>
+                  <span className={proseRule} aria-hidden />
+                  <span>{s.kicker}</span>
+                </aside>
+                <div>
+                  <h2 className={proseHeading}>{s.heading}</h2>
+                  <div className={proseBody}>
+                    {s.body.map((line, j) => (
+                      <p
+                        key={j}
+                        className={line.emphasis ? proseEmphasis : proseLine}
+                      >
+                        {line.text}
+                      </p>
+                    ))}
+                  </div>
+                  {s.demo ? <ReflowDemo /> : null}
                 </div>
               </div>
-            </div>
+            </Reveal>
           </section>
         ))}
       </div>
 
       <section className={featuresSection}>
-        <header className={featuresHeader}>
-          <p className={featuresKicker}>What&apos;s in it</p>
-          <h2 className={featuresHeading}>Four moving parts.</h2>
-        </header>
+        <Reveal>
+          <header className={featuresHeader}>
+            <p className={featuresKicker}>What&apos;s in it</p>
+            <h2 className={featuresHeading}>Four moving parts.</h2>
+          </header>
+        </Reveal>
         <div className={featuresList}>
           {FEATURES.map((f, i) => {
             const reversed = i % 2 === 1;
             const visual = (
-              <div className={featureVisual} aria-hidden>
-                <div className={featureIconWrap}>
-                  <f.Icon size={88} strokeWidth={1.25} />
-                </div>
+              <div className={featureVisual}>
+                <FeatureVignette kind={f.kind} />
               </div>
             );
             const content = (
@@ -288,22 +326,21 @@ export default function Home() {
               </div>
             );
             return (
-              <article
-                key={f.name}
-                className={reversed ? featureRowReverse : featureRow}
-              >
-                {reversed ? (
-                  <>
-                    {content}
-                    {visual}
-                  </>
-                ) : (
-                  <>
-                    {visual}
-                    {content}
-                  </>
-                )}
-              </article>
+              <Reveal key={f.name}>
+                <article className={reversed ? featureRowReverse : featureRow}>
+                  {reversed ? (
+                    <>
+                      {content}
+                      {visual}
+                    </>
+                  ) : (
+                    <>
+                      {visual}
+                      {content}
+                    </>
+                  )}
+                </article>
+              </Reveal>
             );
           })}
         </div>
@@ -311,18 +348,25 @@ export default function Home() {
 
       <section className={closeSection}>
         <div className={closeCard}>
-          <h2 className={closeHeading}>Your week reveals your priorities.</h2>
-          <p className={closeBody}>
-            Circadium helps make sure they&apos;re the right ones.
-          </p>
-          <div className={closeActions}>
-            <Button variant="solidLight" size="lg" onClick={goRegister}>
-              Start free →
-            </Button>
-          </div>
-          <p className={closeNote}>
-            Free while in beta. Your data stays yours.
-          </p>
+          <VectorField
+            settings={{ density: 1.0, speed: 0.55, strength: 1.15, mforce: 0.6 }}
+          />
+          <div className={closeScrim} aria-hidden />
+          <Grain />
+          <Reveal className={closeInner}>
+            <h2 className={closeHeading}>Your week reveals your priorities.</h2>
+            <p className={closeBody}>
+              Circadium helps make sure they&apos;re the right ones.
+            </p>
+            <div className={closeActions}>
+              <Button variant="solidLight" size="lg" onClick={goRegister}>
+                Build your first week →
+              </Button>
+            </div>
+            <p className={closeNote}>
+              Free while in beta. Your data stays yours.
+            </p>
+          </Reveal>
         </div>
       </section>
 

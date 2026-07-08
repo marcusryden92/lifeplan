@@ -1,9 +1,8 @@
-﻿import { globalStyle, style } from "@vanilla-extract/css";
-import { space, vars, contentWidth, media, radii } from "@/lib/theme";
-
+import { globalStyle, style } from "@vanilla-extract/css";
+import { space, vars, contentWidth, media, radii, zIndex } from "@/lib/theme";
 
 // ---------- page chrome ----------
-// No horizontal padding â€” sections handle their own. This lets full-bleed
+// No horizontal padding — sections handle their own. This lets full-bleed
 // sections (e.g. the dark prose section) reach the viewport edge cleanly
 // while bezeled elements (hero, close card) supply their own 12px inset.
 // `main` itself is the scroll container so the `.custom-scrollbar` rules
@@ -19,126 +18,237 @@ export const page = style({
   overflowX: "hidden",
 });
 
-// ---------- top navigation ----------
-export const navBar = style({
+// ---------- hero ----------
+// Full-viewport bezeled card: the vector field carries the nav and the
+// headline as overlays. Overlay wrappers are pointer-transparent so the
+// canvas keeps its mouse interactivity; only the actual controls re-enable
+// pointer events.
+export const hero = style({
+  position: "relative",
+  borderRadius: radii["3xl"],
+  overflow: "hidden",
+  isolation: "isolate",
+  background: vars.ink,
+  height: ["calc(100vh - 24px)", "calc(100svh - 24px)"],
+  marginInline: space["3"],
+  marginTop: space["3"],
+  "@media": {
+    [media.mobile]: {
+      borderRadius: radii.none,
+      height: ["100vh", "100svh"],
+      marginInline: 0,
+      marginTop: 0,
+    },
+  },
+});
+
+export const heroScrim = style({
+  position: "absolute",
+  inset: 0,
+  zIndex: 1,
+  pointerEvents: "none",
+  background:
+    "linear-gradient(to top, rgba(11,9,26,0.68) 0%, rgba(11,9,26,0.28) 36%, transparent 62%)",
+});
+
+export const heroNav = style({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  zIndex: 2,
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
   gap: space["4"],
-  padding: "8px clamp(12px, 1.6vw, 28px)",
-  flexShrink: 0,
-  "@media": {
-    [media.mobile]: { padding: "14px 20px" },
-  },
+  padding: "18px clamp(16px, 2.4vw, 32px)",
+  pointerEvents: "none",
 });
 
-export const navWordmark = style({
+export const heroWordmark = style({
   fontFamily: vars.font.display,
   fontSize: 24,
   fontWeight: 500,
   letterSpacing: "-0.02em",
-  color: vars.ink,
+  color: "#f2efea",
   textDecoration: "none",
   lineHeight: 1,
+  pointerEvents: "auto",
 });
 
 export const navActions = style({
   display: "flex",
   alignItems: "center",
   gap: space["2"],
+  pointerEvents: "auto",
 });
 
-// ---------- hero ----------
-// Matches the original flex:2 of an aboveFold of height calc(100vh - 24px)
-// with a 5px gap â€” i.e. (100vh - 29px) * 2/3. Self-bezeled (12px inline
-// margin) since the page no longer pads horizontally.
-export const hero = style({
-  position: "relative",
-  borderRadius: radii["3xl"],
-  overflow: "hidden",
-  isolation: "isolate",
-  background: vars.paper,
-  height: "calc((100vh - 29px) * 2 / 3)",
-  marginInline: space["3"],
-  "@media": {
-    [media.mobile]: {
-      borderRadius: radii.none,
-      height: "calc(100vh * 2 / 3)",
-      marginInline: 0,
+// Landing-specific light ghost button — the pillBtn ghost variant reads
+// ink-on-paper and would vanish on the dark field.
+export const heroSignIn = style({
+  fontFamily: vars.font.ui,
+  fontSize: 12.5,
+  fontWeight: 600,
+  padding: "6px 14px",
+  borderRadius: radii.pill,
+  border: "1px solid rgba(242,239,234,0.35)",
+  background: "transparent",
+  color: "rgba(242,239,234,0.85)",
+  cursor: "pointer",
+  transition: "background 160ms ease, color 160ms ease, border-color 160ms ease",
+  selectors: {
+    "&:hover": {
+      background: "rgba(242,239,234,0.12)",
+      color: "#f2efea",
     },
   },
 });
 
-// ---------- intro section (sits directly beneath the hero) ----------
-// Edge-aligned with the hero card so the headline reads as the wordmark
-// did in the original layout: large, immediately below the vector field,
-// not pushed into a narrow centered column.
-export const introSection = style({
-  padding:
-    "28px clamp(12px, 1.6vw, 28px) clamp(72px, 9vw, 120px) clamp(28px, 4vw, 80px)",
+export const heroContent = style({
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  zIndex: 2,
   display: "flex",
   flexDirection: "column",
-  gap: space["6"],
+  gap: space["4"],
+  padding: "0 clamp(24px, 4vw, 72px) clamp(40px, 5vw, 72px)",
+  pointerEvents: "none",
   "@media": {
-    [media.mobile]: { padding: "32px 24px 64px", gap: space["5"] },
+    [media.mobile]: { padding: "0 22px 48px", gap: space["3.5"] },
   },
 });
 
-export const introHeadline = style({
+export const heroHeadline = style({
   fontFamily: vars.font.display,
-  fontSize: "clamp(36px, 4.8vw, 72px)",
+  fontSize: "clamp(40px, 5.6vw, 86px)",
   fontWeight: 400,
   letterSpacing: "-0.025em",
-  lineHeight: 1.05,
-  color: vars.ink,
+  lineHeight: 1.03,
+  color: "#f2efea",
   margin: 0,
-  maxWidth: contentWidth.lg,
+  maxWidth: 920,
 });
 
-globalStyle(`${introHeadline} em`, {
+globalStyle(`${heroHeadline} em`, {
   fontStyle: "italic",
   fontWeight: 400,
-  color: vars.accent.primary,
+  color: "#60a5fa",
 });
 
-export const introSubhead = style({
+export const heroSubhead = style({
   fontFamily: vars.font.display,
-  fontSize: "clamp(22px, 2.6vw, 32px)",
+  fontSize: "clamp(20px, 2.2vw, 30px)",
   fontWeight: 400,
   letterSpacing: "-0.015em",
   lineHeight: 1.25,
-  color: vars.inkSoft,
+  color: "rgba(242,239,234,0.72)",
   margin: 0,
-  marginTop: space["1"],
 });
 
-export const introBody = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["3.5"],
-  fontFamily: vars.font.ui,
-  fontSize: "clamp(15px, 1.15vw, 17px)",
-  lineHeight: 1.6,
-  color: vars.inkSoft,
-  maxWidth: contentWidth.sm,
-  marginTop: space["2"],
-});
-
-globalStyle(`${introBody} p`, { margin: 0 });
-
-export const introCta = style({
+export const heroCta = style({
   display: "flex",
   alignItems: "center",
   gap: space["3.5"],
-  marginTop: space["3"],
+  marginTop: space["2"],
   flexWrap: "wrap",
+  pointerEvents: "auto",
 });
 
-export const introCtaNote = style({
+export const heroCtaNote = style({
   fontFamily: vars.font.ui,
   fontSize: 12.5,
-  color: vars.muted,
+  color: "rgba(242,239,234,0.55)",
   letterSpacing: "0.01em",
+});
+
+// ---------- floating pill nav (appears once the hero scrolls away) ----------
+export const pillNav = style({
+  position: "fixed",
+  top: 14,
+  left: "50%",
+  zIndex: zIndex.floating,
+  display: "flex",
+  alignItems: "center",
+  gap: space["2"],
+  padding: "7px 8px 7px 16px",
+  borderRadius: radii.pill,
+  background: vars.glass.bgDeep,
+  border: `1px solid ${vars.glass.stroke}`,
+  boxShadow: vars.shadow.panelSm,
+  backdropFilter: "blur(16px) saturate(140%)",
+  WebkitBackdropFilter: "blur(16px) saturate(140%)",
+  opacity: 0,
+  transform: "translate(-50%, -16px)",
+  pointerEvents: "none",
+  transition:
+    "opacity 260ms ease, transform 320ms cubic-bezier(0.22, 1, 0.36, 1)",
+});
+
+export const pillNavVisible = style({
+  opacity: 1,
+  transform: "translate(-50%, 0)",
+  pointerEvents: "auto",
+});
+
+globalStyle(`${pillNav} button`, {
+  whiteSpace: "nowrap",
+});
+
+export const pillNavSecondary = style({
+  "@media": {
+    [media.mobile]: { display: "none" },
+  },
+});
+
+export const pillNavWordmark = style({
+  fontFamily: vars.font.display,
+  fontSize: 16,
+  fontWeight: 500,
+  letterSpacing: "-0.02em",
+  color: vars.ink,
+  textDecoration: "none",
+  lineHeight: 1,
+  marginRight: space["2"],
+});
+
+// ---------- lead (sits directly beneath the hero) ----------
+export const leadSection = style({
+  padding:
+    "clamp(64px, 8vw, 110px) clamp(24px, 4vw, 80px) clamp(72px, 9vw, 120px) clamp(28px, 4vw, 80px)",
+  display: "flex",
+  flexDirection: "column",
+  "@media": {
+    [media.mobile]: { padding: "56px 24px 64px" },
+  },
+});
+
+export const leadInner = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["4"],
+});
+
+export const leadText = style({
+  fontFamily: vars.font.ui,
+  fontSize: "clamp(17px, 1.5vw, 21px)",
+  lineHeight: 1.6,
+  color: vars.inkSoft,
+  margin: 0,
+  maxWidth: contentWidth.sm,
+});
+
+export const leadEmphasis = style({
+  fontFamily: vars.font.display,
+  fontSize: "clamp(24px, 2.8vw, 42px)",
+  fontWeight: 400,
+  letterSpacing: "-0.02em",
+  lineHeight: 1.15,
+  color: vars.ink,
+  margin: 0,
+  marginTop: space["3"],
+  maxWidth: contentWidth.md,
 });
 
 // ---------- editorial sections ----------
@@ -155,9 +265,9 @@ const proseSectionBase = style({
   },
 });
 
-// Light prose section. Sections 1 and 4 (within the prose container) pick
+// Light prose section. Sections 1 and 3 (within the prose container) pick
 // up a soft tint via :nth-child so adjacent light sections don't blur into
-// each other. The dark section at position 3 uses a different class and
+// each other. The dark section at position 2 uses a different class and
 // is unaffected by these selectors.
 export const proseSection = style([
   proseSectionBase,
@@ -166,19 +276,20 @@ export const proseSection = style([
     color: vars.ink,
     borderTop: `1px solid ${vars.rule}`,
     selectors: {
-      "&:nth-child(1), &:nth-child(4)": {
+      "&:nth-child(1), &:nth-child(3)": {
         background: `color-mix(in srgb, ${vars.ink} 5%, ${vars.paper})`,
       },
     },
   },
 ]);
 
-// Dark inverse â€” used for one mid-page section to break the rhythm.
+// Dark inverse — used for one mid-page section to break the rhythm.
 export const proseSectionDark = style([
   proseSectionBase,
   {
     background: vars.ink,
     color: vars.paper,
+    overflow: "hidden",
   },
 ]);
 
@@ -295,7 +406,7 @@ export const proseEmphasis = style({
   borderLeft: `2px solid ${vars.accent.primary}`,
 });
 
-// ---------- features â€” concrete capability tiles ----------
+// ---------- features — concrete capability vignettes ----------
 export const featuresSection = style({
   padding: "clamp(96px, 10vw, 160px) clamp(12px, 1.6vw, 28px)",
   borderTop: `1px solid ${vars.rule}`,
@@ -341,7 +452,7 @@ export const featuresList = style({
   gap: "clamp(72px, 9vw, 128px)",
 });
 
-// Two-column subsection â€” icon side + content side. Ordering is done in
+// Two-column subsection — vignette side + content side. Ordering is done in
 // JSX so vanilla-extract doesn't need descendant selectors; the reverse
 // variant is here as a stable hook in case we want to style asymmetries
 // per-side later.
@@ -369,24 +480,6 @@ export const featureVisual = style({
     [media.mobile]: { minHeight: 0, justifyContent: "flex-start" },
   },
 });
-
-// Neutral ash wash behind the lucide stroke icon. Ink at low opacity so
-// the icon reads as a quiet monochrome accent, not a colored chip.
-export const featureIconWrap = style({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 168,
-  height: 168,
-  borderRadius: radii.pill,
-  background: `color-mix(in srgb, ${vars.ink} 5%, transparent)`,
-  color: vars.ink,
-  "@media": {
-    [media.mobile]: { width: 120, height: 120 },
-  },
-});
-
-globalStyle(`${featureIconWrap} svg`, { display: "block" });
 
 export const featureContent = style({
   display: "flex",
@@ -422,10 +515,10 @@ export const featureBody = style({
   margin: 0,
 });
 
-// ---------- close â€” ink-tinted card ----------
-// Card width matches the hero/vector field: it fills the page bezel
-// (page already supplies 12px horizontal padding), so the section adds
-// only vertical padding.
+// ---------- close — vector-field reprise ----------
+// Card width matches the hero: it fills the page bezel (12px inline margin),
+// so the section adds only vertical padding. The card hosts a calmer second
+// VectorField instance behind the content, bookending the page.
 export const closeSection = style({
   padding: "clamp(72px, 8vw, 120px) 0",
   "@media": {
@@ -434,19 +527,39 @@ export const closeSection = style({
 });
 
 export const closeCard = style({
+  position: "relative",
+  isolation: "isolate",
+  overflow: "hidden",
   borderRadius: radii["3xl"],
   background: vars.ink,
   color: vars.paper,
   padding: "clamp(72px, 9vw, 120px) clamp(32px, 6vw, 96px)",
   marginInline: space["3"],
+  "@media": {
+    [media.mobile]: {
+      padding: "64px 28px",
+      borderRadius: radii.none,
+      marginInline: 0,
+    },
+  },
+});
+
+export const closeScrim = style({
+  position: "absolute",
+  inset: 0,
+  background: "rgba(11,9,26,0.38)",
+  pointerEvents: "none",
+});
+
+export const closeInner = style({
+  position: "relative",
+  zIndex: 1,
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
   textAlign: "center",
   gap: space["3.5"],
-  "@media": {
-    [media.mobile]: { padding: "64px 28px", borderRadius: radii.none, marginInline: 0 },
-  },
+  pointerEvents: "none",
 });
 
 export const closeHeading = style({
@@ -474,6 +587,7 @@ export const closeActions = style({
   marginTop: space["5"],
   flexWrap: "wrap",
   justifyContent: "center",
+  pointerEvents: "auto",
 });
 
 export const closeNote = style({
