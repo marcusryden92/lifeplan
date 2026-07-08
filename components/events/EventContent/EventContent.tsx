@@ -43,6 +43,10 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
   // Completion is derived from the event data; the override only bridges the
   // gap between the optimistic click and the regen/sync confirming it. State
   // seeded once from props would go stale when the event updates in place.
+  // FullCalendar recycles these components across regens, so the override must
+  // also reset when the instance starts rendering a DIFFERENT event — without
+  // the event.id dep, completing a chunk marked whatever event inherited the
+  // recycled instance (usually the neighbor) as completed too.
   const propsCompleted = !!(completedStartTime && completedEndTime);
   const [optimisticCompleted, setOptimisticCompleted] = useState<
     boolean | null
@@ -51,7 +55,7 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
 
   useEffect(() => {
     setOptimisticCompleted(null);
-  }, [propsCompleted]);
+  }, [event.id, propsCompleted]);
 
   if (!event.start || !event.end) return null;
 
@@ -59,7 +63,6 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
   const startTime = new Date(event.start);
   const endTime = new Date(event.end);
 
-  const green = userSettings.styles.events.completedColor;
   const red = userSettings.styles.events.errorColor;
 
   const displayPostponeButton =
@@ -100,11 +103,9 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
         setOptimisticCompleted(
           typeof value === "function" ? value(isCompleted) : value,
         ),
-      elementRef,
       planner,
       calendar,
       updateAll,
-      green,
     );
   };
 

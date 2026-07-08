@@ -7,7 +7,7 @@ export const card = style({
 });
 
 export const cardBody = style({
-  padding: "16px 0",
+  padding: "12px 0",
 });
 
 export const fieldGrid = style({

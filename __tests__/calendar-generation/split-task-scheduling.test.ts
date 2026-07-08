@@ -8,7 +8,13 @@ import {
   serializeTaskSplitting,
 } from "@/utils/taskSplitting";
 import { plannerIdFromEventId } from "@/utils/planRecurrence";
-import type { EventTemplate, Planner, SimpleEvent } from "@/types/prisma";
+import type {
+  Category,
+  EventTemplate,
+  Planner,
+  SimpleEvent,
+} from "@/types/prisma";
+import type { WeekDayIntegers } from "@/types/calendarTypes";
 
 // Split-task scheduling: a task with `splitting` set places as dynamically
 // sized chunks (slot-driven, bounded by min/max and the per-day cap), its
@@ -63,14 +69,18 @@ function makePlanner(id: string, overrides: Partial<Planner>): Planner {
   };
 }
 
-function run(planners: Planner[], previousCalendar: SimpleEvent[] = []) {
+function run(
+  planners: Planner[],
+  previousCalendar: SimpleEvent[] = [],
+  categories: Category[] = [],
+) {
   return generateCalendar(
     USER_ID,
     1,
     SLEEP_TEMPLATES,
     planners,
     previousCalendar,
-    { categories: [], injectTravelEvents: false },
+    { categories, injectTravelEvents: false },
   );
 }
 
@@ -153,6 +163,31 @@ describe("split task scheduling", () => {
       expect(minutes).toBeLessThanOrEqual(120);
     });
     expect(perDay.size).toBeGreaterThanOrEqual(3);
+  });
+
+  it("separates same-task chunks by at least the minimum chunk length", () => {
+    const task = makePlanner("reading", {
+      duration: 300,
+      splitting: serializeTaskSplitting({
+        minMinutes: 45,
+        maxMinutes: 60,
+        maxMinutesPerDay: null,
+      }),
+    });
+
+    const { events } = run([task]);
+
+    const chunks = chunksOf(events, "reading").sort(
+      (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
+    );
+    expect(chunks.reduce((sum, c) => sum + eventMinutes(c), 0)).toBe(300);
+    for (let i = 1; i < chunks.length; i++) {
+      const gapMinutes =
+        (new Date(chunks[i].start).getTime() -
+          new Date(chunks[i - 1].end).getTime()) /
+        60000;
+      expect(gapMinutes).toBeGreaterThanOrEqual(45);
+    }
   });
 
   it("freezes completed segments and schedules only the remainder", () => {
@@ -267,6 +302,117 @@ describe("split task scheduling", () => {
     expect(new Date(placedB!.start).getTime()).toBeGreaterThanOrEqual(
       lastChunkEnd,
     );
+  });
+
+  it("keeps every chunk inside the parent's category windows", () => {
+    const ts = FAKE_TODAY.toISOString();
+    const study: Category = {
+      id: "cat-study",
+      name: "Study",
+      icon: null,
+      color: null,
+      sortOrder: 0,
+      useTimeWindows: true,
+      isStrict: false,
+      confineToOwnWindows: false,
+      locationId: null,
+      parentId: null,
+      userId: USER_ID,
+      createdAt: ts,
+      updatedAt: ts,
+      timeSlots: ([2, 3, 4] as WeekDayIntegers[]).map((day) => ({
+        id: `win-study-${day}`,
+        day,
+        startTime: "09:00",
+        endTime: "12:00",
+        recurrenceExceptions: null,
+        categoryId: "cat-study",
+        userId: USER_ID,
+      })),
+    };
+    const task = makePlanner("reading", {
+      duration: 300,
+      categoryId: "cat-study",
+      splitting: serializeTaskSplitting({
+        minMinutes: 45,
+        maxMinutes: 120,
+        maxMinutesPerDay: null,
+      }),
+    });
+
+    const { events } = run([task], [], [study]);
+
+    const chunks = chunksOf(events, "reading");
+    expect(chunks.reduce((sum, c) => sum + eventMinutes(c), 0)).toBe(300);
+    for (const chunk of chunks) {
+      const start = new Date(chunk.start);
+      const end = new Date(chunk.end);
+      expect([2, 3, 4]).toContain(start.getDay());
+      expect(start.getHours()).toBeGreaterThanOrEqual(9);
+      expect(
+        end.getHours() * 60 + end.getMinutes(),
+      ).toBeLessThanOrEqual(12 * 60);
+    }
+  });
+
+  it("keeps a split goal leaf's chunks inside the goal root's category windows", () => {
+    const ts = FAKE_TODAY.toISOString();
+    const study: Category = {
+      id: "cat-study",
+      name: "Study",
+      icon: null,
+      color: null,
+      sortOrder: 0,
+      useTimeWindows: true,
+      isStrict: false,
+      confineToOwnWindows: false,
+      locationId: null,
+      parentId: null,
+      userId: USER_ID,
+      createdAt: ts,
+      updatedAt: ts,
+      timeSlots: ([2, 3, 4] as WeekDayIntegers[]).map((day) => ({
+        id: `win-study-${day}`,
+        day,
+        startTime: "09:00",
+        endTime: "12:00",
+        recurrenceExceptions: null,
+        categoryId: "cat-study",
+        userId: USER_ID,
+      })),
+    };
+    const goal = makePlanner("goal", {
+      plannerType: "goal",
+      duration: 0,
+      isReady: true,
+      categoryId: "cat-study",
+      deadline: "2026-02-01",
+    });
+    const leaf = makePlanner("leaf", {
+      plannerType: "goal",
+      parentId: "goal",
+      duration: 300,
+      sortOrder: 1024,
+      splitting: serializeTaskSplitting({
+        minMinutes: 45,
+        maxMinutes: 120,
+        maxMinutesPerDay: null,
+      }),
+    });
+
+    const { events } = run([goal, leaf], [], [study]);
+
+    const chunks = chunksOf(events, "leaf");
+    expect(chunks.reduce((sum, c) => sum + eventMinutes(c), 0)).toBe(300);
+    for (const chunk of chunks) {
+      const start = new Date(chunk.start);
+      const end = new Date(chunk.end);
+      expect([2, 3, 4]).toContain(start.getDay());
+      expect(start.getHours()).toBeGreaterThanOrEqual(9);
+      expect(
+        end.getHours() * 60 + end.getMinutes(),
+      ).toBeLessThanOrEqual(12 * 60);
+    }
   });
 
   it("re-emits identical chunk events on an idle regen", () => {

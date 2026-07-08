@@ -8,6 +8,7 @@ import {
   backdropFilters,
   radii,
   space,
+  display,
 } from "@/lib/theme";
 
 export const sidebar = style({
@@ -57,26 +58,25 @@ export const brandLogo = style({
   maskPosition: "center",
 });
 
-export const brandText = style({
-  fontFamily: vars.font.display,
-  fontSize: 19,
-  fontWeight: 500,
-  letterSpacing: "-0.03em",
-  color: vars.ink,
-  flex: 1,
-  minWidth: 0,
-  maxWidth: "100%",
-  paddingLeft: space["3"],
-  boxSizing: "border-box",
-  overflow: "hidden",
-  transition: collapseTransition,
-  selectors: {
-    '[data-collapsed="true"] &': {
-      maxWidth: 0,
-      opacity: 0,
+export const brandText = style([
+  display.panelTitle,
+  {
+    color: vars.ink,
+    flex: 1,
+    minWidth: 0,
+    maxWidth: "100%",
+    paddingLeft: space["3"],
+    boxSizing: "border-box",
+    overflow: "hidden",
+    transition: collapseTransition,
+    selectors: {
+      '[data-collapsed="true"] &': {
+        maxWidth: 0,
+        opacity: 0,
+      },
     },
   },
-});
+]);
 
 export const navItem = style({
   height: 30,

@@ -1,139 +1,182 @@
-# Precedence — queues (pipes) and dependencies over one edge model
+# Precedence — queues (pipes) and dependencies for Planner items
 
-Companion to the Queues plan (`~/.claude/plans/1-i-disagree-that-shiny-tulip.md`). That plan ships the pipe; this document fixes the shared architecture both features ride on, amends the queue plan where the generalization is cheaper done up front, and specifies the dependency feature that follows.
+One system, two user-facing concepts, one engine representation. This plan is self-contained and supersedes the earlier queues-only plan.
 
 ## Context
 
-Two user-facing concepts, deliberately distinct:
+Goals conflate "completable outcome" with "ordered container". Work streams (e.g. a Work pipeline) need ordering without finitude — today users would endlessly append subtasks to a fake goal. Separately, root-level items need prerequisite links ("get married" needs "find a girlfriend" AND "get an apartment") that no container expresses — the items don't fit under one category, they just need to be linked.
 
-- **Queue (pipe)** — a persistent ordered container for mixed root-level items ("work stuff", "hobby business"). No endpoint; members are continually added and dissolved; they exit in the order they entered. Ordering is a chosen throughput discipline, not logic.
-- **Dependency** — a logical prerequisite edge between root-level items ("get married" needs "find a girlfriend" AND "get an apartment"; order among prerequisites is irrelevant). Multi-predecessor, authored in the item editor, no container entity — the connected component of the dependency graph IS the "project"; it is derived, never declared. No Project model, ever.
+Two concepts, deliberately distinct:
+
+- **Queue (pipe)** — a new first-class entity: a persistent, user-authored, ordered list of references to existing root-level Planner items (tasks and goals). No endpoint; members are continually added and dissolved; they exit in the order they entered. Ordering is a chosen throughput discipline, not logic. Deliberately NOT a plannerType: it holds mixed item kinds, needs none of a planner's fields, and gets its own flat, directed-list UI at `/queues`.
+- **Dependency** — a logical prerequisite edge between root-level items. Multi-predecessor ("multi-branch topological sort"), order among prerequisites irrelevant, authored in the item editor. No container entity — the connected component of the dependency graph IS the "project"; it is derived, never declared. No Project model, ever.
 
 Both compile to the same engine representation: `PrecedenceEdge[]` with a `source` discriminator (`"queue" | "dependency"`). The engine gates each candidate on **max end across all placed predecessors** and never sees a cycle — legality is enforced at authoring time, in the surface the user is touching.
 
 ### Decided semantics
 
-1. **Orthogonality.** Pipe membership and dependency are independent. A pipe member may depend on an item outside any pipe; the pipe stalls at that member (FIFO among members is preserved, the forecast shows the stall honestly). Successors never flow around a stalled member.
-2. **Merged-graph validation, logical order.** Cycle checks run against the union of dependency edges and each queue's FULL logical member order (all members, including completed/unready — transparency affects gating, never legality; otherwise un-completing an item could resurrect a latent cycle). Validated on every mutation of either system: dependency add, queue member add, queue reorder.
-3. **Redundant same-pipe dependencies are allowed** (B before D in a pipe, plus "D depends on B"). The dependency is a durable fact that survives fluid pipe membership. Contradicting edges are blocked with the cycle path shown and a computed fix offered where one exists ("move D ahead of B in the pipe" / "disconnect").
-4. **Readiness gate (authoring-time).** A goal cannot be marked ready while any dependency predecessor is an unready goal. The Ready button grays/refuses with "Awaiting <title>"; a three-dot affordance per blocker offers "Ready <title>" (subject to that goal's own gate — no deep cascade) and "Disconnect dependency". Task predecessors and completed predecessors never block (tasks always forecast; completed is satisfied).
-5. **Symmetric un-ready gate.** Un-readying a goal that a READY goal depends on is refused the same way ("Required by <title> — un-ready it first", with the same shortcut affordance). Authoring-time prevention is the primary line; the engine keeps a defensive fallback (below) for states that slip through (assistant apply, stale multi-tab sync).
-6. **Engine fallback semantics per edge source.** Completed predecessor: transparent, no bound (both sources). Permanently failed predecessor (TOO_LARGE, budget exhaustion): successor schedules unbounded + message (both sources). Unready-goal predecessor: queue → transparent silent skip (pipe = flow); dependency → successor schedules unbounded + a LOUD message ("forecast ignores a prerequisite that is not ready") — a prerequisite never stops being a prerequisite. This asymmetry is intentional.
-7. **Edge scope.** Both endpoints root-level, triaged, `task | goal`. Plans excluded (deferred, same as queue membership). The readiness gate applies only where the successor is a goal; task successors get the engine bound with no gate (nothing to gate).
-8. **Horizon honesty.** Deep chains/DAGs will exhaust the expansion budget (`MAX_WEEKS_TO_SEARCH`) long before a life-scale plan resolves. The budget-exhaustion fallback must emit a distinct "forecast extends past the scheduling horizon" flavor rather than pretending the sequence broke.
-9. **Graph view (deferred, shapes decisions now).** A future graph surface renders pipes as lanes and dependencies as connectors, and writes through the SAME validator. It must require zero new rules — it is a third editor of the same merged graph. Every decision below preserves that property.
+1. **All members/successors schedule (full forecast)**, each bounded to start after the max of its predecessors' last placed ends — via the engine's existing `afterTime` plumbing (the `goalAfterTime` mechanism, which already threads end-to-end through `Scheduler.scheduleTask → findValidSlots → findAllFittingSlots`).
+2. **Edge scope.** Both endpoints root-level, triaged, `task | goal`. Plans excluded (deferred). A planner belongs to **at most one queue** (DB unique on `QueueMember.plannerId`) → queue chains are a disjoint union, but dependencies make the merged graph a general DAG, so cycle validation is real.
+3. **Orthogonality.** Pipe membership and dependency are independent. A pipe member may depend on an item outside any pipe; the pipe stalls at that member (FIFO among members preserved, the forecast shows the stall honestly). Successors never flow around a stalled member.
+4. **Merged-graph validation, logical order.** Cycle checks run against the union of dependency edges and each queue's FULL logical member order (all members, including completed/unready — transparency affects gating, never legality; otherwise un-completing an item could resurrect a latent cycle). Validated on every mutation of either system: dependency add, queue member add, queue reorder. The engine never arbitrates.
+5. **Redundant same-pipe dependencies are allowed** (B before D in a pipe, plus "D depends on B") — a durable fact that survives fluid pipe membership. Contradicting edges are blocked with the cycle path shown ("through the Work pipe: B → C → D") and a computed fix offered where one exists ("move D ahead of B" / "disconnect").
+6. **Transparency (engine gating).** Completed members/predecessors: transparent, no bound (both sources). Unready-goal predecessor: queue → transparent silent skip (a pipe skips what can't flow); dependency → successor schedules unbounded + a LOUD message (a prerequisite never stops being a prerequisite). This asymmetry is intentional.
+7. **Permanent placement failure** of a predecessor (TOO_LARGE, or NO_SLOTS at budget exhaustion) → successors schedule anyway, unbounded, plus an engine message. Pure budget exhaustion emits a distinct "past the horizon" flavor rather than pretending the sequence broke.
+8. **Readiness gate (authoring-time).** A goal cannot be marked ready while any dependency predecessor is an unready goal. The Ready button grays/refuses with "Awaiting <title>"; a three-dot affordance per blocker offers "Ready <title>" (subject to that goal's own gate — no deep cascade) and "Disconnect dependency". Task predecessors and completed predecessors never block. Symmetrically, un-readying a goal that a READY goal depends on is refused ("Required by <title>") with the same shortcut affordance. The engine keeps a defensive fallback (#6) for states that slip through (assistant apply, multi-tab races).
+9. **Queue's optional `categoryId` = inherited default**: members with no effective category of their own resolve to it (windows/strictness/location then follow the normal category machinery). Members with their own category keep it. Dependencies carry no category semantics.
+10. **Graph view (deferred, shapes decisions now).** A future graph surface renders pipes as lanes and dependencies as connectors, and writes through the SAME validator. It must require zero new rules — every decision below preserves that property.
 
 ---
 
-## Part A — Amendments to the Queues plan (do these DURING that implementation)
+## Phase 1 — Data layer
 
-A1. **Multi-predecessor gate from day one.** Queue plan 3c/3d already build `buildPredecessorMap(edges): Map<toId, PrecedenceEdge[]>` (a list). Implement the placement gate as `afterTime = max(lastEnd over all placed predecessors)` and "blocked while ANY predecessor outcome is missing" even though queues only ever produce one incoming edge per node. Dependencies then become pure data — zero new loop logic in `scheduleTasksAndGoals`, which is the highest-risk file in the engine and should be touched once, not twice.
+New `prisma/schemas/models/queue.prisma` (mirror `category.prisma` idioms — string timestamps, userId cascade, `@@index([userId])`):
 
-A2. **Per-edge failure fallback.** `sequenceBreaks` entries carry the edge (`{source, queueId?, fromId, toId}`) rather than just `{queueId, failedPlannerId}`, so the message emitter can discriminate queue vs dependency causes later without reshaping the return.
+- `Queue`: `id uuid`, `title`, `sortOrder Int @default(0)` (queue-list order), `categoryId String?` → Category `onDelete: SetNull`, `userId`, string `createdAt`/`updatedAt`, `@@map("Queues")`.
+- `QueueMember`: `id uuid`, `sortOrder Float @default(0)` (fractional key), `queueId` → Queue `onDelete: Cascade`, `plannerId String @unique` → Planner `onDelete: Cascade` (the unique IS the one-queue-per-planner invariant), `userId`, string timestamps, `@@map("QueueMembers")`.
 
-A3. **One mutation choke point for queue writes.** Route all queue member adds/reorders through a single helper (`utils/queue-handlers/mutateQueueMembers.ts` or similar) so the merged-graph validator has exactly one seam to slot into when dependencies land. Rail/list/modal UI never assembles member arrays ad hoc.
+New `prisma/schemas/models/dependency.prisma`:
 
-A4. **Naming.** Keep `PrecedenceEdge`, `buildPrecedenceEdges`, `predecessorMap` source-agnostic (no `queue` in the shared names).
+- `PlannerDependency`: `id uuid`, `predecessorId` → Planner `onDelete: Cascade`, `successorId` → Planner `onDelete: Cascade`, `userId`, string timestamps, `@@unique([predecessorId, successorId])`, `@@index([userId])`, `@@map("PlannerDependencies")`. No sortOrder — prerequisite order is meaningless by definition. Rows are immutable (created or deleted, never updated).
 
-A5. The window-exceptions freeze in the queue plan's "Do not touch" list has landed (`e10bcee` and prior). Verify nothing is still in flight, then treat that constraint as lifted.
+Edits: back-references on `user.prisma` (`queues`, `queueMembers`, `plannerDependencies`), `calendar.prisma` Planner (`queueMember QueueMember?`, `dependenciesAsPredecessor`/`dependenciesAsSuccessor`), `category.prisma` (`queues Queue[]` — back-reference only). `types/prisma.ts`: `Queue = Prisma.QueueGetPayload<{ include: { members: true } }>` (nested-members is the app/Redux shape, Category.timeSlots precedent), `QueueMember`, `PlannerDependency`.
 
----
+`pnpm prisma:migrate:dev --name add_precedence` then `pnpm prisma generate`.
 
-## Part B — Dependencies
+## Phase 2 — Sync plumbing (checklist)
 
-### B1. Data layer
+Queues: nested Redux shape; diff strips members from the queue group and flattens members across queues (exact `stripTimeSlots` pattern, [compareCalendarData.ts:337-388](utils/server-handlers/compareCalendarData.ts#L337-L388)). Dependencies: flat list, value-based diff producing creates/deletes only.
 
-New `prisma/schemas/models/dependency.prisma` (same idioms: string timestamps, userId cascade, `@@index([userId])`):
+1. [fetchCalendarData.ts](actions/calendar-actions/fetchCalendarData.ts) — `db.queue.findMany({ where: { userId }, include: { members: true } })` + `db.plannerDependency.findMany({ where: { userId } })`; add `queues` and `dependencies` to returned data.
+2. [fetchFreshState.ts](actions/calendar-actions/fetchFreshState.ts) — same queries; `FreshState` gains both.
+3. [compareCalendarData.ts](utils/server-handlers/compareCalendarData.ts) — `DatabaseChanges` gains `queue: ChangeGroup<Omit<Queue,"members">>`, `queueMember: ChangeGroup<QueueMember>`, `dependency: ChangeGroup<PlannerDependency>`; initializers; diff blocks (stripMembers + flatMap members by id; dependency by value); new positional pairs threaded through BOTH `handleServerTransaction` and `compareData` signatures. If the keyed-object refactor of this seam is ever going to happen, before this lands is the last cheap moment — decide explicitly.
+4. New `sync-handlers/queueHandlers.ts` — createMany skipDuplicates / `bulkUpdate` (`'"Queues"'`, columns title, sortOrder int, categoryId, updatedAt) / deleteMany userId-scoped. Mirror `categoryHandlers.ts`.
+5. New `sync-handlers/queueMemberHandlers.ts` — same trio; bulkUpdate columns sortOrder (`double precision`), queueId, updatedAt.
+6. New `sync-handlers/dependencyHandlers.ts` — createMany skipDuplicates / deleteMany userId-scoped; no bulkUpdate (immutable rows).
+7. [syncCalendarData.ts](actions/calendar-actions/syncCalendarData.ts) — spread queue handler, then member handler, then dependency handler into `operations`, AFTER category and planner handlers (FK order).
+8. [calendarSourceSlice.ts](redux/slices/calendarSourceSlice.ts) — `queues: Queue[]` + `dependencies: PlannerDependency[]` state; `hydrateSource` gains both; `setQueues` / `setDependencies`.
+9. [useCalendarServerSync.ts](hooks/useCalendarServerSync.ts) — `previousQueues` + `previousDependencies` refs; `initializeState` args; `hasPendingChanges`; `runSync` pairs; `adoptFreshServerState` + `rollbackToLastConfirmedState`.
+10. [useFetchCalendarData.ts](hooks/useFetchCalendarData.ts) — forward both into hydrate + initializeState.
+11. [CalendarProvider.tsx](context/CalendarProvider.tsx) — selectors; `syncState` memo + deps; context value + `CalendarContextType` (+ `updateQueueArray`, `updateDependencyArray`).
+12. [calendarThunks.ts](redux/thunks/calendarThunks.ts) — `CalendarPayload.queues?` + `.dependencies?` (value-or-updater); dispatch `setQueues`/`setDependencies` synchronously BEFORE the engine await; pass both in engine options. After `newPlanner` is computed, run central pruning (below) and dispatch if changed.
+13. [useCalendarStateActions.ts](hooks/useCalendarStateActions.ts) — new `updateQueueArray(queues|fn, options?)` + `updateDependencyArray(...)`. Do NOT grow `updateAll`'s positional signature.
 
-- `PlannerDependency`: `id uuid`, `predecessorId` → Planner `onDelete: Cascade`, `successorId` → Planner `onDelete: Cascade`, `userId`, string `createdAt`/`updatedAt`, `@@unique([predecessorId, successorId])`, `@@map("PlannerDependencies")`.
+**Central pruning** — `utils/precedence/prunePrecedenceInputs.ts`: `pruneQueueMembers(queues, planner): Queue[]` drops members whose planner is missing / non-root / `plannerType === "plan"` / untriaged; `pruneDependencies(dependencies, planner)` drops edges whose EITHER endpoint fails the same test. Both return the SAME reference on no-op (no phantom diff). Completed + unready members/predecessors are kept (valid transparent links / gate inputs). Runs in the thunk, so delete/retype/reparent/untriage are covered wherever they originate; DB cascade covers server-side deletes.
 
-No sortOrder — prerequisite order is meaningless by definition. Root-level/triaged/kind constraints are app-level (central pruning, below), matching the queue-member precedent. Back-references on `user.prisma` and `calendar.prisma` Planner (`dependenciesAsPredecessor` / `dependenciesAsSuccessor`). `types/prisma.ts` re-export. `pnpm prisma:migrate:dev --name add_planner_dependency`, `pnpm prisma generate`.
+## Phase 3 — Shared validation (`utils/precedence/`)
 
-### B2. Sync plumbing
-
-Flat list — strictly simpler than queues (no nesting, no strip-and-flatten):
-
-1. [fetchCalendarData.ts](actions/calendar-actions/fetchCalendarData.ts) + [fetchFreshState.ts](actions/calendar-actions/fetchFreshState.ts) — `db.plannerDependency.findMany({ where: { userId } })`; add `dependencies`.
-2. [compareCalendarData.ts](utils/server-handlers/compareCalendarData.ts) — `DatabaseChanges.dependency: ChangeGroup<PlannerDependency>`; value-based diff (immutable rows — an edge is created or deleted, never updated; the diff should only ever produce creates/deletes).
-3. New `sync-handlers/dependencyHandlers.ts` — createMany skipDuplicates / deleteMany userId-scoped; no bulkUpdate needed (immutable rows).
-4. [syncCalendarData.ts](actions/calendar-actions/syncCalendarData.ts) — spread after planner handlers (FK order).
-5. [calendarSourceSlice.ts](redux/slices/calendarSourceSlice.ts) — `dependencies: PlannerDependency[]`; hydrate + `setDependencies`.
-6. [useCalendarServerSync.ts](hooks/useCalendarServerSync.ts) / [useFetchCalendarData.ts](hooks/useFetchCalendarData.ts) / [CalendarProvider.tsx](context/CalendarProvider.tsx) / [calendarThunks.ts](redux/thunks/calendarThunks.ts) / [useCalendarStateActions.ts](hooks/useCalendarStateActions.ts) — same checklist as queue plan Phase 2 (refs, adopt, rollback, `CalendarPayload.dependencies?`, `updateDependencyArray`). Same caveat: every positional `compareCalendarData` caller updated in one commit. If the keyed-object refactor of that seam is ever going to happen, before this lands is the last cheap moment.
-
-**Central pruning** — `utils/precedence/pruneDependencies.ts`: drop edges whose endpoint is missing / non-root / plan / untriaged; SAME reference on no-op. Runs in the thunk beside `pruneQueueMembers` (consider one `prunePrecedenceInputs` wrapper). DB cascade covers server-side deletes.
-
-### B3. Shared validation — `utils/precedence/`
-
-- `collectPrecedenceEdges(queues, dependencies, planners)` — queue full-logical-order consecutive edges (ALL members, no transparency filter — this is the validation graph, distinct from the engine's gated build) + dependency edges.
-- `findCycle(edges, candidateEdge): PrecedenceEdge[] | null` — returns the closing path for display ("through the Work pipe: B → C → D"), null when acyclic. Plain DFS; graphs are tiny.
+- `collectValidationEdges(queues, dependencies)` — queue full-logical-order consecutive edges (ALL members, no transparency filter — this is the validation graph, deliberately distinct from the engine's gated build; keep the two builders side by side with a comment stating the distinction, or someone will "unify" them and reintroduce the latent-cycle bug) + dependency edges.
+- `findCycle(edges, candidateEdge): PrecedenceEdge[] | null` — returns the closing path for display, null when acyclic. Plain DFS; graphs are tiny.
 - `wouldCreateCycle` variants for the three mutation shapes: add dependency, add queue member at position, reorder queue member.
-- Callers: the item-editor dependency picker (filter candidates that would cycle, and hard-check on commit), the queue mutation choke point (A3), the future graph connector. One validator, three writers.
+- **One mutation choke point for queue writes**: `utils/queue-handlers/mutateQueueMembers.ts` — all member adds/reorders route through it so the validator has exactly one seam. UI never assembles member arrays ad hoc. Dependency writes get the same treatment in their picker commit path.
+- Callers: the item-editor dependency picker, the queue mutation choke point, the future graph connector. One validator, three writers.
 
-### B4. Engine
+## Phase 4 — Engine
 
-- `GenerateCalendarOptions.dependencies?: PlannerDependency[]` → `CalendarGenerationInput`; plain JSON, worker-safe.
-- `buildPrecedenceEdges` gains the second producer: per dependency, re-filter defensively (both endpoints exist/root/task|goal/triaged), drop completed predecessors (transparent), emit `{fromId: predecessorId, toId: successorId, source: "dependency"}`. Unready-goal predecessors are NOT dropped here (unlike queue transparency) — they flow to the gate so the fallback can be loud.
-- Gate (already multi-predecessor per A1): an unready-goal predecessor is seeded as `failed` with cause `"unready"`; the successor schedules unbounded and records a break carrying the cause.
-- Defensive belt: this path should be near-unreachable through the UI (the ready gates prevent it) but must exist for assistant applies and multi-tab races.
-- **Messages** ([EngineMessage.ts](utils/calendar-generation/models/EngineMessage.ts) / [coalesceMessages.ts](utils/calendar-generation/helpers/CalendarGenerator/coalesceMessages.ts) / [renderEngineMessage.ts](utils/renderEngineMessage.ts)):
-  - `DEPENDENCY_BROKEN` — payload `{predecessorId, successorId, cause: "failed" | "unready"}`, id `DEPENDENCY_BROKEN::predecessorId|successorId|cause`. Prose must state the consequence, not just the fact: "…was scheduled without waiting for <predecessor>".
-  - `SEQUENCE_PAST_HORIZON` — emitted instead of the broken-flavor when a predecessor's only failure is budget exhaustion (`NO_SLOTS` at exhaustion), for both sources: "the forecast for <title> extends past the scheduling horizon". Requires the exhaustion path to tag its failures distinctly from true TOO_LARGE — small, contained change in the queue plan's 3d exhaustion handling; fold it in there (amendment A2 makes the plumbing trivial).
-  - `QUEUE_SEQUENCE_BROKEN` prose from the queue plan gets the same consequence-first rewrite.
+**4a. Input**: `GenerateCalendarOptions.queues?: Queue[]` + `dependencies?: PlannerDependency[]` ([calendarGeneration.ts](utils/calendar-generation/calendarGeneration.ts)) → `CalendarGenerationInput` ([SchedulingModels.ts](utils/calendar-generation/models/SchedulingModels.ts)); rows are plain JSON, worker-safe, no `engineWorkerClient` changes.
 
-### B5. Readiness gating UI
+**4b. Category inheritance at the input boundary** — new `helpers/CalendarGenerator/applyQueueCategoryInheritance.ts`: for each root member with `categoryId === null` whose queue has one, return `{...p, categoryId: queue.categoryId}`; identity otherwise (same array reference on no-op). Applied in `calendarGeneration.ts` next to the `isTriaged` filter. Planner rows never flow out of the engine, so this is diff-safe, and `buildPlannerCategoryMap`, `resolveCategoryLocation`, `capacityCheck`, and eligibility matching all see it with zero signature changes.
 
-Extends the existing blocker mechanism in [ItemDetailLayout.tsx](app/(protected)/items/[id]/_components/ItemDetailLayout/ItemDetailLayout.tsx#L231-L237) (currently: subtasks + deadline):
+**4c. Precedence map** — new `helpers/Scheduler/precedenceEdges.ts` (pure, source-agnostic names throughout):
 
-- New pure helper `utils/precedence/readinessBlockers.ts`: `dependencyReadyBlockers(plannerId, dependencies, planner): Planner[]` — predecessor goals that are unready and uncompleted. And the reverse gate: `readyDependents(plannerId, ...)` — ready goals that depend on this one.
-- `readyBlockers` gains one entry per blocker: "Awaiting <title>". The existing flash-message path already handles the refusal copy.
+- `PrecedenceEdge = { fromId, toId, source: "queue" | "dependency", queueId? }`.
+- `buildPrecedenceEdges(queues, dependencies, planners)`:
+  - Queues: per queue sort members by sortOrder, re-filter defensively (exists/root/task|goal/triaged), drop transparent members (completed, unready goals), emit consecutive-pair edges.
+  - Dependencies: re-filter both endpoints defensively, drop completed predecessors (transparent), emit one edge per row. Unready-goal predecessors are NOT dropped (unlike queue transparency) — they flow to the gate so the fallback can be loud (semantics #6).
+- `buildPredecessorMap(edges): Map<toId, PrecedenceEdge[]>` — a list per target; queues happen to produce one incoming edge per node, dependencies produce many. The gate is written multi-predecessor from day one.
+
+Built in `CalendarGenerator` Phase 4 next to `buildPlannerCategoryMap`; hung on `SchedulingContext.predecessorMap` via `prepareSchedulingContext`.
+
+**4d. Placement gate** in [scheduleTasksAndGoals.ts](utils/calendar-generation/helpers/Scheduler/scheduleTasksAndGoals.ts):
+
+- Run state `chainOutcome: Map<plannerId, { status: "placed" | "failed"; lastEnd?: Date; failCause?: "failed" | "unready" | "horizon" }>`. Seed before the loop: edge sources not in `candidates` (memoized-past etc.) → `placed` with max subtree end from `context.scheduledEvents` (past-only, effectively unconstraining); unready-goal dependency predecessors → `failed` with cause `"unready"`; other unseedable non-candidates → `failed` (starvation guard).
+- Candidate walk gate: no incoming edges → unchanged. ANY predecessor outcome missing → **skip** (stays in candidates; not added to `resolvedIds`). All `placed` → pass `afterTime = max(lastEnd over predecessors)`. Any `failed` (and none missing) → schedule bounded by the max over the PLACED subset (unbounded if none) + record `sequenceBreaks.push({source, queueId?, fromId, toId, cause})` per failed edge (deduped).
+- Outcomes: task scheduled → `placed` with `event.end`; `permanentFailure` → `failed` (cause `"failed"`); NO_SLOTS → unset (successor keeps waiting through expansion, correct). Goal → `placed` with new `lastPlacedEnd` return; all-leaves-TOO_LARGE → `failed`.
+- **Loop control (load-bearing):** (1) exclude blocked candidates from the watermark's biggest-remaining sizing (they must not trigger expansion they can't use); (2) after a pass that resolved ≥1 candidate while candidates remain, `continue` WITHOUT `expandSlots` — re-walk to unblock successors; only expand on a zero-progress pass. Finite: every non-expanding iteration resolves ≥1 candidate.
+- **Budget exhaustion:** before the final NO_SLOTS push, mark all outcome-less edge sources `failed` with cause `"horizon"`, run ONE final gate-resolved walk (no expansion) so blocked successors attempt placement + emit breaks; leftovers get the existing NO_SLOTS failure.
+- Return grows `sequenceBreaks: { source, queueId?, fromId, toId, cause }[]`; mirror in `core/Scheduler.ts`.
+
+**4e. Signatures:** [scheduleSingleTask.ts](utils/calendar-generation/helpers/Scheduler/scheduleSingleTask.ts) gains `afterTime?` → passes to `scheduler.scheduleTask(task, afterTime)` (plumbing below it already exists). [scheduleGoal.ts](utils/calendar-generation/helpers/Scheduler/scheduleGoal.ts) gains `initialAfterTime?` (seeds `goalAfterTime`) and returns `lastPlacedEnd?` + all-leaves-TOO_LARGE signal.
+
+**4f. Messages** ([EngineMessage.ts](utils/calendar-generation/models/EngineMessage.ts), emit producer in [coalesceMessages.ts](utils/calendar-generation/helpers/CalendarGenerator/coalesceMessages.ts) fed from `sequenceBreaks`, prose in [renderEngineMessage.ts](utils/renderEngineMessage.ts) — plain language, null-safe on deleted queue/planner; `EngineMessageLookups` gains `queueById`, update the lookup builder's caller in calendar/page.tsx):
+
+- `QUEUE_SEQUENCE_BROKEN` — payload `{queueId, failedPlannerId}`, id `QUEUE_SEQUENCE_BROKEN::queueId|failedPlannerId`.
+- `DEPENDENCY_BROKEN` — payload `{predecessorId, successorId, cause: "failed" | "unready"}`, id `DEPENDENCY_BROKEN::predecessorId|successorId|cause`.
+- `SEQUENCE_PAST_HORIZON` — emitted instead of the broken flavor when the predecessor's only failure is budget exhaustion (cause `"horizon"`), both sources: "the forecast for <title> extends past the scheduling horizon".
+- All three state the consequence, not just the fact: "…was scheduled without waiting for <predecessor>". `SchedulingFailureReason.DEPENDENCY_CONFLICT` stays unused (validation makes it unreachable).
+
+## Phase 5 — UI: queues route
+
+**Route `app/(protected)/queues/`** — clone the categories-page skeleton (subHeader, 260px rail + mainCard grid, `media.tablet` collapse, `_components/` folders with co-located css + index barrel):
+
+- `QueueRail/` — queue list: create / inline rename / delete (`ConfirmModal`); dense-int sortOrder renumber (categories-rail precedent).
+- `QueueMemberList/` — ordered rows: `TypeBadge` + title + `CategoryBadge` (queue's inherited category shown dimmed when member has none) + duration; completed members dimmed/struck (`plannerIsCompleted`) but draggable/removable; unready goals get a subtle hint. Drag-reorder copies the RolesStep flat-list grammar verbatim ([RolesStep.tsx](app/(protected)/onboarding/_steps/RolesStep.tsx)): before/after zones, transparent drag image, 0.4 opacity, 2px accent inset drop lines, Firefox `setData` quirk. Member `sortOrder` uses **fractional keys** (one-row diff per drag) — generalize `insertKeyAt`/`appendKey` from [sortOrderKeys.ts](utils/goal-handlers/sortOrderKeys.ts) for `{id, sortOrder}` shapes under `utils/queue-handlers/`. Adds and reorders go through the Phase 3 choke point; a reorder that would close a cycle through an external dependency path is blocked with the path shown.
+- `AddMemberModal/` — fork the SearchPalette search/rank/render machinery into an `onPick(plannerId)` modal; filter: root, triaged, task|goal, not completed, not already in any queue, passes `wouldCreateCycle`.
+- Queue header: category tie via `Combobox` (CategorySection precedent).
+- All mutations dispatch through `updateQueueArray` (functional updates) — queue edits are engine input and must regen.
+
+Other: [nav.ts](components/ui/shell/nav.ts) `NAV_ITEMS` entry (lucide `ListOrdered`, desktop only). `getEffectiveCategoryId` in [goalPageHandlers.ts](utils/goalPageHandlers.ts) gains optional `queueCategoryByRootId?: Map` so UI badges match the engine; sweep ALL callers (dashboard `buildTodayAgenda`/`buildUncompletedItems`, `ItemDetailLayout`, library/search surfaces showing `CategoryBadge`). Minimal "In queue: <name>" row in item-detail SideCards linking to `/queues`.
+
+## Phase 6 — UI: dependencies + readiness gating
+
+**Dependencies card** — new `SideCards` card on root items ([SideCards/](app/(protected)/items/[id]/_components/SideCards/)):
+
+- **Depends on** — chip list (title + `TypeBadge`, click navigates) with remove; `Combobox` picker to add. Candidate filter: root, triaged, `task | goal`, not self, not already linked, and `findCycle` returns null (filter the list AND hard-check on commit). An otherwise-sensible candidate excluded by a cycle shows disabled with the path as the reason — the block-and-explain surface. The "move it in the pipe" one-click fix (semantics #5) can ship as a fast-follow; plain block-with-path first.
+- **Required by** — read-only reverse list (click navigates). The minimal "viewed somewhere" until the graph view exists.
+- Mutations dispatch through `updateDependencyArray` (functional updates) — engine input, must regen.
+
+**Readiness gate** — extends the existing blocker mechanism in [ItemDetailLayout.tsx:231-237](app/(protected)/items/[id]/_components/ItemDetailLayout/ItemDetailLayout.tsx#L231-L237) (currently: subtasks + deadline):
+
+- New pure helpers `utils/precedence/readinessBlockers.ts`: `dependencyReadyBlockers(plannerId, dependencies, planner): Planner[]` — predecessor goals that are unready and uncompleted; `readyDependents(plannerId, ...)` — ready goals depending on this one.
+- `readyBlockers` gains one entry per blocker: "Awaiting <title>". The existing flash-message refusal path handles the copy.
 - Beside the Ready button, when dependency blockers exist: a three-dot trigger opening a popover (existing popover primitives + `usePopoverPosition`) listing each blocker with two actions: **Ready <title>** (calls `setGoalIsReady` for that goal, itself gated — if THAT goal is blocked, show its blockers in place rather than cascading) and **Disconnect dependency** (removes the edge via `updateDependencyArray`).
 - Un-ready path: extend the existing `hasCompletedActivity` refusal with the symmetric check — "Required by <title>" + the same popover offering **Un-ready <title>** / **Disconnect**.
-- `toggleGoalIsReady` / `setGoalIsReady` ([toggleGoalIsReady.ts](utils/goal-handlers/toggleGoalIsReady.ts)) stay dumb subtree stampers; gating lives at call sites (item detail, and wherever else a ready toggle exists — audit `setGoalIsReady` callers). The AI assistant apply path clamps instead (B7).
+- `toggleGoalIsReady` / `setGoalIsReady` ([toggleGoalIsReady.ts](utils/goal-handlers/toggleGoalIsReady.ts)) stay dumb subtree stampers; gating lives at call sites. Audit every caller (item detail, subtasks EditDrawer, any future surface) as a checklist item — a missed site produces the unready-predecessor state, survivable (loud engine fallback) but sloppy.
 
-### B6. Dependency editing UI
+## Phase 7 — AI assistant containment
 
-New `SideCards` card "Dependencies" on root items ([SideCards/](app/(protected)/items/[id]/_components/SideCards/)):
+Dependencies and queues are NOT exposed to the assistant initially (no tools, not in the prompt). Two containment duties:
 
-- **Depends on** — chip list (title + `TypeBadge`, click navigates) with remove; `Combobox` picker to add. Candidate filter: root, triaged, `task | goal`, not self, not already linked, and `findCycle` returns null (filter the list AND hard-check on commit). When an otherwise-sensible candidate is excluded by a cycle, show it disabled with the path as the reason — this is the block-and-explain surface.
-- **Required by** — read-only reverse list (click navigates). This is the minimal "viewed somewhere" until the graph view exists.
-- Mutations dispatch through `updateDependencyArray` (functional updates) — dependencies are engine input and must regen.
-- Queue-conflict fix-offer (decided semantics #3) can ship as plain block-with-path first; the "move it in the pipe" one-click fix is a fast-follow once both features are stable.
+- `applyDraftForestToPlanner` clamps `isReady: true` to false on any goal with dependency blockers at save time (mirroring the UI gate; the readiness cascade then stamps the subtree consistently).
+- Assistant deletes of roots under an edge/membership need no special handling — central pruning (Phase 2) drops them on the next thunk pass.
 
-### B7. AI assistant containment
+Assistant read/write of precedence is separate future work.
 
-Dependencies are NOT exposed to the assistant initially (no tools, not in the prompt). Two containment duties now:
+## Phase 8 — Tests
 
-- `applyDraftForestToPlanner` clamps `isReady: true` to false on any goal with dependency blockers at save time (mirroring the UI gate; readiness cascade then stamps the subtree consistently).
-- The assistant cannot delete a root out from under an edge silently — central pruning (B2) already drops the edge on the next thunk pass; acceptable.
-
-Assistant awareness of dependencies (read context + edit tools) is a separate future piece of work.
-
-### B8. Tests
-
-- `__tests__/utils/precedence/findCycle.test.ts` — direct cycle, cross-pipe cycle through two queues + two dependency edges (the "each edge looks innocent" case), reorder-induced cycle, transparency-independence (completed member still participates in the validation graph), path reporting.
+- `__tests__/calendar-generation/queue-sequence.test.ts` (fixture pattern, fake timers): (1) two tasks in a queue → second starts ≥ first's end; (2) task→goal chain → goal's first leaf after task end; (3) completed member transparent; (4) unready goal skipped silently, no message; (5) TOO_LARGE predecessor → successor places unbounded + exactly one deduped `QUEUE_SEQUENCE_BROKEN`; (6) chain reaching past the 28-day chunk → all members place (blocked-candidate × expansion interplay); (7) stable regen → empty diff.
+- `__tests__/calendar-generation/dependency-gate.test.ts` (fixture pattern): (1) two-predecessor goal starts after the LATER predecessor's end; (2) completed predecessor transparent; (3) unready predecessor → successor unbounded + one `DEPENDENCY_BROKEN(cause: unready)`; (4) failed predecessor → `cause: failed`; (5) budget exhaustion → `SEQUENCE_PAST_HORIZON`, not broken; (6) mixed: queue member with an external dependency — pipe stalls at that member, FIFO preserved; (7) stable regen → empty diff.
+- `queue-category-inheritance.test.ts` (hand-built minimal geometry, category-window-cascade precedent): categoryless member inherits queue's strict windowed category; member with own category keeps it; `applyQueueCategoryInheritance` unit cases (identity no-op).
+- `__tests__/calendar-generation/precedence-edges.test.ts` — edge building: filtering, queue transparency chain-through, dependency unready-predecessor retention, ordering, empty/singleton queues, multi-predecessor map shape.
+- `__tests__/utils/precedence/findCycle.test.ts` — direct cycle, cross-pipe cycle through two queues + two dependency edges (the "each edge looks innocent" case: pipes [A,B] and [C,D] + deps B→C, D→A), reorder-induced cycle, transparency-independence (completed member still participates in validation), path reporting.
 - `__tests__/utils/precedence/readinessBlockers.test.ts` — unready goal blocks, task/completed predecessor does not, reverse-gate dependents.
-- `__tests__/calendar-generation/dependency-gate.test.ts` (fixture pattern) — (1) two-predecessor goal starts after the LATER predecessor's end; (2) completed predecessor transparent; (3) unready predecessor → successor unbounded + one `DEPENDENCY_BROKEN(cause: unready)`; (4) failed predecessor → `cause: failed`; (5) exhaustion → `SEQUENCE_PAST_HORIZON`, not broken; (6) stable regen → empty diff.
-- `pruneDependencies` unit tests — endpoint deletion/retype/nest/untriage; identity no-op.
-- `renderEngineMessage` null-safety for both new types (deleted planner on either end).
+- `prunePrecedenceInputs` unit tests — delete/retype/nest/untriage removal on both structures; identity no-op; completed/unready retained.
+- `renderEngineMessage` null-safety for all three new types (deleted queue/planner on either end).
 
-### B9. Verification
+## Verification
 
 1. `pnpm type-check`, `pnpm test`.
-2. Link "buy a car" → depends on "get a job" + "save money" (both unready goals). Ready button on "buy a car" grays with "Awaiting…"; three-dot lists both; Ready one via shortcut, confirm the button ungrays only when both resolve.
-3. Ready everything; confirm "buy a car" forecasts after the LATER of the two on the calendar.
-4. Attempt a cycle in the picker (A depends on B, then open B and try A) — candidate disabled with the path shown.
-5. Cross-system: pipe [A, B]; add "A depends on B" — blocked with the pipe named in the path. Reorder the pipe to [B, A]; edge now insertable.
-6. Un-ready a predecessor of a ready goal — refused with "Required by…"; shortcut works.
-7. Two-tab: add an edge in one tab, confirm adoption in the other; idle regen diffs empty.
+2. `pnpm db:reset:dev` (or migrate against dev DB), run the app: create a queue at `/queues`, add three tasks, confirm the calendar shows them sequentially; drag-reorder a member → regen reorders placements; complete the middle member → chain passes through it.
+3. Set queue category to a strict windowed category, add a categoryless task → it lands inside the windows.
+4. Make member 1 oversized (duration > any gap) → members 2–3 still place, engine console shows the sequence-broken card; dismiss survives regen (deterministic id).
+5. Link "buy a car" → depends on "get a job" + "save money" (both unready goals). Ready button grays with "Awaiting…"; three-dot lists both; Ready one via shortcut, confirm the button ungrays only when both resolve.
+6. Ready everything; confirm "buy a car" forecasts after the LATER of the two on the calendar.
+7. Attempt a cycle in the picker (A depends on B, then open B and try A) — candidate disabled with the path shown.
+8. Cross-system: pipe [A, B]; add "A depends on B" — blocked with the pipe named in the path. Reorder the pipe to [B, A]; edge now insertable. Then attempt the reorder back → blocked.
+9. Give a pipe member an external dependency on a big unfinished goal → the pipe visibly stalls at that member; later members keep their order.
+10. Un-ready a predecessor of a ready goal — refused with "Required by…"; shortcut works.
+11. Two-tab check: edit a queue / add an edge in one tab, confirm the other adopts on stale sync; idle regen diffs empty (watch the network tab).
+12. Delete a member's planner from the library → member and any edges disappear, sync clean.
 
 ## Risks
 
-- The engine gate ships inside the queue plan's Phase 3d (amendment A1) — all the loop-control risk concentrates there; the dependency feature adds only data producers and messages on the engine side. That was the point.
-- The ready gate has multiple call sites (item detail, subtasks drawer, any future surface, assistant apply). A missed site produces the unready-predecessor state — survivable (loud engine fallback) but sloppy. Audit `setGoalIsReady` / `toggleGoalIsReady` callers as a checklist item.
-- Positional sync signatures grow again (B2). Decide on the keyed-object refactor BEFORE this lands or accept the debt explicitly.
-- Validation graph vs gated graph divergence: validation uses full logical queue order, the engine uses transparency-filtered edges. Keep the two builders side by side in `utils/precedence/` with a comment stating the distinction, or someone will "unify" them and reintroduce the latent-cycle bug.
+- The Phase 4d loop-control changes in `scheduleTasksAndGoals` are the highest-risk edit in the whole plan (starvation/budget interplay; this file carries all the historical watermark scars). It is touched ONCE, already multi-predecessor — dependencies add only data producers and messages afterward. Implement with the `dynamicScheduling` recorder on and queue-sequence test 6 written first.
+- `compareCalendarData`/`useCalendarServerSync` positional signatures grow by three groups: every caller must be updated in the same commit, or the seam gets its keyed-object refactor first (preferred).
+- No-op identity discipline (`prunePrecedenceInputs`, `applyQueueCategoryInheritance`, untouched queue rows keep `updatedAt`, dependency rows immutable) — phantom diffs make second-window syncs permanently stale.
+- Validation graph vs gated graph divergence is intentional (semantics #4 vs #6). Keep both builders in `utils/precedence/` side by side with the distinction stated, or someone will "unify" them and reintroduce the latent-cycle bug.
+- The ready gate is call-site enforced; sweep `setGoalIsReady`/`toggleGoalIsReady` callers and the assistant apply clamp together.
 
 ## Deferred
 
 - Graph view: lanes (pipes) + connectors (dependencies), drag-to-link writing through `findCycle`, illegal drags highlight the existing path. Zero new rules by construction.
-- Plans as edge endpoints; subtree-level dependencies; assistant read/write of dependencies; named clusters (labels on derived components — still no Project entity).
+- Plans as members/endpoints; subtree-level dependencies; assistant read/write of precedence; queue-conflict one-click fix offers; named clusters (labels on derived components — still no Project entity).

@@ -47,12 +47,9 @@ import {
   renamePencil,
   body,
   metaRow,
+  footer,
 } from "../CalendarPopover/CalendarPopover.css";
-import {
-  metaIcon,
-  statusActionsRow,
-  footerSection,
-} from "./EventPopover.css";
+import { metaIcon, statusActionsRow } from "./EventPopover.css";
 
 interface EventPopoverProps {
   event: EventImpl;
@@ -407,7 +404,7 @@ const EventPopover: React.FC<EventPopoverProps> = ({
               </div>
             )}
 
-            <div className={footerSection}>
+            <div className={footer}>
               <PopoverAction
                 onClick={openFullEditor}
                 icon={<ArrowUpRight size={13} strokeWidth={2} />}

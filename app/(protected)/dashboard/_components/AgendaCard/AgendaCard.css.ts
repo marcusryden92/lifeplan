@@ -1,35 +1,34 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, backdropFilters, media, radii } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  backdropFilters,
+  media,
+  radii,
+  glass,
+  display,
+  text,
+  fieldLabel,
+} from "@/lib/theme";
 
-
-// Deliberately does NOT use the glass() recipe: a parent backdrop-filter
-// would create a backdrop root that hides the scrolling agendaList from
-// the header's own backdrop-filter sample, breaking the under-header
-// blur. The card carries the same visual via bg + border + shadow, and
-// the page-behind blur was only visible at the card's empty edges
-// anyway since the agendaList content covers the body.
-export const leftCard = style({
-  position: "relative",
-  // Contain the sticky header's high z-index within the card. Without a
-  // stacking context here, leftCardHeader's zIndex:100 leaks to the app level
-  // and paints over the AI assistant overlay (zIndex.floating).
-  isolation: "isolate",
-  display: "flex",
-  flexDirection: "column",
-  minHeight: 0,
-  overflow: "hidden",
-  background: vars.glass.bg,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: radii["xl+2"],
-  boxShadow: vars.shadow.panel,
-  transition: themeTransition,
-  "@media": {
-    [media.mobile]: {
-      minHeight: "auto",
-      overflow: "visible",
+// blur:"pseudo" lets leftCardHeader keep its own backdrop-filter sample of
+// the scrolling list; its isolation also contains the header's zIndex:100.
+export const leftCard = style([
+  glass({ radius: "lg", blur: "pseudo" }),
+  {
+    display: "flex",
+    flexDirection: "column",
+    minHeight: 0,
+    overflow: "hidden",
+    "@media": {
+      [media.mobile]: {
+        minHeight: "auto",
+        overflow: "visible",
+      },
     },
   },
-});
+]);
 
 export const leftCardHeader = style({
   position: "absolute",
@@ -58,15 +57,14 @@ export const leftCardHeader = style({
   },
 });
 
-export const leftCardTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 22,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  margin: 0,
-  transition: themeTransition,
-});
+export const leftCardTitle = style([
+  display.modalTitle,
+  {
+    color: vars.ink,
+    margin: 0,
+    transition: themeTransition,
+  },
+]);
 
 export const agendaList = style({
   flex: 1,
@@ -125,23 +123,23 @@ export const agendaSectionHeader = style({
   marginBottom: space["3.5"],
 });
 
-export const agendaSectionHeaderText = style({
-  fontFamily: vars.font.display,
-  fontSize: 18,
-  fontWeight: 500,
-  letterSpacing: "-0.01em",
-  color: vars.ink,
-  transition: themeTransition,
-});
+export const agendaSectionHeaderText = style([
+  display.panelTitle,
+  {
+    color: vars.ink,
+    transition: themeTransition,
+  },
+]);
 
-export const agendaSectionHeaderCount = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: "0.04em",
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const agendaSectionHeaderCount = style([
+  text.microLabel,
+  {
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    color: vars.muted,
+    transition: themeTransition,
+  },
+]);
 
 export const agendaGroup = style({
   margin: "8px 0",
@@ -158,12 +156,9 @@ export const agendaGroupHeader = style({
   marginBottom: space["2.5"],
 });
 
-export const agendaGroupHeaderText = style({
-  fontFamily: vars.font.ui,
-  fontSize: 10.5,
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const agendaGroupHeaderText = style([
+  fieldLabel,
+  {
+    transition: themeTransition,
+  },
+]);

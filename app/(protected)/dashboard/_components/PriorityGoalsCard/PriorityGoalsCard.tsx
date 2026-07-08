@@ -1,4 +1,4 @@
-import { space } from "@/lib/theme";
+import { space, progressTrack } from "@/lib/theme";
 import {
   Caption,
   CategoryDot,
@@ -72,7 +72,7 @@ export function PriorityGoalsCard({ isLoaded, goals, onOpenGoal }: Props) {
                 <span className={goalName}>{g.name}</span>
                 <span className={goalFraction}>{g.fraction}</span>
               </div>
-              <div className={goalTrack}>
+              <div className={`${progressTrack()} ${goalTrack}`}>
                 <div
                   className={goalFill}
                   style={{

@@ -1,5 +1,5 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { vars, interactiveTransition, space } from "@/lib/theme";
+import { vars, interactiveTransition, space, text } from "@/lib/theme";
 
 export const root = style({
   display: "flex",
@@ -14,11 +14,12 @@ export const overrideRow = style({
   flexWrap: "wrap",
 });
 
-const overrideLabelBase = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  fontWeight: 600,
-});
+const overrideLabelBase = style([
+  text.label,
+  {
+    fontWeight: 600,
+  },
+]);
 
 export const overrideLabel = styleVariants({
   custom: [overrideLabelBase, { color: vars.ink }],

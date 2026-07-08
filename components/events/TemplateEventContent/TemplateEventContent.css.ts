@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { space } from "@/lib/theme";
+import { iconBtn } from "@/lib/theme";
 
 export const hoverRow = style({
   display: "flex",
@@ -12,8 +12,14 @@ export const hoverBtnGroup = style({
   justifyContent: "flex-end",
 });
 
-export const hoverBtn = style({
-  display: "inline-flex",
-  padding: space["0.5"],
-  color: "inherit",
-});
+// Tile text color tracks the event color, so the recipe's ink colors are
+// overridden back to inherit.
+export const hoverBtn = style([
+  iconBtn({ size: "sm" }),
+  {
+    selectors: {
+      "&&": { color: "inherit" },
+      "&&:hover:not(:disabled)": { color: "inherit" },
+    },
+  },
+]);

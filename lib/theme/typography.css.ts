@@ -43,6 +43,17 @@ export const caption = style([
   },
 ]);
 
+export const fieldLabel = style([
+  baseUI,
+  {
+    fontSize: 9.5,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: "0.14em",
+    color: vars.muted,
+  },
+]);
+
 export const statusTag = style([
   baseUI,
   {

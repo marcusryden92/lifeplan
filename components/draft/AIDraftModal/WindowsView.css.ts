@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii, text, fieldLabel } from "@/lib/theme";
 
 export const wrap = style({
   flex: 1,
@@ -13,13 +13,14 @@ export const wrap = style({
   userSelect: "text",
 });
 
-export const empty = style({
-  padding: space["6"],
-  color: vars.muted,
-  fontFamily: vars.font.ui,
-  fontSize: 12,
-  textAlign: "center",
-});
+export const empty = style([
+  text.bodySm,
+  {
+    padding: space["6"],
+    color: vars.muted,
+    textAlign: "center",
+  },
+]);
 
 export const categoryGroup = style({
   display: "flex",
@@ -38,15 +39,13 @@ export const categoryHeader = style({
   padding: "2px 8px 4px",
 });
 
-export const categoryName = style({
-  fontFamily: vars.font.ui,
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: vars.inkSoft,
-  transition: themeTransition,
-});
+export const categoryName = style([
+  fieldLabel,
+  {
+    color: vars.inkSoft,
+    transition: themeTransition,
+  },
+]);
 
 export const categoryNameDeleted = style([
   categoryName,
@@ -83,28 +82,30 @@ export const flagChip = style({
   },
 });
 
-export const dayLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  fontWeight: 600,
-  color: vars.inkSoft,
-  fontVariantNumeric: "tabular-nums",
-  whiteSpace: "nowrap",
-  flexShrink: 0,
-  width: 78,
-  transition: themeTransition,
-});
+export const dayLabel = style([
+  text.label,
+  {
+    fontWeight: 600,
+    color: vars.inkSoft,
+    fontVariantNumeric: "tabular-nums",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    width: 78,
+    transition: themeTransition,
+  },
+]);
 
-export const timeRange = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  fontWeight: 600,
-  color: vars.ink,
-  fontVariantNumeric: "tabular-nums",
-  whiteSpace: "nowrap",
-  flexShrink: 0,
-  transition: themeTransition,
-});
+export const timeRange = style([
+  text.label,
+  {
+    fontWeight: 600,
+    color: vars.ink,
+    fontVariantNumeric: "tabular-nums",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    transition: themeTransition,
+  },
+]);
 
 export const timeRangeDeleted = style([
   timeRange,

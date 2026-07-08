@@ -7,6 +7,7 @@ import {
   backdropFilters,
   formInput,
   media,
+  radii,
 } from "@/lib/theme";
 
 
@@ -64,7 +65,7 @@ export const dialog = style([
         marginLeft: 0,
         marginRight: 0,
         width: "100%",
-        borderRadius: "22px 22px 0 0",
+        borderRadius: `${radii["xl+2"]}px ${radii["xl+2"]}px 0 0`,
         animationName: sheetUp,
         animationDuration: `${DURATIONS.modal}s`,
       },

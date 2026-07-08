@@ -1,5 +1,13 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  radii,
+  display,
+  text,
+  fieldLabel as fieldLabelPreset,
+} from "@/lib/theme";
 
 export const selectedPanel = style({
   flexShrink: 0,
@@ -23,18 +31,17 @@ export const selectedSwatch = style({
   boxShadow: `0 0 0 1px color-mix(in srgb, ${vars.ink} 14%, transparent)`,
 });
 
-export const selectedTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 18,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  flex: 1,
-  minWidth: 0,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-});
+export const selectedTitle = style([
+  display.panelTitle,
+  {
+    color: vars.ink,
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+]);
 
 export const fieldGrid = style({
   display: "grid",
@@ -56,43 +63,37 @@ export const fieldWithMargin = style({
   marginBottom: space["2"],
 });
 
-export const fieldLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-});
+export const fieldLabel = fieldLabelPreset;
 
-export const fieldInput = style({
-  appearance: "none",
-  border: `1px solid ${vars.rule}`,
-  background: vars.paper,
-  padding: "6px 10px",
-  borderRadius: radii.sm,
-  fontFamily: vars.font.ui,
-  fontSize: 12.5,
-  color: vars.ink,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-  selectors: {
-    "&:focus": {
-      outline: "none",
-      borderColor: `color-mix(in srgb, ${vars.accent.primary} 60%, ${vars.rule})`,
+export const fieldInput = style([
+  text.bodySm,
+  {
+    appearance: "none",
+    border: `1px solid ${vars.rule}`,
+    background: vars.paper,
+    padding: "6px 10px",
+    borderRadius: radii.sm,
+    color: vars.ink,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+    selectors: {
+      "&:focus": {
+        outline: "none",
+        borderColor: `color-mix(in srgb, ${vars.accent.primary} 60%, ${vars.rule})`,
+      },
     },
   },
-});
+]);
 
-export const fieldStatic = style({
-  padding: "6px 0",
-  fontFamily: vars.font.ui,
-  fontSize: 13.5,
-  fontWeight: 500,
-  color: vars.ink,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-});
+export const fieldStatic = style([
+  text.row,
+  {
+    padding: "6px 0",
+    color: vars.ink,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+  },
+]);
 
 
 export const selectedActions = style({

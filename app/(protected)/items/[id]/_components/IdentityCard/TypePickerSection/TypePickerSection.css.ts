@@ -1,5 +1,11 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  radii,
+  fieldLabel as fieldLabelPreset,
+} from "@/lib/theme";
 
 export const fieldStack = style({
   display: "flex",
@@ -8,15 +14,12 @@ export const fieldStack = style({
   minWidth: 0,
 });
 
-export const fieldLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const fieldLabel = style([
+  fieldLabelPreset,
+  {
+    transition: themeTransition,
+  },
+]);
 
 export const typePicker = style({
   position: "relative",

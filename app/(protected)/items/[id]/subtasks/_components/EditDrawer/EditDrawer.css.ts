@@ -6,6 +6,10 @@ import {
   interactiveTransition,
   radii,
   media,
+  display,
+  text,
+  iconBtn,
+  fieldLabel as fieldLabelPreset,
 } from "@/lib/theme";
 
 const lockedShake = keyframes({
@@ -42,26 +46,14 @@ export const drawerHeader = style({
   justifyContent: "space-between",
 });
 
-export const drawerHeaderLabel = style({
-  letterSpacing: "0.14em",
-});
-
-export const drawerClose = style({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 26,
-  height: 26,
-  borderRadius: radii.pill,
-  border: "none",
-  background: "transparent",
-  color: vars.muted,
-  cursor: "pointer",
-  transition: themeTransition,
-  selectors: {
-    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
+export const drawerHeaderLabel = style([
+  fieldLabelPreset,
+  {
+    transition: themeTransition,
   },
-});
+]);
+
+export const drawerClose = iconBtn();
 
 export const drawerBody = style({
   display: "flex",
@@ -69,23 +61,22 @@ export const drawerBody = style({
   gap: space["3.5"],
 });
 
-export const drawerTitleInput = style({
-  fontFamily: vars.font.display,
-  fontSize: 22,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  background: "transparent",
-  border: "none",
-  outline: "none",
-  padding: "4px 0",
-  borderBottom: `1px solid ${vars.rule}`,
-  transition: themeTransition,
-  selectors: {
-    "&:focus": { borderBottomColor: vars.accent.primary },
-    "&::placeholder": { color: vars.muted },
+export const drawerTitleInput = style([
+  display.modalTitle,
+  {
+    color: vars.ink,
+    background: "transparent",
+    border: "none",
+    outline: "none",
+    padding: "4px 0",
+    borderBottom: `1px solid ${vars.rule}`,
+    transition: themeTransition,
+    selectors: {
+      "&:focus": { borderBottomColor: vars.accent.primary },
+      "&::placeholder": { color: vars.muted },
+    },
   },
-});
+]);
 
 export const fieldStack = style({
   display: "flex",
@@ -93,15 +84,12 @@ export const fieldStack = style({
   gap: space["1.5"],
 });
 
-export const fieldLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const fieldLabel = style([
+  fieldLabelPreset,
+  {
+    transition: themeTransition,
+  },
+]);
 
 export const durationStepper = style({
   display: "inline-flex",
@@ -109,43 +97,42 @@ export const durationStepper = style({
   gap: space["1.5"],
 });
 
-export const stepperBtn = style({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 26,
-  height: 26,
-  border: `1px solid ${vars.glass.stroke}`,
-  background: vars.glass.bg,
-  borderRadius: radii.xs,
-  color: vars.ink,
-  cursor: "pointer",
-  transition: themeTransition,
-  selectors: {
-    "&:hover": { background: vars.glass.bgDeep },
+export const stepperBtn = style([
+  iconBtn(),
+  {
+    border: `1px solid ${vars.glass.stroke}`,
+    background: vars.glass.bg,
+    color: vars.ink,
+    selectors: {
+      "&:hover:not(:disabled)": {
+        background: vars.glass.bgDeep,
+        color: vars.ink,
+      },
+    },
   },
-});
+]);
 
-export const stepperValue = style({
-  width: 72,
-  padding: "5px 10px",
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: radii.sm,
-  fontFamily: vars.font.ui,
-  fontSize: 13.5,
-  fontWeight: 600,
-  color: vars.ink,
-  textAlign: "center",
-  outline: "none",
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-  selectors: {
-    "&:focus": { borderColor: vars.accent.primary },
-    "&::-webkit-inner-spin-button": { appearance: "none", margin: 0 },
-    "&::-webkit-outer-spin-button": { appearance: "none", margin: 0 },
+export const stepperValue = style([
+  text.row,
+  {
+    width: 72,
+    padding: "5px 10px",
+    background: vars.glass.bgSoft,
+    border: `1px solid ${vars.glass.stroke}`,
+    borderRadius: radii["sm+2"],
+    fontWeight: 600,
+    color: vars.ink,
+    textAlign: "center",
+    outline: "none",
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+    selectors: {
+      "&:focus": { borderColor: vars.accent.primary },
+      "&::-webkit-inner-spin-button": { appearance: "none", margin: 0 },
+      "&::-webkit-outer-spin-button": { appearance: "none", margin: 0 },
+    },
   },
-});
+]);
 
 export const completeHeader = style({
   display: "flex",

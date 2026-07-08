@@ -21,6 +21,7 @@ import {
 } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useSelector } from "react-redux";
+import { listRow } from "@/lib/theme";
 import { usePlatform } from "@/hooks/usePlatform";
 import { deleteGoal } from "@/utils/goalPageHandlers";
 import { isUnprocessed } from "@/utils/plannerStatus";
@@ -356,7 +357,7 @@ export default function CapturePage() {
                   <button
                     key={item.id}
                     type="button"
-                    className={`${queueRow} ${active ? queueRowActive : ""}`}
+                    className={`${listRow({ selected: active })} ${queueRow} ${active ? queueRowActive : ""}`}
                     onClick={() => setSelectedId(item.id)}
                   >
                     <span className={queueRowTitle}>{item.title}</span>

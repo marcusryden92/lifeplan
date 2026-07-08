@@ -1,5 +1,13 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  radii,
+  text,
+  fieldLabel,
+  statusTag,
+} from "@/lib/theme";
 
 export const wrap = style({
   flex: 1,
@@ -15,13 +23,14 @@ export const wrap = style({
   userSelect: "text",
 });
 
-export const empty = style({
-  padding: space["6"],
-  color: vars.muted,
-  fontFamily: vars.font.ui,
-  fontSize: 12,
-  textAlign: "center",
-});
+export const empty = style([
+  text.bodySm,
+  {
+    padding: space["6"],
+    color: vars.muted,
+    textAlign: "center",
+  },
+]);
 
 export const nodeBlock = style({
   display: "flex",
@@ -87,18 +96,18 @@ export const row = styleVariants({
   ],
 });
 
-const titleBase = style({
-  fontFamily: vars.font.ui,
-  fontSize: 12.5,
-  fontWeight: 500,
-  color: vars.ink,
-  minWidth: 0,
-  flex: 1,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  transition: themeTransition,
-});
+const titleBase = style([
+  text.bodySm,
+  {
+    color: vars.ink,
+    minWidth: 0,
+    flex: 1,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    transition: themeTransition,
+  },
+]);
 
 export const title = styleVariants({
   unchanged: [titleBase],
@@ -114,54 +123,38 @@ export const title = styleVariants({
   ],
 });
 
+const statusBadgeBase = style([
+  statusTag,
+  {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "1px 6px",
+    borderRadius: radii.pill,
+    flexShrink: 0,
+  },
+]);
+
 export const statusBadge = styleVariants({
   unchanged: [{ display: "none" }],
   modified: [
+    statusBadgeBase,
     {
-      display: "inline-flex",
-      alignItems: "center",
-      padding: "1px 6px",
-      borderRadius: radii.pill,
-      fontFamily: vars.font.ui,
-      fontSize: 9,
-      fontWeight: 700,
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
       color: vars.status.warning,
       border: `1px solid color-mix(in srgb, ${vars.status.warning} 45%, transparent)`,
-      flexShrink: 0,
     },
   ],
   added: [
+    statusBadgeBase,
     {
-      display: "inline-flex",
-      alignItems: "center",
-      padding: "1px 6px",
-      borderRadius: radii.pill,
-      fontFamily: vars.font.ui,
-      fontSize: 9,
-      fontWeight: 700,
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
       color: vars.status.success,
       border: `1px solid color-mix(in srgb, ${vars.status.success} 45%, transparent)`,
-      flexShrink: 0,
     },
   ],
   deleted: [
+    statusBadgeBase,
     {
-      display: "inline-flex",
-      alignItems: "center",
-      padding: "1px 6px",
-      borderRadius: radii.pill,
-      fontFamily: vars.font.ui,
-      fontSize: 9,
-      fontWeight: 700,
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
       color: vars.status.error,
       border: `1px solid color-mix(in srgb, ${vars.status.error} 45%, transparent)`,
-      flexShrink: 0,
     },
   ],
 });
@@ -173,21 +166,23 @@ export const metaCluster = style({
   flexShrink: 0,
 });
 
-export const duration = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  fontWeight: 600,
-  color: vars.inkSoft,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-});
+export const duration = style([
+  text.microLabel,
+  {
+    fontWeight: 600,
+    color: vars.inkSoft,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+  },
+]);
 
-export const deadline = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  color: vars.muted,
-  fontVariantNumeric: "tabular-nums",
-});
+export const deadline = style([
+  text.microLabel,
+  {
+    color: vars.muted,
+    fontVariantNumeric: "tabular-nums",
+  },
+]);
 
 export const metaSep = style({
   color: vars.rule,
@@ -254,16 +249,14 @@ export const categoryGroup = style({
   },
 });
 
-export const categoryGroupHeader = style({
-  display: "flex",
-  alignItems: "center",
-  gap: space["2"],
-  padding: "2px 8px 4px",
-  fontFamily: vars.font.ui,
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: vars.inkSoft,
-  transition: themeTransition,
-});
+export const categoryGroupHeader = style([
+  fieldLabel,
+  {
+    display: "flex",
+    alignItems: "center",
+    gap: space["2"],
+    padding: "2px 8px 4px",
+    color: vars.inkSoft,
+    transition: themeTransition,
+  },
+]);

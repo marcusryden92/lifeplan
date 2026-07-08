@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { FolderOpen, Palette, SlidersHorizontal, Trash2, X } from "lucide-react";
 import { CategoryDot } from "@/components/ui";
-import { popover as popoverRecipe } from "@/lib/theme";
+import { pillBtn, popover as popoverRecipe } from "@/lib/theme";
 import { CALENDAR_COLOR_GROUPS } from "@/data/calendarColors";
 import { buildCategoryTree, type CategoryNode } from "@/utils/categoryUtils";
 import type { Category } from "@/types/prisma";
@@ -13,7 +13,6 @@ import {
   countLabel,
   barDivider,
   barBtn,
-  barBtnDanger,
   escHint,
   menu,
   menuItem,
@@ -55,6 +54,7 @@ export function BulkActionBar({
   onClear: () => void;
 }) {
   const [openMenu, setOpenMenu] = useState<MenuKey | null>(null);
+  const barBtnClass = `${pillBtn({ variant: "glass", size: "sm" })} ${barBtn}`;
 
   const flatCategories = useMemo(() => {
     const out: Array<{ category: Category; depth: number }> = [];
@@ -81,7 +81,7 @@ export function BulkActionBar({
 
       <Popover.Root {...menuProps("category")}>
         <Popover.Trigger asChild>
-          <button type="button" className={barBtn}>
+          <button type="button" className={barBtnClass}>
             <FolderOpen size={13} strokeWidth={2} aria-hidden />
             Category
           </button>
@@ -127,7 +127,7 @@ export function BulkActionBar({
 
       <Popover.Root {...menuProps("color")}>
         <Popover.Trigger asChild>
-          <button type="button" className={barBtn}>
+          <button type="button" className={barBtnClass}>
             <Palette size={13} strokeWidth={2} aria-hidden />
             Color
           </button>
@@ -162,7 +162,7 @@ export function BulkActionBar({
 
       <Popover.Root {...menuProps("priority")}>
         <Popover.Trigger asChild>
-          <button type="button" className={barBtn}>
+          <button type="button" className={barBtnClass}>
             <SlidersHorizontal size={13} strokeWidth={2} aria-hidden />
             Priority
           </button>
@@ -195,7 +195,7 @@ export function BulkActionBar({
 
       <button
         type="button"
-        className={`${barBtn} ${barBtnDanger}`}
+        className={pillBtn({ variant: "danger", size: "sm" })}
         onClick={onDelete}
       >
         <Trash2 size={13} strokeWidth={2} aria-hidden />
@@ -206,7 +206,7 @@ export function BulkActionBar({
       <span className={escHint}>esc to clear</span>
       <button
         type="button"
-        className={barBtn}
+        className={barBtnClass}
         aria-label="Clear selection"
         onClick={onClear}
       >

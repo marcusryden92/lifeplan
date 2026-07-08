@@ -1,5 +1,13 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  radii,
+  text,
+  caption,
+  fieldLabel as fieldLabelPreset,
+} from "@/lib/theme";
 
 export const fieldStack = style({
   display: "flex",
@@ -8,15 +16,12 @@ export const fieldStack = style({
   minWidth: 0,
 });
 
-export const fieldLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const fieldLabel = style([
+  fieldLabelPreset,
+  {
+    transition: themeTransition,
+  },
+]);
 
 export const toggleRow = style({
   display: "flex",
@@ -25,12 +30,13 @@ export const toggleRow = style({
   minHeight: 34,
 });
 
-export const toggleHint = style({
-  fontFamily: vars.font.ui,
-  fontSize: 12.5,
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const toggleHint = style([
+  text.bodySm,
+  {
+    color: vars.muted,
+    transition: themeTransition,
+  },
+]);
 
 export const inputsGrid = style({
   display: "grid",
@@ -44,34 +50,36 @@ export const inputStack = style({
   gap: space["1"],
 });
 
-export const inputCaption = style({
-  fontFamily: vars.font.ui,
-  fontSize: 10.5,
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const inputCaption = style([
+  caption,
+  {
+    transition: themeTransition,
+  },
+]);
 
-export const numberInput = style({
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.glass.stroke}`,
-  borderRadius: radii["sm+2"],
-  padding: "8px 10px",
-  fontFamily: vars.font.ui,
-  fontSize: 13.5,
-  color: vars.ink,
-  outline: "none",
-  width: "100%",
-  transition: themeTransition,
-  selectors: {
-    "&:focus": {
-      borderColor: vars.accent.primary,
+export const numberInput = style([
+  text.row,
+  {
+    background: vars.glass.bgSoft,
+    border: `1px solid ${vars.glass.stroke}`,
+    borderRadius: radii["sm+2"],
+    padding: "8px 10px",
+    color: vars.ink,
+    outline: "none",
+    width: "100%",
+    transition: themeTransition,
+    selectors: {
+      "&:focus": {
+        borderColor: vars.accent.primary,
+      },
     },
   },
-});
+]);
 
-export const progressNote = style({
-  fontFamily: vars.font.ui,
-  fontSize: 12,
-  color: vars.inkSoft,
-  transition: themeTransition,
-});
+export const progressNote = style([
+  text.bodySm,
+  {
+    color: vars.inkSoft,
+    transition: themeTransition,
+  },
+]);

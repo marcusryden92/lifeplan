@@ -9,6 +9,10 @@ import {
   interactiveTransition,
   formInput,
   radii,
+  display,
+  text,
+  caption,
+  fieldLabel,
 } from "@/lib/theme";
 
 const FADE_MS = 160;
@@ -63,20 +67,21 @@ export const header = style({
   gap: space["1"],
 });
 
-export const title = style({
-  fontFamily: vars.font.display,
-  fontSize: 20,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  margin: 0,
-});
+export const title = style([
+  display.sectionHead,
+  {
+    color: vars.ink,
+    margin: 0,
+  },
+]);
 
-export const subtitle = style({
-  fontSize: 12,
-  color: vars.muted,
-  fontVariantNumeric: "tabular-nums",
-});
+export const subtitle = style([
+  text.bodySm,
+  {
+    color: vars.muted,
+    fontVariantNumeric: "tabular-nums",
+  },
+]);
 
 export const periodList = style({
   display: "flex",
@@ -91,13 +96,7 @@ export const periodRow = style({
   gap: space["2"],
 });
 
-export const periodName = style({
-  fontSize: 10.5,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  fontWeight: 600,
-});
+export const periodName = style([fieldLabel]);
 
 // Numeric stepper for travel-minute fields. Inherits the boxed form-input
 // look (bg, border, focus color) so it matches every other input, then
@@ -119,12 +118,14 @@ export const periodInput = style([
   },
 ]);
 
-export const googleHint = style({
-  fontSize: 10.5,
-  color: vars.muted,
-  whiteSpace: "nowrap",
-  fontVariantNumeric: "tabular-nums",
-});
+export const googleHint = style([
+  caption,
+  {
+    color: vars.muted,
+    whiteSpace: "nowrap",
+    fontVariantNumeric: "tabular-nums",
+  },
+]);
 
 export const revertBtn = style({
   display: "inline-flex",
@@ -132,7 +133,7 @@ export const revertBtn = style({
   justifyContent: "center",
   width: 24,
   height: 24,
-  borderRadius: 5,
+  borderRadius: radii.xs,
   border: "none",
   background: "transparent",
   color: vars.muted,

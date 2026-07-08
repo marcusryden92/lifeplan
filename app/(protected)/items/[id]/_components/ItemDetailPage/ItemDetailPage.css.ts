@@ -6,6 +6,8 @@ import {
   interactiveTransition,
   media,
   radii,
+  text,
+  progressTrack as progressTrackRecipe,
 } from "@/lib/theme";
 
 const lockedShake = keyframes({
@@ -22,30 +24,28 @@ export const progressBlock = style({
   overflow: "hidden",
 });
 
-export const progressMeta = style({
-  fontSize: 13,
-  lineHeight: 1,
-  color: vars.inkSoft,
-  fontFamily: vars.font.ui,
-  fontWeight: 500,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-});
+export const progressMeta = style([
+  text.body,
+  {
+    lineHeight: 1,
+    color: vars.inkSoft,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+  },
+]);
 
 export const progressMetaStrong = style({
   color: vars.ink,
   fontWeight: 600,
 });
 
-export const progressTrack = style({
-  marginTop: space["2.5"],
-  height: 8,
-  borderRadius: radii.pill,
-  background: vars.rule,
-  position: "relative",
-  overflow: "hidden",
-  transition: themeTransition,
-});
+export const progressTrack = style([
+  progressTrackRecipe({ size: "lg" }),
+  {
+    marginTop: space["2.5"],
+    transition: themeTransition,
+  },
+]);
 
 export const progressFill = style({
   position: "absolute",
@@ -115,15 +115,16 @@ export const completeCheckbox = style({
   },
 });
 
-export const completeLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 13,
-  fontWeight: 600,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  flexShrink: 0,
-});
+export const completeLabel = style([
+  text.body,
+  {
+    fontWeight: 600,
+    letterSpacing: "0.08em",
+    textTransform: "uppercase",
+    color: vars.muted,
+    flexShrink: 0,
+  },
+]);
 
 export const completeDateWrap = style({
   width: 250,

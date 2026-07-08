@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, media } from "@/lib/theme";
+import { space, vars, themeTransition, media, display, text } from "@/lib/theme";
 
 
 export const headerRow = style({
@@ -19,28 +19,27 @@ export const headerRow = style({
   },
 });
 
-export const greeting = style({
-  fontFamily: vars.font.display,
-  fontSize: 56,
-  fontWeight: 500,
-  letterSpacing: "-0.045em",
-  lineHeight: 0.98,
-  color: vars.ink,
-  margin: 0,
-  transition: themeTransition,
-  "@media": {
-    [media.mobile]: { fontSize: 38 },
+export const greeting = style([
+  display.hero,
+  {
+    lineHeight: 0.98,
+    color: vars.ink,
+    margin: 0,
+    transition: themeTransition,
+    "@media": {
+      [media.mobile]: { fontSize: 38 },
+    },
   },
-});
+]);
 
-export const summaryLine = style({
-  marginTop: space["2.5"],
-  fontSize: 14,
-  color: vars.inkSoft,
-  fontWeight: 500,
-  fontFamily: vars.font.ui,
-  transition: themeTransition,
-});
+export const summaryLine = style([
+  text.bodyLg,
+  {
+    marginTop: space["2.5"],
+    color: vars.inkSoft,
+    transition: themeTransition,
+  },
+]);
 
 export const summaryStrong = style({
   fontVariantNumeric: "tabular-nums",

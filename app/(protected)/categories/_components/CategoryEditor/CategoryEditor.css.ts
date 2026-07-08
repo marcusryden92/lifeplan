@@ -1,5 +1,16 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, interactiveTransition, media, radii } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  interactiveTransition,
+  media,
+  radii,
+  iconBtn,
+  display,
+  text,
+  fieldLabel as fieldLabelText,
+} from "@/lib/theme";
 
 
 export const editor = style({
@@ -55,9 +66,8 @@ export const headerInfo = style({
   minWidth: 0,
 });
 
-// Shared geometry so static â†” edit doesn't shift the surrounding layout.
-const NAME_FONT = 30;
-const NAME_LINE_HEIGHT = 30;
+// Shared geometry so static <-> edit doesn't shift the surrounding layout.
+const NAME_LINE_HEIGHT = 32;
 const NAME_BORDER = 2;
 
 export const headerNameRow = style({
@@ -67,88 +77,78 @@ export const headerNameRow = style({
   minWidth: 0,
 });
 
-export const headerName = style({
-  fontFamily: vars.font.display,
-  fontSize: NAME_FONT,
-  fontWeight: 500,
-  letterSpacing: "-0.025em",
-  color: vars.ink,
-  lineHeight: `${NAME_LINE_HEIGHT}px`,
-  margin: 0,
-  padding: 0,
-  flex: 1,
-  minWidth: 0,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  height: NAME_LINE_HEIGHT,
-  boxSizing: "content-box",
-  // Transparent border-bottom reserves the same vertical space the editing
-  // input's accent underline occupies, so swapping in/out doesn't pop layout.
-  borderBottom: `${NAME_BORDER}px solid transparent`,
-  cursor: "text",
-  transition: themeTransition,
-});
-
-export const headerNameInput = style({
-  fontFamily: vars.font.display,
-  fontSize: NAME_FONT,
-  fontWeight: 500,
-  letterSpacing: "-0.025em",
-  lineHeight: `${NAME_LINE_HEIGHT}px`,
-  color: vars.ink,
-  background: "transparent",
-  border: "none",
-  outline: "none",
-  padding: 0,
-  margin: 0,
-  flex: 1,
-  minWidth: 0,
-  display: "block",
-  boxSizing: "content-box",
-  height: NAME_LINE_HEIGHT,
-  borderBottom: `${NAME_BORDER}px solid ${vars.accent.primary}`,
-});
-
-export const headerNamePencil = style({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 28,
-  height: 28,
-  borderRadius: radii.pill,
-  border: "none",
-  background: "transparent",
-  color: vars.muted,
-  cursor: "pointer",
-  opacity: 0,
-  flexShrink: 0,
-  transition: interactiveTransition("opacity", "color", "background-color"),
-  selectors: {
-    [`${headerNameRow}:hover &`]: { opacity: 1 },
-    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
-    "&:focus-visible": { opacity: 1 },
+export const headerName = style([
+  display.pageTitle,
+  {
+    color: vars.ink,
+    lineHeight: `${NAME_LINE_HEIGHT}px`,
+    margin: 0,
+    padding: 0,
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    height: NAME_LINE_HEIGHT,
+    boxSizing: "content-box",
+    // Transparent border-bottom reserves the same vertical space the editing
+    // input's accent underline occupies, so swapping in/out doesn't pop layout.
+    borderBottom: `${NAME_BORDER}px solid transparent`,
+    cursor: "text",
+    transition: themeTransition,
   },
-});
+]);
 
-export const headerSummary = style({
-  marginTop: space["1.5"],
-  fontFamily: vars.font.ui,
-  fontSize: 12.5,
-  color: vars.muted,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-});
+export const headerNameInput = style([
+  display.pageTitle,
+  {
+    lineHeight: `${NAME_LINE_HEIGHT}px`,
+    color: vars.ink,
+    background: "transparent",
+    border: "none",
+    outline: "none",
+    padding: 0,
+    margin: 0,
+    flex: 1,
+    minWidth: 0,
+    display: "block",
+    boxSizing: "content-box",
+    height: NAME_LINE_HEIGHT,
+    borderBottom: `${NAME_BORDER}px solid ${vars.accent.primary}`,
+  },
+]);
 
-export const sectionTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 17,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  marginBottom: space["3.5"],
-  transition: themeTransition,
-});
+export const headerNamePencil = style([
+  iconBtn(),
+  {
+    color: vars.muted,
+    opacity: 0,
+    transition: interactiveTransition("opacity", "color", "background-color"),
+    selectors: {
+      [`${headerNameRow}:hover &`]: { opacity: 1 },
+      "&:focus-visible": { opacity: 1 },
+    },
+  },
+]);
+
+export const headerSummary = style([
+  text.bodySm,
+  {
+    marginTop: space["1.5"],
+    color: vars.muted,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+  },
+]);
+
+export const sectionTitle = style([
+  display.listTitle,
+  {
+    color: vars.ink,
+    marginBottom: space["3.5"],
+    transition: themeTransition,
+  },
+]);
 
 export const section = style({
   display: "flex",
@@ -180,15 +180,12 @@ export const fieldStack = style({
   minWidth: 0,
 });
 
-export const fieldLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const fieldLabel = style([
+  fieldLabelText,
+  {
+    transition: themeTransition,
+  },
+]);
 
 export const swatchRow = style({
   display: "flex",
@@ -245,7 +242,7 @@ export const strictToggle = style({
 export const strictToggleThumb = style({
   width: 16,
   height: 16,
-  borderRadius: "50%",
+  borderRadius: radii.pill,
   background: vars.paper,
   transition: "transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
   selectors: {
@@ -255,50 +252,50 @@ export const strictToggleThumb = style({
   },
 });
 
-export const strictLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 13.5,
-  fontWeight: 600,
-  color: vars.ink,
-  transition: themeTransition,
-});
+export const strictLabel = style([
+  text.row,
+  {
+    fontWeight: 600,
+    color: vars.ink,
+    transition: themeTransition,
+  },
+]);
 
-export const sectionHelp = style({
-  marginTop: space["2.5"],
-  fontFamily: vars.font.ui,
-  fontSize: 12.5,
-  color: vars.inkSoft,
-  lineHeight: 1.5,
-  transition: themeTransition,
-});
+export const sectionHelp = style([
+  text.bodySm,
+  {
+    marginTop: space["2.5"],
+    color: vars.inkSoft,
+    lineHeight: 1.5,
+    transition: themeTransition,
+  },
+]);
 
 export const windowsSubsection = style({
   marginBottom: space["5"],
 });
 
-export const subsectionLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  marginBottom: space["2"],
-  display: "block",
-  transition: themeTransition,
-});
+export const subsectionLabel = style([
+  fieldLabelText,
+  {
+    marginBottom: space["2"],
+    display: "block",
+    transition: themeTransition,
+  },
+]);
 
-export const classificationNote = style({
-  padding: "14px 16px",
-  border: `1px dashed ${vars.rule}`,
-  borderRadius: radii.md,
-  background: vars.glass.bgSoft,
-  fontFamily: vars.font.ui,
-  fontSize: 12.5,
-  color: vars.inkSoft,
-  lineHeight: 1.5,
-  transition: themeTransition,
-});
+export const classificationNote = style([
+  text.bodySm,
+  {
+    padding: "14px 16px",
+    border: `1px dashed ${vars.rule}`,
+    borderRadius: radii.md,
+    background: vars.glass.bgSoft,
+    color: vars.inkSoft,
+    lineHeight: 1.5,
+    transition: themeTransition,
+  },
+]);
 
 export const windowsActions = style({
   display: "flex",
@@ -312,31 +309,35 @@ export const subCategoriesList = style({
   gap: space["1.5"],
 });
 
-export const subCategoryRow = style({
-  display: "grid",
-  gridTemplateColumns: "14px 1fr 130px 90px",
-  alignItems: "center",
-  gap: space["3"],
-  "@media": {
-    [media.mobile]: { gridTemplateColumns: "14px 1fr auto auto", gap: space["2"] },
-  },
-  padding: "8px 12px",
-  border: `1px solid ${vars.rule}`,
-  borderRadius: radii["sm+2"],
-  background: "transparent",
-  cursor: "pointer",
-  textAlign: "left",
-  fontFamily: vars.font.ui,
-  fontSize: 13,
-  color: vars.ink,
-  transition: themeTransition,
-  selectors: {
-    "&:hover": {
-      background: vars.interactive.hoverFill,
-      borderColor: vars.glass.stroke,
+export const subCategoryRow = style([
+  text.body,
+  {
+    display: "grid",
+    gridTemplateColumns: "14px 1fr 130px 90px",
+    alignItems: "center",
+    gap: space["3"],
+    "@media": {
+      [media.mobile]: {
+        gridTemplateColumns: "14px 1fr auto auto",
+        gap: space["2"],
+      },
+    },
+    padding: "8px 12px",
+    border: `1px solid ${vars.rule}`,
+    borderRadius: radii["sm+2"],
+    background: "transparent",
+    cursor: "pointer",
+    textAlign: "left",
+    color: vars.ink,
+    transition: themeTransition,
+    selectors: {
+      "&:hover": {
+        background: vars.interactive.hoverFill,
+        borderColor: vars.glass.stroke,
+      },
     },
   },
-});
+]);
 
 export const subCategoryDot = style({
   width: 9,
@@ -354,13 +355,14 @@ export const subCategoryName = style({
   whiteSpace: "nowrap",
 });
 
-export const subCategoryMeta = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  color: vars.muted,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-});
+export const subCategoryMeta = style([
+  text.label,
+  {
+    color: vars.muted,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+  },
+]);
 
 // Repeated inline-flex layout for combobox option rows (dot/icon + label).
 export const inlineRow = style({
@@ -398,17 +400,18 @@ export const subCategoryChevron = style({
   justifySelf: "end",
 });
 
-export const emptyEditor = style({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flex: 1,
-  padding: "60px 24px",
-  fontFamily: vars.font.ui,
-  fontSize: 14,
-  color: vars.muted,
-  textAlign: "center",
-});
+export const emptyEditor = style([
+  text.bodyLg,
+  {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+    padding: "60px 24px",
+    color: vars.muted,
+    textAlign: "center",
+  },
+]);
 
 export const windowExceptionsList = style({
   display: "flex",
@@ -426,13 +429,14 @@ export const windowExceptionBlock = style({
   borderRadius: radii.md,
 });
 
-export const windowExceptionHeading = style({
-  fontFamily: vars.font.ui,
-  fontSize: 12.5,
-  fontWeight: 600,
-  color: vars.ink,
-  fontVariantNumeric: "tabular-nums",
-  display: "flex",
-  alignItems: "center",
-  gap: space["1.5"],
-});
+export const windowExceptionHeading = style([
+  text.bodySm,
+  {
+    fontWeight: 600,
+    color: vars.ink,
+    fontVariantNumeric: "tabular-nums",
+    display: "flex",
+    alignItems: "center",
+    gap: space["1.5"],
+  },
+]);

@@ -7,6 +7,7 @@ import { getTaskTreeIds } from "@/utils/goalPageHandlers";
 import { bucketEventsByDay, getDuration } from "@/utils/calendarUtils";
 import { plannerIdFromEventId } from "@/utils/planRecurrence";
 import { formatDurationCompact, relativeDayLabel } from "@/utils/timeFormatting";
+import { Button } from "@/components/ui";
 import { useItem } from "../_components/ItemContext";
 import type { SimpleEvent } from "@/types/prisma";
 import {
@@ -21,7 +22,6 @@ import {
   eventTitle,
   eventDuration,
   emptyState,
-  pastToggle,
 } from "./page.css";
 
 export default function ItemSchedulePage() {
@@ -115,13 +115,13 @@ export default function ItemSchedulePage() {
           {showPast ? (
             pastBuckets.map(renderBucket)
           ) : (
-            <button
-              type="button"
-              className={pastToggle}
+            <Button
+              variant="outlined"
+              size="sm"
               onClick={() => setShowPast(true)}
             >
               Show {past.length} past event{past.length === 1 ? "" : "s"}
-            </button>
+            </Button>
           )}
         </section>
       )}

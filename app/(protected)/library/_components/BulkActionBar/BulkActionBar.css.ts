@@ -1,5 +1,13 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, radii, media, zIndex, themeTransition } from "@/lib/theme";
+import {
+  space,
+  vars,
+  radii,
+  media,
+  zIndex,
+  themeTransition,
+  text,
+} from "@/lib/theme";
 
 export const bar = style({
   position: "fixed",
@@ -28,12 +36,14 @@ export const bar = style({
   },
 });
 
-export const countLabel = style({
-  fontSize: 12.5,
-  fontWeight: 600,
-  whiteSpace: "nowrap",
-  padding: "0 6px",
-});
+export const countLabel = style([
+  text.bodySm,
+  {
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+    padding: "0 6px",
+  },
+]);
 
 export const barDivider = style({
   width: 1,
@@ -42,48 +52,26 @@ export const barDivider = style({
   background: `color-mix(in srgb, ${vars.paper} 25%, transparent)`,
 });
 
+// The bar surface is vars.ink, so the glass pillBtn's currentColor tinting
+// must run off paper, not the recipe's default ink.
 export const barBtn = style({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: space["1.5"],
-  padding: "6px 10px",
-  border: "none",
-  borderRadius: radii["pill"],
-  background: "transparent",
   color: vars.paper,
-  fontFamily: vars.font.ui,
-  fontSize: 12.5,
-  fontWeight: 500,
-  cursor: "pointer",
   whiteSpace: "nowrap",
-  transition: themeTransition,
-  selectors: {
-    "&:hover": {
-      background: `color-mix(in srgb, ${vars.paper} 14%, transparent)`,
-    },
-  },
 });
 
-export const barBtnDanger = style({
-  color: vars.status.error,
-  selectors: {
-    "&:hover": {
-      background: `color-mix(in srgb, ${vars.status.error} 18%, transparent)`,
+export const escHint = style([
+  text.label,
+  {
+    color: `color-mix(in srgb, ${vars.paper} 60%, transparent)`,
+    whiteSpace: "nowrap",
+    padding: "0 6px",
+    "@media": {
+      [media.mobile]: {
+        display: "none",
+      },
     },
   },
-});
-
-export const escHint = style({
-  fontSize: 11.5,
-  color: `color-mix(in srgb, ${vars.paper} 60%, transparent)`,
-  whiteSpace: "nowrap",
-  padding: "0 6px",
-  "@media": {
-    [media.mobile]: {
-      display: "none",
-    },
-  },
-});
+]);
 
 export const menu = style({
   display: "flex",
@@ -94,26 +82,27 @@ export const menu = style({
   minWidth: 190,
 });
 
-export const menuItem = style({
-  display: "flex",
-  alignItems: "center",
-  gap: space["2"],
-  padding: "6px 8px",
-  border: "none",
-  borderRadius: radii["xs"],
-  background: "transparent",
-  color: vars.ink,
-  fontFamily: vars.font.ui,
-  fontSize: 13,
-  textAlign: "left",
-  cursor: "pointer",
-  transition: themeTransition,
-  selectors: {
-    "&:hover": {
-      background: vars.interactive.hoverFill,
+export const menuItem = style([
+  text.body,
+  {
+    display: "flex",
+    alignItems: "center",
+    gap: space["2"],
+    padding: "6px 8px",
+    border: "none",
+    borderRadius: radii["xs"],
+    background: "transparent",
+    color: vars.ink,
+    textAlign: "left",
+    cursor: "pointer",
+    transition: themeTransition,
+    selectors: {
+      "&:hover": {
+        background: vars.interactive.hoverFill,
+      },
     },
   },
-});
+]);
 
 export const menuItemMuted = style({
   color: vars.muted,
@@ -145,25 +134,26 @@ export const priorityRow = style({
   gap: space["1"],
 });
 
-export const priorityPill = style({
-  width: 26,
-  height: 26,
-  padding: 0,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  border: `1px solid ${vars.rule}`,
-  borderRadius: radii["pill"],
-  background: "transparent",
-  color: vars.ink,
-  fontFamily: vars.font.ui,
-  fontSize: 12,
-  cursor: "pointer",
-  transition: themeTransition,
-  selectors: {
-    "&:hover": {
-      background: vars.interactive.hoverFill,
-      borderColor: vars.inkSoft,
+export const priorityPill = style([
+  text.bodySm,
+  {
+    width: 28,
+    height: 28,
+    padding: 0,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: `1px solid ${vars.rule}`,
+    borderRadius: radii["pill"],
+    background: "transparent",
+    color: vars.ink,
+    cursor: "pointer",
+    transition: themeTransition,
+    selectors: {
+      "&:hover": {
+        background: vars.interactive.hoverFill,
+        borderColor: vars.inkSoft,
+      },
     },
   },
-});
+]);

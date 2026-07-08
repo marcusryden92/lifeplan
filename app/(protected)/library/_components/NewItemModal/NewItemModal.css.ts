@@ -7,6 +7,8 @@ import {
   backdropFilters,
   formInput,
   media,
+  radii,
+  text,
 } from "@/lib/theme";
 
 const fadeIn = keyframes({
@@ -63,7 +65,7 @@ export const dialog = style([
         marginLeft: 0,
         marginRight: 0,
         width: "100%",
-        borderRadius: "22px 22px 0 0",
+        borderRadius: `${radii["xl+2"]}px ${radii["xl+2"]}px 0 0`,
         animationName: sheetUp,
         animationDuration: `${DURATIONS.modal}s`,
       },
@@ -86,12 +88,14 @@ export const field = style({
   gap: space["2"],
 });
 
-export const fieldLabel = style({
-  fontSize: 12,
-  fontWeight: 600,
-  letterSpacing: "0.01em",
-  color: vars.muted,
-});
+export const fieldLabel = style([
+  text.bodySm,
+  {
+    fontWeight: 600,
+    letterSpacing: "0.01em",
+    color: vars.muted,
+  },
+]);
 
 export const durationRow = style({
   display: "flex",
@@ -104,10 +108,12 @@ export const durationInput = style([
   { width: 96 },
 ]);
 
-export const durationUnit = style({
-  fontSize: 13,
-  color: vars.muted,
-});
+export const durationUnit = style([
+  text.body,
+  {
+    color: vars.muted,
+  },
+]);
 
 export const footer = style({
   display: "flex",

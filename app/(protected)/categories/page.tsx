@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import { Plus } from "lucide-react";
-import { ConfirmModal, Loader, vars } from "@/components/ui";
+import { Button, ConfirmModal, Loader, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   upsertCategory,
@@ -309,14 +309,15 @@ export default function CategoriesPage() {
             )}
           </div>
           <div className={railFooter}>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               className={railNewButton}
               onClick={() => handleCreate()}
             >
               <Plus size={13} strokeWidth={2.4} />
               New role
-            </button>
+            </Button>
           </div>
         </aside>
 

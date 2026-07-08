@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import { Caption } from "@/components/ui";
+import { listRow } from "@/lib/theme";
 import {
   formatDurationCompact,
   formatTimeOfDay,
@@ -39,6 +40,7 @@ export function AgendaItemRow({ item, onClick }: Props) {
   const handleClick = plannerId ? () => onClick?.(plannerId) : undefined;
 
   const rowClass = [
+    listRow(),
     agendaRow,
     item.now ? agendaRowNow : "",
     item.next ? agendaRowNext : "",

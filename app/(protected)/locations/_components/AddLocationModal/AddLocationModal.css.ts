@@ -8,6 +8,9 @@ import {
   colorMixAlpha,
   formInput,
   radii,
+  display,
+  text,
+  fieldLabel as fieldLabelText,
 } from "@/lib/theme";
 
 const FADE_MS = 160;
@@ -65,19 +68,20 @@ export const header = style({
   gap: space["1"],
 });
 
-export const title = style({
-  fontFamily: vars.font.display,
-  fontSize: 22,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  margin: 0,
-});
+export const title = style([
+  display.modalTitle,
+  {
+    color: vars.ink,
+    margin: 0,
+  },
+]);
 
-export const subtitle = style({
-  fontSize: 12,
-  color: vars.muted,
-});
+export const subtitle = style([
+  text.bodySm,
+  {
+    color: vars.muted,
+  },
+]);
 
 export const fieldStack = style({
   display: "flex",
@@ -85,14 +89,7 @@ export const fieldStack = style({
   gap: space["1.5"],
 });
 
-export const fieldLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-});
+export const fieldLabel = style([fieldLabelText]);
 
 export const searchWrap = style({
   position: "relative",

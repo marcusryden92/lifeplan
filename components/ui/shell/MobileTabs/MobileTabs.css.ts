@@ -1,5 +1,12 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, buttonTransition, backdropFilters, radii } from "@/lib/theme";
+import {
+  space,
+  vars,
+  buttonTransition,
+  backdropFilters,
+  radii,
+  fieldLabel,
+} from "@/lib/theme";
 
 export const tabBar = style({
   position: "fixed",
@@ -19,24 +26,22 @@ export const tabBar = style({
   boxShadow: vars.shadow.panelSm,
 });
 
-export const tab = style({
-  flex: 1,
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  gap: space["0.5"],
-  padding: "6px 8px",
-  background: "transparent",
-  border: "none",
-  color: vars.muted,
-  fontFamily: vars.font.ui,
-  fontSize: 10,
-  fontWeight: 600,
-  letterSpacing: "0.04em",
-  textTransform: "uppercase",
-  textDecoration: "none",
-  cursor: "pointer",
-});
+export const tab = style([
+  fieldLabel,
+  {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: space["0.5"],
+    padding: "6px 8px",
+    background: "transparent",
+    border: "none",
+    letterSpacing: "0.04em",
+    textDecoration: "none",
+    cursor: "pointer",
+  },
+]);
 
 export const tabActive = style({
   color: vars.ink,
@@ -78,7 +83,7 @@ export const captureButton = style({
   display: "grid",
   placeItems: "center",
   marginTop: `-${space["7"]}`,
-  boxShadow: `0 8px 24px ${vars.status.error}55, inset 0 1px 0 rgba(255,255,255,0.18)`,
+  boxShadow: `0 8px 24px color-mix(in srgb, ${vars.status.error} 33%, transparent), inset 0 1px 0 rgba(255,255,255,0.18)`,
   transition: buttonTransition,
   selectors: {
     "&:active": { transform: "scale(0.96)" },

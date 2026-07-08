@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii, text, fieldLabel } from "@/lib/theme";
 
 export const wrap = style({
   flex: 1,
@@ -13,13 +13,14 @@ export const wrap = style({
   userSelect: "text",
 });
 
-export const empty = style({
-  padding: space["6"],
-  color: vars.muted,
-  fontFamily: vars.font.ui,
-  fontSize: 12,
-  textAlign: "center",
-});
+export const empty = style([
+  text.bodySm,
+  {
+    padding: space["6"],
+    color: vars.muted,
+    textAlign: "center",
+  },
+]);
 
 export const dayGroup = style({
   display: "flex",
@@ -31,16 +32,14 @@ export const dayGroup = style({
   },
 });
 
-export const dayLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: vars.inkSoft,
-  padding: "2px 8px 4px",
-  transition: themeTransition,
-});
+export const dayLabel = style([
+  fieldLabel,
+  {
+    color: vars.inkSoft,
+    padding: "2px 8px 4px",
+    transition: themeTransition,
+  },
+]);
 
 export const colorDot = style({
   width: 8,
@@ -56,16 +55,17 @@ export const colorDot = style({
   },
 });
 
-export const timeRange = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  fontWeight: 600,
-  color: vars.inkSoft,
-  fontVariantNumeric: "tabular-nums",
-  whiteSpace: "nowrap",
-  flexShrink: 0,
-  transition: themeTransition,
-});
+export const timeRange = style([
+  text.label,
+  {
+    fontWeight: 600,
+    color: vars.inkSoft,
+    fontVariantNumeric: "tabular-nums",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+    transition: themeTransition,
+  },
+]);
 
 export const overnightMarker = style({
   marginLeft: space["1"],
@@ -75,18 +75,18 @@ export const overnightMarker = style({
   verticalAlign: "super",
 });
 
-export const templateTitle = style({
-  fontFamily: vars.font.ui,
-  fontSize: 12.5,
-  fontWeight: 500,
-  color: vars.ink,
-  minWidth: 0,
-  flex: 1,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  transition: themeTransition,
-});
+export const templateTitle = style([
+  text.bodySm,
+  {
+    color: vars.ink,
+    minWidth: 0,
+    flex: 1,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    transition: themeTransition,
+  },
+]);
 
 export const templateTitleDeleted = style([
   templateTitle,
@@ -104,13 +104,14 @@ export const metaCluster = style({
   flexShrink: 0,
 });
 
-export const metaText = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  color: vars.muted,
-  fontVariantNumeric: "tabular-nums",
-  whiteSpace: "nowrap",
-});
+export const metaText = style([
+  text.microLabel,
+  {
+    color: vars.muted,
+    fontVariantNumeric: "tabular-nums",
+    whiteSpace: "nowrap",
+  },
+]);
 
 export const metaSep = style({
   color: vars.rule,

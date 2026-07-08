@@ -1,5 +1,12 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { space, vars, colorMixAlpha, radii, borderWidth } from "@/lib/theme";
+import {
+  space,
+  vars,
+  colorMixAlpha,
+  radii,
+  borderWidth,
+  text,
+} from "@/lib/theme";
 
 // Mirrors the drag state CalendarPopover exposes via its render prop.
 export const headerCursor = styleVariants({
@@ -15,12 +22,13 @@ export const tone = styleVariants({
   ok: { color: vars.muted },
 });
 
-export const statusNote = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  fontWeight: 600,
-  letterSpacing: "0.02em",
-});
+export const statusNote = style([
+  text.microLabel,
+  {
+    fontWeight: 600,
+    letterSpacing: "0.02em",
+  },
+]);
 
 export const travelTitle = style({
   cursor: "default",
@@ -38,15 +46,16 @@ export const mutedText = style({
   color: vars.muted,
 });
 
-export const estimateRow = style({
-  display: "flex",
-  alignItems: "center",
-  gap: space["1.5"],
-  fontSize: 12,
-  color: vars.inkSoft,
-  fontFamily: vars.font.ui,
-  fontVariantNumeric: "tabular-nums",
-});
+export const estimateRow = style([
+  text.bodySm,
+  {
+    display: "flex",
+    alignItems: "center",
+    gap: space["1.5"],
+    color: vars.inkSoft,
+    fontVariantNumeric: "tabular-nums",
+  },
+]);
 
 export const estimateValue = style({
   fontWeight: 600,
@@ -82,17 +91,10 @@ export const alertIcon = style({
   flexShrink: 0,
 });
 
-export const alertText = style({
-  fontSize: 11.5,
-  color: vars.ink,
-  lineHeight: 1.45,
-  fontFamily: vars.font.ui,
-});
-
-export const footerActions = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["0.5"],
-  paddingTop: space["2"],
-  borderTop: `${borderWidth.hairline}px solid ${vars.rule}`,
-});
+export const alertText = style([
+  text.label,
+  {
+    color: vars.ink,
+    lineHeight: 1.45,
+  },
+]);
