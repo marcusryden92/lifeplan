@@ -243,7 +243,7 @@ export const listRow = recipe({
     display: "flex",
     alignItems: "center",
     borderRadius: radii.sm,
-    padding: `${space["1.5"]}px ${space["2"]}px`,
+    padding: `${space["1"]}px ${space["2"]}px`,
     cursor: "pointer",
     transition: themeTransition,
     selectors: {

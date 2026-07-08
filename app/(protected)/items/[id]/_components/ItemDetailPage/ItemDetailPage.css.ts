@@ -21,6 +21,7 @@ export const progressBlock = style({
   marginTop: space["10"],
   marginBottom: space["6"],
   height: 38,
+  flexShrink: 0,
   overflow: "hidden",
 });
 
@@ -140,6 +141,7 @@ export const overviewGrid = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
   gap: space["12"],
+  flexShrink: 0,
   "@media": {
     [media.tablet]: { gridTemplateColumns: "1fr", gap: space["6"] },
   },
