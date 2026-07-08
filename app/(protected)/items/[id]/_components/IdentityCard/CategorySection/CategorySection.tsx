@@ -40,7 +40,7 @@ export function CategorySection() {
   if (item.parentId) {
     return (
       <div className={fieldStack}>
-        <span className={fieldLabel}>Area</span>
+        <span className={fieldLabel}>Category</span>
         {category ? (
           <CategoryBadge color={category.color ?? "#888"}>
             {category.name}

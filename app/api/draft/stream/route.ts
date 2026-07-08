@@ -61,6 +61,12 @@ import {
 
 export const runtime = "nodejs";
 
+// The assistant runs a multi-turn Anthropic tool-use loop (up to MAX_TOOL_TURNS
+// streamed completions) over one SSE response. Vercel's default function
+// duration (10s Hobby / 15s Pro) kills the stream mid-loop, so the finalizing
+// `done` event never reaches the client and the pending draft is discarded.
+export const maxDuration = 60;
+
 const MODEL = "claude-sonnet-4-6";
 const MAX_TOKENS = 16000;
 
@@ -1872,6 +1878,7 @@ export async function POST(req: Request) {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 }
