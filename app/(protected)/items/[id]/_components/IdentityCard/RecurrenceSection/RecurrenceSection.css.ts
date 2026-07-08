@@ -28,7 +28,7 @@ export const select = style([
     background: vars.glass.bgSoft,
     border: `1px solid ${vars.glass.stroke}`,
     borderRadius: radii["sm+2"],
-    padding: "8px 12px",
+    padding: "6px 11px",
     color: vars.ink,
     outline: "none",
     width: "100%",

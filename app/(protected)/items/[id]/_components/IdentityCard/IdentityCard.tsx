@@ -10,7 +10,7 @@ import { ColorSection } from "./ColorSection";
 import { RecurrenceSection } from "./RecurrenceSection";
 import { SplittingSection } from "./SplittingSection";
 import { DeleteRow } from "./DeleteRow";
-import { card, cardBody, fieldGrid } from "./IdentityCard.css";
+import { card, cardBody, fieldGrid, doubleGrid } from "./IdentityCard.css";
 
 export function IdentityCard() {
   return (
@@ -19,13 +19,14 @@ export function IdentityCard() {
       <div className={cardBody}>
         <div className={fieldGrid}>
           <TypePickerSection />
-          <CategorySection />
+          <div className={doubleGrid}>
+            <CategorySection /> <ColorSection />
+          </div>
           <DateSection />
           <DurationSection />
-          <RecurrenceSection />
           <SplittingSection />
           <LocationSection />
-          <ColorSection />
+          <RecurrenceSection />
         </div>
         <DeleteRow />
       </div>

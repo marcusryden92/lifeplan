@@ -189,9 +189,9 @@ export const pillBtn = recipe({
       },
     },
     size: {
-      sm: { padding: "6px 14px", fontSize: 12 },
-      md: { padding: "8px 16px", fontSize: 12.5 },
-      lg: { padding: "10px 20px", fontSize: 14 },
+      sm: { padding: "5px 12px", fontSize: 12 },
+      md: { padding: "6px 14px", fontSize: 12.5 },
+      lg: { padding: "8px 18px", fontSize: 14 },
     },
   },
   defaultVariants: {
@@ -330,7 +330,7 @@ export const formInput = recipe({
       underline: {
         fontSize: 16,
         fontWeight: 500,
-        padding: "10px 0",
+        padding: "8px 0",
         background: "transparent",
         border: "none",
         borderBottom: `1px solid ${vars.rule}`,
@@ -341,7 +341,7 @@ export const formInput = recipe({
       boxed: {
         fontSize: 13.5,
         fontWeight: 500,
-        padding: "9px 12px",
+        padding: "6px 11px",
         background: vars.glass.bgSoft,
         border: `1px solid ${vars.glass.stroke}`,
         borderRadius: radii["sm+2"],

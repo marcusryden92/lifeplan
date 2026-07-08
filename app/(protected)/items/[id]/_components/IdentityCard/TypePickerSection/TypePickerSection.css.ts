@@ -54,7 +54,7 @@ export const typePickerBtn = style({
   appearance: "none",
   border: "none",
   background: "transparent",
-  padding: "5px 14px",
+  padding: "4px 12px",
   borderRadius: radii.pill,
   cursor: "pointer",
   fontSize: 11,

@@ -13,7 +13,16 @@ export const cardBody = style({
 export const fieldGrid = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
-  gap: "18px 26px",
+  gap: "13px 22px",
+  "@media": {
+    [media.mobile]: { gridTemplateColumns: "1fr" },
+  },
+});
+
+export const doubleGrid = style({
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: "13px 22px",
   "@media": {
     [media.mobile]: { gridTemplateColumns: "1fr" },
   },

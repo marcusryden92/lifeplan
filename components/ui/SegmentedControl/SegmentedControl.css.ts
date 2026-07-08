@@ -27,7 +27,7 @@ export const segmentedButton = style({
   appearance: "none",
   border: "none",
   background: "transparent",
-  padding: "5px 14px",
+  padding: "4px 12px",
   borderRadius: radii.pill,
   cursor: "pointer",
   display: "inline-flex",

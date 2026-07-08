@@ -34,7 +34,7 @@ export const triggerBoxed = style([
   {
     fontSize: 13,
     fontVariantNumeric: "tabular-nums",
-    padding: "8px 34px 8px 12px",
+    padding: "6px 32px 6px 11px",
   },
 ]);
 

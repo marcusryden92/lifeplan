@@ -16,7 +16,7 @@ export function DurationSection() {
   return (
     <div className={fieldStack}>
       <span className={fieldLabel}>
-        {isGoal ? "Rolled-up duration" : "Duration (min)"}
+        {isGoal ? "Total duration" : "Duration (min)"}
       </span>
       {isGoal ? (
         <span className={fieldValue}>

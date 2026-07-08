@@ -1,8 +1,7 @@
 "use client";
 
 import { space } from "@/lib/theme";
-import { format } from "date-fns";
-import { Caption, DateTimePicker } from "@/components/ui";
+import { DateTimePicker } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatDatetimeLocal } from "@/utils/datetime";
 import { useItem } from "../../ItemContext";
@@ -18,21 +17,20 @@ export function DateSection() {
   return (
     <div className={fieldStack}>
       <span className={fieldLabel}>{isPlan ? "Scheduled" : "Deadline"}</span>
-      <div style={{ display: "flex", flexDirection: "column", gap: space["1"] }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: space["1"],
+          maxWidth: "200px",
+        }}
+      >
         <DateTimePicker
           value={dateValue}
           onChange={(v) => changeDate(v ? new Date(v) : undefined)}
           weekStartsOn={weekStartDay}
           ariaLabel={isPlan ? "Scheduled time" : "Deadline"}
         />
-        {/* Always rendered so toggling a date doesn't reflow the column.
-            Falls back to a non-breaking space + hidden visibility when
-            the date is empty. */}
-        <Caption style={isoValue ? undefined : { visibility: "hidden" }}>
-          {isoValue
-            ? format(new Date(isoValue), "EEE MMM d · HH:mm")
-            : " "}
-        </Caption>
       </div>
     </div>
   );

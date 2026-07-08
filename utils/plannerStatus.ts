@@ -68,7 +68,7 @@ export function getGoalDurationProgress(
 }
 
 /**
- * Rolled-up remaining duration for an item with descendants: sum of leaf
+ * Total remaining duration for an item with descendants: sum of leaf
  * durations whose `completedEndTime` is unset. Returns null for items with
  * no children (caller should fall back to the item's own duration).
  */

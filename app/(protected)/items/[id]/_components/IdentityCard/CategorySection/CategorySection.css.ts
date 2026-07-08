@@ -1,5 +1,9 @@
 import { style } from "@vanilla-extract/css";
-import { space, themeTransition, fieldLabel as fieldLabelPreset } from "@/lib/theme";
+import {
+  space,
+  themeTransition,
+  fieldLabel as fieldLabelPreset,
+} from "@/lib/theme";
 
 export const fieldStack = style({
   display: "flex",
