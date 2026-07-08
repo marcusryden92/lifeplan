@@ -4,6 +4,8 @@ import { VectorField } from "@/components/landing/VectorField";
 import {
   page,
   fieldPanel,
+  fieldBrand,
+  fieldLogo,
   fieldWordmark,
   formPanel,
   backLink,
@@ -14,7 +16,10 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
     <div className={`${themeLight} ${page}`}>
       <div className={fieldPanel}>
         <VectorField />
-        <span className={fieldWordmark}>Circadium</span>
+        <div className={fieldBrand}>
+          <span className={fieldLogo} aria-hidden />
+          <span className={fieldWordmark}>Circadium</span>
+        </div>
       </div>
       <div className={formPanel}>
         <Link href="/" className={backLink}>

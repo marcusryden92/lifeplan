@@ -65,7 +65,22 @@ export const heroNav = style({
   pointerEvents: "none",
 });
 
+// Same mask treatment as the Sidebar brand — the SVG tints via background.
+const logoMask = {
+  WebkitMaskImage: "url(/logo_minified.svg)",
+  maskImage: "url(/logo_minified.svg)",
+  WebkitMaskSize: "contain",
+  maskSize: "contain",
+  WebkitMaskRepeat: "no-repeat",
+  maskRepeat: "no-repeat",
+  WebkitMaskPosition: "center",
+  maskPosition: "center",
+} as const;
+
 export const heroWordmark = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: space["2.5"],
   fontFamily: vars.font.display,
   fontSize: 24,
   fontWeight: 500,
@@ -74,6 +89,14 @@ export const heroWordmark = style({
   textDecoration: "none",
   lineHeight: 1,
   pointerEvents: "auto",
+});
+
+export const heroLogo = style({
+  width: 26,
+  height: 26,
+  flexShrink: 0,
+  backgroundColor: "#f2efea",
+  ...logoMask,
 });
 
 export const navActions = style({
@@ -95,7 +118,8 @@ export const heroSignIn = style({
   background: "transparent",
   color: "rgba(242,239,234,0.85)",
   cursor: "pointer",
-  transition: "background 160ms ease, color 160ms ease, border-color 160ms ease",
+  transition:
+    "background 160ms ease, color 160ms ease, border-color 160ms ease",
   selectors: {
     "&:hover": {
       background: "rgba(242,239,234,0.12)",
@@ -147,6 +171,12 @@ export const heroSubhead = style({
   margin: 0,
 });
 
+globalStyle(`${heroSubhead} em`, {
+  fontStyle: "italic",
+  fontWeight: 400,
+  color: "#60a5fa",
+});
+
 export const heroCta = style({
   display: "flex",
   alignItems: "center",
@@ -161,6 +191,10 @@ export const heroCtaNote = style({
   fontSize: 12.5,
   color: "rgba(242,239,234,0.55)",
   letterSpacing: "0.01em",
+});
+
+export const heroTitle = style({
+  marginTop: 3,
 });
 
 // ---------- floating pill nav (appears once the hero scrolls away) ----------
@@ -203,6 +237,9 @@ export const pillNavSecondary = style({
 });
 
 export const pillNavWordmark = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: space["2"],
   fontFamily: vars.font.display,
   fontSize: 16,
   fontWeight: 500,
@@ -211,6 +248,18 @@ export const pillNavWordmark = style({
   textDecoration: "none",
   lineHeight: 1,
   marginRight: space["2"],
+});
+
+export const pillNavLogo = style({
+  width: 20,
+  height: 20,
+  flexShrink: 0,
+  backgroundColor: vars.ink,
+  ...logoMask,
+});
+
+export const pillNavTitle = style({
+  marginTop: 3,
 });
 
 // ---------- lead (sits directly beneath the hero) ----------

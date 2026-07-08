@@ -1,7 +1,6 @@
 ﻿import { style } from "@vanilla-extract/css";
 import { vars, media } from "@/lib/theme";
 
-
 // Locked to light. Split layout: vector field on the left, paper form panel
 // on the right. Carries the landing's hero artifact through the transition.
 export const page = style({
@@ -32,27 +31,60 @@ export const fieldPanel = style({
   },
 });
 
-// Big bottom-left wordmark on the field side. Pointer-events: none so it
-// doesn't block the canvas's mouse interaction.
-export const fieldWordmark = style({
+// Big bottom-left brand lockup on the field side: regular logo + wordmark.
+// Pointer-events: none so it doesn't block the canvas's mouse interaction.
+export const fieldBrand = style({
   position: "absolute",
   left: "clamp(20px, 3vw, 48px)",
   bottom: "clamp(20px, 3vw, 48px)",
-  fontFamily: vars.font.display,
-  fontSize: "clamp(36px, 5vw, 88px)",
-  fontWeight: 400,
-  letterSpacing: "-0.03em",
-  lineHeight: 1,
-  color: "#f5f0e8",
-  margin: 0,
+  display: "flex",
+  alignItems: "center",
+  gap: "clamp(12px, 1.6vw, 28px)",
   pointerEvents: "none",
   userSelect: "none",
   zIndex: 1,
   "@media": {
     [media.mobile]: {
-      fontSize: "clamp(28px, 8vw, 48px)",
       left: 20,
       bottom: 16,
+      gap: 10,
+    },
+  },
+});
+
+// Regular logo, tinted to match the cream wordmark and scaled alongside it.
+export const fieldLogo = style({
+  width: "clamp(40px, 5.4vw, 96px)",
+  height: "clamp(40px, 5.4vw, 96px)",
+  flexShrink: 0,
+  backgroundColor: "#f5f0e8",
+  WebkitMaskImage: "url(/logo.svg)",
+  maskImage: "url(/logo.svg)",
+  WebkitMaskSize: "contain",
+  maskSize: "contain",
+  WebkitMaskRepeat: "no-repeat",
+  maskRepeat: "no-repeat",
+  WebkitMaskPosition: "center",
+  maskPosition: "center",
+  "@media": {
+    [media.mobile]: {
+      width: "clamp(30px, 8.6vw, 52px)",
+      height: "clamp(30px, 8.6vw, 52px)",
+    },
+  },
+});
+
+export const fieldWordmark = style({
+  fontFamily: vars.font.display,
+  fontSize: "clamp(36px, 5vw, 88px)",
+  fontWeight: 300,
+  letterSpacing: "-0.03em",
+  lineHeight: 1,
+  color: "#f5f0e8",
+  margin: 0,
+  "@media": {
+    [media.mobile]: {
+      fontSize: "clamp(28px, 8vw, 48px)",
     },
   },
 });

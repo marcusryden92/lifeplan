@@ -6,6 +6,8 @@ import { Social } from "./Social";
 import {
   card,
   brandRow,
+  brandMark,
+  brandLogo,
   brand,
   title as titleStyle,
   subtitle as subtitleStyle,
@@ -35,7 +37,10 @@ export const AuthCard = ({
   return (
     <div className={card}>
       <div className={brandRow}>
-        <h1 className={brand}>Circadium</h1>
+        <div className={brandMark}>
+          <span className={brandLogo} aria-hidden />
+          <h1 className={brand}>Circadium</h1>
+        </div>
         <h2 className={titleStyle}>{title}</h2>
         {subtitle && <span className={subtitleStyle}>{subtitle}</span>}
       </div>

@@ -21,6 +21,30 @@ export const brandRow = style({
   marginBottom: space["2"],
 });
 
+// Little-wordmark lockup (minified logo + "Circadium"), mirroring the Sidebar.
+export const brandMark = style({
+  display: "flex",
+  alignItems: "center",
+  gap: space["2"],
+});
+
+// Masked logo tinted to ink, same technique as the Sidebar. Minified glyph for
+// the small wordmark.
+export const brandLogo = style({
+  width: 24,
+  height: 24,
+  flexShrink: 0,
+  backgroundColor: vars.ink,
+  WebkitMaskImage: "url(/logo_minified.svg)",
+  maskImage: "url(/logo_minified.svg)",
+  WebkitMaskSize: "contain",
+  maskSize: "contain",
+  WebkitMaskRepeat: "no-repeat",
+  maskRepeat: "no-repeat",
+  WebkitMaskPosition: "center",
+  maskPosition: "center",
+});
+
 // Small wordmark — eyebrow-style label above the headline, matching the
 // landing's compact nav wordmark.
 export const brand = style({
