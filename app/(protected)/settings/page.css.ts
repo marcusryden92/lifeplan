@@ -1,5 +1,14 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, glass, media, radii } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  media,
+  radii,
+  display,
+  text,
+  fieldLabel as fieldLabelText,
+} from "@/lib/theme";
 
 
 export const page = style({
@@ -20,40 +29,40 @@ export const subHeader = style({
   },
 });
 
-export const pageTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 32,
-  fontWeight: 500,
-  letterSpacing: "-0.03em",
-  color: vars.ink,
-  lineHeight: 1,
-  margin: 0,
-  transition: themeTransition,
-  "@media": { [media.mobile]: { fontSize: 24 } },
-});
+export const pageTitle = style([
+  display.pageTitle,
+  {
+    color: vars.ink,
+    lineHeight: 1,
+    margin: 0,
+    transition: themeTransition,
+    "@media": { [media.mobile]: { fontSize: 24 } },
+  },
+]);
 
-export const titleSummary = style({
-  fontSize: 12.5,
-  color: vars.muted,
-  fontWeight: 500,
-  fontFamily: vars.font.ui,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-});
+export const titleSummary = style([
+  text.bodySm,
+  {
+    color: vars.muted,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+  },
+]);
 
 export const spacer = style({ flex: 1 });
 
-export const userBadge = style({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: space["2"],
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  color: vars.muted,
-  letterSpacing: "0.06em",
-  textTransform: "uppercase",
-  fontWeight: 600,
-});
+export const userBadge = style([
+  text.microLabel,
+  {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: space["2"],
+    color: vars.muted,
+    letterSpacing: "0.06em",
+    textTransform: "uppercase",
+    fontWeight: 600,
+  },
+]);
 
 export const mainGrid = style({
   display: "grid",
@@ -89,7 +98,7 @@ export const subnavItem = style({
   alignItems: "center",
   gap: space["2.5"],
   padding: "10px 12px",
-  borderRadius: radii["sm+2"],
+  borderRadius: radii.sm,
   border: `1px solid transparent`,
   background: "transparent",
   color: vars.ink,
@@ -150,16 +159,15 @@ export const sectionHead = style({
   flexShrink: 0,
 });
 
-export const sectionTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 28,
-  fontWeight: 500,
-  letterSpacing: "-0.025em",
-  color: vars.ink,
-  margin: 0,
-  lineHeight: 1.1,
-  transition: themeTransition,
-});
+export const sectionTitle = style([
+  display.sectionHead,
+  {
+    color: vars.ink,
+    margin: 0,
+    lineHeight: 1.1,
+    transition: themeTransition,
+  },
+]);
 
 export const sectionSub = style({
   fontFamily: vars.font.ui,
@@ -176,26 +184,24 @@ export const pinstripeRule = style({
   transition: themeTransition,
 });
 
-export const card = style([
-  glass({ fill: "deep", radius: "md", shadow: "none" }),
+export const card = style({
+  border: `1px solid ${vars.rule}`,
+  borderRadius: radii["md+2"],
+  background: "transparent",
+  padding: space["5"],
+  display: "flex",
+  flexDirection: "column",
+  gap: space["3.5"],
+  transition: themeTransition,
+  "@media": { [media.mobile]: { padding: space["4"], borderRadius: radii.md } },
+});
+
+export const cardTitle = style([
+  fieldLabelText,
   {
-    padding: space["5"],
-    display: "flex",
-    flexDirection: "column",
-    gap: space["3.5"],
-    "@media": { [media.mobile]: { padding: space["4"], borderRadius: radii["md+2"] } },
+    transition: themeTransition,
   },
 ]);
-
-export const cardTitle = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  transition: themeTransition,
-});
 
 export const fieldGrid = style({
   display: "grid",
@@ -210,19 +216,16 @@ export const field = style({
   gap: space["1.5"],
 });
 
-export const fieldLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const fieldLabel = style([
+  fieldLabelText,
+  {
+    transition: themeTransition,
+  },
+]);
 
 export const fieldInput = style({
   padding: "10px 12px",
-  borderRadius: radii["sm+2"],
+  borderRadius: radii.sm,
   border: `1px solid ${vars.rule}`,
   background: vars.glass.bgSoft,
   color: vars.ink,
@@ -238,13 +241,14 @@ export const fieldInput = style({
   },
 });
 
-export const fieldNote = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  color: vars.muted,
-  lineHeight: 1.45,
-  transition: themeTransition,
-});
+export const fieldNote = style([
+  text.label,
+  {
+    color: vars.muted,
+    lineHeight: 1.45,
+    transition: themeTransition,
+  },
+]);
 
 export const rowSplit = style({
   display: "flex",
@@ -262,21 +266,23 @@ export const toggleRow = style({
 
 export const toggleMain = style({ flex: 1, minWidth: 0 });
 
-export const toggleHead = style({
-  fontFamily: vars.font.ui,
-  fontSize: 13,
-  fontWeight: 600,
-  color: vars.ink,
-  transition: themeTransition,
-});
+export const toggleHead = style([
+  text.body,
+  {
+    fontWeight: 600,
+    color: vars.ink,
+    transition: themeTransition,
+  },
+]);
 
-export const toggleBody = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  color: vars.muted,
-  marginTop: space["0.5"],
-  transition: themeTransition,
-});
+export const toggleBody = style([
+  text.label,
+  {
+    color: vars.muted,
+    marginTop: space["0.5"],
+    transition: themeTransition,
+  },
+]);
 
 export const toggleSwitch = style({
   position: "relative",
@@ -373,20 +379,22 @@ export const providerIcon = style({
 
 export const providerMain = style({ flex: 1, minWidth: 0 });
 
-export const providerName = style({
-  fontFamily: vars.font.ui,
-  fontSize: 13,
-  fontWeight: 600,
-  color: vars.ink,
-  transition: themeTransition,
-});
+export const providerName = style([
+  text.body,
+  {
+    fontWeight: 600,
+    color: vars.ink,
+    transition: themeTransition,
+  },
+]);
 
-export const providerStatus = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const providerStatus = style([
+  text.label,
+  {
+    color: vars.muted,
+    transition: themeTransition,
+  },
+]);
 
 export const footerRow = style({
   display: "flex",
@@ -395,12 +403,13 @@ export const footerRow = style({
   justifyContent: "flex-end",
 });
 
-export const footerMessage = style({
-  flex: 1,
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  color: vars.muted,
-});
+export const footerMessage = style([
+  text.label,
+  {
+    flex: 1,
+    color: vars.muted,
+  },
+]);
 
 export const footerMessageSuccess = style({
   color: vars.status.success,
@@ -423,14 +432,13 @@ export const comingSoon = style({
   gap: space["1.5"],
 });
 
-export const comingSoonTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 18,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  transition: themeTransition,
-});
+export const comingSoonTitle = style([
+  display.panelTitle,
+  {
+    color: vars.ink,
+    transition: themeTransition,
+  },
+]);
 
 export const dangerNote = style({
   padding: "12px 14px",

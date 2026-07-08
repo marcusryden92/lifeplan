@@ -70,7 +70,7 @@ export const legacyCardDisabled = style({
 });
 
 export const cardBody = style({
-  padding: "12px 0 16px",
+  padding: "12px 0",
 });
 
 // When the subtask list wrapper renders null (no subtasks), AddSubtask is the

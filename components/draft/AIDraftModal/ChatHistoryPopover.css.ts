@@ -1,5 +1,13 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii, zIndex, popover } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  radii,
+  zIndex,
+  popover,
+  text,
+} from "@/lib/theme";
 
 export const menu = style([
   popover(),
@@ -15,13 +23,14 @@ export const menu = style([
   },
 ]);
 
-export const stateRow = style({
-  padding: "10px 12px",
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  color: vars.muted,
-  textAlign: "center",
-});
+export const stateRow = style([
+  text.label,
+  {
+    padding: "10px 12px",
+    color: vars.muted,
+    textAlign: "center",
+  },
+]);
 
 export const conversationRow = style({
   display: "flex",
@@ -54,16 +63,16 @@ export const conversationButton = style({
   },
 });
 
-export const conversationTitle = style({
-  fontFamily: vars.font.ui,
-  fontSize: 12,
-  fontWeight: 500,
-  color: vars.ink,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  transition: themeTransition,
-});
+export const conversationTitle = style([
+  text.bodySm,
+  {
+    color: vars.ink,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    transition: themeTransition,
+  },
+]);
 
 export const conversationDate = style({
   fontFamily: vars.font.ui,

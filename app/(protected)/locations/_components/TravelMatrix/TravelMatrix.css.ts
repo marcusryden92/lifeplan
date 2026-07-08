@@ -1,6 +1,13 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { space, vars, themeTransition, interactiveTransition, radii } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  interactiveTransition,
+  radii,
+  fieldLabel,
+} from "@/lib/theme";
 
 export const matrixWrap = style({
   border: `1px solid ${vars.glass.stroke}`,
@@ -37,16 +44,13 @@ const HEADER_OVERLAY_BASE = {
   transition: "opacity 200ms cubic-bezier(0.4, 0, 0.2, 1)",
 } as const;
 
-export const headerCell = style({
+const headerCellBase = style({
   padding: "10px 12px",
   borderBottom: `1px solid ${vars.glass.stroke}`,
   background: vars.paper,
-  fontWeight: 600,
   textAlign: "center",
   verticalAlign: "middle",
   minWidth: 96,
-  fontSize: 12,
-  color: vars.ink,
   position: "sticky",
   top: 0,
   zIndex: 2,
@@ -57,16 +61,20 @@ export const headerCell = style({
   },
 });
 
+export const headerCell = style([
+  headerCellBase,
+  {
+    fontWeight: 600,
+    fontSize: 12,
+    color: vars.ink,
+  },
+]);
+
 export const cornerCell = style([
-  headerCell,
+  headerCellBase,
+  fieldLabel,
   {
     borderRight: `1px solid ${vars.glass.stroke}`,
-    fontSize: 9.5,
-    letterSpacing: "0.14em",
-    textTransform: "uppercase",
-    color: vars.muted,
-    fontWeight: 600,
-    position: "sticky",
     left: 0,
     zIndex: 3,
   },
@@ -194,13 +202,12 @@ export const singleValueUnit = style({
   fontWeight: 600,
 });
 
-export const periodLabel = style({
-  fontSize: 9.5,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  fontWeight: 600,
-});
+export const periodLabel = style([
+  fieldLabel,
+  {
+    letterSpacing: "0.08em",
+  },
+]);
 
 globalStyle(`${cell}[data-custom="true"] > button`, {
   background: `color-mix(in srgb, ${vars.status.warning} 12%, transparent)`,

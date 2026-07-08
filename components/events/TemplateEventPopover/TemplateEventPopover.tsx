@@ -31,13 +31,9 @@ import {
   renamePencil,
   body,
   metaRow,
+  footer,
 } from "../CalendarPopover/CalendarPopover.css";
-import {
-  headerGrabbing,
-  metaIcon,
-  note,
-  actionsSection,
-} from "./TemplateEventPopover.css";
+import { headerGrabbing, metaIcon, note } from "./TemplateEventPopover.css";
 
 interface TemplateEventPopoverProps {
   event: EventImpl;
@@ -223,7 +219,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
               onChange={applyColor}
             />
 
-            <div className={actionsSection}>
+            <div className={footer}>
               <PopoverAction
                 onClick={onCopy}
                 icon={<Copy size={13} strokeWidth={2} />}

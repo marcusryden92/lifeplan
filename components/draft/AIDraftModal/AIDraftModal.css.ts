@@ -1,5 +1,15 @@
 import { createVar, style, globalStyle } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii, zIndex, media } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  radii,
+  zIndex,
+  media,
+  display,
+  text,
+  fieldLabel,
+} from "@/lib/theme";
 
 export const MODAL_FADE_MS = 220;
 
@@ -66,44 +76,32 @@ export const banner = style({
   transition: themeTransition,
 });
 
-export const editingLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 10.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: `color-mix(in srgb, ${vars.paper} 65%, transparent)`,
-  transition: themeTransition,
-});
+export const editingLabel = style([
+  fieldLabel,
+  {
+    color: `color-mix(in srgb, ${vars.paper} 65%, transparent)`,
+    transition: themeTransition,
+  },
+]);
 
-export const bannerTitle = style({
-  fontFamily: vars.font.ui,
-  fontSize: 12.5,
-  fontWeight: 500,
-  color: `color-mix(in srgb, ${vars.paper} 85%, transparent)`,
-  transition: themeTransition,
-  minWidth: 0,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-});
+export const bannerTitle = style([
+  text.bodySm,
+  {
+    color: `color-mix(in srgb, ${vars.paper} 85%, transparent)`,
+    transition: themeTransition,
+    minWidth: 0,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+]);
 
 export const bannerSpacer = style({ flex: 1 });
 
-// Doubled selector (`&&`) beats the `pillBtn` recipe on specificity so the
-// paper-tinted overrides win on top of `variant="glass"`, matching
-// WeekStructureModal's cancel button treatment.
 export const cancelButtonStyle = style({
+  color: vars.paper,
   selectors: {
-    "&&": {
-      background: `color-mix(in srgb, ${vars.paper} 14%, transparent)`,
-      border: `1px solid color-mix(in srgb, ${vars.paper} 40%, transparent)`,
-      color: vars.paper,
-    },
-    "&&:hover:not(:disabled)": {
-      background: `color-mix(in srgb, ${vars.paper} 22%, transparent)`,
-      borderColor: `color-mix(in srgb, ${vars.paper} 55%, transparent)`,
-    },
+    "&:hover": { color: vars.paper },
   },
 });
 
@@ -221,22 +219,22 @@ export const paneHeader = style({
   flexShrink: 0,
 });
 
-export const paneTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 22,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  margin: 0,
-  transition: themeTransition,
-});
+export const paneTitle = style([
+  display.modalTitle,
+  {
+    color: vars.ink,
+    margin: 0,
+    transition: themeTransition,
+  },
+]);
 
-export const paneSubtitle = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  color: vars.inkSoft,
-  fontVariantNumeric: "tabular-nums",
-});
+export const paneSubtitle = style([
+  text.label,
+  {
+    color: vars.inkSoft,
+    fontVariantNumeric: "tabular-nums",
+  },
+]);
 
 // Goals / Week tab buttons in the tree pane header. The active tab reads as
 // the pane title; inactive tabs recede to muted and invite the switch.
@@ -263,15 +261,14 @@ export const paneTab = style({
 
 // paneTitle's look with the color left to the tab button, so active/inactive
 // states cascade.
-export const paneTabLabel = style({
-  fontFamily: vars.font.display,
-  fontSize: 22,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: "inherit",
-  margin: 0,
-  transition: themeTransition,
-});
+export const paneTabLabel = style([
+  display.modalTitle,
+  {
+    color: "inherit",
+    margin: 0,
+    transition: themeTransition,
+  },
+]);
 
 export const tabChangeCount = style({
   display: "inline-flex",
@@ -300,44 +297,46 @@ export const headerActionCluster = style({
 });
 
 // Small action button in a pane header ("Show all", "New chat", "History").
-export const headerActionButton = style({
-  appearance: "none",
-  background: "transparent",
-  border: "none",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: space["1"],
-  padding: "4px 8px",
-  borderRadius: radii.sm,
-  cursor: "pointer",
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  fontWeight: 600,
-  color: vars.inkSoft,
-  whiteSpace: "nowrap",
-  transition: themeTransition,
-  selectors: {
-    "&:hover": {
-      background: vars.interactive.hoverFill,
-      color: vars.ink,
+export const headerActionButton = style([
+  text.microLabel,
+  {
+    appearance: "none",
+    background: "transparent",
+    border: "none",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: space["1"],
+    padding: "4px 8px",
+    borderRadius: radii.sm,
+    cursor: "pointer",
+    fontWeight: 600,
+    color: vars.inkSoft,
+    whiteSpace: "nowrap",
+    transition: themeTransition,
+    selectors: {
+      "&:hover": {
+        background: vars.interactive.hoverFill,
+        color: vars.ink,
+      },
     },
   },
-});
+]);
 
-export const chatPlaceholder = style({
-  flex: 1,
-  minHeight: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: space["6"],
-  borderRadius: radii["md+2"],
-  border: `1px dashed ${vars.rule}`,
-  color: vars.muted,
-  fontFamily: vars.font.ui,
-  fontSize: 12,
-  textAlign: "center",
-});
+export const chatPlaceholder = style([
+  text.bodySm,
+  {
+    flex: 1,
+    minHeight: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: space["6"],
+    borderRadius: radii["md+2"],
+    border: `1px dashed ${vars.rule}`,
+    color: vars.muted,
+    textAlign: "center",
+  },
+]);
 
 export const a11yHiddenTitle = style({
   position: "absolute",

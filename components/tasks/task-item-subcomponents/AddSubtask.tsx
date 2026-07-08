@@ -8,6 +8,7 @@ import type { Planner } from "@/types/prisma";
 
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { addSubtask } from "@/utils/goalPageHandlers";
+import { iconBtn as iconBtnRecipe } from "@/lib/theme";
 import {
   addRowRoot,
   addRowInline,
@@ -96,7 +97,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
           type="button"
           disabled={!taskTitle}
           onClick={() => handleAddSubtask(task)}
-          className={`${iconBtn} ${iconBtnVisible}`}
+          className={`${iconBtnRecipe()} ${iconBtn} ${iconBtnVisible}`}
           aria-label="Add subtask"
         >
           <Plus size={18} strokeWidth={2.4} />

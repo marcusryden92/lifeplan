@@ -3,7 +3,7 @@ import { Check, ChevronRight, MoreHorizontal, Trash2 } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import { format } from "date-fns";
 import { Caption, CategoryDot, TypeBadge, vars } from "@/components/ui";
-import { popover as popoverRecipe } from "@/lib/theme";
+import { iconBtn, popover as popoverRecipe } from "@/lib/theme";
 import { isItemOverdue } from "@/utils/plannerStatus";
 import { plannerCompletedEnd } from "@/utils/plannerCompletion";
 import { formatDurationCompact } from "@/utils/timeFormatting";
@@ -132,7 +132,7 @@ export function ItemRow({
           <Popover.Trigger asChild>
             <button
               type="button"
-              className={rowMenuBtn}
+              className={`${iconBtn({ size: "sm" })} ${rowMenuBtn}`}
               aria-label={`Actions for ${item.title}`}
               onClick={(e) => e.stopPropagation()}
             >

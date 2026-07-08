@@ -229,7 +229,7 @@ export function EditDrawer() {
   return (
     <aside className={drawer}>
       <div className={drawerHeader}>
-        <Caption className={drawerHeaderLabel}>Edit subtask</Caption>
+        <span className={drawerHeaderLabel}>Edit subtask</span>
         <button
           type="button"
           className={drawerClose}

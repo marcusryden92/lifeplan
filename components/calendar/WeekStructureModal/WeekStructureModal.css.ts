@@ -1,5 +1,15 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii, media } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  radii,
+  media,
+  display,
+  text,
+  fieldLabel,
+  iconBtn,
+} from "@/lib/theme";
 
 // Modal fade duration in ms â€” used by both CSS transition and the JS unmount timer.
 export const MODAL_FADE_MS = 220;
@@ -61,15 +71,13 @@ export const banner = style({
   },
 });
 
-export const editingLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 10.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: `color-mix(in srgb, ${vars.paper} 65%, transparent)`,
-  transition: themeTransition,
-});
+export const editingLabel = style([
+  fieldLabel,
+  {
+    color: `color-mix(in srgb, ${vars.paper} 65%, transparent)`,
+    transition: themeTransition,
+  },
+]);
 
 export const modeToggle = style({
   position: "relative",
@@ -98,38 +106,39 @@ export const modeToggleThumb = style({
   },
 });
 
-export const modeToggleButton = style({
-  position: "relative",
-  zIndex: 1,
-  appearance: "none",
-  border: "none",
-  background: "transparent",
-  padding: "5px 18px",
-  borderRadius: radii.pill,
-  fontFamily: vars.font.ui,
-  fontSize: 12,
-  fontWeight: 600,
-  letterSpacing: "0.04em",
-  color: `color-mix(in srgb, ${vars.paper} 70%, transparent)`,
-  cursor: "pointer",
-  transition: `color 0.22s cubic-bezier(0.4, 0, 0.2, 1)`,
-  selectors: {
-    "&[data-active='true']": {
-      color: vars.ink,
-    },
-    "&:hover:not([data-active='true'])": {
-      color: vars.paper,
+export const modeToggleButton = style([
+  text.bodySm,
+  {
+    position: "relative",
+    zIndex: 1,
+    appearance: "none",
+    border: "none",
+    background: "transparent",
+    padding: "5px 18px",
+    borderRadius: radii.pill,
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    color: `color-mix(in srgb, ${vars.paper} 70%, transparent)`,
+    cursor: "pointer",
+    transition: `color 0.22s cubic-bezier(0.4, 0, 0.2, 1)`,
+    selectors: {
+      "&[data-active='true']": {
+        color: vars.ink,
+      },
+      "&:hover:not([data-active='true'])": {
+        color: vars.paper,
+      },
     },
   },
-});
+]);
 
-export const bannerSummary = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  fontWeight: 500,
-  color: `color-mix(in srgb, ${vars.paper} 72%, transparent)`,
-  fontVariantNumeric: "tabular-nums",
-});
+export const bannerSummary = style([
+  text.label,
+  {
+    color: `color-mix(in srgb, ${vars.paper} 72%, transparent)`,
+    fontVariantNumeric: "tabular-nums",
+  },
+]);
 
 export const bannerSpacer = style({ flex: 1 });
 
@@ -177,22 +186,22 @@ export const gridHeader = style({
   flexShrink: 0,
 });
 
-export const gridTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 22,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  margin: 0,
-  transition: themeTransition,
-});
+export const gridTitle = style([
+  display.modalTitle,
+  {
+    color: vars.ink,
+    margin: 0,
+    transition: themeTransition,
+  },
+]);
 
-export const gridSubtitle = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  color: vars.inkSoft,
-  fontVariantNumeric: "tabular-nums",
-});
+export const gridSubtitle = style([
+  text.label,
+  {
+    color: vars.inkSoft,
+    fontVariantNumeric: "tabular-nums",
+  },
+]);
 
 // Mobile swaps the 7-column drawable week for a single-day view; this is the
 // prev / weekday / next switcher in the grid header. Hidden on wider layouts.
@@ -208,24 +217,7 @@ export const dayNav = style({
   },
 });
 
-export const dayNavBtn = style({
-  appearance: "none",
-  border: `1px solid ${vars.rule}`,
-  background: "transparent",
-  color: vars.ink,
-  width: 26,
-  height: 26,
-  borderRadius: radii.sm,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-  padding: 0,
-  transition: themeTransition,
-  selectors: {
-    "&:hover": { background: vars.interactive.hoverFill },
-  },
-});
+export const dayNavBtn = iconBtn({ size: "md" });
 
 export const dayNavLabel = style({
   fontFamily: vars.font.ui,
@@ -301,19 +293,12 @@ export const errorDismiss = style({
   display: "inline-flex",
 });
 
-// Doubled selector (`&&`) beats the `pillBtn` recipe on specificity so the
-// paper-tinted overrides actually win on top of `variant="glass"`, which sets
-// `color: vars.ink` â€” that would render as dark text on the dark banner.
+// Paper text for the ghost variant on the dark ink banner.
 export const cancelButtonStyle = style({
+  color: `color-mix(in srgb, ${vars.paper} 80%, transparent)`,
   selectors: {
-    "&&": {
-      background: `color-mix(in srgb, ${vars.paper} 14%, transparent)`,
-      border: `1px solid color-mix(in srgb, ${vars.paper} 40%, transparent)`,
+    "&:hover:not(:disabled)": {
       color: vars.paper,
-    },
-    "&&:hover:not(:disabled)": {
-      background: `color-mix(in srgb, ${vars.paper} 22%, transparent)`,
-      borderColor: `color-mix(in srgb, ${vars.paper} 55%, transparent)`,
     },
   },
 });
@@ -366,10 +351,11 @@ globalStyle(`${FC} .fc-col-header-cell`, {
   padding: "8px 0",
 });
 
+// Literal fieldLabel preset values — globalStyle cannot compose classes.
 globalStyle(`${FC} .fc-col-header-cell-cushion`, {
   textDecoration: "none",
   fontFamily: vars.font.ui,
-  fontSize: 10.5,
+  fontSize: 9.5,
   fontWeight: 600,
   letterSpacing: "0.14em",
   textTransform: "uppercase",
@@ -406,7 +392,7 @@ globalStyle(`${FC} .fc-event`, {
   border: "none !important",
   borderRadius: "0 !important",
   fontFamily: vars.font.ui,
-  fontSize: 11,
+  fontSize: 11.5,
   fontWeight: 600,
   cursor: "pointer",
   boxShadow: "none !important",

@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition } from "@/lib/theme";
+import { space, vars, themeTransition, radii, display, text } from "@/lib/theme";
 
 export const cardHeader = style({
   display: "flex",
@@ -12,14 +12,13 @@ export const cardHeader = style({
   flexWrap: "wrap",
 });
 
-export const cardTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 17,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  transition: themeTransition,
-});
+export const cardTitle = style([
+  display.listTitle,
+  {
+    color: vars.ink,
+    transition: themeTransition,
+  },
+]);
 
 export const priorityRow = style({
   display: "flex",
@@ -27,26 +26,27 @@ export const priorityRow = style({
   flexWrap: "nowrap",
 });
 
-export const priorityPill = style({
-  flex: "0 0 auto",
-  width: 28,
-  height: 28,
-  border: `1px solid ${vars.glass.stroke}`,
-  background: "transparent",
-  padding: 0,
-  borderRadius: "50%",
-  cursor: "pointer",
-  fontSize: 12.5,
-  fontFamily: vars.font.ui,
-  fontWeight: 700,
-  color: vars.inkSoft,
-  textAlign: "center",
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-  selectors: {
-    "&:hover": { color: vars.ink, borderColor: vars.rule },
+export const priorityPill = style([
+  text.bodySm,
+  {
+    flex: "0 0 auto",
+    width: 28,
+    height: 28,
+    border: `1px solid ${vars.glass.stroke}`,
+    background: "transparent",
+    padding: 0,
+    borderRadius: radii.pill,
+    cursor: "pointer",
+    fontWeight: 700,
+    color: vars.inkSoft,
+    textAlign: "center",
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+    selectors: {
+      "&:hover": { color: vars.ink, borderColor: vars.rule },
+    },
   },
-});
+]);
 
 export const priorityPillActive = style({
   background: vars.ink,

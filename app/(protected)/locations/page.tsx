@@ -499,8 +499,9 @@ export default function LocationsPage() {
             )}
           </div>
           <div className={railFooter}>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="sm"
               className={railNewButton}
               onClick={() => modalDispatch({ type: "OPEN_ADD" })}
               disabled={locations.length >= MAX_LOCATIONS}
@@ -509,7 +510,7 @@ export default function LocationsPage() {
               {locations.length >= MAX_LOCATIONS
                 ? `Max ${MAX_LOCATIONS} reached`
                 : "Add location"}
-            </button>
+            </Button>
             <span className={railNote}>
               Up to {MAX_LOCATIONS} locations · deleting cascades to travel
               times
@@ -581,14 +582,15 @@ export default function LocationsPage() {
                   custom overrides; click any cell to edit all three periods.
                 </span>
                 <span style={{ flex: 1 }} />
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className={matrixFooterAction}
                   disabled={!anyCustomOverride || working}
                   onClick={() => modalDispatch({ type: "CONFIRM_CLEAR_ALL" })}
                 >
                   Clear all overrides
-                </button>
+                </Button>
               </div>
             </>
           )}

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { TaskItemProps } from "@/lib/taskItem";
+import { iconBtn } from "@/lib/theme";
 
 import TaskList from "./TaskList";
 import TaskListWrapper from "./task-item-subcomponents/TaskListWrapper";
@@ -247,7 +248,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
           {hasSubtasks ? (
             <button
               type="button"
-              className={`${chevronBtn} ${itemIsFocused ? chevronBtnFocused : ""}`}
+              className={`${iconBtn({ size: "sm" })} ${chevronBtn} ${itemIsFocused ? chevronBtnFocused : ""}`}
               onClick={(e) => {
                 e.stopPropagation();
                 setSubtasksMinimized((prev) => !prev);
@@ -265,7 +266,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
           ) : (
             <button
               type="button"
-              className={completeBtn}
+              className={`${iconBtn({ size: "sm" })} ${completeBtn}`}
               data-completed={isCompleted ? "true" : "false"}
               data-locked={completionLocked ? "true" : "false"}
               data-shake={shakeLocked ? "true" : "false"}

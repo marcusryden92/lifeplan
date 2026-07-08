@@ -1,5 +1,6 @@
 import { ArrowRight, Check } from "lucide-react";
 import { Button, Caption } from "@/components/ui";
+import { listRow } from "@/lib/theme";
 import type { UncompletedItem } from "../../_data/types";
 import type { FlashTone } from "../../_hooks/useFlashAction";
 import {
@@ -35,6 +36,7 @@ export function UncompletedItemRow({
   onPostpone,
 }: Props) {
   const rowClass = [
+    listRow(),
     agendaRow,
     agendaRowGrouped,
     flash === "success" ? uncompletedRowFlashSuccess : "",

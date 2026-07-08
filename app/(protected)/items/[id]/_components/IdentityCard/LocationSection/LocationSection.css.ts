@@ -1,5 +1,11 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  text,
+  fieldLabel as fieldLabelPreset,
+} from "@/lib/theme";
 
 export const fieldStack = style({
   display: "flex",
@@ -9,15 +15,12 @@ export const fieldStack = style({
   gridColumn: "1 / -1",
 });
 
-export const fieldLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const fieldLabel = style([
+  fieldLabelPreset,
+  {
+    transition: themeTransition,
+  },
+]);
 
 export const placeRow = style({
   display: "flex",
@@ -37,15 +40,15 @@ export const hintRow = style({
 // Indented to align the first letter of "from ..." with the first letter of
 // the "Inherited" / "Override" labels inside the SegmentedControl above.
 // SegmentedControl is: 1px border + 3px outer padding + 14px button padding = 18px.
-export const inheritedHint = style({
-  paddingLeft: space["5"],
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  fontWeight: 500,
-  color: vars.muted,
-  minWidth: 0,
-  overflowWrap: "anywhere",
-});
+export const inheritedHint = style([
+  text.microLabel,
+  {
+    paddingLeft: space["5"],
+    color: vars.muted,
+    minWidth: 0,
+    overflowWrap: "anywhere",
+  },
+]);
 
 // Pulls ghost-size-sm buttons flush-left under the field grid by negating the
 // button's internal left padding (pillBtn sm = padding: 6px 14px).

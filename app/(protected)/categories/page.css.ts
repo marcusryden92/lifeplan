@@ -7,6 +7,10 @@ import {
   colorMixAlpha,
   media,
   radii,
+  iconBtn,
+  display,
+  text,
+  fieldLabel,
 } from "@/lib/theme";
 
 
@@ -39,28 +43,27 @@ export const subHeader = style({
   },
 });
 
-export const pageTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 32,
-  fontWeight: 500,
-  letterSpacing: "-0.03em",
-  color: vars.ink,
-  lineHeight: 1,
-  margin: 0,
-  transition: themeTransition,
-  "@media": {
-    [media.mobile]: { fontSize: 24 },
+export const pageTitle = style([
+  display.pageTitle,
+  {
+    color: vars.ink,
+    lineHeight: 1,
+    margin: 0,
+    transition: themeTransition,
+    "@media": {
+      [media.mobile]: { fontSize: 24 },
+    },
   },
-});
+]);
 
-export const titleSummary = style({
-  fontSize: 12.5,
-  color: vars.muted,
-  fontWeight: 500,
-  fontFamily: vars.font.ui,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-});
+export const titleSummary = style([
+  text.bodySm,
+  {
+    color: vars.muted,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+  },
+]);
 
 export const spacer = style({
   flex: 1,
@@ -113,16 +116,13 @@ export const rail = style([
   },
 ]);
 
-export const railHead = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  padding: "0 8px 6px",
-  transition: themeTransition,
-});
+export const railHead = style([
+  fieldLabel,
+  {
+    padding: "0 8px 6px",
+    transition: themeTransition,
+  },
+]);
 
 export const railBody = style({
   flex: 1,
@@ -132,27 +132,28 @@ export const railBody = style({
   flexDirection: "column",
 });
 
-export const railRow = style({
-  display: "flex",
-  alignItems: "center",
-  gap: space["2"],
-  padding: "5px 8px",
-  borderRadius: radii.sm,
-  cursor: "pointer",
-  fontSize: 13.5,
-  fontFamily: vars.font.ui,
-  color: vars.ink,
-  background: "transparent",
-  border: "1px solid transparent",
-  transition: themeTransition,
-  textAlign: "left",
-  width: "100%",
-  selectors: {
-    "&:hover": {
-      background: vars.interactive.hoverFill,
+export const railRow = style([
+  text.row,
+  {
+    display: "flex",
+    alignItems: "center",
+    gap: space["2"],
+    padding: "5px 8px",
+    borderRadius: radii.sm,
+    cursor: "pointer",
+    color: vars.ink,
+    background: "transparent",
+    border: "1px solid transparent",
+    transition: themeTransition,
+    textAlign: "left",
+    width: "100%",
+    selectors: {
+      "&:hover": {
+        background: vars.interactive.hoverFill,
+      },
     },
   },
-});
+]);
 
 export const railRowActive = style({
   background: vars.glass.bgDeep,
@@ -186,13 +187,14 @@ export const railRowLabel = style({
   textOverflow: "ellipsis",
 });
 
-export const railRowCount = style({
-  fontSize: 10.5,
-  fontVariantNumeric: "tabular-nums",
-  color: vars.muted,
-  fontWeight: 500,
-  transition: themeTransition,
-});
+export const railRowCount = style([
+  text.microLabel,
+  {
+    fontVariantNumeric: "tabular-nums",
+    color: vars.muted,
+    transition: themeTransition,
+  },
+]);
 
 // Drop-target visualization on the tree rows. "before"/"after" draw a 2px
 // accent line at the top/bottom of the row; "into" highlights the row body to
@@ -214,27 +216,21 @@ globalStyle(`${railRow}[data-drag-over="into"]`, {
   borderColor: vars.accent.primary,
 });
 
-export const railRowAddChild = style({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 18,
-  height: 18,
-  borderRadius: 5,
-  border: "none",
-  background: "transparent",
-  color: vars.muted,
-  cursor: "pointer",
-  opacity: 0,
-  transition: interactiveTransition("opacity", "color", "background-color"),
-  flexShrink: 0,
-  padding: 0,
-  selectors: {
-    [`${railRow}:hover &`]: { opacity: 1 },
-    "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
-    "&:focus-visible": { opacity: 1, outline: `1px solid ${vars.accent.primary}` },
+export const railRowAddChild = style([
+  iconBtn({ size: "sm" }),
+  {
+    color: vars.muted,
+    opacity: 0,
+    transition: interactiveTransition("opacity", "color", "background-color"),
+    selectors: {
+      [`${railRow}:hover &`]: { opacity: 1 },
+      "&:focus-visible": {
+        opacity: 1,
+        outline: `1px solid ${vars.accent.primary}`,
+      },
+    },
   },
-});
+]);
 
 export const treeChevron = style({
   display: "inline-flex",
@@ -244,7 +240,7 @@ export const treeChevron = style({
   justifyContent: "center",
   color: vars.muted,
   cursor: "pointer",
-  borderRadius: 3,
+  borderRadius: radii.xs,
   transition: themeTransition,
   selectors: {
     "&:hover": {
@@ -270,20 +266,12 @@ export const railFooter = style({
 
 export const railNewButton = style({
   width: "100%",
-  display: "inline-flex",
-  alignItems: "center",
   justifyContent: "center",
   gap: space["1.5"],
   padding: "8px 10px",
   borderRadius: radii.sm,
   border: `1px dashed ${vars.rule}`,
-  background: "transparent",
   color: vars.muted,
-  fontFamily: vars.font.ui,
-  fontSize: 12.5,
-  fontWeight: 600,
-  cursor: "pointer",
-  transition: themeTransition,
   selectors: {
     "&:hover": {
       color: vars.ink,
@@ -305,26 +293,27 @@ export const mainCard = style([
   },
 ]);
 
-export const emptyMain = style({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  flex: 1,
-  padding: "60px 24px",
-  fontFamily: vars.font.ui,
-  fontSize: 14,
-  color: vars.muted,
-  textAlign: "center",
-});
+export const emptyMain = style([
+  text.bodyLg,
+  {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+    padding: "60px 24px",
+    color: vars.muted,
+    textAlign: "center",
+  },
+]);
 
-export const errorBanner = style({
-  margin: "0 28px 14px",
-  padding: "8px 12px",
-  borderRadius: radii["sm+2"],
-  background: `color-mix(in srgb, ${vars.status.error} ${colorMixAlpha.lightFill}%, transparent)`,
-  border: `1px solid ${vars.status.error}`,
-  color: vars.status.error,
-  fontSize: 12.5,
-  fontFamily: vars.font.ui,
-  fontWeight: 500,
-});
+export const errorBanner = style([
+  text.bodySm,
+  {
+    margin: "0 28px 14px",
+    padding: "8px 12px",
+    borderRadius: radii["sm+2"],
+    background: `color-mix(in srgb, ${vars.status.error} ${colorMixAlpha.lightFill}%, transparent)`,
+    border: `1px solid ${vars.status.error}`,
+    color: vars.status.error,
+  },
+]);

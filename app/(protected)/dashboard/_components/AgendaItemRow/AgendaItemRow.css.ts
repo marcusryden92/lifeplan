@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, colorMixAlpha } from "@/lib/theme";
+import { vars, themeTransition, colorMixAlpha, text } from "@/lib/theme";
 
 export const agendaRowNow = style({
   background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.lightFill}%, transparent)`,
@@ -37,34 +37,37 @@ export const agendaTitleTravel = style({
 
 // Floating label sitting above a NOW / NEXT row, aligned with the row's
 // inner gutter so it visually anchors to the colored item card below it.
-export const rowLabel = style({
-  display: "flex",
-  margin: "12px 24px 6px",
-  fontFamily: vars.font.ui,
-  fontSize: 12,
-  fontWeight: 800,
-  letterSpacing: "0.12em",
-  transition: themeTransition,
-});
+export const rowLabel = style([
+  text.bodySm,
+  {
+    display: "flex",
+    margin: "12px 24px 6px",
+    fontWeight: 800,
+    letterSpacing: "0.12em",
+    transition: themeTransition,
+  },
+]);
 
 export const rowLabelNow = style({ color: vars.accent.now });
 export const rowLabelNext = style({ color: vars.status.warning });
 
-export const agendaWarn = style({
-  fontSize: 10,
-  fontWeight: 700,
-  color: vars.status.warning,
-  letterSpacing: "0.08em",
-  fontFamily: vars.font.ui,
-});
+export const agendaWarn = style([
+  text.microLabel,
+  {
+    fontWeight: 700,
+    color: vars.status.warning,
+    letterSpacing: "0.08em",
+  },
+]);
 
-export const agendaOverdue = style({
-  fontSize: 10,
-  fontWeight: 700,
-  color: vars.status.error,
-  letterSpacing: "0.08em",
-  fontFamily: vars.font.ui,
-});
+export const agendaOverdue = style([
+  text.microLabel,
+  {
+    fontWeight: 700,
+    color: vars.status.error,
+    letterSpacing: "0.08em",
+  },
+]);
 
 export const agendaChevron = style({
   color: vars.muted,

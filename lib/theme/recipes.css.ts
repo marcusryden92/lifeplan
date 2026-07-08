@@ -202,6 +202,68 @@ export const pillBtn = recipe({
 
 export type PillBtnVariants = NonNullable<Parameters<typeof pillBtn>[0]>;
 
+// Canonical square icon button: chevrons, pencils, close X's, row menus.
+// One footprint per size so sibling icon buttons line up across surfaces.
+export const iconBtn = recipe({
+  base: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    border: "none",
+    background: "transparent",
+    color: vars.inkSoft,
+    borderRadius: radii.xs,
+    cursor: "pointer",
+    padding: 0,
+    transition: buttonTransition,
+    selectors: {
+      "&:hover:not(:disabled)": {
+        background: vars.interactive.hoverFill,
+        color: vars.ink,
+      },
+      "&:disabled": { opacity: 0.5, cursor: "not-allowed" },
+    },
+  },
+  variants: {
+    size: {
+      sm: { width: 22, height: 22 },
+      md: { width: 26, height: 26 },
+    },
+  },
+  defaultVariants: { size: "md" },
+});
+
+export type IconBtnVariants = NonNullable<Parameters<typeof iconBtn>[0]>;
+
+// Canonical interactive list row: transparent at rest, hoverFill on hover,
+// selectedFill when selected. Compose with text.row for the row typeface.
+export const listRow = recipe({
+  base: {
+    display: "flex",
+    alignItems: "center",
+    borderRadius: radii.sm,
+    padding: `${space["1.5"]}px ${space["2"]}px`,
+    cursor: "pointer",
+    transition: themeTransition,
+    selectors: {
+      "&:hover": { background: vars.interactive.hoverFill },
+    },
+  },
+  variants: {
+    selected: {
+      true: {
+        background: vars.interactive.selectedFill,
+        selectors: {
+          "&:hover": { background: vars.interactive.selectedFill },
+        },
+      },
+    },
+  },
+});
+
+export type ListRowVariants = NonNullable<Parameters<typeof listRow>[0]>;
+
 export const badge = recipe({
   base: {
     fontFamily: vars.font.ui,

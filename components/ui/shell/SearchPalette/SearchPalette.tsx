@@ -25,6 +25,7 @@ import { useSearch } from "../SearchContext";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { RootState } from "@/redux/store";
 import type { Planner, Category, Location } from "@/types/prisma";
+import { Kbd } from "@/components/ui";
 import {
   overlay,
   dialog,
@@ -42,7 +43,7 @@ import {
   itemSub,
   emptyState,
   footer,
-  kbd,
+  kbdSpacing,
 } from "./SearchPalette.css";
 
 const MAX_PER_GROUP = 5;
@@ -283,14 +284,16 @@ export function SearchPalette() {
 
           <div className={footer}>
             <span>
-              <span className={kbd}>↑</span>
-              <span className={kbd}>↓</span>
+              <Kbd className={kbdSpacing}>↑</Kbd>
+              <Kbd className={kbdSpacing}>↓</Kbd>
               navigate ·
-              <span className={kbd} style={{ marginLeft: space["1.5"] }}>
+              <Kbd className={kbdSpacing} style={{ marginLeft: space["1.5"] }}>
                 <CornerDownLeft size={9} strokeWidth={2.4} />
-              </span>
+              </Kbd>
               open ·
-              <span className={kbd} style={{ marginLeft: space["1.5"] }}>esc</span>
+              <Kbd className={kbdSpacing} style={{ marginLeft: space["1.5"] }}>
+                esc
+              </Kbd>
               close
             </span>
             <span>across items, categories, locations</span>

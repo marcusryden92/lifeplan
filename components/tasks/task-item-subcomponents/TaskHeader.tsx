@@ -10,6 +10,7 @@ import DurationDisplay from "./DurationDisplay";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { addSubtask } from "@/utils/goalPageHandlers";
+import { iconBtn } from "@/lib/theme";
 import {
   headerRow,
   headerRowDragged,
@@ -70,12 +71,12 @@ export const TaskHeader = ({
         <TaskDisplay task={task} itemIsFocused={itemIsFocused} />
         <button
           type="button"
-          className={addChildBtn}
+          className={`${iconBtn()} ${addChildBtn}`}
           onClick={handleAddChild}
           onMouseDown={(e) => e.stopPropagation()}
           aria-label="Add subtask"
         >
-          <Plus size={28} strokeWidth={2.4} />
+          <Plus size={24} strokeWidth={2.4} />
         </button>
       </div>
 

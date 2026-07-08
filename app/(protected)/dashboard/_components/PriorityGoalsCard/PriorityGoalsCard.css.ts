@@ -1,5 +1,13 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, media, radii } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  media,
+  radii,
+  display,
+  text,
+} from "@/lib/theme";
 
 
 export const goalsCard = style({
@@ -23,15 +31,14 @@ export const goalsHeader = style({
   marginBottom: space["2"],
 });
 
-export const goalsTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 19,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  margin: 0,
-  transition: themeTransition,
-});
+export const goalsTitle = style([
+  display.panelTitle,
+  {
+    color: vars.ink,
+    margin: 0,
+    transition: themeTransition,
+  },
+]);
 
 export const goalRow = style({
   padding: "12px 0",
@@ -49,32 +56,27 @@ export const goalHead = style({
   gap: space["2"],
 });
 
-export const goalName = style({
-  fontFamily: vars.font.display,
-  fontSize: 16,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  flex: 1,
-  color: vars.ink,
-  transition: themeTransition,
-});
+export const goalName = style([
+  display.listTitle,
+  {
+    flex: 1,
+    color: vars.ink,
+    transition: themeTransition,
+  },
+]);
 
-export const goalFraction = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  fontWeight: 700,
-  color: vars.inkSoft,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-});
+export const goalFraction = style([
+  text.label,
+  {
+    fontWeight: 700,
+    color: vars.inkSoft,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+  },
+]);
 
 export const goalTrack = style({
   marginTop: space["2"],
-  height: 6,
-  borderRadius: radii.pill,
-  background: `color-mix(in srgb, ${vars.ink} 10%, transparent)`,
-  position: "relative",
-  overflow: "hidden",
 });
 
 export const goalFill = style({
@@ -91,13 +93,13 @@ export const goalFooter = style({
   gap: space["2.5"],
 });
 
-export const goalNext = style({
-  fontSize: 12,
-  color: vars.inkSoft,
-  fontFamily: vars.font.ui,
-  fontWeight: 500,
-  transition: themeTransition,
-});
+export const goalNext = style([
+  text.bodySm,
+  {
+    color: vars.inkSoft,
+    transition: themeTransition,
+  },
+]);
 
 export const goalsEmpty = style({
   display: "flex",

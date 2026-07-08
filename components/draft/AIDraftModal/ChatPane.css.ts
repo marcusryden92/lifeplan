@@ -1,5 +1,5 @@
 import { style, keyframes, globalStyle } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii } from "@/lib/theme";
+import { space, vars, themeTransition, radii, text, fieldLabel } from "@/lib/theme";
 
 export const wrap = style({
   flex: 1,
@@ -25,19 +25,20 @@ export const messageList = style({
   userSelect: "text",
 });
 
-export const empty = style({
-  flex: 1,
-  minHeight: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: space["6"],
-  color: vars.muted,
-  fontFamily: vars.font.ui,
-  fontSize: 12,
-  textAlign: "center",
-  lineHeight: 1.55,
-});
+export const empty = style([
+  text.bodySm,
+  {
+    flex: 1,
+    minHeight: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: space["6"],
+    color: vars.muted,
+    textAlign: "center",
+    lineHeight: 1.55,
+  },
+]);
 
 // No explicit fontFamily: message text reads in the app's regular body font
 // (inherited from <body>) rather than the UI font.
@@ -76,14 +77,12 @@ export const messageAssistant = style([
   },
 ]);
 
-export const messageRole = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 700,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-});
+export const messageRole = style([
+  fieldLabel,
+  {
+    fontWeight: 700,
+  },
+]);
 
 export const messageContent = style({
   whiteSpace: "pre-wrap",

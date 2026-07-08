@@ -5,8 +5,13 @@ import {
   themeTransition,
   collapseTransition,
   DURATIONS,
-  backdropFilters,
   glass,
+  pillBtn,
+  iconBtn,
+  display,
+  text,
+  fieldLabel,
+  statusTag,
   media,
   radii,
   zIndex,
@@ -51,21 +56,20 @@ export const calendarHeaderRow = style({
   display: "contents",
 });
 
-export const rangeTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 32,
-  fontWeight: 500,
-  letterSpacing: "-0.03em",
-  color: vars.ink,
-  lineHeight: 1,
-  margin: 0,
-  minWidth: 240,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-  "@media": {
-    [media.mobile]: { fontSize: 24, minWidth: "auto" },
+export const rangeTitle = style([
+  display.pageTitle,
+  {
+    color: vars.ink,
+    lineHeight: 1,
+    margin: 0,
+    minWidth: 240,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+    "@media": {
+      [media.mobile]: { fontSize: 24, minWidth: "auto" },
+    },
   },
-});
+]);
 
 export const dayHeaderStack = style({
   display: "flex",
@@ -75,26 +79,22 @@ export const dayHeaderStack = style({
   padding: "4px 0",
 });
 
-export const dayHeaderLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const dayHeaderLabel = style([
+  fieldLabel,
+  {
+    transition: themeTransition,
+  },
+]);
 
-export const dayHeaderNum = style({
-  fontFamily: vars.font.display,
-  fontSize: 22,
-  fontWeight: 500,
-  letterSpacing: "-0.03em",
-  lineHeight: 1,
-  color: vars.ink,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-});
+export const dayHeaderNum = style([
+  display.modalTitle,
+  {
+    lineHeight: 1,
+    color: vars.ink,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+  },
+]);
 
 export const dayHeaderNumToday = style({
   color: vars.accent.now,
@@ -116,18 +116,19 @@ export const spacer = style({
 
 // Hovered-category chip in the header. Shrinks and truncates before it can
 // push the fixed clusters to its right out of the row.
-export const hoverChip = style({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: space["1.5"],
-  fontSize: 12,
-  color: vars.inkSoft,
-  fontFamily: vars.font.ui,
-  fontWeight: 600,
-  letterSpacing: "0.01em",
-  minWidth: 0,
-  flexShrink: 1,
-});
+export const hoverChip = style([
+  text.bodySm,
+  {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: space["1.5"],
+    color: vars.inkSoft,
+    fontWeight: 600,
+    letterSpacing: "0.01em",
+    minWidth: 0,
+    flexShrink: 1,
+  },
+]);
 
 export const hoverChipDot = style({
   width: 8,
@@ -206,30 +207,17 @@ export const headerEngineLabel = style({
   },
 });
 
-// Mirrors the glass variant of pillBtn (lib/theme/recipes.css.ts) so it sits
-// visually next to the action cluster buttons. Square icon-only footprint.
-export const engineCogBtn = style({
-  position: "relative",
-  width: COG_WIDTH,
-  height: COG_WIDTH,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 0,
-  border: `1px solid ${vars.glass.stroke}`,
-  background: vars.glass.bgDeep,
-  backdropFilter: backdropFilters.button,
-  WebkitBackdropFilter: backdropFilters.button,
-  boxShadow: `inset 0 1px 0 ${vars.glass.hi}`,
-  color: vars.ink,
-  cursor: "pointer",
-  borderRadius: radii.pill,
-  flexShrink: 0,
-  transition: themeTransition,
-  selectors: {
-    "&:active": { transform: "scale(0.98)" },
+export const engineCogBtn = style([
+  pillBtn({ variant: "glass", size: "sm" }),
+  {
+    position: "relative",
+    width: COG_WIDTH,
+    height: COG_WIDTH,
+    justifyContent: "center",
+    padding: 0,
+    flexShrink: 0,
   },
-});
+]);
 
 export const engineCogAlertDot = style({
   position: "absolute",
@@ -377,30 +365,30 @@ export const engineHeader = style({
   gap: space["1"],
 });
 
-export const engineTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 18,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  transition: themeTransition,
-});
+export const engineTitle = style([
+  display.panelTitle,
+  {
+    color: vars.ink,
+    transition: themeTransition,
+  },
+]);
 
-export const engineLastRun = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  color: vars.muted,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-});
+export const engineLastRun = style([
+  text.microLabel,
+  {
+    color: vars.muted,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+  },
+]);
 
-export const engineSummary = style({
-  fontSize: 11.5,
-  color: vars.inkSoft,
-  fontWeight: 500,
-  fontFamily: vars.font.ui,
-  transition: themeTransition,
-});
+export const engineSummary = style([
+  text.label,
+  {
+    color: vars.inkSoft,
+    transition: themeTransition,
+  },
+]);
 
 export const engineList = style({
   display: "flex",
@@ -423,15 +411,12 @@ export const engineControls = style({
   transition: themeTransition,
 });
 
-export const engineControlsTitle = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const engineControlsTitle = style([
+  fieldLabel,
+  {
+    transition: themeTransition,
+  },
+]);
 
 export const controlRow = style({
   display: "flex",
@@ -446,23 +431,24 @@ export const controlHead = style({
   gap: space["2"],
 });
 
-export const controlLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 12,
-  fontWeight: 500,
-  color: vars.inkSoft,
-  transition: themeTransition,
-});
+export const controlLabel = style([
+  text.bodySm,
+  {
+    color: vars.inkSoft,
+    transition: themeTransition,
+  },
+]);
 
-export const controlValue = style({
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  fontWeight: 600,
-  color: vars.ink,
-  fontVariantNumeric: "tabular-nums",
-  letterSpacing: "0.02em",
-  transition: themeTransition,
-});
+export const controlValue = style([
+  text.microLabel,
+  {
+    fontWeight: 600,
+    color: vars.ink,
+    fontVariantNumeric: "tabular-nums",
+    letterSpacing: "0.02em",
+    transition: themeTransition,
+  },
+]);
 
 export const controlSlider = style({
   WebkitAppearance: "none",
@@ -531,68 +517,29 @@ export const engineCardContent = style({
   pointerEvents: "none",
 });
 
-// Small × in the top-right. `pointer-events: auto` restores clickability
-// against the parent's disabled events set on engineCardContent.
-export const engineDismissBtn = style({
-  position: "absolute",
-  top: 6,
-  right: 6,
-  zIndex: 2,
-  pointerEvents: "auto",
-  width: 22,
-  height: 22,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 0,
-  border: "none",
-  background: "transparent",
-  color: vars.inkSoft,
-  borderRadius: radii.sm,
-  cursor: "pointer",
-  opacity: 0.65,
-  transition: themeTransition,
-  ":hover": {
-    opacity: 1,
-    background: vars.interactive.hoverFill,
+// `pointer-events: auto` restores clickability against the parent's
+// disabled events set on engineCardContent.
+const engineCardActionBtn = style([
+  iconBtn({ size: "sm" }),
+  {
+    position: "absolute",
+    top: 6,
+    zIndex: 2,
+    pointerEvents: "auto",
+    opacity: 0.65,
+    ":hover": {
+      opacity: 1,
+    },
+    ":focus-visible": {
+      outline: `2px solid ${vars.accent.primary}`,
+      outlineOffset: 1,
+    },
   },
-  ":focus-visible": {
-    outline: `2px solid ${vars.accent.primary}`,
-    outlineOffset: 1,
-  },
-});
+]);
 
-// Locate icon sits just left of the dismiss button. Only rendered on cards
-// with a concrete date to navigate to (SCHEDULED_LATE). Same interaction
-// shape as the dismiss button.
-export const engineGoToBtn = style({
-  position: "absolute",
-  top: 6,
-  right: 32,
-  zIndex: 2,
-  pointerEvents: "auto",
-  width: 22,
-  height: 22,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 0,
-  border: "none",
-  background: "transparent",
-  color: vars.inkSoft,
-  borderRadius: radii.sm,
-  cursor: "pointer",
-  opacity: 0.65,
-  transition: themeTransition,
-  ":hover": {
-    opacity: 1,
-    background: vars.interactive.hoverFill,
-  },
-  ":focus-visible": {
-    outline: `2px solid ${vars.accent.primary}`,
-    outlineOffset: 1,
-  },
-});
+export const engineDismissBtn = style([engineCardActionBtn, { right: 6 }]);
+
+export const engineGoToBtn = style([engineCardActionBtn, { right: 32 }]);
 
 export const engineCardHead = style({
   display: "flex",
@@ -606,37 +553,35 @@ export const engineCardHead = style({
   paddingRight: space["12"],
 });
 
-export const engineTag = style({
-  padding: "2px 8px",
-  borderRadius: radii.pill,
-  color: vars.textOnAccent,
-  fontSize: 9.5,
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  fontFamily: vars.font.ui,
-});
+export const engineTag = style([
+  statusTag,
+  {
+    padding: "2px 8px",
+    borderRadius: radii.pill,
+    color: vars.textOnAccent,
+  },
+]);
 
-export const engineCardTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 13.5,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  lineHeight: 1.25,
-  flex: 1,
-  minWidth: 0,
-  transition: themeTransition,
-});
+export const engineCardTitle = style([
+  text.row,
+  {
+    color: vars.ink,
+    lineHeight: 1.25,
+    flex: 1,
+    minWidth: 0,
+    transition: themeTransition,
+  },
+]);
 
-export const engineCardBody = style({
-  fontSize: 11.5,
-  color: vars.inkSoft,
-  marginTop: space["1.5"],
-  lineHeight: 1.45,
-  fontFamily: vars.font.ui,
-  fontWeight: 500,
-  transition: themeTransition,
-});
+export const engineCardBody = style([
+  text.label,
+  {
+    color: vars.inkSoft,
+    marginTop: space["1.5"],
+    lineHeight: 1.45,
+    transition: themeTransition,
+  },
+]);
 
 export const fcWrap = style({
   flex: 1,
@@ -644,5 +589,5 @@ export const fcWrap = style({
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  borderRadius: radii["xl+2"],
+  borderRadius: radii.md,
 });

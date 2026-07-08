@@ -6,6 +6,7 @@ import {
   space,
   borderWidth,
   zIndex,
+  text,
 } from "@/lib/theme";
 
 const SWATCH_SIZE = 16;
@@ -24,21 +25,22 @@ const POPUP_MAX_HEIGHT = 288;
 
 // alignSelf prevents the popover's flex-column body from stretching this
 // control across the full width — it sizes to its content.
-export const trigger = style({
-  alignSelf: "flex-start",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: space["2"],
-  padding: `${space["1"]}px ${space["3"]}px ${space["1"]}px ${space["1"]}px`,
-  borderRadius: radii.pill,
-  background: vars.glass.bgSoft,
-  border: `${borderWidth.hairline}px solid ${vars.glass.stroke}`,
-  color: vars.ink,
-  cursor: "pointer",
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  fontWeight: 600,
-});
+export const trigger = style([
+  text.label,
+  {
+    alignSelf: "flex-start",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: space["2"],
+    padding: `${space["1"]}px ${space["3"]}px ${space["1"]}px ${space["1"]}px`,
+    borderRadius: radii.pill,
+    background: vars.glass.bgSoft,
+    border: `${borderWidth.hairline}px solid ${vars.glass.stroke}`,
+    color: vars.ink,
+    cursor: "pointer",
+    fontWeight: 600,
+  },
+]);
 
 // Background is the currently applied event color — set inline by the component.
 export const triggerDot = style({

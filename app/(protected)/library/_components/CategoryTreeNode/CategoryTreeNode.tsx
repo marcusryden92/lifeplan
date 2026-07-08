@@ -1,4 +1,5 @@
 import { ChevronRight, ChevronDown } from "lucide-react";
+import { listRow } from "@/lib/theme";
 import type { CategoryNode } from "@/utils/categoryUtils";
 import type { SmartView } from "@/utils/dateUtils";
 import {
@@ -45,7 +46,7 @@ export function CategoryTreeNode({
   return (
     <>
       <button
-        className={`${railRow} ${active ? railRowActive : ""}`}
+        className={`${listRow()} ${railRow} ${active ? railRowActive : ""}`}
         onClick={() => setSelection({ kind: "category", id: node.id })}
         style={{
           paddingLeft: TREE_BASE_PADDING_PX + depth * TREE_DEPTH_STEP_PX,

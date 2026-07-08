@@ -7,6 +7,8 @@ import {
   backdropFilters,
   formInput,
   media,
+  radii,
+  fieldLabel,
 } from "@/lib/theme";
 
 
@@ -66,7 +68,7 @@ export const dialog = style([
         marginRight: 0,
         width: "100%",
         maxHeight: "70vh",
-        borderRadius: "22px 22px 0 0",
+        borderRadius: `${radii["xl+2"]}px ${radii["xl+2"]}px 0 0`,
         animationName: sheetUp,
         animationDuration: `${DURATIONS.modal}s`,
       },
@@ -96,8 +98,6 @@ export const input = style([
     borderBottom: "none",
     padding: 0,
     background: "transparent",
-    fontSize: 17,
-    fontWeight: 500,
     selectors: {
       "&:focus": { borderBottom: "none" },
     },
@@ -119,15 +119,12 @@ export const group = style({
   },
 });
 
-export const groupLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  padding: "6px 18px",
-});
+export const groupLabel = style([
+  fieldLabel,
+  {
+    padding: "6px 18px",
+  },
+]);
 
 export const item = style({
   display: "flex",
@@ -215,18 +212,6 @@ export const footer = style({
   },
 });
 
-export const kbd = style({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  minWidth: 16,
-  fontFamily: vars.font.ui,
-  fontSize: 10,
-  fontWeight: 600,
-  color: vars.inkSoft,
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.rule}`,
-  borderRadius: 5,
-  padding: "1px 5px",
+export const kbdSpacing = style({
   marginRight: space["1"],
 });

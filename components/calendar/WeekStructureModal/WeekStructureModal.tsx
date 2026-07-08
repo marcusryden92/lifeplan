@@ -502,7 +502,7 @@ export function WeekStructureModal({
           </span>
           <span className={bannerSpacer} />
           <Button
-            variant="glass"
+            variant="ghost"
             size="sm"
             onClick={cancel}
             disabled={saving}

@@ -1,6 +1,6 @@
 "use client";
 
-import { space } from "@/lib/theme";
+import { space, listRow } from "@/lib/theme";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -498,7 +498,7 @@ export default function LibraryPage() {
           <div className={railSection}>
             <div className={railSectionHead}>Smart views</div>
             <button
-              className={`${railRow} ${selection.kind === "all" ? railRowActive : ""}`}
+              className={`${listRow()} ${railRow} ${selection.kind === "all" ? railRowActive : ""}`}
               onClick={() => setSelection({ kind: "all" })}
             >
               <span className={railRowIcon}>
@@ -515,7 +515,7 @@ export default function LibraryPage() {
               return (
                 <button
                   key={v.key}
-                  className={`${railRow} ${active ? railRowActive : ""}`}
+                  className={`${listRow()} ${railRow} ${active ? railRowActive : ""}`}
                   onClick={() => setSelection({ kind: "view", view: v.key })}
                 >
                   <span className={railRowIcon}>

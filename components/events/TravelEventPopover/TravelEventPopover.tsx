@@ -28,6 +28,7 @@ import {
   titleStatic,
   body,
   metaRow,
+  footer,
 } from "../CalendarPopover/CalendarPopover.css";
 import {
   headerCursor,
@@ -41,7 +42,6 @@ import {
   alertBox,
   alertIcon,
   alertText,
-  footerActions,
 } from "./TravelEventPopover.css";
 
 interface TravelExtendedProps {
@@ -217,7 +217,7 @@ const TravelEventPopover: React.FC<TravelEventPopoverProps> = ({
               </div>
             )}
 
-            <div className={footerActions}>
+            <div className={footer}>
               <PopoverAction
                 onClick={openLocationsRoute}
                 icon={<Settings size={13} strokeWidth={2} />}

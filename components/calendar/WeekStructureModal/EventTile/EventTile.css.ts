@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, radii, themeTransition } from "@/lib/theme";
 
 // Local copy of the modal-shell fade duration so the tile's opacity transition
 // stays in lockstep with mount/unmount without importing across folders.
@@ -14,7 +14,7 @@ export const eventBox = style({
   lineHeight: 1.15,
   color: vars.ink,
   overflow: "hidden",
-  borderRadius: 4,
+  borderRadius: radii.sm,
   position: "relative",
   outline: "1.5px solid transparent",
   outlineOffset: -1,

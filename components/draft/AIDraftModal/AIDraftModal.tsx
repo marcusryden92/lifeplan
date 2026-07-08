@@ -684,7 +684,7 @@ export function AIDraftModal({
           <span className={bannerTitle}>{focusedGoalTitle ?? "All goals"}</span>
           <span className={bannerSpacer} />
           <Button
-            variant="glass"
+            variant="ghost"
             size="sm"
             onClick={requestClose}
             className={cancelButtonStyle}

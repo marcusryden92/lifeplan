@@ -1,6 +1,16 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, popover, glass, media, radii } from "@/lib/theme";
-
+import {
+  space,
+  vars,
+  themeTransition,
+  popover,
+  glass,
+  media,
+  radii,
+  display,
+  text,
+  fieldLabel as fieldLabelPreset,
+} from "@/lib/theme";
 
 export const page = style({
   display: "flex",
@@ -20,38 +30,38 @@ export const subHeader = style({
   },
 });
 
-export const pageTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 32,
-  fontWeight: 500,
-  letterSpacing: "-0.03em",
-  color: vars.ink,
-  lineHeight: 1,
-  margin: 0,
-  transition: themeTransition,
-  "@media": { [media.mobile]: { fontSize: 24 } },
-});
+export const pageTitle = style([
+  display.pageTitle,
+  {
+    color: vars.ink,
+    lineHeight: 1,
+    margin: 0,
+    transition: themeTransition,
+    "@media": { [media.mobile]: { fontSize: 24 } },
+  },
+]);
 
-export const titleSummary = style({
-  fontSize: 12.5,
-  color: vars.muted,
-  fontWeight: 500,
-  fontFamily: vars.font.ui,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-});
+export const titleSummary = style([
+  text.bodySm,
+  {
+    color: vars.muted,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+  },
+]);
 
 export const spacer = style({ flex: 1 });
 
-export const kbdHint = style({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: space["1.5"],
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  color: vars.muted,
-  transition: themeTransition,
-});
+export const kbdHint = style([
+  text.microLabel,
+  {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: space["1.5"],
+    color: vars.muted,
+    transition: themeTransition,
+  },
+]);
 
 export const mainGrid = style({
   display: "grid",
@@ -89,14 +99,13 @@ export const queueHead = style({
   padding: "0 4px",
 });
 
-export const queueTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 18,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  transition: themeTransition,
-});
+export const queueTitle = style([
+  display.panelTitle,
+  {
+    color: vars.ink,
+    transition: themeTransition,
+  },
+]);
 
 export const quickAdd = style({
   display: "flex",
@@ -109,16 +118,17 @@ export const quickAdd = style({
   transition: themeTransition,
 });
 
-export const quickAddInput = style({
-  flex: 1,
-  border: "none",
-  outline: "none",
-  background: "transparent",
-  fontSize: 13,
-  fontFamily: vars.font.ui,
-  color: vars.ink,
-  selectors: { "&::placeholder": { color: vars.muted } },
-});
+export const quickAddInput = style([
+  text.body,
+  {
+    flex: 1,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    color: vars.ink,
+    selectors: { "&::placeholder": { color: vars.muted } },
+  },
+]);
 
 export const queueList = style({
   display: "flex",
@@ -130,33 +140,23 @@ export const queueList = style({
   minHeight: 0,
 });
 
-export const queueRow = style({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  gap: space["2"],
-  padding: "10px 12px",
-  borderRadius: radii.sm,
-  cursor: "pointer",
-  border: `1px solid ${vars.rule}`,
-  background: vars.glass.bgSoft,
-  color: vars.ink,
-  fontFamily: vars.font.ui,
-  fontSize: 13,
-  textAlign: "left",
-  transition: themeTransition,
-  selectors: {
-    "&:hover": { background: vars.glass.bgDeep },
+export const queueRow = style([
+  text.row,
+  {
+    justifyContent: "space-between",
+    gap: space["2"],
+    border: "none",
+    background: "transparent",
+    color: vars.ink,
+    textAlign: "left",
   },
-});
+]);
 
+// Re-asserts the listRow selected fill over this button's background reset
+// (same specificity; this class is emitted later).
 export const queueRowActive = style({
-  background: vars.ink,
-  color: vars.paper,
-  borderColor: vars.ink,
-  selectors: {
-    "&:hover": { background: vars.ink },
-  },
+  background: vars.interactive.selectedFill,
+  fontWeight: 600,
 });
 
 export const queueRowTitle = style({
@@ -167,24 +167,25 @@ export const queueRowTitle = style({
   textOverflow: "ellipsis",
 });
 
-export const queueRowAge = style({
-  fontFamily: vars.font.ui,
-  fontSize: 10,
-  fontWeight: 500,
-  letterSpacing: "0.1em",
-  textTransform: "uppercase",
-  opacity: 0.7,
-  fontVariantNumeric: "tabular-nums",
-  flexShrink: 0,
-});
+export const queueRowAge = style([
+  text.microLabel,
+  {
+    letterSpacing: "0.1em",
+    textTransform: "uppercase",
+    opacity: 0.7,
+    fontVariantNumeric: "tabular-nums",
+    flexShrink: 0,
+  },
+]);
 
-export const queueEmpty = style({
-  padding: "24px 16px",
-  textAlign: "center",
-  color: vars.muted,
-  fontFamily: vars.font.ui,
-  fontSize: 12.5,
-});
+export const queueEmpty = style([
+  text.bodySm,
+  {
+    padding: "24px 16px",
+    textAlign: "center",
+    color: vars.muted,
+  },
+]);
 
 export const main = style({
   display: "flex",
@@ -195,15 +196,16 @@ export const main = style({
   paddingRight: space["1"],
 });
 
-export const breadcrumb = style({
-  display: "flex",
-  alignItems: "center",
-  gap: space["2"],
-  fontFamily: vars.font.ui,
-  fontSize: 11.5,
-  color: vars.muted,
-  fontVariantNumeric: "tabular-nums",
-});
+export const breadcrumb = style([
+  text.label,
+  {
+    display: "flex",
+    alignItems: "center",
+    gap: space["2"],
+    color: vars.muted,
+    fontVariantNumeric: "tabular-nums",
+  },
+]);
 
 export const card = style([
   glass({ fill: "deep", radius: "lg", shadow: "none" }),
@@ -216,17 +218,16 @@ export const card = style([
   },
 ]);
 
-export const itemTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 30,
-  fontWeight: 500,
-  letterSpacing: "-0.025em",
-  lineHeight: 1.1,
-  color: vars.ink,
-  margin: 0,
-  transition: themeTransition,
-  "@media": { [media.mobile]: { fontSize: 22 } },
-});
+export const itemTitle = style([
+  display.pageTitle,
+  {
+    lineHeight: 1.1,
+    color: vars.ink,
+    margin: 0,
+    transition: themeTransition,
+    "@media": { [media.mobile]: { fontSize: 22 } },
+  },
+]);
 
 export const typeGrid = style({
   display: "grid",
@@ -274,14 +275,13 @@ export const typeCardFocused = style({
   outlineOffset: 2,
 });
 
-export const typeCardLabel = style({
-  fontFamily: vars.font.display,
-  fontSize: 20,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  lineHeight: 1,
-  textTransform: "uppercase",
-});
+export const typeCardLabel = style([
+  display.sectionHead,
+  {
+    lineHeight: 1,
+    textTransform: "uppercase",
+  },
+]);
 
 export const typeCardSub = style({
   fontSize: 10.5,
@@ -289,14 +289,14 @@ export const typeCardSub = style({
   opacity: 0.7,
 });
 
-export const typeCardKbd = style({
-  fontSize: 9,
-  fontFamily: vars.font.ui,
-  fontWeight: 600,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  opacity: 0.6,
-});
+// color: inherit keeps the hint legible on the inverted (ink-bg) active card.
+export const typeCardKbd = style([
+  fieldLabelPreset,
+  {
+    color: "inherit",
+    opacity: 0.6,
+  },
+]);
 
 export const fieldGrid = style({
   display: "grid",
@@ -318,52 +318,49 @@ export const field = style({
   transition: themeTransition,
 });
 
-export const fieldLabel = style({
-  fontFamily: vars.font.ui,
-  fontSize: 9.5,
-  fontWeight: 600,
-  letterSpacing: "0.14em",
-  textTransform: "uppercase",
-  color: vars.muted,
-  transition: themeTransition,
-});
-
-export const fieldInput = style({
-  border: "none",
-  outline: "none",
-  background: "transparent",
-  fontFamily: vars.font.ui,
-  fontSize: 15,
-  fontWeight: 500,
-  color: vars.ink,
-  width: "100%",
-  height: 26,
-  lineHeight: "26px",
-  padding: 0,
-  fontVariantNumeric: "tabular-nums",
-  transition: themeTransition,
-  selectors: {
-    "&::placeholder": { color: vars.muted, opacity: 0.6 },
+export const fieldLabel = style([
+  fieldLabelPreset,
+  {
+    transition: themeTransition,
   },
-});
+]);
 
-export const categoryTrigger = style({
-  display: "flex",
-  alignItems: "center",
-  gap: space["2"],
-  width: "100%",
-  height: 26,
-  padding: 0,
-  border: "none",
-  background: "transparent",
-  cursor: "pointer",
-  textAlign: "left",
-  fontFamily: vars.font.ui,
-  fontSize: 15,
-  fontWeight: 500,
-  color: vars.ink,
-  transition: themeTransition,
-});
+export const fieldInput = style([
+  text.bodyLg,
+  {
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    color: vars.ink,
+    width: "100%",
+    height: 26,
+    lineHeight: "26px",
+    padding: 0,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+    selectors: {
+      "&::placeholder": { color: vars.muted, opacity: 0.6 },
+    },
+  },
+]);
+
+export const categoryTrigger = style([
+  text.bodyLg,
+  {
+    display: "flex",
+    alignItems: "center",
+    gap: space["2"],
+    width: "100%",
+    height: 26,
+    padding: 0,
+    border: "none",
+    background: "transparent",
+    cursor: "pointer",
+    textAlign: "left",
+    color: vars.ink,
+    transition: themeTransition,
+  },
+]);
 
 export const categoryTriggerLabel = style({
   flex: 1,
@@ -403,26 +400,26 @@ export const categoryDropdown = style([
   },
 ]);
 
-export const categoryDropdownItem = style({
-  display: "flex",
-  alignItems: "center",
-  gap: space["2"],
-  width: "100%",
-  padding: "8px 10px",
-  border: "none",
-  borderRadius: radii.xs,
-  background: "transparent",
-  cursor: "pointer",
-  fontFamily: vars.font.ui,
-  fontSize: 13,
-  fontWeight: 500,
-  color: vars.ink,
-  textAlign: "left",
-  transition: themeTransition,
-  selectors: {
-    "&:hover": { background: vars.interactive.hoverFill },
+export const categoryDropdownItem = style([
+  text.body,
+  {
+    display: "flex",
+    alignItems: "center",
+    gap: space["2"],
+    width: "100%",
+    padding: "8px 10px",
+    border: "none",
+    borderRadius: radii.xs,
+    background: "transparent",
+    cursor: "pointer",
+    color: vars.ink,
+    textAlign: "left",
+    transition: themeTransition,
+    selectors: {
+      "&:hover": { background: vars.interactive.hoverFill },
+    },
   },
-});
+]);
 
 export const categoryDropdownItemActive = style({
   background: vars.glass.bgDeep,
@@ -440,37 +437,38 @@ export const actionRow = style({
   flexWrap: "wrap",
 });
 
-export const footerHint = style({
-  display: "flex",
-  alignItems: "center",
-  gap: space["3"],
-  flexWrap: "wrap",
-  fontFamily: vars.font.ui,
-  fontSize: 11,
-  color: vars.muted,
-  padding: "0 4px",
-  transition: themeTransition,
-});
+export const footerHint = style([
+  text.microLabel,
+  {
+    display: "flex",
+    alignItems: "center",
+    gap: space["3"],
+    flexWrap: "wrap",
+    color: vars.muted,
+    padding: "0 4px",
+    transition: themeTransition,
+  },
+]);
 
-export const emptyMain = style({
-  flex: 1,
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "60px 24px",
-  textAlign: "center",
-  color: vars.muted,
-  fontFamily: vars.font.ui,
-  fontSize: 14,
-  gap: space["2"],
-});
+export const emptyMain = style([
+  text.bodyLg,
+  {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "60px 24px",
+    textAlign: "center",
+    color: vars.muted,
+    gap: space["2"],
+  },
+]);
 
-export const emptyMainTitle = style({
-  fontFamily: vars.font.display,
-  fontSize: 24,
-  fontWeight: 500,
-  letterSpacing: "-0.02em",
-  color: vars.ink,
-  transition: themeTransition,
-});
+export const emptyMainTitle = style([
+  display.modalTitle,
+  {
+    color: vars.ink,
+    transition: themeTransition,
+  },
+]);
