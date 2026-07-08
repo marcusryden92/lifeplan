@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatMinutesToHours } from "@/utils/taskArrayUtils";
@@ -29,6 +30,49 @@ const DEFAULT_SETTINGS: TaskSplittingSettings = {
   maxMinutesPerDay: null,
 };
 
+// Free typing, clamp on commit — clamping per keystroke fights the user
+// (typing "90" clamps the intermediate "9" up to the minimum and the digits
+// land on the clamped value).
+function CommitNumberInput({
+  value,
+  placeholder,
+  ariaLabel,
+  onCommit,
+}: {
+  value: number | null;
+  placeholder?: string;
+  ariaLabel: string;
+  onCommit: (raw: string) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDraft(null);
+  }, [value]);
+
+  const commit = () => {
+    if (draft === null) return;
+    onCommit(draft);
+    setDraft(null);
+  };
+
+  return (
+    <input
+      className={numberInput}
+      type="number"
+      value={draft ?? (value === null ? "" : String(value))}
+      placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        if (e.key === "Escape") setDraft(null);
+      }}
+      aria-label={ariaLabel}
+    />
+  );
+}
+
 export function SplittingSection() {
   const { item, updateField } = useItem();
   const { planner } = useCalendarProvider();
@@ -48,9 +92,11 @@ export function SplittingSection() {
     updateField("splitting", next ? serializeTaskSplitting(next) : null);
   };
 
-  const patchMin = (value: number) => {
+  const commitMin = (raw: string) => {
     if (!settings) return;
-    const min = Math.max(MIN_CHUNK_MINUTES, Math.floor(value) || 0);
+    const parsed = Math.floor(Number(raw));
+    if (!Number.isFinite(parsed)) return;
+    const min = Math.max(MIN_CHUNK_MINUTES, parsed);
     apply({
       ...settings,
       minMinutes: min,
@@ -62,20 +108,25 @@ export function SplittingSection() {
     });
   };
 
-  const patchMax = (value: number) => {
+  const commitMax = (raw: string) => {
     if (!settings) return;
-    const max = Math.max(settings.minMinutes, Math.floor(value) || 0);
-    apply({ ...settings, maxMinutes: max });
+    const parsed = Math.floor(Number(raw));
+    if (!Number.isFinite(parsed)) return;
+    apply({ ...settings, maxMinutes: Math.max(settings.minMinutes, parsed) });
   };
 
-  const patchPerDay = (raw: string) => {
+  const commitPerDay = (raw: string) => {
     if (!settings) return;
     if (raw.trim() === "") {
       apply({ ...settings, maxMinutesPerDay: null });
       return;
     }
-    const perDay = Math.max(settings.minMinutes, Math.floor(Number(raw)) || 0);
-    apply({ ...settings, maxMinutesPerDay: perDay });
+    const parsed = Math.floor(Number(raw));
+    if (!Number.isFinite(parsed)) return;
+    apply({
+      ...settings,
+      maxMinutesPerDay: Math.max(settings.minMinutes, parsed),
+    });
   };
 
   return (
@@ -100,36 +151,27 @@ export function SplittingSection() {
           <div className={inputsGrid}>
             <div className={inputStack}>
               <span className={inputCaption}>Min (min)</span>
-              <input
-                className={numberInput}
-                type="number"
-                min={MIN_CHUNK_MINUTES}
+              <CommitNumberInput
                 value={settings.minMinutes}
-                onChange={(e) => patchMin(Number(e.target.value))}
-                aria-label="Minimum chunk minutes"
+                ariaLabel="Minimum chunk minutes"
+                onCommit={commitMin}
               />
             </div>
             <div className={inputStack}>
               <span className={inputCaption}>Max (min)</span>
-              <input
-                className={numberInput}
-                type="number"
-                min={settings.minMinutes}
+              <CommitNumberInput
                 value={settings.maxMinutes}
-                onChange={(e) => patchMax(Number(e.target.value))}
-                aria-label="Maximum chunk minutes"
+                ariaLabel="Maximum chunk minutes"
+                onCommit={commitMax}
               />
             </div>
             <div className={inputStack}>
               <span className={inputCaption}>Max / day</span>
-              <input
-                className={numberInput}
-                type="number"
-                min={settings.minMinutes}
-                value={settings.maxMinutesPerDay ?? ""}
+              <CommitNumberInput
+                value={settings.maxMinutesPerDay}
                 placeholder="—"
-                onChange={(e) => patchPerDay(e.target.value)}
-                aria-label="Maximum minutes per day"
+                ariaLabel="Maximum minutes per day"
+                onCommit={commitPerDay}
               />
             </div>
           </div>

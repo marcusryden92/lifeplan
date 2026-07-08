@@ -10,6 +10,7 @@ import {
   dayKeyLocal,
   grantChunkMinutes,
   minChunkRequired,
+  parseCompletedSegments,
   splitRemainingMinutes,
 } from "../../../taskSplitting";
 
@@ -38,6 +39,8 @@ export interface SplitPlacementState {
   chunkOrdinals: Map<string, number>;
   /** plannerId -> local dayKey -> minutes consumed (seeded from completed segments) */
   dayMinutes: Map<string, Map<string, number>>;
+  /** plannerId -> ms end of the task's last placed chunk / latest segment */
+  lastChunkEndMs: Map<string, number>;
   /** Constraint compromises made while placing, surfaced as engine messages */
   relaxations: SplitRelaxation[];
 }
@@ -47,6 +50,7 @@ export function createSplitPlacementState(): SplitPlacementState {
     placedMinutes: new Map(),
     chunkOrdinals: new Map(),
     dayMinutes: new Map(),
+    lastChunkEndMs: new Map(),
     relaxations: [],
   };
 }
@@ -85,6 +89,14 @@ export function scheduleSplitTask(args: {
   if (!dayMap) {
     dayMap = completedMinutesByDay(task);
     state.dayMinutes.set(task.id, dayMap);
+    // Chunks keep a break from the latest completed segment too, not just
+    // from each other.
+    const latestSegmentEndMs = parseCompletedSegments(
+      task.completedSegments,
+    ).reduce((latest, s) => Math.max(latest, new Date(s.end).getTime()), 0);
+    if (latestSegmentEndMs > 0) {
+      state.lastChunkEndMs.set(task.id, latestSegmentEndMs);
+    }
   }
   const dayMinutes = dayMap;
 
@@ -150,7 +162,20 @@ export function scheduleSplitTask(args: {
         dayBudget: attempt.dayCap ? dayBudgetFn : undefined,
       };
 
-      const result = scheduler.scheduleTask(chunkTask, args.afterTime, sizing);
+      // Same-task chunks keep a break of at least minMinutes between each
+      // other (and after the latest completed segment) — back-to-back chunks
+      // would defeat the max chunk size as a continuous-work limit.
+      const lastEndMs = state.lastChunkEndMs.get(task.id);
+      const spacedAfter =
+        lastEndMs !== undefined
+          ? new Date(lastEndMs + settings.minMinutes * 60 * 1000)
+          : undefined;
+      const afterTime =
+        args.afterTime && (!spacedAfter || args.afterTime > spacedAfter)
+          ? args.afterTime
+          : spacedAfter;
+
+      const result = scheduler.scheduleTask(chunkTask, afterTime, sizing);
       if (result.success && result.event) {
         placedEvent = result.event;
         placedWithoutDayCap = !attempt.dayCap && dayBudgetFn !== undefined;
@@ -189,6 +214,10 @@ export function scheduleSplitTask(args: {
       (state.placedMinutes.get(task.id) ?? 0) + granted,
     );
     state.chunkOrdinals.set(task.id, ordinal + 1);
+    state.lastChunkEndMs.set(
+      task.id,
+      Math.max(state.lastChunkEndMs.get(task.id) ?? 0, end.getTime()),
+    );
     addIntervalMinutesByDay(dayMinutes, start, end);
 
     if (ruleForcedWhole && granted > settings.maxMinutes) {

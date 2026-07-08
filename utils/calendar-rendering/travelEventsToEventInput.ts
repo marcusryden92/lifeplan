@@ -1,6 +1,7 @@
 import type { EventInput } from "@fullcalendar/core/index.js";
 import { TravelEvent, EventType } from "@/types/prisma";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
+import { vars } from "@/lib/theme";
 
 // Locations joined at render time so renaming one takes effect without
 // touching every materialized travel row.
@@ -15,14 +16,14 @@ export function travelEventsToEventInput(
   };
 
   return travelEvents.map((event) => {
-    let backgroundColor = "#9CA3AF";
-    let borderColor = "#6B7280";
+    let backgroundColor = vars.muted;
+    let borderColor = vars.inkSoft;
     if (event.insufficientTravel) {
-      backgroundColor = "#F87171";
-      borderColor = "#DC2626";
+      backgroundColor = vars.status.error;
+      borderColor = vars.status.error;
     } else if (event.overconstrained) {
-      backgroundColor = "#FDE68A";
-      borderColor = "#D97706";
+      backgroundColor = vars.status.warning;
+      borderColor = vars.status.warning;
     }
 
     const fromName = nameFor(event.fromLocationId);

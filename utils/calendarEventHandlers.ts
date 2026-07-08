@@ -444,29 +444,22 @@ export const handleUpdateTitle = (
   setTitle(title);
 };
 
+// Completion feedback is React-state-driven (the optimistic override tints the
+// tile) — never write colors onto the DOM node here: FullCalendar recycles
+// tile elements across regens, and an imperative backgroundColor sticks to
+// whatever event inherits the node.
 export const handleClickCompleteTask = (
   event: EventImpl,
   isCompleted: boolean,
   setIsCompleted: React.Dispatch<React.SetStateAction<boolean>>,
-  elementRef: React.RefObject<HTMLDivElement>,
   planner: Planner[],
   calendar: SimpleEvent[],
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
     calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
   ) => void,
-  green = "#0ebf7e",
 ) => {
-  const element = elementRef.current;
-  if (!event || !element) return;
-
-  const color = !isCompleted
-    ? green
-    : (event.extendedProps.backgroundColor as string);
-
-  if (element && color) {
-    element.style.backgroundColor = color;
-  }
+  if (!event) return;
 
   // Split-task chunks complete per-chunk: the chunk's window is appended to
   // the row's completedSegments (completed minutes are derived by summing),
@@ -587,13 +580,9 @@ export const handleClickDelete = (
   red = "#ef4444",
   setShowPopover?: React.Dispatch<React.SetStateAction<boolean>>,
 ) => {
-  const element = elementRef.current;
-
-  if (element) {
-    element.style.backgroundColor = red;
-    element.style.border = `solid 2px ${red}`;
-  }
-
+  // No imperative styling here — FullCalendar recycles tile elements, and a
+  // red backgroundColor written onto the node outlives this event and paints
+  // whatever event inherits the node after the regen.
   const updatedCalendar = calendar?.filter((e) => e.id !== event?.id);
 
   // Chunk/segment tiles of a split task carry composite ids that match no

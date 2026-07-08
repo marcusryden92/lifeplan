@@ -1,5 +1,6 @@
 import type { EventInput } from "@fullcalendar/core/index.js";
 import { Category, CategoryEvent, EventType } from "@/types/prisma";
+import { vars } from "@/lib/theme";
 
 // Converts persisted CategoryEvent rows into FullCalendar EventInput. Joins
 // each event with its parent Category at render time to get color, name, and
@@ -22,8 +23,8 @@ export function categoryEventsToEventInput(
       title: `${categoryName} Time Slot`,
       start: event.start,
       end: event.end,
-      backgroundColor: categoryColor ?? "#3b82f6",
-      borderColor: categoryColor ?? "#3b82f6",
+      backgroundColor: categoryColor ?? vars.accent.primary,
+      borderColor: categoryColor ?? vars.accent.primary,
       display: "background",
       editable: false,
       extendedProps: {
