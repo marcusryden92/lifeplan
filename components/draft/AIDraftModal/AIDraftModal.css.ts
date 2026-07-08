@@ -79,8 +79,12 @@ export const banner = style({
 export const editingLabel = style([
   fieldLabel,
   {
-    color: vars.paper,
     transition: themeTransition,
+    // fieldLabel bundles color: vars.muted; a doubled selector outranks that
+    // single-class preset so paper wins on the dark ink banner, order-safe.
+    selectors: {
+      "&&": { color: vars.paper },
+    },
   },
 ]);
 
@@ -99,11 +103,11 @@ export const bannerTitle = style([
 export const bannerSpacer = style({ flex: 1 });
 
 export const cancelButtonStyle = style({
-  color: vars.paper,
-  fontWeight: 600,
-  opacity: 1,
+  // Beat pillBtn's ghost `color: vars.inkSoft` (which matches the ink banner
+  // background in both themes) via a doubled selector — order-independent.
   selectors: {
-    "&:hover:not(:disabled)": { color: vars.paper },
+    "&&": { color: vars.paper },
+    "&&:hover:not(:disabled)": { color: vars.paper },
   },
 });
 
