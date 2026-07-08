@@ -79,7 +79,7 @@ export const banner = style({
 export const editingLabel = style([
   fieldLabel,
   {
-    color: `color-mix(in srgb, ${vars.paper} 65%, transparent)`,
+    color: vars.paper,
     transition: themeTransition,
   },
 ]);
@@ -87,7 +87,7 @@ export const editingLabel = style([
 export const bannerTitle = style([
   text.bodySm,
   {
-    color: `color-mix(in srgb, ${vars.paper} 85%, transparent)`,
+    color: vars.paper,
     transition: themeTransition,
     minWidth: 0,
     overflow: "hidden",
@@ -100,8 +100,10 @@ export const bannerSpacer = style({ flex: 1 });
 
 export const cancelButtonStyle = style({
   color: vars.paper,
+  fontWeight: 600,
+  opacity: 1,
   selectors: {
-    "&:hover": { color: vars.paper },
+    "&:hover:not(:disabled)": { color: vars.paper },
   },
 });
 
