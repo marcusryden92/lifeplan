@@ -8,7 +8,6 @@ import {
   backdropFilters,
   radii,
   space,
-  display,
 } from "@/lib/theme";
 
 export const sidebar = style({
@@ -42,41 +41,6 @@ export const brand = style({
   whiteSpace: "nowrap",
   overflow: "hidden",
 });
-
-export const brandLogo = style({
-  width: 30,
-  height: 30,
-  flexShrink: 0,
-  backgroundColor: vars.ink,
-  WebkitMaskImage: "url(/logo_minified.svg)",
-  maskImage: "url(/logo_minified.svg)",
-  WebkitMaskSize: "contain",
-  maskSize: "contain",
-  WebkitMaskRepeat: "no-repeat",
-  maskRepeat: "no-repeat",
-  WebkitMaskPosition: "center",
-  maskPosition: "center",
-});
-
-export const brandText = style([
-  display.panelTitle,
-  {
-    color: vars.ink,
-    flex: 1,
-    minWidth: 0,
-    maxWidth: "100%",
-    paddingLeft: space["3"],
-    boxSizing: "border-box",
-    overflow: "hidden",
-    transition: collapseTransition,
-    selectors: {
-      '[data-collapsed="true"] &': {
-        maxWidth: 0,
-        opacity: 0,
-      },
-    },
-  },
-]);
 
 export const navItem = style({
   height: 30,

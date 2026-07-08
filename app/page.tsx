@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button, Grain } from "@/components/ui";
+import { Button, Grain, Logo } from "@/components/ui";
 import { themeLight } from "@/lib/theme";
 import { VectorField } from "@/components/landing/VectorField";
 import { Reveal } from "@/components/landing/Reveal";
@@ -18,8 +18,6 @@ import {
   heroScrim,
   heroNav,
   heroWordmark,
-  heroLogo,
-  heroTitle,
   navActions,
   heroSignIn,
   heroContent,
@@ -31,8 +29,6 @@ import {
   pillNavVisible,
   pillNavSecondary,
   pillNavWordmark,
-  pillNavLogo,
-  pillNavTitle,
   leadSection,
   leadInner,
   leadText,
@@ -202,8 +198,7 @@ export default function Home() {
     <main className={`${themeLight} ${page} custom-scrollbar`}>
       <div className={pastHero ? `${pillNav} ${pillNavVisible}` : pillNav}>
         <Link href="/" className={pillNavWordmark}>
-          <span className={pillNavLogo} aria-hidden />
-          <span className={pillNavTitle}>Circadium</span>
+          <Logo size={19} />
         </Link>
         <Button
           variant="ghost"
@@ -223,8 +218,7 @@ export default function Home() {
         <div className={heroScrim} aria-hidden />
         <header className={heroNav}>
           <Link href="/" className={heroWordmark}>
-            <span className={heroLogo} aria-hidden />
-            <span className={heroTitle}>Circadium</span>
+            <Logo size={28} tone="#f2efea" />
           </Link>
           <div className={navActions}>
             <button type="button" className={heroSignIn} onClick={goLogin}>

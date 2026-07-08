@@ -2,13 +2,11 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { Logo } from "@/components/ui";
 import { Social } from "./Social";
 import {
   card,
   brandRow,
-  brandMark,
-  brandLogo,
-  brand,
   title as titleStyle,
   subtitle as subtitleStyle,
   body,
@@ -37,10 +35,7 @@ export const AuthCard = ({
   return (
     <div className={card}>
       <div className={brandRow}>
-        <div className={brandMark}>
-          <span className={brandLogo} aria-hidden />
-          <h1 className={brand}>Circadium</h1>
-        </div>
+        <Logo size={21} textAs="h1" />
         <h2 className={titleStyle}>{title}</h2>
         {subtitle && <span className={subtitleStyle}>{subtitle}</span>}
       </div>

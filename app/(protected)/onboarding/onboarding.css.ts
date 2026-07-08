@@ -201,14 +201,6 @@ export const welcomeCenter = style({
   marginBlock: "auto",
 });
 
-export const brand = style([
-  display.bigStat,
-  {
-    color: vars.ink,
-    margin: 0,
-  },
-]);
-
 export const tagline = style([
   text.bodyLg,
   {

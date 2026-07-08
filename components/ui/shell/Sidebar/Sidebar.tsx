@@ -14,13 +14,12 @@ import {
   Sun,
 } from "lucide-react";
 import { useTheme } from "../../ThemeProvider";
+import { Logo } from "../../Logo";
 import { useAssistant } from "../AssistantContext";
 import { NAV_ITEMS } from "../nav";
 import {
   sidebar,
   brand,
-  brandLogo,
-  brandText,
   navItem,
   navItemActive,
   navGlyph,
@@ -78,8 +77,7 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
       aria-label="Main navigation"
     >
       <div className={brand} title="Circadium">
-        <span className={brandLogo} aria-hidden />
-        <span className={brandText}>Circadium</span>
+        <Logo size={30} collapsed={collapsed} />
       </div>
 
       <div className={navDivider} aria-hidden />

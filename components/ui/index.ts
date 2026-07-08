@@ -11,6 +11,7 @@ export { Backdrop } from "./Backdrop";
 export { Masthead } from "./Masthead";
 export { ProgressBar } from "./ProgressBar";
 export { Loader } from "./Loader";
+export { Logo } from "./Logo";
 export { StatusTag } from "./StatusTag";
 export { ThemeProvider, useTheme } from "./ThemeProvider";
 export type { ThemeName } from "./ThemeProvider";

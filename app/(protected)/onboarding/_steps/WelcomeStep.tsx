@@ -1,10 +1,9 @@
 "use client";
 
-import { Button } from "@/components/ui";
+import { Button, Logo } from "@/components/ui";
 import { StepFrame } from "../_components/StepFrame";
 import {
   welcomeCenter,
-  brand,
   tagline,
   skipLink,
   footerActions,
@@ -49,7 +48,7 @@ export function WelcomeStep({
       }
     >
       <div className={welcomeCenter}>
-        <p className={brand}>Circadium</p>
+        <Logo size={51} textAs="p" />
         <p className={tagline}>
           A calendar that plans around your life. You say what matters, and we
           weave it through your week.

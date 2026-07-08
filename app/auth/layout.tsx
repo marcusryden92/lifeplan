@@ -1,15 +1,8 @@
 import Link from "next/link";
 import { themeLight } from "@/lib/theme";
+import { Logo } from "@/components/ui";
 import { VectorField } from "@/components/landing/VectorField";
-import {
-  page,
-  fieldPanel,
-  fieldBrand,
-  fieldLogo,
-  fieldWordmark,
-  formPanel,
-  backLink,
-} from "./auth.css";
+import { page, fieldPanel, fieldBrand, formPanel, backLink } from "./auth.css";
 
 const AuthLayout = ({ children }: { children: React.ReactNode }) => {
   return (
@@ -17,8 +10,12 @@ const AuthLayout = ({ children }: { children: React.ReactNode }) => {
       <div className={fieldPanel}>
         <VectorField />
         <div className={fieldBrand}>
-          <span className={fieldLogo} aria-hidden />
-          <span className={fieldWordmark}>Circadium</span>
+          <Logo
+            size="clamp(34px, 6vw, 100px)"
+            simple={false}
+            tone="#f5f0e8"
+            weight={300}
+          />
         </div>
       </div>
       <div className={formPanel}>

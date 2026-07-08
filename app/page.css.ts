@@ -65,18 +65,6 @@ export const heroNav = style({
   pointerEvents: "none",
 });
 
-// Same mask treatment as the Sidebar brand — the SVG tints via background.
-const logoMask = {
-  WebkitMaskImage: "url(/logo_minified.svg)",
-  maskImage: "url(/logo_minified.svg)",
-  WebkitMaskSize: "contain",
-  maskSize: "contain",
-  WebkitMaskRepeat: "no-repeat",
-  maskRepeat: "no-repeat",
-  WebkitMaskPosition: "center",
-  maskPosition: "center",
-} as const;
-
 export const heroWordmark = style({
   display: "inline-flex",
   alignItems: "center",
@@ -89,14 +77,6 @@ export const heroWordmark = style({
   textDecoration: "none",
   lineHeight: 1,
   pointerEvents: "auto",
-});
-
-export const heroLogo = style({
-  width: 26,
-  height: 26,
-  flexShrink: 0,
-  backgroundColor: "#f2efea",
-  ...logoMask,
 });
 
 export const navActions = style({
@@ -193,10 +173,6 @@ export const heroCtaNote = style({
   letterSpacing: "0.01em",
 });
 
-export const heroTitle = style({
-  marginTop: 3,
-});
-
 // ---------- floating pill nav (appears once the hero scrolls away) ----------
 export const pillNav = style({
   position: "fixed",
@@ -248,18 +224,6 @@ export const pillNavWordmark = style({
   textDecoration: "none",
   lineHeight: 1,
   marginRight: space["2"],
-});
-
-export const pillNavLogo = style({
-  width: 20,
-  height: 20,
-  flexShrink: 0,
-  backgroundColor: vars.ink,
-  ...logoMask,
-});
-
-export const pillNavTitle = style({
-  marginTop: 3,
 });
 
 // ---------- lead (sits directly beneath the hero) ----------
