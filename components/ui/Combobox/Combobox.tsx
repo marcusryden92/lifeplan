@@ -65,7 +65,16 @@ export function Combobox<V extends string | null>({
             disabled={disabled}
             style={width != null ? { width: "100%" } : undefined}
           >
-            <span style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+            <span
+              style={{
+                flex: 1,
+                minWidth: 0,
+                textAlign: "left",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {renderValue ? renderValue(current) : current?.label ?? placeholder}
             </span>
             <ChevronDown
