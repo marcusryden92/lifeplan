@@ -15,10 +15,15 @@ const SWATCH_GAP = 5;
 // own line, grouping the palette by hue without labels.
 const SWATCHES_PER_ROW = 5;
 const POPUP_PAD = 12;
+// scrollbar-gutter: stable reserves the scrollbar's width inside the content
+// box, so the swatch row must budget for it or the last swatch wraps. Covers
+// the custom 7px webkit scrollbar with slack for wider native gutters.
+const SCROLLBAR_GUTTER = 12;
 const POPUP_WIDTH =
   SWATCHES_PER_ROW * SWATCH_SIZE +
   (SWATCHES_PER_ROW - 1) * SWATCH_GAP +
-  POPUP_PAD * 2;
+  POPUP_PAD * 2 +
+  SCROLLBAR_GUTTER;
 // Cap the height so the full grouped palette scrolls rather than growing the
 // popover past the viewport.
 const POPUP_MAX_HEIGHT = 288;

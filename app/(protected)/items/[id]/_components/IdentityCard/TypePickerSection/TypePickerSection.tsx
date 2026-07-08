@@ -20,15 +20,15 @@ export function TypePickerSection() {
         <span
           className={typePickerThumb}
           data-position={
-            item.plannerType === "task"
+            item.plannerType === "plan"
               ? "0"
-              : item.plannerType === "plan"
+              : item.plannerType === "task"
                 ? "1"
                 : "2"
           }
           aria-hidden="true"
         />
-        {(["task", "plan", "goal"] as const).map((t) => (
+        {(["plan", "task", "goal"] as const).map((t) => (
           <button
             key={t}
             type="button"

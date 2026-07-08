@@ -56,7 +56,6 @@ export const column = style({
   gap: space["0.5"],
   height: 208,
   overflowY: "auto",
-  scrollbarWidth: "thin",
   paddingRight: space["0.5"],
 });
 

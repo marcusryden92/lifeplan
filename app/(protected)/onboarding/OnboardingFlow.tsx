@@ -245,9 +245,14 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
   }, [roles, categories, updateAll, userId]);
 
   const commitWeek = useCallback(() => {
+    // Home-based blocks (sleep, routines) default to a location named "Home"
+    // when the user has one — mirrors the Work-location auto-pick. Absent a
+    // Home location, they stay Anywhere (null).
+    const homeLocationId =
+      locations.find((l) => l.name.trim().toLowerCase() === "home")?.id ?? null;
     const form: WeekFormInput = {
       sleep: week.sleepEnabled
-        ? { start: week.sleepStart, end: week.sleepEnd }
+        ? { start: week.sleepStart, end: week.sleepEnd, locationId: homeLocationId }
         : null,
       work: week.workEnabled
         ? {
@@ -265,10 +270,10 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
           }
         : null,
       morning: week.morningEnabled
-        ? { start: week.morningStart, end: week.morningEnd }
+        ? { start: week.morningStart, end: week.morningEnd, locationId: homeLocationId }
         : null,
       evening: week.eveningEnabled
-        ? { start: week.eveningStart, end: week.eveningEnd }
+        ? { start: week.eveningStart, end: week.eveningEnd, locationId: homeLocationId }
         : null,
     };
     const nowIso = new Date().toISOString();
@@ -302,7 +307,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
           : undefined,
     );
     weekWorkApplied.current = hasWork;
-  }, [week, template, updateAll, userId]);
+  }, [week, template, locations, updateAll, userId]);
 
   const commitBrainDump = useCallback(() => {
     const nowIso = new Date().toISOString();

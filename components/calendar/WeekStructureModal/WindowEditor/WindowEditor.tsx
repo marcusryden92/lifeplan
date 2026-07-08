@@ -8,6 +8,7 @@ import {
   parseRecurrenceExceptions,
   serializeRecurrenceExceptions,
 } from "@/utils/planRecurrence";
+import { buildIndentedCategoryList } from "@/utils/categoryUtils";
 import { UNASSIGNED_COLOR } from "../constants";
 import type { WorkingWindow } from "../timeWindow";
 import {
@@ -74,13 +75,14 @@ export function WindowEditor({
       <div className={fieldWithMargin}>
         <span className={fieldLabel}>category</span>
         <div className={categoryRow}>
-          {categories.map((c) => (
+          {buildIndentedCategoryList(categories).map((c) => (
             <button
               key={c.id}
               type="button"
               className={categoryOption}
               data-active={win.categoryId === c.id}
               onClick={() => onUpdate({ categoryId: c.id })}
+              style={c.depth > 0 ? { marginLeft: c.depth * 12 } : undefined}
             >
               <span
                 className={categoryDot}

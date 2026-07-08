@@ -16,11 +16,10 @@ const lockedShake = keyframes({
   "40%, 80%": { transform: "translateX(3px)" },
 });
 
-
 export const progressBlock = style({
-  marginTop: space["10"],
-  marginBottom: space["6"],
-  height: 38,
+  paddingTop: space["5"],
+  paddingBottom: space["5"],
+  height: 60,
   flexShrink: 0,
   overflow: "hidden",
 });

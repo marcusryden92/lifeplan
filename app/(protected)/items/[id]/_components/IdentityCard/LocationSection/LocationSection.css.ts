@@ -12,6 +12,7 @@ export const fieldStack = style({
   flexDirection: "column",
   gap: space["2"],
   minWidth: 0,
+  gridColumn: "1 / -1",
 });
 
 export const fieldLabel = style([
@@ -23,7 +24,7 @@ export const fieldLabel = style([
 
 export const placeRow = style({
   display: "flex",
-  alignItems: "center",
+  alignItems: "top",
   gap: space["2.5"],
 });
 

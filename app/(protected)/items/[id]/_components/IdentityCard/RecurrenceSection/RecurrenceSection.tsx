@@ -1,6 +1,6 @@
 "use client";
 
-import { Caption, DateTimePicker } from "@/components/ui";
+import { DateTimePicker } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatDatetimeLocal, parseDatetimeLocal } from "@/utils/datetime";
 import {
@@ -9,7 +9,12 @@ import {
   type PlanRecurrenceRule,
 } from "@/utils/planRecurrence";
 import { useItem } from "../../ItemContext";
-import { fieldStack, fieldLabel, select, untilRow } from "./RecurrenceSection.css";
+import {
+  recurGrid,
+  fieldStack,
+  fieldLabel,
+  select,
+} from "./RecurrenceSection.css";
 
 type RecurrencePreset = "none" | "daily" | "weekly" | "biweekly" | "monthly";
 
@@ -65,30 +70,32 @@ export function RecurrenceSection() {
   };
 
   return (
-    <div className={fieldStack}>
-      <span className={fieldLabel}>Repeats</span>
-      <select
-        className={select}
-        value={preset}
-        onChange={(e) =>
-          applyRule(
-            ruleFromPreset(
-              e.target.value as RecurrencePreset,
-              rule?.until ?? null,
-            ),
-          )
-        }
-        aria-label="Recurrence"
-      >
-        {(Object.keys(PRESET_LABELS) as RecurrencePreset[]).map((key) => (
-          <option key={key} value={key}>
-            {PRESET_LABELS[key]}
-          </option>
-        ))}
-      </select>
+    <div className={recurGrid}>
+      <div className={fieldStack}>
+        <span className={fieldLabel}>Repeats</span>
+        <select
+          className={select}
+          value={preset}
+          onChange={(e) =>
+            applyRule(
+              ruleFromPreset(
+                e.target.value as RecurrencePreset,
+                rule?.until ?? null,
+              ),
+            )
+          }
+          aria-label="Recurrence"
+        >
+          {(Object.keys(PRESET_LABELS) as RecurrencePreset[]).map((key) => (
+            <option key={key} value={key}>
+              {PRESET_LABELS[key]}
+            </option>
+          ))}
+        </select>
+      </div>
       {rule && (
-        <div className={untilRow}>
-          <Caption>Until (optional)</Caption>
+        <div className={fieldStack}>
+          <span className={fieldLabel}>Until (optional)</span>
           <DateTimePicker
             value={formatDatetimeLocal(rule.until)}
             onChange={(v) =>

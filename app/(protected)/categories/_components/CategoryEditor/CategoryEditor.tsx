@@ -9,6 +9,7 @@ import {
   parseRecurrenceExceptions,
   serializeRecurrenceExceptions,
 } from "@/utils/planRecurrence";
+import { buildIndentedCategoryList } from "@/utils/categoryUtils";
 import { WindowsMiniGrid } from "../WindowsMiniGrid";
 import { useInlineEdit } from "./useInlineEdit";
 import {
@@ -142,12 +143,12 @@ export function CategoryEditor({
 
   const parentOptions = [
     { value: null as string | null, label: <Caption>Top-level</Caption> },
-    ...categories
+    ...buildIndentedCategoryList(categories)
       .filter((c) => c.id !== category.id && c.parentId !== category.id)
       .map((c) => ({
         value: c.id,
         label: (
-          <span className={inlineRow}>
+          <span className={inlineRow} style={{ paddingLeft: c.depth * 12 }}>
             {c.color && (
               <span
                 className={parentOptionDot}

@@ -22,7 +22,7 @@ export function DateSection() {
           display: "flex",
           flexDirection: "column",
           gap: space["1"],
-          maxWidth: "200px",
+          maxWidth: "220px",
         }}
       >
         <DateTimePicker

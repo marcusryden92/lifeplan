@@ -41,7 +41,13 @@ export function LocationSection() {
       ...locations.map((l) => ({
         value: l.id,
         label: (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: space["2"] }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: space["2"],
+            }}
+          >
             <MapPin size={12} strokeWidth={2} />
             <span>{l.name}</span>
           </span>
@@ -60,19 +66,33 @@ export function LocationSection() {
       <span className={fieldLabel}>Place</span>
       <div className={placeRow}>
         {categoryHasLocation && (
-          <SegmentedControl<OverrideKey>
-            value={locationOverrideEnabled ? "override" : "inherited"}
-            onChange={(next) => {
-              const nextEnabled = next === "override";
-              if (nextEnabled !== locationOverrideEnabled) {
-                toggleLocationOverride();
-              }
-            }}
-            options={[
-              { key: "inherited", label: "Inherited" },
-              { key: "override", label: "Override" },
-            ]}
-          />
+          <div>
+            <SegmentedControl<OverrideKey>
+              value={locationOverrideEnabled ? "override" : "inherited"}
+              onChange={(next) => {
+                const nextEnabled = next === "override";
+                if (nextEnabled !== locationOverrideEnabled) {
+                  toggleLocationOverride();
+                }
+              }}
+              options={[
+                { key: "inherited", label: "Inherited" },
+                { key: "override", label: "Override" },
+              ]}
+            />
+            {categoryHasLocation && (
+              <div className={hintRow}>
+                <span
+                  className={inheritedHint}
+                  style={{
+                    visibility: locationOverrideEnabled ? "hidden" : "visible",
+                  }}
+                >
+                  from {category?.name}
+                </span>
+              </div>
+            )}
+          </div>
         )}
         <Combobox
           value={item.locationId ?? null}
@@ -99,36 +119,24 @@ export function LocationSection() {
           }}
           ariaLabel="Location"
         />
-      </div>
-      {categoryHasLocation && (
-        <div className={hintRow}>
-          <span
-            className={inheritedHint}
-            style={{
-              visibility: locationOverrideEnabled ? "hidden" : "visible",
-            }}
-          >
-            from {category?.name}
-          </span>
-        </div>
-      )}
-      <div
-        style={{
-          marginTop: space["1.5"],
-          visibility: isGoal ? "visible" : "hidden",
-        }}
-        aria-hidden={!isGoal}
-      >
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={requestResetSubgoalLocations}
-          disabled={!isGoal}
-          className={flushLeftBtn}
+        <div
+          style={{
+            marginTop: space["0.5"],
+            visibility: isGoal ? "visible" : "hidden",
+          }}
+          aria-hidden={!isGoal}
         >
-          <RotateCcw size={11} strokeWidth={2.2} />
-          Reset sub-goal places
-        </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={requestResetSubgoalLocations}
+            disabled={!isGoal}
+            className={flushLeftBtn}
+          >
+            <RotateCcw size={11} strokeWidth={2.2} />
+            Reset sub-goal places
+          </Button>
+        </div>
       </div>
     </div>
   );

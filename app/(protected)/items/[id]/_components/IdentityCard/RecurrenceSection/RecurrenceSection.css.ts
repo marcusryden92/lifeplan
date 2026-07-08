@@ -5,8 +5,22 @@ import {
   themeTransition,
   radii,
   text,
+  media,
   fieldLabel as fieldLabelPreset,
 } from "@/lib/theme";
+
+// Mirror SplittingSection: the recurrence select on the left, the optional
+// "until" date on the right, so setting an end date does not grow the section.
+export const recurGrid = style({
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: "13px 22px",
+  alignItems: "start",
+  minWidth: 0,
+  "@media": {
+    [media.mobile]: { gridTemplateColumns: "1fr" },
+  },
+});
 
 export const fieldStack = style({
   display: "flex",
@@ -18,6 +32,7 @@ export const fieldStack = style({
 export const fieldLabel = style([
   fieldLabelPreset,
   {
+    whiteSpace: "nowrap",
     transition: themeTransition,
   },
 ]);
@@ -29,6 +44,7 @@ export const select = style([
     border: `1px solid ${vars.glass.stroke}`,
     borderRadius: radii["sm+2"],
     padding: "6px 11px",
+    minHeight: 34,
     color: vars.ink,
     outline: "none",
     width: "100%",
@@ -42,9 +58,3 @@ export const select = style([
     },
   },
 ]);
-
-export const untilRow = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["1"],
-});

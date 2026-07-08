@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { Switch } from "@/components/ui";
-import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatMinutesToHours } from "@/utils/taskArrayUtils";
 import {
   MIN_CHUNK_MINUTES,
@@ -13,10 +12,12 @@ import {
 } from "@/utils/taskSplitting";
 import { useItem } from "../../ItemContext";
 import {
+  splitGrid,
   fieldStack,
   fieldLabel,
   toggleRow,
   toggleHint,
+  boxesCol,
   inputsGrid,
   inputStack,
   inputCaption,
@@ -75,13 +76,11 @@ function CommitNumberInput({
 
 export function SplittingSection() {
   const { item, updateField } = useItem();
-  const { planner } = useCalendarProvider();
 
-  // Splittable = anything the scheduler places as a block: standalone tasks
-  // and goal subtree leaves (goal-typed rows without children). Plans are
-  // fixed anchors; parent containers never schedule themselves.
-  const hasChildren = planner.some((p) => p.parentId === item.id);
-  if (item.plannerType === "plan" || hasChildren) return null;
+  // Splittable = a task the scheduler places as a single block. Plans are
+  // fixed anchors and goals are containers (their leaf tasks get split, not the
+  // container), so chunking is exposed on task-typed rows only.
+  if (item.plannerType !== "task") return null;
 
   const settings = parseTaskSplitting(item.splitting);
   const completed = splitCompletedMinutes(item);
@@ -130,24 +129,26 @@ export function SplittingSection() {
   };
 
   return (
-    <div className={fieldStack}>
-      <span className={fieldLabel}>Split into chunks</span>
-      <div className={toggleRow}>
-        <Switch
-          checked={settings !== null}
-          onCheckedChange={(checked) =>
-            apply(checked ? DEFAULT_SETTINGS : null)
-          }
-          aria-label="Split into chunks"
-        />
-        {!settings && (
-          <span className={toggleHint}>
-            Schedule as flexible chunks instead of one block
-          </span>
-        )}
+    <div className={splitGrid}>
+      <div className={fieldStack}>
+        <span className={fieldLabel}>Split into chunks</span>
+        <div className={toggleRow}>
+          <Switch
+            checked={settings !== null}
+            onCheckedChange={(checked) =>
+              apply(checked ? DEFAULT_SETTINGS : null)
+            }
+            aria-label="Split into chunks"
+          />
+          {!settings && (
+            <span className={toggleHint}>
+              Schedule as flexible chunks instead of one block
+            </span>
+          )}
+        </div>
       </div>
       {settings && (
-        <>
+        <div className={boxesCol}>
           <div className={inputsGrid}>
             <div className={inputStack}>
               <span className={inputCaption}>Min (min)</span>
@@ -181,7 +182,7 @@ export function SplittingSection() {
               {formatMinutesToHours(item.duration)} done
             </span>
           )}
-        </>
+        </div>
       )}
     </div>
   );

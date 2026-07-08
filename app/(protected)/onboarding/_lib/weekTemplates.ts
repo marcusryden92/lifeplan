@@ -57,7 +57,11 @@ export const DEFAULT_WEEK: WeekUIState = {
   eveningEnd: "22:00",
 };
 
-export type SleepInput = { start: string; end: string };
+export type SleepInput = {
+  start: string;
+  end: string;
+  locationId?: string | null;
+};
 export type WorkInput = {
   start: string;
   end: string;
@@ -69,7 +73,11 @@ export type ExerciseInput = {
   end: string;
   days: WeekDayIntegers[];
 };
-export type RitualInput = { start: string; end: string };
+export type RitualInput = {
+  start: string;
+  end: string;
+  locationId?: string | null;
+};
 
 export type WeekFormInput = {
   sleep: SleepInput | null;
@@ -173,7 +181,7 @@ export function buildWeekTemplates(
       input.sleep.start,
       input.sleep.end,
     )) {
-      push(block, "Sleep", SLEEP_COLOR, null);
+      push(block, "Sleep", SLEEP_COLOR, input.sleep.locationId ?? null);
     }
   }
 
@@ -195,7 +203,7 @@ export function buildWeekTemplates(
       input.morning.end,
       false,
     )) {
-      push(block, "Morning routine", MORNING_COLOR, null);
+      push(block, "Morning routine", MORNING_COLOR, input.morning.locationId ?? null);
     }
   }
 
@@ -206,7 +214,7 @@ export function buildWeekTemplates(
       input.evening.end,
       false,
     )) {
-      push(block, "Evening routine", EVENING_COLOR, null);
+      push(block, "Evening routine", EVENING_COLOR, input.evening.locationId ?? null);
     }
   }
 

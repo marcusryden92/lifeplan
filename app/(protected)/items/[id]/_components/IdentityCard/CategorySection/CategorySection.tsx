@@ -3,6 +3,7 @@
 import { space, radii } from "@/lib/theme";
 import { useMemo } from "react";
 import { Caption, CategoryBadge, Combobox } from "@/components/ui";
+import { buildIndentedCategoryList } from "@/utils/categoryUtils";
 import { useItem } from "../../ItemContext";
 import { fieldStack, fieldLabel } from "./CategorySection.css";
 
@@ -12,10 +13,17 @@ export function CategorySection() {
   const categoryOptions = useMemo(
     () => [
       { value: null, label: <Caption>No category</Caption> },
-      ...categories.map((c) => ({
+      ...buildIndentedCategoryList(categories).map((c) => ({
         value: c.id,
         label: (
-          <span style={{ display: "inline-flex", alignItems: "center", gap: space["2"] }}>
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: space["2"],
+              paddingLeft: c.depth * space["3"],
+            }}
+          >
             {c.color && (
               <span
                 style={{
