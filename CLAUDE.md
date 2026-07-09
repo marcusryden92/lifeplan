@@ -151,7 +151,7 @@
   │   │   ├── calendarSourceSlice.ts    # User-authored inputs: planner, template, categories, isLoaded
   │   │   ├── engineOutputSlice.ts      # Engine-derived: calendar, categoryEvents, travelEvents, engineMessages, plannerScores + lastEngineRunAt (ephemeral)
   │   │   ├── userSlice.ts
-  │   │   └── schedulingSettingsSlice.ts # bufferTimeMinutes, defaultTransportMode, travelTimeMatrix (engine-shaped), allTravelTimes (full rows), locations, strategy weights/scores/penalties, enableTravelEvents
+  │   │   └── schedulingSettingsSlice.ts # bufferTimeMinutes, defaultTransportMode, allTravelTimes (full rows — sole source of truth), locations, strategy weights/scores/penalties, enableTravelEvents. The engine-shaped single-mode matrix is NOT stored; it is derived from allTravelTimes + defaultTransportMode at each engine run via deriveTravelTimeMatrix (so travel-time/mode changes take effect without a reload)
   │   └── thunks/
   │       └── calendarThunks.ts         # updateAllCalendarStates — the engine entry point from Redux
   │

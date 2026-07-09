@@ -19,6 +19,7 @@ import { applyEngineRun } from "@/redux/slices/engineOutputSlice";
 import { useSelector } from "react-redux";
 import {
   travelTimeArrayToMap,
+  deriveTravelTimeMatrix,
   type SerializedTravelTimeEntry,
   type DebugStrategyConfig,
 } from "@/redux/slices/schedulingSettingsSlice";
@@ -41,8 +42,17 @@ const useManuallyRefreshCalendar = (
   const enableTravelEvents = useSelector(
     (state: RootState) => state.schedulingSettings.enableTravelEvents
   );
-  const travelTimeMatrix = useSelector(
-    (state: RootState) => state.schedulingSettings.travelTimeMatrix
+  const allTravelTimes = useSelector(
+    (state: RootState) => state.schedulingSettings.allTravelTimes
+  );
+  const defaultTransportMode = useSelector(
+    (state: RootState) => state.schedulingSettings.defaultTransportMode
+  );
+  // Derived fresh from the source-of-truth rows so travel-time and transport-
+  // mode changes take effect on the next regen without a page reload.
+  const travelTimeMatrix = deriveTravelTimeMatrix(
+    allTravelTimes,
+    defaultTransportMode
   );
   const debugStrategyConfig = useSelector(
     (state: RootState) => state.schedulingSettings.debugStrategyConfig

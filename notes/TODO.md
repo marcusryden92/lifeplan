@@ -1,6 +1,5 @@
 # Issues
 
-- Onboarding should not split sleep items at midnight
 - Still need to hard refresh for new locations to take effect
 - Completing a split task still needs to move it to now if its future planned
 

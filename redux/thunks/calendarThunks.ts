@@ -8,7 +8,10 @@ import {
   setPlannerAndTemplate,
 } from "../slices/calendarSourceSlice";
 import { applyEngineRun } from "../slices/engineOutputSlice";
-import { travelTimeArrayToMap } from "../slices/schedulingSettingsSlice";
+import {
+  travelTimeArrayToMap,
+  deriveTravelTimeMatrix,
+} from "../slices/schedulingSettingsSlice";
 
 type CalendarPayload = {
   planner?: Planner[] | ((prev: Planner[]) => Planner[]);
@@ -53,7 +56,13 @@ export const updateAllCalendarStates =
       state.schedulingSettings.bufferTimeMinutes;
     const enableTravelEvents: boolean =
       state.schedulingSettings.enableTravelEvents;
-    const travelTimeMatrix = state.schedulingSettings.travelTimeMatrix;
+    // Derived fresh from the source-of-truth rows so newly added locations,
+    // refreshed travel times, override edits, and transport-mode switches take
+    // effect on the next regen without a page reload.
+    const travelTimeMatrix = deriveTravelTimeMatrix(
+      state.schedulingSettings.allTravelTimes,
+      state.schedulingSettings.defaultTransportMode,
+    );
 
     const newPlanner = updates.planner
       ? processInput(updates.planner, currentPlanner)

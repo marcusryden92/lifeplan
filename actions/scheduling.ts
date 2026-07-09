@@ -32,16 +32,9 @@ export async function fetchAllSchedulingData(): Promise<{
     defaultTransportMode: TransportMode;
     weekStartDay: number;
   };
-  travelTimes: Array<{
-    key: string;
-    fromLocationId: string;
-    toLocationId: string;
-    rushHourMinutes: number;
-    regularMinutes: number;
-    nightMinutes: number;
-  }>;
-  // Full TravelTime rows, every transport mode — source of truth for the
-  // Locations UI. The engine-shaped travelTimes above is derived from these.
+  // Full TravelTime rows, every transport mode — the single source of truth for
+  // both the Locations UI and the engine (which derives its single-mode matrix
+  // from these client-side via deriveTravelTimeMatrix).
   allTravelTimes: SerializedTravelTime[];
   locations: Array<{
     id: string;
@@ -85,26 +78,12 @@ export async function fetchAllSchedulingData(): Promise<{
     customNightMinutes: tt.customNightMinutes,
   }));
 
-  // Engine-shaped subset for the default mode. Key format must match
-  // TimeSlotManager.getTravelTime: "fromId->toId".
-  const travelTimeMatrix = allTravelTimes
-    .filter((tt) => tt.transportMode === defaultTransportMode)
-    .map((tt) => ({
-      key: `${tt.fromLocationId}->${tt.toLocationId}`,
-      fromLocationId: tt.fromLocationId,
-      toLocationId: tt.toLocationId,
-      rushHourMinutes: tt.customRushHourMinutes ?? tt.googleRushHourMinutes,
-      regularMinutes: tt.customRegularMinutes ?? tt.googleRegularMinutes,
-      nightMinutes: tt.customNightMinutes ?? tt.googleNightMinutes,
-    }));
-
   return {
     preferences: {
       bufferTimeMinutes: prefs?.bufferTimeMinutes ?? 10,
       defaultTransportMode,
       weekStartDay: prefs?.weekStartDay ?? 1,
     },
-    travelTimes: travelTimeMatrix,
     allTravelTimes,
     locations,
   };
