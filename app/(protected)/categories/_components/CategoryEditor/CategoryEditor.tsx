@@ -1,16 +1,14 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { ChevronRight, Lock, MapPin, SquarePen, Trash2 } from "lucide-react";
 import { Button, Caption, Combobox } from "@/components/ui";
 import type { Category } from "@/types/prisma";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
-import { WindowExceptionEditor } from "@/components/events/WindowExceptionEditor";
-import {
-  parseRecurrenceExceptions,
-  serializeRecurrenceExceptions,
-} from "@/utils/planRecurrence";
+import { parseRecurrenceExceptions } from "@/utils/planRecurrence";
 import { buildIndentedCategoryList } from "@/utils/categoryUtils";
 import { WindowsMiniGrid } from "../WindowsMiniGrid";
+import { CategoryExceptionsModal } from "../CategoryExceptionsModal";
 import { useInlineEdit } from "./useInlineEdit";
 import {
   editor,
@@ -49,9 +47,7 @@ import {
   parentOptionDot,
   lockIcon,
   subCategoryChevron,
-  windowExceptionsList,
-  windowExceptionBlock,
-  windowExceptionHeading,
+  exceptionsBlock,
 } from "./CategoryEditor.css";
 
 export const SWATCH_PALETTE = [
@@ -66,8 +62,6 @@ export const SWATCH_PALETTE = [
 ];
 
 const FALLBACK_COLOR = "#9ca3af";
-
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 interface CategoryEditorProps {
   category: Category;
@@ -124,6 +118,17 @@ export function CategoryEditor({
     resetKey: category.id,
     onCommit: onRename,
   });
+
+  const [exceptionsOpen, setExceptionsOpen] = useState(false);
+  const totalExceptions = useMemo(
+    () =>
+      category.timeSlots.reduce(
+        (sum, w) =>
+          sum + parseRecurrenceExceptions(w.recurrenceExceptions).length,
+        0,
+      ),
+    [category.timeSlots],
+  );
 
   const color = category.color || FALLBACK_COLOR;
   const initial = category.name.charAt(0).toUpperCase() || "?";
@@ -361,42 +366,18 @@ export function CategoryEditor({
             color={color}
             onOpen={onOpenWindows}
           />
-          {category.timeSlots.length > 0 && (
-            <>
+          {totalExceptions > 0 && (
+            <div className={exceptionsBlock}>
               <span className={subsectionLabel}>Per-occurrence exceptions</span>
-              <div className={windowExceptionsList}>
-                {[...category.timeSlots]
-                  .sort(
-                    (a, b) =>
-                      ((a.day + 6) % 7) - ((b.day + 6) % 7) ||
-                      a.startTime.localeCompare(b.startTime),
-                  )
-                  .map((row) => (
-                    <div key={row.id} className={windowExceptionBlock}>
-                      <span className={windowExceptionHeading}>
-                        <span
-                          className={subCategoryDot}
-                          style={{ background: color }}
-                        />
-                        {DAY_LABELS[row.day]} {row.startTime}–{row.endTime}
-                      </span>
-                      <WindowExceptionEditor
-                        window={row}
-                        exceptions={parseRecurrenceExceptions(
-                          row.recurrenceExceptions,
-                        )}
-                        onChange={(next) =>
-                          onChangeWindowExceptions(
-                            row.id,
-                            serializeRecurrenceExceptions(next),
-                          )
-                        }
-                        variant="card"
-                      />
-                    </div>
-                  ))}
-              </div>
-            </>
+              <Button
+                variant="glass"
+                size="sm"
+                onClick={() => setExceptionsOpen(true)}
+              >
+                Review {totalExceptions} exception
+                {totalExceptions === 1 ? "" : "s"}
+              </Button>
+            </div>
           )}
         </div>
       ) : (
@@ -472,6 +453,12 @@ export function CategoryEditor({
         </div>
       )}
 
+      <CategoryExceptionsModal
+        open={exceptionsOpen}
+        onClose={() => setExceptionsOpen(false)}
+        category={category}
+        onChangeWindowExceptions={onChangeWindowExceptions}
+      />
     </div>
   );
 }
