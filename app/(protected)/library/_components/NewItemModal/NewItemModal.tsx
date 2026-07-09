@@ -8,6 +8,7 @@ import { Button, Caption, SegmentedControl } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { fallbackCalendarColor } from "@/utils/colorUtils";
 import { defaultReadyForType } from "@/utils/plannerReadiness";
+import { PRIORITY_DEFAULT } from "@/utils/plannerPriority";
 import type { Planner } from "@/types/prisma";
 import {
   overlay,
@@ -87,7 +88,7 @@ export function NewItemModal({
       sortOrder: 0,
       completedStartTime: null,
       completedEndTime: null,
-      priority: 5,
+      priority: PRIORITY_DEFAULT,
       userId,
       // A palette color keyed on the id, not the silent red default.
       color: fallbackCalendarColor(id),

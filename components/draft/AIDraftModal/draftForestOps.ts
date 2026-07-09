@@ -3,6 +3,7 @@ import type { DraftNode } from "./plannerTreeToJson";
 import type { DraftForest } from "./plannerForestToJson";
 import { normalizeDraftTree, coerceParentTypes } from "./normalizeDraftTree";
 import { normalizeTaskSplittingSettings } from "@/utils/taskSplitting";
+import { clampPriority } from "@/utils/plannerPriority";
 
 // Deterministic operations on a DraftForest, executed server-side on the
 // assistant's working copy so the model states intent (ids + fields) and code
@@ -209,7 +210,7 @@ export function updateDraftItems(
         failures.push({ id, reason: "priority must be an integer" });
         continue;
       }
-      node.priority = Math.floor(update.priority);
+      node.priority = clampPriority(update.priority);
     }
     if (update.categoryId !== undefined) {
       if (!isRoot) {

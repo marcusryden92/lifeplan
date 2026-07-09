@@ -1,5 +1,6 @@
 import type { DraftNode } from "./plannerTreeToJson";
 import { normalizeTaskSplittingSettings } from "@/utils/taskSplitting";
+import { clampPriority, PRIORITY_DEFAULT } from "@/utils/plannerPriority";
 
 // Partial-JSON parses of a streaming tool input can hand back nodes with
 // missing fields — most commonly `children` still undefined because the array
@@ -17,7 +18,10 @@ export function normalizeDraftTree(raw: unknown): DraftNode | null {
       ? node.plannerType
       : "task";
   const duration = typeof node.duration === "number" ? node.duration : 0;
-  const priority = typeof node.priority === "number" ? node.priority : 0;
+  const priority =
+    typeof node.priority === "number"
+      ? clampPriority(node.priority)
+      : PRIORITY_DEFAULT;
   const id = typeof node.id === "string" ? node.id : "";
   const deadline = typeof node.deadline === "string" ? node.deadline : null;
   const isReady = typeof node.isReady === "boolean" ? node.isReady : null;

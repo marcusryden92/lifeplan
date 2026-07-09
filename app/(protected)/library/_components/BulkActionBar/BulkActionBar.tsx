@@ -7,6 +7,7 @@ import { CategoryDot } from "@/components/ui";
 import { pillBtn, popover as popoverRecipe } from "@/lib/theme";
 import { CALENDAR_COLOR_GROUPS } from "@/data/calendarColors";
 import { buildCategoryTree, type CategoryNode } from "@/utils/categoryUtils";
+import { PRIORITY_LEVELS } from "@/utils/plannerPriority";
 import type { Category } from "@/types/prisma";
 import {
   bar,
@@ -174,7 +175,7 @@ export function BulkActionBar({
             {...contentProps}
           >
             <div className={priorityRow}>
-              {Array.from({ length: 11 }).map((_, p) => (
+              {PRIORITY_LEVELS.map((p) => (
                 <button
                   key={p}
                   type="button"

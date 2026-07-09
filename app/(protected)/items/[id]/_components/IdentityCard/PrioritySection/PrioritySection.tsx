@@ -1,5 +1,6 @@
 "use client";
 
+import { PRIORITY_LEVELS } from "@/utils/plannerPriority";
 import { useItem } from "../../ItemContext";
 import {
   cardHeader,
@@ -16,7 +17,7 @@ export function PrioritySection() {
     <div className={cardHeader}>
       <span className={cardTitle}>Priority</span>
       <div className={priorityRow}>
-        {Array.from({ length: 11 }).map((_, p) => (
+        {PRIORITY_LEVELS.map((p) => (
           <button
             key={p}
             type="button"

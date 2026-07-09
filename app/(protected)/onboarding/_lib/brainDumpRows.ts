@@ -1,6 +1,7 @@
 import type { Planner } from "@/types/prisma";
 import { getTaskTreeIds } from "@/utils/goalPageHandlers";
 import { defaultReadyForType } from "@/utils/plannerReadiness";
+import { PRIORITY_DEFAULT } from "@/utils/plannerPriority";
 import {
   DEFAULT_DRAFT_DURATION_MIN,
   type TriageType,
@@ -47,7 +48,7 @@ export function buildBrainDumpRow(
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,
-    priority: 5,
+    priority: PRIORITY_DEFAULT,
     userId,
     color: null,
     locationId: null,

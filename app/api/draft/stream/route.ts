@@ -535,7 +535,7 @@ Each node in a goal tree has:
 - plannerType: "task" | "plan" | "goal". Leaves are "task"; any node with subtasks is a "goal" — the app enforces this automatically, so you never need to fix a parent's type by hand. Change a leaf's type with update_items (task <-> goal, or plan -> task). Never create new "plan" nodes — plans need a fixed start time this contract doesn't carry.
 - duration: minutes required for that leaf task. For a "goal" node, duration is a rough estimate (children sum to the real total).
 - deadline: ISO date string or null.
-- priority: integer.
+- priority: integer 1-7 (higher = more important); 4 is neutral.
 - isReady: top-level goals only — true marks the goal ready for scheduling, and requires at least one subtask AND a deadline (the app blocks it otherwise). Default a goal you create to ready (isReady true) whenever it has subtasks and a deadline, so it starts scheduling immediately and the user doesn't have to turn it on by hand. If it has no deadline or no subtasks, leave it unready and, in plain words, tell the user what it still needs before it can be scheduled. OMIT this field (or use null) on all child nodes; readiness cascades from the root (every row in a subtree carries the root's value, stamped on save).
 - categoryId: top-level goals only — one of the user's category ids, or null. Echo it verbatim for retained goals (null on a retained goal means "leave as is"); pick a fitting category for new goals, or null if none fits. Never set it on child nodes; they inherit.
 - color: top-level goals only — a 6-digit hex color for the whole goal (its subtasks inherit it on the calendar). Give every NEW goal a fitting color and vary colors across goals so the calendar doesn't come out all one shade. Good palette: #1976D2 blue, #2E7D32 green, #F77F00 orange, #6C5CE7 violet, #16A085 teal, #E63946 red, #FFB703 amber, #1D3557 navy, #8E44AD purple, #D81B60 pink. Echo the existing color verbatim for retained goals (null means "leave as is"). Never set it on child nodes; they inherit.
@@ -617,7 +617,7 @@ const proposeGoalsTool: Anthropic.Tool = {
             description: "Duration in minutes.",
           },
           deadline: { type: ["string", "null"] },
-          priority: { type: "integer" },
+          priority: { type: "integer", minimum: 1, maximum: 7 },
           isReady: { type: ["boolean", "null"] },
           categoryId: {
             type: ["string", "null"],
@@ -719,7 +719,7 @@ const updateItemsTool: Anthropic.Tool = {
             plannerType: { type: "string", enum: ["task", "goal"] },
             duration: { type: "integer" },
             deadline: { type: ["string", "null"] },
-            priority: { type: "integer" },
+            priority: { type: "integer", minimum: 1, maximum: 7 },
             isReady: { type: ["boolean", "null"] },
             categoryId: { type: ["string", "null"] },
             splitting: {
@@ -780,7 +780,7 @@ const addItemsTool: Anthropic.Tool = {
           plannerType: { type: "string", enum: ["task", "goal"] },
           duration: { type: "integer" },
           deadline: { type: ["string", "null"] },
-          priority: { type: "integer" },
+          priority: { type: "integer", minimum: 1, maximum: 7 },
           isReady: { type: ["boolean", "null"] },
           splitting: {
             type: ["object", "null"],

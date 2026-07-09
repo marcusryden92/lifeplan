@@ -24,6 +24,7 @@ import { useSelector } from "react-redux";
 import { listRow } from "@/lib/theme";
 import { usePlatform } from "@/hooks/usePlatform";
 import { deleteGoal } from "@/utils/goalPageHandlers";
+import { PRIORITY_DEFAULT } from "@/utils/plannerPriority";
 import { isUnprocessed } from "@/utils/plannerStatus";
 import { ageLabel } from "@/utils/timeFormatting";
 import type { RootState } from "@/redux/store";
@@ -196,7 +197,7 @@ export default function CapturePage() {
         sortOrder: 0,
         completedStartTime: null,
         completedEndTime: null,
-        priority: 5,
+        priority: PRIORITY_DEFAULT,
         userId,
         color: null,
         locationId: null,

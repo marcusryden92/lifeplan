@@ -652,6 +652,7 @@
   - `add_category_window_recurrence_exceptions` — `CategoryTimeWindow.recurrenceExceptions` (nullable JSON string). Per-occurrence moved/deleted overrides for category windows, applied in `expandCategoryWindowPeriods` (the shared expansion for slot fabric + CategoryEvent materialization); a moved occurrence keeps its original-date CategoryEvent id.
   - `add_task_splitting` — `Planner.splitting` + `Planner.completedSegments` (nullable JSON strings). Split tasks: chunking settings and the per-chunk completion record (completed minutes always derived by summing segments, never stored as a counter).
   - `backfill_task_is_ready` — SQL-only data backfill (no schema change). Readiness became the universal scheduling gate (tasks + goals, not goals alone); sets existing tasks and plans to `isReady = true` so their current scheduling behavior is preserved once the gate applies to tasks. Goals untouched (their readiness is user-controlled).
+  - `clamp_priority_range` — SQL-only data backfill (no schema change). Priority moved from a 0-10 scale to a 1-7 scale (higher = more important, 4 neutral); clamps existing rows outside 1-7 into the range, leaving in-range values untouched. The range + default live in [utils/plannerPriority.ts](utils/plannerPriority.ts) (`clampPriority`, `PRIORITY_LEVELS`), consumed by both priority pickers, every create surface, and the AI draft ops.
 
   Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 

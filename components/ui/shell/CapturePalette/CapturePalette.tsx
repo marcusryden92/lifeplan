@@ -12,6 +12,7 @@ import { Button } from "../../Button";
 import { Kbd } from "../../Kbd";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { usePlatform } from "@/hooks/usePlatform";
+import { PRIORITY_DEFAULT } from "@/utils/plannerPriority";
 import type { Planner } from "@/types/prisma";
 import {
   overlay,
@@ -59,7 +60,7 @@ export function CapturePalette() {
       sortOrder: 0,
       completedStartTime: null,
       completedEndTime: null,
-      priority: 5,
+      priority: PRIORITY_DEFAULT,
       userId,
       color: null,
       locationId: null,
