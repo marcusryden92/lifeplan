@@ -6,10 +6,9 @@ import { X } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import type { RootState } from "@/redux/store";
 import type { Category } from "@/types/prisma";
-import { RecurrenceExceptionList } from "@/components/events/RecurrenceExceptionList";
+import { WindowExceptionEditor } from "@/components/events/WindowExceptionEditor";
 import {
   parseRecurrenceExceptions,
-  removeException,
   serializeRecurrenceExceptions,
 } from "@/utils/planRecurrence";
 import { orderedWeekDays } from "@/utils/calendarUtils";
@@ -28,7 +27,7 @@ import {
   windowLabel,
   countBadge,
   panel,
-  exceptionList,
+  panelHeading,
   empty,
 } from "./CategoryExceptionsModal.css";
 
@@ -104,8 +103,8 @@ export function CategoryExceptionsModal({
             <div className={headerText}>
               <Dialog.Title className={title}>Window exceptions</Dialog.Title>
               <span className={subtitle}>
-                Skipped and moved occurrences in {category.name}. Restore one to
-                return it to its regular time.
+                Skip or move individual occurrences of {category.name}&apos;s
+                windows, or restore ones you&apos;ve changed.
               </span>
             </div>
             <button
@@ -143,26 +142,28 @@ export function CategoryExceptionsModal({
             </div>
 
             <div className={panel}>
-              {selectedWindow && selectedExceptions.length > 0 ? (
-                <div className={exceptionList}>
-                  <RecurrenceExceptionList
+              {selectedWindow ? (
+                <>
+                  <div className={panelHeading}>
+                    <span className={dot} style={{ background: color }} />
+                    {DAY_LABELS[selectedWindow.day]} {selectedWindow.startTime}–
+                    {selectedWindow.endTime}
+                  </div>
+                  <WindowExceptionEditor
+                    window={selectedWindow}
                     exceptions={selectedExceptions}
-                    onRestore={(key) =>
+                    onChange={(next) =>
                       onChangeWindowExceptions(
                         selectedWindow.id,
-                        serializeRecurrenceExceptions(
-                          removeException(selectedExceptions, key),
-                        ),
+                        serializeRecurrenceExceptions(next),
                       )
                     }
                     variant="card"
                   />
-                </div>
+                </>
               ) : (
                 <div className={empty}>
-                  {selectedWindow
-                    ? "No exceptions on this window."
-                    : "Select a window to see its exceptions."}
+                  Select a window to manage its exceptions.
                 </div>
               )}
             </div>

@@ -366,7 +366,7 @@ export function CategoryEditor({
             color={color}
             onOpen={onOpenWindows}
           />
-          {totalExceptions > 0 && (
+          {category.timeSlots.length > 0 && (
             <div className={exceptionsBlock}>
               <span className={subsectionLabel}>Per-occurrence exceptions</span>
               <Button
@@ -374,8 +374,8 @@ export function CategoryEditor({
                 size="sm"
                 onClick={() => setExceptionsOpen(true)}
               >
-                Review {totalExceptions} exception
-                {totalExceptions === 1 ? "" : "s"}
+                Manage exceptions
+                {totalExceptions > 0 ? ` · ${totalExceptions}` : ""}
               </Button>
             </div>
           )}

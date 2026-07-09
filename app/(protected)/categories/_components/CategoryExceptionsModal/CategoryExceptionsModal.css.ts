@@ -159,18 +159,27 @@ export const panel = style({
   minWidth: 0,
   overflow: "auto",
   padding: space["4"],
-});
-
-export const exceptionList = style({
   display: "flex",
   flexDirection: "column",
-  gap: space["1"],
+  gap: space["3"],
 });
+
+export const panelHeading = style([
+  text.bodySm,
+  {
+    fontWeight: 600,
+    color: vars.ink,
+    fontVariantNumeric: "tabular-nums",
+    display: "flex",
+    alignItems: "center",
+    gap: space["2"],
+  },
+]);
 
 export const empty = style([
   text.bodySm,
   {
-    height: "100%",
+    flex: 1,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
