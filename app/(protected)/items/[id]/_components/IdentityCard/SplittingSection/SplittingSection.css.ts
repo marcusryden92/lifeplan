@@ -1,12 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  text,
-  media,
-  fieldLabel as fieldLabelPreset,
-} from "@/lib/theme";
+import { space, vars, themeTransition, text, media } from "@/lib/theme";
 
 // Two field-grid columns: toggle on the left, chunk boxes on the right. The
 // boxes sit beside the toggle rather than under it, so enabling splitting does
@@ -21,21 +14,6 @@ export const splitGrid = style({
     [media.mobile]: { gridTemplateColumns: "1fr" },
   },
 });
-
-export const fieldStack = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["2"],
-  minWidth: 0,
-});
-
-export const fieldLabel = style([
-  fieldLabelPreset,
-  {
-    whiteSpace: "nowrap",
-    transition: themeTransition,
-  },
-]);
 
 export const toggleRow = style({
   display: "flex",

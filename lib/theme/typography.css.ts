@@ -26,7 +26,7 @@ export const text = styleVariants({
   body: [baseUI, { fontSize: 13, fontWeight: 500 }],
   bodyLg: [baseUI, { fontSize: 14, fontWeight: 500 }],
   bodySm: [baseUI, { fontSize: 12.5, fontWeight: 500 }],
-  row: [baseUI, { fontSize: 13.5, fontWeight: 500 }],
+  row: [baseUI, { fontSize: 13, fontWeight: 500 }],
   label: [baseUI, { fontSize: 11.5, fontWeight: 500 }],
   microLabel: [baseUI, { fontSize: 11, fontWeight: 500 }],
 });

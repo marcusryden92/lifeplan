@@ -1,10 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import {
-  space,
-  themeTransition,
-  media,
-  fieldLabel as fieldLabelPreset,
-} from "@/lib/theme";
+import { media } from "@/lib/theme";
 
 // Mirror SplittingSection: the recurrence select on the left, the optional
 // "until" date on the right, so setting an end date does not grow the section.
@@ -18,18 +13,3 @@ export const recurGrid = style({
     [media.mobile]: { gridTemplateColumns: "1fr" },
   },
 });
-
-export const fieldStack = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["2"],
-  minWidth: 0,
-});
-
-export const fieldLabel = style([
-  fieldLabelPreset,
-  {
-    whiteSpace: "nowrap",
-    transition: themeTransition,
-  },
-]);

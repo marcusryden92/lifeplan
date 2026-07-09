@@ -1,11 +1,10 @@
 "use client";
 
 import { space } from "@/lib/theme";
-import { DateTimePicker } from "@/components/ui";
+import { DateTimePicker, FieldStack } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatDatetimeLocal } from "@/utils/datetime";
 import { useItem } from "../../ItemContext";
-import { fieldStack, fieldLabel } from "./DateSection.css";
 
 export function DateSection() {
   const { item, changeDate } = useItem();
@@ -15,8 +14,7 @@ export function DateSection() {
   const dateValue = formatDatetimeLocal(isoValue);
 
   return (
-    <div className={fieldStack}>
-      <span className={fieldLabel}>{isPlan ? "Scheduled" : "Deadline"}</span>
+    <FieldStack label={isPlan ? "Scheduled" : "Deadline"}>
       <div
         style={{
           display: "flex",
@@ -32,6 +30,6 @@ export function DateSection() {
           ariaLabel={isPlan ? "Scheduled time" : "Deadline"}
         />
       </div>
-    </div>
+    </FieldStack>
   );
 }

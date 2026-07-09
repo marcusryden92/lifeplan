@@ -1,6 +1,6 @@
 "use client";
 
-import { Switch } from "@/components/ui";
+import { FieldStack, Switch } from "@/components/ui";
 import {
   SplittingFields,
   DEFAULT_SPLITTING_SETTINGS,
@@ -12,13 +12,7 @@ import {
   type TaskSplittingSettings,
 } from "@/utils/taskSplitting";
 import { useItem } from "../../ItemContext";
-import {
-  splitGrid,
-  fieldStack,
-  fieldLabel,
-  toggleRow,
-  toggleHint,
-} from "./SplittingSection.css";
+import { splitGrid, toggleRow, toggleHint } from "./SplittingSection.css";
 
 export function SplittingSection() {
   const { item, updateField } = useItem();
@@ -40,8 +34,7 @@ export function SplittingSection() {
 
   return (
     <div className={splitGrid}>
-      <div className={fieldStack}>
-        <span className={fieldLabel}>Split into chunks</span>
+      <FieldStack label="Split into chunks">
         <div className={toggleRow}>
           <Switch
             checked={settings !== null}
@@ -56,7 +49,7 @@ export function SplittingSection() {
             </span>
           )}
         </div>
-      </div>
+      </FieldStack>
       {settings && (
         <SplittingFields
           settings={settings}

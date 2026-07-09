@@ -10,7 +10,6 @@ import {
   fieldLabel,
 } from "@/lib/theme";
 
-
 const fadeIn = keyframes({
   from: { opacity: 0 },
   to: { opacity: 1 },
@@ -163,7 +162,7 @@ export const itemBody = style({
 });
 
 export const itemTitle = style({
-  fontSize: 13.5,
+  fontSize: 13,
   fontWeight: 500,
   color: vars.ink,
   overflow: "hidden",

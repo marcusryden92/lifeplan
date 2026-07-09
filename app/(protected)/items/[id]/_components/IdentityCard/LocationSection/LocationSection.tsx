@@ -5,11 +5,15 @@ import { useMemo } from "react";
 import { MapPin, RotateCcw } from "lucide-react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
-import { Button, Caption, Combobox, SegmentedControl } from "@/components/ui";
+import {
+  Button,
+  Caption,
+  Combobox,
+  FieldStack,
+  SegmentedControl,
+} from "@/components/ui";
 import { useItem } from "../../ItemContext";
 import {
-  fieldStack,
-  fieldLabel,
   placeRow,
   hintRow,
   inheritedHint,
@@ -62,8 +66,7 @@ export function LocationSection() {
   const dropdownDisabled = categoryHasLocation && !locationOverrideEnabled;
 
   return (
-    <div className={fieldStack}>
-      <span className={fieldLabel}>Place</span>
+    <FieldStack label="Place" full>
       <div className={placeRow}>
         {categoryHasLocation && (
           <div>
@@ -138,6 +141,6 @@ export function LocationSection() {
           </Button>
         </div>
       </div>
-    </div>
+    </FieldStack>
   );
 }

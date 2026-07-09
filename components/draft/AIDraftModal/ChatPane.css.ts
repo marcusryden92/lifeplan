@@ -1,5 +1,12 @@
 import { style, keyframes, globalStyle } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii, text, fieldLabel } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  radii,
+  text,
+  fieldLabel,
+} from "@/lib/theme";
 
 export const wrap = style({
   flex: 1,
@@ -117,7 +124,7 @@ globalStyle(`${markdownBody} strong`, {
 globalStyle(
   `${markdownBody} h1, ${markdownBody} h2, ${markdownBody} h3, ${markdownBody} h4`,
   {
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: 700,
     margin: "10px 0 4px",
     lineHeight: 1.4,

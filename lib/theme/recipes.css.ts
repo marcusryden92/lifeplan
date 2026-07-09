@@ -339,12 +339,12 @@ export const formInput = recipe({
     variant: {
       boxed: {
         fontFamily: vars.font.ui,
-        fontSize: 13.5,
+        fontSize: 13,
         fontWeight: 500,
-        padding: "6px 11px",
+        padding: `${space["1"]}px ${space["2"]}px`,
         background: "transparent",
         border: `1px solid ${vars.glass.stroke}`,
-        borderRadius: radii["sm+2"],
+        borderRadius: radii.sm,
         selectors: {
           "&:focus": { borderColor: vars.accent.primary },
         },

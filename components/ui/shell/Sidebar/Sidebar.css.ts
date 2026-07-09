@@ -53,7 +53,7 @@ export const navItem = style({
   background: "transparent",
   border: "none",
   color: vars.inkSoft,
-  fontSize: 13.5,
+  fontSize: 13,
   fontWeight: 500,
   fontFamily: vars.font.ui,
   cursor: "pointer",

@@ -1,6 +1,6 @@
 "use client";
 
-import { Combobox, DateTimePicker } from "@/components/ui";
+import { Combobox, DateTimePicker, FieldStack } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatDatetimeLocal, parseDatetimeLocal } from "@/utils/datetime";
 import {
@@ -9,7 +9,7 @@ import {
   type PlanRecurrenceRule,
 } from "@/utils/planRecurrence";
 import { useItem } from "../../ItemContext";
-import { recurGrid, fieldStack, fieldLabel } from "./RecurrenceSection.css";
+import { recurGrid } from "./RecurrenceSection.css";
 
 type RecurrencePreset = "none" | "daily" | "weekly" | "biweekly" | "monthly";
 
@@ -66,8 +66,7 @@ export function RecurrenceSection() {
 
   return (
     <div className={recurGrid}>
-      <div className={fieldStack}>
-        <span className={fieldLabel}>Repeats</span>
+      <FieldStack label="Repeats">
         <Combobox
           value={preset}
           options={(Object.keys(PRESET_LABELS) as RecurrencePreset[]).map(
@@ -77,10 +76,9 @@ export function RecurrenceSection() {
           width="100%"
           ariaLabel="Recurrence"
         />
-      </div>
+      </FieldStack>
       {rule && (
-        <div className={fieldStack}>
-          <span className={fieldLabel}>Until (optional)</span>
+        <FieldStack label="Until (optional)">
           <DateTimePicker
             value={formatDatetimeLocal(rule.until)}
             onChange={(v) =>
@@ -90,7 +88,7 @@ export function RecurrenceSection() {
             clearable={!!rule.until}
             ariaLabel="Repeat until"
           />
-        </div>
+        </FieldStack>
       )}
     </div>
   );

@@ -3,6 +3,7 @@ export { Caption } from "./Caption";
 export { Kbd } from "./Kbd";
 export { Button } from "./Button";
 export { Input, Field } from "./Input";
+export { FieldStack, FieldValue } from "./FieldStack";
 export { TypeBadge } from "./TypeBadge";
 export { CategoryBadge } from "./CategoryBadge";
 export { CategoryDot } from "./CategoryDot";

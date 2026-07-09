@@ -14,9 +14,15 @@ export const fieldStack = style({
   minWidth: 0,
 });
 
+// Spans the full width of a multi-column field grid (e.g. IdentityCard's Place row).
+export const fieldStackFull = style({
+  gridColumn: "1 / -1",
+});
+
 export const fieldLabel = style([
   fieldLabelPreset,
   {
+    whiteSpace: "nowrap",
     transition: themeTransition,
   },
 ]);

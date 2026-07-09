@@ -77,7 +77,7 @@ export function DurationField({
           onKeyDown={(e) => onKeyDown(e, () => setMinsDraft(null))}
           aria-label={`${ariaLabel} minutes`}
         />
-        <span className={unit}>m</span>
+        <span className={unit}>min</span>
       </div>
     </div>
   );
