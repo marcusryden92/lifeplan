@@ -3,8 +3,10 @@ import {
   space,
   vars,
   themeTransition,
+  collapseTransition,
   media,
   radii,
+  iconBtn,
   display,
   text,
   fieldLabel,
@@ -72,7 +74,7 @@ export const actionCluster = style({
 
 export const mainGrid = style({
   display: "grid",
-  gridTemplateColumns: "260px 1fr",
+  gridTemplateColumns: "auto 1fr",
   gap: space["4"],
   padding: "0 28px 28px",
   flex: 1,
@@ -100,11 +102,60 @@ const cardBase = style({
 export const rail = style([
   cardBase,
   {
+    width: 260,
+    minWidth: 0,
+    transition: collapseTransition,
     "@media": {
       [media.mobile]: { minHeight: "auto" },
+      // Below tablet the rail stacks full-width; the fixed width comes off.
+      [media.tablet]: { width: "auto" },
+    },
+    selectors: {
+      [`${page}[data-rail-collapsed="true"] &`]: {
+        width: 44,
+        "@media": {
+          [media.tablet]: { width: "auto" },
+        },
+      },
+      [`${page}[data-no-transitions="true"] &`]: {
+        transition: "none",
+      },
     },
   },
 ]);
+
+export const railHeader = style({
+  display: "flex",
+  justifyContent: "flex-end",
+  alignItems: "center",
+  padding: "10px 8px 4px",
+  flexShrink: 0,
+  selectors: {
+    [`${page}[data-rail-collapsed="true"] &`]: {
+      justifyContent: "center",
+      padding: "10px 0 4px",
+    },
+  },
+  "@media": {
+    [media.tablet]: { display: "none" },
+  },
+});
+
+export const railToggle = iconBtn();
+
+export const railToggleIcon = style({
+  display: "inline-flex",
+  color: vars.muted,
+  transition: collapseTransition,
+  selectors: {
+    [`${page}[data-rail-collapsed="true"] &`]: {
+      transform: "rotate(180deg)",
+    },
+    [`${page}[data-no-transitions="true"] &`]: {
+      transition: "none",
+    },
+  },
+});
 
 export const railSection = style({
   display: "flex",
@@ -117,6 +168,12 @@ export const railSection = style({
       flex: 1,
       minHeight: 0,
       overflow: "auto",
+    },
+    [`${page}[data-rail-collapsed="true"] &`]: {
+      display: "none",
+      "@media": {
+        [media.tablet]: { display: "flex" },
+      },
     },
   },
 });

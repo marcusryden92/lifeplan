@@ -1,10 +1,7 @@
 import { style } from "@vanilla-extract/css";
 import {
   space,
-  vars,
   themeTransition,
-  radii,
-  text,
   media,
   fieldLabel as fieldLabelPreset,
 } from "@/lib/theme";
@@ -34,27 +31,5 @@ export const fieldLabel = style([
   {
     whiteSpace: "nowrap",
     transition: themeTransition,
-  },
-]);
-
-export const select = style([
-  text.row,
-  {
-    background: vars.glass.bgSoft,
-    border: `1px solid ${vars.glass.stroke}`,
-    borderRadius: radii["sm+2"],
-    padding: "6px 11px",
-    minHeight: 34,
-    color: vars.ink,
-    outline: "none",
-    width: "100%",
-    appearance: "none",
-    cursor: "pointer",
-    transition: themeTransition,
-    selectors: {
-      "&:focus": {
-        borderColor: vars.accent.primary,
-      },
-    },
   },
 ]);

@@ -1,6 +1,6 @@
 "use client";
 
-import { DateTimePicker } from "@/components/ui";
+import { Combobox, DateTimePicker } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatDatetimeLocal, parseDatetimeLocal } from "@/utils/datetime";
 import {
@@ -9,12 +9,7 @@ import {
   type PlanRecurrenceRule,
 } from "@/utils/planRecurrence";
 import { useItem } from "../../ItemContext";
-import {
-  recurGrid,
-  fieldStack,
-  fieldLabel,
-  select,
-} from "./RecurrenceSection.css";
+import { recurGrid, fieldStack, fieldLabel } from "./RecurrenceSection.css";
 
 type RecurrencePreset = "none" | "daily" | "weekly" | "biweekly" | "monthly";
 
@@ -73,25 +68,15 @@ export function RecurrenceSection() {
     <div className={recurGrid}>
       <div className={fieldStack}>
         <span className={fieldLabel}>Repeats</span>
-        <select
-          className={select}
+        <Combobox
           value={preset}
-          onChange={(e) =>
-            applyRule(
-              ruleFromPreset(
-                e.target.value as RecurrencePreset,
-                rule?.until ?? null,
-              ),
-            )
-          }
-          aria-label="Recurrence"
-        >
-          {(Object.keys(PRESET_LABELS) as RecurrencePreset[]).map((key) => (
-            <option key={key} value={key}>
-              {PRESET_LABELS[key]}
-            </option>
-          ))}
-        </select>
+          options={(Object.keys(PRESET_LABELS) as RecurrencePreset[]).map(
+            (key) => ({ value: key, label: PRESET_LABELS[key] }),
+          )}
+          onChange={(next) => applyRule(ruleFromPreset(next, rule?.until ?? null))}
+          width="100%"
+          ariaLabel="Recurrence"
+        />
       </div>
       {rule && (
         <div className={fieldStack}>

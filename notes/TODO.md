@@ -1,15 +1,10 @@
 # Issues
 
-- Still need to hard refresh for new locations to take effect
-- Split task feature to goal subtasks
-- Completing a split task still needs to move it to now if its future planned
-- Area pill button needs max width in item overview
-- Plan 'repeats' drop down ugly as shit
-- Go from 0-10 priority to 1-7?
 - Mark tasks ready?
-- More category colors
-- Collapse/expand library sidebar
+- Go from 0-10 priority to 1-7?
 - Onboarding should not split sleep items at midnight
+- Still need to hard refresh for new locations to take effect
+- Completing a split task still needs to move it to now if its future planned
 
 # Mobile
 - AI button in floating menu

@@ -1,7 +1,13 @@
 "use client";
 
 import { space, listRow } from "@/lib/theme";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -14,6 +20,7 @@ import {
   Flag,
   CheckCircle2,
   Layers,
+  ChevronLeft,
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
@@ -65,6 +72,9 @@ import {
   actionCluster,
   mainGrid,
   rail,
+  railHeader,
+  railToggle,
+  railToggleIcon,
   railSection,
   railSectionHead,
   railRow,
@@ -94,6 +104,8 @@ import {
   emptyState,
   emptyStateTitle,
 } from "./page.css";
+
+const RAIL_COLLAPSE_KEY = "circadium.library.railCollapsed";
 
 type TypeFilter = "all" | "task" | "plan" | "goal";
 type SortKey =
@@ -183,6 +195,34 @@ export default function LibraryPage() {
   const [showCompleted, setShowCompleted] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  const [railHydrated, setRailHydrated] = useState(false);
+  // Suppresses the rail width transition on the first frame so restoring a
+  // collapsed rail from localStorage doesn't animate 260 -> 44 on mount.
+  const [railTransitionsReady, setRailTransitionsReady] = useState(false);
+
+  useLayoutEffect(() => {
+    try {
+      if (window.localStorage.getItem(RAIL_COLLAPSE_KEY) === "1") {
+        setRailCollapsed(true);
+      }
+    } catch {
+      // localStorage may be unavailable (private mode, disabled cookies)
+    }
+    setRailHydrated(true);
+    const id = requestAnimationFrame(() => setRailTransitionsReady(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!railHydrated) return;
+    try {
+      window.localStorage.setItem(RAIL_COLLAPSE_KEY, railCollapsed ? "1" : "0");
+    } catch {
+      // localStorage may be unavailable (private mode, quota exceeded)
+    }
+  }, [railCollapsed, railHydrated]);
 
   const onSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -473,7 +513,11 @@ export default function LibraryPage() {
   })();
 
   return (
-    <div className={page}>
+    <div
+      className={page}
+      data-rail-collapsed={railCollapsed}
+      data-no-transitions={railTransitionsReady ? undefined : "true"}
+    >
       <div className={subHeader}>
         <h1 className={pageTitle}>Library</h1>
         <span className={titleSummary}>
@@ -495,6 +539,20 @@ export default function LibraryPage() {
 
       <div className={mainGrid}>
         <aside className={rail}>
+          <div className={railHeader}>
+            <button
+              type="button"
+              className={railToggle}
+              onClick={() => setRailCollapsed((c) => !c)}
+              title={railCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={railCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!railCollapsed}
+            >
+              <span className={railToggleIcon} aria-hidden>
+                <ChevronLeft size={16} strokeWidth={2} />
+              </span>
+            </button>
+          </div>
           <div className={railSection}>
             <div className={railSectionHead}>Smart views</div>
             <button
