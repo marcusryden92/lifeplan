@@ -1,6 +1,5 @@
 import FullCalendar from "@fullcalendar/react";
 import { DateSelectArg } from "@fullcalendar/core/index.js";
-import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
 import { EventTemplate } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { calendarColors } from "@/data/calendarColors";
@@ -49,42 +48,6 @@ export const handleTemplateSelect = (
 
     updateTemplateArray((prevEvents) => [...prevEvents, newEvent]);
   }
-};
-
-// Resize edits the series duration ONLY — the start stays anchored to the
-// template's startDay/startTime. Deriving day/time from the resized tile
-// would re-anchor the whole series when the tile is a moved one-off
-// occurrence sitting at its exception's override position.
-export const handleTemplateEventResize = (
-  updateTemplateArray: (
-    template: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
-    options?: { engineMode?: "inline" | "worker" },
-  ) => void,
-  resizeInfo: EventResizeStartArg
-) => {
-  const { event }: EventResizeStartArg = resizeInfo;
-
-  const startDate = event.start;
-  const endDate = event.end;
-
-  if (!startDate || !endDate) return;
-
-  // Use extendedProps.eventId to get the original template ID
-  // (a moved occurrence's event.id is a composite `templateId|key`)
-  const templateId = (event.extendedProps?.eventId as string) || event.id;
-  const duration = Math.round(
-    (endDate.getTime() - startDate.getTime()) / (1000 * 60)
-  );
-
-  updateTemplateArray(
-    (prevEvents) =>
-      prevEvents.map((ev) =>
-        ev.id === templateId
-          ? { ...ev, duration, updatedAt: new Date().toISOString() }
-          : ev
-      ),
-    { engineMode: "inline" }
-  );
 };
 
 export const handleTemplateEventCopy = (

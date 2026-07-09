@@ -69,4 +69,31 @@ describe("templatesToEventInput — recurrence exceptions", () => {
         new Date(moved.start as string).getTime(),
     ).toBe(120 * 60000);
   });
+
+  it("uses a per-occurrence duration override for a resized occurrence", () => {
+    // Resize-in-place: newStart equals the rule position, only the length
+    // changes (60 min instead of the series' 120).
+    const inPlaceStart = new Date(2026, 5, 8, 7, 0);
+    const exceptions: PlanOccurrenceException[] = [
+      {
+        key: JUN8_KEY,
+        type: "moved",
+        newStart: inPlaceStart.toISOString(),
+        durationMinutes: 60,
+      },
+    ];
+    const events = templatesToEventInput([
+      template(serializeRecurrenceExceptions(exceptions)),
+    ]);
+    expect(events).toHaveLength(2);
+    const [base, moved] = events;
+    expect(base.exdate).toEqual(["2026-06-08T07:00:00"]);
+    expect(new Date(moved.start as string).getTime()).toBe(
+      inPlaceStart.getTime(),
+    );
+    expect(
+      new Date(moved.end as string).getTime() -
+        new Date(moved.start as string).getTime(),
+    ).toBe(60 * 60000);
+  });
 });

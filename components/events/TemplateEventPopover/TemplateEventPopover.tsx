@@ -7,12 +7,18 @@ import {
   Copy,
   GripVertical,
   Pencil,
+  RotateCcw,
   Trash2,
   X,
 } from "lucide-react";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { CategoryBadge, TypeBadge } from "@/components/ui";
+import { Button, CategoryBadge, TypeBadge } from "@/components/ui";
+import {
+  occurrenceKeyFromEventId,
+  hasMovedException,
+} from "@/utils/planRecurrence";
+import { applyTemplateOccurrenceRestore } from "@/utils/calendarEventHandlers";
 import { PopoverLocationPicker } from "../PopoverLocationPicker";
 import { PopoverColorPicker } from "../PopoverColorPicker";
 import { formatTime } from "@/utils/calendarUtils";
@@ -33,7 +39,12 @@ import {
   metaRow,
   footer,
 } from "../CalendarPopover/CalendarPopover.css";
-import { headerGrabbing, metaIcon, note } from "./TemplateEventPopover.css";
+import {
+  headerGrabbing,
+  metaIcon,
+  note,
+  restoreBtn,
+} from "./TemplateEventPopover.css";
 
 interface TemplateEventPopoverProps {
   event: EventImpl;
@@ -76,6 +87,27 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
 
   const currentColor =
     (templateItem?.color as string | undefined) ?? calendarColors[0];
+
+  // A moved one-off carries a composite id whose key must also still have a
+  // moved exception on the row — otherwise the tile is a plain series
+  // occurrence and there is nothing to restore.
+  const occurrenceKeyValue = occurrenceKeyFromEventId(event.id);
+  const isException =
+    !!templateItem &&
+    occurrenceKeyValue !== null &&
+    hasMovedException(templateItem.recurrenceExceptions, occurrenceKeyValue);
+
+  const handleRestore = () => {
+    if (templateItem && occurrenceKeyValue !== null) {
+      applyTemplateOccurrenceRestore(
+        updateTemplateArray,
+        templateItem.id,
+        occurrenceKeyValue,
+      );
+    }
+    // The one-off tile this popover is anchored to disappears on restore.
+    onClose();
+  };
 
   const applyColor = (color: string) => {
     updateTemplateArray((prev) =>
@@ -204,8 +236,22 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
             </div>
 
             <div className={note}>
-              Editing applies to every occurrence of this template.
+              {isException
+                ? "This occurrence was moved out of its usual slot. Other edits still apply to every occurrence."
+                : "Editing applies to every occurrence of this template."}
             </div>
+
+            {isException && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRestore}
+                className={restoreBtn}
+              >
+                <RotateCcw size={11} strokeWidth={2.2} />
+                Restore to series
+              </Button>
+            )}
 
             {templateItem && (
               <PopoverLocationPicker

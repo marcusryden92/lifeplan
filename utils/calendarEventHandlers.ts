@@ -24,6 +24,8 @@ import {
   shiftRecurrenceExceptions,
   upsertDeletedException,
   upsertMovedException,
+  clearMovedDuration,
+  removeException,
   plannerIdFromEventId,
 } from "./planRecurrence";
 import {
@@ -339,6 +341,100 @@ export const applyTemplateSeriesMove = (
               startDay: newStart.getDay() as WeekDayIntegers,
               startTime: getTimeFromDate(newStart),
               recurrenceExceptions: null,
+              updatedAt: new Date().toISOString(),
+            }
+          : t,
+      ),
+    { engineMode: "inline" },
+  );
+};
+
+// "Resize just this occurrence": a moved exception carrying a per-occurrence
+// duration. The start is the occurrence's current position (unchanged for a
+// bottom-edge resize; the new start for a top-edge one), so a resize of a
+// never-moved occurrence pins it in place with only its length overridden.
+export const applyTemplateOccurrenceResize = (
+  updateTemplateArray: UpdateTemplateArrayFn,
+  templateId: string,
+  key: string,
+  newStart: Date,
+  durationMinutes: number,
+) => {
+  updateTemplateArray(
+    (prev) =>
+      prev.map((t) =>
+        t.id === templateId
+          ? {
+              ...t,
+              recurrenceExceptions: serializeRecurrenceExceptions(
+                upsertMovedException(
+                  parseRecurrenceExceptions(t.recurrenceExceptions),
+                  key,
+                  newStart.toISOString(),
+                  durationMinutes,
+                ),
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : t,
+      ),
+    { engineMode: "inline" },
+  );
+};
+
+// "Resize every occurrence": edit the series duration. The start stays anchored
+// to the template's startDay/startTime — deriving day/time from a moved
+// one-off's tile would re-anchor the whole series. If the resized occurrence
+// carried a per-occurrence duration override (it had been resized before), that
+// override is dropped so it inherits the new series length instead of snapping
+// back to its stale one; any position override it has is preserved.
+export const applyTemplateSeriesResize = (
+  updateTemplateArray: UpdateTemplateArrayFn,
+  templateId: string,
+  occurrenceKey: string,
+  durationMinutes: number,
+) => {
+  updateTemplateArray(
+    (prev) =>
+      prev.map((t) =>
+        t.id === templateId
+          ? {
+              ...t,
+              duration: durationMinutes,
+              recurrenceExceptions: serializeRecurrenceExceptions(
+                clearMovedDuration(
+                  parseRecurrenceExceptions(t.recurrenceExceptions),
+                  occurrenceKey,
+                ),
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : t,
+      ),
+    { engineMode: "inline" },
+  );
+};
+
+// Restore a customized occurrence: drop its exception so it returns to the
+// regular series slot (original day/time/duration). The moved one-off tile
+// disappears and the plain series occurrence reappears in its place.
+export const applyTemplateOccurrenceRestore = (
+  updateTemplateArray: UpdateTemplateArrayFn,
+  templateId: string,
+  key: string,
+) => {
+  updateTemplateArray(
+    (prev) =>
+      prev.map((t) =>
+        t.id === templateId
+          ? {
+              ...t,
+              recurrenceExceptions: serializeRecurrenceExceptions(
+                removeException(
+                  parseRecurrenceExceptions(t.recurrenceExceptions),
+                  key,
+                ),
+              ),
               updatedAt: new Date().toISOString(),
             }
           : t,

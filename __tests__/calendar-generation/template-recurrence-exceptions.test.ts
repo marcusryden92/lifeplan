@@ -79,6 +79,37 @@ describe("masksToIntervals — template recurrence exceptions", () => {
     expect(keys).not.toContain(KEYS.jun8);
   });
 
+  it("applies a per-occurrence duration override on a moved occurrence", () => {
+    // Resize just this occurrence: same start (07:00), 60 min instead of 120.
+    const inPlaceStart = new Date(2026, 5, 8, 7, 0);
+    const intervals = masksToIntervals(
+      [
+        mondayMask([
+          {
+            key: KEYS.jun8,
+            type: "moved",
+            newStart: inPlaceStart.toISOString(),
+            durationMinutes: 60,
+          },
+        ]),
+      ],
+      RANGE_START,
+      RANGE_END,
+    );
+
+    const resized = intervals.find(
+      (i) => i.start.getTime() === inPlaceStart.getTime(),
+    );
+    expect(resized).toBeTruthy();
+    expect(resized!.end.getTime() - resized!.start.getTime()).toBe(60 * 60000);
+
+    // Untouched Mondays keep the 120-min series length.
+    const jun1 = intervals.find(
+      (i) => occurrenceKey(i.start) === KEYS.jun1,
+    );
+    expect(jun1!.end.getTime() - jun1!.start.getTime()).toBe(120 * 60000);
+  });
+
   it("emits a moved occurrence landing in range even when its original day is before the range", () => {
     // Range starts Tue Jun 9 — the original Mon Jun 8 slot is never iterated,
     // but the override lands inside the range and must occupy the fabric

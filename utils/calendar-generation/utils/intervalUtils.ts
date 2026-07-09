@@ -490,11 +490,15 @@ export function masksToIntervals(
 
   for (const mask of masks) {
     if (!mask.recurrenceExceptions?.length) continue;
-    const durationMs = (mask.endMinutes - mask.startMinutes) * 60000;
+    const seriesDurationMs = (mask.endMinutes - mask.startMinutes) * 60000;
     for (const exception of mask.recurrenceExceptions) {
       if (exception.type !== "moved") continue;
       const start = new Date(exception.newStart);
       if (start < startDate || start >= endDate) continue;
+      const durationMs =
+        exception.durationMinutes !== undefined
+          ? exception.durationMinutes * 60000
+          : seriesDurationMs;
       intervals.push({
         start,
         end: new Date(start.getTime() + durationMs),

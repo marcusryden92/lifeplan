@@ -1,7 +1,5 @@
 # Issues
-- Editing just one template task still propogates to all of them
-- Resizing a template does not ask for one/all
-- Stop asking when an item is already set to exception
+
 - Role view exceptions handling is really dumb
 
 - Remove annoying 30 min gap between split tasks in the same day

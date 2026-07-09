@@ -19,6 +19,7 @@ import {
   occurrenceKeyFromEventId,
   plannerIdFromEventId,
   planIsRecurring,
+  hasMovedException,
 } from "@/utils/planRecurrence";
 import { RecurrenceScopeModal } from "../RecurrenceScopeModal";
 import { PlannerType } from "@/types/prisma";
@@ -79,6 +80,22 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
 
   const onDelete = () => {
     if (isRecurringOccurrence) {
+      // An already-customized occurrence skips the prompt — deleting a moved
+      // one-off always means "just this one".
+      if (
+        occurrencePlanId &&
+        occurrenceKey !== null &&
+        hasMovedException(occurrencePlan.recurrenceExceptions, occurrenceKey)
+      ) {
+        applyOccurrenceDelete(
+          updateAll,
+          occurrencePlanId,
+          occurrenceKey,
+          event.id,
+        );
+        setShowPopover(false);
+        return;
+      }
       setShowPopover(false);
       setShowDeleteScope(true);
       return;
