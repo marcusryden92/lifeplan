@@ -38,7 +38,7 @@ import {
 
 export default function CategoriesPage() {
   const dispatch = useDispatch<AppDispatch>();
-  const { planner, categories } = useCalendarProvider();
+  const { planner, categories, updateAll } = useCalendarProvider();
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
   );
@@ -96,13 +96,14 @@ export default function CategoriesPage() {
     [categories, selected],
   );
 
-  // All mutations are pure Redux dispatches. useCalendarServerSync watches
-  // state.calendarSource.categories, diffs against its prev-ref, and 300ms after
-  // the user stops fiddling sends one batched sync transaction. No direct
-  // server-action calls from this component.
+  // Mutations commit via direct calendarSource dispatches (synced by
+  // useCalendarServerSync). Those don't run the engine, so every handler also
+  // calls updateAll() to regen — the thunk reads getState() fresh, so it sees
+  // the dispatch that just landed.
   const replace = (next: Partial<Category>) => {
     if (!selected) return;
     dispatch(upsertCategory({ ...selected, ...next }));
+    updateAll();
   };
 
   const handleRename = (name: string) => replace({ name });
@@ -126,6 +127,7 @@ export default function CategoriesPage() {
     const row = selected?.timeSlots.find((ts) => ts.id === windowId);
     if (!row) return;
     dispatch(upsertTimeWindow({ ...row, recurrenceExceptions: serialized }));
+    updateAll();
   };
 
   // Reparenting recomputes sortOrder client-side (append to the new sibling
@@ -145,6 +147,7 @@ export default function CategoriesPage() {
       setSelectedId(remaining.find((c) => !c.parentId)?.id ?? null);
     }
     dispatch(removeCategory(deletingId));
+    updateAll();
     setDeletingId(null);
   };
 
@@ -193,6 +196,7 @@ export default function CategoriesPage() {
         dispatch(upsertCategory({ ...sib, sortOrder: i }));
       }
     }
+    updateAll();
 
     if (zone === "into") {
       setExpanded((prev) => new Set(prev).add(targetId));
@@ -227,6 +231,7 @@ export default function CategoriesPage() {
       updatedAt: now,
     };
     dispatch(upsertCategory(created));
+    updateAll();
     setSelectedId(id);
     if (parentId) {
       setExpanded((prev) => new Set(prev).add(parentId));

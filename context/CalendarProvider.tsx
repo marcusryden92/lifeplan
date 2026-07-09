@@ -151,18 +151,38 @@ export default function CalendarProvider({
   const travelTimes = useSelector(
     (state: RootState) => state.schedulingSettings.allTravelTimes,
   );
+  const defaultTransportMode = useSelector(
+    (state: RootState) => state.schedulingSettings.defaultTransportMode,
+  );
+  const enableTravelEvents = useSelector(
+    (state: RootState) => state.schedulingSettings.enableTravelEvents,
+  );
   const isInitialMount = useRef(true);
+  // Ref (not a dep) so the settings-regen effect skips hydration-time firings —
+  // regenerating against a not-yet-loaded planner paints an empty calendar.
+  const isCalendarLoadedRef = useRef(isCalendarLoaded);
+  isCalendarLoadedRef.current = isCalendarLoaded;
 
-  // Regenerate calendar when bufferTimeMinutes or weekStartDay changes
-  // (preserves current event positions)
+  // Regenerate on engine-input settings that don't flow through the source
+  // arrays (buffer, week start, travel rows, transport mode, travel toggle).
+  // Safe as an effect because the thunk reads these but never writes them;
+  // watching categories/template instead would double-fire against source edits.
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    if (!userId) return;
+    if (!userId || !isCalendarLoadedRef.current) return;
     updateAll();
-  }, [bufferTimeMinutes, weekStartDay, updateAll, userId]);
+  }, [
+    bufferTimeMinutes,
+    weekStartDay,
+    travelTimes,
+    defaultTransportMode,
+    enableTravelEvents,
+    updateAll,
+    userId,
+  ]);
 
   // Empty-state autoregen, fired exactly once per cold load. Snapshots
   // isCalendarLoaded at mount: if redux retained the loaded state from a

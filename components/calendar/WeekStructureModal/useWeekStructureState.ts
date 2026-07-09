@@ -24,7 +24,7 @@ export function useWeekStructureState({
   onClose,
 }: UseWeekStructureStateArgs) {
   const dispatch = useDispatch<AppDispatch>();
-  const { template, categories } = useCalendarProvider();
+  const { template, categories, updateAll } = useCalendarProvider();
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -195,6 +195,10 @@ export function useWeekStructureState({
       });
       setTplsInitial(stamped);
       setTplsWorking(stamped);
+
+      // The dispatches above don't run the engine; regen once off the updated
+      // state (the thunk reads getState() fresh, so it sees them).
+      if (changeCount > 0) updateAll();
 
       onClose();
     } catch (err) {
