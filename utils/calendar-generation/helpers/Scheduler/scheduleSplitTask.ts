@@ -39,7 +39,10 @@ export interface SplitPlacementState {
   chunkOrdinals: Map<string, number>;
   /** plannerId -> local dayKey -> minutes consumed (seeded from completed segments) */
   dayMinutes: Map<string, Map<string, number>>;
-  /** plannerId -> ms end of the task's last placed chunk / latest segment */
+  /**
+   * plannerId -> ms end of the task's last placed chunk / latest segment.
+   * Only maintained when the task requests a minimum inter-chunk spacing.
+   */
   lastChunkEndMs: Map<string, number>;
   /** Constraint compromises made while placing, surfaced as engine messages */
   relaxations: SplitRelaxation[];
@@ -85,17 +88,23 @@ export function scheduleSplitTask(args: {
   const { task, settings, scheduler, state } = args;
   const context = scheduler.context;
 
+  // Optional minimum break between consecutive chunks of this task. Off by
+  // default (chunks sit only the standard placement buffer apart).
+  const spacingMs = (settings.minSpacingMinutes ?? 0) * 60 * 1000;
+
   let dayMap = state.dayMinutes.get(task.id);
   if (!dayMap) {
     dayMap = completedMinutesByDay(task);
     state.dayMinutes.set(task.id, dayMap);
-    // Chunks keep a break from the latest completed segment too, not just
-    // from each other.
-    const latestSegmentEndMs = parseCompletedSegments(
-      task.completedSegments,
-    ).reduce((latest, s) => Math.max(latest, new Date(s.end).getTime()), 0);
-    if (latestSegmentEndMs > 0) {
-      state.lastChunkEndMs.set(task.id, latestSegmentEndMs);
+    // Seed the spacing anchor from the latest completed segment so a new chunk
+    // keeps its break from work already done, not just from other chunks.
+    if (spacingMs > 0) {
+      const latestSegmentEndMs = parseCompletedSegments(
+        task.completedSegments,
+      ).reduce((latest, s) => Math.max(latest, new Date(s.end).getTime()), 0);
+      if (latestSegmentEndMs > 0) {
+        state.lastChunkEndMs.set(task.id, latestSegmentEndMs);
+      }
     }
   }
   const dayMinutes = dayMap;
@@ -162,18 +171,17 @@ export function scheduleSplitTask(args: {
         dayBudget: attempt.dayCap ? dayBudgetFn : undefined,
       };
 
-      // Same-task chunks keep a break of at least minMinutes between each
-      // other (and after the latest completed segment) — back-to-back chunks
-      // would defeat the max chunk size as a continuous-work limit.
-      const lastEndMs = state.lastChunkEndMs.get(task.id);
+      // When a minimum spacing is requested, hold the next chunk until at least
+      // that long after the previous one; otherwise chunks sit only the standard
+      // placement buffer apart, like any two dynamic placements.
+      const lastEndMs =
+        spacingMs > 0 ? state.lastChunkEndMs.get(task.id) : undefined;
       const spacedAfter =
-        lastEndMs !== undefined
-          ? new Date(lastEndMs + settings.minMinutes * 60 * 1000)
-          : undefined;
+        lastEndMs !== undefined ? new Date(lastEndMs + spacingMs) : undefined;
       const afterTime =
-        args.afterTime && (!spacedAfter || args.afterTime > spacedAfter)
-          ? args.afterTime
-          : spacedAfter;
+        spacedAfter && (!args.afterTime || spacedAfter > args.afterTime)
+          ? spacedAfter
+          : args.afterTime;
 
       const result = scheduler.scheduleTask(chunkTask, afterTime, sizing);
       if (result.success && result.event) {
@@ -214,10 +222,12 @@ export function scheduleSplitTask(args: {
       (state.placedMinutes.get(task.id) ?? 0) + granted,
     );
     state.chunkOrdinals.set(task.id, ordinal + 1);
-    state.lastChunkEndMs.set(
-      task.id,
-      Math.max(state.lastChunkEndMs.get(task.id) ?? 0, end.getTime()),
-    );
+    if (spacingMs > 0) {
+      state.lastChunkEndMs.set(
+        task.id,
+        Math.max(state.lastChunkEndMs.get(task.id) ?? 0, end.getTime()),
+      );
+    }
     addIntervalMinutesByDay(dayMinutes, start, end);
 
     if (ruleForcedWhole && granted > settings.maxMinutes) {

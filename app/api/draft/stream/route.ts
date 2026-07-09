@@ -539,7 +539,7 @@ Each node in a goal tree has:
 - isReady: top-level goals only — true marks the goal ready for scheduling, and requires at least one subtask AND a deadline (the app blocks it otherwise). Default a goal you create to ready (isReady true) whenever it has subtasks and a deadline, so it starts scheduling immediately and the user doesn't have to turn it on by hand. If it has no deadline or no subtasks, leave it unready and, in plain words, tell the user what it still needs before it can be scheduled. OMIT this field (or use null) on all child nodes; readiness cascades from the root (every row in a subtree carries the root's value, stamped on save).
 - categoryId: top-level goals only — one of the user's category ids, or null. Echo it verbatim for retained goals (null on a retained goal means "leave as is"); pick a fitting category for new goals, or null if none fits. Never set it on child nodes; they inherit.
 - color: top-level goals only — a 6-digit hex color for the whole goal (its subtasks inherit it on the calendar). Give every NEW goal a fitting color and vary colors across goals so the calendar doesn't come out all one shade. Good palette: #1976D2 blue, #2E7D32 green, #F77F00 orange, #6C5CE7 violet, #16A085 teal, #E63946 red, #FFB703 amber, #1D3557 navy, #8E44AD purple, #D81B60 pink. Echo the existing color verbatim for retained goals (null means "leave as is"). Never set it on child nodes; they inherit.
-- splitting: schedulable leaves only (never plans, never nodes with subtasks) — {minMinutes, maxMinutes, maxMinutesPerDay} or null. Non-null makes the scheduler place the item as flexibly sized chunks (each between min and max, at most maxMinutesPerDay per day when set; maxMinutesPerDay null = no daily limit) instead of one continuous block — right for long, interruptible work like "read the textbook, 12h". minMinutes >= 5 and maxMinutes >= minMinutes. Echo it verbatim for retained nodes in propose_goals — a re-emitted tree that drops it turns chunking off. When the user speaks of it, call it splitting into chunks — never say "splitting field".
+- splitting: schedulable leaves only (never plans, never nodes with subtasks) — {minMinutes, maxMinutes, maxMinutesPerDay, minSpacingMinutes} or null. Non-null makes the scheduler place the item as flexibly sized chunks (each between min and max, at most maxMinutesPerDay per day when set; maxMinutesPerDay null = no daily limit) instead of one continuous block — right for long, interruptible work like "read the textbook, 12h". minSpacingMinutes (optional; null = no forced gap) keeps at least that many minutes of break between consecutive chunks of the item. minMinutes >= 5 and maxMinutes >= minMinutes. Echo it verbatim for retained nodes in propose_goals — a re-emitted tree that drops it turns chunking off. When the user speaks of it, call it splitting into chunks — never say "splitting field".
 - children: ordered array of sub-nodes. Empty for leaves.
 
 ID PRESERVATION (IMPORTANT)
@@ -632,11 +632,12 @@ const proposeGoalsTool: Anthropic.Tool = {
           splitting: {
             type: ["object", "null"],
             description:
-              "Schedulable leaves only: chunked-scheduling settings. Echo verbatim for retained nodes — dropping it turns chunking off.",
+              "Schedulable leaves only: chunked-scheduling settings. Echo verbatim for retained nodes — dropping it turns chunking off. minSpacingMinutes is an optional minimum break between chunks.",
             properties: {
               minMinutes: { type: "integer" },
               maxMinutes: { type: "integer" },
               maxMinutesPerDay: { type: ["integer", "null"] },
+              minSpacingMinutes: { type: ["integer", "null"] },
             },
             required: ["minMinutes", "maxMinutes"],
           },
@@ -727,6 +728,7 @@ const updateItemsTool: Anthropic.Tool = {
                 minMinutes: { type: "integer" },
                 maxMinutes: { type: "integer" },
                 maxMinutesPerDay: { type: ["integer", "null"] },
+                minSpacingMinutes: { type: ["integer", "null"] },
               },
               required: ["minMinutes", "maxMinutes"],
             },
@@ -786,6 +788,7 @@ const addItemsTool: Anthropic.Tool = {
               minMinutes: { type: "integer" },
               maxMinutes: { type: "integer" },
               maxMinutesPerDay: { type: ["integer", "null"] },
+              minSpacingMinutes: { type: ["integer", "null"] },
             },
             required: ["minMinutes", "maxMinutes"],
           },

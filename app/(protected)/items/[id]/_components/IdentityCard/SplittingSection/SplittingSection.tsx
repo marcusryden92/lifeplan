@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS: TaskSplittingSettings = {
   minMinutes: 30,
   maxMinutes: 120,
   maxMinutesPerDay: null,
+  minSpacingMinutes: null,
 };
 
 // Free typing, clamp on commit — clamping per keystroke fights the user
@@ -128,6 +129,17 @@ export function SplittingSection() {
     });
   };
 
+  const commitSpacing = (raw: string) => {
+    if (!settings) return;
+    if (raw.trim() === "") {
+      apply({ ...settings, minSpacingMinutes: null });
+      return;
+    }
+    const parsed = Math.floor(Number(raw));
+    if (!Number.isFinite(parsed)) return;
+    apply({ ...settings, minSpacingMinutes: parsed > 0 ? parsed : null });
+  };
+
   return (
     <div className={splitGrid}>
       <div className={fieldStack}>
@@ -173,6 +185,15 @@ export function SplittingSection() {
                 placeholder="—"
                 ariaLabel="Maximum minutes per day"
                 onCommit={commitPerDay}
+              />
+            </div>
+            <div className={inputStack}>
+              <span className={inputCaption}>Min gap</span>
+              <CommitNumberInput
+                value={settings.minSpacingMinutes ?? null}
+                placeholder="—"
+                ariaLabel="Minimum minutes between chunks"
+                onCommit={commitSpacing}
               />
             </div>
           </div>

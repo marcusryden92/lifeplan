@@ -19,6 +19,10 @@ export interface TaskSplittingSettings {
   minMinutes: number;
   maxMinutes: number;
   maxMinutesPerDay: number | null;
+  // Minimum break the engine keeps between consecutive chunks of this task
+  // (and after its latest completed segment). null/absent = no forced gap,
+  // chunks sit only the standard placement buffer apart.
+  minSpacingMinutes?: number | null;
 }
 
 export interface CompletedSegment {
@@ -52,7 +56,16 @@ export function normalizeTaskSplittingSettings(
     typeof parsed.maxMinutesPerDay === "number" && parsed.maxMinutesPerDay > 0
       ? Math.max(Math.floor(parsed.maxMinutesPerDay), min)
       : null;
-  return { minMinutes: min, maxMinutes: max, maxMinutesPerDay: perDay };
+  const spacing =
+    typeof parsed.minSpacingMinutes === "number" && parsed.minSpacingMinutes > 0
+      ? Math.floor(parsed.minSpacingMinutes)
+      : null;
+  return {
+    minMinutes: min,
+    maxMinutes: max,
+    maxMinutesPerDay: perDay,
+    minSpacingMinutes: spacing,
+  };
 }
 
 export function parseTaskSplitting(
@@ -73,6 +86,10 @@ export function serializeTaskSplitting(
     minMinutes: settings.minMinutes,
     maxMinutes: settings.maxMinutes,
     maxMinutesPerDay: settings.maxMinutesPerDay ?? null,
+    // Omit when unset so existing rows serialize byte-identically (no sync churn).
+    ...(settings.minSpacingMinutes
+      ? { minSpacingMinutes: settings.minSpacingMinutes }
+      : {}),
   });
 }
 

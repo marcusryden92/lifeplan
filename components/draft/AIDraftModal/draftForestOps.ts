@@ -53,6 +53,7 @@ export interface DraftItemUpdate {
     minMinutes: number;
     maxMinutes: number;
     maxMinutesPerDay?: number | null;
+    minSpacingMinutes?: number | null;
   } | null;
 }
 
@@ -251,7 +252,7 @@ export function updateDraftItems(
           failures.push({
             id,
             reason:
-              "splitting requires minMinutes >= 5 and maxMinutes >= minMinutes (maxMinutesPerDay optional)",
+              "splitting requires minMinutes >= 5 and maxMinutes >= minMinutes (maxMinutesPerDay, minSpacingMinutes optional)",
           });
           continue;
         }

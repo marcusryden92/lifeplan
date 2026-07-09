@@ -1,6 +1,5 @@
 # Issues
 
-- Role view exceptions handling is really dumb
 
 - Remove annoying 30 min gap between split tasks in the same day
 - Duration needs an hour setting

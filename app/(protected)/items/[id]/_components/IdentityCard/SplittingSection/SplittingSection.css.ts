@@ -71,7 +71,7 @@ export const toggleHint = style([
 
 export const inputsGrid = style({
   display: "grid",
-  gridTemplateColumns: "repeat(3, minmax(70px, 1fr))",
+  gridTemplateColumns: "repeat(2, minmax(70px, 1fr))",
   gap: space["2"],
 });
 

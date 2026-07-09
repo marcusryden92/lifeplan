@@ -103,7 +103,8 @@ function splittingEqual(a: DraftNode["splitting"], b: DraftNode["splitting"]): b
   return (
     left.minMinutes === right.minMinutes &&
     left.maxMinutes === right.maxMinutes &&
-    (left.maxMinutesPerDay ?? null) === (right.maxMinutesPerDay ?? null)
+    (left.maxMinutesPerDay ?? null) === (right.maxMinutesPerDay ?? null) &&
+    (left.minSpacingMinutes ?? null) === (right.minSpacingMinutes ?? null)
   );
 }
 

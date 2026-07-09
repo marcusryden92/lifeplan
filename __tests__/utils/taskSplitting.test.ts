@@ -64,6 +64,34 @@ describe("parseTaskSplitting", () => {
       minMinutes: 30,
       maxMinutes: 120,
       maxMinutesPerDay: 30,
+      minSpacingMinutes: null,
+    });
+  });
+
+  it("keeps a positive minimum spacing and drops non-positive to null", () => {
+    expect(
+      parseTaskSplitting(
+        JSON.stringify({
+          minMinutes: 30,
+          maxMinutes: 120,
+          minSpacingMinutes: 45.7,
+        }),
+      ),
+    ).toEqual({
+      minMinutes: 30,
+      maxMinutes: 120,
+      maxMinutesPerDay: null,
+      minSpacingMinutes: 45,
+    });
+    expect(
+      parseTaskSplitting(
+        JSON.stringify({ minMinutes: 30, maxMinutes: 120, minSpacingMinutes: 0 }),
+      ),
+    ).toEqual({
+      minMinutes: 30,
+      maxMinutes: 120,
+      maxMinutesPerDay: null,
+      minSpacingMinutes: null,
     });
   });
 

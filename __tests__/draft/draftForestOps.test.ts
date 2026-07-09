@@ -305,6 +305,7 @@ describe("splitting via item ops", () => {
       minMinutes: 30,
       maxMinutes: 120,
       maxMinutesPerDay: 30,
+      minSpacingMinutes: null,
     });
 
     const cleared = updateDraftItems(
@@ -354,6 +355,7 @@ describe("splitting via item ops", () => {
       minMinutes: 45,
       maxMinutes: 120,
       maxMinutesPerDay: null,
+      minSpacingMinutes: null,
     });
   });
 });
