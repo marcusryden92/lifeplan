@@ -12,7 +12,17 @@ import { X, Trash2, Copy, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
-import { Button, Caption } from "@/components/ui";
+import { Button, Caption, Switch } from "@/components/ui";
+import {
+  SplittingFields,
+  DEFAULT_SPLITTING_SETTINGS,
+} from "@/components/tasks/SplittingFields";
+import {
+  parseTaskSplitting,
+  serializeTaskSplitting,
+  splitCompletedMinutes,
+  type TaskSplittingSettings,
+} from "@/utils/taskSplitting";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import { useFlashBoolean } from "@/hooks/useFlashAnimation";
@@ -43,6 +53,8 @@ import {
   drawerTitleInput,
   fieldStack,
   fieldLabel,
+  splitToggleRow,
+  splitHint,
   dateInputFaded,
   completeHeader,
   completeCheckbox,
@@ -112,6 +124,9 @@ export function EditDrawer() {
 
   const close = () => setFocusedTask(null);
 
+  const splitSettings = parseTaskSplitting(task.splitting);
+  const splitCompleted = splitCompletedMinutes(task);
+
   const commitTitle = () => {
     const t = titleDraft.trim();
     if (!t || t === task.title) return;
@@ -139,6 +154,20 @@ export function EditDrawer() {
       prev.map((p) =>
         p.id === task.id
           ? { ...p, duration: next, updatedAt: new Date().toISOString() }
+          : p,
+      ),
+    );
+  };
+
+  const applySplitting = (next: TaskSplittingSettings | null) => {
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === task.id
+          ? {
+              ...p,
+              splitting: next ? serializeTaskSplitting(next) : null,
+              updatedAt: new Date().toISOString(),
+            }
           : p,
       ),
     );
@@ -251,6 +280,34 @@ export function EditDrawer() {
             onCommit={setDuration}
           />
         </div>
+
+        {isLeaf && task.plannerType !== "plan" && (
+          <div className={fieldStack}>
+            <span className={fieldLabel}>Split into chunks</span>
+            <div className={splitToggleRow}>
+              <Switch
+                checked={splitSettings !== null}
+                onCheckedChange={(checked) =>
+                  applySplitting(checked ? DEFAULT_SPLITTING_SETTINGS : null)
+                }
+                aria-label="Split into chunks"
+              />
+              {!splitSettings && (
+                <span className={splitHint}>
+                  Schedule as flexible chunks instead of one block
+                </span>
+              )}
+            </div>
+            {splitSettings && (
+              <SplittingFields
+                settings={splitSettings}
+                duration={task.duration ?? 0}
+                completed={splitCompleted}
+                onChange={applySplitting}
+              />
+            )}
+          </div>
+        )}
 
         <div className={fieldStack}>
           <span className={fieldLabel}>Location</span>

@@ -7,6 +7,7 @@ import {
   radii,
   media,
   display,
+  text,
   iconBtn,
   fieldLabel as fieldLabelPreset,
 } from "@/lib/theme";
@@ -86,6 +87,21 @@ export const fieldStack = style({
 export const fieldLabel = style([
   fieldLabelPreset,
   {
+    transition: themeTransition,
+  },
+]);
+
+export const splitToggleRow = style({
+  display: "flex",
+  alignItems: "center",
+  gap: space["2"],
+  minHeight: 28,
+});
+
+export const splitHint = style([
+  text.bodySm,
+  {
+    color: vars.muted,
     transition: themeTransition,
   },
 ]);

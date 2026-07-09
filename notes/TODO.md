@@ -1,7 +1,5 @@
 # Issues
 
-
-- Duration needs an hour setting
 - Still need to hard refresh for new locations to take effect
 - Split task feature to goal subtasks
 - Completing a split task still needs to move it to now if its future planned
@@ -34,8 +32,6 @@
 - Mobile app (Capacitor wrap)
 
 # P5 — Medium features
-
-- Splitting large tasks into smaller chunks when generating calendar (important for cases like 20 × 30-min "reading" — currently painful)
 
 - Maximum time of a goal per day
 - Allowed days/time spans in any day for goals
