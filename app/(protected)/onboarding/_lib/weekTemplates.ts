@@ -99,17 +99,19 @@ function toMinutes(hhmm: string): number {
   return h * 60 + m;
 }
 
-// Splits a daily [start, end) range at midnight so every emitted block stays
-// within a single calendar day. The engine also accepts a single block whose
-// duration crosses midnight, but WeekStructureModal's grid renders one as a
-// negative-duration event — matching its single-day shape keeps the two
-// authoring surfaces in agreement.
+// Expands a daily [start, end) range into one block per day.
 //
-// `allowOvernight` is true only for sleep, which legitimately wraps past
-// midnight (23:00-07:00). For within-day blocks (work, exercise, routines) an
-// end that isn't after the start is user error — e.g. a "10:00" meant as 10 PM
-// — and wrapping it would balloon the block across the day, so those ranges are
-// simply dropped rather than expanded overnight.
+// A within-day range (end after start) becomes a single same-day block. When
+// end is not after start the range crosses midnight, and `allowOvernight`
+// decides the treatment:
+//   - true (sleep): kept as ONE block whose duration runs past 24:00. The
+//     engine (masksToIntervals) and both calendar surfaces render a single
+//     overnight block correctly, and one continuous Sleep block reads better
+//     than the two split chips a midnight cut produced.
+//   - false (work, exercise, routines): an end that isn't after the start is
+//     user error — e.g. a "10:00" meant as 10 PM — so the range is dropped
+//     rather than ballooned across the whole day. (Work windows, which cannot
+//     be overnight in the grid, do their own midnight split in workCategory.)
 export function expandDailyRange(
   days: WeekDayIntegers[],
   start: string,
@@ -126,19 +128,11 @@ export function expandDailyRange(
       continue;
     }
     if (!allowOvernight) continue;
-    // Crosses midnight: an evening piece to 24:00 and a morning piece from
-    // 00:00 on the FOLLOWING day, dropping either if it would be zero-length.
-    const eveningDuration = 24 * 60 - startMin;
-    if (eveningDuration > 0) {
-      blocks.push({ startDay: day, startTime: start, duration: eveningDuration });
-    }
-    if (endMin > 0) {
-      blocks.push({
-        startDay: ((day + 1) % 7) as WeekDayIntegers,
-        startTime: "00:00",
-        duration: endMin,
-      });
-    }
+    blocks.push({
+      startDay: day,
+      startTime: start,
+      duration: 24 * 60 - startMin + endMin,
+    });
   }
 
   return blocks;

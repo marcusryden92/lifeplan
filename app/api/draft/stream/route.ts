@@ -520,7 +520,7 @@ Templates are fixed weekly-recurring blocks of occupied time; goals and tasks ar
 - The full current template list is always shown above — there is nothing to fetch. Template ids are minted by the app and reported back when you add.
 
 Category time windows bound WHEN a category's goals and tasks may be scheduled (work items only during work hours, etc.). Window rules:
-- One window = one day + one within-day range: "HH:MM" 24h with startTime < endTime. Use "23:59" for end of day; spanning midnight takes two windows (evening + next morning).
+- One window = one day + one range: "HH:MM" 24h. startTime < endTime is within-day; startTime > endTime is overnight and runs into the next morning (e.g. 23:00-07:00). Use "23:59" for a window that ends exactly at midnight.
 - Windows must NEVER overlap — not within a category and not across categories (two categories cannot both claim the same hours). Plan the week as non-overlapping blocks. The tool result flags any overlap your change creates; fix it immediately with update_time_windows or delete_time_windows before ending your turn.
 - Windows only take effect while the category's windows flag is on. Adding a window to a category with windows off turns the flag on automatically — mention that to the user.
 - strict: a strict category reserves its windows exclusively for its own items; other work is pushed out. This reshapes the whole schedule — only change strict when the user explicitly asks.
@@ -910,7 +910,7 @@ const deleteTemplatesTool: Anthropic.Tool = {
 const addTimeWindowsTool: Anthropic.Tool = {
   name: "add_time_windows",
   description:
-    "Create category time windows (the weekly hours a category's items may schedule in). One entry per day occurrence, within-day only (startTime < endTime; two windows to span midnight). Ids are minted by the app and reported back. Adding to a category with windows off enables the flag automatically.",
+    "Create category time windows (the weekly hours a category's items may schedule in). One entry per day occurrence; startTime < endTime is within-day, startTime > endTime is an overnight window running into the next morning (e.g. 23:00-07:00). Ids are minted by the app and reported back. Adding to a category with windows off enables the flag automatically.",
   input_schema: {
     type: "object",
     properties: {
@@ -931,7 +931,7 @@ const addTimeWindowsTool: Anthropic.Tool = {
             endTime: {
               type: "string",
               description:
-                '"HH:MM", 24-hour, after startTime; "23:59" for end of day.',
+                '"HH:MM", 24-hour. Before startTime makes an overnight window that runs to the next morning; "23:59" for end of day.',
             },
           },
           required: ["categoryId", "day", "startTime", "endTime"],
@@ -945,7 +945,7 @@ const addTimeWindowsTool: Anthropic.Tool = {
 const updateTimeWindowsTool: Anthropic.Tool = {
   name: "update_time_windows",
   description:
-    "Change existing category time windows by id — day (0-6, 0 = Sunday), startTime/endTime (HH:MM, within-day), or categoryId to move a window to another category. Partial patches; omit fields you are not changing.",
+    "Change existing category time windows by id — day (0-6, 0 = Sunday), startTime/endTime (HH:MM; startTime > endTime = overnight), or categoryId to move a window to another category. Partial patches; omit fields you are not changing.",
   input_schema: {
     type: "object",
     properties: {

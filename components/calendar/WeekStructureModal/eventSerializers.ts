@@ -68,14 +68,22 @@ export function windowToEvent(
   const offset = (win.day - weekStartDay + 7) % 7;
   const baseDate = shiftDate(weekStart, offset);
   const start = setTimeOnDate(baseDate, win.startTime);
-  const end =
-    win.endTime === "23:59"
-      ? new Date(
-          baseDate.getFullYear(),
-          baseDate.getMonth(),
-          baseDate.getDate() + 1,
-        )
-      : setTimeOnDate(baseDate, win.endTime);
+  let end: Date;
+  if (win.endTime === "23:59") {
+    // End-of-day sentinel: render the within-day window reaching midnight.
+    end = new Date(
+      baseDate.getFullYear(),
+      baseDate.getMonth(),
+      baseDate.getDate() + 1,
+    );
+  } else {
+    end = setTimeOnDate(baseDate, win.endTime);
+    // Overnight window (endTime <= startTime): the end lands the next day.
+    if (end.getTime() <= start.getTime()) {
+      end = new Date(end);
+      end.setDate(end.getDate() + 1);
+    }
+  }
   return {
     id: `win:${win.id}`,
     title,

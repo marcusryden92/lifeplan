@@ -27,7 +27,6 @@ import {
   dateToWeekDay,
   durationMinutes,
   endTimeFromDate,
-  isSameDayOrMidnightEnd,
   timeFromDate,
   windowRangeOverlaps,
   type WorkingWindow,
@@ -68,6 +67,13 @@ import {
 } from "./WeekStructureModal.css";
 
 type Mode = "templates" | "windows";
+
+// Templates and windows may both run past midnight (an overnight sleep block
+// or a 23:00-07:00 window); each is capped at 24h so a block can't overrun its
+// own next weekly occurrence. Window overlap is enforced separately.
+function rangeAllowed(start: Date, end: Date): boolean {
+  return end > start && durationMinutes(start, end) <= 24 * 60;
+}
 
 interface WeekStructureModalProps {
   open: boolean;
@@ -199,7 +205,7 @@ export function WeekStructureModal({
 
   const handleSelect = useCallback(
     (info: DateSelectArg) => {
-      if (!isSameDayOrMidnightEnd(info.start, info.end)) {
+      if (!rangeAllowed(info.start, info.end)) {
         calendarRef.current?.getApi().unselect();
         return;
       }
@@ -276,7 +282,7 @@ export function WeekStructureModal({
       const start = info.event.start;
       const end = info.event.end;
       if (!start || !end) return;
-      if (!isSameDayOrMidnightEnd(start, end)) {
+      if (!rangeAllowed(start, end)) {
         info.revert();
         return;
       }
@@ -340,7 +346,7 @@ export function WeekStructureModal({
       const start = info.event.start;
       const end = info.event.end;
       if (!start || !end) return;
-      if (!isSameDayOrMidnightEnd(start, end)) {
+      if (!rangeAllowed(start, end)) {
         info.revert();
         return;
       }
@@ -597,8 +603,7 @@ export function WeekStructureModal({
                 selectable={true}
                 selectMirror={true}
                 selectAllow={(info) => {
-                  if (!isSameDayOrMidnightEnd(info.start, info.end))
-                    return false;
+                  if (!rangeAllowed(info.start, info.end)) return false;
                   if (
                     mode === "windows" &&
                     overlapsWindow(info.start, info.end, null)
@@ -608,8 +613,7 @@ export function WeekStructureModal({
                 }}
                 eventAllow={(info, draggedEvent) => {
                   if (!info.start || !info.end) return false;
-                  if (!isSameDayOrMidnightEnd(info.start, info.end))
-                    return false;
+                  if (!rangeAllowed(info.start, info.end)) return false;
                   const ext = draggedEvent?.extendedProps as
                     | {
                         kind?: "template" | "window";

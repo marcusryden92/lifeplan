@@ -13,10 +13,10 @@ export interface DraftTimeWindow {
   categoryId: string;
   // 0-6, 0 = Sunday (matches WeekDayIntegers / Date.getDay()).
   day: number;
-  // "HH:MM", 24h. Windows are within-day: startTime < endTime, with "23:59"
-  // as the end-of-day sentinel (the WeekStructureModal grid cannot produce
-  // overnight windows, and its serializers would render one as a
-  // negative-duration event; spanning midnight = two windows).
+  // "HH:MM", 24h, startTime !== endTime. Within-day when startTime < endTime;
+  // overnight when startTime > endTime (e.g. "23:00"-"07:00", ending the next
+  // morning — the engine and the WeekStructureModal both handle the wrap).
+  // "23:59" is the end-of-day sentinel: a within-day window reaching midnight.
   startTime: string;
   endTime: string;
 }
@@ -45,11 +45,16 @@ export interface DraftWindowsState {
 
 export const MAX_DRAFT_CATEGORY_NAME_CHARS = 60;
 
+// A window is within-day (startTime < endTime) or overnight (startTime >
+// endTime, wrapping past midnight into the next morning); equal bounds are
+// degenerate and rejected.
 export function isValidWindowRange(
   startTime: unknown,
   endTime: unknown,
 ): boolean {
-  return isValidTime(startTime) && isValidTime(endTime) && startTime < endTime;
+  return (
+    isValidTime(startTime) && isValidTime(endTime) && startTime !== endTime
+  );
 }
 
 export function isValidCategoryColor(value: unknown): value is string {
@@ -185,10 +190,40 @@ export interface WindowOverlap {
   b: DraftTimeWindow;
 }
 
-// Same-day range intersections, within or across categories. When
-// involvedIds is given, only pairs touching at least one involved window are
-// reported — pre-existing overlaps in the user's data shouldn't nag on every
-// unrelated op. HH:MM strings compare correctly as strings.
+const WEEK_MINUTES = 7 * 24 * 60;
+
+function hhmmToMin(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map((v) => parseInt(v, 10));
+  return h * 60 + m;
+}
+
+// A window's occupied span in absolute minutes-of-week [start, end). An
+// overnight window (endTime <= startTime) wraps past midnight, so end runs
+// beyond the start day; "23:59" is the end-of-day sentinel (ends at midnight).
+function windowWeekSpan(w: DraftTimeWindow): [number, number] {
+  const startMin = hhmmToMin(w.startTime);
+  let endMin = w.endTime === "23:59" ? 24 * 60 : hhmmToMin(w.endTime);
+  if (endMin <= startMin) endMin += 24 * 60;
+  const start = w.day * 24 * 60 + startMin;
+  return [start, start + (endMin - startMin)];
+}
+
+function windowsIntersect(a: DraftTimeWindow, b: DraftTimeWindow): boolean {
+  const [as, ae] = windowWeekSpan(a);
+  const [bs, be] = windowWeekSpan(b);
+  // Compare on the weekly ring so an overnight window near the Sat/Sun seam is
+  // matched against early-Sunday windows (each span < a week, so ±1 covers it).
+  for (const shift of [-WEEK_MINUTES, 0, WEEK_MINUTES]) {
+    if (as < be + shift && bs + shift < ae) return true;
+  }
+  return false;
+}
+
+// Range intersections on the weekly ring, within or across categories and
+// across the day boundary (an overnight window bleeds into the next morning).
+// When involvedIds is given, only pairs touching at least one involved window
+// are reported — pre-existing overlaps in the user's data shouldn't nag on
+// every unrelated op.
 export function findWindowOverlaps(
   windows: DraftTimeWindow[],
   involvedIds?: ReadonlySet<string>,
@@ -198,11 +233,10 @@ export function findWindowOverlaps(
     for (let j = i + 1; j < windows.length; j++) {
       const a = windows[i];
       const b = windows[j];
-      if (a.day !== b.day) continue;
       if (involvedIds && !involvedIds.has(a.id) && !involvedIds.has(b.id)) {
         continue;
       }
-      if (a.startTime < b.endTime && b.startTime < a.endTime) {
+      if (windowsIntersect(a, b)) {
         overlaps.push({ a, b });
       }
     }

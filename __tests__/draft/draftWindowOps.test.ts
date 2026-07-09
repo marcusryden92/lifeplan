@@ -107,13 +107,32 @@ describe("addDraftTimeWindows", () => {
       { categoryId: "nope", day: 1, startTime: "09:00", endTime: "10:00" },
       { categoryId: CATEGORY_WORK, day: 7, startTime: "09:00", endTime: "10:00" },
       { categoryId: CATEGORY_WORK, day: 1, startTime: "24:00", endTime: "10:00" },
-      { categoryId: CATEGORY_WORK, day: 1, startTime: "17:00", endTime: "09:00" },
       { categoryId: CATEGORY_WORK, day: 1, startTime: "09:00", endTime: "09:00" },
       { categoryId: CATEGORY_WORK, day: 5, startTime: "10:00", endTime: "23:59" },
+      { categoryId: CATEGORY_WORK, day: 1, startTime: "23:00", endTime: "07:00" },
     ]);
-    expect(result.failures).toHaveLength(5);
+    // Unknown category, bad day, bad time, equal bounds fail; the within-day
+    // and the overnight (start > end) rows are accepted.
+    expect(result.failures).toHaveLength(4);
+    expect(result.state.windows).toHaveLength(3);
+    expect(
+      result.state.windows
+        .slice(1)
+        .map((w) => `${w.startTime}-${w.endTime}`)
+        .sort(),
+    ).toEqual(["10:00-23:59", "23:00-07:00"]);
+  });
+
+  it("accepts an overnight window whose startTime is after its endTime", () => {
+    const result = addDraftTimeWindows(state(), [
+      { categoryId: CATEGORY_WORK, day: 1, startTime: "23:00", endTime: "07:00" },
+    ]);
+    expect(result.failures).toHaveLength(0);
     expect(result.state.windows).toHaveLength(2);
-    expect(result.state.windows[1].endTime).toBe("23:59");
+    expect(result.state.windows[1]).toMatchObject({
+      startTime: "23:00",
+      endTime: "07:00",
+    });
   });
 
   it("does not mutate the input state", () => {
@@ -138,12 +157,24 @@ describe("updateDraftTimeWindows", () => {
     });
   });
 
-  it("validates the patched start/end pair together", () => {
+  it("validates the patched start/end pair together, rejecting equal bounds", () => {
+    // The window ends 17:00; patching startTime to 17:00 collapses it.
     const result = updateDraftTimeWindows(state(), [
-      { id: "win-1", startTime: "18:00" },
+      { id: "win-1", startTime: "17:00" },
     ]);
     expect(result.failures).toHaveLength(1);
     expect(result.state.windows[0].startTime).toBe("09:00");
+  });
+
+  it("accepts a patch that turns the window overnight", () => {
+    const result = updateDraftTimeWindows(state(), [
+      { id: "win-1", startTime: "22:00", endTime: "06:00" },
+    ]);
+    expect(result.failures).toHaveLength(0);
+    expect(result.state.windows[0]).toMatchObject({
+      startTime: "22:00",
+      endTime: "06:00",
+    });
   });
 
   it("fails on unknown id and unknown categoryId", () => {
@@ -403,6 +434,30 @@ describe("findWindowOverlaps", () => {
     ]);
     expect(findWindowOverlaps(windows)).toHaveLength(2);
   });
+
+  it("flags an overnight window colliding with the next morning across the day boundary", () => {
+    const overlaps = findWindowOverlaps([
+      window({ id: "mon-night", day: 1, startTime: "23:00", endTime: "07:00" }),
+      window({ id: "tue-morning", day: 2, startTime: "06:00", endTime: "09:00" }),
+    ]);
+    expect(overlaps).toHaveLength(1);
+  });
+
+  it("does not flag an overnight window against an unrelated next-day window", () => {
+    const overlaps = findWindowOverlaps([
+      window({ id: "mon-night", day: 1, startTime: "23:00", endTime: "07:00" }),
+      window({ id: "tue-day", day: 2, startTime: "09:00", endTime: "17:00" }),
+    ]);
+    expect(overlaps).toHaveLength(0);
+  });
+
+  it("wraps a Saturday overnight window into Sunday morning on the weekly ring", () => {
+    const overlaps = findWindowOverlaps([
+      window({ id: "sat-night", day: 6, startTime: "23:00", endTime: "07:00" }),
+      window({ id: "sun-morning", day: 0, startTime: "05:00", endTime: "08:00" }),
+    ]);
+    expect(overlaps).toHaveLength(1);
+  });
 });
 
 describe("draftWindowsStateEqual / normalizeDraftWindowsState", () => {
@@ -453,7 +508,7 @@ describe("draftWindowsStateEqual / normalizeDraftWindowsState", () => {
     const normalized = normalizeDraftWindowsState({
       windows: [
         window(),
-        { id: "x", categoryId: CATEGORY_WORK, day: 1, startTime: "17:00", endTime: "09:00" },
+        { id: "x", categoryId: CATEGORY_WORK, day: 1, startTime: "09:00", endTime: "09:00" },
         "not an object",
       ],
       categories: [

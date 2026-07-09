@@ -102,7 +102,7 @@ export function addDraftTimeWindows(
       failures.push({
         id: null,
         reason:
-          'startTime/endTime must be "HH:MM" (24h) with startTime < endTime; use "23:59" for end of day and two windows to span midnight',
+          'startTime/endTime must be "HH:MM" (24h) and differ; startTime < endTime is within-day, startTime > endTime is overnight (e.g. "23:00"-"07:00"), "23:59" is end of day',
       });
       continue;
     }
@@ -173,7 +173,7 @@ export function updateDraftTimeWindows(
       failures.push({
         id,
         reason:
-          'startTime/endTime must be "HH:MM" (24h) with startTime < endTime; use "23:59" for end of day',
+          'startTime/endTime must be "HH:MM" (24h) and differ; startTime > endTime makes an overnight window, "23:59" is end of day',
       });
       continue;
     }
