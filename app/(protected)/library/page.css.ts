@@ -75,7 +75,7 @@ export const actionCluster = style({
 export const mainGrid = style({
   display: "grid",
   gridTemplateColumns: "auto 1fr",
-  gap: space["4"],
+  gap: space["6"],
   padding: "0 28px 28px",
   flex: 1,
   minHeight: 0,
@@ -104,6 +104,8 @@ export const rail = style([
   {
     width: 260,
     minWidth: 0,
+    borderRight: `1px solid ${vars.rule}`,
+    marginTop: space["2.5"],
     transition: collapseTransition,
     "@media": {
       [media.mobile]: { minHeight: "auto" },
@@ -128,12 +130,12 @@ export const railHeader = style({
   display: "flex",
   justifyContent: "flex-end",
   alignItems: "center",
-  padding: "10px 8px 4px",
+  padding: "0px 8px 4px",
   flexShrink: 0,
   selectors: {
     [`${page}[data-rail-collapsed="true"] &`]: {
       justifyContent: "center",
-      padding: "10px 0 4px",
+      paddingBottom: space["1"],
     },
   },
   "@media": {
@@ -162,18 +164,33 @@ export const railSection = style({
   flexDirection: "column",
   padding: "14px 12px 12px",
   borderBottom: `1px solid ${vars.rule}`,
+  // Pinned to the expanded width so it never reflows while the rail animates;
+  // the rail's overflow:hidden clips it and opacity fades it, making collapse
+  // and expand mirror animations instead of an abrupt hide.
+  width: 260,
+  alignSelf: "flex-start",
+  opacity: 1,
+  transition: collapseTransition,
+  "@media": {
+    [media.tablet]: { width: "auto", alignSelf: "stretch" },
+  },
   selectors: {
     "&:last-child": {
       borderBottom: "none",
       flex: 1,
       minHeight: 0,
-      overflow: "auto",
+      overflowY: "auto",
+      overflowX: "hidden",
     },
     [`${page}[data-rail-collapsed="true"] &`]: {
-      display: "none",
+      opacity: 0,
+      pointerEvents: "none",
       "@media": {
-        [media.tablet]: { display: "flex" },
+        [media.tablet]: { opacity: 1, pointerEvents: "auto" },
       },
+    },
+    [`${page}[data-no-transitions="true"] &`]: {
+      transition: "none",
     },
   },
 });
@@ -669,4 +686,3 @@ export const emptyStateTitle = style([
     transition: themeTransition,
   },
 ]);
-

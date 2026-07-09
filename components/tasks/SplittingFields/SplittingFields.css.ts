@@ -1,5 +1,12 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii, text, caption } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  radii,
+  text,
+  caption,
+} from "@/lib/theme";
 
 export const boxesCol = style({
   display: "flex",
@@ -33,8 +40,8 @@ export const numberInput = style([
   {
     background: vars.glass.bgSoft,
     border: `1px solid ${vars.glass.stroke}`,
-    borderRadius: radii["sm+2"],
-    padding: "6px 10px",
+    borderRadius: radii.sm,
+    padding: `${space["1"]}px ${space["2"]}px`,
     color: vars.ink,
     outline: "none",
     width: "100%",
