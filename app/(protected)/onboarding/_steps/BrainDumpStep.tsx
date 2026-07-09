@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
-import { Button } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 import { StepFrame } from "../_components/StepFrame";
 import type { DumpItem } from "../_lib/brainDumpRows";
 import {
@@ -76,7 +76,7 @@ export function BrainDumpStep({
       }
     >
       <div className={customRow}>
-        <input
+        <Input
           className={input}
           placeholder="Add something…"
           value={jot}

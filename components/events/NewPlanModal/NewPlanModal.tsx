@@ -5,12 +5,11 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { format } from "date-fns";
 import { CornerDownLeft } from "lucide-react";
-import { Button, Caption, Kbd } from "@/components/ui";
+import { Button, Caption, Input, Kbd } from "@/components/ui";
 import {
   overlay,
   dialog,
   header,
-  input,
   hintsRow,
 } from "@/components/ui/shell/CapturePalette/CapturePalette.css";
 
@@ -79,9 +78,9 @@ export function NewPlanModal({
           <Dialog.Title style={{ position: "absolute", left: -10000 }}>
             New plan
           </Dialog.Title>
-          <input
+          <Input
             ref={inputRef}
-            className={input}
+            variant="underline"
             placeholder="what's the plan?"
             type="text"
             value={value}

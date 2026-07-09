@@ -110,22 +110,16 @@ export const titleStatic = style([
   },
 ]);
 
+// The <Input variant="titleInline"> supplies the accent underline + box reset;
+// this layers the modal-title typography and the height matched to titleStatic
+// so toggling rename in/out doesn't shift layout.
 export const titleInput = style([
   display.modalTitle,
   {
     lineHeight: `${TITLE_LINE_HEIGHT}px`,
-    color: vars.ink,
-    background: "transparent",
-    border: "none",
-    outline: "none",
-    padding: 0,
-    margin: 0,
-    width: "100%",
     flex: 1,
     display: "block",
-    boxSizing: "content-box",
     height: TITLE_LINE_HEIGHT,
-    borderBottom: `${TITLE_BORDER}px solid ${vars.accent.primary}`,
   },
 ]);
 

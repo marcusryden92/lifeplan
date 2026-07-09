@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Input } from "@/components/ui";
 import { formatMinutesToHours } from "@/utils/taskArrayUtils";
 import { MIN_CHUNK_MINUTES, type TaskSplittingSettings } from "@/utils/taskSplitting";
 import {
@@ -8,7 +9,6 @@ import {
   inputsGrid,
   inputStack,
   inputCaption,
-  numberInput,
   progressNote,
 } from "./SplittingFields.css";
 
@@ -47,8 +47,7 @@ function CommitNumberInput({
   };
 
   return (
-    <input
-      className={numberInput}
+    <Input
       type="number"
       value={draft ?? (value === null ? "" : String(value))}
       placeholder={placeholder}

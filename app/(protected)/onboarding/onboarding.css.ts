@@ -6,7 +6,6 @@ import {
   contentWidth,
   media,
   zIndex,
-  formInput,
   colorMixAlpha,
   display,
   text,
@@ -423,12 +422,9 @@ export const dumpEmpty = style([
   },
 ]);
 
-// Shared inputs — built on the app-wide formInput recipe so onboarding fields
-// match every other form surface (glass fill, glass stroke, accent focus).
-export const input = style([
-  formInput({ variant: "boxed" }),
-  { appearance: "none" },
-]);
+// Override layer for the boxed <Input>; appearance:none only strips native
+// date/select chrome. The fill, stroke, and focus come from the component.
+export const input = style({ appearance: "none" });
 
 export const fieldStack = style({
   display: "flex",
@@ -527,8 +523,6 @@ export const locationRow = style({
   alignItems: "start",
 });
 
-export const nameField = style([formInput({ variant: "boxed" })]);
-
 export const addressCell = style({
   position: "relative",
 });
@@ -549,18 +543,15 @@ export const addressIcon = style({
   pointerEvents: "none",
 });
 
-// The boxed formInput recipe, but the MapPin icon (left) and spinner (right)
-// need wider asymmetric padding than the recipe's uniform 12px. `&&` doubles
-// specificity so the override beats the recipe's padding regardless of
-// stylesheet order — otherwise the icon sits on top of the text.
-export const addressInput = style([
-  formInput({ variant: "boxed" }),
-  {
-    selectors: {
-      "&&": { padding: "9px 36px 9px 38px" },
-    },
+// Boxed <Input> whose MapPin icon (left) and spinner (right) need wider
+// asymmetric padding than the recipe's uniform value. `&&` doubles specificity
+// so the override beats the recipe's padding regardless of stylesheet order —
+// otherwise the icon sits on top of the text.
+export const addressInput = style({
+  selectors: {
+    "&&": { padding: "9px 36px 9px 38px" },
   },
-]);
+});
 
 export const addressSelected = style({
   borderColor: vars.accent.primary,

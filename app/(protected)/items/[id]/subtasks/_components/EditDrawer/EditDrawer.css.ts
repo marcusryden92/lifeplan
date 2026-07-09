@@ -61,19 +61,13 @@ export const drawerBody = style({
   gap: space["3.5"],
 });
 
+// The <Input variant="titleInline"> supplies the accent underline + box reset;
+// this layers the modal-title typography and a little vertical breathing room.
 export const drawerTitleInput = style([
   display.modalTitle,
   {
-    color: vars.ink,
-    background: "transparent",
-    border: "none",
-    outline: "none",
-    padding: "4px 0",
-    borderBottom: `1px solid ${vars.rule}`,
-    transition: themeTransition,
     selectors: {
-      "&:focus": { borderBottomColor: vars.accent.primary },
-      "&::placeholder": { color: vars.muted },
+      "&&": { padding: "4px 0" },
     },
   },
 ]);

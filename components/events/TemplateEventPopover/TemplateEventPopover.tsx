@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { Button, CategoryBadge, TypeBadge } from "@/components/ui";
+import { Button, CategoryBadge, Input, TypeBadge } from "@/components/ui";
 import {
   occurrenceKeyFromEventId,
   hasMovedException,
@@ -191,8 +191,9 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
 
           <div className={titleRow}>
             {isEditingTitle ? (
-              <input
+              <Input
                 ref={titleInputRef}
+                variant="titleInline"
                 type="text"
                 value={titleValue}
                 onChange={(e) => setTitleValue(e.target.value)}

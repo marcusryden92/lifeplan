@@ -1,19 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui";
+import { Button, Field, Input } from "@/components/ui";
 import { settings } from "@/actions/settings";
 import { useServerAction } from "@/hooks/useServerAction";
 import type { UserRole } from "@/generated/client";
 import { StatusLine } from "../StatusLine";
-import {
-  card,
-  cardTitle,
-  field,
-  fieldLabel,
-  fieldInput,
-  footerRow,
-} from "../../page.css";
+import { card, cardTitle, footerRow } from "../../page.css";
 
 interface ProfileSectionProps {
   user: { name?: string; role: UserRole };
@@ -40,17 +33,15 @@ export function ProfileSection({ user }: ProfileSectionProps) {
   return (
     <div className={card}>
       <span className={cardTitle}>Identity</span>
-      <label className={field}>
-        <span className={fieldLabel}>Name</span>
-        <input
-          className={fieldInput}
+      <Field label="Name">
+        <Input
           value={name}
           placeholder="Your name"
           onChange={(e) => setName(e.target.value)}
           disabled={isPending}
           maxLength={80}
         />
-      </label>
+      </Field>
       <div className={footerRow}>
         <StatusLine status={status} />
         <Button

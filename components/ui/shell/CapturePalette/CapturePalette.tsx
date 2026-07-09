@@ -9,18 +9,13 @@ import { v4 as uuidv4 } from "uuid";
 import { useCapture } from "../CaptureContext";
 import { Caption } from "../../Caption";
 import { Button } from "../../Button";
+import { Input } from "../../Input";
 import { Kbd } from "../../Kbd";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { usePlatform } from "@/hooks/usePlatform";
 import { PRIORITY_DEFAULT } from "@/utils/plannerPriority";
 import type { Planner } from "@/types/prisma";
-import {
-  overlay,
-  dialog,
-  header,
-  input,
-  hintsRow,
-} from "./CapturePalette.css";
+import { overlay, dialog, header, hintsRow } from "./CapturePalette.css";
 
 export function CapturePalette() {
   const { open, setOpen } = useCapture();
@@ -114,9 +109,9 @@ export function CapturePalette() {
           <Dialog.Title style={{ position: "absolute", left: -10000 }}>
             Capture
           </Dialog.Title>
-          <input
+          <Input
             ref={inputRef}
-            className={input}
+            variant="underline"
             placeholder="jot anything…"
             type="text"
             value={value}

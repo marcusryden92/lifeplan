@@ -2,7 +2,7 @@ import { recipe } from "@vanilla-extract/recipes";
 import { vars } from "./tokens.css";
 import { backdropFilters } from "./effects";
 import { themeTransition, buttonTransition } from "./transitions";
-import { radii, space } from "./scales";
+import { radii, space, borderWidth } from "./scales";
 
 export const glass = recipe({
   base: {
@@ -307,27 +307,50 @@ export const badge = recipe({
 
 export type BadgeVariants = NonNullable<Parameters<typeof badge>[0]>;
 
-// Shared form input recipe. Two intentional patterns:
-//   underline — single-input "command bar" modals (QC, NewPlanModal). The
-//     input IS the modal; large font, no box, just a focus underline.
-//   boxed — form-field modals (locations, settings). Multiple labeled fields
-//     where each input needs a clear container anchor.
-// Both share font family, focus color, and text color so they feel like the
-// same family. Only the shape differs.
+// The single source of truth for every text input in the app, consumed
+// through the <Input> primitive. Four intentional shapes:
+//   boxed — labeled form fields (settings, locations, item detail). A clear
+//     container anchor per field. The default.
+//   underline — single-input "command bar" modals (Capture, NewPlanModal).
+//     The input IS the modal; large font, no box, just a focus underline.
+//   bare — an input embedded in an already-styled wrapper (search pills). No
+//     box of its own; inherits the wrapper's surface.
+//   titleInline — inline rename editors that replace a static display title.
+//     Carries only the accent-underline treatment; the caller composes the
+//     display typography so a page title and a popover title keep their scale.
+// The base owns the theme-invariant behavior (focus reset, placeholder,
+// disabled, number-spinner removal); each variant sets font + shape so the
+// typography-agnostic titleInline can borrow the caller's display preset
+// without a font-family collision.
 export const formInput = recipe({
   base: {
-    fontFamily: vars.font.ui,
     color: vars.ink,
     outline: "none",
     width: "100%",
     transition: themeTransition,
     selectors: {
       "&::placeholder": { color: vars.muted },
+      "&:disabled": { opacity: 0.6, cursor: "not-allowed" },
+      "&::-webkit-inner-spin-button": { appearance: "none", margin: 0 },
+      "&::-webkit-outer-spin-button": { appearance: "none", margin: 0 },
     },
   },
   variants: {
     variant: {
+      boxed: {
+        fontFamily: vars.font.ui,
+        fontSize: 13.5,
+        fontWeight: 500,
+        padding: "6px 11px",
+        background: "transparent",
+        border: `1px solid ${vars.glass.stroke}`,
+        borderRadius: radii["sm+2"],
+        selectors: {
+          "&:focus": { borderColor: vars.accent.primary },
+        },
+      },
       underline: {
+        fontFamily: vars.font.ui,
         fontSize: 16,
         fontWeight: 500,
         padding: "8px 0",
@@ -338,16 +361,21 @@ export const formInput = recipe({
           "&:focus": { borderBottomColor: vars.accent.primary },
         },
       },
-      boxed: {
-        fontSize: 13.5,
+      bare: {
+        fontFamily: vars.font.ui,
+        fontSize: 13,
         fontWeight: 500,
-        padding: "6px 11px",
-        background: vars.glass.bgSoft,
-        border: `1px solid ${vars.glass.stroke}`,
-        borderRadius: radii["sm+2"],
-        selectors: {
-          "&:focus": { borderColor: vars.accent.primary },
-        },
+        padding: 0,
+        background: "transparent",
+        border: "none",
+      },
+      titleInline: {
+        padding: 0,
+        margin: 0,
+        background: "transparent",
+        border: "none",
+        borderBottom: `${borderWidth.medium}px solid ${vars.accent.primary}`,
+        boxSizing: "content-box",
       },
     },
   },

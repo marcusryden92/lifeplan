@@ -4,7 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { Button, Caption, SegmentedControl } from "@/components/ui";
+import { Button, Caption, Input, SegmentedControl } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { fallbackCalendarColor } from "@/utils/colorUtils";
 import { defaultReadyForType } from "@/utils/plannerReadiness";
@@ -14,7 +14,6 @@ import {
   overlay,
   dialog,
   header,
-  titleInput,
   field,
   fieldLabel,
   durationRow,
@@ -125,9 +124,9 @@ export function NewItemModal({
             New item
           </Dialog.Title>
 
-          <input
+          <Input
             ref={inputRef}
-            className={titleInput}
+            variant="underline"
             placeholder="What is it?"
             type="text"
             value={title}
@@ -152,7 +151,7 @@ export function NewItemModal({
             <div className={field}>
               <span className={fieldLabel}>Duration</span>
               <div className={durationRow}>
-                <input
+                <Input
                   className={durationInput}
                   type="number"
                   min={MIN_DURATION_MINUTES}

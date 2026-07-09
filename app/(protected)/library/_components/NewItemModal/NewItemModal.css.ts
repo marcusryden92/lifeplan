@@ -5,7 +5,6 @@ import {
   DURATIONS,
   popover,
   backdropFilters,
-  formInput,
   media,
   radii,
   text,
@@ -80,8 +79,6 @@ export const header = style({
   gap: space["3"],
 });
 
-export const titleInput = style([formInput({ variant: "underline" })]);
-
 export const field = style({
   display: "flex",
   flexDirection: "column",
@@ -103,10 +100,13 @@ export const durationRow = style({
   gap: space["2"],
 });
 
-export const durationInput = style([
-  formInput({ variant: "boxed" }),
-  { width: 96 },
-]);
+// Boxed <Input>; fixed width beats the recipe's width:100% via the doubled
+// selector.
+export const durationInput = style({
+  selectors: {
+    "&&": { width: 96 },
+  },
+});
 
 export const durationUnit = style([
   text.body,

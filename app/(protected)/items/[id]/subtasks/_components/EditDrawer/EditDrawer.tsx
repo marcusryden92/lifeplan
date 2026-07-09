@@ -12,7 +12,7 @@ import { X, Trash2, Copy, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
-import { Button, Caption, Switch } from "@/components/ui";
+import { Button, Caption, Input, Switch } from "@/components/ui";
 import {
   SplittingFields,
   DEFAULT_SPLITTING_SETTINGS,
@@ -262,8 +262,9 @@ export function EditDrawer() {
       </div>
 
       <div className={drawerBody}>
-        <input
+        <Input
           ref={titleInputRef}
+          variant="titleInline"
           className={drawerTitleInput}
           value={titleDraft}
           onChange={(e) => setTitleDraft(e.target.value)}

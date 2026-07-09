@@ -5,7 +5,6 @@ import {
   DURATIONS,
   popover,
   backdropFilters,
-  formInput,
   media,
   radii,
 } from "@/lib/theme";
@@ -79,8 +78,6 @@ export const header = style({
   justifyContent: "space-between",
   gap: space["3"],
 });
-
-export const input = style([formInput({ variant: "underline" })]);
 
 export const hintsRow = style({
   display: "flex",

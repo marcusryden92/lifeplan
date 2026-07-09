@@ -210,37 +210,6 @@ export const fieldGrid = style({
   "@media": { [media.mobile]: { gridTemplateColumns: "1fr" } },
 });
 
-export const field = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["1.5"],
-});
-
-export const fieldLabel = style([
-  fieldLabelText,
-  {
-    transition: themeTransition,
-  },
-]);
-
-export const fieldInput = style({
-  padding: "10px 12px",
-  borderRadius: radii.sm,
-  border: `1px solid ${vars.rule}`,
-  background: vars.glass.bgSoft,
-  color: vars.ink,
-  fontFamily: vars.font.ui,
-  fontSize: 13,
-  fontWeight: 500,
-  outline: "none",
-  transition: themeTransition,
-  selectors: {
-    "&:focus": { borderColor: vars.ink },
-    "&:disabled": { opacity: 0.6, cursor: "not-allowed" },
-    "&::placeholder": { color: vars.muted },
-  },
-});
-
 export const fieldNote = style([
   text.label,
   {

@@ -25,7 +25,7 @@ import { useSearch } from "../SearchContext";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { RootState } from "@/redux/store";
 import type { Planner, Category, Location } from "@/types/prisma";
-import { Kbd } from "@/components/ui";
+import { Input, Kbd } from "@/components/ui";
 import {
   overlay,
   dialog,
@@ -229,8 +229,9 @@ export function SearchPalette() {
             <span className={inputIcon} aria-hidden>
               <Search size={18} strokeWidth={2} />
             </span>
-            <input
+            <Input
               ref={inputRef}
+              variant="bare"
               className={input}
               placeholder="Search items, categories, locations…"
               type="text"

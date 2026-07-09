@@ -15,6 +15,7 @@ import {
   Button,
   Caption,
   DateTimePicker,
+  Input,
   Kbd,
   Loader,
   vars,
@@ -312,7 +313,8 @@ export default function CapturePage() {
 
           <div className={quickAdd}>
             <Plus size={14} strokeWidth={2.4} style={{ color: vars.muted }} />
-            <input
+            <Input
+              variant="bare"
               className={quickAddInput}
               placeholder="jot anything…"
               value={jot}
@@ -439,7 +441,8 @@ export default function CapturePage() {
                         —
                       </span>
                     ) : (
-                      <input
+                      <Input
+                        variant="bare"
                         className={fieldInput}
                         type="number"
                         min={1}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Button, vars } from "@/components/ui";
+import { Button, Input, vars } from "@/components/ui";
 import type { EventTemplate } from "@/types/prisma";
 import { PopoverLocationPicker } from "@/components/events/PopoverLocationPicker";
 import { PopoverColorPicker } from "@/components/events/PopoverColorPicker";
@@ -22,7 +22,6 @@ import {
   field,
   fieldWithMargin,
   fieldLabel,
-  fieldInput,
   fieldStatic,
   selectedActions,
   exceptionsSection,
@@ -65,8 +64,7 @@ export function TemplateEditor({
 
       <div className={fieldWithMargin}>
         <span className={fieldLabel}>name</span>
-        <input
-          className={fieldInput}
+        <Input
           value={template.title}
           onChange={(e) => onUpdate({ title: e.target.value })}
         />

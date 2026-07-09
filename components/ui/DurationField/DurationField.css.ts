@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii, text, caption } from "@/lib/theme";
+import { space, vars, themeTransition, caption } from "@/lib/theme";
 
 export const root = style({
   display: "inline-flex",
@@ -13,27 +13,20 @@ export const unitGroup = style({
   gap: space["1.5"],
 });
 
-export const input = style([
-  text.row,
-  {
-    width: 58,
-    padding: "6px 8px",
-    background: vars.glass.bgSoft,
-    border: `1px solid ${vars.glass.stroke}`,
-    borderRadius: radii["sm+2"],
-    color: vars.ink,
-    fontWeight: 600,
-    textAlign: "center",
-    outline: "none",
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-    selectors: {
-      "&:focus": { borderColor: vars.accent.primary },
-      "&::-webkit-inner-spin-button": { appearance: "none", margin: 0 },
-      "&::-webkit-outer-spin-button": { appearance: "none", margin: 0 },
+// Narrow, centered, bold numeric field. The box (fill, border, radius, focus,
+// spinner removal) comes from the boxed <Input> recipe; these override the
+// geometry. Doubled selector to win specificity over the recipe class.
+export const input = style({
+  selectors: {
+    "&&": {
+      width: 58,
+      padding: "6px 8px",
+      fontWeight: 600,
+      textAlign: "center",
+      fontVariantNumeric: "tabular-nums",
     },
   },
-]);
+});
 
 export const unit = style([
   caption,

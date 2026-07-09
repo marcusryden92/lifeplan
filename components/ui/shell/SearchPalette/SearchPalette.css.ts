@@ -5,7 +5,6 @@ import {
   DURATIONS,
   popover,
   backdropFilters,
-  formInput,
   media,
   radii,
   fieldLabel,
@@ -90,19 +89,14 @@ export const inputIcon = style({
   color: vars.inkSoft,
 });
 
-export const input = style([
-  formInput({ variant: "underline" }),
-  {
-    flex: 1,
-    border: "none",
-    borderBottom: "none",
-    padding: 0,
-    background: "transparent",
-    selectors: {
-      "&:focus": { borderBottom: "none" },
-    },
+// Bare field inside the icon row; the large search font is the one thing that
+// differs from the bare <Input> default, so it wins via the doubled selector.
+export const input = style({
+  flex: 1,
+  selectors: {
+    "&&": { fontSize: 16 },
   },
-]);
+});
 
 export const scrollArea = style({
   overflowY: "auto",

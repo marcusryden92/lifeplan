@@ -99,22 +99,17 @@ export const headerName = style([
   },
 ]);
 
+// The <Input variant="titleInline"> supplies the accent underline + box reset;
+// this layers the page-title typography and the height matched to headerName so
+// toggling rename in/out doesn't shift layout.
 export const headerNameInput = style([
   display.pageTitle,
   {
     lineHeight: `${NAME_LINE_HEIGHT}px`,
-    color: vars.ink,
-    background: "transparent",
-    border: "none",
-    outline: "none",
-    padding: 0,
-    margin: 0,
     flex: 1,
     minWidth: 0,
     display: "block",
-    boxSizing: "content-box",
     height: NAME_LINE_HEIGHT,
-    borderBottom: `${NAME_BORDER}px solid ${vars.accent.primary}`,
   },
 ]);
 

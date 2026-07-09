@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties } from "react";
 import { Plus, X } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 import { StepFrame } from "../_components/StepFrame";
 import {
   STARTER_ROLE_PRESETS,
@@ -260,7 +260,7 @@ export function RolesStep({
           )}
 
           <div className={customRow}>
-            <input
+            <Input
               className={input}
               placeholder="Add your own role…"
               value={customName}

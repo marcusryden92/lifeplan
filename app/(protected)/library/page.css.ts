@@ -328,21 +328,8 @@ export const searchWrap = style({
   transition: themeTransition,
 });
 
-export const searchInput = style([
-  text.body,
-  {
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    color: vars.ink,
-    flex: 1,
-    selectors: {
-      "&::placeholder": {
-        color: vars.muted,
-      },
-    },
-  },
-]);
+// Bare <Input> inside the search pill; the pill owns the box.
+export const searchInput = style({ flex: 1 });
 
 export const breadcrumb = style([
   text.body,

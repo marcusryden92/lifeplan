@@ -118,17 +118,7 @@ export const quickAdd = style({
   transition: themeTransition,
 });
 
-export const quickAddInput = style([
-  text.body,
-  {
-    flex: 1,
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    color: vars.ink,
-    selectors: { "&::placeholder": { color: vars.muted } },
-  },
-]);
+export const quickAddInput = style({ flex: 1 });
 
 export const queueList = style({
   display: "flex",
@@ -325,24 +315,21 @@ export const fieldLabel = style([
   },
 ]);
 
-export const fieldInput = style([
-  text.bodyLg,
-  {
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    color: vars.ink,
-    width: "100%",
-    height: 26,
-    lineHeight: "26px",
-    padding: 0,
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-    selectors: {
-      "&::placeholder": { color: vars.muted, opacity: 0.6 },
-    },
+// Bare field: the surrounding `field` is the box. Shared by the number
+// <Input variant="bare"> and its sibling "—" placeholder span, which must
+// stay pixel-identical — the doubled selector beats the bare variant's font.
+export const fieldInput = style({
+  fontFamily: vars.font.ui,
+  height: 26,
+  lineHeight: "26px",
+  fontVariantNumeric: "tabular-nums",
+  color: vars.ink,
+  transition: themeTransition,
+  selectors: {
+    "&&": { fontSize: 14, fontWeight: 500 },
+    "&::placeholder": { color: vars.muted, opacity: 0.6 },
   },
-]);
+});
 
 export const categoryTrigger = style([
   text.bodyLg,

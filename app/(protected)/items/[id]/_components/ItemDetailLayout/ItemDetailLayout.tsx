@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Check, SquarePen } from "lucide-react";
-import { Button, Caption, Loader } from "@/components/ui";
+import { Button, Caption, Input, Loader } from "@/components/ui";
 import { space, vars, interactiveTransition } from "@/lib/theme";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
@@ -318,8 +318,9 @@ export default function ItemDetailLayout({
             <div className={titleBlock}>
               <div className={editableTitleWrap}>
                 {editingTitle ? (
-                  <input
+                  <Input
                     autoFocus
+                    variant="titleInline"
                     className={titleEditInput}
                     value={draftTitle}
                     onChange={(e) => setDraftTitle(e.target.value)}

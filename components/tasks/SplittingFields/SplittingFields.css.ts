@@ -1,12 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  radii,
-  text,
-  caption,
-} from "@/lib/theme";
+import { space, vars, themeTransition, text, caption } from "@/lib/theme";
 
 export const boxesCol = style({
   display: "flex",
@@ -32,25 +25,6 @@ export const inputCaption = style([
   caption,
   {
     transition: themeTransition,
-  },
-]);
-
-export const numberInput = style([
-  text.row,
-  {
-    background: vars.glass.bgSoft,
-    border: `1px solid ${vars.glass.stroke}`,
-    borderRadius: radii.sm,
-    padding: `${space["1"]}px ${space["2"]}px`,
-    color: vars.ink,
-    outline: "none",
-    width: "100%",
-    transition: themeTransition,
-    selectors: {
-      "&:focus": {
-        borderColor: vars.accent.primary,
-      },
-    },
   },
 ]);
 

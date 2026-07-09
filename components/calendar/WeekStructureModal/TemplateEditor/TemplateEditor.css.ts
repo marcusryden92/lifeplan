@@ -65,26 +65,6 @@ export const fieldWithMargin = style({
 
 export const fieldLabel = fieldLabelPreset;
 
-export const fieldInput = style([
-  text.bodySm,
-  {
-    appearance: "none",
-    border: `1px solid ${vars.rule}`,
-    background: vars.paper,
-    padding: "6px 10px",
-    borderRadius: radii.sm,
-    color: vars.ink,
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-    selectors: {
-      "&:focus": {
-        outline: "none",
-        borderColor: `color-mix(in srgb, ${vars.accent.primary} 60%, ${vars.rule})`,
-      },
-    },
-  },
-]);
-
 export const fieldStatic = style([
   text.row,
   {

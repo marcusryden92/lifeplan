@@ -6,6 +6,7 @@ import { Plus } from "lucide-react";
 import { AddSubtaskProps } from "@/lib/taskItem";
 import type { Planner } from "@/types/prisma";
 
+import { Input } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { addSubtask } from "@/utils/goalPageHandlers";
 import { iconBtn as iconBtnRecipe } from "@/lib/theme";
@@ -75,7 +76,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
   return (
     <div className={isMainParent ? addRowRoot : addRowInline}>
       <div className={addRowForm}>
-        <input
+        <Input
           ref={getRef(parentId ?? undefined)}
           className={editInput}
           value={taskTitle}
@@ -83,7 +84,7 @@ const AddSubtask: React.FC<AddSubtaskProps> = ({
           placeholder="New subtask name"
           style={isMainParent ? undefined : { maxWidth: 180 }}
         />
-        <input
+        <Input
           ref={durationRef}
           className={editDurationInput}
           value={taskDuration || ""}

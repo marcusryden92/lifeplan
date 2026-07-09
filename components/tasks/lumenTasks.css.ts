@@ -361,41 +361,19 @@ export const editForm = style({
   minWidth: 0,
 });
 
-export const editInput = style([
-  text.row,
-  {
-    flex: 1,
-    minWidth: 0,
-    background: vars.glass.bgSoft,
-    border: `1px solid ${vars.glass.stroke}`,
-    borderRadius: radii.sm,
-    padding: "5px 10px",
-    color: vars.ink,
-    outline: "none",
-    transition: themeTransition,
-    selectors: {
-      "&:focus": { borderColor: vars.accent.primary },
-    },
-  },
-]);
+// Boxed <Input> for the add-subtask row; fill/border/focus come from the
+// recipe, these carry only layout.
+export const editInput = style({
+  flex: 1,
+  minWidth: 0,
+});
 
-export const editDurationInput = style([
-  text.row,
-  {
-    width: 72,
-    background: vars.glass.bgSoft,
-    border: `1px solid ${vars.glass.stroke}`,
-    borderRadius: radii.sm,
-    padding: "5px 10px",
-    color: vars.ink,
-    outline: "none",
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-    selectors: {
-      "&:focus": { borderColor: vars.accent.primary },
-    },
+export const editDurationInput = style({
+  fontVariantNumeric: "tabular-nums",
+  selectors: {
+    "&&": { width: 72 },
   },
-]);
+});
 
 export const addSubtaskTrigger = style([
   text.bodySm,

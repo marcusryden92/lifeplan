@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronRight, Lock, MapPin, SquarePen, Trash2 } from "lucide-react";
-import { Button, Caption, Combobox } from "@/components/ui";
+import { Button, Caption, Combobox, Input } from "@/components/ui";
 import type { Category } from "@/types/prisma";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import { parseRecurrenceExceptions } from "@/utils/planRecurrence";
@@ -212,8 +212,9 @@ export function CategoryEditor({
         <div className={headerInfo}>
           <div className={headerNameRow}>
             {editingName ? (
-              <input
+              <Input
                 ref={nameInputRef}
+                variant="titleInline"
                 className={headerNameInput}
                 value={nameDraft}
                 onChange={(e) => setNameDraft(e.target.value)}

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, MapPin, Trash2, AlertTriangle } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Button } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import { useLocationModalState } from "../../_hooks/useLocationModalState";
 import { usePlaceSearch, type Prediction } from "../../_hooks/usePlaceSearch";
@@ -20,7 +20,6 @@ import {
   searchIcon,
   searchSpinner,
   textInput,
-  plainInput,
   selectedHint,
   cascadeNote,
   placeMessageSlot,
@@ -149,8 +148,7 @@ export function EditLocationModal({
 
           <div className={fieldStack}>
             <span className={fieldLabel}>Name</span>
-            <input
-              className={plainInput}
+            <Input
               placeholder="e.g. Home, Office, Gym"
               value={name}
               maxLength={50}
@@ -166,7 +164,7 @@ export function EditLocationModal({
               <span className={searchIcon}>
                 <MapPin size={13} strokeWidth={2} />
               </span>
-              <input
+              <Input
                 className={textInput}
                 placeholder="Search for an address…"
                 value={query}

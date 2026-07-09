@@ -32,6 +32,7 @@ import {
   Button,
   Caption,
   ConfirmModal,
+  Input,
   Loader,
   Switch,
   vars,
@@ -685,7 +686,8 @@ export default function LibraryPage() {
                   strokeWidth={2}
                   style={{ color: vars.muted }}
                 />
-                <input
+                <Input
+                  variant="bare"
                   className={searchInput}
                   placeholder={`Search ${selectionLabel.toLowerCase()}…`}
                   value={search}

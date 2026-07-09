@@ -32,7 +32,7 @@ import {
 import { PlannerType } from "@/types/prisma";
 import { calendarColors } from "@/data/calendarColors";
 import { getCompleteTaskTreeIds, getRootParentId } from "@/utils/goalPageHandlers";
-import { CategoryBadge, TypeBadge } from "@/components/ui";
+import { CategoryBadge, Input, TypeBadge } from "@/components/ui";
 import { vars } from "@/lib/theme";
 import { CalendarPopover } from "../CalendarPopover";
 import { PopoverAction } from "../PopoverAction";
@@ -306,8 +306,9 @@ const EventPopover: React.FC<EventPopoverProps> = ({
 
           <div className={titleRow}>
             {isEditing ? (
-              <input
+              <Input
                 ref={inputRef}
+                variant="titleInline"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Input } from "../Input";
 import { root, unitGroup, input, unit } from "./DurationField.css";
 
 interface DurationFieldProps {
@@ -53,7 +54,7 @@ export function DurationField({
   return (
     <div className={root}>
       <div className={unitGroup}>
-        <input
+        <Input
           className={input}
           type="number"
           min={0}
@@ -66,7 +67,7 @@ export function DurationField({
         <span className={unit}>h</span>
       </div>
       <div className={unitGroup}>
-        <input
+        <Input
           className={input}
           type="number"
           min={0}
