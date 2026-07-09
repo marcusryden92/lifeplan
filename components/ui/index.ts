@@ -26,6 +26,7 @@ export { DateTimePicker } from "./DateTimePicker";
 export type { DateTimePickerProps } from "./DateTimePicker";
 export { TimePicker } from "./TimePicker";
 export type { TimePickerProps } from "./TimePicker";
+export { DurationField } from "./DurationField";
 export { CenteredLoader } from "./CenteredLoader";
 export { StubPage } from "./StubPage";
 export {

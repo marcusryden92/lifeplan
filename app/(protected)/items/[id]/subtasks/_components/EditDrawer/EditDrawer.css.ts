@@ -7,7 +7,6 @@ import {
   radii,
   media,
   display,
-  text,
   iconBtn,
   fieldLabel as fieldLabelPreset,
 } from "@/lib/theme";
@@ -88,49 +87,6 @@ export const fieldLabel = style([
   fieldLabelPreset,
   {
     transition: themeTransition,
-  },
-]);
-
-export const durationStepper = style({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: space["1.5"],
-});
-
-export const stepperBtn = style([
-  iconBtn(),
-  {
-    border: `1px solid ${vars.glass.stroke}`,
-    background: vars.glass.bg,
-    color: vars.ink,
-    selectors: {
-      "&:hover:not(:disabled)": {
-        background: vars.glass.bgDeep,
-        color: vars.ink,
-      },
-    },
-  },
-]);
-
-export const stepperValue = style([
-  text.row,
-  {
-    width: 72,
-    padding: "5px 10px",
-    background: vars.glass.bgSoft,
-    border: `1px solid ${vars.glass.stroke}`,
-    borderRadius: radii["sm+2"],
-    fontWeight: 600,
-    color: vars.ink,
-    textAlign: "center",
-    outline: "none",
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-    selectors: {
-      "&:focus": { borderColor: vars.accent.primary },
-      "&::-webkit-inner-spin-button": { appearance: "none", margin: 0 },
-      "&::-webkit-outer-spin-button": { appearance: "none", margin: 0 },
-    },
   },
 ]);
 

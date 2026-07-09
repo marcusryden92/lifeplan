@@ -3,7 +3,6 @@ import {
   space,
   vars,
   themeTransition,
-  radii,
   text,
   fieldLabel as fieldLabelPreset,
 } from "@/lib/theme";
@@ -29,25 +28,5 @@ export const fieldValue = style([
     color: vars.ink,
     fontVariantNumeric: "tabular-nums",
     transition: themeTransition,
-  },
-]);
-
-export const numberInput = style([
-  text.row,
-  {
-    background: vars.glass.bgSoft,
-    border: `1px solid ${vars.glass.stroke}`,
-    borderRadius: radii["sm+2"],
-    padding: "6px 11px",
-    color: vars.ink,
-    outline: "none",
-    width: "100%",
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-    selectors: {
-      "&:focus": {
-        borderColor: vars.accent.primary,
-      },
-    },
   },
 ]);

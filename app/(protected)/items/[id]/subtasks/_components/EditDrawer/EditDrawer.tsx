@@ -6,10 +6,9 @@ import {
   useMemo,
   useRef,
   useState,
-  type ChangeEvent,
   type KeyboardEvent,
 } from "react";
-import { X, Minus, Plus, Trash2, Copy, MapPin } from "lucide-react";
+import { X, Trash2, Copy, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
@@ -26,7 +25,12 @@ import {
 } from "@/utils/goal-handlers/subtaskCompletion";
 import { getRootParentId, getSubtasksById } from "@/utils/goalPageHandlers";
 import { Check } from "lucide-react";
-import { Combobox, ConfirmModal, DateTimePicker } from "@/components/ui";
+import {
+  Combobox,
+  ConfirmModal,
+  DateTimePicker,
+  DurationField,
+} from "@/components/ui";
 import { formatDatetimeLocal, parseDatetimeLocal } from "@/utils/datetime";
 import { SHAKE_DURATION_MS } from "../../../_constants";
 
@@ -39,9 +43,6 @@ import {
   drawerTitleInput,
   fieldStack,
   fieldLabel,
-  durationStepper,
-  stepperBtn,
-  stepperValue,
   dateInputFaded,
   completeHeader,
   completeCheckbox,
@@ -141,15 +142,6 @@ export function EditDrawer() {
           : p,
       ),
     );
-  };
-
-  const stepDuration = (delta: number) =>
-    setDuration(Math.max(5, (task.duration ?? 0) + delta));
-
-  const onDurationInput = (e: ChangeEvent<HTMLInputElement>) => {
-    const v = Number(e.target.value);
-    if (Number.isNaN(v)) return;
-    setDuration(Math.max(0, v));
   };
 
   const setDeadline = (iso: string | null) => {
@@ -253,33 +245,11 @@ export function EditDrawer() {
 
         <div className={fieldStack}>
           <span className={fieldLabel}>Duration</span>
-          <div className={durationStepper}>
-            <button
-              type="button"
-              className={stepperBtn}
-              onClick={() => stepDuration(-5)}
-              aria-label="Decrease duration"
-            >
-              <Minus size={12} strokeWidth={2.4} />
-            </button>
-            <input
-              className={stepperValue}
-              type="number"
-              min={0}
-              value={task.duration ? task.duration : ""}
-              placeholder="0"
-              onChange={onDurationInput}
-            />
-            <button
-              type="button"
-              className={stepperBtn}
-              onClick={() => stepDuration(5)}
-              aria-label="Increase duration"
-            >
-              <Plus size={12} strokeWidth={2.4} />
-            </button>
-            <Caption>min</Caption>
-          </div>
+          <DurationField
+            minutes={task.duration ?? 0}
+            ariaLabel="Duration"
+            onCommit={setDuration}
+          />
         </div>
 
         <div className={fieldStack}>

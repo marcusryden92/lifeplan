@@ -1,13 +1,9 @@
 "use client";
 
+import { DurationField } from "@/components/ui";
 import { formatMinutesToHours } from "@/utils/taskArrayUtils";
 import { useItem } from "../../ItemContext";
-import {
-  fieldStack,
-  fieldLabel,
-  fieldValue,
-  numberInput,
-} from "./DurationSection.css";
+import { fieldStack, fieldLabel, fieldValue } from "./DurationSection.css";
 
 export function DurationSection() {
   const { item, totalDuration, updateField } = useItem();
@@ -15,20 +11,17 @@ export function DurationSection() {
 
   return (
     <div className={fieldStack}>
-      <span className={fieldLabel}>
-        {isGoal ? "Total duration" : "Duration (min)"}
-      </span>
+      <span className={fieldLabel}>{isGoal ? "Total duration" : "Duration"}</span>
       {isGoal ? (
         <span className={fieldValue}>
           {formatMinutesToHours(totalDuration)}
         </span>
       ) : (
-        <input
-          className={numberInput}
-          type="number"
-          min={1}
-          value={item.duration}
-          onChange={(e) => updateField("duration", Number(e.target.value))}
+        <DurationField
+          minutes={item.duration}
+          minMinutes={1}
+          ariaLabel="Duration"
+          onCommit={(minutes) => updateField("duration", minutes)}
         />
       )}
     </div>

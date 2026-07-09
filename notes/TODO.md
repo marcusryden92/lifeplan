@@ -1,7 +1,6 @@
 # Issues
 
 
-- Remove annoying 30 min gap between split tasks in the same day
 - Duration needs an hour setting
 - Still need to hard refresh for new locations to take effect
 - Split task feature to goal subtasks
