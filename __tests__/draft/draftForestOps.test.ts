@@ -149,6 +149,20 @@ describe("updateDraftItems", () => {
     expect(ok.forest.goals[1].isReady).toBe(true);
   });
 
+  it("readies a standalone task freely — no subtasks or deadline needed", () => {
+    const forest = makeForest();
+    forest.goals.push(node({ id: "loose", title: "Call dentist" }));
+    const result = updateDraftItems(
+      forest,
+      [{ id: "loose", isReady: true }],
+      VALID_CATEGORY_IDS,
+    );
+    expect(result.failures).toEqual([]);
+    expect(result.forest.goals.find((g) => g.id === "loose")!.isReady).toBe(
+      true,
+    );
+  });
+
   it("reports unknown ids without touching anything", () => {
     const result = updateDraftItems(
       makeForest(),

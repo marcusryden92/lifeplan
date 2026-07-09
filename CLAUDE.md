@@ -214,8 +214,8 @@
     starts?: ISO,                 // plan items only
     sortOrder: number,            // fractional sibling key within a parentId group (0 on roots — top-level order non-semantic)
     priority: number,
-    isReady?: boolean,            // goals: ready to schedule?
-    isTriaged: boolean,           // false until first Capture save moves the item out of the triage queue
+    isReady?: boolean,            // universal scheduling gate (tasks + goals): schedules only when true. Tasks/plans default ready on create; goals need subtasks + deadline. Orthogonal to isTriaged (which owns "draft")
+    isTriaged: boolean,           // false until first Capture save moves the item out of the triage queue; the sole "draft" signal (readiness never implies draft)
     completedStartTime?, completedEndTime?,
     locationId?: string | null,   // null = "Anywhere"
     useParentLocation: boolean,   // inherit from category or ancestor instead
@@ -651,6 +651,7 @@
   - `add_template_recurrence_exceptions` — `EventTemplate.recurrenceExceptions` (nullable JSON string). Per-occurrence moved/deleted overrides for weekly templates, keyed by the occurrence's original local start; applied by the engine in `masksToIntervals` and reflected on the calendar via `exdate` + one-off moved events.
   - `add_category_window_recurrence_exceptions` — `CategoryTimeWindow.recurrenceExceptions` (nullable JSON string). Per-occurrence moved/deleted overrides for category windows, applied in `expandCategoryWindowPeriods` (the shared expansion for slot fabric + CategoryEvent materialization); a moved occurrence keeps its original-date CategoryEvent id.
   - `add_task_splitting` — `Planner.splitting` + `Planner.completedSegments` (nullable JSON strings). Split tasks: chunking settings and the per-chunk completion record (completed minutes always derived by summing segments, never stored as a counter).
+  - `backfill_task_is_ready` — SQL-only data backfill (no schema change). Readiness became the universal scheduling gate (tasks + goals, not goals alone); sets existing tasks and plans to `isReady = true` so their current scheduling behavior is preserved once the gate applies to tasks. Goals untouched (their readiness is user-controlled).
 
   Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 
@@ -710,7 +711,7 @@
 
   - **expansion-seam** — guards the local-date-keyed `CategoryEvent` ID format by forcing horizon expansion (a single Plan three weeks out). The diff layer and the DB schema depend on this composite ID; UTC-instant keying would desync near midnight UTC.
   - **completed-task-not-rescheduled** — a completed task under a ready goal must render only at its completion window, never re-enter the candidate list (guards the `prepareCandidates` completed filter).
-  - **ready-gate** — a NOT-ready goal's subtree schedules nothing (its tasks are never individual candidates), while standalone tasks still place. Readiness is the scheduling gate and cascades: `toggleGoalIsReady` / `setGoalIsReady` / the assistant apply / `addSubtask` stamp the whole subtree with the root's value.
+  - **ready-gate** — readiness is the universal scheduling gate: a NOT-ready goal's subtree schedules nothing (its tasks are never individual candidates), a ready-marked standalone task places, and a NOT-ready standalone task does not. Readiness cascades: `toggleGoalIsReady` / `setGoalIsReady` / the assistant apply / `addSubtask` stamp the whole subtree with the root's value. Tasks/plans default ready on every create surface (`defaultReadyForType`); goals stay unready until they have subtasks + a deadline.
   - **ready-goal-watermark** — a ready goal must place every leaf despite the three watermark starvation modes: subtree-aggregate sizing (goals size as their largest uncompleted, still-placeable leaf), a windowless classification-only `categoryId` (the watermark resolves constraints against the same window-bearing category set placement uses), and a memoized past leaf inflating the goal's size. An exhausted expansion budget must surface `NO_SLOTS` failures instead of exiting silently.
   - **stable-regen** — an idle regen must produce an empty diff: unchanged placements return the previous emit by object identity (`stabilizeEvent`), and a plan `starts` drag re-derives rather than memoizes.
   - **category-window-cascade** — window-eligibility membership: items schedule in ancestor windows via the upward cascade, never in descendant windows, with `confineToOwnWindows` acting as both opt-out and ceiling.

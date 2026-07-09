@@ -46,7 +46,8 @@ export function CapturePalette() {
       title: t,
       parentId: null,
       plannerType: "task",
-      isReady: false,
+      // Ready by default; the untriaged flag, not readiness, keeps it a draft.
+      isReady: true,
       isTriaged: false,
       duration: 0,
       deadline: null,

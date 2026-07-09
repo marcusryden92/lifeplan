@@ -30,16 +30,19 @@ export function prepareCandidates(
 
   // Completed items are rendered at their completion window by
   // buildCompletedEvents and must never re-enter the scheduler.
-  // Tasks inside a goal subtree are owned by the goal's ready gate:
-  // scheduleGoal places them when the root goal is ready, and an unready
-  // goal's subtree must stay off the calendar entirely — admitting them as
-  // individual candidates made readying a no-op.
+  // Readiness is the universal scheduling gate: tasks and goals alike only
+  // become candidates when isReady === true. Tasks inside a goal subtree are
+  // owned by the goal's ready gate — scheduleGoal places them when the root
+  // goal is ready, and an unready goal's subtree stays off the calendar
+  // entirely — so they are excluded here regardless (they inherit the root's
+  // readiness via the cascade).
   const candidates = planners.filter((item) => {
     if (taskIsCompleted(item) || memoizedEventIds.has(item.id)) return false;
     if (item.plannerType === PlannerType.goal) {
       return !item.parentId && item.isReady === true;
     }
     if (item.plannerType !== PlannerType.task) return false;
+    if (item.isReady !== true) return false;
     if (!item.parentId) return true;
     return rootOf(item).plannerType !== PlannerType.goal;
   });

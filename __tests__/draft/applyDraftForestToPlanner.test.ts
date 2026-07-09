@@ -251,6 +251,46 @@ describe("applyDraftForestToPlanner", () => {
     expect(ungatedChild.isReady).toBe(false);
   });
 
+  it("readies a new standalone task by default, honoring an explicit hold", () => {
+    const planner = makePlanner();
+    const workingForest = clone(plannerForestToJson(planner));
+    workingForest.goals.push(
+      {
+        id: "",
+        title: "call dentist",
+        plannerType: "task",
+        duration: 15,
+        deadline: null,
+        priority: 0,
+        isReady: null,
+        categoryId: null,
+        children: [],
+      },
+      {
+        id: "",
+        title: "someday idea",
+        plannerType: "task",
+        duration: 30,
+        deadline: null,
+        priority: 0,
+        isReady: false,
+        categoryId: null,
+        children: [],
+      },
+    );
+
+    const result = applyDraftForestToPlanner({
+      planner,
+      workingForest,
+      userId: USER_ID,
+      validCategoryIds: VALID_CATEGORY_IDS,
+    });
+
+    // A task needs no deadline to be ready — ready unless explicitly held off.
+    expect(result.find((p) => p.title === "call dentist")!.isReady).toBe(true);
+    expect(result.find((p) => p.title === "someday idea")!.isReady).toBe(false);
+  });
+
   it("cascades a retained root's ready state to restructured descendants", () => {
     const planner = makePlanner().map((p) =>
       p.id === "goal-a" || p.id === "a1" || p.id === "a2"

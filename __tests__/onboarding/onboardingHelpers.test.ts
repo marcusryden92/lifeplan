@@ -335,12 +335,13 @@ describe("buildBrainDumpRow", () => {
     expect(row.title).toBe("Write book");
   });
 
-  it("stamps triaged, not-ready planning defaults for every type", () => {
+  it("stamps triaged planning defaults, ready by type, for every type", () => {
     for (const type of ["task", "plan", "goal"] as const) {
       const row = buildBrainDumpRow({ ...base, type }, USER_ID, NOW);
       expect(row.plannerType).toBe(type);
       expect(row.isTriaged).toBe(true);
-      expect(row.isReady).toBe(false);
+      // Tasks and plans are ready to schedule by default; goals are not.
+      expect(row.isReady).toBe(type !== "goal");
       expect(row.parentId).toBeNull();
       expect(row.deadline).toBeNull();
       expect(row.starts).toBeNull();

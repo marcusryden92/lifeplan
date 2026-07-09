@@ -16,6 +16,21 @@ function splittingColumn(node: DraftNode): string | null {
   return node.splitting ? serializeTaskSplitting(node.splitting) : null;
 }
 
+// Readiness the apply layer stamps across a whole subtree — it cascades from
+// the root, matching the manual toggle and the create defaults. A task/plan
+// root is ready unless the assistant explicitly set it false; a goal root
+// stays gated on subtasks + a deadline, matching the manual "Mark ready".
+function resolveAppliedReady(node: DraftNode, rootType: PlannerType): boolean {
+  if (rootType === PlannerType.goal) {
+    return (
+      node.isReady === true &&
+      node.children.length > 0 &&
+      node.deadline !== null
+    );
+  }
+  return node.isReady !== false;
+}
+
 interface ApplyForestArgs {
   planner: Planner[];
   workingForest: DraftForest;
@@ -154,6 +169,15 @@ function applyTreeToExistingRoot({
     ? workingTree.color
     : rootRow.color;
 
+  // Readiness cascades from the root across the whole subtree, resolved from
+  // the root's (possibly retyped) type.
+  const resolvedRootType = resolveRetainedRootType(
+    workingTree.plannerType,
+    workingTree.children.length > 0,
+    rootRow.plannerType,
+  );
+  const appliedReady = resolveAppliedReady(workingTree, resolvedRootType);
+
   const newRows: Planner[] = [];
 
   // Preorder traversal that mints/reuses ids, builds Planner rows, and stamps
@@ -183,7 +207,7 @@ function applyTreeToExistingRoot({
           priority: node.priority,
           // Readiness cascades from the root: the subtree is ready or
           // unready as one, matching the manual toggle's semantics.
-          isReady: workingTree.isReady,
+          isReady: appliedReady,
           parentId,
           sortOrder,
           categoryId: null,
@@ -198,7 +222,7 @@ function applyTreeToExistingRoot({
             node.plannerType,
             node.children.length > 0,
           ),
-          isReady: workingTree.isReady,
+          isReady: appliedReady,
           isTriaged: true,
           duration: Math.max(1, Math.floor(node.duration)),
           deadline: node.deadline,
@@ -232,15 +256,11 @@ function applyTreeToExistingRoot({
   const updatedRoot: Planner = {
     ...rootRow,
     title: workingTree.title,
-    plannerType: resolveRetainedRootType(
-      workingTree.plannerType,
-      workingTree.children.length > 0,
-      rootRow.plannerType,
-    ),
+    plannerType: resolvedRootType,
     duration: Math.max(1, Math.floor(workingTree.duration)),
     deadline: workingTree.deadline,
     priority: workingTree.priority,
-    isReady: workingTree.isReady,
+    isReady: appliedReady,
     categoryId: nextCategoryId,
     color: nextColor,
     splitting: splittingColumn(workingTree),
@@ -282,11 +302,11 @@ function buildNewRootRows(
 
   const rows: Planner[] = [];
 
-  // The app's manual gate only allows readying a goal with subtasks and a
-  // deadline; hold AI-created goals to the same rule. Readiness cascades
-  // from the root: every row in the subtree carries the same value.
-  const canBeReady = node.children.length > 0 && node.deadline !== null;
-  const rootIsReady = node.isReady === true && canBeReady;
+  // Readiness cascades from the root: every row in the subtree carries the
+  // same value. A goal is held to the manual gate (subtasks + deadline); a
+  // task/plan root defaults ready unless the assistant set it false.
+  const rootType = normalizeRootType(node.plannerType, node.children.length > 0);
+  const rootIsReady = resolveAppliedReady(node, rootType);
 
   function build(child: DraftNode, parentId: string, sortOrder: number): void {
     const childId = uuidv4();
@@ -332,7 +352,7 @@ function buildNewRootRows(
     id: rootId,
     title: node.title,
     parentId: null,
-    plannerType: normalizeRootType(node.plannerType, node.children.length > 0),
+    plannerType: rootType,
     isReady: rootIsReady,
     isTriaged: true,
     duration: Math.max(1, Math.floor(node.duration)),

@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { Button, Caption, SegmentedControl } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { fallbackCalendarColor } from "@/utils/colorUtils";
+import { defaultReadyForType } from "@/utils/plannerReadiness";
 import type { Planner } from "@/types/prisma";
 import {
   overlay,
@@ -71,7 +72,7 @@ export function NewItemModal({
       title: trimmed,
       parentId: null,
       plannerType: type,
-      isReady: false,
+      isReady: defaultReadyForType(type),
       // Library-created items are managed items, not inbox jots — they skip
       // the triage queue and are immediately visible to scheduling and the
       // AI assistant.

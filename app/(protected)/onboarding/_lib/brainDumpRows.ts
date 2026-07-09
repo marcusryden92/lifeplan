@@ -1,5 +1,6 @@
 import type { Planner } from "@/types/prisma";
 import { getTaskTreeIds } from "@/utils/goalPageHandlers";
+import { defaultReadyForType } from "@/utils/plannerReadiness";
 import {
   DEFAULT_DRAFT_DURATION_MIN,
   type TriageType,
@@ -19,10 +20,11 @@ export function durationForType(type: TriageType): number {
   return type === "goal" ? 0 : DEFAULT_DRAFT_DURATION_MIN;
 }
 
-// Builds a triaged Planner row from a brain-dump jot. Deadlines, readiness,
-// start times, and real durations are deferred to the AI step; this only needs
-// to produce a valid, schedulable-once-refined row. isTriaged MUST be true so
-// the assistant forest (triaged roots only) picks the item up.
+// Builds a triaged Planner row from a brain-dump jot. Deadlines, start times,
+// and real durations are deferred to the AI step; this only needs to produce a
+// valid, schedulable row. isTriaged MUST be true so the assistant forest
+// (triaged roots only) picks the item up. Readiness follows the create default
+// (tasks/plans ready, goals not) so a jot is schedulable before AI refinement.
 export function buildBrainDumpRow(
   item: DumpItem,
   userId: string,
@@ -33,7 +35,7 @@ export function buildBrainDumpRow(
     title: item.title.trim(),
     parentId: null,
     plannerType: item.type,
-    isReady: false,
+    isReady: defaultReadyForType(item.type),
     isTriaged: true,
     duration: durationForType(item.type),
     deadline: null,

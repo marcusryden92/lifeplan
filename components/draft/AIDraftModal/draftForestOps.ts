@@ -265,10 +265,12 @@ export function updateDraftItems(
         continue;
       }
       // Same gate as the app's manual "Mark ready": a top-level goal needs
-      // subtasks and a deadline.
+      // subtasks and a deadline. Tasks and plans are freely readyable —
+      // readiness is just the scheduling gate for them.
       if (
         update.isReady === true &&
         isRoot &&
+        node.plannerType === "goal" &&
         (node.children.length === 0 || node.deadline === null)
       ) {
         failures.push({

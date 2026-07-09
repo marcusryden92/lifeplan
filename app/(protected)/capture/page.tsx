@@ -183,7 +183,8 @@ export default function CapturePage() {
         title: t,
         parentId: null,
         plannerType: "task",
-        isReady: false,
+        // Ready by default; the untriaged flag, not readiness, keeps it a draft.
+        isReady: true,
         isTriaged: false,
         duration: 0,
         deadline: null,
@@ -215,16 +216,11 @@ export default function CapturePage() {
       if (!selected) return;
       const id = selected.id;
       const isGoal = draft.type === "goal";
-      // Goals need subtasks before they can be marked ready (enforced on the
-      // item detail). Tasks need a deadline, plans need a start time. If the
-      // user asked to mark-ready but the prerequisites aren't met, fall back
-      // to saving as a draft rather than persisting an invalid state.
-      const eligibleForReady =
-        !isGoal &&
-        (draft.type === "plan"
-          ? draft.starts.length > 0
-          : draft.deadline.length > 0);
-      const nextReady = markReady && eligibleForReady;
+      // A goal can never be readied here (it needs subtasks, enforced on the
+      // item detail). Tasks and plans are freely readyable — readiness is just
+      // the scheduling gate, so "Save as draft" leaves a triaged item unready
+      // rather than encoding draftness.
+      const nextReady = isGoal ? false : markReady;
       const nowIso = new Date().toISOString();
       const deadlineIso = draft.deadline
         ? new Date(draft.deadline).toISOString()
@@ -509,7 +505,7 @@ export default function CapturePage() {
                     size="sm"
                     onClick={() => commitSelected(false)}
                   >
-                    Save as draft
+                    Save, not ready
                   </Button>
                   <span className={spacer} />
                   <Button

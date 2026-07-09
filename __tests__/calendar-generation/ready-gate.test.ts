@@ -8,11 +8,11 @@ import type {
   Category,
 } from "@/types/prisma";
 
-// Readiness is the scheduling gate for goal subtrees. prepareCandidates used
-// to admit every task-typed row as an individual candidate regardless of its
-// ancestry, so the leaves of a NOT-ready goal were placed anyway — readying
-// (and un-readying) a goal had no visible effect on the calendar. Tasks whose
-// root ancestor is a goal must only reach the scheduler through scheduleGoal.
+// Readiness is the universal scheduling gate. A goal's subtree only schedules
+// through scheduleGoal when the root goal is ready; a standalone task schedules
+// only when its own isReady === true. prepareCandidates used to admit every
+// task-typed row regardless of ancestry or readiness, so a NOT-ready goal's
+// leaves were placed anyway and a standalone task ignored its own readiness.
 
 const ROOT_GOAL_ID = "ce1a7c26-986e-478d-8fdf-8be5bc0ac68b";
 
@@ -90,6 +90,7 @@ describe("goal readiness gates the subtree", () => {
       parentId: null,
       sortOrder: 0,
       categoryId: null,
+      isReady: true,
     };
     const planner = [
       ...FIXTURE.planner.map((p) =>
@@ -105,5 +106,34 @@ describe("goal readiness gates the subtree", () => {
     });
 
     expect(events.some((e) => e.id === "standalone-task-id")).toBe(true);
+  });
+
+  it("does not schedule a NOT-ready standalone task", () => {
+    const template = FIXTURE.planner.find(
+      (p) => p.plannerType === "task" && !p.completedEndTime,
+    )!;
+    const standalone: Planner = {
+      ...template,
+      id: "standalone-task-id",
+      title: "standalone",
+      parentId: null,
+      sortOrder: 0,
+      categoryId: null,
+      isReady: false,
+    };
+    const planner = [
+      ...FIXTURE.planner.map((p) =>
+        p.id === ROOT_GOAL_ID ? { ...p, isReady: false } : p,
+      ),
+      standalone,
+    ];
+
+    const { events } = generateCalendar("1", 1, templates, planner, [], {
+      bufferTimeMinutes: 10,
+      categories: FIXTURE.categories,
+      previousEngineMessages: [],
+    });
+
+    expect(events.some((e) => e.id === "standalone-task-id")).toBe(false);
   });
 });

@@ -227,8 +227,13 @@ export default function ItemDetailLayout({
   };
 
   const isGoal = item.plannerType === "goal";
+  const isTask = item.plannerType === "task";
 
-  // Prerequisites for marking a goal ready.
+  // Readiness is the scheduling gate for both goals and standalone tasks, so
+  // the toggle appears on either (root items only — readiness is a whole-tree
+  // property). A goal has prerequisites before it can be readied; a task has
+  // none — it is freely held on or off the calendar.
+  const showReadyToggle = !item.parentId && (isGoal || isTask);
   const readyBlockers: string[] = [];
   if (isGoal) {
     if (subtasks.length === 0) readyBlockers.push("at least one subtask");
@@ -343,7 +348,7 @@ export default function ItemDetailLayout({
               </div>
 
               <div className={headActions}>
-                {isGoal && (
+                {showReadyToggle && (
                   <div className={readyCluster}>
                     <Button
                       variant={item.isReady ? "solid" : "glass"}

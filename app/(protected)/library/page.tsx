@@ -116,7 +116,7 @@ type SortKey =
   | "deadline"
   | "category";
 type SortDir = "asc" | "desc";
-type GoalReadiness = "all" | "ready" | "not-ready";
+type Readiness = "all" | "ready" | "not-ready";
 
 const DEFAULT_SORT_DIR: Record<SortKey, SortDir> = {
   title: "asc",
@@ -191,7 +191,7 @@ export default function LibraryPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
-  const [goalReadiness, setGoalReadiness] = useState<GoalReadiness>("all");
+  const [readiness, setReadiness] = useState<Readiness>("all");
   const [showCompleted, setShowCompleted] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -307,8 +307,8 @@ export default function LibraryPage() {
       result = result.filter((i) => i.plannerType === typeFilter);
     }
 
-    if (typeFilter === "goal" && goalReadiness !== "all") {
-      const wantReady = goalReadiness === "ready";
+    if (readiness !== "all") {
+      const wantReady = readiness === "ready";
       result = result.filter((i) => !!i.isReady === wantReady);
     }
 
@@ -365,7 +365,7 @@ export default function LibraryPage() {
     categoryIndex,
     search,
     typeFilter,
-    goalReadiness,
+    readiness,
     showCompleted,
     sortKey,
     sortDir,
@@ -657,17 +657,15 @@ export default function LibraryPage() {
                 ]}
               />
 
-              {typeFilter === "goal" && (
-                <SegmentedControl<GoalReadiness>
-                  value={goalReadiness}
-                  onChange={setGoalReadiness}
-                  options={[
-                    { key: "all", label: "All" },
-                    { key: "ready", label: "Ready" },
-                    { key: "not-ready", label: "Draft" },
-                  ]}
-                />
-              )}
+              <SegmentedControl<Readiness>
+                value={readiness}
+                onChange={setReadiness}
+                options={[
+                  { key: "all", label: "All" },
+                  { key: "ready", label: "Ready" },
+                  { key: "not-ready", label: "Not ready" },
+                ]}
+              />
 
               <span className={spacer} />
 
