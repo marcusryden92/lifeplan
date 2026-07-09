@@ -1,8 +1,5 @@
 # Issues
 
-- Still need to hard refresh for new locations to take effect
-- Completing a split task still needs to move it to now if its future planned
-
 - Ubiquitous input fields
 
 # Mobile

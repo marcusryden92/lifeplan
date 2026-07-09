@@ -588,13 +588,24 @@ export const handleClickCompleteTask = (
         (prev) => prev.filter((e) => e.id !== event.id),
       );
     } else {
-      // Completing mid-chunk credits only the elapsed time (floored to five
-      // minutes) so the unspent remainder reschedules; otherwise the whole
-      // scheduled window is credited.
+      // A chunk that hasn't started yet completes at now, its length preserved
+      // (end = now, start = now - chunk length) — same "move it to now" rule a
+      // regular dynamic task follows when completed ahead of its scheduled
+      // slot. A chunk in progress credits only the elapsed time (floored to
+      // five minutes) so the unspent remainder reschedules; a past chunk keeps
+      // its actual window.
       const now = new Date();
-      const inEvent = now >= start && now <= end;
-      const minEnd = new Date(start.getTime() + 5 * 60 * 1000);
-      const segmentEnd = inEvent ? (now > minEnd ? now : minEnd) : end;
+      let segmentStart = start;
+      let segmentEnd = end;
+      if (now < start) {
+        segmentEnd = now;
+        segmentStart = new Date(
+          now.getTime() - (end.getTime() - start.getTime()),
+        );
+      } else if (now <= end) {
+        const minEnd = new Date(start.getTime() + 5 * 60 * 1000);
+        segmentEnd = now > minEnd ? now : minEnd;
+      }
       setIsCompleted(true);
       updateAll(
         (prev) =>
@@ -605,7 +616,7 @@ export const handleClickCompleteTask = (
                   completedSegments: serializeCompletedSegments([
                     ...parseCompletedSegments(item.completedSegments),
                     {
-                      start: start.toISOString(),
+                      start: segmentStart.toISOString(),
                       end: segmentEnd.toISOString(),
                     },
                   ]),
