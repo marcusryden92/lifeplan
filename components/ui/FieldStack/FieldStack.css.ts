@@ -12,6 +12,7 @@ export const fieldStack = style({
   flexDirection: "column",
   gap: space["2"],
   minWidth: 0,
+  minHeight: 60,
 });
 
 // Spans the full width of a multi-column field grid (e.g. IdentityCard's Place row).

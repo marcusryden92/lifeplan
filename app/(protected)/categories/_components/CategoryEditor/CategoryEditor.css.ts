@@ -168,20 +168,6 @@ export const fieldGrid = style({
   },
 });
 
-export const fieldStack = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["2"],
-  minWidth: 0,
-});
-
-export const fieldLabel = style([
-  fieldLabelText,
-  {
-    transition: themeTransition,
-  },
-]);
-
 export const swatchRow = style({
   display: "flex",
   gap: space["1.5"],

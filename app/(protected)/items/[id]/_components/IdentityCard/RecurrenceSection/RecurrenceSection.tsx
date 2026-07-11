@@ -57,10 +57,7 @@ export function RecurrenceSection() {
   const preset = presetFromRule(rule);
 
   const applyRule = (next: PlanRecurrenceRule | null) => {
-    updateField(
-      "recurrence",
-      next ? serializePlanRecurrence(next) : null,
-    );
+    updateField("recurrence", next ? serializePlanRecurrence(next) : null);
     if (!next) updateField("recurrenceExceptions", null);
   };
 
@@ -72,8 +69,10 @@ export function RecurrenceSection() {
           options={(Object.keys(PRESET_LABELS) as RecurrencePreset[]).map(
             (key) => ({ value: key, label: PRESET_LABELS[key] }),
           )}
-          onChange={(next) => applyRule(ruleFromPreset(next, rule?.until ?? null))}
-          width="100%"
+          onChange={(next) =>
+            applyRule(ruleFromPreset(next, rule?.until ?? null))
+          }
+          width="150px"
           ariaLabel="Recurrence"
         />
       </FieldStack>

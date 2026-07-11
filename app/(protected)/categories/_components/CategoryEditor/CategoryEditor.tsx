@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronRight, Lock, MapPin, SquarePen, Trash2 } from "lucide-react";
-import { Button, Caption, Combobox, Input } from "@/components/ui";
+import { Button, Caption, Combobox, FieldStack, Input } from "@/components/ui";
 import type { Category } from "@/types/prisma";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import { parseRecurrenceExceptions } from "@/utils/planRecurrence";
@@ -25,8 +25,6 @@ import {
   sectionPair,
   sectionTitle,
   fieldGrid,
-  fieldStack,
-  fieldLabel,
   swatchRow,
   swatchChip,
   strictRow,
@@ -263,8 +261,7 @@ export function CategoryEditor({
       <div className={section}>
         <div className={sectionTitle}>Identity</div>
         <div className={fieldGrid}>
-          <div className={fieldStack}>
-            <span className={fieldLabel}>Color</span>
+          <FieldStack label="Color">
             <div className={swatchRow}>
               {SWATCH_PALETTE.map((c) => (
                 <button
@@ -278,16 +275,15 @@ export function CategoryEditor({
                 />
               ))}
             </div>
-          </div>
-          <div className={fieldStack}>
-            <span className={fieldLabel}>Parent</span>
+          </FieldStack>
+          <FieldStack label="Parent">
             <Combobox
               value={category.parentId ?? null}
               options={parentOptions}
               onChange={(v) => onChangeParent(v)}
               ariaLabel="Parent"
             />
-          </div>
+          </FieldStack>
         </div>
       </div>
 

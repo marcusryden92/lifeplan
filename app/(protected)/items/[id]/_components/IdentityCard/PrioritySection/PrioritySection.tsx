@@ -7,7 +7,6 @@ import {
   cardTitle,
   priorityRow,
   priorityPill,
-  priorityPillActive,
 } from "./PrioritySection.css";
 
 export function PrioritySection() {
@@ -21,9 +20,8 @@ export function PrioritySection() {
           <button
             key={p}
             type="button"
-            className={`${priorityPill} ${
-              item.priority === p ? priorityPillActive : ""
-            }`}
+            className={priorityPill}
+            aria-pressed={item.priority === p}
             onClick={() => updateField("priority", p)}
             aria-label={`Priority ${p}`}
           >

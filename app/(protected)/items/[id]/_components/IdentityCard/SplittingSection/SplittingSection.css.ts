@@ -6,8 +6,8 @@ import { space, vars, themeTransition, text, media } from "@/lib/theme";
 // not change the section's height. Column gap matches IdentityCard's fieldGrid.
 export const splitGrid = style({
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: "13px 22px",
+  gridTemplateColumns: "1fr 2fr",
+  gap: "13px 0",
   alignItems: "start",
   minWidth: 0,
   "@media": {
@@ -18,6 +18,7 @@ export const splitGrid = style({
 export const toggleRow = style({
   display: "flex",
   alignItems: "center",
+  paddingLeft: space["2"],
   gap: space["3"],
   minHeight: 34,
 });
@@ -34,6 +35,7 @@ export const toggleHint = style([
     WebkitLineClamp: 2,
     overflow: "hidden",
     lineHeight: "15px",
+    minWidth: 200,
     transition: themeTransition,
   },
 ]);

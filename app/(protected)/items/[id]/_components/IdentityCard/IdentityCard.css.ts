@@ -21,8 +21,8 @@ export const fieldGrid = style({
 
 export const doubleGrid = style({
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: "13px 22px",
+  gridTemplateColumns: "2fr 1fr",
+  gap: "5px 22px",
   "@media": {
     [media.mobile]: { gridTemplateColumns: "1fr" },
   },
@@ -36,5 +36,5 @@ export const doubleGrid = style({
 export const splitRecurrenceSlot = style({
   gridColumn: "1 / -1",
   minWidth: 0,
-  minHeight: 56,
+  minHeight: 60,
 });

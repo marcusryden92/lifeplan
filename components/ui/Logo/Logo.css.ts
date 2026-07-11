@@ -1,6 +1,7 @@
 import { style, styleVariants, createVar } from "@vanilla-extract/css";
 import { vars, collapseTransition } from "@/lib/theme";
 
+
 // Set inline per instance; the mark and text read them so one logo-height
 // input drives the whole lockup.
 export const logoHeightVar = createVar();
@@ -56,6 +57,8 @@ export const text = style({
   color: toneVar,
   margin: 0,
   minWidth: 0,
+  // Concrete value (not `none`) so the collapse can interpolate max-width -> 0.
+  maxWidth: "6em",
   overflow: "hidden",
   transition: collapseTransition,
 });
@@ -64,4 +67,5 @@ export const text = style({
 export const textCollapsed = style({
   maxWidth: 0,
   opacity: 0,
+  transition: collapseTransition,
 });

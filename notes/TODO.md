@@ -1,7 +1,3 @@
-# Issues
-
-- Ubiquitous input fields
-
 # Mobile
 - AI button in floating menu
 - Hide floating menu when AI or WeekStructureModal opens

@@ -20,7 +20,7 @@ export const input = style({
   selectors: {
     "&&": {
       width: 58,
-      padding: "6px 8px",
+      padding: "4px 8px",
       fontWeight: 600,
       textAlign: "center",
       fontVariantNumeric: "tabular-nums",
