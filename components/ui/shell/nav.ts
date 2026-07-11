@@ -74,5 +74,5 @@ export const MOBILE_TABS: MobileTab[] = [
   { key: "library", label: "Library", icon: Library, href: "/library" },
   { key: "capture", label: "Capture", icon: Plus, href: null },
   { key: "calendar", label: "Calendar", icon: Calendar, href: "/calendar" },
-  { key: "more", label: "More", icon: MoreHorizontal, href: "/settings" },
+  { key: "more", label: "More", icon: MoreHorizontal, href: null },
 ];

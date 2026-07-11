@@ -1,6 +1,5 @@
 # Mobile
-- AI button in floating menu
-- Hide floating menu when AI or WeekStructureModal opens
+
 - 'More' shouldn't just route to settings
 - Floating menu buttons more contrast
 
