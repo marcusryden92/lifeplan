@@ -9,6 +9,8 @@ import { CaptureProvider } from "../CaptureContext";
 import { CapturePalette } from "../CapturePalette";
 import { SearchProvider } from "../SearchContext";
 import { SearchPalette } from "../SearchPalette";
+import { CornerActions } from "../CornerActions";
+import { ShellOverlayProvider } from "../ShellOverlayContext";
 import {
   bezelFrame,
   canvas,
@@ -49,28 +51,31 @@ export function AppShell({
   return (
     <CaptureProvider>
       <SearchProvider>
-        <div className={bezelFrame}>
-          <div className={canvas}>
-            <Backdrop variant={backdrop} />
-            <Grain />
-            <div className={contentRow}>
-              <div className={desktopOnly}>
-                <Sidebar userName={userName} userInitial={userInitial} />
+        <ShellOverlayProvider>
+          <div className={bezelFrame}>
+            <div className={canvas}>
+              <Backdrop variant={backdrop} />
+              <Grain />
+              <div className={contentRow}>
+                <div className={desktopOnly}>
+                  <Sidebar userName={userName} userInitial={userInitial} />
+                </div>
+                <div className={mainColumn}>
+                  <CornerActions />
+                  {children}
+                  {assistantSlot}
+                </div>
               </div>
-              <div className={mainColumn}>
-                {children}
-                {assistantSlot}
+              <div className={mobileOnly}>
+                <MobileTabs />
               </div>
+              <CapturePalette />
+              <SearchPalette />
+              {overlaySlot}
+              {loadingSlot}
             </div>
-            <div className={mobileOnly}>
-              <MobileTabs />
-            </div>
-            <CapturePalette />
-            <SearchPalette />
-            {overlaySlot}
-            {loadingSlot}
           </div>
-        </div>
+        </ShellOverlayProvider>
       </SearchProvider>
     </CaptureProvider>
   );

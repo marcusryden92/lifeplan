@@ -16,7 +16,13 @@ import { addDays, format } from "date-fns";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { Button, Backdrop, ConfirmModal, Grain } from "@/components/ui";
+import {
+  Button,
+  Backdrop,
+  ConfirmModal,
+  Grain,
+  useShellOverlay,
+} from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import type { Category, EventTemplate } from "@/types/prisma";
@@ -90,6 +96,7 @@ export function WeekStructureModal({
   initialMode = "templates",
   focusedCategoryId = null,
 }: WeekStructureModalProps) {
+  useShellOverlay(open);
   const { userId, categories, weekStartDay } = useCalendarProvider();
   const calendarRef = useRef<FullCalendar>(null);
 

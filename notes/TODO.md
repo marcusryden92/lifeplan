@@ -1,9 +1,10 @@
 # Mobile
 - AI button in floating menu
 - Hide floating menu when AI or WeekStructureModal opens
-- Bottom padding for AI, currently can't reach the text box (for all pages really)
-- Floating menu buttons more contrast
 - 'More' shouldn't just route to settings
+- Floating menu buttons more contrast
+
+- Bottom padding for AI, currently can't reach the text box (for all pages really)
 
 - Remove container padding and margins in mobile dashboard
 - Ctrl K buttons visible?

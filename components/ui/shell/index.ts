@@ -7,5 +7,10 @@ export { AssistantProvider, useAssistant } from "./AssistantContext";
 export type { AssistantScope } from "./AssistantContext";
 export { SearchPalette } from "./SearchPalette";
 export { SearchProvider, useSearch } from "./SearchContext";
+export {
+  ShellOverlayProvider,
+  useShellOverlay,
+  useShellOverlayOpen,
+} from "./ShellOverlayContext";
 export { NAV_ITEMS, MOBILE_TABS } from "./nav";
 export type { NavItem } from "./nav";

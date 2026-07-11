@@ -40,6 +40,8 @@ export {
   useCapture,
   AssistantProvider,
   useAssistant,
+  useShellOverlay,
+  useShellOverlayOpen,
   NAV_ITEMS,
   MOBILE_TABS,
 } from "./shell";

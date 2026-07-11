@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useAssistant } from "@/components/ui/shell/AssistantContext";
+import { useShellOverlay } from "@/components/ui/shell/ShellOverlayContext";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { getRootParentId } from "@/utils/goalPageHandlers";
 import { AIDraftModal, type AIDraftFocus } from "./AIDraftModal";
@@ -11,6 +12,7 @@ import { AIDraftModal, type AIDraftFocus } from "./AIDraftModal";
 // is detected) and mounts the modal into the AppShell assistant slot.
 export function GlobalAssistant() {
   const { open, scope, close } = useAssistant();
+  useShellOverlay(open);
   const pathname = usePathname();
   const { planner } = useCalendarProvider();
 

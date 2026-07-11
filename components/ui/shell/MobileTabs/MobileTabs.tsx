@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCapture } from "../CaptureContext";
+import { useShellOverlayOpen } from "../ShellOverlayContext";
 import { MOBILE_TABS } from "../nav";
 import {
   tabBar,
@@ -17,6 +18,11 @@ import {
 export function MobileTabs() {
   const pathname = usePathname() ?? "";
   const { setOpen: setCaptureOpen } = useCapture();
+  const overlayOpen = useShellOverlayOpen();
+
+  // A full-screen shell surface (AI assistant, WeekStructureModal) is open —
+  // step the floating menu out of the way instead of floating over it.
+  if (overlayOpen) return null;
 
   return (
     <nav className={tabBar} aria-label="Primary navigation">

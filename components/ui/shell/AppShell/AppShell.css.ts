@@ -55,6 +55,13 @@ export const mainColumn = style({
   minHeight: 0,
   overflow: "hidden",
   "@media": {
+    // Reserve a top band for the floating corner actions (CornerActions).
+    // They are absolutely positioned, so padding pushes the in-flow page
+    // header below them without displacing the buttons themselves. Only on
+    // true desktop, where the buttons are shown.
+    [media.desktopUp]: {
+      paddingTop: space["12"],
+    },
     // Pages collapse their rail grids to a single stacked column at the
     // tablet breakpoint and grow past the viewport, so the column must
     // scroll there too — not just on mobile.
