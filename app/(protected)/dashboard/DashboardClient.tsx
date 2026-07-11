@@ -1,7 +1,5 @@
 "use client";
 
-import { useCapture } from "@/components/ui";
-import { usePlatform } from "@/hooks/usePlatform";
 import { DashboardHeader } from "./_components/DashboardHeader/DashboardHeader";
 import { AgendaCard } from "./_components/AgendaCard/AgendaCard";
 import { PriorityGoalsCard } from "./_components/PriorityGoalsCard/PriorityGoalsCard";
@@ -9,8 +7,6 @@ import { useDashboardData } from "./_hooks/useDashboardData";
 import { page, gridWrap, rightCol } from "./page.css";
 
 export function DashboardClient() {
-  const { setOpen: setCaptureOpen } = useCapture();
-  const { modKey } = usePlatform();
   const {
     isLoaded,
     greetingText,
@@ -30,8 +26,6 @@ export function DashboardClient() {
         greetingText={greetingText}
         dateText={dateText}
         summary={summary}
-        modKey={modKey}
-        onCaptureClick={() => setCaptureOpen(true)}
       />
 
       <div className={gridWrap}>

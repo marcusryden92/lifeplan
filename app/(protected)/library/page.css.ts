@@ -86,7 +86,7 @@ export const mainGrid = style({
       minHeight: "auto",
     },
     [media.mobile]: {
-      padding: "0 16px 24px",
+      padding: "0 0 24px",
       gap: space["3.5"],
     },
   },

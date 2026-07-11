@@ -17,7 +17,6 @@ import {
   zIndex,
 } from "@/lib/theme";
 
-
 export const page = style({
   display: "flex",
   flexDirection: "column",
@@ -27,6 +26,7 @@ export const page = style({
     [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
+      paddingTop: space["16"],
     },
   },
 });
@@ -264,7 +264,7 @@ export const mainGrid = style({
     },
     [media.mobile]: {
       gridTemplateColumns: "1fr",
-      padding: "0 16px 24px",
+      padding: "0 0 24px",
       gap: space["3.5"],
       flex: "0 0 auto",
       minHeight: "auto",
@@ -282,6 +282,9 @@ export const calendarCard = style([
     "@media": {
       [media.mobile]: {
         minHeight: 540,
+        borderRadius: 0,
+        borderLeftWidth: 0,
+        borderRightWidth: 0,
       },
     },
   },
@@ -483,7 +486,6 @@ export const controlSlider = style({
   },
 });
 
-
 export const engineCard = style({
   position: "relative",
   padding: "10px 12px",
@@ -590,4 +592,7 @@ export const fcWrap = style({
   flexDirection: "column",
   overflow: "hidden",
   borderRadius: radii.md,
+  "@media": {
+    [media.mobile]: { borderRadius: 0 },
+  },
 });

@@ -23,8 +23,12 @@ export const leftCard = style([
     overflow: "hidden",
     "@media": {
       [media.mobile]: {
+        flex: "1 0 auto",
         minHeight: "auto",
         overflow: "visible",
+        borderRadius: 0,
+        borderLeftWidth: 0,
+        borderRightWidth: 0,
       },
     },
   },
@@ -53,6 +57,9 @@ export const leftCardHeader = style({
     [media.mobile]: {
       position: "relative",
       top: "auto",
+      padding: "14px 12px",
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
     },
   },
 });
@@ -65,6 +72,14 @@ export const leftCardTitle = style([
     transition: themeTransition,
   },
 ]);
+
+// The Agenda-header "Open calendar" only shows on mobile — on desktop the
+// page header owns that action.
+export const openCalendarLink = style({
+  "@media": {
+    [media.tabletUp]: { display: "none" },
+  },
+});
 
 export const agendaList = style({
   flex: 1,
@@ -92,6 +107,11 @@ export const agendaList = style({
 
 export const agendaRows = style({
   padding: "22px 28px 24px",
+  "@media": {
+    [media.mobile]: {
+      padding: "18px 8px 20px",
+    },
+  },
 });
 
 export const agendaEmpty = style({
@@ -121,6 +141,12 @@ export const agendaSectionHeader = style({
   marginLeft: space["3"],
   marginRight: space["3"],
   marginBottom: space["3.5"],
+  "@media": {
+    [media.mobile]: {
+      marginLeft: space["1.5"],
+      marginRight: space["1.5"],
+    },
+  },
 });
 
 export const agendaSectionHeaderText = style([
@@ -143,6 +169,11 @@ export const agendaSectionHeaderCount = style([
 
 export const agendaGroup = style({
   margin: "8px 0",
+  "@media": {
+    [media.mobile]: {
+      margin: "0",
+    },
+  },
 });
 
 export const agendaGroupHeader = style({

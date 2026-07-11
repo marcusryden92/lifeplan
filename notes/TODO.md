@@ -1,12 +1,16 @@
 # Mobile
+- Calendar should take up whole screen in Calendar on mobile. (With some bottom padding to account for the floating menu)
+- Calendar engine should open as a modal
+- Calendar header needs restructuring (col not row-ish)
 
-- 'More' shouldn't just route to settings
-- Floating menu buttons more contrast
+- Main floating menu items need to be static, currently jump up when selected
+due to underline
+- Main menu capture button should lead to capture page, not quick capture modal
 
-- Bottom padding for AI, currently can't reach the text box (for all pages really)
+- Bottom sheet modal animates up, but not down. Just disappears when closed.
 
-- Remove container padding and margins in mobile dashboard
-- Ctrl K buttons visible?
+- Library header needs horizontal padding in mobile
+
 - No hover buttons on calendar in mobile - one click for bottom sheet modal
 
 - Area and color side by side in overview

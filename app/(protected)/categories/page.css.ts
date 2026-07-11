@@ -89,7 +89,7 @@ export const mainGrid = style({
       minHeight: "auto",
     },
     [media.mobile]: {
-      padding: "0 16px 24px",
+      padding: "0 0 24px",
       gap: space["3.5"],
     },
   },
@@ -111,7 +111,12 @@ export const rail = style([
     background: "transparent",
     transition: themeTransition,
     "@media": {
-      [media.mobile]: { minHeight: "auto", borderRadius: radii.md },
+      [media.mobile]: {
+        minHeight: "auto",
+        borderRadius: 0,
+        borderLeftWidth: 0,
+        borderRightWidth: 0,
+      },
     },
   },
 ]);
@@ -288,7 +293,12 @@ export const mainCard = style([
     borderRadius: radii["md+2"],
     transition: themeTransition,
     "@media": {
-      [media.mobile]: { minHeight: 540, borderRadius: radii.md },
+      [media.mobile]: {
+        minHeight: 540,
+        borderRadius: 0,
+        borderLeftWidth: 0,
+        borderRightWidth: 0,
+      },
     },
   },
 ]);

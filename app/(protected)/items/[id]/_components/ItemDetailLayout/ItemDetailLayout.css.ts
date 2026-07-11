@@ -42,7 +42,7 @@ export const innerWrap = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [media.mobile]: { padding: "16px 32px 24px" },
+    [media.mobile]: { padding: "16px 16px 24px" },
   },
 });
 

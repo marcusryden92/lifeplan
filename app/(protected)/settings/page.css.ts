@@ -78,7 +78,7 @@ export const mainGrid = style({
       minHeight: "auto",
     },
     [media.mobile]: {
-      padding: "0 16px 24px",
+      padding: "0 0 24px",
       gap: space["3.5"],
     },
   },
@@ -149,6 +149,9 @@ export const scrollWrap = style({
   display: "flex",
   flexDirection: "column",
   gap: space["5"],
+  "@media": {
+    [media.mobile]: { paddingRight: 0 },
+  },
 });
 
 export const sectionHead = style({
@@ -193,7 +196,14 @@ export const card = style({
   flexDirection: "column",
   gap: space["3.5"],
   transition: themeTransition,
-  "@media": { [media.mobile]: { padding: space["4"], borderRadius: radii.md } },
+  "@media": {
+    [media.mobile]: {
+      padding: space["4"],
+      borderRadius: 0,
+      borderLeftWidth: 0,
+      borderRightWidth: 0,
+    },
+  },
 });
 
 export const cardTitle = style([

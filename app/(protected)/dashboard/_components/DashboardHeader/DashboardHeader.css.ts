@@ -11,7 +11,7 @@ export const headerRow = style({
   gap: space["6"],
   "@media": {
     [media.mobile]: {
-      padding: "22px 18px 16px",
+      padding: "22px 16px 16px",
       flexDirection: "column",
       alignItems: "flex-start",
       gap: space["3.5"],
@@ -60,5 +60,12 @@ export const headerActions = style({
   flexShrink: 0,
   "@media": {
     [media.mobile]: { width: "100%" },
+  },
+});
+
+// The page-header "Open calendar" moves into the Agenda card header on mobile.
+export const openCalendarLink = style({
+  "@media": {
+    [media.mobile]: { display: "none" },
   },
 });

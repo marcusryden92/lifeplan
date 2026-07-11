@@ -20,6 +20,10 @@ export const goalsCard = style({
     [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
+      padding: "16px 16px",
+      borderRadius: 0,
+      borderLeftWidth: 0,
+      borderRightWidth: 0,
     },
   },
 });

@@ -79,7 +79,7 @@ export const mainGrid = style({
       minHeight: "auto",
     },
     [media.mobile]: {
-      padding: "0 16px 24px",
+      padding: "0 0 24px",
       gap: space["3.5"],
     },
   },
@@ -204,7 +204,14 @@ export const card = style([
     display: "flex",
     flexDirection: "column",
     gap: space["5"],
-    "@media": { [media.mobile]: { padding: space["5"], borderRadius: radii["lg+2"] } },
+    "@media": {
+      [media.mobile]: {
+        padding: space["5"],
+        borderRadius: 0,
+        borderLeftWidth: 0,
+        borderRightWidth: 0,
+      },
+    },
   },
 ]);
 

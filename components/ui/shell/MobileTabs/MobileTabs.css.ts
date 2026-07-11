@@ -181,16 +181,16 @@ export const sheetItem = style([
   },
 ]);
 
+export const sheetItemDanger = style({
+  color: vars.status.error,
+});
+
 export const sheetItemIcon = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   color: vars.inkSoft,
-});
-
-export const sheetItemDanger = style({
-  color: vars.status.error,
   selectors: {
-    [`& .${sheetItemIcon}`]: { color: vars.status.error },
+    [`${sheetItemDanger} &`]: { color: vars.status.error },
   },
 });

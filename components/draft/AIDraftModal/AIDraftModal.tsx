@@ -34,14 +34,8 @@ import { applyDraftTemplates } from "./applyDraftTemplates";
 import { applyDraftWindows } from "./applyDraftWindows";
 import { templatesToDraft } from "./draftTemplates";
 import { categoriesToDraftWindows } from "./draftWindows";
-import {
-  countTemplateChanges,
-  diffDraftTemplates,
-} from "./diffDraftTemplates";
-import {
-  countWindowChanges,
-  diffDraftWindows,
-} from "./diffDraftWindows";
+import { countTemplateChanges, diffDraftTemplates } from "./diffDraftTemplates";
+import { countWindowChanges, diffDraftWindows } from "./diffDraftWindows";
 import { WindowsView } from "./WindowsView";
 import { diffDraftForest } from "./diffDraftForest";
 import { diffSubtreeHasChanges } from "./diffDraftTree";
@@ -52,7 +46,6 @@ import {
   embeddedRoot,
   banner,
   editingLabel,
-  bannerTitle,
   bannerSpacer,
   cancelButtonStyle,
   body,
@@ -178,8 +171,7 @@ export function AIDraftModal({
   );
 
   const onDividerKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const step =
-      e.key === "ArrowLeft" ? -4 : e.key === "ArrowRight" ? 4 : null;
+    const step = e.key === "ArrowLeft" ? -4 : e.key === "ArrowRight" ? 4 : null;
     if (step === null) return;
     e.preventDefault();
     setChatBasisPct((prev) => Math.max(20, Math.min(80, prev + step)));
@@ -290,10 +282,6 @@ export function AIDraftModal({
         (g) => shownGoalIds.has(g.id) || diffSubtreeHasChanges(g),
       );
   const hiddenCount = diffedGoals.length - visibleGoals.length;
-
-  const focusedGoalTitle = focusRootId
-    ? canonical.goals.find((g) => g.id === focusRootId)?.title ?? null
-    : null;
 
   // Keep the latest working state in refs so the send callback always reads
   // fresh state without having to be recreated on every tick.
@@ -504,9 +492,7 @@ export function AIDraftModal({
                 : "Done.";
           updateMessage(assistantMessageId, {
             streaming: false,
-            ...(assistantText.trim().length === 0
-              ? { content: fallback }
-              : {}),
+            ...(assistantText.trim().length === 0 ? { content: fallback } : {}),
           });
         },
         onError: (message) => {
@@ -539,9 +525,7 @@ export function AIDraftModal({
         }
         updateMessage(assistantMessageId, {
           streaming: false,
-          ...(assistantText.trim().length === 0
-            ? { content: "Stopped." }
-            : {}),
+          ...(assistantText.trim().length === 0 ? { content: "Stopped." } : {}),
         });
       }
 
@@ -681,7 +665,6 @@ export function AIDraftModal({
       {!embedded && (
         <div className={banner}>
           <span className={editingLabel}>ai assistant</span>
-          <span className={bannerTitle}>{focusedGoalTitle ?? "All goals"}</span>
           <span className={bannerSpacer} />
           <Button
             variant="ghost"
@@ -703,176 +686,174 @@ export function AIDraftModal({
       )}
 
       <div className={mobilePaneSwitch}>
-          <SegmentedControl<MobilePane>
-            options={[
-              { key: "chat", label: "Chat" },
-              {
-                key: "review",
-                label: (
-                  <>
-                    Review
-                    {reviewChangeCount > 0 && (
-                      <span className={tabChangeCount}>
-                        {reviewChangeCount}
-                      </span>
-                    )}
-                  </>
-                ),
-              },
-            ]}
-            value={mobilePane}
-            onChange={setMobilePane}
+        <SegmentedControl<MobilePane>
+          options={[
+            { key: "chat", label: "Chat" },
+            {
+              key: "review",
+              label: (
+                <>
+                  Review
+                  {reviewChangeCount > 0 && (
+                    <span className={tabChangeCount}>{reviewChangeCount}</span>
+                  )}
+                </>
+              ),
+            },
+          ]}
+          value={mobilePane}
+          onChange={setMobilePane}
+        />
+      </div>
+
+      <div className={body} ref={bodyRef}>
+        <div
+          className={`${chatPane} ${
+            mobilePane === "chat" ? "" : paneMobileHidden
+          }`}
+          style={assignInlineVars({ [chatBasisVar]: `${chatBasisPct}%` })}
+        >
+          <div className={paneHeader}>
+            <h2 className={paneTitle}>Chat</h2>
+            <span className={paneSubtitle}>
+              {isStreaming
+                ? (streamStatus ?? "assistant is thinking…")
+                : "send a prompt to begin"}
+            </span>
+            <span className={headerActionCluster}>
+              {intent !== "onboarding" && (
+                <ChatHistoryPopover
+                  currentConversationId={conversationId}
+                  disabled={isStreaming}
+                  onAdopt={adoptConversation}
+                  onDeletedCurrent={startNewConversation}
+                />
+              )}
+              {messages.length > 0 && !isStreaming && (
+                <button
+                  type="button"
+                  className={headerActionButton}
+                  onClick={startNewConversation}
+                >
+                  New chat
+                </button>
+              )}
+            </span>
+          </div>
+          <ChatPane
+            messages={messages}
+            onSend={handleSend}
+            onStop={handleStop}
+            isStreaming={isStreaming}
+            initialDraft={open ? (initialPrompt ?? null) : null}
+            emptyHint={
+              intent === "onboarding" ? (
+                <>
+                  The assistant can create, edit, and expand your goals and
+                  items — just describe what you want.
+                  <br />
+                  Ask it to turn what you jotted down into real goals, break
+                  them into steps, or set deadlines and durations. Nothing is
+                  saved until you continue.
+                </>
+              ) : undefined
+            }
           />
         </div>
-
-        <div className={body} ref={bodyRef}>
-          <div
-            className={`${chatPane} ${
-              mobilePane === "chat" ? "" : paneMobileHidden
-            }`}
-            style={assignInlineVars({ [chatBasisVar]: `${chatBasisPct}%` })}
-          >
-            <div className={paneHeader}>
-              <h2 className={paneTitle}>Chat</h2>
-              <span className={paneSubtitle}>
-                {isStreaming
-                  ? streamStatus ?? "assistant is thinking…"
-                  : "send a prompt to begin"}
-              </span>
-              <span className={headerActionCluster}>
-                {intent !== "onboarding" && (
-                  <ChatHistoryPopover
-                    currentConversationId={conversationId}
-                    disabled={isStreaming}
-                    onAdopt={adoptConversation}
-                    onDeletedCurrent={startNewConversation}
-                  />
-                )}
-                {messages.length > 0 && !isStreaming && (
+        <div
+          className={paneDivider}
+          data-dragging={isDraggingDivider ? "true" : undefined}
+          onPointerDown={onDividerPointerDown}
+          onKeyDown={onDividerKeyDown}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize chat / tree panes"
+          tabIndex={0}
+        />
+        <div
+          className={`${treePane} ${
+            mobilePane === "review" ? "" : paneMobileHidden
+          }`}
+        >
+          <div className={paneHeader}>
+            <button
+              type="button"
+              className={paneTab}
+              data-active={activeTab === "goals" ? "true" : undefined}
+              onClick={() => selectTab("goals")}
+            >
+              <span className={paneTabLabel}>Goals</span>
+              {goalChangeCount > 0 && (
+                <span className={tabChangeCount}>{goalChangeCount}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={paneTab}
+              data-active={activeTab === "week" ? "true" : undefined}
+              onClick={() => selectTab("week")}
+            >
+              <span className={paneTabLabel}>Week</span>
+              {templateChangeCount > 0 && (
+                <span className={tabChangeCount}>{templateChangeCount}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={paneTab}
+              data-active={activeTab === "windows" ? "true" : undefined}
+              onClick={() => selectTab("windows")}
+            >
+              <span className={paneTabLabel}>Categories</span>
+              {windowChangeCount > 0 && (
+                <span className={tabChangeCount}>{windowChangeCount}</span>
+              )}
+            </button>
+            <span className={paneSubtitle}>
+              {hasChanges ? "unsaved changes" : "current state"}
+            </span>
+            {activeTab === "goals" &&
+              (hiddenCount > 0 ? (
+                <span className={headerActionCluster}>
                   <button
                     type="button"
                     className={headerActionButton}
-                    onClick={startNewConversation}
+                    onClick={() => setShowAll(true)}
                   >
-                    New chat
+                    Show all · {hiddenCount} more goal
+                    {hiddenCount === 1 ? "" : "s"}
                   </button>
-                )}
-              </span>
-            </div>
-            <ChatPane
-              messages={messages}
-              onSend={handleSend}
-              onStop={handleStop}
-              isStreaming={isStreaming}
-              initialDraft={open ? initialPrompt ?? null : null}
-              emptyHint={
-                intent === "onboarding" ? (
-                  <>
-                    The assistant can create, edit, and expand your goals and
-                    items — just describe what you want.
-                    <br />
-                    Ask it to turn what you jotted down into real goals, break
-                    them into steps, or set deadlines and durations. Nothing is
-                    saved until you continue.
-                  </>
-                ) : undefined
-              }
+                </span>
+              ) : showAll && visibleGoals.length > 0 ? (
+                <span className={headerActionCluster}>
+                  <button
+                    type="button"
+                    className={headerActionButton}
+                    onClick={() => setShowAll(false)}
+                  >
+                    Show relevant only
+                  </button>
+                </span>
+              ) : null)}
+          </div>
+          {activeTab === "goals" ? (
+            <JsonForestView
+              goals={visibleGoals}
+              hiddenCount={hiddenCount}
+              categories={categories}
+              focusRootId={focusRootId}
+              groupByCategory={showAll}
             />
-          </div>
-          <div
-            className={paneDivider}
-            data-dragging={isDraggingDivider ? "true" : undefined}
-            onPointerDown={onDividerPointerDown}
-            onKeyDown={onDividerKeyDown}
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="Resize chat / tree panes"
-            tabIndex={0}
-          />
-          <div
-            className={`${treePane} ${
-              mobilePane === "review" ? "" : paneMobileHidden
-            }`}
-          >
-            <div className={paneHeader}>
-              <button
-                type="button"
-                className={paneTab}
-                data-active={activeTab === "goals" ? "true" : undefined}
-                onClick={() => selectTab("goals")}
-              >
-                <span className={paneTabLabel}>Goals</span>
-                {goalChangeCount > 0 && (
-                  <span className={tabChangeCount}>{goalChangeCount}</span>
-                )}
-              </button>
-              <button
-                type="button"
-                className={paneTab}
-                data-active={activeTab === "week" ? "true" : undefined}
-                onClick={() => selectTab("week")}
-              >
-                <span className={paneTabLabel}>Week</span>
-                {templateChangeCount > 0 && (
-                  <span className={tabChangeCount}>{templateChangeCount}</span>
-                )}
-              </button>
-              <button
-                type="button"
-                className={paneTab}
-                data-active={activeTab === "windows" ? "true" : undefined}
-                onClick={() => selectTab("windows")}
-              >
-                <span className={paneTabLabel}>Categories</span>
-                {windowChangeCount > 0 && (
-                  <span className={tabChangeCount}>{windowChangeCount}</span>
-                )}
-              </button>
-              <span className={paneSubtitle}>
-                {hasChanges ? "unsaved changes" : "current state"}
-              </span>
-              {activeTab === "goals" &&
-                (hiddenCount > 0 ? (
-                  <span className={headerActionCluster}>
-                    <button
-                      type="button"
-                      className={headerActionButton}
-                      onClick={() => setShowAll(true)}
-                    >
-                      Show all · {hiddenCount} more goal
-                      {hiddenCount === 1 ? "" : "s"}
-                    </button>
-                  </span>
-                ) : showAll && visibleGoals.length > 0 ? (
-                  <span className={headerActionCluster}>
-                    <button
-                      type="button"
-                      className={headerActionButton}
-                      onClick={() => setShowAll(false)}
-                    >
-                      Show relevant only
-                    </button>
-                  </span>
-                ) : null)}
-            </div>
-            {activeTab === "goals" ? (
-              <JsonForestView
-                goals={visibleGoals}
-                hiddenCount={hiddenCount}
-                categories={categories}
-                focusRootId={focusRootId}
-                groupByCategory={showAll}
-              />
-            ) : activeTab === "week" ? (
-              <TemplateWeekView
-                templates={diffedTemplates}
-                locations={locations}
-              />
-            ) : (
-              <WindowsView diffed={diffedWindows} />
-            )}
-          </div>
+          ) : activeTab === "week" ? (
+            <TemplateWeekView
+              templates={diffedTemplates}
+              locations={locations}
+            />
+          ) : (
+            <WindowsView diffed={diffedWindows} />
+          )}
         </div>
+      </div>
 
       {!embedded && (
         <ConfirmModal

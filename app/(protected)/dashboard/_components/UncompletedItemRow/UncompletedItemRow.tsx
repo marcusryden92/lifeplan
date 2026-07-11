@@ -14,6 +14,7 @@ import {
   agendaMetaDimmer,
 } from "../agendaRow.css";
 import {
+  uncompletedRow,
   uncompletedDaysLabel,
   uncompletedActions,
   uncompletedRowFlashSuccess,
@@ -39,6 +40,7 @@ export function UncompletedItemRow({
     listRow(),
     agendaRow,
     agendaRowGrouped,
+    uncompletedRow,
     flash === "success" ? uncompletedRowFlashSuccess : "",
     flash === "info" ? uncompletedRowFlashInfo : "",
   ]

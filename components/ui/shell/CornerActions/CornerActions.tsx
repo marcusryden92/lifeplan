@@ -3,11 +3,17 @@
 import { Search, Sparkles } from "lucide-react";
 import { useSearch } from "../SearchContext";
 import { useAssistant } from "../AssistantContext";
+import { useShellOverlayOpen } from "../ShellOverlayContext";
 import { searchButton, assistantButton } from "./CornerActions.css";
 
 export function CornerActions() {
   const { setOpen: setSearchOpen } = useSearch();
   const { openAssistant } = useAssistant();
+  const overlayOpen = useShellOverlayOpen();
+
+  // A full-screen shell surface (AI assistant, WeekStructureModal) is open —
+  // step out of the way, same as the bottom floating menu.
+  if (overlayOpen) return null;
 
   return (
     <>
