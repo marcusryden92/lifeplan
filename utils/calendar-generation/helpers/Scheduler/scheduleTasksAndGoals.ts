@@ -16,6 +16,7 @@ import {
   SplitRelaxation,
   createSplitPlacementState,
 } from "./scheduleSplitTask";
+import { GoalCapRelaxation, createGoalCapState } from "./goalDayCap";
 
 export function scheduleTasksAndGoals(
   scheduler: Scheduler,
@@ -31,6 +32,7 @@ export function scheduleTasksAndGoals(
   newEvents: SimpleEvent[];
   failures: SchedulingFailure[];
   splitRelaxations: SplitRelaxation[];
+  goalCapRelaxations: GoalCapRelaxation[];
 } {
   const { slotManager, travelManager, context } = scheduler;
   const events: SimpleEvent[] = [];
@@ -39,6 +41,8 @@ export function scheduleTasksAndGoals(
   // Split-task bookkeeping shared across iterations: partially placed tasks
   // resume from their remainder after horizon expansion instead of restarting.
   const splitState = createSplitPlacementState();
+  // Per-goal daily-cap ledgers, shared for the same reason.
+  const goalCapState = createGoalCapState();
 
   const plannerCategoryMap =
     context.plannerCategoryMap ?? new Map<string, string | null>();
@@ -167,6 +171,7 @@ export function scheduleTasksAndGoals(
           context.currentDate,
           capacityCache,
           splitState,
+          goalCapState,
         );
 
         if (result.scheduled || result.permanentFailure) {
@@ -239,6 +244,7 @@ export function scheduleTasksAndGoals(
           context.currentDate,
           capacityCache,
           splitState,
+          goalCapState,
           true,
         );
         if (result.scheduled || result.permanentFailure) {
@@ -276,6 +282,7 @@ export function scheduleTasksAndGoals(
     newEvents: events,
     failures: finalFailures,
     splitRelaxations: splitState.relaxations,
+    goalCapRelaxations: goalCapState.relaxations,
   };
 }
 

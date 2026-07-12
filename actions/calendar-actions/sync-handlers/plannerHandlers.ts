@@ -64,6 +64,11 @@ export function handlePlannerChanges(
             extract: (r) => r.completedSegments,
           },
           {
+            name: "maxMinutesPerDay",
+            cast: "int",
+            extract: (r) => r.maxMinutesPerDay,
+          },
+          {
             name: "sortOrder",
             cast: "double precision",
             extract: (r) => r.sortOrder,

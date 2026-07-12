@@ -61,6 +61,7 @@ export function renderEngineMessage(
     "SCHEDULED_LATE",
     "INSUFFICIENT_TRAVEL",
     "SPLIT_CONSTRAINT_RELAXED",
+    "GOAL_DAY_CAP_RELAXED",
     "SCHEDULED_OK",
   ];
   const rawType = (raw as { type: unknown }).type;
@@ -171,6 +172,27 @@ export function renderEngineMessage(
         tag: "SPLIT",
         tone,
         title: `"${label}" placed with a compromise`,
+        body,
+        goToDate: null,
+      };
+    }
+
+    case "GOAL_DAY_CAP_RELAXED": {
+      const planner = lookups.plannerById.get(payload.plannerId);
+      const label = planner?.title ?? "Goal";
+      const blockLabel =
+        payload.affectedCount === 1
+          ? "one work block"
+          : `${payload.affectedCount} work blocks`;
+      const body =
+        payload.kind === "oversizedLeaf"
+          ? `A single work block needs more than the ${formatMinutes(payload.capMinutes)}/day limit, so ${blockLabel} (${formatMinutes(payload.totalMinutes)}) was placed whole.`
+          : `There wasn't room within the ${formatMinutes(payload.capMinutes)}/day limit before the horizon ran out, so ${blockLabel} (${formatMinutes(payload.totalMinutes)}) was placed past it rather than dropped.`;
+      return {
+        id: message.id,
+        tag: "DAILY LIMIT",
+        tone,
+        title: `"${label}" placed over its daily limit`,
         body,
         goToDate: null,
       };

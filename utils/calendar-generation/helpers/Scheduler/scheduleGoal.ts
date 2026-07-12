@@ -12,6 +12,13 @@ import {
   scheduleSplitTask,
   splitRemainingForRun,
 } from "./scheduleSplitTask";
+import {
+  GoalCapState,
+  goalDayCapMinutes,
+  seedGoalDayLedger,
+  buildGoalCapContext,
+  wholeBlockSizing,
+} from "./goalDayCap";
 
 export function scheduleGoal(
   goal: Planner,
@@ -28,6 +35,7 @@ export function scheduleGoal(
   currentDate: Date,
   capacityCache: Map<string, number>,
   splitState: SplitPlacementState,
+  goalCapState: GoalCapState,
   allowDayCapRelaxation = false,
 ): { scheduled: boolean; permanentFailure: boolean } {
   const goalTasks = getSortedTreeBottomLayer(allPlanners, goal.id).filter(
@@ -36,6 +44,18 @@ export function scheduleGoal(
       !scheduledTaskIds.has(t.id) &&
       !memoizedEventIds.has(t.id)
   );
+
+  const dayCap = goalDayCapMinutes(goal);
+  let goalCap = undefined;
+  if (dayCap !== null) {
+    seedGoalDayLedger(
+      goal,
+      allPlanners,
+      scheduler.context.scheduledEvents,
+      goalCapState,
+    );
+    goalCap = buildGoalCapContext(goal, dayCap, goalCapState);
+  }
 
   let goalFailedDueToNoSlots = false;
   let goalAfterTime: Date | undefined = undefined;
@@ -80,6 +100,7 @@ export function scheduleGoal(
         state: splitState,
         afterTime: goalAfterTime,
         allowDayCapRelaxation,
+        goalCap,
       });
       events.push(...result.events);
       for (const e of result.events) {
@@ -96,9 +117,36 @@ export function scheduleGoal(
       continue;
     }
 
-    const res = scheduler.scheduleTask(task, goalAfterTime);
+    // A leaf bigger than the goal's daily cap can never place under it — no
+    // horizon expansion creates such a day, so it places whole immediately
+    // (recorded as an oversizedLeaf compromise) instead of starving the loop.
+    const oversizedLeaf = goalCap !== undefined && task.duration > dayCap!;
+    let res =
+      goalCap && !oversizedLeaf
+        ? scheduler.scheduleTask(
+            task,
+            goalAfterTime,
+            wholeBlockSizing(task.duration, goalCap.budget),
+          )
+        : scheduler.scheduleTask(task, goalAfterTime);
+    let dayCapRelaxed = false;
+    if (goalCap && !oversizedLeaf && !res.success && allowDayCapRelaxation) {
+      res = scheduler.scheduleTask(task, goalAfterTime);
+      dayCapRelaxed = res.success;
+    }
 
     if (res.success && res.event) {
+      if (goalCap) {
+        const start = new Date(res.event.start);
+        const end = new Date(res.event.end);
+        const minutes = Math.round((end.getTime() - start.getTime()) / 60000);
+        if (oversizedLeaf) {
+          goalCap.recordRelaxation("oversizedLeaf", minutes, res.event.start);
+        } else if (dayCapRelaxed && goalCap.budget(start) < minutes) {
+          goalCap.recordRelaxation("dayCap", minutes, res.event.start);
+        }
+        goalCap.charge(start, end);
+      }
       events.push(res.event);
       scheduledTaskIds.add(task.id);
       goalAfterTime = new Date(res.event.end);

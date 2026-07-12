@@ -21,6 +21,7 @@
  *   - TASK_TOO_LARGE:      plannerId
  *   - TASK_UNSCHEDULABLE:  plannerId | reason
  *   - SPLIT_CONSTRAINT_RELAXED: plannerId | kind | affectedCount | totalMinutes
+ *   - GOAL_DAY_CAP_RELAXED: plannerId | kind | affectedCount | totalMinutes
  *   - SCHEDULED_OK:        placedCount
  *
  * Any change to a discriminating field (placement shift, new reason, new
@@ -44,6 +45,7 @@ export type EngineMessageType =
   | "SCHEDULED_LATE"
   | "INSUFFICIENT_TRAVEL"
   | "SPLIT_CONSTRAINT_RELAXED"
+  | "GOAL_DAY_CAP_RELAXED"
   | "SCHEDULED_OK";
 
 /**
@@ -101,6 +103,19 @@ export type EngineMessagePayload =
       kind: "maxChunk" | "dayCap";
       affectedCount: number;
       totalMinutes: number;
+    }
+  | {
+      // A goal's daily cap was exceeded to place its subtree: "oversizedLeaf"
+      // = a single block (or a split leaf's minimum chunk) is bigger than the
+      // cap and placed whole; "dayCap" = the final pass placed minutes past
+      // the cap rather than dropping them. One row per (plannerId, kind);
+      // capMinutes is an emit-time fact and stays out of the id.
+      type: "GOAL_DAY_CAP_RELAXED";
+      plannerId: string;
+      kind: "oversizedLeaf" | "dayCap";
+      affectedCount: number;
+      totalMinutes: number;
+      capMinutes: number;
     }
   | {
       // Informational summary emitted once per regen when at least one
@@ -198,6 +213,20 @@ export function splitConstraintRelaxedId(fields: {
   totalMinutes: number;
 }): string {
   return `SPLIT_CONSTRAINT_RELAXED${MESSAGE_ID_DELIM}${joinBody(
+    fields.plannerId,
+    fields.kind,
+    fields.affectedCount,
+    fields.totalMinutes,
+  )}`;
+}
+
+export function goalDayCapRelaxedId(fields: {
+  plannerId: string;
+  kind: "oversizedLeaf" | "dayCap";
+  affectedCount: number;
+  totalMinutes: number;
+}): string {
+  return `GOAL_DAY_CAP_RELAXED${MESSAGE_ID_DELIM}${joinBody(
     fields.plannerId,
     fields.kind,
     fields.affectedCount,

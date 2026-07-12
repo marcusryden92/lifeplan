@@ -347,6 +347,7 @@ export class CalendarGenerator {
       currentDate,
       input.previousEngineMessages ?? [],
       schedulingResult.splitRelaxations,
+      schedulingResult.goalCapRelaxations,
     );
 
     return {

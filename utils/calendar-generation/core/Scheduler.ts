@@ -21,6 +21,7 @@ import { scheduleTask } from "../helpers/Scheduler/scheduleTask";
 import { scheduleTasks } from "../helpers/Scheduler/scheduleTasks";
 import { scheduleTasksAndGoals } from "../helpers/Scheduler/scheduleTasksAndGoals";
 import type { SplitRelaxation } from "../helpers/Scheduler/scheduleSplitTask";
+import type { GoalCapRelaxation } from "../helpers/Scheduler/goalDayCap";
 import { TravelPassRecorder } from "../helpers/TravelManager/TravelPassRecorder";
 
 export class Scheduler {
@@ -108,6 +109,7 @@ export class Scheduler {
     newEvents: SimpleEvent[];
     failures: SchedulingFailure[];
     splitRelaxations: SplitRelaxation[];
+    goalCapRelaxations: GoalCapRelaxation[];
   } {
     return scheduleTasksAndGoals(
       this,

@@ -56,6 +56,9 @@ export interface DraftItemUpdate {
     maxMinutesPerDay?: number | null;
     minSpacingMinutes?: number | null;
   } | null;
+  // The goal's daily limit: a positive number of minutes sets it, null clears
+  // it. Rejected on anything but a top-level goal.
+  maxMinutesPerDay?: number | null;
 }
 
 function coerceForestTypes(forest: DraftForest): DraftForest {
@@ -258,6 +261,31 @@ export function updateDraftItems(
           continue;
         }
         node.splitting = normalized;
+      }
+    }
+    if (update.maxMinutesPerDay !== undefined) {
+      if (update.maxMinutesPerDay === null) {
+        node.maxMinutesPerDay = null;
+      } else {
+        if (!isRoot || node.plannerType !== "goal") {
+          failures.push({
+            id,
+            reason: "the daily limit applies to top-level goals only",
+          });
+          continue;
+        }
+        if (
+          typeof update.maxMinutesPerDay !== "number" ||
+          !isFinite(update.maxMinutesPerDay) ||
+          update.maxMinutesPerDay <= 0
+        ) {
+          failures.push({
+            id,
+            reason: "the daily limit must be a positive number of minutes",
+          });
+          continue;
+        }
+        node.maxMinutesPerDay = Math.floor(update.maxMinutesPerDay);
       }
     }
     if (update.isReady !== undefined) {

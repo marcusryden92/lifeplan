@@ -45,6 +45,7 @@ export function buildBrainDumpRow(
     recurrenceExceptions: null,
     splitting: null,
     completedSegments: null,
+    maxMinutesPerDay: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

@@ -30,6 +30,10 @@ export interface DraftNode {
   // retained node re-emitted without it clears it. Optional so hand-built
   // literals stay valid; absent reads as null.
   splitting?: TaskSplittingSettings | null;
+  // The goal's daily limit — max minutes of its subtree scheduled on any one
+  // day. Top-level goal roots only (children carry null); full-tree contract
+  // like splitting: a retained goal re-emitted without it clears it.
+  maxMinutesPerDay?: number | null;
   children: DraftNode[];
 }
 
@@ -44,6 +48,7 @@ export function plannerTreeToJson(
     ...node,
     categoryId: root.categoryId ?? null,
     color: root.color ?? null,
+    maxMinutesPerDay: root.maxMinutesPerDay ?? null,
   };
 }
 
@@ -60,6 +65,7 @@ export function buildDraftNode(planner: Planner[], node: Planner): DraftNode {
     categoryId: null,
     color: null,
     splitting: parseTaskSplitting(node.splitting),
+    maxMinutesPerDay: null,
     children: orderedChildren.map((child) => buildDraftNode(planner, child)),
   };
 }

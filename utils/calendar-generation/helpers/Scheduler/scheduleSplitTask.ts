@@ -13,6 +13,7 @@ import {
   parseCompletedSegments,
   splitRemainingMinutes,
 } from "../../../taskSplitting";
+import { GoalCapContext } from "./goalDayCap";
 
 // Placement of one split task: repeatedly runs the 5-phase pipeline with a
 // ChunkSizing until the remaining minutes are exhausted or a chunk finds no
@@ -80,12 +81,18 @@ export function scheduleSplitTask(args: {
    * chance to satisfy the cap before it is violated.
    */
   allowDayCapRelaxation?: boolean;
+  /**
+   * Present when this leaf sits under a goal with a daily cap. The effective
+   * per-day budget is the pointwise min of the task's own budget and the
+   * goal's; every placed chunk charges both ledgers.
+   */
+  goalCap?: GoalCapContext;
 }): {
   fullyPlaced: boolean;
   events: SimpleEvent[];
   failure?: SchedulingFailure;
 } {
-  const { task, settings, scheduler, state } = args;
+  const { task, settings, scheduler, state, goalCap } = args;
   const context = scheduler.context;
 
   // Optional minimum break between consecutive chunks of this task. Off by
@@ -130,8 +137,25 @@ export function scheduleSplitTask(args: {
     // in strict mode, and is surfaced as a maxChunk compromise.
     const ruleForcedWhole = minReq > settings.maxMinutes;
 
+    // A goal budget below the required minimum chunk is rule-forced out of
+    // the composition — no day could ever host the chunk under it. The chunk
+    // still charges the ledger and is surfaced as an oversizedLeaf compromise.
+    const goalBudgetApplies =
+      goalCap !== undefined && minReq <= goalCap.capMinutes;
+    const budgetFns: Array<(slotStart: Date) => number> = [];
+    if (dayBudgetFn) budgetFns.push(dayBudgetFn);
+    if (goalCap && goalBudgetApplies) budgetFns.push(goalCap.budget);
+    const effectiveBudgetFn =
+      budgetFns.length > 0
+        ? (slotStart: Date) =>
+            budgetFns.reduce(
+              (min, fn) => Math.min(min, fn(slotStart)),
+              Infinity,
+            )
+        : undefined;
+
     const attempts: Array<{ dayCap: boolean }> = [{ dayCap: true }];
-    if (args.allowDayCapRelaxation && dayBudgetFn) {
+    if (args.allowDayCapRelaxation && effectiveBudgetFn) {
       attempts.push({ dayCap: false });
     }
 
@@ -168,7 +192,7 @@ export function scheduleSplitTask(args: {
             dayBudget: attempt.dayCap ? dayBudget : undefined,
             maxOverride: ruleForcedWhole ? chunkRemaining : undefined,
           }),
-        dayBudget: attempt.dayCap ? dayBudgetFn : undefined,
+        dayBudget: attempt.dayCap ? effectiveBudgetFn : undefined,
       };
 
       // When a minimum spacing is requested, hold the next chunk until at least
@@ -186,7 +210,8 @@ export function scheduleSplitTask(args: {
       const result = scheduler.scheduleTask(chunkTask, afterTime, sizing);
       if (result.success && result.event) {
         placedEvent = result.event;
-        placedWithoutDayCap = !attempt.dayCap && dayBudgetFn !== undefined;
+        placedWithoutDayCap =
+          !attempt.dayCap && effectiveBudgetFn !== undefined;
         break;
       }
       lastFailure = result.failure;
@@ -215,6 +240,15 @@ export function scheduleSplitTask(args: {
     const granted = Math.round((end.getTime() - start.getTime()) / 60000);
     if (granted <= 0) break;
 
+    // Budgets are read before charging so a relaxed placement is attributed
+    // to the budget it actually exceeded, not to both.
+    const ownBudgetShort =
+      placedWithoutDayCap &&
+      dayBudgetFn !== undefined &&
+      dayBudgetFn(start) < granted;
+    const goalBudgetShort =
+      placedWithoutDayCap && goalBudgetApplies && goalCap.budget(start) < granted;
+
     events.push(placedEvent);
     remaining -= granted;
     state.placedMinutes.set(
@@ -229,6 +263,7 @@ export function scheduleSplitTask(args: {
       );
     }
     addIntervalMinutesByDay(dayMinutes, start, end);
+    goalCap?.charge(start, end);
 
     if (ruleForcedWhole && granted > settings.maxMinutes) {
       state.relaxations.push({
@@ -239,14 +274,22 @@ export function scheduleSplitTask(args: {
         chunkStart: placedEvent.start,
       });
     }
+    if (goalCap && !goalBudgetApplies) {
+      goalCap.recordRelaxation("oversizedLeaf", granted, placedEvent.start);
+    }
     if (placedWithoutDayCap) {
-      state.relaxations.push({
-        plannerId: task.id,
-        taskTitle: task.title,
-        kind: "dayCap",
-        chunkMinutes: granted,
-        chunkStart: placedEvent.start,
-      });
+      if (dayBudgetFn !== undefined && (ownBudgetShort || !goalBudgetShort)) {
+        state.relaxations.push({
+          plannerId: task.id,
+          taskTitle: task.title,
+          kind: "dayCap",
+          chunkMinutes: granted,
+          chunkStart: placedEvent.start,
+        });
+      }
+      if (goalBudgetShort) {
+        goalCap.recordRelaxation("dayCap", granted, placedEvent.start);
+      }
     }
   }
 

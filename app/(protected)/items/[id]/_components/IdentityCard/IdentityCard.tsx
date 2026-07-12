@@ -9,6 +9,7 @@ import { LocationSection } from "./LocationSection";
 import { ColorSection } from "./ColorSection";
 import { RecurrenceSection } from "./RecurrenceSection";
 import { SplittingSection } from "./SplittingSection";
+import { DailyLimitSection } from "./DailyLimitSection";
 import { DeleteRow } from "./DeleteRow";
 import {
   card,
@@ -34,6 +35,7 @@ export function IdentityCard() {
           <div className={splitRecurrenceSlot}>
             <SplittingSection />
             <RecurrenceSection />
+            <DailyLimitSection />
           </div>
         </div>
         <DeleteRow />

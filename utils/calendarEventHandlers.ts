@@ -62,6 +62,7 @@ export const createPlanFromSelection = (
     recurrenceExceptions: null,
     splitting: null,
     completedSegments: null,
+    maxMinutesPerDay: null,
     sortOrder: 0,
     priority: 5,
     completedStartTime: null,

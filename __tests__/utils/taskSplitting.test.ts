@@ -40,6 +40,7 @@ function makePlanner(overrides: Partial<Planner>): Planner {
     recurrenceExceptions: null,
     splitting: serializeTaskSplitting(SETTINGS),
     completedSegments: null,
+    maxMinutesPerDay: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

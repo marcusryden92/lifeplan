@@ -25,8 +25,10 @@ import { SchedulingFailureReason } from "../../constants";
 import { taskIsCompleted } from "../../../taskHelpers";
 import { plannerIdFromEventId } from "../../../planRecurrence";
 import type { SplitRelaxation } from "../Scheduler/scheduleSplitTask";
+import type { GoalCapRelaxation } from "../Scheduler/goalDayCap";
 import {
   EngineMessageEmit,
+  goalDayCapRelaxedId,
   insufficientTravelId,
   scheduledLateId,
   scheduledOkId,
@@ -44,6 +46,7 @@ export function buildEngineMessages(
   currentDate: Date,
   previousMessages: EngineMessage[],
   splitRelaxations: SplitRelaxation[] = [],
+  goalCapRelaxations: GoalCapRelaxation[] = [],
 ): EngineMessage[] {
   const priorDismissed = buildDismissedSet(previousMessages);
 
@@ -52,6 +55,7 @@ export function buildEngineMessages(
     ...emitScheduledLateMessages(planners, finalEvents, currentDate),
     ...emitInsufficientTravelMessages(travelEvents),
     ...emitSplitRelaxationMessages(splitRelaxations),
+    ...emitGoalCapRelaxationMessages(goalCapRelaxations),
     ...emitScheduledOkMessages(finalEvents),
   ];
 
@@ -185,6 +189,61 @@ function emitSplitRelaxationMessages(
         kind: b.kind,
         affectedCount: b.affectedCount,
         totalMinutes: b.totalMinutes,
+      },
+    });
+  }
+  return emits;
+}
+
+/**
+ * GOAL_DAY_CAP_RELAXED coalesces per (goalId, kind), same shape as the split
+ * variant: N compromised placements of one goal's subtree fold into a single
+ * row carrying count and total minutes. capMinutes is an emit-time fact
+ * (excluded from the id, like TASK_TOO_LARGE.maxCapacity) — a cap edit alone
+ * doesn't resurface a dismissed row; a changed compromise does.
+ */
+function emitGoalCapRelaxationMessages(
+  relaxations: GoalCapRelaxation[],
+): EngineMessageEmit[] {
+  type Bucket = {
+    plannerId: string;
+    kind: "oversizedLeaf" | "dayCap";
+    affectedCount: number;
+    totalMinutes: number;
+    capMinutes: number;
+  };
+  const buckets = new Map<string, Bucket>();
+  for (const r of relaxations) {
+    const key = `${r.goalId}|${r.kind}`;
+    const existing = buckets.get(key);
+    if (existing) {
+      existing.affectedCount += 1;
+      existing.totalMinutes += r.minutes;
+    } else {
+      buckets.set(key, {
+        plannerId: r.goalId,
+        kind: r.kind,
+        affectedCount: 1,
+        totalMinutes: r.minutes,
+        capMinutes: r.capMinutes,
+      });
+    }
+  }
+
+  const emits: EngineMessageEmit[] = [];
+  for (const b of buckets.values()) {
+    emits.push({
+      id: goalDayCapRelaxedId(b),
+      type: "GOAL_DAY_CAP_RELAXED",
+      tone: "warn",
+      dismissed: false,
+      payload: {
+        type: "GOAL_DAY_CAP_RELAXED",
+        plannerId: b.plannerId,
+        kind: b.kind,
+        affectedCount: b.affectedCount,
+        totalMinutes: b.totalMinutes,
+        capMinutes: b.capMinutes,
       },
     });
   }

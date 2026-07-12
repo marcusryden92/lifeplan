@@ -44,6 +44,7 @@ model Planner {
   recurrenceExceptions String? // JSON PlanOccurrenceException[]; per-occurrence moved/deleted overrides keyed by the occurrence's original local start
   splitting            String? // JSON TaskSplittingSettings ({minMinutes, maxMinutes, maxMinutesPerDay?, minSpacingMinutes?}); tasks only — non-null makes the engine place the item as dynamically sized chunks
   completedSegments    String? // JSON CompletedSegment[] ({start, end}); one entry per completed chunk of a split task — completed minutes are always derived by summing, never stored
+  maxMinutesPerDay     Int? // Goals only — max minutes of this goal's subtree the engine may place on any single day
   sortOrder          Float       @default(0) // Fractional key ordering siblings within a parentId group; 0 on top-level roots (order non-semantic)
   completedStartTime String?
   completedEndTime   String?

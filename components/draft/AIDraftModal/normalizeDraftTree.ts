@@ -32,6 +32,12 @@ export function normalizeDraftTree(raw: unknown): DraftNode | null {
   const color =
     typeof node.color === "string" && node.color.length > 0 ? node.color : null;
   const splitting = normalizeTaskSplittingSettings(node.splitting);
+  const maxMinutesPerDay =
+    typeof node.maxMinutesPerDay === "number" &&
+    Number.isFinite(node.maxMinutesPerDay) &&
+    node.maxMinutesPerDay > 0
+      ? Math.floor(node.maxMinutesPerDay)
+      : null;
 
   const rawChildren = Array.isArray(node.children) ? node.children : [];
   const children = rawChildren
@@ -50,6 +56,7 @@ export function normalizeDraftTree(raw: unknown): DraftNode | null {
     categoryId,
     color,
     splitting,
+    maxMinutesPerDay,
     children,
   };
 }

@@ -283,6 +283,7 @@ const FIELD_LABELS: Record<string, string> = {
   isReady: "ready",
   categoryId: "category",
   splitting: "chunking",
+  maxMinutesPerDay: "daily limit",
 };
 
 function formatChangedFields(fields: string[]): string {

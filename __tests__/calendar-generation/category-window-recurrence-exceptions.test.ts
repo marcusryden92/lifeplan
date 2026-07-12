@@ -86,6 +86,7 @@ function makeTask(id: string, categoryId: string | null): Planner {
     recurrenceExceptions: null,
     splitting: null,
     completedSegments: null,
+    maxMinutesPerDay: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

@@ -28,6 +28,7 @@ function row(overrides: Partial<Planner> & { id: string }): Planner {
     recurrenceExceptions: null,
     splitting: null,
     completedSegments: null,
+    maxMinutesPerDay: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,
@@ -213,6 +214,28 @@ describe("diffDraftForest / draftForestsEqual", () => {
   it("is order-insensitive at the top level", () => {
     const reordered = { goals: [...canonical.goals].reverse() };
     expect(draftForestsEqual(canonical, reordered)).toBe(true);
+  });
+
+  it("marks a daily-limit change as modified with no merge backfill", () => {
+    const capped = {
+      goals: [
+        node({ id: "goal-a", categoryId: "cat-1", maxMinutesPerDay: 120 }),
+        node({ id: "goal-b" }),
+      ],
+    };
+    const diff = diffDraftForest(capped, canonical);
+    expect(diff[0].status).toBe("modified");
+    expect(diff[0].changedFields).toEqual(["maxMinutesPerDay"]);
+    expect(draftForestsEqual(canonical, capped)).toBe(false);
+
+    // Splitting-style contract: a retained root re-emitted WITHOUT the field
+    // merges to null (clears) — no categoryId-style backfill.
+    const merged = mergeDraftForest(capped, {
+      goals: [node({ id: "goal-a", categoryId: "cat-1", title: "edited" })],
+      deletedGoalIds: [],
+      trustNullCategoryId: false,
+    });
+    expect(merged.goals[0].maxMinutesPerDay ?? null).toBeNull();
   });
 
   it("treats an id-less goal as a change", () => {

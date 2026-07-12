@@ -16,6 +16,21 @@ function splittingColumn(node: DraftNode): string | null {
   return node.splitting ? serializeTaskSplitting(node.splitting) : null;
 }
 
+// The daily limit rides top-level goal roots only, splitting-style null
+// semantics: the node's value (null when absent) becomes the row value, so a
+// retained goal re-emitted without it clears it. Non-goal roots and all
+// descendants stamp null.
+function goalDayCapColumn(
+  node: DraftNode,
+  rootType: PlannerType,
+): number | null {
+  if (rootType !== PlannerType.goal) return null;
+  const cap = node.maxMinutesPerDay;
+  return typeof cap === "number" && Number.isFinite(cap) && cap > 0
+    ? Math.floor(cap)
+    : null;
+}
+
 // Readiness the apply layer stamps across a whole subtree — it cascades from
 // the root, matching the manual toggle and the create defaults. A task/plan
 // root is ready unless the assistant explicitly set it false; a goal root
@@ -212,6 +227,7 @@ function applyTreeToExistingRoot({
           sortOrder,
           categoryId: null,
           splitting: splittingColumn(node),
+          maxMinutesPerDay: null,
           updatedAt: now,
         }
       : {
@@ -231,6 +247,7 @@ function applyTreeToExistingRoot({
           recurrenceExceptions: null,
           splitting: splittingColumn(node),
           completedSegments: null,
+          maxMinutesPerDay: null,
           sortOrder,
           completedStartTime: null,
           completedEndTime: null,
@@ -264,6 +281,7 @@ function applyTreeToExistingRoot({
     categoryId: nextCategoryId,
     color: nextColor,
     splitting: splittingColumn(workingTree),
+    maxMinutesPerDay: goalDayCapColumn(workingTree, resolvedRootType),
     updatedAt: now,
   };
 
@@ -332,6 +350,7 @@ function buildNewRootRows(
       recurrenceExceptions: null,
       splitting: splittingColumn(child),
       completedSegments: null,
+      maxMinutesPerDay: null,
       sortOrder,
       completedStartTime: null,
       completedEndTime: null,
@@ -362,6 +381,7 @@ function buildNewRootRows(
     recurrenceExceptions: null,
     splitting: splittingColumn(node),
     completedSegments: null,
+    maxMinutesPerDay: goalDayCapColumn(node, rootType),
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

@@ -272,6 +272,7 @@ export const generatePlanners = (userId: string): Planner[] => {
       recurrenceExceptions: null,
       splitting: null,
       completedSegments: null,
+      maxMinutesPerDay: null,
       sortOrder,
       completedStartTime: null,
       completedEndTime: null,

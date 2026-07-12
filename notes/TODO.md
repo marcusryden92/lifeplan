@@ -1,9 +1,18 @@
+# Emergent issues
+- Library layout and filter functionality on mobile
+- All bottom sheet modals using the same closing animation as calendar engine (all bottom sheets using the same component really)
+- Give bottomsheet modal proper bottom padding
+- Display 3 days at a time in WeekStructureModal like in calendar?
+- Locations view bottom and top padding for mobile and general layout and functionality?
+- "Just this occurence" modals being tailored for mobile as well
+
 # P5 — Medium features
 
-- Maximum time of a goal per day
-- Allowed days/time spans in any day for goals
+- Earliest allowed date goals & tasks
+- Allowed days/time spans in any day for goals & tasks
 
 - Add inter-goal dependencies (with cycle detection)
+- Allow a goal to be added/linked to another goal as a subtask
 - File-view / mind-map style: displays categories + sub-categories + items together
 
 - Custom Claude API key

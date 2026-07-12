@@ -540,6 +540,7 @@ Each node in a goal tree has:
 - categoryId: top-level goals only — one of the user's category ids, or null. Echo it verbatim for retained goals (null on a retained goal means "leave as is"); pick a fitting category for new goals, or null if none fits. Never set it on child nodes; they inherit.
 - color: top-level goals only — a 6-digit hex color for the whole goal (its subtasks inherit it on the calendar). Give every NEW goal a fitting color and vary colors across goals so the calendar doesn't come out all one shade. Good palette: #1976D2 blue, #2E7D32 green, #F77F00 orange, #6C5CE7 violet, #16A085 teal, #E63946 red, #FFB703 amber, #1D3557 navy, #8E44AD purple, #D81B60 pink. Echo the existing color verbatim for retained goals (null means "leave as is"). Never set it on child nodes; they inherit.
 - splitting: schedulable leaves only (never plans, never nodes with subtasks) — {minMinutes, maxMinutes, maxMinutesPerDay, minSpacingMinutes} or null. Non-null makes the scheduler place the item as flexibly sized chunks (each between min and max, at most maxMinutesPerDay per day when set; maxMinutesPerDay null = no daily limit) instead of one continuous block — right for long, interruptible work like "read the textbook, 12h". minSpacingMinutes (optional; null = no forced gap) keeps at least that many minutes of break between consecutive chunks of the item. minMinutes >= 5 and maxMinutes >= minMinutes. Echo it verbatim for retained nodes in propose_goals — a re-emitted tree that drops it turns chunking off. When the user speaks of it, call it splitting into chunks — never say "splitting field".
+- maxMinutesPerDay: top-level goals only — the goal's daily limit: at most this many minutes of the goal's whole subtree are scheduled on any one day (an integer, or null for no limit). Use it when the user wants a big goal spread out ("no more than 2 hours of this per day"). Echo it verbatim for retained goals in propose_goals — a re-emitted tree that drops it removes the limit. Never set it on child nodes. When the user speaks of it, call it the daily limit — never say "maxMinutesPerDay".
 - children: ordered array of sub-nodes. Empty for leaves.
 
 ID PRESERVATION (IMPORTANT)
@@ -556,7 +557,7 @@ Reading:
 - get_goal_trees: fetch complete trees by id. Required before propose_goals may modify a goal (proposals are complete-tree replacements; editing blind would silently delete subtasks). The focused goal (if any) is already provided. Tool results are NOT retained between user messages — re-fetch each message.
 
 Editing — deterministic operations. PREFER these for small changes; each applies immediately to the user's review pane as a pending change (nothing is saved without their confirmation):
-- update_items: change fields (title, plannerType task/goal, duration, deadline, priority, isReady; categoryId on top-level goals only; splitting on schedulable leaves — an object turns chunked scheduling on or adjusts it, null turns it off) on items by id. No fetch needed. Use this to convert an item's type — you no longer need propose_goals just to change a task into a goal or a plan into a task. Readiness (isReady) gates scheduling for every item: tasks and plans are ready by default and you can mark one not ready to keep it off the calendar; a goal can only be readied once it has subtasks and a deadline.
+- update_items: change fields (title, plannerType task/goal, duration, deadline, priority, isReady; categoryId on top-level goals only; splitting on schedulable leaves — an object turns chunked scheduling on or adjusts it, null turns it off; maxMinutesPerDay on top-level goals only — the daily limit, null removes it) on items by id. No fetch needed. Use this to convert an item's type — you no longer need propose_goals just to change a task into a goal or a plan into a task. Readiness (isReady) gates scheduling for every item: tasks and plans are ready by default and you can mark one not ready to keep it off the calendar; a goal can only be readied once it has subtasks and a deadline.
 - move_item: move or reorder an item within its own goal (new parent + position). Cross-goal moves and moving top-level goals are not supported.
 - add_items: insert new subtasks under an existing parent. Added items are assigned draft ids on insertion — fetch the goal tree if you need to reference them.
 - delete_items: remove items (with their subtrees) or whole goals by id.
@@ -641,6 +642,11 @@ const proposeGoalsTool: Anthropic.Tool = {
             },
             required: ["minMinutes", "maxMinutes"],
           },
+          maxMinutesPerDay: {
+            type: ["integer", "null"],
+            description:
+              "Top-level goals only: the goal's daily limit — max minutes of its subtree scheduled on any one day. Echo verbatim for retained goals; dropping it removes the limit. Never set on child nodes.",
+          },
           children: {
             type: "array",
             items: { $ref: "#/$defs/draftNode" },
@@ -705,7 +711,7 @@ const searchItemsTool: Anthropic.Tool = {
 const updateItemsTool: Anthropic.Tool = {
   name: "update_items",
   description:
-    'Change fields on existing items by id — title, plannerType ("task" or "goal"; convert a leaf task into an empty goal or vice versa, or turn a plan into a task), duration (minutes), deadline (ISO date or null to clear), priority, isReady, categoryId (top-level goals only; null to clear), and splitting (schedulable leaves only — an object enables/adjusts chunked scheduling, null turns it off). An item with subtasks is always a goal — that is enforced automatically, so you never set plannerType just to fix a parent. Structural changes (adding, moving, removing items) use the other tools.',
+    'Change fields on existing items by id — title, plannerType ("task" or "goal"; convert a leaf task into an empty goal or vice versa, or turn a plan into a task), duration (minutes), deadline (ISO date or null to clear), priority, isReady, categoryId (top-level goals only; null to clear), splitting (schedulable leaves only — an object enables/adjusts chunked scheduling, null turns it off), and maxMinutesPerDay (top-level goals only — the goal\'s daily limit in minutes, null to remove it). An item with subtasks is always a goal — that is enforced automatically, so you never set plannerType just to fix a parent. Structural changes (adding, moving, removing items) use the other tools.',
   input_schema: {
     type: "object",
     properties: {
@@ -731,6 +737,11 @@ const updateItemsTool: Anthropic.Tool = {
                 minSpacingMinutes: { type: ["integer", "null"] },
               },
               required: ["minMinutes", "maxMinutes"],
+            },
+            maxMinutesPerDay: {
+              type: ["integer", "null"],
+              description:
+                "Top-level goals only: the goal's daily limit in minutes; null removes it.",
             },
           },
           required: ["id"],

@@ -72,6 +72,7 @@ function diffNode(working: DraftNode, canonical: DraftNode): DiffNode {
     categoryId: working.categoryId,
     color: working.color ?? null,
     splitting: working.splitting ?? null,
+    maxMinutesPerDay: working.maxMinutesPerDay ?? null,
     status,
     children: diffedChildren,
     changedFields,
@@ -90,6 +91,7 @@ export function markSubtree(node: DraftNode, status: DiffStatus): DiffNode {
     categoryId: node.categoryId,
     color: node.color ?? null,
     splitting: node.splitting ?? null,
+    maxMinutesPerDay: node.maxMinutesPerDay ?? null,
     status,
     changedFields: [],
     children: node.children.map((c) => markSubtree(c, status)),
@@ -119,6 +121,8 @@ function fieldsThatChanged(a: DraftNode, b: DraftNode): string[] {
   if (a.categoryId !== b.categoryId) changed.push("categoryId");
   if ((a.color ?? null) !== (b.color ?? null)) changed.push("color");
   if (!splittingEqual(a.splitting, b.splitting)) changed.push("splitting");
+  if ((a.maxMinutesPerDay ?? null) !== (b.maxMinutesPerDay ?? null))
+    changed.push("maxMinutesPerDay");
   return changed;
 }
 
