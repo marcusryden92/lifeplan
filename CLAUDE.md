@@ -8,7 +8,7 @@
 
   ## Stack
 
-  - **Next.js** 14.2.6 — App Router, server actions, `(protected)` route group.
+  - **Next.js** 14.2.35 — App Router, server actions, `(protected)` route group.
   - **React** 18, **TypeScript** 6.0.3 (strict, `moduleResolution: "bundler"`, `@/*` path alias).
   - **Prisma** 7.8 with `@prisma/adapter-pg` driver adapter (Prisma 7 requires a driver adapter at construction time — see [lib/db.ts](lib/db.ts)). Client is generated to `generated/client` (outside `/prisma/` so the VS Code Prisma extension doesn't merge its embedded `schema.prisma` copy with the source schema) and imported as `@/generated/client`.
   - **PostgreSQL** (local: `docker-compose.dev.yml`, port 5433, db `lifeplan_dev`).
@@ -61,7 +61,7 @@
   │   └── test-shell/, test-tokens/     # Dev scaffolding
   │
   ├── actions/                          # Server actions (preferred backend surface)
-  │   ├── login.ts, register.ts, reset.ts, newPassword.ts, newVerificationAction.ts, settings.ts
+  │   ├── login.ts, register.ts, reset.ts, newPassword.ts, newVerificationAction.ts, settings.ts, deleteAccount.ts
   │   ├── onboarding.ts                 # completeOnboarding() — stamps User.onboardedAt
   │   ├── scheduling.ts                 # UserSchedulingPreferences + TaskPreferences
   │   ├── categories.ts                 # Category CRUD + planner-category assignment
@@ -79,20 +79,22 @@
   │   ├── draft/AIDraftModal/           # Global AI assistant — chat (+ DB-backed history popover) + tabbed Goals/Week/Windows diff view (goal forest, weekly templates, category windows/flags); mounted in the AppShell assistant slot, opened anywhere via mod+I / sidebar / item-detail entry points
   │   ├── draggable/                    # DragBox, DraggableItem, TaskDivider, DraggableContext
   │   ├── events/                       # Calendar event renderers + popovers (Event, Template, Travel, CategoryWrapper, NewPlanModal, RecurrenceScopeModal, color/location pickers)
-  │   ├── landing/VectorField/          # Landing-page visual
+  │   ├── landing/                        # Landing-page visuals: VectorField/, FeatureVignettes/, ReflowDemo/, Reveal/
   │   ├── tasks/                        # TaskItem, TaskList, task-item-subcomponents/
   │   └── ui/                           # Custom design-system primitives (NOT pure shadcn)
-  │       ├── Button, Glass, Backdrop, Grain, Masthead, ProgressBar, Loader,
+  │       ├── Button, Glass, Backdrop, Grain, Masthead, ProgressBar, Loader, Logo,
   │       │   StatusTag, TypeBadge, CategoryBadge, CategoryDot, ConicDot, Caption,
+  │       │   Input/Field, FieldStack/FieldValue, BottomSheet, DurationField,
   │       │   Combobox, SegmentedControl, DateTimePicker, TimePicker, ConfirmModal, Switch, StubPage, Kbd,
-  │       │   ThemeProvider, useResolvedCategoryColor, CenteredLoader
+  │       │   ThemeProvider, useResolvedCategoryColor, CenteredLoader, AppLoadingScreen
   │       └── shell/                    # AppShell architecture
   │           ├── AppShell/             # Outer bezel + canvas + content row (+ assistantSlot inside mainColumn)
   │           ├── Sidebar/              # Desktop nav (+ Assistant action button)
   │           ├── MobileTabs/           # Mobile bottom nav
   │           ├── CapturePalette/       # Quick-entry overlay
   │           ├── SearchPalette/        # Cmd-K-style search
-  │           ├── CaptureContext.tsx, SearchContext.tsx, AssistantContext.tsx
+  │           ├── CornerActions/        # Mobile-only floating Search + AI-assistant cluster (hides under full-screen shell overlays)
+  │           ├── CaptureContext.tsx, SearchContext.tsx, AssistantContext.tsx, ShellOverlayContext.tsx
   │           └── nav.ts                # NAV_ITEMS, MOBILE_TABS
   │
   ├── context/
@@ -178,7 +180,8 @@
   │   └── (loose helpers)               # generalUtils, badgeTone, calendarEventHandlers, categoryUtils,
   │                                     # colorUtils, dateUtils, engineTones, eventTier, goalPageHandlers,
   │                                     # plannerStatus, taskArrayUtils, taskHelpers, templateBuilderUtils,
-  │                                     # timeFormatting, calendarUtils
+  │                                     # timeFormatting, calendarUtils, plannerPriority (1-7 scale: clampPriority/PRIORITY_LEVELS),
+  │                                     # plannerReadiness (defaultReadyForType), windowOccurrences (upcoming category-window occurrences)
   │
   ├── __tests__/
   │   ├── calendar-generation/          # Engine regression tests + fixtures/ (trimmed live-data snapshots)
@@ -511,7 +514,7 @@
 
   ## App routes & access control
 
-  - `routes.ts` defines `publicRoutes = ["/", "/auth/new-verification"]`, `authRoutes = [/auth/login|register|error|reset|new-password]`, and `DEFAULT_LOGIN_REDIRECT = "/dashboard"`.
+  - `routes.ts` defines `publicRoutes = ["/", "/auth/new-verification", "/auth/confirm-deletion"]`, `authRoutes = [/auth/login|register|error|reset|new-password]`, and `DEFAULT_LOGIN_REDIRECT = "/dashboard"`.
   - `middleware.ts` uses the **edge-safe** `auth.config.ts` (OAuth providers only) — it must NOT import anything Node-only. The Credentials provider, bcrypt, and DB access live in `auth.ts`.
   - Everything under `app/(protected)/` requires login. Unauthenticated requests are redirected to `/`.
 
@@ -558,7 +561,7 @@
   - `contentWidth` (`xs 520` … `2xl 1280`) — text measures + page containers. Prefer over raw `maxWidth: 1240`.
   - `breakpoints` (`mobile 767`, `tablet 1023`, `laptop 1279`) + `media` (prebuilt `@media` query strings: `mobile`, `tablet`, `laptop`, `tabletUp`, `desktopUp`, `wideUp`). `laptop` marks where a docked wide side panel (e.g. the calendar's 340px engine console) stops fitting and switches to an overlay. Rail+content page grids collapse to a stacked column at `tablet`, not `mobile` — the desktop sidebar persists through the tablet band. **Do not declare local `const MOBILE = "..."`** — import `media` from `@/lib/theme` and use `[media.mobile]` as the `@media` key.
   - `borderWidth` (`hairline 1`, `medium 2`, `thick 3`)
-  - `zIndex` — semantic layers: `base 0`, `docked 5`, `raised 10`, `floating 30`, `palette 50`, `popoverOverPalette 60`, `modal 100`, `modalOver 150`, `toast 200`
+  - `zIndex` — semantic layers: `base 0`, `docked 5`, `raised 10`, `floating 30`, `palette 50`, `popoverOverPalette 60`, `modal 100`, `modalOver 150`, `toast 200`, `appLoading 300` (first-run data-load overlay, above every layer)
 
   ### 3. Recipes — component shapes ([lib/theme/recipes.css.ts](lib/theme/recipes.css.ts))
 
