@@ -63,12 +63,20 @@ export const tabGlyph = style({
   height: 22,
 });
 
+// Always rendered so every tab reserves the same height; only the active tab
+// paints it. Conditionally rendering it made the active tab taller, and the
+// bar's alignItems:center then nudged its icon/label upward on select.
 export const tabUnderline = style({
   width: 18,
   height: 2,
   borderRadius: 2,
-  background: vars.ink,
+  background: "transparent",
   marginTop: space["0.5"],
+  transition: themeTransition,
+});
+
+export const tabUnderlineActive = style({
+  background: vars.ink,
 });
 
 export const captureTabWrapper = style({
@@ -109,6 +117,16 @@ const sheetUp = keyframes({
   to: { transform: "translateY(0)" },
 });
 
+const sheetDown = keyframes({
+  from: { transform: "translateY(0)" },
+  to: { transform: "translateY(100%)" },
+});
+
+const fadeOut = keyframes({
+  from: { opacity: 1 },
+  to: { opacity: 0 },
+});
+
 export const sheetOverlay = style({
   position: "fixed",
   inset: 0,
@@ -116,9 +134,12 @@ export const sheetOverlay = style({
   backdropFilter: backdropFilters.palette,
   WebkitBackdropFilter: backdropFilters.palette,
   zIndex: zIndex.palette,
-  animationName: fadeIn,
   animationDuration: `${DURATIONS.modal}s`,
   animationTimingFunction: "ease",
+  selectors: {
+    '&[data-state="open"]': { animationName: fadeIn },
+    '&[data-state="closed"]': { animationName: fadeOut },
+  },
 });
 
 export const sheet = style([
@@ -134,9 +155,12 @@ export const sheet = style([
     gap: space["0.5"],
     padding: `${space["2"]}px ${space["3"]}px calc(${space["4"]}px + env(safe-area-inset-bottom, 0px))`,
     borderRadius: `${radii["xl+2"]}px ${radii["xl+2"]}px 0 0`,
-    animationName: sheetUp,
     animationDuration: `${DURATIONS.modal}s`,
     animationTimingFunction: "ease",
+    selectors: {
+      '&[data-state="open"]': { animationName: sheetUp },
+      '&[data-state="closed"]': { animationName: sheetDown },
+    },
   },
 ]);
 

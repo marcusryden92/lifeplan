@@ -6,7 +6,6 @@ import { useState } from "react";
 import { signOut } from "next-auth/react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Settings, Moon, Sun, LogOut } from "lucide-react";
-import { useCapture } from "../CaptureContext";
 import { useShellOverlayOpen } from "../ShellOverlayContext";
 import { useTheme } from "../../ThemeProvider";
 import { MOBILE_TABS } from "../nav";
@@ -16,6 +15,7 @@ import {
   tabActive,
   tabGlyph,
   tabUnderline,
+  tabUnderlineActive,
   captureTabWrapper,
   captureButton,
   sheetOverlay,
@@ -30,7 +30,6 @@ import {
 export function MobileTabs() {
   const pathname = usePathname() ?? "";
   const router = useRouter();
-  const { setOpen: setCaptureOpen } = useCapture();
   const { dark, toggle } = useTheme();
   const overlayOpen = useShellOverlayOpen();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -55,7 +54,7 @@ export function MobileTabs() {
                 <button
                   type="button"
                   className={captureButton}
-                  onClick={() => setCaptureOpen(true)}
+                  onClick={() => router.push("/capture")}
                   aria-label="Capture"
                 >
                   <Icon size={26} strokeWidth={2.5} aria-hidden />
@@ -78,7 +77,10 @@ export function MobileTabs() {
                   <Icon size={20} strokeWidth={2} aria-hidden />
                 </span>
                 <span>{item.label}</span>
-                {isActive && <span aria-hidden className={tabUnderline} />}
+                <span
+                  aria-hidden
+                  className={`${tabUnderline} ${isActive ? tabUnderlineActive : ""}`}
+                />
               </button>
             );
           }
@@ -95,7 +97,10 @@ export function MobileTabs() {
                 <Icon size={20} strokeWidth={2} aria-hidden />
               </span>
               <span>{item.label}</span>
-              {isActive && <span aria-hidden className={tabUnderline} />}
+              <span
+                aria-hidden
+                className={`${tabUnderline} ${isActive ? tabUnderlineActive : ""}`}
+              />
             </Link>
           );
         })}

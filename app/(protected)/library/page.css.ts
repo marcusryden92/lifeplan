@@ -21,6 +21,7 @@ export const page = style({
     [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
+      paddingTop: space["16"],
     },
   },
 });
@@ -294,7 +295,9 @@ export const mainCard = style([
   cardBase,
   {
     "@media": {
-      [media.mobile]: { minHeight: 540 },
+      // Inset the breadcrumb/filter/table so they align with the padded page
+      // header instead of hugging the screen edge.
+      [media.mobile]: { minHeight: 540, padding: "0 16px" },
     },
   },
 ]);

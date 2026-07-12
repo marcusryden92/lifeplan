@@ -3,14 +3,6 @@
 - Calendar engine should open as a modal
 - Calendar header needs restructuring (col not row-ish)
 
-- Main floating menu items need to be static, currently jump up when selected
-due to underline
-- Main menu capture button should lead to capture page, not quick capture modal
-
-- Bottom sheet modal animates up, but not down. Just disappears when closed.
-
-- Library header needs horizontal padding in mobile
-
 - No hover buttons on calendar in mobile - one click for bottom sheet modal
 
 - Area and color side by side in overview
