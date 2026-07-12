@@ -51,6 +51,8 @@ export function addSubtask({
       splitting: null,
       completedSegments: null,
       maxMinutesPerDay: null,
+      earliestStartDate: null,
+      allowedTimes: null,
       sortOrder: appendKey(getSubtasksById(planner, task.id)),
       completedStartTime: null,
       completedEndTime: null,

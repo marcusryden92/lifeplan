@@ -11,6 +11,7 @@ import {
   SchedulingMetrics,
 } from "../../models/SchedulingModels";
 import { SchedulerRecorder } from "../Scheduler/SchedulerRecorder";
+import { PlannerSchedulingConstraints } from "./buildPlannerConstraintsMap";
 
 export function prepareSchedulingContext(
   userId: string,
@@ -23,6 +24,7 @@ export function prepareSchedulingContext(
   plannerLocationMap: Map<string, string | null>,
   plannerCategoryMap: Map<string, string | null>,
   categoryEligibilityMap: Map<string, Set<string>>,
+  plannerConstraintsMap: Map<string, PlannerSchedulingConstraints>,
   schedulerRecorder: SchedulerRecorder | null,
   previousCalendarById?: Map<string, SimpleEvent>,
 ): SchedulingContext {
@@ -41,6 +43,7 @@ export function prepareSchedulingContext(
     plannerLocationMap,
     plannerCategoryMap,
     categoryEligibilityMap,
+    plannerConstraintsMap,
     schedulerRecorder,
     previousCalendarById,
   };

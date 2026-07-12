@@ -1,6 +1,10 @@
 import { PlaceableSlot, Slot } from "../../models/TimeSlot";
 import { dateTimeService } from "../../utils/dateTimeService";
 import { SCHEDULING_CONFIG } from "../../constants";
+import {
+  AllowedTimesSettings,
+  intersectIntervalWithAllowed,
+} from "../../../allowedTimes";
 
 // Find slots a task could be placed in, given duration + buffer.
 //
@@ -12,6 +16,13 @@ import { SCHEDULING_CONFIG } from "../../constants";
 //   - Unconstrained task: skip CategorySlot fragments that are strict (those
 //     belong to a category that excludes outsiders); free time and non-strict
 //     categories are fair game.
+//
+// allowedTimes (per-task constraint chain, own + inherited) clips each
+// candidate to the sub-intervals satisfying every settings object; one slot
+// can yield several fragments. Fragments are copies with adjusted
+// start/end/durationMinutes — the same virtual-candidate shape the afterDate
+// clip already produces — so the whole placement unit lands inside the
+// allowed window.
 export function findAllFittingSlots(
   slots: Slot[],
   bufferTimeMinutes: number,
@@ -20,6 +31,7 @@ export function findAllFittingSlots(
   maxDaysToSearch: number = SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
   eligibleCategoryIds?: Set<string>,
   placementCutoffDate?: Date | null,
+  allowedTimes?: AllowedTimesSettings[],
 ): PlaceableSlot[] {
   const fittingSlots: PlaceableSlot[] = [];
   const searchEndDate = dateTimeService.shiftDays(afterDate, maxDaysToSearch);
@@ -50,6 +62,30 @@ export function findAllFittingSlots(
     }
 
     const effectiveStart = slot.start < afterDate ? afterDate : slot.start;
+
+    if (allowedTimes?.length) {
+      const fragments = intersectIntervalWithAllowed(
+        effectiveStart,
+        slot.end,
+        allowedTimes,
+      );
+      for (const fragment of fragments) {
+        const fragmentMinutes = dateTimeService.getMinutesDifference(
+          fragment.start,
+          fragment.end,
+        );
+        if (fragmentMinutes >= baseRequiredMinutes) {
+          fittingSlots.push({
+            ...slot,
+            start: fragment.start,
+            end: fragment.end,
+            durationMinutes: fragmentMinutes,
+          });
+        }
+      }
+      continue;
+    }
+
     const effectiveMinutes = dateTimeService.getMinutesDifference(
       effectiveStart,
       slot.end,

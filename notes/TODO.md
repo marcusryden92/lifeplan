@@ -8,9 +8,6 @@
 
 # P5 — Medium features
 
-- Earliest allowed date goals & tasks
-- Allowed days/time spans in any day for goals & tasks
-
 - Add inter-goal dependencies (with cycle detection)
 - Allow a goal to be added/linked to another goal as a subtask
 - File-view / mind-map style: displays categories + sub-categories + items together

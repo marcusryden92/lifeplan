@@ -69,6 +69,14 @@ export function selectBestSlot(
   // duration is granted per-slot from its headroom after acceptance.
   const fitMinutes = sizing ? sizing.minMinutes : task.duration;
 
+  // Absorb/reclaim back-extend the placement region before the candidate's
+  // start. A constrained task's candidates are clipped to its earliest start
+  // date / allowed times, so back-extension would move the task outside its
+  // bounds — skip those paths entirely for constrained tasks.
+  const hasSchedulingConstraints = !!context.plannerConstraintsMap?.get(
+    task.id,
+  );
+
   // Score ALL slots using the strategy (includes location adjacency scoring)
   const scoredSlots = scoreSlots(task, validSlots, strategy, context);
 
@@ -143,10 +151,9 @@ export function selectBestSlot(
         // task at OUR location. e.g., B4 (Uppsala) placed travel-after Uppsala->GamlaStan,
         // so the free slot has prevLocationId=GamlaStan. If B5 is also Uppsala, we can
         // absorb B4's travel-after instead of creating new travel-before.
-        absorbableTravel = travelManager.findAdjacentTravelFrom(
-          slot.start,
-          taskLocationId,
-        );
+        absorbableTravel = hasSchedulingConstraints
+          ? null
+          : travelManager.findAdjacentTravelFrom(slot.start, taskLocationId);
         if (absorbableTravel) {
           canAbsorbPrevTravel = true;
           needTravelBefore = 0;
@@ -170,7 +177,9 @@ export function selectBestSlot(
           // Check if there is a pre-carved gap travel (e.g. a return trip Gamla Stan → Home)
           // immediately before this slot. If so, we can bypass the intermediate stop and
           // travel direct from the real origin (Gamla Stan) to the task location.
-          const precedingGapTravel = travelManager.findPrecedingGapTravel(slot.start);
+          const precedingGapTravel = hasSchedulingConstraints
+            ? null
+            : travelManager.findPrecedingGapTravel(slot.start);
           if (
             precedingGapTravel?.travelFromLocationId &&
             precedingGapTravel.travelFromLocationId !== taskLocationId

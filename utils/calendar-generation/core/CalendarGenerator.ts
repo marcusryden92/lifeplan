@@ -24,6 +24,7 @@ import {
   buildLocationMap,
   buildPlannerCategoryMap,
   buildCategoryEligibilityMap,
+  buildPlannerConstraintsMap,
   prepareSchedulingContext,
   buildSchedulingStrategy,
   prepareCandidates,
@@ -186,6 +187,9 @@ export class CalendarGenerator {
     const categoryEligibilityMap = buildCategoryEligibilityMap(
       input.categories ?? [],
     );
+    // Per-planner scheduling constraints (earliest start + allowed times),
+    // resolved down the tree so goal leaves inherit their ancestors' bounds.
+    const plannerConstraintsMap = buildPlannerConstraintsMap(input.planners);
 
     // Phase 6a: Build available slots over the full scheduling timeline
     const schedulingStartDate = setTimeOnDate(currentDate, "00:00");
@@ -257,6 +261,7 @@ export class CalendarGenerator {
       plannerLocationMap,
       plannerCategoryMap,
       categoryEligibilityMap,
+      plannerConstraintsMap,
       schedulerRecorder,
       previousById,
     );

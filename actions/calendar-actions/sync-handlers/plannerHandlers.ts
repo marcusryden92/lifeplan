@@ -69,6 +69,16 @@ export function handlePlannerChanges(
             extract: (r) => r.maxMinutesPerDay,
           },
           {
+            name: "earliestStartDate",
+            cast: "text",
+            extract: (r) => r.earliestStartDate,
+          },
+          {
+            name: "allowedTimes",
+            cast: "text",
+            extract: (r) => r.allowedTimes,
+          },
+          {
             name: "sortOrder",
             cast: "double precision",
             extract: (r) => r.sortOrder,

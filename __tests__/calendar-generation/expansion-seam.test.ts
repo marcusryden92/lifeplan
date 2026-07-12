@@ -71,6 +71,8 @@ function makePlan(id: string, startsISO: string): Planner {
     splitting: null,
     completedSegments: null,
     maxMinutesPerDay: null,
+    earliestStartDate: null,
+    allowedTimes: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

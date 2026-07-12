@@ -18,6 +18,7 @@ import { SchedulingFailureReason } from "../constants";
 import { PlaceableSlot } from "./TimeSlot";
 import type { TravelShardSpan } from "../utils/timeSlotUtils";
 import type { SchedulerRecorder } from "../helpers/Scheduler/SchedulerRecorder";
+import type { PlannerSchedulingConstraints } from "../helpers/CalendarGenerator/buildPlannerConstraintsMap";
 
 /**
  * Result of a scheduling operation
@@ -140,6 +141,12 @@ export interface SchedulingContext {
    * buildCategoryEligibilityMap.
    */
   categoryEligibilityMap?: Map<string, Set<string>>;
+  /**
+   * plannerId -> resolved scheduling constraints (earliest start date +
+   * allowed-times chain, own + inherited from ancestors). Only rows with an
+   * actual constraint have an entry. See buildPlannerConstraintsMap.
+   */
+  plannerConstraintsMap?: Map<string, PlannerSchedulingConstraints>;
   /**
    * Optional per-task recorder for dynamic scheduling traces (mirrors the
    * staticEventTravelPass recorder). When attached, every scheduleTask

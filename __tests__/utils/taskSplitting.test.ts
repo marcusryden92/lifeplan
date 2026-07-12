@@ -41,6 +41,8 @@ function makePlanner(overrides: Partial<Planner>): Planner {
     splitting: serializeTaskSplitting(SETTINGS),
     completedSegments: null,
     maxMinutesPerDay: null,
+    earliestStartDate: null,
+    allowedTimes: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

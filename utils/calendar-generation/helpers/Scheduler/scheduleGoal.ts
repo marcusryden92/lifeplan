@@ -7,6 +7,7 @@ import { taskIsCompleted } from "../../../taskHelpers";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { maxEffectiveCapacityFor } from "./capacityCheck";
 import { parseTaskSplitting, minChunkRequired } from "../../../taskSplitting";
+import { maxAllowedBlockMinutes } from "../../../allowedTimes";
 import {
   SplitPlacementState,
   scheduleSplitTask,
@@ -63,14 +64,24 @@ export function scheduleGoal(
   for (const task of goalTasks) {
     const splitSettings = parseTaskSplitting(task.splitting);
 
-    const maxCapacity = maxEffectiveCapacityFor(
-      task,
-      perTemplateMasks,
-      categories,
-      plannerCategoryMap,
-      currentDate,
-      categoryEligibilityMap,
-      capacityCache,
+    // Allowed-times ceiling: the leaf's constraint chain (own + inherited
+    // from this goal's ancestors) bounds its largest possible block — see
+    // scheduleSingleTask for the expansion-budget rationale.
+    const allowedCeiling = maxAllowedBlockMinutes(
+      scheduler.context.plannerConstraintsMap?.get(task.id)?.allowedTimes ??
+        [],
+    );
+    const maxCapacity = Math.min(
+      maxEffectiveCapacityFor(
+        task,
+        perTemplateMasks,
+        categories,
+        plannerCategoryMap,
+        currentDate,
+        categoryEligibilityMap,
+        capacityCache,
+      ),
+      allowedCeiling,
     );
 
     // A split leaf only needs room for its required minimum chunk.
@@ -83,7 +94,7 @@ export function scheduleGoal(
         taskId: task.id,
         taskTitle: task.title,
         reason: SchedulingFailureReason.TOO_LARGE,
-        details: `Task duration (${requiredBlockMinutes} min${splitSettings ? ", minimum chunk" : ""}) exceeds max effective capacity (${maxCapacity} min) given templates and category constraints`,
+        details: `Task duration (${requiredBlockMinutes} min${splitSettings ? ", minimum chunk" : ""}) exceeds max effective capacity (${maxCapacity} min) given templates, category, and allowed-time constraints`,
         context: { duration: requiredBlockMinutes, maxCapacity },
       });
       continue;

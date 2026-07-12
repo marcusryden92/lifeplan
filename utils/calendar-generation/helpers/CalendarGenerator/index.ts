@@ -4,6 +4,8 @@ export { expandTemplates } from "./expandTemplates";
 export { buildLocationMap } from "./buildLocationMap";
 export { buildPlannerCategoryMap } from "./buildPlannerCategoryMap";
 export { buildCategoryEligibilityMap } from "./buildCategoryEligibilityMap";
+export { buildPlannerConstraintsMap } from "./buildPlannerConstraintsMap";
+export type { PlannerSchedulingConstraints } from "./buildPlannerConstraintsMap";
 export { prepareSchedulingContext } from "./prepareSchedulingContext";
 export { buildSchedulingStrategy } from "./buildSchedulingStrategy";
 export { prepareCandidates } from "./prepareCandidates";

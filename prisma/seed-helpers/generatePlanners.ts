@@ -273,6 +273,8 @@ export const generatePlanners = (userId: string): Planner[] => {
       splitting: null,
       completedSegments: null,
       maxMinutesPerDay: null,
+      earliestStartDate: null,
+      allowedTimes: null,
       sortOrder,
       completedStartTime: null,
       completedEndTime: null,

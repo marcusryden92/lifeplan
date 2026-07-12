@@ -10,6 +10,8 @@ import { ColorSection } from "./ColorSection";
 import { RecurrenceSection } from "./RecurrenceSection";
 import { SplittingSection } from "./SplittingSection";
 import { DailyLimitSection } from "./DailyLimitSection";
+import { EarliestStartSection } from "./EarliestStartSection";
+import { AllowedTimesSection } from "./AllowedTimesSection";
 import { DeleteRow } from "./DeleteRow";
 import {
   card,
@@ -30,12 +32,14 @@ export function IdentityCard() {
             <CategorySection /> <ColorSection />
           </div>
           <DateSection />
+          <EarliestStartSection />
           <DurationSection />
           <LocationSection />
           <div className={splitRecurrenceSlot}>
             <SplittingSection />
             <RecurrenceSection />
             <DailyLimitSection />
+            <AllowedTimesSection />
           </div>
         </div>
         <DeleteRow />

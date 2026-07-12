@@ -25,6 +25,15 @@ export function findValidSlots(
   // Chunked placements fit-test at the chunk minimum, not the full duration.
   const fitMinutes = fitDurationMinutes ?? task.duration;
 
+  // Scheduling constraints (own + inherited): an earliest start date rides the
+  // same afterTime seam goal-leaf chaining uses; allowed times are applied as
+  // interval clipping inside findAllFittingSlots.
+  const constraints = context.plannerConstraintsMap?.get(task.id);
+  let effectiveAfter = afterTime || context.currentDate;
+  if (constraints?.earliestStart && constraints.earliestStart > effectiveAfter) {
+    effectiveAfter = constraints.earliestStart;
+  }
+
   // Resolve effective category from parent chain via pre-built map
   const effectiveCategoryId =
     context.plannerCategoryMap?.get(task.id) ?? task.categoryId;
@@ -52,19 +61,23 @@ export function findValidSlots(
     slotManager.slots,
     slotManager.bufferTimeMinutes,
     fitMinutes,
-    afterTime || context.currentDate,
+    effectiveAfter,
     undefined,
     hasWindowConstraint ? eligibleCategoryIds : undefined,
     context.placementCutoffDate,
+    constraints?.allowedTimes,
   );
 
   if (fittingSlots.length === 0) {
+    const constraintNote = constraints?.allowedTimes.length
+      ? " within its allowed times"
+      : "";
     return {
       failure: {
         taskId: task.id,
         taskTitle: task.title,
         reason: SchedulingFailureReason.NO_SLOTS,
-        details: `No available time slots found for ${fitMinutes} minutes`,
+        details: `No available time slots found for ${fitMinutes} minutes${constraintNote}`,
       },
     };
   }
