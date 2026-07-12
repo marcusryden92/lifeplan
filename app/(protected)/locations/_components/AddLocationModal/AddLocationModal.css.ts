@@ -9,7 +9,6 @@ import {
   radii,
   display,
   text,
-  fieldLabel as fieldLabelText,
 } from "@/lib/theme";
 
 const FADE_MS = 160;
@@ -81,14 +80,6 @@ export const subtitle = style([
     color: vars.muted,
   },
 ]);
-
-export const fieldStack = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["1.5"],
-});
-
-export const fieldLabel = style([fieldLabelText]);
 
 export const searchWrap = style({
   position: "relative",

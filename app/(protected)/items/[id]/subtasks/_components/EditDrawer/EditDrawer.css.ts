@@ -72,12 +72,6 @@ export const drawerTitleInput = style([
   },
 ]);
 
-export const fieldStack = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["1.5"],
-});
-
 export const fieldLabel = style([
   fieldLabelPreset,
   {
@@ -131,8 +125,14 @@ export const completeCheckbox = style({
   color: vars.muted,
   cursor: "pointer",
   padding: 0,
+  paddingLeft: space["1"],
+  marginBottom: space["1"],
   // Snappier than the 1s themeTransition so click feedback feels immediate.
-  transition: interactiveTransition("background-color", "border-color", "color"),
+  transition: interactiveTransition(
+    "background-color",
+    "border-color",
+    "color",
+  ),
   selectors: {
     "&[data-completed='true']": {
       background: vars.status.success,

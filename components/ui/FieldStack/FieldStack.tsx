@@ -6,8 +6,12 @@ import {
   fieldValue,
 } from "./FieldStack.css";
 
+type FieldStackSize = "sm" | "md" | "lg";
+
 interface FieldStackProps {
   label: ReactNode;
+  // sm: dense drawers/modals. md (default): multi-column grid rows. lg: onboarding.
+  size?: FieldStackSize;
   // Spans the full width of a multi-column field grid.
   full?: boolean;
   className?: string;
@@ -17,14 +21,20 @@ interface FieldStackProps {
 // Label stacked above an arbitrary control. Deliberately a <div>, not the
 // <label> of the Input primitive's Field: these wrap button-based controls
 // (Combobox, SegmentedControl, color/type pickers) that a <label> would hijack.
-export function FieldStack({ label, full, className, children }: FieldStackProps) {
-  const classes = [fieldStack, full && fieldStackFull, className]
+export function FieldStack({
+  label,
+  size = "md",
+  full,
+  className,
+  children,
+}: FieldStackProps) {
+  const classes = [fieldStack[size], full && fieldStackFull, className]
     .filter(Boolean)
     .join(" ");
 
   return (
     <div className={classes}>
-      <span className={fieldLabel}>{label}</span>
+      <span className={fieldLabel[size]}>{label}</span>
       {children}
     </div>
   );

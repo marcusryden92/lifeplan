@@ -12,7 +12,7 @@ import { X, Trash2, Copy, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
-import { Button, Caption, Input, Switch } from "@/components/ui";
+import { Button, Caption, FieldStack, Input, Switch } from "@/components/ui";
 import {
   SplittingFields,
   DEFAULT_SPLITTING_SETTINGS,
@@ -51,7 +51,6 @@ import {
   drawerClose,
   drawerBody,
   drawerTitleInput,
-  fieldStack,
   fieldLabel,
   splitToggleRow,
   splitHint,
@@ -321,18 +320,16 @@ export function EditDrawer() {
           </div>
         )}
 
-        <div className={fieldStack}>
-          <span className={fieldLabel}>Duration</span>
+        <FieldStack size="sm" label="Duration">
           <DurationField
             minutes={task.duration ?? 0}
             ariaLabel="Duration"
             onCommit={setDuration}
           />
-        </div>
+        </FieldStack>
 
         {isLeaf && task.plannerType !== "plan" && (
-          <div className={fieldStack}>
-            <span className={fieldLabel}>Split into chunks</span>
+          <FieldStack size="sm" label="Split into chunks">
             <div className={splitToggleRow}>
               <Switch
                 checked={splitSettings !== null}
@@ -355,11 +352,10 @@ export function EditDrawer() {
                 onChange={applySplitting}
               />
             )}
-          </div>
+          </FieldStack>
         )}
 
-        <div className={fieldStack}>
-          <span className={fieldLabel}>Location</span>
+        <FieldStack size="sm" label="Location">
           <Combobox
             value={task.locationId ?? null}
             options={locationOptions}
@@ -382,17 +378,16 @@ export function EditDrawer() {
             }
             ariaLabel="Location"
           />
-        </div>
+        </FieldStack>
 
-        <div className={fieldStack}>
-          <span className={fieldLabel}>Deadline</span>
+        <FieldStack size="sm" label="Deadline">
           <DateTimePicker
             value={dateValue}
             onChange={onDateInput}
             weekStartsOn={weekStartDay}
             ariaLabel="Deadline"
           />
-        </div>
+        </FieldStack>
       </div>
 
       <div className={drawerFooter}>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Button, SegmentedControl } from "@/components/ui";
+import { Button, FieldStack, SegmentedControl } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import * as locationActions from "@/actions/locations";
 import { serializeLocation, serializeTravelTime } from "@/utils/locations";
@@ -18,8 +18,6 @@ import { TRANSPORT_MODE_OPTIONS } from "../../locations/_constants";
 import { StepFrame } from "../_components/StepFrame";
 import { LocationRows, type LocationRow } from "../_components/LocationRows";
 import {
-  fieldStack,
-  fieldLabel,
   fieldHelp,
   footerActions,
   errorText,
@@ -193,8 +191,7 @@ export function LocationsStep({
         </>
       }
     >
-      <div className={fieldStack}>
-        <span className={fieldLabel}>How do you usually get around?</span>
+      <FieldStack size="lg" label="How do you usually get around?">
         <SegmentedControl
           options={TRANSPORT_MODE_OPTIONS}
           value={transportMode}
@@ -203,7 +200,7 @@ export function LocationsStep({
         <span className={fieldHelp}>
           The default travel mode for estimating time between locations.
         </span>
-      </div>
+      </FieldStack>
 
       <LocationRows
         rows={rows}
