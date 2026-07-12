@@ -54,6 +54,35 @@ export function templateToEvent(
   };
 }
 
+export function windowRangeToDates(
+  day: WeekDayIntegers,
+  startTime: string,
+  endTime: string,
+  weekStart: Date,
+  weekStartDay: WeekDayIntegers,
+): [Date, Date] {
+  const offset = (day - weekStartDay + 7) % 7;
+  const baseDate = shiftDate(weekStart, offset);
+  const start = setTimeOnDate(baseDate, startTime);
+  let end: Date;
+  if (endTime === "23:59") {
+    // End-of-day sentinel: the within-day window reaches midnight.
+    end = new Date(
+      baseDate.getFullYear(),
+      baseDate.getMonth(),
+      baseDate.getDate() + 1,
+    );
+  } else {
+    end = setTimeOnDate(baseDate, endTime);
+    // Overnight window (endTime <= startTime): the end lands the next day.
+    if (end.getTime() <= start.getTime()) {
+      end = new Date(end);
+      end.setDate(end.getDate() + 1);
+    }
+  }
+  return [start, end];
+}
+
 export function windowToEvent(
   win: WorkingWindow,
   weekStart: Date,
@@ -65,25 +94,13 @@ export function windowToEvent(
   const category = win.categoryId ? categoryById.get(win.categoryId) : null;
   const color = category?.color || UNASSIGNED_COLOR;
   const title = category?.name || "Unassigned";
-  const offset = (win.day - weekStartDay + 7) % 7;
-  const baseDate = shiftDate(weekStart, offset);
-  const start = setTimeOnDate(baseDate, win.startTime);
-  let end: Date;
-  if (win.endTime === "23:59") {
-    // End-of-day sentinel: render the within-day window reaching midnight.
-    end = new Date(
-      baseDate.getFullYear(),
-      baseDate.getMonth(),
-      baseDate.getDate() + 1,
-    );
-  } else {
-    end = setTimeOnDate(baseDate, win.endTime);
-    // Overnight window (endTime <= startTime): the end lands the next day.
-    if (end.getTime() <= start.getTime()) {
-      end = new Date(end);
-      end.setDate(end.getDate() + 1);
-    }
-  }
+  const [start, end] = windowRangeToDates(
+    win.day,
+    win.startTime,
+    win.endTime,
+    weekStart,
+    weekStartDay,
+  );
   return {
     id: `win:${win.id}`,
     title,

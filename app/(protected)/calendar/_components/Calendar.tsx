@@ -23,6 +23,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import {
   transformEventsForFullCalendar,
   getDuration,
+  CALENDAR_LONG_PRESS_DELAY_MS,
 } from "@/utils/calendarUtils";
 import {
   templatesToEventInput,
@@ -462,6 +463,46 @@ function Calendar({
             }}
             hideHoverButtons
             scopedDelete
+            onEditTimes={(newStart, newEnd) => {
+              // Keyed from the CURRENT rendered start — unlike drag-resize the
+              // form hasn't moved the tile, so no oldEvent is needed.
+              const occurrence = resolveTemplateOccurrence(
+                event.id,
+                templateRef.current,
+                event.start,
+              );
+              if (!occurrence) return;
+              const newDurationMinutes = getDuration(newStart, newEnd);
+              const template = templateRef.current.find(
+                (t) => t.id === occurrence.templateId,
+              );
+              // An already-customized occurrence skips the prompt — re-editing
+              // a one-off always means "just this one".
+              if (
+                template &&
+                hasMovedException(
+                  template.recurrenceExceptions,
+                  occurrence.occurrenceKey,
+                )
+              ) {
+                applyTemplateOccurrenceResize(
+                  updateTemplateArray,
+                  occurrence.templateId,
+                  occurrence.occurrenceKey,
+                  newStart,
+                  newDurationMinutes,
+                );
+                return;
+              }
+              setPendingTemplateScope({
+                mode: "resize",
+                ...occurrence,
+                newStart,
+                newDurationMinutes,
+                // Nothing moved visually — a form edit never touches the tile.
+                revert: () => {},
+              });
+            }}
           />
         );
       }
@@ -487,7 +528,8 @@ function Calendar({
         views={VIEWS}
         scrollTime={"05:00:00"}
         allDaySlot={false}
-        snapDuration={"00:00:05"}
+        snapDuration={"00:05:00"}
+        longPressDelay={CALENDAR_LONG_PRESS_DELAY_MS}
         firstDay={weekStartDay}
         nowIndicator={true}
         height={"100%"}

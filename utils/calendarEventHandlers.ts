@@ -78,84 +78,6 @@ export const createPlanFromSelection = (
   updatePlannerArray((prevEvents) => [...prevEvents, newEvent]);
 };
 
-// Calendar drag/resize run the engine inline: FullCalendar has already moved
-// the tile internally, so an async regen would paint it overlapping stale
-// placements for a frame ("half-width popping"). Inline commits source +
-// engine output before the next paint — same atomicity the synchronous
-// engine had.
-export const handleEventResize = (
-  updateAll: (
-    planner?: Planner[] | ((prev: Planner[]) => Planner[]),
-    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
-    template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
-    categories?: Category[] | ((prev: Category[]) => Category[]),
-    options?: { engineMode?: "inline" | "worker" },
-  ) => void,
-  resizeInfo: EventResizeStartArg,
-) => {
-  const { event } = resizeInfo;
-
-  assert(event, "Event undefined in handleEventResize");
-  assert(event.start, "Event.start undefined in handleEventResize");
-  assert(event.end, "Event.end undefined in handleEventResize");
-
-  const start = event.start;
-  const end = event.end;
-
-  // Occurrence events resolve to their plan row; resizing one occurrence
-  // resizes the series (duration lives on the planner).
-  const plannerId = plannerIdFromEventId(event.id);
-
-  updateAll(
-    (prevPlanner) =>
-      prevPlanner.map((p) =>
-        p.id === plannerId ? { ...p, duration: getDuration(start, end) } : p,
-      ),
-    (prevEvents) =>
-      prevEvents.map((ev) =>
-        ev.id === event.id
-          ? {
-              ...ev,
-              start: event.start ? event.start.toISOString() : ev.start,
-              end: event.end ? event.end.toISOString() : ev.end,
-            }
-          : ev,
-      ),
-    undefined,
-    undefined,
-    { engineMode: "inline" },
-  );
-};
-
-export const handleEventDrop = (
-  updatePlannerArray: (
-    planner: Planner[] | ((prev: Planner[]) => Planner[]),
-    options?: { engineMode?: "inline" | "worker" },
-  ) => void,
-  dropInfo: EventDropArg,
-) => {
-  const { event } = dropInfo;
-  console.debug("[calendar] eventDrop", event.id, event.start?.toISOString());
-
-  updatePlannerArray(
-    (prevPlanner) => {
-      if (!prevPlanner.some((p) => p.id === event.id)) {
-        console.warn("[calendar] eventDrop matched no planner row", event.id);
-        return prevPlanner;
-      }
-      return prevPlanner.map((ev) =>
-        ev.id === event.id
-          ? {
-              ...ev,
-              starts: event.start?.toISOString() || ev.starts,
-            }
-          : ev,
-      );
-    },
-    { engineMode: "inline" },
-  );
-};
-
 type UpdatePlannerArrayFn = (
   planner: Planner[] | ((prev: Planner[]) => Planner[]),
   options?: { engineMode?: "inline" | "worker" },
@@ -168,6 +90,93 @@ type UpdateAllFn = (
   categories?: Category[] | ((prev: Category[]) => Category[]),
   options?: { engineMode?: "inline" | "worker" },
 ) => void;
+
+// Calendar drag/resize run the engine inline: FullCalendar has already moved
+// the tile internally, so an async regen would paint it overlapping stale
+// placements for a frame ("half-width popping"). Inline commits source +
+// engine output before the next paint — same atomicity the synchronous
+// engine had.
+
+// Shared commit for drag-resize and the popover time fields. Occurrence
+// events resolve to their plan row; resizing one occurrence resizes the
+// series (duration lives on the planner).
+export const applyEventResize = (
+  updateAll: UpdateAllFn,
+  eventId: string,
+  start: Date,
+  end: Date,
+) => {
+  const plannerId = plannerIdFromEventId(eventId);
+
+  updateAll(
+    (prevPlanner) =>
+      prevPlanner.map((p) =>
+        p.id === plannerId ? { ...p, duration: getDuration(start, end) } : p,
+      ),
+    (prevEvents) =>
+      prevEvents.map((ev) =>
+        ev.id === eventId
+          ? {
+              ...ev,
+              start: start.toISOString(),
+              end: end.toISOString(),
+            }
+          : ev,
+      ),
+    undefined,
+    undefined,
+    { engineMode: "inline" },
+  );
+};
+
+export const handleEventResize = (
+  updateAll: UpdateAllFn,
+  resizeInfo: EventResizeStartArg,
+) => {
+  const { event } = resizeInfo;
+
+  assert(event, "Event undefined in handleEventResize");
+  assert(event.start, "Event.start undefined in handleEventResize");
+  assert(event.end, "Event.end undefined in handleEventResize");
+
+  applyEventResize(updateAll, event.id, event.start, event.end);
+};
+
+// Shared commit for drag-move and the popover start field (plan `starts`).
+export const applyEventStartEdit = (
+  updatePlannerArray: UpdatePlannerArrayFn,
+  eventId: string,
+  newStart: Date,
+) => {
+  updatePlannerArray(
+    (prevPlanner) => {
+      if (!prevPlanner.some((p) => p.id === eventId)) {
+        console.warn("[calendar] starts update matched no planner row", eventId);
+        return prevPlanner;
+      }
+      return prevPlanner.map((ev) =>
+        ev.id === eventId
+          ? {
+              ...ev,
+              starts: newStart.toISOString(),
+            }
+          : ev,
+      );
+    },
+    { engineMode: "inline" },
+  );
+};
+
+export const handleEventDrop = (
+  updatePlannerArray: UpdatePlannerArrayFn,
+  dropInfo: EventDropArg,
+) => {
+  const { event } = dropInfo;
+  console.debug("[calendar] eventDrop", event.id, event.start?.toISOString());
+  if (!event.start) return;
+
+  applyEventStartEdit(updatePlannerArray, event.id, event.start);
+};
 
 // "Move just this occurrence": a moved exception keyed by the occurrence's
 // original rule position. Re-moving the same occurrence updates the entry.

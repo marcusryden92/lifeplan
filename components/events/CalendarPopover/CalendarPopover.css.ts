@@ -11,6 +11,7 @@ import {
   media,
   backdropFilters,
   DURATIONS,
+  fieldLabel,
 } from "@/lib/theme";
 
 const fadeIn = keyframes({
@@ -180,3 +181,28 @@ export const footer = style({
   flexDirection: "column",
   gap: space["0.5"],
 });
+
+// Start/end time fields — shared by EventPopover and TemplateEventPopover.
+export const timeFieldsRow = style({
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: space["2"],
+});
+
+export const timeField = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["1"],
+  minWidth: 0,
+});
+
+export const timeFieldLabel = fieldLabel;
+
+export const timeFieldStatic = style([
+  text.row,
+  {
+    padding: "6px 0",
+    color: vars.ink,
+    fontVariantNumeric: "tabular-nums",
+  },
+]);

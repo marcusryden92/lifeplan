@@ -13,7 +13,13 @@ import {
 } from "lucide-react";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { Button, CategoryBadge, Input, TypeBadge } from "@/components/ui";
+import {
+  Button,
+  CategoryBadge,
+  Input,
+  TimePicker,
+  TypeBadge,
+} from "@/components/ui";
 import {
   occurrenceKeyFromEventId,
   hasMovedException,
@@ -21,7 +27,7 @@ import {
 import { applyTemplateOccurrenceRestore } from "@/utils/calendarEventHandlers";
 import { PopoverLocationPicker } from "../PopoverLocationPicker";
 import { PopoverColorPicker } from "../PopoverColorPicker";
-import { formatTime } from "@/utils/calendarUtils";
+import { formatTime, timeOnDate } from "@/utils/calendarUtils";
 import { calendarColors } from "@/data/calendarColors";
 import { vars } from "@/lib/theme";
 import { CalendarPopover } from "../CalendarPopover";
@@ -38,6 +44,9 @@ import {
   body,
   metaRow,
   footer,
+  timeFieldsRow,
+  timeField,
+  timeFieldLabel,
 } from "../CalendarPopover/CalendarPopover.css";
 import {
   headerGrabbing,
@@ -55,10 +64,11 @@ interface TemplateEventPopoverProps {
   onEdit: (newTitle: string) => void;
   onCopy: () => void;
   onDelete: () => void;
+  onEditTimes?: (newStart: Date, newEnd: Date) => void;
 }
 
 const POPOVER_WIDTH = 320;
-const POPOVER_HEIGHT = 340;
+const POPOVER_HEIGHT = 390;
 
 const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
   event,
@@ -69,6 +79,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
   onEdit,
   onCopy,
   onDelete,
+  onEditTimes,
 }) => {
   const { template, updateTemplateArray } = useCalendarProvider();
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -235,6 +246,48 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
                 {formatTime(endTime)}
               </span>
             </div>
+
+            {onEditTimes && (
+              <div className={timeFieldsRow}>
+                <div className={timeField}>
+                  <span className={timeFieldLabel}>start</span>
+                  <TimePicker
+                    value={format(startTime, "HH:mm")}
+                    ariaLabel="Start time"
+                    onChange={(next) => {
+                      // The end stays fixed — a form start edit is the
+                      // top-edge resize. An end at or before it wraps to the
+                      // next morning.
+                      const newStart = timeOnDate(startTime, next);
+                      if (newStart.getTime() === startTime.getTime()) return;
+                      const newEnd =
+                        endTime <= newStart
+                          ? new Date(endTime.getTime() + 24 * 60 * 60 * 1000)
+                          : endTime;
+                      onEditTimes(newStart, newEnd);
+                    }}
+                  />
+                </div>
+                <div className={timeField}>
+                  <span className={timeFieldLabel}>end</span>
+                  <TimePicker
+                    value={format(endTime, "HH:mm")}
+                    ariaLabel="End time"
+                    onChange={(next) => {
+                      // End at or before start wraps to the next morning.
+                      let newEnd = timeOnDate(startTime, next);
+                      if (newEnd <= startTime) {
+                        newEnd = new Date(
+                          newEnd.getTime() + 24 * 60 * 60 * 1000,
+                        );
+                      }
+                      if (newEnd.getTime() === endTime.getTime()) return;
+                      onEditTimes(startTime, newEnd);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className={note}>
               {isException

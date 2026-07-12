@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Button, Input, vars } from "@/components/ui";
+import { Button, Input, TimePicker, vars } from "@/components/ui";
 import type { EventTemplate } from "@/types/prisma";
 import { PopoverLocationPicker } from "@/components/events/PopoverLocationPicker";
 import { PopoverColorPicker } from "@/components/events/PopoverColorPicker";
@@ -12,7 +12,7 @@ import {
   serializeRecurrenceExceptions,
   removeException,
 } from "@/utils/planRecurrence";
-import { addMinutesToHHMM } from "../timeWindow";
+import { addMinutesToHHMM, timeToMinutes } from "../timeWindow";
 import {
   selectedPanel,
   selectedHeaderRow,
@@ -22,7 +22,6 @@ import {
   field,
   fieldWithMargin,
   fieldLabel,
-  fieldStatic,
   selectedActions,
   exceptionsSection,
 } from "./TemplateEditor.css";
@@ -73,13 +72,35 @@ export function TemplateEditor({
       <div className={fieldGrid}>
         <div className={field}>
           <span className={fieldLabel}>start</span>
-          <span className={fieldStatic}>{template.startTime}</span>
+          <TimePicker
+            value={template.startTime}
+            ariaLabel="Start time"
+            onChange={(next) => {
+              if (next === template.startTime) return;
+              // Duration is preserved; a start re-anchor invalidates
+              // per-occurrence exception keys — same rule as a grid drag.
+              onUpdate({ startTime: next, recurrenceExceptions: null });
+            }}
+          />
         </div>
         <div className={field}>
           <span className={fieldLabel}>end</span>
-          <span className={fieldStatic}>
-            {addMinutesToHHMM(template.startTime, template.duration)}
-          </span>
+          <TimePicker
+            value={addMinutesToHHMM(template.startTime, template.duration)}
+            ariaLabel="End time"
+            onChange={(next) => {
+              // The wrap handles overnight (end at or before start runs into
+              // the next morning); zero-length is rejected. End-only change:
+              // exceptions are preserved.
+              const dur =
+                (timeToMinutes(next) -
+                  timeToMinutes(template.startTime) +
+                  1440) %
+                1440;
+              if (dur === 0 || dur === template.duration) return;
+              onUpdate({ duration: dur });
+            }}
+          />
         </div>
       </div>
 

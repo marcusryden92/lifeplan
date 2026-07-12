@@ -1,5 +1,5 @@
 import { globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition, media } from "@/lib/theme";
+import { vars, themeTransition, media, space } from "@/lib/theme";
 
 const ROOT = ".circadium-calendar";
 
@@ -7,7 +7,7 @@ const ROOT = ".circadium-calendar";
 globalStyle(`${ROOT} .fc-timegrid-body`, {
   "@media": {
     [media.mobile]: {
-      marginBottom: 100,
+      marginBottom: space["22"],
       borderBottom: `1px solid ${vars.rule}`,
     },
   },
@@ -78,6 +78,11 @@ globalStyle(`${ROOT} .fc-timegrid-slot-label-cushion`, {
 globalStyle(`${ROOT} .fc-timegrid-slot`, {
   height: "2.4rem !important",
   borderColor: `${vars.rule} !important`,
+  "@media": {
+    [media.mobile]: {
+      height: "2.8rem !important",
+    },
+  },
 });
 
 globalStyle(`${ROOT} .fc-timegrid-col`, {
@@ -169,4 +174,49 @@ globalStyle(`${ROOT} .fc-timegrid-daygrid-day-top`, {
 
 globalStyle(`${ROOT} .fc-timegrid-axis`, {
   borderColor: `${vars.rule} !important`,
+});
+
+// Touch resize handles. FullCalendar derives the dot size, position, and
+// radius entirely from these custom properties, so overriding them rescales
+// and re-centers the dots through FC's own math.
+globalStyle(`${ROOT}`, {
+  vars: {
+    "--fc-event-resizer-dot-total-width": "16px",
+    "--fc-event-resizer-dot-border-width": "2.5px",
+    // Kill FC's dark wash on selected tiles; the ring below is the signal.
+    "--fc-event-selected-overlay-color": "transparent",
+  },
+});
+
+// A touch starting on a handle must never become a browser scroll — during
+// the first 5px FullCalendar hasn't claimed the gesture yet, and a scroll
+// there permanently cancels the resize (wasTouchScroll).
+globalStyle(`${ROOT} .fc-event-resizer`, {
+  touchAction: "none",
+});
+
+globalStyle(`${ROOT} .fc-event-selected .fc-event-resizer`, {
+  background: `${vars.accent.primary} !important`,
+  borderColor: `${vars.paper} !important`,
+  boxShadow: "0 1px 4px rgba(0, 0, 0, 0.35)",
+});
+
+// FC's stock hit inset is -20px per side; with the bigger dot that would
+// swallow short tiles' bodies entirely. -12px keeps a 40px target.
+globalStyle(`${ROOT} .fc-event-selected .fc-event-resizer::before`, {
+  top: -12,
+  right: -12,
+  bottom: -12,
+  left: -12,
+});
+
+globalStyle(`${ROOT} .fc-event.fc-event-selected`, {
+  boxShadow: `0 0 0 2px ${vars.paper}, 0 0 0 4px ${vars.accent.primary}, 0 6px 16px rgba(0, 0, 0, 0.22) !important`,
+});
+
+// Long-pressing tile text must not trigger iOS text selection / callout.
+globalStyle(`${ROOT} .fc-event`, {
+  WebkitTouchCallout: "none",
+  WebkitUserSelect: "none",
+  userSelect: "none",
 });

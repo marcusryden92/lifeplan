@@ -26,7 +26,10 @@ import {
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import type { Category, EventTemplate } from "@/types/prisma";
-import { getWeekFirstDate } from "@/utils/calendarUtils";
+import {
+  getWeekFirstDate,
+  CALENDAR_LONG_PRESS_DELAY_MS,
+} from "@/utils/calendarUtils";
 
 import { REFERENCE_WEEK_DATE, TEMPLATE_PALETTE } from "./constants";
 import {
@@ -37,7 +40,11 @@ import {
   windowRangeOverlaps,
   type WorkingWindow,
 } from "./timeWindow";
-import { templateToEvent, windowToEvent } from "./eventSerializers";
+import {
+  templateToEvent,
+  windowToEvent,
+  windowRangeToDates,
+} from "./eventSerializers";
 import { useWeekStructureState } from "./useWeekStructureState";
 import { TemplateEditor } from "./TemplateEditor";
 import { WindowEditor } from "./WindowEditor";
@@ -416,6 +423,40 @@ export function WeekStructureModal({
     );
   };
 
+  const updateWindowTimes = (
+    id: string,
+    startTimeRaw: string,
+    endTimeRaw: string,
+  ) => {
+    const win = winsWorking.find((w) => w.id === id);
+    if (!win) return;
+    // A midnight end is stored as the "23:59" end-of-day sentinel
+    // (endTimeFromDate precedent); equal bounds are zero-length, not 24h.
+    const endTime = endTimeRaw === "00:00" ? "23:59" : endTimeRaw;
+    if (startTimeRaw === endTime) return;
+    if (startTimeRaw === win.startTime && endTime === win.endTime) return;
+    const [start, end] = windowRangeToDates(
+      win.day,
+      startTimeRaw,
+      endTime,
+      weekStart,
+      weekStartDay,
+    );
+    if (!rangeAllowed(start, end)) return;
+    if (overlapsWindow(start, end, id)) {
+      setError("Those times would overlap another window.");
+      return;
+    }
+    updateWindow(id, {
+      startTime: startTimeRaw,
+      endTime,
+      // A start re-anchor invalidates per-occurrence exception keys — same
+      // rule as a grid drag; end-only changes preserve them.
+      recurrenceExceptions:
+        startTimeRaw !== win.startTime ? null : win.recurrenceExceptions,
+    });
+  };
+
   const deleteSelected = () => {
     if (!selected) return;
     if (selected.kind === "templates") {
@@ -591,6 +632,7 @@ export function WeekStructureModal({
                 firstDay={weekStartDay}
                 snapDuration="00:15:00"
                 slotDuration="00:30:00"
+                longPressDelay={CALENDAR_LONG_PRESS_DELAY_MS}
                 scrollTime="06:00:00"
                 height="100%"
                 headerToolbar={false}
@@ -693,6 +735,9 @@ export function WeekStructureModal({
                 window={selectedWindow}
                 categories={categories}
                 onUpdate={(patch) => updateWindow(selectedWindow.id, patch)}
+                onUpdateTimes={(startTime, endTime) =>
+                  updateWindowTimes(selectedWindow.id, startTime, endTime)
+                }
                 onDuplicate={duplicateSelected}
                 onDelete={deleteSelected}
               />

@@ -17,6 +17,19 @@ import { startOfDay } from "./dateUtils";
 export const getWeekdayFromDate = (date: Date): WeekDayType =>
   dateTimeService.getWeekdayFromDate(date);
 
+// FullCalendar's default is 1000ms; 300ms keeps scroll-flicks scrolling
+// (movement cancels the pending drag) while beating iOS's ~500ms system
+// long-press gestures. Shared by the main calendar and the WeekStructureModal.
+export const CALENDAR_LONG_PRESS_DELAY_MS = 300;
+
+// Apply a "HH:MM" picker value onto an existing date, keeping its day.
+export const timeOnDate = (base: Date, hhmm: string): Date => {
+  const [h, m] = hhmm.split(":").map(Number);
+  const next = new Date(base);
+  next.setHours(h, m, 0, 0);
+  return next;
+};
+
 const WEEKDAY_NAME_BY_INT: readonly WeekDayType[] = [
   "sunday",
   "monday",

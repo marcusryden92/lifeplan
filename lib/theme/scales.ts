@@ -24,6 +24,9 @@ export const space = {
   "14": 56,
   "16": 64,
   "20": 80,
+  "21": 88,
+  "22": 96,
+  "23": 104,
 } as const;
 
 // Radius scale — the base tiers (xs/sm/md/lg/xl/2xl/3xl) are the "snap-to"
