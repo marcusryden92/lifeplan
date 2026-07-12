@@ -6,6 +6,7 @@ import { Planner } from "@/types/prisma";
 import {
   dropDivider,
   dropDividerActive,
+  dropDividerTouchTarget,
 } from "@/components/tasks/lumenTasks.css";
 
 interface TaskDividerProps {
@@ -25,6 +26,7 @@ const TaskDivider: React.FC<TaskDividerProps> = ({
     currentlyClickedItem,
     setCurrentlyClickedItem,
     displayDragBox,
+    touchDropTarget,
     flashDroppedTask,
   } = useDraggableContext();
   const [isHovered, setIsHovered] = useState<boolean>(false);
@@ -45,13 +47,19 @@ const TaskDivider: React.FC<TaskDividerProps> = ({
   };
 
   const active = currentlyClickedItem && displayDragBox;
+  const isTouchTarget =
+    !!touchDropTarget &&
+    touchDropTarget.taskId === targetId &&
+    touchDropTarget.kind === mouseLocationInItem;
 
   return (
     <div
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onMouseUp={handleDragEnd}
-      className={`${dropDivider} ${active ? dropDividerActive : ""}`}
+      data-divider-target={targetId}
+      data-divider-location={mouseLocationInItem}
+      className={`${dropDivider} ${active ? dropDividerActive : ""} ${isTouchTarget ? dropDividerTouchTarget : ""}`}
     />
   );
 };

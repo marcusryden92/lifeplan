@@ -25,6 +25,7 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import useClickOutside from "@/hooks/useClickOutside";
 import DragDisableListWrapper from "@/components/draggable/DragDisableListWrapper";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
+import { useTouchDragReorder } from "@/components/draggable/useTouchDragReorder";
 import {
   itemRow,
   itemRowWithSubtasks,
@@ -98,8 +99,9 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
   );
 
   // The hover-and-mouse drag system never fires on touch, so on mobile the
-  // grip opens an explicit move menu driven by the same moveItem handlers
-  // the drop targets use.
+  // grip doubles as a touch drag handle: moving past the threshold starts a
+  // drag, a plain tap opens the move menu driven by the same moveItem
+  // handlers the drop targets use.
   const isMobile = useIsMobile();
   const [moveMenuOpen, setMoveMenuOpen] = useState(false);
   const moveMenuRef = useRef<HTMLSpanElement>(null);
@@ -107,6 +109,14 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
     ref: moveMenuRef,
     onClickOutside: () => setMoveMenuOpen(false),
     isActive: moveMenuOpen,
+  });
+
+  const closeMoveMenu = useCallback(() => setMoveMenuOpen(false), []);
+  const { onGripPointerDown, consumeDragClick } = useTouchDragReorder({
+    taskId: task.id,
+    taskTitle: task.title,
+    parentId: task.parentId ?? null,
+    onDragStart: closeMoveMenu,
   });
 
   const siblings = moveMenuOpen
@@ -150,10 +160,12 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
             <span
               className={gripBtn}
               onMouseDown={isMobile ? undefined : startDrag}
+              onPointerDown={isMobile ? onGripPointerDown : undefined}
               onClick={
                 isMobile
                   ? (e) => {
                       e.stopPropagation();
+                      if (consumeDragClick()) return;
                       setMoveMenuOpen((o) => !o);
                     }
                   : undefined

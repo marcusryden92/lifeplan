@@ -1,9 +1,3 @@
-# Mobile
-
-- How to rearrange items in subtask view?
-
-- Mobile app (Capacitor wrap)
-
 # P5 — Medium features
 
 - Maximum time of a goal per day
@@ -13,6 +7,7 @@
 - File-view / mind-map style: displays categories + sub-categories + items together
 
 - Custom Claude API key
+- Mobile app (Capacitor wrap)
 
 - Habits - dynamic items that schedule every week
 - Allow moving/pinning of dynamic objects (temporarily acting like a plan)
