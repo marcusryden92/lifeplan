@@ -22,6 +22,11 @@ export const progressBlock = style({
   height: 60,
   flexShrink: 0,
   overflow: "hidden",
+  // The completion row wraps to two lines on narrow screens; the fixed
+  // desktop height would clip the wrapped date picker.
+  "@media": {
+    [media.mobile]: { height: "auto", minHeight: 60 },
+  },
 });
 
 export const progressMeta = style([
@@ -67,6 +72,7 @@ export const completeRow = style({
   width: "calc(50% - 24px)",
   "@media": {
     [media.tablet]: { width: "100%" },
+    [media.mobile]: { flexWrap: "wrap", height: "auto" },
   },
 });
 
@@ -129,6 +135,11 @@ export const completeLabel = style([
 export const completeDateWrap = style({
   width: 250,
   maxWidth: "100%",
+  // Fluid on mobile: fills the remaining row space, and wraps to its own
+  // full-width line when less than the basis is left next to the label.
+  "@media": {
+    [media.mobile]: { width: "auto", flex: "1 1 220px" },
+  },
 });
 
 export const completeDateWrapFaded = style({

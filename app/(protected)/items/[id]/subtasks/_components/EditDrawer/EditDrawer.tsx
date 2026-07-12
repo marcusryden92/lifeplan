@@ -56,6 +56,7 @@ import {
   splitToggleRow,
   splitHint,
   dateInputFaded,
+  completeSection,
   completeHeader,
   completeCheckbox,
   drawerFooter,
@@ -224,7 +225,13 @@ export function EditDrawer() {
     ...locations.map((l) => ({
       value: l.id,
       label: (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: space["2"] }}>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: space["2"],
+          }}
+        >
           <MapPin size={12} strokeWidth={2} />
           <span>{l.name}</span>
         </span>
@@ -272,6 +279,47 @@ export function EditDrawer() {
           onKeyDown={onTitleKey}
           placeholder="Subtask title"
         />
+
+        {isLeaf && (
+          <div className={completeSection}>
+            <div className={completeHeader}>
+              <button
+                type="button"
+                className={completeCheckbox}
+                data-completed={isCompleted ? "true" : "false"}
+                data-locked={completionLocked ? "true" : "false"}
+                data-shake={shakeLocked ? "true" : "false"}
+                onClick={toggleCompletion}
+                aria-pressed={isCompleted}
+                aria-label={isCompleted ? "Mark incomplete" : "Mark complete"}
+                title={
+                  completionLocked
+                    ? "Mark the goal ready before completing subtasks"
+                    : undefined
+                }
+              >
+                {isCompleted && <Check size={12} strokeWidth={3} />}
+              </button>
+              <span className={fieldLabel}>Completed at</span>
+            </div>
+            <div
+              className={isCompleted && !completionLocked ? "" : dateInputFaded}
+              title={
+                completionLocked
+                  ? "Mark the goal ready before completing subtasks"
+                  : undefined
+              }
+            >
+              <DateTimePicker
+                value={completedValue}
+                onChange={onCompletedAtChange}
+                weekStartsOn={weekStartDay}
+                clearable={isCompleted && !completionLocked}
+                ariaLabel="Completed at"
+              />
+            </div>
+          </div>
+        )}
 
         <div className={fieldStack}>
           <span className={fieldLabel}>Duration</span>
@@ -344,58 +392,7 @@ export function EditDrawer() {
             weekStartsOn={weekStartDay}
             ariaLabel="Deadline"
           />
-          {task.deadline && (
-            <Caption>
-              {format(new Date(task.deadline), "EEE MMM d · HH:mm")}
-            </Caption>
-          )}
         </div>
-
-        {isLeaf && (
-          <div className={fieldStack}>
-            <div className={completeHeader}>
-              <button
-                type="button"
-                className={completeCheckbox}
-                data-completed={isCompleted ? "true" : "false"}
-                data-locked={completionLocked ? "true" : "false"}
-                data-shake={shakeLocked ? "true" : "false"}
-                onClick={toggleCompletion}
-                aria-pressed={isCompleted}
-                aria-label={isCompleted ? "Mark incomplete" : "Mark complete"}
-                title={
-                  completionLocked
-                    ? "Mark the goal ready before completing subtasks"
-                    : undefined
-                }
-              >
-                {isCompleted && <Check size={10} strokeWidth={3} />}
-              </button>
-              <span className={fieldLabel}>Completed at</span>
-            </div>
-            <div
-              className={isCompleted && !completionLocked ? "" : dateInputFaded}
-              title={
-                completionLocked
-                  ? "Mark the goal ready before completing subtasks"
-                  : undefined
-              }
-            >
-              <DateTimePicker
-                value={completedValue}
-                onChange={onCompletedAtChange}
-                weekStartsOn={weekStartDay}
-                clearable={isCompleted && !completionLocked}
-                ariaLabel="Completed at"
-              />
-            </div>
-            {task.completedEndTime && (
-              <Caption>
-                {format(new Date(task.completedEndTime), "EEE MMM d · HH:mm")}
-              </Caption>
-            )}
-          </div>
-        )}
       </div>
 
       <div className={drawerFooter}>

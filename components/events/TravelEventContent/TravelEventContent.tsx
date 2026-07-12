@@ -7,6 +7,7 @@ import { AlertTriangle, Car } from "lucide-react";
 // extendedProps. The TravelTime record carries DRIVING/TRANSIT/BICYCLING/
 // WALKING but the engine only emits a duration today.
 import { RootState } from "@/redux/store";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
 import { getEventTier } from "@/utils/eventTier";
@@ -44,6 +45,7 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
     (state: RootState) => state.schedulingSettings.locations,
   );
   const setHoverLabel = useSetCalendarHoverLabel();
+  const isMobile = useIsMobile();
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
   const [elementWidth, setElementWidth] = useState<number>(0);
@@ -105,6 +107,11 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   return (
     <div
       ref={elementRef}
+      onClick={(e) => {
+        if (!isMobile) return;
+        if (!elementRef.current?.contains(e.target as Node)) return;
+        handleDoubleClick(e, elementRef, setEventRect, setShowPopover);
+      }}
       onDoubleClick={(e) =>
         handleDoubleClick(e, elementRef, setEventRect, setShowPopover)
       }

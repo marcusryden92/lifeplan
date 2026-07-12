@@ -2,6 +2,7 @@ import React, { ReactNode, useLayoutEffect } from "react";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { Pin } from "lucide-react";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
 import { plannerIdFromEventId } from "@/utils/planRecurrence";
@@ -62,6 +63,7 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
 }: EventWrapperProps) => {
   const { userSettings, planner, categories } = useCalendarProvider();
   const setHoverLabel = useSetCalendarHoverLabel();
+  const isMobile = useIsMobile();
 
   useLayoutEffect(() => {
     const element = elementRef.current;
@@ -138,6 +140,16 @@ const EventWrapper: React.FC<EventWrapperProps> = ({
       onMouseLeave={() => {
         setOnHover(false);
         setHoverLabel?.(null);
+      }}
+      // No hover on touch — a single tap opens the popover (presented as a
+      // bottom sheet on mobile). Desktop keeps double-click only. The popover
+      // renders in this React tree but portals its DOM to body, so its clicks
+      // bubble back here synthetically — the contains() check keeps a tap on
+      // the sheet (dismiss, close button) from instantly reopening it.
+      onClick={(e) => {
+        if (!isMobile || disableInteraction) return;
+        if (!elementRef.current?.contains(e.target as Node)) return;
+        handleDoubleClick(e, elementRef, setEventRect, setShowPopover);
       }}
       onDoubleClick={(e) =>
         !disableInteraction &&

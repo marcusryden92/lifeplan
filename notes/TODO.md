@@ -1,9 +1,5 @@
 # Mobile
 
-- No hover buttons on calendar in mobile - one click for bottom sheet modal
-
-- Area and color side by side in overview
-- Completed at button and date box overlap
 - How to rearrange items in subtask view?
 
 - Mobile app (Capacitor wrap)
@@ -13,13 +9,13 @@
 - Maximum time of a goal per day
 - Allowed days/time spans in any day for goals
 
-- Habits - dynamic items that schedule every week
-- Allow moving/pinning of dynamic objects (temporarily acting like a plan)
+- Add inter-goal dependencies (with cycle detection)
+- File-view / mind-map style: displays categories + sub-categories + items together
 
 - Custom Claude API key
 
-- Add inter-goal dependencies (with cycle detection)
-- File-view / mind-map style: displays categories + sub-categories + items together
+- Habits - dynamic items that schedule every week
+- Allow moving/pinning of dynamic objects (temporarily acting like a plan)
 - Multiple templates of different time spans (3 days, 2 weeks etc)
 - Categorization of goals (tags) — may be redundant with categories; revisit
 

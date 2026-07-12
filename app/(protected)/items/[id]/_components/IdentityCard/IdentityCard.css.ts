@@ -19,12 +19,14 @@ export const fieldGrid = style({
   },
 });
 
+// Category + color stay paired on mobile too — both controls are narrow
+// pills, and the single-column stack wasted a full row on each.
 export const doubleGrid = style({
   display: "grid",
   gridTemplateColumns: "2fr 1fr",
   gap: "5px 22px",
   "@media": {
-    [media.mobile]: { gridTemplateColumns: "1fr" },
+    [media.mobile]: { gap: "5px 12px" },
   },
 });
 

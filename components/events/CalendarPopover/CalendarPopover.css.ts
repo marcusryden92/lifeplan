@@ -1,4 +1,4 @@
-﻿import { style } from "@vanilla-extract/css";
+﻿import { style, keyframes } from "@vanilla-extract/css";
 import {
   space,
   vars,
@@ -8,7 +8,20 @@ import {
   display,
   text,
   iconBtn,
+  media,
+  backdropFilters,
+  DURATIONS,
 } from "@/lib/theme";
+
+const fadeIn = keyframes({
+  from: { opacity: 0 },
+  to: { opacity: 1 },
+});
+
+const sheetUp = keyframes({
+  from: { transform: "translateY(100%)" },
+  to: { transform: "translateY(0)" },
+});
 
 // Layout-only â€” the popover() recipe owns the glass surface (fill, blur,
 // stroke, shadow, radius). This file adds the calendar-popover-specific
@@ -33,10 +46,24 @@ export const calendarPopoverSheet = style({
   top: "auto",
   width: "auto",
   maxWidth: "100vw",
-  maxHeight: "75vh",
+  maxHeight: ["75vh", "75dvh"],
   overflowY: "auto",
   borderBottomLeftRadius: 0,
   borderBottomRightRadius: 0,
+  paddingBottom: "env(safe-area-inset-bottom, 0px)",
+  animation: `${sheetUp} ${DURATIONS.modal}s ease`,
+});
+
+// Radix renders no overlay in non-modal mode, so this only materializes on
+// mobile where the dialog is modal — dimming the calendar behind the sheet.
+export const sheetOverlay = style({
+  position: "fixed",
+  inset: 0,
+  zIndex: 49,
+  background: vars.overlay,
+  backdropFilter: backdropFilters.palette,
+  WebkitBackdropFilter: backdropFilters.palette,
+  animation: `${fadeIn} ${DURATIONS.modal}s ease`,
 });
 
 export const header = style({
@@ -63,6 +90,9 @@ export const dragHandle = style({
   selectors: {
     "&:hover": { color: vars.ink },
     "&:active": { cursor: "grabbing" },
+  },
+  "@media": {
+    [media.mobile]: { display: "none" },
   },
 });
 

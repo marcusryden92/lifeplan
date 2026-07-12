@@ -59,7 +59,7 @@ export function CategorySection() {
   }
 
   return (
-    <FieldStack label="Area">
+    <FieldStack label="Category">
       <Combobox
         value={item.categoryId ?? null}
         options={categoryOptions}

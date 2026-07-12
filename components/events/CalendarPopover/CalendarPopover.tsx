@@ -5,7 +5,11 @@ import * as Dialog from "@radix-ui/react-dialog";
 import usePopoverPosition from "@/hooks/usePopoverPosition";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { space, popover } from "@/lib/theme";
-import { calendarPopover, calendarPopoverSheet } from "./CalendarPopover.css";
+import {
+  calendarPopover,
+  calendarPopoverSheet,
+  sheetOverlay,
+} from "./CalendarPopover.css";
 
 interface RenderArgs {
   startDrag: (e: React.MouseEvent) => void;
@@ -69,23 +73,15 @@ export function CalendarPopover({
   return (
     <Dialog.Root
       open
-      modal={false}
+      modal={isMobile}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
     >
       <Dialog.Portal>
-        {/* Transparent backdrop blocks pointer events from reaching the
-            calendar grid (drag-to-select, event clicks) while the popover is
-            open. pointerDownOutside on Dialog.Content handles dismissal. */}
-        <Dialog.Overlay
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 49,
-            background: "transparent",
-          }}
-        />
+        {/* Radix skips the overlay entirely in non-modal (desktop) mode;
+            dismissal on both surfaces runs through pointerDownOutside. */}
+        <Dialog.Overlay className={sheetOverlay} />
         <Dialog.Content
           ref={popoverRef}
           className={`${popover({ size: "lg" })} ${calendarPopover} ${

@@ -100,18 +100,31 @@ export const splitHint = style([
   },
 ]);
 
+// Completion is a status block, not a form field — it leads the drawer and
+// a bottom rule fences it off from the fields below.
+export const completeSection = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["1.5"],
+  paddingBottom: space["4"],
+  borderBottom: `1px solid ${vars.rule}`,
+  transition: themeTransition,
+});
+
 export const completeHeader = style({
   display: "flex",
   alignItems: "center",
   gap: space["2"],
 });
 
+// Sized just under the overview page's 22px completion checkbox so the two
+// surfaces read as the same control at the drawer's denser scale.
 export const completeCheckbox = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 16,
-  height: 16,
+  width: 20,
+  height: 20,
   borderRadius: radii.pill,
   border: `1.5px solid ${vars.muted}`,
   background: "transparent",

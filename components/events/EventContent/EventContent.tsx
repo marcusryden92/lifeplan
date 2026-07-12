@@ -4,6 +4,7 @@ import { Check, ArrowRight, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { floorMinutes } from "@/utils/calendarUtils";
 import EventPopover from "../EventPopover";
 import EventWrapper from "../EventWrapper";
@@ -31,6 +32,7 @@ interface EventContentProps {
 
 const EventContent: React.FC<EventContentProps> = ({ event }) => {
   const { planner, updateAll, calendar, userSettings } = useCalendarProvider();
+  const isMobile = useIsMobile();
   const { plannerType, parentId, completedStartTime, completedEndTime } =
     event.extendedProps;
   const elementRef = useRef<HTMLDivElement>(null);
@@ -142,7 +144,10 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
       showPopover={showPopover}
       setShowPopover={setShowPopover}
     >
-      {onHover &&
+      {/* Touch taps fire an emulated mouseenter, so without the gate these
+          would appear on tap and linger — mobile gets the bottom sheet. */}
+      {!isMobile &&
+        onHover &&
         elementHeight > 40 &&
         elementWidth > 70 &&
         !event.extendedProps.isTemplateItem && (
