@@ -1,7 +1,17 @@
 import { globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition } from "@/lib/theme";
+import { vars, themeTransition, media } from "@/lib/theme";
 
 const ROOT = ".circadium-calendar";
+
+// Lets the last hours scroll clear of the floating bottom menu.
+globalStyle(`${ROOT} .fc-timegrid-body`, {
+  "@media": {
+    [media.mobile]: {
+      marginBottom: 100,
+      borderBottom: `1px solid ${vars.rule}`,
+    },
+  },
+});
 
 globalStyle(`${ROOT}`, {
   flex: 1,

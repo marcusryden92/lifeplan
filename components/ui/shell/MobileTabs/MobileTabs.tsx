@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import * as Dialog from "@radix-ui/react-dialog";
 import { Settings, Moon, Sun, LogOut } from "lucide-react";
 import { useShellOverlayOpen } from "../ShellOverlayContext";
 import { useTheme } from "../../ThemeProvider";
+import { BottomSheet } from "../../BottomSheet";
 import { MOBILE_TABS } from "../nav";
 import {
   tabBar,
@@ -18,10 +18,6 @@ import {
   tabUnderlineActive,
   captureTabWrapper,
   captureButton,
-  sheetOverlay,
-  sheet,
-  sheetHandle,
-  sheetTitle,
   sheetItem,
   sheetItemDanger,
   sheetItemIcon,
@@ -106,41 +102,34 @@ export function MobileTabs() {
         })}
       </nav>
 
-      <Dialog.Root open={moreOpen} onOpenChange={setMoreOpen}>
-        <Dialog.Portal>
-          <Dialog.Overlay className={sheetOverlay} />
-          <Dialog.Content className={sheet} aria-describedby={undefined}>
-            <span className={sheetHandle} aria-hidden />
-            <Dialog.Title className={sheetTitle}>More</Dialog.Title>
-            <button type="button" className={sheetItem} onClick={goSettings}>
-              <span className={sheetItemIcon}>
-                <Settings size={18} strokeWidth={2} aria-hidden />
-              </span>
-              Settings
-            </button>
-            <button type="button" className={sheetItem} onClick={toggle}>
-              <span className={sheetItemIcon}>
-                {dark ? (
-                  <Sun size={18} strokeWidth={2} aria-hidden />
-                ) : (
-                  <Moon size={18} strokeWidth={2} aria-hidden />
-                )}
-              </span>
-              {dark ? "Light mode" : "Dark mode"}
-            </button>
-            <button
-              type="button"
-              className={`${sheetItem} ${sheetItemDanger}`}
-              onClick={() => signOut()}
-            >
-              <span className={sheetItemIcon}>
-                <LogOut size={18} strokeWidth={2} aria-hidden />
-              </span>
-              Sign out
-            </button>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog.Root>
+      <BottomSheet open={moreOpen} onOpenChange={setMoreOpen} title="More">
+        <button type="button" className={sheetItem} onClick={goSettings}>
+          <span className={sheetItemIcon}>
+            <Settings size={18} strokeWidth={2} aria-hidden />
+          </span>
+          Settings
+        </button>
+        <button type="button" className={sheetItem} onClick={toggle}>
+          <span className={sheetItemIcon}>
+            {dark ? (
+              <Sun size={18} strokeWidth={2} aria-hidden />
+            ) : (
+              <Moon size={18} strokeWidth={2} aria-hidden />
+            )}
+          </span>
+          {dark ? "Light mode" : "Dark mode"}
+        </button>
+        <button
+          type="button"
+          className={`${sheetItem} ${sheetItemDanger}`}
+          onClick={() => signOut()}
+        >
+          <span className={sheetItemIcon}>
+            <LogOut size={18} strokeWidth={2} aria-hidden />
+          </span>
+          Sign out
+        </button>
+      </BottomSheet>
     </>
   );
 }

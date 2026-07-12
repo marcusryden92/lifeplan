@@ -2,6 +2,7 @@ export { Glass } from "./Glass";
 export { Caption } from "./Caption";
 export { Kbd } from "./Kbd";
 export { Button } from "./Button";
+export { BottomSheet } from "./BottomSheet";
 export { Input, Field } from "./Input";
 export { FieldStack, FieldValue } from "./FieldStack";
 export { TypeBadge } from "./TypeBadge";

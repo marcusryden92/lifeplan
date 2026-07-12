@@ -1,16 +1,10 @@
 # Mobile
-- Calendar should take up whole screen in Calendar on mobile. (With some bottom padding to account for the floating menu)
-- Calendar engine should open as a modal
-- Calendar header needs restructuring (col not row-ish)
 
 - No hover buttons on calendar in mobile - one click for bottom sheet modal
 
 - Area and color side by side in overview
 - Completed at button and date box overlap
 - How to rearrange items in subtask view?
-
-- Engine console doesn't show
-- Calendar header needs work
 
 - Mobile app (Capacitor wrap)
 
