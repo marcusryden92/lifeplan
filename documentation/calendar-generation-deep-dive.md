@@ -212,8 +212,9 @@ Scoring itself: tasks without a deadline get `MIN_URGENCY_MULTIPLIER * priority`
 
 - Excludes memoized rows.
 - Excludes completed tasks — completed items render via `buildCompletedEvents` (Phase 2) and must never re-enter scheduling.
-- Keeps ready root goals (`isReady === true`), plus **ready** tasks whose root ancestor is **not** a goal (standalone tasks and task-rooted subtrees). Readiness is the universal gate: a task also needs `isReady === true` to become a candidate (tasks/plans default ready on create, so this is transparent for the common case; a user or the assistant can hold a task off the calendar by un-readying it). Tasks inside a goal subtree are owned by the goal's readiness gate instead — `scheduleGoal` places them when the root is ready, and an unready goal's subtree stays off the calendar entirely; they are excluded here regardless of their own flag (they inherit the root's readiness via the cascade). Admitting goal-subtree tasks individually would make readying a no-op.
-- Sorts via [sortByPriorityAndConstraints](../utils/calendar-generation/helpers/PrioritySorter/sortByPriorityAndConstraints.ts) — two-tier sort: category-constrained items first (because they have fewer eligible slots), then by descending **urgency score** looked up from the precomputed map. Urgency is not a strategy; it is decided here before any slot scoring.
+- Keeps ready root goals (`isReady === true`), plus **ready** tasks whose root ancestor is **not** a goal (standalone tasks and task-rooted subtrees). Readiness is the universal gate: a task also needs `isReady === true` to become a candidate (tasks/plans default ready on create, so this is transparent for the common case; a user or the assistant can hold a task off the calendar by un-readying it). Tasks inside a goal subtree are owned by the goal's readiness gate instead — the flat scheduler places a goal's leaves when the root is ready (via `buildLeafGraph`), and an unready goal's subtree stays off the calendar entirely; they are excluded here regardless of their own flag (they inherit the root's readiness via the cascade). Admitting goal-subtree tasks individually would make readying a no-op.
+- Excludes **detour targets** — roots referenced by a placeholder's `linkedItemId` (`collectLinkedTargetIds`) schedule via the host splice, not as an independent candidate.
+- Sorts via [sortByPriorityAndConstraints](../utils/calendar-generation/helpers/PrioritySorter/sortByPriorityAndConstraints.ts) — two-tier sort: category-constrained items first (because they have fewer eligible slots), then by descending score. The score fed here is the **inheritance-adjusted** `computeEffectiveScores` (a prerequisite rides its dependents' urgency), not raw urgency; raw urgency still feeds `plannerScores` for the dashboard. Ordering is decided here before any slot scoring.
 
 ### Phase 10 — Schedule tasks and goals
 
@@ -304,22 +305,27 @@ Static placements (plans, templates, category-wrapper travel) are always flush w
 
 ### Outer loop (`scheduleTasksAndGoals`)
 
-[scheduleTasksAndGoals.ts](../utils/calendar-generation/helpers/Scheduler/scheduleTasksAndGoals.ts) drives candidates to convergence. Two pieces of bookkeeping are created once per run and shared across iterations: `SplitPlacementState` (per-task placed minutes, chunk ordinals, per-day ledgers — so a partially placed split task resumes from its remainder after horizon expansion instead of restarting) and `GoalCapState` (per-goal daily-cap ledgers, for the same reason).
+[scheduleTasksAndGoals.ts](../utils/calendar-generation/helpers/Scheduler/scheduleTasksAndGoals.ts) drives the flattened leaf pool (see "Flat-order scheduling" above) to convergence. Two pieces of bookkeeping are created once per run and shared across iterations: `SplitPlacementState` (per-task placed minutes, chunk ordinals, per-day ledgers — so a partially placed split task resumes from its remainder after horizon expansion instead of restarting) and `GoalCapState` (per-goal daily-cap ledgers, for the same reason).
 
 - Per iteration: compute `placementCutoffDate = lastPlaceableSlotEnd − PLACEMENT_BUFFER_DAYS`.
 - **Proactive expansion check**: count Available slots. Trigger [expandSlots](../utils/calendar-generation/helpers/Scheduler/expandSlots.ts) if either:
   - `availableCount < LOW_SLOT_WATERMARK`, **or**
-  - The largest compatible slot for the biggest remaining candidate is smaller than that candidate's **effective duration** ([largestCompatibleSlotForLargestTask](../utils/calendar-generation/helpers/Scheduler/capacityCheck.ts)). Effective duration (`effectiveCandidateDuration`) is the item's own duration for tasks (a split item sizes as its required minimum chunk), but for goals it is the **largest uncompleted leaf** — `scheduleGoal` places leaves one at a time, so the subtree aggregate is the wrong unit. Comparing the aggregate here made the watermark permanently true for any substantial ready goal, and the loop burned its whole expansion budget on `continue`s without attempting a single placement.
+  - The largest compatible slot for the biggest remaining leaf is smaller than that leaf's block size ([largestCompatibleSlotForLargestTask](../utils/calendar-generation/helpers/Scheduler/capacityCheck.ts) + `placementBlockMinutes` — a split leaf sizes as its required minimum chunk). Leaves whose chain predecessors or cross gate are still blocked are excluded (they can't use an expansion until they unblock, so they must not trigger one).
   - Then `continue` (skip the forward pass and re-check on the expanded array).
-- **Forward pass**: walk candidates **in sorted order** (category-constrained and highest-urgency first — matching the Phase 9 sort), calling [scheduleSingleTask](../utils/calendar-generation/helpers/Scheduler/scheduleSingleTask.ts) for tasks and [scheduleGoal](../utils/calendar-generation/helpers/Scheduler/scheduleGoal.ts) for goals. `scheduleSingleTask` gates `TOO_LARGE` at the task's required block (its full duration, or the required minimum chunk for a split task) and dispatches split tasks to the chunk loop ([Split tasks](#split-tasks-chunked-placement) below); a partially placed split task keeps its chunks on the calendar and stays a candidate, resuming from the remainder next iteration. Resolved ids (scheduled or permanently failed) are collected during the walk and removed after the pass; rows that failed with `NO_SLOTS` are retained for retry. (The old reverse-index splice idiom handed first pick to the lowest-urgency item under contention, inverting the sorter's intent.)
-- **Reactive backstop**: if candidates remain after a full forward pass, run `expandSlots` and loop again.
-- Stops when candidates empty or `expansionsDone ≥ MAX_WEEKS_TO_SEARCH`.
-- **Final compromise pass**: with the expansion budget spent and candidates still standing, one last walk runs with `allowDayCapRelaxation: true` — placing a chunk past the split task's or goal's per-day cap beats dropping the minutes entirely. Scarcity stays strict through every normal pass so expansion gets the chance to satisfy the caps before they're violated. Every compromise is recorded (`SplitPlacementState.relaxations` / `GoalCapState.relaxations`) and surfaced by Phase 12 as `SPLIT_CONSTRAINT_RELAXED` / `GOAL_DAY_CAP_RELAXED`. Non-split candidates get one last ordinary attempt, which is harmless.
-- Candidates still standing after the compromise pass each push a `NO_SLOTS` failure — this exit used to be silent, which let a starved run report `SCHEDULED_OK` with zero events while the diff sync deleted every previously placed event. Failures for tasks that eventually placed on a later iteration are dropped at the end (a `NO_SLOTS` on attempt 1 that succeeds after expansion is not console-worthy).
+- **Forward pass**: walk pool leaves in `(leafEffScore desc, scheduleIndex asc)` order, attempting each via [placeLeaf](../utils/calendar-generation/helpers/Scheduler/placeLeaf.ts) once its chain predecessors are resolved and its cross gate is open. `placeLeaf` gates `TOO_LARGE` at the leaf's required block and dispatches split leaves to the chunk loop ([Split tasks](#split-tasks-chunked-placement) below); a partial split leaf keeps its chunks and stays in the pool. Resolved leaves (placed or permanently failed) are removed after the pass; `NO_SLOTS` leaves are retained for retry.
+- **Reactive backstop**: if leaves remain after a full forward pass, run `expandSlots` and loop again.
+- Stops when the pool empties or `expansionsDone ≥ MAX_WEEKS_TO_SEARCH`.
+- **Final compromise pass**: with the expansion budget spent and leaves still standing, one last walk runs with `allowDayCapRelaxation: true` — placing a chunk past the split task's or goal's per-day cap beats dropping the minutes entirely. Scarcity stays strict through every normal pass so expansion gets the chance to satisfy the caps before they're violated. Every compromise is recorded (`SplitPlacementState.relaxations` / `GoalCapState.relaxations`) and surfaced by Phase 12 as `SPLIT_CONSTRAINT_RELAXED` / `GOAL_DAY_CAP_RELAXED`.
+- Leaves still standing after the compromise pass each push a `NO_SLOTS` failure — this exit used to be silent, which let a starved run report `SCHEDULED_OK` with zero events while the diff sync deleted every previously placed event. Failures for leaves that eventually placed on a later iteration are dropped at the end.
 
-### Goals
+### Flat-order (leaf-driven) scheduling
 
-`scheduleGoal` resolves the goal's bottom-layer uncompleted tasks (via `getSortedTreeBottomLayer`), filters out completed / already-scheduled / memoized tasks, and schedules each in sequence using `goalAfterTime = previousTaskEnd` so the goal's children stay temporally clustered. Each leaf is gated `TOO_LARGE` at its own required block (full duration, or minimum chunk for a split leaf) against `min(maxEffectiveCapacityFor, maxAllowedBlockMinutes)`. A split leaf runs its chunk loop to exhaustion with every chunk placed after the previous leaf's end, and the **next** leaf chains after the last chunk — the split item acts as one dependency link. Always returns `permanentFailure: false` — the retry loop handles `NO_SLOTS`.
+The scheduler does NOT place a goal atomically. [buildLeafGraph](../utils/calendar-generation/helpers/Scheduler/buildLeafGraph.ts) flattens every candidate root into a single **leaf pool** and derives the precedence structure; `scheduleTasksAndGoals` then places leaves one at a time via the shared [placeLeaf](../utils/calendar-generation/helpers/Scheduler/placeLeaf.ts) primitive (the old `scheduleGoal` / `scheduleSingleTask` are absorbed).
+
+- **Leaf pool + chain edges.** Each candidate's detour-spliced leaf sequence ([getScheduledLeafSequence](../utils/goalPageHandlers.ts)) yields consecutive-pair *chain edges* (`leaf_i → leaf_{i+1}`). This one construct encodes goal-internal ordering (a goal's leaves chain so they stay clustered and after the previous), detour splices (a `linkedItemId` placeholder redirects into the target's sequence), and **multi-reference** (a target referenced from several hosts lives once with chain predecessors from all of them). Deduped by leaf id.
+- **Ordering.** Ready leaves (chain predecessors resolved, cross gate open) are placed in `(leafEffScore desc, scheduleIndex asc)` order. `leafEffScore` is leaf-level priority inheritance — a leaf inherits the max score of everything downstream that needs it (over chain + lifted queue/dependency edges), so a dependency's whole predecessor chain and a detour host's *before*-leaves ride their dependents' urgency; *after*-leaves don't. `scheduleIndex` is the clustering tiebreak.
+- **Chaining + failure.** `afterTime` for a leaf = max over its placed chain predecessors' ends (plus the cross-gate bound). A permanently-failed (TOO_LARGE) leaf publishes a *pass-through* end so the chain flows from the last real success — reproducing the old `scheduleGoal` skip-and-continue. A NO_SLOTS / partial-split leaf stays unresolved and holds back its chain successors (retry after expansion).
+- **Cross gate (queue/dependency) stays root-level** ([precedenceGate.ts](../utils/calendar-generation/helpers/Scheduler/precedenceGate.ts)): applied to a root's first scheduled leaf; a root's outcome resolves when all leaves contributing to its completion land (a detour target is a tracked root too, so it can be a queue/dependency endpoint). Day caps compose pointwise-min across every capped root a leaf belongs to (`composeGoalCaps`).
 
 ### Split tasks (chunked placement)
 
@@ -344,7 +350,7 @@ A goal root with non-null `Planner.maxMinutesPerDay` has its whole subtree meter
 - **Two-tier relaxation.** Scarcity stays strict through horizon expansion and is only relaxed by the final compromise pass (`dayCap`). But a block that can NEVER fit under the cap — leaf duration or minimum chunk > cap — places whole immediately (`oversizedLeaf`); no expansion creates such a day, and holding it strict would starve the loop.
 - Budget tests key on the slot's **start** day; a midnight-crossing placement charges each day it touches (split-task parity, via `addIntervalMinutesByDay`).
 
-Only root goal candidates reach `scheduleGoal`, so a stale cap on a retyped or nested row is inert. Guarded by [`goal-day-cap.test.ts`](../__tests__/calendar-generation/goal-day-cap.test.ts).
+The day cap applies only to root goal candidates (and detour-target roots), so a stale cap on a retyped or nested row is inert. Guarded by [`goal-day-cap.test.ts`](../__tests__/calendar-generation/goal-day-cap.test.ts).
 
 ---
 
@@ -434,7 +440,7 @@ The slot horizon is bounded — initial build covers `HORIZON_CHUNK_DAYS = 28` d
 
 ### Why proactive expansion matters
 
-Without the proactive watermark check, the scheduler would burn iterations on tasks that can't possibly fit before triggering reactive expansion. Detecting "biggest candidate > biggest compatible slot" before the forward pass starts cuts straight to the expansion step. The comparison must use `effectiveCandidateDuration` (goals sized as their largest uncompleted leaf, excluding leaves already placed or memoized) — see Section 6 for the starvation failure mode when the goal aggregate is used instead. The watermark must also resolve category constraints against the same window-bearing category set placement uses (`scheduledCategories`): a classification-only category (no time windows) is unconstrained at placement, and treating it as constraining here demands category slots that can never exist — the loop then spends its whole expansion budget on watermark `continue`s and the placement walk never runs.
+Without the proactive watermark check, the scheduler would burn iterations on leaves that can't possibly fit before triggering reactive expansion. Detecting "biggest remaining leaf > biggest compatible slot" before the forward pass starts cuts straight to the expansion step. The comparison sizes each remaining leaf by `placementBlockMinutes` (a split leaf as its required minimum chunk); leaves whose chain predecessors or cross gate are still blocked are excluded (they can't use an expansion until they unblock). The flat scheduler retired the old goal-aggregate sizing that pinned the watermark permanently true. The watermark must also resolve category constraints against the same window-bearing category set placement uses (`scheduledCategories`): a classification-only category (no time windows) is unconstrained at placement, and treating it as constraining here demands category slots that can never exist — the loop then spends its whole expansion budget on watermark `continue`s and the placement walk never runs.
 
 ### Regression coverage
 
@@ -463,11 +469,11 @@ All but the seam, window-exception, and marker-less-expansion tests run against 
 
 Returns `min(categoryCeiling, largestGap)`. Cached per `taskCategoryId ?? "anywhere"` for the duration of a scheduling pass.
 
-`scheduleSingleTask` and `scheduleGoal` call this at task entry and take the min with the task's allowed-times ceiling (`maxAllowedBlockMinutes` — the exact longest contiguous block a generic week offers under the constraint chain, measured on a two-week unroll so blocks chaining across midnight and the week seam count; the per-task value stays outside the category-keyed cache). If the required block exceeds `maxCapacity`, the task is marked `TOO_LARGE` immediately — no iterations wasted attempting placement, and no expansion budget burned hunting for an allowed block that cannot exist. The required block is the full duration for a plain task, but only the required **minimum chunk** for a split task (`minChunkRequired` of the run's remainder) — a split task is `TOO_LARGE` only when not even one minimum chunk fits anywhere.
+`placeLeaf` calls this at leaf entry and takes the min with the leaf's allowed-times ceiling (`maxAllowedBlockMinutes` — the exact longest contiguous block a generic week offers under the constraint chain, measured on a two-week unroll so blocks chaining across midnight and the week seam count; the per-task value stays outside the category-keyed cache). If the required block exceeds `maxCapacity`, the task is marked `TOO_LARGE` immediately — no iterations wasted attempting placement, and no expansion budget burned hunting for an allowed block that cannot exist. The required block is the full duration for a plain task, but only the required **minimum chunk** for a split task (`minChunkRequired` of the run's remainder) — a split task is `TOO_LARGE` only when not even one minimum chunk fits anywhere.
 
 ### `largestCompatibleSlotForLargestTask`
 
-Same module, used by the proactive expansion check. Walks the slot array and returns the largest currently-existing slot the caller-supplied biggest remaining candidate could land in, honoring category strictness and the `placementCutoffDate`. The biggest candidate is selected once per outer-loop iteration in `scheduleTasksAndGoals` by `effectiveCandidateDuration` (same module) and shared with the watermark comparison: a task's own duration, but a goal's **largest uncompleted, still-placeable leaf** — never the subtree aggregate (see Section 6), and never a leaf that is memoized or already placed this run. Split items (standalone or leaf) size as their required **minimum chunk** (`placementBlockMinutes`), never the full remainder — the aggregate would pin the watermark exactly like the goal aggregate did. Category eligibility is resolved through `categoryEligibilityMap` and intersected with the caller-supplied `schedulableCategoryIds` (the window-bearing categories), so the watermark agrees with `findValidSlots` about which windows a subcategory item may cascade into.
+Same module, used by the proactive expansion check. Walks the slot array and returns the largest currently-existing slot the caller-supplied biggest remaining leaf could land in, honoring category strictness and the `placementCutoffDate`. The biggest remaining leaf is selected once per outer-loop iteration in `scheduleTasksAndGoals` by `placementBlockMinutes` (same module) over the unblocked leaves and shared with the watermark comparison — a split leaf sizes as its required **minimum chunk**, never the full remainder. Category eligibility is resolved through `categoryEligibilityMap` and intersected with the caller-supplied `schedulableCategoryIds` (the window-bearing categories), so the watermark agrees with `findValidSlots` about which windows a subcategory item may cascade into.
 
 ---
 
@@ -661,18 +667,19 @@ CalendarGenerator.generate()
    │         │
    │         ▼
    │       create SplitPlacementState + GoalCapState (shared across iterations)
-   │       loop while candidates remain (≤ MAX_WEEKS_TO_SEARCH expansions):
+   │       leaf pool + edges: buildLeafGraph (spliced sequences, chain edges, leafEffScore)
+   │       loop while the pool is non-empty (≤ MAX_WEEKS_TO_SEARCH expansions):
    │         compute placementCutoffDate
-   │         proactive expansion check (watermark / effective-duration vs largest-compatible-slot)
+   │         proactive expansion check (watermark / biggest-leaf-block vs largest-compatible-slot)
    │           → if needed: expandSlots → continue
    │         forward pass:
-   │           for each candidate in sorted order:
-   │             scheduleSingleTask / scheduleGoal
+   │           for each ready leaf in (leafEffScore desc, scheduleIndex asc) order:
+   │             placeLeaf (chain preds resolved + cross gate open)
    │               → scheduleTask: validate → findValid → selectBest → reserve → buildEvent
-   │               → split tasks: scheduleSplitTask chunk loop (ChunkSizing)
-   │               → capped goals: per-day ledger via ChunkSizing.dayBudget
+   │               → split leaves: scheduleSplitTask chunk loop (ChunkSizing)
+   │               → capped roots: per-day ledgers via ChunkSizing.dayBudget (composed pointwise-min)
    │             collect resolved ids; remove after the pass
-   │         if candidates remain → expandSlots (reactive backstop)
+   │         if leaves remain → expandSlots (reactive backstop)
    │       final compromise pass (day caps relaxed; compromises recorded)
    │       leftover candidates at budget exhaustion → loud NO_SLOTS failures
    │

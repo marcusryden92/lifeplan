@@ -98,6 +98,7 @@ function makeTask(id: string, categoryId: string | null): Planner {
     maxMinutesPerDay: null,
     earliestStartDate: null,
     allowedTimes: null,
+    linkedItemId: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

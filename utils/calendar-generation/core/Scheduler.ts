@@ -20,6 +20,7 @@ import { PerTemplateMask } from "../models/TemplateModels";
 import { scheduleTask } from "../helpers/Scheduler/scheduleTask";
 import { scheduleTasks } from "../helpers/Scheduler/scheduleTasks";
 import { scheduleTasksAndGoals } from "../helpers/Scheduler/scheduleTasksAndGoals";
+import type { LeafGraph } from "../helpers/Scheduler/buildLeafGraph";
 import type { SplitRelaxation } from "../helpers/Scheduler/scheduleSplitTask";
 import type { GoalCapRelaxation } from "../helpers/Scheduler/goalDayCap";
 import type { SequenceBreak } from "../helpers/Scheduler/precedenceGate";
@@ -104,6 +105,7 @@ export class Scheduler {
     perTemplateMasks: PerTemplateMask[],
     plannerLocationMap: Map<string, string | null>,
     categories: Category[],
+    leafGraph: LeafGraph,
     travelPassRecorder?: TravelPassRecorder,
   ): {
     success: boolean;
@@ -121,6 +123,7 @@ export class Scheduler {
       perTemplateMasks,
       plannerLocationMap,
       categories,
+      leafGraph,
       travelPassRecorder,
     );
   }

@@ -79,6 +79,11 @@ export function handlePlannerChanges(
             extract: (r) => r.allowedTimes,
           },
           {
+            name: "linkedItemId",
+            cast: "text",
+            extract: (r) => r.linkedItemId,
+          },
+          {
             name: "sortOrder",
             cast: "double precision",
             extract: (r) => r.sortOrder,

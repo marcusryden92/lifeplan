@@ -57,6 +57,7 @@ function makePlanner(id: string, overrides: Partial<Planner>): Planner {
     maxMinutesPerDay: null,
     earliestStartDate: null,
     allowedTimes: null,
+    linkedItemId: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,

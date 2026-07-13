@@ -47,6 +47,7 @@ model Planner {
   maxMinutesPerDay     Int? // Goals only — max minutes of this goal's subtree the engine may place on any single day
   earliestStartDate    String? // Tasks + goals — the engine never places the item (or its subtree) before this instant; inherits down the tree as the max over ancestors
   allowedTimes         String? // JSON AllowedTimesSettings ({days, ranges}); tasks + goals — restricts dynamic placement to the given weekdays / time-of-day ranges, intersected down the tree
+  linkedItemId         String? // Detour: on a subtask placeholder, points to a root goal/task whose leaves the engine splices in at this position (the placeholder's own duration/children are ignored while set). SetNull on target delete.
   sortOrder          Float       @default(0) // Fractional key ordering siblings within a parentId group; 0 on top-level roots (order non-semantic)
   completedStartTime String?
   completedEndTime   String?
@@ -61,6 +62,8 @@ model Planner {
   user               User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   location           Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
   category           Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  linkedItem         Planner?    @relation("PlannerLink", fields: [linkedItemId], references: [id], onDelete: SetNull)
+  linkedBy           Planner[]   @relation("PlannerLink")
   taskPreferences    TaskPreferences?
   queueMember        QueueMember?
   dependenciesAsPredecessor PlannerDependency[] @relation("DependencyPredecessor")

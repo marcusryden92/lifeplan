@@ -53,6 +53,7 @@ export function addSubtask({
       maxMinutesPerDay: null,
       earliestStartDate: null,
       allowedTimes: null,
+      linkedItemId: null,
       sortOrder: appendKey(getSubtasksById(planner, task.id)),
       completedStartTime: null,
       completedEndTime: null,
@@ -198,6 +199,59 @@ export function getSortedTreeBottomLayer(
   id: string,
 ): Planner[] {
   return getTreeBottomLayer(planner, id);
+}
+
+// Detour-aware leaf enumeration for the SCHEDULER only. Walks the tree in DFS
+// order like the bottom layer, but a node carrying `linkedItemId` is a pure
+// redirect: its own duration/children are ignored and the linked target's
+// scheduled sequence is spliced in at that position. Real leaves are deduped
+// (a target referenced twice inside one tree still schedules once) and detour
+// chains are cycle-guarded. Kept separate from getTreeBottomLayer so structural
+// walks (deletion, counts) never follow links — a host delete must not delete
+// the linked target, and progress counts must not double.
+export function getScheduledLeafSequence(
+  planner: Planner[],
+  id: string,
+): Planner[] {
+  const index = getTreeIndex(planner);
+  const result: Planner[] = [];
+  const seen = new Set<string>();
+  const visitingTargets = new Set<string>();
+
+  const walk = (nodeId: string) => {
+    const node = index.byId.get(nodeId);
+    if (!node) return;
+    if (node.linkedItemId) {
+      const targetId = node.linkedItemId;
+      if (!index.byId.has(targetId) || visitingTargets.has(targetId)) return;
+      visitingTargets.add(targetId);
+      walk(targetId);
+      visitingTargets.delete(targetId);
+      return;
+    }
+    const children = index.childrenByParent.get(nodeId);
+    if (!children || children.length === 0) {
+      if (!seen.has(nodeId)) {
+        seen.add(nodeId);
+        result.push(node);
+      }
+      return;
+    }
+    for (const child of children) walk(child.id);
+  };
+
+  walk(id);
+  return result;
+}
+
+// Root planner ids referenced by any placeholder's linkedItemId. These roots
+// schedule via the splice, not as independent candidates.
+export function collectLinkedTargetIds(planner: Planner[]): Set<string> {
+  const targets = new Set<string>();
+  for (const p of planner) {
+    if (p.linkedItemId) targets.add(p.linkedItemId);
+  }
+  return targets;
 }
 
 // GET GOAL ROOT PARENT

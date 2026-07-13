@@ -47,3 +47,21 @@ export function pruneDependencies(
 
   return next.length === dependencies.length ? dependencies : next;
 }
+
+// Central pruning for detour links: clear a placeholder's linkedItemId when its
+// target no longer resolves to a valid schedulable root (deleted, retyped to
+// plan, nested under a parent, or untriaged). Deletes are also covered by the
+// FK's onDelete: SetNull, but clearing client-side first keeps the sync
+// transaction from writing a linkedItemId that references an about-to-be-deleted
+// row. Identity-preserving on no-op.
+export function prunePlannerDetours(planner: Planner[]): Planner[] {
+  const byId = new Map(planner.map((p) => [p.id, p]));
+  let changed = false;
+  const next = planner.map((p) => {
+    if (!p.linkedItemId) return p;
+    if (isValidPrecedenceEndpoint(byId.get(p.linkedItemId))) return p;
+    changed = true;
+    return { ...p, linkedItemId: null };
+  });
+  return changed ? next : planner;
+}

@@ -275,6 +275,7 @@ export const generatePlanners = (userId: string): Planner[] => {
       maxMinutesPerDay: null,
       earliestStartDate: null,
       allowedTimes: null,
+      linkedItemId: null,
       sortOrder,
       completedStartTime: null,
       completedEndTime: null,

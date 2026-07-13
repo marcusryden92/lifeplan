@@ -4,48 +4,23 @@ import { Slot } from "../../models/TimeSlot";
 import { gapIntervalsForDay } from "../TemplateExpander/gapIntervalsForDay";
 import { expandSlotForDay } from "../TimeSlotManager/expandSlotForDay";
 import { dateTimeService } from "../../utils/dateTimeService";
-import { getTreeBottomLayer } from "../../../goalPageHandlers";
-import { taskIsCompleted } from "../../../taskHelpers";
 import {
   parseTaskSplitting,
   minChunkRequired,
   splitRemainingMinutes,
 } from "../../../taskSplitting";
 
-// Split tasks are placed one chunk at a time, so for watermark/fit purposes
-// their size is the required minimum chunk (the whole remainder when it has
-// shrunk below 2*min), never the full duration — the aggregate would pin the
-// watermark exactly like the goal aggregate below. Applies to goal-typed
-// leaves too (goal subtree leaves are goal-typed rows); plans never split.
-function placementBlockMinutes(item: Planner): number {
+// The flat scheduler sizes the watermark per leaf. A split leaf is placed one
+// chunk at a time, so its fit size is the required minimum chunk (the whole
+// remainder once it drops below 2*min), never the full duration — the
+// aggregate would pin `biggestFit < biggestRemaining` permanently true and
+// burn the whole expansion budget. Plans never split.
+export function placementBlockMinutes(item: Planner): number {
   const settings = parseTaskSplitting(item.splitting);
   if (settings && item.plannerType !== PlannerType.plan) {
     return minChunkRequired(splitRemainingMinutes(item), settings);
   }
   return item.duration;
-}
-
-// A goal candidate is never placed as one block — scheduleGoal places its
-// leaves one at a time — so for watermark/fit purposes its size is its
-// largest uncompleted leaf, not the subtree aggregate. Treating the
-// aggregate as a block made `biggestFit < biggestRemaining` permanently
-// true for any substantial ready goal: the scheduling loop then burned its
-// whole expansion budget on watermark `continue`s and exited without
-// attempting a single candidate — silently, since nothing ever failed.
-// Leaves the scheduler will never attempt (memoized past events, already
-// placed this run) must be excluded for the same reason: sizing the goal by
-// a leaf that can't be placed pins the watermark just like the aggregate did.
-export function effectiveCandidateDuration(
-  item: Planner,
-  allPlanners: Planner[],
-  excludedLeafIds?: Set<string>,
-): number {
-  if (item.plannerType !== PlannerType.goal) return placementBlockMinutes(item);
-  const leaves = getTreeBottomLayer(allPlanners, item.id).filter(
-    (t) => !taskIsCompleted(t) && !excludedLeafIds?.has(t.id),
-  );
-  if (leaves.length === 0) return 0;
-  return Math.max(...leaves.map(placementBlockMinutes));
 }
 
 // Max usable duration in a single category window, ignoring everything else.

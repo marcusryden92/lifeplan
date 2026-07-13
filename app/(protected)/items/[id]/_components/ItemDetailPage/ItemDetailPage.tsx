@@ -19,6 +19,7 @@ import {
   EngineNotesCard,
   InQueueCard,
   DependenciesCard,
+  LinkedIntoCard,
 } from "../SideCards";
 import { SHAKE_DURATION_MS } from "../../_constants";
 import {
@@ -157,6 +158,7 @@ export default function ItemOverviewPage() {
           <NextOnCalendarCard />
           <InQueueCard />
           <DependenciesCard />
+          <LinkedIntoCard />
           <EngineNotesCard />
         </div>
       </div>

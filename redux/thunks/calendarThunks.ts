@@ -24,6 +24,7 @@ import {
 import {
   pruneQueueMembers,
   pruneDependencies,
+  prunePlannerDetours,
 } from "@/utils/precedence/prunePrecedenceInputs";
 
 type CalendarPayload = {
@@ -84,9 +85,11 @@ export const updateAllCalendarStates =
       state.schedulingSettings.defaultTransportMode,
     );
 
-    const newPlanner = updates.planner
-      ? processInput(updates.planner, currentPlanner)
-      : currentPlanner;
+    const newPlanner = prunePlannerDetours(
+      updates.planner
+        ? processInput(updates.planner, currentPlanner)
+        : currentPlanner,
+    );
     const newCalendarInput = updates.calendar
       ? processInput(updates.calendar, calendar)
       : calendar;

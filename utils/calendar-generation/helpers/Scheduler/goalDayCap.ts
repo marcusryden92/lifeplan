@@ -2,7 +2,7 @@ import { Planner, SimpleEvent, PlannerType } from "@/types/prisma";
 import { ChunkSizing } from "../../models/SchedulingModels";
 import { addIntervalMinutesByDay, dayKeyLocal } from "../../../taskSplitting";
 import { plannerIdFromEventId } from "../../../planRecurrence";
-import { getSortedTreeBottomLayer } from "../../../goalPageHandlers";
+import { getScheduledLeafSequence } from "../../../goalPageHandlers";
 
 // Per-goal daily cap: Planner.maxMinutesPerDay on a goal root limits how many
 // minutes of that goal's subtree may land on any single local day. Mirrors the
@@ -56,8 +56,10 @@ export function seedGoalDayLedger(
   if (state.seeded.has(goal.id)) return;
   state.seeded.add(goal.id);
   const dayMap = ledgerFor(goal.id, state);
+  // Splice-aware: the cap meters the goal's scheduled sequence, so a completed
+  // detour-target leaf placed under this goal seeds its day too.
   const leafIds = new Set(
-    getSortedTreeBottomLayer(allPlanners, goal.id).map((t) => t.id),
+    getScheduledLeafSequence(allPlanners, goal.id).map((t) => t.id),
   );
   for (const event of scheduledEvents) {
     if (!leafIds.has(plannerIdFromEventId(event.id))) continue;
@@ -98,6 +100,30 @@ export function buildGoalCapContext(
         start,
         capMinutes,
       }),
+  };
+}
+
+// Compose several goal caps into one context for a leaf that sits under
+// multiple capped goals at once (a detour target's leaf is metered by both the
+// host goal's cap and the target goal's own cap — pointwise min). Budget is the
+// min across caps; a placement charges every ledger; relaxations are recorded
+// on all composed goals (a chunk over the min budget relaxed at least the
+// tightest). Returns the single cap unchanged when only one applies, and
+// undefined when none do — so the non-detour path is byte-for-byte the same.
+export function composeGoalCaps(
+  caps: GoalCapContext[],
+): GoalCapContext | undefined {
+  if (caps.length === 0) return undefined;
+  if (caps.length === 1) return caps[0];
+  return {
+    capMinutes: Math.min(...caps.map((c) => c.capMinutes)),
+    budget: (slotStart) => Math.min(...caps.map((c) => c.budget(slotStart))),
+    charge: (start, end) => {
+      for (const c of caps) c.charge(start, end);
+    },
+    recordRelaxation: (kind, minutes, start) => {
+      for (const c of caps) c.recordRelaxation(kind, minutes, start);
+    },
   };
 }
 

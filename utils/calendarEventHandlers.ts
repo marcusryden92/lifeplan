@@ -67,6 +67,7 @@ export const createPlanFromSelection = (
     maxMinutesPerDay: null,
     earliestStartDate: null,
     allowedTimes: null,
+    linkedItemId: null,
     sortOrder: 0,
     priority: 5,
     completedStartTime: null,

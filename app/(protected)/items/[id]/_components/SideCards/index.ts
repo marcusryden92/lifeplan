@@ -3,4 +3,5 @@ export {
   EngineNotesCard,
   InQueueCard,
   DependenciesCard,
+  LinkedIntoCard,
 } from "./SideCards";

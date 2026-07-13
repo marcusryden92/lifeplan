@@ -8,11 +8,19 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { X, Trash2, Copy, MapPin } from "lucide-react";
-import { format } from "date-fns";
+import { X, Trash2, Copy, MapPin, Link2, Link2Off } from "lucide-react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
-import { Button, Caption, FieldStack, Input, Switch } from "@/components/ui";
+import {
+  Button,
+  Caption,
+  FieldStack,
+  Input,
+  Switch,
+  type ComboboxOption,
+} from "@/components/ui";
+import { canLinkAsDetour } from "@/utils/precedence/detourLinks";
+import { plannerIsCompleted } from "@/utils/plannerCompletion";
 import {
   SplittingFields,
   DEFAULT_SPLITTING_SETTINGS,
@@ -89,6 +97,42 @@ export function EditDrawer() {
     return root ? !root.isReady : false;
   }, [planner, task]);
 
+  // Linkable detour targets: triaged root goals/tasks, excluding this item's
+  // own root and completed items. Cycle-forming targets stay listed but
+  // annotated and blocked at commit (the Combobox has no per-option disable).
+  const linkTargets = useMemo(() => {
+    if (!task) {
+      return {
+        options: [] as ComboboxOption<string | null>[],
+        blocked: new Set<string>(),
+      };
+    }
+    const ownRoot = getRootParentId(planner, task.id);
+    const blocked = new Set<string>();
+    const options: ComboboxOption<string | null>[] = planner
+      .filter(
+        (p) =>
+          p.parentId == null &&
+          p.isTriaged &&
+          (p.plannerType === "task" || p.plannerType === "goal") &&
+          p.id !== ownRoot &&
+          !plannerIsCompleted(p),
+      )
+      .sort((a, b) => (a.title || "").localeCompare(b.title || ""))
+      .map((t) => {
+        const ok = canLinkAsDetour(planner, task.id, t.id).ok;
+        if (!ok) blocked.add(t.id);
+        return {
+          value: t.id,
+          label: ok
+            ? t.title || "Untitled"
+            : `${t.title || "Untitled"} — would create a loop`,
+          searchLabel: t.title ?? undefined,
+        };
+      });
+    return { options, blocked };
+  }, [planner, task]);
+
   const [titleDraft, setTitleDraft] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -126,6 +170,22 @@ export function EditDrawer() {
 
   const splitSettings = parseTaskSplitting(task.splitting);
   const splitCompleted = splitCompletedMinutes(task);
+
+  const isLinked = !!task.linkedItemId;
+  const linkedTarget = isLinked
+    ? planner.find((p) => p.id === task.linkedItemId)
+    : undefined;
+
+  const setLinkedItem = (targetId: string | null) => {
+    if (targetId && linkTargets.blocked.has(targetId)) return;
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === task.id
+          ? { ...p, linkedItemId: targetId, updatedAt: new Date().toISOString() }
+          : p,
+      ),
+    );
+  };
 
   const commitTitle = () => {
     const t = titleDraft.trim();
@@ -279,6 +339,36 @@ export function EditDrawer() {
           placeholder="Subtask title"
         />
 
+        {isLinked ? (
+          <FieldStack size="sm" label="Linked item">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: space["2"],
+              }}
+            >
+              <Link2 size={13} strokeWidth={2} />
+              <span style={{ flex: 1, fontWeight: 500 }}>
+                {linkedTarget?.title || "Untitled"}
+              </span>
+              <Button
+                variant="glass"
+                size="sm"
+                onClick={() => setLinkedItem(null)}
+                aria-label="Unlink"
+                title="Unlink"
+              >
+                <Link2Off size={12} strokeWidth={2.2} />
+              </Button>
+            </div>
+            <Caption>
+              This subtask redirects the schedule into the linked item; its own
+              duration and subtasks are ignored.
+            </Caption>
+          </FieldStack>
+        ) : (
+          <>
         {isLeaf && (
           <div className={completeSection}>
             <div className={completeHeader}>
@@ -388,6 +478,24 @@ export function EditDrawer() {
             ariaLabel="Deadline"
           />
         </FieldStack>
+
+        {isLeaf && (
+          <FieldStack size="sm" label="Link external item">
+            <Combobox
+              value={null}
+              options={linkTargets.options}
+              onChange={setLinkedItem}
+              placeholder="Link a goal or task…"
+              ariaLabel="Link external item"
+            />
+            <Caption>
+              Splice another goal or task&apos;s work into this position in the
+              sequence.
+            </Caption>
+          </FieldStack>
+        )}
+          </>
+        )}
       </div>
 
       <div className={drawerFooter}>

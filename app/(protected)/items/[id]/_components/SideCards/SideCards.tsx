@@ -14,6 +14,7 @@ import {
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { plannerIdFromEventId } from "@/utils/planRecurrence";
 import { plannerIsCompleted } from "@/utils/plannerCompletion";
+import { getRootParentId } from "@/utils/goalPageHandlers";
 import { buildQueueByPlannerId } from "@/utils/queue-handlers/queueLookups";
 import { wouldCreateCycleAddingDependency } from "@/utils/precedence/findCycle";
 import { describeCycle } from "@/utils/precedence/describeCycle";
@@ -127,6 +128,45 @@ export function InQueueCard() {
         &ldquo;{queue.title}&rdquo; — scheduled in order with the other items
         in this queue.
       </div>
+    </div>
+  );
+}
+
+export function LinkedIntoCard() {
+  const { item } = useItem();
+  const { planner } = useCalendarProvider();
+
+  const hosts = useMemo(() => {
+    if (item.parentId != null) return [];
+    return planner
+      .filter((p) => p.linkedItemId === item.id)
+      .map((placeholder) => {
+        const rootId = getRootParentId(planner, placeholder.id);
+        const host = rootId ? planner.find((p) => p.id === rootId) : undefined;
+        return { placeholder, host };
+      })
+      .filter(
+        (x): x is { placeholder: (typeof planner)[number]; host: NonNullable<typeof x.host> } =>
+          !!x.host,
+      );
+  }, [planner, item.id, item.parentId]);
+
+  if (hosts.length === 0) return null;
+
+  return (
+    <div className={card}>
+      <span className={cardSectionTitle}>Linked into</span>
+      <div className={whyText}>
+        This item&apos;s work is spliced into the sequence of:
+      </div>
+      {hosts.map(({ placeholder, host }) => (
+        <div key={placeholder.id} className={depRow}>
+          <TypeBadge size="sm">{host.plannerType}</TypeBadge>
+          <Link href={`/items/${host.id}`} className={depTitleLink}>
+            {host.title || "Untitled"}
+          </Link>
+        </div>
+      ))}
     </div>
   );
 }

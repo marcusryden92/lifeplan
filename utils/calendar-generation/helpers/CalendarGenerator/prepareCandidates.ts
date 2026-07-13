@@ -7,6 +7,7 @@
 import { Planner, PlannerType } from "@/types/prisma";
 import { sortByPriorityAndConstraints } from "../PrioritySorter";
 import { taskIsCompleted } from "../../../taskHelpers";
+import { collectLinkedTargetIds } from "../../../goalPageHandlers";
 
 export function prepareCandidates(
   planners: Planner[],
@@ -15,6 +16,9 @@ export function prepareCandidates(
   plannerCategoryMap?: Map<string, string | null>,
 ): Planner[] {
   const plannersById = new Map(planners.map((p) => [p.id, p]));
+  // Detour targets schedule via their host's spliced sequence, never as an
+  // independent candidate (else their leaves would place twice).
+  const linkedTargetIds = collectLinkedTargetIds(planners);
 
   function rootOf(item: Planner): Planner {
     let current = item;
@@ -38,6 +42,7 @@ export function prepareCandidates(
   // readiness via the cascade).
   const candidates = planners.filter((item) => {
     if (taskIsCompleted(item) || memoizedEventIds.has(item.id)) return false;
+    if (linkedTargetIds.has(item.id)) return false;
     if (item.plannerType === PlannerType.goal) {
       return !item.parentId && item.isReady === true;
     }

@@ -1,6 +1,8 @@
 # Precedence — queues (pipes) and dependencies for Planner items
 
-**STATUS (2026-07-13): Phases 1–8 are IMPLEMENTED, tested, and building** on branch `feature/inter-goal-dependencies`. This note is now a HAND-OFF: §1 records what exists and where, §2 the deviations from the original plan you need to know, §3 the outstanding manual verification, §4 the not-yet-implemented features with their design decisions preserved. The decided semantics below still govern every future surface — read them before touching anything.
+**STATUS (2026-07-13): Phases 1–8 IMPLEMENTED; §4d Detour IMPLEMENTED (2026-07-13)** on branch `feature/inter-goal-dependencies`. This note is now a HAND-OFF: §1 records what exists and where, §2 the deviations from the original plan you need to know, §3 the outstanding manual verification, §4 the not-yet-implemented features with their design decisions preserved. The decided semantics below still govern every future surface — read them before touching anything.
+
+**Detour (§4d) shipped via the PLACEHOLDER model, NOT the two-columns-on-the-linked-goal model §4d originally sketched.** A placeholder subtask carries `Planner.linkedItemId` (self-FK, SetNull) and becomes a pure redirect into the target root's leaves — this is more general (multi-reference, familiar subtask create/drag UX) and it required a full **flat-order engine rewrite**: the scheduler is now leaf-driven (candidate roots flattened to one leaf pool + a leaf precedence graph), with priority inheritance. See CLAUDE.md ("Detour" domain section + the engine summary's "Flat-order scheduling" bullet) and the deep-dive spine sections for the shipped design. Key files: [buildLeafGraph.ts](../utils/calendar-generation/helpers/Scheduler/buildLeafGraph.ts), [placeLeaf.ts](../utils/calendar-generation/helpers/Scheduler/placeLeaf.ts), [scheduleTasksAndGoals.ts](../utils/calendar-generation/helpers/Scheduler/scheduleTasksAndGoals.ts), [goalPageHandlers.ts](../utils/goalPageHandlers.ts) `getScheduledLeafSequence`, [detourLinks.ts](../utils/precedence/detourLinks.ts). v1 gaps: assistant can't author detours; the subtasks tree renders a placeholder as an ordinary row (drawer reveals the link); manual in-browser pass not yet run.
 
 ## Context
 
@@ -72,7 +74,9 @@ Pipes as lanes + dependencies as connectors on a **time axis**. Everything it co
 
 Category-tree surfaces, orthogonal to precedence — but they must render queue membership and effective category with the SAME lookups (4a), not their own resolution, so all views plus item detail agree with the engine's `applyQueueCategoryInheritance`.
 
-### 4d. Goal linked into another goal as a detour (TODO's "goal as subtask")
+### 4d. Goal linked into another goal as a detour (TODO's "goal as subtask") — IMPLEMENTED 2026-07-13
+
+**Shipped via the placeholder model (see the STATUS note at the top), not the columns-on-the-linked-goal design sketched below.** The analysis below is preserved for context; the shipped semantics live in CLAUDE.md.
 
 NOT reparenting and NOT containment. The linked goal stays a separate root — own category, own constraints, own readiness, own item page — and a link marks a position inside the host goal's tree. Scheduling is a **traversal-time splice**: the host's leaf enumeration inlines the linked goal's sorted bottom layer at the link position, and the existing `goalAfterTime` chaining does the rest. Zero new gate mechanics; the edit lives where `scheduleGoal` enumerates leaves (`getSortedTreeBottomLayer` consumer), not in the precedence gate.
 
