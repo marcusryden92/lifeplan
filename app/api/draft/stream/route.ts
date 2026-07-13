@@ -1,8 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { parse as parsePartial, Allow } from "partial-json";
 import { auth } from "@/auth";
-import type { DraftNode } from "@/components/draft/AIDraftModal/plannerTreeToJson";
-import type { DraftForest } from "@/components/draft/AIDraftModal/plannerForestToJson";
+import type { DraftNode } from "@/utils/draft/plannerTreeToJson";
+import type { DraftForest } from "@/utils/draft/plannerForestToJson";
 import {
   addDraftItems,
   deleteDraftItems,
@@ -11,29 +11,29 @@ import {
   updateDraftItems,
   type DraftItemUpdate,
   type DraftOpsResult,
-} from "@/components/draft/AIDraftModal/draftForestOps";
-import { assignDraftIds } from "@/components/draft/AIDraftModal/assignDraftIds";
-import { normalizeDraftForest } from "@/components/draft/AIDraftModal/normalizeDraftForest";
-import { mergeDraftForest } from "@/components/draft/AIDraftModal/mergeDraftForest";
+} from "@/utils/draft/draftForestOps";
+import { assignDraftIds } from "@/utils/draft/assignDraftIds";
+import { normalizeDraftForest } from "@/utils/draft/normalizeDraftForest";
+import { mergeDraftForest } from "@/utils/draft/mergeDraftForest";
 import {
   isValidStartDay,
   isValidTime,
   normalizeDraftTemplate,
   type DraftTemplate,
-} from "@/components/draft/AIDraftModal/draftTemplates";
+} from "@/utils/draft/draftTemplates";
 import {
   addDraftTemplates,
   deleteDraftTemplates,
   updateDraftTemplates,
   type DraftTemplateOpsResult,
   type DraftTemplateUpdate,
-} from "@/components/draft/AIDraftModal/draftTemplateOps";
+} from "@/utils/draft/draftTemplateOps";
 import {
   findWindowOverlaps,
   isValidCategoryColor,
   type DraftWindowsState,
   type DraftTimeWindow,
-} from "@/components/draft/AIDraftModal/draftWindows";
+} from "@/utils/draft/draftWindows";
 import {
   addDraftCategories,
   addDraftTimeWindows,
@@ -44,12 +44,12 @@ import {
   type DraftCategoryUpdate,
   type DraftTimeWindowUpdate,
   type DraftWindowOpsResult,
-} from "@/components/draft/AIDraftModal/draftWindowOps";
+} from "@/utils/draft/draftWindowOps";
 import {
   normalizeDraftPrecedenceState,
   pruneDraftPrecedence,
   type DraftPrecedenceState,
-} from "@/components/draft/AIDraftModal/draftPrecedence";
+} from "@/utils/draft/draftPrecedence";
 import {
   addDraftDependencies,
   addDraftQueueMembers,
@@ -61,7 +61,7 @@ import {
   updateDraftQueues,
   type DraftPrecedenceOpsResult,
   type DraftQueueUpdate,
-} from "@/components/draft/AIDraftModal/draftPrecedenceOps";
+} from "@/utils/draft/draftPrecedenceOps";
 
 // Note: this file lives under app/api/ despite the CLAUDE.md convention of
 // preferring server actions. Streaming binary/SSE responses don't map cleanly

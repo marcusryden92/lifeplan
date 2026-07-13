@@ -11,7 +11,7 @@ import {
   type DraftConversationMessage,
   type DraftConversationSummary,
 } from "@/actions/draftConversations";
-import { headerActionButton } from "./AIDraftModal.css";
+import { headerActionButton } from "@/components/draft/AIDraftModal/AIDraftModal.css";
 import {
   menu,
   stateRow,

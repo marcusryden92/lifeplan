@@ -1,8 +1,8 @@
-import { applyDraftWindows } from "@/components/draft/AIDraftModal/applyDraftWindows";
+import { applyDraftWindows } from "@/utils/draft/applyDraftWindows";
 import {
   categoriesToDraftWindows,
   type DraftWindowsState,
-} from "@/components/draft/AIDraftModal/draftWindows";
+} from "@/utils/draft/draftWindows";
 import type { Category, CategoryTimeWindow } from "@/types/prisma";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 

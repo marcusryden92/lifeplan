@@ -4,12 +4,12 @@ import {
   row,
   statusBadge,
   changedFields as changedFieldsStyle,
-} from "./JsonTreeView.css";
+} from "@/components/draft/JsonTreeView/JsonTreeView.css";
 import type {
   DiffDependency,
   DiffPrecedenceState,
   DiffQueue,
-} from "./diffDraftPrecedence";
+} from "@/utils/draft/diffDraftPrecedence";
 import {
   wrap,
   empty,

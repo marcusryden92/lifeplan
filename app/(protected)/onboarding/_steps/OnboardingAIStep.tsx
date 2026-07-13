@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Button, ConfirmModal } from "@/components/ui";
-import { AIDraftModal } from "@/components/draft/AIDraftModal/AIDraftModal";
+import { AIDraftModal } from "@/components/draft/AIDraftModal";
 import { StepFrame } from "../_components/StepFrame";
 import { aiWorkspace, footerActions } from "../onboarding.css";
 

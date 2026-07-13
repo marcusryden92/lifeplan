@@ -13,42 +13,42 @@ import {
   SegmentedControl,
 } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { plannerForestToJson } from "./plannerForestToJson";
-import { JsonForestView } from "./JsonTreeView";
-import { TemplateWeekView } from "./TemplateWeekView";
-import { ChatPane } from "./ChatPane";
-import { ChatHistoryPopover } from "./ChatHistoryPopover";
-import { useAIDraftState } from "./useAIDraftState";
+import { plannerForestToJson } from "@/utils/draft/plannerForestToJson";
+import { JsonForestView } from "@/components/draft/JsonTreeView";
+import { TemplateWeekView } from "@/components/draft/TemplateWeekView";
+import { ChatPane } from "@/components/draft/ChatPane";
+import { ChatHistoryPopover } from "@/components/draft/ChatHistoryPopover";
+import { useAIDraftState } from "@/hooks/useAIDraftState";
 import {
   streamDraft,
   type StreamChatMessage,
   type StreamDraftFocus,
-} from "./streamDraft";
+} from "@/utils/draft/streamDraft";
 import {
   normalizeDraftForest,
   type DraftForestProposal,
-} from "./normalizeDraftForest";
-import { foldDraftProposals } from "./mergeDraftForest";
+} from "@/utils/draft/normalizeDraftForest";
+import { foldDraftProposals } from "@/utils/draft/mergeDraftForest";
 import {
   applyDraftForestToPlanner,
   clampReadinessAgainstDependencies,
-} from "./applyDraftForestToPlanner";
-import { applyDraftTemplates } from "./applyDraftTemplates";
-import { applyDraftWindows } from "./applyDraftWindows";
-import { applyDraftPrecedence } from "./applyDraftPrecedence";
-import { templatesToDraft } from "./draftTemplates";
-import { categoriesToDraftWindows } from "./draftWindows";
-import { precedenceToDraft } from "./draftPrecedence";
-import { countTemplateChanges, diffDraftTemplates } from "./diffDraftTemplates";
-import { countWindowChanges, diffDraftWindows } from "./diffDraftWindows";
+} from "@/utils/draft/applyDraftForestToPlanner";
+import { applyDraftTemplates } from "@/utils/draft/applyDraftTemplates";
+import { applyDraftWindows } from "@/utils/draft/applyDraftWindows";
+import { applyDraftPrecedence } from "@/utils/draft/applyDraftPrecedence";
+import { templatesToDraft } from "@/utils/draft/draftTemplates";
+import { categoriesToDraftWindows } from "@/utils/draft/draftWindows";
+import { precedenceToDraft } from "@/utils/draft/draftPrecedence";
+import { countTemplateChanges, diffDraftTemplates } from "@/utils/draft/diffDraftTemplates";
+import { countWindowChanges, diffDraftWindows } from "@/utils/draft/diffDraftWindows";
 import {
   countPrecedenceChanges,
   diffDraftPrecedence,
-} from "./diffDraftPrecedence";
-import { WindowsView } from "./WindowsView";
-import { PrecedenceView } from "./PrecedenceView";
-import { diffDraftForest } from "./diffDraftForest";
-import { diffSubtreeHasChanges } from "./diffDraftTree";
+} from "@/utils/draft/diffDraftPrecedence";
+import { WindowsView } from "@/components/draft/WindowsView";
+import { PrecedenceView } from "@/components/draft/PrecedenceView";
+import { diffDraftForest } from "@/utils/draft/diffDraftForest";
+import { diffSubtreeHasChanges } from "@/utils/draft/diffDraftTree";
 
 import {
   overlay,

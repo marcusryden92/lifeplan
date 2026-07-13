@@ -2,12 +2,12 @@ import {
   countWindowChanges,
   diffDraftWindows,
   groupWindowsByCategory,
-} from "@/components/draft/AIDraftModal/diffDraftWindows";
+} from "@/utils/draft/diffDraftWindows";
 import type {
   DraftCategoryRecord,
   DraftTimeWindow,
   DraftWindowsState,
-} from "@/components/draft/AIDraftModal/draftWindows";
+} from "@/utils/draft/draftWindows";
 
 function window(overrides: Partial<DraftTimeWindow> = {}): DraftTimeWindow {
   return {

@@ -8,7 +8,7 @@ import {
   CategoryDot,
   useResolvedCategoryColor,
 } from "@/components/ui";
-import { diffSubtreeHasChanges, type DiffNode } from "./diffDraftTree";
+import { diffSubtreeHasChanges, type DiffNode } from "@/utils/draft/diffDraftTree";
 import {
   wrap,
   empty,

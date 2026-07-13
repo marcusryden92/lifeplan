@@ -1,15 +1,15 @@
 import type { Planner } from "@/types/prisma";
-import { plannerForestToJson } from "@/components/draft/AIDraftModal/plannerForestToJson";
+import { plannerForestToJson } from "@/utils/draft/plannerForestToJson";
 import {
   foldDraftProposals,
   mergeDraftForest,
-} from "@/components/draft/AIDraftModal/mergeDraftForest";
-import { normalizeDraftForest } from "@/components/draft/AIDraftModal/normalizeDraftForest";
+} from "@/utils/draft/mergeDraftForest";
+import { normalizeDraftForest } from "@/utils/draft/normalizeDraftForest";
 import {
   draftForestsEqual,
   diffDraftForest,
-} from "@/components/draft/AIDraftModal/diffDraftForest";
-import type { DraftNode } from "@/components/draft/AIDraftModal/plannerTreeToJson";
+} from "@/utils/draft/diffDraftForest";
+import type { DraftNode } from "@/utils/draft/plannerTreeToJson";
 
 const USER_ID = "test-user";
 const TS = "2026-01-01T00:00:00.000Z";

@@ -8,12 +8,12 @@ import {
   type DiffCategoryRecord,
   type DiffWindow,
   type DiffWindowsState,
-} from "./diffDraftWindows";
+} from "@/utils/draft/diffDraftWindows";
 import {
   row,
   statusBadge,
   changedFields as changedFieldsStyle,
-} from "./JsonTreeView.css";
+} from "@/components/draft/JsonTreeView/JsonTreeView.css";
 import {
   wrap,
   empty,

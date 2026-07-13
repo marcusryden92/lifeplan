@@ -6,7 +6,7 @@ import UserProvider from "@/context/UserProvider";
 import CalendarProvider from "@/context/CalendarProvider";
 import { AppShell, AssistantProvider } from "@/components/ui";
 import { AppLoadingScreen } from "@/components/ui/AppLoadingScreen";
-import { GlobalAssistant } from "@/components/draft/AIDraftModal";
+import { GlobalAssistant } from "@/components/draft/GlobalAssistant";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { OnboardingOverlay } from "./onboarding/OnboardingOverlay";
 

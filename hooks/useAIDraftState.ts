@@ -15,17 +15,17 @@ import {
   upsertDraftConversation,
   type DraftConversationMessage,
 } from "@/actions/draftConversations";
-import type { DraftForest } from "./plannerForestToJson";
-import { draftForestsEqual } from "./diffDraftForest";
-import { draftTemplatesEqual, type DraftTemplate } from "./draftTemplates";
+import type { DraftForest } from "@/utils/draft/plannerForestToJson";
+import { draftForestsEqual } from "@/utils/draft/diffDraftForest";
+import { draftTemplatesEqual, type DraftTemplate } from "@/utils/draft/draftTemplates";
 import {
   draftWindowsStateEqual,
   type DraftWindowsState,
-} from "./draftWindows";
+} from "@/utils/draft/draftWindows";
 import {
   draftPrecedenceStateEqual,
   type DraftPrecedenceState,
-} from "./draftPrecedence";
+} from "@/utils/draft/draftPrecedence";
 
 export interface ChatMessage {
   id: string;

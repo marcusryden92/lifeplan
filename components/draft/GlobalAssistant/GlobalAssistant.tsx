@@ -5,7 +5,7 @@ import { useAssistant } from "@/components/ui/shell/AssistantContext";
 import { useShellOverlay } from "@/components/ui/shell/ShellOverlayContext";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { getRootParentId } from "@/utils/goalPageHandlers";
-import { AIDraftModal, type AIDraftFocus } from "./AIDraftModal";
+import { AIDraftModal, type AIDraftFocus } from "@/components/draft/AIDraftModal";
 
 // Thin shell-level wrapper: resolves what the assistant should focus on
 // (an explicit scope from the opener wins; otherwise the /items/[id] route

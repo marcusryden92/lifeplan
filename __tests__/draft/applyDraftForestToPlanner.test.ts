@@ -1,7 +1,7 @@
 import type { Planner } from "@/types/prisma";
-import { applyDraftForestToPlanner } from "@/components/draft/AIDraftModal/applyDraftForestToPlanner";
-import { plannerForestToJson } from "@/components/draft/AIDraftModal/plannerForestToJson";
-import type { DraftNode } from "@/components/draft/AIDraftModal/plannerTreeToJson";
+import { applyDraftForestToPlanner } from "@/utils/draft/applyDraftForestToPlanner";
+import { plannerForestToJson } from "@/utils/draft/plannerForestToJson";
+import type { DraftNode } from "@/utils/draft/plannerTreeToJson";
 
 const USER_ID = "test-user";
 const TS = "2026-01-01T00:00:00.000Z";

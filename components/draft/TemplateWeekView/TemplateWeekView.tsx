@@ -5,12 +5,12 @@ import type { RootState } from "@/redux/store";
 import {
   groupTemplatesByDay,
   type DiffTemplate,
-} from "./diffDraftTemplates";
+} from "@/utils/draft/diffDraftTemplates";
 import {
   row,
   statusBadge,
   changedFields as changedFieldsStyle,
-} from "./JsonTreeView.css";
+} from "@/components/draft/JsonTreeView/JsonTreeView.css";
 import {
   wrap,
   empty,

@@ -4,12 +4,12 @@ import type {
   Queue,
   QueueMember,
 } from "@/types/prisma";
-import { applyDraftPrecedence } from "@/components/draft/AIDraftModal/applyDraftPrecedence";
-import { clampReadinessAgainstDependencies } from "@/components/draft/AIDraftModal/applyDraftForestToPlanner";
+import { applyDraftPrecedence } from "@/utils/draft/applyDraftPrecedence";
+import { clampReadinessAgainstDependencies } from "@/utils/draft/applyDraftForestToPlanner";
 import {
   precedenceToDraft,
   type DraftPrecedenceState,
-} from "@/components/draft/AIDraftModal/draftPrecedence";
+} from "@/utils/draft/draftPrecedence";
 
 const USER_ID = "test-user";
 const TS = "2026-01-01T00:00:00.000Z";

@@ -11,7 +11,7 @@ import { ArrowUp, Square } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui";
-import type { ChatMessage } from "./useAIDraftState";
+import type { ChatMessage } from "@/hooks/useAIDraftState";
 import {
   wrap,
   messageList,

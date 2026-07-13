@@ -1,5 +1,5 @@
-import { applyDraftTemplates } from "@/components/draft/AIDraftModal/applyDraftTemplates";
-import { templatesToDraft } from "@/components/draft/AIDraftModal/draftTemplates";
+import { applyDraftTemplates } from "@/utils/draft/applyDraftTemplates";
+import { templatesToDraft } from "@/utils/draft/draftTemplates";
 import type { EventTemplate } from "@/types/prisma";
 
 const USER = "user-1";

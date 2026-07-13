@@ -1,0 +1,1 @@
+export { TemplateWeekView } from "./TemplateWeekView";

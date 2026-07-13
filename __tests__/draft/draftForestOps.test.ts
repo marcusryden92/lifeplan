@@ -1,12 +1,12 @@
-import type { DraftNode } from "@/components/draft/AIDraftModal/plannerTreeToJson";
-import type { DraftForest } from "@/components/draft/AIDraftModal/plannerForestToJson";
+import type { DraftNode } from "@/utils/draft/plannerTreeToJson";
+import type { DraftForest } from "@/utils/draft/plannerForestToJson";
 import {
   addDraftItems,
   deleteDraftItems,
   moveDraftItem,
   searchDraftItems,
   updateDraftItems,
-} from "@/components/draft/AIDraftModal/draftForestOps";
+} from "@/utils/draft/draftForestOps";
 
 const VALID_CATEGORY_IDS: ReadonlySet<string> = new Set(["cat-1", "cat-2"]);
 

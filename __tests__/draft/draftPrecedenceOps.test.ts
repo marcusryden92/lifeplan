@@ -1,10 +1,10 @@
-import type { DraftForest } from "@/components/draft/AIDraftModal/plannerForestToJson";
-import type { DraftNode } from "@/components/draft/AIDraftModal/plannerTreeToJson";
+import type { DraftForest } from "@/utils/draft/plannerForestToJson";
+import type { DraftNode } from "@/utils/draft/plannerTreeToJson";
 import {
   draftPrecedenceStateEqual,
   pruneDraftPrecedence,
   type DraftPrecedenceState,
-} from "@/components/draft/AIDraftModal/draftPrecedence";
+} from "@/utils/draft/draftPrecedence";
 import {
   addDraftDependencies,
   addDraftQueueMembers,
@@ -14,7 +14,7 @@ import {
   removeDraftDependencies,
   removeDraftQueueMembers,
   updateDraftQueues,
-} from "@/components/draft/AIDraftModal/draftPrecedenceOps";
+} from "@/utils/draft/draftPrecedenceOps";
 
 const VALID_CATEGORY_IDS: ReadonlySet<string> = new Set(["cat-1"]);
 

@@ -5,7 +5,7 @@ import {
   deleteDraftTimeWindows,
   updateDraftCategories,
   updateDraftTimeWindows,
-} from "@/components/draft/AIDraftModal/draftWindowOps";
+} from "@/utils/draft/draftWindowOps";
 import {
   draftWindowsStateEqual,
   findWindowOverlaps,
@@ -13,7 +13,7 @@ import {
   type DraftCategoryRecord,
   type DraftTimeWindow,
   type DraftWindowsState,
-} from "@/components/draft/AIDraftModal/draftWindows";
+} from "@/utils/draft/draftWindows";
 
 const CATEGORY_WORK = "category-work";
 const CATEGORY_GYM = "category-gym";
