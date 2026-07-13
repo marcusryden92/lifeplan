@@ -12,6 +12,7 @@ import {
 } from "@/utils/timeFormatting";
 import { buildTodayAgenda } from "../_data/buildTodayAgenda";
 import { buildUncompletedItems } from "../_data/buildUncompletedItems";
+import { buildQueueCategoryByRootId } from "@/utils/queue-handlers/queueLookups";
 import { buildPriorityGoals } from "../_data/buildPriorityGoals";
 import { groupAgenda } from "../_data/groupAgenda";
 import {
@@ -48,6 +49,7 @@ export function useDashboardData(): DashboardData {
     calendar,
     template,
     categories,
+    queues,
     travelEvents,
     inheritedLocationMap,
     updateAll,
@@ -63,6 +65,11 @@ export function useDashboardData(): DashboardData {
 
   const now = useTickingNow();
 
+  const queueCategoryByRootId = useMemo(
+    () => buildQueueCategoryByRootId(queues),
+    [queues],
+  );
+
   const rawAgenda = useMemo(
     () =>
       buildTodayAgenda({
@@ -74,6 +81,7 @@ export function useDashboardData(): DashboardData {
         categories,
         locations,
         inheritedLocationMap,
+        queueCategoryByRootId,
       }),
     [
       now,
@@ -84,13 +92,20 @@ export function useDashboardData(): DashboardData {
       categories,
       locations,
       inheritedLocationMap,
+      queueCategoryByRootId,
     ],
   );
 
   const uncompleted = useMemo(
     () =>
-      buildUncompletedItems({ now, planners: planner, categories, calendar }),
-    [now, planner, categories, calendar],
+      buildUncompletedItems({
+        now,
+        planners: planner,
+        categories,
+        calendar,
+        queueCategoryByRootId,
+      }),
+    [now, planner, categories, calendar, queueCategoryByRootId],
   );
 
   const agenda = useMemo(

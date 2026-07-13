@@ -1,1 +1,6 @@
-export { NextOnCalendarCard, EngineNotesCard } from "./SideCards";
+export {
+  NextOnCalendarCard,
+  EngineNotesCard,
+  InQueueCard,
+  DependenciesCard,
+} from "./SideCards";

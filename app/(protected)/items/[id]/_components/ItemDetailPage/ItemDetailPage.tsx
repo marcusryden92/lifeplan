@@ -14,7 +14,12 @@ import { vars } from "@/lib/theme";
 import { useItem } from "../ItemContext";
 import { IdentityCard } from "../IdentityCard";
 import { RecurrenceExceptionsCard } from "../RecurrenceExceptionsCard";
-import { NextOnCalendarCard, EngineNotesCard } from "../SideCards";
+import {
+  NextOnCalendarCard,
+  EngineNotesCard,
+  InQueueCard,
+  DependenciesCard,
+} from "../SideCards";
 import { SHAKE_DURATION_MS } from "../../_constants";
 import {
   overviewGrid,
@@ -150,6 +155,8 @@ export default function ItemOverviewPage() {
         </div>
         <div className={rightCol}>
           <NextOnCalendarCard />
+          <InQueueCard />
+          <DependenciesCard />
           <EngineNotesCard />
         </div>
       </div>

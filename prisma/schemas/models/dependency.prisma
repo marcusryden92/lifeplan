@@ -1,0 +1,22 @@
+model PlannerDependency {
+  id String @id @default(uuid())
+
+  // Prerequisite edge: successor never starts before predecessor's last
+  // placed end. Rows are immutable — created or deleted, never updated.
+  // No sortOrder: order among prerequisites is meaningless by definition.
+  predecessorId String
+  predecessor   Planner @relation("DependencyPredecessor", fields: [predecessorId], references: [id], onDelete: Cascade)
+
+  successorId String
+  successor   Planner @relation("DependencySuccessor", fields: [successorId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt String @default(dbgenerated("(now())::text"))
+  updatedAt String
+
+  @@unique([predecessorId, successorId])
+  @@index([userId])
+  @@map("PlannerDependencies")
+}

@@ -26,12 +26,16 @@ import { taskIsCompleted } from "../../../taskHelpers";
 import { plannerIdFromEventId } from "../../../planRecurrence";
 import type { SplitRelaxation } from "../Scheduler/scheduleSplitTask";
 import type { GoalCapRelaxation } from "../Scheduler/goalDayCap";
+import type { SequenceBreak } from "../Scheduler/precedenceGate";
 import {
   EngineMessageEmit,
+  dependencyBrokenId,
   goalDayCapRelaxedId,
   insufficientTravelId,
+  queueSequenceBrokenId,
   scheduledLateId,
   scheduledOkId,
+  sequencePastHorizonId,
   splitConstraintRelaxedId,
   taskTooLargeId,
   taskUnschedulableId,
@@ -47,6 +51,7 @@ export function buildEngineMessages(
   previousMessages: EngineMessage[],
   splitRelaxations: SplitRelaxation[] = [],
   goalCapRelaxations: GoalCapRelaxation[] = [],
+  sequenceBreaks: SequenceBreak[] = [],
 ): EngineMessage[] {
   const priorDismissed = buildDismissedSet(previousMessages);
 
@@ -56,6 +61,7 @@ export function buildEngineMessages(
     ...emitInsufficientTravelMessages(travelEvents),
     ...emitSplitRelaxationMessages(splitRelaxations),
     ...emitGoalCapRelaxationMessages(goalCapRelaxations),
+    ...emitSequenceBreakMessages(sequenceBreaks),
     ...emitScheduledOkMessages(finalEvents),
   ];
 
@@ -244,6 +250,70 @@ function emitGoalCapRelaxationMessages(
         affectedCount: b.affectedCount,
         totalMinutes: b.totalMinutes,
         capMinutes: b.capMinutes,
+      },
+    });
+  }
+  return emits;
+}
+
+/**
+ * Sequence breaks map to three flavors:
+ *   - cause "horizon" (both sources) → SEQUENCE_PAST_HORIZON, one row per
+ *     (predecessorId, successorId): the forecast ran past the horizon, the
+ *     sequence didn't actually break.
+ *   - source "queue" → QUEUE_SEQUENCE_BROKEN, one row per (queueId,
+ *     failedPlannerId): every successor bound to the same failed member
+ *     folds into one card via the id-level dedupe.
+ *   - source "dependency" → DEPENDENCY_BROKEN, one row per
+ *     (predecessorId, successorId, cause).
+ * All three state the consequence — the successor was scheduled without
+ * waiting — not just the fact of the failure.
+ */
+function emitSequenceBreakMessages(
+  sequenceBreaks: SequenceBreak[],
+): EngineMessageEmit[] {
+  const emits: EngineMessageEmit[] = [];
+  for (const b of sequenceBreaks) {
+    if (b.cause === "horizon") {
+      emits.push({
+        id: sequencePastHorizonId(b.fromId, b.toId),
+        type: "SEQUENCE_PAST_HORIZON",
+        tone: "warn",
+        dismissed: false,
+        payload: {
+          type: "SEQUENCE_PAST_HORIZON",
+          source: b.source,
+          queueId: b.queueId ?? null,
+          predecessorId: b.fromId,
+          successorId: b.toId,
+        },
+      });
+      continue;
+    }
+    if (b.source === "queue") {
+      emits.push({
+        id: queueSequenceBrokenId(b.queueId ?? "", b.fromId),
+        type: "QUEUE_SEQUENCE_BROKEN",
+        tone: "warn",
+        dismissed: false,
+        payload: {
+          type: "QUEUE_SEQUENCE_BROKEN",
+          queueId: b.queueId ?? "",
+          failedPlannerId: b.fromId,
+        },
+      });
+      continue;
+    }
+    emits.push({
+      id: dependencyBrokenId(b.fromId, b.toId, b.cause),
+      type: "DEPENDENCY_BROKEN",
+      tone: "warn",
+      dismissed: false,
+      payload: {
+        type: "DEPENDENCY_BROKEN",
+        predecessorId: b.fromId,
+        successorId: b.toId,
+        cause: b.cause,
       },
     });
   }

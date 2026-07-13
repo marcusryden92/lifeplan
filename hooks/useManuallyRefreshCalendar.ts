@@ -13,6 +13,8 @@ import {
   EventTemplate,
   Category,
   EngineMessage,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 import { AppDispatch, RootState } from "@/redux/store";
 import { applyEngineRun } from "@/redux/slices/engineOutputSlice";
@@ -60,6 +62,12 @@ const useManuallyRefreshCalendar = (
   const previousEngineMessages = useSelector(
     (state: RootState) => state.engineOutput.engineMessages
   );
+  const queues = useSelector(
+    (state: RootState) => state.calendarSource.queues
+  );
+  const dependencies = useSelector(
+    (state: RootState) => state.calendarSource.dependencies
+  );
 
   // Store latest values in refs so callback doesn't need to depend on them
   const stateRef = useRef<{
@@ -68,6 +76,8 @@ const useManuallyRefreshCalendar = (
     calendar: SimpleEvent[];
     template: EventTemplate[];
     categories: Category[];
+    queues: Queue[];
+    dependencies: PlannerDependency[];
     weekStartDay: WeekDayIntegers;
     bufferTimeMinutes: number;
     enableTravelEvents: boolean;
@@ -81,6 +91,8 @@ const useManuallyRefreshCalendar = (
     calendar,
     template,
     categories,
+    queues,
+    dependencies,
     weekStartDay,
     bufferTimeMinutes,
     enableTravelEvents,
@@ -95,6 +107,8 @@ const useManuallyRefreshCalendar = (
     calendar,
     template,
     categories,
+    queues,
+    dependencies,
     weekStartDay,
     bufferTimeMinutes,
     enableTravelEvents,
@@ -111,6 +125,8 @@ const useManuallyRefreshCalendar = (
       calendar,
       template,
       categories,
+      queues,
+      dependencies,
       weekStartDay,
       bufferTimeMinutes,
       enableTravelEvents,
@@ -152,6 +168,8 @@ const useManuallyRefreshCalendar = (
           locationGroupingPenalties:
             debugStrategyConfig.locationGrouping.penalties,
           categories,
+          queues,
+          dependencies,
           previousEngineMessages,
         },
       }).then((result) => {

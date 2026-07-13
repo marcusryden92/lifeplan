@@ -11,6 +11,8 @@ import {
   CategoryEvent,
   TravelEvent,
   EngineMessage,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 import type {
   SerializedLocation,
@@ -36,6 +38,8 @@ const useCalendarServerSync = (
     categoryEvents: CategoryEvent[];
     travelEvents: TravelEvent[];
     engineMessages: EngineMessage[];
+    queues: Queue[];
+    dependencies: PlannerDependency[];
     locations: SerializedLocation[];
     travelTimes: SerializedTravelTime[];
   },
@@ -48,6 +52,8 @@ const useCalendarServerSync = (
   const previousCategoryEvents = useRef<CategoryEvent[]>([]);
   const previousTravelEvents = useRef<TravelEvent[]>([]);
   const previousEngineMessages = useRef<EngineMessage[]>([]);
+  const previousQueues = useRef<Queue[]>([]);
+  const previousDependencies = useRef<PlannerDependency[]>([]);
   const previousLocations = useRef<SerializedLocation[]>([]);
   const previousTravelTimes = useRef<SerializedTravelTime[]>([]);
   // OCC token. Every successful sync bumps the server-side User.dataVersion
@@ -66,6 +72,8 @@ const useCalendarServerSync = (
     categoryEvents,
     travelEvents,
     engineMessages,
+    queues,
+    dependencies,
     locations,
     travelTimes,
   } = calendarState;
@@ -79,6 +87,8 @@ const useCalendarServerSync = (
       categoryEvents: CategoryEvent[],
       travelEvents: TravelEvent[],
       engineMessages: EngineMessage[],
+      queues: Queue[],
+      dependencies: PlannerDependency[],
       dataVersion: number,
     ) => {
       previousPlanner.current = planner;
@@ -88,6 +98,8 @@ const useCalendarServerSync = (
       previousCategoryEvents.current = categoryEvents;
       previousTravelEvents.current = travelEvents;
       previousEngineMessages.current = engineMessages;
+      previousQueues.current = queues;
+      previousDependencies.current = dependencies;
       // Locations are loaded asynchronously by UserProvider, which may race
       // with the calendar fetch. We seed previousLocations from the current
       // value; the diff's create-branch is a no-op for locations (Google
@@ -140,6 +152,8 @@ const useCalendarServerSync = (
         planner: previousPlanner.current,
         template: previousTemplate.current,
         categories: previousCategories.current,
+        queues: previousQueues.current,
+        dependencies: previousDependencies.current,
       }),
     );
     dispatch(
@@ -173,6 +187,8 @@ const useCalendarServerSync = (
       previousCategoryEvents.current = fresh.categoryEvents;
       previousTravelEvents.current = fresh.travelEvents;
       previousEngineMessages.current = fresh.engineMessages;
+      previousQueues.current = fresh.queues;
+      previousDependencies.current = fresh.dependencies;
       previousLocations.current = fresh.locations;
       previousTravelTimes.current = fresh.travelTimes;
       knownDataVersion.current = fresh.dataVersion;
@@ -182,6 +198,8 @@ const useCalendarServerSync = (
           planner: fresh.planner,
           template: fresh.template,
           categories: fresh.categories,
+          queues: fresh.queues,
+          dependencies: fresh.dependencies,
         }),
       );
       dispatch(
@@ -231,6 +249,9 @@ const useCalendarServerSync = (
           JSON.stringify(s.travelEvents) &&
         JSON.stringify(previousEngineMessages.current) ===
           JSON.stringify(s.engineMessages) &&
+        JSON.stringify(previousQueues.current) === JSON.stringify(s.queues) &&
+        JSON.stringify(previousDependencies.current) ===
+          JSON.stringify(s.dependencies) &&
         JSON.stringify(previousLocations.current) ===
           JSON.stringify(s.locations) &&
         JSON.stringify(previousTravelTimes.current) ===
@@ -255,24 +276,52 @@ const useCalendarServerSync = (
         try {
           const response = await handleServerTransaction(
             knownDataVersion.current,
-            snapshot.planner,
-            previousPlanner,
-            snapshot.calendar,
-            previousCalendar,
-            snapshot.template,
-            previousTemplate,
-            snapshot.categories,
-            previousCategories,
-            snapshot.categoryEvents,
-            previousCategoryEvents,
-            snapshot.travelEvents,
-            previousTravelEvents,
-            snapshot.engineMessages,
-            previousEngineMessages,
-            snapshot.locations,
-            previousLocations,
-            snapshot.travelTimes,
-            previousTravelTimes,
+            {
+              planner: {
+                current: snapshot.planner,
+                previous: previousPlanner.current,
+              },
+              calendar: {
+                current: snapshot.calendar,
+                previous: previousCalendar.current,
+              },
+              template: {
+                current: snapshot.template,
+                previous: previousTemplate.current,
+              },
+              categories: {
+                current: snapshot.categories,
+                previous: previousCategories.current,
+              },
+              categoryEvents: {
+                current: snapshot.categoryEvents,
+                previous: previousCategoryEvents.current,
+              },
+              travelEvents: {
+                current: snapshot.travelEvents,
+                previous: previousTravelEvents.current,
+              },
+              engineMessages: {
+                current: snapshot.engineMessages,
+                previous: previousEngineMessages.current,
+              },
+              queues: {
+                current: snapshot.queues,
+                previous: previousQueues.current,
+              },
+              dependencies: {
+                current: snapshot.dependencies,
+                previous: previousDependencies.current,
+              },
+              locations: {
+                current: snapshot.locations,
+                previous: previousLocations.current,
+              },
+              travelTimes: {
+                current: snapshot.travelTimes,
+                previous: previousTravelTimes.current,
+              },
+            },
           );
           retryAttemptRef.current = 0;
 
@@ -286,6 +335,8 @@ const useCalendarServerSync = (
             previousCategoryEvents.current = snapshot.categoryEvents;
             previousTravelEvents.current = snapshot.travelEvents;
             previousEngineMessages.current = snapshot.engineMessages;
+            previousQueues.current = snapshot.queues;
+            previousDependencies.current = snapshot.dependencies;
             previousLocations.current = snapshot.locations;
             previousTravelTimes.current = snapshot.travelTimes;
             knownDataVersion.current = response.newDataVersion;
@@ -351,6 +402,8 @@ const useCalendarServerSync = (
     categoryEvents,
     travelEvents,
     engineMessages,
+    queues,
+    dependencies,
     locations,
     travelTimes,
     isInitialized,

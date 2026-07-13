@@ -131,6 +131,7 @@ export function AIDraftModal({
     categories,
     template,
     locations,
+    dependencies,
     updateAll,
     userId,
     isLoaded,
@@ -614,6 +615,7 @@ export function AIDraftModal({
           categoryColorById: new Map(
             categoriesForForest.map((c) => [c.id, c.color]),
           ),
+          dependencies,
         })
       : undefined;
     const nextTemplates = hasTemplateChanges
@@ -643,6 +645,7 @@ export function AIDraftModal({
     planner,
     template,
     categories,
+    dependencies,
     updateAll,
     onClose,
     embedded,

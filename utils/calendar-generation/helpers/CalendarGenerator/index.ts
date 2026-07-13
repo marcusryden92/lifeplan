@@ -6,6 +6,7 @@ export { buildPlannerCategoryMap } from "./buildPlannerCategoryMap";
 export { buildCategoryEligibilityMap } from "./buildCategoryEligibilityMap";
 export { buildPlannerConstraintsMap } from "./buildPlannerConstraintsMap";
 export type { PlannerSchedulingConstraints } from "./buildPlannerConstraintsMap";
+export { applyQueueCategoryInheritance } from "./applyQueueCategoryInheritance";
 export { prepareSchedulingContext } from "./prepareSchedulingContext";
 export { buildSchedulingStrategy } from "./buildSchedulingStrategy";
 export { prepareCandidates } from "./prepareCandidates";

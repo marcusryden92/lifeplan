@@ -38,7 +38,13 @@ export function scheduleGoal(
   splitState: SplitPlacementState,
   goalCapState: GoalCapState,
   allowDayCapRelaxation = false,
-): { scheduled: boolean; permanentFailure: boolean } {
+  initialAfterTime?: Date,
+): {
+  scheduled: boolean;
+  permanentFailure: boolean;
+  lastPlacedEnd?: Date;
+  allLeavesTooLarge: boolean;
+} {
   const goalTasks = getSortedTreeBottomLayer(allPlanners, goal.id).filter(
     (t) =>
       !taskIsCompleted(t) &&
@@ -59,7 +65,11 @@ export function scheduleGoal(
   }
 
   let goalFailedDueToNoSlots = false;
-  let goalAfterTime: Date | undefined = undefined;
+  // Seeded by the precedence gate: the goal's first leaf starts after its
+  // predecessors' last placed end. Leaf-to-leaf chaining rides the same
+  // variable unchanged.
+  let goalAfterTime: Date | undefined = initialAfterTime;
+  let tooLargeCount = 0;
 
   for (const task of goalTasks) {
     const splitSettings = parseTaskSplitting(task.splitting);
@@ -97,6 +107,7 @@ export function scheduleGoal(
         details: `Task duration (${requiredBlockMinutes} min${splitSettings ? ", minimum chunk" : ""}) exceeds max effective capacity (${maxCapacity} min) given templates, category, and allowed-time constraints`,
         context: { duration: requiredBlockMinutes, maxCapacity },
       });
+      tooLargeCount++;
       continue;
     }
 
@@ -174,8 +185,16 @@ export function scheduleGoal(
     }
   }
 
+  // Every remaining leaf TOO_LARGE: the goal can never make progress, so it
+  // must resolve as a permanent failure instead of reporting scheduled —
+  // successors gating on this goal break loudly rather than waiting forever.
+  const allLeavesTooLarge =
+    goalTasks.length > 0 && tooLargeCount === goalTasks.length;
+
   return {
-    scheduled: !goalFailedDueToNoSlots,
-    permanentFailure: false,
+    scheduled: !goalFailedDueToNoSlots && !allLeavesTooLarge,
+    permanentFailure: allLeavesTooLarge,
+    lastPlacedEnd: goalAfterTime,
+    allLeavesTooLarge,
   };
 }

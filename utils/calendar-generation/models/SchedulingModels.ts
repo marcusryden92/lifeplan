@@ -12,6 +12,8 @@ import {
   CategoryEvent,
   TravelEvent,
   EngineMessage,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 
 import { SchedulingFailureReason } from "../constants";
@@ -19,6 +21,7 @@ import { PlaceableSlot } from "./TimeSlot";
 import type { TravelShardSpan } from "../utils/timeSlotUtils";
 import type { SchedulerRecorder } from "../helpers/Scheduler/SchedulerRecorder";
 import type { PlannerSchedulingConstraints } from "../helpers/CalendarGenerator/buildPlannerConstraintsMap";
+import type { PrecedenceEdge } from "@/utils/precedence/types";
 
 /**
  * Result of a scheduling operation
@@ -147,6 +150,13 @@ export interface SchedulingContext {
    * actual constraint have an entry. See buildPlannerConstraintsMap.
    */
   plannerConstraintsMap?: Map<string, PlannerSchedulingConstraints>;
+  /**
+   * plannerId -> incoming precedence edges (queue order + dependencies) whose
+   * transparency filtering already happened at build time. The placement gate
+   * bounds each candidate to start after the max end across all placed
+   * predecessors. See buildPrecedenceEdges / buildPredecessorMap.
+   */
+  predecessorMap?: Map<string, PrecedenceEdge[]>;
   /**
    * Optional per-task recorder for dynamic scheduling traces (mirrors the
    * staticEventTravelPass recorder). When attached, every scheduleTask
@@ -336,6 +346,10 @@ export interface CalendarGenerationInput {
   config?: CalendarGenerationConfig;
   /** Categories with time constraints */
   categories?: Category[];
+  /** User-authored queues (pipes) — ordered precedence over root items */
+  queues?: Queue[];
+  /** Prerequisite edges between root items */
+  dependencies?: PlannerDependency[];
 }
 
 export interface StrategyConfig {

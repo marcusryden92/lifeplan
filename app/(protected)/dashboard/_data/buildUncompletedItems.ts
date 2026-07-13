@@ -15,8 +15,9 @@ export function buildUncompletedItems(args: {
   planners: Planner[];
   categories: Category[];
   calendar: SimpleEvent[];
+  queueCategoryByRootId?: Map<string, string>;
 }): UncompletedItem[] {
-  const { now, planners, categories, calendar } = args;
+  const { now, planners, categories, calendar, queueCategoryByRootId } = args;
   const nowMs = now.getTime();
   const dayStart = startOfDay(now);
   const categoryById = new Map(categories.map((c) => [c.id, c]));
@@ -45,7 +46,11 @@ export function buildUncompletedItems(args: {
       Math.floor((dayStart.getTime() - startOfDay(end).getTime()) / MS_PER_DAY),
     );
 
-    const effectiveCategoryId = getEffectiveCategoryId(planners, planner.id);
+    const effectiveCategoryId = getEffectiveCategoryId(
+      planners,
+      planner.id,
+      queueCategoryByRootId,
+    );
     const category = effectiveCategoryId
       ? categoryById.get(effectiveCategoryId)
       : undefined;

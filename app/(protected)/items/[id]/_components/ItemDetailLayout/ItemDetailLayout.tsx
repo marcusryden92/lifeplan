@@ -21,6 +21,18 @@ import {
   getTaskTreeIds,
   getTreeBottomLayer,
 } from "@/utils/goalPageHandlers";
+import { buildQueueCategoryByRootId } from "@/utils/queue-handlers/queueLookups";
+import {
+  dependencyReadyBlockers,
+  readyDependents,
+} from "@/utils/precedence/readinessBlockers";
+import { plannerIsCompleted } from "@/utils/plannerCompletion";
+import { setGoalIsReady } from "@/utils/goal-handlers/toggleGoalIsReady";
+import type { Planner } from "@/types/prisma";
+import {
+  DependencyGatePopover,
+  type GateEntry,
+} from "./DependencyGatePopover";
 import {
   completedSubtaskDuration,
   totalSubtaskDuration,
@@ -63,8 +75,15 @@ export default function ItemDetailLayout({
   // Categories come from the provider (Redux) like every other surface — a
   // page-local fetch showed stale data after edits elsewhere and blocked
   // first paint on its own round-trip.
-  const { planner, updatePlannerArray, updateAll, categories } =
-    useCalendarProvider();
+  const {
+    planner,
+    updatePlannerArray,
+    updateAll,
+    categories,
+    queues,
+    dependencies,
+    updateDependencyArray,
+  } = useCalendarProvider();
   const isCalendarLoaded = useSelector(
     (state: RootState) => state.calendarSource.isLoaded,
   );
@@ -100,12 +119,22 @@ export default function ItemDetailLayout({
 
   // Subitems inherit their category from the nearest ancestor that has one —
   // resolve the effective id, not the row's own (usually null on children).
+  // Queue membership contributes the queue's category as an inherited
+  // default so the badge matches the engine.
+  const queueCategoryByRootId = useMemo(
+    () => buildQueueCategoryByRootId(queues),
+    [queues],
+  );
   const category = useMemo(() => {
     if (!item) return null;
-    const effectiveId = getEffectiveCategoryId(planner, item.id);
+    const effectiveId = getEffectiveCategoryId(
+      planner,
+      item.id,
+      queueCategoryByRootId,
+    );
     if (!effectiveId) return null;
     return categories.find((c) => c.id === effectiveId) ?? null;
-  }, [item, planner, categories]);
+  }, [item, planner, categories, queueCategoryByRootId]);
   const categoryHasLocation = !!category?.locationId;
 
   const handlers = useItemHandlers(
@@ -241,6 +270,37 @@ export default function ItemDetailLayout({
   }
   const canMarkReady = readyBlockers.length === 0;
 
+  // Dependency gate: an unready-goal prerequisite blocks readying; a READY
+  // goal depending on this one blocks un-readying. Entries carry the edge id
+  // so the popover's Disconnect action removes the exact row.
+  const dependencyBlockerEntries: GateEntry[] = dependencies
+    .filter((d) => d.successorId === item.id)
+    .map((d) => ({
+      edgeId: d.id,
+      goal: planner.find((p) => p.id === d.predecessorId),
+    }))
+    .filter(
+      (x): x is GateEntry =>
+        !!x.goal &&
+        x.goal.plannerType === "goal" &&
+        x.goal.isReady !== true &&
+        !plannerIsCompleted(x.goal),
+    );
+
+  const readyDependentEntries: GateEntry[] = dependencies
+    .filter((d) => d.predecessorId === item.id)
+    .map((d) => ({
+      edgeId: d.id,
+      goal: planner.find((p) => p.id === d.successorId),
+    }))
+    .filter(
+      (x): x is GateEntry =>
+        !!x.goal &&
+        x.goal.plannerType === "goal" &&
+        x.goal.isReady === true &&
+        !plannerIsCompleted(x.goal),
+    );
+
   // Block un-readying when the item already has completed work — either the
   // root itself or anything in its subtree.
   const hasCompletedActivity = (() => {
@@ -255,20 +315,85 @@ export default function ItemDetailLayout({
   })();
 
   const onReadyClick = () => {
-    if (!item.isReady && !canMarkReady) {
-      const msg =
-        readyBlockers.length === 1
-          ? `Needs ${readyBlockers[0]}.`
-          : `Needs ${readyBlockers.slice(0, -1).join(", ")} and ${readyBlockers[readyBlockers.length - 1]}.`;
-      flashReadyMessage(msg);
+    if (
+      !item.isReady &&
+      (!canMarkReady || dependencyBlockerEntries.length > 0)
+    ) {
+      const parts: string[] = [];
+      if (!canMarkReady) {
+        parts.push(
+          readyBlockers.length === 1
+            ? `Needs ${readyBlockers[0]}.`
+            : `Needs ${readyBlockers.slice(0, -1).join(", ")} and ${readyBlockers[readyBlockers.length - 1]}.`,
+        );
+      }
+      for (const entry of dependencyBlockerEntries) {
+        parts.push(`Awaiting "${entry.goal.title || "Untitled"}".`);
+      }
+      flashReadyMessage(parts.join(" "));
       return;
     }
     if (item.isReady && hasCompletedActivity) {
       flashReadyMessage("Has completed work — cannot un-ready.");
       return;
     }
+    if (item.isReady && readyDependentEntries.length > 0) {
+      flashReadyMessage(
+        `Required by ${readyDependentEntries
+          .map((entry) => `"${entry.goal.title || "Untitled"}"`)
+          .join(", ")}.`,
+      );
+      return;
+    }
     flashReadyMessage(null);
     handleToggleReady();
+  };
+
+  // Shortcut actions on the gate popover. Each is itself gated — a blocked
+  // target shows its blockers in place rather than cascading.
+  const applyReadyShortcut = (goal: Planner): string | null => {
+    const missing: string[] = [];
+    if (!planner.some((p) => p.parentId === goal.id)) {
+      missing.push("at least one subtask");
+    }
+    if (!goal.deadline) missing.push("a deadline");
+    const ownBlockers = dependencyReadyBlockers(goal.id, dependencies, planner);
+    if (missing.length > 0 || ownBlockers.length > 0) {
+      const parts: string[] = [];
+      if (missing.length > 0) parts.push(`needs ${missing.join(" and ")}`);
+      if (ownBlockers.length > 0) {
+        parts.push(
+          `awaiting ${ownBlockers.map((b) => `"${b.title || "Untitled"}"`).join(", ")}`,
+        );
+      }
+      return `"${goal.title || "Untitled"}" ${parts.join("; ")}.`;
+    }
+    setGoalIsReady(updatePlannerArray, goal.id, true);
+    return null;
+  };
+
+  const applyUnreadyShortcut = (goal: Planner): string | null => {
+    const treeIds = new Set(getTaskTreeIds(planner, goal.id));
+    const hasCompleted =
+      !!goal.completedEndTime ||
+      planner.some(
+        (p) => treeIds.has(p.id) && p.id !== goal.id && !!p.completedEndTime,
+      );
+    if (hasCompleted) {
+      return `"${goal.title || "Untitled"}" has completed work — cannot un-ready.`;
+    }
+    const dependents = readyDependents(goal.id, dependencies, planner);
+    if (dependents.length > 0) {
+      return `"${goal.title || "Untitled"}" is required by ${dependents
+        .map((d) => `"${d.title || "Untitled"}"`)
+        .join(", ")}.`;
+    }
+    setGoalIsReady(updatePlannerArray, goal.id, false);
+    return null;
+  };
+
+  const disconnectDependency = (edgeId: string) => {
+    updateDependencyArray((prev) => prev.filter((d) => d.id !== edgeId));
   };
 
   return (
@@ -375,6 +500,22 @@ export default function ItemDetailLayout({
                       <Check size={12} strokeWidth={2.4} />
                       {item.isReady ? "Ready" : "Mark ready"}
                     </Button>
+                    {!item.isReady && (
+                      <DependencyGatePopover
+                        mode="ready"
+                        entries={dependencyBlockerEntries}
+                        onApply={applyReadyShortcut}
+                        onDisconnect={disconnectDependency}
+                      />
+                    )}
+                    {item.isReady && (
+                      <DependencyGatePopover
+                        mode="unready"
+                        entries={readyDependentEntries}
+                        onApply={applyUnreadyShortcut}
+                        onDisconnect={disconnectDependency}
+                      />
+                    )}
                     {readyMessage && (
                       <div className={readyHint}>{readyMessage}</div>
                     )}

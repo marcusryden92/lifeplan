@@ -3,7 +3,14 @@
 import { useCallback } from "react";
 import { AppDispatch } from "@/redux/store";
 
-import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
+import {
+  Planner,
+  SimpleEvent,
+  EventTemplate,
+  Category,
+  Queue,
+  PlannerDependency,
+} from "@/types/prisma";
 import { updateAllCalendarStates } from "@/redux/thunks/calendarThunks";
 
 export type CalendarUpdateOptions = {
@@ -41,6 +48,38 @@ export default function useCalendarStateActions(dispatch: AppDispatch) {
     []
   );
 
+  const updateQueueArray = useCallback(
+    (
+      queues: Queue[] | ((prev: Queue[]) => Queue[]),
+      options?: CalendarUpdateOptions,
+    ) => {
+      dispatch(
+        updateAllCalendarStates({
+          queues,
+          engineMode: options?.engineMode,
+        })
+      );
+    },
+    []
+  );
+
+  const updateDependencyArray = useCallback(
+    (
+      dependencies:
+        | PlannerDependency[]
+        | ((prev: PlannerDependency[]) => PlannerDependency[]),
+      options?: CalendarUpdateOptions,
+    ) => {
+      dispatch(
+        updateAllCalendarStates({
+          dependencies,
+          engineMode: options?.engineMode,
+        })
+      );
+    },
+    []
+  );
+
   const updateAll = useCallback(
     (
       planner?: Planner[] | ((prev: Planner[]) => Planner[]),
@@ -65,6 +104,8 @@ export default function useCalendarStateActions(dispatch: AppDispatch) {
   return {
     updatePlannerArray,
     updateTemplateArray,
+    updateQueueArray,
+    updateDependencyArray,
     updateAll,
   };
 }

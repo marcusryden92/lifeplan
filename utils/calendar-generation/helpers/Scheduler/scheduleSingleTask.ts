@@ -25,6 +25,7 @@ export function scheduleSingleTask(
   capacityCache: Map<string, number>,
   splitState: SplitPlacementState,
   allowDayCapRelaxation = false,
+  afterTime?: Date,
 ): {
   scheduled: boolean;
   permanentFailure: boolean;
@@ -78,6 +79,7 @@ export function scheduleSingleTask(
       settings: splitSettings,
       scheduler,
       state: splitState,
+      afterTime,
       allowDayCapRelaxation,
     });
     if (result.fullyPlaced) {
@@ -96,7 +98,9 @@ export function scheduleSingleTask(
     };
   }
 
-  const result = scheduler.scheduleTask(task);
+  // Do NOT compose earliestStartDate here — findValidSlots owns the
+  // max(afterTime, earliest-start chain) composition (effectiveAfter).
+  const result = scheduler.scheduleTask(task, afterTime);
 
   if (result.success && result.event) {
     scheduledTaskIds.add(task.id);

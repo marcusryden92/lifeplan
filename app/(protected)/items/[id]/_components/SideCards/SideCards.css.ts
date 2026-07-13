@@ -74,3 +74,84 @@ export const whyText = style([
     transition: themeTransition,
   },
 ]);
+
+export const depGroupLabel = style([
+  text.microLabel,
+  {
+    display: "block",
+    fontWeight: 600,
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    color: vars.muted,
+    marginTop: space["2.5"],
+    marginBottom: space["1"],
+    transition: themeTransition,
+  },
+]);
+
+export const depRow = style({
+  display: "flex",
+  alignItems: "center",
+  gap: space["2"],
+  padding: "4px 0",
+  minWidth: 0,
+});
+
+export const depTitleLink = style([
+  text.bodySm,
+  {
+    flex: 1,
+    minWidth: 0,
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    textOverflow: "ellipsis",
+    color: vars.ink,
+    textDecoration: "none",
+    transition: themeTransition,
+    selectors: {
+      "&:hover": { textDecoration: "underline" },
+    },
+  },
+]);
+
+export const depRemove = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 20,
+  height: 20,
+  border: "none",
+  background: "transparent",
+  borderRadius: 4,
+  color: vars.muted,
+  cursor: "pointer",
+  flexShrink: 0,
+  transition: themeTransition,
+  selectors: {
+    "&:hover": {
+      color: vars.ink,
+      background: vars.interactive.hoverFill,
+    },
+  },
+});
+
+export const depPickerRow = style({
+  marginTop: space["2"],
+});
+
+export const depError = style([
+  text.bodySm,
+  {
+    color: vars.status.error,
+    marginTop: space["1.5"],
+    lineHeight: 1.45,
+  },
+]);
+
+export const depEmpty = style([
+  text.bodySm,
+  {
+    color: vars.muted,
+    padding: "2px 0",
+  },
+]);

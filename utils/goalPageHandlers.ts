@@ -326,12 +326,17 @@ export function getGoalTree(planner: Planner[], id: string): Planner[] {
   return tasks;
 }
 
+// `queueCategoryByRootId` (buildQueueCategoryByRootId) resolves the queue's
+// inherited default when the parent-chain walk finds no own category — so UI
+// badges agree with the engine's applyQueueCategoryInheritance.
 export function getEffectiveCategoryId(
   planner: Planner[],
   id: string,
+  queueCategoryByRootId?: Map<string, string>,
 ): string | null {
   const visited = new Set<string>();
   let currentId: string | null = id;
+  let rootId: string = id;
 
   while (currentId) {
     if (visited.has(currentId)) break;
@@ -341,10 +346,11 @@ export function getEffectiveCategoryId(
     if (!task) break;
 
     if (task.categoryId) return task.categoryId;
+    rootId = task.id;
     currentId = task.parentId;
   }
 
-  return null;
+  return queueCategoryByRootId?.get(rootId) ?? null;
 }
 
 export interface InheritedLocationInfo {
@@ -360,6 +366,7 @@ export function buildInheritedLocationMap(
   planners: Planner[],
   categories: Category[],
   locations: { id: string; name: string }[],
+  queueCategoryByRootId?: Map<string, string>,
 ): Map<string, InheritedLocationInfo> {
   const result = new Map<string, InheritedLocationInfo>();
   const plannerMap = new Map(planners.map((p) => [p.id, p]));
@@ -390,7 +397,11 @@ export function buildInheritedLocationMap(
     }
 
     if (!info) {
-      const effectiveCategoryId = getEffectiveCategoryId(planners, planner.id);
+      const effectiveCategoryId = getEffectiveCategoryId(
+        planners,
+        planner.id,
+        queueCategoryByRootId,
+      );
       if (effectiveCategoryId) {
         const category = categories.find((c) => c.id === effectiveCategoryId);
         if (category?.locationId) {

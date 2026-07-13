@@ -41,6 +41,9 @@ model Category {
   // Materialized weekly occurrences with trespass info (back-reference)
   events CategoryEvent[]
 
+  // Queues inheriting this category as their members' default (back-reference)
+  queues Queue[]
+
   createdAt String @default(dbgenerated("(now())::text"))
   updatedAt String
 

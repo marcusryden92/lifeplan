@@ -14,6 +14,8 @@ import {
   CategoryEvent,
   TravelEvent,
   EngineMessage,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 import { SimpleEvent } from "@/types/prisma";
 import { EventTemplate } from "@/types/prisma";
@@ -27,6 +29,8 @@ interface Data {
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
   engineMessages: EngineMessage[];
+  queues: Queue[];
+  dependencies: PlannerDependency[];
 }
 
 export function useFetchCalendarData(
@@ -39,6 +43,8 @@ export function useFetchCalendarData(
     categoryEvents: CategoryEvent[],
     travelEvents: TravelEvent[],
     engineMessages: EngineMessage[],
+    queues: Queue[],
+    dependencies: PlannerDependency[],
     dataVersion: number,
   ) => void,
 ) {
@@ -69,6 +75,8 @@ export function useFetchCalendarData(
           categoryEvents,
           travelEvents,
           engineMessages,
+          queues,
+          dependencies,
           dataVersion,
         } = response.data;
         const newData = {
@@ -79,6 +87,8 @@ export function useFetchCalendarData(
           categoryEvents,
           travelEvents,
           engineMessages,
+          queues,
+          dependencies,
         };
 
         setData(newData);
@@ -89,6 +99,8 @@ export function useFetchCalendarData(
             planner: newData.planner,
             template: newData.template,
             categories: newData.categories,
+            queues: newData.queues,
+            dependencies: newData.dependencies,
           }),
         );
         dispatch(
@@ -108,6 +120,8 @@ export function useFetchCalendarData(
           newData.categoryEvents,
           newData.travelEvents,
           newData.engineMessages,
+          newData.queues,
+          newData.dependencies,
           dataVersion,
         );
       } catch (err) {

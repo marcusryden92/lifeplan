@@ -20,6 +20,8 @@ import {
   Category,
   CategoryEvent,
   TravelEvent,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
@@ -35,6 +37,7 @@ import type {
   SerializedTravelTime,
 } from "@/redux/slices/schedulingSettingsSlice";
 import { buildInheritedLocationMap, InheritedLocationInfo } from "@/utils/goalPageHandlers";
+import { buildQueueCategoryByRootId } from "@/utils/queue-handlers/queueLookups";
 
 type CalendarContextType = {
   userId: string;
@@ -50,12 +53,24 @@ type CalendarContextType = {
   categories: Category[];
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
+  queues: Queue[];
+  dependencies: PlannerDependency[];
   locations: SerializedLocation[];
   updatePlannerArray: (
     planner: Planner[] | ((prev: Planner[]) => Planner[]),
     options?: CalendarUpdateOptions,
   ) => void;
   updateTemplateArray: React.Dispatch<React.SetStateAction<EventTemplate[]>>;
+  updateQueueArray: (
+    queues: Queue[] | ((prev: Queue[]) => Queue[]),
+    options?: CalendarUpdateOptions,
+  ) => void;
+  updateDependencyArray: (
+    dependencies:
+      | PlannerDependency[]
+      | ((prev: PlannerDependency[]) => PlannerDependency[]),
+    options?: CalendarUpdateOptions,
+  ) => void;
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
     calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
@@ -110,6 +125,12 @@ export default function CalendarProvider({
   const categories = useSelector(
     (state: RootState) => state.calendarSource.categories,
   );
+  const queues = useSelector(
+    (state: RootState) => state.calendarSource.queues,
+  );
+  const dependencies = useSelector(
+    (state: RootState) => state.calendarSource.dependencies,
+  );
   const isCalendarLoaded = useSelector(
     (state: RootState) => state.calendarSource.isLoaded,
   );
@@ -132,8 +153,13 @@ export default function CalendarProvider({
     (state: RootState) => state.schedulingSettings.weekStartDay,
   );
 
-  const { updatePlannerArray, updateTemplateArray, updateAll } =
-    useCalendarStateActions(dispatch);
+  const {
+    updatePlannerArray,
+    updateTemplateArray,
+    updateQueueArray,
+    updateDependencyArray,
+    updateAll,
+  } = useCalendarStateActions(dispatch);
 
   const manuallyRefreshCalendar = useManuallyRefreshCalendar(
     userId,
@@ -229,6 +255,8 @@ export default function CalendarProvider({
       categoryEvents,
       travelEvents,
       engineMessages,
+      queues,
+      dependencies,
       locations,
       travelTimes,
     }),
@@ -240,6 +268,8 @@ export default function CalendarProvider({
       categoryEvents,
       travelEvents,
       engineMessages,
+      queues,
+      dependencies,
       locations,
       travelTimes,
     ],
@@ -251,9 +281,19 @@ export default function CalendarProvider({
 
   useFetchCalendarData(userId, initializeState);
 
+  const queueCategoryByRootId = useMemo(
+    () => buildQueueCategoryByRootId(queues),
+    [queues],
+  );
   const inheritedLocationMap = useMemo(
-    () => buildInheritedLocationMap(planner, categories, locations),
-    [planner, categories, locations]
+    () =>
+      buildInheritedLocationMap(
+        planner,
+        categories,
+        locations,
+        queueCategoryByRootId,
+      ),
+    [planner, categories, locations, queueCategoryByRootId]
   );
 
   // Memoized so a provider re-render (any calendar-slice write) only reaches
@@ -273,9 +313,13 @@ export default function CalendarProvider({
             categories,
             categoryEvents,
             travelEvents,
+            queues,
+            dependencies,
             locations,
             updatePlannerArray,
             updateTemplateArray,
+            updateQueueArray,
+            updateDependencyArray,
             updateAll,
             manuallyRefreshCalendar,
             inheritedLocationMap,
@@ -292,9 +336,13 @@ export default function CalendarProvider({
       categories,
       categoryEvents,
       travelEvents,
+      queues,
+      dependencies,
       locations,
       updatePlannerArray,
       updateTemplateArray,
+      updateQueueArray,
+      updateDependencyArray,
       updateAll,
       manuallyRefreshCalendar,
       inheritedLocationMap,

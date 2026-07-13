@@ -62,6 +62,9 @@ model Planner {
   location           Location?   @relation(fields: [locationId], references: [id], onDelete: SetNull)
   category           Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   taskPreferences    TaskPreferences?
+  queueMember        QueueMember?
+  dependenciesAsPredecessor PlannerDependency[] @relation("DependencyPredecessor")
+  dependenciesAsSuccessor   PlannerDependency[] @relation("DependencySuccessor")
 
   @@index([userId])
   @@map("Planners")

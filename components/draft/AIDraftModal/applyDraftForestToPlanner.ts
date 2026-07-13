@@ -1,8 +1,9 @@
 import { v4 as uuidv4 } from "uuid";
-import type { Planner } from "@/types/prisma";
+import type { Planner, PlannerDependency } from "@/types/prisma";
 import { PlannerType } from "@/generated/client";
 import { getTaskTreeIds } from "@/utils/goalPageHandlers";
 import { SORT_ORDER_STEP } from "@/utils/goal-handlers/sortOrderKeys";
+import { dependencyReadyBlockers } from "@/utils/precedence/readinessBlockers";
 import { plannerTreeToJson, type DraftNode } from "./plannerTreeToJson";
 import type { DraftForest } from "./plannerForestToJson";
 import { draftTreesEqual } from "./diffDraftTree";
@@ -57,6 +58,9 @@ interface ApplyForestArgs {
   // color and before the deterministic palette fallback. Optional so callers
   // that don't care about coloring can omit it.
   categoryColorById?: ReadonlyMap<string, string | null>;
+  // Dependency edges, used to clamp isReady at save time — the assistant has
+  // no dependency awareness, so this mirrors the UI's readiness gate.
+  dependencies?: PlannerDependency[];
 }
 
 // A new top-level item's color: the model's explicit pick, else its category's
@@ -90,6 +94,7 @@ export function applyDraftForestToPlanner({
   userId,
   validCategoryIds,
   categoryColorById,
+  dependencies = [],
 }: ApplyForestArgs): Planner[] {
   const now = new Date().toISOString();
   let current = planner;
@@ -133,6 +138,38 @@ export function applyDraftForestToPlanner({
         ...current,
         ...buildNewRootRows(goal, userId, validCategoryIds, categoryColorById, now),
       ];
+    }
+  }
+
+  // Containment clamp: the assistant has no dependency awareness, so a goal
+  // it marked ready may still have an unready-goal prerequisite. Mirror the
+  // UI gate against the SAVED array (a predecessor legitimately readied in
+  // this same save doesn't block) and un-ready the whole subtree — the
+  // cascade keeps readiness a consistent whole-tree property. Runs to a
+  // fixed point: clamping one goal can newly block a goal that depends on
+  // it. Terminates because each pass strictly shrinks the ready set.
+  if (dependencies.length > 0) {
+    let clampedSomething = true;
+    while (clampedSomething) {
+      clampedSomething = false;
+      for (const root of current) {
+        if (root.parentId != null) continue;
+        if (root.plannerType !== PlannerType.goal) continue;
+        if (root.isReady !== true) continue;
+        const blockers = dependencyReadyBlockers(
+          root.id,
+          dependencies,
+          current,
+        );
+        if (blockers.length === 0) continue;
+        const treeIds = new Set(getTaskTreeIds(current, root.id));
+        current = current.map((p) =>
+          treeIds.has(p.id) ? { ...p, isReady: false, updatedAt: now } : p,
+        );
+        clampedSomething = true;
+        // Restart the scan — the for..of is iterating a stale snapshot now.
+        break;
+      }
     }
   }
 

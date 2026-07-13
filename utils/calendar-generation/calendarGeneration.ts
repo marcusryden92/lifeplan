@@ -14,8 +14,11 @@ import {
   CategoryEvent,
   TravelEvent,
   EngineMessage,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 import { CalendarGenerator } from "./core/CalendarGenerator";
+import { applyQueueCategoryInheritance } from "./helpers/CalendarGenerator";
 import { SCHEDULING_CONFIG } from "./constants";
 import type {
   TravelTimeEntry,
@@ -37,6 +40,10 @@ export interface GenerateCalendarOptions {
   locationGroupingScores?: LocationGroupingScoresConfig;
   locationGroupingPenalties?: LocationGroupingPenaltiesConfig;
   categories?: Category[];
+  /** User-authored queues (pipes) — ordered precedence over root items */
+  queues?: Queue[];
+  /** Prerequisite edges between root items */
+  dependencies?: PlannerDependency[];
   /**
    * Prior engine messages array, consulted at emit time to carry forward
    * the user-owned `dismissed` flag by id. Callers pass the current Redux
@@ -84,7 +91,14 @@ export function generateCalendar(
   // regen: validatePlanners errors on a zero-duration task or a start-less
   // plan, and the generator returns empty events on any validation failure.
   // Drop them once here, at the input boundary.
-  const scheduledPlanners = planner.filter((p) => p.isTriaged !== false);
+  const triagedPlanners = planner.filter((p) => p.isTriaged !== false);
+  // Queue category inheritance is also an input-boundary substitution:
+  // categoryless root members adopt their queue's category before any map
+  // is built, so every downstream consumer sees it without signature changes.
+  const scheduledPlanners = applyQueueCategoryInheritance(
+    triagedPlanners,
+    opts.queues ?? [],
+  );
 
   // Logging configuration - set enableLogging to false to disable all logging.
   // dateRangeStart / dateRangeEnd limit event-based logs (finalEvents,
@@ -121,6 +135,8 @@ export function generateCalendar(
     previousCalendar: prevCalendar,
     previousEngineMessages: opts.previousEngineMessages,
     categories: opts.categories,
+    queues: opts.queues,
+    dependencies: opts.dependencies,
     config: {
       maxDaysAhead: SCHEDULING_CONFIG.MAX_DAYS_TO_SEARCH,
       enableLogging,

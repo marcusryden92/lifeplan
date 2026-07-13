@@ -32,6 +32,9 @@ model User {
   engineMessages        EngineMessage[]
   draftConversations    DraftConversation[]
   verificationTokens    VerificationToken[]
+  queues                Queue[]
+  queueMembers          QueueMember[]
+  plannerDependencies   PlannerDependency[]
 
   @@map("users")
 }

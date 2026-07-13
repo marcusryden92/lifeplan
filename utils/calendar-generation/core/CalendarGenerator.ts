@@ -33,6 +33,10 @@ import {
   emitDebugLog,
   buildEngineMessages,
 } from "../helpers/CalendarGenerator";
+import {
+  buildPrecedenceEdges,
+  buildPredecessorMap,
+} from "../helpers/Scheduler/precedenceEdges";
 import { scoreCandidatesAndRootGoals } from "../helpers/PrioritySorter";
 import {
   buildAvailableSlots,
@@ -190,6 +194,15 @@ export class CalendarGenerator {
     // Per-planner scheduling constraints (earliest start + allowed times),
     // resolved down the tree so goal leaves inherit their ancestors' bounds.
     const plannerConstraintsMap = buildPlannerConstraintsMap(input.planners);
+    // Precedence edges (queue order + dependency prerequisites), transparency
+    // already applied — the third sibling map. The placement gate reads the
+    // predecessor grouping off the scheduling context.
+    const precedenceEdges = buildPrecedenceEdges(
+      input.queues ?? [],
+      input.dependencies ?? [],
+      input.planners,
+    );
+    const predecessorMap = buildPredecessorMap(precedenceEdges);
 
     // Phase 6a: Build available slots over the full scheduling timeline
     const schedulingStartDate = setTimeOnDate(currentDate, "00:00");
@@ -262,6 +275,7 @@ export class CalendarGenerator {
       plannerCategoryMap,
       categoryEligibilityMap,
       plannerConstraintsMap,
+      predecessorMap,
       schedulerRecorder,
       previousById,
     );
@@ -353,6 +367,7 @@ export class CalendarGenerator {
       input.previousEngineMessages ?? [],
       schedulingResult.splitRelaxations,
       schedulingResult.goalCapRelaxations,
+      schedulingResult.sequenceBreaks,
     );
 
     return {

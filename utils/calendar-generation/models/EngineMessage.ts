@@ -22,6 +22,9 @@
  *   - TASK_UNSCHEDULABLE:  plannerId | reason
  *   - SPLIT_CONSTRAINT_RELAXED: plannerId | kind | affectedCount | totalMinutes
  *   - GOAL_DAY_CAP_RELAXED: plannerId | kind | affectedCount | totalMinutes
+ *   - QUEUE_SEQUENCE_BROKEN: queueId | failedPlannerId
+ *   - DEPENDENCY_BROKEN:   predecessorId | successorId | cause
+ *   - SEQUENCE_PAST_HORIZON: predecessorId | successorId
  *   - SCHEDULED_OK:        placedCount
  *
  * Any change to a discriminating field (placement shift, new reason, new
@@ -46,6 +49,9 @@ export type EngineMessageType =
   | "INSUFFICIENT_TRAVEL"
   | "SPLIT_CONSTRAINT_RELAXED"
   | "GOAL_DAY_CAP_RELAXED"
+  | "QUEUE_SEQUENCE_BROKEN"
+  | "DEPENDENCY_BROKEN"
+  | "SEQUENCE_PAST_HORIZON"
   | "SCHEDULED_OK";
 
 /**
@@ -116,6 +122,35 @@ export type EngineMessagePayload =
       affectedCount: number;
       totalMinutes: number;
       capMinutes: number;
+    }
+  | {
+      // A queue member permanently failed to place, so later members were
+      // scheduled without waiting for it. One row per (queueId,
+      // failedPlannerId) — every successor bound to the same failed member
+      // folds into the one card. Both fields ride in the id.
+      type: "QUEUE_SEQUENCE_BROKEN";
+      queueId: string;
+      failedPlannerId: string;
+    }
+  | {
+      // A dependency predecessor failed ("failed") or is an unready goal
+      // ("unready") — the successor was scheduled without waiting for it.
+      // A prerequisite never stops being a prerequisite, so the unready
+      // case is loud here where the queue equivalent skips silently.
+      type: "DEPENDENCY_BROKEN";
+      predecessorId: string;
+      successorId: string;
+      cause: "failed" | "unready";
+    }
+  | {
+      // Budget-exhaustion flavor for both sources: the predecessor's only
+      // failure is that its forecast extends past the scheduling horizon —
+      // the sequence didn't break, the calendar just can't see that far.
+      type: "SEQUENCE_PAST_HORIZON";
+      source: "queue" | "dependency";
+      queueId: string | null;
+      predecessorId: string;
+      successorId: string;
     }
   | {
       // Informational summary emitted once per regen when at least one
@@ -232,6 +267,28 @@ export function goalDayCapRelaxedId(fields: {
     fields.affectedCount,
     fields.totalMinutes,
   )}`;
+}
+
+export function queueSequenceBrokenId(
+  queueId: string,
+  failedPlannerId: string,
+): string {
+  return `QUEUE_SEQUENCE_BROKEN${MESSAGE_ID_DELIM}${joinBody(queueId, failedPlannerId)}`;
+}
+
+export function dependencyBrokenId(
+  predecessorId: string,
+  successorId: string,
+  cause: "failed" | "unready",
+): string {
+  return `DEPENDENCY_BROKEN${MESSAGE_ID_DELIM}${joinBody(predecessorId, successorId, cause)}`;
+}
+
+export function sequencePastHorizonId(
+  predecessorId: string,
+  successorId: string,
+): string {
+  return `SEQUENCE_PAST_HORIZON${MESSAGE_ID_DELIM}${joinBody(predecessorId, successorId)}`;
 }
 
 export function scheduledOkId(placedCount: number): string {

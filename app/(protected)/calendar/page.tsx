@@ -90,7 +90,7 @@ function renderDayHeader(arg: { date: Date; isToday: boolean }) {
 }
 
 export default function CalendarPage() {
-  const { weekStartDay, manuallyRefreshCalendar, planner } =
+  const { weekStartDay, manuallyRefreshCalendar, planner, queues } =
     useCalendarProvider();
   const dispatch = useDispatch<AppDispatch>();
   const engineMessages = useSelector(
@@ -116,7 +116,7 @@ export default function CalendarPage() {
     [calendarEvents],
   );
   const renderedMessages = useMemo(() => {
-    const lookups = buildEngineMessageLookups(planner, locations);
+    const lookups = buildEngineMessageLookups(planner, locations, queues);
     // renderEngineMessage returns null for payload shapes we don't recognize
     // (e.g. a persisted row from a newer client version). Drop those rather
     // than showing an undefined card — no signal is better than a crash.
@@ -136,7 +136,7 @@ export default function CalendarPage() {
         : null;
       return [{ ...rendered, drillTo }];
     });
-  }, [engineMessages, planner, locations]);
+  }, [engineMessages, planner, locations, queues]);
   const failCount = renderedMessages.filter((m) => m.tone === "fail").length;
   const warnCount = renderedMessages.filter((m) => m.tone === "warn").length;
   const handleDismiss = useCallback(

@@ -10,7 +10,7 @@
  *     re-parsing prose.
  */
 
-import type { Planner, EngineMessage } from "@/types/prisma";
+import type { Planner, EngineMessage, Queue } from "@/types/prisma";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import type {
   EngineMessagePayload,
@@ -33,15 +33,18 @@ export type RenderedEngineMessage = {
 export type EngineMessageLookups = {
   plannerById: Map<string, Planner>;
   locationById: Map<string, SerializedLocation>;
+  queueById: Map<string, Queue>;
 };
 
 export function buildEngineMessageLookups(
   planners: Planner[],
   locations: SerializedLocation[],
+  queues: Queue[] = [],
 ): EngineMessageLookups {
   return {
     plannerById: new Map(planners.map((p) => [p.id, p])),
     locationById: new Map(locations.map((l) => [l.id, l])),
+    queueById: new Map(queues.map((q) => [q.id, q])),
   };
 }
 
@@ -62,6 +65,9 @@ export function renderEngineMessage(
     "INSUFFICIENT_TRAVEL",
     "SPLIT_CONSTRAINT_RELAXED",
     "GOAL_DAY_CAP_RELAXED",
+    "QUEUE_SEQUENCE_BROKEN",
+    "DEPENDENCY_BROKEN",
+    "SEQUENCE_PAST_HORIZON",
     "SCHEDULED_OK",
   ];
   const rawType = (raw as { type: unknown }).type;
@@ -194,6 +200,68 @@ export function renderEngineMessage(
         tone,
         title: `"${label}" placed over its daily limit`,
         body,
+        goToDate: null,
+      };
+    }
+
+    case "QUEUE_SEQUENCE_BROKEN": {
+      const queue = lookups.queueById.get(payload.queueId);
+      const failed = lookups.plannerById.get(payload.failedPlannerId);
+      const queueLabel = queue ? `"${queue.title}"` : "a queue";
+      const failedLabel = failed ? `"${failed.title}"` : "an item";
+      return {
+        id: message.id,
+        tag: "QUEUE",
+        tone,
+        title: `Order broken in ${queueLabel}`,
+        body: `${failedLabel} couldn't be placed, so later items in the queue were scheduled without waiting for it.`,
+        goToDate: null,
+      };
+    }
+
+    case "DEPENDENCY_BROKEN": {
+      const predecessor = lookups.plannerById.get(payload.predecessorId);
+      const successor = lookups.plannerById.get(payload.successorId);
+      const predecessorLabel = predecessor
+        ? `"${predecessor.title}"`
+        : "a prerequisite";
+      const successorLabel = successor ? `"${successor.title}"` : "An item";
+      const reason =
+        payload.cause === "unready"
+          ? `${predecessorLabel} isn't marked ready yet`
+          : `${predecessorLabel} couldn't be placed`;
+      return {
+        id: message.id,
+        tag: "PREREQUISITE",
+        tone,
+        title: `${successorLabel} scheduled without its prerequisite`,
+        body: `${reason}, so ${successorLabel} was scheduled without waiting for it.`,
+        goToDate: null,
+      };
+    }
+
+    case "SEQUENCE_PAST_HORIZON": {
+      const predecessor = lookups.plannerById.get(payload.predecessorId);
+      const successor = lookups.plannerById.get(payload.successorId);
+      const predecessorLabel = predecessor
+        ? `"${predecessor.title}"`
+        : "an earlier item";
+      const successorLabel = successor ? `"${successor.title}"` : "a later item";
+      const queue = payload.queueId
+        ? lookups.queueById.get(payload.queueId)
+        : undefined;
+      const context =
+        payload.source === "queue"
+          ? queue
+            ? ` in the "${queue.title}" queue`
+            : " in a queue"
+          : "";
+      return {
+        id: message.id,
+        tag: "HORIZON",
+        tone,
+        title: `Forecast for ${predecessorLabel} runs past the horizon`,
+        body: `The schedule couldn't reach the end of ${predecessorLabel}${context} within the planning horizon, so ${successorLabel} was scheduled without waiting for it.`,
         goToDate: null,
       };
     }
