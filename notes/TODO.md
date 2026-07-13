@@ -10,7 +10,10 @@
 
 - Add inter-goal dependencies (with cycle detection)
 - Allow a goal to be added/linked to another goal as a subtask
-- File-view / mind-map style: displays categories + sub-categories + items together
+
+- File-view: displays categories + sub-categories + items together
+- Mind-map style: items as organized under their roles and sub-categories
+- Directional Graph: All the goals and their directions, dependencies and connections
 
 - Custom Claude API key
 - Mobile app (Capacitor wrap)
