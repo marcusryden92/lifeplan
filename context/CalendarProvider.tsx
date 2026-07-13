@@ -76,6 +76,10 @@ type CalendarContextType = {
     calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
     template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
     categories?: Category[] | ((prev: Category[]) => Category[]),
+    queues?: Queue[] | ((prev: Queue[]) => Queue[]),
+    dependencies?:
+      | PlannerDependency[]
+      | ((prev: PlannerDependency[]) => PlannerDependency[]),
     options?: CalendarUpdateOptions,
   ) => void;
   manuallyRefreshCalendar: () => void;

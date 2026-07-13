@@ -6,6 +6,7 @@ import {
   interactiveTransition,
   radii,
   text,
+  caption,
   iconBtn,
 } from "@/lib/theme";
 
@@ -75,11 +76,6 @@ export const memberTitleLink = style({
   },
 });
 
-export const memberCompleted = style({
-  opacity: 0.55,
-  textDecoration: "line-through",
-});
-
 export const memberHint = style([
   text.microLabel,
   {
@@ -128,5 +124,81 @@ export const emptyNote = style([
     padding: "18px 10px",
     color: vars.muted,
     textAlign: "center",
+  },
+]);
+
+export const historyToggle = style([
+  caption,
+  {
+    alignSelf: "flex-start",
+    padding: "4px 10px",
+    margin: 0,
+    border: "none",
+    background: "transparent",
+    borderRadius: radii.sm,
+    color: vars.muted,
+    cursor: "pointer",
+    transition: interactiveTransition("color", "background-color"),
+    selectors: {
+      "&:hover": {
+        color: vars.inkSoft,
+        background: vars.interactive.hoverFill,
+      },
+    },
+  },
+]);
+
+export const historyPanel = style({
+  maxHeight: 220,
+  overflowY: "auto",
+  display: "flex",
+  flexDirection: "column",
+  gap: space["0.5"],
+  paddingBottom: space["1.5"],
+  marginBottom: space["1.5"],
+  borderBottom: `1px solid ${vars.rule}`,
+});
+
+export const historyRow = style([
+  text.row,
+  {
+    display: "flex",
+    alignItems: "center",
+    gap: space["2.5"],
+    padding: "6px 10px",
+    borderRadius: radii.sm,
+    color: vars.muted,
+    transition: themeTransition,
+    selectors: {
+      "&:hover": {
+        background: vars.interactive.hoverFill,
+      },
+    },
+  },
+]);
+
+export const historyDate = style([
+  text.microLabel,
+  {
+    fontVariantNumeric: "tabular-nums",
+    color: vars.muted,
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+  },
+]);
+
+export const historyRemove = style([
+  iconBtn({ size: "sm" }),
+  {
+    color: vars.muted,
+    opacity: 0,
+    transition: interactiveTransition("opacity", "color", "background-color"),
+    selectors: {
+      [`${historyRow}:hover &`]: { opacity: 1 },
+      "&:focus-visible": {
+        opacity: 1,
+        outline: `1px solid ${vars.accent.primary}`,
+      },
+    },
   },
 ]);

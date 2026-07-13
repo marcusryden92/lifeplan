@@ -77,7 +77,7 @@
   ├── components/
   │   ├── auth/                         # AuthCard, login/register/reset forms, Social, LoginButton
   │   ├── calendar/                     # WeekStructureModal + editors (Template, Window, Event tile)
-  │   ├── draft/AIDraftModal/           # Global AI assistant — chat (+ DB-backed history popover) + tabbed Goals/Week/Windows diff view (goal forest, weekly templates, category windows/flags); mounted in the AppShell assistant slot, opened anywhere via mod+I / sidebar / item-detail entry points
+  │   ├── draft/AIDraftModal/           # Global AI assistant — chat (+ DB-backed history popover) + tabbed Goals/Week/Categories/Queues diff view (goal forest, weekly templates, category windows/flags, queues + dependencies); mounted in the AppShell assistant slot, opened anywhere via mod+I / sidebar / item-detail entry points
   │   ├── draggable/                    # DragBox, DraggableItem, TaskDivider, DraggableContext
   │   ├── events/                       # Calendar event renderers + popovers (Event, Template, Travel, CategoryWrapper, NewPlanModal, RecurrenceScopeModal, color/location pickers)
   │   ├── landing/                        # Landing-page visuals: VectorField/, FeatureVignettes/, ReflowDemo/, Reveal/
@@ -258,7 +258,7 @@
   - **Validation vs gating — deliberately two graphs.** Cycle legality is authoring-time only, checked against the union of dependency edges and each queue's FULL logical member order ([utils/precedence/validationEdges.ts](utils/precedence/validationEdges.ts) + [findCycle.ts](utils/precedence/findCycle.ts)) — completed/unready members still count, so un-completing can't resurrect a latent cycle. The engine's gated builder ([helpers/Scheduler/precedenceEdges.ts](utils/calendar-generation/helpers/Scheduler/precedenceEdges.ts)) applies TRANSPARENCY instead: completed members/predecessors carry no bound, unready-goal queue members chain through silently, unready-goal dependency predecessors flow to the gate so the fallback is loud. Do not unify the two.
   - **Engine gate** ([precedenceGate.ts](utils/calendar-generation/helpers/Scheduler/precedenceGate.ts), folded into `scheduleTasksAndGoals`): candidates with unresolved predecessors are skipped (never trigger expansion they can't use — they're excluded from the watermark sizing, as are candidates over the weekly capacity ceiling); a resolving pass re-walks WITHOUT expanding; permanent predecessor failure → successors schedule unbounded + `QUEUE_SEQUENCE_BROKEN` / `DEPENDENCY_BROKEN` (cause `failed`/`unready`); pure budget exhaustion → `SEQUENCE_PAST_HORIZON` instead. The bound rides the existing `afterTime` seam, so `findValidSlots` composes it with `earliestStartDate`/`allowedTimes` for free.
   - **Redundant same-pipe dependencies are allowed**; contradictions are blocked with the closing path shown ([describeCycle](utils/precedence/describeCycle.ts)). Central pruning ([utils/precedence/prunePrecedenceInputs.ts](utils/precedence/prunePrecedenceInputs.ts), run in the calendar thunk) drops members/edges whose planner was deleted/retyped/nested/untriaged; completed + unready stay (valid transparent links).
-  - **Readiness gate**: a goal can't be readied while a dependency predecessor is an unready goal ("Awaiting <title>", three-dot popover with Ready/Disconnect shortcuts); un-readying a goal a READY goal depends on is refused symmetrically ([utils/precedence/readinessBlockers.ts](utils/precedence/readinessBlockers.ts), enforced in ItemDetailLayout). The assistant has NO precedence awareness yet — `applyDraftForestToPlanner` clamps `isReady: true` to false on blocked goals at save time (fixed-point, cascades the subtree).
+  - **Readiness gate**: a goal can't be readied while a dependency predecessor is an unready goal ("Awaiting <title>", three-dot popover with Ready/Disconnect shortcuts); un-readying a goal a READY goal depends on is refused symmetrically ([utils/precedence/readinessBlockers.ts](utils/precedence/readinessBlockers.ts), enforced in ItemDetailLayout). The assistant has full precedence read/write (see the AI-assistant section — same validators, draft ids remapped at Save); `applyDraftForestToPlanner` still clamps `isReady: true` to false on blocked goals at save time (fixed-point, cascades the subtree), and handleSave re-runs the clamp after the precedence apply so assistant-created edges gate too.
 
   ### Location & travel
 
@@ -311,9 +311,9 @@
 
   ---
 
-  ## AI assistant (goal-forest + weekly-template + category-window planning)
+  ## AI assistant (goal-forest + weekly-template + category-window + precedence planning)
 
-  One global assistant, always reachable: **mod+I**, the Sparkles button in the Sidebar, or the "AI assistant" button in `ItemTabs`. It operates on the whole **forest** of triaged top-level rows — restructuring existing goals, creating new goals with full subtrees, and deleting goals — on the user's **weekly templates** (EventTemplate rows: sleep, work hours, standing commitments), and on the full **categories domain**: the category records themselves (create/rename/recolor/reparent/relocate/delete, plus the `useTimeWindows`/`isStrict`/`confineToOwnWindows` flags) and their **time windows** (CategoryTimeWindow rows) — so "set up my week and this goal" happens in one conversation. Untriaged Capture-inbox jots are excluded and never touched. Locations are read context only (they can't be created here — they need Google Places), though categories and items may be assigned to existing ones.
+  One global assistant, always reachable: **mod+I**, the Sparkles button in the Sidebar, or the "AI assistant" button in `ItemTabs`. It operates on the whole **forest** of triaged top-level rows — restructuring existing goals, creating new goals with full subtrees, and deleting goals — on the user's **weekly templates** (EventTemplate rows: sleep, work hours, standing commitments), on the full **categories domain**: the category records themselves (create/rename/recolor/reparent/relocate/delete, plus the `useTimeWindows`/`isStrict`/`confineToOwnWindows` flags) and their **time windows** (CategoryTimeWindow rows), and on the **precedence domain**: queues (create/rename/recategorize/delete, member add/move/remove) and dependencies (add/remove prerequisite edges) — so "set up my week and this goal" happens in one conversation. Untriaged Capture-inbox jots are excluded and never touched. Locations are read context only (they can't be created here — they need Google Places), though categories and items may be assigned to existing ones.
 
   Mounting: `AssistantProvider` ([components/ui/shell/AssistantContext.tsx](components/ui/shell/AssistantContext.tsx)) wraps `AppShell` in the protected layout; [GlobalAssistant.tsx](components/draft/AIDraftModal/GlobalAssistant.tsx) is passed into AppShell's `assistantSlot` and renders the modal filling `mainColumn` (`position: absolute; inset: 0`) — the sidebar stays visible and interactive (`Dialog modal={false}`, outside-interaction dismissal prevented; Esc / Close only). Focus resolution: an explicit `AssistantScope.focusItemId` from the opener wins, else the `/items/[id]` route is detected; either maps to its root via `getRootParentId` and is sent as a prompt hint plus default tree-pane expansion.
 
@@ -322,24 +322,33 @@
   Split-pane modal ([components/draft/AIDraftModal/](components/draft/AIDraftModal/)):
 
   - **Left**: chat pane. User bubbles right, assistant responses left-aligned as plain text; `initialDraft` prefills the composer without sending. The chat pane sits on `color-mix(ink 4%, paper)` so it reads as sunken relative to the tree pane. While a response streams the send button becomes a **Stop** button (aborts the fetch; the route forwards `req.signal` upstream; the interrupted bubble is finalized — "Stopped." if it had no prose yet). On abort, completed work stays but truncated tails roll back: the stamped `propose_goals` re-emit carries `complete: true` (fromOps trees count as complete), and the client refolds the turn from only the completed callIndexes, dropping any proposal whose finalized emit hadn't arrived. **Conversations persist to the DB** — a `DraftConversation` row (client-minted uuid id, title from the first user message, whole message array as Json) upserted by a debounced effect in `useAIDraftState` whenever the chat settles, guarded by a last-persisted snapshot so loading a conversation never bumps its own `updatedAt`. Server surface: [actions/draftConversations.ts](actions/draftConversations.ts) (list/get/upsert/delete, capped at 50 conversations, NOT part of the diff sync). The header has a **History** popover (list + load + delete, via `ChatHistoryPopover`) and a **New chat** reset; on the first open of a fresh page load the most recent conversation auto-resumes. The client sends only the trailing 40-message window to stay under the route's history cap; working drafts still reseed from canonical on each open.
-  - **Right**: a tabbed review pane — **Goals / Week / Categories** tab buttons in the pane header (internal tab key is still `windows`), each with a change-count badge; during a stream the pane auto-follows the domain the assistant is editing unless the user clicked a tab this turn (pin resets per send).
+  - **Right**: a tabbed review pane — **Goals / Week / Categories / Queues** tab buttons in the pane header (internal tab keys `goals`/`week`/`windows`/`queues`), each with a change-count badge; during a stream the pane auto-follows the domain the assistant is editing unless the user clicked a tab this turn (pin resets per send).
     - **Goals tab**: `JsonForestView` — one collapsible section per top-level goal (chevron + title + `CategoryBadge` + goal-level diff badge), the focused goal and changed goals expanded by default, with the per-node diff overlay from [diffDraftTree.ts](components/draft/AIDraftModal/diffDraftTree.ts); deleted nodes/goals stay visible in place. **Display is relevance-scoped**: the pane shows only the focused goal, goals the AI touched, and goals brought into view via the `show_goals` tool (display-only tool → SSE `show` event), plus a "Show all" header toggle. Show-all mode groups goals under category headers (provider order, uncategorized last); the relevance-scoped view stays flat. The full forest is still sent to the model and held in working state — visibility is a render filter only, so Save/delete semantics are unaffected.
     - **Week tab**: `TemplateWeekView` — Monday-first day-grouped template list with the same diff language (status badges + friendly changedFields), color dot, HH:MM–HH:MM range with a `+1d` overnight marker, location name ("Anywhere" when null). Always shows all templates — no relevance filter.
     - **Categories tab**: `WindowsView` — grouped by the diffed category records (working order, canonical-deleted appended): `CategoryDot` + name (struck through when deleted) + "under X" note on creates/moves + flag chips (`windows on/off`, `strict`, `own windows only`; accent-outlined when changed) + friendly changed-field text (renamed/color/moved/location) + status badge, windows beneath rows Monday-first with day + HH:MM–HH:MM and the shared status-badge diff language. Categories with no windows and no changes of their own are omitted. The change badge counts window rows plus changed category records.
+    - **Queues tab**: `PrecedenceView` — one group per diffed queue (title struck through when deleted, category chip accent-outlined when changed, changed-field text + status badge) with numbered member rows (titles resolved from the working + canonical forests so drafts and deleted goals both render; per-member added/deleted badges), then a Dependencies group of "A → before → B" rows with the same badge language. The change badge counts changed queues plus changed dependency edges.
   - **Draggable divider** between the panes (state clamped 20/80%; both panes have `minWidth: 240px`).
 
   Data flow per turn:
 
   ```
   plannerForestToJson(planner)             → canonical DraftForest (triaged roots + subtrees; root categoryId stamped)
-  useAIDraftState({open, canonical, canonicalTemplates, canonicalWindows})
-    ─ owns workingForest/workingTemplates/workingWindows + chat messages +
-      conversation lifecycle (id minting, debounced DB upsert, auto-resume)
+  useAIDraftState({open, canonical, canonicalTemplates, canonicalWindows,
+                   canonicalPrecedence})
+    ─ owns workingForest/workingTemplates/workingWindows/workingPrecedence +
+      chat messages + conversation lifecycle (id minting, debounced DB
+      upsert, auto-resume)
     User sends message
         │
         ▼
   POST /api/draft/stream                    ← auth-gated, Sonnet 4.6
-    body: { currentForest, currentTemplates, history, focus?,
+    body: { currentForest, currentTemplates,
+            currentPrecedence ({queues: [{id, title, categoryId,
+            memberPlannerIds (ordered)}], dependencies: [{predecessorId,
+            successorId}]} — member order is array position, exactly like the
+            forest's sibling order; the route prunes stale references against
+            the forest at request start),
+            history, focus?,
             categories (full records: id+name+color+parentId+locationId+flags
             +timeSlots WITH window ids — built ENTIRELY from the WORKING
             categories state so pending drafts, including created categories,
@@ -347,8 +356,8 @@
             locations (id+name), today (local) }
     (full forest goes to OUR server only — Anthropic gets a compact per-goal
      INDEX line + the focused goal's tree; everything else is fetched on
-     demand. Templates, category windows, and locations are small and ride in
-     the prompt whole — no fetch dance for them)
+     demand. Templates, category windows, queues/dependencies, and locations
+     are small and ride in the prompt whole — no fetch dance for them)
     tools:
       read:  search_items({query}), get_goal_trees({goalIds})
       edit:  update_items, move_item, add_items, delete_items
@@ -386,6 +395,22 @@
                set (drafts included; self/descendant reparent rejected),
                locationId against the user's locations, reject duplicate
                sibling names, and delete cascades the subtree + its windows.
+      precedence: add_queues, update_queues, delete_queues,
+             add_queue_members, move_queue_member, remove_queue_members,
+             add_dependencies, remove_dependencies
+             ← deterministic ops (draftPrecedenceOps.ts) on the request's
+               workingPrecedence state; each change emits an SSE `precedence`
+               event carrying the FULL authoritative state (same contract as
+               templates/windows). Queue uuids are route-minted and become
+               the DB ids at Save. Endpoints must be top-level non-plan
+               forest roots (draft ids included); one queue per item; every
+               member insert/move and dependency add runs the SHARED cycle
+               validators (findCycle/findCycleInGraph over the merged draft
+               graph) and a refusal carries the closing path in the
+               tool_result ("A" → "B" (through the X queue) → "A") so the
+               model explains it in prose. Forest edits inside the request
+               prune the precedence state (deleted goal ⇒ member/edge drops,
+               re-emitted to the client).
       build: propose_goals({goals, deletedGoalIds})   ← new goals + wholesale restructures
       show:  show_goals({goalIds | all})
         │
@@ -394,7 +419,8 @@
         ▼
     server-side partial-json parse of each propose_goals input_json_delta,
     emits SSE `text`, `forest` (with callIndex; the finalized stamped re-emit
-    carries `complete: true`), `templates`, `windows`, `show`, `status` events.
+    carries `complete: true`), `templates`, `windows`, `precedence`, `show`,
+    `status` events.
     GUARD: a proposal touching an existing goal whose tree the model has NOT
     fetched this request (focused goal counts as fetched) is filtered out and
     rejected via tool_result — complete-tree replacement without the current
@@ -410,17 +436,22 @@
         ▼
   User clicks Save (hasChanges = forest dirty (draftForestsEqual, top-level
   order-insensitive) OR templates dirty (draftTemplatesEqual) OR windows/flags
-  dirty (draftWindowsStateEqual) — all order-insensitive)
+  dirty (draftWindowsStateEqual) OR precedence dirty
+  (draftPrecedenceStateEqual — queue-list order-insensitive, member order
+  SENSITIVE; dependencies compare as a set of pairs))
         │
         ▼
-  forest dirty → applyDraftForestToPlanner({planner, workingForest, userId, validCategoryIds})
+  forest dirty → applyDraftForestToPlanner({planner, workingForest, userId,
+                                            validCategoryIds, rootIdMap})
     1. deleted roots: pure subtree filter (order is a local property; no
       neighbor fixup)
     2. retained goals (only if !draftTreesEqual): existing per-tree apply —
       UUID preservation, sibling sortOrder stamped from array position;
       root categoryId applied when it validates
     3. new roots: parentId null, sortOrder 0, isTriaged true, validated
-      categoryId, children stamped per level
+      categoryId, children stamped per level; each minted root id is
+      reported into rootIdMap (draft id → permanent id) for the precedence
+      apply
   templates dirty → applyDraftTemplates({current, canonical, working, userId, now})
     deletes removed rows, restamps updatedAt on changed rows, creates new rows
     keeping the route-minted uuid; UNTOUCHED rows return by object identity
@@ -441,18 +472,39 @@
     rows made elsewhere are preserved. Runs BEFORE applyDraftForestToPlanner
     in handleSave so goal categoryIds validate against the SAVED category set
     (a goal filed under a category created this conversation keeps it)
+  precedence dirty → applyDraftPrecedence({currentQueues, currentDependencies,
+    canonical, working, rootIdMap, nextPlanner, validCategoryIds, userId, now})
+    runs AFTER the forest apply (it needs rootIdMap + the saved planner for
+    endpoint validity). Replays the assistant's deltas onto the LIVE arrays:
+    queue deletes (concurrent member additions die with the queue, DB-cascade
+    parity), per-field queue deltas (title/categoryId only where the
+    assistant changed them), membership targets with no-resurrection (a
+    member removed concurrently stays removed), concurrent additions
+    preserved, and the user's concurrent placement winning a
+    one-queue-per-item conflict; new queues keep the route-minted uuid,
+    member rows reuse existing row objects when (i+1)*STEP keys match (an
+    append leaves retained rows by identity), dependency rows are minted
+    create-only/deleted by pair, and a final cycle defense re-validates the
+    MERGED result — assistant-added members/edges that a concurrent edit
+    turned cyclic are dropped, never user rows. handleSave then re-runs
+    clampReadinessAgainstDependencies (exported from
+    applyDraftForestToPlanner) against the final edge set, because
+    assistant-created dependencies only exist with permanent ids after this
+    apply.
         │
         ▼
-  updateAll(nextPlanner, undefined, nextTemplates, nextCategories) → ONE engine
-  regen → one sync (clean domains pass undefined so their state keeps identity;
-  the thunk dispatches setCategories before regenerating when categories are
-  passed — CalendarPayload grew a categories field for this)
+  updateAll(nextPlanner, undefined, nextTemplates, nextCategories, nextQueues,
+  nextDependencies) → ONE engine regen → one sync (clean domains pass
+  undefined so their state keeps identity; the thunk dispatches setCategories
+  before regenerating when categories are passed, and central precedence
+  pruning runs there on every pass — CalendarPayload carries categories,
+  queues, and dependencies fields for this)
   ```
 
   Contracts worth not breaking:
 
   - **Working drafts seed only after hydration** — `useAIDraftState` adopts canonical as the working copy on `open && ready` (`ready` = CalendarProvider's `isLoaded`), and the dirty flags return false until then. A modal open before the initial snapshot lands (onboarding resumed on the AI step, mod+I right after load) would otherwise seed an EMPTY working forest: every real item diffs as deleted, the model is sent an empty forest, and Save would actually delete everything. Send and save are guarded on `isLoaded` too.
-  - **UUID preservation is load-bearing** — see the `preserve-planner-ids` memory note. The AI is instructed to echo existing ids; the reverse parser only trusts an id inside the subtree of the goal being applied (any other id becomes a fresh UUID). Inter-goal dependencies (planned) will reference these ids.
+  - **UUID preservation is load-bearing** — see the `preserve-planner-ids` memory note. The AI is instructed to echo existing ids; the reverse parser only trusts an id inside the subtree of the goal being applied (any other id becomes a fresh UUID). Queue members and dependency edges reference these ids, so a silently re-minted root id would orphan its precedence links.
   - **`sortOrder` is never emitted by the AI** — sibling order is array position (top-level goal order is NOT semantic; goals match by id). The reverse parser stamps fresh fractional keys from array position at each level.
   - **Goal-granular deltas** — the model never re-emits untouched goals; unchanged goals are skipped at apply time so they see zero `updatedAt` churn and no phantom sync diffs.
   - **Fetch-before-modify is enforced server-side** — tool results are not carried between user messages (client history is prose-only), so the model must re-fetch trees each message; the route rejects proposal entries for unfetched existing goals rather than trusting the prompt alone. The deterministic edit tools are exempt: they operate by id on the server's copy, so they cannot drop data the model never saw.
@@ -469,9 +521,13 @@
   - **The assistant has full category CRUD, prompt-gated where it reshapes things** — `add_categories`/`update_categories`/`delete_categories` cover name, color, parentId, locationId, and all three scheduling flags. The prompt reserves `isStrict`/`confineToOwnWindows` changes and any delete for explicit user requests (deletes cascade the subtree + windows; items become uncategorized via the DB's `SetNull`, never deleted). `add_time_windows` still auto-enables `useTimeWindows` deterministically. Locations remain read-only (creation needs Google Places) — only assignable by id.
   - **Category apply is per-field, concurrent-safe** — applyDraftWindows applies only the fields the assistant actually changed (canonical vs working), so edits made elsewhere while the modal was open survive on untouched fields; a concurrent delete elsewhere wins over an assistant edit (no resurrection), and an assistant delete cascades over the current tree exactly like the DB's `parentId` cascade will.
   - **Categories apply before the forest at Save** — handleSave computes `nextCategories` first and validates goal `categoryId`s against it, so filing a goal under a category created in the same conversation survives the save.
+  - **Queue draft ids ARE the DB ids; goal draft ids inside precedence are NOT** — a route-minted queue uuid survives into the Queue row (templates/windows precedent), but a queue member or dependency endpoint naming a draft GOAL id must be remapped at Save: the forest apply mints the permanent id and reports it through `rootIdMap`, and `applyDraftPrecedence` translates. An unmapped draft id (a draft that was never saved) is dropped, never persisted. This is why the precedence apply runs AFTER the forest apply — reordering them silently drops every queue/dependency reference to same-conversation goals.
+  - **Member order is array position in the draft contract** — `memberPlannerIds` order IS schedule order; fractional QueueMember `sortOrder` keys are a save-time concern (`applyDraftPrecedence` reuses row objects when the `(i+1)*STEP` keys already match, so a pure append leaves retained members by identity). Dependencies are identified by their endpoint pair, not row id — rows are immutable create/delete, matching the sync diff.
+  - **Precedence ops run the SHARED cycle validators** — `draftPrecedenceOps` builds the merged legality graph (`draftPrecedenceEdges`: full queue chains + dependency edges, the collectValidationEdges mirror) and refuses member inserts/moves and dependency adds through `findCycle`/`findCycleInGraph`, returning the closing path in the failure reason. The save-time apply re-validates against the MERGED live state (concurrent edits included) and drops assistant-added artifacts — never user rows — if a loop slipped between op time and save.
+  - **Precedence prunes with the forest, at every layer** — the route prunes the working precedence state at request start and after every forest mutation (delete_items / propose_goals deletions), `applyDraftPrecedence` filters endpoints against the saved planner, and the thunk's central pruning is the final backstop. A deleted goal must never linger as a member/edge in any copy.
   - **BYOK is deferred** — one key in `.env` for now (see TODO). If/when we ship publicly, wire per-user keys before enabling the feature.
 
-  Unit tests: [__tests__/draft/](__tests__/draft/) covers forest apply (UUID preservation, subtree deletion, sortOrder stamping, categoryId validation, splitting round-trip/set/clear), merge, diff, and forest equality with hand-built planner arrays, plus the template domain: ops (minting, per-field validation, locationId gating), save-time apply (object-identity no-op rule, concurrent-row preservation), and diff/day-grouping — and the categories domain: ops (window + category minting, auto-enable, range validation, category field patches, reparent cycle rejection, sibling-name dedupe, cascade delete), save-time apply (category identity, flag-vs-window updatedAt rules, userId stamping, concurrent-edit preservation, create/delete/no-resurrection semantics), and diff/category-grouping.
+  Unit tests: [__tests__/draft/](__tests__/draft/) covers forest apply (UUID preservation, subtree deletion, sortOrder stamping, categoryId validation, splitting round-trip/set/clear), merge, diff, and forest equality with hand-built planner arrays, plus the template domain: ops (minting, per-field validation, locationId gating), save-time apply (object-identity no-op rule, concurrent-row preservation), and diff/day-grouping — and the categories domain: ops (window + category minting, auto-enable, range validation, category field patches, reparent cycle rejection, sibling-name dedupe, cascade delete), save-time apply (category identity, flag-vs-window updatedAt rules, userId stamping, concurrent-edit preservation, create/delete/no-resurrection semantics), and diff/category-grouping — and the precedence domain: ops (queue minting, endpoint eligibility, one-queue rule, cycle refusals with paths across queues and dependencies, prune identity, state equality semantics), save-time apply (no-op identity, rootIdMap remapping, unsaved-draft drops, member-row identity on append, no-resurrection, one-queue conflict resolution, per-field queue deltas, dependency dedupe/remap, concurrent-cycle defense), and the readiness clamp.
 
   ---
 

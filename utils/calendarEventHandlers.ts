@@ -4,6 +4,8 @@ import {
   EventTemplate,
   PlannerType,
   Category,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 import { EventDropArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
@@ -91,6 +93,10 @@ type UpdateAllFn = (
   calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
   template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
   categories?: Category[] | ((prev: Category[]) => Category[]),
+  queues?: Queue[] | ((prev: Queue[]) => Queue[]),
+  dependencies?:
+    | PlannerDependency[]
+    | ((prev: PlannerDependency[]) => PlannerDependency[]),
   options?: { engineMode?: "inline" | "worker" },
 ) => void;
 
@@ -126,6 +132,8 @@ export const applyEventResize = (
             }
           : ev,
       ),
+    undefined,
+    undefined,
     undefined,
     undefined,
     { engineMode: "inline" },

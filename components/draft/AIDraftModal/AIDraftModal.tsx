@@ -29,14 +29,24 @@ import {
   type DraftForestProposal,
 } from "./normalizeDraftForest";
 import { foldDraftProposals } from "./mergeDraftForest";
-import { applyDraftForestToPlanner } from "./applyDraftForestToPlanner";
+import {
+  applyDraftForestToPlanner,
+  clampReadinessAgainstDependencies,
+} from "./applyDraftForestToPlanner";
 import { applyDraftTemplates } from "./applyDraftTemplates";
 import { applyDraftWindows } from "./applyDraftWindows";
+import { applyDraftPrecedence } from "./applyDraftPrecedence";
 import { templatesToDraft } from "./draftTemplates";
 import { categoriesToDraftWindows } from "./draftWindows";
+import { precedenceToDraft } from "./draftPrecedence";
 import { countTemplateChanges, diffDraftTemplates } from "./diffDraftTemplates";
 import { countWindowChanges, diffDraftWindows } from "./diffDraftWindows";
+import {
+  countPrecedenceChanges,
+  diffDraftPrecedence,
+} from "./diffDraftPrecedence";
 import { WindowsView } from "./WindowsView";
+import { PrecedenceView } from "./PrecedenceView";
 import { diffDraftForest } from "./diffDraftForest";
 import { diffSubtreeHasChanges } from "./diffDraftTree";
 
@@ -66,7 +76,7 @@ import {
   a11yHiddenTitle,
 } from "./AIDraftModal.css";
 
-type DraftPaneTab = "goals" | "week" | "windows";
+type DraftPaneTab = "goals" | "week" | "windows" | "queues";
 type MobilePane = "chat" | "review";
 
 export interface AIDraftFocus {
@@ -78,11 +88,13 @@ function formatDirtyDomains(
   forest: boolean,
   templates: boolean,
   windows: boolean,
+  precedence: boolean,
 ): string {
   const parts = [
     forest ? "goals" : null,
     templates ? "weekly schedule" : null,
     windows ? "category windows" : null,
+    precedence ? "queues" : null,
   ].filter((p): p is string => p !== null);
   if (parts.length <= 1) return parts[0] ?? "plan";
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
@@ -131,6 +143,7 @@ export function AIDraftModal({
     categories,
     template,
     locations,
+    queues,
     dependencies,
     updateAll,
     userId,
@@ -187,6 +200,10 @@ export function AIDraftModal({
     () => categoriesToDraftWindows(categories),
     [categories],
   );
+  const canonicalPrecedence = useMemo(
+    () => precedenceToDraft(queues, dependencies),
+    [queues, dependencies],
+  );
 
   const {
     workingForest,
@@ -195,9 +212,12 @@ export function AIDraftModal({
     setWorkingTemplates,
     workingWindows,
     setWorkingWindows,
+    workingPrecedence,
+    setWorkingPrecedence,
     hasForestChanges,
     hasTemplateChanges,
     hasWindowChanges,
+    hasPrecedenceChanges,
     hasChanges,
     messages,
     appendMessage,
@@ -212,6 +232,7 @@ export function AIDraftModal({
     canonical,
     canonicalTemplates,
     canonicalWindows,
+    canonicalPrecedence,
     autoResume: intent !== "onboarding",
     resumeConversationId,
   });
@@ -232,11 +253,32 @@ export function AIDraftModal({
     canonicalTemplates,
   );
   const diffedWindows = diffDraftWindows(workingWindows, canonicalWindows);
+  const diffedPrecedence = diffDraftPrecedence(
+    workingPrecedence,
+    canonicalPrecedence,
+  );
   const goalChangeCount = diffedGoals.filter(diffSubtreeHasChanges).length;
   const templateChangeCount = countTemplateChanges(diffedTemplates);
   const windowChangeCount = countWindowChanges(diffedWindows);
+  const precedenceChangeCount = countPrecedenceChanges(diffedPrecedence);
   const reviewChangeCount =
-    goalChangeCount + templateChangeCount + windowChangeCount;
+    goalChangeCount +
+    templateChangeCount +
+    windowChangeCount +
+    precedenceChangeCount;
+
+  // Member and dependency endpoints are top-level items; working roots cover
+  // drafts, canonical roots cover rows deleted in the working copy.
+  const precedenceTitleById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const goal of canonical.goals) map.set(goal.id, goal.title);
+    for (const goal of workingForest.goals) map.set(goal.id, goal.title);
+    return map;
+  }, [canonical, workingForest]);
+  const categoryNameById = useMemo(
+    () => new Map(workingWindows.categories.map((c) => [c.id, c.name])),
+    [workingWindows],
+  );
 
   // Goals / Week tabs. During a stream the pane follows the assistant's work
   // (last streamed domain wins) unless the user clicked a tab this turn; the
@@ -300,6 +342,11 @@ export function AIDraftModal({
   useEffect(() => {
     workingWindowsRef.current = workingWindows;
   }, [workingWindows]);
+
+  const workingPrecedenceRef = useRef(workingPrecedence);
+  useEffect(() => {
+    workingPrecedenceRef.current = workingPrecedence;
+  }, [workingPrecedence]);
 
   const messagesRef = useRef(messages);
   useEffect(() => {
@@ -365,6 +412,7 @@ export function AIDraftModal({
       let sawForest = false;
       let sawTemplates = false;
       let sawWindows = false;
+      let sawPrecedence = false;
       let sawShow = false;
       let finished = false;
       // Categories ride from the WORKING state, not the provider — pending
@@ -374,6 +422,7 @@ export function AIDraftModal({
       await streamDraft({
         currentForest: turnStartForest,
         currentTemplates: workingTemplatesRef.current,
+        currentPrecedence: workingPrecedenceRef.current,
         history,
         focus: streamFocus,
         categories: windowsState.categories.map((c) => ({
@@ -429,6 +478,11 @@ export function AIDraftModal({
           setWorkingWindows(state);
           autoSwitchTab("windows");
         },
+        onPrecedence: (state) => {
+          sawPrecedence = true;
+          setWorkingPrecedence(state);
+          autoSwitchTab("queues");
+        },
         onStatus: ({ tool, count }) => {
           const plural = count === 1 ? "" : "s";
           const label =
@@ -458,7 +512,23 @@ export function AIDraftModal({
                                     ? `deleting ${count} window${plural}…`
                                     : tool === "update_categories"
                                       ? `updating ${count} categor${count === 1 ? "y" : "ies"}…`
-                                      : null;
+                                      : tool === "add_queues"
+                                        ? `creating ${count} queue${plural}…`
+                                        : tool === "update_queues"
+                                          ? `editing ${count} queue${plural}…`
+                                          : tool === "delete_queues"
+                                            ? `deleting ${count} queue${plural}…`
+                                            : tool === "add_queue_members"
+                                              ? `queueing ${count} item${plural}…`
+                                              : tool === "move_queue_member"
+                                                ? "reordering a queue…"
+                                                : tool === "remove_queue_members"
+                                                  ? `unqueueing ${count} item${plural}…`
+                                                  : tool === "add_dependencies"
+                                                    ? `linking ${count} dependenc${count === 1 ? "y" : "ies"}…`
+                                                    : tool === "remove_dependencies"
+                                                      ? `unlinking ${count} dependenc${count === 1 ? "y" : "ies"}…`
+                                                      : null;
           if (label) setStreamStatus(label);
         },
         onShow: ({ goalIds, all }) => {
@@ -482,6 +552,7 @@ export function AIDraftModal({
             sawForest ? "Goals" : null,
             sawTemplates ? "Week" : null,
             sawWindows ? "Categories" : null,
+            sawPrecedence ? "Queues" : null,
           ].filter((t): t is string => t !== null);
           const fallback =
             touchedTabs.length > 0
@@ -541,6 +612,7 @@ export function AIDraftModal({
       setWorkingForest,
       setWorkingTemplates,
       setWorkingWindows,
+      setWorkingPrecedence,
       autoSwitchTab,
       focus,
       categories,
@@ -591,7 +663,7 @@ export function AIDraftModal({
   const handleSave = useCallback(() => {
     if (!hasChanges || !userId || !isLoaded) return;
     // Clean domains pass undefined so their state keeps identity — one
-    // updateAll call means one engine regen and one sync for both domains.
+    // updateAll call means one engine regen and one sync for all domains.
     const now = new Date().toISOString();
     // Categories first: the forest apply validates goal categoryIds against
     // the SAVED category set, so a goal filed under a category created in
@@ -606,6 +678,10 @@ export function AIDraftModal({
         })
       : undefined;
     const categoriesForForest = nextCategories ?? categories;
+    // Forest before precedence: queue members and dependency endpoints may
+    // reference goals created this conversation, and their permanent ids only
+    // exist once the forest apply mints them (reported through rootIdMap).
+    const rootIdMap = new Map<string, string>();
     const nextPlanner = hasForestChanges
       ? applyDraftForestToPlanner({
           planner,
@@ -616,6 +692,7 @@ export function AIDraftModal({
             categoriesForForest.map((c) => [c.id, c.color]),
           ),
           dependencies,
+          rootIdMap,
         })
       : undefined;
     const nextTemplates = hasTemplateChanges
@@ -627,24 +704,62 @@ export function AIDraftModal({
           now,
         })
       : undefined;
-    updateAll(nextPlanner, undefined, nextTemplates, nextCategories);
+    let plannerForSync = nextPlanner;
+    let nextQueues: typeof queues | undefined;
+    let nextDependencies: typeof dependencies | undefined;
+    if (hasPrecedenceChanges) {
+      const applied = applyDraftPrecedence({
+        currentQueues: queues,
+        currentDependencies: dependencies,
+        canonical: canonicalPrecedence,
+        working: workingPrecedence,
+        rootIdMap,
+        nextPlanner: plannerForSync ?? planner,
+        validCategoryIds: new Set(categoriesForForest.map((c) => c.id)),
+        userId,
+        now,
+      });
+      nextQueues = applied.queues;
+      nextDependencies = applied.dependencies;
+      // Assistant-created dependencies exist only now (with permanent ids),
+      // so the forest apply's readiness clamp could not see them — re-run it
+      // against the final edge set.
+      const clamped = clampReadinessAgainstDependencies(
+        plannerForSync ?? planner,
+        applied.dependencies,
+        now,
+      );
+      if (clamped !== (plannerForSync ?? planner)) plannerForSync = clamped;
+    }
+    updateAll(
+      plannerForSync,
+      undefined,
+      nextTemplates,
+      nextCategories,
+      nextQueues,
+      nextDependencies,
+    );
     if (embedded) onSaved?.();
     else onClose();
   }, [
     workingForest,
     workingTemplates,
     workingWindows,
+    workingPrecedence,
     canonicalTemplates,
     canonicalWindows,
+    canonicalPrecedence,
     hasChanges,
     hasForestChanges,
     hasTemplateChanges,
     hasWindowChanges,
+    hasPrecedenceChanges,
     userId,
     isLoaded,
     planner,
     template,
     categories,
+    queues,
     dependencies,
     updateAll,
     onClose,
@@ -812,6 +927,17 @@ export function AIDraftModal({
                 <span className={tabChangeCount}>{windowChangeCount}</span>
               )}
             </button>
+            <button
+              type="button"
+              className={paneTab}
+              data-active={activeTab === "queues" ? "true" : undefined}
+              onClick={() => selectTab("queues")}
+            >
+              <span className={paneTabLabel}>Queues</span>
+              {precedenceChangeCount > 0 && (
+                <span className={tabChangeCount}>{precedenceChangeCount}</span>
+              )}
+            </button>
             <span className={paneSubtitle}>
               {hasChanges ? "unsaved changes" : "current state"}
             </span>
@@ -852,8 +978,14 @@ export function AIDraftModal({
               templates={diffedTemplates}
               locations={locations}
             />
-          ) : (
+          ) : activeTab === "windows" ? (
             <WindowsView diffed={diffedWindows} />
+          ) : (
+            <PrecedenceView
+              diffed={diffedPrecedence}
+              titleById={precedenceTitleById}
+              categoryNameById={categoryNameById}
+            />
           )}
         </div>
       </div>
@@ -869,6 +1001,7 @@ export function AIDraftModal({
                 hasForestChanges,
                 hasTemplateChanges,
                 hasWindowChanges,
+                hasPrecedenceChanges,
               )}
               . Closing now will discard them.
             </p>

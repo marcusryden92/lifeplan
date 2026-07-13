@@ -58,9 +58,14 @@ interface ApplyForestArgs {
   // color and before the deterministic palette fallback. Optional so callers
   // that don't care about coloring can omit it.
   categoryColorById?: ReadonlyMap<string, string | null>;
-  // Dependency edges, used to clamp isReady at save time — the assistant has
-  // no dependency awareness, so this mirrors the UI's readiness gate.
+  // Dependency edges, used to clamp isReady at save time — mirrors the UI's
+  // readiness gate for edges the assistant's proposal may conflict with.
   dependencies?: PlannerDependency[];
+  // Populated (when provided) with draft root id -> minted permanent id for
+  // every new top-level goal. The precedence apply uses it to remap queue
+  // members and dependency endpoints that reference goals created in the
+  // same conversation.
+  rootIdMap?: Map<string, string>;
 }
 
 // A new top-level item's color: the model's explicit pick, else its category's
@@ -95,6 +100,7 @@ export function applyDraftForestToPlanner({
   validCategoryIds,
   categoryColorById,
   dependencies = [],
+  rootIdMap,
 }: ApplyForestArgs): Planner[] {
   const now = new Date().toISOString();
   let current = planner;
@@ -134,45 +140,55 @@ export function applyDraftForestToPlanner({
         now,
       });
     } else {
-      current = [
-        ...current,
-        ...buildNewRootRows(goal, userId, validCategoryIds, categoryColorById, now),
-      ];
+      const { rootId, rows } = buildNewRootRows(
+        goal,
+        userId,
+        validCategoryIds,
+        categoryColorById,
+        now,
+      );
+      if (goal.id.length > 0) rootIdMap?.set(goal.id, rootId);
+      current = [...current, ...rows];
     }
   }
 
-  // Containment clamp: the assistant has no dependency awareness, so a goal
-  // it marked ready may still have an unready-goal prerequisite. Mirror the
-  // UI gate against the SAVED array (a predecessor legitimately readied in
-  // this same save doesn't block) and un-ready the whole subtree — the
-  // cascade keeps readiness a consistent whole-tree property. Runs to a
-  // fixed point: clamping one goal can newly block a goal that depends on
-  // it. Terminates because each pass strictly shrinks the ready set.
-  if (dependencies.length > 0) {
-    let clampedSomething = true;
-    while (clampedSomething) {
-      clampedSomething = false;
-      for (const root of current) {
-        if (root.parentId != null) continue;
-        if (root.plannerType !== PlannerType.goal) continue;
-        if (root.isReady !== true) continue;
-        const blockers = dependencyReadyBlockers(
-          root.id,
-          dependencies,
-          current,
-        );
-        if (blockers.length === 0) continue;
-        const treeIds = new Set(getTaskTreeIds(current, root.id));
-        current = current.map((p) =>
-          treeIds.has(p.id) ? { ...p, isReady: false, updatedAt: now } : p,
-        );
-        clampedSomething = true;
-        // Restart the scan — the for..of is iterating a stale snapshot now.
-        break;
-      }
+  return clampReadinessAgainstDependencies(current, dependencies, now);
+}
+
+// Containment clamp: a goal the assistant marked ready may still have an
+// unready-goal prerequisite. Mirror the UI gate against the SAVED array (a
+// predecessor legitimately readied in this same save doesn't block) and
+// un-ready the whole subtree — the cascade keeps readiness a consistent
+// whole-tree property. Runs to a fixed point: clamping one goal can newly
+// block a goal that depends on it. Terminates because each pass strictly
+// shrinks the ready set. Identity-preserving on no-op. Exported so handleSave
+// can re-run it after the precedence apply — dependencies the assistant
+// created this conversation only exist (with permanent ids) at that point.
+export function clampReadinessAgainstDependencies(
+  planner: Planner[],
+  dependencies: PlannerDependency[],
+  now: string,
+): Planner[] {
+  if (dependencies.length === 0) return planner;
+  let current = planner;
+  let clampedSomething = true;
+  while (clampedSomething) {
+    clampedSomething = false;
+    for (const root of current) {
+      if (root.parentId != null) continue;
+      if (root.plannerType !== PlannerType.goal) continue;
+      if (root.isReady !== true) continue;
+      const blockers = dependencyReadyBlockers(root.id, dependencies, current);
+      if (blockers.length === 0) continue;
+      const treeIds = new Set(getTaskTreeIds(current, root.id));
+      current = current.map((p) =>
+        treeIds.has(p.id) ? { ...p, isReady: false, updatedAt: now } : p,
+      );
+      clampedSomething = true;
+      // Restart the scan — the for..of is iterating a stale snapshot now.
+      break;
     }
   }
-
   return current;
 }
 
@@ -342,7 +358,7 @@ function buildNewRootRows(
   validCategoryIds: ReadonlySet<string>,
   categoryColorById: ReadonlyMap<string, string | null> | undefined,
   now: string,
-): Planner[] {
+): { rootId: string; rows: Planner[] } {
   const rootId = uuidv4();
   const rootCategoryId =
     node.categoryId && validCategoryIds.has(node.categoryId)
@@ -443,7 +459,7 @@ function buildNewRootRows(
     build(child, rootId, (i + 1) * SORT_ORDER_STEP);
   });
 
-  return rows;
+  return { rootId, rows };
 }
 
 // Structure wins over the model's label: any node that holds children is a

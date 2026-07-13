@@ -9,6 +9,10 @@ import {
   normalizeDraftWindowsState,
   type DraftWindowsState,
 } from "./draftWindows";
+import {
+  normalizeDraftPrecedenceState,
+  type DraftPrecedenceState,
+} from "./draftPrecedence";
 
 export interface StreamChatMessage {
   role: "user" | "assistant";
@@ -39,6 +43,7 @@ export interface StreamDraftCategory {
 export interface StreamDraftArgs {
   currentForest: DraftForest;
   currentTemplates: DraftTemplate[];
+  currentPrecedence: DraftPrecedenceState;
   history: StreamChatMessage[];
   focus: StreamDraftFocus | null;
   categories: StreamDraftCategory[];
@@ -63,6 +68,8 @@ export interface StreamDraftArgs {
   onTemplates: (templates: DraftTemplate[]) => void;
   // Window/flag ops emit the full authoritative state — same contract.
   onWindows: (state: DraftWindowsState) => void;
+  // Queue/dependency ops emit the full authoritative state — same contract.
+  onPrecedence: (state: DraftPrecedenceState) => void;
   // show_goals: display-only request to bring goals into the tree pane.
   onShow: (payload: { goalIds: string[]; all: boolean }) => void;
   // Server-side tool activity (e.g. the model fetching goal trees) — for a
@@ -75,6 +82,7 @@ export interface StreamDraftArgs {
 export async function streamDraft({
   currentForest,
   currentTemplates,
+  currentPrecedence,
   history,
   focus,
   categories,
@@ -86,6 +94,7 @@ export async function streamDraft({
   onForest,
   onTemplates,
   onWindows,
+  onPrecedence,
   onShow,
   onStatus,
   onDone,
@@ -99,6 +108,7 @@ export async function streamDraft({
       body: JSON.stringify({
         currentForest,
         currentTemplates,
+        currentPrecedence,
         history: history.slice(-MAX_HISTORY_MESSAGES),
         focus,
         categories,
@@ -140,6 +150,7 @@ export async function streamDraft({
           onForest,
           onTemplates,
           onWindows,
+          onPrecedence,
           onShow,
           onStatus,
           onDone,
@@ -160,6 +171,7 @@ interface DispatchHandlers {
   onForest: StreamDraftArgs["onForest"];
   onTemplates: StreamDraftArgs["onTemplates"];
   onWindows: StreamDraftArgs["onWindows"];
+  onPrecedence: StreamDraftArgs["onPrecedence"];
   onShow: StreamDraftArgs["onShow"];
   onStatus: StreamDraftArgs["onStatus"];
   onDone: StreamDraftArgs["onDone"];
@@ -207,6 +219,11 @@ function dispatchSseEvent(raw: string, handlers: DispatchHandlers): void {
     case "windows": {
       const state = normalizeDraftWindowsState(data);
       if (state) handlers.onWindows(state);
+      break;
+    }
+    case "precedence": {
+      const state = normalizeDraftPrecedenceState(data);
+      if (state) handlers.onPrecedence(state);
       break;
     }
     case "status": {

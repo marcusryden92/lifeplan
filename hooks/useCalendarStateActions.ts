@@ -86,6 +86,10 @@ export default function useCalendarStateActions(dispatch: AppDispatch) {
       calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
       template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
       categories?: Category[] | ((prev: Category[]) => Category[]),
+      queues?: Queue[] | ((prev: Queue[]) => Queue[]),
+      dependencies?:
+        | PlannerDependency[]
+        | ((prev: PlannerDependency[]) => PlannerDependency[]),
       options?: CalendarUpdateOptions
     ) => {
       dispatch(
@@ -94,6 +98,8 @@ export default function useCalendarStateActions(dispatch: AppDispatch) {
           calendar,
           template,
           categories,
+          queues,
+          dependencies,
           engineMode: options?.engineMode,
         })
       );

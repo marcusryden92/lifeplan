@@ -45,6 +45,23 @@ import {
   type DraftTimeWindowUpdate,
   type DraftWindowOpsResult,
 } from "@/components/draft/AIDraftModal/draftWindowOps";
+import {
+  normalizeDraftPrecedenceState,
+  pruneDraftPrecedence,
+  type DraftPrecedenceState,
+} from "@/components/draft/AIDraftModal/draftPrecedence";
+import {
+  addDraftDependencies,
+  addDraftQueueMembers,
+  addDraftQueues,
+  deleteDraftQueues,
+  moveDraftQueueMember,
+  removeDraftDependencies,
+  removeDraftQueueMembers,
+  updateDraftQueues,
+  type DraftPrecedenceOpsResult,
+  type DraftQueueUpdate,
+} from "@/components/draft/AIDraftModal/draftPrecedenceOps";
 
 // Note: this file lives under app/api/ despite the CLAUDE.md convention of
 // preferring server actions. Streaming binary/SSE responses don't map cleanly
@@ -80,6 +97,9 @@ const MAX_CATEGORY_NAME_CHARS = 200;
 const MAX_TEMPLATES = 200;
 const MAX_LOCATIONS = 100;
 const MAX_TIME_WINDOWS_PER_CATEGORY = 56;
+const MAX_QUEUES = 50;
+const MAX_QUEUE_MEMBERS = 200;
+const MAX_DEPENDENCIES = 400;
 
 // Loop guards. Twelve turns fits the headline flow (search + fetch + template
 // batches + window edits + propose_goals + follow-ups) without inviting
@@ -130,6 +150,7 @@ interface DraftFocus {
 interface DraftRequestBody {
   currentForest: DraftForest;
   currentTemplates: DraftTemplate[];
+  currentPrecedence: DraftPrecedenceState;
   history: DraftChatMessage[];
   focus: DraftFocus | null;
   categories: DraftCategory[];
@@ -145,6 +166,7 @@ function parseRequestBody(raw: unknown): DraftRequestBody | string {
   const {
     currentForest,
     currentTemplates,
+    currentPrecedence,
     history,
     focus,
     categories,
@@ -303,6 +325,24 @@ function parseRequestBody(raw: unknown): DraftRequestBody | string {
     parsedTemplates.push(template);
   }
 
+  const parsedPrecedence = normalizeDraftPrecedenceState(currentPrecedence);
+  if (!parsedPrecedence) {
+    return "currentPrecedence must be an object with queues and dependencies arrays";
+  }
+  if (parsedPrecedence.queues.length > MAX_QUEUES) {
+    return `currentPrecedence exceeds ${MAX_QUEUES} queues`;
+  }
+  if (
+    parsedPrecedence.queues.some(
+      (q) => q.memberPlannerIds.length > MAX_QUEUE_MEMBERS,
+    )
+  ) {
+    return `a queue exceeds ${MAX_QUEUE_MEMBERS} members`;
+  }
+  if (parsedPrecedence.dependencies.length > MAX_DEPENDENCIES) {
+    return `currentPrecedence exceeds ${MAX_DEPENDENCIES} dependencies`;
+  }
+
   if (typeof today !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(today)) {
     return "today must be a YYYY-MM-DD string";
   }
@@ -320,6 +360,7 @@ function parseRequestBody(raw: unknown): DraftRequestBody | string {
   return {
     currentForest: currentForest as unknown as DraftForest,
     currentTemplates: parsedTemplates,
+    currentPrecedence: parsedPrecedence,
     history: history as DraftChatMessage[],
     focus: parsedFocus,
     categories: parsedCategories,
@@ -431,9 +472,54 @@ function buildTemplateList(
     .join("\n");
 }
 
+// Queues and dependencies are small flat structures — like templates, the
+// full state rides in the prompt and there is nothing to fetch.
+function buildPrecedenceList(
+  precedence: DraftPrecedenceState,
+  forest: DraftForest,
+  categories: DraftCategory[],
+): string {
+  const titleById = new Map(forest.goals.map((g) => [g.id, g.title]));
+  const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
+  const lines: string[] = [];
+
+  if (precedence.queues.length === 0) {
+    lines.push("(no queues yet)");
+  } else {
+    for (const queue of precedence.queues) {
+      const parts = [`${queue.id}: "${queue.title}"`];
+      if (queue.categoryId) {
+        parts.push(
+          `category ${categoryNameById.get(queue.categoryId) ?? queue.categoryId}`,
+        );
+      }
+      lines.push(`- ${parts.join(" | ")}`);
+      if (queue.memberPlannerIds.length === 0) {
+        lines.push("  (empty)");
+      }
+      queue.memberPlannerIds.forEach((id, i) => {
+        lines.push(`  ${i + 1}. ${id} "${titleById.get(id) ?? "unknown"}"`);
+      });
+    }
+  }
+
+  lines.push("");
+  if (precedence.dependencies.length === 0) {
+    lines.push("(no dependencies yet)");
+  } else {
+    for (const d of precedence.dependencies) {
+      lines.push(
+        `- "${titleById.get(d.predecessorId) ?? d.predecessorId}" (${d.predecessorId}) must finish before "${titleById.get(d.successorId) ?? d.successorId}" (${d.successorId})`,
+      );
+    }
+  }
+  return lines.join("\n");
+}
+
 function buildSystemPrompt({
   currentForest,
   currentTemplates,
+  currentPrecedence,
   focus,
   categories,
   locations,
@@ -527,6 +613,19 @@ Category time windows bound WHEN a category's goals and tasks may be scheduled (
 - The full window list is always shown above under USER CATEGORIES — there is nothing to fetch. Window ids are minted by the app and reported back when you add.
 - Windows constrain scheduling; templates occupy time. "I work 9-17" as occupied time is a template; "work tasks should happen 9-17" is a window on the Work category.
 - WORD CHOICE decides the tool, not the topic. If the user says "window" or "category window" (even "Work category windows"), use the window tools (add_time_windows / update_time_windows) and NEVER add_templates. If they say "template", "block", or "commitment", use the template tools. When genuinely ambiguous, ask which they mean rather than guessing.
+
+QUEUES AND DEPENDENCIES (queues with their members in schedule order; after the blank line, the prerequisite edges)
+${buildPrecedenceList(currentPrecedence, currentForest, categories)}
+
+Queues and dependencies sequence the user's work. A queue is an ordered list of top-level items scheduled strictly first-to-last; a dependency says one top-level item must finish before another starts. Rules:
+- Only TOP-LEVEL tasks and goals qualify (ids from the goal index; draft ids work too) — never subtasks, never plans. An item can belong to at most ONE queue.
+- Member order in a queue is the schedule order. add_queue_members appends (or inserts at atIndex); move_queue_member repositions.
+- Dependencies may give one item several prerequisites; it starts after ALL of them finish. Completed prerequisites are simply skipped, so linking to something already done is harmless but pointless — mention it instead of adding it.
+- Loops are impossible and the tools refuse them, reporting the chain that would close the loop (e.g. "A" → "B" → "A"). Relay that path in plain words and offer a fix (reorder, or drop one link).
+- A dependency that repeats what a queue already enforces is allowed but redundant — prefer one mechanism per relationship.
+- A queue's optional category: members without their own category inherit it for scheduling (its time windows and location apply to them). Set it when the queue clearly belongs to one area of the user's life.
+- When the user describes sequential work ("first X, then Y", "after the kitchen is done"), use a queue for a named ordered stream of whole items and dependencies for one-off prerequisite links between otherwise independent items.
+- Only delete a queue or remove members when the user asks. When the user speaks of these, say "queue" and "depends on" — never "queueId", "member", "plannerId", "predecessor", or "successor".
 ${focusBlock}${intentBlock}
 NODE STRUCTURE
 Each node in a goal tree has:
@@ -564,6 +663,9 @@ Editing — deterministic operations. PREFER these for small changes; each appli
 - add_templates / update_templates / delete_templates: manage the user's weekly template blocks. Batch related blocks into one call (e.g. all three gym sessions). Updates are partial patches by id; null clears color or locationId.
 - add_time_windows / update_time_windows / delete_time_windows: manage category time windows by id. Batch related windows into one call (e.g. all five weekday windows).
 - add_categories / update_categories / delete_categories: manage the categories themselves — create roles and sub-categories, rename, recolor, reorganize (parentId), set a location, toggle scheduling flags, delete (subtree + windows; only on explicit request). To create a parent and its children, create the parent first and use its reported id in the next call.
+- add_queues / update_queues / delete_queues: manage queues (ordered work streams). add_queues may include initial members in order; ids are minted by the app and reported back.
+- add_queue_members / move_queue_member / remove_queue_members: manage a queue's members by top-level item id. Adds append unless atIndex is given; moves address the position after the item is lifted out.
+- add_dependencies / remove_dependencies: prerequisite links between top-level items ({predecessorId, successorId} — the first must finish before the second starts).
 
 Building:
 - propose_goals: create new top-level goals, or restructure a goal wholesale. Complete trees ONLY for goals you create or modify — never re-emit untouched goals, and never use this for small edits (use the editing tools instead). Emit each goal's id as its FIRST field; new nodes omit id (draft ids are assigned and reported back). deletedGoalIds removes whole goals. The order of the goals array is not meaningful.
@@ -571,7 +673,7 @@ Building:
 Display:
 - show_goals: bring existing goals into the user's tree pane without changing them. Pass ids, or all: true.
 
-The user's tree pane starts nearly empty: it displays only the focused goal, goals you change, and goals you show. Template changes appear on a separate Week tab that always shows the full weekly schedule; category and window changes appear on a Categories tab grouped by category.
+The user's tree pane starts nearly empty: it displays only the focused goal, goals you change, and goals you show. Template changes appear on a separate Week tab that always shows the full weekly schedule; category and window changes appear on a Categories tab grouped by category; queue and dependency changes appear on a Queues tab.
 
 Always write at least one short sentence of prose before calling any tool — never reply with a bare tool call. If the user is only asking a question, answer in prose (using the reading tools if needed) and don't make changes.`;
 }
@@ -1076,6 +1178,177 @@ const deleteCategoriesTool: Anthropic.Tool = {
   } as Anthropic.Tool["input_schema"],
 };
 
+const addQueuesTool: Anthropic.Tool = {
+  name: "add_queues",
+  description:
+    "Create queues — named ordered work streams over top-level items. memberPlannerIds (optional) seeds the queue in schedule order; each member must be a top-level task or goal not already in a queue. Queue ids are minted by the app and reported back.",
+  input_schema: {
+    type: "object",
+    properties: {
+      queues: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            categoryId: {
+              type: ["string", "null"],
+              description:
+                "Optional inherited default: members without their own category adopt this one for scheduling.",
+            },
+            memberPlannerIds: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "Top-level item ids in schedule order (first schedules first).",
+            },
+          },
+          required: ["title"],
+        },
+      },
+    },
+    required: ["queues"],
+  } as Anthropic.Tool["input_schema"],
+};
+
+const updateQueuesTool: Anthropic.Tool = {
+  name: "update_queues",
+  description:
+    "Edit queues by id: title, categoryId (null clears the inherited default). Partial patches — omit fields you are not changing. Membership is managed with the member tools, not here.",
+  input_schema: {
+    type: "object",
+    properties: {
+      updates: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            title: { type: "string" },
+            categoryId: { type: ["string", "null"] },
+          },
+          required: ["id"],
+        },
+      },
+    },
+    required: ["updates"],
+  } as Anthropic.Tool["input_schema"],
+};
+
+const deleteQueuesTool: Anthropic.Tool = {
+  name: "delete_queues",
+  description:
+    "Delete queues by id. The member items themselves are untouched — only the ordering is removed. Only use on an explicit user request.",
+  input_schema: {
+    type: "object",
+    properties: {
+      queueIds: {
+        type: "array",
+        items: { type: "string" },
+      },
+    },
+    required: ["queueIds"],
+  } as Anthropic.Tool["input_schema"],
+};
+
+const addQueueMembersTool: Anthropic.Tool = {
+  name: "add_queue_members",
+  description:
+    "Add top-level items to a queue, in the given order. Appends at the end unless atIndex is given (0 = first). Each item must be a top-level task or goal and not already in any queue; an addition that would create a loop is refused with the closing path.",
+  input_schema: {
+    type: "object",
+    properties: {
+      queueId: { type: "string" },
+      plannerIds: {
+        type: "array",
+        items: { type: "string" },
+      },
+      atIndex: {
+        type: "integer",
+        description: "Insertion position, 0 = first. Omit to append.",
+      },
+    },
+    required: ["queueId", "plannerIds"],
+  } as Anthropic.Tool["input_schema"],
+};
+
+const moveQueueMemberTool: Anthropic.Tool = {
+  name: "move_queue_member",
+  description:
+    "Move a member to a new position within its queue. toIndex addresses the order AFTER the member is lifted out (0 = first). A reorder that would create a loop is refused with the closing path.",
+  input_schema: {
+    type: "object",
+    properties: {
+      queueId: { type: "string" },
+      plannerId: { type: "string" },
+      toIndex: { type: "integer" },
+    },
+    required: ["queueId", "plannerId", "toIndex"],
+  } as Anthropic.Tool["input_schema"],
+};
+
+const removeQueueMembersTool: Anthropic.Tool = {
+  name: "remove_queue_members",
+  description:
+    "Remove items from their queues by top-level item id (an item is in at most one queue). The items themselves are untouched.",
+  input_schema: {
+    type: "object",
+    properties: {
+      plannerIds: {
+        type: "array",
+        items: { type: "string" },
+      },
+    },
+    required: ["plannerIds"],
+  } as Anthropic.Tool["input_schema"],
+};
+
+const addDependenciesTool: Anthropic.Tool = {
+  name: "add_dependencies",
+  description:
+    "Create prerequisite links between top-level items: the predecessor must finish before the successor starts. An item may have several prerequisites (it starts after ALL finish). A link that would create a loop is refused with the closing path.",
+  input_schema: {
+    type: "object",
+    properties: {
+      dependencies: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            predecessorId: { type: "string" },
+            successorId: { type: "string" },
+          },
+          required: ["predecessorId", "successorId"],
+        },
+      },
+    },
+    required: ["dependencies"],
+  } as Anthropic.Tool["input_schema"],
+};
+
+const removeDependenciesTool: Anthropic.Tool = {
+  name: "remove_dependencies",
+  description:
+    "Remove prerequisite links by their {predecessorId, successorId} pair.",
+  input_schema: {
+    type: "object",
+    properties: {
+      dependencies: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            predecessorId: { type: "string" },
+            successorId: { type: "string" },
+          },
+          required: ["predecessorId", "successorId"],
+        },
+      },
+    },
+    required: ["dependencies"],
+  } as Anthropic.Tool["input_schema"],
+};
+
 function parseGoalIds(input: unknown): string[] {
   const goalIds = (input as { goalIds?: unknown } | null)?.goalIds;
   if (!Array.isArray(goalIds)) return [];
@@ -1149,6 +1422,17 @@ export async function POST(req: Request) {
     })),
   };
 
+  // And for precedence (queues + dependency edges): full state in the prompt,
+  // ops emit the whole next state. Forest edits inside the request prune it
+  // (a deleted goal must not linger as a queue member). The initial prune
+  // heals a client that missed a prune event on an aborted stream.
+  const initialPrune = pruneDraftPrecedence(
+    parsed.currentPrecedence,
+    parsed.currentForest,
+  );
+  let workingPrecedence: DraftPrecedenceState = initialPrune.state;
+  parsed.currentPrecedence = workingPrecedence;
+
   const existingGoalIds = new Set(
     parsed.currentForest.goals.map((g) => g.id).filter((id) => id.length > 0),
   );
@@ -1194,6 +1478,10 @@ export async function POST(req: Request) {
       // each other's merges.
       let proposeCallCounter = 0;
 
+      if (initialPrune.changed) {
+        send("precedence", workingPrecedence);
+      }
+
       const isProposalGoalAllowed = (goal: unknown): boolean => {
         const id = (goal as { id?: unknown } | null)?.id;
         if (typeof id !== "string" || id.length === 0) return true; // new goal
@@ -1237,6 +1525,18 @@ export async function POST(req: Request) {
         return JSON.stringify({ trees, missingIds });
       };
 
+      // Forest edits can orphan precedence references (a deleted or retyped
+      // root that was a queue member or dependency endpoint). Mirrors the
+      // thunk's central pruning inside the request; the client hears about it
+      // through the same full-state event ops use.
+      const prunePrecedenceAgainstForest = () => {
+        const pruned = pruneDraftPrecedence(workingPrecedence, workingForest);
+        if (pruned.changed) {
+          workingPrecedence = pruned.state;
+          send("precedence", workingPrecedence);
+        }
+      };
+
       // Adopt an edit-tool result: advance the working copy, mirror changed
       // goals to the client through the same forest-event path proposals use
       // (fromOps marks the trees as code-computed — the client merge then
@@ -1258,6 +1558,7 @@ export async function POST(req: Request) {
             deletedGoalIds: result.deletedGoalIds,
             fromOps: true,
           });
+          prunePrecedenceAgainstForest();
         }
         const parts: string[] = [];
         if (changed) {
@@ -1337,6 +1638,33 @@ export async function POST(req: Request) {
         return parts.join(" ") || "Nothing changed.";
       };
 
+      // Precedence sibling — same full-state contract as templates/windows.
+      // Cycle refusals arrive as failures whose reason carries the closing
+      // path; the model is instructed to relay it in plain words.
+      const applyPrecedenceOpResult = (
+        result: DraftPrecedenceOpsResult,
+        appliedVerb: string,
+      ): string => {
+        workingPrecedence = result.state;
+        if (result.changed) {
+          send("precedence", workingPrecedence);
+        }
+        const parts: string[] = [];
+        if (result.changed) {
+          parts.push(
+            `${appliedVerb} — the user sees it as a pending change on the Queues tab.`,
+          );
+        }
+        if (result.failures.length > 0) {
+          parts.push(
+            `Failed: ${result.failures
+              .map((f) => `${f.id ?? "(no id)"}: ${f.reason}`)
+              .join("; ")}.`,
+          );
+        }
+        return parts.join(" ") || "Nothing changed.";
+      };
+
       // Template sibling of applyOpResult. The event carries the full
       // authoritative array — small list, last write wins, no client folding.
       const applyTemplateOpResult = (
@@ -1404,6 +1732,14 @@ export async function POST(req: Request) {
                 addCategoriesTool,
                 updateCategoriesTool,
                 deleteCategoriesTool,
+                addQueuesTool,
+                updateQueuesTool,
+                deleteQueuesTool,
+                addQueueMembersTool,
+                moveQueueMemberTool,
+                removeQueueMembersTool,
+                addDependenciesTool,
+                removeDependenciesTool,
                 proposeGoalsTool,
                 showGoalsTool,
               ],
@@ -1797,6 +2133,156 @@ export async function POST(req: Request) {
                     ) + removedNote;
                   break;
                 }
+                case "add_queues": {
+                  const items = (
+                    Array.isArray(input?.queues) ? input.queues : []
+                  ).slice(0, MAX_OP_ITEMS);
+                  send("status", { tool: tu.name, count: items.length });
+                  const before = new Set(
+                    workingPrecedence.queues.map((q) => q.id),
+                  );
+                  const result = addDraftQueues(
+                    workingPrecedence,
+                    items,
+                    workingForest,
+                    currentCategoryIds(),
+                  );
+                  const minted = result.state.queues.filter(
+                    (q) => !before.has(q.id),
+                  );
+                  const mintedNote =
+                    minted.length > 0
+                      ? ` Assigned ids: ${minted
+                          .map((q) => `"${q.title}" = ${q.id}`)
+                          .join(", ")}.`
+                      : "";
+                  content =
+                    applyPrecedenceOpResult(
+                      result,
+                      `Created ${minted.length} queue(s)`,
+                    ) + mintedNote;
+                  break;
+                }
+                case "update_queues": {
+                  const updates = (
+                    Array.isArray(input?.updates) ? input.updates : []
+                  ).slice(0, MAX_OP_ITEMS) as DraftQueueUpdate[];
+                  send("status", { tool: tu.name, count: updates.length });
+                  content = applyPrecedenceOpResult(
+                    updateDraftQueues(
+                      workingPrecedence,
+                      updates,
+                      currentCategoryIds(),
+                    ),
+                    `Updated ${updates.length} queue(s)`,
+                  );
+                  break;
+                }
+                case "delete_queues": {
+                  const queueIds = parseStringArray(input?.queueIds).slice(
+                    0,
+                    MAX_OP_ITEMS,
+                  );
+                  send("status", { tool: tu.name, count: queueIds.length });
+                  content = applyPrecedenceOpResult(
+                    deleteDraftQueues(workingPrecedence, queueIds),
+                    `Deleted ${queueIds.length} queue(s)`,
+                  );
+                  break;
+                }
+                case "add_queue_members": {
+                  const plannerIds = parseStringArray(input?.plannerIds).slice(
+                    0,
+                    MAX_OP_ITEMS,
+                  );
+                  send("status", { tool: tu.name, count: plannerIds.length });
+                  content = applyPrecedenceOpResult(
+                    addDraftQueueMembers(
+                      workingPrecedence,
+                      {
+                        queueId:
+                          typeof input?.queueId === "string"
+                            ? input.queueId
+                            : "",
+                        plannerIds,
+                        atIndex:
+                          typeof input?.atIndex === "number"
+                            ? input.atIndex
+                            : undefined,
+                      },
+                      workingForest,
+                    ),
+                    `Added ${plannerIds.length} queue member(s)`,
+                  );
+                  break;
+                }
+                case "move_queue_member": {
+                  send("status", { tool: tu.name, count: 1 });
+                  content = applyPrecedenceOpResult(
+                    moveDraftQueueMember(
+                      workingPrecedence,
+                      {
+                        queueId:
+                          typeof input?.queueId === "string"
+                            ? input.queueId
+                            : "",
+                        plannerId:
+                          typeof input?.plannerId === "string"
+                            ? input.plannerId
+                            : "",
+                        toIndex:
+                          typeof input?.toIndex === "number"
+                            ? input.toIndex
+                            : Number.NaN,
+                      },
+                      workingForest,
+                    ),
+                    "Moved the queue member",
+                  );
+                  break;
+                }
+                case "remove_queue_members": {
+                  const plannerIds = parseStringArray(input?.plannerIds).slice(
+                    0,
+                    MAX_OP_ITEMS,
+                  );
+                  send("status", { tool: tu.name, count: plannerIds.length });
+                  content = applyPrecedenceOpResult(
+                    removeDraftQueueMembers(workingPrecedence, plannerIds),
+                    `Removed ${plannerIds.length} queue member(s)`,
+                  );
+                  break;
+                }
+                case "add_dependencies": {
+                  const items = (
+                    Array.isArray(input?.dependencies)
+                      ? input.dependencies
+                      : []
+                  ).slice(0, MAX_OP_ITEMS);
+                  send("status", { tool: tu.name, count: items.length });
+                  content = applyPrecedenceOpResult(
+                    addDraftDependencies(
+                      workingPrecedence,
+                      items,
+                      workingForest,
+                    ),
+                    `Added ${items.length} dependenc${items.length === 1 ? "y" : "ies"}`,
+                  );
+                  break;
+                }
+                case "remove_dependencies": {
+                  const items = (
+                    Array.isArray(input?.dependencies)
+                      ? input.dependencies
+                      : []
+                  ).slice(0, MAX_OP_ITEMS);
+                  send("status", { tool: tu.name, count: items.length });
+                  content = applyPrecedenceOpResult(
+                    removeDraftDependencies(workingPrecedence, items),
+                    `Removed ${items.length} dependenc${items.length === 1 ? "y" : "ies"}`,
+                  );
+                  break;
+                }
                 case "propose_goals": {
                   const filtered = filterProposal(tu.input);
                   // Stamp draft ids on the accepted goals, adopt them into
@@ -1817,6 +2303,7 @@ export async function POST(req: Request) {
                       ...normalized,
                       goals: stampedGoals,
                     });
+                    prunePrecedenceAgainstForest();
                     for (const root of newRoots) {
                       // The model authored these trees this request — no
                       // fetch required before revising them.
