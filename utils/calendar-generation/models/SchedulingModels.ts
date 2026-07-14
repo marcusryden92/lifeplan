@@ -367,6 +367,13 @@ export interface FindValidSlotsResult {
   fittingSlots: PlaceableSlot[];
   taskLocationId: string | null | undefined;
   constraintForTask: Category | undefined;
+  /**
+   * The lower placement bound the candidates were clipped to:
+   * max(afterTime, inherited earliestStartDate, currentDate). Threaded into
+   * selectBestSlot so absorb/reclaim back-extension can be validated against
+   * the same bound instead of being skipped wholesale.
+   */
+  effectiveAfter: Date;
 }
 
 /**
@@ -406,6 +413,14 @@ export interface SlotSelectionResult {
    */
   absorbableTravel: TravelShardSpan | null;
   reclaimPrecedingGapTravel: TravelShardSpan | null;
+  /**
+   * Whether the placement back-extends into the freed travel span (the
+   * historical absorb/reclaim behavior). False when a constraint boundary
+   * (allowed times / earliest start / chain bound) sits inside the freed
+   * region: the redundant travel is still removed, but the task keeps the
+   * candidate slot's clipped start and the freed span stays free time.
+   */
+  slideIntoFreedTravel: boolean;
   /**
    * Minutes the reservation will actually occupy. Equals task.duration for
    * plain placements; for chunked placements it is what ChunkSizing.grant

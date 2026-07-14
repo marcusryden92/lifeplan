@@ -56,6 +56,8 @@ export const SM = {
       spanDur: number,
     ) =>
       `Absorb prev task's outbound travel: ${spanFrom} span [${spanStart}-${spanEnd}, ${spanDur}min] — no travel-before needed`,
+    absorbWithoutSlide:
+      "Back-extension would cross a placement bound (allowed times / earliest start / chain) — travel still removed, task keeps the clipped slot start, freed span stays free time",
     reclaimPrecedingGapTravel: (
       origin: string,
       directT: number,

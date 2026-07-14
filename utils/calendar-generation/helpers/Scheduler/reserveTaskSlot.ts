@@ -32,6 +32,7 @@ export function reserveTaskSlot(
   context: SchedulingContext,
   absorbableTravel: TravelShardSpan | null = null,
   reclaimPrecedingGapTravel: TravelShardSpan | null = null,
+  slideIntoFreedTravel: boolean = true,
   durationMinutes?: number,
 ): ReservationResult | { failure: SchedulingFailure } {
   const recorder = context.schedulerRecorder;
@@ -83,10 +84,13 @@ export function reserveTaskSlot(
   // When absorbing the previous task's travel-after, or reclaiming a preceding
   // gap travel, start at the absorbed/reclaimed position instead of the free
   // slot's nominal start (the slot will be back-extended in reserveSlotWithTravel).
-  const effectiveSlotStart =
-    absorbableTravel?.travelStart ??
-    reclaimPrecedingGapTravel?.travelStart ??
-    selectedSlot.start;
+  // Without the slide the redundant travel is still removed, but the task keeps
+  // the candidate slot's clipped start and the freed span stays free time.
+  const effectiveSlotStart = slideIntoFreedTravel
+    ? (absorbableTravel?.travelStart ??
+      reclaimPrecedingGapTravel?.travelStart ??
+      selectedSlot.start)
+    : selectedSlot.start;
 
   const taskStartDate = dateTimeService.addDuration(
     effectiveSlotStart,

@@ -19,6 +19,7 @@ import {
 import { PlaceableSlot } from "../../models/TimeSlot";
 import { SchedulingFailureReason } from "../../constants";
 import type { TravelShardSpan } from "../../utils/timeSlotUtils";
+import { intersectIntervalWithAllowed } from "../../../allowedTimes";
 import { SM } from "./schedulerMessages";
 
 /**
@@ -62,6 +63,7 @@ export function selectBestSlot(
   strategy: SchedulingStrategy,
   context: SchedulingContext,
   sizing?: ChunkSizing,
+  effectiveAfter?: Date,
 ): SlotSelectionResult | { failure: SchedulingFailure } {
   const recorder = context.schedulerRecorder;
 
@@ -70,12 +72,29 @@ export function selectBestSlot(
   const fitMinutes = sizing ? sizing.minMinutes : task.duration;
 
   // Absorb/reclaim back-extend the placement region before the candidate's
-  // start. A constrained task's candidates are clipped to its earliest start
-  // date / allowed times, so back-extension would move the task outside its
-  // bounds — skip those paths entirely for constrained tasks.
-  const hasSchedulingConstraints = !!context.plannerConstraintsMap?.get(
-    task.id,
-  );
+  // start. Removing the redundant travel is always correct (the user never
+  // makes that trip); only the back-extension can violate the task's bounds.
+  // So the slide is validated per candidate: the back-extended task start
+  // must respect the lower placement bound (afterTime / earliest date) and
+  // stay inside the same allowed interval as the candidate. When it doesn't,
+  // the travel is still removed but the task keeps the candidate's clipped
+  // start and the freed span stays free time (slideIntoFreedTravel=false).
+  const constraints = context.plannerConstraintsMap?.get(task.id);
+  const canSlideTaskTo = (slideTaskStart: Date, slotEnd: Date): boolean => {
+    if (effectiveAfter && slideTaskStart < effectiveAfter) return false;
+    const allowed = constraints?.allowedTimes;
+    if (!allowed || allowed.length === 0) return true;
+    const fragments = intersectIntervalWithAllowed(
+      slideTaskStart,
+      slotEnd,
+      allowed,
+    );
+    return (
+      fragments.length === 1 &&
+      fragments[0].start.getTime() === slideTaskStart.getTime() &&
+      fragments[0].end.getTime() === slotEnd.getTime()
+    );
+  };
 
   // Score ALL slots using the strategy (includes location adjacency scoring)
   const scoredSlots = scoreSlots(task, validSlots, strategy, context);
@@ -91,6 +110,7 @@ export function selectBestSlot(
   let selectedReusableTravelStart: Date | null = null;
   let selectedAbsorbableTravel: TravelShardSpan | null = null;
   let selectedReclaimPrecedingGapTravel: TravelShardSpan | null = null;
+  let selectedSlideIntoFreedTravel = true;
   let selectedGrantedMinutes = task.duration;
 
   let candidateIdx = 0;
@@ -123,6 +143,7 @@ export function selectBestSlot(
     let canAbsorbPrevTravel = false;
     let absorbableTravel: TravelShardSpan | null = null;
     let reclaimPrecedingGapTravel: TravelShardSpan | null = null;
+    let slideIntoFreedTravel = true;
 
     // For a CategorySlot, the task lands inside the category interior, so
     // the user's effective location on both sides of the task is the
@@ -151,12 +172,19 @@ export function selectBestSlot(
         // task at OUR location. e.g., B4 (Uppsala) placed travel-after Uppsala->GamlaStan,
         // so the free slot has prevLocationId=GamlaStan. If B5 is also Uppsala, we can
         // absorb B4's travel-after instead of creating new travel-before.
-        absorbableTravel = hasSchedulingConstraints
-          ? null
-          : travelManager.findAdjacentTravelFrom(slot.start, taskLocationId);
+        absorbableTravel = travelManager.findAdjacentTravelFrom(
+          slot.start,
+          taskLocationId,
+        );
         if (absorbableTravel) {
           canAbsorbPrevTravel = true;
           needTravelBefore = 0;
+          slideIntoFreedTravel = canSlideTaskTo(
+            new Date(
+              absorbableTravel.travelStart.getTime() + bufferMinutes * 60000,
+            ),
+            slot.end,
+          );
           if (recorder) {
             const dur = Math.floor(
               (absorbableTravel.travelEnd.getTime() -
@@ -172,14 +200,17 @@ export function selectBestSlot(
               ),
               3,
             );
+            if (!slideIntoFreedTravel) {
+              recorder.decision(SM.selectBestSlot.absorbWithoutSlide, 3);
+            }
           }
         } else {
           // Check if there is a pre-carved gap travel (e.g. a return trip Gamla Stan → Home)
           // immediately before this slot. If so, we can bypass the intermediate stop and
           // travel direct from the real origin (Gamla Stan) to the task location.
-          const precedingGapTravel = hasSchedulingConstraints
-            ? null
-            : travelManager.findPrecedingGapTravel(slot.start);
+          const precedingGapTravel = travelManager.findPrecedingGapTravel(
+            slot.start,
+          );
           if (
             precedingGapTravel?.travelFromLocationId &&
             precedingGapTravel.travelFromLocationId !== taskLocationId
@@ -192,6 +223,26 @@ export function selectBestSlot(
             if (directTravel > 0) {
               needTravelBefore = directTravel;
               reclaimPrecedingGapTravel = precedingGapTravel;
+              // Mirror reserveTaskSlot's layout: with a standalone-outside
+              // travel-before the slid task starts at the span start; with
+              // travel inside, buffer + travel precede it.
+              const slideOffsetMinutes =
+                travelManager.canPlaceStandaloneTravelBefore(
+                  new Date(slot.start.getTime()),
+                  directTravel,
+                )
+                  ? 0
+                  : bufferMinutes + directTravel;
+              slideIntoFreedTravel = canSlideTaskTo(
+                new Date(
+                  precedingGapTravel.travelStart.getTime() +
+                    slideOffsetMinutes * 60000,
+                ),
+                slot.end,
+              );
+              if (!slideIntoFreedTravel) {
+                recorder?.decision(SM.selectBestSlot.absorbWithoutSlide, 3);
+              }
               if (recorder) {
                 const dur = Math.floor(
                   (precedingGapTravel.travelEnd.getTime() -
@@ -328,16 +379,17 @@ export function selectBestSlot(
     // When absorbing a previous task's travel-after, or reclaiming a preceding gap travel,
     // the reclaimed travel space adds to the effective slot capacity. Use the
     // full multi-shard span duration (travelEnd - travelStart) so we count
-    // every shard, not just the matched one.
+    // every shard, not just the matched one. Without the slide the task cannot
+    // occupy the freed span, so no capacity bonus applies.
     let effectiveCapacity = slot.durationMinutes;
-    if (canAbsorbPrevTravel && absorbableTravel) {
+    if (slideIntoFreedTravel && canAbsorbPrevTravel && absorbableTravel) {
       const spanDur = Math.floor(
         (absorbableTravel.travelEnd.getTime() -
           absorbableTravel.travelStart.getTime()) /
           60000,
       );
       effectiveCapacity += spanDur;
-    } else if (reclaimPrecedingGapTravel) {
+    } else if (slideIntoFreedTravel && reclaimPrecedingGapTravel) {
       // Expand capacity backward to include the gap travel window.
       const spanDur = Math.floor(
         (reclaimPrecedingGapTravel.travelEnd.getTime() -
@@ -405,6 +457,7 @@ export function selectBestSlot(
       selectedReusableTravelStart = reusableTravelStart;
       selectedAbsorbableTravel = canAbsorbPrevTravel ? absorbableTravel : null;
       selectedReclaimPrecedingGapTravel = reclaimPrecedingGapTravel;
+      selectedSlideIntoFreedTravel = slideIntoFreedTravel;
       selectedGrantedMinutes = grantedMinutes;
       break;
     }
@@ -434,6 +487,7 @@ export function selectBestSlot(
     taskLocationId,
     absorbableTravel: selectedAbsorbableTravel,
     reclaimPrecedingGapTravel: selectedReclaimPrecedingGapTravel,
+    slideIntoFreedTravel: selectedSlideIntoFreedTravel,
     grantedDurationMinutes: selectedGrantedMinutes,
   };
 }

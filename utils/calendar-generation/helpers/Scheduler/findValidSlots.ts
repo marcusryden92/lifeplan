@@ -90,5 +90,6 @@ export function findValidSlots(
     fittingSlots,
     taskLocationId,
     constraintForTask,
+    effectiveAfter,
   };
 }
