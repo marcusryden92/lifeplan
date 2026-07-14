@@ -1,9 +1,16 @@
-import type { Queue, PlannerDependency, QueueMember } from "@/types/prisma";
+import type { Queue, PlannerDependency, QueueMember, Planner } from "@/types/prisma";
 import type { PrecedenceEdge } from "./types";
-import { collectValidationEdges } from "./validationEdges";
+import {
+  collectValidationEdges,
+  detourComponentMap,
+  contractPrecedenceEdges,
+} from "./validationEdges";
 
 // Cycle detection over the merged validation graph (queue logical order +
-// dependency edges). Graphs are tiny — plain DFS everywhere.
+// dependency edges). Graphs are tiny — plain DFS everywhere. Passing
+// `planner` folds detour links in: host and spliced target contract to one
+// node, so a queue/dependency edge connecting them (directly or through a
+// path) is refused as a cycle — at runtime the pair would mutually block.
 
 function buildAdjacency(edges: PrecedenceEdge[]): Map<string, PrecedenceEdge[]> {
   const adjacency = new Map<string, PrecedenceEdge[]>();
@@ -102,10 +109,16 @@ export function wouldCreateCycleAddingDependency(
   dependencies: PlannerDependency[],
   predecessorId: string,
   successorId: string,
+  planner: Planner[] = [],
 ): PrecedenceEdge[] | null {
-  return findCycle(collectValidationEdges(queues, dependencies), {
-    fromId: predecessorId,
-    toId: successorId,
+  const repr = detourComponentMap(planner);
+  const edges = contractPrecedenceEdges(
+    collectValidationEdges(queues, dependencies),
+    repr,
+  );
+  return findCycle(edges, {
+    fromId: repr.get(predecessorId) ?? predecessorId,
+    toId: repr.get(successorId) ?? successorId,
     source: "dependency",
   });
 }
@@ -147,6 +160,7 @@ export function wouldCreateCycleAddingQueueMember(
   queueId: string,
   plannerId: string,
   atIndex?: number,
+  planner: Planner[] = [],
 ): PrecedenceEdge[] | null {
   const queue = queues.find((q) => q.id === queueId);
   if (!queue) return null;
@@ -154,7 +168,10 @@ export function wouldCreateCycleAddingQueueMember(
   const index = atIndex === undefined ? order.length : atIndex;
   order.splice(Math.max(0, Math.min(index, order.length)), 0, plannerId);
   return findCycleInGraph(
-    edgesWithQueueOrder(queues, dependencies, queueId, order),
+    contractPrecedenceEdges(
+      edgesWithQueueOrder(queues, dependencies, queueId, order),
+      detourComponentMap(planner),
+    ),
   );
 }
 
@@ -169,6 +186,7 @@ export function wouldCreateCycleReorderingQueueMember(
   queueId: string,
   plannerId: string,
   toIndex: number,
+  planner: Planner[] = [],
 ): PrecedenceEdge[] | null {
   const queue = queues.find((q) => q.id === queueId);
   if (!queue) return null;
@@ -177,6 +195,9 @@ export function wouldCreateCycleReorderingQueueMember(
     .filter((id) => id !== plannerId);
   order.splice(Math.max(0, Math.min(toIndex, order.length)), 0, plannerId);
   return findCycleInGraph(
-    edgesWithQueueOrder(queues, dependencies, queueId, order),
+    contractPrecedenceEdges(
+      edgesWithQueueOrder(queues, dependencies, queueId, order),
+      detourComponentMap(planner),
+    ),
   );
 }

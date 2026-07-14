@@ -141,17 +141,6 @@ export function gateCandidate(
   return { blocked: false, afterTime, failedEdges };
 }
 
-/** True when the candidate has an incoming edge whose outcome is unresolved. */
-export function isBlocked(
-  plannerId: string,
-  predecessorMap: Map<string, PrecedenceEdge[]>,
-  chainOutcome: Map<string, ChainOutcome>,
-): boolean {
-  const incoming = predecessorMap.get(plannerId);
-  if (!incoming || incoming.length === 0) return false;
-  return incoming.some((edge) => !chainOutcome.has(edge.fromId));
-}
-
 /** Dedupe-and-record sequence breaks (one per edge+cause across passes). */
 export function recordSequenceBreaks(
   breaks: SequenceBreak[],

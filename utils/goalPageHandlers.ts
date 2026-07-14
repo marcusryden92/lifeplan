@@ -1,6 +1,7 @@
 import { Planner, SimpleEvent, Category, PlannerType } from "@/types/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { calendarColors } from "@/data/calendarColors";
+import { plannerIsCompleted } from "@/utils/plannerCompletion";
 
 import {
   appendKey,
@@ -202,50 +203,103 @@ export function getSortedTreeBottomLayer(
 }
 
 // Detour-aware leaf enumeration for the SCHEDULER only. Walks the tree in DFS
-// order like the bottom layer, but a node carrying `linkedItemId` is a pure
-// redirect: its own duration/children are ignored and the linked target's
-// scheduled sequence is spliced in at that position. Real leaves are deduped
-// (a target referenced twice inside one tree still schedules once) and detour
-// chains are cycle-guarded. Kept separate from getTreeBottomLayer so structural
-// walks (deletion, counts) never follow links — a host delete must not delete
-// the linked target, and progress counts must not double.
+// order like the bottom layer, but a node carrying `linkedItemId` is a
+// redirect: its own duration is ignored and the linked target's scheduled
+// sequence is spliced in at that position (children added under a placeholder
+// still schedule, after the splice). The splice is transparent for unready or
+// completed targets — the readiness gate is universal and completed work never
+// reschedules — so the chain simply flows through the placeholder. A TASK
+// entry (walk root or redirect target) contributes its own block; its children
+// are independent candidates, matching how the candidate filter admits tasks
+// under non-goal roots. Real leaves are deduped (a target referenced twice
+// inside one tree still schedules once) and detour chains are cycle-guarded.
+// Kept separate from getTreeBottomLayer so structural walks (deletion, counts)
+// never follow links — a host delete must not delete the linked target, and
+// progress counts must not double.
 export function getScheduledLeafSequence(
   planner: Planner[],
   id: string,
+  followedTargets?: Set<string>,
 ): Planner[] {
   const index = getTreeIndex(planner);
   const result: Planner[] = [];
   const seen = new Set<string>();
   const visitingTargets = new Set<string>();
 
+  const emit = (node: Planner) => {
+    if (!seen.has(node.id)) {
+      seen.add(node.id);
+      result.push(node);
+    }
+  };
+
+  const follow = (targetId: string) => {
+    const target = index.byId.get(targetId);
+    if (!target || !shouldFollowDetourLink(target)) return;
+    if (visitingTargets.has(targetId)) return;
+    followedTargets?.add(targetId);
+    visitingTargets.add(targetId);
+    walkEntry(targetId);
+    visitingTargets.delete(targetId);
+  };
+
+  const walkChildren = (nodeId: string) => {
+    for (const child of index.childrenByParent.get(nodeId) ?? []) {
+      walk(child.id);
+    }
+  };
+
+  // Sequence entry (the walk root or a redirect target): a task stands for
+  // its own block, a goal walks its subtree bottom layer.
+  const walkEntry = (nodeId: string) => {
+    const node = index.byId.get(nodeId);
+    if (!node) return;
+    if (node.linkedItemId) {
+      follow(node.linkedItemId);
+      walkChildren(nodeId);
+      return;
+    }
+    if (node.plannerType === PlannerType.task) {
+      emit(node);
+      return;
+    }
+    walk(nodeId);
+  };
+
+  // Interior nodes: bottom-layer semantics (childless node is a leaf).
   const walk = (nodeId: string) => {
     const node = index.byId.get(nodeId);
     if (!node) return;
     if (node.linkedItemId) {
-      const targetId = node.linkedItemId;
-      if (!index.byId.has(targetId) || visitingTargets.has(targetId)) return;
-      visitingTargets.add(targetId);
-      walk(targetId);
-      visitingTargets.delete(targetId);
+      follow(node.linkedItemId);
+      walkChildren(nodeId);
       return;
     }
     const children = index.childrenByParent.get(nodeId);
     if (!children || children.length === 0) {
-      if (!seen.has(nodeId)) {
-        seen.add(nodeId);
-        result.push(node);
-      }
+      emit(node);
       return;
     }
     for (const child of children) walk(child.id);
   };
 
-  walk(id);
+  walkEntry(id);
   return result;
 }
 
-// Root planner ids referenced by any placeholder's linkedItemId. These roots
-// schedule via the splice, not as independent candidates.
+// The engine follows a detour link only to a target that can actually
+// schedule: unready targets are gated out (readiness is the universal
+// scheduling gate) and completed targets never reschedule. Both cases are
+// transparent — the host chain flows through the placeholder.
+export function shouldFollowDetourLink(target: Planner): boolean {
+  return target.isReady === true && !plannerIsCompleted(target);
+}
+
+// Root planner ids referenced by any placeholder's linkedItemId. Used for
+// target-level bookkeeping (reverse views, leaf-graph outcome tracking) —
+// candidacy exclusion instead derives from the ACTIVE candidates' walks via
+// getScheduledLeafSequence's followedTargets, so a target whose only host is
+// completed/unready schedules independently.
 export function collectLinkedTargetIds(planner: Planner[]): Set<string> {
   const targets = new Set<string>();
   for (const p of planner) {

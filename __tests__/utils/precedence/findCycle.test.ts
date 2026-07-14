@@ -1,4 +1,4 @@
-import type { Queue, PlannerDependency } from "@/types/prisma";
+import type { Queue, PlannerDependency, Planner } from "@/types/prisma";
 import { collectValidationEdges } from "@/utils/precedence/validationEdges";
 import {
   findCycle,
@@ -152,5 +152,109 @@ describe("findCycle", () => {
       [makeDependency("A", "C")],
     );
     expect(findCycleInGraph(edges)).toBeNull();
+  });
+});
+
+describe("detour contraction", () => {
+  // Host H splices target T via a placeholder — for legality they are one
+  // node, so any queue/dependency edge connecting them closes a cycle.
+  const makePlanner = (id: string, overrides: Partial<Planner> = {}): Planner => ({
+    id,
+    title: id,
+    parentId: null,
+    plannerType: "task",
+    isReady: true,
+    isTriaged: true,
+    duration: 60,
+    deadline: null,
+    starts: null,
+    recurrence: null,
+    recurrenceExceptions: null,
+    splitting: null,
+    completedSegments: null,
+    maxMinutesPerDay: null,
+    earliestStartDate: null,
+    allowedTimes: null,
+    linkedItemId: null,
+    sortOrder: 0,
+    completedStartTime: null,
+    completedEndTime: null,
+    priority: 5,
+    userId: "u",
+    color: null,
+    locationId: null,
+    useParentLocation: false,
+    categoryId: null,
+    createdAt: TS,
+    updatedAt: TS,
+    ...overrides,
+  });
+  const linkedPlanner = () => [
+    makePlanner("H", { plannerType: "goal" }),
+    makePlanner("ph", { parentId: "H", sortOrder: 1024, linkedItemId: "T" }),
+    makePlanner("T", { plannerType: "goal" }),
+    makePlanner("X"),
+  ];
+
+  it("refuses a dependency between a host and its spliced target, both directions", () => {
+    expect(
+      wouldCreateCycleAddingDependency([], [], "T", "H", linkedPlanner()),
+    ).not.toBeNull();
+    expect(
+      wouldCreateCycleAddingDependency([], [], "H", "T", linkedPlanner()),
+    ).not.toBeNull();
+  });
+
+  it("refuses a dependency path that reaches the pair through another item", () => {
+    expect(
+      wouldCreateCycleAddingDependency(
+        [],
+        [makeDependency("X", "H")],
+        "T",
+        "X",
+        linkedPlanner(),
+      ),
+    ).not.toBeNull();
+  });
+
+  it("refuses adding a spliced target to a queue that holds its host", () => {
+    const queues = [makeQueue("pipe", ["H"])];
+    expect(
+      wouldCreateCycleAddingQueueMember(
+        queues,
+        [],
+        "pipe",
+        "T",
+        undefined,
+        linkedPlanner(),
+      ),
+    ).not.toBeNull();
+  });
+
+  it("does not poison unrelated mutations — the pair alone is not a cycle", () => {
+    const queues = [makeQueue("pipe", ["X"])];
+    expect(
+      wouldCreateCycleAddingQueueMember(
+        queues,
+        [],
+        "pipe",
+        "Y",
+        undefined,
+        linkedPlanner(),
+      ),
+    ).toBeNull();
+    expect(
+      wouldCreateCycleAddingDependency([], [], "X", "Y", linkedPlanner()),
+    ).toBeNull();
+    expect(
+      wouldCreateCycleReorderingQueueMember(
+        [makeQueue("pipe", ["X", "Y"])],
+        [],
+        "pipe",
+        "Y",
+        0,
+        linkedPlanner(),
+      ),
+    ).toBeNull();
   });
 });

@@ -35,8 +35,14 @@ export interface PlaceLeafArgs {
   failures: SchedulingFailure[];
   afterTime?: Date;
   allowDayCapRelaxation?: boolean;
-  /** Present when the leaf sits under a goal (or detour host) with a daily cap. */
-  goalCap?: GoalCapContext;
+  /**
+   * One entry per capped goal the leaf sits under (its own root plus every
+   * detour host that splices it). Oversized/steering/attribution are decided
+   * PER CAP: a leaf bigger than one goal's cap is oversized for that goal
+   * only — the other caps still steer it and only the exceeded cap gets the
+   * relaxation row. Every placement charges every ledger.
+   */
+  goalCaps?: GoalCapContext[];
 }
 
 export interface PlaceLeafResult {
@@ -73,7 +79,7 @@ export function placeLeaf(args: PlaceLeafArgs): PlaceLeafResult {
     failures,
     afterTime,
     allowDayCapRelaxation = false,
-    goalCap,
+    goalCaps = [],
   } = args;
 
   if (scheduledTaskIds.has(leaf.id)) {
@@ -121,7 +127,7 @@ export function placeLeaf(args: PlaceLeafArgs): PlaceLeafResult {
       state: splitState,
       afterTime,
       allowDayCapRelaxation,
-      goalCap,
+      goalCaps,
     });
     const lastEnd = maxEventEnd(result.events);
     if (result.fullyPlaced) {
@@ -144,35 +150,47 @@ export function placeLeaf(args: PlaceLeafArgs): PlaceLeafResult {
     };
   }
 
-  // A leaf bigger than its goal's daily cap can never place under it — no
-  // horizon expansion creates such a day — so it places whole immediately
-  // (recorded as an oversizedLeaf compromise) instead of starving the loop.
-  const oversizedLeaf = goalCap !== undefined && leaf.duration > goalCap.capMinutes;
+  // A leaf bigger than a goal's daily cap can never place under that cap —
+  // no horizon expansion creates such a day — so that cap is ruled out of
+  // steering (recorded as an oversizedLeaf compromise on placement) instead
+  // of starving the loop. Caps the leaf DOES fit keep steering it.
+  const exceededCaps = goalCaps.filter((c) => leaf.duration > c.capMinutes);
+  const fittingCaps = goalCaps.filter((c) => leaf.duration <= c.capMinutes);
+  const fittingBudget = (slotStart: Date): number => {
+    let min = Infinity;
+    for (const c of fittingCaps) min = Math.min(min, c.budget(slotStart));
+    return min;
+  };
   let res =
-    goalCap && !oversizedLeaf
+    fittingCaps.length > 0
       ? scheduler.scheduleTask(
           leaf,
           afterTime,
-          wholeBlockSizing(leaf.duration, goalCap.budget),
+          wholeBlockSizing(leaf.duration, fittingBudget),
         )
       : scheduler.scheduleTask(leaf, afterTime);
   let dayCapRelaxed = false;
-  if (goalCap && !oversizedLeaf && !res.success && allowDayCapRelaxation) {
+  if (fittingCaps.length > 0 && !res.success && allowDayCapRelaxation) {
     res = scheduler.scheduleTask(leaf, afterTime);
     dayCapRelaxed = res.success;
   }
 
   if (res.success && res.event) {
-    if (goalCap) {
+    if (goalCaps.length > 0) {
       const start = new Date(res.event.start);
       const end = new Date(res.event.end);
       const minutes = Math.round((end.getTime() - start.getTime()) / 60000);
-      if (oversizedLeaf) {
-        goalCap.recordRelaxation("oversizedLeaf", minutes, res.event.start);
-      } else if (dayCapRelaxed && goalCap.budget(start) < minutes) {
-        goalCap.recordRelaxation("dayCap", minutes, res.event.start);
+      for (const c of exceededCaps) {
+        c.recordRelaxation("oversizedLeaf", minutes, res.event.start);
       }
-      goalCap.charge(start, end);
+      if (dayCapRelaxed) {
+        for (const c of fittingCaps) {
+          if (c.budget(start) < minutes) {
+            c.recordRelaxation("dayCap", minutes, res.event.start);
+          }
+        }
+      }
+      for (const c of goalCaps) c.charge(start, end);
     }
     scheduledTaskIds.add(leaf.id);
     return {

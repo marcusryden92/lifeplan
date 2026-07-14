@@ -71,8 +71,14 @@ import {
 } from "./EditDrawer.css";
 
 export function EditDrawer() {
-  const { planner, updatePlannerArray, updateAll, weekStartDay } =
-    useCalendarProvider();
+  const {
+    planner,
+    queues,
+    dependencies,
+    updatePlannerArray,
+    updateAll,
+    weekStartDay,
+  } = useCalendarProvider();
   const { focusedTask, setFocusedTask } = useDraggableContext();
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
@@ -120,7 +126,7 @@ export function EditDrawer() {
       )
       .sort((a, b) => (a.title || "").localeCompare(b.title || ""))
       .map((t) => {
-        const ok = canLinkAsDetour(planner, task.id, t.id).ok;
+        const ok = canLinkAsDetour(planner, task.id, t.id, queues, dependencies).ok;
         if (!ok) blocked.add(t.id);
         return {
           value: t.id,
@@ -131,7 +137,7 @@ export function EditDrawer() {
         };
       });
     return { options, blocked };
-  }, [planner, task]);
+  }, [planner, task, queues, dependencies]);
 
   const [titleDraft, setTitleDraft] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

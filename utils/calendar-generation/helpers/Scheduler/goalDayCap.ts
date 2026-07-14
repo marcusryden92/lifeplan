@@ -103,30 +103,6 @@ export function buildGoalCapContext(
   };
 }
 
-// Compose several goal caps into one context for a leaf that sits under
-// multiple capped goals at once (a detour target's leaf is metered by both the
-// host goal's cap and the target goal's own cap — pointwise min). Budget is the
-// min across caps; a placement charges every ledger; relaxations are recorded
-// on all composed goals (a chunk over the min budget relaxed at least the
-// tightest). Returns the single cap unchanged when only one applies, and
-// undefined when none do — so the non-detour path is byte-for-byte the same.
-export function composeGoalCaps(
-  caps: GoalCapContext[],
-): GoalCapContext | undefined {
-  if (caps.length === 0) return undefined;
-  if (caps.length === 1) return caps[0];
-  return {
-    capMinutes: Math.min(...caps.map((c) => c.capMinutes)),
-    budget: (slotStart) => Math.min(...caps.map((c) => c.budget(slotStart))),
-    charge: (start, end) => {
-      for (const c of caps) c.charge(start, end);
-    },
-    recordRelaxation: (kind, minutes, start) => {
-      for (const c of caps) c.recordRelaxation(kind, minutes, start);
-    },
-  };
-}
-
 // Fixed-grant sizing for a plain (non-split) leaf under a goal cap: the block
 // places whole or not at all, so selectBestSlot's day-budget seam skips days
 // without room and the grant never shrinks the block.

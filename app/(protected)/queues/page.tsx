@@ -106,6 +106,7 @@ export default function QueuesPage() {
       queueId: selected.id,
       plannerId,
       userId,
+      planner,
     });
     if (!result.ok) {
       setCycleError(describeCycle(result.cycle, planner, queues));
@@ -123,6 +124,7 @@ export default function QueuesPage() {
       queueId: selected.id,
       plannerId,
       toIndex,
+      planner,
     });
     if (!result.ok) {
       setCycleError(

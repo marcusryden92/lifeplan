@@ -6,6 +6,7 @@ import {
   collectLinkedTargetIds,
 } from "../../../goalPageHandlers";
 import { taskIsCompleted } from "../../../taskHelpers";
+import { computeEffectiveScores } from "../PrioritySorter";
 
 // The leaf-level precedence graph the flat scheduler walks. Everything the
 // scheduler needs to place leaves in the right order is derived here from the
@@ -36,8 +37,6 @@ export interface LeafGraph {
   rootLeafCount: Map<string, number>;
   /** leafId -> inheritance-adjusted score (primary ordering key, desc). */
   leafEffScore: Map<string, number>;
-  /** trackedRootId -> its own last scheduled leaf id (for cross inheritance). */
-  rootLastOwnLeaf: Map<string, string>;
 }
 
 const pushUnique = (map: Map<string, string[]>, key: string, value: string) => {
@@ -126,30 +125,16 @@ export function buildLeafGraph(
     if (fromLast && toFirst) pushUnique(successors, fromLast, toFirst);
   }
 
-  const rawScoreOf = (leaf: Planner): number => {
-    const rootId = getRootParentId(allPlanners, leaf.id) ?? leaf.id;
-    return urgencyScores.get(rootId) ?? 0;
-  };
-
-  const leafEffScore = new Map<string, number>();
-  const visiting = new Set<string>();
-  const resolveScore = (leafId: string): number => {
-    const cached = leafEffScore.get(leafId);
-    if (cached !== undefined) return cached;
-    const node = nodeById.get(leafId);
-    if (!node) return 0;
-    if (visiting.has(leafId)) return rawScoreOf(node.leaf);
-    visiting.add(leafId);
-    let score = rawScoreOf(node.leaf);
-    for (const successorId of successors.get(leafId) ?? []) {
-      const successorScore = resolveScore(successorId);
-      if (successorScore > score) score = successorScore;
-    }
-    visiting.delete(leafId);
-    leafEffScore.set(leafId, score);
-    return score;
-  };
-  for (const node of nodes) resolveScore(node.leaf.id);
+  const rawLeafScores = new Map<string, number>();
+  for (const node of nodes) {
+    const rootId = getRootParentId(allPlanners, node.leaf.id) ?? node.leaf.id;
+    rawLeafScores.set(node.leaf.id, urgencyScores.get(rootId) ?? 0);
+  }
+  const leafEdges: Array<{ fromId: string; toId: string }> = [];
+  for (const [predId, succs] of successors) {
+    for (const succId of succs) leafEdges.push({ fromId: predId, toId: succId });
+  }
+  const leafEffScore = computeEffectiveScores(rawLeafScores, leafEdges);
 
   return {
     nodes,
@@ -158,6 +143,5 @@ export function buildLeafGraph(
     completionRoots,
     rootLeafCount,
     leafEffScore,
-    rootLastOwnLeaf,
   };
 }

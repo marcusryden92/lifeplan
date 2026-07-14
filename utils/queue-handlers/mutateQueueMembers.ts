@@ -1,5 +1,10 @@
 import { v4 as uuidv4 } from "uuid";
-import type { Queue, QueueMember, PlannerDependency } from "@/types/prisma";
+import type {
+  Queue,
+  QueueMember,
+  PlannerDependency,
+  Planner,
+} from "@/types/prisma";
 import type { PrecedenceEdge } from "@/utils/precedence/types";
 import {
   wouldCreateCycleAddingQueueMember,
@@ -32,6 +37,7 @@ export function addQueueMember({
   plannerId,
   userId,
   atIndex,
+  planner = [],
 }: {
   queues: Queue[];
   dependencies: PlannerDependency[];
@@ -39,6 +45,8 @@ export function addQueueMember({
   plannerId: string;
   userId: string;
   atIndex?: number;
+  /** When provided, detour links join the cycle graph (host ↔ target). */
+  planner?: Planner[];
 }): QueueMutationResult {
   const queue = queues.find((q) => q.id === queueId);
   if (!queue) return { ok: true, queues };
@@ -54,6 +62,7 @@ export function addQueueMember({
     queueId,
     plannerId,
     atIndex,
+    planner,
   );
   if (cycle) return { ok: false, cycle };
 
@@ -95,12 +104,15 @@ export function reorderQueueMember({
   queueId,
   plannerId,
   toIndex,
+  planner = [],
 }: {
   queues: Queue[];
   dependencies: PlannerDependency[];
   queueId: string;
   plannerId: string;
   toIndex: number;
+  /** When provided, detour links join the cycle graph (host ↔ target). */
+  planner?: Planner[];
 }): QueueMutationResult {
   const queue = queues.find((q) => q.id === queueId);
   if (!queue) return { ok: true, queues };
@@ -113,6 +125,7 @@ export function reorderQueueMember({
     queueId,
     plannerId,
     toIndex,
+    planner,
   );
   if (cycle) return { ok: false, cycle };
 

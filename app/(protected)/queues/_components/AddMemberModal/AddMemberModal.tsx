@@ -88,8 +88,15 @@ export function AddMemberModal({
         !plannerIsCompleted(p) &&
         !inAnyQueue.has(p.id) &&
         // Members append to the end; anything that would close a cycle
-        // through an external dependency path is excluded outright.
-        !wouldCreateCycleAddingQueueMember(queues, dependencies, queue.id, p.id),
+        // through an external dependency or detour path is excluded outright.
+        !wouldCreateCycleAddingQueueMember(
+          queues,
+          dependencies,
+          queue.id,
+          p.id,
+          undefined,
+          planner,
+        ),
     );
     const q = query.trim();
     if (!q) {

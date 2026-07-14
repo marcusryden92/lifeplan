@@ -5,7 +5,11 @@ import type {
   Queue,
   QueueMember,
 } from "@/types/prisma";
-import { collectValidationEdges } from "@/utils/precedence/validationEdges";
+import {
+  collectValidationEdges,
+  detourComponentMap,
+  contractPrecedenceEdges,
+} from "@/utils/precedence/validationEdges";
 import { findCycle, findCycleInGraph } from "@/utils/precedence/findCycle";
 import { sortQueueMembers } from "@/utils/queue-handlers/mutateQueueMembers";
 import { SORT_ORDER_STEP } from "@/utils/queue-handlers/sortOrderKeys";
@@ -318,24 +322,38 @@ export function applyDraftPrecedence({
   }
 
   // Concurrent-edit cycle defense on memberships: op-time validation covered
-  // the working state, but a dependency created elsewhere while the modal was
-  // open can compose a loop with an assistant-added member. Drop assistant
-  // additions (never user rows) until acyclic.
+  // the working state, but a dependency or detour link created elsewhere
+  // while the modal was open can compose a loop with an assistant-added
+  // member. Drop assistant additions (never user rows) until acyclic. The
+  // graph is contracted over detour components (host and spliced target are
+  // one node for legality), so cycle endpoints may be representatives — the
+  // reverse map recovers the real member ids inside a component.
+  const detourRepr = detourComponentMap(nextPlanner);
+  const idsByRepr = new Map<string, string[]>();
+  for (const [id, repr] of detourRepr) {
+    const list = idsByRepr.get(repr);
+    if (list) list.push(id);
+    else idsByRepr.set(repr, [id]);
+  }
+  const realIdsFor = (contractedId: string): string[] =>
+    idsByRepr.get(contractedId) ?? [contractedId];
   let guard = 0;
   for (;;) {
     const cycle = findCycleInGraph(
-      collectValidationEdges(nextQueues, nextDependencies),
+      contractPrecedenceEdges(
+        collectValidationEdges(nextQueues, nextDependencies),
+        detourRepr,
+      ),
     );
     if (!cycle || guard++ > 100) break;
     let dropped = false;
     for (const edge of cycle) {
       if (edge.source !== "queue" || !edge.queueId) continue;
       const added = addedByQueueId.get(edge.queueId);
-      const victim = added?.has(edge.toId)
-        ? edge.toId
-        : added?.has(edge.fromId)
-          ? edge.fromId
-          : null;
+      const victim =
+        realIdsFor(edge.toId).find((id) => added?.has(id)) ??
+        realIdsFor(edge.fromId).find((id) => added?.has(id)) ??
+        null;
       if (!victim) continue;
       const index = nextQueues.findIndex((q) => q.id === edge.queueId);
       if (index === -1) continue;
@@ -366,10 +384,13 @@ export function applyDraftPrecedence({
       continue;
     }
     const cycle = findCycle(
-      collectValidationEdges(nextQueues, nextDependencies),
+      contractPrecedenceEdges(
+        collectValidationEdges(nextQueues, nextDependencies),
+        detourRepr,
+      ),
       {
-        fromId: pair.predecessorId,
-        toId: pair.successorId,
+        fromId: detourRepr.get(pair.predecessorId) ?? pair.predecessorId,
+        toId: detourRepr.get(pair.successorId) ?? pair.successorId,
         source: "dependency",
       },
     );

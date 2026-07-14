@@ -93,7 +93,7 @@ export function scoreCandidatesAndRootGoals(
 // defensive (a stray cycle degrades to the raw score, never loops).
 export function computeEffectiveScores(
   rawScores: Map<string, number>,
-  edges: PrecedenceEdge[],
+  edges: Array<Pick<PrecedenceEdge, "fromId" | "toId">>,
 ): Map<string, number> {
   const successors = new Map<string, string[]>();
   for (const edge of edges) {

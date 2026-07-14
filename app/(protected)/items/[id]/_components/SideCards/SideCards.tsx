@@ -238,6 +238,7 @@ export function DependenciesCard() {
           dependencies,
           p.id,
           item.id,
+          planner,
         );
         if (cycle) blocked.add(p.id);
         return {
@@ -258,6 +259,7 @@ export function DependenciesCard() {
       dependencies,
       predecessorId,
       item.id,
+      planner,
     );
     if (cycle || blockedIds.has(predecessorId)) {
       setError(
