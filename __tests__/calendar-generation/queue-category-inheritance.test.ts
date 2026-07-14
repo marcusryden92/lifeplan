@@ -112,6 +112,7 @@ function makeQueue(
     id,
     title: id,
     sortOrder: 0,
+    color: null,
     categoryId,
     userId: USER_ID,
     createdAt: TS,

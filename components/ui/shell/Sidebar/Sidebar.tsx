@@ -97,7 +97,7 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
             title={item.label}
           >
             <span className={navGlyph}>
-              <Icon size={20} strokeWidth={2} aria-hidden />
+              <Icon size={16} strokeWidth={2} aria-hidden />
             </span>
             <span className={navLabel}>{item.label}</span>
           </Link>
@@ -113,7 +113,7 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
         title="AI assistant (Ctrl/Cmd+I)"
       >
         <span className={navGlyph}>
-          <Sparkles size={20} strokeWidth={2} aria-hidden />
+          <Sparkles size={16} strokeWidth={2} aria-hidden />
         </span>
         <span className={navLabel}>Assistant</span>
       </button>
@@ -128,9 +128,9 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
       >
         <span className={navGlyph}>
           {dark ? (
-            <Sun size={20} strokeWidth={2} aria-hidden />
+            <Sun size={16} strokeWidth={2} aria-hidden />
           ) : (
-            <Moon size={20} strokeWidth={2} aria-hidden />
+            <Moon size={16} strokeWidth={2} aria-hidden />
           )}
         </span>
         <span className={navLabel}>{dark ? "Light mode" : "Dark mode"}</span>
@@ -146,7 +146,7 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
       >
         <span className={navGlyph}>
           <span className={collapseChevronIcon} aria-hidden>
-            <ChevronLeft size={20} strokeWidth={2} />
+            <ChevronLeft size={16} strokeWidth={2} />
           </span>
         </span>
         <span className={navLabel}>Collapse</span>

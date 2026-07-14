@@ -1,7 +1,8 @@
 model Queue {
-  id        String @id @default(uuid())
+  id        String  @id @default(uuid())
   title     String
-  sortOrder Int    @default(0)
+  sortOrder Int     @default(0)
+  color     String? // Optional accent — tints the queue's lane on the graph view; falls back to the category color
 
   // Optional inherited default: members with no effective category of their
   // own resolve to this at engine time (windows/strictness/location follow).

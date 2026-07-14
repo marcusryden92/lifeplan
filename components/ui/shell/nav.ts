@@ -5,6 +5,7 @@ import {
   Library,
   Layers,
   ListOrdered,
+  Waypoints,
   MapPin,
   MoreHorizontal,
   type LucideIcon,
@@ -59,6 +60,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Queues",
     icon: ListOrdered,
     href: "/queues",
+    kind: "route",
+  },
+  {
+    key: "graph",
+    label: "Graph",
+    icon: Waypoints,
+    href: "/graph",
     kind: "route",
   },
   {

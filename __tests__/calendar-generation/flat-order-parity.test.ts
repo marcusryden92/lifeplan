@@ -245,6 +245,7 @@ describe("flat-order parity", () => {
       id: "pipe",
       title: "pipe",
       sortOrder: 0,
+      color: null,
       categoryId: null,
       userId: USER_ID,
       createdAt: FAKE_TODAY.toISOString(),

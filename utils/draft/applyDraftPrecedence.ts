@@ -275,6 +275,7 @@ export function applyDraftPrecedence({
       id: draft.id,
       title: draft.title,
       sortOrder: maxSortOrder,
+      color: null,
       categoryId:
         draft.categoryId !== null && validCategoryIds.has(draft.categoryId)
           ? draft.categoryId

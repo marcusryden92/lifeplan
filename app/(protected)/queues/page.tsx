@@ -9,9 +9,12 @@ import {
   ConfirmModal,
   Input,
   Loader,
+  useTheme,
   vars,
+  categoryColor,
   type ComboboxOption,
 } from "@/components/ui";
+import { PopoverColorPicker } from "@/components/events/PopoverColorPicker";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import type { Queue } from "@/types/prisma";
 import {
@@ -65,6 +68,7 @@ export default function QueuesPage() {
     updateQueueArray,
   } = useCalendarProvider();
 
+  const { dark } = useTheme();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -149,6 +153,7 @@ export default function QueuesPage() {
       id,
       title: "New queue",
       sortOrder: maxOrder + 1,
+      color: null,
       categoryId: null,
       userId,
       members: [],
@@ -170,6 +175,13 @@ export default function QueuesPage() {
     if (!selected) return;
     updateQueueArray((prev) =>
       prev.map((q) => (q.id === selected.id ? { ...q, categoryId } : q)),
+    );
+  };
+
+  const handleChangeColor = (color: string) => {
+    if (!selected) return;
+    updateQueueArray((prev) =>
+      prev.map((q) => (q.id === selected.id ? { ...q, color } : q)),
     );
   };
 
@@ -285,6 +297,20 @@ export default function QueuesPage() {
                   aria-label="Queue name"
                 />
                 <div className={headerControls}>
+                  <PopoverColorPicker
+                    currentColor={
+                      selected.color ??
+                      categoryColor(
+                        selected.categoryId
+                          ? categories.find(
+                              (c) => c.id === selected.categoryId,
+                            )
+                          : null,
+                        dark ? "dark" : "light",
+                      )
+                    }
+                    onChange={handleChangeColor}
+                  />
                   <span className={headerControlLabel}>Category</span>
                   <Combobox
                     value={selected.categoryId}

@@ -75,6 +75,7 @@ function queueRow(
     id,
     title,
     sortOrder: 1,
+    color: null,
     categoryId: null,
     userId: USER_ID,
     createdAt: TS,

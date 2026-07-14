@@ -1,0 +1,334 @@
+import { style, globalStyle } from "@vanilla-extract/css";
+import {
+  vars,
+  space,
+  radii,
+  text,
+  caption,
+  fieldLabel,
+  themeTransition,
+  interactiveTransition,
+  iconBtn,
+} from "@/lib/theme";
+
+export const scroller = style({
+  flex: 1,
+  minHeight: 0,
+  overflow: "auto",
+  position: "relative",
+});
+
+export const AXIS_HEIGHT = 30;
+
+export const axis = style({
+  position: "sticky",
+  top: 0,
+  zIndex: 5,
+  height: AXIS_HEIGHT,
+  background: vars.paper,
+  borderBottom: `1px solid ${vars.rule}`,
+  transition: themeTransition,
+});
+
+export const axisTick = style([
+  caption,
+  {
+    position: "absolute",
+    top: "50%",
+    transform: "translateY(-50%)",
+    paddingLeft: space["1"],
+    whiteSpace: "nowrap",
+    color: vars.muted,
+    fontVariantNumeric: "tabular-nums",
+    fontSize: 9.5,
+    fontWeight: 400,
+  },
+]);
+
+globalStyle(`${axisTick}[data-emphasized="true"]`, {
+  color: vars.inkSoft,
+});
+
+export const axisDockLabel = style([
+  caption,
+  {
+    position: "absolute",
+    top: "50%",
+    transform: "translateY(-50%)",
+    paddingLeft: space["1"],
+    whiteSpace: "nowrap",
+    color: vars.muted,
+    fontStyle: "italic",
+  },
+]);
+
+export const content = style({
+  position: "relative",
+});
+
+export const svgLayer = style({
+  position: "absolute",
+  left: 0,
+  top: 0,
+  pointerEvents: "none",
+});
+
+export const edgeHit = style({
+  pointerEvents: "stroke",
+  cursor: "pointer",
+});
+
+export const lane = style({
+  position: "relative",
+});
+
+export const laneHead = style({
+  position: "sticky",
+  left: 8,
+  zIndex: 3,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: space["2"],
+  height: 26,
+  paddingTop: space["1.5"],
+});
+
+// Inline kicker in front of a queue lane's title, distinguishing a queue
+// from a same-named category heading.
+export const laneQueueCaption = style({
+  opacity: 0.55,
+});
+
+export const laneTitle = style([
+  fieldLabel,
+  {
+    whiteSpace: "nowrap",
+    transition: themeTransition,
+  },
+]);
+
+export const laneCount = style([
+  caption,
+  {
+    color: vars.muted,
+    fontVariantNumeric: "tabular-nums",
+    whiteSpace: "nowrap",
+  },
+]);
+
+export const node = style([
+  text.row,
+  {
+    position: "absolute",
+    display: "flex",
+    alignItems: "center",
+    borderRadius: radii.pill,
+    background: vars.tileFill,
+    border: `1px solid ${vars.rule}`,
+    color: vars.ink,
+    zIndex: 2,
+    transition: themeTransition,
+    selectors: {
+      "&:hover": {
+        borderColor: vars.glass.stroke,
+      },
+    },
+  },
+]);
+
+globalStyle(`${node}[data-completed="true"]`, {
+  opacity: 0.55,
+});
+
+globalStyle(`${node}[data-docked="true"]`, {
+  borderStyle: "dashed",
+  background: "transparent",
+});
+
+globalStyle(`${node}[data-dragging="true"]`, {
+  opacity: 0.4,
+});
+
+globalStyle(`${node}[data-drag-over="before"]`, {
+  boxShadow: `inset 2px 0 0 0 ${vars.accent.primary}`,
+});
+
+globalStyle(`${node}[data-drag-over="after"]`, {
+  boxShadow: `inset -2px 0 0 0 ${vars.accent.primary}`,
+});
+
+globalStyle(`${node}[data-link-target="valid"]`, {
+  borderColor: vars.accent.primary,
+  boxShadow: `0 0 0 1px ${vars.accent.primary}`,
+});
+
+globalStyle(`${node}[data-link-target="invalid"]`, {
+  borderColor: vars.status.error,
+  boxShadow: `0 0 0 1px ${vars.status.error}`,
+});
+
+export const nodeLink = style({
+  display: "flex",
+  alignItems: "center",
+  minWidth: 0,
+  width: "100%",
+  height: "100%",
+  padding: "0 10px",
+  borderRadius: radii.pill,
+  color: "inherit",
+  textDecoration: "none",
+});
+
+export const nodeTitle = style({
+  fontSize: "inherit",
+  minWidth: 0,
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+  selectors: {
+    "&:hover": { textDecoration: "underline" },
+  },
+});
+
+export const nodeInitial = style({
+  fontSize: "inherit",
+  fontWeight: 600,
+  lineHeight: 1,
+  textAlign: "center",
+});
+
+export const nodeNameBadge = style({
+  position: "absolute",
+  zIndex: 4,
+  display: "flex",
+  flexDirection: "column",
+  gap: space.px,
+  transform: "translateX(-50%)",
+  padding: "5px 11px",
+  borderRadius: radii["sm+2"],
+  background: vars.paper,
+  border: `1px solid ${vars.glass.stroke}`,
+  boxShadow: vars.shadow.panelSm,
+  color: vars.ink,
+  maxWidth: 320,
+  pointerEvents: "none",
+});
+
+export const nodeNameBadgeTitle = style({
+  fontSize: 12,
+  fontWeight: 550,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+});
+
+export const nodeNameBadgeMeta = style([
+  caption,
+  {
+    color: vars.muted,
+    whiteSpace: "nowrap",
+    fontVariantNumeric: "tabular-nums",
+  },
+]);
+
+export const nodeHint = style([
+  caption,
+  {
+    marginLeft: space["1.5"],
+    color: vars.muted,
+    fontStyle: "italic",
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+  },
+]);
+
+const linkHandleBase = style({
+  position: "absolute",
+  top: "50%",
+  transform: "translateY(-50%)",
+  width: 14,
+  height: 14,
+  padding: 0,
+  borderRadius: radii.pill,
+  border: `1.5px solid ${vars.muted}`,
+  background: vars.paper,
+  cursor: "crosshair",
+  opacity: 0,
+  zIndex: 3,
+  touchAction: "none",
+  transition: interactiveTransition("opacity", "border-color"),
+  selectors: {
+    [`${node}:hover &`]: { opacity: 1 },
+    "&:hover": { borderColor: vars.accent.primary },
+    "&:focus-visible": {
+      opacity: 1,
+      outline: `1px solid ${vars.accent.primary}`,
+    },
+  },
+});
+
+export const linkHandleOut = style([linkHandleBase, { right: -7 }]);
+
+export const linkHandleIn = style([linkHandleBase, { left: -7 }]);
+
+export const linkReasonChip = style([
+  caption,
+  {
+    position: "absolute",
+    zIndex: 4,
+    padding: "3px 8px",
+    borderRadius: radii.pill,
+    background: vars.paper,
+    border: `1px solid ${vars.status.error}`,
+    color: vars.status.error,
+    whiteSpace: "nowrap",
+    pointerEvents: "none",
+  },
+]);
+
+export const edgeChip = style([
+  text.bodySm,
+  {
+    position: "absolute",
+    zIndex: 4,
+    display: "flex",
+    alignItems: "center",
+    gap: space["1.5"],
+    padding: "4px 6px 4px 10px",
+    borderRadius: radii.pill,
+    background: vars.paper,
+    border: `1px solid ${vars.glass.stroke}`,
+    boxShadow: vars.shadow.panelSm,
+    color: vars.ink,
+    transform: "translate(-50%, -50%)",
+    whiteSpace: "nowrap",
+    maxWidth: 340,
+  },
+]);
+
+export const edgeChipLabel = style({
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  minWidth: 0,
+});
+
+export const edgeChipRemove = style([
+  iconBtn({ size: "sm" }),
+  {
+    color: vars.muted,
+    flexShrink: 0,
+    selectors: {
+      "&:hover": { color: vars.status.error },
+    },
+  },
+]);
+
+export const emptyLaneNote = style([
+  caption,
+  {
+    color: vars.muted,
+    fontStyle: "italic",
+    whiteSpace: "nowrap",
+  },
+]);

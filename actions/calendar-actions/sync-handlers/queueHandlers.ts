@@ -18,6 +18,7 @@ export function handleQueueChanges(
           id: q.id,
           title: q.title,
           sortOrder: q.sortOrder,
+          color: q.color,
           categoryId: q.categoryId,
           createdAt: q.createdAt,
           updatedAt: q.updatedAt,
@@ -41,6 +42,7 @@ export function handleQueueChanges(
         columns: [
           { name: "title", cast: "text", extract: (r) => r.title },
           { name: "sortOrder", cast: "int", extract: (r) => r.sortOrder },
+          { name: "color", cast: "text", extract: (r) => r.color },
           { name: "categoryId", cast: "text", extract: (r) => r.categoryId },
         ],
       }),

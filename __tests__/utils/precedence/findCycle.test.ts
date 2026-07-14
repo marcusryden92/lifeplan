@@ -18,6 +18,7 @@ function makeQueue(id: string, memberPlannerIds: string[]): Queue {
     id,
     title: id,
     sortOrder: 0,
+    color: null,
     categoryId: null,
     userId: "u",
     createdAt: TS,
