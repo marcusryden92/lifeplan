@@ -15,7 +15,6 @@ import { useCalendarProvider } from "@/context/CalendarProvider";
 import { plannerIdFromEventId } from "@/utils/planRecurrence";
 import { plannerIsCompleted } from "@/utils/plannerCompletion";
 import { getRootParentId } from "@/utils/goalPageHandlers";
-import { buildQueueByPlannerId } from "@/utils/queue-handlers/queueLookups";
 import { wouldCreateCycleAddingDependency } from "@/utils/precedence/findCycle";
 import { describeCycle } from "@/utils/precedence/describeCycle";
 import type { PlannerDependency } from "@/types/prisma";
@@ -107,12 +106,9 @@ export function EngineNotesCard() {
 
 export function InQueueCard() {
   const { item } = useItem();
-  const { queues } = useCalendarProvider();
+  const { queueByPlannerId } = useCalendarProvider();
 
-  const queue = useMemo(
-    () => buildQueueByPlannerId(queues).get(item.id),
-    [queues, item.id],
-  );
+  const queue = queueByPlannerId.get(item.id);
 
   if (!queue) return null;
 

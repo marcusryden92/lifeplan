@@ -12,7 +12,6 @@ import {
 } from "@/utils/timeFormatting";
 import { buildTodayAgenda } from "../_data/buildTodayAgenda";
 import { buildUncompletedItems } from "../_data/buildUncompletedItems";
-import { buildQueueCategoryByRootId } from "@/utils/queue-handlers/queueLookups";
 import { buildPriorityGoals } from "../_data/buildPriorityGoals";
 import { groupAgenda } from "../_data/groupAgenda";
 import {
@@ -49,9 +48,9 @@ export function useDashboardData(): DashboardData {
     calendar,
     template,
     categories,
-    queues,
     travelEvents,
     inheritedLocationMap,
+    queueCategoryByRootId,
     updateAll,
   } = useCalendarProvider();
 
@@ -64,11 +63,6 @@ export function useDashboardData(): DashboardData {
   );
 
   const now = useTickingNow();
-
-  const queueCategoryByRootId = useMemo(
-    () => buildQueueCategoryByRootId(queues),
-    [queues],
-  );
 
   const rawAgenda = useMemo(
     () =>

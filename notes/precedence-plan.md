@@ -57,9 +57,9 @@ Type-check/tests/build/migration are done. Still unexercised in the running app:
 
 ## 4. Hand-off: not-yet-implemented features
 
-### 4a. First commit of any new view: lift the shared lookup seam
+### 4a. First commit of any new view: lift the shared lookup seam — DONE (2026-07-14)
 
-`buildQueueCategoryByRootId` / `buildQueueByPlannerId` ([queueLookups.ts](../utils/queue-handlers/queueLookups.ts)) are pure builders currently memoized per call site (dashboard hook, ItemDetailLayout, CalendarProvider for inheritedLocationMap). Before adding the graph / file / mind-map views, lift ONE memoized pair onto the CalendarProvider context and point the existing call sites at it, so all views plus item detail read one source. Trivial refactor, prevents three more page-local copies.
+`buildQueueCategoryByRootId` / `buildQueueByPlannerId` ([queueLookups.ts](../utils/queue-handlers/queueLookups.ts)) are now memoized ONCE on the CalendarProvider context (`queueCategoryByRootId` / `queueByPlannerId`); the former per-call-site copies (dashboard hook, ItemDetailLayout, SideCards InQueueCard) read the context values. New views (graph / file / mind-map) must consume these — never build page-local copies.
 
 ### 4b. Directional Graph view (TODO's "directional graph … like a timeline")
 

@@ -21,7 +21,6 @@ import {
   getTaskTreeIds,
   getTreeBottomLayer,
 } from "@/utils/goalPageHandlers";
-import { buildQueueCategoryByRootId } from "@/utils/queue-handlers/queueLookups";
 import {
   dependencyReadyBlockers,
   readyDependents,
@@ -80,9 +79,9 @@ export default function ItemDetailLayout({
     updatePlannerArray,
     updateAll,
     categories,
-    queues,
     dependencies,
     updateDependencyArray,
+    queueCategoryByRootId,
   } = useCalendarProvider();
   const isCalendarLoaded = useSelector(
     (state: RootState) => state.calendarSource.isLoaded,
@@ -121,10 +120,6 @@ export default function ItemDetailLayout({
   // resolve the effective id, not the row's own (usually null on children).
   // Queue membership contributes the queue's category as an inherited
   // default so the badge matches the engine.
-  const queueCategoryByRootId = useMemo(
-    () => buildQueueCategoryByRootId(queues),
-    [queues],
-  );
   const category = useMemo(() => {
     if (!item) return null;
     const effectiveId = getEffectiveCategoryId(

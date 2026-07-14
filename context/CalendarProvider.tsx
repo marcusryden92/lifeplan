@@ -37,7 +37,10 @@ import type {
   SerializedTravelTime,
 } from "@/redux/slices/schedulingSettingsSlice";
 import { buildInheritedLocationMap, InheritedLocationInfo } from "@/utils/goalPageHandlers";
-import { buildQueueCategoryByRootId } from "@/utils/queue-handlers/queueLookups";
+import {
+  buildQueueCategoryByRootId,
+  buildQueueByPlannerId,
+} from "@/utils/queue-handlers/queueLookups";
 
 type CalendarContextType = {
   userId: string;
@@ -84,6 +87,11 @@ type CalendarContextType = {
   ) => void;
   manuallyRefreshCalendar: () => void;
   inheritedLocationMap: Map<string, InheritedLocationInfo>;
+  // Shared queue-lookup seam: every surface rendering queue membership or
+  // effective category reads these, never a page-local build, so all views
+  // agree with the engine's applyQueueCategoryInheritance.
+  queueCategoryByRootId: Map<string, string>;
+  queueByPlannerId: Map<string, Queue>;
   // Direct server actions that bypass the diff sync (Location create needs
   // Google Places, travel-time refresh needs Google distances) must call this
   // after dispatching their result to Redux, or the next sync pass treats the
@@ -289,6 +297,10 @@ export default function CalendarProvider({
     () => buildQueueCategoryByRootId(queues),
     [queues],
   );
+  const queueByPlannerId = useMemo(
+    () => buildQueueByPlannerId(queues),
+    [queues],
+  );
   const inheritedLocationMap = useMemo(
     () =>
       buildInheritedLocationMap(
@@ -327,6 +339,8 @@ export default function CalendarProvider({
             updateAll,
             manuallyRefreshCalendar,
             inheritedLocationMap,
+            queueCategoryByRootId,
+            queueByPlannerId,
             markSynced,
           }
         : null,
@@ -350,6 +364,8 @@ export default function CalendarProvider({
       updateAll,
       manuallyRefreshCalendar,
       inheritedLocationMap,
+      queueCategoryByRootId,
+      queueByPlannerId,
       markSynced,
     ],
   );
