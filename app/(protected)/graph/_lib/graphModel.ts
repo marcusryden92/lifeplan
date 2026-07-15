@@ -38,6 +38,11 @@ export function nodeHeightForZoom(pxPerDay: number): number {
   return Math.round(NODE_HEIGHT_MIN + t * (NODE_HEIGHT_MAX - NODE_HEIGHT_MIN));
 }
 
+// The band's root card is a compact label, not a span bar — shorter than
+// leaf pills and only as wide as its title (width is CSS max-content).
+export const bandRootHeight = (nodeHeight: number): number =>
+  Math.max(14, Math.round(nodeHeight * 0.65));
+
 export const GRAPH_METRICS = {
   rowSpacing: 8,
   lanePadTop: 8,
@@ -49,17 +54,17 @@ export const GRAPH_METRICS = {
   dockNodeGap: 10,
   rightPad: 48,
   minRowGapX: 6,
+  // Vertical gap between an expanded item's root pill and its leaf row —
+  // hosts the grouping brace.
+  bandGap: 12,
 } as const;
 
-export function buildRootSpans(
-  calendar: SimpleEvent[],
-  planner: Planner[],
-): Map<string, GraphSpan> {
+const makeRootResolver = (planner: Planner[]) => {
   const parentById = new Map<string, string | null>();
   for (const row of planner) parentById.set(row.id, row.parentId ?? null);
 
   const rootCache = new Map<string, string | null>();
-  const rootOf = (id: string): string | null => {
+  return (id: string): string | null => {
     const cached = rootCache.get(id);
     if (cached !== undefined) return cached;
     const seen = new Set<string>();
@@ -79,7 +84,13 @@ export function buildRootSpans(
     rootCache.set(id, root);
     return root;
   };
+};
 
+export function buildRootSpans(
+  calendar: SimpleEvent[],
+  planner: Planner[],
+): Map<string, GraphSpan> {
+  const rootOf = makeRootResolver(planner);
   const spans = new Map<string, GraphSpan>();
   for (const event of calendar) {
     if (event.extendedProps?.eventType !== "planner") continue;
@@ -99,6 +110,46 @@ export function buildRootSpans(
   return spans;
 }
 
+// Leaf-level spans grouped by root: rootId -> leaf plannerId -> span. A
+// leaf's chunk/segment/occurrence events aggregate into one span, so the
+// leaf view shows per-leaf placement without chunk-level noise.
+export function buildLeafSpans(
+  calendar: SimpleEvent[],
+  planner: Planner[],
+): Map<string, Map<string, GraphSpan>> {
+  const rootOf = makeRootResolver(planner);
+  const result = new Map<string, Map<string, GraphSpan>>();
+  for (const event of calendar) {
+    if (event.extendedProps?.eventType !== "planner") continue;
+    const leafId = plannerIdFromEventId(event.id);
+    const rootId = rootOf(leafId);
+    if (!rootId) continue;
+    const start = Date.parse(event.start);
+    const end = Date.parse(event.end);
+    if (Number.isNaN(start) || Number.isNaN(end)) continue;
+    let bucket = result.get(rootId);
+    if (!bucket) {
+      bucket = new Map();
+      result.set(rootId, bucket);
+    }
+    const existing = bucket.get(leafId);
+    if (!existing) {
+      bucket.set(leafId, { start, end });
+    } else {
+      if (start < existing.start) existing.start = start;
+      if (end > existing.end) existing.end = end;
+    }
+  }
+  return result;
+}
+
+export type GraphLeaf = {
+  id: string;
+  planner: Planner;
+  span: GraphSpan;
+  completed: boolean;
+};
+
 export type GraphNode = {
   id: string;
   planner: Planner;
@@ -106,6 +157,9 @@ export type GraphNode = {
   laneKey: string;
   completed: boolean;
   unreadyGoal: boolean;
+  // Leaf view only: the root's placed bottom-layer blocks, span-ordered.
+  // Empty when the item's only block is its own (nothing to expand).
+  leaves: GraphLeaf[];
 };
 
 export type GraphLane = {
@@ -113,16 +167,12 @@ export type GraphLane = {
   queue: Queue | null;
   category: Category | null;
   title: string;
-  // Indent level for the lane heading: category tree depth; a
-  // category-attached queue sits one below its category, unattached queues 0.
+  // Heading indent: category tree depth; an attached queue sits one below it.
   depth: number;
-  // A category heading rendered for context only — its items live in
-  // subcategory or attached-queue lanes below it. Gets a compact height and
-  // no lane body.
+  // Category heading with no lane body — its items live in lanes below it.
   headerOnly: boolean;
   nodes: GraphNode[];
-  // Full logical member order (completed included) — drop-index math must run
-  // against it, exactly like QueueMemberList, even when completed are hidden.
+  // Full member order (completed included) — drop-index math runs against it.
   memberOrderRows: Planner[];
 };
 
@@ -142,6 +192,7 @@ export function buildGraphLanes({
   dependencies,
   categories,
   spans,
+  leafSpans,
   showCompleted,
 }: {
   planner: Planner[];
@@ -149,6 +200,7 @@ export function buildGraphLanes({
   dependencies: PlannerDependency[];
   categories: Category[];
   spans: Map<string, GraphSpan>;
+  leafSpans?: Map<string, Map<string, GraphSpan>> | null;
   showCompleted: boolean;
 }): GraphLane[] {
   const plannerById = new Map(planner.map((p) => [p.id, p]));
@@ -160,6 +212,29 @@ export function buildGraphLanes({
       a.id.localeCompare(b.id),
   );
 
+  const toLeaves = (rootId: string): GraphLeaf[] => {
+    const bucket = leafSpans?.get(rootId);
+    if (!bucket) return [];
+    const entries: GraphLeaf[] = [];
+    for (const [leafId, span] of bucket) {
+      const leafRow = plannerById.get(leafId);
+      if (!leafRow) continue;
+      entries.push({
+        id: leafId,
+        planner: leafRow,
+        span,
+        completed: plannerIsCompleted(leafRow),
+      });
+    }
+    entries.sort(
+      (a, b) =>
+        a.span.start - b.span.start ||
+        (a.planner.title || "").localeCompare(b.planner.title || ""),
+    );
+    // A lone block that is the root's own is nothing to expand.
+    return entries.some((leaf) => leaf.id !== rootId) ? entries : [];
+  };
+
   const toNode = (row: Planner, laneKey: string): GraphNode => ({
     id: row.id,
     planner: row,
@@ -167,6 +242,7 @@ export function buildGraphLanes({
     laneKey,
     completed: plannerIsCompleted(row),
     unreadyGoal: row.plannerType === "goal" && row.isReady !== true,
+    leaves: toLeaves(row.id),
   });
 
   const queuedIds = new Set<string>();
@@ -179,8 +255,7 @@ export function buildGraphLanes({
     memberRowsByQueueId.set(queue.id, rows);
   }
 
-  // A queue attached to a category nests under that category in the tree
-  // walk, like a subcategory; unattached queues stay as top lanes.
+  // A category-attached queue nests under its category like a subcategory.
   const queuesByCategoryId = new Map<string, Queue[]>();
   const unattachedQueues: Queue[] = [];
   for (const queue of orderedQueues) {
@@ -317,6 +392,13 @@ export function buildGraphLanes({
   return lanes;
 }
 
+export type LaidLeaf = {
+  leaf: GraphLeaf;
+  x: number;
+  w: number;
+  y: number;
+};
+
 export type LaidNode = {
   node: GraphNode;
   x: number;
@@ -324,6 +406,7 @@ export type LaidNode = {
   y: number;
   row: number;
   docked: boolean;
+  leaves: LaidLeaf[];
 };
 
 export type LaidLane = {
@@ -345,8 +428,7 @@ export type GraphLayout = {
   nodeById: Map<string, LaidNode>;
   dockX: number | null;
   nowX: number;
-  // Where the engine's placements end — the delimiter between forecast and
-  // the uncalculated beyond. Null when nothing is scheduled.
+  // Where the engine's placements end; null when nothing is scheduled.
   scheduleEndX: number | null;
 };
 
@@ -401,7 +483,24 @@ export function layoutGraph(
       if (node.span) {
         const left = toX(node.span.start);
         const width = Math.max(nodeHeight, toX(node.span.end) - left);
-        laid.push({ node, x: left, w: width, y: 0, row: 0, docked: false });
+        const leaves: LaidLeaf[] = node.leaves.map((leaf) => {
+          const leafLeft = toX(leaf.span.start);
+          return {
+            leaf,
+            x: leafLeft,
+            w: Math.max(nodeHeight, toX(leaf.span.end) - leafLeft),
+            y: 0,
+          };
+        });
+        laid.push({
+          node,
+          x: left,
+          w: width,
+          y: 0,
+          row: 0,
+          docked: false,
+          leaves,
+        });
       } else {
         const left =
           (dockX ?? 0) + dockIndex * (M.dockNodeWidth + M.dockNodeGap);
@@ -413,53 +512,83 @@ export function layoutGraph(
           y: 0,
           row: 0,
           docked: true,
+          leaves: [],
         });
       }
     }
 
-    let rows = 1;
-    if (lane.queue) {
-      // Queue members weave over-under in member order — back-to-back
-      // placements would otherwise touch and read as one bar.
+    // Expanded items (root card + brace + leaf row) always get a row of their
+    // own so no other item's pills overlap the band.
+    const rootHeight = bandRootHeight(nodeHeight);
+    const bandHeight = rootHeight + M.bandGap + nodeHeight;
+    const hasBands = laid.some((item) => item.leaves.length > 0);
+    const rowPlan: { items: LaidNode[]; h: number }[] = [];
+    if (lane.queue && !hasBands) {
+      // Weave rows so back-to-back members don't read as one bar.
       laid.forEach((item, index) => {
         item.row = index % 2;
       });
-      rows = Math.min(2, Math.max(1, laid.length));
-    } else {
-      laid.sort((a, b) => a.x - b.x);
-      const rowEnds: number[] = [];
+      const rows = Math.min(2, Math.max(1, laid.length));
+      for (let row = 0; row < rows; row++) {
+        rowPlan.push({
+          items: laid.filter((item) => item.row === row),
+          h: nodeHeight,
+        });
+      }
+    } else if (lane.queue) {
       for (const item of laid) {
+        rowPlan.push({
+          items: [item],
+          h: item.leaves.length > 0 ? bandHeight : nodeHeight,
+        });
+      }
+    } else {
+      const plain = laid
+        .filter((item) => item.leaves.length === 0)
+        .sort((a, b) => a.x - b.x);
+      const rowEnds: number[] = [];
+      const packed: LaidNode[][] = [];
+      for (const item of plain) {
         let row = rowEnds.findIndex((end) => end + M.minRowGapX <= item.x);
         if (row === -1) {
           row = rowEnds.length;
           rowEnds.push(Number.NEGATIVE_INFINITY);
+          packed.push([]);
         }
         rowEnds[row] = item.x + item.w;
-        item.row = row;
+        packed[row].push(item);
       }
-      rows = Math.max(1, rowEnds.length);
+      for (const items of packed) rowPlan.push({ items, h: nodeHeight });
+      const bands = laid
+        .filter((item) => item.leaves.length > 0)
+        .sort((a, b) => a.x - b.x);
+      for (const item of bands) rowPlan.push({ items: [item], h: bandHeight });
     }
+    if (rowPlan.length === 0) rowPlan.push({ items: [], h: nodeHeight });
+
+    let rowY = yCursor + M.laneHeadHeight + M.lanePadTop;
+    rowPlan.forEach((row, index) => {
+      for (const item of row.items) {
+        item.row = index;
+        item.y = rowY;
+        let right = item.x + item.w;
+        for (const leaf of item.leaves) {
+          leaf.y = rowY + rootHeight + M.bandGap;
+          if (leaf.x + leaf.w > right) right = leaf.x + leaf.w;
+        }
+        if (right > maxRight) maxRight = right;
+        if (!item.docked && right > scheduledRight) scheduledRight = right;
+        nodeById.set(item.node.id, item);
+      }
+      rowY += row.h + M.rowSpacing;
+    });
+    const rowsHeight =
+      rowPlan.reduce((sum, row) => sum + row.h, 0) +
+      (rowPlan.length - 1) * M.rowSpacing;
     const height =
-      M.laneHeadHeight +
-      M.lanePadTop +
-      rows * nodeHeight +
-      (rows - 1) * M.rowSpacing +
-      M.lanePadBottom;
+      M.laneHeadHeight + M.lanePadTop + rowsHeight + M.lanePadBottom;
 
-    for (const item of laid) {
-      item.y =
-        yCursor +
-        M.laneHeadHeight +
-        M.lanePadTop +
-        item.row * (nodeHeight + M.rowSpacing);
-      if (item.x + item.w > maxRight) maxRight = item.x + item.w;
-      if (!item.docked && item.x + item.w > scheduledRight) {
-        scheduledRight = item.x + item.w;
-      }
-      nodeById.set(item.node.id, item);
-    }
-
-    laidLanes.push({ lane, y: yCursor, height, rows, nodes: laid });
+    laidLanes.push({ lane, y: yCursor, height, rows: rowPlan.length, nodes: laid });
     yCursor += height;
   }
 
@@ -474,8 +603,7 @@ export function layoutGraph(
     nodeById,
     dockX,
     nowX: toX(now),
-    // Min-width clamping can render a pill past its span's end — the
-    // delimiter tracks the furthest rendered edge, not the raw timestamp.
+    // Min-width clamping can render a pill past its span's raw end.
     scheduleEndX:
       rawScheduleEnd !== null
         ? Math.max(toX(rawScheduleEnd), scheduledRight)

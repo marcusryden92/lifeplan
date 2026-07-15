@@ -10,6 +10,7 @@ import { wouldCreateCycleAddingDependency } from "@/utils/precedence/findCycle";
 import { describeCycle } from "@/utils/precedence/describeCycle";
 import {
   buildRootSpans,
+  buildLeafSpans,
   buildGraphLanes,
   layoutGraph,
   ZOOM_MIN_PX_PER_DAY,
@@ -120,6 +121,7 @@ export default function GraphPage() {
 
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [leafView, setLeafView] = useState(false);
   const [hoverLabels, setHoverLabels] = useState(true);
   const [markers, setMarkers] = useState<GraphTickUnits>({
     hour: true,
@@ -149,6 +151,10 @@ export default function GraphPage() {
     () => buildRootSpans(calendar, planner),
     [calendar, planner],
   );
+  const leafSpans = useMemo(
+    () => (leafView ? buildLeafSpans(calendar, planner) : null),
+    [leafView, calendar, planner],
+  );
   const lanes = useMemo(
     () =>
       buildGraphLanes({
@@ -157,9 +163,10 @@ export default function GraphPage() {
         dependencies,
         categories,
         spans,
+        leafSpans,
         showCompleted,
       }),
-    [planner, queues, dependencies, categories, spans, showCompleted],
+    [planner, queues, dependencies, categories, spans, leafSpans, showCompleted],
   );
   const layout = useMemo(
     () => layoutGraph(lanes, { pxPerDay, now }),
@@ -248,6 +255,14 @@ export default function GraphPage() {
         </span>
         <div className={headerControls}>
           <MarkerMenu value={markers} onChange={setMarkers} />
+          <div className={controlGroup}>
+            <span className={controlLabel}>Leaf tasks</span>
+            <Switch
+              checked={leafView}
+              onCheckedChange={setLeafView}
+              aria-label="Break items into their leaf tasks"
+            />
+          </div>
           <div className={controlGroup}>
             <span className={controlLabel}>Hover labels</span>
             <Switch

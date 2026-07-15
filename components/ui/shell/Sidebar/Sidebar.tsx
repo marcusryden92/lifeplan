@@ -82,7 +82,7 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
 
       <div className={navDivider} aria-hidden />
 
-      {NAV_ITEMS.map((item) => {
+      {NAV_ITEMS.map((item, i) => {
         const isActive = item.href
           ? pathname === item.href || pathname.startsWith(`${item.href}/`)
           : false;
@@ -95,6 +95,7 @@ export function Sidebar({ userName = "User", userInitial = "U" }: Props) {
             href={item.href ?? "#"}
             className={className}
             title={item.label}
+            style={{ marginTop: i === 0 ? "8px" : "" }}
           >
             <span className={navGlyph}>
               <Icon size={16} strokeWidth={2} aria-hidden />

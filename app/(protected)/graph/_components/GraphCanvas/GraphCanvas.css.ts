@@ -1,4 +1,4 @@
-import { style, globalStyle } from "@vanilla-extract/css";
+import { style, globalStyle, keyframes } from "@vanilla-extract/css";
 import {
   vars,
   space,
@@ -8,6 +8,7 @@ import {
   fieldLabel,
   themeTransition,
   interactiveTransition,
+  DURATIONS,
   iconBtn,
 } from "@/lib/theme";
 
@@ -78,6 +79,16 @@ export const edgeHit = style({
   cursor: "pointer",
 });
 
+const edgeFadeIn = keyframes({
+  from: { opacity: 0 },
+  to: { opacity: 1 },
+});
+
+// The delay hides the transient broken-chain flash between a drop and its regen.
+export const edgeGroup = style({
+  animation: `${edgeFadeIn} ${DURATIONS.interactive}s ease ${DURATIONS.interactive}s both`,
+});
+
 export const lane = style({
   position: "relative",
 });
@@ -93,8 +104,7 @@ export const laneHead = style({
   paddingTop: space["1.5"],
 });
 
-// Inline kicker in front of a queue lane's title, distinguishing a queue
-// from a same-named category heading.
+// Distinguishes a queue lane from a same-named category heading.
 export const laneQueueCaption = style({
   opacity: 0.55,
 });
@@ -116,6 +126,9 @@ export const laneCount = style([
   },
 ]);
 
+const nodeMotion = `transform ${DURATIONS.collapse}s ease, opacity ${DURATIONS.collapse}s ease`;
+const nodeReflow = `left ${DURATIONS.collapse}s ease, top ${DURATIONS.collapse}s ease, width ${DURATIONS.collapse}s ease`;
+
 export const node = style([
   text.row,
   {
@@ -127,7 +140,8 @@ export const node = style([
     border: `1px solid ${vars.rule}`,
     color: vars.ink,
     zIndex: 2,
-    transition: themeTransition,
+    userSelect: "none",
+    transition: `${nodeMotion}, ${nodeReflow}, ${themeTransition}`,
     selectors: {
       "&:hover": {
         borderColor: vars.glass.stroke,
@@ -135,6 +149,10 @@ export const node = style([
     },
   },
 ]);
+
+globalStyle(`${content}[data-zooming="true"] ${node}`, {
+  transition: `${nodeMotion}, ${themeTransition}`,
+});
 
 globalStyle(`${node}[data-completed="true"]`, {
   opacity: 0.55,
@@ -145,16 +163,68 @@ globalStyle(`${node}[data-docked="true"]`, {
   background: "transparent",
 });
 
-globalStyle(`${node}[data-dragging="true"]`, {
-  opacity: 0.4,
+// The grabbed node follows the pointer — any easing would trail the cursor.
+globalStyle(`${node}[data-drag-active="true"]`, {
+  zIndex: 6,
+  boxShadow: vars.shadow.panelSm,
+  pointerEvents: "none",
+  transition: themeTransition,
 });
 
-globalStyle(`${node}[data-drag-over="before"]`, {
-  boxShadow: `inset 2px 0 0 0 ${vars.accent.primary}`,
+// Dropped — easing back on so it slides from the cursor into the slot.
+globalStyle(`${node}[data-settling="true"]`, {
+  zIndex: 6,
 });
 
-globalStyle(`${node}[data-drag-over="after"]`, {
-  boxShadow: `inset -2px 0 0 0 ${vars.accent.primary}`,
+// Leaf-view group: root pill above, grouping brace, leaf pills below. The
+// container is transparent and pointer-inert; pills re-enable events.
+export const band = style({
+  position: "absolute",
+  zIndex: 2,
+  pointerEvents: "none",
+  transition: `${nodeMotion}, ${nodeReflow}, ${themeTransition}`,
+});
+
+globalStyle(`${content}[data-zooming="true"] ${band}`, {
+  transition: `${nodeMotion}, ${themeTransition}`,
+});
+
+globalStyle(`${band} > ${node}`, {
+  pointerEvents: "auto",
+});
+
+globalStyle(`${band}[data-drag-active="true"]`, {
+  zIndex: 6,
+  transition: themeTransition,
+});
+
+globalStyle(`${band}[data-drag-active="true"] > ${node}`, {
+  pointerEvents: "none",
+  boxShadow: vars.shadow.panelSm,
+});
+
+globalStyle(`${band}[data-settling="true"]`, {
+  zIndex: 6,
+});
+
+export const bandBrace = style({
+  position: "absolute",
+  borderLeft: `1px solid ${vars.rule}`,
+  borderRight: `1px solid ${vars.rule}`,
+  borderTop: `1px solid ${vars.rule}`,
+  borderRadius: "5px 5px 0 0",
+  pointerEvents: "none",
+  selectors: {
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      left: "50%",
+      top: -4,
+      width: 1,
+      height: 4,
+      background: vars.rule,
+    },
+  },
 });
 
 globalStyle(`${node}[data-link-target="valid"]`, {
@@ -177,6 +247,29 @@ export const nodeLink = style({
   borderRadius: radii.pill,
   color: "inherit",
   textDecoration: "none",
+});
+
+globalStyle(`${node}[data-draggable="true"] ${nodeLink}`, {
+  cursor: "grab",
+});
+
+globalStyle(
+  `${scroller}[data-reordering="true"], ${scroller}[data-reordering="true"] *`,
+  {
+    cursor: "grabbing",
+  },
+);
+
+// Marks the landing anchor while a member is being dragged or settling.
+export const dropSlot = style({
+  position: "absolute",
+  borderRadius: radii.pill,
+  border: `1.5px dashed ${vars.accent.primary}`,
+  background: `color-mix(in srgb, ${vars.accent.primary} 6%, transparent)`,
+  opacity: 0.65,
+  pointerEvents: "none",
+  zIndex: 1,
+  transition: nodeReflow,
 });
 
 export const nodeTitle = style({

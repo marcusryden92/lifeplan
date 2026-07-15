@@ -7,9 +7,11 @@ import type {
 } from "@/types/prisma";
 import {
   buildRootSpans,
+  buildLeafSpans,
   buildGraphLanes,
   layoutGraph,
   buildGraphTicks,
+  bandRootHeight,
   GRAPH_METRICS,
   INDEPENDENT_LANE_KEY,
 } from "@/app/(protected)/graph/_lib/graphModel";
@@ -516,5 +518,95 @@ describe("buildGraphTicks", () => {
     expect(hourTicks.length).toBeGreaterThan(0);
     expect(hourTicks.every((t) => t.x <= 3000)).toBe(true);
     expect(hourTicks.some((t) => /^\d{2}:\d{2}$/.test(t.label))).toBe(true);
+  });
+});
+
+describe("leaf view", () => {
+  const planner = [
+    makePlanner({ id: "goal-1", plannerType: "goal" }),
+    makePlanner({ id: "leaf-1", parentId: "goal-1", title: "Leaf one" }),
+    makePlanner({ id: "leaf-2", parentId: "goal-1", title: "Leaf two" }),
+    makePlanner({ id: "task-1" }),
+  ];
+  const calendar = [
+    makeEvent("leaf-2|chunk:1", "2026-07-16T09:00:00.000Z", "2026-07-16T10:00:00.000Z"),
+    makeEvent("leaf-2|chunk:2", "2026-07-17T09:00:00.000Z", "2026-07-17T11:00:00.000Z"),
+    makeEvent("leaf-1", "2026-07-15T09:00:00.000Z", "2026-07-15T10:00:00.000Z"),
+    makeEvent("task-1", "2026-07-15T12:00:00.000Z", "2026-07-15T13:00:00.000Z"),
+  ];
+
+  it("groups placed events per leaf under the root, aggregating chunk composites", () => {
+    const leafSpans = buildLeafSpans(calendar, planner);
+    const goalBucket = leafSpans.get("goal-1")!;
+    expect([...goalBucket.keys()].sort()).toEqual(["leaf-1", "leaf-2"]);
+    expect(goalBucket.get("leaf-2")).toEqual({
+      start: Date.parse("2026-07-16T09:00:00.000Z"),
+      end: Date.parse("2026-07-17T11:00:00.000Z"),
+    });
+    expect([...leafSpans.get("task-1")!.keys()]).toEqual(["task-1"]);
+  });
+
+  it("attaches span-ordered leaves to expanded nodes and none to single-block items", () => {
+    const lanes = buildGraphLanes({
+      planner,
+      queues: [makeQueue("queue-1", ["goal-1", "task-1"])],
+      dependencies: [],
+      categories: [],
+      spans: buildRootSpans(calendar, planner),
+      leafSpans: buildLeafSpans(calendar, planner),
+      showCompleted: false,
+    });
+    const [goalNode, taskNode] = lanes[0].nodes;
+    expect(goalNode.leaves.map((l) => l.id)).toEqual(["leaf-1", "leaf-2"]);
+    expect(taskNode.leaves).toEqual([]);
+  });
+
+  it("lays an expanded item as a band on its own row: leaf row below the root, lane height accounting both", () => {
+    const lanes = buildGraphLanes({
+      planner,
+      queues: [makeQueue("queue-1", ["goal-1", "task-1"])],
+      dependencies: [],
+      categories: [],
+      spans: buildRootSpans(calendar, planner),
+      leafSpans: buildLeafSpans(calendar, planner),
+      showCompleted: false,
+    });
+    const layout = layoutGraph(lanes, { pxPerDay: 30, now: NOW });
+    const goal = layout.nodeById.get("goal-1")!;
+    const task = layout.nodeById.get("task-1")!;
+    const nodeH = layout.nodeHeight;
+    const rootH = bandRootHeight(nodeH);
+
+    expect(goal.leaves).toHaveLength(2);
+    for (const leaf of goal.leaves) {
+      expect(leaf.y).toBe(goal.y + rootH + GRAPH_METRICS.bandGap);
+    }
+    // The plain member sits on its own row below the whole band.
+    expect(task.y).toBeGreaterThanOrEqual(
+      goal.y + rootH + GRAPH_METRICS.bandGap + nodeH,
+    );
+    const lane = layout.lanes[0];
+    expect(lane.height).toBe(
+      GRAPH_METRICS.laneHeadHeight +
+        GRAPH_METRICS.lanePadTop +
+        (rootH + GRAPH_METRICS.bandGap + nodeH) +
+        GRAPH_METRICS.rowSpacing +
+        nodeH +
+        GRAPH_METRICS.lanePadBottom,
+    );
+  });
+
+  it("keeps root-view layout identical when leafSpans is not provided", () => {
+    const lanes = buildGraphLanes({
+      planner,
+      queues: [makeQueue("queue-1", ["goal-1", "task-1"])],
+      dependencies: [],
+      categories: [],
+      spans: buildRootSpans(calendar, planner),
+      showCompleted: false,
+    });
+    const layout = layoutGraph(lanes, { pxPerDay: 30, now: NOW });
+    expect(layout.nodeById.get("goal-1")!.leaves).toEqual([]);
+    expect(layout.lanes[0].rows).toBe(2);
   });
 });
