@@ -196,7 +196,7 @@
   │   ├── calendar-generation/          # Engine regression tests + fixtures/ (trimmed live-data snapshots)
   │   ├── draft/                        # Assistant draft-domain unit tests (forest, templates, windows)
   │   ├── goal-handlers/                # toggleGoalIsReady cascade + sortOrderKeys/moveItem tests
-  │   ├── graph/                        # Graph-view model unit tests (root spans, lane membership, row packing, ticks)
+  │   ├── graph/                        # Graph-view model unit tests (root/leaf spans, lane membership, row packing, leaf-view bands, ticks)
   │   └── utils/                        # plannerBulkActions + planRecurrence unit tests
   │
   ├── documentation/
