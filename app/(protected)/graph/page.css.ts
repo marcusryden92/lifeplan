@@ -91,16 +91,81 @@ export const controlLabel = style([
   },
 ]);
 
-export const zoomSlider = style({
+// Custom zoom slider: a native range input (transparent track, only its thumb
+// visible) layered over a transparent bordered track and a solid fill bar. The
+// fill width is computed with a thumb-radius correction so its right edge tracks
+// the thumb centre (THUMB_PX must match the value used in page.tsx).
+const SLIDER_TRACK_HEIGHT = 6;
+const SLIDER_THUMB = 13;
+
+export const zoomTrack = style({
+  position: "relative",
   width: 300,
-  accentColor: vars.muted,
-  cursor: "pointer",
+  height: SLIDER_THUMB,
   "@media": {
-    [media.tablet]: {
-      width: 200,
+    [media.tablet]: { width: 200 },
+    [media.mobile]: { width: 150 },
+  },
+});
+
+export const zoomTrackBar = style({
+  position: "absolute",
+  left: 0,
+  right: 0,
+  top: "50%",
+  transform: "translateY(-50%)",
+  height: SLIDER_TRACK_HEIGHT,
+  borderRadius: radii.pill,
+  background: "transparent",
+  border: `1px solid ${vars.glass.stroke}`,
+  pointerEvents: "none",
+  transition: themeTransition,
+});
+
+export const zoomFill = style({
+  position: "absolute",
+  left: 0,
+  top: "50%",
+  transform: "translateY(-50%)",
+  height: SLIDER_TRACK_HEIGHT,
+  borderRadius: radii.pill,
+  background: vars.inkSoft,
+  pointerEvents: "none",
+  transition: themeTransition,
+});
+
+export const zoomSlider = style({
+  position: "absolute",
+  inset: 0,
+  width: "100%",
+  height: "100%",
+  margin: 0,
+  WebkitAppearance: "none",
+  appearance: "none",
+  background: "transparent",
+  outline: "none",
+  cursor: "pointer",
+  selectors: {
+    "&::-webkit-slider-thumb": {
+      WebkitAppearance: "none",
+      appearance: "none",
+      width: SLIDER_THUMB,
+      height: SLIDER_THUMB,
+      borderRadius: radii.pill,
+      background: vars.ink,
+      border: "none",
+      cursor: "pointer",
     },
-    [media.mobile]: {
-      width: 150,
+    "&::-moz-range-thumb": {
+      width: SLIDER_THUMB,
+      height: SLIDER_THUMB,
+      border: "none",
+      borderRadius: radii.pill,
+      background: vars.ink,
+      cursor: "pointer",
+    },
+    "&::-moz-range-track": {
+      background: "transparent",
     },
   },
 });
@@ -133,20 +198,9 @@ export const legendItem = style({
 export const legendKeys = style({
   display: "inline-flex",
   alignItems: "center",
-  gap: space["4"],
+  gap: space["6"],
   marginLeft: "auto",
 });
-
-export const kbdHint = style([
-  text.microLabel,
-  {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: space["1.5"],
-    color: vars.muted,
-    transition: themeTransition,
-  },
-]);
 
 export const errorBanner = style([
   text.bodySm,

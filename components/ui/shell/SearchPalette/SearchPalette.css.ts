@@ -205,6 +205,9 @@ export const footer = style({
   },
 });
 
-export const kbdSpacing = style({
-  marginRight: space["1"],
+export const footerHints = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: space["4"],
+  flexWrap: "wrap",
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { Kbd, Loader, Switch, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -26,11 +26,13 @@ import {
   headerControls,
   controlGroup,
   controlLabel,
+  zoomTrack,
+  zoomTrackBar,
+  zoomFill,
   zoomSlider,
   legendRow,
   legendItem,
   legendKeys,
-  kbdHint,
   errorBanner,
   canvasCard,
   emptyMain,
@@ -44,8 +46,27 @@ const zoomToPxPerDay = (t: number): number =>
       Math.pow(ZOOM_MAX_PX_PER_DAY / ZOOM_MIN_PX_PER_DAY, t / 100),
   );
 
-// Roughly 30 px/day on the 6..960 log range.
+// Inverse of zoomToPxPerDay — the slider value that yields a given px/day.
+const pxPerDayToZoom = (pxPerDay: number): number => {
+  const clamped = Math.max(
+    ZOOM_MIN_PX_PER_DAY,
+    Math.min(ZOOM_MAX_PX_PER_DAY, pxPerDay),
+  );
+  const t =
+    (100 * Math.log(clamped / ZOOM_MIN_PX_PER_DAY)) /
+    Math.log(ZOOM_MAX_PX_PER_DAY / ZOOM_MIN_PX_PER_DAY);
+  return Math.max(0, Math.min(100, t));
+};
+
+// Days of timeline the initial view fits into the viewport (now → now + 1 week).
+const DEFAULT_HORIZON_DAYS = 7;
+
+// Fallback zoom before the viewport width is measured (~30 px/day).
 const DEFAULT_ZOOM = 32;
+
+// Must match SLIDER_THUMB in page.css.ts: the fill's right edge is nudged by the
+// thumb radius so it stays centred under the thumb across the whole track.
+const SLIDER_THUMB_PX = 13;
 
 function LegendSwatch({
   dashed,
@@ -113,6 +134,15 @@ export default function GraphPage() {
 
   const handleZoomDelta = useCallback((delta: number) => {
     setZoom((prev) => Math.max(0, Math.min(100, prev + delta)));
+  }, []);
+
+  // On first mount the canvas reports its width so the initial view fits one
+  // week (now → now + 1 week); GraphCanvas keeps "now" pinned to the left edge.
+  const didFitRef = useRef(false);
+  const handleFitWeek = useCallback((viewportWidth: number) => {
+    if (didFitRef.current || viewportWidth <= 0) return;
+    didFitRef.current = true;
+    setZoom(pxPerDayToZoom(viewportWidth / DEFAULT_HORIZON_DAYS));
   }, []);
 
   const spans = useMemo(
@@ -236,16 +266,25 @@ export default function GraphPage() {
           </div>
           <div className={controlGroup}>
             <span className={controlLabel}>Zoom</span>
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={zoom}
-              onChange={(e) => setZoom(Number(e.target.value))}
-              className={zoomSlider}
-              aria-label="Zoom timeline"
-            />
+            <div className={zoomTrack}>
+              <div className={zoomTrackBar} />
+              <div
+                className={zoomFill}
+                style={{
+                  width: `calc(${zoom}% + ${(SLIDER_THUMB_PX * (50 - zoom)) / 100}px)`,
+                }}
+              />
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className={zoomSlider}
+                aria-label="Zoom timeline"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -260,20 +299,9 @@ export default function GraphPage() {
           out of order
         </span>
         <span className={legendKeys}>
-          <span className={kbdHint}>
-            <Kbd>scroll</Kbd>
-            pan
-          </span>
-          <span className={kbdHint}>
-            <Kbd>shift</Kbd>
-            <Kbd>scroll</Kbd>
-            vertical
-          </span>
-          <span className={kbdHint}>
-            <Kbd>{modKey}</Kbd>
-            <Kbd>scroll</Kbd>
-            zoom
-          </span>
+          <Kbd keys="Scroll" instruction="pan" />
+          <Kbd keys={["Shift", "Scroll"]} instruction="vertical" />
+          <Kbd keys={[modKey, "Scroll"]} instruction="zoom" />
         </span>
       </div>
 
@@ -305,6 +333,7 @@ export default function GraphPage() {
             onLinkRefused={setCycleError}
             hoverLabels={hoverLabels}
             onZoomDelta={handleZoomDelta}
+            onFitWeek={handleFitWeek}
           />
         )}
       </div>

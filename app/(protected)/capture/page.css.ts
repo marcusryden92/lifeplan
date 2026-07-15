@@ -52,17 +52,6 @@ export const titleSummary = style([
 
 export const spacer = style({ flex: 1 });
 
-export const kbdHint = style([
-  text.microLabel,
-  {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: space["1.5"],
-    color: vars.muted,
-    transition: themeTransition,
-  },
-]);
-
 export const mainGrid = style({
   display: "grid",
   gridTemplateColumns: "300px 1fr",

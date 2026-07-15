@@ -90,7 +90,7 @@ export function NewPlanModal({
           <div className={hintsRow} style={{ justifyContent: "flex-end" }}>
             <Button variant="glass" size="sm" onClick={onCancel}>
               Cancel
-              <Kbd style={{ marginLeft: space["2"] }}>esc</Kbd>
+              <Kbd keys="esc" style={{ marginLeft: space["2"] }} />
             </Button>
             <Button
               variant="glassInk"
@@ -99,9 +99,10 @@ export function NewPlanModal({
               disabled={!canSubmit}
             >
               Create
-              <Kbd style={{ marginLeft: space["2"] }}>
-                <CornerDownLeft size={11} strokeWidth={2.4} />
-              </Kbd>
+              <Kbd
+                keys={<CornerDownLeft size={11} strokeWidth={2.4} />}
+                style={{ marginLeft: space["2"] }}
+              />
             </Button>
           </div>
         </Dialog.Content>

@@ -125,7 +125,7 @@ export function CapturePalette() {
           <div className={hintsRow} style={{ justifyContent: "flex-end" }}>
             <Button variant="glass" size="sm" onClick={() => setOpen(false)}>
               Cancel
-              <Kbd style={{ marginLeft: space["2"] }}>esc</Kbd>
+              <Kbd keys="esc" style={{ marginLeft: space["2"] }} />
             </Button>
             <Button
               variant="glass"
@@ -134,14 +134,13 @@ export function CapturePalette() {
               disabled={!canSubmit}
             >
               Save & triage
-              <Kbd style={{ marginLeft: space["2"] }}>
-                {modKey}
-                <CornerDownLeft
-                  size={11}
-                  strokeWidth={2.4}
-                  style={{ marginLeft: space["1"] }}
-                />
-              </Kbd>
+              <Kbd
+                keys={[
+                  modKey,
+                  <CornerDownLeft key="return" size={11} strokeWidth={2.4} />,
+                ]}
+                style={{ marginLeft: space["2"] }}
+              />
             </Button>
             <Button
               variant="glassInk"
@@ -150,9 +149,10 @@ export function CapturePalette() {
               disabled={!canSubmit}
             >
               Save
-              <Kbd style={{ marginLeft: space["2"] }}>
-                <CornerDownLeft size={11} strokeWidth={2.4} />
-              </Kbd>
+              <Kbd
+                keys={<CornerDownLeft size={11} strokeWidth={2.4} />}
+                style={{ marginLeft: space["2"] }}
+              />
             </Button>
           </div>
         </Dialog.Content>

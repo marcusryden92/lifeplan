@@ -4,7 +4,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { X } from "lucide-react";
-import type { Category, Planner, PlannerDependency, Queue } from "@/types/prisma";
+import type {
+  Category,
+  Planner,
+  PlannerDependency,
+  Queue,
+} from "@/types/prisma";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
 import { CategoryDot, useTheme, vars, categoryColor } from "@/components/ui";
 import { getEffectiveCategoryId } from "@/utils/goalPageHandlers";
@@ -100,6 +105,7 @@ type GraphCanvasProps = {
   onLinkRefused: (message: string) => void;
   hoverLabels: boolean;
   onZoomDelta: (delta: number) => void;
+  onFitWeek: (viewportWidth: number) => void;
 };
 
 // Titles render as much as fits (ellipsis-truncated). Below TITLE_MIN_WIDTH
@@ -150,6 +156,7 @@ export function GraphCanvas({
   onLinkRefused,
   hoverLabels,
   onZoomDelta,
+  onFitWeek,
 }: GraphCanvasProps) {
   const { dark } = useTheme();
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -158,6 +165,8 @@ export function GraphCanvas({
   layoutRef.current = layout;
   const onZoomDeltaRef = useRef(onZoomDelta);
   onZoomDeltaRef.current = onZoomDelta;
+  const onFitWeekRef = useRef(onFitWeek);
+  onFitWeekRef.current = onFitWeek;
   const nodeH = layout.nodeHeight;
 
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -171,7 +180,10 @@ export function GraphCanvas({
   } | null>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
 
-  // First mount anchors on "now"; zoom changes keep a fixed time under the
+  // First mount pins "now" to the left edge and asks the page to fit ~1 week
+  // into the viewport. The fit re-runs this effect with the new pxPerDay; the
+  // zoom is pivoted on the left edge (anchor 0), so "now" stays pinned there
+  // once the fitted zoom lands. Later zoom changes keep a fixed time under the
   // anchor point — the cursor for ctrl+wheel zooms, the viewport center
   // otherwise, except pinned to the domain start while the viewport touches
   // the far left (domainStart is zoom-independent, so x scales linearly).
@@ -183,10 +195,9 @@ export function GraphCanvas({
     const prev = prevPxPerDayRef.current;
     prevPxPerDayRef.current = layout.pxPerDay;
     if (prev === null) {
-      el.scrollLeft = Math.max(
-        0,
-        layoutRef.current.nowX - el.clientWidth * 0.2,
-      );
+      el.scrollLeft = Math.max(0, layoutRef.current.nowX);
+      zoomAnchorRef.current = 0;
+      onFitWeekRef.current(el.clientWidth);
       return;
     }
     if (prev === layout.pxPerDay) return;
@@ -249,7 +260,8 @@ export function GraphCanvas({
         0,
         Math.floor((el.scrollLeft - 2000) / 1000) * 1000,
       );
-      const end = Math.ceil((el.scrollLeft + el.clientWidth + 2000) / 1000) * 1000;
+      const end =
+        Math.ceil((el.scrollLeft + el.clientWidth + 2000) / 1000) * 1000;
       setTickWindow((prev) =>
         prev && prev.start === start && prev.end === end
           ? prev
@@ -272,10 +284,7 @@ export function GraphCanvas({
     [layout, weekStartDay, markers, tickWindow],
   );
 
-  const contentHeight = Math.max(
-    layout.height,
-    viewportHeight - AXIS_HEIGHT,
-  );
+  const contentHeight = Math.max(layout.height, viewportHeight - AXIS_HEIGHT);
 
   const categoryById = useMemo(
     () => new Map(categories.map((c) => [c.id, c])),
@@ -375,7 +384,7 @@ export function GraphCanvas({
   const selectedEdge = useMemo(
     () =>
       selectedEdgeId
-        ? edges.find((e) => e.edge?.id === selectedEdgeId) ?? null
+        ? (edges.find((e) => e.edge?.id === selectedEdgeId) ?? null)
         : null,
     [edges, selectedEdgeId],
   );
@@ -417,7 +426,11 @@ export function GraphCanvas({
     sourceId: string,
     targetId: string,
     direction: LinkDirection,
-  ): { valid: boolean; reason: string | null; cycle: PrecedenceEdge[] | null } => {
+  ): {
+    valid: boolean;
+    reason: string | null;
+    cycle: PrecedenceEdge[] | null;
+  } => {
     const target = layout.nodeById.get(targetId)?.node;
     if (!target) return { valid: false, reason: null, cycle: null };
     if (target.completed) {
@@ -650,7 +663,11 @@ export function GraphCanvas({
         }}
         onDrop={(e) => {
           e.preventDefault();
-          if (reorderDraggedId && dragOver && reorderDraggedId !== laid.node.id) {
+          if (
+            reorderDraggedId &&
+            dragOver &&
+            reorderDraggedId !== laid.node.id
+          ) {
             handleReorderDrop(graphLane, laid.node.id, dragOver.zone);
           } else {
             endReorder();
@@ -743,7 +760,7 @@ export function GraphCanvas({
   const linkSource = linkDrag ? layout.nodeById.get(linkDrag.sourceId) : null;
   const hoveredLaid =
     hoverLabels && hoveredNodeId && !linkDrag && !reorderDraggedId
-      ? layout.nodeById.get(hoveredNodeId) ?? null
+      ? (layout.nodeById.get(hoveredNodeId) ?? null)
       : null;
 
   const badgeRef = useRef<HTMLSpanElement>(null);
@@ -876,7 +893,7 @@ export function GraphCanvas({
                 className={laneHead}
                 style={
                   laidLane.lane.depth > 0
-                    ? { paddingLeft: laidLane.lane.depth * 18 }
+                    ? { paddingLeft: laidLane.lane.depth * 24 }
                     : undefined
                 }
               >
@@ -980,7 +997,10 @@ export function GraphCanvas({
         {linkDrag?.targetId && !linkDrag.valid && linkDrag.reason && (
           <span
             className={linkReasonChip}
-            style={{ left: linkDrag.pointerX + 12, top: linkDrag.pointerY + 14 }}
+            style={{
+              left: linkDrag.pointerX + 12,
+              top: linkDrag.pointerY + 14,
+            }}
           >
             {linkDrag.reason}
           </span>

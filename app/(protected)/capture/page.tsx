@@ -43,7 +43,6 @@ import {
   pageTitle,
   titleSummary,
   spacer,
-  kbdHint,
   mainGrid,
   queueRail,
   queueHead,
@@ -301,11 +300,7 @@ export default function CapturePage() {
             : `${queue.length} to triage · raw notes → schedulable items`}
         </span>
         <span className={spacer} />
-        <span className={kbdHint}>
-          <Kbd>{modKey}</Kbd>
-          <Kbd>K</Kbd>
-          <Caption>capture</Caption>
-        </span>
+        <Kbd keys={[modKey, "K"]} instruction="capture" />
       </div>
 
       <div className={mainGrid}>
@@ -325,9 +320,7 @@ export default function CapturePage() {
               onChange={(e) => setJot(e.target.value)}
               onKeyDown={handleQuickAdd}
             />
-            <Kbd>
-              <CornerDownLeft size={11} strokeWidth={2.4} />
-            </Kbd>
+            <Kbd keys={<CornerDownLeft size={11} strokeWidth={2.4} />} />
           </div>
 
           <div className={queueList}>
@@ -527,19 +520,17 @@ export default function CapturePage() {
               </div>
 
               <div className={footerHint}>
-                <Kbd>
-                  <CornerDownLeft size={11} strokeWidth={2.4} />
-                </Kbd>
-                <Caption>save & next</Caption>
-                <Kbd>1</Kbd>
-                <Kbd>2</Kbd>
-                <Kbd>3</Kbd>
-                <Caption>type</Caption>
-                <Kbd>←</Kbd>
-                <Kbd>→</Kbd>
-                <Caption>cycle buttons</Caption>
-                <Kbd>x</Kbd>
-                <Caption>trash</Caption>
+                <Kbd
+                  keys={<CornerDownLeft size={11} strokeWidth={2.4} />}
+                  instruction="save & next"
+                />
+                <Kbd keys={["1", "2", "3"]} separator="/" instruction="type" />
+                <Kbd
+                  keys={["←", "→"]}
+                  separator="/"
+                  instruction="cycle buttons"
+                />
+                <Kbd keys="x" instruction="trash" />
                 <span className={spacer} />
                 <span
                   role="button"

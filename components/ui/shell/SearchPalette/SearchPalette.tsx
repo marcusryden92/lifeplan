@@ -1,6 +1,5 @@
 "use client";
 
-import { space } from "@/lib/theme";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   useEffect,
@@ -43,7 +42,7 @@ import {
   itemSub,
   emptyState,
   footer,
-  kbdSpacing,
+  footerHints,
 } from "./SearchPalette.css";
 
 const MAX_PER_GROUP = 5;
@@ -284,18 +283,13 @@ export function SearchPalette() {
           </div>
 
           <div className={footer}>
-            <span>
-              <Kbd className={kbdSpacing}>↑</Kbd>
-              <Kbd className={kbdSpacing}>↓</Kbd>
-              navigate ·
-              <Kbd className={kbdSpacing} style={{ marginLeft: space["1.5"] }}>
-                <CornerDownLeft size={9} strokeWidth={2.4} />
-              </Kbd>
-              open ·
-              <Kbd className={kbdSpacing} style={{ marginLeft: space["1.5"] }}>
-                esc
-              </Kbd>
-              close
+            <span className={footerHints}>
+              <Kbd keys={["↑", "↓"]} separator="/" instruction="navigate" />
+              <Kbd
+                keys={<CornerDownLeft size={9} strokeWidth={2.4} />}
+                instruction="open"
+              />
+              <Kbd keys="esc" instruction="close" />
             </span>
             <span>across items, categories, locations</span>
           </div>
