@@ -18,7 +18,7 @@
   - **FullCalendar** 6.1 for the calendar surface; **date-fns** 3 for date math (engine has its own [dateTimeService](utils/calendar-generation/utils/dateTimeService.ts)); **rrule** for template recurrence.
   - **React Hook Form** + **Zod** for forms.
   - **Jest** + **Testing Library** for tests.
-  - **Anthropic SDK** (`@anthropic-ai/sdk`) for the AI assistant — a server-side tool-use loop: `propose_goals` input JSON is parsed incrementally with `partial-json` and forwarded as SSE `forest` events; deterministic edit tools (items, templates, category windows/flags) execute server-side and emit their results as SSE events.
+  - **Anthropic SDK** (`@anthropic-ai/sdk`) for the AI assistant — an IN-BROWSER tool-use loop (BYOK: each user's own API key, held encrypted in a per-device IndexedDB vault, calls api.anthropic.com directly via the SDK's `dangerouslyAllowBrowser` + CORS opt-in header; the key never touches our server): `propose_goals` input JSON is parsed incrementally with `partial-json` and folded via `onForest` callbacks; deterministic edit tools (items, templates, category windows/flags, queues/dependencies) execute in the engine and emit their results through the same callback contract. Engine: [utils/draft/assistantEngine/](utils/draft/assistantEngine/); vault: [lib/aiKey.ts](lib/aiKey.ts); gating: `User.aiMode` + `AiAccessProvider`.
   - **pnpm** 9.15.4 — use `pnpm` for all commands.
 
   ---
@@ -29,7 +29,7 @@
   - **No narration comments** ("// fixed to handle X", "// updated to use new API"). Comments explain *why* something non-obvious exists, not *what* the code does.
   - **No summary, changelog, refactor-notes, or migration-notes markdown files** added to the repo. Make the change and commit.
   - **Absolute imports with `@/`** prefix.
-  - **Prefer server actions** (`"use server"` files in [actions/](actions/)) over `app/api/` routes. API routes exist only for `auth/`, `admin/`, and `draft/stream/` (SSE streaming from Anthropic — a Response-body concern that doesn't fit the server-action return shape).
+  - **Prefer server actions** (`"use server"` files in [actions/](actions/)) over `app/api/` routes. API routes exist only for `auth/` and `admin/`. (The AI assistant's old SSE route is gone — its tool-use loop runs in the browser on the user's own key; see the AI-assistant section.)
   - **Zod schemas** in [schemas/](schemas/) for any user-facing form.
   - Spell out "category" — never "cat".
   - The location surface is named **Locations**, not "Places" (Google Places is the underlying API, but the user-facing concept is Location).
@@ -45,7 +45,7 @@
   │   ├── page.tsx                      # Landing
   │   ├── globals.css, page.css.ts
   │   ├── (protected)/                  # Auth-gated routes
-  │   │   ├── layout.tsx                # Async server component: reads onboardedAt, computes needsOnboarding
+  │   │   ├── layout.tsx                # Async server component: reads onboardedAt + aiMode, computes needsOnboarding
   │   │   ├── ProtectedProviders.tsx    # Client: StoreProvider > UserProvider > CalendarProvider > AppShell (+ onboarding overlaySlot)
   │   │   ├── calendar/                 # FullCalendar surface
   │   │   ├── capture/                  # Quick-entry surface
@@ -59,7 +59,7 @@
   │   │   ├── onboarding/               # First-run 6-step overlay (Welcome/Roles/Locations/Week/BrainDump/AI); _lib builders, _steps, _components
   │   │   └── settings/
   │   ├── auth/                         # login/register/reset/new-password/new-verification/error
-  │   ├── api/                          # auth/ + admin/ + draft/stream/ (SSE)
+  │   ├── api/                          # auth/ + admin/
   │   └── test-shell/, test-tokens/     # Dev scaffolding
   │
   ├── actions/                          # Server actions (preferred backend surface)
@@ -78,7 +78,7 @@
   ├── components/
   │   ├── auth/                         # AuthCard, login/register/reset forms, Social, LoginButton
   │   ├── calendar/                     # WeekStructureModal + editors (Template, Window, Event tile)
-  │   ├── draft/                        # Global AI assistant UI — chat (+ DB-backed history popover) + tabbed Goals/Week/Categories/Queues diff view; mounted in the AppShell assistant slot, opened anywhere via mod+I / sidebar / item-detail entry points. One folder per component: AIDraftModal, ChatPane, ChatHistoryPopover, GlobalAssistant, JsonTreeView, TemplateWeekView, WindowsView, PrecedenceView. The draft-domain logic (ops/diff/apply/contracts) lives in utils/draft/, the state hook in hooks/useAIDraftState
+  │   ├── draft/                        # Global AI assistant UI — chat (+ DB-backed history popover) + tabbed Goals/Week/Categories/Queues diff view; mounted in the AppShell assistant slot, opened anywhere via mod+I / sidebar / item-detail entry points. One folder per component: AIDraftModal, AssistantGate (BYOK key-entry panel shown when AI isn't ready), ChatPane, ChatHistoryPopover, GlobalAssistant, JsonTreeView, TemplateWeekView, WindowsView, PrecedenceView. The draft-domain logic (ops/diff/apply/contracts + the in-browser engine) lives in utils/draft/, the state hook in hooks/useAIDraftState
   │   ├── draggable/                    # DragBox, DraggableItem, TaskDivider, DraggableContext
   │   ├── events/                       # Calendar event renderers + popovers (Event, Template, Travel, CategoryWrapper, NewPlanModal, RecurrenceScopeModal, color/location pickers)
   │   ├── landing/                        # Landing-page visuals: VectorField/, FeatureVignettes/, ReflowDemo/, Reveal/
@@ -97,6 +97,7 @@
   │           ├── SearchPalette/        # Cmd-K-style search
   │           ├── CornerActions/        # Mobile-only floating Search + AI-assistant cluster (hides under full-screen shell overlays AND on canvas routes)
   │           ├── CaptureContext.tsx, SearchContext.tsx, AssistantContext.tsx, ShellOverlayContext.tsx
+  │           ├── AiAccessContext.tsx   # BYOK access state: server aiMode + device-key presence → status ready/needs-key/off (+ saveKey/removeKey/setMode/getApiKey)
   │           ├── NavHistoryContext.tsx # Previous-pathname tracker (usePreviousPathname) — feeds the canvas-route back button (deep-link fallback: /dashboard)
   │           └── nav.ts                # NAV_ITEMS, MOBILE_TABS, isCanvasRoute (graph/mindmap: on mobile the shell chrome yields to an in-page back button + header settings sheet — faux stack sheet)
   │
@@ -119,6 +120,7 @@
   │   │   useFlashAnimation, usePlatform, useTitleEditor
   │
   ├── lib/
+  │   ├── aiKey.ts                      # BYOK device vault: user's Anthropic key AES-GCM-encrypted (non-extractable CryptoKey) in IndexedDB, per userId; validateAiKey via free models.list
   │   ├── auth.ts                       # Helpers around NextAuth session
   │   ├── db.ts                         # Prisma client singleton (PrismaPg adapter)
   │   ├── google-maps-api.ts            # Places autocomplete + Distance Matrix
@@ -141,7 +143,7 @@
   │   ├── schemas/
   │   │   ├── schema.prisma             # Generator + datasource only
   │   │   └── models/
-  │   │       ├── user.prisma           # User (+ dataVersion OCC counter, onboardedAt gate), Account, VerificationToken, PasswordResetToken, TwoFactorToken, TwoFactorConfirmation, AccountDeletionToken, UserRole
+  │   │       ├── user.prisma           # User (+ dataVersion OCC counter, onboardedAt gate, aiMode BYOK/MANAGED/OFF), Account, VerificationToken, PasswordResetToken, TwoFactorToken, TwoFactorConfirmation, AccountDeletionToken, UserRole, AiMode
   │   │       ├── calendar.prisma       # SimpleEvent, EventExtendedProps, Planner, EventTemplate, WeekDayType, PlannerType, EventType
   │   │       ├── category.prisma       # Category, CategoryTimeWindow, CategoryEvent
   │   │       ├── location.prisma       # Location, TravelTime, TravelEvent, TransportMode
@@ -187,7 +189,7 @@
   │   ├── allowedTimes.ts               # Scheduling constraints: AllowedTimesSettings parse + serialize, allowed-interval intersection, weekly max-block ceiling, earliest-start parse
   │   ├── precedence/                   # Precedence shared layer: types (PrecedenceEdge), validationEdges (FULL logical order — legality), findCycle + wouldCreateCycle variants, describeCycle, readinessBlockers, prunePrecedenceInputs (thunk-run central pruning)
   │   ├── queue-handlers/               # mutateQueueMembers (THE queue-member write choke point, cycle-validated), sortOrderKeys ({id, sortOrder} generalization), queueLookups (queueCategoryByRootId / queueByPlannerId display seam — built once in CalendarProvider and exposed on its context; consume from there, never per page)
-  │   ├── draft/                        # AI-assistant draft domain (pure logic; UI in components/draft/): plannerForestToJson / plannerTreeToJson (DraftForest/DraftNode contracts), draft{Templates,Windows,Precedence} (contracts + equality), draft{Forest,Template,Window,Precedence}Ops (deterministic server-side ops), diffDraft* (review-pane diffs), applyDraft* (save-time applies), normalize/merge/assignDraftIds, streamDraft (SSE client)
+  │   ├── draft/                        # AI-assistant draft domain (pure logic; UI in components/draft/): plannerForestToJson / plannerTreeToJson (DraftForest/DraftNode contracts), draft{Templates,Windows,Precedence} (contracts + equality), draft{Forest,Template,Window,Precedence}Ops (deterministic engine ops), diffDraft* (review-pane diffs), applyDraft* (save-time applies), normalize/merge/assignDraftIds, assistantEngine/ (the in-browser BYOK tool-use loop: runAssistantTurn + the browser Anthropic client factory)
   │   └── (loose helpers)               # generalUtils, badgeTone, calendarEventHandlers, categoryUtils,
   │                                     # colorUtils, dateUtils, engineTones, eventTier, goalPageHandlers,
   │                                     # plannerStatus, taskArrayUtils, taskHelpers, templateBuilderUtils,
@@ -199,6 +201,7 @@
   │   ├── draft/                        # Assistant draft-domain unit tests (forest, templates, windows)
   │   ├── goal-handlers/                # toggleGoalIsReady cascade + sortOrderKeys/moveItem tests
   │   ├── graph/                        # Graph-view model unit tests (root/leaf spans, lane membership, row packing, leaf-view bands, ticks)
+  │   ├── lib/                          # aiKey vault crypto (AES-GCM round trip, fresh IVs, non-extractable keys, masked hint)
   │   └── utils/                        # plannerBulkActions + planRecurrence unit tests
   │
   ├── documentation/
@@ -329,15 +332,17 @@
 
   ## AI assistant (goal-forest + weekly-template + category-window + precedence planning)
 
+  **BYOK access model.** The assistant runs on each user's OWN Anthropic API key. The key is validated client-side (a free `models.list` call), AES-GCM-encrypted under a non-extractable WebCrypto key, and stored per userId in an IndexedDB vault ([lib/aiKey.ts](lib/aiKey.ts)) — per device, never in Redux/localStorage/React state, and never in any request to our server. The server knows only the MODE: `User.aiMode` (`BYOK | MANAGED | OFF`, null = undecided, gates like OFF; `MANAGED` is reserved for a future app-key paid tier — the engine's `baseURL` parameter is the transport seam for its thin auth+quota proxy). The protected layout reads `aiMode` alongside `onboardedAt` and threads it into `AiAccessProvider` ([components/ui/shell/AiAccessContext.tsx](components/ui/shell/AiAccessContext.tsx)), which combines it with device-key presence into `status: ready | needs-key | off | loading` plus `saveKey/removeKey/setMode/getApiKey`. When status isn't `ready`, `AIDraftModal` renders [AssistantGate](components/draft/AssistantGate/AssistantGate.tsx) (key entry + explanation, opt-out variant for onboarding) in place of the chat — so every entry point gates through one panel with zero per-entry-point code. Users opt in/out on the onboarding AI step (skip records `OFF`) and manage the key under Settings → AI assistant (mode picker, masked hint, replace, remove).
+
   One global assistant, always reachable: **mod+I**, the Sparkles button in the Sidebar, or the "AI assistant" button in `ItemTabs`. It operates on the whole **forest** of triaged top-level rows — restructuring existing goals, creating new goals with full subtrees, and deleting goals — on the user's **weekly templates** (EventTemplate rows: sleep, work hours, standing commitments), on the full **categories domain**: the category records themselves (create/rename/recolor/reparent/relocate/delete, plus the `useTimeWindows`/`isStrict`/`confineToOwnWindows` flags) and their **time windows** (CategoryTimeWindow rows), and on the **precedence domain**: queues (create/rename/recategorize/delete, member add/move/remove) and dependencies (add/remove prerequisite edges) — so "set up my week and this goal" happens in one conversation. Untriaged Capture-inbox jots are excluded and never touched. Locations are read context only (they can't be created here — they need Google Places), though categories and items may be assigned to existing ones.
 
   Mounting: `AssistantProvider` ([components/ui/shell/AssistantContext.tsx](components/ui/shell/AssistantContext.tsx)) wraps `AppShell` in the protected layout; [GlobalAssistant.tsx](components/draft/GlobalAssistant/GlobalAssistant.tsx) is passed into AppShell's `assistantSlot` and renders the modal filling `mainColumn` (`position: absolute; inset: 0`) — the sidebar stays visible and interactive (`Dialog modal={false}`, outside-interaction dismissal prevented; Esc / Close only). Focus resolution: an explicit `AssistantScope.focusItemId` from the opener wins, else the `/items/[id]` route is detected; either maps to its root via `getRootParentId` and is sent as a prompt hint plus default tree-pane expansion.
 
-**Embedded mode (onboarding AI step).** `AIDraftModal` takes `embedded`/`intent`/`onSaved`/`onStateChange`/`resumeConversationId`/`onConversationIdChange` props. `intent="onboarding"` (the value `AssistantScope.intent` reserves) both threads to the route for a prompt preamble (`intentBlock` — triage the raw brain-dump jots, which arrive as untyped tasks: shape each into a task or a goal with subtasks, set durations/deadlines, assign each to one of the user's *roles*, ready eligible goals) and tunes the instance: empty-state hint, no History popover, no most-recent `autoResume`, and an **auto-sent kickoff message** (fires once per mount after hydration AND after the resume attempt settles — `resumeSettled` from `useAIDraftState` — with items-present vs empty-forest phrasing). Instead of most-recent resume, the instance resumes **its own conversation**: the id is reported via `onConversationIdChange`, persisted in onboarding's `StoredProgress.aiConversationId`, and passed back as `resumeConversationId` so a page refresh mid-interview reopens the same chat (a missing/deleted id degrades to a fresh kickoff; unsaved tree proposals still reseed from canonical — only the chat persists). `embedded` renders inline via `embeddedRoot` (no Dialog overlay, no save/cancel banner); the host (`OnboardingAIStep`) owns the Save action, driving it through the reported `{hasChanges, isStreaming, save}` (`onStateChange`) and getting `onSaved` (not `onClose`) on save. Back out of the step confirms first when `hasChanges`; a confirmed discard also clears the stored conversation id, so returning starts a fresh interview.
+**Embedded mode (onboarding AI step).** `AIDraftModal` takes `embedded`/`intent`/`onSaved`/`onStateChange`/`resumeConversationId`/`onConversationIdChange` props. `intent="onboarding"` (the value `AssistantScope.intent` reserves) both threads to the engine for a prompt preamble (`intentBlock` — triage the raw brain-dump jots, which arrive as untyped tasks: shape each into a task or a goal with subtasks, set durations/deadlines, assign each to one of the user's *roles*, ready eligible goals) and tunes the instance: empty-state hint, no History popover, no most-recent `autoResume`, and an **auto-sent kickoff message** (fires once per mount after hydration AND after the resume attempt settles — `resumeSettled` from `useAIDraftState` — with items-present vs empty-forest phrasing). Instead of most-recent resume, the instance resumes **its own conversation**: the id is reported via `onConversationIdChange`, persisted in onboarding's `StoredProgress.aiConversationId`, and passed back as `resumeConversationId` so a page refresh mid-interview reopens the same chat (a missing/deleted id degrades to a fresh kickoff; unsaved tree proposals still reseed from canonical — only the chat persists). `embedded` renders inline via `embeddedRoot` (no Dialog overlay, no save/cancel banner); the host (`OnboardingAIStep`) owns the Save action, driving it through the reported `{hasChanges, isStreaming, save}` (`onStateChange`) and getting `onSaved` (not `onClose`) on save. Back out of the step confirms first when `hasChanges`; a confirmed discard also clears the stored conversation id, so returning starts a fresh interview.
 
   Split-pane modal ([components/draft/](components/draft/); domain logic in [utils/draft/](utils/draft/)):
 
-  - **Left**: chat pane. User bubbles right, assistant responses left-aligned as plain text; `initialDraft` prefills the composer without sending. The chat pane sits on `color-mix(ink 4%, paper)` so it reads as sunken relative to the tree pane. While a response streams the send button becomes a **Stop** button (aborts the fetch; the route forwards `req.signal` upstream; the interrupted bubble is finalized — "Stopped." if it had no prose yet). On abort, completed work stays but truncated tails roll back: the stamped `propose_goals` re-emit carries `complete: true` (fromOps trees count as complete), and the client refolds the turn from only the completed callIndexes, dropping any proposal whose finalized emit hadn't arrived. **Conversations persist to the DB** — a `DraftConversation` row (client-minted uuid id, title from the first user message, whole message array as Json) upserted by a debounced effect in `useAIDraftState` whenever the chat settles, guarded by a last-persisted snapshot so loading a conversation never bumps its own `updatedAt`. Server surface: [actions/draftConversations.ts](actions/draftConversations.ts) (list/get/upsert/delete, capped at 50 conversations, NOT part of the diff sync). The header has a **History** popover (list + load + delete, via `ChatHistoryPopover`) and a **New chat** reset; on the first open of a fresh page load the most recent conversation auto-resumes. The client sends only the trailing 40-message window to stay under the route's history cap; working drafts still reseed from canonical on each open.
+  - **Left**: chat pane. User bubbles right, assistant responses left-aligned as plain text; `initialDraft` prefills the composer without sending. The chat pane sits on `color-mix(ink 4%, paper)` so it reads as sunken relative to the tree pane. While a response streams the send button becomes a **Stop** button (aborts the in-browser engine run; the engine forwards the AbortSignal to the Anthropic stream; the interrupted bubble is finalized — "Stopped." if it had no prose yet). On abort, completed work stays but truncated tails roll back: the stamped `propose_goals` re-emit carries `complete: true` (fromOps trees count as complete), and the client refolds the turn from only the completed callIndexes, dropping any proposal whose finalized emit hadn't arrived. **Conversations persist to the DB** — a `DraftConversation` row (client-minted uuid id, title from the first user message, whole message array as Json) upserted by a debounced effect in `useAIDraftState` whenever the chat settles, guarded by a last-persisted snapshot so loading a conversation never bumps its own `updatedAt`. Server surface: [actions/draftConversations.ts](actions/draftConversations.ts) (list/get/upsert/delete, capped at 50 conversations, NOT part of the diff sync). The header has a **History** popover (list + load + delete, via `ChatHistoryPopover`) and a **New chat** reset; on the first open of a fresh page load the most recent conversation auto-resumes. Only the trailing 40-message window rides into each engine turn (prompt hygiene); working drafts still reseed from canonical on each open.
   - **Right**: a tabbed review pane — **Goals / Week / Categories / Queues** tab buttons in the pane header (internal tab keys `goals`/`week`/`windows`/`queues`), each with a change-count badge; during a stream the pane auto-follows the domain the assistant is editing unless the user clicked a tab this turn (pin resets per send).
     - **Goals tab**: `JsonForestView` — one collapsible section per top-level goal (chevron + title + `CategoryBadge` + goal-level diff badge), the focused goal and changed goals expanded by default, with the per-node diff overlay from [diffDraftTree.ts](utils/draft/diffDraftTree.ts); deleted nodes/goals stay visible in place. **Display is relevance-scoped**: the pane shows only the focused goal, goals the AI touched, and goals brought into view via the `show_goals` tool (display-only tool → SSE `show` event), plus a "Show all" header toggle. Show-all mode groups goals under category headers (provider order, uncategorized last); the relevance-scoped view stays flat. The full forest is still sent to the model and held in working state — visibility is a render filter only, so Save/delete semantics are unaffected.
     - **Week tab**: `TemplateWeekView` — Monday-first day-grouped template list with the same diff language (status badges + friendly changedFields), color dot, HH:MM–HH:MM range with a `+1d` overnight marker, location name ("Anywhere" when null). Always shows all templates — no relevance filter.
@@ -357,50 +362,53 @@
     User sends message
         │
         ▼
-  POST /api/draft/stream                    ← auth-gated, Sonnet 4.6
-    body: { currentForest, currentTemplates,
+  runAssistantTurn (utils/draft/assistantEngine — IN THE BROWSER, dynamic
+  import; the user's key is read from the device vault per send and calls
+  api.anthropic.com directly with Sonnet 4.6; gate: sends are dropped unless
+  AiAccess status is "ready")
+    args: { currentForest, currentTemplates,
             currentPrecedence ({queues: [{id, title, categoryId,
             memberPlannerIds (ordered)}], dependencies: [{predecessorId,
             successorId}]} — member order is array position, exactly like the
-            forest's sibling order; the route prunes stale references against
-            the forest at request start),
-            history, focus?,
+            forest's sibling order; the engine prunes stale references against
+            the forest at turn start),
+            history (trailing 40), focus?,
             categories (full records: id+name+color+parentId+locationId+flags
             +timeSlots WITH window ids — built ENTIRELY from the WORKING
             categories state so pending drafts, including created categories,
             stay visible to the model on later turns),
-            locations (id+name), today (local) }
-    (full forest goes to OUR server only — Anthropic gets a compact per-goal
+            locations (id+name), today (local), apiKey, baseURL? }
+    (the full forest stays on the device — Anthropic gets a compact per-goal
      INDEX line + the focused goal's tree; everything else is fetched on
      demand. Templates, category windows, queues/dependencies, and locations
      are small and ride in the prompt whole — no fetch dance for them)
     tools:
       read:  search_items({query}), get_goal_trees({goalIds})
       edit:  update_items, move_item, add_items, delete_items
-             ← deterministic ops executed server-side by draftForestOps.ts on
-               the request's working copy; the resulting trees are emitted as
-               fromOps forest events (code-computed — never retyped by the
-               model). Same-goal moves only; supplied ids on add are discarded
+             ← deterministic ops executed by draftForestOps.ts on the turn's
+               working copy; the resulting trees are emitted as fromOps
+               forest events (code-computed — never retyped by the model).
+               Same-goal moves only; supplied ids on add are discarded
                and re-minted as draft ids; isReady / categoryId / splitting /
                maxMinutesPerDay validation built in (splitting: leaves only,
                never plans; maxMinutesPerDay: top-level goals only).
       week:  add_templates, update_templates, delete_templates
-             ← deterministic ops (draftTemplateOps.ts) on the request's
-               workingTemplates copy; each change emits an SSE `templates`
+             ← deterministic ops (draftTemplateOps.ts) on the turn's
+               workingTemplates copy; each change emits a `templates`
                event carrying the FULL authoritative array (small flat list —
                last write wins, no callIndex folding, no fetch guard). Ids are
-               route-minted uuids that become the real DB ids at Save;
+               engine-minted uuids that become the real DB ids at Save;
                locationId validated against the user's set; overlap is
                allowed (engine warns), never rejected.
       categories: add_time_windows, update_time_windows, delete_time_windows,
              add_categories, delete_categories,
              update_categories({id, name?, color?, parentId?, locationId?,
                                 useTimeWindows?, isStrict?, confineToOwnWindows?})
-             ← deterministic ops (draftWindowOps.ts) on the request's
-               workingWindows state {windows, categories}; each change emits an
-               SSE `windows` event carrying the FULL authoritative state
+             ← deterministic ops (draftWindowOps.ts) on the turn's
+               workingWindows state {windows, categories}; each change emits a
+               `windows` event carrying the FULL authoritative state
                (same contract as templates). Window AND category uuids are
-               route-minted and become the DB ids at Save. Windows may be
+               engine-minted and become the DB ids at Save. Windows may be
                within-day (startTime < endTime) or overnight (startTime >
                endTime, running into the next morning); "23:59" is the
                end-of-day sentinel. The engine, the WeekStructureModal grid,
@@ -414,36 +422,36 @@
       precedence: add_queues, update_queues, delete_queues,
              add_queue_members, move_queue_member, remove_queue_members,
              add_dependencies, remove_dependencies
-             ← deterministic ops (draftPrecedenceOps.ts) on the request's
-               workingPrecedence state; each change emits an SSE `precedence`
+             ← deterministic ops (draftPrecedenceOps.ts) on the turn's
+               workingPrecedence state; each change emits a `precedence`
                event carrying the FULL authoritative state (same contract as
-               templates/windows). Queue uuids are route-minted and become
+               templates/windows). Queue uuids are engine-minted and become
                the DB ids at Save. Endpoints must be top-level non-plan
                forest roots (draft ids included); one queue per item; every
                member insert/move and dependency add runs the SHARED cycle
                validators (findCycle/findCycleInGraph over the merged draft
                graph) and a refusal carries the closing path in the
                tool_result ("A" → "B" (through the X queue) → "A") so the
-               model explains it in prose. Forest edits inside the request
+               model explains it in prose. Forest edits inside the turn
                prune the precedence state (deleted goal ⇒ member/edge drops,
-               re-emitted to the client).
+               re-emitted through the same events).
       build: propose_goals({goals, deletedGoalIds})   ← new goals + wholesale restructures
       show:  show_goals({goalIds | all})
         │
         │ tool-use LOOP (≤ MAX_TOOL_TURNS): stream → execute tool calls →
         │ append tool_results → stream again, until end_turn
         ▼
-    server-side partial-json parse of each propose_goals input_json_delta,
-    emits SSE `text`, `forest` (with callIndex; the finalized stamped re-emit
-    carries `complete: true`), `templates`, `windows`, `precedence`, `show`,
-    `status` events.
+    partial-json parse of each propose_goals input_json_delta, dispatched as
+    `text`, `forest` (with callIndex; the finalized stamped re-emit carries
+    `complete: true`), `templates`, `windows`, `precedence`, `show`,
+    `status` callbacks (same payload shapes the old SSE events carried).
     GUARD: a proposal touching an existing goal whose tree the model has NOT
-    fetched this request (focused goal counts as fetched) is filtered out and
+    fetched this turn (focused goal counts as fetched) is filtered out and
     rejected via tool_result — complete-tree replacement without the current
     subtree would silently delete children.
         │
         ▼
-  streamDraft (client) → onForest({callIndex, proposal}) → normalizeDraftForest
+  onForest({callIndex, proposal}) → normalizeDraftForest
     → foldDraftProposals(turnStartSnapshot, proposals in callIndex order)
     → setWorkingForest
     (snapshot per send: each call's partial re-parses replace, never compound;
@@ -523,25 +531,25 @@
   - **UUID preservation is load-bearing** — see the `preserve-planner-ids` memory note. The AI is instructed to echo existing ids; the reverse parser only trusts an id inside the subtree of the goal being applied (any other id becomes a fresh UUID). Queue members and dependency edges reference these ids, so a silently re-minted root id would orphan its precedence links.
   - **`sortOrder` is never emitted by the AI** — sibling order is array position (top-level goal order is NOT semantic; goals match by id). The reverse parser stamps fresh fractional keys from array position at each level.
   - **Goal-granular deltas** — the model never re-emits untouched goals; unchanged goals are skipped at apply time so they see zero `updatedAt` churn and no phantom sync diffs.
-  - **Fetch-before-modify is enforced server-side** — tool results are not carried between user messages (client history is prose-only), so the model must re-fetch trees each message; the route rejects proposal entries for unfetched existing goals rather than trusting the prompt alone. The deterministic edit tools are exempt: they operate by id on the server's copy, so they cannot drop data the model never saw.
-  - **Draft ids are route-minted** — id-less nodes in an accepted `propose_goals` call (and every `add_items` node) get UUIDs stamped by the route (`assignDraftIds` / `mintDraftIds`); the stamped trees are merged into the request's working copy, re-emitted to the client under the same `callIndex` (replacing the id-less partials), and the new root ids are reported in the tool result. Unsaved drafts are therefore first-class for every tool — fetchable, editable, replaceable by id, deletable — instead of duplicate-prone rebuilds from model memory. Draft ids never reach the DB: they match no canonical root at Save, so `applyDraftForestToPlanner` mints the permanent UUIDs.
+  - **Fetch-before-modify is enforced by the engine** — tool results are not carried between user messages (chat history is prose-only), so the model must re-fetch trees each message; the engine rejects proposal entries for unfetched existing goals rather than trusting the prompt alone. The deterministic edit tools are exempt: they operate by id on the turn's working copy, so they cannot drop data the model never saw.
+  - **Draft ids are engine-minted** — id-less nodes in an accepted `propose_goals` call (and every `add_items` node) get UUIDs stamped by the engine (`assignDraftIds` / `mintDraftIds`); the stamped trees are merged into the turn's working copy, re-emitted under the same `callIndex` (replacing the id-less partials), and the new root ids are reported in the tool result. Unsaved drafts are therefore first-class for every tool — fetchable, editable, replaceable by id, deletable — instead of duplicate-prone rebuilds from model memory. Draft ids never reach the DB: they match no canonical root at Save, so `applyDraftForestToPlanner` mints the permanent UUIDs.
   - **Edit ops never touch sortOrder** — draftForestOps works on the nested tree where order is array position; fractional keys are stamped once at Save by applyDraftForestToPlanner.
   - **`categoryId` rides on top-level goal roots only**; children inherit. This is a row-level invariant, not just a draft-contract one: descendants are stored with `categoryId: null` and resolved by parent-chain walk (engine: `buildPlannerCategoryMap`; UI: `getEffectiveCategoryId`) — an explicit child value would win over the walk and pin leaves to a stale category's windows after a root-level switch. `applyDraftForestToPlanner` stamps null on new descendants AND clears retained ones (healing pre-invariant rows); item detail's category change cascades the clear (`assignCategoryToSubtrees` in [utils/plannerBulkActions.ts](utils/plannerBulkActions.ts)) and only renders the category picker on root items. Null on a retained root means "leave as is" (backfilled in `mergeDraftForest`); an id not in the user's category set is ignored. New top-level rows are never plans (`starts` isn't in the contract; coerced defensively).
   - **`color` rides on top-level goal roots only** (same rule as `categoryId`): optional hex on the root, children inherit it on save, null on a retained root means "leave as is". A new goal's color resolves AI pick -> its category color -> a deterministic palette pick keyed on the id (`resolveNewRootColor` / `fallbackCalendarColor`), never the silent `calendarColors[0]` red default that `buildTaskEvent` falls back to for a null `Planner.color`. The library "New item" modal and every AI-created row therefore get a real color; only Capture-inbox jots stay uncolored.
-  - **Streaming path is a Route handler**, not a server action. See the note in "Code style rules" — SSE bytes don't fit the server-action return shape.
-  - **Template draft ids ARE the DB ids** — unlike goal draft ids (re-minted at Save), a route-minted template uuid survives into the EventTemplate row (WeekStructureModal set the uuidv4-id precedent). applyDraftTemplates must keep returning untouched rows by object identity: the template sync diff does not strip timestamps, so a fresh object with a fresh updatedAt would produce a phantom update on every save.
+  - **The loop runs in the browser, not on a server** — `runAssistantTurn` ([utils/draft/assistantEngine/](utils/draft/assistantEngine/)) is a client-safe module (no `@/auth`, no `next/*`), dynamically imported at first send so the Anthropic SDK stays out of the shell bundle. The Anthropic client is built by `createBrowserAnthropicClient` (`dangerouslyAllowBrowser` + the `anthropic-dangerous-direct-browser-access` header); its `baseURL` parameter is the managed-mode seam. There is no app CSP today — if one is ever added, `connect-src` must include `https://api.anthropic.com`.
+  - **Template draft ids ARE the DB ids** — unlike goal draft ids (re-minted at Save), an engine-minted template uuid survives into the EventTemplate row (WeekStructureModal set the uuidv4-id precedent). applyDraftTemplates must keep returning untouched rows by object identity: the template sync diff does not strip timestamps, so a fresh object with a fresh updatedAt would produce a phantom update on every save.
   - **Template ops never reject overlap** — overlapping templates are an engine warning by design; the assistant flags them in prose instead.
-  - **Window AND category draft ids ARE the DB ids** — like templates: route-minted uuids survive into CategoryTimeWindow and Category rows (WeekStructureModal mints client-side uuids at save, same precedent). Windows carry no timestamps, so the sync diff is purely value-based — but applyDraftWindows must stamp `userId` on rebuilt rows (the diff compares it) and must NOT restamp a category's `updatedAt` for window-only changes (the category diff strips timeSlots but compares updatedAt — a spurious restamp is a phantom category update).
+  - **Window AND category draft ids ARE the DB ids** — like templates: engine-minted uuids survive into CategoryTimeWindow and Category rows (WeekStructureModal mints client-side uuids at save, same precedent). Windows carry no timestamps, so the sync diff is purely value-based — but applyDraftWindows must stamp `userId` on rebuilt rows (the diff compares it) and must NOT restamp a category's `updatedAt` for window-only changes (the category diff strips timeSlots but compares updatedAt — a spurious restamp is a phantom category update).
   - **Windows may be overnight everywhere** (`startTime < endTime` within-day, `startTime > endTime` overnight running into the next morning, `"23:59"` end-of-day sentinel, equal bounds rejected). The engine (`expandSlotForDay`/`expandCategoryWindowPeriods` add 24h when `endMin <= startMin`), the WeekStructureModal (serializer renders the end on the next day; drag/resize/overlap handle the wrap via a weekly-minute ring in `windowRangeOverlaps`), and the assistant (`isValidWindowRange` allows `startTime !== endTime`; `findWindowOverlaps` uses the same ring so an overnight window is checked across the day boundary and the Sat/Sun seam) all agree. The one deliberate seam: `hhmmToMinutes("23:59")` is 1439 in the engine but the overlap checkers treat the `"23:59"` sentinel as midnight (1440) — a 1-minute discrepancy that only matters for a window literally touching midnight.
   - **Window overlap is checker-enforced via the model, not op-rejected** — unlike templates (overlap allowed by design), windows must never overlap. `findWindowOverlaps` (draftWindows.ts) runs after add/update window ops; collisions involving the touched windows are appended to the tool_result (`"Work" Sat 10:00-14:00 overlaps "Fun" Sat 12:00-16:00`) and the prompt instructs the model to resolve them before ending its turn. Ops still accept the state so a batch can be fixed by a follow-up call; pre-existing overlaps in user data are not re-reported on unrelated ops.
   - **The assistant has full category CRUD, prompt-gated where it reshapes things** — `add_categories`/`update_categories`/`delete_categories` cover name, color, parentId, locationId, and all three scheduling flags. The prompt reserves `isStrict`/`confineToOwnWindows` changes and any delete for explicit user requests (deletes cascade the subtree + windows; items become uncategorized via the DB's `SetNull`, never deleted). `add_time_windows` still auto-enables `useTimeWindows` deterministically. Locations remain read-only (creation needs Google Places) — only assignable by id.
   - **Category apply is per-field, concurrent-safe** — applyDraftWindows applies only the fields the assistant actually changed (canonical vs working), so edits made elsewhere while the modal was open survive on untouched fields; a concurrent delete elsewhere wins over an assistant edit (no resurrection), and an assistant delete cascades over the current tree exactly like the DB's `parentId` cascade will.
   - **Categories apply before the forest at Save** — handleSave computes `nextCategories` first and validates goal `categoryId`s against it, so filing a goal under a category created in the same conversation survives the save.
-  - **Queue draft ids ARE the DB ids; goal draft ids inside precedence are NOT** — a route-minted queue uuid survives into the Queue row (templates/windows precedent), but a queue member or dependency endpoint naming a draft GOAL id must be remapped at Save: the forest apply mints the permanent id and reports it through `rootIdMap`, and `applyDraftPrecedence` translates. An unmapped draft id (a draft that was never saved) is dropped, never persisted. This is why the precedence apply runs AFTER the forest apply — reordering them silently drops every queue/dependency reference to same-conversation goals.
+  - **Queue draft ids ARE the DB ids; goal draft ids inside precedence are NOT** — an engine-minted queue uuid survives into the Queue row (templates/windows precedent), but a queue member or dependency endpoint naming a draft GOAL id must be remapped at Save: the forest apply mints the permanent id and reports it through `rootIdMap`, and `applyDraftPrecedence` translates. An unmapped draft id (a draft that was never saved) is dropped, never persisted. This is why the precedence apply runs AFTER the forest apply — reordering them silently drops every queue/dependency reference to same-conversation goals.
   - **Member order is array position in the draft contract** — `memberPlannerIds` order IS schedule order; fractional QueueMember `sortOrder` keys are a save-time concern (`applyDraftPrecedence` reuses row objects when the `(i+1)*STEP` keys already match, so a pure append leaves retained members by identity). Dependencies are identified by their endpoint pair, not row id — rows are immutable create/delete, matching the sync diff.
   - **Precedence ops run the SHARED cycle validators** — `draftPrecedenceOps` builds the merged legality graph (`draftPrecedenceEdges`: full queue chains + dependency edges, the collectValidationEdges mirror) and refuses member inserts/moves and dependency adds through `findCycle`/`findCycleInGraph`, returning the closing path in the failure reason. The save-time apply re-validates against the MERGED live state (concurrent edits included) and drops assistant-added artifacts — never user rows — if a loop slipped between op time and save.
-  - **Precedence prunes with the forest, at every layer** — the route prunes the working precedence state at request start and after every forest mutation (delete_items / propose_goals deletions), `applyDraftPrecedence` filters endpoints against the saved planner, and the thunk's central pruning is the final backstop. A deleted goal must never linger as a member/edge in any copy.
-  - **BYOK is deferred** — one key in `.env` for now (see TODO). If/when we ship publicly, wire per-user keys before enabling the feature.
+  - **Precedence prunes with the forest, at every layer** — the engine prunes the working precedence state at turn start and after every forest mutation (delete_items / propose_goals deletions), `applyDraftPrecedence` filters endpoints against the saved planner, and the thunk's central pruning is the final backstop. A deleted goal must never linger as a member/edge in any copy.
+  - **The key never crosses our trust boundary** — the user's Anthropic key lives only in the device vault ([lib/aiKey.ts](lib/aiKey.ts): AES-GCM under a non-extractable CryptoKey in IndexedDB, per userId) and in direct browser → api.anthropic.com requests. Never put it in Redux, localStorage, React state, logs, or any request to our own server; the engine receives it as a call argument read freshly from the vault per send. `AiAccessProvider` is the ONE place access state is derived; gating UI is `AssistantGate`, rendered inside `AIDraftModal` so entry points need no per-site checks.
 
   Unit tests: [__tests__/draft/](__tests__/draft/) covers forest apply (UUID preservation, subtree deletion, sortOrder stamping, categoryId validation, splitting round-trip/set/clear), merge, diff, and forest equality with hand-built planner arrays, plus the template domain: ops (minting, per-field validation, locationId gating), save-time apply (object-identity no-op rule, concurrent-row preservation), and diff/day-grouping — and the categories domain: ops (window + category minting, auto-enable, range validation, category field patches, reparent cycle rejection, sibling-name dedupe, cascade delete), save-time apply (category identity, flag-vs-window updatedAt rules, userId stamping, concurrent-edit preservation, create/delete/no-resurrection semantics), and diff/category-grouping — and the precedence domain: ops (queue minting, endpoint eligibility, one-queue rule, cycle refusals with paths across queues and dependencies, prune identity, state equality semantics), save-time apply (no-op identity, rootIdMap remapping, unsaved-draft drops, member-row identity on append, no-resurrection, one-queue conflict resolution, per-field queue deltas, dependency dedupe/remap, concurrent-cycle defense), and the readiness clamp.
 
@@ -557,7 +565,7 @@
   - **Week** → sleep, exercise, and morning/evening routines = `EventTemplate` rows (`buildWeekTemplates`, unchanged blocks reuse the previously committed row via `reconcileWeekTemplateRows` so a re-commit is an empty diff); work hours = time windows on a **Professional** role's Work sub-category (`applyWorkCategory`, `useTimeWindows`), matching the role preset so no stray "Career" is minted; disabling work after a commit clears those windows (`clearWorkCategoryWindows`, gated by the `weekWorkApplied` progress flag). Only sleep may cross midnight, and it is emitted as ONE overnight template block per day (`expandDailyRange` with `allowOvernight: true` keeps the crossing-midnight range as a single block whose duration runs past 24:00 — the engine and both calendar surfaces render that correctly, so sleep is no longer split at midnight); the within-day blocks pass `allowOvernight: false`, so an `end <= start` range is dropped rather than ballooned into an overnight block. (Work hours become time windows, which the WeekStructureModal grid can't render overnight, so `workCategory` still splits an overnight shift at midnight.)
   - **BrainDump** → pure capture, no type selector: every jot commits as a plain task (the AI step does the triage — task vs goal, deadlines, roles). `applyBrainDump` upserts triaged Planner rows by dump id, patching only fields the user changed vs the last-committed snapshot so AI-step edits (including retypes) survive a return trip. `DumpItem.type` remains in the stored model for blob compatibility; the UI always mints "task".
   - **Locations** → `createLocation` per row, persisting `createdId` markers incrementally so a partial failure doesn't duplicate on retry; a started-but-incomplete row blocks Continue with a message instead of being silently dropped.
-  - **AI** → the embedded assistant (`intent="onboarding"`; see the AI-assistant section).
+  - **AI** → the embedded assistant (`intent="onboarding"`; see the AI-assistant section), behind the BYOK opt-in gate: until AiAccess status is `ready`, the step renders `AssistantGate` (key entry + "Skip AI for now") instead of mounting the modal — which also holds the auto-kickoff until the user decides. Opting out (gate button, footer Skip, or Finish while gated and undecided) records `aiMode = OFF`; entering a valid key records `BYOK` and the interview starts.
 
   Progress + owned-id sets persist per user to `localStorage["circadium.onboarding.progress.<userId>"]` (**StoredProgress v4**: `roleCommittedIds`, `weekTemplateIds`, the Week form snapshot `week` + `weekWorkApplied`, `dumpItems`, per-id `dumpCommitted` snapshots, `aiConversationId` for AI-step chat resume); `migrateProgress` normalizes older blobs and `loadProgress` adopts a legacy unscoped blob once. The theme preference (`theme.dark.<userId>`) is user-scoped the same way. Pure builders live in `_lib/` and are unit-tested ([__tests__/onboarding/](__tests__/onboarding/)); `_steps/` + `_components/` are UI.
 
@@ -760,6 +768,7 @@
   - `add_precedence` — `Queue` (title, int sortOrder, optional categoryId SetNull), `QueueMember` (fractional sortOrder, `@unique plannerId` = the one-queue-per-planner invariant, cascade both FKs), `PlannerDependency` (predecessorId/successorId cascade, `@@unique([predecessorId, successorId])`, immutable rows). See "precedence" in the domain model.
   - `add_planner_linked_item` — `Planner.linkedItemId` (nullable self-FK, `onDelete: SetNull`). Detour: a placeholder subtask redirects the scheduler into the linked target root's leaves (see "Detour" in the domain model).
   - `add_queue_color` — `Queue.color` (nullable String). Optional queue accent picked on the queues page; tints the queue's lane on the graph view, falling back to the queue's category color.
+  - `add_user_ai_mode` — `User.aiMode` (nullable `AiMode` enum: `BYOK | MANAGED | OFF`). The server-known half of BYOK AI access: null = undecided (gates like OFF), set by the onboarding AI gate and Settings → AI assistant. The API key itself never reaches the DB — it lives encrypted in the device vault (lib/aiKey.ts). `MANAGED` is reserved for a future app-key paid mode.
 
   Prisma 7 requires a driver adapter at construction. Both `lib/db.ts` and `prisma/seed.ts` use `PrismaPg`. Don't construct `PrismaClient` without one.
 
@@ -780,7 +789,9 @@
   GOOGLE_CLIENT_SECRET=""
   GOOGLE_MAPS_API_KEY=""              # Places + Distance Matrix
   RESEND_API_KEY=""
-  ANTHROPIC_API_KEY=""                # AI assistant — Sonnet 4.6 via @anthropic-ai/sdk
+  # ANTHROPIC_API_KEY is NOT required: the AI assistant is BYOK — each user's
+  # own key, stored on their device, calling Anthropic from the browser.
+  # (Reserved for the future MANAGED mode's server-side proxy.)
   ```
 
   ---
@@ -838,7 +849,7 @@
 
   Most full-pipeline tests (completed-task-not-rescheduled, ready-gate, ready-goal-watermark, stable-regen) run against trimmed live-data snapshots in `fixtures/` — synthetic minimal fixtures rarely produce a valid slot fabric, so new tests that exercise the whole scheduler should extend the fixture pattern rather than hand-building planners (expansion-seam, category-window-cascade, and category-window-recurrence-exceptions are the deliberate exceptions: they run `generateCalendar` on hand-built minimal inputs shaped for their specific geometry). recurring-plan-events is a module-level unit test of `buildPlanEvents` — no slot fabric needed. Tests use jest fake timers (`{ doNotFake: ["queueMicrotask"] }` + `setSystemTime`) for a deterministic "now", and map fixture template `startDay` weekday names to the integers the engine expects.
 
-  Run with `pnpm test` / `pnpm test:watch`. Type-checking covers both the app and the test project: `pnpm type-check` (also chained into `pnpm lint`).
+  Run with `pnpm test` / `pnpm test:watch`. Type-checking covers both the app and the test project: `pnpm type-check` (also chained into `pnpm lint`). One jest quirk: `@/` aliases resolve through next/jest's SWC transform, which rewrites `import` statements but NOT the string literal inside `jest.mock(...)` — a mocked module must be named with a RELATIVE specifier (see `__tests__/draft/assistantEngine.test.ts`).
 
   ---
 

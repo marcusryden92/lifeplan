@@ -18,6 +18,10 @@ model User {
   // Null until the user finishes (or skips) first-run onboarding; the dashboard
   // redirect predicate is "onboardedAt === null".
   onboardedAt           DateTime?              @map("onboarded_at")
+  // Null until the user decides (onboarding AI gate or settings). The API key
+  // itself never reaches the server in BYOK mode — it lives encrypted on the
+  // user's device. MANAGED is reserved for a future app-key paid mode.
+  aiMode                AiMode?                @map("ai_mode")
   EventTemplate         EventTemplate[]
   Planner               Planner[]
   SimpleEvent           SimpleEvent[]
@@ -107,4 +111,10 @@ model AccountDeletionToken {
 enum UserRole {
   ADMIN
   USER
+}
+
+enum AiMode {
+  BYOK
+  MANAGED
+  OFF
 }

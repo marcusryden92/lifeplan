@@ -19,11 +19,11 @@ import { TemplateWeekView } from "@/components/draft/TemplateWeekView";
 import { ChatPane } from "@/components/draft/ChatPane";
 import { ChatHistoryPopover } from "@/components/draft/ChatHistoryPopover";
 import { useAIDraftState } from "@/hooks/useAIDraftState";
-import {
-  streamDraft,
-  type StreamChatMessage,
-  type StreamDraftFocus,
-} from "@/utils/draft/streamDraft";
+import { useAiAccess } from "@/components/ui";
+import type {
+  StreamChatMessage,
+  StreamDraftFocus,
+} from "@/utils/draft/assistantEngine";
 import {
   normalizeDraftForest,
   type DraftForestProposal,
@@ -47,6 +47,7 @@ import {
 } from "@/utils/draft/diffDraftPrecedence";
 import { WindowsView } from "@/components/draft/WindowsView";
 import { PrecedenceView } from "@/components/draft/PrecedenceView";
+import { AssistantGate } from "@/components/draft/AssistantGate";
 import { diffDraftForest } from "@/utils/draft/diffDraftForest";
 import { diffSubtreeHasChanges } from "@/utils/draft/diffDraftTree";
 
@@ -149,6 +150,7 @@ export function AIDraftModal({
     userId,
     isLoaded,
   } = useCalendarProvider();
+  const { status: aiStatus, getApiKey } = useAiAccess();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [chatBasisPct, setChatBasisPct] = useState(50);
   const [isDraggingDivider, setIsDraggingDivider] = useState(false);
@@ -369,6 +371,9 @@ export function AIDraftModal({
       // Pre-hydration the working forest is a stale empty seed — a send would
       // show the model no goals. The window is sub-second; drop the click.
       if (!isLoaded) return;
+      // The gate replaces the chat UI whenever AI isn't ready, so this only
+      // trips on races (key removed in another tab mid-session).
+      if (aiStatus !== "ready") return;
       const userMessageId = uuidv4();
       const assistantMessageId = uuidv4();
 
@@ -419,7 +424,24 @@ export function AIDraftModal({
       // drafts (created categories, renames, moved windows, flag changes)
       // must be visible to the model on the next turn.
       const windowsState = workingWindowsRef.current;
-      await streamDraft({
+      // The key lives encrypted on this device only; read it per send and
+      // hand it straight to the engine — never into React state.
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        setStreamStatus(null);
+        updateMessage(assistantMessageId, {
+          content:
+            "[Error: Your API key isn't on this device — add it under Settings → AI assistant.]",
+          streaming: false,
+        });
+        if (abortRef.current === controller) abortRef.current = null;
+        return;
+      }
+      // Dynamic import keeps the Anthropic SDK + tool-loop out of the shell
+      // bundle until the first send.
+      const { runAssistantTurn } = await import("@/utils/draft/assistantEngine");
+      await runAssistantTurn({
+        apiKey,
         currentForest: turnStartForest,
         currentTemplates: workingTemplatesRef.current,
         currentPrecedence: workingPrecedenceRef.current,
@@ -607,6 +629,8 @@ export function AIDraftModal({
     },
     [
       isLoaded,
+      aiStatus,
+      getApiKey,
       appendMessage,
       updateMessage,
       setWorkingForest,
@@ -630,6 +654,7 @@ export function AIDraftModal({
   const kickoffSentRef = useRef(false);
   useEffect(() => {
     if (intent !== "onboarding" || !open || !isLoaded || !resumeSettled) return;
+    if (aiStatus !== "ready") return;
     if (kickoffSentRef.current || messages.length > 0) return;
     kickoffSentRef.current = true;
     void handleSend(
@@ -642,6 +667,7 @@ export function AIDraftModal({
     open,
     isLoaded,
     resumeSettled,
+    aiStatus,
     messages.length,
     canonical.goals.length,
     handleSend,
@@ -1019,8 +1045,35 @@ export function AIDraftModal({
     </>
   );
 
+  // BYOK gate: when the user opted out, or opted in but this device holds no
+  // key, every entry point lands here instead of the chat UI. The shell
+  // chrome (backdrop, banner) stays so the modal still reads as the
+  // assistant surface.
+  const gateContent = (
+    <>
+      <Backdrop variant="blob" />
+      <Grain />
+      {!embedded && (
+        <div className={banner}>
+          <span className={editingLabel}>ai assistant</span>
+          <span className={bannerSpacer} />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={requestClose}
+            className={cancelButtonStyle}
+          >
+            Close
+          </Button>
+        </div>
+      )}
+      <AssistantGate />
+    </>
+  );
+  const activeContent = aiStatus === "ready" ? content : gateContent;
+
   if (embedded) {
-    return <div className={embeddedRoot}>{content}</div>;
+    return <div className={embeddedRoot}>{activeContent}</div>;
   }
 
   return (
@@ -1041,7 +1094,7 @@ export function AIDraftModal({
         onInteractOutside={(e) => e.preventDefault()}
       >
         <Dialog.Title className={a11yHiddenTitle}>AI Assistant</Dialog.Title>
-        {content}
+        {activeContent}
       </Dialog.Content>
     </Dialog.Root>
   );

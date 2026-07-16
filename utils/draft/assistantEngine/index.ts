@@ -1,6 +1,7 @@
+"use client";
+
 import Anthropic from "@anthropic-ai/sdk";
 import { parse as parsePartial, Allow } from "partial-json";
-import { auth } from "@/auth";
 import type { DraftNode } from "@/utils/draft/plannerTreeToJson";
 import type { DraftForest } from "@/utils/draft/plannerForestToJson";
 import {
@@ -16,9 +17,7 @@ import { assignDraftIds } from "@/utils/draft/assignDraftIds";
 import { normalizeDraftForest } from "@/utils/draft/normalizeDraftForest";
 import { mergeDraftForest } from "@/utils/draft/mergeDraftForest";
 import {
-  isValidStartDay,
-  isValidTime,
-  normalizeDraftTemplate,
+  normalizeDraftTemplates,
   type DraftTemplate,
 } from "@/utils/draft/draftTemplates";
 import {
@@ -30,7 +29,7 @@ import {
 } from "@/utils/draft/draftTemplateOps";
 import {
   findWindowOverlaps,
-  isValidCategoryColor,
+  normalizeDraftWindowsState,
   type DraftWindowsState,
   type DraftTimeWindow,
 } from "@/utils/draft/draftWindows";
@@ -62,44 +61,32 @@ import {
   type DraftPrecedenceOpsResult,
   type DraftQueueUpdate,
 } from "@/utils/draft/draftPrecedenceOps";
+import { createBrowserAnthropicClient } from "./anthropicClient";
 
-// Note: this file lives under app/api/ despite the CLAUDE.md convention of
-// preferring server actions. Streaming binary/SSE responses don't map cleanly
-// to the server-action return shape, so the assistant's streaming endpoint is
-// the exception. Non-streaming draft mutations should still use server actions.
-
+// The assistant's tool-use loop, running IN THE BROWSER on the user's own
+// Anthropic API key (BYOK — the key comes from the device vault in lib/aiKey
+// and never touches our server). This used to be app/api/draft/stream: the
+// client already held the full working state and uploaded it per request, so
+// the loop moved here wholesale — same prompt, same tools, same deterministic
+// ops, with the SSE events replaced by direct callbacks.
+//
 // Architecture: the model does NOT receive the full forest. The system prompt
 // carries a one-line-per-goal index; the model pulls complete trees on demand
-// via the get_goal_trees tool, which the server answers from the forest the
-// client uploaded (client -> our server is free; the index + fetched trees
-// are all that ever reaches Anthropic). This runs as a tool-use loop:
-// stream -> execute tool calls -> feed tool_results back -> stream again,
-// until the model ends its turn.
-
-export const runtime = "nodejs";
-
-// The assistant runs a multi-turn Anthropic tool-use loop (up to MAX_TOOL_TURNS
-// streamed completions) over one SSE response. Vercel's default function
-// duration (10s Hobby / 15s Pro) kills the stream mid-loop, so the finalizing
-// `done` event never reaches the client and the pending draft is discarded.
-export const maxDuration = 60;
+// via the get_goal_trees tool, answered from the working copy (all local —
+// the index + fetched trees are all that ever reaches Anthropic). This runs
+// as a tool-use loop: stream -> execute tool calls -> feed tool_results back
+// -> stream again, until the model ends its turn.
+//
+// The baseURL parameter is the future managed-mode seam: a thin authenticated
+// proxy route that injects the app's key server-side runs this same loop
+// unchanged.
 
 const MODEL = "claude-sonnet-4-6";
 const MAX_TOKENS = 16000;
 
-// Request caps. The endpoint spends real money per call, so a malformed or
-// hostile body should fail fast instead of being forwarded to Anthropic.
+// Prompt-hygiene cap: persistent conversations can outgrow what a single
+// request should carry, so only the trailing window is sent.
 const MAX_HISTORY_MESSAGES = 40;
-const MAX_MESSAGE_CHARS = 8_000;
-const MAX_FOREST_CHARS = 200_000;
-const MAX_CATEGORIES = 200;
-const MAX_CATEGORY_NAME_CHARS = 200;
-const MAX_TEMPLATES = 200;
-const MAX_LOCATIONS = 100;
-const MAX_TIME_WINDOWS_PER_CATEGORY = 56;
-const MAX_QUEUES = 50;
-const MAX_QUEUE_MEMBERS = 200;
-const MAX_DEPENDENCIES = 400;
 
 // Loop guards. Twelve turns fits the headline flow (search + fetch + template
 // batches + window edits + propose_goals + follow-ups) without inviting
@@ -109,23 +96,17 @@ const MAX_TREES_PER_FETCH = 25;
 const MAX_SEARCH_RESULTS = 25;
 const MAX_OP_ITEMS = 50;
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
-interface DraftChatMessage {
+export interface StreamChatMessage {
   role: "user" | "assistant";
   content: string;
 }
 
-interface RequestTimeWindow {
-  id: string;
-  day: number;
-  startTime: string;
-  endTime: string;
+export interface StreamDraftFocus {
+  rootId: string | null;
+  itemId: string | null;
 }
 
-interface DraftCategory {
+export interface StreamDraftCategory {
   id: string;
   name: string;
   color: string | null;
@@ -134,7 +115,7 @@ interface DraftCategory {
   isStrict: boolean;
   useTimeWindows: boolean;
   confineToOwnWindows: boolean;
-  timeSlots: RequestTimeWindow[];
+  timeSlots: { id: string; day: number; startTime: string; endTime: string }[];
 }
 
 interface DraftLocationRef {
@@ -142,232 +123,60 @@ interface DraftLocationRef {
   name: string;
 }
 
-interface DraftFocus {
-  rootId: string | null;
-  itemId: string | null;
-}
-
-interface DraftRequestBody {
+export interface StreamDraftArgs {
   currentForest: DraftForest;
   currentTemplates: DraftTemplate[];
   currentPrecedence: DraftPrecedenceState;
-  history: DraftChatMessage[];
-  focus: DraftFocus | null;
-  categories: DraftCategory[];
+  history: StreamChatMessage[];
+  focus: StreamDraftFocus | null;
+  categories: StreamDraftCategory[];
   locations: DraftLocationRef[];
   today: string;
-  // Programmatic session hint (e.g. "onboarding"). Prompt preamble only —
-  // never gates tool availability or apply semantics.
-  intent: string | null;
+  // Programmatic session hint (e.g. "onboarding") — keys a prompt preamble.
+  // Prompt-only; never alters tool/apply semantics.
+  intent?: string | null;
+  signal?: AbortSignal;
+  onText: (delta: string) => void;
+  // Raw (possibly partial) propose_goals input plus its callIndex; the caller
+  // normalizes and folds it against the turn-start working forest. `complete`
+  // marks finalized emits (stamped propose_goals re-emit or fromOps trees) —
+  // anything else may be a truncated partial if the stream aborts.
+  onForest: (payload: {
+    callIndex: number;
+    proposal: unknown;
+    complete: boolean;
+  }) => void;
+  // Template ops emit the full authoritative array — the caller replaces its
+  // working templates wholesale (last write wins, no folding).
+  onTemplates: (templates: DraftTemplate[]) => void;
+  // Window/flag ops emit the full authoritative state — same contract.
+  onWindows: (state: DraftWindowsState) => void;
+  // Queue/dependency ops emit the full authoritative state — same contract.
+  onPrecedence: (state: DraftPrecedenceState) => void;
+  // show_goals: display-only request to bring goals into the tree pane.
+  onShow: (payload: { goalIds: string[]; all: boolean }) => void;
+  // Tool activity (e.g. the model fetching goal trees) — for a progress hint
+  // while a tool round trip runs.
+  onStatus?: (payload: { tool: string; count: number }) => void;
+  onDone: (stopReason: string | null) => void;
+  onError: (message: string) => void;
 }
 
-function parseRequestBody(raw: unknown): DraftRequestBody | string {
-  if (typeof raw !== "object" || raw === null) return "Body must be an object";
-  const {
-    currentForest,
-    currentTemplates,
-    currentPrecedence,
-    history,
-    focus,
-    categories,
-    locations,
-    today,
-    intent,
-  } = raw as Record<string, unknown>;
+export type RunAssistantTurnArgs = StreamDraftArgs & {
+  // The user's own Anthropic API key, freshly read from the device vault.
+  apiKey: string;
+  baseURL?: string;
+};
 
-  if (!Array.isArray(history) || history.length === 0) {
-    return "history must be a non-empty array";
-  }
-  if (history.length > MAX_HISTORY_MESSAGES) {
-    return `history exceeds ${MAX_HISTORY_MESSAGES} messages`;
-  }
-  for (const entry of history) {
-    if (typeof entry !== "object" || entry === null) {
-      return "history entries must be objects";
-    }
-    const { role, content } = entry as Record<string, unknown>;
-    if (role !== "user" && role !== "assistant") {
-      return "history roles must be 'user' or 'assistant'";
-    }
-    if (typeof content !== "string" || content.trim().length === 0) {
-      return "history contents must be non-empty strings";
-    }
-    if (content.length > MAX_MESSAGE_CHARS) {
-      return `a history message exceeds ${MAX_MESSAGE_CHARS} characters`;
-    }
-  }
-
-  if (
-    typeof currentForest !== "object" ||
-    currentForest === null ||
-    !Array.isArray((currentForest as Record<string, unknown>).goals)
-  ) {
-    return "currentForest must be an object with a goals array";
-  }
-  if (JSON.stringify(currentForest).length > MAX_FOREST_CHARS) {
-    return `currentForest exceeds ${MAX_FOREST_CHARS} serialized characters`;
-  }
-
-  if (!Array.isArray(categories)) {
-    return "categories must be an array";
-  }
-  if (categories.length > MAX_CATEGORIES) {
-    return `categories exceeds ${MAX_CATEGORIES} entries`;
-  }
-  const parsedCategories: DraftCategory[] = [];
-  for (const entry of categories) {
-    if (typeof entry !== "object" || entry === null) {
-      return "category entries must be objects";
-    }
-    const {
-      id,
-      name,
-      color,
-      parentId,
-      locationId,
-      isStrict,
-      useTimeWindows,
-      confineToOwnWindows,
-      timeSlots,
-    } = entry as Record<string, unknown>;
-    if (typeof id !== "string" || id.length === 0) {
-      return "category ids must be non-empty strings";
-    }
-    if (typeof name !== "string" || name.length > MAX_CATEGORY_NAME_CHARS) {
-      return "category names must be short strings";
-    }
-    if (color !== undefined && color !== null && !isValidCategoryColor(color)) {
-      return "category colors must be 6-digit hex strings";
-    }
-    if (
-      parentId !== undefined &&
-      parentId !== null &&
-      (typeof parentId !== "string" || parentId.length === 0)
-    ) {
-      return "category parentIds must be non-empty strings or null";
-    }
-    if (
-      locationId !== undefined &&
-      locationId !== null &&
-      (typeof locationId !== "string" || locationId.length === 0)
-    ) {
-      return "category locationIds must be non-empty strings or null";
-    }
-    const parsedSlots: RequestTimeWindow[] = [];
-    if (timeSlots !== undefined) {
-      if (!Array.isArray(timeSlots)) {
-        return "category timeSlots must be an array";
-      }
-      if (timeSlots.length > MAX_TIME_WINDOWS_PER_CATEGORY) {
-        return `a category exceeds ${MAX_TIME_WINDOWS_PER_CATEGORY} time windows`;
-      }
-      for (const slot of timeSlots) {
-        if (typeof slot !== "object" || slot === null) {
-          return "time window entries must be objects";
-        }
-        const { id: windowId, day, startTime, endTime } = slot as Record<
-          string,
-          unknown
-        >;
-        if (typeof windowId !== "string" || windowId.length === 0) {
-          return "time window ids must be non-empty strings";
-        }
-        if (!isValidStartDay(day) || !isValidTime(startTime) || !isValidTime(endTime)) {
-          return "time windows must have day 0-6 and HH:MM start/end times";
-        }
-        parsedSlots.push({ id: windowId, day, startTime, endTime });
-      }
-    }
-    parsedCategories.push({
-      id,
-      name,
-      color: typeof color === "string" ? color : null,
-      parentId: typeof parentId === "string" ? parentId : null,
-      locationId: typeof locationId === "string" ? locationId : null,
-      isStrict: isStrict === true,
-      useTimeWindows: useTimeWindows === true,
-      confineToOwnWindows: confineToOwnWindows === true,
-      timeSlots: parsedSlots,
-    });
-  }
-
-  if (!Array.isArray(locations)) {
-    return "locations must be an array";
-  }
-  if (locations.length > MAX_LOCATIONS) {
-    return `locations exceeds ${MAX_LOCATIONS} entries`;
-  }
-  const parsedLocations: DraftLocationRef[] = [];
-  for (const entry of locations) {
-    if (typeof entry !== "object" || entry === null) {
-      return "location entries must be objects";
-    }
-    const { id, name } = entry as Record<string, unknown>;
-    if (typeof id !== "string" || id.length === 0) {
-      return "location ids must be non-empty strings";
-    }
-    if (typeof name !== "string" || name.length > MAX_CATEGORY_NAME_CHARS) {
-      return "location names must be short strings";
-    }
-    parsedLocations.push({ id, name });
-  }
-
-  if (!Array.isArray(currentTemplates)) {
-    return "currentTemplates must be an array";
-  }
-  if (currentTemplates.length > MAX_TEMPLATES) {
-    return `currentTemplates exceeds ${MAX_TEMPLATES} entries`;
-  }
-  const parsedTemplates: DraftTemplate[] = [];
-  for (const entry of currentTemplates) {
-    const template = normalizeDraftTemplate(entry);
-    if (!template) return "currentTemplates contains a malformed template";
-    parsedTemplates.push(template);
-  }
-
-  const parsedPrecedence = normalizeDraftPrecedenceState(currentPrecedence);
-  if (!parsedPrecedence) {
-    return "currentPrecedence must be an object with queues and dependencies arrays";
-  }
-  if (parsedPrecedence.queues.length > MAX_QUEUES) {
-    return `currentPrecedence exceeds ${MAX_QUEUES} queues`;
-  }
-  if (
-    parsedPrecedence.queues.some(
-      (q) => q.memberPlannerIds.length > MAX_QUEUE_MEMBERS,
-    )
-  ) {
-    return `a queue exceeds ${MAX_QUEUE_MEMBERS} members`;
-  }
-  if (parsedPrecedence.dependencies.length > MAX_DEPENDENCIES) {
-    return `currentPrecedence exceeds ${MAX_DEPENDENCIES} dependencies`;
-  }
-
-  if (typeof today !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(today)) {
-    return "today must be a YYYY-MM-DD string";
-  }
-
-  let parsedFocus: DraftFocus | null = null;
-  if (focus !== null && focus !== undefined) {
-    if (typeof focus !== "object") return "focus must be an object or null";
-    const { rootId, itemId } = focus as Record<string, unknown>;
-    parsedFocus = {
-      rootId: typeof rootId === "string" && rootId.length > 0 ? rootId : null,
-      itemId: typeof itemId === "string" && itemId.length > 0 ? itemId : null,
-    };
-  }
-
-  return {
-    currentForest: currentForest as unknown as DraftForest,
-    currentTemplates: parsedTemplates,
-    currentPrecedence: parsedPrecedence,
-    history: history as DraftChatMessage[],
-    focus: parsedFocus,
-    categories: parsedCategories,
-    locations: parsedLocations,
-    today,
-    intent: typeof intent === "string" && intent.length > 0 ? intent : null,
-  };
+interface AssistantTurnInput {
+  currentForest: DraftForest;
+  currentTemplates: DraftTemplate[];
+  currentPrecedence: DraftPrecedenceState;
+  focus: StreamDraftFocus | null;
+  categories: StreamDraftCategory[];
+  locations: DraftLocationRef[];
+  today: string;
+  intent: string | null;
 }
 
 function countDescendants(node: DraftNode): number {
@@ -381,7 +190,7 @@ function countDescendants(node: DraftNode): number {
 // trees are only spent on Anthropic tokens when explicitly fetched.
 function buildGoalIndex(
   forest: DraftForest,
-  categories: DraftCategory[],
+  categories: StreamDraftCategory[],
 ): string {
   if (forest.goals.length === 0) return "(no goals yet)";
   const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
@@ -409,13 +218,13 @@ const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // beneath their parent so the model can reason about the hierarchy it is
 // allowed to edit.
 function buildCategoryList(
-  categories: DraftCategory[],
+  categories: StreamDraftCategory[],
   locations: DraftLocationRef[],
 ): string {
   if (categories.length === 0) return "(the user has no categories yet)";
   const locationNameById = new Map(locations.map((l) => [l.id, l.name]));
   const ids = new Set(categories.map((c) => c.id));
-  const byParent = new Map<string | null, DraftCategory[]>();
+  const byParent = new Map<string | null, StreamDraftCategory[]>();
   for (const c of categories) {
     const key = c.parentId !== null && ids.has(c.parentId) ? c.parentId : null;
     const list = byParent.get(key);
@@ -423,7 +232,7 @@ function buildCategoryList(
     else byParent.set(key, [c]);
   }
   const lines: string[] = [];
-  const emit = (category: DraftCategory, depth: number) => {
+  const emit = (category: StreamDraftCategory, depth: number) => {
     const indent = "  ".repeat(depth);
     const parts = [`${category.id}: ${category.name}`];
     if (category.color) parts.push(category.color);
@@ -477,7 +286,7 @@ function buildTemplateList(
 function buildPrecedenceList(
   precedence: DraftPrecedenceState,
   forest: DraftForest,
-  categories: DraftCategory[],
+  categories: StreamDraftCategory[],
 ): string {
   const titleById = new Map(forest.goals.map((g) => [g.id, g.title]));
   const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
@@ -525,7 +334,7 @@ function buildSystemPrompt({
   locations,
   today,
   intent,
-}: DraftRequestBody): string {
+}: AssistantTurnInput): string {
   const categoryList = buildCategoryList(categories, locations);
 
   const locationList =
@@ -1360,46 +1169,67 @@ function parseStringArray(value: unknown): string[] {
   return value.filter((v): v is string => typeof v === "string");
 }
 
-export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return new Response("Unauthorized", { status: 401 });
+// The user's key is at work here, so surface Anthropic failures in words that
+// point at the fix rather than raw SDK messages.
+function describeAssistantError(err: unknown): string {
+  if (err instanceof Anthropic.AuthenticationError) {
+    return "Anthropic rejected your API key — check it under Settings → AI assistant.";
   }
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return new Response(
-      JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
-    );
+  if (err instanceof Anthropic.RateLimitError) {
+    return "Your Anthropic account is rate-limited right now — wait a moment and try again.";
   }
-
-  let rawBody: unknown;
-  try {
-    rawBody = await req.json();
-  } catch {
-    return new Response("Invalid JSON body", { status: 400 });
+  if (err instanceof Anthropic.APIConnectionError) {
+    return "Couldn't reach Anthropic — check your connection and try again.";
   }
-
-  const parsed = parseRequestBody(rawBody);
-  if (typeof parsed === "string") {
-    return new Response(parsed, { status: 400 });
+  if (err instanceof Anthropic.APIError) {
+    if (typeof err.status === "number" && err.status >= 500) {
+      return "Anthropic is overloaded right now — try again in a moment.";
+    }
+    return `${err.status}: ${err.message}`;
   }
+  return err instanceof Error ? err.message : "Unknown error";
+}
 
-  // The server's working copy: deterministic edit tools mutate this (via the
-  // pure draftForestOps functions), so later reads within the same request
-  // see earlier edits. The client mirrors each edit through forest events.
-  let workingForest: DraftForest = parsed.currentForest;
+export async function runAssistantTurn({
+  currentForest,
+  currentTemplates,
+  currentPrecedence,
+  history,
+  focus,
+  categories,
+  locations,
+  today,
+  intent,
+  apiKey,
+  baseURL,
+  signal,
+  onText,
+  onForest,
+  onTemplates,
+  onWindows,
+  onPrecedence,
+  onShow,
+  onStatus,
+  onDone,
+  onError,
+}: RunAssistantTurnArgs): Promise<void> {
+  const client = createBrowserAnthropicClient(apiKey, baseURL);
+
+  // The turn's working copy: deterministic edit tools mutate this (via the
+  // pure draftForestOps functions), so later reads within the same turn see
+  // earlier edits. The caller mirrors each edit through forest events.
+  let workingForest: DraftForest = currentForest;
   const getGoal = (id: string): DraftNode | undefined =>
     workingForest.goals.find((g) => g.id === id);
 
   // Same pattern for templates — a flat list, so no index/fetch dance: the
   // full list rides in the prompt and ops emit the whole next array.
-  let workingTemplates: DraftTemplate[] = parsed.currentTemplates;
+  let workingTemplates: DraftTemplate[] = currentTemplates;
 
   // And for the categories domain (records + their windows): built from the
-  // request categories, ops emit the whole next state.
+  // caller's categories, ops emit the whole next state.
   let workingWindows: DraftWindowsState = {
-    windows: parsed.categories.flatMap((c) =>
+    windows: categories.flatMap((c) =>
       c.timeSlots.map(
         (w): DraftTimeWindow => ({
           id: w.id,
@@ -1410,7 +1240,7 @@ export async function POST(req: Request) {
         }),
       ),
     ),
-    categories: parsed.categories.map((c) => ({
+    categories: categories.map((c) => ({
       id: c.id,
       name: c.name,
       color: c.color,
@@ -1423,963 +1253,920 @@ export async function POST(req: Request) {
   };
 
   // And for precedence (queues + dependency edges): full state in the prompt,
-  // ops emit the whole next state. Forest edits inside the request prune it
-  // (a deleted goal must not linger as a queue member). The initial prune
-  // heals a client that missed a prune event on an aborted stream.
-  const initialPrune = pruneDraftPrecedence(
-    parsed.currentPrecedence,
-    parsed.currentForest,
-  );
+  // ops emit the whole next state. Forest edits inside the turn prune it (a
+  // deleted goal must not linger as a queue member). The initial prune heals
+  // a caller that missed a prune event on an aborted stream.
+  const initialPrune = pruneDraftPrecedence(currentPrecedence, currentForest);
   let workingPrecedence: DraftPrecedenceState = initialPrune.state;
-  parsed.currentPrecedence = workingPrecedence;
 
   const existingGoalIds = new Set(
-    parsed.currentForest.goals.map((g) => g.id).filter((id) => id.length > 0),
+    currentForest.goals.map((g) => g.id).filter((id) => id.length > 0),
   );
-  const validLocationIds = new Set(parsed.locations.map((l) => l.id));
+  const validLocationIds = new Set(locations.map((l) => l.id));
   // Category ids and names must be read from the working state, not the
-  // request snapshot — categories created or renamed by earlier tool calls in
-  // this same request are immediately referenceable.
+  // turn-start snapshot — categories created or renamed by earlier tool calls
+  // in this same turn are immediately referenceable.
   const currentCategoryIds = () =>
     new Set(workingWindows.categories.map((c) => c.id));
   const categoryName = (id: string): string =>
     workingWindows.categories.find((c) => c.id === id)?.name ?? id;
 
-  // Trees the model may legitimately modify this request: the focused goal is
+  // Trees the model may legitimately modify this turn: the focused goal is
   // pre-fetched in the prompt; everything else must go through get_goal_trees
   // first. Guards against complete-tree proposals silently dropping subtasks
   // the model never saw.
   const fetchedGoalIds = new Set<string>();
-  if (parsed.focus?.rootId) fetchedGoalIds.add(parsed.focus.rootId);
+  if (focus?.rootId) fetchedGoalIds.add(focus.rootId);
 
-  const systemPrompt = buildSystemPrompt(parsed);
+  const systemPrompt = buildSystemPrompt({
+    currentForest,
+    currentTemplates,
+    currentPrecedence: workingPrecedence,
+    focus,
+    categories,
+    locations,
+    today,
+    intent: intent ?? null,
+  });
 
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      let closed = false;
-      const send = (event: string, data: unknown) => {
-        if (closed) return;
-        // The client can disconnect at any time; enqueue on a cancelled
-        // controller throws, and there is nobody left to send to anyway.
-        try {
-          controller.enqueue(
-            encoder.encode(
-              `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`,
-            ),
-          );
-        } catch {
-          closed = true;
-        }
-      };
-
-      // Streamed proposals are keyed by call index so the client can fold
-      // multiple propose_goals calls from one turn without them clobbering
-      // each other's merges.
-      let proposeCallCounter = 0;
-
-      if (initialPrune.changed) {
-        send("precedence", workingPrecedence);
+  // Callback dispatch replacing the old SSE emit — same event names and
+  // payload shapes, including the normalize pass the SSE client ran, so the
+  // caller's contract is unchanged.
+  const send = (event: string, data: unknown) => {
+    switch (event) {
+      case "text":
+        onText((data as { delta: string }).delta);
+        break;
+      case "forest": {
+        const { callIndex, complete, fromOps } = data as {
+          callIndex?: unknown;
+          complete?: unknown;
+          fromOps?: unknown;
+        };
+        onForest({
+          callIndex: typeof callIndex === "number" ? callIndex : 0,
+          proposal: data,
+          complete: complete === true || fromOps === true,
+        });
+        break;
       }
+      case "templates": {
+        const templates = normalizeDraftTemplates(data);
+        if (templates) onTemplates(templates);
+        break;
+      }
+      case "windows": {
+        const state = normalizeDraftWindowsState(data);
+        if (state) onWindows(state);
+        break;
+      }
+      case "precedence": {
+        const state = normalizeDraftPrecedenceState(data);
+        if (state) onPrecedence(state);
+        break;
+      }
+      case "status": {
+        const { tool, count } = data as { tool?: unknown; count?: unknown };
+        onStatus?.({
+          tool: typeof tool === "string" ? tool : "",
+          count: typeof count === "number" ? count : 0,
+        });
+        break;
+      }
+      case "show": {
+        const { goalIds, all } = data as { goalIds?: unknown; all?: unknown };
+        onShow({
+          goalIds: Array.isArray(goalIds)
+            ? goalIds.filter((id): id is string => typeof id === "string")
+            : [],
+          all: all === true,
+        });
+        break;
+      }
+      case "done":
+        onDone((data as { stopReason: string | null }).stopReason);
+        break;
+      case "error":
+        onError((data as { message: string }).message);
+        break;
+    }
+  };
 
-      const isProposalGoalAllowed = (goal: unknown): boolean => {
-        const id = (goal as { id?: unknown } | null)?.id;
-        if (typeof id !== "string" || id.length === 0) return true; // new goal
-        if (!existingGoalIds.has(id)) return true; // unknown id -> new goal
-        return fetchedGoalIds.has(id);
-      };
+  // Streamed proposals are keyed by call index so the caller can fold
+  // multiple propose_goals calls from one turn without them clobbering each
+  // other's merges.
+  let proposeCallCounter = 0;
 
-      const filterProposal = (partial: unknown) => {
-        const { goals, deletedGoalIds } = (partial ?? {}) as {
-          goals?: unknown;
-          deletedGoalIds?: unknown;
-        };
-        const allGoals = Array.isArray(goals) ? goals : [];
-        return {
-          goals: allGoals.filter(isProposalGoalAllowed),
-          rejectedIds: allGoals
-            .map((g) => (g as { id?: unknown } | null)?.id)
-            .filter(
-              (id): id is string =>
-                typeof id === "string" &&
-                existingGoalIds.has(id) &&
-                !fetchedGoalIds.has(id),
-            ),
-          deletedGoalIds: deletedGoalIds ?? [],
-        };
-      };
+  if (initialPrune.changed) {
+    send("precedence", workingPrecedence);
+  }
 
-      const executeGetGoalTrees = (input: unknown): string => {
-        const ids = parseGoalIds(input).slice(0, MAX_TREES_PER_FETCH);
-        const trees: DraftNode[] = [];
-        const missingIds: string[] = [];
-        for (const id of ids) {
-          const goal = getGoal(id);
-          if (goal) {
-            trees.push(goal);
-            fetchedGoalIds.add(id);
-          } else {
-            missingIds.push(id);
+  const isProposalGoalAllowed = (goal: unknown): boolean => {
+    const id = (goal as { id?: unknown } | null)?.id;
+    if (typeof id !== "string" || id.length === 0) return true; // new goal
+    if (!existingGoalIds.has(id)) return true; // unknown id -> new goal
+    return fetchedGoalIds.has(id);
+  };
+
+  const filterProposal = (partial: unknown) => {
+    const { goals, deletedGoalIds } = (partial ?? {}) as {
+      goals?: unknown;
+      deletedGoalIds?: unknown;
+    };
+    const allGoals = Array.isArray(goals) ? goals : [];
+    return {
+      goals: allGoals.filter(isProposalGoalAllowed),
+      rejectedIds: allGoals
+        .map((g) => (g as { id?: unknown } | null)?.id)
+        .filter(
+          (id): id is string =>
+            typeof id === "string" &&
+            existingGoalIds.has(id) &&
+            !fetchedGoalIds.has(id),
+        ),
+      deletedGoalIds: deletedGoalIds ?? [],
+    };
+  };
+
+  const executeGetGoalTrees = (input: unknown): string => {
+    const ids = parseGoalIds(input).slice(0, MAX_TREES_PER_FETCH);
+    const trees: DraftNode[] = [];
+    const missingIds: string[] = [];
+    for (const id of ids) {
+      const goal = getGoal(id);
+      if (goal) {
+        trees.push(goal);
+        fetchedGoalIds.add(id);
+      } else {
+        missingIds.push(id);
+      }
+    }
+    return JSON.stringify({ trees, missingIds });
+  };
+
+  // Forest edits can orphan precedence references (a deleted or retyped root
+  // that was a queue member or dependency endpoint). Mirrors the thunk's
+  // central pruning inside the turn; the caller hears about it through the
+  // same full-state event ops use.
+  const prunePrecedenceAgainstForest = () => {
+    const pruned = pruneDraftPrecedence(workingPrecedence, workingForest);
+    if (pruned.changed) {
+      workingPrecedence = pruned.state;
+      send("precedence", workingPrecedence);
+    }
+  };
+
+  // Adopt an edit-tool result: advance the working copy, mirror changed goals
+  // to the caller through the same forest-event path proposals use (fromOps
+  // marks the trees as code-computed — the caller merge then trusts null
+  // categoryId as an intentional clear rather than backfilling it), and
+  // summarize for the model's tool_result.
+  const applyOpResult = (result: DraftOpsResult, appliedVerb: string): string => {
+    workingForest = result.forest;
+    const changed =
+      result.updatedRootIds.length > 0 || result.deletedGoalIds.length > 0;
+    if (changed) {
+      send("forest", {
+        callIndex: proposeCallCounter++,
+        goals: result.updatedRootIds.map((id) => getGoal(id)).filter(Boolean),
+        deletedGoalIds: result.deletedGoalIds,
+        fromOps: true,
+      });
+      prunePrecedenceAgainstForest();
+    }
+    const parts: string[] = [];
+    if (changed) {
+      parts.push(`${appliedVerb} — the user sees it as a pending change.`);
+    }
+    if (result.failures.length > 0) {
+      parts.push(
+        `Failed: ${result.failures
+          .map((f) => `${f.id ?? "(no id)"}: ${f.reason}`)
+          .join("; ")}.`,
+      );
+    }
+    return parts.join(" ") || "Nothing changed.";
+  };
+
+  // Overlapping windows are accepted by the ops (a batch may be fixed by a
+  // later call) but flagged straight back to the model, which the prompt
+  // instructs to resolve before ending its turn. Only pairs involving windows
+  // this op touched are reported, so pre-existing overlaps in the user's data
+  // don't nag on every op.
+  const MAX_REPORTED_OVERLAPS = 5;
+  const describeWindow = (w: DraftTimeWindow): string =>
+    `"${categoryName(w.categoryId)}" ${
+      DAY_NAMES[w.day]
+    } ${w.startTime}-${w.endTime} (${w.id})`;
+  const buildOverlapNote = (
+    state: DraftWindowsState,
+    touchedIds: ReadonlySet<string>,
+  ): string => {
+    const overlaps = findWindowOverlaps(state.windows, touchedIds);
+    if (overlaps.length === 0) return "";
+    const listed = overlaps
+      .slice(0, MAX_REPORTED_OVERLAPS)
+      .map(({ a, b }) => `${describeWindow(a)} overlaps ${describeWindow(b)}`)
+      .join("; ");
+    const more =
+      overlaps.length > MAX_REPORTED_OVERLAPS
+        ? ` (+${overlaps.length - MAX_REPORTED_OVERLAPS} more)`
+        : "";
+    return ` OVERLAP WARNING: ${listed}${more}. Category windows must never overlap — adjust or delete the conflicting windows now.`;
+  };
+
+  // Categories sibling of applyTemplateOpResult — same full-state contract.
+  const applyWindowOpResult = (
+    result: DraftWindowOpsResult,
+    appliedVerb: string,
+  ): string => {
+    workingWindows = result.state;
+    if (result.changed) {
+      send("windows", {
+        windows: workingWindows.windows,
+        categories: workingWindows.categories,
+      });
+    }
+    const parts: string[] = [];
+    if (result.changed) {
+      parts.push(
+        `${appliedVerb} — the user sees it as a pending change on the Categories tab.`,
+      );
+    }
+    if (result.autoEnabledCategoryIds.length > 0) {
+      parts.push(
+        `Auto-enabled windows for: ${result.autoEnabledCategoryIds
+          .map((id) => categoryName(id))
+          .join(", ")} — tell the user.`,
+      );
+    }
+    if (result.failures.length > 0) {
+      parts.push(
+        `Failed: ${result.failures
+          .map((f) => `${f.id ?? "(no id)"}: ${f.reason}`)
+          .join("; ")}.`,
+      );
+    }
+    return parts.join(" ") || "Nothing changed.";
+  };
+
+  // Precedence sibling — same full-state contract as templates/windows.
+  // Cycle refusals arrive as failures whose reason carries the closing path;
+  // the model is instructed to relay it in plain words.
+  const applyPrecedenceOpResult = (
+    result: DraftPrecedenceOpsResult,
+    appliedVerb: string,
+  ): string => {
+    workingPrecedence = result.state;
+    if (result.changed) {
+      send("precedence", workingPrecedence);
+    }
+    const parts: string[] = [];
+    if (result.changed) {
+      parts.push(
+        `${appliedVerb} — the user sees it as a pending change on the Queues tab.`,
+      );
+    }
+    if (result.failures.length > 0) {
+      parts.push(
+        `Failed: ${result.failures
+          .map((f) => `${f.id ?? "(no id)"}: ${f.reason}`)
+          .join("; ")}.`,
+      );
+    }
+    return parts.join(" ") || "Nothing changed.";
+  };
+
+  // Template sibling of applyOpResult. The event carries the full
+  // authoritative array — small list, last write wins, no caller folding.
+  const applyTemplateOpResult = (
+    result: DraftTemplateOpsResult,
+    appliedVerb: string,
+  ): string => {
+    workingTemplates = result.templates;
+    if (result.changed) {
+      send("templates", { templates: workingTemplates });
+    }
+    const parts: string[] = [];
+    if (result.changed) {
+      parts.push(
+        `${appliedVerb} — the user sees it as a pending change on the Week tab.`,
+      );
+    }
+    if (result.failures.length > 0) {
+      parts.push(
+        `Failed: ${result.failures
+          .map((f) => `${f.id ?? "(no id)"}: ${f.reason}`)
+          .join("; ")}.`,
+      );
+    }
+    return parts.join(" ") || "Nothing changed.";
+  };
+
+  try {
+    const messages: Anthropic.MessageParam[] = history
+      .slice(-MAX_HISTORY_MESSAGES)
+      .map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+    let stopReason: string | null = null;
+
+    // Prose segments before and after a tool call are separate content
+    // blocks; the caller concatenates all text into one bubble, so without an
+    // injected break they fuse mid-sentence
+    // ("...your goals!Your planning library...").
+    let anyTextSent = false;
+    let needsSeparator = false;
+
+    for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
+      // The abort signal fires when the user hits Stop or closes the modal.
+      // Forwarding it aborts the upstream Anthropic request so the user stops
+      // paying for tokens nobody will receive.
+      const anthropicStream = client.messages.stream(
+        {
+          model: MODEL,
+          max_tokens: MAX_TOKENS,
+          system: systemPrompt,
+          messages,
+          tools: [
+            searchItemsTool,
+            getGoalTreesTool,
+            updateItemsTool,
+            moveItemTool,
+            addItemsTool,
+            deleteItemsTool,
+            addTemplatesTool,
+            updateTemplatesTool,
+            deleteTemplatesTool,
+            addTimeWindowsTool,
+            updateTimeWindowsTool,
+            deleteTimeWindowsTool,
+            addCategoriesTool,
+            updateCategoriesTool,
+            deleteCategoriesTool,
+            addQueuesTool,
+            updateQueuesTool,
+            deleteQueuesTool,
+            addQueueMembersTool,
+            moveQueueMemberTool,
+            removeQueueMembersTool,
+            addDependenciesTool,
+            removeDependenciesTool,
+            proposeGoalsTool,
+            showGoalsTool,
+          ],
+        },
+        { signal },
+      );
+
+      let toolInputAccumulator = "";
+      let currentToolName: string | null = null;
+      let currentProposeCallIndex = 0;
+      let lastEmittedProposalJson: string | null = null;
+      // The final stamped re-emit (in the tool-execution pass below) must
+      // reuse the callIndex the partial deltas streamed under, so the caller
+      // fold replaces them instead of stacking a second proposal.
+      const proposeCallIndexByToolUseId = new Map<string, number>();
+
+      for await (const event of anthropicStream) {
+        if (event.type === "content_block_start") {
+          if (event.content_block.type === "tool_use") {
+            toolInputAccumulator = "";
+            currentToolName = event.content_block.name;
+            if (currentToolName === "propose_goals") {
+              currentProposeCallIndex = proposeCallCounter++;
+              proposeCallIndexByToolUseId.set(
+                event.content_block.id,
+                currentProposeCallIndex,
+              );
+            }
+            if (anyTextSent) needsSeparator = true;
           }
-        }
-        return JSON.stringify({ trees, missingIds });
-      };
-
-      // Forest edits can orphan precedence references (a deleted or retyped
-      // root that was a queue member or dependency endpoint). Mirrors the
-      // thunk's central pruning inside the request; the client hears about it
-      // through the same full-state event ops use.
-      const prunePrecedenceAgainstForest = () => {
-        const pruned = pruneDraftPrecedence(workingPrecedence, workingForest);
-        if (pruned.changed) {
-          workingPrecedence = pruned.state;
-          send("precedence", workingPrecedence);
-        }
-      };
-
-      // Adopt an edit-tool result: advance the working copy, mirror changed
-      // goals to the client through the same forest-event path proposals use
-      // (fromOps marks the trees as code-computed — the client merge then
-      // trusts null categoryId as an intentional clear rather than
-      // backfilling it), and summarize for the model's tool_result.
-      const applyOpResult = (
-        result: DraftOpsResult,
-        appliedVerb: string,
-      ): string => {
-        workingForest = result.forest;
-        const changed =
-          result.updatedRootIds.length > 0 || result.deletedGoalIds.length > 0;
-        if (changed) {
-          send("forest", {
-            callIndex: proposeCallCounter++,
-            goals: result.updatedRootIds
-              .map((id) => getGoal(id))
-              .filter(Boolean),
-            deletedGoalIds: result.deletedGoalIds,
-            fromOps: true,
-          });
-          prunePrecedenceAgainstForest();
-        }
-        const parts: string[] = [];
-        if (changed) {
-          parts.push(
-            `${appliedVerb} — the user sees it as a pending change.`,
-          );
-        }
-        if (result.failures.length > 0) {
-          parts.push(
-            `Failed: ${result.failures
-              .map((f) => `${f.id ?? "(no id)"}: ${f.reason}`)
-              .join("; ")}.`,
-          );
-        }
-        return parts.join(" ") || "Nothing changed.";
-      };
-
-      // Overlapping windows are accepted by the ops (a batch may be fixed by
-      // a later call) but flagged straight back to the model, which the
-      // prompt instructs to resolve before ending its turn. Only pairs
-      // involving windows this op touched are reported, so pre-existing
-      // overlaps in the user's data don't nag on every op.
-      const MAX_REPORTED_OVERLAPS = 5;
-      const describeWindow = (w: DraftTimeWindow): string =>
-        `"${categoryName(w.categoryId)}" ${
-          DAY_NAMES[w.day]
-        } ${w.startTime}-${w.endTime} (${w.id})`;
-      const buildOverlapNote = (
-        state: DraftWindowsState,
-        touchedIds: ReadonlySet<string>,
-      ): string => {
-        const overlaps = findWindowOverlaps(state.windows, touchedIds);
-        if (overlaps.length === 0) return "";
-        const listed = overlaps
-          .slice(0, MAX_REPORTED_OVERLAPS)
-          .map(({ a, b }) => `${describeWindow(a)} overlaps ${describeWindow(b)}`)
-          .join("; ");
-        const more =
-          overlaps.length > MAX_REPORTED_OVERLAPS
-            ? ` (+${overlaps.length - MAX_REPORTED_OVERLAPS} more)`
-            : "";
-        return ` OVERLAP WARNING: ${listed}${more}. Category windows must never overlap — adjust or delete the conflicting windows now.`;
-      };
-
-      // Categories sibling of applyTemplateOpResult — same full-state contract.
-      const applyWindowOpResult = (
-        result: DraftWindowOpsResult,
-        appliedVerb: string,
-      ): string => {
-        workingWindows = result.state;
-        if (result.changed) {
-          send("windows", {
-            windows: workingWindows.windows,
-            categories: workingWindows.categories,
-          });
-        }
-        const parts: string[] = [];
-        if (result.changed) {
-          parts.push(
-            `${appliedVerb} — the user sees it as a pending change on the Categories tab.`,
-          );
-        }
-        if (result.autoEnabledCategoryIds.length > 0) {
-          parts.push(
-            `Auto-enabled windows for: ${result.autoEnabledCategoryIds
-              .map((id) => categoryName(id))
-              .join(", ")} — tell the user.`,
-          );
-        }
-        if (result.failures.length > 0) {
-          parts.push(
-            `Failed: ${result.failures
-              .map((f) => `${f.id ?? "(no id)"}: ${f.reason}`)
-              .join("; ")}.`,
-          );
-        }
-        return parts.join(" ") || "Nothing changed.";
-      };
-
-      // Precedence sibling — same full-state contract as templates/windows.
-      // Cycle refusals arrive as failures whose reason carries the closing
-      // path; the model is instructed to relay it in plain words.
-      const applyPrecedenceOpResult = (
-        result: DraftPrecedenceOpsResult,
-        appliedVerb: string,
-      ): string => {
-        workingPrecedence = result.state;
-        if (result.changed) {
-          send("precedence", workingPrecedence);
-        }
-        const parts: string[] = [];
-        if (result.changed) {
-          parts.push(
-            `${appliedVerb} — the user sees it as a pending change on the Queues tab.`,
-          );
-        }
-        if (result.failures.length > 0) {
-          parts.push(
-            `Failed: ${result.failures
-              .map((f) => `${f.id ?? "(no id)"}: ${f.reason}`)
-              .join("; ")}.`,
-          );
-        }
-        return parts.join(" ") || "Nothing changed.";
-      };
-
-      // Template sibling of applyOpResult. The event carries the full
-      // authoritative array — small list, last write wins, no client folding.
-      const applyTemplateOpResult = (
-        result: DraftTemplateOpsResult,
-        appliedVerb: string,
-      ): string => {
-        workingTemplates = result.templates;
-        if (result.changed) {
-          send("templates", { templates: workingTemplates });
-        }
-        const parts: string[] = [];
-        if (result.changed) {
-          parts.push(
-            `${appliedVerb} — the user sees it as a pending change on the Week tab.`,
-          );
-        }
-        if (result.failures.length > 0) {
-          parts.push(
-            `Failed: ${result.failures
-              .map((f) => `${f.id ?? "(no id)"}: ${f.reason}`)
-              .join("; ")}.`,
-          );
-        }
-        return parts.join(" ") || "Nothing changed.";
-      };
-
-      try {
-        const messages: Anthropic.MessageParam[] = parsed.history.map((m) => ({
-          role: m.role,
-          content: m.content,
-        }));
-
-        let stopReason: string | null = null;
-
-        // Prose segments before and after a tool call are separate content
-        // blocks; the client concatenates all text into one bubble, so
-        // without an injected break they fuse mid-sentence
-        // ("...your goals!Your planning library...").
-        let anyTextSent = false;
-        let needsSeparator = false;
-
-        for (let turn = 0; turn < MAX_TOOL_TURNS; turn++) {
-          // req.signal fires when the browser disconnects (tab closed, modal
-          // dismissed). Forwarding it aborts the upstream Anthropic request
-          // so we stop paying for tokens nobody will receive.
-          const anthropicStream = client.messages.stream(
-            {
-              model: MODEL,
-              max_tokens: MAX_TOKENS,
-              system: systemPrompt,
-              messages,
-              tools: [
-                searchItemsTool,
-                getGoalTreesTool,
-                updateItemsTool,
-                moveItemTool,
-                addItemsTool,
-                deleteItemsTool,
-                addTemplatesTool,
-                updateTemplatesTool,
-                deleteTemplatesTool,
-                addTimeWindowsTool,
-                updateTimeWindowsTool,
-                deleteTimeWindowsTool,
-                addCategoriesTool,
-                updateCategoriesTool,
-                deleteCategoriesTool,
-                addQueuesTool,
-                updateQueuesTool,
-                deleteQueuesTool,
-                addQueueMembersTool,
-                moveQueueMemberTool,
-                removeQueueMembersTool,
-                addDependenciesTool,
-                removeDependenciesTool,
-                proposeGoalsTool,
-                showGoalsTool,
-              ],
-            },
-            { signal: req.signal },
-          );
-
-          let toolInputAccumulator = "";
-          let currentToolName: string | null = null;
-          let currentProposeCallIndex = 0;
-          let lastEmittedProposalJson: string | null = null;
-          // The final stamped re-emit (in the tool-execution pass below) must
-          // reuse the callIndex the partial deltas streamed under, so the
-          // client fold replaces them instead of stacking a second proposal.
-          const proposeCallIndexByToolUseId = new Map<string, number>();
-
-          for await (const event of anthropicStream) {
-            if (event.type === "content_block_start") {
-              if (event.content_block.type === "tool_use") {
-                toolInputAccumulator = "";
-                currentToolName = event.content_block.name;
-                if (currentToolName === "propose_goals") {
-                  currentProposeCallIndex = proposeCallCounter++;
-                  proposeCallIndexByToolUseId.set(
-                    event.content_block.id,
-                    currentProposeCallIndex,
-                  );
-                }
-                if (anyTextSent) needsSeparator = true;
-              }
-            } else if (event.type === "content_block_delta") {
-              if (event.delta.type === "text_delta") {
-                if (needsSeparator) {
-                  needsSeparator = false;
-                  send("text", { delta: "\n\n" });
-                }
-                anyTextSent = true;
-                send("text", { delta: event.delta.text });
-              } else if (event.delta.type === "input_json_delta") {
-                toolInputAccumulator += event.delta.partial_json;
-                if (currentToolName !== "propose_goals") continue;
-                // Best-effort partial parse. `Allow.ALL` lets partial-json
-                // fill in missing brackets/quotes so we can extract whatever
-                // complete goals have landed so far.
-                try {
-                  const partial: unknown = parsePartial(
-                    toolInputAccumulator,
-                    Allow.ALL,
-                  );
-                  if (
-                    partial &&
-                    typeof partial === "object" &&
-                    "goals" in partial
-                  ) {
-                    const filtered = filterProposal(partial);
-                    const proposal = {
-                      callIndex: currentProposeCallIndex,
-                      goals: filtered.goals,
-                      deletedGoalIds: filtered.deletedGoalIds,
-                    };
-                    const proposalJson = JSON.stringify(proposal);
-                    if (proposalJson !== lastEmittedProposalJson) {
-                      lastEmittedProposalJson = proposalJson;
-                      send("forest", proposal);
-                    }
-                  }
-                } catch {
-                  // Not yet parseable — wait for more deltas.
+        } else if (event.type === "content_block_delta") {
+          if (event.delta.type === "text_delta") {
+            if (needsSeparator) {
+              needsSeparator = false;
+              send("text", { delta: "\n\n" });
+            }
+            anyTextSent = true;
+            send("text", { delta: event.delta.text });
+          } else if (event.delta.type === "input_json_delta") {
+            toolInputAccumulator += event.delta.partial_json;
+            if (currentToolName !== "propose_goals") continue;
+            // Best-effort partial parse. `Allow.ALL` lets partial-json fill
+            // in missing brackets/quotes so we can extract whatever complete
+            // goals have landed so far.
+            try {
+              const partial: unknown = parsePartial(
+                toolInputAccumulator,
+                Allow.ALL,
+              );
+              if (partial && typeof partial === "object" && "goals" in partial) {
+                const filtered = filterProposal(partial);
+                const proposal = {
+                  callIndex: currentProposeCallIndex,
+                  goals: filtered.goals,
+                  deletedGoalIds: filtered.deletedGoalIds,
+                };
+                const proposalJson = JSON.stringify(proposal);
+                if (proposalJson !== lastEmittedProposalJson) {
+                  lastEmittedProposalJson = proposalJson;
+                  send("forest", proposal);
                 }
               }
-            } else if (event.type === "content_block_stop") {
-              if (currentToolName === "show_goals") {
-                try {
-                  const input: unknown = JSON.parse(
-                    toolInputAccumulator || "{}",
-                  );
-                  const { all } = (input ?? {}) as { all?: unknown };
-                  send("show", {
-                    goalIds: parseGoalIds(input),
-                    all: all === true,
-                  });
-                } catch {
-                  // Malformed tool input — nothing to show.
-                }
-              }
-              currentToolName = null;
+            } catch {
+              // Not yet parseable — wait for more deltas.
             }
           }
-
-          const finalMessage = await anthropicStream.finalMessage();
-          stopReason = finalMessage.stop_reason;
-          if (finalMessage.stop_reason !== "tool_use") break;
-
-          const toolUses = finalMessage.content.filter(
-            (block): block is Anthropic.ToolUseBlock =>
-              block.type === "tool_use",
-          );
-          if (toolUses.length === 0) break;
-
-          const results: Anthropic.ToolResultBlockParam[] = toolUses.map(
-            (tu) => {
-              const input = tu.input as Record<string, unknown>;
-              let content: string;
-              switch (tu.name) {
-                case "get_goal_trees": {
-                  send("status", {
-                    tool: tu.name,
-                    count: parseGoalIds(tu.input).length,
-                  });
-                  content = executeGetGoalTrees(tu.input);
-                  break;
-                }
-                case "search_items": {
-                  send("status", { tool: tu.name, count: 1 });
-                  const query =
-                    typeof input?.query === "string" ? input.query : "";
-                  content = JSON.stringify({
-                    hits: searchDraftItems(
-                      workingForest,
-                      query,
-                      MAX_SEARCH_RESULTS,
-                    ),
-                  });
-                  break;
-                }
-                case "update_items": {
-                  const updates = (
-                    Array.isArray(input?.updates) ? input.updates : []
-                  ).slice(0, MAX_OP_ITEMS) as DraftItemUpdate[];
-                  send("status", { tool: tu.name, count: updates.length });
-                  content = applyOpResult(
-                    updateDraftItems(workingForest, updates, currentCategoryIds()),
-                    `Updated ${updates.length} item(s)`,
-                  );
-                  break;
-                }
-                case "move_item": {
-                  send("status", { tool: tu.name, count: 1 });
-                  content = applyOpResult(
-                    moveDraftItem(workingForest, {
-                      itemId:
-                        typeof input?.itemId === "string" ? input.itemId : "",
-                      newParentId:
-                        typeof input?.newParentId === "string"
-                          ? input.newParentId
-                          : "",
-                      afterSiblingId:
-                        typeof input?.afterSiblingId === "string"
-                          ? input.afterSiblingId
-                          : undefined,
-                      atStart: input?.atStart === true,
-                    }),
-                    "Moved the item",
-                  );
-                  break;
-                }
-                case "add_items": {
-                  const items = (
-                    Array.isArray(input?.items) ? input.items : []
-                  ).slice(0, MAX_OP_ITEMS);
-                  send("status", { tool: tu.name, count: items.length });
-                  content = applyOpResult(
-                    addDraftItems(workingForest, {
-                      parentId:
-                        typeof input?.parentId === "string"
-                          ? input.parentId
-                          : "",
-                      items,
-                      afterSiblingId:
-                        typeof input?.afterSiblingId === "string"
-                          ? input.afterSiblingId
-                          : undefined,
-                      atStart: input?.atStart === true,
-                    }),
-                    `Added ${items.length} item(s) with draft ids (fetch the goal tree to read them)`,
-                  );
-                  break;
-                }
-                case "delete_items": {
-                  const itemIds = parseStringArray(input?.itemIds).slice(
-                    0,
-                    MAX_OP_ITEMS,
-                  );
-                  send("status", { tool: tu.name, count: itemIds.length });
-                  content = applyOpResult(
-                    deleteDraftItems(workingForest, itemIds),
-                    `Deleted ${itemIds.length} item(s)`,
-                  );
-                  break;
-                }
-                case "add_templates": {
-                  const items = (
-                    Array.isArray(input?.templates) ? input.templates : []
-                  ).slice(0, MAX_OP_ITEMS);
-                  send("status", { tool: tu.name, count: items.length });
-                  const before = new Set(workingTemplates.map((t) => t.id));
-                  const result = addDraftTemplates(
-                    workingTemplates,
-                    items,
-                    validLocationIds,
-                  );
-                  const minted = result.templates.filter(
-                    (t) => !before.has(t.id),
-                  );
-                  const mintedNote =
-                    minted.length > 0
-                      ? ` Assigned ids: ${minted
-                          .map((t) => `"${t.title}" = ${t.id}`)
-                          .join(", ")}.`
-                      : "";
-                  content =
-                    applyTemplateOpResult(
-                      result,
-                      `Added ${minted.length} template(s)`,
-                    ) + mintedNote;
-                  break;
-                }
-                case "update_templates": {
-                  const updates = (
-                    Array.isArray(input?.updates) ? input.updates : []
-                  ).slice(0, MAX_OP_ITEMS) as DraftTemplateUpdate[];
-                  send("status", { tool: tu.name, count: updates.length });
-                  content = applyTemplateOpResult(
-                    updateDraftTemplates(
-                      workingTemplates,
-                      updates,
-                      validLocationIds,
-                    ),
-                    `Updated ${updates.length} template(s)`,
-                  );
-                  break;
-                }
-                case "delete_templates": {
-                  const templateIds = parseStringArray(
-                    input?.templateIds,
-                  ).slice(0, MAX_OP_ITEMS);
-                  send("status", { tool: tu.name, count: templateIds.length });
-                  content = applyTemplateOpResult(
-                    deleteDraftTemplates(workingTemplates, templateIds),
-                    `Deleted ${templateIds.length} template(s)`,
-                  );
-                  break;
-                }
-                case "add_time_windows": {
-                  const items = (
-                    Array.isArray(input?.windows) ? input.windows : []
-                  ).slice(0, MAX_OP_ITEMS);
-                  send("status", { tool: tu.name, count: items.length });
-                  const before = new Set(
-                    workingWindows.windows.map((w) => w.id),
-                  );
-                  const result = addDraftTimeWindows(workingWindows, items);
-                  const minted = result.state.windows.filter(
-                    (w) => !before.has(w.id),
-                  );
-                  const mintedNote =
-                    minted.length > 0
-                      ? ` Assigned ids: ${minted
-                          .map(
-                            (w) =>
-                              `"${categoryName(w.categoryId)} ${
-                                DAY_NAMES[w.day]
-                              }" = ${w.id}`,
-                          )
-                          .join(", ")}.`
-                      : "";
-                  content =
-                    applyWindowOpResult(
-                      result,
-                      `Added ${minted.length} window(s)`,
-                    ) +
-                    mintedNote +
-                    buildOverlapNote(
-                      result.state,
-                      new Set(minted.map((w) => w.id)),
-                    );
-                  break;
-                }
-                case "update_time_windows": {
-                  const updates = (
-                    Array.isArray(input?.updates) ? input.updates : []
-                  ).slice(0, MAX_OP_ITEMS) as DraftTimeWindowUpdate[];
-                  send("status", { tool: tu.name, count: updates.length });
-                  const result = updateDraftTimeWindows(
-                    workingWindows,
-                    updates,
-                  );
-                  content =
-                    applyWindowOpResult(
-                      result,
-                      `Updated ${updates.length} window(s)`,
-                    ) +
-                    buildOverlapNote(
-                      result.state,
-                      new Set(
-                        updates
-                          .map((u) => u.id)
-                          .filter((id): id is string => typeof id === "string"),
-                      ),
-                    );
-                  break;
-                }
-                case "delete_time_windows": {
-                  const windowIds = parseStringArray(input?.windowIds).slice(
-                    0,
-                    MAX_OP_ITEMS,
-                  );
-                  send("status", { tool: tu.name, count: windowIds.length });
-                  content = applyWindowOpResult(
-                    deleteDraftTimeWindows(workingWindows, windowIds),
-                    `Deleted ${windowIds.length} window(s)`,
-                  );
-                  break;
-                }
-                case "add_categories": {
-                  const items = (
-                    Array.isArray(input?.categories) ? input.categories : []
-                  ).slice(0, MAX_OP_ITEMS);
-                  send("status", { tool: tu.name, count: items.length });
-                  const before = currentCategoryIds();
-                  const result = addDraftCategories(
-                    workingWindows,
-                    items,
-                    validLocationIds,
-                  );
-                  const minted = result.state.categories.filter(
-                    (c) => !before.has(c.id),
-                  );
-                  const mintedNote =
-                    minted.length > 0
-                      ? ` Assigned ids: ${minted
-                          .map((c) => `"${c.name}" = ${c.id}`)
-                          .join(
-                            ", ",
-                          )}. Use these ids for windows, sub-categories, and filing items.`
-                      : "";
-                  content =
-                    applyWindowOpResult(
-                      result,
-                      `Created ${minted.length} categor${
-                        minted.length === 1 ? "y" : "ies"
-                      }`,
-                    ) + mintedNote;
-                  break;
-                }
-                case "update_categories": {
-                  const updates = (
-                    Array.isArray(input?.updates) ? input.updates : []
-                  ).slice(0, MAX_OP_ITEMS) as DraftCategoryUpdate[];
-                  send("status", { tool: tu.name, count: updates.length });
-                  content = applyWindowOpResult(
-                    updateDraftCategories(
-                      workingWindows,
-                      updates,
-                      validLocationIds,
-                    ),
-                    `Updated ${updates.length} categor${
-                      updates.length === 1 ? "y" : "ies"
-                    }`,
-                  );
-                  break;
-                }
-                case "delete_categories": {
-                  const categoryIds = parseStringArray(
-                    input?.categoryIds,
-                  ).slice(0, MAX_OP_ITEMS);
-                  send("status", { tool: tu.name, count: categoryIds.length });
-                  const before = workingWindows.categories;
-                  const result = deleteDraftCategories(
-                    workingWindows,
-                    categoryIds,
-                  );
-                  const afterIds = new Set(
-                    result.state.categories.map((c) => c.id),
-                  );
-                  const removed = before.filter((c) => !afterIds.has(c.id));
-                  const removedNote =
-                    removed.length > 0
-                      ? ` Removed (with sub-categories and windows): ${removed
-                          .map((c) => `"${c.name}"`)
-                          .join(
-                            ", ",
-                          )}. Items filed under them are kept and become uncategorized.`
-                      : "";
-                  content =
-                    applyWindowOpResult(
-                      result,
-                      `Deleted ${removed.length} categor${
-                        removed.length === 1 ? "y" : "ies"
-                      }`,
-                    ) + removedNote;
-                  break;
-                }
-                case "add_queues": {
-                  const items = (
-                    Array.isArray(input?.queues) ? input.queues : []
-                  ).slice(0, MAX_OP_ITEMS);
-                  send("status", { tool: tu.name, count: items.length });
-                  const before = new Set(
-                    workingPrecedence.queues.map((q) => q.id),
-                  );
-                  const result = addDraftQueues(
-                    workingPrecedence,
-                    items,
-                    workingForest,
-                    currentCategoryIds(),
-                  );
-                  const minted = result.state.queues.filter(
-                    (q) => !before.has(q.id),
-                  );
-                  const mintedNote =
-                    minted.length > 0
-                      ? ` Assigned ids: ${minted
-                          .map((q) => `"${q.title}" = ${q.id}`)
-                          .join(", ")}.`
-                      : "";
-                  content =
-                    applyPrecedenceOpResult(
-                      result,
-                      `Created ${minted.length} queue(s)`,
-                    ) + mintedNote;
-                  break;
-                }
-                case "update_queues": {
-                  const updates = (
-                    Array.isArray(input?.updates) ? input.updates : []
-                  ).slice(0, MAX_OP_ITEMS) as DraftQueueUpdate[];
-                  send("status", { tool: tu.name, count: updates.length });
-                  content = applyPrecedenceOpResult(
-                    updateDraftQueues(
-                      workingPrecedence,
-                      updates,
-                      currentCategoryIds(),
-                    ),
-                    `Updated ${updates.length} queue(s)`,
-                  );
-                  break;
-                }
-                case "delete_queues": {
-                  const queueIds = parseStringArray(input?.queueIds).slice(
-                    0,
-                    MAX_OP_ITEMS,
-                  );
-                  send("status", { tool: tu.name, count: queueIds.length });
-                  content = applyPrecedenceOpResult(
-                    deleteDraftQueues(workingPrecedence, queueIds),
-                    `Deleted ${queueIds.length} queue(s)`,
-                  );
-                  break;
-                }
-                case "add_queue_members": {
-                  const plannerIds = parseStringArray(input?.plannerIds).slice(
-                    0,
-                    MAX_OP_ITEMS,
-                  );
-                  send("status", { tool: tu.name, count: plannerIds.length });
-                  content = applyPrecedenceOpResult(
-                    addDraftQueueMembers(
-                      workingPrecedence,
-                      {
-                        queueId:
-                          typeof input?.queueId === "string"
-                            ? input.queueId
-                            : "",
-                        plannerIds,
-                        atIndex:
-                          typeof input?.atIndex === "number"
-                            ? input.atIndex
-                            : undefined,
-                      },
-                      workingForest,
-                    ),
-                    `Added ${plannerIds.length} queue member(s)`,
-                  );
-                  break;
-                }
-                case "move_queue_member": {
-                  send("status", { tool: tu.name, count: 1 });
-                  content = applyPrecedenceOpResult(
-                    moveDraftQueueMember(
-                      workingPrecedence,
-                      {
-                        queueId:
-                          typeof input?.queueId === "string"
-                            ? input.queueId
-                            : "",
-                        plannerId:
-                          typeof input?.plannerId === "string"
-                            ? input.plannerId
-                            : "",
-                        toIndex:
-                          typeof input?.toIndex === "number"
-                            ? input.toIndex
-                            : Number.NaN,
-                      },
-                      workingForest,
-                    ),
-                    "Moved the queue member",
-                  );
-                  break;
-                }
-                case "remove_queue_members": {
-                  const plannerIds = parseStringArray(input?.plannerIds).slice(
-                    0,
-                    MAX_OP_ITEMS,
-                  );
-                  send("status", { tool: tu.name, count: plannerIds.length });
-                  content = applyPrecedenceOpResult(
-                    removeDraftQueueMembers(workingPrecedence, plannerIds),
-                    `Removed ${plannerIds.length} queue member(s)`,
-                  );
-                  break;
-                }
-                case "add_dependencies": {
-                  const items = (
-                    Array.isArray(input?.dependencies)
-                      ? input.dependencies
-                      : []
-                  ).slice(0, MAX_OP_ITEMS);
-                  send("status", { tool: tu.name, count: items.length });
-                  content = applyPrecedenceOpResult(
-                    addDraftDependencies(
-                      workingPrecedence,
-                      items,
-                      workingForest,
-                    ),
-                    `Added ${items.length} dependenc${items.length === 1 ? "y" : "ies"}`,
-                  );
-                  break;
-                }
-                case "remove_dependencies": {
-                  const items = (
-                    Array.isArray(input?.dependencies)
-                      ? input.dependencies
-                      : []
-                  ).slice(0, MAX_OP_ITEMS);
-                  send("status", { tool: tu.name, count: items.length });
-                  content = applyPrecedenceOpResult(
-                    removeDraftDependencies(workingPrecedence, items),
-                    `Removed ${items.length} dependenc${items.length === 1 ? "y" : "ies"}`,
-                  );
-                  break;
-                }
-                case "propose_goals": {
-                  const filtered = filterProposal(tu.input);
-                  // Stamp draft ids on the accepted goals, adopt them into
-                  // the server's working copy (so same-turn fetches and edit
-                  // ops see them), and re-emit the stamped proposal under the
-                  // callIndex its id-less partials streamed with — the client
-                  // fold replaces those partials with the final stamped trees.
-                  const normalized = normalizeDraftForest({
-                    goals: filtered.goals,
-                    deletedGoalIds: filtered.deletedGoalIds,
-                  });
-                  let assignedNote = "";
-                  if (normalized) {
-                    const { goals: stampedGoals, newRoots } = assignDraftIds(
-                      normalized.goals,
-                    );
-                    workingForest = mergeDraftForest(workingForest, {
-                      ...normalized,
-                      goals: stampedGoals,
-                    });
-                    prunePrecedenceAgainstForest();
-                    for (const root of newRoots) {
-                      // The model authored these trees this request — no
-                      // fetch required before revising them.
-                      existingGoalIds.add(root.id);
-                      fetchedGoalIds.add(root.id);
-                    }
-                    send("forest", {
-                      callIndex:
-                        proposeCallIndexByToolUseId.get(tu.id) ??
-                        proposeCallCounter++,
-                      goals: stampedGoals,
-                      deletedGoalIds: normalized.deletedGoalIds,
-                      // Lets the client tell finalized proposals from
-                      // truncated partials when a stream is aborted.
-                      complete: true,
-                    });
-                    if (newRoots.length > 0) {
-                      assignedNote = ` New goals were assigned draft ids: ${newRoots
-                        .map((r) => `"${r.title}" = ${r.id}`)
-                        .join(
-                          ", ",
-                        )}. Draft ids work with every tool; permanent ids replace them when the user saves.`;
-                    }
-                  }
-                  content =
-                    filtered.rejectedIds.length > 0
-                      ? `Proposal received, EXCEPT these goals were REJECTED because you have not fetched their trees this message: ${filtered.rejectedIds.join(", ")}. Call get_goal_trees for them, then re-propose only those goals.`
-                      : `Proposal received. The user sees it as a pending diff; do not repeat it.${assignedNote}`;
-                  break;
-                }
-                default:
-                  content = "Goals displayed.";
-              }
-              return {
-                type: "tool_result",
-                tool_use_id: tu.id,
-                content,
-              };
-            },
-          );
-
-          messages.push({ role: "assistant", content: finalMessage.content });
-          messages.push({ role: "user", content: results });
-        }
-
-        send("done", { stopReason });
-      } catch (err) {
-        // Client-initiated abort is a normal exit, not an error to report.
-        if (!req.signal.aborted) {
-          const message =
-            err instanceof Anthropic.APIError
-              ? `${err.status}: ${err.message}`
-              : err instanceof Error
-                ? err.message
-                : "Unknown error";
-          send("error", { message });
-        }
-      } finally {
-        if (!closed) {
-          closed = true;
-          try {
-            controller.close();
-          } catch {
-            // Controller already cancelled by the disconnect.
+        } else if (event.type === "content_block_stop") {
+          if (currentToolName === "show_goals") {
+            try {
+              const input: unknown = JSON.parse(toolInputAccumulator || "{}");
+              const { all } = (input ?? {}) as { all?: unknown };
+              send("show", {
+                goalIds: parseGoalIds(input),
+                all: all === true,
+              });
+            } catch {
+              // Malformed tool input — nothing to show.
+            }
           }
+          currentToolName = null;
         }
       }
-    },
-  });
 
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    },
-  });
+      const finalMessage = await anthropicStream.finalMessage();
+      stopReason = finalMessage.stop_reason;
+      if (finalMessage.stop_reason !== "tool_use") break;
+
+      const toolUses = finalMessage.content.filter(
+        (block): block is Anthropic.ToolUseBlock => block.type === "tool_use",
+      );
+      if (toolUses.length === 0) break;
+
+      const results: Anthropic.ToolResultBlockParam[] = toolUses.map((tu) => {
+        const input = tu.input as Record<string, unknown>;
+        let content: string;
+        switch (tu.name) {
+          case "get_goal_trees": {
+            send("status", {
+              tool: tu.name,
+              count: parseGoalIds(tu.input).length,
+            });
+            content = executeGetGoalTrees(tu.input);
+            break;
+          }
+          case "search_items": {
+            send("status", { tool: tu.name, count: 1 });
+            const query = typeof input?.query === "string" ? input.query : "";
+            content = JSON.stringify({
+              hits: searchDraftItems(workingForest, query, MAX_SEARCH_RESULTS),
+            });
+            break;
+          }
+          case "update_items": {
+            const updates = (
+              Array.isArray(input?.updates) ? input.updates : []
+            ).slice(0, MAX_OP_ITEMS) as DraftItemUpdate[];
+            send("status", { tool: tu.name, count: updates.length });
+            content = applyOpResult(
+              updateDraftItems(workingForest, updates, currentCategoryIds()),
+              `Updated ${updates.length} item(s)`,
+            );
+            break;
+          }
+          case "move_item": {
+            send("status", { tool: tu.name, count: 1 });
+            content = applyOpResult(
+              moveDraftItem(workingForest, {
+                itemId: typeof input?.itemId === "string" ? input.itemId : "",
+                newParentId:
+                  typeof input?.newParentId === "string"
+                    ? input.newParentId
+                    : "",
+                afterSiblingId:
+                  typeof input?.afterSiblingId === "string"
+                    ? input.afterSiblingId
+                    : undefined,
+                atStart: input?.atStart === true,
+              }),
+              "Moved the item",
+            );
+            break;
+          }
+          case "add_items": {
+            const items = (
+              Array.isArray(input?.items) ? input.items : []
+            ).slice(0, MAX_OP_ITEMS);
+            send("status", { tool: tu.name, count: items.length });
+            content = applyOpResult(
+              addDraftItems(workingForest, {
+                parentId:
+                  typeof input?.parentId === "string" ? input.parentId : "",
+                items,
+                afterSiblingId:
+                  typeof input?.afterSiblingId === "string"
+                    ? input.afterSiblingId
+                    : undefined,
+                atStart: input?.atStart === true,
+              }),
+              `Added ${items.length} item(s) with draft ids (fetch the goal tree to read them)`,
+            );
+            break;
+          }
+          case "delete_items": {
+            const itemIds = parseStringArray(input?.itemIds).slice(
+              0,
+              MAX_OP_ITEMS,
+            );
+            send("status", { tool: tu.name, count: itemIds.length });
+            content = applyOpResult(
+              deleteDraftItems(workingForest, itemIds),
+              `Deleted ${itemIds.length} item(s)`,
+            );
+            break;
+          }
+          case "add_templates": {
+            const items = (
+              Array.isArray(input?.templates) ? input.templates : []
+            ).slice(0, MAX_OP_ITEMS);
+            send("status", { tool: tu.name, count: items.length });
+            const before = new Set(workingTemplates.map((t) => t.id));
+            const result = addDraftTemplates(
+              workingTemplates,
+              items,
+              validLocationIds,
+            );
+            const minted = result.templates.filter((t) => !before.has(t.id));
+            const mintedNote =
+              minted.length > 0
+                ? ` Assigned ids: ${minted
+                    .map((t) => `"${t.title}" = ${t.id}`)
+                    .join(", ")}.`
+                : "";
+            content =
+              applyTemplateOpResult(
+                result,
+                `Added ${minted.length} template(s)`,
+              ) + mintedNote;
+            break;
+          }
+          case "update_templates": {
+            const updates = (
+              Array.isArray(input?.updates) ? input.updates : []
+            ).slice(0, MAX_OP_ITEMS) as DraftTemplateUpdate[];
+            send("status", { tool: tu.name, count: updates.length });
+            content = applyTemplateOpResult(
+              updateDraftTemplates(workingTemplates, updates, validLocationIds),
+              `Updated ${updates.length} template(s)`,
+            );
+            break;
+          }
+          case "delete_templates": {
+            const templateIds = parseStringArray(input?.templateIds).slice(
+              0,
+              MAX_OP_ITEMS,
+            );
+            send("status", { tool: tu.name, count: templateIds.length });
+            content = applyTemplateOpResult(
+              deleteDraftTemplates(workingTemplates, templateIds),
+              `Deleted ${templateIds.length} template(s)`,
+            );
+            break;
+          }
+          case "add_time_windows": {
+            const items = (
+              Array.isArray(input?.windows) ? input.windows : []
+            ).slice(0, MAX_OP_ITEMS);
+            send("status", { tool: tu.name, count: items.length });
+            const before = new Set(workingWindows.windows.map((w) => w.id));
+            const result = addDraftTimeWindows(workingWindows, items);
+            const minted = result.state.windows.filter((w) => !before.has(w.id));
+            const mintedNote =
+              minted.length > 0
+                ? ` Assigned ids: ${minted
+                    .map(
+                      (w) =>
+                        `"${categoryName(w.categoryId)} ${
+                          DAY_NAMES[w.day]
+                        }" = ${w.id}`,
+                    )
+                    .join(", ")}.`
+                : "";
+            content =
+              applyWindowOpResult(result, `Added ${minted.length} window(s)`) +
+              mintedNote +
+              buildOverlapNote(result.state, new Set(minted.map((w) => w.id)));
+            break;
+          }
+          case "update_time_windows": {
+            const updates = (
+              Array.isArray(input?.updates) ? input.updates : []
+            ).slice(0, MAX_OP_ITEMS) as DraftTimeWindowUpdate[];
+            send("status", { tool: tu.name, count: updates.length });
+            const result = updateDraftTimeWindows(workingWindows, updates);
+            content =
+              applyWindowOpResult(
+                result,
+                `Updated ${updates.length} window(s)`,
+              ) +
+              buildOverlapNote(
+                result.state,
+                new Set(
+                  updates
+                    .map((u) => u.id)
+                    .filter((id): id is string => typeof id === "string"),
+                ),
+              );
+            break;
+          }
+          case "delete_time_windows": {
+            const windowIds = parseStringArray(input?.windowIds).slice(
+              0,
+              MAX_OP_ITEMS,
+            );
+            send("status", { tool: tu.name, count: windowIds.length });
+            content = applyWindowOpResult(
+              deleteDraftTimeWindows(workingWindows, windowIds),
+              `Deleted ${windowIds.length} window(s)`,
+            );
+            break;
+          }
+          case "add_categories": {
+            const items = (
+              Array.isArray(input?.categories) ? input.categories : []
+            ).slice(0, MAX_OP_ITEMS);
+            send("status", { tool: tu.name, count: items.length });
+            const before = currentCategoryIds();
+            const result = addDraftCategories(
+              workingWindows,
+              items,
+              validLocationIds,
+            );
+            const minted = result.state.categories.filter(
+              (c) => !before.has(c.id),
+            );
+            const mintedNote =
+              minted.length > 0
+                ? ` Assigned ids: ${minted
+                    .map((c) => `"${c.name}" = ${c.id}`)
+                    .join(
+                      ", ",
+                    )}. Use these ids for windows, sub-categories, and filing items.`
+                : "";
+            content =
+              applyWindowOpResult(
+                result,
+                `Created ${minted.length} categor${
+                  minted.length === 1 ? "y" : "ies"
+                }`,
+              ) + mintedNote;
+            break;
+          }
+          case "update_categories": {
+            const updates = (
+              Array.isArray(input?.updates) ? input.updates : []
+            ).slice(0, MAX_OP_ITEMS) as DraftCategoryUpdate[];
+            send("status", { tool: tu.name, count: updates.length });
+            content = applyWindowOpResult(
+              updateDraftCategories(workingWindows, updates, validLocationIds),
+              `Updated ${updates.length} categor${
+                updates.length === 1 ? "y" : "ies"
+              }`,
+            );
+            break;
+          }
+          case "delete_categories": {
+            const categoryIds = parseStringArray(input?.categoryIds).slice(
+              0,
+              MAX_OP_ITEMS,
+            );
+            send("status", { tool: tu.name, count: categoryIds.length });
+            const before = workingWindows.categories;
+            const result = deleteDraftCategories(workingWindows, categoryIds);
+            const afterIds = new Set(result.state.categories.map((c) => c.id));
+            const removed = before.filter((c) => !afterIds.has(c.id));
+            const removedNote =
+              removed.length > 0
+                ? ` Removed (with sub-categories and windows): ${removed
+                    .map((c) => `"${c.name}"`)
+                    .join(
+                      ", ",
+                    )}. Items filed under them are kept and become uncategorized.`
+                : "";
+            content =
+              applyWindowOpResult(
+                result,
+                `Deleted ${removed.length} categor${
+                  removed.length === 1 ? "y" : "ies"
+                }`,
+              ) + removedNote;
+            break;
+          }
+          case "add_queues": {
+            const items = (
+              Array.isArray(input?.queues) ? input.queues : []
+            ).slice(0, MAX_OP_ITEMS);
+            send("status", { tool: tu.name, count: items.length });
+            const before = new Set(workingPrecedence.queues.map((q) => q.id));
+            const result = addDraftQueues(
+              workingPrecedence,
+              items,
+              workingForest,
+              currentCategoryIds(),
+            );
+            const minted = result.state.queues.filter((q) => !before.has(q.id));
+            const mintedNote =
+              minted.length > 0
+                ? ` Assigned ids: ${minted
+                    .map((q) => `"${q.title}" = ${q.id}`)
+                    .join(", ")}.`
+                : "";
+            content =
+              applyPrecedenceOpResult(
+                result,
+                `Created ${minted.length} queue(s)`,
+              ) + mintedNote;
+            break;
+          }
+          case "update_queues": {
+            const updates = (
+              Array.isArray(input?.updates) ? input.updates : []
+            ).slice(0, MAX_OP_ITEMS) as DraftQueueUpdate[];
+            send("status", { tool: tu.name, count: updates.length });
+            content = applyPrecedenceOpResult(
+              updateDraftQueues(
+                workingPrecedence,
+                updates,
+                currentCategoryIds(),
+              ),
+              `Updated ${updates.length} queue(s)`,
+            );
+            break;
+          }
+          case "delete_queues": {
+            const queueIds = parseStringArray(input?.queueIds).slice(
+              0,
+              MAX_OP_ITEMS,
+            );
+            send("status", { tool: tu.name, count: queueIds.length });
+            content = applyPrecedenceOpResult(
+              deleteDraftQueues(workingPrecedence, queueIds),
+              `Deleted ${queueIds.length} queue(s)`,
+            );
+            break;
+          }
+          case "add_queue_members": {
+            const plannerIds = parseStringArray(input?.plannerIds).slice(
+              0,
+              MAX_OP_ITEMS,
+            );
+            send("status", { tool: tu.name, count: plannerIds.length });
+            content = applyPrecedenceOpResult(
+              addDraftQueueMembers(
+                workingPrecedence,
+                {
+                  queueId:
+                    typeof input?.queueId === "string" ? input.queueId : "",
+                  plannerIds,
+                  atIndex:
+                    typeof input?.atIndex === "number"
+                      ? input.atIndex
+                      : undefined,
+                },
+                workingForest,
+              ),
+              `Added ${plannerIds.length} queue member(s)`,
+            );
+            break;
+          }
+          case "move_queue_member": {
+            send("status", { tool: tu.name, count: 1 });
+            content = applyPrecedenceOpResult(
+              moveDraftQueueMember(
+                workingPrecedence,
+                {
+                  queueId:
+                    typeof input?.queueId === "string" ? input.queueId : "",
+                  plannerId:
+                    typeof input?.plannerId === "string" ? input.plannerId : "",
+                  toIndex:
+                    typeof input?.toIndex === "number"
+                      ? input.toIndex
+                      : Number.NaN,
+                },
+                workingForest,
+              ),
+              "Moved the queue member",
+            );
+            break;
+          }
+          case "remove_queue_members": {
+            const plannerIds = parseStringArray(input?.plannerIds).slice(
+              0,
+              MAX_OP_ITEMS,
+            );
+            send("status", { tool: tu.name, count: plannerIds.length });
+            content = applyPrecedenceOpResult(
+              removeDraftQueueMembers(workingPrecedence, plannerIds),
+              `Removed ${plannerIds.length} queue member(s)`,
+            );
+            break;
+          }
+          case "add_dependencies": {
+            const items = (
+              Array.isArray(input?.dependencies) ? input.dependencies : []
+            ).slice(0, MAX_OP_ITEMS);
+            send("status", { tool: tu.name, count: items.length });
+            content = applyPrecedenceOpResult(
+              addDraftDependencies(workingPrecedence, items, workingForest),
+              `Added ${items.length} dependenc${items.length === 1 ? "y" : "ies"}`,
+            );
+            break;
+          }
+          case "remove_dependencies": {
+            const items = (
+              Array.isArray(input?.dependencies) ? input.dependencies : []
+            ).slice(0, MAX_OP_ITEMS);
+            send("status", { tool: tu.name, count: items.length });
+            content = applyPrecedenceOpResult(
+              removeDraftDependencies(workingPrecedence, items),
+              `Removed ${items.length} dependenc${items.length === 1 ? "y" : "ies"}`,
+            );
+            break;
+          }
+          case "propose_goals": {
+            const filtered = filterProposal(tu.input);
+            // Stamp draft ids on the accepted goals, adopt them into the
+            // turn's working copy (so same-turn fetches and edit ops see
+            // them), and re-emit the stamped proposal under the callIndex its
+            // id-less partials streamed with — the caller fold replaces those
+            // partials with the final stamped trees.
+            const normalized = normalizeDraftForest({
+              goals: filtered.goals,
+              deletedGoalIds: filtered.deletedGoalIds,
+            });
+            let assignedNote = "";
+            if (normalized) {
+              const { goals: stampedGoals, newRoots } = assignDraftIds(
+                normalized.goals,
+              );
+              workingForest = mergeDraftForest(workingForest, {
+                ...normalized,
+                goals: stampedGoals,
+              });
+              prunePrecedenceAgainstForest();
+              for (const root of newRoots) {
+                // The model authored these trees this turn — no fetch
+                // required before revising them.
+                existingGoalIds.add(root.id);
+                fetchedGoalIds.add(root.id);
+              }
+              send("forest", {
+                callIndex:
+                  proposeCallIndexByToolUseId.get(tu.id) ??
+                  proposeCallCounter++,
+                goals: stampedGoals,
+                deletedGoalIds: normalized.deletedGoalIds,
+                // Lets the caller tell finalized proposals from truncated
+                // partials when a stream is aborted.
+                complete: true,
+              });
+              if (newRoots.length > 0) {
+                assignedNote = ` New goals were assigned draft ids: ${newRoots
+                  .map((r) => `"${r.title}" = ${r.id}`)
+                  .join(
+                    ", ",
+                  )}. Draft ids work with every tool; permanent ids replace them when the user saves.`;
+              }
+            }
+            content =
+              filtered.rejectedIds.length > 0
+                ? `Proposal received, EXCEPT these goals were REJECTED because you have not fetched their trees this message: ${filtered.rejectedIds.join(", ")}. Call get_goal_trees for them, then re-propose only those goals.`
+                : `Proposal received. The user sees it as a pending diff; do not repeat it.${assignedNote}`;
+            break;
+          }
+          default:
+            content = "Goals displayed.";
+        }
+        return {
+          type: "tool_result",
+          tool_use_id: tu.id,
+          content,
+        };
+      });
+
+      messages.push({ role: "assistant", content: finalMessage.content });
+      messages.push({ role: "user", content: results });
+    }
+
+    send("done", { stopReason });
+  } catch (err) {
+    // User-initiated abort is a normal exit, not an error to report.
+    if (!signal?.aborted) {
+      send("error", { message: describeAssistantError(err) });
+    }
+  }
 }

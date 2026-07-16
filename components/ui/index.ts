@@ -41,13 +41,15 @@ export {
   useCapture,
   AssistantProvider,
   useAssistant,
+  AiAccessProvider,
+  useAiAccess,
   useShellOverlay,
   useShellOverlayOpen,
   usePreviousPathname,
   NAV_ITEMS,
   MOBILE_TABS,
 } from "./shell";
-export type { NavItem, AssistantScope } from "./shell";
+export type { NavItem, AssistantScope, AiAccessStatus, SaveKeyResult } from "./shell";
 
 export {
   vars,

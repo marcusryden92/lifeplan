@@ -5,6 +5,8 @@ export { CapturePalette } from "./CapturePalette";
 export { CaptureProvider, useCapture } from "./CaptureContext";
 export { AssistantProvider, useAssistant } from "./AssistantContext";
 export type { AssistantScope } from "./AssistantContext";
+export { AiAccessProvider, useAiAccess } from "./AiAccessContext";
+export type { AiAccessStatus, SaveKeyResult } from "./AiAccessContext";
 export { SearchPalette } from "./SearchPalette";
 export { SearchProvider, useSearch } from "./SearchContext";
 export {

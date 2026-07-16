@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Sparkles } from "lucide-react";
-import { Button, ConfirmModal } from "@/components/ui";
+import { Button, ConfirmModal, useAiAccess } from "@/components/ui";
+import { AiMode } from "@/generated/client";
 import { AIDraftModal } from "@/components/draft/AIDraftModal";
+import { AssistantGate } from "@/components/draft/AssistantGate";
 import { StepFrame } from "../_components/StepFrame";
 import { aiWorkspace, footerActions } from "../onboarding.css";
 
@@ -37,6 +39,7 @@ export function OnboardingAIStep({
   resumeConversationId,
   onConversationIdChange,
 }: OnboardingAIStepProps) {
+  const { status: aiStatus, mode: aiModeValue, setMode } = useAiAccess();
   const [assistant, setAssistant] = useState<AssistantState>({
     hasChanges: false,
     isStreaming: false,
@@ -44,11 +47,39 @@ export function OnboardingAIStep({
   });
   const [showBackConfirm, setShowBackConfirm] = useState(false);
 
+  // BYOK opt-in gate: until this device is ready (opted in + key stored),
+  // the step shows the key-entry panel instead of mounting the assistant —
+  // which also keeps the auto-kickoff from firing before the user decides.
+  const gated = aiStatus !== "ready";
+
+  // Leaving AI off is a recorded decision, not a lingering null — the
+  // assistant entry points then gate with "add a key any time" copy.
+  const recordOptOut = useCallback(() => {
+    if (aiModeValue !== AiMode.OFF) {
+      // Fire-and-forget: a failed write must not trap the user in setup.
+      void setMode(AiMode.OFF).catch(() => {});
+    }
+  }, [aiModeValue, setMode]);
+
+  const handleOptOut = useCallback(() => {
+    recordOptOut();
+    onFinish();
+  }, [recordOptOut, onFinish]);
+
+  const handleSkip = useCallback(() => {
+    if (aiStatus === "off") recordOptOut();
+    onSkip();
+  }, [aiStatus, recordOptOut, onSkip]);
+
   // Save & continue applies the assistant's proposals (which calls onSaved =
   // onFinish); with nothing proposed it just finishes.
   const handleContinue = () => {
-    if (assistant.hasChanges) assistant.save();
-    else onFinish();
+    if (assistant.hasChanges) {
+      assistant.save();
+      return;
+    }
+    if (aiStatus === "off") recordOptOut();
+    onFinish();
   };
 
   // Leaving this step unmounts the assistant, which discards unsaved
@@ -65,7 +96,7 @@ export function OnboardingAIStep({
       wide
       title="Plan your first goals with AI"
       subtitle="Chat to draft goals across your roles, then Save & continue to keep them. Nothing is added until you do."
-      onSkip={onSkip}
+      onSkip={handleSkip}
       skipDisabled={finishing}
       footer={
         <>
@@ -90,17 +121,21 @@ export function OnboardingAIStep({
       }
     >
       <div className={aiWorkspace}>
-        <AIDraftModal
-          embedded
-          open
-          onClose={() => {}}
-          focus={null}
-          intent="onboarding"
-          onSaved={onFinish}
-          onStateChange={setAssistant}
-          resumeConversationId={resumeConversationId}
-          onConversationIdChange={onConversationIdChange}
-        />
+        {gated ? (
+          <AssistantGate onOptOut={handleOptOut} optOutLabel="Skip AI for now" />
+        ) : (
+          <AIDraftModal
+            embedded
+            open
+            onClose={() => {}}
+            focus={null}
+            intent="onboarding"
+            onSaved={onFinish}
+            onStateChange={setAssistant}
+            resumeConversationId={resumeConversationId}
+            onConversationIdChange={onConversationIdChange}
+          />
+        )}
       </div>
 
       <ConfirmModal
