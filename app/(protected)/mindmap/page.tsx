@@ -91,13 +91,13 @@ export default function MindmapPage() {
       buildMindmapTree({
         planner,
         categories,
-        userName: user?.name || "Me",
+        userName: "Me",
         theme: dark ? "dark" : "light",
         showCompleted,
         hideEmpty,
         showLeaves,
       }),
-    [planner, categories, user?.name, dark, showCompleted, hideEmpty, showLeaves],
+    [planner, categories, dark, showCompleted, hideEmpty, showLeaves],
   );
   const layout = useMemo(
     () => layoutMindmap(tree, layoutOptions),

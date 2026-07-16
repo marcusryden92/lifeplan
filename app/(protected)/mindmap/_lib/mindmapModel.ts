@@ -261,8 +261,14 @@ export type MindmapLayoutOptions = {
   levelDistance: number;
   // Gap reserved between stacked siblings.
   siblingSpacing: number;
-  // Radial only: pushes the arms apart so labels breathe (>= 1).
+  // Radial only: scales the first-tier radius — below 1 pulls the arms toward
+  // the center (the de-overlap pass keeps them legible), above 1 pushes them
+  // out so labels breathe.
   armClearance: number;
+  // Radial only: how wide each role's fan opens vs. the slice it is allotted —
+  // 1 fills the whole slice (one big starburst), lower narrows the fan into a
+  // distinct spoke and pushes it out radially so leaf spacing is preserved.
+  branchSpread: number;
   // 0 = gentle S, higher = more pronounced branch curve.
   branchCurve: number;
   // Radial only: the size of each goal's leaf bubble — 0 packs the leaves as
@@ -279,6 +285,7 @@ export const MINDMAP_LAYOUT_DEFAULTS: MindmapLayoutOptions = {
   levelDistance: 150,
   siblingSpacing: 14,
   armClearance: 1.15,
+  branchSpread: 0.6,
   branchCurve: 0.45,
   leafSpread: 0.5,
   leafWrap: 1,
@@ -286,6 +293,7 @@ export const MINDMAP_LAYOUT_DEFAULTS: MindmapLayoutOptions = {
 
 const TAU = Math.PI * 2;
 const CANVAS_PADDING = 160;
+const BRANCH_SPREAD_MIN = 0.3;
 
 // S-curve control-handle fraction along the depth axis, from the curve setting.
 const handleFraction = (curve: number): number => 0.5 - clamp01(curve) * 0.34;
@@ -298,7 +306,7 @@ function clamp01(v: number): number {
 // non-root pill carries (and the count on roles/categories); otherwise the
 // label is clipped short.
 function estimateSize(node: MindmapTreeNode): { w: number; h: number } {
-  if (node.kind === "root") return { w: 108, h: 56 };
+  if (node.kind === "root") return { w: 112, h: 112 };
   const charWidth = node.kind === "role" ? 8 : 6.9;
   const labelCap =
     node.kind === "leaf" ? 120 : node.kind === "item" ? 150 : 168;
@@ -853,11 +861,18 @@ function layoutRadial(
   const roughBreadths = roles.map((r, idx) => tidyArm(r, thetas[idx]));
   thetas = sectorAngles(roughBreadths);
 
-  const clearance = Math.max(1, options.armClearance);
+  const clearance = Math.max(0, options.armClearance);
+  const spread = Math.min(1, Math.max(BRANCH_SPREAD_MIN, options.branchSpread));
+  // Narrowing each fan by `spread` while growing the radius by its reciprocal
+  // keeps every tier's arc length (hence its spacing) identical, so tighter
+  // spokes never collide — they just sit further out with wider gaps between.
+  const radialScale = 1 / spread;
+  const levelStep = level * radialScale;
   const totalBreadth = roughBreadths.reduce((s, b) => s + b, 0);
   let usable = TAU - gapAngle * roles.length;
   if (usable < TAU * 0.35) usable = TAU * 0.35;
-  const R1 = Math.max(level, totalBreadth / (usable || 1)) * clearance;
+  const R1 =
+    Math.max(level, totalBreadth / (usable || 1)) * clearance * radialScale;
   const totalRough = roughBreadths.reduce((s, b) => s + b, 0) || 1;
 
   for (let idx = 0; idx < roles.length; idx++) {
@@ -868,8 +883,9 @@ function layoutRadial(
     // The arm's members spread over its angular sector instead of stacking on
     // a straight tangential line: tidy offset maps to arc position. R1 is at
     // least totalBreadth/usable, so at every radius the arc length allotted to
-    // a footprint is at least the footprint itself — no compression.
-    const sweep = (usable * roughBreadths[idx]) / totalRough;
+    // a footprint is at least the footprint itself — no compression. `spread`
+    // then narrows the fan within its slice (the radius grew to match).
+    const sweep = ((usable * roughBreadths[idx]) / totalRough) * spread;
     const angleOf = (vv: number): number =>
       theta + (vv * sweep) / Math.max(breadth, 1);
 
@@ -892,7 +908,7 @@ function layoutRadial(
       const base =
         items[i].depth === 1 ? 0 : (uOf.get(items[i].parentIndex) ?? 0);
       const step = Math.max(
-        items[i].depth === 1 ? R1 : level,
+        items[i].depth === 1 ? R1 : levelStep,
         isHub[i] ? hubGap[i] : 0,
       );
       const u = base + step;

@@ -50,18 +50,33 @@ async function main() {
   });
 
   // Clear any existing calendar data so the account starts empty (onboarding
-  // begins from a blank calendar). Order matters for foreign keys. Engine
-  // output rows (categoryEvent + travelEvent) go first: categoryEvents would
-  // cascade with their Category but the explicit delete is cheap insurance;
-  // travelEvents would otherwise be left with null location FKs when Location
-  // is dropped below (onDelete: SetNull), producing orphans.
+  // begins from a blank calendar). The admin is upserted rather than deleted,
+  // so every per-user table the app reads (see fetchCalendarData) must be
+  // cleared explicitly here — a table that only cascades on User delete would
+  // otherwise survive the reseed. Order matters for foreign keys.
+  //
+  // Engine-derived output first. categoryEvents would cascade with their
+  // Category but the explicit delete is cheap insurance; travelEvents would
+  // otherwise be left with null location FKs when Location is dropped below
+  // (onDelete: SetNull), producing orphans; simpleEvents (calendar) and
+  // engineMessages only cascade on User delete.
   await prisma.categoryEvent.deleteMany({});
   await prisma.travelEvent.deleteMany({});
+  await prisma.simpleEvent.deleteMany({}); // cascades EventExtendedProps
+  await prisma.engineMessage.deleteMany({});
+  // Precedence graph. QueueMembers and PlannerDependencies cascade from the
+  // Planner delete below, but a Queue row has no Planner FK (it only cascades
+  // on User delete), so stale queues would linger without this.
+  await prisma.plannerDependency.deleteMany({});
+  await prisma.queue.deleteMany({}); // cascades QueueMember
+  // User-authored inputs.
   await prisma.planner.deleteMany({});
   await prisma.eventTemplate.deleteMany({});
-  await prisma.category.deleteMany({});
+  await prisma.category.deleteMany({}); // cascades CategoryTimeWindow
   await prisma.travelTime.deleteMany({});
   await prisma.location.deleteMany({});
+  // AI-assistant chat history, so a reseeded account has no leftover chats.
+  await prisma.draftConversation.deleteMany({});
 
   // User calendar data seeding is deactivated: onboarding needs an empty
   // calendar. Re-enable this block (and the imports at the top) to restore the

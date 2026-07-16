@@ -22,16 +22,43 @@ type MindmapCanvasProps = {
 const TAU = Math.PI * 2;
 const MAX_DPR = 2;
 
+// Hovering a branch (connector) focuses it like hovering the node it feeds,
+// within this screen-space tolerance. Sampled coarsely — plenty for hover.
+const HOVER_EDGE_TOL_PX = 7;
+const EDGE_SAMPLES = 14;
+
+// Leaving a node holds the dim for this long before everything brightens
+// again, so a glance from one node to the next doesn't flash the whole map.
+const FOCUS_CLEAR_DELAY_MS = 200;
+
+// Squared distance from (px,py) to segment a->b — squared to skip the sqrt in
+// the hit-test hot loop.
+function pointSegDist2(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 > 0 ? ((px - ax) * dx + (py - ay) * dy) / len2 : 0;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const cx = ax + t * dx;
+  const cy = ay + t * dy;
+  const ex = px - cx;
+  const ey = py - cy;
+  return ex * ex + ey * ey;
+}
+
 type Colors = {
   tileFill: string;
+  paper: string;
   ink: string;
   inkSoft: string;
   muted: string;
-  rule: string;
-  glassStroke: string;
-  accentPrimary: string;
-  accentSecondary: string;
-  textOnAccent: string;
   fontFamily: string;
 };
 
@@ -41,7 +68,7 @@ const KIND: Record<
   MindmapKind,
   { padL: number; dotR: number; font: string; text: keyof Colors }
 > = {
-  root: { padL: 18, dotR: 0, font: "600 15px", text: "textOnAccent" },
+  root: { padL: 18, dotR: 0, font: "650 20px", text: "ink" },
   role: { padL: 11, dotR: 4.5, font: "650 13px", text: "ink" },
   category: { padL: 11, dotR: 3.5, font: "550 12px", text: "ink" },
   item: { padL: 11, dotR: 4, font: "500 11.5px", text: "ink" },
@@ -59,9 +86,7 @@ type DrawNode = {
   h: number;
   cy: number;
   fill: string;
-  border: string | null;
-  gradFrom: string;
-  gradTo: string;
+  border: string;
   dotR: number;
   dotX: number;
   dotColor: string;
@@ -107,14 +132,10 @@ function resolveColors(host: HTMLElement): Colors {
   };
   const colors: Colors = {
     tileFill: read(vars.tileFill),
+    paper: read(vars.paper),
     ink: read(vars.ink),
     inkSoft: read(vars.inkSoft),
     muted: read(vars.muted),
-    rule: read(vars.rule),
-    glassStroke: read(vars.glass.stroke),
-    accentPrimary: read(vars.accent.primary),
-    accentSecondary: read(vars.accent.secondary),
-    textOnAccent: read(vars.textOnAccent),
     fontFamily: "",
   };
   probe.style.fontFamily = vars.font.ui;
@@ -189,20 +210,12 @@ function buildDrawList(
       w: laid.w,
       h: laid.h,
       cy: laid.y,
-      fill: isRoot ? "" : colors.tileFill,
-      // Roles get a colored outline (their branch hue) and a heavier stroke so
-      // top-level groups stand out; leaves drop the border entirely to read as
-      // the lightest tier.
-      border: isRoot
-        ? null
-        : n.kind === "role"
-          ? (n.color ?? colors.glassStroke)
-          : n.kind === "leaf"
-            ? null
-            : colors.rule,
-      borderW: n.kind === "role" ? 1.8 : 1,
-      gradFrom: colors.accentPrimary,
-      gradTo: colors.accentSecondary,
+      // The root reads as a paper coin; every other card sits on the tile fill.
+      fill: isRoot ? colors.paper : colors.tileFill,
+      // Ink borders (the readable text ink) outline every card so they stay
+      // legible against the canvas; the root's ring is a touch heavier.
+      border: colors.ink,
+      borderW: isRoot ? 2 : n.kind === "role" ? 1.8 : 1,
       dotR: spec.dotR,
       dotX,
       dotColor: n.color ?? colors.muted,
@@ -278,6 +291,7 @@ export function MindmapCanvas({
   const pivotRef = useRef<{ x: number; y: number } | null>(null);
   const focusRef = useRef<Set<string> | null>(null);
   const hoverIdRef = useRef<string | null>(null);
+  const clearFocusTimerRef = useRef<number | null>(null);
   const isPanningRef = useRef(false);
   const didInitRef = useRef(false);
   const rafRef = useRef(0);
@@ -350,21 +364,11 @@ export function MindmapCanvas({
           : 1;
 
       pillPath(ctx, nd.x, nd.y, nd.w, nd.h);
-      if (nd.kind === "root") {
-        const grad = ctx.createLinearGradient(nd.x, nd.y, nd.x + nd.w, nd.y + nd.h);
-        grad.addColorStop(0, nd.gradFrom);
-        grad.addColorStop(1, nd.gradTo);
-        ctx.fillStyle = grad;
-        ctx.fill();
-      } else {
-        ctx.fillStyle = nd.fill;
-        ctx.fill();
-        if (nd.border) {
-          ctx.lineWidth = nd.borderW / s;
-          ctx.strokeStyle = nd.border;
-          ctx.stroke();
-        }
-      }
+      ctx.fillStyle = nd.fill;
+      ctx.fill();
+      ctx.lineWidth = nd.borderW / s;
+      ctx.strokeStyle = nd.border;
+      ctx.stroke();
 
       if (nd.dotR > 0) {
         ctx.beginPath();
@@ -382,8 +386,13 @@ export function MindmapCanvas({
 
       ctx.font = nd.labelFont;
       ctx.fillStyle = nd.textColor;
-      ctx.textAlign = "left";
-      ctx.fillText(nd.label, nd.labelX, nd.cy);
+      if (nd.kind === "root") {
+        ctx.textAlign = "center";
+        ctx.fillText(nd.label, nd.x + nd.w / 2, nd.cy);
+      } else {
+        ctx.textAlign = "left";
+        ctx.fillText(nd.label, nd.labelX, nd.cy);
+      }
     }
     ctx.globalAlpha = 1;
   }, []);
@@ -395,6 +404,26 @@ export function MindmapCanvas({
       draw();
     });
   }, [draw]);
+
+  const cancelClearTimer = useCallback(() => {
+    if (clearFocusTimerRef.current !== null) {
+      clearTimeout(clearFocusTimerRef.current);
+      clearFocusTimerRef.current = null;
+    }
+  }, []);
+
+  // Un-dim after a grace period rather than instantly, so passing off a node
+  // into empty space (or a brief exit) doesn't strobe the map. A fresh hover
+  // cancels this before it fires, switching focus with no flash between.
+  const scheduleFocusClear = useCallback(() => {
+    if (hoverIdRef.current === null || clearFocusTimerRef.current !== null) return;
+    clearFocusTimerRef.current = window.setTimeout(() => {
+      clearFocusTimerRef.current = null;
+      hoverIdRef.current = null;
+      focusRef.current = null;
+      scheduleDraw();
+    }, FOCUS_CLEAR_DELAY_MS);
+  }, [scheduleDraw]);
 
   // Reads layout through a ref so it stays identity-stable — a [layout] dep
   // would churn the size effect, re-subscribing the observer and reallocating
@@ -527,10 +556,11 @@ export function MindmapCanvas({
   // A rebuilt layout invalidates the hovered id set (it references old nodes),
   // so drop the focus before repainting or dimming lands on stale ids.
   useEffect(() => {
+    cancelClearTimer();
     hoverIdRef.current = null;
     focusRef.current = null;
     scheduleDraw();
-  }, [drawList, scheduleDraw]);
+  }, [drawList, cancelClearTimer, scheduleDraw]);
 
   // Native, non-passive wheel: ctrl/meta (or pinch) zooms at the cursor,
   // everything else pans.
@@ -571,6 +601,10 @@ export function MindmapCanvas({
         cancelAnimationFrame(rafRef.current);
         rafRef.current = 0;
       }
+      if (clearFocusTimerRef.current !== null) {
+        clearTimeout(clearFocusTimerRef.current);
+        clearFocusTimerRef.current = null;
+      }
       panTeardownRef.current?.();
     },
     [],
@@ -591,6 +625,55 @@ export function MindmapCanvas({
     }
     return hit;
   }, []);
+
+  // Nearest branch under the cursor (its child-node id), or null. Each edge's
+  // bezier is sampled into a short polyline and distance-tested; the control
+  // hull gives a cheap bounding-box reject first.
+  const edgeHitTest = useCallback(
+    (screenX: number, screenY: number): string | null => {
+      const list = drawListRef.current;
+      if (!list) return null;
+      const s = scaleRef.current;
+      const pan = panRef.current;
+      const wx = (screenX - pan.x) / s;
+      const wy = (screenY - pan.y) / s;
+      const tol = HOVER_EDGE_TOL_PX / s;
+      let bestDist2 = tol * tol;
+      let bestId: string | null = null;
+      for (const e of list.edges) {
+        const minX = Math.min(e.x1, e.c1x, e.c2x, e.x2) - tol;
+        const maxX = Math.max(e.x1, e.c1x, e.c2x, e.x2) + tol;
+        const minY = Math.min(e.y1, e.c1y, e.c2y, e.y2) - tol;
+        const maxY = Math.max(e.y1, e.c1y, e.c2y, e.y2) + tol;
+        if (wx < minX || wx > maxX || wy < minY || wy > maxY) continue;
+        let px = e.x1;
+        let py = e.y1;
+        for (let i = 1; i <= EDGE_SAMPLES; i++) {
+          const t = i / EDGE_SAMPLES;
+          const mt = 1 - t;
+          const bx =
+            mt * mt * mt * e.x1 +
+            3 * mt * mt * t * e.c1x +
+            3 * mt * t * t * e.c2x +
+            t * t * t * e.x2;
+          const by =
+            mt * mt * mt * e.y1 +
+            3 * mt * mt * t * e.c1y +
+            3 * mt * t * t * e.c2y +
+            t * t * t * e.y2;
+          const d2 = pointSegDist2(wx, wy, px, py, bx, by);
+          if (d2 < bestDist2) {
+            bestDist2 = d2;
+            bestId = e.toId;
+          }
+          px = bx;
+          py = by;
+        }
+      }
+      return bestId;
+    },
+    [],
+  );
 
   const computeFocus = useCallback(
     (id: string): Set<string> => {
@@ -621,23 +704,31 @@ export function MindmapCanvas({
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
-      const hit = hitTest(e.clientX - rect.left, e.clientY - rect.top);
-      canvas.style.cursor = hit?.href ? "pointer" : "grab";
-      const id = hit?.id ?? null;
-      if (id === hoverIdRef.current) return;
-      hoverIdRef.current = id;
-      focusRef.current = id ? computeFocus(id) : null;
-      scheduleDraw();
+      const localX = e.clientX - rect.left;
+      const localY = e.clientY - rect.top;
+      const nodeHit = hitTest(localX, localY);
+      canvas.style.cursor = nodeHit?.href ? "pointer" : "grab";
+      // A node wins over its branches; otherwise the nearest branch focuses the
+      // object it feeds, so hovering a connector lights the same lineage.
+      const id = nodeHit?.id ?? edgeHitTest(localX, localY);
+      if (id !== null) {
+        // Landing on something cancels any pending un-dim and focuses at once.
+        cancelClearTimer();
+        if (id !== hoverIdRef.current) {
+          hoverIdRef.current = id;
+          focusRef.current = computeFocus(id);
+          scheduleDraw();
+        }
+      } else {
+        scheduleFocusClear();
+      }
     },
-    [hitTest, computeFocus, scheduleDraw],
+    [hitTest, edgeHitTest, computeFocus, scheduleDraw, cancelClearTimer, scheduleFocusClear],
   );
 
   const clearHover = useCallback(() => {
-    if (!hoverIdRef.current) return;
-    hoverIdRef.current = null;
-    focusRef.current = null;
-    scheduleDraw();
-  }, [scheduleDraw]);
+    scheduleFocusClear();
+  }, [scheduleFocusClear]);
 
   const beginPan = useCallback(
     (e: React.PointerEvent) => {
