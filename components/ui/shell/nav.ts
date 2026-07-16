@@ -6,6 +6,7 @@ import {
   Layers,
   ListOrdered,
   Waypoints,
+  Orbit,
   MapPin,
   MoreHorizontal,
   type LucideIcon,
@@ -67,6 +68,13 @@ export const NAV_ITEMS: NavItem[] = [
     label: "Graph",
     icon: Waypoints,
     href: "/graph",
+    kind: "route",
+  },
+  {
+    key: "mindmap",
+    label: "Mindmap",
+    icon: Orbit,
+    href: "/mindmap",
     kind: "route",
   },
   {

@@ -80,7 +80,7 @@ export async function fetchAllSchedulingData(): Promise<{
 
   return {
     preferences: {
-      bufferTimeMinutes: prefs?.bufferTimeMinutes ?? 10,
+      bufferTimeMinutes: prefs?.bufferTimeMinutes ?? 5,
       defaultTransportMode,
       weekStartDay: prefs?.weekStartDay ?? 1,
     },
@@ -151,7 +151,7 @@ export async function upsertTaskPreferences(
     priority?: PriorityLevel | null;
     energyLevel?: EnergyLevel | null;
     allowFlexibility?: boolean | null;
-  }
+  },
 ) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
