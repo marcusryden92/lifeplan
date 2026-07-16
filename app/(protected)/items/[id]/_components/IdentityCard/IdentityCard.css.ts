@@ -1,5 +1,5 @@
-﻿import { style } from "@vanilla-extract/css";
-import { media, space } from "@/lib/theme";
+import { style } from "@vanilla-extract/css";
+import { media } from "@/lib/theme";
 
 export const card = style({
   display: "flex",
@@ -30,17 +30,13 @@ export const doubleGrid = style({
   },
 });
 
-// Splitting (task), Recurrence (plan), and DailyLimit (goal root) are
-// mutually exclusive; AllowedTimes co-renders with them for tasks and goals.
-// The slot spans the full field grid so each section can lay its control out
-// on the left and its detail on the right, keeping a constant height whether
-// the detail is showing or not; minHeight reserves that height for the empty
-// case so the card never jumps.
-export const splitRecurrenceSlot = style({
+// Splitting (task), Repeats (plan), and DailyLimit (goal root) are mutually
+// exclusive; AllowedTimes co-renders with them for tasks and goals. Each
+// renders as a one-line summary row whose editor opens in a popover, so the
+// slot height depends only on the row count, never on editor state.
+export const rulesSlot = style({
   gridColumn: "1 / -1",
   minWidth: 0,
-  minHeight: 60,
   display: "flex",
   flexDirection: "column",
-  gap: space["3"],
 });

@@ -7,6 +7,7 @@ import {
   media,
   radii,
   text,
+  zIndex,
   progressTrack as progressTrackRecipe,
 } from "@/lib/theme";
 
@@ -147,6 +148,15 @@ export const completeDateWrapFaded = style({
   transition: "opacity 160ms ease",
 });
 
+// Fills the tab body so the delete dock can pin to the bottom edge — the
+// dock's position depends only on viewport/content height, never on what the
+// rule popovers or connection groups are doing.
+export const overviewRoot = style({
+  display: "flex",
+  flexDirection: "column",
+  flex: 1,
+});
+
 export const overviewGrid = style({
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
@@ -154,6 +164,29 @@ export const overviewGrid = style({
   flexShrink: 0,
   "@media": {
     [media.tablet]: { gridTemplateColumns: "1fr", gap: space["6"] },
+  },
+});
+
+// Sticky within the page scroll area: sits at the content end when the page
+// is short, pins to the viewport bottom edge when it overflows — the delete
+// row and its top border never move, whatever the columns above are doing.
+// The negative bottom margin mirrors innerWrap's bottom padding
+// (ItemDetailLayout.css.ts) so the dock is flush with the scrollport edge in
+// both states instead of jumping 28px between them.
+export const deleteDock = style({
+  position: "sticky",
+  bottom: 0,
+  marginTop: "auto",
+  marginBottom: `-${space["7"]}px`,
+  flexShrink: 0,
+  zIndex: zIndex.docked,
+  background: vars.paper,
+  borderTop: `1px solid ${vars.rule}`,
+  paddingTop: space["2.5"],
+  paddingBottom: space["2.5"],
+  transition: themeTransition,
+  "@media": {
+    [media.mobile]: { marginBottom: `-${space["6"]}px` },
   },
 });
 

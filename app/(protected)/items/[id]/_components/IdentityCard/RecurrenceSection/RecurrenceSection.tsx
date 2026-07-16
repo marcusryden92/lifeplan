@@ -1,5 +1,6 @@
 "use client";
 
+import { format } from "date-fns";
 import { Combobox, DateTimePicker, FieldStack } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { formatDatetimeLocal, parseDatetimeLocal } from "@/utils/datetime";
@@ -9,7 +10,7 @@ import {
   type PlanRecurrenceRule,
 } from "@/utils/planRecurrence";
 import { useItem } from "../../ItemContext";
-import { recurGrid } from "./RecurrenceSection.css";
+import { RuleRow } from "../RuleRow";
 
 type RecurrencePreset = "none" | "daily" | "weekly" | "biweekly" | "monthly";
 
@@ -47,6 +48,17 @@ function ruleFromPreset(
   }
 }
 
+function recurrenceSummary(
+  preset: RecurrencePreset,
+  rule: PlanRecurrenceRule | null,
+): string {
+  if (!rule) return "Does not repeat";
+  const label = PRESET_LABELS[preset];
+  return rule.until
+    ? `${label} · until ${format(new Date(rule.until), "MMM d, yyyy")}`
+    : label;
+}
+
 export function RecurrenceSection() {
   const { item, updateField } = useItem();
   const { weekStartDay } = useCalendarProvider();
@@ -62,8 +74,12 @@ export function RecurrenceSection() {
   };
 
   return (
-    <div className={recurGrid}>
-      <FieldStack label="Repeats">
+    <RuleRow
+      label="Repeats"
+      enabled={rule !== null}
+      summary={recurrenceSummary(preset, rule)}
+    >
+      <FieldStack label="Repeats" size="sm">
         <Combobox
           value={preset}
           options={(Object.keys(PRESET_LABELS) as RecurrencePreset[]).map(
@@ -77,7 +93,7 @@ export function RecurrenceSection() {
         />
       </FieldStack>
       {rule && (
-        <FieldStack label="Until (optional)">
+        <FieldStack label="Until (optional)" size="sm">
           <DateTimePicker
             value={formatDatetimeLocal(rule.until)}
             onChange={(v) =>
@@ -89,6 +105,6 @@ export function RecurrenceSection() {
           />
         </FieldStack>
       )}
-    </div>
+    </RuleRow>
   );
 }

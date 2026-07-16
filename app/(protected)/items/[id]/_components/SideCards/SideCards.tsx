@@ -104,33 +104,27 @@ export function EngineNotesCard() {
   );
 }
 
-export function InQueueCard() {
+// Every precedence-ish relation on one card: queue membership, dependency
+// edges (with the add picker), and detour hosts. Groups render only when they
+// apply; the card disappears entirely for items with nothing to connect.
+export function ConnectionsCard() {
   const { item } = useItem();
-  const { queueByPlannerId } = useCalendarProvider();
+  const {
+    userId,
+    planner,
+    queues,
+    dependencies,
+    updateDependencyArray,
+    queueByPlannerId,
+  } = useCalendarProvider();
+  const [error, setError] = useState<string | null>(null);
 
   const queue = queueByPlannerId.get(item.id);
 
-  if (!queue) return null;
-
-  return (
-    <div className={card}>
-      <div className={nextCardHeaderRow}>
-        <span className={cardSectionTitle}>In queue</span>
-        <Link href="/queues" className={nextCardLink}>
-          Open queues →
-        </Link>
-      </div>
-      <div className={whyText}>
-        &ldquo;{queue.title}&rdquo; — scheduled in order with the other items
-        in this queue.
-      </div>
-    </div>
+  const plannerById = useMemo(
+    () => new Map(planner.map((p) => [p.id, p])),
+    [planner],
   );
-}
-
-export function LinkedIntoCard() {
-  const { item } = useItem();
-  const { planner } = useCalendarProvider();
 
   const hosts = useMemo(() => {
     if (item.parentId != null) return [];
@@ -146,42 +140,6 @@ export function LinkedIntoCard() {
           !!x.host,
       );
   }, [planner, item.id, item.parentId]);
-
-  if (hosts.length === 0) return null;
-
-  return (
-    <div className={card}>
-      <span className={cardSectionTitle}>Linked into</span>
-      <div className={whyText}>
-        This item&apos;s work is spliced into the sequence of:
-      </div>
-      {hosts.map(({ placeholder, host }) => (
-        <div key={placeholder.id} className={depRow}>
-          <TypeBadge size="sm">{host.plannerType}</TypeBadge>
-          <Link href={`/items/${host.id}`} className={depTitleLink}>
-            {host.title || "Untitled"}
-          </Link>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-export function DependenciesCard() {
-  const { item } = useItem();
-  const {
-    userId,
-    planner,
-    queues,
-    dependencies,
-    updateDependencyArray,
-  } = useCalendarProvider();
-  const [error, setError] = useState<string | null>(null);
-
-  const plannerById = useMemo(
-    () => new Map(planner.map((p) => [p.id, p])),
-    [planner],
-  );
 
   const dependsOn = useMemo(
     () =>
@@ -293,66 +251,102 @@ export function DependenciesCard() {
   };
 
   // Dependencies only exist between root-level triaged tasks and goals.
-  if (
-    item.parentId != null ||
-    !item.isTriaged ||
-    (item.plannerType !== "task" && item.plannerType !== "goal")
-  ) {
-    return null;
-  }
+  const canHaveDependencies =
+    item.parentId == null &&
+    item.isTriaged &&
+    (item.plannerType === "task" || item.plannerType === "goal");
+
+  if (!canHaveDependencies && !queue && hosts.length === 0) return null;
 
   return (
     <div className={card}>
-      <span className={cardSectionTitle}>Dependencies</span>
-
-      <span className={depGroupLabel}>Depends on</span>
-      {dependsOn.length === 0 ? (
-        <div className={depEmpty}>No prerequisites.</div>
-      ) : (
-        dependsOn.map(({ edge, predecessor }) => (
-          <div key={edge.id} className={depRow}>
-            <TypeBadge size="sm">{predecessor.plannerType}</TypeBadge>
-            <Link
-              href={`/items/${predecessor.id}`}
-              className={depTitleLink}
-            >
-              {predecessor.title || "Untitled"}
-            </Link>
-            <button
-              type="button"
-              className={depRemove}
-              onClick={() => handleRemove(edge.id)}
-              aria-label={`Remove dependency on ${predecessor.title || "item"}`}
-            >
-              <X size={12} strokeWidth={2.2} />
-            </button>
-          </div>
-        ))
-      )}
-      <div className={depPickerRow}>
-        <Combobox
-          value={null}
-          options={options}
-          onChange={handleAdd}
-          placeholder="Add prerequisite…"
-          ariaLabel="Add prerequisite"
-          maxWidth="100%"
-        />
+      <div className={nextCardHeaderRow}>
+        <span className={cardSectionTitle}>Connections</span>
+        <Link href="/graph" className={nextCardLink}>
+          Graph →
+        </Link>
       </div>
-      {error && <div className={depError}>{error}</div>}
 
-      <span className={depGroupLabel}>Required by</span>
-      {requiredBy.length === 0 ? (
-        <div className={depEmpty}>Nothing depends on this.</div>
-      ) : (
-        requiredBy.map(({ edge, successor }) => (
-          <div key={edge.id} className={depRow}>
-            <TypeBadge size="sm">{successor.plannerType}</TypeBadge>
-            <Link href={`/items/${successor.id}`} className={depTitleLink}>
-              {successor.title || "Untitled"}
+      {queue && (
+        <>
+          <span className={depGroupLabel}>In queue</span>
+          <div className={depRow}>
+            <Link href="/queues" className={depTitleLink}>
+              {queue.title || "Untitled queue"}
             </Link>
           </div>
-        ))
+        </>
+      )}
+
+      {canHaveDependencies && (
+        <>
+          <span className={depGroupLabel}>Depends on</span>
+          {dependsOn.length === 0 ? (
+            <div className={depEmpty}>No prerequisites.</div>
+          ) : (
+            dependsOn.map(({ edge, predecessor }) => (
+              <div key={edge.id} className={depRow}>
+                <TypeBadge size="sm">{predecessor.plannerType}</TypeBadge>
+                <Link
+                  href={`/items/${predecessor.id}`}
+                  className={depTitleLink}
+                >
+                  {predecessor.title || "Untitled"}
+                </Link>
+                <button
+                  type="button"
+                  className={depRemove}
+                  onClick={() => handleRemove(edge.id)}
+                  aria-label={`Remove dependency on ${predecessor.title || "item"}`}
+                >
+                  <X size={12} strokeWidth={2.2} />
+                </button>
+              </div>
+            ))
+          )}
+          <div className={depPickerRow}>
+            <Combobox
+              value={null}
+              options={options}
+              onChange={handleAdd}
+              placeholder="Add prerequisite…"
+              ariaLabel="Add prerequisite"
+              maxWidth="100%"
+            />
+          </div>
+          {error && <div className={depError}>{error}</div>}
+
+          {requiredBy.length > 0 && (
+            <>
+              <span className={depGroupLabel}>Required by</span>
+              {requiredBy.map(({ edge, successor }) => (
+                <div key={edge.id} className={depRow}>
+                  <TypeBadge size="sm">{successor.plannerType}</TypeBadge>
+                  <Link href={`/items/${successor.id}`} className={depTitleLink}>
+                    {successor.title || "Untitled"}
+                  </Link>
+                </div>
+              ))}
+            </>
+          )}
+        </>
+      )}
+
+      {hosts.length > 0 && (
+        <>
+          <span className={depGroupLabel}>Linked into</span>
+          <div className={whyText}>
+            This item&apos;s work is spliced into the sequence of:
+          </div>
+          {hosts.map(({ placeholder, host }) => (
+            <div key={placeholder.id} className={depRow}>
+              <TypeBadge size="sm">{host.plannerType}</TypeBadge>
+              <Link href={`/items/${host.id}`} className={depTitleLink}>
+                {host.title || "Untitled"}
+              </Link>
+            </div>
+          ))}
+        </>
       )}
     </div>
   );

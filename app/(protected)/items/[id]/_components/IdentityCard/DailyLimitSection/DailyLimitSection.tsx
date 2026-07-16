@@ -1,13 +1,9 @@
 "use client";
 
-import { DurationField, FieldStack, Switch } from "@/components/ui";
+import { DurationField, FieldStack } from "@/components/ui";
+import { formatMinutesToHours } from "@/utils/taskArrayUtils";
 import { useItem } from "../../ItemContext";
-import {
-  limitGrid,
-  toggleRow,
-  toggleHint,
-  fieldRow,
-} from "./DailyLimitSection.css";
+import { RuleRow } from "../RuleRow";
 
 const DEFAULT_DAILY_LIMIT_MINUTES = 120;
 
@@ -22,38 +18,27 @@ export function DailyLimitSection() {
   const enabled = typeof limit === "number" && limit > 0;
 
   return (
-    <div className={limitGrid}>
-      <FieldStack label="Daily limit">
-        <div className={toggleRow}>
-          <Switch
-            checked={enabled}
-            onCheckedChange={(checked) =>
-              updateField(
-                "maxMinutesPerDay",
-                checked ? DEFAULT_DAILY_LIMIT_MINUTES : null,
-              )
-            }
-            aria-label="Daily limit"
-          />
-          {!enabled && (
-            <span className={toggleHint}>
-              Cap how much of this goal is scheduled on any one day
-            </span>
-          )}
-        </div>
-      </FieldStack>
+    <RuleRow
+      label="Daily limit"
+      enabled={enabled}
+      summary={enabled ? `${formatMinutesToHours(limit)} per day` : "Off"}
+      onToggle={(checked) =>
+        updateField(
+          "maxMinutesPerDay",
+          checked ? DEFAULT_DAILY_LIMIT_MINUTES : null,
+        )
+      }
+    >
       {enabled && (
-        <FieldStack label="Max per day">
-          <div className={fieldRow}>
-            <DurationField
-              minutes={limit}
-              minMinutes={5}
-              ariaLabel="Daily limit"
-              onCommit={(minutes) => updateField("maxMinutesPerDay", minutes)}
-            />
-          </div>
+        <FieldStack label="Max per day" size="sm">
+          <DurationField
+            minutes={limit}
+            minMinutes={5}
+            ariaLabel="Daily limit"
+            onCommit={(minutes) => updateField("maxMinutesPerDay", minutes)}
+          />
         </FieldStack>
       )}
-    </div>
+    </RuleRow>
   );
 }

@@ -1,7 +1,5 @@
 export {
   NextOnCalendarCard,
   EngineNotesCard,
-  InQueueCard,
-  DependenciesCard,
-  LinkedIntoCard,
+  ConnectionsCard,
 } from "./SideCards";

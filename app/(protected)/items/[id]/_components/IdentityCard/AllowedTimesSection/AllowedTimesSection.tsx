@@ -1,8 +1,9 @@
 "use client";
 
-import { FieldStack, Switch, TimePicker } from "@/components/ui";
+import { FieldStack, TimePicker } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { orderedWeekDays, intToWeekday } from "@/utils/calendarUtils";
+import type { WeekDayIntegers } from "@/types/calendarTypes";
 import {
   AllowedTimeRange,
   AllowedTimesSettings,
@@ -10,11 +11,8 @@ import {
   serializeAllowedTimes,
 } from "@/utils/allowedTimes";
 import { useItem } from "../../ItemContext";
+import { RuleRow } from "../RuleRow";
 import {
-  sectionGrid,
-  toggleRow,
-  toggleHint,
-  detailColumn,
   dayToggles,
   dayToggle,
   dayToggleOn,
@@ -27,8 +25,41 @@ import {
 } from "./AllowedTimesSection.css";
 
 const DAY_LETTERS = ["S", "M", "T", "W", "T", "F", "S"];
+const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6];
 const DEFAULT_RANGE: AllowedTimeRange = { startTime: "09:00", endTime: "17:00" };
+
+function daysSummary(days: number[], weekStartDay: WeekDayIntegers): string {
+  const week = orderedWeekDays(weekStartDay);
+  const positions = week
+    .map((day, index) => (days.includes(day) ? index : -1))
+    .filter((index) => index !== -1);
+  const contiguous =
+    positions.length > 1 &&
+    positions[positions.length - 1] - positions[0] === positions.length - 1;
+  if (contiguous) {
+    const first = week[positions[0]];
+    const last = week[positions[positions.length - 1]];
+    return `${DAY_SHORT[first]}–${DAY_SHORT[last]}`;
+  }
+  return positions.map((index) => DAY_SHORT[week[index]]).join(", ");
+}
+
+function allowedSummary(
+  settings: AllowedTimesSettings,
+  weekStartDay: WeekDayIntegers,
+): string {
+  const daysPart = settings.days
+    ? daysSummary(settings.days, weekStartDay)
+    : null;
+  const rangesPart = (settings.ranges ?? [])
+    .map((range) => `${range.startTime}–${range.endTime}`)
+    .join(", ");
+  if (daysPart && rangesPart) return `${daysPart} · ${rangesPart}`;
+  if (daysPart) return daysPart;
+  if (rangesPart) return rangesPart;
+  return "Any time";
+}
 
 export function AllowedTimesSection() {
   const { item, updateField } = useItem();
@@ -41,7 +72,7 @@ export function AllowedTimesSection() {
   const enabled = settings !== null;
 
   // serializeAllowedTimes returns null when nothing constrains anymore (all
-  // days selected, no time spans) — the section then collapses to its toggle.
+  // days selected, no time spans) — the row then reads Off again.
   const apply = (next: AllowedTimesSettings | null) => {
     updateField("allowedTimes", next ? serializeAllowedTimes(next) : null);
   };
@@ -85,26 +116,17 @@ export function AllowedTimesSection() {
   };
 
   return (
-    <div className={sectionGrid}>
-      <FieldStack label="Allowed times">
-        <div className={toggleRow}>
-          <Switch
-            checked={enabled}
-            onCheckedChange={(checked) =>
-              apply(checked ? { days: null, ranges: [{ ...DEFAULT_RANGE }] } : null)
-            }
-            aria-label="Allowed times"
-          />
-          {!enabled && (
-            <span className={toggleHint}>
-              Limit scheduling to certain weekdays or hours
-            </span>
-          )}
-        </div>
-      </FieldStack>
+    <RuleRow
+      label="Allowed times"
+      enabled={enabled}
+      summary={settings ? allowedSummary(settings, weekStartDay) : "Off"}
+      onToggle={(checked) =>
+        apply(checked ? { days: null, ranges: [{ ...DEFAULT_RANGE }] } : null)
+      }
+    >
       {enabled && (
-        <div className={detailColumn}>
-          <FieldStack label="Days">
+        <>
+          <FieldStack label="Days" size="sm">
             <div className={dayToggles}>
               {orderedWeekDays(weekStartDay).map((day) => {
                 const on = selectedDays.includes(day);
@@ -123,7 +145,7 @@ export function AllowedTimesSection() {
               })}
             </div>
           </FieldStack>
-          <FieldStack label="Time spans">
+          <FieldStack label="Time spans" size="sm">
             <div className={rangeList}>
               {ranges.length === 0 && (
                 <span className={anyTimeNote}>Any time of day</span>
@@ -155,8 +177,8 @@ export function AllowedTimesSection() {
               </button>
             </div>
           </FieldStack>
-        </div>
+        </>
       )}
-    </div>
+    </RuleRow>
   );
 }

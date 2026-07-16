@@ -1,47 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, radii, themeTransition, text, media } from "@/lib/theme";
-
-// Same two-column shape as DailyLimitSection: toggle on the left, the day
-// chips and time-span rows on the right.
-export const sectionGrid = style({
-  display: "grid",
-  gridTemplateColumns: "1fr 2fr",
-  gap: "13px 0",
-  alignItems: "start",
-  minWidth: 0,
-  "@media": {
-    [media.mobile]: { gridTemplateColumns: "1fr" },
-  },
-});
-
-export const toggleRow = style({
-  display: "flex",
-  alignItems: "center",
-  paddingLeft: space["2"],
-  gap: space["3"],
-  minHeight: 34,
-});
-
-export const toggleHint = style([
-  text.bodySm,
-  {
-    color: vars.muted,
-    display: "-webkit-box",
-    WebkitBoxOrient: "vertical",
-    WebkitLineClamp: 2,
-    overflow: "hidden",
-    lineHeight: "15px",
-    minWidth: 200,
-    transition: themeTransition,
-  },
-]);
-
-export const detailColumn = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["3"],
-  minWidth: 0,
-});
+import { space, vars, radii, themeTransition, text } from "@/lib/theme";
 
 export const dayToggles = style({
   display: "flex",

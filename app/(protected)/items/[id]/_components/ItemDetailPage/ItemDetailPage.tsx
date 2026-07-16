@@ -14,18 +14,19 @@ import { vars } from "@/lib/theme";
 import { useItem } from "../ItemContext";
 import { IdentityCard } from "../IdentityCard";
 import { RecurrenceExceptionsCard } from "../RecurrenceExceptionsCard";
+import { DeleteRow } from "../DeleteRow";
 import {
   NextOnCalendarCard,
   EngineNotesCard,
-  InQueueCard,
-  DependenciesCard,
-  LinkedIntoCard,
+  ConnectionsCard,
 } from "../SideCards";
 import { SHAKE_DURATION_MS } from "../../_constants";
 import {
+  overviewRoot,
   overviewGrid,
   leftCol,
   rightCol,
+  deleteDock,
   progressBlock,
   progressMeta,
   progressMetaStrong,
@@ -82,7 +83,7 @@ export default function ItemOverviewPage() {
   };
 
   return (
-    <>
+    <div className={overviewRoot}>
       <div className={progressBlock}>
         {showProgress && (
           <>
@@ -156,12 +157,14 @@ export default function ItemOverviewPage() {
         </div>
         <div className={rightCol}>
           <NextOnCalendarCard />
-          <InQueueCard />
-          <DependenciesCard />
-          <LinkedIntoCard />
+          <ConnectionsCard />
           <EngineNotesCard />
         </div>
       </div>
-    </>
+
+      <div className={deleteDock}>
+        <DeleteRow />
+      </div>
+    </div>
   );
 }

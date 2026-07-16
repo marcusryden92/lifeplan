@@ -1,10 +1,10 @@
 "use client";
 
-import { FieldStack, Switch } from "@/components/ui";
 import {
   SplittingFields,
   DEFAULT_SPLITTING_SETTINGS,
 } from "@/components/tasks/SplittingFields";
+import { formatMinutesToHours } from "@/utils/taskArrayUtils";
 import {
   parseTaskSplitting,
   serializeTaskSplitting,
@@ -12,7 +12,20 @@ import {
   type TaskSplittingSettings,
 } from "@/utils/taskSplitting";
 import { useItem } from "../../ItemContext";
-import { splitGrid, toggleRow, toggleHint } from "./SplittingSection.css";
+import { RuleRow } from "../RuleRow";
+
+function splittingSummary(settings: TaskSplittingSettings): string {
+  const parts = [
+    `${formatMinutesToHours(settings.minMinutes)}–${formatMinutesToHours(settings.maxMinutes)}`,
+  ];
+  if (settings.maxMinutesPerDay !== null) {
+    parts.push(`≤ ${formatMinutesToHours(settings.maxMinutesPerDay)}/day`);
+  }
+  if (settings.minSpacingMinutes != null) {
+    parts.push(`${formatMinutesToHours(settings.minSpacingMinutes)} gap`);
+  }
+  return parts.join(" · ");
+}
 
 export function SplittingSection() {
   const { item, updateField } = useItem();
@@ -33,23 +46,14 @@ export function SplittingSection() {
   };
 
   return (
-    <div className={splitGrid}>
-      <FieldStack label="Split into chunks">
-        <div className={toggleRow}>
-          <Switch
-            checked={settings !== null}
-            onCheckedChange={(checked) =>
-              apply(checked ? DEFAULT_SPLITTING_SETTINGS : null)
-            }
-            aria-label="Split into chunks"
-          />
-          {!settings && (
-            <span className={toggleHint}>
-              Schedule as flexible chunks instead of one block
-            </span>
-          )}
-        </div>
-      </FieldStack>
+    <RuleRow
+      label="Split into chunks"
+      enabled={settings !== null}
+      summary={settings ? splittingSummary(settings) : "Off"}
+      onToggle={(checked) =>
+        apply(checked ? DEFAULT_SPLITTING_SETTINGS : null)
+      }
+    >
       {settings && (
         <SplittingFields
           settings={settings}
@@ -58,6 +62,6 @@ export function SplittingSection() {
           onChange={apply}
         />
       )}
-    </div>
+    </RuleRow>
   );
 }
