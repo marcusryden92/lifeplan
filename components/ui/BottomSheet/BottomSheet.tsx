@@ -7,6 +7,7 @@ import {
   sheet,
   sheetHandle,
   sheetTitle,
+  sheetBody,
 } from "./BottomSheet.css";
 
 type BottomSheetProps = {
@@ -29,7 +30,7 @@ export function BottomSheet({
         <Dialog.Content className={sheet} aria-describedby={undefined}>
           <span className={sheetHandle} aria-hidden />
           <Dialog.Title className={sheetTitle}>{title}</Dialog.Title>
-          {children}
+          <div className={sheetBody}>{children}</div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

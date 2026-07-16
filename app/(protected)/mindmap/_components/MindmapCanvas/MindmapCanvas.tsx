@@ -530,13 +530,16 @@ export function MindmapCanvas({
     const canvas = canvasRef.current;
     if (!host || !canvas) return;
     const syncSize = () => {
-      const rect = host.getBoundingClientRect();
-      if (rect.width === 0 || rect.height === 0) return;
-      sizeRef.current = { w: rect.width, h: rect.height };
+      // Layout metrics, not getBoundingClientRect: the backing store must
+      // track the element's layout size, unaffected by ancestor transforms.
+      const w = host.clientWidth;
+      const h = host.clientHeight;
+      if (w === 0 || h === 0) return;
+      sizeRef.current = { w, h };
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       dprRef.current = dpr;
-      const pxW = Math.round(rect.width * dpr);
-      const pxH = Math.round(rect.height * dpr);
+      const pxW = Math.round(w * dpr);
+      const pxH = Math.round(h * dpr);
       // Assigning canvas.width/height clears the backing store, so only touch
       // it when the pixel size actually changed — otherwise the map blanks
       // for a frame on every unrelated resize notification.
@@ -548,7 +551,7 @@ export function MindmapCanvas({
         didInitRef.current = true;
         centerOnMe(scaleRef.current);
         prevScaleRef.current = scaleRef.current;
-        onFitRef.current(rect.width, rect.height);
+        onFitRef.current(w, h);
       }
       scheduleDraw();
     };

@@ -86,6 +86,17 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+// Full-bleed canvas surfaces. On mobile the shell hides its floating chrome
+// here (tab bar, corner actions) and each page shows a back button instead,
+// so the canvas keeps the vertical space.
+const CANVAS_ROUTES = ["/graph", "/mindmap"];
+
+export function isCanvasRoute(pathname: string): boolean {
+  return CANVAS_ROUTES.some(
+    (href) => pathname === href || pathname.startsWith(`${href}/`),
+  );
+}
+
 export type MobileTab = {
   key: string;
   label: string;

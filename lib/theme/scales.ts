@@ -116,9 +116,7 @@ const minWidthUnlessLandscapePhone = (px: number) =>
 // carry the same OR clause only so the mobile ⊂ tablet ⊂ laptop containment
 // holds by construction. `touch` keys on pointer capability alone — it
 // drives the interaction model (gestures, sheets, hit targets) on all touch
-// devices, tablets included. `portraitPhone` gates canvas surfaces that
-// require landscape (graph, mindmap): in portrait the width IS the smaller
-// dimension, same divider, so tablets are exempt. `landscapePhone` is for
+// devices, tablets included. `landscapePhone` is for
 // the rare mobile style whose portrait treatment assumes a TALL viewport
 // (e.g. a fixed-height canvas block) — key the correction on it AFTER the
 // mobile block; within one style object, later `@media` keys win.
@@ -130,7 +128,6 @@ export const media = {
   desktopUp: minWidthUnlessLandscapePhone(breakpoints.tablet + 1),
   wideUp: minWidthUnlessLandscapePhone(breakpoints.laptop + 1),
   touch: `screen and ${touchDevice}`,
-  portraitPhone: `screen and ${touchDevice} and (orientation: portrait) and (max-width: ${phoneDivider}px)`,
   landscapePhone,
 } as const;
 

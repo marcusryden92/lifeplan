@@ -11,7 +11,12 @@ import type {
   Queue,
 } from "@/types/prisma";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
-import { CategoryDot, useTheme, vars, categoryColor } from "@/components/ui";
+import {
+  CategoryDot,
+  useTheme,
+  vars,
+  categoryColor,
+} from "@/components/ui";
 import { getEffectiveCategoryId } from "@/utils/goalPageHandlers";
 import { wouldCreateCycleAddingDependency } from "@/utils/precedence/findCycle";
 import { describeCycle } from "@/utils/precedence/describeCycle";
@@ -20,6 +25,8 @@ import { formatDurationCompact } from "@/utils/timeFormatting";
 import {
   useCanvasGestures,
   pinchZoomDelta,
+  clientToCanvasPoint,
+  canvasPointToClient,
   type CanvasGesturePoint,
   type CanvasPinchInfo,
 } from "@/hooks/useCanvasGestures";
@@ -473,8 +480,7 @@ export function GraphCanvas({
   const toContentPoint = (e: { clientX: number; clientY: number }) => {
     const el = contentRef.current;
     if (!el) return { x: 0, y: 0 };
-    const rect = el.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    return clientToCanvasPoint(el.getBoundingClientRect(), e.clientX, e.clientY);
   };
 
   const hitTestNode = (x: number, y: number): LaidNode | null => {
@@ -560,8 +566,11 @@ export function GraphCanvas({
   const contentPointFromLocal = (pt: CanvasGesturePoint) => {
     const el = scrollerRef.current;
     if (!el) return { x: 0, y: 0 };
-    const rect = el.getBoundingClientRect();
-    return toContentPoint({ clientX: pt.x + rect.left, clientY: pt.y + rect.top });
+    const { clientX, clientY } = canvasPointToClient(
+      el.getBoundingClientRect(),
+      pt,
+    );
+    return toContentPoint({ clientX, clientY });
   };
 
   // Right handle: source becomes the predecessor; left handle: the target does.

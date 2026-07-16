@@ -8,7 +8,7 @@ import { Settings, Moon, Sun, LogOut } from "lucide-react";
 import { useShellOverlayOpen } from "../ShellOverlayContext";
 import { useTheme } from "../../ThemeProvider";
 import { BottomSheet } from "../../BottomSheet";
-import { MOBILE_TABS, NAV_ITEMS } from "../nav";
+import { MOBILE_TABS, NAV_ITEMS, isCanvasRoute } from "../nav";
 import {
   tabBar,
   tab,
@@ -40,8 +40,9 @@ export function MobileTabs() {
   const [moreOpen, setMoreOpen] = useState(false);
 
   // A full-screen shell surface (AI assistant, WeekStructureModal) is open —
-  // step the floating menu out of the way instead of floating over it.
-  if (overlayOpen) return null;
+  // step the floating menu out of the way instead of floating over it. Canvas
+  // routes trade the tab bar for an in-page back button (faux stack sheet).
+  if (overlayOpen || isCanvasRoute(pathname)) return null;
 
   const goSettings = () => {
     setMoreOpen(false);

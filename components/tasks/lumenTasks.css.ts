@@ -332,6 +332,13 @@ export const taskTitleFocused = style({
   fontWeight: 600,
 });
 
+export const linkedIcon = style({
+  display: "inline-flex",
+  alignItems: "center",
+  flexShrink: 0,
+  color: vars.muted,
+});
+
 export const iconRow = style({
   display: "flex",
   alignItems: "center",

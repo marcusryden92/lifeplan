@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Link2 } from "lucide-react";
 
 import TaskDisplay from "./TaskDisplay";
 import { TaskHeaderProps } from "@/lib/taskItem";
@@ -17,6 +17,7 @@ import {
   headerInner,
   headerInnerDim,
   addChildBtn,
+  linkedIcon,
 } from "@/components/tasks/lumenTasks.css";
 
 export const NEW_SUBTASK_TITLE = "New subtask";
@@ -58,6 +59,10 @@ export const TaskHeader = ({
 
   if (!task.parentId) return null;
 
+  const linkedTargetTitle = task.linkedItemId
+    ? (planner.find((p) => p.id === task.linkedItemId)?.title ?? "Untitled")
+    : null;
+
   const dimInner = subtasks.length !== 0 && !itemIsFocused;
   const draggedSelf =
     displayDragBox && currentlyClickedItem?.parentId === task.id;
@@ -69,6 +74,15 @@ export const TaskHeader = ({
     >
       <div className={`${headerInner} ${dimInner ? headerInnerDim : ""}`}>
         <TaskDisplay task={task} itemIsFocused={itemIsFocused} />
+        {linkedTargetTitle !== null && (
+          <span
+            className={linkedIcon}
+            title={`Redirects into "${linkedTargetTitle}"`}
+            aria-label={`Redirects into "${linkedTargetTitle}"`}
+          >
+            <Link2 size={13} strokeWidth={2} />
+          </span>
+        )}
         <button
           type="button"
           className={`${iconBtn()} ${addChildBtn}`}

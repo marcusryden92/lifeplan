@@ -1,20 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
-import { Sliders } from "lucide-react";
+import { ArrowLeft, Sliders } from "lucide-react";
 import {
   BottomSheet,
   Kbd,
   Loader,
-  RotateToLandscape,
   Switch,
+  usePreviousPathname,
   useTheme,
 } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { usePlatform } from "@/hooks/usePlatform";
 import { useCoarsePointer } from "@/hooks/useCoarsePointer";
-import { usePortraitPhone } from "@/hooks/usePortraitPhone";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { RootState } from "@/redux/store";
 import { plannerIsCompleted } from "@/utils/plannerCompletion";
 import {
@@ -34,11 +35,14 @@ import {
 import {
   page,
   subHeader,
+  titleGroup,
   pageTitle,
   titleSummary,
   headerControls,
   controlGroup,
   controlLabel,
+  backButton,
+  settingsButton,
   zoomTrack,
   zoomTrackBar,
   zoomFill,
@@ -48,6 +52,11 @@ import {
   canvasCard,
   emptyMain,
   mobileSettingsButton,
+  sheetSection,
+  sheetRow,
+  sheetRowLabel,
+  sheetZoomTrack,
+  sheetHint,
 } from "./page.css";
 
 const DEFAULT_ZOOM = 46;
@@ -62,7 +71,11 @@ export default function MindmapPage() {
   const { dark } = useTheme();
   const { modKey } = usePlatform();
   const coarsePointer = useCoarsePointer();
-  const portraitPhone = usePortraitPhone();
+  const isMobile = useIsMobile();
+  const router = useRouter();
+  const previousPathname = usePreviousPathname();
+
+  const goBack = () => router.push(previousPathname ?? "/dashboard");
 
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -166,81 +179,104 @@ export default function MindmapPage() {
   return (
     <div className={page}>
       <div className={subHeader}>
-        <h1 className={pageTitle}>Mindmap</h1>
-        <span className={titleSummary}>
-          {rolesCount} role{rolesCount === 1 ? "" : "s"} · {itemsCount} item
-          {itemsCount === 1 ? "" : "s"}
-        </span>
-        <div className={headerControls}>
-          <div className={controlGroup}>
-            <span className={controlLabel}>Leaf tasks</span>
-            <Switch
-              checked={showLeaves}
-              onCheckedChange={setShowLeaves}
-              aria-label="Branch each goal out into its leaf tasks"
-            />
-          </div>
-          <div className={controlGroup}>
-            <span className={controlLabel}>Hide empty</span>
-            <Switch
-              checked={hideEmpty}
-              onCheckedChange={setHideEmpty}
-              aria-label="Hide roles and categories with no items"
-            />
-          </div>
-          <div className={controlGroup}>
-            <span className={controlLabel}>Show completed</span>
-            <Switch
-              checked={showCompleted}
-              onCheckedChange={setShowCompleted}
-              aria-label="Show completed items"
-            />
-          </div>
-          <div className={controlGroup}>
-            <span className={controlLabel}>Zoom</span>
-            <div className={zoomTrack}>
-              <div className={zoomTrackBar} />
-              <div
-                className={zoomFill}
-                style={{
-                  width: `calc(${zoom}% + ${(SLIDER_THUMB_PX * (50 - zoom)) / 100}px)`,
-                }}
-              />
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                value={zoom}
-                onChange={(e) => setZoom(Number(e.target.value))}
-                className={zoomSlider}
-                aria-label="Zoom mindmap"
+        {isMobile && (
+          <button
+            type="button"
+            className={backButton}
+            onClick={goBack}
+            aria-label="Back"
+          >
+            <ArrowLeft size={17} strokeWidth={2.2} aria-hidden />
+          </button>
+        )}
+        <div className={titleGroup}>
+          <h1 className={pageTitle}>Mindmap</h1>
+          <span className={titleSummary}>
+            {rolesCount} role{rolesCount === 1 ? "" : "s"} · {itemsCount} item
+            {itemsCount === 1 ? "" : "s"}
+          </span>
+        </div>
+        {isMobile ? (
+          <button
+            type="button"
+            className={settingsButton}
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Settings"
+          >
+            <Sliders size={16} strokeWidth={2} aria-hidden />
+          </button>
+        ) : (
+          <div className={headerControls}>
+            <div className={controlGroup}>
+              <span className={controlLabel}>Leaf tasks</span>
+              <Switch
+                checked={showLeaves}
+                onCheckedChange={setShowLeaves}
+                aria-label="Branch each goal out into its leaf tasks"
               />
             </div>
+            <div className={controlGroup}>
+              <span className={controlLabel}>Hide empty</span>
+              <Switch
+                checked={hideEmpty}
+                onCheckedChange={setHideEmpty}
+                aria-label="Hide roles and categories with no items"
+              />
+            </div>
+            <div className={controlGroup}>
+              <span className={controlLabel}>Show completed</span>
+              <Switch
+                checked={showCompleted}
+                onCheckedChange={setShowCompleted}
+                aria-label="Show completed items"
+              />
+            </div>
+            <div className={controlGroup}>
+              <span className={controlLabel}>Zoom</span>
+              <div className={zoomTrack}>
+                <div className={zoomTrackBar} />
+                <div
+                  className={zoomFill}
+                  style={{
+                    width: `calc(${zoom}% + ${(SLIDER_THUMB_PX * (50 - zoom)) / 100}px)`,
+                  }}
+                />
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={zoom}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  className={zoomSlider}
+                  aria-label="Zoom mindmap"
+                />
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      <div className={legendRow}>
-        <span>Your roles and everything you&rsquo;re working on, organized.</span>
-        <span className={legendKeys}>
-          {coarsePointer ? (
-            <span>Pinch to zoom · Tap to focus · Tap Open to navigate</span>
-          ) : (
-            <>
-              <Kbd keys="Drag" instruction="pan" />
-              <Kbd keys={[modKey, "Scroll"]} instruction="zoom" />
-            </>
-          )}
-        </span>
-      </div>
+      {!isMobile && (
+        <div className={legendRow}>
+          <span>
+            Your roles and everything you&rsquo;re working on, organized.
+          </span>
+          <span className={legendKeys}>
+            {coarsePointer ? (
+              <span>Pinch to zoom · Tap to focus · Tap Open to navigate</span>
+            ) : (
+              <>
+                <Kbd keys="Drag" instruction="pan" />
+                <Kbd keys={[modKey, "Scroll"]} instruction="zoom" />
+              </>
+            )}
+          </span>
+        </div>
+      )}
 
       <div className={canvasCard}>
-        {portraitPhone ? (
-          <RotateToLandscape>
-            The map branches out sideways — it needs landscape to breathe.
-          </RotateToLandscape>
-        ) : !isLoaded ? (
+        {!isLoaded ? (
           <div className={emptyMain}>
             <Loader size="md" label="Loading mindmap" />
           </div>
@@ -260,7 +296,7 @@ export default function MindmapPage() {
               onZoomDelta={handleZoomDelta}
               onFit={handleFit}
             />
-            {coarsePointer ? (
+            {isMobile ? null : coarsePointer ? (
               <>
                 <button
                   type="button"
@@ -291,6 +327,70 @@ export default function MindmapPage() {
           </>
         )}
       </div>
+
+      {isMobile && (
+        <BottomSheet
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          title="Settings"
+        >
+          <span className={sheetSection}>View</span>
+          <div className={sheetRow}>
+            <span className={sheetRowLabel}>Leaf tasks</span>
+            <Switch
+              checked={showLeaves}
+              onCheckedChange={setShowLeaves}
+              aria-label="Branch each goal out into its leaf tasks"
+            />
+          </div>
+          <div className={sheetRow}>
+            <span className={sheetRowLabel}>Hide empty</span>
+            <Switch
+              checked={hideEmpty}
+              onCheckedChange={setHideEmpty}
+              aria-label="Hide roles and categories with no items"
+            />
+          </div>
+          <div className={sheetRow}>
+            <span className={sheetRowLabel}>Show completed</span>
+            <Switch
+              checked={showCompleted}
+              onCheckedChange={setShowCompleted}
+              aria-label="Show completed items"
+            />
+          </div>
+          <div className={sheetRow}>
+            <span className={sheetRowLabel}>Zoom</span>
+            <div className={sheetZoomTrack}>
+              <div className={zoomTrackBar} />
+              <div
+                className={zoomFill}
+                style={{
+                  width: `calc(${zoom}% + ${(SLIDER_THUMB_PX * (50 - zoom)) / 100}px)`,
+                }}
+              />
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className={zoomSlider}
+                aria-label="Zoom mindmap"
+              />
+            </div>
+          </div>
+          <span className={sheetSection}>Layout</span>
+          <MindmapControlsBody
+            options={layoutOptions}
+            onChange={patchLayoutOptions}
+          />
+          <div className={sheetHint}>
+            Pinch to zoom · Tap to focus · Tap Open to navigate
+          </div>
+        </BottomSheet>
+      )}
     </div>
   );
 }

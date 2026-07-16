@@ -7,12 +7,15 @@ import { popover as popoverRecipe } from "@/lib/theme";
 import type { GraphTickUnits } from "../../_lib/graphModel";
 import { trigger, menu, row, rowCheck, hint } from "./MarkerMenu.css";
 
-const UNIT_ROWS: { key: keyof GraphTickUnits; label: string }[] = [
-  { key: "hour", label: "Hours" },
-  { key: "day", label: "Days" },
-  { key: "week", label: "Weeks" },
-  { key: "month", label: "Months" },
-];
+// Shared with the mobile settings sheet, which renders the same units as
+// switch rows instead of this popover.
+export const MARKER_UNIT_ROWS: { key: keyof GraphTickUnits; label: string }[] =
+  [
+    { key: "hour", label: "Hours" },
+    { key: "day", label: "Days" },
+    { key: "week", label: "Weeks" },
+    { key: "month", label: "Months" },
+  ];
 
 export function MarkerMenu({
   value,
@@ -38,7 +41,7 @@ export function MarkerMenu({
           sideOffset={6}
           collisionPadding={8}
         >
-          {UNIT_ROWS.map((unit) => (
+          {MARKER_UNIT_ROWS.map((unit) => (
             <button
               key={unit.key}
               type="button"

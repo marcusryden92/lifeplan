@@ -57,8 +57,8 @@ export const sheet = style([
     flexDirection: "column",
     gap: space["0.5"],
     maxHeight: ["85vh", "85dvh"],
-    padding: `${space["2"]}px ${space["3"]}px calc(${space["4"]}px + env(safe-area-inset-bottom, 0px))`,
-    paddingBottom: space["5"],
+    padding: `${space["2"]}px ${space["3"]}px`,
+    paddingBottom: `calc(${space["5"]}px + env(safe-area-inset-bottom, 0px))`,
     borderRadius: `${radii["xl+2"]}px ${radii["xl+2"]}px 0 0`,
     animationDuration: `${DURATIONS.modal}s`,
     animationTimingFunction: "ease",
@@ -87,3 +87,15 @@ export const sheetTitle = style([
     padding: `0 ${space["2"]}px ${space["1"]}px`,
   },
 ]);
+
+// Content taller than the sheet's 85dvh cap (short landscape-phone viewports)
+// scrolls here instead of clipping; keeps the same row gap the sheet used to
+// apply to direct children.
+export const sheetBody = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["0.5"],
+  minHeight: 0,
+  overflowY: "auto",
+});
+

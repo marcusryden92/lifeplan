@@ -1,1 +1,1 @@
-export { MarkerMenu } from "./MarkerMenu";
+export { MarkerMenu, MARKER_UNIT_ROWS } from "./MarkerMenu";

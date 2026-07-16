@@ -1,6 +1,8 @@
 import {
   classifyPointerGesture,
   pinchZoomDelta,
+  clientToCanvasPoint,
+  canvasPointToClient,
   type PointerGestureEvent,
 } from "@/hooks/useCanvasGestures";
 import {
@@ -75,6 +77,17 @@ describe("classifyPointerGesture", () => {
       { type: "up", pointerId: 1, x: 105, y: 100, t: 90 },
     ];
     expect(classifyPointerGesture(events, OPTS)).toBe("tap");
+  });
+});
+
+describe("coordinate mapping", () => {
+  it("maps client coordinates to element-local points and back", () => {
+    const rect = { left: 30, top: 50 };
+    expect(clientToCanvasPoint(rect, 130, 90)).toEqual({ x: 100, y: 40 });
+    expect(canvasPointToClient(rect, { x: 100, y: 40 })).toEqual({
+      clientX: 130,
+      clientY: 90,
+    });
   });
 });
 

@@ -92,12 +92,13 @@
   │       └── shell/                    # AppShell architecture
   │           ├── AppShell/             # Outer bezel + canvas + content row (+ assistantSlot inside mainColumn)
   │           ├── Sidebar/              # Desktop nav (+ Assistant action button)
-  │           ├── MobileTabs/           # Mobile bottom nav
+  │           ├── MobileTabs/           # Mobile bottom nav (hidden on canvas routes — see nav.ts)
   │           ├── CapturePalette/       # Quick-entry overlay
   │           ├── SearchPalette/        # Cmd-K-style search
-  │           ├── CornerActions/        # Mobile-only floating Search + AI-assistant cluster (hides under full-screen shell overlays)
+  │           ├── CornerActions/        # Mobile-only floating Search + AI-assistant cluster (hides under full-screen shell overlays AND on canvas routes)
   │           ├── CaptureContext.tsx, SearchContext.tsx, AssistantContext.tsx, ShellOverlayContext.tsx
-  │           └── nav.ts                # NAV_ITEMS, MOBILE_TABS
+  │           ├── NavHistoryContext.tsx # Previous-pathname tracker (usePreviousPathname) — feeds the canvas-route back button (deep-link fallback: /dashboard)
+  │           └── nav.ts                # NAV_ITEMS, MOBILE_TABS, isCanvasRoute (graph/mindmap: on mobile the shell chrome yields to an in-page back button + header settings sheet — faux stack sheet)
   │
   ├── context/
   │   ├── StoreProvider.tsx             # Redux store wrapper
@@ -113,7 +114,6 @@
   │   ├── useServerAction               # useTransition + status pattern for mutations
   │   ├── useIsMobile                   # matchMedia on media.mobile (narrow viewport OR landscape phone) — for JS-level mobile treatments (view types, bottom sheets)
   │   ├── useCoarsePointer              # matchMedia on media.touch — drives the touch interaction model (canvas gestures, touch legends, sheet swaps) on all touch devices, tablets included
-  │   ├── usePortraitPhone              # matchMedia on media.portraitPhone — gates the landscape-only canvases (graph, mindmap) behind RotateToLandscape
   │   ├── useAIDraftState               # AI-assistant working drafts (forest/templates/windows/precedence) + chat + conversation persistence
   │   ├── useKeyboardShortcuts, useListKeyboardNav, useClickOutside, usePopoverPosition,
   │   │   useFlashAnimation, usePlatform, useTitleEditor
@@ -656,7 +656,7 @@
   - `space` (0–80px) — padding/margin/gap
   - `radii` — base tiers (`xs 6`, `sm 8`, `md 12`, `lg 16`, `xl 20`, `2xl 24`, `3xl 30`) + half-steps (`sm+2 10`, `md+2 14`, `lg+2 18`, `xl+2 22`) used by glass/popover recipes to sit intentionally rounder than a plain card at the same tier, plus `pill 999`. Values below 6 (2–5px) stay hardcoded as bespoke micro-corners.
   - `contentWidth` (`xs 520` … `2xl 1280`) — text measures + page containers. Prefer over raw `maxWidth: 1240`.
-  - `breakpoints` (`mobile 767`, `tablet 1023`, `laptop 1279`) + `media` (prebuilt `@media` query strings: `mobile`, `tablet`, `laptop`, `tabletUp`, `desktopUp`, `wideUp`, `touch`, `portraitPhone`, `landscapePhone`). Width is not the whole story: `mobile` (and by containment `tablet`/`laptop`) also matches a **landscape phone** — touch device whose height, the smaller dimension in landscape, is ≤599px (the Android 600dp phone/tablet divider) — and the `*Up` queries exclude it, so a phone keeps the phone UI when rotated even though it is ~800–930px wide. `touch` keys on pointer capability alone and drives the interaction model on all touch devices (tablets included); `portraitPhone` gates the landscape-only canvases (graph, mindmap); `landscapePhone` corrects the rare mobile style whose portrait treatment assumes a tall viewport (the graph/mindmap 480px canvas block reverts to fill) — key it after the `mobile` block, later `@media` keys win within a style. `laptop` marks where a docked wide side panel (e.g. the calendar's 340px engine console) stops fitting and switches to an overlay. Rail+content page grids collapse to a stacked column at `tablet`, not `mobile` — the desktop sidebar persists through the tablet band. **Do not declare local `const MOBILE = "..."`** — import `media` from `@/lib/theme` and use `[media.mobile]` as the `@media` key.
+  - `breakpoints` (`mobile 767`, `tablet 1023`, `laptop 1279`) + `media` (prebuilt `@media` query strings: `mobile`, `tablet`, `laptop`, `tabletUp`, `desktopUp`, `wideUp`, `touch`, `landscapePhone`). Width is not the whole story: `mobile` (and by containment `tablet`/`laptop`) also matches a **landscape phone** — touch device whose height, the smaller dimension in landscape, is ≤599px (the Android 600dp phone/tablet divider) — and the `*Up` queries exclude it, so a phone keeps the phone UI when rotated even though it is ~800–930px wide. Orientation is the user's own: portrait phones get the standard portrait mobile layout, and physically rotating the phone lands in the landscape-phone layout — there is deliberately NO in-app rotation (no prompt, no forced frame, no toggle). `touch` keys on pointer capability alone and drives the interaction model on all touch devices (tablets included); `landscapePhone` corrects the rare mobile style whose portrait treatment assumes a tall viewport (the graph/mindmap 480px canvas block reverts to fill) — key it after the `mobile` block, later `@media` keys win within a style. `laptop` marks where a docked wide side panel (e.g. the calendar's 340px engine console) stops fitting and switches to an overlay. Rail+content page grids collapse to a stacked column at `tablet`, not `mobile` — the desktop sidebar persists through the tablet band. **Do not declare local `const MOBILE = "..."`** — import `media` from `@/lib/theme` and use `[media.mobile]` as the `@media` key.
   - `borderWidth` (`hairline 1`, `medium 2`, `thick 3`)
   - `zIndex` — semantic layers: `base 0`, `docked 5`, `raised 10`, `floating 30`, `palette 50`, `popoverOverPalette 60`, `modal 100`, `modalOver 150`, `toast 200`, `appLoading 300` (first-run data-load overlay, above every layer)
 

@@ -26,11 +26,13 @@ export function validatePlanner(planner: Planner): ValidationResult {
     if (planner.duration === undefined || planner.duration === null) {
       errors.push({ field: "duration", message: "Duration is required" });
     } else if (planner.duration <= 0) {
-      errors.push({
-        field: "duration",
-        message: "Duration must be positive",
-        value: planner.duration,
-      });
+      // A zero-duration task/plan is a warning, not an error: the scheduler
+      // skips it with a loud INVALID_TASK failure and buildPlanEvents
+      // null-guards plans. A hard error here would blank the entire calendar
+      // — a goal retyped to task keeps its duration of 0.
+      warnings.push(
+        `"${planner.title}" has no duration and will not be scheduled`,
+      );
     } else if (planner.duration > TIME_CONSTANTS.MINUTES_PER_WEEK) {
       warnings.push(
         `Task "${planner.title}" duration (${planner.duration} min) exceeds one week`,

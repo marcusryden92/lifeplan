@@ -87,6 +87,23 @@ export function pinchZoomDelta(ratio: number, logRange: number): number {
   return (100 * Math.log(ratio)) / logRange;
 }
 
+// Client -> element-local coordinates for a canvas surface.
+export function clientToCanvasPoint(
+  rect: { left: number; top: number },
+  clientX: number,
+  clientY: number,
+): CanvasGesturePoint {
+  return { x: clientX - rect.left, y: clientY - rect.top };
+}
+
+// Exact inverse of clientToCanvasPoint for the same rect.
+export function canvasPointToClient(
+  rect: { left: number; top: number },
+  pt: CanvasGesturePoint,
+): { clientX: number; clientY: number } {
+  return { clientX: rect.left + pt.x, clientY: rect.top + pt.y };
+}
+
 interface TrackedPointer {
   startX: number;
   startY: number;
@@ -122,10 +139,8 @@ export function useCanvasGestures(
     let longPressTimer: ReturnType<typeof setTimeout> | null = null;
     let prevPinchDist = 0;
 
-    const rectPoint = (clientX: number, clientY: number): CanvasGesturePoint => {
-      const rect = el.getBoundingClientRect();
-      return { x: clientX - rect.left, y: clientY - rect.top };
-    };
+    const rectPoint = (clientX: number, clientY: number): CanvasGesturePoint =>
+      clientToCanvasPoint(el.getBoundingClientRect(), clientX, clientY);
 
     const clearLongPress = () => {
       if (longPressTimer !== null) {
@@ -137,11 +152,10 @@ export function useCanvasGestures(
     const twoPointerGeometry = () => {
       const [a, b] = [...pointers.values()];
       const dist = Math.hypot(a.lastX - b.lastX, a.lastY - b.lastY);
-      const rect = el.getBoundingClientRect();
-      const centroid = {
-        x: (a.lastX + b.lastX) / 2 - rect.left,
-        y: (a.lastY + b.lastY) / 2 - rect.top,
-      };
+      const centroid = rectPoint(
+        (a.lastX + b.lastX) / 2,
+        (a.lastY + b.lastY) / 2,
+      );
       return { dist, centroid };
     };
 
@@ -220,7 +234,11 @@ export function useCanvasGestures(
       }
 
       if (mode === "dragging") {
-        handlersRef.current.onDragMove?.(e.clientX - prevX, e.clientY - prevY, pt);
+        handlersRef.current.onDragMove?.(
+          e.clientX - prevX,
+          e.clientY - prevY,
+          pt,
+        );
       }
     };
 

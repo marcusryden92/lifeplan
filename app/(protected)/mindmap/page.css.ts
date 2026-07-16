@@ -42,7 +42,22 @@ export const subHeader = style({
   flexWrap: "wrap",
   "@media": {
     [media.mobile]: {
-      padding: "16px 16px 10px",
+      padding: "10px 14px 8px",
+      gap: space["2.5"],
+      // The mobile row carries 34px icon buttons; center them and the title
+      // on one axis. titleGroup keeps title + summary baseline-aligned inside.
+      alignItems: "center",
+    },
+  },
+});
+
+export const titleGroup = style({
+  display: "flex",
+  alignItems: "baseline",
+  gap: space["3"],
+  minWidth: 0,
+  "@media": {
+    [media.mobile]: {
       gap: space["2.5"],
     },
   },
@@ -96,6 +111,34 @@ export const controlLabel = style([
   {
     transition: themeTransition,
   },
+]);
+
+// Mobile-only header chrome: canvas routes hide the shell tab bar, so the
+// header carries a back button and a settings trigger instead.
+const headerIconButton = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 34,
+  height: 34,
+  flexShrink: 0,
+  padding: 0,
+  background: "transparent",
+  border: `1px solid ${vars.glass.stroke}`,
+  borderRadius: radii.pill,
+  color: vars.ink,
+  cursor: "pointer",
+  transition: themeTransition,
+  selectors: {
+    "&:active": { background: vars.interactive.selectedFill },
+  },
+});
+
+export const backButton = headerIconButton;
+
+export const settingsButton = style([
+  headerIconButton,
+  { marginLeft: "auto" },
 ]);
 
 const SLIDER_TRACK_HEIGHT = 6;
@@ -238,8 +281,9 @@ export const emptyMain = style([
   },
 ]);
 
-// Mobile-only: opens the layout settings in a BottomSheet instead of the
-// floating panel, which would swallow the map on a phone.
+// Coarse-pointer tablets: opens the layout settings in a BottomSheet instead
+// of the floating panel. Phones fold these controls into the header settings
+// sheet instead, so this button never renders there.
 export const mobileSettingsButton = style({
   position: "absolute",
   top: space["3"],
@@ -263,3 +307,49 @@ export const mobileSettingsButton = style({
   cursor: "pointer",
   transition: themeTransition,
 });
+
+// Rows for the mobile settings sheet — the header controls relocated as
+// full-width label + control rows.
+export const sheetSection = style([
+  fieldLabel,
+  {
+    color: vars.muted,
+    padding: `${space["3"]}px ${space["2"]}px ${space["1"]}px`,
+  },
+]);
+
+export const sheetRow = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: space["4"],
+  minHeight: 44,
+  padding: `0 ${space["2"]}px`,
+});
+
+export const sheetRowLabel = style([
+  text.body,
+  {
+    color: vars.ink,
+    fontWeight: 500,
+  },
+]);
+
+export const sheetZoomTrack = style({
+  position: "relative",
+  flex: 1,
+  maxWidth: 320,
+  height: SLIDER_THUMB,
+});
+
+export const sheetHint = style([
+  caption,
+  {
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: space["3.5"],
+    color: vars.muted,
+    padding: `${space["3"]}px ${space["2"]}px 0`,
+  },
+]);
