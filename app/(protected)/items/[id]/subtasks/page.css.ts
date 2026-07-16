@@ -1,5 +1,5 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { DURATIONS, media, radii, vars, zIndex } from "@/lib/theme";
+import { DURATIONS, media } from "@/lib/theme";
 
 
 export const layout = style({
@@ -21,39 +21,27 @@ export const treePane = style({
   flexDirection: "column",
 });
 
+// Desktop-only side column — on mobile the drawer renders through the shared
+// BottomSheet instead (in the stacked flow it would sit below the entire
+// tree, off-screen from the row that was tapped).
 export const drawerSlot = style({
   width: 0,
   flexShrink: 0,
   overflow: "hidden",
   transition: `width ${DURATIONS.collapse}s ease`,
-  "@media": {
-    [media.mobile]: { display: "none", width: "auto", transition: "none" },
-  },
 });
 
-// On mobile the drawer presents as a fixed bottom sheet instead of a side
-// column — in the stacked flow it would render below the entire tree,
-// off-screen from the row that was tapped.
 export const drawerSlotOpen = style({
   width: 360,
-  "@media": {
-    [media.mobile]: {
-      display: "block",
-      position: "fixed",
-      left: 0,
-      right: 0,
-      bottom: 0,
-      width: "auto",
-      height: "70vh",
-      zIndex: zIndex.floating,
-      background: vars.paper,
-      borderTop: `1px solid ${vars.rule}`,
-      borderTopLeftRadius: radii.xl,
-      borderTopRightRadius: radii.xl,
-      boxShadow: vars.shadow.panel,
-      overflow: "hidden",
-    },
-  },
+});
+
+// The drawer's own layout expects a bounded container to fill and scroll in;
+// inside the content-sized sheet body it gets one explicitly.
+export const drawerSheetFill = style({
+  display: "flex",
+  flexDirection: "column",
+  minHeight: 0,
+  height: ["66vh", "66dvh"],
 });
 
 export const card = style({

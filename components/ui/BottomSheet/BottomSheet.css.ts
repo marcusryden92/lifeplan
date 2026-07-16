@@ -25,8 +25,9 @@ const sheetUp = keyframes({
   to: { transform: "translateY(0)" },
 });
 
+// Destination-only: a swipe-dismiss leaves an inline translateY on the sheet,
+// and the exit must animate from there, not snap back to 0 first.
 const sheetDown = keyframes({
-  from: { transform: "translateY(0)" },
   to: { transform: "translateY(100%)" },
 });
 
@@ -69,14 +70,29 @@ export const sheet = style([
   },
 ]);
 
+export const sheetFlush = style({
+  paddingLeft: 0,
+  paddingRight: 0,
+});
+
+// Full-width strip so the drag affordance is a real touch target, not the
+// 4px pill alone; touchAction none keeps the browser from claiming the swipe.
 export const sheetHandle = style({
   flexShrink: 0,
-  alignSelf: "center",
-  width: 36,
-  height: 4,
-  borderRadius: radii.pill,
-  background: vars.rule,
-  margin: `${space["1"]}px 0 ${space["2"]}px`,
+  alignSelf: "stretch",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  height: 20,
+  touchAction: "none",
+  cursor: "grab",
+  "::before": {
+    content: '""',
+    width: 36,
+    height: 4,
+    borderRadius: radii.pill,
+    background: vars.rule,
+  },
 });
 
 export const sheetTitle = style([
@@ -85,6 +101,7 @@ export const sheetTitle = style([
     flexShrink: 0,
     color: vars.muted,
     padding: `0 ${space["2"]}px ${space["1"]}px`,
+    touchAction: "none",
   },
 ]);
 
@@ -97,5 +114,6 @@ export const sheetBody = style({
   gap: space["0.5"],
   minHeight: 0,
   overflowY: "auto",
+  overscrollBehavior: "contain",
 });
 

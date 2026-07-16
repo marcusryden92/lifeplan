@@ -5,8 +5,6 @@ import {
   DURATIONS,
   popover,
   backdropFilters,
-  media,
-  radii,
 } from "@/lib/theme";
 
 const fadeIn = keyframes({
@@ -17,11 +15,6 @@ const fadeIn = keyframes({
 const slideUp = keyframes({
   from: { opacity: 0, transform: "translateY(8px) scale(0.98)" },
   to: { opacity: 1, transform: "translateY(0) scale(1)" },
-});
-
-const sheetUp = keyframes({
-  from: { transform: "translateY(100%)" },
-  to: { transform: "translateY(0)" },
 });
 
 export const overlay = style({
@@ -55,21 +48,6 @@ export const dialog = style([
     animationName: slideUp,
     animationDuration: `${DURATIONS.modal}s`,
     animationTimingFunction: "ease",
-    "@media": {
-      [media.mobile]: {
-        top: "auto",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        marginLeft: 0,
-        marginRight: 0,
-        width: "100%",
-        maxHeight: "70vh",
-        borderRadius: `${radii["xl+2"]}px ${radii["xl+2"]}px 0 0`,
-        animationName: sheetUp,
-        animationDuration: `${DURATIONS.modal}s`,
-      },
-    },
   },
 ]);
 

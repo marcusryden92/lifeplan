@@ -4,8 +4,15 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import { Button, Caption, Input, SegmentedControl } from "@/components/ui";
+import {
+  BottomSheet,
+  Button,
+  Caption,
+  Input,
+  SegmentedControl,
+} from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { fallbackCalendarColor } from "@/utils/colorUtils";
 import { defaultReadyForType } from "@/utils/plannerReadiness";
 import { PRIORITY_DEFAULT } from "@/utils/plannerPriority";
@@ -20,6 +27,7 @@ import {
   durationInput,
   durationUnit,
   footer,
+  sheetStack,
 } from "./NewItemModal.css";
 
 type NewItemType = "task" | "plan" | "goal";
@@ -37,6 +45,7 @@ export function NewItemModal({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const { userId, updatePlannerArray } = useCalendarProvider();
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -64,7 +73,10 @@ export function NewItemModal({
     const parsed = Math.round(Number(duration));
     const resolvedDuration = isGoal
       ? 0
-      : Math.max(MIN_DURATION_MINUTES, Number.isFinite(parsed) ? parsed : DEFAULT_DURATION_MINUTES);
+      : Math.max(
+          MIN_DURATION_MINUTES,
+          Number.isFinite(parsed) ? parsed : DEFAULT_DURATION_MINUTES,
+        );
 
     const id = uuidv4();
     const newItem: Planner = {
@@ -112,6 +124,83 @@ export function NewItemModal({
     create();
   };
 
+  const content = (
+    <>
+      <div className={header}>
+        <Caption>new item · goes straight to your library</Caption>
+      </div>
+
+      <Input
+        ref={inputRef}
+        variant="underline"
+        placeholder="What is it?"
+        type="text"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={onKeyDown}
+      />
+
+      <div className={field}>
+        <span className={fieldLabel}>Type</span>
+        <SegmentedControl<NewItemType>
+          value={type}
+          onChange={setType}
+          options={[
+            { key: "task", label: "Task" },
+            { key: "plan", label: "Plan" },
+            { key: "goal", label: "Goal" },
+          ]}
+        />
+      </div>
+
+      {type !== "goal" && (
+        <div className={field}>
+          <span className={fieldLabel}>Duration</span>
+          <div className={durationRow}>
+            <Input
+              className={durationInput}
+              type="number"
+              min={MIN_DURATION_MINUTES}
+              step={5}
+              value={duration}
+              onChange={(e) => setDuration(e.target.value)}
+              onKeyDown={onKeyDown}
+            />
+            <span className={durationUnit}>minutes</span>
+          </div>
+        </div>
+      )}
+
+      <div className={footer}>
+        <Button variant="glass" size="sm" onClick={() => onOpenChange(false)}>
+          Cancel
+        </Button>
+        <Button
+          variant="solid"
+          size="sm"
+          onClick={create}
+          disabled={!canSubmit}
+        >
+          Create
+        </Button>
+      </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <BottomSheet
+        open={open}
+        onOpenChange={onOpenChange}
+        title="New item"
+        hideTitle
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className={sheetStack}>{content}</div>
+      </BottomSheet>
+    );
+  }
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -121,67 +210,10 @@ export function NewItemModal({
           aria-describedby={undefined}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <div className={header}>
-            <Caption>new item · goes straight to your library</Caption>
-          </div>
           <Dialog.Title style={{ position: "absolute", left: -10000 }}>
             New item
           </Dialog.Title>
-
-          <Input
-            ref={inputRef}
-            variant="underline"
-            placeholder="What is it?"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={onKeyDown}
-          />
-
-          <div className={field}>
-            <span className={fieldLabel}>Type</span>
-            <SegmentedControl<NewItemType>
-              value={type}
-              onChange={setType}
-              options={[
-                { key: "task", label: "Task" },
-                { key: "plan", label: "Plan" },
-                { key: "goal", label: "Goal" },
-              ]}
-            />
-          </div>
-
-          {type !== "goal" && (
-            <div className={field}>
-              <span className={fieldLabel}>Duration</span>
-              <div className={durationRow}>
-                <Input
-                  className={durationInput}
-                  type="number"
-                  min={MIN_DURATION_MINUTES}
-                  step={5}
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  onKeyDown={onKeyDown}
-                />
-                <span className={durationUnit}>minutes</span>
-              </div>
-            </div>
-          )}
-
-          <div className={footer}>
-            <Button variant="glass" size="sm" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="solid"
-              size="sm"
-              onClick={create}
-              disabled={!canSubmit}
-            >
-              Create
-            </Button>
-          </div>
+          {content}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

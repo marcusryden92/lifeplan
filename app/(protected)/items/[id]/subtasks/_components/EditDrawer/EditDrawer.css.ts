@@ -30,8 +30,8 @@ export const drawer = style({
   minHeight: 0,
   overflow: "auto",
   transition: themeTransition,
-  // Inside the mobile bottom sheet (see drawerSlotOpen) the side-column
-  // chrome comes off; the sheet owns the border and radius.
+  // Inside the mobile BottomSheet the side-column chrome comes off; the
+  // sheet owns the border and radius.
   "@media": {
     [media.mobile]: {
       borderLeft: "none",

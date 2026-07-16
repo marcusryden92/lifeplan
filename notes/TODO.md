@@ -6,8 +6,6 @@
 - Locations view bottom and top padding for mobile and general layout and functionality?
 - "Just this occurence" modals being tailored for mobile as well
 
-- Changing a root goal to task sometimes crashes the engine because the duration is 0
-- Add a link icon to linked subtasks in item subtask view
 
 # P5 — Medium features
 

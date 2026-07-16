@@ -5,11 +5,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import usePopoverPosition from "@/hooks/usePopoverPosition";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { space, popover } from "@/lib/theme";
-import {
-  calendarPopover,
-  calendarPopoverSheet,
-  sheetOverlay,
-} from "./CalendarPopover.css";
+import { BottomSheet } from "@/components/ui";
+import { calendarPopover } from "./CalendarPopover.css";
 
 interface RenderArgs {
   startDrag: (e: React.MouseEvent) => void;
@@ -66,27 +63,45 @@ export function CalendarPopover({
       dimensions: { width: effectiveWidth, height },
       padding: space["4"],
     });
-  // Mobile skips anchored positioning entirely and presents as a bottom
-  // sheet — a floating box anchored to a tiny tile is a desktop idiom.
+  // Mobile skips anchored positioning entirely and presents as the shared
+  // bottom sheet — a floating box anchored to a tiny tile is a desktop idiom.
   const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <BottomSheet
+        open
+        onOpenChange={(next) => {
+          if (!next) (onClickOutside ?? onClose)();
+        }}
+        title={title}
+        hideTitle
+        flush
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => {
+          if (onEscape) {
+            e.preventDefault();
+            onEscape();
+          }
+        }}
+      >
+        {children({ startDrag, close: onClose, isDragging: false })}
+      </BottomSheet>
+    );
+  }
 
   return (
     <Dialog.Root
       open
-      modal={isMobile}
+      modal={false}
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
     >
       <Dialog.Portal>
-        {/* Radix skips the overlay entirely in non-modal (desktop) mode;
-            dismissal on both surfaces runs through pointerDownOutside. */}
-        <Dialog.Overlay className={sheetOverlay} />
         <Dialog.Content
           ref={popoverRef}
-          className={`${popover({ size: "lg" })} ${calendarPopover} ${
-            isMobile ? calendarPopoverSheet : ""
-          }`}
+          className={`${popover({ size: "lg" })} ${calendarPopover}`}
           aria-describedby={undefined}
           onOpenAutoFocus={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => {
@@ -98,17 +113,13 @@ export function CalendarPopover({
           onPointerDownOutside={() => {
             (onClickOutside ?? onClose)();
           }}
-          style={
-            isMobile
-              ? undefined
-              : {
-                  top: `${position.top}px`,
-                  left: `${position.left}px`,
-                  width: `${effectiveWidth}px`,
-                  visibility: isPositioned ? "visible" : "hidden",
-                  cursor: isDragging ? "grabbing" : "auto",
-                }
-          }
+          style={{
+            top: `${position.top}px`,
+            left: `${position.left}px`,
+            width: `${effectiveWidth}px`,
+            visibility: isPositioned ? "visible" : "hidden",
+            cursor: isDragging ? "grabbing" : "auto",
+          }}
         >
           <Dialog.Title style={srOnlyStyle}>{title}</Dialog.Title>
           {children({ startDrag, close: onClose, isDragging })}

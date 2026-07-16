@@ -22,9 +22,11 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useSearch } from "../SearchContext";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import type { RootState } from "@/redux/store";
 import type { Planner, Category, Location } from "@/types/prisma";
 import { Input, Kbd } from "@/components/ui";
+import { BottomSheet } from "../../BottomSheet";
 import {
   overlay,
   dialog,
@@ -88,6 +90,7 @@ function matchScore(haystack: string, needle: string): number {
 export function SearchPalette() {
   const { open, setOpen } = useSearch();
   const router = useRouter();
+  const isMobile = useIsMobile();
   const { planner, categories } = useCalendarProvider();
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
@@ -212,6 +215,95 @@ export function SearchPalette() {
 
   const showEmpty = query.trim().length > 0 && flat.length === 0;
 
+  const content = (
+    <>
+      <div className={inputRow}>
+        <span className={inputIcon} aria-hidden>
+          <Search size={18} strokeWidth={2} />
+        </span>
+        <Input
+          ref={inputRef}
+          variant="bare"
+          className={input}
+          placeholder="Search items, categories, locations…"
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={onKeyDown}
+          aria-label="Search"
+        />
+      </div>
+
+      <div className={scrollArea}>
+        {showEmpty && (
+          <div className={emptyState}>No matches for &ldquo;{query}&rdquo;</div>
+        )}
+        {!showEmpty && query.trim().length === 0 && (
+          <div className={emptyState}>
+            Start typing to search across items, categories, and locations.
+          </div>
+        )}
+        {groups.map((g) => {
+          const startIdx = flat.indexOf(g.results[0]);
+          return (
+            <div key={g.label} className={group}>
+              <div className={groupLabel}>{g.label}</div>
+              {g.results.map((r, j) => {
+                const Icon = r.icon;
+                const idx = startIdx + j;
+                const isActive = idx === activeIndex;
+                return (
+                  <button
+                    key={`${r.kind}-${r.id}`}
+                    type="button"
+                    className={`${item} ${isActive ? itemActive : ""}`}
+                    onMouseEnter={() => setActiveIndex(idx)}
+                    onClick={() => activate(r)}
+                  >
+                    <span className={itemIcon} aria-hidden>
+                      <Icon size={16} strokeWidth={2} />
+                    </span>
+                    <span className={itemBody}>
+                      <span className={itemTitle}>{r.title}</span>
+                      {r.sub && <span className={itemSub}>{r.sub}</span>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className={footer}>
+        <span className={footerHints}>
+          <Kbd keys={["↑", "↓"]} separator="/" instruction="navigate" />
+          <Kbd
+            keys={<CornerDownLeft size={9} strokeWidth={2.4} />}
+            instruction="open"
+          />
+          <Kbd keys="esc" instruction="close" />
+        </span>
+        <span>across items, categories, locations</span>
+      </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <BottomSheet
+        open={open}
+        onOpenChange={setOpen}
+        title="Search"
+        hideTitle
+        flush
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        {content}
+      </BottomSheet>
+    );
+  }
+
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
@@ -224,75 +316,7 @@ export function SearchPalette() {
           <Dialog.Title style={{ position: "absolute", left: -10000 }}>
             Search
           </Dialog.Title>
-          <div className={inputRow}>
-            <span className={inputIcon} aria-hidden>
-              <Search size={18} strokeWidth={2} />
-            </span>
-            <Input
-              ref={inputRef}
-              variant="bare"
-              className={input}
-              placeholder="Search items, categories, locations…"
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={onKeyDown}
-              aria-label="Search"
-            />
-          </div>
-
-          <div className={scrollArea}>
-            {showEmpty && (
-              <div className={emptyState}>No matches for &ldquo;{query}&rdquo;</div>
-            )}
-            {!showEmpty && query.trim().length === 0 && (
-              <div className={emptyState}>
-                Start typing to search across items, categories, and locations.
-              </div>
-            )}
-            {groups.map((g) => {
-              const startIdx = flat.indexOf(g.results[0]);
-              return (
-                <div key={g.label} className={group}>
-                  <div className={groupLabel}>{g.label}</div>
-                  {g.results.map((r, j) => {
-                    const Icon = r.icon;
-                    const idx = startIdx + j;
-                    const isActive = idx === activeIndex;
-                    return (
-                      <button
-                        key={`${r.kind}-${r.id}`}
-                        type="button"
-                        className={`${item} ${isActive ? itemActive : ""}`}
-                        onMouseEnter={() => setActiveIndex(idx)}
-                        onClick={() => activate(r)}
-                      >
-                        <span className={itemIcon} aria-hidden>
-                          <Icon size={16} strokeWidth={2} />
-                        </span>
-                        <span className={itemBody}>
-                          <span className={itemTitle}>{r.title}</span>
-                          {r.sub && <span className={itemSub}>{r.sub}</span>}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
-
-          <div className={footer}>
-            <span className={footerHints}>
-              <Kbd keys={["↑", "↓"]} separator="/" instruction="navigate" />
-              <Kbd
-                keys={<CornerDownLeft size={9} strokeWidth={2.4} />}
-                instruction="open"
-              />
-              <Kbd keys="esc" instruction="close" />
-            </span>
-            <span>across items, categories, locations</span>
-          </div>
+          {content}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

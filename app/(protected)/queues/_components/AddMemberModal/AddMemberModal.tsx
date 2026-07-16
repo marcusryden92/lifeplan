@@ -10,7 +10,8 @@ import {
 import * as Dialog from "@radix-ui/react-dialog";
 import { Search } from "lucide-react";
 import type { Planner, Queue, PlannerDependency } from "@/types/prisma";
-import { Input, TypeBadge } from "@/components/ui";
+import { BottomSheet, Input, TypeBadge } from "@/components/ui";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { plannerIsCompleted } from "@/utils/plannerCompletion";
 import { formatDurationCompact } from "@/utils/timeFormatting";
 import { wouldCreateCycleAddingQueueMember } from "@/utils/precedence/findCycle";
@@ -59,6 +60,7 @@ export function AddMemberModal({
   planner,
   onPick,
 }: AddMemberModalProps) {
+  const isMobile = useIsMobile();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -134,6 +136,70 @@ export function AddMemberModal({
     }
   };
 
+  const content = (
+    <>
+      <div className={inputRow}>
+        <span className={inputIcon} aria-hidden>
+          <Search size={16} strokeWidth={2} />
+        </span>
+        <Input
+          ref={inputRef}
+          variant="bare"
+          className={input}
+          placeholder="Add a task or goal…"
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={onKeyDown}
+          aria-label="Search items to add"
+        />
+      </div>
+
+      <div className={scrollArea}>
+        {candidates.length === 0 ? (
+          <div className={emptyState}>
+            {query.trim()
+              ? `No matches for "${query}"`
+              : "No eligible items — only top-level tasks and goals that aren't already in a queue can be added."}
+          </div>
+        ) : (
+          candidates.map((p, idx) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`${item} ${idx === activeIndex ? itemActive : ""}`}
+              onMouseEnter={() => setActiveIndex(idx)}
+              onClick={() => pick(p.id)}
+            >
+              <TypeBadge size="sm">{p.plannerType}</TypeBadge>
+              <span className={itemTitle}>{p.title || "Untitled"}</span>
+              {p.duration > 0 && (
+                <span className={itemDuration}>
+                  {formatDurationCompact(p.duration)}
+                </span>
+              )}
+            </button>
+          ))
+        )}
+      </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <BottomSheet
+        open={open}
+        onOpenChange={(next) => !next && onClose()}
+        title="Add to queue"
+        hideTitle
+        flush
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        {content}
+      </BottomSheet>
+    );
+  }
+
   return (
     <Dialog.Root open={open} onOpenChange={(next) => !next && onClose()}>
       <Dialog.Portal>
@@ -146,50 +212,7 @@ export function AddMemberModal({
           <Dialog.Title style={{ position: "absolute", left: -10000 }}>
             Add to queue
           </Dialog.Title>
-          <div className={inputRow}>
-            <span className={inputIcon} aria-hidden>
-              <Search size={16} strokeWidth={2} />
-            </span>
-            <Input
-              ref={inputRef}
-              variant="bare"
-              className={input}
-              placeholder="Add a task or goal…"
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={onKeyDown}
-              aria-label="Search items to add"
-            />
-          </div>
-
-          <div className={scrollArea}>
-            {candidates.length === 0 ? (
-              <div className={emptyState}>
-                {query.trim()
-                  ? `No matches for "${query}"`
-                  : "No eligible items — only top-level tasks and goals that aren't already in a queue can be added."}
-              </div>
-            ) : (
-              candidates.map((p, idx) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={`${item} ${idx === activeIndex ? itemActive : ""}`}
-                  onMouseEnter={() => setActiveIndex(idx)}
-                  onClick={() => pick(p.id)}
-                >
-                  <TypeBadge size="sm">{p.plannerType}</TypeBadge>
-                  <span className={itemTitle}>{p.title || "Untitled"}</span>
-                  {p.duration > 0 && (
-                    <span className={itemDuration}>
-                      {formatDurationCompact(p.duration)}
-                    </span>
-                  )}
-                </button>
-              ))
-            )}
-          </div>
+          {content}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

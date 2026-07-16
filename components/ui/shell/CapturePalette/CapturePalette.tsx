@@ -13,13 +13,22 @@ import { Input } from "../../Input";
 import { Kbd } from "../../Kbd";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { usePlatform } from "@/hooks/usePlatform";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { PRIORITY_DEFAULT } from "@/utils/plannerPriority";
 import type { Planner } from "@/types/prisma";
-import { overlay, dialog, header, hintsRow } from "./CapturePalette.css";
+import { BottomSheet } from "../../BottomSheet";
+import {
+  overlay,
+  dialog,
+  header,
+  hintsRow,
+  sheetStack,
+} from "./CapturePalette.css";
 
 export function CapturePalette() {
   const { open, setOpen } = useCapture();
   const { modKey } = usePlatform();
+  const isMobile = useIsMobile();
   const router = useRouter();
   const { userId, updatePlannerArray } = useCalendarProvider();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +107,70 @@ export function CapturePalette() {
 
   const canSubmit = value.trim().length > 0;
 
+  const content = (
+    <>
+      <div className={header}>
+        <Caption>capture · jot · classify later</Caption>
+      </div>
+      <Input
+        ref={inputRef}
+        variant="underline"
+        placeholder="jot anything…"
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={onKeyDown}
+      />
+      <div className={hintsRow} style={{ justifyContent: "flex-end" }}>
+        <Button variant="glass" size="sm" onClick={() => setOpen(false)}>
+          Cancel
+          <Kbd keys="esc" style={{ marginLeft: space["2"] }} />
+        </Button>
+        <Button
+          variant="glass"
+          size="sm"
+          onClick={saveAndTriage}
+          disabled={!canSubmit}
+        >
+          Save & triage
+          <Kbd
+            keys={[
+              modKey,
+              <CornerDownLeft key="return" size={11} strokeWidth={2.4} />,
+            ]}
+            style={{ marginLeft: space["2"] }}
+          />
+        </Button>
+        <Button
+          variant="glassInk"
+          size="sm"
+          onClick={saveToInbox}
+          disabled={!canSubmit}
+        >
+          Save
+          <Kbd
+            keys={<CornerDownLeft size={11} strokeWidth={2.4} />}
+            style={{ marginLeft: space["2"] }}
+          />
+        </Button>
+      </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <BottomSheet
+        open={open}
+        onOpenChange={setOpen}
+        title="Capture"
+        hideTitle
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className={sheetStack}>{content}</div>
+      </BottomSheet>
+    );
+  }
+
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
@@ -107,54 +180,10 @@ export function CapturePalette() {
           aria-describedby={undefined}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <div className={header}>
-            <Caption>capture · jot · classify later</Caption>
-          </div>
           <Dialog.Title style={{ position: "absolute", left: -10000 }}>
             Capture
           </Dialog.Title>
-          <Input
-            ref={inputRef}
-            variant="underline"
-            placeholder="jot anything…"
-            type="text"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={onKeyDown}
-          />
-          <div className={hintsRow} style={{ justifyContent: "flex-end" }}>
-            <Button variant="glass" size="sm" onClick={() => setOpen(false)}>
-              Cancel
-              <Kbd keys="esc" style={{ marginLeft: space["2"] }} />
-            </Button>
-            <Button
-              variant="glass"
-              size="sm"
-              onClick={saveAndTriage}
-              disabled={!canSubmit}
-            >
-              Save & triage
-              <Kbd
-                keys={[
-                  modKey,
-                  <CornerDownLeft key="return" size={11} strokeWidth={2.4} />,
-                ]}
-                style={{ marginLeft: space["2"] }}
-              />
-            </Button>
-            <Button
-              variant="glassInk"
-              size="sm"
-              onClick={saveToInbox}
-              disabled={!canSubmit}
-            >
-              Save
-              <Kbd
-                keys={<CornerDownLeft size={11} strokeWidth={2.4} />}
-                style={{ marginLeft: space["2"] }}
-              />
-            </Button>
-          </div>
+          {content}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

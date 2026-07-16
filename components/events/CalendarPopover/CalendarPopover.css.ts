@@ -1,4 +1,4 @@
-﻿import { style, keyframes } from "@vanilla-extract/css";
+﻿import { style } from "@vanilla-extract/css";
 import {
   space,
   vars,
@@ -9,24 +9,13 @@ import {
   text,
   iconBtn,
   media,
-  backdropFilters,
-  DURATIONS,
   fieldLabel,
 } from "@/lib/theme";
 
-const fadeIn = keyframes({
-  from: { opacity: 0 },
-  to: { opacity: 1 },
-});
-
-const sheetUp = keyframes({
-  from: { transform: "translateY(100%)" },
-  to: { transform: "translateY(0)" },
-});
-
 // Layout-only â€” the popover() recipe owns the glass surface (fill, blur,
 // stroke, shadow, radius). This file adds the calendar-popover-specific
-// positioning, sizing limits, font, and viewport guards.
+// positioning, sizing limits, font, and viewport guards. Mobile presents
+// through the shared BottomSheet instead of this anchored box.
 export const calendarPopover = style({
   position: "fixed",
   maxWidth: "calc(100vw - 20px)",
@@ -35,36 +24,6 @@ export const calendarPopover = style({
   overflow: "hidden",
   fontFamily: vars.font.ui,
   color: vars.ink,
-});
-
-// Mobile presentation: a bottom sheet instead of an anchored floating box.
-// Applied alongside calendarPopover when the component detects mobile (the
-// anchored inline top/left/width are skipped there, so these win).
-export const calendarPopoverSheet = style({
-  left: 0,
-  right: 0,
-  bottom: 0,
-  top: "auto",
-  width: "auto",
-  maxWidth: "100vw",
-  maxHeight: ["75vh", "75dvh"],
-  overflowY: "auto",
-  borderBottomLeftRadius: 0,
-  borderBottomRightRadius: 0,
-  paddingBottom: "env(safe-area-inset-bottom, 0px)",
-  animation: `${sheetUp} ${DURATIONS.modal}s ease`,
-});
-
-// Radix renders no overlay in non-modal mode, so this only materializes on
-// mobile where the dialog is modal — dimming the calendar behind the sheet.
-export const sheetOverlay = style({
-  position: "fixed",
-  inset: 0,
-  zIndex: 49,
-  background: vars.overlay,
-  backdropFilter: backdropFilters.palette,
-  WebkitBackdropFilter: backdropFilters.palette,
-  animation: `${fadeIn} ${DURATIONS.modal}s ease`,
 });
 
 export const header = style({
