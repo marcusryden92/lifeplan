@@ -23,6 +23,13 @@ export const page = style({
       flex: "0 0 auto",
       minHeight: "auto",
     },
+    // A landscape phone is short, not narrow — the portrait block-and-scroll
+    // treatment would make the canvas taller than the viewport, so keep the
+    // desktop fill layout.
+    [media.landscapePhone]: {
+      flex: 1,
+      minHeight: 0,
+    },
   },
 });
 
@@ -231,6 +238,10 @@ export const canvasCard = style({
       borderRadius: 0,
       borderLeftWidth: 0,
       borderRightWidth: 0,
+    },
+    [media.landscapePhone]: {
+      margin: 0,
+      minHeight: 0,
     },
   },
 });

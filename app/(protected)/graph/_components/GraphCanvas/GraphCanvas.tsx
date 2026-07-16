@@ -18,8 +18,16 @@ import { describeCycle } from "@/utils/precedence/describeCycle";
 import type { PrecedenceEdge } from "@/utils/precedence/types";
 import { formatDurationCompact } from "@/utils/timeFormatting";
 import {
+  useCanvasGestures,
+  pinchZoomDelta,
+  type CanvasGesturePoint,
+  type CanvasPinchInfo,
+} from "@/hooks/useCanvasGestures";
+import {
   buildGraphTicks,
   bandRootHeight,
+  ZOOM_MIN_PX_PER_DAY,
+  ZOOM_MAX_PX_PER_DAY,
   type GraphLayout,
   type GraphTickUnit,
   type GraphTickUnits,
@@ -54,6 +62,7 @@ import {
   nodeNameBadge,
   nodeNameBadgeTitle,
   nodeNameBadgeMeta,
+  nodeBadgeOpen,
   linkHandleOut,
   linkHandleIn,
   linkReasonChip,
@@ -137,6 +146,7 @@ type GraphCanvasProps = {
   ) => void;
   onLinkRefused: (message: string) => void;
   hoverLabels: boolean;
+  touch?: boolean;
   onZoomDelta: (delta: number) => void;
   onFitWeek: (viewportWidth: number) => void;
 };
@@ -145,6 +155,8 @@ type GraphCanvasProps = {
 const TITLE_MIN_WIDTH = 40;
 const TITLE_TIGHT_PAD_WIDTH = 72;
 const INITIAL_MIN_NODE_HEIGHT = 22;
+
+const GRAPH_LOG_RANGE = Math.log(ZOOM_MAX_PX_PER_DAY / ZOOM_MIN_PX_PER_DAY);
 
 const TICK_LINE_OPACITY: Record<GraphTickUnit, number> = {
   month: 0.9,
@@ -200,6 +212,7 @@ export function GraphCanvas({
   onReorderMember,
   onLinkRefused,
   hoverLabels,
+  touch = false,
   onZoomDelta,
   onFitWeek,
 }: GraphCanvasProps) {
@@ -225,6 +238,11 @@ export function GraphCanvas({
   const dragOverRef = useRef<ReorderTarget | null>(null);
   const didReorderDragRef = useRef(false);
   const reorderTeardownRef = useRef<(() => void) | null>(null);
+  const touchReorderRef = useRef<{
+    draggedId: string;
+    laneKey: string;
+    grabX: number;
+  } | null>(null);
   const [viewportHeight, setViewportHeight] = useState(0);
 
   // Zoom pivots on a fixed anchor: the cursor for ctrl+wheel, else the
@@ -483,6 +501,69 @@ export function GraphCanvas({
     return null;
   };
 
+  // Like hitTestNode but keeps which leaf was hit (touch tap-to-select reveals
+  // that specific pill's link handles, which live on the leaf in leaf view).
+  const hitTestNodeLeaf = (
+    x: number,
+    y: number,
+  ): { root: LaidNode; leafId: string | null } | null => {
+    for (const laid of layout.nodeById.values()) {
+      if (
+        x >= laid.x &&
+        x <= laid.x + laid.w &&
+        y >= laid.y &&
+        y <= laid.y + nodeH
+      ) {
+        return { root: laid, leafId: null };
+      }
+      for (const leaf of laid.leaves) {
+        if (
+          x >= leaf.x &&
+          x <= leaf.x + leaf.w &&
+          y >= leaf.y &&
+          y <= leaf.y + nodeH
+        ) {
+          return { root: laid, leafId: leaf.leaf.id };
+        }
+      }
+    }
+    return null;
+  };
+
+  const laneForNode = (id: string): LaidLane | null =>
+    layoutRef.current.lanes.find(
+      (l) => !!l.lane.queue && l.nodes.some((n) => n.node.id === id),
+    ) ?? null;
+
+  // The lane member under content-x, or null if none — shared by the mouse
+  // reorder drag and the touch long-press reorder.
+  const findReorderTarget = (
+    laneKey: string,
+    x: number,
+    draggedId: string,
+  ): ReorderTarget | null => {
+    const laidLane = layoutRef.current.lanes.find(
+      (l) => l.lane.key === laneKey,
+    );
+    if (!laidLane) return null;
+    for (const candidate of laidLane.nodes) {
+      if (candidate.node.id === draggedId) continue;
+      if (x < candidate.x || x > candidate.x + candidate.w) continue;
+      return {
+        id: candidate.node.id,
+        zone: x < candidate.x + candidate.w / 2 ? "before" : "after",
+      };
+    }
+    return null;
+  };
+
+  const contentPointFromLocal = (pt: CanvasGesturePoint) => {
+    const el = scrollerRef.current;
+    if (!el) return { x: 0, y: 0 };
+    const rect = el.getBoundingClientRect();
+    return toContentPoint({ clientX: pt.x + rect.left, clientY: pt.y + rect.top });
+  };
+
   // Right handle: source becomes the predecessor; left handle: the target does.
   const orderEndpoints = (
     sourceId: string,
@@ -720,6 +801,8 @@ export function GraphCanvas({
     draggedId: string,
     laneKey: string,
   ) => {
+    // Touch drives reorder through the gesture recognizer (long-press to grab).
+    if (touch) return;
     if (e.button !== 0 || linkDrag) return;
     if (reorderRef.current?.phase === "drag") return;
     const contentEl = contentRef.current;
@@ -746,21 +829,8 @@ export function GraphCanvas({
         }
       }
       // Keep the last target while over the grabbed node's own slot or a gap.
-      let over = dragOverRef.current;
-      const laidLane = layoutRef.current.lanes.find(
-        (l) => l.lane.key === laneKey,
-      );
-      if (laidLane) {
-        for (const candidate of laidLane.nodes) {
-          if (candidate.node.id === draggedId) continue;
-          if (x < candidate.x || x > candidate.x + candidate.w) continue;
-          over = {
-            id: candidate.node.id,
-            zone: x < candidate.x + candidate.w / 2 ? "before" : "after",
-          };
-          break;
-        }
-      }
+      const found = findReorderTarget(laneKey, x, draggedId);
+      const over = found ?? dragOverRef.current;
       applyReorder({ id: draggedId, laneKey, dx, phase: "drag" }, over);
     };
 
@@ -809,6 +879,104 @@ export function GraphCanvas({
       passive: true,
     });
   };
+
+  // A tap selects the node under it — revealing its link handles and the
+  // inspect badge — or clears selection on empty space. Navigation is via the
+  // badge's Open action, so a low-zoom tap never opens the item blind.
+  const handleTouchTap = (pt: CanvasGesturePoint) => {
+    const cp = contentPointFromLocal(pt);
+    const hit = hitTestNodeLeaf(cp.x, cp.y);
+    if (!hit) {
+      setHovered(null);
+      setSelectedEdgeId(null);
+      return;
+    }
+    setHovered({ rootId: hit.root.node.id, leafId: hit.leafId });
+    setHoverX(cp.x);
+  };
+
+  // Long-press grabs a queue member for reordering; on a non-draggable node it
+  // falls back to selecting (so the gesture never feels dead).
+  const handleTouchLongPress = (pt: CanvasGesturePoint) => {
+    const cp = contentPointFromLocal(pt);
+    const hit = hitTestNodeLeaf(cp.x, cp.y);
+    if (!hit) return;
+    const lane = laneForNode(hit.root.node.id);
+    if (lane && !hit.root.node.completed) {
+      touchReorderRef.current = {
+        draggedId: hit.root.node.id,
+        laneKey: lane.lane.key,
+        grabX: cp.x,
+      };
+      didReorderDragRef.current = true;
+      applyReorder(
+        { id: hit.root.node.id, laneKey: lane.lane.key, dx: 0, phase: "drag" },
+        null,
+      );
+    } else {
+      setHovered({ rootId: hit.root.node.id, leafId: hit.leafId });
+      setHoverX(cp.x);
+    }
+  };
+
+  const handleTouchDragMove = (
+    dx: number,
+    dy: number,
+    pt: CanvasGesturePoint,
+  ) => {
+    const active = touchReorderRef.current;
+    if (active) {
+      const cp = contentPointFromLocal(pt);
+      const over =
+        findReorderTarget(active.laneKey, cp.x, active.draggedId) ??
+        dragOverRef.current;
+      applyReorder(
+        {
+          id: active.draggedId,
+          laneKey: active.laneKey,
+          dx: cp.x - active.grabX,
+          phase: "drag",
+        },
+        over,
+      );
+      return;
+    }
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollLeft -= dx;
+    el.scrollTop -= dy;
+  };
+
+  const handleTouchDragEnd = () => {
+    if (!touchReorderRef.current) return;
+    touchReorderRef.current = null;
+    commitReorder();
+    window.setTimeout(() => {
+      didReorderDragRef.current = false;
+    }, 0);
+  };
+
+  const handleTouchPinch = ({ scaleFactor, centroid }: CanvasPinchInfo) => {
+    zoomAnchorRef.current = centroid.x;
+    onZoomDeltaRef.current(pinchZoomDelta(scaleFactor, GRAPH_LOG_RANGE));
+  };
+
+  // Drop the anchor so a clamped pinch at the zoom extremes doesn't leak its
+  // centroid into a later slider zoom (the pxPerDay effect only clears it when
+  // the zoom actually changes).
+  const handleTouchPinchEnd = () => {
+    zoomAnchorRef.current = null;
+  };
+
+  useCanvasGestures(scrollerRef, {
+    enabled: touch,
+    onTap: handleTouchTap,
+    onLongPress: handleTouchLongPress,
+    onDragMove: handleTouchDragMove,
+    onDragEnd: handleTouchDragEnd,
+    onPinch: handleTouchPinch,
+    onPinchEnd: handleTouchPinchEnd,
+  });
 
   const hoverMeta = (
     laid: LaidNode,
@@ -882,6 +1050,9 @@ export function GraphCanvas({
     const docked = !opts.leaf && opts.rootLaid.docked;
     const title = row.title || "Untitled";
     const leafId = opts.leaf?.leaf.id ?? null;
+    // Touch: a tap-selected pill reveals its (enlarged) link handles.
+    const selected =
+      touch && hovered?.rootId === rootId && hovered?.leafId === leafId;
     const pillH = opts.compact ? rootH : nodeH;
     const showInlineTitle = opts.compact || opts.rect.w >= TITLE_MIN_WIDTH;
     const showInitial =
@@ -912,6 +1083,7 @@ export function GraphCanvas({
         data-draggable={opts.draggable || undefined}
         data-drag-active={opts.dragActive || undefined}
         data-settling={opts.settling || undefined}
+        data-selected={selected || undefined}
         data-link-target={
           linkDrag?.targetId === rootId
             ? linkDrag.valid
@@ -925,7 +1097,10 @@ export function GraphCanvas({
             : undefined
         }
         onClickCapture={(e) => {
-          if (didReorderDragRef.current) {
+          // On touch a pill tap selects (via the gesture recognizer); the Link
+          // must not also navigate. On desktop, only a completed reorder drag
+          // suppresses the click.
+          if (touch || didReorderDragRef.current) {
             e.preventDefault();
             e.stopPropagation();
           }
@@ -979,6 +1154,7 @@ export function GraphCanvas({
             <button
               type="button"
               className={linkHandleIn}
+              data-gesture-skip
               aria-label={`Schedule "${title}" after another item — drag to it`}
               onPointerDown={(e) =>
                 beginLink(e, rootId, "backward", {
@@ -997,6 +1173,7 @@ export function GraphCanvas({
             <button
               type="button"
               className={linkHandleOut}
+              data-gesture-skip
               aria-label={`Schedule another item after "${title}" — drag to it`}
               onPointerDown={(e) =>
                 beginLink(e, rootId, "forward", {
@@ -1121,7 +1298,7 @@ export function GraphCanvas({
   };
 
   const hoveredLaid =
-    hoverLabels && hovered && !linkDrag && !reorder
+    (hoverLabels || touch) && hovered && !linkDrag && !reorder
       ? (layout.nodeById.get(hovered.rootId) ?? null)
       : null;
   const hoveredLeaf =
@@ -1172,6 +1349,7 @@ export function GraphCanvas({
       ref={scrollerRef}
       className={scroller}
       data-reordering={reorder?.phase === "drag" || undefined}
+      data-touch={touch || undefined}
       onClick={() => setSelectedEdgeId(null)}
     >
       <div className={axis} style={{ width: layout.width }}>
@@ -1351,7 +1529,7 @@ export function GraphCanvas({
                   className={edgeHit}
                   style={{
                     stroke: "transparent",
-                    strokeWidth: 14,
+                    strokeWidth: touch ? 26 : 14,
                     fill: "none",
                   }}
                   onClick={(e) => {
@@ -1424,6 +1602,15 @@ export function GraphCanvas({
             <span className={nodeNameBadgeMeta}>
               {hoverMeta(hoveredLaid, hoveredLeaf)}
             </span>
+            {touch && hovered && (
+              <Link
+                href={`/items/${hovered.leafId ?? hovered.rootId}`}
+                className={nodeBadgeOpen}
+                data-gesture-skip
+              >
+                Open →
+              </Link>
+            )}
           </span>
         )}
 

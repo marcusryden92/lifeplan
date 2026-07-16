@@ -82,15 +82,56 @@ export const breakpoints = {
   laptop: 1279,
 } as const;
 
+// 599 is the phone/tablet divider on the device's SMALLER dimension
+// (Android's 600dp convention): width in portrait, height in landscape.
+const phoneDivider = 599;
+const touchDevice = "(hover: none) and (pointer: coarse)";
+
+// A phone held sideways is ~800–930px wide — squarely in the tablet width
+// band — so pure width queries misread it as a desktop viewport. It is a
+// touch device whose height (the smaller dimension in landscape) is at or
+// under the phone divider.
+const landscapePhone = `screen and ${touchDevice} and (orientation: landscape) and (max-height: ${phoneDivider}px)`;
+
+// The *Up queries must exclude a landscape phone. The exclusion is written
+// as a query list negating one landscapePhone feature per clause (rather
+// than a media-level `not`) so every clause parses on pre-MQ4 engines and
+// a failed clause degrades alone instead of killing the whole query.
+const notLandscapePhoneClauses = [
+  "(hover: hover)",
+  "(pointer: fine)",
+  "(orientation: portrait)",
+  `(min-height: ${phoneDivider + 1}px)`,
+];
+const minWidthUnlessLandscapePhone = (px: number) =>
+  notLandscapePhoneClauses
+    .map((clause) => `screen and (min-width: ${px}px) and ${clause}`)
+    .join(", ");
+
 // Prebuilt media query strings. Use inside `@media` keys in vanilla-extract
 // style() blocks: `"@media": { [media.mobile]: { ... } }`.
+// `mobile` means "narrow viewport OR landscape phone" — the phone UI follows
+// the device through rotation instead of flipping to desktop; the *Up
+// queries exclude the landscape phone symmetrically. `tablet`/`laptop`
+// carry the same OR clause only so the mobile ⊂ tablet ⊂ laptop containment
+// holds by construction. `touch` keys on pointer capability alone — it
+// drives the interaction model (gestures, sheets, hit targets) on all touch
+// devices, tablets included. `portraitPhone` gates canvas surfaces that
+// require landscape (graph, mindmap): in portrait the width IS the smaller
+// dimension, same divider, so tablets are exempt. `landscapePhone` is for
+// the rare mobile style whose portrait treatment assumes a TALL viewport
+// (e.g. a fixed-height canvas block) — key the correction on it AFTER the
+// mobile block; within one style object, later `@media` keys win.
 export const media = {
-  mobile: `screen and (max-width: ${breakpoints.mobile}px)`,
-  tablet: `screen and (max-width: ${breakpoints.tablet}px)`,
-  laptop: `screen and (max-width: ${breakpoints.laptop}px)`,
-  tabletUp: `screen and (min-width: ${breakpoints.mobile + 1}px)`,
-  desktopUp: `screen and (min-width: ${breakpoints.tablet + 1}px)`,
-  wideUp: `screen and (min-width: ${breakpoints.laptop + 1}px)`,
+  mobile: `screen and (max-width: ${breakpoints.mobile}px), ${landscapePhone}`,
+  tablet: `screen and (max-width: ${breakpoints.tablet}px), ${landscapePhone}`,
+  laptop: `screen and (max-width: ${breakpoints.laptop}px), ${landscapePhone}`,
+  tabletUp: minWidthUnlessLandscapePhone(breakpoints.mobile + 1),
+  desktopUp: minWidthUnlessLandscapePhone(breakpoints.tablet + 1),
+  wideUp: minWidthUnlessLandscapePhone(breakpoints.laptop + 1),
+  touch: `screen and ${touchDevice}`,
+  portraitPhone: `screen and ${touchDevice} and (orientation: portrait) and (max-width: ${phoneDivider}px)`,
+  landscapePhone,
 } as const;
 
 // Border-width scale. `hairline` is the app's default 1px rule (85+ uses);

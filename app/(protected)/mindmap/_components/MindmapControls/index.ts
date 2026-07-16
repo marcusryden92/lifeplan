@@ -1,1 +1,1 @@
-export { MindmapControls } from "./MindmapControls";
+export { MindmapControls, MindmapControlsBody } from "./MindmapControls";

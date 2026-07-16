@@ -8,7 +8,7 @@ import { Settings, Moon, Sun, LogOut } from "lucide-react";
 import { useShellOverlayOpen } from "../ShellOverlayContext";
 import { useTheme } from "../../ThemeProvider";
 import { BottomSheet } from "../../BottomSheet";
-import { MOBILE_TABS } from "../nav";
+import { MOBILE_TABS, NAV_ITEMS } from "../nav";
 import {
   tabBar,
   tab,
@@ -19,9 +19,18 @@ import {
   captureTabWrapper,
   captureButton,
   sheetItem,
+  sheetItemActive,
   sheetItemDanger,
   sheetItemIcon,
+  sheetDivider,
 } from "./MobileTabs.css";
+
+// Desktop routes with no bottom-tab of their own — surfaced in the More sheet
+// so the whole app is reachable below the tablet breakpoint.
+const MORE_ROUTES = NAV_ITEMS.filter(
+  (item) =>
+    item.href !== null && !MOBILE_TABS.some((t) => t.key === item.key),
+);
 
 export function MobileTabs() {
   const pathname = usePathname() ?? "";
@@ -103,6 +112,27 @@ export function MobileTabs() {
       </nav>
 
       <BottomSheet open={moreOpen} onOpenChange={setMoreOpen} title="More">
+        {MORE_ROUTES.map((item) => {
+          const Icon = item.icon;
+          const href = item.href as string;
+          const isActive =
+            pathname === href || pathname.startsWith(`${href}/`);
+          return (
+            <Link
+              key={item.key}
+              href={href}
+              className={`${sheetItem} ${isActive ? sheetItemActive : ""}`}
+              aria-current={isActive ? "page" : undefined}
+              onClick={() => setMoreOpen(false)}
+            >
+              <span className={sheetItemIcon}>
+                <Icon size={18} strokeWidth={2} aria-hidden />
+              </span>
+              {item.label}
+            </Link>
+          );
+        })}
+        <hr className={sheetDivider} />
         <button type="button" className={sheetItem} onClick={goSettings}>
           <span className={sheetItemIcon}>
             <Settings size={18} strokeWidth={2} aria-hidden />

@@ -2,9 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
-import { Kbd, Loader, Switch, useTheme } from "@/components/ui";
+import { Sliders } from "lucide-react";
+import {
+  BottomSheet,
+  Kbd,
+  Loader,
+  RotateToLandscape,
+  Switch,
+  useTheme,
+} from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { usePlatform } from "@/hooks/usePlatform";
+import { useCoarsePointer } from "@/hooks/useCoarsePointer";
+import { usePortraitPhone } from "@/hooks/usePortraitPhone";
 import type { RootState } from "@/redux/store";
 import { plannerIsCompleted } from "@/utils/plannerCompletion";
 import {
@@ -17,7 +27,10 @@ import {
   type MindmapLayoutOptions,
 } from "./_lib/mindmapModel";
 import { MindmapCanvas } from "./_components/MindmapCanvas";
-import { MindmapControls } from "./_components/MindmapControls";
+import {
+  MindmapControls,
+  MindmapControlsBody,
+} from "./_components/MindmapControls";
 import {
   page,
   subHeader,
@@ -34,6 +47,7 @@ import {
   legendKeys,
   canvasCard,
   emptyMain,
+  mobileSettingsButton,
 } from "./page.css";
 
 const DEFAULT_ZOOM = 46;
@@ -47,8 +61,11 @@ export default function MindmapPage() {
   const user = useSelector((state: RootState) => state.user.user);
   const { dark } = useTheme();
   const { modKey } = usePlatform();
+  const coarsePointer = useCoarsePointer();
+  const portraitPhone = usePortraitPhone();
 
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [hideEmpty, setHideEmpty] = useState(false);
   const [showLeaves, setShowLeaves] = useState(false);
@@ -207,13 +224,23 @@ export default function MindmapPage() {
       <div className={legendRow}>
         <span>Your roles and everything you&rsquo;re working on, organized.</span>
         <span className={legendKeys}>
-          <Kbd keys="Drag" instruction="pan" />
-          <Kbd keys={[modKey, "Scroll"]} instruction="zoom" />
+          {coarsePointer ? (
+            <span>Pinch to zoom · Tap to focus · Tap Open to navigate</span>
+          ) : (
+            <>
+              <Kbd keys="Drag" instruction="pan" />
+              <Kbd keys={[modKey, "Scroll"]} instruction="zoom" />
+            </>
+          )}
         </span>
       </div>
 
       <div className={canvasCard}>
-        {!isLoaded ? (
+        {portraitPhone ? (
+          <RotateToLandscape>
+            The map branches out sideways — it needs landscape to breathe.
+          </RotateToLandscape>
+        ) : !isLoaded ? (
           <div className={emptyMain}>
             <Loader size="md" label="Loading mindmap" />
           </div>
@@ -229,13 +256,38 @@ export default function MindmapPage() {
               layout={layout}
               scale={scale}
               refitToken={layoutOptions.layout}
+              touch={coarsePointer}
               onZoomDelta={handleZoomDelta}
               onFit={handleFit}
             />
-            <MindmapControls
-              options={layoutOptions}
-              onChange={patchLayoutOptions}
-            />
+            {coarsePointer ? (
+              <>
+                <button
+                  type="button"
+                  className={mobileSettingsButton}
+                  onClick={() => setSettingsOpen(true)}
+                  aria-label="Layout settings"
+                >
+                  <Sliders size={15} strokeWidth={2} aria-hidden />
+                  Layout
+                </button>
+                <BottomSheet
+                  open={settingsOpen}
+                  onOpenChange={setSettingsOpen}
+                  title="Layout settings"
+                >
+                  <MindmapControlsBody
+                    options={layoutOptions}
+                    onChange={patchLayoutOptions}
+                  />
+                </BottomSheet>
+              </>
+            ) : (
+              <MindmapControls
+                options={layoutOptions}
+                onChange={patchLayoutOptions}
+              />
+            )}
           </>
         )}
       </div>

@@ -1,16 +1,34 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import { useTheme, vars } from "@/components/ui";
+import {
+  useCanvasGestures,
+  pinchZoomDelta,
+  type CanvasGesturePoint,
+  type CanvasPinchInfo,
+} from "@/hooks/useCanvasGestures";
 import type {
   MindmapKind,
   MindmapLaidNode,
   MindmapLayout,
 } from "../../_lib/mindmapModel";
 import {
+  MINDMAP_ZOOM_MIN_SCALE,
+  MINDMAP_ZOOM_MAX_SCALE,
+} from "../../_lib/mindmapModel";
+import {
   container as containerClass,
   canvas as canvasClass,
+  openChip as openChipClass,
 } from "./MindmapCanvas.css";
 
 type MindmapCanvasProps = {
@@ -18,12 +36,18 @@ type MindmapCanvasProps = {
   scale: number;
   // Bumped by the page when the layout mode switches, to re-center and refit.
   refitToken?: string | number;
+  // Touch mode (mobile): the gesture recognizer owns pan/pinch/tap instead of
+  // the mouse pan + hover focus.
+  touch?: boolean;
   onZoomDelta: (delta: number) => void;
   onFit: (viewportWidth: number, viewportHeight: number) => void;
 };
 
 const TAU = Math.PI * 2;
 const MAX_DPR = 2;
+const MINDMAP_LOG_RANGE = Math.log(
+  MINDMAP_ZOOM_MAX_SCALE / MINDMAP_ZOOM_MIN_SCALE,
+);
 
 // Hovering a branch (connector) focuses it like hovering the node it feeds,
 // within this screen-space tolerance. Sampled coarsely — plenty for hover.
@@ -277,6 +301,7 @@ export function MindmapCanvas({
   layout,
   scale,
   refitToken,
+  touch = false,
   onZoomDelta,
   onFit,
 }: MindmapCanvasProps) {
@@ -288,6 +313,11 @@ export function MindmapCanvas({
   const measureRef = useRef<CanvasRenderingContext2D | null>(null);
 
   const [colors, setColors] = useState<Colors | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const selectedNodeIdRef = useRef<string | null>(null);
+  selectedNodeIdRef.current = selectedNodeId;
+  const chipRef = useRef<HTMLButtonElement>(null);
+  const selectedDrawNodeRef = useRef<DrawNode | null>(null);
 
   const panRef = useRef({ x: 0, y: 0 });
   const scaleRef = useRef(scale);
@@ -328,6 +358,19 @@ export function MindmapCanvas({
     return mctx ? buildDrawList(layout, colors, mctx) : null;
   }, [layout, colors]);
   drawListRef.current = drawList;
+
+  // The Open chip tracks its node through pan/zoom: projected world->screen
+  // each frame, offset just past the node's right edge and vertically centred.
+  const positionChip = useCallback(() => {
+    const chip = chipRef.current;
+    const sel = selectedDrawNodeRef.current;
+    if (!chip || !sel) return;
+    const s = scaleRef.current;
+    const pan = panRef.current;
+    const sx = (sel.x + sel.w) * s + pan.x;
+    const sy = sel.cy * s + pan.y;
+    chip.style.transform = `translate(${Math.round(sx + 8)}px, ${Math.round(sy)}px) translateY(-50%)`;
+  }, []);
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -415,7 +458,8 @@ export function MindmapCanvas({
       }
     }
     ctx.globalAlpha = 1;
-  }, []);
+    positionChip();
+  }, [positionChip]);
 
   const scheduleDraw = useCallback(() => {
     if (rafRef.current) return;
@@ -580,6 +624,7 @@ export function MindmapCanvas({
     cancelClearTimer();
     hoverIdRef.current = null;
     focusRef.current = null;
+    setSelectedNodeId(null);
     scheduleDraw();
   }, [drawList, cancelClearTimer, scheduleDraw]);
 
@@ -732,6 +777,8 @@ export function MindmapCanvas({
 
   const handleHover = useCallback(
     (e: React.PointerEvent) => {
+      // Touch never hovers — the tap handler owns focus on mobile.
+      if (e.pointerType === "touch") return;
       if (isPanningRef.current) return;
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -772,6 +819,8 @@ export function MindmapCanvas({
   const beginPan = useCallback(
     (e: React.PointerEvent) => {
       if (e.button !== 0) return;
+      // On touch, the gesture recognizer owns pan/tap; mouse still pans here.
+      if (touch && e.pointerType === "touch") return;
       const host = containerRef.current;
       if (!host) return;
       const startX = e.clientX;
@@ -824,8 +873,72 @@ export function MindmapCanvas({
       window.addEventListener("pointerup", onUp);
       window.addEventListener("pointercancel", onCancel);
     },
-    [scheduleDraw, hitTest, router],
+    [scheduleDraw, hitTest, router, touch],
   );
+
+  const handleTouchPan = useCallback(
+    (dx: number, dy: number) => {
+      panRef.current = { x: panRef.current.x + dx, y: panRef.current.y + dy };
+      scheduleDraw();
+    },
+    [scheduleDraw],
+  );
+
+  // A tap focuses the tapped node's lineage and, for a node that opens
+  // somewhere, surfaces the Open chip; a second tap on the same node (or the
+  // chip) navigates. A tap on empty space clears the selection.
+  const handleTouchTap = useCallback(
+    (pt: CanvasGesturePoint) => {
+      const hit = hitTest(pt.x, pt.y);
+      if (!hit) {
+        if (selectedNodeIdRef.current !== null) setSelectedNodeId(null);
+        hoverIdRef.current = null;
+        focusRef.current = null;
+        scheduleDraw();
+        return;
+      }
+      if (hit.href && selectedNodeIdRef.current === hit.id) {
+        router.push(hit.href);
+        return;
+      }
+      hoverIdRef.current = hit.id;
+      focusRef.current = computeFocus(hit.id);
+      setSelectedNodeId(hit.id);
+      scheduleDraw();
+    },
+    [hitTest, computeFocus, scheduleDraw, router],
+  );
+
+  const handleTouchPinch = useCallback(({ scaleFactor, centroid }: CanvasPinchInfo) => {
+    pivotRef.current = centroid;
+    onZoomDeltaRef.current(pinchZoomDelta(scaleFactor, MINDMAP_LOG_RANGE));
+  }, []);
+
+  // Drop the pinch pivot once the gesture ends so a later slider zoom re-centres
+  // on the viewport rather than the last pinch centroid.
+  const handlePinchEnd = useCallback(() => {
+    pivotRef.current = null;
+  }, []);
+
+  useCanvasGestures(containerRef, {
+    enabled: touch,
+    onTap: handleTouchTap,
+    onDragMove: handleTouchPan,
+    onPinch: handleTouchPinch,
+    onPinchEnd: handlePinchEnd,
+  });
+
+  const selectedNode =
+    selectedNodeId && drawList
+      ? drawList.nodes.find((n) => n.id === selectedNodeId && !!n.href) ?? null
+      : null;
+  selectedDrawNodeRef.current = selectedNode;
+
+  // Position the freshly mounted chip before paint so it never flashes at the
+  // origin; subsequent pan/zoom frames keep it in place via draw().
+  useLayoutEffect(() => {
+    positionChip();
+  }, [selectedNodeId, positionChip]);
 
   return (
     <div
@@ -836,6 +949,17 @@ export function MindmapCanvas({
       onPointerLeave={clearHover}
     >
       <canvas ref={canvasRef} className={canvasClass} />
+      {selectedNode?.href && (
+        <button
+          ref={chipRef}
+          type="button"
+          data-gesture-skip
+          className={openChipClass}
+          onClick={() => router.push(selectedNode.href as string)}
+        >
+          Open →
+        </button>
+      )}
     </div>
   );
 }

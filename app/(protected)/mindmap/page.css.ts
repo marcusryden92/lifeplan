@@ -9,6 +9,7 @@ import {
   text,
   caption,
   fieldLabel,
+  zIndex,
 } from "@/lib/theme";
 
 export const page = style({
@@ -21,6 +22,13 @@ export const page = style({
     [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
+    },
+    // A landscape phone is short, not narrow — the portrait block-and-scroll
+    // treatment would make the canvas taller than the viewport, so keep the
+    // desktop fill layout.
+    [media.landscapePhone]: {
+      flex: 1,
+      minHeight: 0,
     },
   },
 });
@@ -210,6 +218,10 @@ export const canvasCard = style({
       borderLeftWidth: 0,
       borderRightWidth: 0,
     },
+    [media.landscapePhone]: {
+      margin: 0,
+      minHeight: 0,
+    },
   },
 });
 
@@ -225,3 +237,29 @@ export const emptyMain = style([
     textAlign: "center",
   },
 ]);
+
+// Mobile-only: opens the layout settings in a BottomSheet instead of the
+// floating panel, which would swallow the map on a phone.
+export const mobileSettingsButton = style({
+  position: "absolute",
+  top: space["3"],
+  right: space["3"],
+  zIndex: zIndex.floating,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: space["1.5"],
+  minHeight: 36,
+  padding: `0 ${space["3"]}px`,
+  background: vars.glass.bgDeep,
+  backdropFilter: "blur(14px)",
+  WebkitBackdropFilter: "blur(14px)",
+  border: `1px solid ${vars.glass.stroke}`,
+  borderRadius: radii.pill,
+  color: vars.ink,
+  fontFamily: vars.font.ui,
+  fontSize: 12,
+  fontWeight: 600,
+  boxShadow: vars.shadow.panelSm,
+  cursor: "pointer",
+  transition: themeTransition,
+});

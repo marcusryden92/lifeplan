@@ -141,3 +141,14 @@ export const sheetItemIcon = style({
     [`${sheetItemDanger} &`]: { color: vars.status.error },
   },
 });
+
+export const sheetItemActive = style({
+  background: vars.interactive.selectedFill,
+});
+
+export const sheetDivider = style({
+  height: 1,
+  margin: `${space["2"]}px 0`,
+  background: vars.rule,
+  border: "none",
+});

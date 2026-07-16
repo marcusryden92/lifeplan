@@ -2,9 +2,11 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { Kbd, Loader, Switch, vars } from "@/components/ui";
+import { Kbd, Loader, RotateToLandscape, Switch, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { usePlatform } from "@/hooks/usePlatform";
+import { useCoarsePointer } from "@/hooks/useCoarsePointer";
+import { usePortraitPhone } from "@/hooks/usePortraitPhone";
 import { reorderQueueMember } from "@/utils/queue-handlers/mutateQueueMembers";
 import { wouldCreateCycleAddingDependency } from "@/utils/precedence/findCycle";
 import { describeCycle } from "@/utils/precedence/describeCycle";
@@ -132,6 +134,8 @@ export default function GraphPage() {
   const [cycleError, setCycleError] = useState<string | null>(null);
   const [now] = useState(() => Date.now());
   const { modKey } = usePlatform();
+  const coarsePointer = useCoarsePointer();
+  const portraitPhone = usePortraitPhone();
   const pxPerDay = zoomToPxPerDay(zoom);
 
   const handleZoomDelta = useCallback((delta: number) => {
@@ -314,16 +318,26 @@ export default function GraphPage() {
           out of order
         </span>
         <span className={legendKeys}>
-          <Kbd keys="Scroll" instruction="pan" />
-          <Kbd keys={["Shift", "Scroll"]} instruction="vertical" />
-          <Kbd keys={[modKey, "Scroll"]} instruction="zoom" />
+          {coarsePointer ? (
+            <span>Drag to pan · Pinch to zoom · Tap to inspect · Hold to reorder</span>
+          ) : (
+            <>
+              <Kbd keys="Scroll" instruction="pan" />
+              <Kbd keys={["Shift", "Scroll"]} instruction="vertical" />
+              <Kbd keys={[modKey, "Scroll"]} instruction="zoom" />
+            </>
+          )}
         </span>
       </div>
 
       {cycleError && <div className={errorBanner}>{cycleError}</div>}
 
       <div className={canvasCard}>
-        {!isLoaded ? (
+        {portraitPhone ? (
+          <RotateToLandscape>
+            The graph is a timeline — it needs landscape to breathe.
+          </RotateToLandscape>
+        ) : !isLoaded ? (
           <div className={emptyMain}>
             <Loader size="md" label="Loading graph" />
           </div>
@@ -347,6 +361,7 @@ export default function GraphPage() {
             onReorderMember={handleReorderMember}
             onLinkRefused={setCycleError}
             hoverLabels={hoverLabels}
+            touch={coarsePointer}
             onZoomDelta={handleZoomDelta}
             onFitWeek={handleFitWeek}
           />

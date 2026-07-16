@@ -8,6 +8,7 @@ import {
   fieldLabel,
   themeTransition,
   interactiveTransition,
+  media,
   DURATIONS,
   iconBtn,
 } from "@/lib/theme";
@@ -17,6 +18,13 @@ export const scroller = style({
   minHeight: 0,
   overflow: "auto",
   position: "relative",
+});
+
+// Touch mode: the app owns single-finger pan and pinch, so suppress native
+// scroll/gestures — otherwise a touch-drag on a pill races native scroll and
+// cancels the reorder/link nondeterministically.
+globalStyle(`${scroller}[data-touch="true"]`, {
+  touchAction: "none",
 });
 
 export const AXIS_HEIGHT = 30;
@@ -324,6 +332,25 @@ export const nodeNameBadgeMeta = style([
   },
 ]);
 
+// Touch: the badge is pointer-inert, but its Open action re-enables events and
+// navigates to the item (a bare pill tap only selects on touch).
+export const nodeBadgeOpen = style({
+  marginTop: space["1"],
+  alignSelf: "flex-start",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: space["1"],
+  minHeight: 32,
+  padding: `0 ${space["2.5"]}px`,
+  borderRadius: radii.pill,
+  background: vars.ink,
+  color: vars.paper,
+  fontSize: 11,
+  fontWeight: 600,
+  textDecoration: "none",
+  pointerEvents: "auto",
+});
+
 export const nodeHint = style([
   caption,
   {
@@ -347,14 +374,19 @@ const linkHandleBase = style({
   background: vars.paper,
   cursor: "crosshair",
   opacity: 0,
+  // Hidden handles never intercept a pointer (a touch near the pill edge would
+  // otherwise grab an invisible handle); revealing them re-enables events.
+  pointerEvents: "none",
   zIndex: 3,
   touchAction: "none",
   transition: interactiveTransition("opacity", "border-color"),
   selectors: {
-    [`${node}:hover &`]: { opacity: 1 },
+    [`${node}:hover &`]: { opacity: 1, pointerEvents: "auto" },
+    [`${node}[data-selected="true"] &`]: { opacity: 1, pointerEvents: "auto" },
     "&:hover": { borderColor: vars.accent.primary },
     "&:focus-visible": {
       opacity: 1,
+      pointerEvents: "auto",
       outline: `1px solid ${vars.accent.primary}`,
     },
   },
@@ -363,6 +395,18 @@ const linkHandleBase = style({
 export const linkHandleOut = style([linkHandleBase, { right: -7 }]);
 
 export const linkHandleIn = style([linkHandleBase, { left: -7 }]);
+
+// A tap-selected node (touch) enlarges its handles into a comfortable target.
+globalStyle(`${node}[data-selected="true"] ${linkHandleOut}`, {
+  width: 22,
+  height: 22,
+  right: -11,
+});
+globalStyle(`${node}[data-selected="true"] ${linkHandleIn}`, {
+  width: 22,
+  height: 22,
+  left: -11,
+});
 
 export const linkReasonChip = style([
   caption,
@@ -413,6 +457,9 @@ export const edgeChipRemove = style([
     flexShrink: 0,
     selectors: {
       "&:hover": { color: vars.status.error },
+    },
+    "@media": {
+      [media.touch]: { width: 40, height: 40 },
     },
   },
 ]);

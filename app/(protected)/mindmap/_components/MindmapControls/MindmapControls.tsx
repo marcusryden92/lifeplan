@@ -52,13 +52,63 @@ const SLIDERS: ReadonlyArray<SliderDef> = [
   { key: "leafWrap", label: "Wrap angle", min: 0, max: 1, decimals: 2, radialOnly: true },
 ];
 
-export function MindmapControls({
-  options,
-  onChange,
-}: {
+type MindmapControlsProps = {
   options: MindmapLayoutOptions;
   onChange: (patch: Partial<MindmapLayoutOptions>) => void;
-}) {
+};
+
+// The layout-mode toggle + tuning sliders, hosted in both the desktop floating
+// panel and the mobile settings BottomSheet so there is one source of truth.
+export function MindmapControlsBody({ options, onChange }: MindmapControlsProps) {
+  return (
+    <div className={body}>
+      <SegmentedControl<MindmapLayoutKind>
+        options={LAYOUT_OPTIONS}
+        value={options.layout}
+        onChange={(layout) => onChange({ layout })}
+      />
+
+      {SLIDERS.map((def) => {
+        const disabled = def.radialOnly && options.layout !== "radial";
+        const current = options[def.key];
+        const pct =
+          def.max > def.min
+            ? ((current - def.min) / (def.max - def.min)) * 100
+            : 0;
+        return (
+          <div key={def.key} className={field} data-disabled={disabled || undefined}>
+            <div className={fieldRow}>
+              <span className={labelClass}>{def.label}</span>
+              <span className={valueClass}>{current.toFixed(def.decimals)}</span>
+            </div>
+            <div className={sliderTrack}>
+              <div className={sliderBar} />
+              <div
+                className={sliderFill}
+                style={{
+                  width: `calc(${pct}% + ${(SLIDER_THUMB_PX * (50 - pct)) / 100}px)`,
+                }}
+              />
+              <input
+                type="range"
+                className={slider}
+                min={def.min}
+                max={def.max}
+                step="any"
+                value={current}
+                disabled={disabled}
+                onChange={(e) => onChange({ [def.key]: Number(e.target.value) })}
+                aria-label={def.label}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+export function MindmapControls({ options, onChange }: MindmapControlsProps) {
   const [open, setOpen] = useState(true);
 
   return (
@@ -84,52 +134,7 @@ export function MindmapControls({
         </button>
       </div>
 
-      {open && (
-        <div className={body}>
-          <SegmentedControl<MindmapLayoutKind>
-            options={LAYOUT_OPTIONS}
-            value={options.layout}
-            onChange={(layout) => onChange({ layout })}
-          />
-
-          {SLIDERS.map((def) => {
-            const disabled = def.radialOnly && options.layout !== "radial";
-            const current = options[def.key];
-            const pct =
-              def.max > def.min
-                ? ((current - def.min) / (def.max - def.min)) * 100
-                : 0;
-            return (
-              <div key={def.key} className={field} data-disabled={disabled || undefined}>
-                <div className={fieldRow}>
-                  <span className={labelClass}>{def.label}</span>
-                  <span className={valueClass}>{current.toFixed(def.decimals)}</span>
-                </div>
-                <div className={sliderTrack}>
-                  <div className={sliderBar} />
-                  <div
-                    className={sliderFill}
-                    style={{
-                      width: `calc(${pct}% + ${(SLIDER_THUMB_PX * (50 - pct)) / 100}px)`,
-                    }}
-                  />
-                  <input
-                    type="range"
-                    className={slider}
-                    min={def.min}
-                    max={def.max}
-                    step="any"
-                    value={current}
-                    disabled={disabled}
-                    onChange={(e) => onChange({ [def.key]: Number(e.target.value) })}
-                    aria-label={def.label}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {open && <MindmapControlsBody options={options} onChange={onChange} />}
     </div>
   );
 }

@@ -16,6 +16,8 @@ export const sidebar = style({
   background: vars.glass.bg,
   backdropFilter: backdropFilters.panel,
   WebkitBackdropFilter: backdropFilters.panel,
+  // 15 centers the 30px icon column in the 60px collapsed rail; no token is 15.
+  // eslint-disable-next-line theme/no-raw-scale-values
   padding: "15px",
   display: "flex",
   flexDirection: "column",

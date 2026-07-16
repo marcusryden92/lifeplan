@@ -32,6 +32,7 @@ export type { TimePickerProps } from "./TimePicker";
 export { DurationField } from "./DurationField";
 export { CenteredLoader } from "./CenteredLoader";
 export { StubPage } from "./StubPage";
+export { RotateToLandscape } from "./RotateToLandscape";
 export {
   AppShell,
   Sidebar,
