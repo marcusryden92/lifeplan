@@ -12,9 +12,9 @@ export const segmentedControl = style({
 
 export const segmentedThumb = style({
   position: "absolute",
-  top: 3,
-  bottom: 3,
-  left: 3,
+  top: space["1"],
+  bottom: space["1"],
+  left: 0,
   borderRadius: radii.pill,
   background: vars.ink,
   transition: `transform ${DURATIONS.collapse}s cubic-bezier(0.4, 0, 0.2, 1), width ${DURATIONS.collapse}s cubic-bezier(0.4, 0, 0.2, 1)`,

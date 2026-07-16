@@ -307,15 +307,16 @@ function clamp01(v: number): number {
 // label is clipped short.
 function estimateSize(node: MindmapTreeNode): { w: number; h: number } {
   if (node.kind === "root") return { w: 112, h: 112 };
-  const charWidth = node.kind === "role" ? 8 : 6.9;
+  const charWidth =
+    node.kind === "role" ? 9 : node.kind === "category" ? 7.4 : 6.9;
   const labelCap =
     node.kind === "leaf" ? 120 : node.kind === "item" ? 150 : 168;
   const labelWidth = Math.min(labelCap, node.label.length * charWidth);
   const paddingWidth =
     node.kind === "role"
-      ? 48
+      ? 54
       : node.kind === "category"
-        ? 46
+        ? 50
         : node.kind === "leaf"
           ? 34
           : 40; // item

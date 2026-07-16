@@ -91,7 +91,7 @@ export default function MindmapPage() {
       buildMindmapTree({
         planner,
         categories,
-        userName: "Me",
+        userName: "me",
         theme: dark ? "dark" : "light",
         showCompleted,
         hideEmpty,

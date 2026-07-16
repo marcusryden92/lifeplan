@@ -8,7 +8,10 @@ import type {
   MindmapLaidNode,
   MindmapLayout,
 } from "../../_lib/mindmapModel";
-import { container as containerClass, canvas as canvasClass } from "./MindmapCanvas.css";
+import {
+  container as containerClass,
+  canvas as canvasClass,
+} from "./MindmapCanvas.css";
 
 type MindmapCanvasProps = {
   layout: MindmapLayout;
@@ -68,7 +71,7 @@ const KIND: Record<
   MindmapKind,
   { padL: number; dotR: number; font: string; text: keyof Colors }
 > = {
-  root: { padL: 18, dotR: 0, font: "650 20px", text: "ink" },
+  root: { padL: 18, dotR: 0, font: "650 40px", text: "ink" },
   role: { padL: 11, dotR: 4.5, font: "650 13px", text: "ink" },
   category: { padL: 11, dotR: 3.5, font: "550 12px", text: "ink" },
   item: { padL: 11, dotR: 4, font: "500 11.5px", text: "ink" },
@@ -152,7 +155,10 @@ function ellipsize(
   if (maxWidth <= 0) return "";
   if (ctx.measureText(text).width <= maxWidth) return text;
   let trimmed = text;
-  while (trimmed.length > 0 && ctx.measureText(`${trimmed}…`).width > maxWidth) {
+  while (
+    trimmed.length > 0 &&
+    ctx.measureText(`${trimmed}…`).width > maxWidth
+  ) {
     trimmed = trimmed.slice(0, -1);
   }
   return trimmed.length ? `${trimmed}…` : "…";
@@ -215,7 +221,7 @@ function buildDrawList(
       // Ink borders (the readable text ink) outline every card so they stay
       // legible against the canvas; the root's ring is a touch heavier.
       border: colors.ink,
-      borderW: isRoot ? 2 : n.kind === "role" ? 1.8 : 1,
+      borderW: isRoot ? 1 : n.kind === "role" ? 1.8 : 1,
       dotR: spec.dotR,
       dotX,
       dotColor: n.color ?? colors.muted,
@@ -387,8 +393,22 @@ export function MindmapCanvas({
       ctx.font = nd.labelFont;
       ctx.fillStyle = nd.textColor;
       if (nd.kind === "root") {
-        ctx.textAlign = "center";
-        ctx.fillText(nd.label, nd.x + nd.w / 2, nd.cy);
+        // Hubot Sans bearings make pure advance-centring read right and pure
+        // ink-centring read left; a left-heavy label like "Me" balances between
+        // them, biased toward the advance centre (and use the real ink bounds
+        // vertically).
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        const m = ctx.measureText(nd.label);
+        const centerX = nd.x + nd.w / 2;
+        const advancePen = centerX - m.width / 2;
+        const inkPen =
+          centerX -
+          (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2;
+        const inkY =
+          nd.cy + (m.actualBoundingBoxAscent - m.actualBoundingBoxDescent) / 2;
+        ctx.fillText(nd.label, advancePen * 0.65 + inkPen * 0.35, inkY);
+        ctx.textBaseline = "middle";
       } else {
         ctx.textAlign = "left";
         ctx.fillText(nd.label, nd.labelX, nd.cy);
@@ -416,7 +436,8 @@ export function MindmapCanvas({
   // into empty space (or a brief exit) doesn't strobe the map. A fresh hover
   // cancels this before it fires, switching focus with no flash between.
   const scheduleFocusClear = useCallback(() => {
-    if (hoverIdRef.current === null || clearFocusTimerRef.current !== null) return;
+    if (hoverIdRef.current === null || clearFocusTimerRef.current !== null)
+      return;
     clearFocusTimerRef.current = window.setTimeout(() => {
       clearFocusTimerRef.current = null;
       hoverIdRef.current = null;
@@ -572,7 +593,10 @@ export function MindmapCanvas({
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
-        pivotRef.current = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+        pivotRef.current = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        };
         onZoomDeltaRef.current(-e.deltaY * step * 0.06);
         // A clamped no-op zoom won't re-run the scale effect to consume the
         // pivot; drop it next frame so a later slider zoom uses the center.
@@ -610,21 +634,29 @@ export function MindmapCanvas({
     [],
   );
 
-  const hitTest = useCallback((screenX: number, screenY: number): DrawNode | null => {
-    const list = drawListRef.current;
-    if (!list) return null;
-    const s = scaleRef.current;
-    const pan = panRef.current;
-    const wx = (screenX - pan.x) / s;
-    const wy = (screenY - pan.y) / s;
-    let hit: DrawNode | null = null;
-    for (const nd of list.nodes) {
-      if (wx >= nd.x && wx <= nd.x + nd.w && wy >= nd.y && wy <= nd.y + nd.h) {
-        hit = nd;
+  const hitTest = useCallback(
+    (screenX: number, screenY: number): DrawNode | null => {
+      const list = drawListRef.current;
+      if (!list) return null;
+      const s = scaleRef.current;
+      const pan = panRef.current;
+      const wx = (screenX - pan.x) / s;
+      const wy = (screenY - pan.y) / s;
+      let hit: DrawNode | null = null;
+      for (const nd of list.nodes) {
+        if (
+          wx >= nd.x &&
+          wx <= nd.x + nd.w &&
+          wy >= nd.y &&
+          wy <= nd.y + nd.h
+        ) {
+          hit = nd;
+        }
       }
-    }
-    return hit;
-  }, []);
+      return hit;
+    },
+    [],
+  );
 
   // Nearest branch under the cursor (its child-node id), or null. Each edge's
   // bezier is sampled into a short polyline and distance-tested; the control
@@ -723,7 +755,14 @@ export function MindmapCanvas({
         scheduleFocusClear();
       }
     },
-    [hitTest, edgeHitTest, computeFocus, scheduleDraw, cancelClearTimer, scheduleFocusClear],
+    [
+      hitTest,
+      edgeHitTest,
+      computeFocus,
+      scheduleDraw,
+      cancelClearTimer,
+      scheduleFocusClear,
+    ],
   );
 
   const clearHover = useCallback(() => {

@@ -74,7 +74,14 @@ export function MindmapControls({
         >
           {open ? "−" : "+"}
         </button>
-        <span className={title}>Settings</span>
+        <button
+          type="button"
+          className={title}
+          data-open={open}
+          onClick={() => setOpen((o) => !o)}
+        >
+          Settings
+        </button>
       </div>
 
       {open && (

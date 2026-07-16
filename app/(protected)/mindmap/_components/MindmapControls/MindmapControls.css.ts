@@ -59,10 +59,23 @@ export const header = style({
 export const title = style([
   caption,
   {
+    appearance: "none",
+    WebkitAppearance: "none",
+    border: "none",
+    background: "transparent",
+    padding: 0,
     color: vars.ink,
     fontWeight: 650,
     letterSpacing: "0.02em",
+    cursor: "pointer",
     transition: themeTransition,
+    selectors: {
+      // The collapsed card is pointer-events:none; the label re-claims events so
+      // clicking "Settings" reopens it, just like the toggle beside it.
+      "&[data-open='false']": {
+        pointerEvents: "auto",
+      },
+    },
   },
 ]);
 
@@ -130,7 +143,7 @@ export const label = style([
 export const value = style([
   text.microLabel,
   {
-    color: vars.accent.primary,
+    color: vars.ink,
     fontVariantNumeric: "tabular-nums",
     transition: themeTransition,
   },
