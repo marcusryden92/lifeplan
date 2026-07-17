@@ -16,13 +16,12 @@ export const sidebar = style({
   background: vars.glass.bg,
   backdropFilter: backdropFilters.panel,
   WebkitBackdropFilter: backdropFilters.panel,
-  // 15px (off-scale) centers the 30px navGlyph in the 60px collapsed rail
-  // (60 - 2*15 = 30); space["4"] (16px) leaves 28px and clips it off-center.
+  // 15 centers the 30px icon column in the 60px collapsed rail; no token is 15.
   // eslint-disable-next-line theme/no-raw-scale-values
   padding: "15px",
   display: "flex",
   flexDirection: "column",
-  gap: space["2"],
+  gap: space["1.5"],
   position: "relative",
   zIndex: 2,
   width: 208,
@@ -53,7 +52,7 @@ export const navItem = style({
   background: "transparent",
   border: "none",
   color: vars.inkSoft,
-  fontSize: 13.5,
+  fontSize: 13,
   fontWeight: 500,
   fontFamily: vars.font.ui,
   cursor: "pointer",

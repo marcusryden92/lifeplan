@@ -90,23 +90,21 @@ describe("expandDailyRange", () => {
     expect(blocks.map((b) => b.startDay)).toEqual([1, 2, 3, 4, 5]);
   });
 
-  it("splits a midnight-crossing range into an evening block and a morning block on the following day", () => {
+  it("keeps a midnight-crossing range as one overnight block on its start day", () => {
     const blocks = expandDailyRange([1], "23:00", "07:00");
     expect(blocks).toEqual([
-      { startDay: 1, startTime: "23:00", duration: 60 },
-      { startDay: 2, startTime: "00:00", duration: 420 },
+      { startDay: 1, startTime: "23:00", duration: 480 },
     ]);
   });
 
-  it("wraps the morning piece of a Saturday overnight to Sunday", () => {
+  it("keeps a Saturday overnight block on Saturday rather than wrapping to Sunday", () => {
     const blocks = expandDailyRange([6], "23:00", "07:00");
     expect(blocks).toEqual([
-      { startDay: 6, startTime: "23:00", duration: 60 },
-      { startDay: 0, startTime: "00:00", duration: 420 },
+      { startDay: 6, startTime: "23:00", duration: 480 },
     ]);
   });
 
-  it("drops the zero-length morning piece when the range ends at midnight", () => {
+  it("keeps a range ending at midnight as one within-day block", () => {
     const blocks = expandDailyRange([2], "23:00", "00:00");
     expect(blocks).toEqual([
       { startDay: 2, startTime: "23:00", duration: 60 },
@@ -119,22 +117,20 @@ describe("expandDailyRange", () => {
 });
 
 describe("buildWeekTemplates", () => {
-  it("expands overnight sleep into 14 daily blocks", () => {
+  it("expands overnight sleep into one continuous block per day", () => {
     const input: WeekFormInput = {
       sleep: { start: "23:00", end: "07:00" },
       work: null,
     };
     const templates = buildWeekTemplates(input, USER_ID, NOW);
-    expect(templates).toHaveLength(ALL_WEEK_DAYS.length * 2);
+    expect(templates).toHaveLength(ALL_WEEK_DAYS.length);
     expect(templates.every((t) => t.title === "Sleep")).toBe(true);
     expect(templates.every((t) => t.locationId === null)).toBe(true);
     expect(templates.every((t) => t.userId === USER_ID)).toBe(true);
-    const evening = templates.filter((t) => t.startTime === "23:00");
-    const morning = templates.filter((t) => t.startTime === "00:00");
-    expect(evening).toHaveLength(7);
-    expect(morning).toHaveLength(7);
-    expect(evening.every((t) => t.duration === 60)).toBe(true);
-    expect(morning.every((t) => t.duration === 420)).toBe(true);
+    // One overnight block per day — never split at midnight.
+    expect(templates.every((t) => t.startTime === "23:00")).toBe(true);
+    expect(templates.every((t) => t.duration === 480)).toBe(true);
+    expect(templates.map((t) => t.startDay).sort()).toEqual([...ALL_WEEK_DAYS]);
   });
 
   it("ignores work hours — they become Work category windows, not templates", () => {
@@ -309,18 +305,23 @@ describe("reconcileWeekTemplateRows", () => {
   });
 
   it("keeps fresh rows for changed blocks and never reuses one row twice", () => {
-    const first = buildWeekTemplates(input, USER_ID, NOW);
+    const withRoutine: WeekFormInput = {
+      sleep: { start: "23:00", end: "07:00" },
+      work: null,
+      morning: { start: "07:00", end: "07:30" },
+    };
+    const first = buildWeekTemplates(withRoutine, USER_ID, NOW);
     const changed = buildWeekTemplates(
-      { sleep: { start: "22:00", end: "07:00" }, work: null },
+      { ...withRoutine, sleep: { start: "22:00", end: "07:00" } },
       USER_ID,
       "2026-07-06T00:00:00.000Z",
     );
     const reconciled = reconcileWeekTemplateRows(first, changed);
-    // Evening pieces moved to 22:00 (fresh rows); the 00:00-07:00 morning
-    // pieces are unchanged and reused.
-    const evening = reconciled.filter((t) => t.startTime === "22:00");
-    const morning = reconciled.filter((t) => t.startTime === "00:00");
-    expect(evening.every((t) => !first.includes(t))).toBe(true);
+    // Sleep moved to 22:00 (fresh rows); the untouched morning routine rows
+    // are reused from the previous commit.
+    const sleep = reconciled.filter((t) => t.title === "Sleep");
+    const morning = reconciled.filter((t) => t.title === "Morning routine");
+    expect(sleep.every((t) => !first.includes(t))).toBe(true);
     expect(morning.every((t) => first.includes(t))).toBe(true);
     expect(new Set(reconciled.map((t) => t.id)).size).toBe(reconciled.length);
   });
@@ -335,12 +336,13 @@ describe("buildBrainDumpRow", () => {
     expect(row.title).toBe("Write book");
   });
 
-  it("stamps triaged, not-ready planning defaults for every type", () => {
+  it("stamps triaged planning defaults, ready by type, for every type", () => {
     for (const type of ["task", "plan", "goal"] as const) {
       const row = buildBrainDumpRow({ ...base, type }, USER_ID, NOW);
       expect(row.plannerType).toBe(type);
       expect(row.isTriaged).toBe(true);
-      expect(row.isReady).toBe(false);
+      // Tasks and plans are ready to schedule by default; goals are not.
+      expect(row.isReady).toBe(type !== "goal");
       expect(row.parentId).toBeNull();
       expect(row.deadline).toBeNull();
       expect(row.starts).toBeNull();

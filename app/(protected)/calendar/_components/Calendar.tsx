@@ -20,7 +20,11 @@ import type { EventResizeDoneArg } from "@fullcalendar/interaction/index.js";
 import type { RootState } from "@/redux/store";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { transformEventsForFullCalendar } from "@/utils/calendarUtils";
+import {
+  transformEventsForFullCalendar,
+  getDuration,
+  CALENDAR_LONG_PRESS_DELAY_MS,
+} from "@/utils/calendarUtils";
 import {
   templatesToEventInput,
   categoryEventsToEventInput,
@@ -36,12 +40,15 @@ import {
   applyTemplateOccurrenceMove,
   applyTemplateSeriesMove,
   applyTemplateOccurrenceDelete,
+  applyTemplateOccurrenceResize,
+  applyTemplateSeriesResize,
   resolveTemplateOccurrence,
 } from "@/utils/calendarEventHandlers";
 import {
   occurrenceKeyFromEventId,
   plannerIdFromEventId,
   planIsRecurring,
+  hasMovedException,
 } from "@/utils/planRecurrence";
 import { NewPlanModal } from "@/components/events/NewPlanModal";
 import { RecurrenceScopeModal } from "@/components/events/RecurrenceScopeModal";
@@ -51,7 +58,6 @@ import {
   handleTemplateEventCopy,
   handleTemplateEventDelete,
   handleTemplateEventEdit,
-  handleTemplateEventResize,
 } from "@/utils/template-handlers/templateEventHandlers";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { RuntimeEventExtendedProps } from "@/types/ui";
@@ -88,7 +94,9 @@ interface CalendarProps {
     categoryName: string | null,
     categoryColor: string | null,
   ) => void;
-  dayHeaderContent?: React.ComponentProps<typeof FullCalendar>["dayHeaderContent"];
+  dayHeaderContent?: React.ComponentProps<
+    typeof FullCalendar
+  >["dayHeaderContent"];
 }
 
 // Memoized, and every function handed to FullCalendar below is
@@ -152,6 +160,15 @@ function Calendar({
         templateTitle: string;
         occurrenceKey: string;
         newStart: Date;
+        revert: () => void;
+      }
+    | {
+        mode: "resize";
+        templateId: string;
+        templateTitle: string;
+        occurrenceKey: string;
+        newStart: Date;
+        newDurationMinutes: number;
         revert: () => void;
       }
     | {
@@ -224,15 +241,55 @@ function Calendar({
       setPendingPlan({ start: selectInfo.start, end: selectInfo.end }),
     [],
   );
+  // Resizing a template occurrence defers to a scope prompt (this occurrence's
+  // own length vs. the whole series). The tile stays at its resized size while
+  // the modal is open; revert() restores it on cancel.
   const onEventResize = useCallback(
     (resizeInfo: EventResizeDoneArg) => {
+      const { event, oldEvent, revert } = resizeInfo;
       const eventType = (
-        resizeInfo.event.extendedProps as RuntimeEventExtendedProps | undefined
+        event.extendedProps as RuntimeEventExtendedProps | undefined
       )?.eventType;
-      // Resizing a template occurrence resizes the whole series (duration lives
-      // on the template row) — same as resizing a plan occurrence.
       if (eventType === EventType.template) {
-        handleTemplateEventResize(updateTemplateArray, resizeInfo);
+        // Key from the PRE-resize start — a top-edge resize moves event.start,
+        // so it can't stand in for the occurrence's rule position.
+        const occurrence = resolveTemplateOccurrence(
+          event.id,
+          templateRef.current,
+          oldEvent.start,
+        );
+        if (!occurrence || !event.start || !event.end) {
+          revert();
+          return;
+        }
+        const template = templateRef.current.find(
+          (t) => t.id === occurrence.templateId,
+        );
+        // An already-customized occurrence skips the prompt — re-resizing a
+        // one-off always means "just this one".
+        if (
+          template &&
+          hasMovedException(
+            template.recurrenceExceptions,
+            occurrence.occurrenceKey,
+          )
+        ) {
+          applyTemplateOccurrenceResize(
+            updateTemplateArray,
+            occurrence.templateId,
+            occurrence.occurrenceKey,
+            event.start,
+            getDuration(event.start, event.end),
+          );
+          return;
+        }
+        setPendingTemplateScope({
+          mode: "resize",
+          ...occurrence,
+          newStart: event.start,
+          newDurationMinutes: getDuration(event.start, event.end),
+          revert,
+        });
         return;
       }
       handleEventResize(updateAll, resizeInfo);
@@ -263,6 +320,26 @@ function Calendar({
           revert();
           return;
         }
+        const template = templateRef.current.find(
+          (t) => t.id === occurrence.templateId,
+        );
+        // An already-customized occurrence skips the prompt — re-dragging a
+        // one-off always means "just this one".
+        if (
+          template &&
+          hasMovedException(
+            template.recurrenceExceptions,
+            occurrence.occurrenceKey,
+          )
+        ) {
+          applyTemplateOccurrenceMove(
+            updateTemplateArray,
+            occurrence.templateId,
+            occurrence.occurrenceKey,
+            event.start,
+          );
+          return;
+        }
         setPendingTemplateScope({
           mode: "move",
           ...occurrence,
@@ -276,8 +353,23 @@ function Calendar({
       if (occurrenceKeyValue !== null) {
         const planId = plannerIdFromEventId(event.id);
         const plan = plannerRef.current.find((p) => p.id === planId);
-        if (!plan || !planIsRecurring(plan) || !event.start || !oldEvent.start) {
+        if (
+          !plan ||
+          !planIsRecurring(plan) ||
+          !event.start ||
+          !oldEvent.start
+        ) {
           revert();
+          return;
+        }
+        // An already-customized plan occurrence skips the prompt too.
+        if (hasMovedException(plan.recurrenceExceptions, occurrenceKeyValue)) {
+          applyOccurrenceMove(
+            updatePlannerArray,
+            planId,
+            occurrenceKeyValue,
+            event.start,
+          );
           return;
         }
         setPendingOccurrenceMove({
@@ -292,7 +384,7 @@ function Calendar({
       }
       handleEventDrop(updatePlannerArray, dropInfo);
     },
-    [updatePlannerArray],
+    [updatePlannerArray, updateTemplateArray],
   );
   const renderEventContent = useCallback(
     ({ event }: { event: EventImpl }) => {
@@ -348,10 +440,69 @@ function Calendar({
                 event.start,
               );
               if (!occurrence) return;
+              const template = templateRef.current.find(
+                (t) => t.id === occurrence.templateId,
+              );
+              // An already-customized occurrence skips the prompt — deleting a
+              // one-off always means "just this one".
+              if (
+                template &&
+                hasMovedException(
+                  template.recurrenceExceptions,
+                  occurrence.occurrenceKey,
+                )
+              ) {
+                applyTemplateOccurrenceDelete(
+                  updateTemplateArray,
+                  occurrence.templateId,
+                  occurrence.occurrenceKey,
+                );
+                return;
+              }
               setPendingTemplateScope({ mode: "delete", ...occurrence });
             }}
             hideHoverButtons
             scopedDelete
+            onEditTimes={(newStart, newEnd) => {
+              // Keyed from the CURRENT rendered start — unlike drag-resize the
+              // form hasn't moved the tile, so no oldEvent is needed.
+              const occurrence = resolveTemplateOccurrence(
+                event.id,
+                templateRef.current,
+                event.start,
+              );
+              if (!occurrence) return;
+              const newDurationMinutes = getDuration(newStart, newEnd);
+              const template = templateRef.current.find(
+                (t) => t.id === occurrence.templateId,
+              );
+              // An already-customized occurrence skips the prompt — re-editing
+              // a one-off always means "just this one".
+              if (
+                template &&
+                hasMovedException(
+                  template.recurrenceExceptions,
+                  occurrence.occurrenceKey,
+                )
+              ) {
+                applyTemplateOccurrenceResize(
+                  updateTemplateArray,
+                  occurrence.templateId,
+                  occurrence.occurrenceKey,
+                  newStart,
+                  newDurationMinutes,
+                );
+                return;
+              }
+              setPendingTemplateScope({
+                mode: "resize",
+                ...occurrence,
+                newStart,
+                newDurationMinutes,
+                // Nothing moved visually — a form edit never touches the tile.
+                revert: () => {},
+              });
+            }}
           />
         );
       }
@@ -377,7 +528,8 @@ function Calendar({
         views={VIEWS}
         scrollTime={"05:00:00"}
         allDaySlot={false}
-        snapDuration={"00:00:01"}
+        snapDuration={"00:05:00"}
+        longPressDelay={CALENDAR_LONG_PRESS_DELAY_MS}
         firstDay={weekStartDay}
         nowIndicator={true}
         height={"100%"}
@@ -437,6 +589,14 @@ function Calendar({
               pendingTemplateScope.occurrenceKey,
               pendingTemplateScope.newStart,
             );
+          } else if (pendingTemplateScope?.mode === "resize") {
+            applyTemplateOccurrenceResize(
+              updateTemplateArray,
+              pendingTemplateScope.templateId,
+              pendingTemplateScope.occurrenceKey,
+              pendingTemplateScope.newStart,
+              pendingTemplateScope.newDurationMinutes,
+            );
           } else if (pendingTemplateScope?.mode === "delete") {
             applyTemplateOccurrenceDelete(
               updateTemplateArray,
@@ -453,6 +613,13 @@ function Calendar({
               pendingTemplateScope.templateId,
               pendingTemplateScope.newStart,
             );
+          } else if (pendingTemplateScope?.mode === "resize") {
+            applyTemplateSeriesResize(
+              updateTemplateArray,
+              pendingTemplateScope.templateId,
+              pendingTemplateScope.occurrenceKey,
+              pendingTemplateScope.newDurationMinutes,
+            );
           } else if (pendingTemplateScope?.mode === "delete") {
             handleTemplateEventDelete(
               updateTemplateArray,
@@ -462,7 +629,12 @@ function Calendar({
           setPendingTemplateScope(null);
         }}
         onCancel={() => {
-          if (pendingTemplateScope?.mode === "move") {
+          // Move and resize left the tile at its dropped/resized geometry;
+          // restore it. Delete never moved anything.
+          if (
+            pendingTemplateScope?.mode === "move" ||
+            pendingTemplateScope?.mode === "resize"
+          ) {
             pendingTemplateScope.revert();
           }
           setPendingTemplateScope(null);

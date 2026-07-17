@@ -2,6 +2,9 @@ export { Glass } from "./Glass";
 export { Caption } from "./Caption";
 export { Kbd } from "./Kbd";
 export { Button } from "./Button";
+export { BottomSheet } from "./BottomSheet";
+export { Input, Field } from "./Input";
+export { FieldStack, FieldValue } from "./FieldStack";
 export { TypeBadge } from "./TypeBadge";
 export { CategoryBadge } from "./CategoryBadge";
 export { CategoryDot } from "./CategoryDot";
@@ -26,6 +29,7 @@ export { DateTimePicker } from "./DateTimePicker";
 export type { DateTimePickerProps } from "./DateTimePicker";
 export { TimePicker } from "./TimePicker";
 export type { TimePickerProps } from "./TimePicker";
+export { DurationField } from "./DurationField";
 export { CenteredLoader } from "./CenteredLoader";
 export { StubPage } from "./StubPage";
 export {
@@ -37,10 +41,15 @@ export {
   useCapture,
   AssistantProvider,
   useAssistant,
+  AiAccessProvider,
+  useAiAccess,
+  useShellOverlay,
+  useShellOverlayOpen,
+  usePreviousPathname,
   NAV_ITEMS,
   MOBILE_TABS,
 } from "./shell";
-export type { NavItem, AssistantScope } from "./shell";
+export type { NavItem, AssistantScope, AiAccessStatus, SaveKeyResult } from "./shell";
 
 export {
   vars,

@@ -13,12 +13,15 @@ import {
   EventTemplate,
   Category,
   EngineMessage,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 import { AppDispatch, RootState } from "@/redux/store";
 import { applyEngineRun } from "@/redux/slices/engineOutputSlice";
 import { useSelector } from "react-redux";
 import {
   travelTimeArrayToMap,
+  deriveTravelTimeMatrix,
   type SerializedTravelTimeEntry,
   type DebugStrategyConfig,
 } from "@/redux/slices/schedulingSettingsSlice";
@@ -41,14 +44,29 @@ const useManuallyRefreshCalendar = (
   const enableTravelEvents = useSelector(
     (state: RootState) => state.schedulingSettings.enableTravelEvents
   );
-  const travelTimeMatrix = useSelector(
-    (state: RootState) => state.schedulingSettings.travelTimeMatrix
+  const allTravelTimes = useSelector(
+    (state: RootState) => state.schedulingSettings.allTravelTimes
+  );
+  const defaultTransportMode = useSelector(
+    (state: RootState) => state.schedulingSettings.defaultTransportMode
+  );
+  // Derived fresh from the source-of-truth rows so travel-time and transport-
+  // mode changes take effect on the next regen without a page reload.
+  const travelTimeMatrix = deriveTravelTimeMatrix(
+    allTravelTimes,
+    defaultTransportMode
   );
   const debugStrategyConfig = useSelector(
     (state: RootState) => state.schedulingSettings.debugStrategyConfig
   );
   const previousEngineMessages = useSelector(
     (state: RootState) => state.engineOutput.engineMessages
+  );
+  const queues = useSelector(
+    (state: RootState) => state.calendarSource.queues
+  );
+  const dependencies = useSelector(
+    (state: RootState) => state.calendarSource.dependencies
   );
 
   // Store latest values in refs so callback doesn't need to depend on them
@@ -58,6 +76,8 @@ const useManuallyRefreshCalendar = (
     calendar: SimpleEvent[];
     template: EventTemplate[];
     categories: Category[];
+    queues: Queue[];
+    dependencies: PlannerDependency[];
     weekStartDay: WeekDayIntegers;
     bufferTimeMinutes: number;
     enableTravelEvents: boolean;
@@ -71,6 +91,8 @@ const useManuallyRefreshCalendar = (
     calendar,
     template,
     categories,
+    queues,
+    dependencies,
     weekStartDay,
     bufferTimeMinutes,
     enableTravelEvents,
@@ -85,6 +107,8 @@ const useManuallyRefreshCalendar = (
     calendar,
     template,
     categories,
+    queues,
+    dependencies,
     weekStartDay,
     bufferTimeMinutes,
     enableTravelEvents,
@@ -101,6 +125,8 @@ const useManuallyRefreshCalendar = (
       calendar,
       template,
       categories,
+      queues,
+      dependencies,
       weekStartDay,
       bufferTimeMinutes,
       enableTravelEvents,
@@ -142,6 +168,8 @@ const useManuallyRefreshCalendar = (
           locationGroupingPenalties:
             debugStrategyConfig.locationGrouping.penalties,
           categories,
+          queues,
+          dependencies,
           previousEngineMessages,
         },
       }).then((result) => {

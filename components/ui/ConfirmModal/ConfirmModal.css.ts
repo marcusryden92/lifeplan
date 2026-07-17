@@ -1,5 +1,11 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, backdropFilters, popover } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  backdropFilters,
+  popover,
+} from "@/lib/theme";
 
 export const CONFIRM_FADE_MS = 180;
 
@@ -52,7 +58,7 @@ export const modalTitle = style({
 
 export const modalBody = style({
   marginTop: space["2.5"],
-  fontSize: 13.5,
+  fontSize: 13,
   color: vars.inkSoft,
   fontFamily: vars.font.ui,
   lineHeight: 1.5,

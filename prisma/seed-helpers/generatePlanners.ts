@@ -1,288 +1,437 @@
-import { Planner } from "../../generated/client";
+import { Planner, PlannerType } from "../../generated/client";
 import { LOCATION_IDS } from "./generateLocations";
 import { CATEGORY_IDS } from "./generateCategories";
 
-/**
- * Simplified planner data structure - only specify the essential fields.
- * The generator function will fill in the rest with sensible defaults.
- */
-export interface SimplePlannerData {
-  id: string;
-  title: string;
-  parentId: string | null;
-  duration: number;
-  color: string;
-  locationId?: string | null;
-  categoryId?: string | null;
+// Split settings ride as a JSON string on the row (see utils/taskSplitting).
+interface SeedSplitting {
+  minMinutes: number;
+  maxMinutes: number;
+  maxMinutesPerDay?: number;
+  minSpacingMinutes?: number;
 }
 
-/**
- * Seed data for planner goals organized in hierarchical structures.
- * Sibling order is the array order within each parent group; the generator
- * stamps fractional sortOrder keys from it.
- */
-export const plannerSeedData: SimplePlannerData[] = [
-  // Goal A hierarchy - No specific location, Work category
-  {
-    id: "a2d8280b-0362-4fc1-8947-4db30233e47a",
-    title: "A",
-    parentId: null,
-    duration: 5,
-    color: "#6C5CE7",
-    locationId: null,
-    categoryId: CATEGORY_IDS.WORK,
-  },
-  {
-    id: "414c5e8d-2e48-44c5-911d-df2522da1465",
-    title: "A",
-    parentId: "a2d8280b-0362-4fc1-8947-4db30233e47a",
-    duration: 15,
-    color: "#6C5CE7",
-  },
-  {
-    id: "5d3d674c-5bc0-45b0-8bce-d01a30d81522",
-    title: "A1",
-    parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
-    duration: 45,
-    color: "#6C5CE7",
-  },
-  {
-    id: "ded9475d-4b1b-433e-96d2-76b987654cb2",
-    title: "A2",
-    parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
-    duration: 45,
-    color: "#6C5CE7",
-  },
-  {
-    id: "da47b873-4a31-4671-b729-5748ce070d22",
-    title: "A3",
-    parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
-    duration: 45,
-    color: "#6C5CE7",
-  },
-  {
-    id: "ef08d5bb-54aa-4403-8783-47f5ba65e8ac",
-    title: "A4",
-    parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
-    duration: 15,
-    color: "#6C5CE7",
-  },
-  {
-    id: "c123a380-1303-415b-849f-6211fac04001",
-    title: "A5",
-    parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
-    duration: 30,
-    color: "#6C5CE7",
-  },
-  {
-    id: "3ac9edae-5a09-49be-ac16-940a05047a18",
-    title: "A6",
-    parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
-    duration: 15,
-    color: "#6C5CE7",
-  },
-  {
-    id: "d0bc9d33-3acd-429b-99ec-9993f44e9741",
-    title: "A7",
-    parentId: "414c5e8d-2e48-44c5-911d-df2522da1465",
-    duration: 60,
-    color: "#6C5CE7",
-  },
+// A branch (has children) becomes a goal; a childless node becomes a leaf
+// task. Branch durations are rolled up from their children.
+interface SeedNode {
+  title: string;
+  duration?: number; // minutes; leaf tasks only (branches sum their children)
+  locationId?: string | null;
+  splitting?: SeedSplitting;
+  children?: SeedNode[];
+}
 
-  // Goal B hierarchy - Work category (location inherited from category)
-  {
-    id: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
-    title: "B",
-    parentId: null,
-    duration: 5,
-    color: "#8E44AD",
-    categoryId: CATEGORY_IDS.WORK,
-  },
-  {
-    id: "7f8665a1-a476-412f-83ad-71fd21158372",
-    title: "B1",
-    parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
-    duration: 15,
-    color: "#8E44AD",
-  },
-  {
-    id: "13878697-4a27-4e18-bb0b-bf99dfad3e4c",
-    title: "B2",
-    parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
-    duration: 15,
-    color: "#8E44AD",
-  },
-  {
-    id: "9adc0a2f-5505-4334-9e5a-dae3e744bdd4",
-    title: "B3",
-    parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
-    duration: 45,
-    color: "#8E44AD",
-  },
-  {
-    id: "d9abc068-181b-4e32-a97b-362ee85bfcb6",
-    title: "B4",
-    parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
-    duration: 100,
-    color: "#8E44AD",
-  },
-  {
-    id: "e53e6d6a-c5da-4621-8165-da7f1102b5c8",
-    title: "B5",
-    parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
-    duration: 50,
-    color: "#8E44AD",
-  },
-  {
-    id: "e908862a-8b2a-4b06-9f5f-b2695101994e",
-    title: "B6",
-    parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
-    duration: 30,
-    color: "#8E44AD",
-  },
-  {
-    id: "d696ed65-01a7-437a-9b67-1e5076e52e30",
-    title: "B7",
-    parentId: "b202e2a8-bfe2-4b10-8a18-91f7e32173f8",
-    duration: 45,
-    color: "#8E44AD",
-  },
+interface SeedGoal {
+  title: string;
+  color: string;
+  categoryId?: string | null;
+  locationId?: string | null;
+  priority?: number; // 1-7 scale (4 = neutral)
+  deadlineInDays?: number; // deadline = seed time + N days
+  maxMinutesPerDay?: number; // goal daily cap on the subtree
+  children: SeedNode[];
+}
 
-  // Goal C hierarchy - Home location
+const SORT_STEP = 1024;
+
+// Ten multi-layer goals across the seeded roles. Each is a goal root with
+// sub-goal branches and leaf tasks; a couple carry split leaves, deadlines, or
+// a daily cap to exercise those engine features.
+const seedGoals: SeedGoal[] = [
   {
-    id: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
-    title: "C",
-    parentId: null,
-    duration: 5,
-    color: "#457B9D",
+    title: "Launch Q3 Marketing Campaign",
+    color: "#2563EB",
+    categoryId: CATEGORY_IDS.DEEP_WORK,
+    priority: 6,
+    deadlineInDays: 30,
+    children: [
+      {
+        title: "Research",
+        children: [
+          { title: "Competitor analysis", duration: 90 },
+          { title: "Audience survey", duration: 60 },
+        ],
+      },
+      {
+        title: "Content creation",
+        children: [
+          {
+            title: "Draft blog posts",
+            duration: 180,
+            splitting: { minMinutes: 45, maxMinutes: 90 },
+          },
+          { title: "Design graphics", duration: 120 },
+        ],
+      },
+      {
+        title: "Launch",
+        children: [
+          { title: "Schedule social posts", duration: 45 },
+          { title: "Send announcement email", duration: 30 },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Ship Mobile App v2",
+    color: "#3B82F6",
+    categoryId: CATEGORY_IDS.DEEP_WORK,
+    priority: 6,
+    deadlineInDays: 45,
+    children: [
+      {
+        title: "Backend",
+        children: [
+          { title: "Build API endpoints", duration: 150 },
+          { title: "Database migration", duration: 90 },
+        ],
+      },
+      {
+        title: "Frontend",
+        children: [
+          { title: "Onboarding screens", duration: 120 },
+          { title: "Settings screen", duration: 90 },
+        ],
+      },
+      {
+        title: "QA",
+        children: [
+          { title: "Write automated tests", duration: 120 },
+          { title: "Manual testing pass", duration: 90 },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Quarterly Business Review Prep",
+    color: "#6366F1",
+    categoryId: CATEGORY_IDS.MEETINGS,
+    priority: 5,
+    deadlineInDays: 20,
+    children: [
+      { title: "Gather metrics", duration: 60 },
+      {
+        title: "Build slide deck",
+        children: [
+          { title: "Financials slides", duration: 75 },
+          { title: "Roadmap slides", duration: 60 },
+        ],
+      },
+      { title: "Rehearse presentation", duration: 45 },
+    ],
+  },
+  {
+    title: "Run a Half Marathon",
+    color: "#10B981",
+    categoryId: CATEGORY_IDS.FITNESS,
+    priority: 5,
+    deadlineInDays: 90,
+    children: [
+      {
+        title: "Base building",
+        children: [
+          {
+            title: "Easy runs",
+            duration: 210,
+            splitting: { minMinutes: 30, maxMinutes: 60, minSpacingMinutes: 720 },
+          },
+          { title: "Weekend long run", duration: 90 },
+        ],
+      },
+      {
+        title: "Speed work",
+        children: [
+          { title: "Interval training", duration: 60 },
+          { title: "Tempo runs", duration: 50 },
+        ],
+      },
+      { title: "Taper week", duration: 40 },
+    ],
+  },
+  {
+    title: "Improve Nutrition Habits",
+    color: "#059669",
+    categoryId: CATEGORY_IDS.HEALTH,
+    priority: 4,
+    children: [
+      { title: "Plan weekly meals", duration: 45 },
+      {
+        title: "Grocery prep",
+        children: [
+          { title: "Weekly shopping", duration: 60, locationId: null },
+          {
+            title: "Batch cooking",
+            duration: 120,
+            locationId: LOCATION_IDS.HOME,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    title: "Renovate Home Office",
+    color: "#F59E0B",
+    categoryId: CATEGORY_IDS.HOME_PROJECTS,
     locationId: LOCATION_IDS.HOME,
+    priority: 4,
+    children: [
+      {
+        title: "Planning",
+        children: [
+          { title: "Measure the space", duration: 30 },
+          { title: "Choose furniture", duration: 60 },
+        ],
+      },
+      {
+        title: "Execution",
+        children: [
+          { title: "Paint the walls", duration: 180 },
+          { title: "Assemble the desk", duration: 90 },
+          { title: "Set up cable management", duration: 45 },
+        ],
+      },
+    ],
   },
   {
-    id: "0fcae948-e489-44ed-92fc-cd03a42e2f5f",
-    title: "C1",
-    parentId: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
-    duration: 30,
-    color: "#457B9D",
+    title: "Plan Summer Vacation",
+    color: "#D97706",
+    categoryId: CATEGORY_IDS.PERSONAL,
+    priority: 5,
+    deadlineInDays: 60,
+    children: [
+      { title: "Research destinations", duration: 90 },
+      {
+        title: "Bookings",
+        children: [
+          { title: "Book flights", duration: 45 },
+          { title: "Book hotels", duration: 45 },
+        ],
+      },
+      { title: "Build the itinerary", duration: 60 },
+    ],
   },
   {
-    id: "9403a111-3d02-470a-a930-4baf95097bfd",
-    title: "C2",
-    parentId: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
-    duration: 45,
-    color: "#457B9D",
+    title: "Learn Spanish",
+    color: "#8B5CF6",
+    categoryId: CATEGORY_IDS.LEARNING,
+    priority: 5,
+    deadlineInDays: 120,
+    maxMinutesPerDay: 60,
+    children: [
+      {
+        title: "Foundations",
+        children: [
+          {
+            title: "Vocabulary drills",
+            duration: 200,
+            splitting: { minMinutes: 20, maxMinutes: 40, minSpacingMinutes: 120 },
+          },
+          { title: "Grammar basics", duration: 120 },
+        ],
+      },
+      {
+        title: "Practice",
+        children: [
+          { title: "Conversation practice", duration: 90 },
+          { title: "Listening exercises", duration: 75 },
+        ],
+      },
+    ],
   },
   {
-    id: "6a68c08b-b2ed-4c0a-a927-7f7d14bfa8f8",
-    title: "C3",
-    parentId: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
-    duration: 55,
-    color: "#457B9D",
+    title: "Read 12 Books This Year",
+    color: "#A78BFA",
+    categoryId: CATEGORY_IDS.READING,
+    priority: 3,
+    children: [
+      {
+        title: "Fiction",
+        children: [
+          {
+            title: "Finish current novel",
+            duration: 240,
+            splitting: { minMinutes: 45, maxMinutes: 90 },
+          },
+          {
+            title: "Start next novel",
+            duration: 240,
+            splitting: { minMinutes: 45, maxMinutes: 90 },
+          },
+        ],
+      },
+      {
+        title: "Non-fiction",
+        children: [
+          {
+            title: "Read business book",
+            duration: 300,
+            splitting: { minMinutes: 45, maxMinutes: 90 },
+          },
+          {
+            title: "Read science book",
+            duration: 300,
+            splitting: { minMinutes: 45, maxMinutes: 90 },
+          },
+        ],
+      },
+    ],
   },
   {
-    id: "0a1101c5-d1d1-426c-b53e-4c0a31cb6168",
-    title: "C4",
-    parentId: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
-    duration: 20,
-    color: "#457B9D",
-  },
-  {
-    id: "333e37fd-55c9-44f2-8947-107d01980b65",
-    title: "C5",
-    parentId: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
-    duration: 20,
-    color: "#457B9D",
-  },
-  {
-    id: "d85763b6-175a-4841-90d4-2ce14eb58d9e",
-    title: "C6",
-    parentId: "13e0b5e3-e92f-4529-871b-b0de9d81a094",
-    duration: 60,
-    color: "#457B9D",
-  },
-
-  // Goal D hierarchy - Gym location (no category, no root location - children override)
-  {
-    id: "3f2588fe-0190-4e58-baf9-a7045cad9d96",
-    title: "D",
-    parentId: null,
-    duration: 5,
-    color: "#E63946",
-    locationId: null,
-  },
-  {
-    id: "bbc700de-9a5d-460d-9f95-6c21cf164981",
-    title: "D",
-    parentId: "3f2588fe-0190-4e58-baf9-a7045cad9d96",
-    duration: 15,
-    color: "#E63946",
-  },
-  {
-    id: "3c039ae5-e3a3-4a71-8dd9-3ad194578ff8",
-    title: "D1",
-    parentId: "bbc700de-9a5d-460d-9f95-6c21cf164981",
-    duration: 45,
-    color: "#E63946",
-    locationId: LOCATION_IDS.GYM,
-  },
-  {
-    id: "0b616a44-3f21-4787-bc3f-0d59ea5976dc",
-    title: "D2",
-    parentId: "bbc700de-9a5d-460d-9f95-6c21cf164981",
-    duration: 45,
-    color: "#E63946",
-    locationId: LOCATION_IDS.GYM,
+    title: "Organize Digital Life",
+    color: "#F97316",
+    categoryId: CATEGORY_IDS.PERSONAL,
+    priority: 3,
+    children: [
+      {
+        title: "Photos",
+        children: [
+          { title: "Back up photo library", duration: 60 },
+          { title: "Organize into albums", duration: 90 },
+        ],
+      },
+      {
+        title: "Files",
+        children: [
+          { title: "Clean up downloads", duration: 45 },
+          { title: "Archive old projects", duration: 75 },
+        ],
+      },
+    ],
   },
 ];
 
+interface BuildContext {
+  id: string;
+  parentId: string;
+  siblingIndex: number;
+  color: string;
+  userId: string;
+  timestamp: string;
+  out: Planner[];
+}
+
+// Depth-first build; returns the node's rolled-up duration so branches report
+// the sum of their leaves. Children are emitted before their parent, which is
+// safe because Planner.parentId has no DB foreign key (the tree is managed in
+// application code).
+const buildNode = (node: SeedNode, ctx: BuildContext): number => {
+  const children = node.children ?? [];
+  const isLeaf = children.length === 0;
+
+  let childDurationSum = 0;
+  children.forEach((child, index) => {
+    childDurationSum += buildNode(child, {
+      id: `${ctx.id}-${index + 1}`,
+      parentId: ctx.id,
+      siblingIndex: index,
+      color: ctx.color,
+      userId: ctx.userId,
+      timestamp: ctx.timestamp,
+      out: ctx.out,
+    });
+  });
+
+  const duration = isLeaf ? (node.duration ?? 30) : childDurationSum;
+  const hasCustomLocation = node.locationId != null;
+
+  ctx.out.push({
+    id: ctx.id,
+    title: node.title,
+    parentId: ctx.parentId,
+    plannerType: isLeaf ? PlannerType.task : PlannerType.goal,
+    isReady: true,
+    isTriaged: true,
+    duration,
+    deadline: null,
+    starts: null,
+    recurrence: null,
+    recurrenceExceptions: null,
+    splitting: node.splitting ? JSON.stringify(node.splitting) : null,
+    completedSegments: null,
+    maxMinutesPerDay: null,
+    earliestStartDate: null,
+    allowedTimes: null,
+    linkedItemId: null,
+    sortOrder: (ctx.siblingIndex + 1) * SORT_STEP,
+    completedStartTime: null,
+    completedEndTime: null,
+    priority: 4,
+    userId: ctx.userId,
+    color: ctx.color,
+    locationId: node.locationId ?? null,
+    useParentLocation: !hasCustomLocation,
+    categoryId: null, // categoryId rides on root goals only; descendants inherit
+    createdAt: ctx.timestamp,
+    updatedAt: ctx.timestamp,
+  });
+
+  return duration;
+};
+
 /**
- * Generates full Planner objects from simplified seed data.
- * This centralizes the planner creation logic, so changes to the Planner model
- * only need to be updated here.
+ * Generates full Planner objects from the nested seed goals above.
  *
- * Note: categoryId is only set on root items that specify it directly.
- * Descendants inherit their effective category at scheduling time via
- * buildPlannerCategoryMap which walks up the parent chain.
+ * Roots and branches are goal-type; childless leaves are task-type. categoryId
+ * is only set on the root (descendants inherit their effective category at
+ * scheduling time via buildPlannerCategoryMap walking the parent chain), and
+ * top-level sortOrder is 0 (root order is non-semantic).
  */
 export const generatePlanners = (userId: string): Planner[] => {
   const timestamp = new Date().toISOString();
-  const siblingCounts = new Map<string, number>();
+  const now = Date.now();
+  const out: Planner[] = [];
 
-  return plannerSeedData.map((data) => {
-    const isChild = data.parentId !== null;
-    const hasCustomLocation = !!data.locationId;
+  seedGoals.forEach((goal, goalIndex) => {
+    const rootId = `seed-goal-${goalIndex + 1}`;
 
-    let sortOrder = 0;
-    if (data.parentId) {
-      const position = (siblingCounts.get(data.parentId) ?? 0) + 1;
-      siblingCounts.set(data.parentId, position);
-      sortOrder = position * 1024;
-    }
+    let childDurationSum = 0;
+    goal.children.forEach((child, index) => {
+      childDurationSum += buildNode(child, {
+        id: `${rootId}-${index + 1}`,
+        parentId: rootId,
+        siblingIndex: index,
+        color: goal.color,
+        userId,
+        timestamp,
+        out,
+      });
+    });
 
-    return {
-      id: data.id,
-      title: data.title,
-      parentId: data.parentId,
-      plannerType: "goal" as const,
+    const deadline =
+      goal.deadlineInDays != null
+        ? new Date(now + goal.deadlineInDays * 86_400_000).toISOString()
+        : null;
+
+    out.push({
+      id: rootId,
+      title: goal.title,
+      parentId: null,
+      plannerType: PlannerType.goal,
       isReady: true,
       isTriaged: true,
-      duration: data.duration,
-      deadline: null,
+      duration: childDurationSum,
+      deadline,
       starts: null,
       recurrence: null,
       recurrenceExceptions: null,
       splitting: null,
       completedSegments: null,
-      sortOrder,
+      maxMinutesPerDay: goal.maxMinutesPerDay ?? null,
+      earliestStartDate: null,
+      allowedTimes: null,
+      linkedItemId: null,
+      sortOrder: 0,
       completedStartTime: null,
       completedEndTime: null,
-      priority: 5,
+      priority: goal.priority ?? 4,
       userId,
-      color: data.color,
-      locationId: data.locationId ?? null,
-      useParentLocation: isChild && !hasCustomLocation,
-      categoryId: data.categoryId ?? null,
+      color: goal.color,
+      locationId: goal.locationId ?? null,
+      useParentLocation: false,
+      categoryId: goal.categoryId ?? null,
       createdAt: timestamp,
       updatedAt: timestamp,
-    };
+    });
   });
+
+  return out;
 };

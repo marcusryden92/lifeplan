@@ -382,6 +382,11 @@ globalStyle(`${FC} .fc-timegrid-slot-label-cushion`, {
 globalStyle(`${FC} .fc-timegrid-slot`, {
   height: "2.2rem !important",
   borderColor: `${vars.rule} !important`,
+  "@media": {
+    [media.mobile]: {
+      height: "2.6rem !important",
+    },
+  },
 });
 
 globalStyle(`${FC} .fc-timegrid-col`, {
@@ -435,4 +440,49 @@ globalStyle(
 
 globalStyle(`${FC} .fc-timegrid-axis`, {
   borderColor: `${vars.rule} !important`,
+});
+
+// Touch resize handles. FullCalendar derives the dot size, position, and
+// radius entirely from these custom properties, so overriding them rescales
+// and re-centers the dots through FC's own math.
+globalStyle(`${FC}`, {
+  vars: {
+    "--fc-event-resizer-dot-total-width": "16px",
+    "--fc-event-resizer-dot-border-width": "2.5px",
+    // Kill FC's dark wash on selected tiles; the ring below is the signal.
+    "--fc-event-selected-overlay-color": "transparent",
+  },
+});
+
+// A touch starting on a handle must never become a browser scroll — during
+// the first 5px FullCalendar hasn't claimed the gesture yet, and a scroll
+// there permanently cancels the resize (wasTouchScroll).
+globalStyle(`${FC} .fc-event-resizer`, {
+  touchAction: "none",
+});
+
+globalStyle(`${FC} .fc-event-selected .fc-event-resizer`, {
+  background: `${vars.accent.primary} !important`,
+  borderColor: `${vars.paper} !important`,
+  boxShadow: "0 1px 4px rgba(0, 0, 0, 0.35)",
+});
+
+// FC's stock hit inset is -20px per side; with the bigger dot that would
+// swallow short tiles' bodies entirely. -12px keeps a 40px target.
+globalStyle(`${FC} .fc-event-selected .fc-event-resizer::before`, {
+  top: -12,
+  right: -12,
+  bottom: -12,
+  left: -12,
+});
+
+globalStyle(`${FC} .fc-event.fc-event-selected`, {
+  boxShadow: `0 0 0 2px ${vars.paper}, 0 0 0 4px ${vars.accent.primary}, 0 6px 16px rgba(0, 0, 0, 0.22) !important`,
+});
+
+// Long-pressing tile text must not trigger iOS text selection / callout.
+globalStyle(`${FC} .fc-event`, {
+  WebkitTouchCallout: "none",
+  WebkitUserSelect: "none",
+  userSelect: "none",
 });

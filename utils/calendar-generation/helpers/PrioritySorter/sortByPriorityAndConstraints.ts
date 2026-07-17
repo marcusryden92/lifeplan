@@ -1,5 +1,6 @@
 import { Planner, PlannerType } from "@/types/prisma";
 import { URGENCY_CONFIG } from "../../constants";
+import type { PrecedenceEdge } from "@/utils/precedence/types";
 
 function calculateTaskUrgency(
   task: Planner,
@@ -79,6 +80,48 @@ export function scoreCandidatesAndRootGoals(
     }
   }
   return computeUrgencyScores(allPlanners, [...toScore.values()], currentDate);
+}
+
+// Priority inheritance along precedence edges (queues + dependencies). A
+// prerequisite inherits the max score of everything downstream that needs it —
+// `effectiveScore(n) = max(rawScore(n), max over transitive successors)` — so
+// a high-priority chain's low-scored prerequisite isn't starved for slots by
+// unrelated medium-priority work. Propagation is backward-only: successors are
+// never pulled up by their predecessors. The edges are the transparency-gated
+// ones (buildPrecedenceEdges), so a completed successor no longer propagates.
+// The graph is validated acyclic at authoring time; the visiting guard is
+// defensive (a stray cycle degrades to the raw score, never loops).
+export function computeEffectiveScores(
+  rawScores: Map<string, number>,
+  edges: Array<Pick<PrecedenceEdge, "fromId" | "toId">>,
+): Map<string, number> {
+  const successors = new Map<string, string[]>();
+  for (const edge of edges) {
+    const list = successors.get(edge.fromId);
+    if (list) list.push(edge.toId);
+    else successors.set(edge.fromId, [edge.toId]);
+  }
+
+  const effective = new Map<string, number>();
+  const visiting = new Set<string>();
+
+  const resolve = (id: string): number => {
+    const cached = effective.get(id);
+    if (cached !== undefined) return cached;
+    if (visiting.has(id)) return rawScores.get(id) ?? 0;
+    visiting.add(id);
+    let score = rawScores.get(id) ?? 0;
+    for (const successorId of successors.get(id) ?? []) {
+      const successorScore = resolve(successorId);
+      if (successorScore > score) score = successorScore;
+    }
+    visiting.delete(id);
+    effective.set(id, score);
+    return score;
+  };
+
+  for (const id of rawScores.keys()) resolve(id);
+  return effective;
 }
 
 function hasCategoryConstraint(

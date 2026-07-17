@@ -2,19 +2,11 @@
 
 import { space } from "@/lib/theme";
 import { useState } from "react";
-import { Button, ConfirmModal } from "@/components/ui";
+import { Button, ConfirmModal, Field, Input } from "@/components/ui";
 import { requestAccountDeletion } from "@/actions/deleteAccount";
 import { useServerAction } from "@/hooks/useServerAction";
 import { StatusLine } from "../StatusLine";
-import {
-  card,
-  cardTitle,
-  dangerNote,
-  field,
-  fieldLabel,
-  fieldInput,
-  footerRow,
-} from "../../page.css";
+import { card, cardTitle, dangerNote, footerRow } from "../../page.css";
 
 interface DangerSectionProps {
   user: {
@@ -104,13 +96,10 @@ export function DangerSection({ user }: DangerSectionProps) {
               We&apos;ll email you a link that finalizes the deletion. The link
               expires in 30 minutes. Nothing is deleted until you click it.
             </p>
-            <label className={field}>
-              <span className={fieldLabel}>
-                Type your email to confirm
-                {email ? ` (${email})` : ""}
-              </span>
-              <input
-                className={fieldInput}
+            <Field
+              label={`Type your email to confirm${email ? ` (${email})` : ""}`}
+            >
+              <Input
                 type="email"
                 autoComplete="off"
                 value={confirmEmail}
@@ -118,19 +107,17 @@ export function DangerSection({ user }: DangerSectionProps) {
                 disabled={isPending}
                 placeholder={email || "your@email.com"}
               />
-            </label>
+            </Field>
             {requirePassword && (
-              <label className={field}>
-                <span className={fieldLabel}>Password</span>
-                <input
-                  className={fieldInput}
+              <Field label="Password">
+                <Input
                   type="password"
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isPending}
                 />
-              </label>
+              </Field>
             )}
             {status?.tone === "error" && (
               <span

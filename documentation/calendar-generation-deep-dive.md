@@ -124,8 +124,9 @@ A few invariants worth internalizing:
 
 - `CalendarGenerationInput` — the typed input to `CalendarGenerator`, including `previousEngineMessages` which the message emitter consults to carry the user-owned `dismissed` flag forward by id.
 - `CalendarGenerationResult` extends `SchedulingResult` with `categoryEvents`, `travelEvents`, `plannerScores`, and `messages` (the orchestrator's full output).
-- `SchedulingContext` — the bag of state passed to every scheduling call: `currentDate`, `weekStartDay`, `allPlanners`, `scheduledEvents`, `metrics`, `categories` (Map), `plannerLocationMap`, `plannerCategoryMap`, the optional `schedulerRecorder`, and the per-iteration `placementCutoffDate` (tail buffer).
-- `SlotSelectionResult` — what `selectBestSlot` hands to `reserveTaskSlot`. Crucially carries `absorbableTravel` and `reclaimPrecedingGapTravel` as `TravelShardSpan | null`, so removal is by identity (`travelId`), not heuristic time search.
+- `SchedulingContext` — the bag of state passed to every scheduling call: `currentDate`, `weekStartDay`, `allPlanners`, `scheduledEvents`, `metrics`, `categories` (Map), `plannerLocationMap`, `plannerCategoryMap`, `categoryEligibilityMap`, `plannerConstraintsMap` (per-item earliest-start / allowed-times, resolved down the tree), `previousCalendarById` (identity reuse for stable regens), the optional `schedulerRecorder`, and the per-iteration `placementCutoffDate` (tail buffer).
+- `SlotSelectionResult` — what `selectBestSlot` hands to `reserveTaskSlot`. Crucially carries `absorbableTravel` and `reclaimPrecedingGapTravel` as `TravelShardSpan | null`, so removal is by identity (`travelId`), not heuristic time search. `slideIntoFreedTravel` says whether the task back-extends into the freed span or keeps the candidate's clipped start (leg removed either way — see Section 16). Also carries `grantedDurationMinutes` — the minutes the reservation will actually occupy (`task.duration` for plain placements; what `ChunkSizing.grant` returned for chunked ones).
+- `ChunkSizing` — dynamic sizing for chunked placement (split tasks, goal day caps): `{ minMinutes, grant(headroomMinutes, dayBudgetMinutes), dayBudget?(slotStart) }`. When passed to `scheduleTask`, slots are fit-tested at `minMinutes` and `grant` decides the reserved duration from the selected slot's real headroom — chunk sizes derive from calendar geometry, not a fixed block size. See [Section 6](#6-the-dynamic-scheduling-pipeline).
 - `SchedulingFailure` — `{ taskId, taskTitle, reason: SchedulingFailureReason, details, context? }`.
 
 ### Template Models
@@ -140,15 +141,15 @@ A few invariants worth internalizing:
 
 ### Phase 1 — Validate input
 
-[validateInput.ts](../utils/calendar-generation/helpers/CalendarGenerator/validateInput.ts) runs `validateGenerationInput` from the [CalendarValidator](../utils/calendar-generation/helpers/CalendarValidator/) module. On failure, returns immediately with `success: false` and empty arrays. Validation covers required fields (`userId`, `weekStartDay 0–6`), per-planner constraints (duration > 0 unless goal, `duration ≤ MINUTES_PER_WEEK`, valid deadline, plan items have `starts`), per-template constraints (`startDay 0–6`, `startTime "HH:MM"`, `duration ≤ MINUTES_PER_DAY`), and same-day template conflict detection.
+[validateInput.ts](../utils/calendar-generation/helpers/CalendarGenerator/validateInput.ts) runs `validateGenerationInput` from the [CalendarValidator](../utils/calendar-generation/helpers/CalendarValidator/) module. On failure, returns immediately with `success: false` and empty arrays. Validation covers required fields (`userId`, `weekStartDay 0–6`), per-planner constraints (duration > 0 unless goal, `duration ≤ MINUTES_PER_WEEK`, valid deadline), per-template constraints (`startDay 0–6`, `startTime "HH:MM"`, `duration ≤ MINUTES_PER_DAY`), and same-day template conflict detection. A start-less plan is a *warning*, not an error — `buildPlanEvents` null-guards it, so a triaged-but-timeless plan doesn't blank the calendar.
 
 ### Phase 2 — Build initial event array
 
 [buildInitialEventArray.ts](../utils/calendar-generation/helpers/CalendarGenerator/buildInitialEventArray.ts) combines three sources into a single `eventArray`:
 
-1. **Memoized events** ([buildMemoizedEvents](../utils/calendar-generation/helpers/EventAssembler/buildMemoizedEvents.ts)) — items from `previousCalendar` whose end is before `now` and aren't templates/travel/category wrappers **or plans**. Preserved verbatim. Plans are excluded because they are deterministic from their own planner row — pinning the old emit would make the engine ignore a `starts` change on any plan whose block already ended.
+1. **Memoized events** ([buildMemoizedEvents](../utils/calendar-generation/helpers/EventAssembler/buildMemoizedEvents.ts)) — items from `previousCalendar` whose end is before `now` and aren't templates/travel/category wrappers **or plans**. Preserved verbatim. Plans are excluded because they are deterministic from their own planner row — pinning the old emit would make the engine ignore a `starts` change on any plan whose block already ended. Split planners are excluded for the same reason: their frozen past is the completed-segment list on the row (re-emitted fresh by `buildCompletedEvents`), and an uncompleted past chunk must vanish so its minutes reschedule instead of freezing as if they happened.
 2. **Plan events** ([buildPlanEvents](../utils/calendar-generation/helpers/EventAssembler/buildPlanEvents.ts)) — `Planner` rows with `plannerType: "plan"` and a `starts` timestamp, converted to `SimpleEvent` shape. Completion doesn't apply to plans: completion times on a plan row are ignored and the plan always renders at its `starts` anchor. Recurring plans (non-null `Planner.recurrence`) expand into one concrete event per occurrence via [expandPlanOccurrences](../utils/planRecurrence.ts), bounded to `currentDate + PLAN_RECURRENCE_WINDOW_DAYS` (and the rule's `until` / `MAX_PLAN_OCCURRENCES`), with deterministic composite ids `` `${planId}|${localStartKey}` `` so idle regens diff empty. Per-occurrence exceptions on the row (`recurrenceExceptions`) are applied during expansion: `deleted` occurrences are skipped, `moved` ones keep their original key but start at the override time. Occurrence events carry `plannerType: "plan"`, so they are excluded from memoization like plain plans; any engine site resolving a planner from an event id must use `plannerIdFromEventId` (slot location lookups, trespass marking, and SCHEDULED_LATE emission already do).
-3. **Completed events** ([buildCompletedEvents](../utils/calendar-generation/helpers/EventAssembler/buildCompletedEvents.ts)) — tasks/goals with `completedStartTime`/`completedEndTime` set, rendered at their actual completion window (not the originally-scheduled window). Plans are excluded — they are fixed-time anchors, not completable items.
+3. **Completed events** ([buildCompletedEvents](../utils/calendar-generation/helpers/EventAssembler/buildCompletedEvents.ts)) — tasks/goals with `completedStartTime`/`completedEndTime` set, rendered at their actual completion window (not the originally-scheduled window). Plans are excluded — they are fixed-time anchors, not completable items. Split tasks are segment-driven: each entry in `Planner.completedSegments` renders as its own frozen event with id `` `${plannerId}|done:${segmentStart}` `` (`completedSegmentEventId`), re-derived from the row each regen; the classic completion-window path applies only when a split task has no segments (explicitly completed before any chunk was).
 
 Returns `{ eventArray, memoizedEventIds, previousById }`. The ID set is used downstream to prevent the scheduler from re-scheduling already-frozen rows. `previousById` (previous emits keyed by id) rides into the scheduling context; every event builder passes its candidate through [stabilizeEvent](../utils/calendar-generation/helpers/EventAssembler/stabilizeEvent.ts), which reuses the previous emit's `extendedProps.id` / `createdAt` and returns the previous object outright when nothing meaningful changed — an unchanged placement must diff as a no-op, not a fresh-uuid phantom update (see [`stable-regen.test.ts`](../__tests__/calendar-generation/stable-regen.test.ts)).
 
@@ -165,11 +166,12 @@ Returns `{ filteredEvents, recurringTemplateEvents, perTemplateMasks, largestTem
 
 ### Phase 4 — Build location and category maps
 
-Three read-only derivations computed before any slot work:
+Four read-only derivations computed before any slot work:
 
 - [buildLocationMap.ts](../utils/calendar-generation/helpers/CalendarGenerator/buildLocationMap.ts) wraps [LocationMapper/buildLocationMap.ts](../utils/calendar-generation/helpers/LocationMapper/buildLocationMap.ts). Resolution order per planner: **(1)** own `locationId` (unless `useParentLocation`), **(2)** ancestor chain via `parentId`, **(3)** the planner's effective category's `locationId`.
 - [buildPlannerCategoryMap.ts](../utils/calendar-generation/helpers/CalendarGenerator/buildPlannerCategoryMap.ts) resolves each planner's effective categoryId by walking the parent chain, with memoization (O(n) overall even for deep trees).
 - [buildCategoryEligibilityMap.ts](../utils/calendar-generation/helpers/CalendarGenerator/buildCategoryEligibilityMap.ts) resolves each category to the set of category ids whose windows its items may occupy (itself + non-confined ancestors, up to a `confineToOwnWindows` ceiling). Built off the full category list — the chain walks through classification-only ancestors. See [Section 12](#12-category-system) for how the match sites consume it.
+- [buildPlannerConstraintsMap.ts](../utils/calendar-generation/helpers/CalendarGenerator/buildPlannerConstraintsMap.ts) resolves each planner's scheduling constraints (`earliestStartDate`, `allowedTimes`) down the tree: earliest = latest date in the chain, allowed = the chain of settings objects (intersected interval-wise at placement time — settings-level algebra would need day-set × range-set intersection for no gain). Plans are excluded (fixed anchors). Rides `SchedulingContext.plannerConstraintsMap`; parse/interval helpers live in [utils/allowedTimes.ts](../../utils/allowedTimes.ts).
 
 ### Phase 5 — Filter scheduled categories
 
@@ -198,7 +200,7 @@ This is the most consequential phase. It happens in three sub-steps:
 
 ### Phase 8 — Prepare scheduling context
 
-[prepareSchedulingContext.ts](../utils/calendar-generation/helpers/CalendarGenerator/prepareSchedulingContext.ts) packs everything into a single `SchedulingContext` object: current date, week start, planners, scheduled events, metrics, the `Category` lookup map, both planner→location and planner→category maps, and the scheduler recorder.
+[prepareSchedulingContext.ts](../utils/calendar-generation/helpers/CalendarGenerator/prepareSchedulingContext.ts) packs everything into a single `SchedulingContext` object: current date, week start, planners, scheduled events, metrics, the `Category` lookup map, all four Phase 4 maps (planner→location, planner→category, category eligibility, planner constraints), `previousCalendarById` (identity reuse for stable regens), and the scheduler recorder.
 
 ### Phase 9 — Prepare candidates
 
@@ -210,12 +212,13 @@ Scoring itself: tasks without a deadline get `MIN_URGENCY_MULTIPLIER * priority`
 
 - Excludes memoized rows.
 - Excludes completed tasks — completed items render via `buildCompletedEvents` (Phase 2) and must never re-enter scheduling.
-- Keeps ready root goals, plus tasks whose root ancestor is **not** a goal (standalone tasks and task-rooted subtrees). Tasks inside a goal subtree are owned by the goal's readiness gate — `scheduleGoal` places them when the root is ready, and an unready goal's subtree stays off the calendar entirely. Admitting them individually would make readying a no-op.
-- Sorts via [sortByPriorityAndConstraints](../utils/calendar-generation/helpers/PrioritySorter/sortByPriorityAndConstraints.ts) — two-tier sort: category-constrained items first (because they have fewer eligible slots), then by descending **urgency score** looked up from the precomputed map. Urgency is not a strategy; it is decided here before any slot scoring.
+- Keeps ready root goals (`isReady === true`), plus **ready** tasks whose root ancestor is **not** a goal (standalone tasks and task-rooted subtrees). Readiness is the universal gate: a task also needs `isReady === true` to become a candidate (tasks/plans default ready on create, so this is transparent for the common case; a user or the assistant can hold a task off the calendar by un-readying it). Tasks inside a goal subtree are owned by the goal's readiness gate instead — the flat scheduler places a goal's leaves when the root is ready (via `buildLeafGraph`), and an unready goal's subtree stays off the calendar entirely; they are excluded here regardless of their own flag (they inherit the root's readiness via the cascade). Admitting goal-subtree tasks individually would make readying a no-op.
+- Excludes **detour targets actively spliced by a candidate** — the followed set comes from the same enumerator walk the leaf graph uses (`getScheduledLeafSequence`'s `followedTargets`), so a target schedules via the host splice, never twice. A target whose every host is completed, unready, or otherwise not a candidate schedules independently.
+- Sorts via [sortByPriorityAndConstraints](../utils/calendar-generation/helpers/PrioritySorter/sortByPriorityAndConstraints.ts) — two-tier sort: category-constrained items first (because they have fewer eligible slots), then by descending score. The score fed here is the **inheritance-adjusted** `computeEffectiveScores` (a prerequisite rides its dependents' urgency), not raw urgency; raw urgency still feeds `plannerScores` for the dashboard. Ordering is decided here before any slot scoring.
 
 ### Phase 10 — Schedule tasks and goals
 
-Constructs `new Scheduler(timeSlotManager, travelManager, strategy, context)` and calls `scheduleTasksAndGoals(...)`. See [Section 8](#8-incremental-horizon-expansion) for the outer loop; see [Section 6](#6-the-dynamic-scheduling-pipeline) for the per-task pipeline.
+Constructs `new Scheduler(timeSlotManager, travelManager, strategy, context)` and calls `scheduleTasksAndGoals(...)`. See [Section 8](#8-incremental-horizon-expansion) for the outer loop; see [Section 6](#6-the-dynamic-scheduling-pipeline) for the per-task pipeline. Besides events and failures, the call returns the constraint-compromise records accumulated during placement (`splitRelaxations`, `goalCapRelaxations`) — Phase 12 turns them into engine messages.
 
 ### Phase 11 — Assemble final events
 
@@ -235,7 +238,11 @@ The horizon for category wrapper expansion is re-derived from the final slot arr
 - **`TASK_UNSCHEDULABLE`** — one row per (plannerId, reason) for every non-`TOO_LARGE` failure. Payload carries `reason` only; prose lives in [renderEngineMessage.ts](../utils/renderEngineMessage.ts) so a copy rewrite doesn't require a data migration.
 - **`SCHEDULED_LATE`** — one row per placed planner event whose scheduled start is after the deadline inherited via parent walk, guarded so completed tasks and not-yet-passed deadlines don't emit.
 - **`INSUFFICIENT_TRAVEL`** — coalesces recurring travel legs by `(from, to, actualMinutes, timeOfDay, dayOfWeek)`; 400 repeats of the same short leg fold to one row with `affectedCount`.
+- **`SPLIT_CONSTRAINT_RELAXED`** — one warn-tone row per (plannerId, kind) from Phase 10's `splitRelaxations`: `maxChunk` = the carving rule forced a chunk beyond `maxMinutes` (a remainder under `2*min` can only place whole), `dayCap` = the final compromise pass placed chunks past the task's per-day cap rather than dropping the minutes. N compromised chunks fold into one row carrying `affectedCount` + `totalMinutes`; both ride in the id, so a changed compromise supersedes the prior (possibly dismissed) row while an identical regen diffs empty.
+- **`GOAL_DAY_CAP_RELAXED`** — same shape per (goalId, kind) from `goalCapRelaxations`: `oversizedLeaf` = a single block (or a split leaf's minimum chunk) is bigger than the goal's daily cap and placed whole, `dayCap` = the final compromise pass exceeded the cap. `capMinutes` is an emit-time fact excluded from the id (like `TASK_TOO_LARGE.maxCapacity`) — a cap edit alone doesn't resurface a dismissed row; a changed compromise does.
 - **`SCHEDULED_OK`** — one info-tone row per regen with `placedCount` in the id, so a change in count supersedes the prior card. Skipped when count is zero.
+
+The emit array is deduped by id (keep-first) before diffing — id is the DB primary key, so duplicate ids in one array would double-create in the sync transaction (the known producer: a never-scheduled task failing once per expansion pass).
 
 Dismissal is user-owned. `buildDismissedSet(previousEngineMessages)` extracts every id whose prior row had `dismissed: true`; when the current emit produces the same id, the flag is carried forward. A fresh id (situation shifted) surfaces as a new, undismissed row. Full identity model and payload shapes live in [models/EngineMessage.ts](../utils/calendar-generation/models/EngineMessage.ts).
 
@@ -274,7 +281,7 @@ Static placements (plans, templates, category-wrapper travel) are always flush w
 - `splitSlotsAtCategoryBoundaries` — carve Available at pre-expanded category period edges; outside-fragments stay Available, inside-fragments become CategorySlots; threads entry-location across fragments.
 - `inheritLocationFromCategoryPeriods` — stamp period locations onto Occupied intervals fully inside pre-expanded window periods.
 - `expandSlotForDay` — resolve a single `CategoryTimeWindow` rule to concrete bounds for a given day, exception-unaware. Handles overnight slots by adding 24h when `endTime ≤ startTime`. Used by `expandCategoryWindowPeriods` and the clean-week capacity heuristics.
-- `findAllFittingSlots` — return all `PlaceableSlot[]` where `task.duration + bufferTimeMinutes` fits, respecting the task's eligible window-category set (own category + non-confined ancestors) and the per-iteration `placementCutoffDate`. Strict categories the task is not eligible for are filtered out for uncategorized tasks too.
+- `findAllFittingSlots` — return all `PlaceableSlot[]` where the placement's fit-test size (`task.duration`, or `ChunkSizing.minMinutes` for chunked placements) plus buffer fits, respecting the task's eligible window-category set (own category + non-confined ancestors) and the per-iteration `placementCutoffDate`. Strict categories the task is not eligible for are filtered out for uncategorized tasks too. Candidates are copies clipped to `afterDate`; when the task carries an allowed-times chain, each candidate is further clipped into the sub-fragments satisfying every settings object (one slot can yield several fragments), so the whole placement unit lands inside an allowed window.
 - `reserveSlotWithTravel` — atomic placement: removes any absorbed/reclaimed travel shards by `travelId`, splices in `[travel-before?, task, travel-after?]`, and reconstructs leftover Available/Category fragments via [restoreAbsorbedRange](../utils/calendar-generation/utils/timeSlotUtils.ts).
 - `dropPastAvailableSlots` — strip Available slots ending ≤ `now`.
 - `deriveSchedulingHorizon` — return the latest end across all slots (or a fallback). Used for category-wrapper materialization so expansion extends the wrappers too.
@@ -288,30 +295,63 @@ Static placements (plans, templates, category-wrapper travel) are always flush w
 
 ### Per-task pipeline (`scheduleTask`)
 
-[scheduleTask.ts](../utils/calendar-generation/helpers/Scheduler/scheduleTask.ts) runs the following for each candidate:
+[scheduleTask.ts](../utils/calendar-generation/helpers/Scheduler/scheduleTask.ts) runs the following for each candidate. The call optionally takes a `ChunkSizing` (split-task chunks, goal-day-cap placements): phase 2 then fit-tests slots at `sizing.minMinutes` instead of `task.duration`, phase 3 skips slots whose remaining day budget is below the minimum and asks `sizing.grant(headroom, dayBudget)` for the actual reserved minutes (returning 0 rejects the slot), and phase 4 reserves `grantedDurationMinutes` rather than the full duration.
 
 1. **`validateTask`** — `task.duration > 0`. On fail: `INVALID_TASK`.
-2. **`findValidSlots`** — resolves the task's effective location (`plannerLocationMap`) and category (`plannerCategoryMap` or `task.categoryId`), derives the eligible window-category set (`categoryEligibilityMap`), then calls `findAllFittingSlots`. The task is window-constrained only when that set intersects the window-bearing categories; otherwise it schedules in free time. Returns `{ validSlots, fittingSlots, taskLocationId, constraintForTask }`. On empty: `NO_SLOTS`.
-3. **`selectBestSlot`** — scores valid slots via the strategy, then walks candidates in descending score order. For each, computes travel-before / travel-after, inspects whether prior travel can be **absorbed** ([findAdjacentTravelFrom](../utils/calendar-generation/helpers/TravelManager/findAdjacentTravels.ts)) or a **preceding-gap return trip** can be **reclaimed** ([findPrecedingGapTravel](../utils/calendar-generation/helpers/TravelManager/findAdjacentTravels.ts)), and tests whether the effective slot capacity (extended over absorbable/reclaimable spans) can fit `requiredInside`. Accepts the first slot that fits. Returns a `SlotSelectionResult` carrying any `absorbableTravel: TravelShardSpan | null` and `reclaimPrecedingGapTravel: TravelShardSpan | null`.
-4. **`reserveTaskSlot`** — computes the actual `taskStart` / `taskEnd` (accounting for buffer offset, standalone-before placement, and slot-start vs slot-interior position), opportunistically reserves a standalone travel-before if available, then calls `reserveSlotWithTravel` to perform the atomic splice. Absorb / reclaim shard removal is by `travelId` (no time-window search).
+2. **`findValidSlots`** — resolves the task's effective location (`plannerLocationMap`) and category (`plannerCategoryMap` or `task.categoryId`), derives the eligible window-category set (`categoryEligibilityMap`), then calls `findAllFittingSlots`. The task is window-constrained only when that set intersects the window-bearing categories; otherwise it schedules in free time. Scheduling constraints (`plannerConstraintsMap`) are applied here: the effective earliest-start date rides the same `afterTime` seam goal-leaf chaining uses (max of the two), and the allowed-times chain is passed through for slot fragmentation. Returns `{ validSlots, fittingSlots, taskLocationId, constraintForTask, effectiveAfter }` — `effectiveAfter` is the lower placement bound the candidates were clipped to, threaded into phase 3 so slide legality can be validated against the same bound. On empty: `NO_SLOTS`.
+3. **`selectBestSlot`** — scores valid slots via the strategy, then walks candidates in descending score order. For each, computes travel-before / travel-after, inspects whether prior travel can be **absorbed** ([findAdjacentTravelFrom](../utils/calendar-generation/helpers/TravelManager/findAdjacentTravels.ts)) or a **preceding-gap return trip** can be **reclaimed** ([findPrecedingGapTravel](../utils/calendar-generation/helpers/TravelManager/findAdjacentTravels.ts)), and tests whether the effective slot capacity (extended over absorbable/reclaimable spans) can fit `requiredInside`. Absorb/reclaim decompose into two decisions: removing the redundant leg (always correct for a same-location follow-up) and **sliding** the task back into the freed span. The slide is validated per candidate — the back-extended task start must respect `effectiveAfter` and stay inside the candidate's allowed interval (see [Section 16](#16-key-gotchas--edge-cases)); when it fails, the leg is still removed but the task keeps the candidate's clipped start, the freed span stays free time, and no capacity bonus applies. Accepts the first slot that fits. Returns a `SlotSelectionResult` carrying any `absorbableTravel: TravelShardSpan | null`, `reclaimPrecedingGapTravel: TravelShardSpan | null`, and `slideIntoFreedTravel: boolean`.
+4. **`reserveTaskSlot`** — computes the actual `taskStart` / `taskEnd` (accounting for buffer offset, standalone-before placement, and slot-start vs slot-interior position; with `slideIntoFreedTravel: false` the task keeps the candidate slot's start instead of riding the freed span's), opportunistically reserves a standalone travel-before if available, then calls `reserveSlotWithTravel` to perform the atomic splice. Absorb / reclaim shard removal is by `travelId` (no time-window search).
 5. **`buildTaskEvent`** — constructs the `SimpleEvent`. If the placement falls inside a category window, the category's wrapper ID is attached for renderer grouping. Appends to `context.scheduledEvents` so subsequent placements see it.
 
 ### Outer loop (`scheduleTasksAndGoals`)
 
-[scheduleTasksAndGoals.ts](../utils/calendar-generation/helpers/Scheduler/scheduleTasksAndGoals.ts) drives candidates to convergence.
+[scheduleTasksAndGoals.ts](../utils/calendar-generation/helpers/Scheduler/scheduleTasksAndGoals.ts) drives the flattened leaf pool (see "Flat-order scheduling" above) to convergence. Two pieces of bookkeeping are created once per run and shared across iterations: `SplitPlacementState` (per-task placed minutes, chunk ordinals, per-day ledgers — so a partially placed split task resumes from its remainder after horizon expansion instead of restarting) and `GoalCapState` (per-goal daily-cap ledgers, for the same reason).
 
 - Per iteration: compute `placementCutoffDate = lastPlaceableSlotEnd − PLACEMENT_BUFFER_DAYS`.
 - **Proactive expansion check**: count Available slots. Trigger [expandSlots](../utils/calendar-generation/helpers/Scheduler/expandSlots.ts) if either:
   - `availableCount < LOW_SLOT_WATERMARK`, **or**
-  - The largest compatible slot for the biggest remaining candidate is smaller than that candidate's **effective duration** ([largestCompatibleSlotForLargestTask](../utils/calendar-generation/helpers/Scheduler/capacityCheck.ts)). Effective duration (`effectiveCandidateDuration`) is the item's own duration for tasks, but for goals it is the **largest uncompleted leaf** — `scheduleGoal` places leaves one at a time, so the subtree aggregate is the wrong unit. Comparing the aggregate here made the watermark permanently true for any substantial ready goal, and the loop burned its whole expansion budget on `continue`s without attempting a single placement.
+  - The largest compatible slot for the biggest remaining leaf is smaller than that leaf's block size ([largestCompatibleSlotForLargestTask](../utils/calendar-generation/helpers/Scheduler/capacityCheck.ts) + `placementBlockMinutes` — a split leaf sizes as its required minimum chunk). Leaves whose chain predecessors or cross gate are still blocked are excluded (they can't use an expansion until they unblock, so they must not trigger one).
   - Then `continue` (skip the forward pass and re-check on the expanded array).
-- **Forward pass**: walk candidates **in sorted order** (category-constrained and highest-urgency first — matching the Phase 9 sort), calling [scheduleSingleTask](../utils/calendar-generation/helpers/Scheduler/scheduleSingleTask.ts) for tasks and [scheduleGoal](../utils/calendar-generation/helpers/Scheduler/scheduleGoal.ts) for goals. Resolved ids (scheduled or permanently failed) are collected during the walk and removed after the pass; rows that failed with `NO_SLOTS` are retained for retry. (The old reverse-index splice idiom handed first pick to the lowest-urgency item under contention, inverting the sorter's intent.)
-- **Reactive backstop**: if candidates remain after a full forward pass, run `expandSlots` and loop again.
-- Stops when candidates empty or `expansionsDone ≥ MAX_WEEKS_TO_SEARCH`. Candidates still standing at budget exhaustion each push a `NO_SLOTS` failure — this exit used to be silent, which let a starved run report `SCHEDULED_OK` with zero events while the diff sync deleted every previously placed event.
+- **Forward pass**: walk pool leaves in `(constrained desc, leafEffScore desc, scheduleIndex asc)` order — category-constrained leaves pick slots first, matching the two-tier order `sortByPriorityAndConstraints` gives the candidate sort — attempting each via [placeLeaf](../utils/calendar-generation/helpers/Scheduler/placeLeaf.ts) once its chain predecessors are resolved and its cross gate is open. `placeLeaf` gates `TOO_LARGE` at the leaf's required block and dispatches split leaves to the chunk loop ([Split tasks](#split-tasks-chunked-placement) below); a partial split leaf keeps its chunks and stays in the pool. Resolved leaves (placed or permanently failed) are removed after the pass; `NO_SLOTS` leaves are retained for retry.
+- **Zero-leaf candidates** (every leaf already completed/memoized) resolve through their OWN cross gate, publishing the gate bound as their chain end — a queue successor behind a fully-handled middle member stays bounded instead of jumping the chain. Resolution is a fixpoint re-run at the top of each iteration and after the horizon marking / compromise pass.
+- **Reactive backstop**: if leaves remain after a full forward pass, run `expandSlots` and loop again. Exception: a pass in which NOTHING even attempted placement is a precedence deadlock (stale contradictory data — authoring validation refuses these), so the missing gate outcomes are force-failed instead of burning expansion budget; successors proceed with loud breaks.
+- Stops when the pool empties or `expansionsDone ≥ MAX_WEEKS_TO_SEARCH`.
+- **Final compromise pass**: with the expansion budget spent and leaves still standing, one last walk runs with `allowDayCapRelaxation: true` — placing a chunk past the split task's or goal's per-day cap beats dropping the minutes entirely. Scarcity stays strict through every normal pass so expansion gets the chance to satisfy the caps before they're violated. Every compromise is recorded (`SplitPlacementState.relaxations` / `GoalCapState.relaxations`) and surfaced by Phase 12 as `SPLIT_CONSTRAINT_RELAXED` / `GOAL_DAY_CAP_RELAXED`.
+- Leaves still standing after the compromise pass push one `NO_SLOTS` failure per structural root (message identity and console rows match the old per-candidate emission; a spliced target leaf reports on the target) — this exit used to be silent, which let a starved run report `SCHEDULED_OK` with zero events while the diff sync deleted every previously placed event. Failures for leaves that eventually placed on a later iteration are dropped at the end.
 
-### Goals
+### Flat-order (leaf-driven) scheduling
 
-`scheduleGoal` resolves the goal's bottom-layer uncompleted tasks (via `getSortedTreeBottomLayer`), filters out completed / already-scheduled / memoized tasks, and schedules each in sequence using `goalAfterTime = previousTaskEnd` so the goal's children stay temporally clustered. Always returns `permanentFailure: false` — the retry loop handles `NO_SLOTS`.
+The scheduler does NOT place a goal atomically. [buildLeafGraph](../utils/calendar-generation/helpers/Scheduler/buildLeafGraph.ts) flattens every candidate root into a single **leaf pool** and derives the precedence structure; `scheduleTasksAndGoals` then places leaves one at a time via the shared [placeLeaf](../utils/calendar-generation/helpers/Scheduler/placeLeaf.ts) primitive (the old `scheduleGoal` / `scheduleSingleTask` are absorbed).
+
+- **Leaf pool + chain edges.** Each candidate's detour-spliced leaf sequence ([getScheduledLeafSequence](../utils/goalPageHandlers.ts)) yields consecutive-pair *chain edges* (`leaf_i → leaf_{i+1}`). This one construct encodes goal-internal ordering (a goal's leaves chain so they stay clustered and after the previous), detour splices (a `linkedItemId` placeholder redirects into the target's sequence), and **multi-reference** (a target referenced from several hosts lives once with chain predecessors from all of them). Deduped by leaf id.
+- **Ordering.** Ready leaves (chain predecessors resolved, cross gate open) are placed in `(constrained desc, leafEffScore desc, scheduleIndex asc)` order. The constrained tier (the leaf's resolved category is non-null) gives window-bound work first pick at scarce slots. `leafEffScore` is leaf-level priority inheritance — a leaf inherits the max score of everything downstream that needs it (over chain + lifted queue/dependency edges), so a dependency's whole predecessor chain and a detour host's *before*-leaves ride their dependents' urgency; *after*-leaves don't. `scheduleIndex` is the clustering tiebreak.
+- **Chaining + failure.** `afterTime` for a leaf = max over its placed chain predecessors' ends (plus the cross-gate bound). Chain ends accumulate across passes — a split leaf's early chunks land in earlier passes than the pass that reports scheduled, and successors bound to the LAST chunk. A permanently-failed (TOO_LARGE) leaf publishes a *pass-through* end — the later of its incoming bound and its own partial chunks — so the chain flows from the last real work. A NO_SLOTS / partial-split leaf stays unresolved and holds back its chain successors (retry after expansion).
+- **Cross gate (queue/dependency) stays root-level** ([precedenceGate.ts](../utils/calendar-generation/helpers/Scheduler/precedenceGate.ts)): applied to a root's first scheduled leaf; a root's outcome resolves when all leaves contributing to its completion land (a detour target is a tracked root too, so it can be a queue/dependency endpoint). Day caps apply per capped root the leaf belongs to: budgets compose pointwise-min over the caps the block fits, every placement charges every ledger, and a block bigger than one goal's cap is `oversizedLeaf` for that goal only — the other caps keep steering it.
+
+### Split tasks (chunked placement)
+
+A task (or goal leaf) with non-null `Planner.splitting` (`{minMinutes, maxMinutes, maxMinutesPerDay?, minSpacingMinutes?}`, parsed by [utils/taskSplitting.ts](../utils/taskSplitting.ts)) is placed as dynamically sized chunks by [scheduleSplitTask](../utils/calendar-generation/helpers/Scheduler/scheduleSplitTask.ts):
+
+- **Chunk loop.** While minutes remain, run the 5-phase pipeline with a `ChunkSizing`: fit-test at the required minimum, then `grantChunkMinutes` decides the reserved size from the selected slot's real headroom, capped by `maxMinutes` and the remaining day budget. Each chunk rides the pipeline as a synthetic planner clone whose id is the chunk event id (`` `${plannerId}|chunk:${n}` ``, ordinal-keyed) — `plannerIdFromEventId` resolves it back to the row, and travel/buffer handling applies per chunk like any other dynamic placement. The clone's location/category/constraints map entries are copied from the parent row so the chunk doesn't silently default to "Anywhere"/uncategorized/unconstrained — chunks land inside the task's allowed fragments and honor its earliest start.
+- **Carving invariant.** The leftover remainder is always zero or ≥ `minMinutes`. A remainder under `2*min` cannot be split, so the only valid chunk is the whole remainder — rule-forced (not slot-driven), applies even in strict mode, may exceed `maxMinutes`, and is recorded as a `maxChunk` relaxation.
+- **Per-day cap.** `maxMinutesPerDay` maintains a per-task per-day ledger (seeded from the row's completed segments, so today's finished work counts). The `ChunkSizing.dayBudget` seam makes `selectBestSlot` skip slots on exhausted days. The cap is only relaxed by the final compromise pass (`dayCap` relaxation).
+- **Spacing.** `minSpacingMinutes` (optional) holds the next chunk until at least that long after the previous chunk's end — anchor seeded from the latest completed segment too. Default none: chunks sit only the standard placement buffer apart.
+- **Composition with goal caps.** When the leaf sits under capped goals (its own root plus any detour host that splices it), the effective day budget is the pointwise min of the task's own budget and every applicable goal budget, and every placed chunk charges every ledger. A goal budget below the required minimum chunk is rule-forced out of the composition for that goal only (no day could ever host the chunk under it) and recorded as an `oversizedLeaf` relaxation on that goal — the remaining caps keep steering.
+- **Failure shape.** A chunk that finds no slot returns `fullyPlaced: false` with the placed chunks kept — the outer loop retries the remainder after expansion.
+
+Chunk events are never memoized ([Phase 2](#phase-2--build-initial-event-array)); completed minutes are always derived by summing `completedSegments`. Guarded by [`split-task-scheduling.test.ts`](../__tests__/calendar-generation/split-task-scheduling.test.ts).
+
+### Goal daily cap
+
+A goal root with non-null `Planner.maxMinutesPerDay` has its whole subtree metered against one per-day ledger ([goalDayCap.ts](../utils/calendar-generation/helpers/Scheduler/goalDayCap.ts)) — the split-task day cap one level up, riding the same `ChunkSizing.dayBudget` seam:
+
+- **Seeding.** `seedGoalDayLedger` runs once per goal per run, charging pre-existing subtree events — completed leaves, completed split segments, memoized past events — all of which sit in `context.scheduledEvents` before any dynamic placement, so one scan covers today's history.
+- **Plain leaves** place through `wholeBlockSizing`: a fixed grant that returns the full duration when both headroom and day budget allow it, else 0 — the block places whole on a day with room or tries another day; the grant never shrinks it.
+- **Split leaves** compose the goal budget with their own per-task budget (pointwise min), charging both ledgers per chunk.
+- **Two-tier relaxation.** Scarcity stays strict through horizon expansion and is only relaxed by the final compromise pass (`dayCap`). But a block that can NEVER fit under the cap — leaf duration or minimum chunk > cap — places whole immediately (`oversizedLeaf`); no expansion creates such a day, and holding it strict would starve the loop.
+- Budget tests key on the slot's **start** day; a midnight-crossing placement charges each day it touches (split-task parity, via `addIntervalMinutesByDay`).
+
+The day cap applies only to root goal candidates (and detour-target roots), so a stale cap on a retyped or nested row is inert. Guarded by [`goal-day-cap.test.ts`](../__tests__/calendar-generation/goal-day-cap.test.ts).
 
 ---
 
@@ -401,20 +441,20 @@ The slot horizon is bounded — initial build covers `HORIZON_CHUNK_DAYS = 28` d
 
 ### Why proactive expansion matters
 
-Without the proactive watermark check, the scheduler would burn iterations on tasks that can't possibly fit before triggering reactive expansion. Detecting "biggest candidate > biggest compatible slot" before the forward pass starts cuts straight to the expansion step. The comparison must use `effectiveCandidateDuration` (goals sized as their largest uncompleted leaf, excluding leaves already placed or memoized) — see Section 6 for the starvation failure mode when the goal aggregate is used instead. The watermark must also resolve category constraints against the same window-bearing category set placement uses (`scheduledCategories`): a classification-only category (no time windows) is unconstrained at placement, and treating it as constraining here demands category slots that can never exist — the loop then spends its whole expansion budget on watermark `continue`s and the placement walk never runs.
+Without the proactive watermark check, the scheduler would burn iterations on leaves that can't possibly fit before triggering reactive expansion. Detecting "biggest remaining leaf > biggest compatible slot" before the forward pass starts cuts straight to the expansion step. The comparison sizes each remaining leaf by `placementBlockMinutes` (a split leaf as its required minimum chunk); leaves whose chain predecessors or cross gate are still blocked are excluded (they can't use an expansion until they unblock). The flat scheduler retired the old goal-aggregate sizing that pinned the watermark permanently true. The watermark must also resolve category constraints against the same window-bearing category set placement uses (`scheduledCategories`): a classification-only category (no time windows) is unconstrained at placement, and treating it as constraining here demands category slots that can never exist — the loop then spends its whole expansion budget on watermark `continue`s and the placement walk never runs.
 
 ### Regression coverage
 
-Four tests live in [`__tests__/calendar-generation/`](../__tests__/calendar-generation/):
+These tests live in [`__tests__/calendar-generation/`](../__tests__/calendar-generation/) (the full engine-test index is in CLAUDE.md's Tests section):
 
 - [`expansion-seam.test.ts`](../__tests__/calendar-generation/expansion-seam.test.ts) — guards the `CategoryEvent` ID format (`` `${categoryTimeWindowId}|${YYYY-MM-DD-local}` ``) by running `generateCalendar` with a single Plan three weeks out (which forces expansion) and asserting that every produced `CategoryEvent` ID matches the local-date pattern. The diff layer and the DB schema depend on this composite ID; a regression to UTC-instant keying would diverge near midnight UTC and would be caught here.
 - [`ready-goal-watermark.test.ts`](../__tests__/calendar-generation/ready-goal-watermark.test.ts) — guards the three watermark starvation modes: a ready root goal must place every leaf even when the subtree aggregate exceeds any slot, when its `categoryId` names a windowless (classification-only) category, and when a memoized past leaf would otherwise inflate the goal's effective size.
-- [`ready-gate.test.ts`](../__tests__/calendar-generation/ready-gate.test.ts) — guards the Phase 9 readiness gate: a NOT-ready goal's subtree schedules nothing, while standalone tasks next to it still place.
+- [`ready-gate.test.ts`](../__tests__/calendar-generation/ready-gate.test.ts) — guards the Phase 9 readiness gate as the universal scheduling gate: a NOT-ready goal's subtree schedules nothing, a ready standalone task places, and a NOT-ready standalone task does not.
 - [`completed-task-not-rescheduled.test.ts`](../__tests__/calendar-generation/completed-task-not-rescheduled.test.ts) — guards the Phase 9 completed-task filter: a completed task under a ready goal renders exactly once, at its completion window, and never re-enters the scheduler.
 - [`category-window-recurrence-exceptions.test.ts`](../__tests__/calendar-generation/category-window-recurrence-exceptions.test.ts) — guards `expandCategoryWindowPeriods`: deleted occurrences vacate both the CategoryEvents and the slot fabric, moved occurrences keep their original-date id while relocating placement, and a move across the horizon seam emits exactly once (containing-range rule). The seam case leaves one window fragment uncovered so the marker-based pickup path is the one exercised.
 - [`expansion-without-categories.test.ts`](../__tests__/calendar-generation/expansion-without-categories.test.ts) — guards the marker-less growth path: with zero CategorySlots there is nothing for `markLastCategoryAsFinal` to stamp, so the chunk base must derive from the current horizon end rather than the fallback pickup (today) — otherwise expansion rebuilds the same chunk forever and an overflow task fails `NO_SLOTS` instead of placing past day 28.
 
-All but the seam, window-exception, and marker-less-expansion tests run against a trimmed live-data snapshot in `fixtures/` — hand-built minimal fixtures don't produce a valid slot fabric and fail silently, so new engine tests should extend the fixture pattern.
+All but the seam, window-exception, and marker-less-expansion tests run against a trimmed live-data snapshot in `fixtures/` — hand-built minimal fixtures rarely produce a valid slot fabric and fail silently, so new full-pipeline tests should extend the fixture pattern. Deliberate exceptions exist where the test's specific geometry demands hand-built inputs (the seam/window/cascade tests plus [`split-task-scheduling.test.ts`](../__tests__/calendar-generation/split-task-scheduling.test.ts), [`goal-day-cap.test.ts`](../__tests__/calendar-generation/goal-day-cap.test.ts), and [`scheduling-constraints.test.ts`](../__tests__/calendar-generation/scheduling-constraints.test.ts)); the full engine-test index lives in CLAUDE.md's Tests section.
 
 ---
 
@@ -430,11 +470,11 @@ All but the seam, window-exception, and marker-less-expansion tests run against 
 
 Returns `min(categoryCeiling, largestGap)`. Cached per `taskCategoryId ?? "anywhere"` for the duration of a scheduling pass.
 
-`scheduleSingleTask` and `scheduleGoal` call this at task entry. If `task.duration > maxCapacity`, the task is marked `TOO_LARGE` immediately — no iterations wasted attempting placement.
+`placeLeaf` calls this at leaf entry and takes the min with the leaf's allowed-times ceiling (`maxAllowedBlockMinutes` — the exact longest contiguous block a generic week offers under the constraint chain, measured on a two-week unroll so blocks chaining across midnight and the week seam count; the per-task value stays outside the category-keyed cache). If the required block exceeds `maxCapacity`, the task is marked `TOO_LARGE` immediately — no iterations wasted attempting placement, and no expansion budget burned hunting for an allowed block that cannot exist. The required block is the full duration for a plain task, but only the required **minimum chunk** for a split task (`minChunkRequired` of the run's remainder) — a split task is `TOO_LARGE` only when not even one minimum chunk fits anywhere.
 
 ### `largestCompatibleSlotForLargestTask`
 
-Same module, used by the proactive expansion check. Walks the slot array and returns the largest currently-existing slot the caller-supplied biggest remaining candidate could land in, honoring category strictness and the `placementCutoffDate`. The biggest candidate is selected once per outer-loop iteration in `scheduleTasksAndGoals` by `effectiveCandidateDuration` (same module) and shared with the watermark comparison: a task's own duration, but a goal's **largest uncompleted, still-placeable leaf** — never the subtree aggregate (see Section 6), and never a leaf that is memoized or already placed this run. Category eligibility is resolved through `categoryEligibilityMap` and intersected with the caller-supplied `schedulableCategoryIds` (the window-bearing categories), so the watermark agrees with `findValidSlots` about which windows a subcategory item may cascade into.
+Same module, used by the proactive expansion check. Walks the slot array and returns the largest currently-existing slot the caller-supplied biggest remaining leaf could land in, honoring category strictness and the `placementCutoffDate`. The biggest remaining leaf is selected once per outer-loop iteration in `scheduleTasksAndGoals` by `placementBlockMinutes` (same module) over the unblocked leaves and shared with the watermark comparison — a split leaf sizes as its required **minimum chunk**, never the full remainder. Category eligibility is resolved through `categoryEligibilityMap` and intersected with the caller-supplied `schedulableCategoryIds` (the window-bearing categories), so the watermark agrees with `findValidSlots` about which windows a subcategory item may cascade into.
 
 ---
 
@@ -561,7 +601,7 @@ Each generation, `buildCategoryEvents` materializes one `CategoryEvent` row per 
 
 ## 13. Debugging the Engine
 
-The engine has a built-in switchboard at [calendarGeneration.ts:78–94](../utils/calendar-generation/calendarGeneration.ts#L78-L94). Set `enableLogging = true` and flip individual flags:
+The engine has a built-in switchboard at [calendarGeneration.ts:98–114](../utils/calendar-generation/calendarGeneration.ts#L98-L114). Set `enableLogging = true` and flip individual flags:
 
 | Flag | What it dumps |
 | --- | --- |
@@ -613,6 +653,7 @@ CalendarGenerator.generate()
    ├─ (2)  buildInitialEventArray              → memoized + plan + completed events
    ├─ (3)  expandTemplates                     → recurring events + PerTemplateMask[]
    ├─ (4)  buildLocationMap + buildPlannerCategoryMap
+   │       + buildCategoryEligibilityMap + buildPlannerConstraintsMap
    ├─ (5)  filter scheduledCategories          (useTimeWindows + timeSlots.length > 0)
    │
    ├─ (6a) buildAvailableSlots                 → initial 28-day slot array
@@ -626,20 +667,31 @@ CalendarGenerator.generate()
    ├─ (10) Scheduler.scheduleTasksAndGoals
    │         │
    │         ▼
-   │       loop while candidates remain (≤ MAX_WEEKS_TO_SEARCH expansions):
+   │       create SplitPlacementState + GoalCapState (shared across iterations)
+   │       leaf pool + edges: buildLeafGraph (spliced sequences, chain edges, leafEffScore)
+   │       loop while the pool is non-empty (≤ MAX_WEEKS_TO_SEARCH expansions):
+   │         resolve zero-leaf candidates through their cross gate (bound carried forward)
    │         compute placementCutoffDate
-   │         proactive expansion check (watermark / effective-duration vs largest-compatible-slot)
+   │         proactive expansion check (watermark / biggest-leaf-block vs largest-compatible-slot)
    │           → if needed: expandSlots → continue
    │         forward pass:
-   │           for each candidate in sorted order:
-   │             scheduleSingleTask / scheduleGoal
+   │           for each ready leaf in (constrained desc, leafEffScore desc, scheduleIndex asc) order:
+   │             placeLeaf (chain preds resolved + cross gate open)
    │               → scheduleTask: validate → findValid → selectBest → reserve → buildEvent
+   │               → split leaves: scheduleSplitTask chunk loop (ChunkSizing)
+   │               → capped roots: per-day ledgers via ChunkSizing.dayBudget (min over fitting caps;
+   │                 all caps charged; oversized decided per cap)
    │             collect resolved ids; remove after the pass
-   │         if candidates remain → expandSlots (reactive backstop)
-   │       leftover candidates at budget exhaustion → loud NO_SLOTS failures
+   │         if leaves remain → expandSlots (reactive backstop)
+   │           (unless nothing even attempted: precedence deadlock → force-fail missing gates)
+   │       final compromise pass (day caps relaxed; compromises recorded)
+   │       leftover roots at budget exhaustion → loud NO_SLOTS failures (one per structural root)
    │
    ├─ (11) deriveSchedulingHorizon → assembleFinalEvents
    │         → events, categoryEvents, travelEvents
+   │
+   ├─ (12) buildEngineMessages                  → failures + relaxations + travel
+   │         → EngineMessage[] (dismissed carried forward by id)
    │
    └─ emitDebugLog (if logging enabled)
 ```
@@ -664,3 +716,7 @@ CalendarGenerator.generate()
 - **Template events are filtered out of `events`.** They're consumed by the slot builder (as `PerTemplateMask[]`), not surfaced in the final `SimpleEvent[]`. The renderer reads recurring template instances separately.
 - **Trespass flags propagate from slots to `CategoryEvent` rows.** Don't compute trespass in the renderer — the engine writes it via `stampCategoryEventBorders` so cold loads render correctly.
 - **Urgency is not a strategy.** Strategy weights affect *slot scoring* only. Urgency scores are computed once at the top of `CalendarGenerator.execute()` (via `scoreCandidatesAndRootGoals`, which also covers non-candidate root goals so the dashboard can rank them) and consumed by `sortByPriorityAndConstraints` before any strategy runs. The same map is returned as `plannerScores`.
+- **Absorb/reclaim removal and slide are separate decisions.** Removing a redundant travel leg is always correct for a same-location follow-up — a constrained task must never pay a fictional round trip just because its bounds exist. Only the **slide** (back-extending the task into the freed span) can violate a bound, so `selectBestSlot` validates it per candidate: the slid task start must be `>= effectiveAfter` (afterTime chain / earliest date, applied to unconstrained tasks too — a queue-bounded successor must not slide below its gate bound) and must sit in the same allowed interval as the candidate (checked via `intersectIntervalWithAllowed`). On failure the placement carries `slideIntoFreedTravel: false`: the leg is still removed, the task keeps the candidate's clipped start, the freed span becomes plain free time (a visible pad — dead space beats fictional commutes), and the span adds no capacity bonus. Guarded by the "travel coalescing under constraints" tests in [`scheduling-constraints.test.ts`](../__tests__/calendar-generation/scheduling-constraints.test.ts).
+- **Chunk events are never memoized.** `buildMemoizedEvents` excludes split planners entirely — an uncompleted past chunk must vanish so its minutes reschedule; the frozen past is the row's `completedSegments`, re-emitted fresh each regen.
+- **Day budgets key on the slot's start day, but charges split at midnight.** `ChunkSizing.dayBudget(slotStart)` tests the local day the slot starts on; a midnight-crossing placement charges every day it touches (`addIntervalMinutesByDay`). Keep both sides of that seam consistent when extending cap logic.
+- **Day caps are two-tier.** Scarcity (no room left today) stays strict through horizon expansion and only relaxes in the final compromise pass. Impossibility (block or minimum chunk larger than the cap) relaxes immediately — no expansion creates such a day, and staying strict starves the loop.

@@ -42,7 +42,7 @@ export const innerWrap = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [media.mobile]: { padding: "16px 32px 24px" },
+    [media.mobile]: { padding: "16px 16px 24px" },
   },
 });
 
@@ -109,22 +109,15 @@ export const title = style([
   },
 ]);
 
+// The <Input variant="titleInline"> supplies the accent underline + box reset;
+// this layers the hero typography and the height matched to the static title so
+// toggling rename in/out doesn't shift layout.
 export const titleEditInput = style([
   display.hero,
   {
     lineHeight: `${TITLE_LINE_HEIGHT}px`,
-    color: vars.ink,
-    background: "transparent",
-    border: "none",
-    outline: "none",
-    padding: 0,
-    margin: 0,
-    width: "100%",
     display: "block",
-    boxSizing: "content-box",
     height: TITLE_LINE_HEIGHT,
-    borderBottom: `${TITLE_BORDER}px solid ${vars.accent.primary}`,
-    transition: themeTransition,
     "@media": {
       [media.mobile]: { fontSize: 38, lineHeight: "38px", height: 38 },
     },

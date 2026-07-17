@@ -1,26 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  text,
-  fieldLabel as fieldLabelPreset,
-} from "@/lib/theme";
-
-export const fieldStack = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["2"],
-  minWidth: 0,
-  gridColumn: "1 / -1",
-});
-
-export const fieldLabel = style([
-  fieldLabelPreset,
-  {
-    transition: themeTransition,
-  },
-]);
+import { space, vars, text } from "@/lib/theme";
 
 export const placeRow = style({
   display: "flex",

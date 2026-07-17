@@ -23,7 +23,10 @@ export const CategoryBadge = forwardRef<HTMLSpanElement, Props>(
           background: `color-mix(in srgb, ${color} ${colorMixAlpha.lightFill}%, transparent)`,
           color,
           border: `1px solid ${color}`,
-          maxWidth: 110,
+          // Cap at 110 but never exceed the container, so a narrow field (the
+          // item-detail Area cell) truncates the label instead of clipping the
+          // pill's border.
+          maxWidth: "min(110px, 100%)",
           minWidth: 0,
           ...style,
         }}

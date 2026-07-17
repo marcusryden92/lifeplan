@@ -17,9 +17,15 @@ export interface PlanRecurrenceRule {
   until?: string | null;
 }
 
+// A "moved" exception customizes a single occurrence: `newStart` is its
+// wall-clock start (equal to the rule position when only the duration changed),
+// and the optional `durationMinutes` overrides the entity's own duration for a
+// per-occurrence resize. Absent duration means "inherit the series length".
 export type PlanOccurrenceException =
-  | { key: string; type: "moved"; newStart: string }
+  | { key: string; type: "moved"; newStart: string; durationMinutes?: number }
   | { key: string; type: "deleted" };
+
+type MovedException = Extract<PlanOccurrenceException, { type: "moved" }>;
 
 export interface PlanOccurrence {
   key: string;
@@ -77,21 +83,40 @@ export function parseRecurrenceExceptions(
   try {
     const parsed: unknown = JSON.parse(value);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((entry): entry is PlanOccurrenceException => {
-      if (!entry || typeof entry !== "object") return false;
+    const result: PlanOccurrenceException[] = [];
+    for (const entry of parsed) {
+      if (!entry || typeof entry !== "object") continue;
       const candidate = entry as {
         key?: unknown;
         type?: unknown;
         newStart?: unknown;
+        durationMinutes?: unknown;
       };
-      if (typeof candidate.key !== "string") return false;
-      if (candidate.type === "deleted") return true;
-      return (
+      if (typeof candidate.key !== "string") continue;
+      if (candidate.type === "deleted") {
+        result.push({ key: candidate.key, type: "deleted" });
+        continue;
+      }
+      if (
         candidate.type === "moved" &&
         typeof candidate.newStart === "string" &&
         !isNaN(new Date(candidate.newStart).getTime())
-      );
-    });
+      ) {
+        const moved: MovedException = {
+          key: candidate.key,
+          type: "moved",
+          newStart: candidate.newStart,
+        };
+        if (
+          typeof candidate.durationMinutes === "number" &&
+          candidate.durationMinutes > 0
+        ) {
+          moved.durationMinutes = candidate.durationMinutes;
+        }
+        result.push(moved);
+      }
+    }
+    return result;
   } catch {
     return [];
   }
@@ -132,6 +157,21 @@ export function occurrenceKeyFromEventId(eventId: string): string | null {
 
 export function planIsRecurring(plan: Planner): boolean {
   return parsePlanRecurrence(plan.recurrence) !== null;
+}
+
+// True when the occurrence at `key` already carries a moved exception — i.e. it
+// is a customized one-off tile. The scope prompt ("just this / every
+// occurrence?") is skipped for these: re-editing an already-customized
+// occurrence always means "just this one", and "every occurrence" there would
+// rewrite or clear the whole series. Deleted occurrences render no tile, so
+// only moved ones are reachable here.
+export function hasMovedException(
+  recurrenceExceptions: string | null | undefined,
+  key: string,
+): boolean {
+  return parseRecurrenceExceptions(recurrenceExceptions).some(
+    (e) => e.key === key && e.type === "moved",
+  );
 }
 
 function stepOccurrence(
@@ -181,10 +221,14 @@ export function expandPlanOccurrences(args: {
 
     const start =
       exception?.type === "moved" ? new Date(exception.newStart) : ruleStart;
+    const occurrenceDuration =
+      exception?.type === "moved" && exception.durationMinutes !== undefined
+        ? exception.durationMinutes
+        : durationMinutes;
     occurrences.push({
       key,
       start,
-      end: addMinutes(start, durationMinutes),
+      end: addMinutes(start, occurrenceDuration),
       moved: exception?.type === "moved",
     });
   }
@@ -192,14 +236,23 @@ export function expandPlanOccurrences(args: {
 }
 
 // Upserts a moved exception for one occurrence. Re-moving an already-moved
-// occurrence updates the same entry — the key never changes.
+// occurrence updates the same entry — the key never changes. An explicit
+// `durationMinutes` records a per-occurrence resize; omitting it preserves any
+// duration a prior resize set (so a plain drag keeps the occurrence's length).
 export function upsertMovedException(
   exceptions: PlanOccurrenceException[],
   key: string,
   newStart: string,
+  durationMinutes?: number,
 ): PlanOccurrenceException[] {
+  const existing = exceptions.find(
+    (e): e is MovedException => e.key === key && e.type === "moved",
+  );
+  const resolvedDuration = durationMinutes ?? existing?.durationMinutes;
   const rest = exceptions.filter((e) => e.key !== key);
-  return [...rest, { key, type: "moved", newStart }];
+  const moved: MovedException = { key, type: "moved", newStart };
+  if (resolvedDuration !== undefined) moved.durationMinutes = resolvedDuration;
+  return [...rest, moved];
 }
 
 export function upsertDeletedException(
@@ -217,6 +270,22 @@ export function removeException(
   return exceptions.filter((e) => e.key !== key);
 }
 
+// Drops a moved occurrence's per-occurrence duration override so it inherits
+// the series length again, without disturbing its position override. Used when
+// a resize is applied to "every occurrence": the just-resized occurrence must
+// take the new series duration rather than keep its own stale length.
+export function clearMovedDuration(
+  exceptions: PlanOccurrenceException[],
+  key: string,
+): PlanOccurrenceException[] {
+  return exceptions.map((e) => {
+    if (e.key !== key || e.type !== "moved" || e.durationMinutes === undefined) {
+      return e;
+    }
+    return { key: e.key, type: "moved", newStart: e.newStart };
+  });
+}
+
 // "Move all occurrences": the series anchor shifts by the drag delta, so every
 // rule-derived occurrence start shifts with it — exception keys (and moved
 // targets) must shift by the same delta to keep pointing at their occurrences.
@@ -229,10 +298,12 @@ export function shiftRecurrenceExceptions(
       new Date(occurrenceKeyToDate(e.key).getTime() + deltaMs),
     );
     if (e.type === "deleted") return { key: shiftedKey, type: "deleted" };
-    return {
+    const moved: MovedException = {
       key: shiftedKey,
       type: "moved",
       newStart: new Date(new Date(e.newStart).getTime() + deltaMs).toISOString(),
     };
+    if (e.durationMinutes !== undefined) moved.durationMinutes = e.durationMinutes;
+    return moved;
   });
 }

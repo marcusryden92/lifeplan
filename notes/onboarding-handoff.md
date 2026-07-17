@@ -91,7 +91,7 @@ unit-tested; `_steps/` and `_components/` are UI only.
 
 - `components/draft/AIDraftModal/AIDraftModal.tsx` — `intent` tuning: empty-state hint, no History popover, no auto-resume.
 - `app/api/draft/stream/route.ts` — onboarding preamble (`intentBlock`).
-- `components/draft/AIDraftModal/applyDraftForestToPlanner.ts` — save-time reverse parser; any node with children persists as a goal.
+- `utils/draft/applyDraftForestToPlanner.ts` — save-time reverse parser; any node with children persists as a goal.
 
 ---
 

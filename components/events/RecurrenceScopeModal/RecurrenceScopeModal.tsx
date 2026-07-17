@@ -4,7 +4,7 @@ import { Button, ConfirmModal } from "@/components/ui";
 
 interface RecurrenceScopeModalProps {
   open: boolean;
-  mode: "move" | "delete";
+  mode: "move" | "delete" | "resize";
   planTitle: string;
   // The recurring entity's noun, used in the title/body copy. Defaults to
   // "plan"; templates pass "template".
@@ -24,13 +24,12 @@ export function RecurrenceScopeModal({
   onCancel,
 }: RecurrenceScopeModalProps) {
   const isDelete = mode === "delete";
+  const verb = isDelete ? "Delete" : mode === "resize" ? "Resize" : "Move";
   return (
     <ConfirmModal
       open={open}
-      title={`${isDelete ? "Delete" : "Move"} recurring ${entityLabel}`}
-      body={`"${planTitle}" repeats. ${
-        isDelete ? "Delete" : "Move"
-      } just this occurrence, or every occurrence?`}
+      title={`${verb} recurring ${entityLabel}`}
+      body={`"${planTitle}" repeats. ${verb} just this occurrence, or every occurrence?`}
       confirmLabel="Just this occurrence"
       cancelLabel="Cancel"
       tone={isDelete ? "danger" : "default"}

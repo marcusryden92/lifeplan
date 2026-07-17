@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Button, vars } from "@/components/ui";
+import { Button, TimePicker, vars } from "@/components/ui";
 import type { Category } from "@/types/prisma";
 import { WindowExceptionEditor } from "@/components/events/WindowExceptionEditor";
 import {
@@ -20,7 +20,6 @@ import {
   field,
   fieldWithMargin,
   fieldLabel,
-  fieldStatic,
   categoryRow,
   categoryOption,
   categoryDot,
@@ -33,6 +32,9 @@ interface WindowEditorProps {
   window: WorkingWindow;
   categories: Category[];
   onUpdate: (patch: Partial<WorkingWindow>) => void;
+  /** Time edits route through the modal so it can enforce the same range and
+   *  overlap rules as a grid drag before committing. */
+  onUpdateTimes: (startTime: string, endTime: string) => void;
   onDuplicate: () => void;
   onDelete: () => void;
 }
@@ -41,6 +43,7 @@ export function WindowEditor({
   window: win,
   categories,
   onUpdate,
+  onUpdateTimes,
   onDuplicate,
   onDelete,
 }: WindowEditorProps) {
@@ -64,11 +67,19 @@ export function WindowEditor({
       <div className={fieldGrid}>
         <div className={field}>
           <span className={fieldLabel}>start</span>
-          <span className={fieldStatic}>{win.startTime}</span>
+          <TimePicker
+            value={win.startTime}
+            ariaLabel="Start time"
+            onChange={(next) => onUpdateTimes(next, win.endTime)}
+          />
         </div>
         <div className={field}>
           <span className={fieldLabel}>end</span>
-          <span className={fieldStatic}>{win.endTime}</span>
+          <TimePicker
+            value={win.endTime}
+            ariaLabel="End time"
+            onChange={(next) => onUpdateTimes(win.startTime, next)}
+          />
         </div>
       </div>
 

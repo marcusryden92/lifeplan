@@ -1,5 +1,5 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { space, vars, themeTransition, text } from "@/lib/theme";
+import { space, vars, themeTransition, text, media } from "@/lib/theme";
 
 // Row primitives shared by AgendaItemRow and UncompletedItemRow. Variants
 // (NOW/NEXT/TRAVEL, flash tints) live in the respective row files.
@@ -15,6 +15,11 @@ export const agendaRow = style({
 
 export const agendaRowGrouped = style({
   margin: "2px 12px",
+  "@media": {
+    [media.mobile]: {
+      margin: "0",
+    },
+  },
 });
 
 export const agendaTimeCol = style({

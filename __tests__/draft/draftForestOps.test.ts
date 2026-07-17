@@ -1,12 +1,12 @@
-import type { DraftNode } from "@/components/draft/AIDraftModal/plannerTreeToJson";
-import type { DraftForest } from "@/components/draft/AIDraftModal/plannerForestToJson";
+import type { DraftNode } from "@/utils/draft/plannerTreeToJson";
+import type { DraftForest } from "@/utils/draft/plannerForestToJson";
 import {
   addDraftItems,
   deleteDraftItems,
   moveDraftItem,
   searchDraftItems,
   updateDraftItems,
-} from "@/components/draft/AIDraftModal/draftForestOps";
+} from "@/utils/draft/draftForestOps";
 
 const VALID_CATEGORY_IDS: ReadonlySet<string> = new Set(["cat-1", "cat-2"]);
 
@@ -147,6 +147,20 @@ describe("updateDraftItems", () => {
     );
     expect(ok.failures).toEqual([]);
     expect(ok.forest.goals[1].isReady).toBe(true);
+  });
+
+  it("readies a standalone task freely — no subtasks or deadline needed", () => {
+    const forest = makeForest();
+    forest.goals.push(node({ id: "loose", title: "Call dentist" }));
+    const result = updateDraftItems(
+      forest,
+      [{ id: "loose", isReady: true }],
+      VALID_CATEGORY_IDS,
+    );
+    expect(result.failures).toEqual([]);
+    expect(result.forest.goals.find((g) => g.id === "loose")!.isReady).toBe(
+      true,
+    );
   });
 
   it("reports unknown ids without touching anything", () => {
@@ -305,6 +319,7 @@ describe("splitting via item ops", () => {
       minMinutes: 30,
       maxMinutes: 120,
       maxMinutesPerDay: 30,
+      minSpacingMinutes: null,
     });
 
     const cleared = updateDraftItems(
@@ -334,6 +349,50 @@ describe("splitting via item ops", () => {
     expect(badBounds.failures[0].reason).toContain("minMinutes");
   });
 
+  it("sets, floors, and clears the daily limit on a root goal", () => {
+    const enabled = updateDraftItems(
+      makeForest(),
+      [{ id: "goal-a", maxMinutesPerDay: 90.9 }],
+      VALID_CATEGORY_IDS,
+    );
+    expect(enabled.failures).toEqual([]);
+    expect(enabled.forest.goals[0].maxMinutesPerDay).toBe(90);
+
+    const cleared = updateDraftItems(
+      enabled.forest,
+      [{ id: "goal-a", maxMinutesPerDay: null }],
+      VALID_CATEGORY_IDS,
+    );
+    expect(cleared.failures).toEqual([]);
+    expect(cleared.forest.goals[0].maxMinutesPerDay).toBeNull();
+  });
+
+  it("rejects the daily limit on children, top-level tasks, and non-positive values", () => {
+    const forest = makeForest();
+    forest.goals.push(node({ id: "loose", title: "Call dentist" }));
+
+    const onChild = updateDraftItems(
+      forest,
+      [{ id: "basics", maxMinutesPerDay: 60 }],
+      VALID_CATEGORY_IDS,
+    );
+    expect(onChild.failures[0].reason).toContain("top-level goals only");
+
+    const onTask = updateDraftItems(
+      forest,
+      [{ id: "loose", maxMinutesPerDay: 60 }],
+      VALID_CATEGORY_IDS,
+    );
+    expect(onTask.failures[0].reason).toContain("top-level goals only");
+
+    const nonPositive = updateDraftItems(
+      forest,
+      [{ id: "goal-a", maxMinutesPerDay: 0 }],
+      VALID_CATEGORY_IDS,
+    );
+    expect(nonPositive.failures[0].reason).toContain("positive number");
+  });
+
   it("carries splitting through add_items nodes", () => {
     const result = addDraftItems(makeForest(), {
       parentId: "goal-a",
@@ -354,6 +413,7 @@ describe("splitting via item ops", () => {
       minMinutes: 45,
       maxMinutes: 120,
       maxMinutesPerDay: null,
+      minSpacingMinutes: null,
     });
   });
 });

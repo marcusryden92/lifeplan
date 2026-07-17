@@ -122,7 +122,7 @@ export default function LocationsPage() {
   // could cascade-delete locations on the server if the racing fetch ever
   // returned an empty list. Trust Redux as the source of truth.
   const dispatch = useDispatch();
-  const { categories, markSynced } = useCalendarProvider();
+  const { categories, markSynced, updateAll } = useCalendarProvider();
 
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
@@ -302,10 +302,30 @@ export default function LocationsPage() {
   // travel-time removal keeps the matrix in sync immediately.
   const handleDelete = () => {
     if (!deletingId) return;
-    const original = locations.find((l) => l.id === deletingId);
+    const deletedId = deletingId;
+    const original = locations.find((l) => l.id === deletedId);
     if (!original) return;
-    dispatch(removeLocation(deletingId));
-    dispatch(removeTravelTimesByLocationId(deletingId));
+    dispatch(removeLocation(deletedId));
+    dispatch(removeTravelTimesByLocationId(deletedId));
+    // Mirror the server's SetNull cascade: planner/category/template rows that
+    // pointed at the deleted location fall back to "Anywhere". Routing it
+    // through updateAll both nulls the ids and regenerates, so no stale
+    // locationId survives in Redux and the calendar drops travel to/from it.
+    updateAll(
+      (prev) =>
+        prev.map((p) =>
+          p.locationId === deletedId ? { ...p, locationId: null } : p,
+        ),
+      undefined,
+      (prev) =>
+        prev.map((t) =>
+          t.locationId === deletedId ? { ...t, locationId: null } : t,
+        ),
+      (prev) =>
+        prev.map((c) =>
+          c.locationId === deletedId ? { ...c, locationId: null } : c,
+        ),
+    );
     modalDispatch({ type: "CLOSE_ALL" });
     flashSuccess("Location deleted.");
   };

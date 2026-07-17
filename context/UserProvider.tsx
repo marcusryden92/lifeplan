@@ -6,7 +6,6 @@ import { useSession } from "next-auth/react";
 import { setUser } from "@/redux/slices/userSlice";
 import {
   setSchedulingSettings,
-  setTravelTimeMatrix,
   setAllTravelTimes,
   setDefaultTransportMode,
   setLocations,
@@ -34,9 +33,6 @@ export default function UserProvider({ children }: { children: ReactNode }) {
           })
         );
         dispatch(setDefaultTransportMode(data.preferences.defaultTransportMode));
-        if (data.travelTimes.length > 0) {
-          dispatch(setTravelTimeMatrix(data.travelTimes));
-        }
         dispatch(setAllTravelTimes(data.allTravelTimes));
         dispatch(setLocations(data.locations));
       });

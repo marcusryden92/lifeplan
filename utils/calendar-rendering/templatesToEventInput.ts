@@ -101,7 +101,11 @@ export function templatesToEventInput(
     for (const exception of exceptions) {
       if (exception.type !== "moved") continue;
       const start = new Date(exception.newStart);
-      const end = new Date(start.getTime() + durationMs);
+      const occurrenceMs =
+        exception.durationMinutes !== undefined
+          ? exception.durationMinutes * 60 * 1000
+          : durationMs;
+      const end = new Date(start.getTime() + occurrenceMs);
       events.push({
         id: occurrenceEventId(template.id, exception.key),
         title: template.title,

@@ -27,16 +27,6 @@ export function dateToWeekDay(date: Date): WeekDayIntegers {
   return date.getDay() as WeekDayIntegers;
 }
 
-export function isSameDayOrMidnightEnd(start: Date, end: Date): boolean {
-  if (start.toDateString() === end.toDateString()) return true;
-  const nextMidnight = new Date(
-    start.getFullYear(),
-    start.getMonth(),
-    start.getDate() + 1,
-  );
-  return end.getTime() === nextMidnight.getTime();
-}
-
 export function durationMinutes(start: Date, end: Date): number {
   return Math.round((end.getTime() - start.getTime()) / 60000);
 }
@@ -53,24 +43,42 @@ export function addMinutesToHHMM(hhmm: string, addMinutes: number): string {
   return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
+const WEEK_MINUTES = 7 * 24 * 60;
+
+// A window's occupied span in absolute minutes-of-week [start, end). An
+// overnight window (endTime <= startTime, e.g. 23:00-07:00) wraps past
+// midnight, so end runs beyond the start day. The "23:59" value is an
+// end-of-day sentinel — a within-day window ending exactly at midnight.
+function windowWeekSpan(
+  day: WeekDayIntegers,
+  startTime: string,
+  endTime: string,
+): [number, number] {
+  const startMin = timeToMinutes(startTime);
+  let endMin = endTime === "23:59" ? 24 * 60 : timeToMinutes(endTime);
+  if (endMin <= startMin) endMin += 24 * 60;
+  const start = day * 24 * 60 + startMin;
+  return [start, start + (endMin - startMin)];
+}
+
 export function windowRangeOverlaps(
   windows: WorkingWindow[],
   start: Date,
   end: Date,
   excludeWindowId: string | null,
 ): boolean {
-  const day = dateToWeekDay(start);
-  const startMin = start.getHours() * 60 + start.getMinutes();
-  const endMin =
-    end.getHours() === 0 && end.getMinutes() === 0
-      ? 24 * 60
-      : end.getHours() * 60 + end.getMinutes();
+  const candStart =
+    dateToWeekDay(start) * 24 * 60 + start.getHours() * 60 + start.getMinutes();
+  const candEnd = candStart + durationMinutes(start, end);
   for (const w of windows) {
     if (w.id === excludeWindowId) continue;
-    if (w.day !== day) continue;
-    const wStart = timeToMinutes(w.startTime);
-    const wEnd = w.endTime === "23:59" ? 24 * 60 : timeToMinutes(w.endTime);
-    if (startMin < wEnd && endMin > wStart) return true;
+    const [ws, we] = windowWeekSpan(w.day, w.startTime, w.endTime);
+    // Compare on the weekly ring: an overnight window at the Sat/Sun seam
+    // collides with early-Sunday candidates, so test the window shifted by a
+    // whole week on either side too (each span is < a week, so ±1 covers it).
+    for (const shift of [-WEEK_MINUTES, 0, WEEK_MINUTES]) {
+      if (candStart < we + shift && ws + shift < candEnd) return true;
+    }
   }
   return false;
 }

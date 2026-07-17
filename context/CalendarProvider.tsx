@@ -20,6 +20,8 @@ import {
   Category,
   CategoryEvent,
   TravelEvent,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { useFetchCalendarData } from "@/hooks/useFetchCalendarData";
@@ -35,6 +37,10 @@ import type {
   SerializedTravelTime,
 } from "@/redux/slices/schedulingSettingsSlice";
 import { buildInheritedLocationMap, InheritedLocationInfo } from "@/utils/goalPageHandlers";
+import {
+  buildQueueCategoryByRootId,
+  buildQueueByPlannerId,
+} from "@/utils/queue-handlers/queueLookups";
 
 type CalendarContextType = {
   userId: string;
@@ -50,21 +56,42 @@ type CalendarContextType = {
   categories: Category[];
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
+  queues: Queue[];
+  dependencies: PlannerDependency[];
   locations: SerializedLocation[];
   updatePlannerArray: (
     planner: Planner[] | ((prev: Planner[]) => Planner[]),
     options?: CalendarUpdateOptions,
   ) => void;
   updateTemplateArray: React.Dispatch<React.SetStateAction<EventTemplate[]>>;
+  updateQueueArray: (
+    queues: Queue[] | ((prev: Queue[]) => Queue[]),
+    options?: CalendarUpdateOptions,
+  ) => void;
+  updateDependencyArray: (
+    dependencies:
+      | PlannerDependency[]
+      | ((prev: PlannerDependency[]) => PlannerDependency[]),
+    options?: CalendarUpdateOptions,
+  ) => void;
   updateAll: (
     planner?: Planner[] | ((prev: Planner[]) => Planner[]),
     calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
     template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
     categories?: Category[] | ((prev: Category[]) => Category[]),
+    queues?: Queue[] | ((prev: Queue[]) => Queue[]),
+    dependencies?:
+      | PlannerDependency[]
+      | ((prev: PlannerDependency[]) => PlannerDependency[]),
     options?: CalendarUpdateOptions,
   ) => void;
   manuallyRefreshCalendar: () => void;
   inheritedLocationMap: Map<string, InheritedLocationInfo>;
+  // Shared queue-lookup seam: every surface rendering queue membership or
+  // effective category reads these, never a page-local build, so all views
+  // agree with the engine's applyQueueCategoryInheritance.
+  queueCategoryByRootId: Map<string, string>;
+  queueByPlannerId: Map<string, Queue>;
   // Direct server actions that bypass the diff sync (Location create needs
   // Google Places, travel-time refresh needs Google distances) must call this
   // after dispatching their result to Redux, or the next sync pass treats the
@@ -110,6 +137,12 @@ export default function CalendarProvider({
   const categories = useSelector(
     (state: RootState) => state.calendarSource.categories,
   );
+  const queues = useSelector(
+    (state: RootState) => state.calendarSource.queues,
+  );
+  const dependencies = useSelector(
+    (state: RootState) => state.calendarSource.dependencies,
+  );
   const isCalendarLoaded = useSelector(
     (state: RootState) => state.calendarSource.isLoaded,
   );
@@ -132,8 +165,13 @@ export default function CalendarProvider({
     (state: RootState) => state.schedulingSettings.weekStartDay,
   );
 
-  const { updatePlannerArray, updateTemplateArray, updateAll } =
-    useCalendarStateActions(dispatch);
+  const {
+    updatePlannerArray,
+    updateTemplateArray,
+    updateQueueArray,
+    updateDependencyArray,
+    updateAll,
+  } = useCalendarStateActions(dispatch);
 
   const manuallyRefreshCalendar = useManuallyRefreshCalendar(
     userId,
@@ -151,18 +189,38 @@ export default function CalendarProvider({
   const travelTimes = useSelector(
     (state: RootState) => state.schedulingSettings.allTravelTimes,
   );
+  const defaultTransportMode = useSelector(
+    (state: RootState) => state.schedulingSettings.defaultTransportMode,
+  );
+  const enableTravelEvents = useSelector(
+    (state: RootState) => state.schedulingSettings.enableTravelEvents,
+  );
   const isInitialMount = useRef(true);
+  // Ref (not a dep) so the settings-regen effect skips hydration-time firings —
+  // regenerating against a not-yet-loaded planner paints an empty calendar.
+  const isCalendarLoadedRef = useRef(isCalendarLoaded);
+  isCalendarLoadedRef.current = isCalendarLoaded;
 
-  // Regenerate calendar when bufferTimeMinutes or weekStartDay changes
-  // (preserves current event positions)
+  // Regenerate on engine-input settings that don't flow through the source
+  // arrays (buffer, week start, travel rows, transport mode, travel toggle).
+  // Safe as an effect because the thunk reads these but never writes them;
+  // watching categories/template instead would double-fire against source edits.
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
-    if (!userId) return;
+    if (!userId || !isCalendarLoadedRef.current) return;
     updateAll();
-  }, [bufferTimeMinutes, weekStartDay, updateAll, userId]);
+  }, [
+    bufferTimeMinutes,
+    weekStartDay,
+    travelTimes,
+    defaultTransportMode,
+    enableTravelEvents,
+    updateAll,
+    userId,
+  ]);
 
   // Empty-state autoregen, fired exactly once per cold load. Snapshots
   // isCalendarLoaded at mount: if redux retained the loaded state from a
@@ -209,6 +267,8 @@ export default function CalendarProvider({
       categoryEvents,
       travelEvents,
       engineMessages,
+      queues,
+      dependencies,
       locations,
       travelTimes,
     }),
@@ -220,6 +280,8 @@ export default function CalendarProvider({
       categoryEvents,
       travelEvents,
       engineMessages,
+      queues,
+      dependencies,
       locations,
       travelTimes,
     ],
@@ -231,9 +293,23 @@ export default function CalendarProvider({
 
   useFetchCalendarData(userId, initializeState);
 
+  const queueCategoryByRootId = useMemo(
+    () => buildQueueCategoryByRootId(queues),
+    [queues],
+  );
+  const queueByPlannerId = useMemo(
+    () => buildQueueByPlannerId(queues),
+    [queues],
+  );
   const inheritedLocationMap = useMemo(
-    () => buildInheritedLocationMap(planner, categories, locations),
-    [planner, categories, locations]
+    () =>
+      buildInheritedLocationMap(
+        planner,
+        categories,
+        locations,
+        queueCategoryByRootId,
+      ),
+    [planner, categories, locations, queueCategoryByRootId]
   );
 
   // Memoized so a provider re-render (any calendar-slice write) only reaches
@@ -253,12 +329,18 @@ export default function CalendarProvider({
             categories,
             categoryEvents,
             travelEvents,
+            queues,
+            dependencies,
             locations,
             updatePlannerArray,
             updateTemplateArray,
+            updateQueueArray,
+            updateDependencyArray,
             updateAll,
             manuallyRefreshCalendar,
             inheritedLocationMap,
+            queueCategoryByRootId,
+            queueByPlannerId,
             markSynced,
           }
         : null,
@@ -272,12 +354,18 @@ export default function CalendarProvider({
       categories,
       categoryEvents,
       travelEvents,
+      queues,
+      dependencies,
       locations,
       updatePlannerArray,
       updateTemplateArray,
+      updateQueueArray,
+      updateDependencyArray,
       updateAll,
       manuallyRefreshCalendar,
       inheritedLocationMap,
+      queueCategoryByRootId,
+      queueByPlannerId,
       markSynced,
     ],
   );

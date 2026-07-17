@@ -50,6 +50,7 @@ export function useDashboardData(): DashboardData {
     categories,
     travelEvents,
     inheritedLocationMap,
+    queueCategoryByRootId,
     updateAll,
   } = useCalendarProvider();
 
@@ -74,6 +75,7 @@ export function useDashboardData(): DashboardData {
         categories,
         locations,
         inheritedLocationMap,
+        queueCategoryByRootId,
       }),
     [
       now,
@@ -84,13 +86,20 @@ export function useDashboardData(): DashboardData {
       categories,
       locations,
       inheritedLocationMap,
+      queueCategoryByRootId,
     ],
   );
 
   const uncompleted = useMemo(
     () =>
-      buildUncompletedItems({ now, planners: planner, categories, calendar }),
-    [now, planner, categories, calendar],
+      buildUncompletedItems({
+        now,
+        planners: planner,
+        categories,
+        calendar,
+        queueCategoryByRootId,
+      }),
+    [now, planner, categories, calendar, queueCategoryByRootId],
   );
 
   const agenda = useMemo(

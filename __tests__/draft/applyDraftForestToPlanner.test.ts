@@ -1,7 +1,7 @@
 import type { Planner } from "@/types/prisma";
-import { applyDraftForestToPlanner } from "@/components/draft/AIDraftModal/applyDraftForestToPlanner";
-import { plannerForestToJson } from "@/components/draft/AIDraftModal/plannerForestToJson";
-import type { DraftNode } from "@/components/draft/AIDraftModal/plannerTreeToJson";
+import { applyDraftForestToPlanner } from "@/utils/draft/applyDraftForestToPlanner";
+import { plannerForestToJson } from "@/utils/draft/plannerForestToJson";
+import type { DraftNode } from "@/utils/draft/plannerTreeToJson";
 
 const USER_ID = "test-user";
 const TS = "2026-01-01T00:00:00.000Z";
@@ -21,6 +21,10 @@ function row(overrides: Partial<Planner> & { id: string }): Planner {
     recurrenceExceptions: null,
     splitting: null,
     completedSegments: null,
+    maxMinutesPerDay: null,
+    earliestStartDate: null,
+    allowedTimes: null,
+    linkedItemId: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,
@@ -249,6 +253,46 @@ describe("applyDraftForestToPlanner", () => {
       (p) => p.title === "step" && p.parentId === ungatedRoot.id,
     )!;
     expect(ungatedChild.isReady).toBe(false);
+  });
+
+  it("readies a new standalone task by default, honoring an explicit hold", () => {
+    const planner = makePlanner();
+    const workingForest = clone(plannerForestToJson(planner));
+    workingForest.goals.push(
+      {
+        id: "",
+        title: "call dentist",
+        plannerType: "task",
+        duration: 15,
+        deadline: null,
+        priority: 0,
+        isReady: null,
+        categoryId: null,
+        children: [],
+      },
+      {
+        id: "",
+        title: "someday idea",
+        plannerType: "task",
+        duration: 30,
+        deadline: null,
+        priority: 0,
+        isReady: false,
+        categoryId: null,
+        children: [],
+      },
+    );
+
+    const result = applyDraftForestToPlanner({
+      planner,
+      workingForest,
+      userId: USER_ID,
+      validCategoryIds: VALID_CATEGORY_IDS,
+    });
+
+    // A task needs no deadline to be ready — ready unless explicitly held off.
+    expect(result.find((p) => p.title === "call dentist")!.isReady).toBe(true);
+    expect(result.find((p) => p.title === "someday idea")!.isReady).toBe(false);
   });
 
   it("cascades a retained root's ready state to restructured descendants", () => {
@@ -637,6 +681,108 @@ describe("applyDraftForestToPlanner", () => {
         validCategoryIds: VALID_CATEGORY_IDS,
       });
       expect(byId(cleared, "a1").splitting).toBeNull();
+    });
+
+    it("applies the daily limit set on a retained root goal and clears it when dropped", () => {
+      const planner = makePlanner();
+      const workingForest = clone(plannerForestToJson(planner));
+      workingForest.goals.find((g) => g.id === "goal-a")!.maxMinutesPerDay = 120;
+
+      const applied = applyDraftForestToPlanner({
+        planner,
+        workingForest,
+        userId: USER_ID,
+        validCategoryIds: VALID_CATEGORY_IDS,
+      });
+      expect(byId(applied, "goal-a").maxMinutesPerDay).toBe(120);
+
+      // A retained goal re-emitted WITHOUT the field (model dropped it →
+      // normalized to null) clears the limit — splitting-style contract.
+      const droppedForest = clone(plannerForestToJson(applied));
+      const droppedGoal = droppedForest.goals.find((g) => g.id === "goal-a")!;
+      delete droppedGoal.maxMinutesPerDay;
+      droppedGoal.title = "forces apply";
+      const cleared = applyDraftForestToPlanner({
+        planner: applied,
+        workingForest: droppedForest,
+        userId: USER_ID,
+        validCategoryIds: VALID_CATEGORY_IDS,
+      });
+      expect(byId(cleared, "goal-a").maxMinutesPerDay).toBeNull();
+    });
+
+    it("persists the daily limit on a new root goal, never on descendants or task roots", () => {
+      const planner = makePlanner();
+      const workingForest = clone(plannerForestToJson(planner));
+      workingForest.goals.push(
+        {
+          id: "",
+          title: "Capped goal",
+          plannerType: "goal",
+          duration: 0,
+          deadline: "2026-12-01",
+          priority: 4,
+          isReady: null,
+          categoryId: null,
+          maxMinutesPerDay: 90,
+          children: [
+            {
+              id: "",
+              title: "step",
+              plannerType: "task",
+              duration: 60,
+              deadline: null,
+              priority: 4,
+              isReady: null,
+              categoryId: null,
+              // Out-of-contract on a child; the row must be stamped null.
+              maxMinutesPerDay: 30,
+              children: [],
+            },
+          ],
+        },
+        {
+          id: "",
+          title: "Capped task",
+          plannerType: "task",
+          duration: 30,
+          deadline: null,
+          priority: 4,
+          isReady: null,
+          categoryId: null,
+          maxMinutesPerDay: 60,
+          children: [],
+        },
+      );
+
+      const result = applyDraftForestToPlanner({
+        planner,
+        workingForest,
+        userId: USER_ID,
+        validCategoryIds: VALID_CATEGORY_IDS,
+      });
+
+      expect(result.find((p) => p.title === "Capped goal")!.maxMinutesPerDay).toBe(90);
+      expect(result.find((p) => p.title === "step")!.maxMinutesPerDay).toBeNull();
+      expect(result.find((p) => p.title === "Capped task")!.maxMinutesPerDay).toBeNull();
+    });
+
+    it("heals a stale daily limit on retained descendants", () => {
+      const planner = makePlanner().map((p) =>
+        p.id === "a1" ? { ...p, maxMinutesPerDay: 45 } : p,
+      );
+      const workingForest = clone(plannerForestToJson(planner));
+      const goalA = workingForest.goals.find((g) => g.id === "goal-a")!;
+      goalA.title = "forces apply";
+
+      const result = applyDraftForestToPlanner({
+        planner,
+        workingForest,
+        userId: USER_ID,
+        validCategoryIds: VALID_CATEGORY_IDS,
+      });
+
+      expect(byId(result, "a1").maxMinutesPerDay).toBeNull();
     });
 
     it("persists splitting on new nodes", () => {

@@ -29,6 +29,7 @@ export function buildTodayAgenda(args: {
   categories: Category[];
   locations: SerializedLocation[];
   inheritedLocationMap: Map<string, InheritedLocationInfo>;
+  queueCategoryByRootId?: Map<string, string>;
 }): AgendaItem[] {
   const {
     now,
@@ -39,6 +40,7 @@ export function buildTodayAgenda(args: {
     categories,
     locations,
     inheritedLocationMap,
+    queueCategoryByRootId,
   } = args;
 
   const dayStart = startOfDay(now);
@@ -67,7 +69,11 @@ export function buildTodayAgenda(args: {
 
     // Walk the planner parent chain so subtasks/sub-goals inherit their
     // ancestor's category (matches the EventPopover modal pattern).
-    const effectiveCategoryId = getEffectiveCategoryId(planners, planner.id);
+    const effectiveCategoryId = getEffectiveCategoryId(
+      planners,
+      planner.id,
+      queueCategoryByRootId,
+    );
     const category = effectiveCategoryId
       ? categoryById.get(effectiveCategoryId)
       : undefined;

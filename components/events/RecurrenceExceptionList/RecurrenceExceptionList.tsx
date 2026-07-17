@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { addMinutes, format } from "date-fns";
 import { RotateCcw } from "lucide-react";
 import {
   occurrenceKeyToDate,
@@ -39,6 +39,15 @@ export function RecurrenceExceptionList({
               <span className={arrow}>→</span>
               <span className={time}>
                 {format(new Date(exception.newStart), TIME_FORMAT)}
+                {exception.durationMinutes !== undefined
+                  ? `–${format(
+                      addMinutes(
+                        new Date(exception.newStart),
+                        exception.durationMinutes,
+                      ),
+                      "HH:mm",
+                    )}`
+                  : ""}
               </span>
             </>
           ) : (

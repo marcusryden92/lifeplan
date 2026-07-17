@@ -5,12 +5,9 @@ import {
   DURATIONS,
   popover,
   backdropFilters,
-  formInput,
   media,
-  radii,
   fieldLabel,
 } from "@/lib/theme";
-
 
 const fadeIn = keyframes({
   from: { opacity: 0 },
@@ -20,11 +17,6 @@ const fadeIn = keyframes({
 const slideUp = keyframes({
   from: { opacity: 0, transform: "translateY(8px) scale(0.98)" },
   to: { opacity: 1, transform: "translateY(0) scale(1)" },
-});
-
-const sheetUp = keyframes({
-  from: { transform: "translateY(100%)" },
-  to: { transform: "translateY(0)" },
 });
 
 export const overlay = style({
@@ -58,21 +50,6 @@ export const dialog = style([
     animationName: slideUp,
     animationDuration: `${DURATIONS.modal}s`,
     animationTimingFunction: "ease",
-    "@media": {
-      [media.mobile]: {
-        top: "auto",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        marginLeft: 0,
-        marginRight: 0,
-        width: "100%",
-        maxHeight: "70vh",
-        borderRadius: `${radii["xl+2"]}px ${radii["xl+2"]}px 0 0`,
-        animationName: sheetUp,
-        animationDuration: `${DURATIONS.modal}s`,
-      },
-    },
   },
 ]);
 
@@ -90,19 +67,14 @@ export const inputIcon = style({
   color: vars.inkSoft,
 });
 
-export const input = style([
-  formInput({ variant: "underline" }),
-  {
-    flex: 1,
-    border: "none",
-    borderBottom: "none",
-    padding: 0,
-    background: "transparent",
-    selectors: {
-      "&:focus": { borderBottom: "none" },
-    },
+// Bare field inside the icon row; the large search font is the one thing that
+// differs from the bare <Input> default, so it wins via the doubled selector.
+export const input = style({
+  flex: 1,
+  selectors: {
+    "&&": { fontSize: 16 },
   },
-]);
+});
 
 export const scrollArea = style({
   overflowY: "auto",
@@ -169,7 +141,7 @@ export const itemBody = style({
 });
 
 export const itemTitle = style({
-  fontSize: 13.5,
+  fontSize: 13,
   fontWeight: 500,
   color: vars.ink,
   overflow: "hidden",
@@ -212,6 +184,9 @@ export const footer = style({
   },
 });
 
-export const kbdSpacing = style({
-  marginRight: space["1"],
+export const footerHints = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: space["4"],
+  flexWrap: "wrap",
 });

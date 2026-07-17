@@ -451,7 +451,15 @@ export function masksToIntervals(
     (endDate.getTime() - startDate.getTime()) / msPerDay,
   );
 
-  for (let i = 0; i < numDays; i++) {
+  // Look back a full week so the most recent occurrence of every weekly mask is
+  // generated regardless of its length — including one that started on an
+  // earlier day and is still running at startDate (last night's sleep this
+  // morning, or a multi-day block we're currently inside). We don't infer how
+  // far back to look from any template's duration; we generate the candidates
+  // and keep the ones that actually overlap the range below.
+  const DAYS_PER_WEEK = 7;
+
+  for (let i = -DAYS_PER_WEEK; i < numDays; i++) {
     const dayStart = new Date(startDate);
     dayStart.setDate(dayStart.getDate() + i);
     dayStart.setHours(0, 0, 0, 0);
@@ -490,11 +498,15 @@ export function masksToIntervals(
 
   for (const mask of masks) {
     if (!mask.recurrenceExceptions?.length) continue;
-    const durationMs = (mask.endMinutes - mask.startMinutes) * 60000;
+    const seriesDurationMs = (mask.endMinutes - mask.startMinutes) * 60000;
     for (const exception of mask.recurrenceExceptions) {
       if (exception.type !== "moved") continue;
       const start = new Date(exception.newStart);
       if (start < startDate || start >= endDate) continue;
+      const durationMs =
+        exception.durationMinutes !== undefined
+          ? exception.durationMinutes * 60000
+          : seriesDurationMs;
       intervals.push({
         start,
         end: new Date(start.getTime() + durationMs),
@@ -504,5 +516,15 @@ export function masksToIntervals(
     }
   }
 
-  return intervals;
+  // Keep only occurrences that actually overlap [startDate, endDate): an
+  // occurrence is relevant iff we're currently inside it (start before, end
+  // after startDate) or it begins within the range. This is the real test that
+  // catches a straddling block; the week-long look-back above just guarantees
+  // such a block was generated in the first place.
+  const startMs = startDate.getTime();
+  const endMs = endDate.getTime();
+  return intervals.filter(
+    (interval) =>
+      interval.end.getTime() > startMs && interval.start.getTime() < endMs,
+  );
 }

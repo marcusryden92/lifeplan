@@ -54,11 +54,15 @@ export function ItemRow({
 
   const showProgressInstead =
     goalProgress != null && goalProgress > 0 && goalProgress < 1;
+  // Draftness is the untriaged state, not readiness. A triaged item is either
+  // ready to schedule or deliberately held off the calendar ("Not ready").
   const statusLabel = plannerCompletedEnd(item)
     ? "Done"
-    : item.isReady
-      ? "Ready"
-      : "Draft";
+    : !item.isTriaged
+      ? "Draft"
+      : item.isReady
+        ? "Ready"
+        : "Not ready";
 
   return (
     <div

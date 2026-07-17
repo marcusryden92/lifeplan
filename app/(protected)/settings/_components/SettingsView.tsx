@@ -10,6 +10,7 @@ import {
   Lock,
   LogOut,
   Plug,
+  Sparkles,
   User,
   type LucideIcon,
 } from "lucide-react";
@@ -18,6 +19,7 @@ import type { UserRole } from "@/generated/client";
 import { ProfileSection } from "./ProfileSection";
 import { AccountSection } from "./AccountSection";
 import { SchedulingSection } from "./SchedulingSection";
+import { AISection } from "./AISection";
 import { ComingSoonSection } from "./ComingSoonSection";
 import { DangerSection } from "./DangerSection";
 import {
@@ -45,6 +47,7 @@ type SectionId =
   | "profile"
   | "account"
   | "scheduling"
+  | "ai"
   | "notifications"
   | "integrations"
   | "data"
@@ -59,6 +62,7 @@ const SECTIONS: {
   { id: "profile", label: "Profile", icon: User },
   { id: "account", label: "Account", icon: Lock },
   { id: "scheduling", label: "Scheduling", icon: Calendar },
+  { id: "ai", label: "AI assistant", icon: Sparkles },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "integrations", label: "Integrations", icon: Plug },
   { id: "data", label: "Data & export", icon: Box },
@@ -74,6 +78,10 @@ const SECTION_META: Record<SectionId, { title: string; sub: string }> = {
   scheduling: {
     title: "Scheduling",
     sub: "transport mode · week start · travel events",
+  },
+  ai: {
+    title: "AI assistant",
+    sub: "your own API key · stored on this device",
   },
   notifications: { title: "Notifications", sub: "alerts · email digests" },
   integrations: {
@@ -160,6 +168,7 @@ export function SettingsView({ user }: { user: SettingsUser }) {
             {section === "profile" && <ProfileSection user={user} />}
             {section === "account" && <AccountSection user={user} />}
             {section === "scheduling" && <SchedulingSection />}
+            {section === "ai" && <AISection />}
             {section === "notifications" && (
               <ComingSoonSection {...COMING_SOON_COPY.notifications} />
             )}

@@ -12,6 +12,7 @@ import React, {
 } from "react";
 
 import DragBox from "@/components/draggable/DragBox";
+import { TouchDropTarget } from "@/components/draggable/touchDropResolution";
 
 type ClickedItem = {
   taskId: string;
@@ -27,6 +28,11 @@ interface DraggableContextType {
   setCurrentlyClickedItem: React.Dispatch<SetStateAction<ClickedItem | null>>;
   displayDragBox: boolean;
   setDisplayDragBox: React.Dispatch<SetStateAction<boolean>>;
+  // Touch drags can't set hover state on the rows/dividers under the finger;
+  // useTouchDragReorder resolves the target via elementFromPoint and the
+  // matching row/divider highlights off this instead.
+  touchDropTarget: TouchDropTarget;
+  setTouchDropTarget: React.Dispatch<SetStateAction<TouchDropTarget>>;
   focusedTask: string | null;
   setFocusedTask: React.Dispatch<React.SetStateAction<string | null>>;
   // Transient post-drop marker: the just-moved row flashes so it's findable
@@ -50,6 +56,8 @@ export const DraggableContextProvider = ({
   const [currentlyClickedItem, setCurrentlyClickedItem] =
     useState<ClickedItem>(null);
   const [displayDragBox, setDisplayDragBox] = useState<boolean>(false);
+  const [touchDropTarget, setTouchDropTarget] =
+    useState<TouchDropTarget>(null);
   const [focusedTask, setFocusedTask] = useState<string | null>(null);
   const [droppedTask, setDroppedTask] = useState<string | null>(null);
   const droppedTimerRef = useRef<number | null>(null);
@@ -93,6 +101,8 @@ export const DraggableContextProvider = ({
     setCurrentlyClickedItem,
     displayDragBox,
     setDisplayDragBox,
+    touchDropTarget,
+    setTouchDropTarget,
     focusedTask,
     setFocusedTask,
     droppedTask,

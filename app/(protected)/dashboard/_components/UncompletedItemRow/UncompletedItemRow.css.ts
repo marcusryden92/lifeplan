@@ -1,5 +1,5 @@
 import { globalStyle, style } from "@vanilla-extract/css";
-import { space, vars } from "@/lib/theme";
+import { space, vars, media } from "@/lib/theme";
 import {
   agendaTime,
   agendaDur,
@@ -11,11 +11,53 @@ export const uncompletedDaysLabel = style({
   color: vars.status.success,
 });
 
+// On mobile the two action buttons don't fit beside the time + title columns,
+// so the row reflows to a second full-width band that holds the actions.
+export const uncompletedRow = style({
+  "@media": {
+    [media.mobile]: {
+      gridTemplateColumns: "72px 1fr",
+      gridTemplateAreas: '"time content" "actions actions"',
+      rowGap: space["2.5"],
+    },
+  },
+});
+
+globalStyle(`${uncompletedRow} > :nth-child(1)`, {
+  "@media": {
+    [media.mobile]: { gridArea: "time" },
+  },
+});
+
+globalStyle(`${uncompletedRow} > :nth-child(2)`, {
+  "@media": {
+    [media.mobile]: { gridArea: "content" },
+  },
+});
+
 export const uncompletedActions = style({
   display: "inline-flex",
   alignItems: "center",
   alignSelf: "center",
   gap: space["1.5"],
+  "@media": {
+    [media.mobile]: {
+      gridArea: "actions",
+      display: "flex",
+      alignSelf: "stretch",
+    },
+  },
+});
+
+// Full-width, evenly split buttons on the mobile action band so they read as
+// deliberate primary/secondary actions rather than crammed pills.
+globalStyle(`${uncompletedActions} > button`, {
+  "@media": {
+    [media.mobile]: {
+      flex: 1,
+      justifyContent: "center",
+    },
+  },
 });
 
 // 500ms confirmation flash on the row before Complete/Postpone fires.

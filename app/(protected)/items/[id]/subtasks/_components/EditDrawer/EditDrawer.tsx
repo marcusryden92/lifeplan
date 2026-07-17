@@ -6,14 +6,31 @@ import {
   useMemo,
   useRef,
   useState,
-  type ChangeEvent,
   type KeyboardEvent,
 } from "react";
-import { X, Minus, Plus, Trash2, Copy, MapPin } from "lucide-react";
-import { format } from "date-fns";
+import { X, Trash2, Copy, MapPin, Link2, Link2Off } from "lucide-react";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
-import { Button, Caption } from "@/components/ui";
+import {
+  Button,
+  Caption,
+  FieldStack,
+  Input,
+  Switch,
+  type ComboboxOption,
+} from "@/components/ui";
+import { canLinkAsDetour } from "@/utils/precedence/detourLinks";
+import { plannerIsCompleted } from "@/utils/plannerCompletion";
+import {
+  SplittingFields,
+  DEFAULT_SPLITTING_SETTINGS,
+} from "@/components/tasks/SplittingFields";
+import {
+  parseTaskSplitting,
+  serializeTaskSplitting,
+  splitCompletedMinutes,
+  type TaskSplittingSettings,
+} from "@/utils/taskSplitting";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import { useFlashBoolean } from "@/hooks/useFlashAnimation";
@@ -26,7 +43,12 @@ import {
 } from "@/utils/goal-handlers/subtaskCompletion";
 import { getRootParentId, getSubtasksById } from "@/utils/goalPageHandlers";
 import { Check } from "lucide-react";
-import { Combobox, ConfirmModal, DateTimePicker } from "@/components/ui";
+import {
+  Combobox,
+  ConfirmModal,
+  DateTimePicker,
+  DurationField,
+} from "@/components/ui";
 import { formatDatetimeLocal, parseDatetimeLocal } from "@/utils/datetime";
 import { SHAKE_DURATION_MS } from "../../../_constants";
 
@@ -37,12 +59,11 @@ import {
   drawerClose,
   drawerBody,
   drawerTitleInput,
-  fieldStack,
   fieldLabel,
-  durationStepper,
-  stepperBtn,
-  stepperValue,
+  splitToggleRow,
+  splitHint,
   dateInputFaded,
+  completeSection,
   completeHeader,
   completeCheckbox,
   drawerFooter,
@@ -50,8 +71,14 @@ import {
 } from "./EditDrawer.css";
 
 export function EditDrawer() {
-  const { planner, updatePlannerArray, updateAll, weekStartDay } =
-    useCalendarProvider();
+  const {
+    planner,
+    queues,
+    dependencies,
+    updatePlannerArray,
+    updateAll,
+    weekStartDay,
+  } = useCalendarProvider();
   const { focusedTask, setFocusedTask } = useDraggableContext();
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
@@ -75,6 +102,42 @@ export function EditDrawer() {
     const root = planner.find((p) => p.id === rootId);
     return root ? !root.isReady : false;
   }, [planner, task]);
+
+  // Linkable detour targets: triaged root goals/tasks, excluding this item's
+  // own root and completed items. Cycle-forming targets stay listed but
+  // annotated and blocked at commit (the Combobox has no per-option disable).
+  const linkTargets = useMemo(() => {
+    if (!task) {
+      return {
+        options: [] as ComboboxOption<string | null>[],
+        blocked: new Set<string>(),
+      };
+    }
+    const ownRoot = getRootParentId(planner, task.id);
+    const blocked = new Set<string>();
+    const options: ComboboxOption<string | null>[] = planner
+      .filter(
+        (p) =>
+          p.parentId == null &&
+          p.isTriaged &&
+          (p.plannerType === "task" || p.plannerType === "goal") &&
+          p.id !== ownRoot &&
+          !plannerIsCompleted(p),
+      )
+      .sort((a, b) => (a.title || "").localeCompare(b.title || ""))
+      .map((t) => {
+        const ok = canLinkAsDetour(planner, task.id, t.id, queues, dependencies).ok;
+        if (!ok) blocked.add(t.id);
+        return {
+          value: t.id,
+          label: ok
+            ? t.title || "Untitled"
+            : `${t.title || "Untitled"} — would create a loop`,
+          searchLabel: t.title ?? undefined,
+        };
+      });
+    return { options, blocked };
+  }, [planner, task, queues, dependencies]);
 
   const [titleDraft, setTitleDraft] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -111,6 +174,25 @@ export function EditDrawer() {
 
   const close = () => setFocusedTask(null);
 
+  const splitSettings = parseTaskSplitting(task.splitting);
+  const splitCompleted = splitCompletedMinutes(task);
+
+  const isLinked = !!task.linkedItemId;
+  const linkedTarget = isLinked
+    ? planner.find((p) => p.id === task.linkedItemId)
+    : undefined;
+
+  const setLinkedItem = (targetId: string | null) => {
+    if (targetId && linkTargets.blocked.has(targetId)) return;
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === task.id
+          ? { ...p, linkedItemId: targetId, updatedAt: new Date().toISOString() }
+          : p,
+      ),
+    );
+  };
+
   const commitTitle = () => {
     const t = titleDraft.trim();
     if (!t || t === task.title) return;
@@ -143,13 +225,18 @@ export function EditDrawer() {
     );
   };
 
-  const stepDuration = (delta: number) =>
-    setDuration(Math.max(5, (task.duration ?? 0) + delta));
-
-  const onDurationInput = (e: ChangeEvent<HTMLInputElement>) => {
-    const v = Number(e.target.value);
-    if (Number.isNaN(v)) return;
-    setDuration(Math.max(0, v));
+  const applySplitting = (next: TaskSplittingSettings | null) => {
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === task.id
+          ? {
+              ...p,
+              splitting: next ? serializeTaskSplitting(next) : null,
+              updatedAt: new Date().toISOString(),
+            }
+          : p,
+      ),
+    );
   };
 
   const setDeadline = (iso: string | null) => {
@@ -203,7 +290,13 @@ export function EditDrawer() {
     ...locations.map((l) => ({
       value: l.id,
       label: (
-        <span style={{ display: "inline-flex", alignItems: "center", gap: space["2"] }}>
+        <span
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: space["2"],
+          }}
+        >
           <MapPin size={12} strokeWidth={2} />
           <span>{l.name}</span>
         </span>
@@ -241,8 +334,9 @@ export function EditDrawer() {
       </div>
 
       <div className={drawerBody}>
-        <input
+        <Input
           ref={titleInputRef}
+          variant="titleInline"
           className={drawerTitleInput}
           value={titleDraft}
           onChange={(e) => setTitleDraft(e.target.value)}
@@ -251,39 +345,113 @@ export function EditDrawer() {
           placeholder="Subtask title"
         />
 
-        <div className={fieldStack}>
-          <span className={fieldLabel}>Duration</span>
-          <div className={durationStepper}>
-            <button
-              type="button"
-              className={stepperBtn}
-              onClick={() => stepDuration(-5)}
-              aria-label="Decrease duration"
+        {isLinked ? (
+          <FieldStack size="sm" label="Linked item">
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: space["2"],
+              }}
             >
-              <Minus size={12} strokeWidth={2.4} />
-            </button>
-            <input
-              className={stepperValue}
-              type="number"
-              min={0}
-              value={task.duration ? task.duration : ""}
-              placeholder="0"
-              onChange={onDurationInput}
-            />
-            <button
-              type="button"
-              className={stepperBtn}
-              onClick={() => stepDuration(5)}
-              aria-label="Increase duration"
+              <Link2 size={13} strokeWidth={2} />
+              <span style={{ flex: 1, fontWeight: 500 }}>
+                {linkedTarget?.title || "Untitled"}
+              </span>
+              <Button
+                variant="glass"
+                size="sm"
+                onClick={() => setLinkedItem(null)}
+                aria-label="Unlink"
+                title="Unlink"
+              >
+                <Link2Off size={12} strokeWidth={2.2} />
+              </Button>
+            </div>
+            <Caption>
+              This subtask redirects the schedule into the linked item; its own
+              duration and subtasks are ignored.
+            </Caption>
+          </FieldStack>
+        ) : (
+          <>
+        {isLeaf && (
+          <div className={completeSection}>
+            <div className={completeHeader}>
+              <button
+                type="button"
+                className={completeCheckbox}
+                data-completed={isCompleted ? "true" : "false"}
+                data-locked={completionLocked ? "true" : "false"}
+                data-shake={shakeLocked ? "true" : "false"}
+                onClick={toggleCompletion}
+                aria-pressed={isCompleted}
+                aria-label={isCompleted ? "Mark incomplete" : "Mark complete"}
+                title={
+                  completionLocked
+                    ? "Mark the goal ready before completing subtasks"
+                    : undefined
+                }
+              >
+                {isCompleted && <Check size={12} strokeWidth={3} />}
+              </button>
+              <span className={fieldLabel}>Completed at</span>
+            </div>
+            <div
+              className={isCompleted && !completionLocked ? "" : dateInputFaded}
+              title={
+                completionLocked
+                  ? "Mark the goal ready before completing subtasks"
+                  : undefined
+              }
             >
-              <Plus size={12} strokeWidth={2.4} />
-            </button>
-            <Caption>min</Caption>
+              <DateTimePicker
+                value={completedValue}
+                onChange={onCompletedAtChange}
+                weekStartsOn={weekStartDay}
+                clearable={isCompleted && !completionLocked}
+                ariaLabel="Completed at"
+              />
+            </div>
           </div>
-        </div>
+        )}
 
-        <div className={fieldStack}>
-          <span className={fieldLabel}>Location</span>
+        <FieldStack size="sm" label="Duration">
+          <DurationField
+            minutes={task.duration ?? 0}
+            ariaLabel="Duration"
+            onCommit={setDuration}
+          />
+        </FieldStack>
+
+        {isLeaf && task.plannerType !== "plan" && (
+          <FieldStack size="sm" label="Split into chunks">
+            <div className={splitToggleRow}>
+              <Switch
+                checked={splitSettings !== null}
+                onCheckedChange={(checked) =>
+                  applySplitting(checked ? DEFAULT_SPLITTING_SETTINGS : null)
+                }
+                aria-label="Split into chunks"
+              />
+              {!splitSettings && (
+                <span className={splitHint}>
+                  Schedule as flexible chunks instead of one block
+                </span>
+              )}
+            </div>
+            {splitSettings && (
+              <SplittingFields
+                settings={splitSettings}
+                duration={task.duration ?? 0}
+                completed={splitCompleted}
+                onChange={applySplitting}
+              />
+            )}
+          </FieldStack>
+        )}
+
+        <FieldStack size="sm" label="Location">
           <Combobox
             value={task.locationId ?? null}
             options={locationOptions}
@@ -306,67 +474,33 @@ export function EditDrawer() {
             }
             ariaLabel="Location"
           />
-        </div>
+        </FieldStack>
 
-        <div className={fieldStack}>
-          <span className={fieldLabel}>Deadline</span>
+        <FieldStack size="sm" label="Deadline">
           <DateTimePicker
             value={dateValue}
             onChange={onDateInput}
             weekStartsOn={weekStartDay}
             ariaLabel="Deadline"
           />
-          {task.deadline && (
-            <Caption>
-              {format(new Date(task.deadline), "EEE MMM d · HH:mm")}
-            </Caption>
-          )}
-        </div>
+        </FieldStack>
 
         {isLeaf && (
-          <div className={fieldStack}>
-            <div className={completeHeader}>
-              <button
-                type="button"
-                className={completeCheckbox}
-                data-completed={isCompleted ? "true" : "false"}
-                data-locked={completionLocked ? "true" : "false"}
-                data-shake={shakeLocked ? "true" : "false"}
-                onClick={toggleCompletion}
-                aria-pressed={isCompleted}
-                aria-label={isCompleted ? "Mark incomplete" : "Mark complete"}
-                title={
-                  completionLocked
-                    ? "Mark the goal ready before completing subtasks"
-                    : undefined
-                }
-              >
-                {isCompleted && <Check size={10} strokeWidth={3} />}
-              </button>
-              <span className={fieldLabel}>Completed at</span>
-            </div>
-            <div
-              className={isCompleted && !completionLocked ? "" : dateInputFaded}
-              title={
-                completionLocked
-                  ? "Mark the goal ready before completing subtasks"
-                  : undefined
-              }
-            >
-              <DateTimePicker
-                value={completedValue}
-                onChange={onCompletedAtChange}
-                weekStartsOn={weekStartDay}
-                clearable={isCompleted && !completionLocked}
-                ariaLabel="Completed at"
-              />
-            </div>
-            {task.completedEndTime && (
-              <Caption>
-                {format(new Date(task.completedEndTime), "EEE MMM d · HH:mm")}
-              </Caption>
-            )}
-          </div>
+          <FieldStack size="sm" label="Link external item">
+            <Combobox
+              value={null}
+              options={linkTargets.options}
+              onChange={setLinkedItem}
+              placeholder="Link a goal or task…"
+              ariaLabel="Link external item"
+            />
+            <Caption>
+              Splice another goal or task&apos;s work into this position in the
+              sequence.
+            </Caption>
+          </FieldStack>
+        )}
+          </>
         )}
       </div>
 

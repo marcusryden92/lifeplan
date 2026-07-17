@@ -1,4 +1,11 @@
-import { Planner, SimpleEvent, EventTemplate, Category } from "@/types/prisma";
+import {
+  Planner,
+  SimpleEvent,
+  EventTemplate,
+  Category,
+  Queue,
+  PlannerDependency,
+} from "@/types/prisma";
 import { runEngineCalculation } from "@/utils/calendar-generation/engineWorkerClient";
 import { WeekDayIntegers } from "@/types/calendarTypes";
 import { AppDispatch } from "../store";
@@ -6,15 +13,29 @@ import { RootState } from "../store";
 import {
   setCategories,
   setPlannerAndTemplate,
+  setQueues,
+  setDependencies,
 } from "../slices/calendarSourceSlice";
 import { applyEngineRun } from "../slices/engineOutputSlice";
-import { travelTimeArrayToMap } from "../slices/schedulingSettingsSlice";
+import {
+  travelTimeArrayToMap,
+  deriveTravelTimeMatrix,
+} from "../slices/schedulingSettingsSlice";
+import {
+  pruneQueueMembers,
+  pruneDependencies,
+  prunePlannerDetours,
+} from "@/utils/precedence/prunePrecedenceInputs";
 
 type CalendarPayload = {
   planner?: Planner[] | ((prev: Planner[]) => Planner[]);
   calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]);
   template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]);
   categories?: Category[] | ((prev: Category[]) => Category[]);
+  queues?: Queue[] | ((prev: Queue[]) => Queue[]);
+  dependencies?:
+    | PlannerDependency[]
+    | ((prev: PlannerDependency[]) => PlannerDependency[]);
   /**
    * "inline" runs the engine synchronously on the main thread so the source
    * update and the engine output commit before the next paint — no
@@ -48,16 +69,27 @@ export const updateAllCalendarStates =
     const calendar: SimpleEvent[] = state.engineOutput.calendar;
     const template: EventTemplate[] = state.calendarSource.template;
     const categories: Category[] = state.calendarSource.categories;
+    const queues: Queue[] = state.calendarSource.queues;
+    const dependencies: PlannerDependency[] =
+      state.calendarSource.dependencies;
     const previousEngineMessages = state.engineOutput.engineMessages;
     const bufferTimeMinutes: number =
       state.schedulingSettings.bufferTimeMinutes;
     const enableTravelEvents: boolean =
       state.schedulingSettings.enableTravelEvents;
-    const travelTimeMatrix = state.schedulingSettings.travelTimeMatrix;
+    // Derived fresh from the source-of-truth rows so newly added locations,
+    // refreshed travel times, override edits, and transport-mode switches take
+    // effect on the next regen without a page reload.
+    const travelTimeMatrix = deriveTravelTimeMatrix(
+      state.schedulingSettings.allTravelTimes,
+      state.schedulingSettings.defaultTransportMode,
+    );
 
-    const newPlanner = updates.planner
-      ? processInput(updates.planner, currentPlanner)
-      : currentPlanner;
+    const newPlanner = prunePlannerDetours(
+      updates.planner
+        ? processInput(updates.planner, currentPlanner)
+        : currentPlanner,
+    );
     const newCalendarInput = updates.calendar
       ? processInput(updates.calendar, calendar)
       : calendar;
@@ -68,6 +100,21 @@ export const updateAllCalendarStates =
       ? processInput(updates.categories, categories)
       : categories;
 
+    // Central pruning: members/edges whose planner was deleted, retyped,
+    // nested, or untriaged are dropped here regardless of where the planner
+    // edit originated. Identity-preserving on no-op, so an untouched pass
+    // dispatches nothing and the sync diff stays empty.
+    const newQueues = pruneQueueMembers(
+      updates.queues ? processInput(updates.queues, queues) : queues,
+      newPlanner,
+    );
+    const newDependencies = pruneDependencies(
+      updates.dependencies
+        ? processInput(updates.dependencies, dependencies)
+        : dependencies,
+      newPlanner,
+    );
+
     // Convert serialized array to Map for calendar generation
     const travelTimeMap = travelTimeArrayToMap(travelTimeMatrix);
 
@@ -76,6 +123,12 @@ export const updateAllCalendarStates =
     // functional updates from rapid consecutive calls chain off fresh state.
     if (updates.categories) {
       dispatch(setCategories(newCategories));
+    }
+    if (updates.queues || newQueues !== queues) {
+      dispatch(setQueues(newQueues));
+    }
+    if (updates.dependencies || newDependencies !== dependencies) {
+      dispatch(setDependencies(newDependencies));
     }
     dispatch(
       setPlannerAndTemplate({ planner: newPlanner, template: newTemplate }),
@@ -107,6 +160,8 @@ export const updateAllCalendarStates =
             travelTimeMatrix: travelTimeMap ?? undefined,
             injectTravelEvents: enableTravelEvents,
             categories: newCategories,
+            queues: newQueues,
+            dependencies: newDependencies,
             previousEngineMessages,
           },
         },

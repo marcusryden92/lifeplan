@@ -13,38 +13,43 @@ import {
   SegmentedControl,
 } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { plannerForestToJson } from "./plannerForestToJson";
-import { JsonForestView } from "./JsonTreeView";
-import { TemplateWeekView } from "./TemplateWeekView";
-import { ChatPane } from "./ChatPane";
-import { ChatHistoryPopover } from "./ChatHistoryPopover";
-import { useAIDraftState } from "./useAIDraftState";
-import {
-  streamDraft,
-  type StreamChatMessage,
-  type StreamDraftFocus,
-} from "./streamDraft";
+import { plannerForestToJson } from "@/utils/draft/plannerForestToJson";
+import { JsonForestView } from "@/components/draft/JsonTreeView";
+import { TemplateWeekView } from "@/components/draft/TemplateWeekView";
+import { ChatPane } from "@/components/draft/ChatPane";
+import { ChatHistoryPopover } from "@/components/draft/ChatHistoryPopover";
+import { useAIDraftState } from "@/hooks/useAIDraftState";
+import { useAiAccess } from "@/components/ui";
+import type {
+  StreamChatMessage,
+  StreamDraftFocus,
+} from "@/utils/draft/assistantEngine";
 import {
   normalizeDraftForest,
   type DraftForestProposal,
-} from "./normalizeDraftForest";
-import { foldDraftProposals } from "./mergeDraftForest";
-import { applyDraftForestToPlanner } from "./applyDraftForestToPlanner";
-import { applyDraftTemplates } from "./applyDraftTemplates";
-import { applyDraftWindows } from "./applyDraftWindows";
-import { templatesToDraft } from "./draftTemplates";
-import { categoriesToDraftWindows } from "./draftWindows";
+} from "@/utils/draft/normalizeDraftForest";
+import { foldDraftProposals } from "@/utils/draft/mergeDraftForest";
 import {
-  countTemplateChanges,
-  diffDraftTemplates,
-} from "./diffDraftTemplates";
+  applyDraftForestToPlanner,
+  clampReadinessAgainstDependencies,
+} from "@/utils/draft/applyDraftForestToPlanner";
+import { applyDraftTemplates } from "@/utils/draft/applyDraftTemplates";
+import { applyDraftWindows } from "@/utils/draft/applyDraftWindows";
+import { applyDraftPrecedence } from "@/utils/draft/applyDraftPrecedence";
+import { templatesToDraft } from "@/utils/draft/draftTemplates";
+import { categoriesToDraftWindows } from "@/utils/draft/draftWindows";
+import { precedenceToDraft } from "@/utils/draft/draftPrecedence";
+import { countTemplateChanges, diffDraftTemplates } from "@/utils/draft/diffDraftTemplates";
+import { countWindowChanges, diffDraftWindows } from "@/utils/draft/diffDraftWindows";
 import {
-  countWindowChanges,
-  diffDraftWindows,
-} from "./diffDraftWindows";
-import { WindowsView } from "./WindowsView";
-import { diffDraftForest } from "./diffDraftForest";
-import { diffSubtreeHasChanges } from "./diffDraftTree";
+  countPrecedenceChanges,
+  diffDraftPrecedence,
+} from "@/utils/draft/diffDraftPrecedence";
+import { WindowsView } from "@/components/draft/WindowsView";
+import { PrecedenceView } from "@/components/draft/PrecedenceView";
+import { AssistantGate } from "@/components/draft/AssistantGate";
+import { diffDraftForest } from "@/utils/draft/diffDraftForest";
+import { diffSubtreeHasChanges } from "@/utils/draft/diffDraftTree";
 
 import {
   overlay,
@@ -52,7 +57,6 @@ import {
   embeddedRoot,
   banner,
   editingLabel,
-  bannerTitle,
   bannerSpacer,
   cancelButtonStyle,
   body,
@@ -73,7 +77,7 @@ import {
   a11yHiddenTitle,
 } from "./AIDraftModal.css";
 
-type DraftPaneTab = "goals" | "week" | "windows";
+type DraftPaneTab = "goals" | "week" | "windows" | "queues";
 type MobilePane = "chat" | "review";
 
 export interface AIDraftFocus {
@@ -85,11 +89,13 @@ function formatDirtyDomains(
   forest: boolean,
   templates: boolean,
   windows: boolean,
+  precedence: boolean,
 ): string {
   const parts = [
     forest ? "goals" : null,
     templates ? "weekly schedule" : null,
     windows ? "category windows" : null,
+    precedence ? "queues" : null,
   ].filter((p): p is string => p !== null);
   if (parts.length <= 1) return parts[0] ?? "plan";
   return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
@@ -138,10 +144,13 @@ export function AIDraftModal({
     categories,
     template,
     locations,
+    queues,
+    dependencies,
     updateAll,
     userId,
     isLoaded,
   } = useCalendarProvider();
+  const { status: aiStatus, getApiKey } = useAiAccess();
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [chatBasisPct, setChatBasisPct] = useState(50);
   const [isDraggingDivider, setIsDraggingDivider] = useState(false);
@@ -178,8 +187,7 @@ export function AIDraftModal({
   );
 
   const onDividerKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const step =
-      e.key === "ArrowLeft" ? -4 : e.key === "ArrowRight" ? 4 : null;
+    const step = e.key === "ArrowLeft" ? -4 : e.key === "ArrowRight" ? 4 : null;
     if (step === null) return;
     e.preventDefault();
     setChatBasisPct((prev) => Math.max(20, Math.min(80, prev + step)));
@@ -194,6 +202,10 @@ export function AIDraftModal({
     () => categoriesToDraftWindows(categories),
     [categories],
   );
+  const canonicalPrecedence = useMemo(
+    () => precedenceToDraft(queues, dependencies),
+    [queues, dependencies],
+  );
 
   const {
     workingForest,
@@ -202,9 +214,12 @@ export function AIDraftModal({
     setWorkingTemplates,
     workingWindows,
     setWorkingWindows,
+    workingPrecedence,
+    setWorkingPrecedence,
     hasForestChanges,
     hasTemplateChanges,
     hasWindowChanges,
+    hasPrecedenceChanges,
     hasChanges,
     messages,
     appendMessage,
@@ -219,6 +234,7 @@ export function AIDraftModal({
     canonical,
     canonicalTemplates,
     canonicalWindows,
+    canonicalPrecedence,
     autoResume: intent !== "onboarding",
     resumeConversationId,
   });
@@ -239,11 +255,32 @@ export function AIDraftModal({
     canonicalTemplates,
   );
   const diffedWindows = diffDraftWindows(workingWindows, canonicalWindows);
+  const diffedPrecedence = diffDraftPrecedence(
+    workingPrecedence,
+    canonicalPrecedence,
+  );
   const goalChangeCount = diffedGoals.filter(diffSubtreeHasChanges).length;
   const templateChangeCount = countTemplateChanges(diffedTemplates);
   const windowChangeCount = countWindowChanges(diffedWindows);
+  const precedenceChangeCount = countPrecedenceChanges(diffedPrecedence);
   const reviewChangeCount =
-    goalChangeCount + templateChangeCount + windowChangeCount;
+    goalChangeCount +
+    templateChangeCount +
+    windowChangeCount +
+    precedenceChangeCount;
+
+  // Member and dependency endpoints are top-level items; working roots cover
+  // drafts, canonical roots cover rows deleted in the working copy.
+  const precedenceTitleById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const goal of canonical.goals) map.set(goal.id, goal.title);
+    for (const goal of workingForest.goals) map.set(goal.id, goal.title);
+    return map;
+  }, [canonical, workingForest]);
+  const categoryNameById = useMemo(
+    () => new Map(workingWindows.categories.map((c) => [c.id, c.name])),
+    [workingWindows],
+  );
 
   // Goals / Week tabs. During a stream the pane follows the assistant's work
   // (last streamed domain wins) unless the user clicked a tab this turn; the
@@ -291,10 +328,6 @@ export function AIDraftModal({
       );
   const hiddenCount = diffedGoals.length - visibleGoals.length;
 
-  const focusedGoalTitle = focusRootId
-    ? canonical.goals.find((g) => g.id === focusRootId)?.title ?? null
-    : null;
-
   // Keep the latest working state in refs so the send callback always reads
   // fresh state without having to be recreated on every tick.
   const workingForestRef = useRef(workingForest);
@@ -311,6 +344,11 @@ export function AIDraftModal({
   useEffect(() => {
     workingWindowsRef.current = workingWindows;
   }, [workingWindows]);
+
+  const workingPrecedenceRef = useRef(workingPrecedence);
+  useEffect(() => {
+    workingPrecedenceRef.current = workingPrecedence;
+  }, [workingPrecedence]);
 
   const messagesRef = useRef(messages);
   useEffect(() => {
@@ -333,6 +371,9 @@ export function AIDraftModal({
       // Pre-hydration the working forest is a stale empty seed — a send would
       // show the model no goals. The window is sub-second; drop the click.
       if (!isLoaded) return;
+      // The gate replaces the chat UI whenever AI isn't ready, so this only
+      // trips on races (key removed in another tab mid-session).
+      if (aiStatus !== "ready") return;
       const userMessageId = uuidv4();
       const assistantMessageId = uuidv4();
 
@@ -376,15 +417,34 @@ export function AIDraftModal({
       let sawForest = false;
       let sawTemplates = false;
       let sawWindows = false;
+      let sawPrecedence = false;
       let sawShow = false;
       let finished = false;
       // Categories ride from the WORKING state, not the provider — pending
       // drafts (created categories, renames, moved windows, flag changes)
       // must be visible to the model on the next turn.
       const windowsState = workingWindowsRef.current;
-      await streamDraft({
+      // The key lives encrypted on this device only; read it per send and
+      // hand it straight to the engine — never into React state.
+      const apiKey = await getApiKey();
+      if (!apiKey) {
+        setStreamStatus(null);
+        updateMessage(assistantMessageId, {
+          content:
+            "[Error: Your API key isn't on this device — add it under Settings → AI assistant.]",
+          streaming: false,
+        });
+        if (abortRef.current === controller) abortRef.current = null;
+        return;
+      }
+      // Dynamic import keeps the Anthropic SDK + tool-loop out of the shell
+      // bundle until the first send.
+      const { runAssistantTurn } = await import("@/utils/draft/assistantEngine");
+      await runAssistantTurn({
+        apiKey,
         currentForest: turnStartForest,
         currentTemplates: workingTemplatesRef.current,
+        currentPrecedence: workingPrecedenceRef.current,
         history,
         focus: streamFocus,
         categories: windowsState.categories.map((c) => ({
@@ -440,6 +500,11 @@ export function AIDraftModal({
           setWorkingWindows(state);
           autoSwitchTab("windows");
         },
+        onPrecedence: (state) => {
+          sawPrecedence = true;
+          setWorkingPrecedence(state);
+          autoSwitchTab("queues");
+        },
         onStatus: ({ tool, count }) => {
           const plural = count === 1 ? "" : "s";
           const label =
@@ -469,7 +534,23 @@ export function AIDraftModal({
                                     ? `deleting ${count} window${plural}…`
                                     : tool === "update_categories"
                                       ? `updating ${count} categor${count === 1 ? "y" : "ies"}…`
-                                      : null;
+                                      : tool === "add_queues"
+                                        ? `creating ${count} queue${plural}…`
+                                        : tool === "update_queues"
+                                          ? `editing ${count} queue${plural}…`
+                                          : tool === "delete_queues"
+                                            ? `deleting ${count} queue${plural}…`
+                                            : tool === "add_queue_members"
+                                              ? `queueing ${count} item${plural}…`
+                                              : tool === "move_queue_member"
+                                                ? "reordering a queue…"
+                                                : tool === "remove_queue_members"
+                                                  ? `unqueueing ${count} item${plural}…`
+                                                  : tool === "add_dependencies"
+                                                    ? `linking ${count} dependenc${count === 1 ? "y" : "ies"}…`
+                                                    : tool === "remove_dependencies"
+                                                      ? `unlinking ${count} dependenc${count === 1 ? "y" : "ies"}…`
+                                                      : null;
           if (label) setStreamStatus(label);
         },
         onShow: ({ goalIds, all }) => {
@@ -493,6 +574,7 @@ export function AIDraftModal({
             sawForest ? "Goals" : null,
             sawTemplates ? "Week" : null,
             sawWindows ? "Categories" : null,
+            sawPrecedence ? "Queues" : null,
           ].filter((t): t is string => t !== null);
           const fallback =
             touchedTabs.length > 0
@@ -504,9 +586,7 @@ export function AIDraftModal({
                 : "Done.";
           updateMessage(assistantMessageId, {
             streaming: false,
-            ...(assistantText.trim().length === 0
-              ? { content: fallback }
-              : {}),
+            ...(assistantText.trim().length === 0 ? { content: fallback } : {}),
           });
         },
         onError: (message) => {
@@ -539,9 +619,7 @@ export function AIDraftModal({
         }
         updateMessage(assistantMessageId, {
           streaming: false,
-          ...(assistantText.trim().length === 0
-            ? { content: "Stopped." }
-            : {}),
+          ...(assistantText.trim().length === 0 ? { content: "Stopped." } : {}),
         });
       }
 
@@ -551,11 +629,14 @@ export function AIDraftModal({
     },
     [
       isLoaded,
+      aiStatus,
+      getApiKey,
       appendMessage,
       updateMessage,
       setWorkingForest,
       setWorkingTemplates,
       setWorkingWindows,
+      setWorkingPrecedence,
       autoSwitchTab,
       focus,
       categories,
@@ -573,6 +654,7 @@ export function AIDraftModal({
   const kickoffSentRef = useRef(false);
   useEffect(() => {
     if (intent !== "onboarding" || !open || !isLoaded || !resumeSettled) return;
+    if (aiStatus !== "ready") return;
     if (kickoffSentRef.current || messages.length > 0) return;
     kickoffSentRef.current = true;
     void handleSend(
@@ -585,6 +667,7 @@ export function AIDraftModal({
     open,
     isLoaded,
     resumeSettled,
+    aiStatus,
     messages.length,
     canonical.goals.length,
     handleSend,
@@ -606,7 +689,7 @@ export function AIDraftModal({
   const handleSave = useCallback(() => {
     if (!hasChanges || !userId || !isLoaded) return;
     // Clean domains pass undefined so their state keeps identity — one
-    // updateAll call means one engine regen and one sync for both domains.
+    // updateAll call means one engine regen and one sync for all domains.
     const now = new Date().toISOString();
     // Categories first: the forest apply validates goal categoryIds against
     // the SAVED category set, so a goal filed under a category created in
@@ -621,6 +704,10 @@ export function AIDraftModal({
         })
       : undefined;
     const categoriesForForest = nextCategories ?? categories;
+    // Forest before precedence: queue members and dependency endpoints may
+    // reference goals created this conversation, and their permanent ids only
+    // exist once the forest apply mints them (reported through rootIdMap).
+    const rootIdMap = new Map<string, string>();
     const nextPlanner = hasForestChanges
       ? applyDraftForestToPlanner({
           planner,
@@ -630,6 +717,8 @@ export function AIDraftModal({
           categoryColorById: new Map(
             categoriesForForest.map((c) => [c.id, c.color]),
           ),
+          dependencies,
+          rootIdMap,
         })
       : undefined;
     const nextTemplates = hasTemplateChanges
@@ -641,24 +730,63 @@ export function AIDraftModal({
           now,
         })
       : undefined;
-    updateAll(nextPlanner, undefined, nextTemplates, nextCategories);
+    let plannerForSync = nextPlanner;
+    let nextQueues: typeof queues | undefined;
+    let nextDependencies: typeof dependencies | undefined;
+    if (hasPrecedenceChanges) {
+      const applied = applyDraftPrecedence({
+        currentQueues: queues,
+        currentDependencies: dependencies,
+        canonical: canonicalPrecedence,
+        working: workingPrecedence,
+        rootIdMap,
+        nextPlanner: plannerForSync ?? planner,
+        validCategoryIds: new Set(categoriesForForest.map((c) => c.id)),
+        userId,
+        now,
+      });
+      nextQueues = applied.queues;
+      nextDependencies = applied.dependencies;
+      // Assistant-created dependencies exist only now (with permanent ids),
+      // so the forest apply's readiness clamp could not see them — re-run it
+      // against the final edge set.
+      const clamped = clampReadinessAgainstDependencies(
+        plannerForSync ?? planner,
+        applied.dependencies,
+        now,
+      );
+      if (clamped !== (plannerForSync ?? planner)) plannerForSync = clamped;
+    }
+    updateAll(
+      plannerForSync,
+      undefined,
+      nextTemplates,
+      nextCategories,
+      nextQueues,
+      nextDependencies,
+    );
     if (embedded) onSaved?.();
     else onClose();
   }, [
     workingForest,
     workingTemplates,
     workingWindows,
+    workingPrecedence,
     canonicalTemplates,
     canonicalWindows,
+    canonicalPrecedence,
     hasChanges,
     hasForestChanges,
     hasTemplateChanges,
     hasWindowChanges,
+    hasPrecedenceChanges,
     userId,
     isLoaded,
     planner,
     template,
     categories,
+    queues,
+    dependencies,
     updateAll,
     onClose,
     embedded,
@@ -681,7 +809,6 @@ export function AIDraftModal({
       {!embedded && (
         <div className={banner}>
           <span className={editingLabel}>ai assistant</span>
-          <span className={bannerTitle}>{focusedGoalTitle ?? "All goals"}</span>
           <span className={bannerSpacer} />
           <Button
             variant="ghost"
@@ -703,176 +830,191 @@ export function AIDraftModal({
       )}
 
       <div className={mobilePaneSwitch}>
-          <SegmentedControl<MobilePane>
-            options={[
-              { key: "chat", label: "Chat" },
-              {
-                key: "review",
-                label: (
-                  <>
-                    Review
-                    {reviewChangeCount > 0 && (
-                      <span className={tabChangeCount}>
-                        {reviewChangeCount}
-                      </span>
-                    )}
-                  </>
-                ),
-              },
-            ]}
-            value={mobilePane}
-            onChange={setMobilePane}
+        <SegmentedControl<MobilePane>
+          options={[
+            { key: "chat", label: "Chat" },
+            {
+              key: "review",
+              label: (
+                <>
+                  Review
+                  {reviewChangeCount > 0 && (
+                    <span className={tabChangeCount}>{reviewChangeCount}</span>
+                  )}
+                </>
+              ),
+            },
+          ]}
+          value={mobilePane}
+          onChange={setMobilePane}
+        />
+      </div>
+
+      <div className={body} ref={bodyRef}>
+        <div
+          className={`${chatPane} ${
+            mobilePane === "chat" ? "" : paneMobileHidden
+          }`}
+          style={assignInlineVars({ [chatBasisVar]: `${chatBasisPct}%` })}
+        >
+          <div className={paneHeader}>
+            <h2 className={paneTitle}>Chat</h2>
+            <span className={paneSubtitle}>
+              {isStreaming
+                ? (streamStatus ?? "assistant is thinking…")
+                : "send a prompt to begin"}
+            </span>
+            <span className={headerActionCluster}>
+              {intent !== "onboarding" && (
+                <ChatHistoryPopover
+                  currentConversationId={conversationId}
+                  disabled={isStreaming}
+                  onAdopt={adoptConversation}
+                  onDeletedCurrent={startNewConversation}
+                />
+              )}
+              {messages.length > 0 && !isStreaming && (
+                <button
+                  type="button"
+                  className={headerActionButton}
+                  onClick={startNewConversation}
+                >
+                  New chat
+                </button>
+              )}
+            </span>
+          </div>
+          <ChatPane
+            messages={messages}
+            onSend={handleSend}
+            onStop={handleStop}
+            isStreaming={isStreaming}
+            initialDraft={open ? (initialPrompt ?? null) : null}
+            emptyHint={
+              intent === "onboarding" ? (
+                <>
+                  The assistant can create, edit, and expand your goals and
+                  items — just describe what you want.
+                  <br />
+                  Ask it to turn what you jotted down into real goals, break
+                  them into steps, or set deadlines and durations. Nothing is
+                  saved until you continue.
+                </>
+              ) : undefined
+            }
           />
         </div>
-
-        <div className={body} ref={bodyRef}>
-          <div
-            className={`${chatPane} ${
-              mobilePane === "chat" ? "" : paneMobileHidden
-            }`}
-            style={assignInlineVars({ [chatBasisVar]: `${chatBasisPct}%` })}
-          >
-            <div className={paneHeader}>
-              <h2 className={paneTitle}>Chat</h2>
-              <span className={paneSubtitle}>
-                {isStreaming
-                  ? streamStatus ?? "assistant is thinking…"
-                  : "send a prompt to begin"}
-              </span>
-              <span className={headerActionCluster}>
-                {intent !== "onboarding" && (
-                  <ChatHistoryPopover
-                    currentConversationId={conversationId}
-                    disabled={isStreaming}
-                    onAdopt={adoptConversation}
-                    onDeletedCurrent={startNewConversation}
-                  />
-                )}
-                {messages.length > 0 && !isStreaming && (
+        <div
+          className={paneDivider}
+          data-dragging={isDraggingDivider ? "true" : undefined}
+          onPointerDown={onDividerPointerDown}
+          onKeyDown={onDividerKeyDown}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize chat / tree panes"
+          tabIndex={0}
+        />
+        <div
+          className={`${treePane} ${
+            mobilePane === "review" ? "" : paneMobileHidden
+          }`}
+        >
+          <div className={paneHeader}>
+            <button
+              type="button"
+              className={paneTab}
+              data-active={activeTab === "goals" ? "true" : undefined}
+              onClick={() => selectTab("goals")}
+            >
+              <span className={paneTabLabel}>Goals</span>
+              {goalChangeCount > 0 && (
+                <span className={tabChangeCount}>{goalChangeCount}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={paneTab}
+              data-active={activeTab === "week" ? "true" : undefined}
+              onClick={() => selectTab("week")}
+            >
+              <span className={paneTabLabel}>Week</span>
+              {templateChangeCount > 0 && (
+                <span className={tabChangeCount}>{templateChangeCount}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={paneTab}
+              data-active={activeTab === "windows" ? "true" : undefined}
+              onClick={() => selectTab("windows")}
+            >
+              <span className={paneTabLabel}>Categories</span>
+              {windowChangeCount > 0 && (
+                <span className={tabChangeCount}>{windowChangeCount}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              className={paneTab}
+              data-active={activeTab === "queues" ? "true" : undefined}
+              onClick={() => selectTab("queues")}
+            >
+              <span className={paneTabLabel}>Queues</span>
+              {precedenceChangeCount > 0 && (
+                <span className={tabChangeCount}>{precedenceChangeCount}</span>
+              )}
+            </button>
+            <span className={paneSubtitle}>
+              {hasChanges ? "unsaved changes" : "current state"}
+            </span>
+            {activeTab === "goals" &&
+              (hiddenCount > 0 ? (
+                <span className={headerActionCluster}>
                   <button
                     type="button"
                     className={headerActionButton}
-                    onClick={startNewConversation}
+                    onClick={() => setShowAll(true)}
                   >
-                    New chat
+                    Show all · {hiddenCount} more goal
+                    {hiddenCount === 1 ? "" : "s"}
                   </button>
-                )}
-              </span>
-            </div>
-            <ChatPane
-              messages={messages}
-              onSend={handleSend}
-              onStop={handleStop}
-              isStreaming={isStreaming}
-              initialDraft={open ? initialPrompt ?? null : null}
-              emptyHint={
-                intent === "onboarding" ? (
-                  <>
-                    The assistant can create, edit, and expand your goals and
-                    items — just describe what you want.
-                    <br />
-                    Ask it to turn what you jotted down into real goals, break
-                    them into steps, or set deadlines and durations. Nothing is
-                    saved until you continue.
-                  </>
-                ) : undefined
-              }
+                </span>
+              ) : showAll && visibleGoals.length > 0 ? (
+                <span className={headerActionCluster}>
+                  <button
+                    type="button"
+                    className={headerActionButton}
+                    onClick={() => setShowAll(false)}
+                  >
+                    Show relevant only
+                  </button>
+                </span>
+              ) : null)}
+          </div>
+          {activeTab === "goals" ? (
+            <JsonForestView
+              goals={visibleGoals}
+              hiddenCount={hiddenCount}
+              categories={categories}
+              focusRootId={focusRootId}
+              groupByCategory={showAll}
             />
-          </div>
-          <div
-            className={paneDivider}
-            data-dragging={isDraggingDivider ? "true" : undefined}
-            onPointerDown={onDividerPointerDown}
-            onKeyDown={onDividerKeyDown}
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="Resize chat / tree panes"
-            tabIndex={0}
-          />
-          <div
-            className={`${treePane} ${
-              mobilePane === "review" ? "" : paneMobileHidden
-            }`}
-          >
-            <div className={paneHeader}>
-              <button
-                type="button"
-                className={paneTab}
-                data-active={activeTab === "goals" ? "true" : undefined}
-                onClick={() => selectTab("goals")}
-              >
-                <span className={paneTabLabel}>Goals</span>
-                {goalChangeCount > 0 && (
-                  <span className={tabChangeCount}>{goalChangeCount}</span>
-                )}
-              </button>
-              <button
-                type="button"
-                className={paneTab}
-                data-active={activeTab === "week" ? "true" : undefined}
-                onClick={() => selectTab("week")}
-              >
-                <span className={paneTabLabel}>Week</span>
-                {templateChangeCount > 0 && (
-                  <span className={tabChangeCount}>{templateChangeCount}</span>
-                )}
-              </button>
-              <button
-                type="button"
-                className={paneTab}
-                data-active={activeTab === "windows" ? "true" : undefined}
-                onClick={() => selectTab("windows")}
-              >
-                <span className={paneTabLabel}>Categories</span>
-                {windowChangeCount > 0 && (
-                  <span className={tabChangeCount}>{windowChangeCount}</span>
-                )}
-              </button>
-              <span className={paneSubtitle}>
-                {hasChanges ? "unsaved changes" : "current state"}
-              </span>
-              {activeTab === "goals" &&
-                (hiddenCount > 0 ? (
-                  <span className={headerActionCluster}>
-                    <button
-                      type="button"
-                      className={headerActionButton}
-                      onClick={() => setShowAll(true)}
-                    >
-                      Show all · {hiddenCount} more goal
-                      {hiddenCount === 1 ? "" : "s"}
-                    </button>
-                  </span>
-                ) : showAll && visibleGoals.length > 0 ? (
-                  <span className={headerActionCluster}>
-                    <button
-                      type="button"
-                      className={headerActionButton}
-                      onClick={() => setShowAll(false)}
-                    >
-                      Show relevant only
-                    </button>
-                  </span>
-                ) : null)}
-            </div>
-            {activeTab === "goals" ? (
-              <JsonForestView
-                goals={visibleGoals}
-                hiddenCount={hiddenCount}
-                categories={categories}
-                focusRootId={focusRootId}
-                groupByCategory={showAll}
-              />
-            ) : activeTab === "week" ? (
-              <TemplateWeekView
-                templates={diffedTemplates}
-                locations={locations}
-              />
-            ) : (
-              <WindowsView diffed={diffedWindows} />
-            )}
-          </div>
+          ) : activeTab === "week" ? (
+            <TemplateWeekView
+              templates={diffedTemplates}
+              locations={locations}
+            />
+          ) : activeTab === "windows" ? (
+            <WindowsView diffed={diffedWindows} />
+          ) : (
+            <PrecedenceView
+              diffed={diffedPrecedence}
+              titleById={precedenceTitleById}
+              categoryNameById={categoryNameById}
+            />
+          )}
         </div>
+      </div>
 
       {!embedded && (
         <ConfirmModal
@@ -885,6 +1027,7 @@ export function AIDraftModal({
                 hasForestChanges,
                 hasTemplateChanges,
                 hasWindowChanges,
+                hasPrecedenceChanges,
               )}
               . Closing now will discard them.
             </p>
@@ -902,8 +1045,35 @@ export function AIDraftModal({
     </>
   );
 
+  // BYOK gate: when the user opted out, or opted in but this device holds no
+  // key, every entry point lands here instead of the chat UI. The shell
+  // chrome (backdrop, banner) stays so the modal still reads as the
+  // assistant surface.
+  const gateContent = (
+    <>
+      <Backdrop variant="blob" />
+      <Grain />
+      {!embedded && (
+        <div className={banner}>
+          <span className={editingLabel}>ai assistant</span>
+          <span className={bannerSpacer} />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={requestClose}
+            className={cancelButtonStyle}
+          >
+            Close
+          </Button>
+        </div>
+      )}
+      <AssistantGate />
+    </>
+  );
+  const activeContent = aiStatus === "ready" ? content : gateContent;
+
   if (embedded) {
-    return <div className={embeddedRoot}>{content}</div>;
+    return <div className={embeddedRoot}>{activeContent}</div>;
   }
 
   return (
@@ -924,7 +1094,7 @@ export function AIDraftModal({
         onInteractOutside={(e) => e.preventDefault()}
       >
         <Dialog.Title className={a11yHiddenTitle}>AI Assistant</Dialog.Title>
-        {content}
+        {activeContent}
       </Dialog.Content>
     </Dialog.Root>
   );

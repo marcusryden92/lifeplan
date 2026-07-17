@@ -2,10 +2,9 @@
 
 import { space, radii } from "@/lib/theme";
 import { useMemo } from "react";
-import { Caption, CategoryBadge, Combobox } from "@/components/ui";
+import { Caption, CategoryBadge, Combobox, FieldStack } from "@/components/ui";
 import { buildIndentedCategoryList } from "@/utils/categoryUtils";
 import { useItem } from "../../ItemContext";
-import { fieldStack, fieldLabel } from "./CategorySection.css";
 
 export function CategorySection() {
   const { item, category, categories, changeCategory } = useItem();
@@ -47,8 +46,7 @@ export function CategorySection() {
   // item owns the picker.
   if (item.parentId) {
     return (
-      <div className={fieldStack}>
-        <span className={fieldLabel}>Category</span>
+      <FieldStack label="Category">
         {category ? (
           <CategoryBadge color={category.color ?? "#888"}>
             {category.name}
@@ -56,17 +54,17 @@ export function CategorySection() {
         ) : (
           <Caption>No category</Caption>
         )}
-      </div>
+      </FieldStack>
     );
   }
 
   return (
-    <div className={fieldStack}>
-      <span className={fieldLabel}>Area</span>
+    <FieldStack label="Category">
       <Combobox
         value={item.categoryId ?? null}
         options={categoryOptions}
         onChange={(v) => changeCategory(v)}
+        maxWidth="100%"
         renderValue={() =>
           category ? (
             <CategoryBadge color={category.color ?? "#888"}>
@@ -78,6 +76,6 @@ export function CategorySection() {
         }
         ariaLabel="Category"
       />
-    </div>
+    </FieldStack>
   );
 }

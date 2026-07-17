@@ -3,8 +3,10 @@ import {
   space,
   vars,
   themeTransition,
+  collapseTransition,
   media,
   radii,
+  iconBtn,
   display,
   text,
   fieldLabel,
@@ -19,6 +21,7 @@ export const page = style({
     [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
+      paddingTop: space["16"],
     },
   },
 });
@@ -72,8 +75,8 @@ export const actionCluster = style({
 
 export const mainGrid = style({
   display: "grid",
-  gridTemplateColumns: "260px 1fr",
-  gap: space["4"],
+  gridTemplateColumns: "auto 1fr",
+  gap: space["6"],
   padding: "0 28px 28px",
   flex: 1,
   minHeight: 0,
@@ -84,7 +87,7 @@ export const mainGrid = style({
       minHeight: "auto",
     },
     [media.mobile]: {
-      padding: "0 16px 24px",
+      padding: "0 0 24px",
       gap: space["3.5"],
     },
   },
@@ -100,23 +103,95 @@ const cardBase = style({
 export const rail = style([
   cardBase,
   {
+    width: 260,
+    minWidth: 0,
+    borderRight: `1px solid ${vars.rule}`,
+    marginTop: space["2.5"],
+    transition: collapseTransition,
     "@media": {
       [media.mobile]: { minHeight: "auto" },
+      // Below tablet the rail stacks full-width; the fixed width comes off.
+      [media.tablet]: { width: "auto" },
+    },
+    selectors: {
+      [`${page}[data-rail-collapsed="true"] &`]: {
+        width: 44,
+        "@media": {
+          [media.tablet]: { width: "auto" },
+        },
+      },
+      [`${page}[data-no-transitions="true"] &`]: {
+        transition: "none",
+      },
     },
   },
 ]);
+
+export const railHeader = style({
+  display: "flex",
+  justifyContent: "flex-end",
+  alignItems: "center",
+  padding: "0px 8px 4px",
+  flexShrink: 0,
+  selectors: {
+    [`${page}[data-rail-collapsed="true"] &`]: {
+      justifyContent: "center",
+      paddingBottom: space["1"],
+    },
+  },
+  "@media": {
+    [media.tablet]: { display: "none" },
+  },
+});
+
+export const railToggle = iconBtn();
+
+export const railToggleIcon = style({
+  display: "inline-flex",
+  color: vars.muted,
+  transition: collapseTransition,
+  selectors: {
+    [`${page}[data-rail-collapsed="true"] &`]: {
+      transform: "rotate(180deg)",
+    },
+    [`${page}[data-no-transitions="true"] &`]: {
+      transition: "none",
+    },
+  },
+});
 
 export const railSection = style({
   display: "flex",
   flexDirection: "column",
   padding: "14px 12px 12px",
   borderBottom: `1px solid ${vars.rule}`,
+  // Pinned to the expanded width so it never reflows while the rail animates;
+  // the rail's overflow:hidden clips it and opacity fades it, making collapse
+  // and expand mirror animations instead of an abrupt hide.
+  width: 260,
+  alignSelf: "flex-start",
+  opacity: 1,
+  transition: collapseTransition,
+  "@media": {
+    [media.tablet]: { width: "auto", alignSelf: "stretch" },
+  },
   selectors: {
     "&:last-child": {
       borderBottom: "none",
       flex: 1,
       minHeight: 0,
-      overflow: "auto",
+      overflowY: "auto",
+      overflowX: "hidden",
+    },
+    [`${page}[data-rail-collapsed="true"] &`]: {
+      opacity: 0,
+      pointerEvents: "none",
+      "@media": {
+        [media.tablet]: { opacity: 1, pointerEvents: "auto" },
+      },
+    },
+    [`${page}[data-no-transitions="true"] &`]: {
+      transition: "none",
     },
   },
 });
@@ -220,7 +295,9 @@ export const mainCard = style([
   cardBase,
   {
     "@media": {
-      [media.mobile]: { minHeight: 540 },
+      // Inset the breadcrumb/filter/table so they align with the padded page
+      // header instead of hugging the screen edge.
+      [media.mobile]: { minHeight: 540, padding: "0 16px" },
     },
   },
 ]);
@@ -254,21 +331,8 @@ export const searchWrap = style({
   transition: themeTransition,
 });
 
-export const searchInput = style([
-  text.body,
-  {
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    color: vars.ink,
-    flex: 1,
-    selectors: {
-      "&::placeholder": {
-        color: vars.muted,
-      },
-    },
-  },
-]);
+// Bare <Input> inside the search pill; the pill owns the box.
+export const searchInput = style({ flex: 1 });
 
 export const breadcrumb = style([
   text.body,
@@ -612,4 +676,3 @@ export const emptyStateTitle = style([
     transition: themeTransition,
   },
 ]);
-

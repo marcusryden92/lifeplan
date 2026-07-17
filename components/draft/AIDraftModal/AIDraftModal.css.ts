@@ -88,18 +88,6 @@ export const editingLabel = style([
   },
 ]);
 
-export const bannerTitle = style([
-  text.bodySm,
-  {
-    color: vars.paper,
-    transition: themeTransition,
-    minWidth: 0,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-  },
-]);
-
 export const bannerSpacer = style({ flex: 1 });
 
 export const cancelButtonStyle = style({
@@ -171,7 +159,9 @@ export const chatPane = style({
     [media.mobile]: {
       minWidth: 0,
       flex: "1 1 auto",
-      padding: "10px 14px",
+      // Composer sits at the very bottom of the modal on mobile (nothing below
+      // it). Clear the home-indicator safe area so the text box is reachable.
+      padding: "10px 14px calc(16px + env(safe-area-inset-bottom, 0px))",
     },
   },
 });
@@ -190,7 +180,7 @@ export const treePane = style({
     },
     [media.mobile]: {
       minWidth: 0,
-      padding: "10px 14px",
+      padding: "10px 14px calc(16px + env(safe-area-inset-bottom, 0px))",
     },
   },
 });

@@ -3,9 +3,11 @@ import {
   space,
   vars,
   buttonTransition,
+  themeTransition,
   backdropFilters,
   radii,
   fieldLabel,
+  text,
 } from "@/lib/theme";
 
 export const tabBar = style({
@@ -40,6 +42,10 @@ export const tab = style([
     letterSpacing: "0.04em",
     textDecoration: "none",
     cursor: "pointer",
+    // fieldLabel is `muted` — too faint for a primary nav. Lift the resting
+    // state to inkSoft; active tabs go full ink + underline below.
+    color: vars.inkSoft,
+    transition: themeTransition,
   },
 ]);
 
@@ -54,12 +60,20 @@ export const tabGlyph = style({
   height: 22,
 });
 
+// Always rendered so every tab reserves the same height; only the active tab
+// paints it. Conditionally rendering it made the active tab taller, and the
+// bar's alignItems:center then nudged its icon/label upward on select.
 export const tabUnderline = style({
   width: 18,
   height: 2,
   borderRadius: 2,
-  background: vars.ink,
+  background: "transparent",
   marginTop: space["0.5"],
+  transition: themeTransition,
+});
+
+export const tabUnderlineActive = style({
+  background: vars.ink,
 });
 
 export const captureTabWrapper = style({
@@ -88,4 +102,53 @@ export const captureButton = style({
   selectors: {
     "&:active": { transform: "scale(0.96)" },
   },
+});
+
+export const sheetItem = style([
+  text.body,
+  {
+    display: "flex",
+    alignItems: "center",
+    gap: space["3"],
+    width: "100%",
+    minHeight: 48,
+    padding: `0 ${space["2"]}px`,
+    background: "transparent",
+    border: "none",
+    borderRadius: radii.md,
+    color: vars.ink,
+    fontWeight: 500,
+    textAlign: "left",
+    textDecoration: "none",
+    cursor: "pointer",
+    transition: themeTransition,
+    selectors: {
+      "&:active": { background: vars.interactive.selectedFill },
+    },
+  },
+]);
+
+export const sheetItemDanger = style({
+  color: vars.status.error,
+});
+
+export const sheetItemIcon = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: vars.inkSoft,
+  selectors: {
+    [`${sheetItemDanger} &`]: { color: vars.status.error },
+  },
+});
+
+export const sheetItemActive = style({
+  background: vars.interactive.selectedFill,
+});
+
+export const sheetDivider = style({
+  height: 1,
+  margin: `${space["2"]}px 0`,
+  background: vars.rule,
+  border: "none",
 });

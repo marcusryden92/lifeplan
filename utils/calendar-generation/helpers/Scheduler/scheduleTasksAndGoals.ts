@@ -1,21 +1,52 @@
-import { Planner, SimpleEvent, PlannerType, Category } from "@/types/prisma";
+import { Planner, SimpleEvent, Category } from "@/types/prisma";
 import { Scheduler } from "../../core/Scheduler";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { SchedulingFailure } from "../../models/SchedulingModels";
 import { Slot } from "../../models/TimeSlot";
 import { SCHEDULING_CONFIG, SchedulingFailureReason } from "../../constants";
-import { scheduleSingleTask } from "./scheduleSingleTask";
-import { scheduleGoal } from "./scheduleGoal";
 import { expandSlots } from "./expandSlots";
 import { TravelPassRecorder } from "../TravelManager/TravelPassRecorder";
 import {
   largestCompatibleSlotForLargestTask,
-  effectiveCandidateDuration,
+  maxEffectiveCapacityFor,
+  placementBlockMinutes,
 } from "./capacityCheck";
 import {
   SplitRelaxation,
   createSplitPlacementState,
 } from "./scheduleSplitTask";
+import {
+  GoalCapContext,
+  GoalCapRelaxation,
+  createGoalCapState,
+  goalDayCapMinutes,
+  seedGoalDayLedger,
+  buildGoalCapContext,
+} from "./goalDayCap";
+import { getRootParentId } from "../../../goalPageHandlers";
+import type { PrecedenceEdge } from "@/utils/precedence/types";
+import {
+  ChainOutcome,
+  SequenceBreak,
+  seedChainOutcomes,
+  gateCandidate,
+  recordSequenceBreaks,
+} from "./precedenceGate";
+import { placeLeaf } from "./placeLeaf";
+import type { LeafGraph, LeafNode } from "./buildLeafGraph";
+
+// Flat-order scheduler over the leaf precedence graph (buildLeafGraph). Leaves
+// are placed one at a time, ordered by inherited score then clustering index,
+// gated by their chain predecessors (goal-internal + detour splices) and the
+// root-level cross gate (queue/dependency). A detour target's leaves are pulled
+// into the pool via the host's spliced sequence and metered against both the
+// host and the target caps (composed pointwise-min).
+
+function laterDate(a: Date | undefined, b: Date | undefined): Date | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  return a > b ? a : b;
+}
 
 export function scheduleTasksAndGoals(
   scheduler: Scheduler,
@@ -25,80 +56,288 @@ export function scheduleTasksAndGoals(
   perTemplateMasks: PerTemplateMask[],
   plannerLocationMap: Map<string, string | null>,
   categories: Category[],
+  leafGraph: LeafGraph,
   travelPassRecorder?: TravelPassRecorder,
 ): {
   success: boolean;
   newEvents: SimpleEvent[];
   failures: SchedulingFailure[];
   splitRelaxations: SplitRelaxation[];
+  goalCapRelaxations: GoalCapRelaxation[];
+  sequenceBreaks: SequenceBreak[];
 } {
   const { slotManager, travelManager, context } = scheduler;
   const events: SimpleEvent[] = [];
   const failures: SchedulingFailure[] = [];
   const scheduledTaskIds = new Set<string>();
-  // Split-task bookkeeping shared across iterations: partially placed tasks
-  // resume from their remainder after horizon expansion instead of restarting.
+  const permFailedIds = new Set<string>();
   const splitState = createSplitPlacementState();
+  const goalCapState = createGoalCapState();
 
   const plannerCategoryMap =
     context.plannerCategoryMap ?? new Map<string, string | null>();
   const categoryEligibilityMap =
     context.categoryEligibilityMap ?? new Map<string, Set<string>>();
   const capacityCache = new Map<string, number>();
-  // `categories` is already filtered to window-bearing categories upstream
-  // (CalendarGenerator.scheduledCategories) — the watermark must resolve
-  // constraints against the same set placement uses.
   const schedulableCategoryIds = new Set(categories.map((c) => c.id));
+  const plannersById = new Map(allPlanners.map((p) => [p.id, p]));
+
+  const {
+    nodes,
+    chainPreds,
+    crossGateRoots,
+    completionRoots,
+    rootLeafCount,
+    leafEffScore,
+  } = leafGraph;
+
+  const isResolved = (id: string): boolean =>
+    scheduledTaskIds.has(id) || permFailedIds.has(id);
+  // Chain end published to successors: the real end for a placed leaf, or the
+  // pass-through afterTime for a permanently-failed (TOO_LARGE) one so the
+  // chain keeps flowing from the last real success.
+  const leafChainEnd = new Map<string, Date>();
+  // Max placed end per leaf across ALL attempts — a split task's early chunks
+  // land in earlier passes than the pass that finally reports scheduled, and
+  // successors must bound to the LAST chunk, not the resolving pass's.
+  const leafPlacedEnd = new Map<string, Date>();
+
+  const rootResolvedCount = new Map<string, number>();
+  const rootPlacedAny = new Map<string, boolean>();
+  const rootLastEnd = new Map<string, Date>();
+  for (const id of rootLeafCount.keys()) rootResolvedCount.set(id, 0);
+
+  const goalCapByRoot = new Map<string, GoalCapContext | undefined>();
+  const goalCapFor = (rootId: string): GoalCapContext | undefined => {
+    const cached = goalCapByRoot.get(rootId);
+    if (cached !== undefined || goalCapByRoot.has(rootId)) return cached;
+    const root = plannersById.get(rootId);
+    let ctx: GoalCapContext | undefined;
+    if (root) {
+      const dayCap = goalDayCapMinutes(root);
+      if (dayCap !== null) {
+        seedGoalDayLedger(root, allPlanners, context.scheduledEvents, goalCapState);
+        ctx = buildGoalCapContext(root, dayCap, goalCapState);
+      }
+    }
+    goalCapByRoot.set(rootId, ctx);
+    return ctx;
+  };
+
+  const predecessorMap =
+    context.predecessorMap ?? new Map<string, PrecedenceEdge[]>();
+  const allEdges: PrecedenceEdge[] = [];
+  for (const list of predecessorMap.values()) allEdges.push(...list);
+  const chainOutcome: Map<string, ChainOutcome> = seedChainOutcomes(
+    allEdges,
+    candidates,
+    allPlanners,
+    context.scheduledEvents,
+  );
+  // Detour targets are excluded from candidates but their leaves ARE in the
+  // pool, so the loop resolves their outcome as they place. seedChainOutcomes
+  // (which only sees non-candidates) would otherwise seed a ready target with
+  // no past events as failed/failed — making a dependency/queue successor break
+  // immediately instead of waiting for the splice. Drop those premature seeds;
+  // a target with zero schedulable leaves (fully completed) is not in
+  // rootLeafCount and keeps its legitimate seed.
+  const candidateIdSet = new Set(candidates.map((c) => c.id));
+  for (const rootId of rootLeafCount.keys()) {
+    if (!candidateIdSet.has(rootId)) chainOutcome.delete(rootId);
+  }
+  const sequenceBreaks: SequenceBreak[] = [];
+  const seenBreakKeys = new Set<string>();
+
+  // Candidates with no schedulable leaves (all completed/memoized) resolve
+  // through their OWN cross gate, publishing the gate bound as their end —
+  // parity with the old scheduleGoal returning lastPlacedEnd = goalAfterTime.
+  // Resolving them eagerly with no bound would let a queue successor jump the
+  // chain past a fully-handled middle member. Fixpoint: a chain of zero-leaf
+  // candidates resolves in one call once upstream outcomes exist.
+  const pendingZeroLeaf = candidates.filter(
+    (c) => (rootLeafCount.get(c.id) ?? 0) === 0,
+  );
+  const resolveZeroLeafCandidates = () => {
+    let progressed = true;
+    while (progressed) {
+      progressed = false;
+      for (let i = pendingZeroLeaf.length - 1; i >= 0; i--) {
+        const candidate = pendingZeroLeaf[i];
+        const gate = gateCandidate(candidate.id, predecessorMap, chainOutcome);
+        if (gate.blocked) continue;
+        recordSequenceBreaks(sequenceBreaks, seenBreakKeys, gate.failedEdges);
+        chainOutcome.set(candidate.id, {
+          status: "placed",
+          lastEnd: gate.afterTime,
+        });
+        pendingZeroLeaf.splice(i, 1);
+        progressed = true;
+      }
+    }
+  };
+  resolveZeroLeafCandidates();
+
+  const resolveRoots = (leafId: string, placed: boolean) => {
+    for (const rootId of completionRoots.get(leafId) ?? []) {
+      const resolved = (rootResolvedCount.get(rootId) ?? 0) + 1;
+      rootResolvedCount.set(rootId, resolved);
+      if (placed) rootPlacedAny.set(rootId, true);
+      if (resolved === rootLeafCount.get(rootId)) {
+        chainOutcome.set(
+          rootId,
+          rootPlacedAny.get(rootId)
+            ? { status: "placed", lastEnd: rootLastEnd.get(rootId) }
+            : { status: "failed", failCause: "failed" },
+        );
+      }
+    }
+  };
+
+  const chainBlocked = (leafId: string): boolean => {
+    for (const predId of chainPreds.get(leafId) ?? []) {
+      if (!isResolved(predId)) return true;
+    }
+    return false;
+  };
+  const crossBlocked = (leafId: string): boolean => {
+    for (const rootId of crossGateRoots.get(leafId) ?? []) {
+      if (gateCandidate(rootId, predecessorMap, chainOutcome).blocked) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Counts leaves that passed both gates and actually attempted placement in
+  // the current pass — a pass with zero attempts is a precedence deadlock,
+  // not slot scarcity, so expansion cannot help it.
+  let attemptedThisPass = 0;
+
+  // Attempt one leaf. Returns whether it resolved (placed or permanently
+  // failed) and should leave the pool; a skip (blocked / NO_SLOTS / partial
+  // split) keeps it for retry.
+  const attemptLeaf = (node: LeafNode, allowDayCapRelaxation: boolean): boolean => {
+    const leafId = node.leaf.id;
+    if (chainBlocked(leafId)) return false;
+
+    let afterTime: Date | undefined;
+    for (const predId of chainPreds.get(leafId) ?? []) {
+      afterTime = laterDate(afterTime, leafChainEnd.get(predId));
+    }
+    for (const rootId of crossGateRoots.get(leafId) ?? []) {
+      const gate = gateCandidate(rootId, predecessorMap, chainOutcome);
+      if (gate.blocked) return false;
+      recordSequenceBreaks(sequenceBreaks, seenBreakKeys, gate.failedEdges);
+      afterTime = laterDate(afterTime, gate.afterTime);
+    }
+
+    const caps: GoalCapContext[] = [];
+    for (const rootId of completionRoots.get(leafId) ?? []) {
+      const cap = goalCapFor(rootId);
+      if (cap) caps.push(cap);
+    }
+
+    attemptedThisPass++;
+    const result = placeLeaf({
+      leaf: node.leaf,
+      scheduler,
+      perTemplateMasks,
+      categories,
+      plannerCategoryMap,
+      categoryEligibilityMap,
+      currentDate: context.currentDate,
+      capacityCache,
+      splitState,
+      scheduledTaskIds,
+      failures,
+      afterTime,
+      allowDayCapRelaxation,
+      goalCaps: caps,
+    });
+
+    events.push(...result.events);
+
+    // Accumulate the max placed end across every attempt — partial split
+    // passes place real chunks that successors must respect.
+    if (result.lastEnd) {
+      const prior = leafPlacedEnd.get(leafId);
+      if (!prior || result.lastEnd > prior) {
+        leafPlacedEnd.set(leafId, result.lastEnd);
+      }
+      for (const rootId of completionRoots.get(leafId) ?? []) {
+        const prev = rootLastEnd.get(rootId);
+        if (!prev || result.lastEnd > prev) {
+          rootLastEnd.set(rootId, result.lastEnd);
+        }
+      }
+    }
+
+    if (result.scheduled) {
+      const end = leafPlacedEnd.get(leafId);
+      if (end) leafChainEnd.set(leafId, end);
+      resolveRoots(leafId, true);
+      return true;
+    }
+    if (result.permanentFailure) {
+      // Pass-through: the chain flows from the last real success — or from
+      // the leaf's own partial chunks when it placed some before failing.
+      const end = laterDate(afterTime, leafPlacedEnd.get(leafId));
+      if (end) leafChainEnd.set(leafId, end);
+      permFailedIds.add(leafId);
+      resolveRoots(leafId, false);
+      return true;
+    }
+    return false;
+  };
+
+  // Category-constrained leaves pick slots first (they have strictly fewer
+  // options), then inherited score, then the clustering index — the same
+  // two-tier order sortByPriorityAndConstraints gives the candidate walk.
+  const leafConstrained = (leaf: Planner): boolean =>
+    (plannerCategoryMap.get(leaf.id) ?? leaf.categoryId) !== null;
+  let remaining: LeafNode[] = [...nodes].sort((a, b) => {
+    const ca = leafConstrained(a.leaf) ? 1 : 0;
+    const cb = leafConstrained(b.leaf) ? 1 : 0;
+    if (ca !== cb) return cb - ca;
+    const sa = leafEffScore.get(a.leaf.id) ?? 0;
+    const sb = leafEffScore.get(b.leaf.id) ?? 0;
+    if (sb !== sa) return sb - sa;
+    return a.scheduleIndex - b.scheduleIndex;
+  });
 
   let expansionsDone = 0;
 
-  while (
-    candidates.length > 0 &&
-    expansionsDone < SCHEDULING_CONFIG.MAX_WEEKS_TO_SEARCH
-  ) {
-    // Compute and publish the tail-buffer cutoff for this iteration. Anything
-    // starting at or after this date is off-limits to dynamic placement, so
-    // the next expansion's static-pass resume has empty room at the seam.
-    // Anchor: the latest end among placeable slots (Available + Category).
-    // Trailing nightly-template Occupieds are intentionally excluded, else
-    // the cutoff would always sit at midnight and the buffer would never
-    // shrink the placement window.
+  while (remaining.length > 0 && expansionsDone < SCHEDULING_CONFIG.MAX_WEEKS_TO_SEARCH) {
+    resolveZeroLeafCandidates();
     context.placementCutoffDate = computePlacementCutoff(slotManager.slots);
 
-    // Proactive watermark: if either the available-slot count is below the
-    // threshold or the biggest remaining task can't fit any compatible slot,
-    // expand the horizon before burning iterations on guaranteed failures.
-    // The reactive expansion at the bottom still fires after a fully-failed
-    // pass, catching location/travel cases the watermark doesn't model.
     let availableCount = 0;
     for (const s of slotManager.slots) {
       if (s.type === "available") availableCount++;
     }
-    // Goal candidates size as their largest uncompleted leaf, not the
-    // subtree aggregate — scheduleGoal places leaves individually, and the
-    // aggregate can exceed any possible slot, which would pin this watermark
-    // permanently true and starve the placement walk below. Leaves already
-    // placed (this run or memoized from the previous calendar) are excluded
-    // from the sizing for the same reason.
-    const unplaceableLeafIds = new Set([
-      ...memoizedEventIds,
-      ...scheduledTaskIds,
-    ]);
     let biggestRemaining = 0;
-    let biggestCandidate: Planner | null = null;
-    for (const c of candidates) {
-      const duration = effectiveCandidateDuration(
-        c,
-        allPlanners,
-        unplaceableLeafIds,
+    let biggestLeaf: Planner | null = null;
+    for (const node of remaining) {
+      const leafId = node.leaf.id;
+      if (chainBlocked(leafId) || crossBlocked(leafId)) continue;
+      const duration = placementBlockMinutes(node.leaf);
+      const capacityCeiling = maxEffectiveCapacityFor(
+        node.leaf,
+        perTemplateMasks,
+        categories,
+        plannerCategoryMap,
+        context.currentDate,
+        categoryEligibilityMap,
+        capacityCache,
       );
-      if (biggestCandidate === null || duration > biggestRemaining) {
+      if (duration > capacityCeiling) continue;
+      if (biggestLeaf === null || duration > biggestRemaining) {
         biggestRemaining = duration;
-        biggestCandidate = c;
+        biggestLeaf = node.leaf;
       }
     }
     const biggestFit = largestCompatibleSlotForLargestTask(
-      biggestCandidate,
+      biggestLeaf,
       slotManager.slots,
       plannerCategoryMap,
       categoryEligibilityMap,
@@ -124,63 +363,39 @@ export function scheduleTasksAndGoals(
       continue;
     }
 
-    // Walk candidates in sorted order — category-constrained and
-    // highest-urgency items pick slots first. Removals are collected and
-    // applied after the pass so the walk order matches the sort (the previous
-    // reverse-index splice idiom handed first pick to the lowest-urgency,
-    // unconstrained item, inverting the sorter's intent under contention).
+    attemptedThisPass = 0;
     const resolvedIds = new Set<string>();
-
-    for (const item of candidates) {
-      if (item.plannerType === PlannerType.task) {
-        const result = scheduleSingleTask(
-          item,
-          scheduledTaskIds,
-          failures,
-          scheduler,
-          perTemplateMasks,
-          categories,
-          plannerCategoryMap,
-          categoryEligibilityMap,
-          context.currentDate,
-          capacityCache,
-          splitState,
-        );
-
-        events.push(...result.events);
-        if (result.scheduled || result.permanentFailure) {
-          resolvedIds.add(item.id);
-        }
-      } else if (item.plannerType === PlannerType.goal) {
-        const result = scheduleGoal(
-          item,
-          allPlanners,
-          scheduledTaskIds,
-          memoizedEventIds,
-          failures,
-          events,
-          scheduler,
-          perTemplateMasks,
-          categories,
-          plannerCategoryMap,
-          categoryEligibilityMap,
-          context.currentDate,
-          capacityCache,
-          splitState,
-        );
-
-        if (result.scheduled || result.permanentFailure) {
-          resolvedIds.add(item.id);
-        }
-      }
+    for (const node of remaining) {
+      if (attemptLeaf(node, false)) resolvedIds.add(node.leaf.id);
     }
 
     if (resolvedIds.size > 0) {
-      const remaining = candidates.filter((c) => !resolvedIds.has(c.id));
-      candidates.splice(0, candidates.length, ...remaining);
+      remaining = remaining.filter((n) => !resolvedIds.has(n.leaf.id));
+      if (remaining.length > 0) continue;
     }
 
-    if (candidates.length > 0) {
+    if (remaining.length > 0) {
+      // A pass where NOTHING even attempted placement is a precedence
+      // deadlock (authoring validation blocks these, but stale data must not
+      // burn the whole expansion budget): force-fail the missing gate
+      // outcomes so successors proceed with loud breaks instead.
+      if (attemptedThisPass === 0) {
+        let stamped = false;
+        for (const node of remaining) {
+          for (const rootId of crossGateRoots.get(node.leaf.id) ?? []) {
+            for (const edge of predecessorMap.get(rootId) ?? []) {
+              if (!chainOutcome.has(edge.fromId)) {
+                chainOutcome.set(edge.fromId, {
+                  status: "failed",
+                  failCause: "failed",
+                });
+                stamped = true;
+              }
+            }
+          }
+        }
+        if (stamped) continue;
+      }
       expansionsDone++;
       expandSlots(
         context,
@@ -195,94 +410,59 @@ export function scheduleTasksAndGoals(
     }
   }
 
-  // Final compromise pass: with the expansion budget spent, retry what's left
-  // with the split day cap relaxed — placing a chunk over the user's per-day
-  // preference beats dropping the minutes entirely. Every compromise is
-  // recorded in splitState.relaxations and surfaced as an engine message.
-  // Non-split candidates get one last ordinary attempt, which is harmless.
-  if (candidates.length > 0) {
-    context.placementCutoffDate = computePlacementCutoff(slotManager.slots);
-    const resolvedIds = new Set<string>();
-    for (const item of candidates) {
-      if (item.plannerType === PlannerType.task) {
-        const result = scheduleSingleTask(
-          item,
-          scheduledTaskIds,
-          failures,
-          scheduler,
-          perTemplateMasks,
-          categories,
-          plannerCategoryMap,
-          categoryEligibilityMap,
-          context.currentDate,
-          capacityCache,
-          splitState,
-          true,
-        );
-        events.push(...result.events);
-        if (result.scheduled || result.permanentFailure) {
-          resolvedIds.add(item.id);
-        }
-      } else if (item.plannerType === PlannerType.goal) {
-        const result = scheduleGoal(
-          item,
-          allPlanners,
-          scheduledTaskIds,
-          memoizedEventIds,
-          failures,
-          events,
-          scheduler,
-          perTemplateMasks,
-          categories,
-          plannerCategoryMap,
-          categoryEligibilityMap,
-          context.currentDate,
-          capacityCache,
-          splitState,
-          true,
-        );
-        if (result.scheduled || result.permanentFailure) {
-          resolvedIds.add(item.id);
-        }
+  if (remaining.length > 0) {
+    for (const edge of allEdges) {
+      if (!chainOutcome.has(edge.fromId)) {
+        chainOutcome.set(edge.fromId, { status: "failed", failCause: "horizon" });
       }
     }
-    if (resolvedIds.size > 0) {
-      const remaining = candidates.filter((c) => !resolvedIds.has(c.id));
-      candidates.splice(0, candidates.length, ...remaining);
-    }
+    resolveZeroLeafCandidates();
   }
 
-  // Candidates still standing when the expansion budget runs out must fail
-  // loudly. This exit used to be silent (no event, no failure), which let a
-  // starved run report SCHEDULED_OK while the sync deleted every previously
-  // placed event.
-  for (const item of candidates) {
+  if (remaining.length > 0) {
+    context.placementCutoffDate = computePlacementCutoff(slotManager.slots);
+    const resolvedIds = new Set<string>();
+    for (const node of remaining) {
+      if (attemptLeaf(node, true)) resolvedIds.add(node.leaf.id);
+    }
+    if (resolvedIds.size > 0) {
+      remaining = remaining.filter((n) => !resolvedIds.has(n.leaf.id));
+    }
+  }
+  resolveZeroLeafCandidates();
+
+  // One budget-exhaustion failure per structural root, not per leaf — message
+  // identity (TASK_UNSCHEDULABLE id = plannerId) and console rows match the
+  // old per-candidate emission. A spliced target leaf reports on the target.
+  const failedRootIds = new Set<string>();
+  for (const node of remaining) {
+    const rootId = getRootParentId(allPlanners, node.leaf.id) ?? node.leaf.id;
+    if (failedRootIds.has(rootId)) continue;
+    failedRootIds.add(rootId);
+    const root = plannersById.get(rootId) ?? node.leaf;
     failures.push({
-      taskId: item.id,
-      taskTitle: item.title,
+      taskId: root.id,
+      taskTitle: root.title,
       reason: SchedulingFailureReason.NO_SLOTS,
       details: `Horizon expansion budget exhausted (${expansionsDone} expansions) before a slot was found`,
       context: { expansionsDone },
     });
   }
 
-  // Drop failures for tasks that eventually placed on a later iteration.
-  // A NO_SLOTS on attempt 1 that succeeds after expansion is not something the
-  // console should surface — the retry was the whole point of the outer loop.
   const finalFailures = failures.filter((f) => !scheduledTaskIds.has(f.taskId));
 
   return {
-    success: finalFailures.length === 0 && candidates.length === 0,
+    success: finalFailures.length === 0 && remaining.length === 0,
     newEvents: events,
     failures: finalFailures,
     splitRelaxations: splitState.relaxations,
+    goalCapRelaxations: goalCapState.relaxations,
+    sequenceBreaks,
   };
 }
 
 // Tail-buffer cutoff: dynamic placement is suppressed at and after this date.
 // Anchor = max end among placeable slots (Available + Category) - buffer days.
-// Excludes Travel/Occupied so trailing nightly templates don't pin the anchor
-// at midnight, which would leave no buffer behind the actual placement region.
 function computePlacementCutoff(slots: Slot[]): Date | null {
   let lastPlaceableEndMs = 0;
   for (const s of slots) {

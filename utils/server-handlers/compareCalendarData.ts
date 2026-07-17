@@ -10,6 +10,9 @@ import {
   CategoryEvent,
   TravelEvent,
   EngineMessage,
+  Queue,
+  QueueMember,
+  PlannerDependency,
 } from "@/types/prisma";
 import type {
   SerializedLocation,
@@ -35,6 +38,12 @@ type CategoryTimeWindowChange = CategoryTimeWindow;
 type CategoryEventChange = CategoryEvent;
 type TravelEventChange = TravelEvent;
 type EngineMessageChange = EngineMessage;
+// members is a related table — flattened across queues and diffed as its own
+// group (the categories/timeSlots pattern).
+type QueueChange = Omit<Queue, "members">;
+type QueueMemberChange = QueueMember;
+// Dependency rows are immutable: created or deleted, never updated.
+type DependencyChange = PlannerDependency;
 // Only the editable own-row fields. address/lat/lng/placeId are server-
 // authoritative (Google Places) and never flow back from the client.
 type LocationChange = SerializedLocation;
@@ -54,139 +63,65 @@ export type DatabaseChanges = {
   categoryEvent: ChangeGroup<CategoryEventChange>;
   travelEvent: ChangeGroup<TravelEventChange>;
   engineMessage: ChangeGroup<EngineMessageChange>;
+  queue: ChangeGroup<QueueChange>;
+  queueMember: ChangeGroup<QueueMemberChange>;
+  dependency: ChangeGroup<DependencyChange>;
   location: ChangeGroup<LocationChange>;
   travelTime: ChangeGroup<TravelTimeChange>;
 };
 
+// Keyed inputs: each group pairs the current arrays with the last
+// server-confirmed snapshot. Optional groups skip their diff entirely when
+// absent, matching the old optional-positional-pair behavior.
+type SyncedGroup<T> = { current: T[]; previous: T[] };
+
+export type SyncInputs = {
+  planner: SyncedGroup<Planner>;
+  calendar: SyncedGroup<SimpleEvent>;
+  template?: SyncedGroup<EventTemplate>;
+  categories?: SyncedGroup<Category>;
+  categoryEvents?: SyncedGroup<CategoryEvent>;
+  travelEvents?: SyncedGroup<TravelEvent>;
+  engineMessages?: SyncedGroup<EngineMessage>;
+  queues?: SyncedGroup<Queue>;
+  dependencies?: SyncedGroup<PlannerDependency>;
+  locations?: SyncedGroup<SerializedLocation>;
+  travelTimes?: SyncedGroup<SerializedTravelTime>;
+};
+
+const deepCopyGroup = <T>(
+  group: SyncedGroup<T> | undefined,
+): SyncedGroup<T> | undefined =>
+  group
+    ? {
+        current: JSON.parse(JSON.stringify(group.current)) as T[],
+        previous: JSON.parse(JSON.stringify(group.previous)) as T[],
+      }
+    : undefined;
+
 export async function handleServerTransaction(
   clientKnownDataVersion: number,
-  planner: Planner[],
-  previousPlanner: { current: Planner[] },
-  calendar: SimpleEvent[],
-  previousCalendar: { current: SimpleEvent[] },
-  template?: EventTemplate[],
-  previousTemplate?: { current: EventTemplate[] },
-  categories?: Category[],
-  previousCategories?: { current: Category[] },
-  categoryEvents?: CategoryEvent[],
-  previousCategoryEvents?: { current: CategoryEvent[] },
-  travelEvents?: TravelEvent[],
-  previousTravelEvents?: { current: TravelEvent[] },
-  engineMessages?: EngineMessage[],
-  previousEngineMessages?: { current: EngineMessage[] },
-  locations?: SerializedLocation[],
-  previousLocations?: { current: SerializedLocation[] },
-  travelTimes?: SerializedTravelTime[],
-  previousTravelTimes?: { current: SerializedTravelTime[] },
+  inputs: SyncInputs,
 ) {
   // Templates, category wrappers, and travel events no longer enter
   // state.engineOutput.calendar — they live in their own redux fields and
   // their own sync diff groups. SimpleEvent[] now only carries plans +
   // scheduled tasks, so no filter is needed before the diff.
-  const serializedPlanner = JSON.parse(JSON.stringify(planner)) as Planner[];
-  const serializedPreviousPlanner = {
-    current: JSON.parse(JSON.stringify(previousPlanner.current)) as Planner[],
+  const serialized: SyncInputs = {
+    planner: deepCopyGroup(inputs.planner)!,
+    calendar: deepCopyGroup(inputs.calendar)!,
+    template: deepCopyGroup(inputs.template),
+    categories: deepCopyGroup(inputs.categories),
+    categoryEvents: deepCopyGroup(inputs.categoryEvents),
+    travelEvents: deepCopyGroup(inputs.travelEvents),
+    engineMessages: deepCopyGroup(inputs.engineMessages),
+    queues: deepCopyGroup(inputs.queues),
+    dependencies: deepCopyGroup(inputs.dependencies),
+    locations: deepCopyGroup(inputs.locations),
+    travelTimes: deepCopyGroup(inputs.travelTimes),
   };
-  const serializedCalendar = JSON.parse(
-    JSON.stringify(calendar),
-  ) as SimpleEvent[];
-  const serializedPreviousCalendar = {
-    current: JSON.parse(
-      JSON.stringify(previousCalendar.current),
-    ) as SimpleEvent[],
-  };
-  const serializedTemplate = template
-    ? (JSON.parse(JSON.stringify(template)) as EventTemplate[])
-    : undefined;
-  const serializedPreviousTemplate = previousTemplate
-    ? {
-        current: JSON.parse(
-          JSON.stringify(previousTemplate.current),
-        ) as EventTemplate[],
-      }
-    : undefined;
 
-  const serializedCategories = categories
-    ? (JSON.parse(JSON.stringify(categories)) as Category[])
-    : undefined;
-  const serializedPreviousCategories = previousCategories
-    ? {
-        current: JSON.parse(
-          JSON.stringify(previousCategories.current),
-        ) as Category[],
-      }
-    : undefined;
-  const serializedLocations = locations
-    ? (JSON.parse(JSON.stringify(locations)) as SerializedLocation[])
-    : undefined;
-  const serializedPreviousLocations = previousLocations
-    ? {
-        current: JSON.parse(
-          JSON.stringify(previousLocations.current),
-        ) as SerializedLocation[],
-      }
-    : undefined;
-  const serializedTravelTimes = travelTimes
-    ? (JSON.parse(JSON.stringify(travelTimes)) as SerializedTravelTime[])
-    : undefined;
-  const serializedPreviousTravelTimes = previousTravelTimes
-    ? {
-        current: JSON.parse(
-          JSON.stringify(previousTravelTimes.current),
-        ) as SerializedTravelTime[],
-      }
-    : undefined;
-  const serializedCategoryEvents = categoryEvents
-    ? (JSON.parse(JSON.stringify(categoryEvents)) as CategoryEvent[])
-    : undefined;
-  const serializedPreviousCategoryEvents = previousCategoryEvents
-    ? {
-        current: JSON.parse(
-          JSON.stringify(previousCategoryEvents.current),
-        ) as CategoryEvent[],
-      }
-    : undefined;
-  const serializedTravelEvents = travelEvents
-    ? (JSON.parse(JSON.stringify(travelEvents)) as TravelEvent[])
-    : undefined;
-  const serializedPreviousTravelEvents = previousTravelEvents
-    ? {
-        current: JSON.parse(
-          JSON.stringify(previousTravelEvents.current),
-        ) as TravelEvent[],
-      }
-    : undefined;
-  const serializedEngineMessages = engineMessages
-    ? (JSON.parse(JSON.stringify(engineMessages)) as EngineMessage[])
-    : undefined;
-  const serializedPreviousEngineMessages = previousEngineMessages
-    ? {
-        current: JSON.parse(
-          JSON.stringify(previousEngineMessages.current),
-        ) as EngineMessage[],
-      }
-    : undefined;
-
-  const databaseChanges = compareData(
-    serializedPlanner,
-    serializedPreviousPlanner,
-    serializedCalendar,
-    serializedPreviousCalendar,
-    serializedTemplate,
-    serializedPreviousTemplate,
-    serializedCategories,
-    serializedPreviousCategories,
-    serializedCategoryEvents,
-    serializedPreviousCategoryEvents,
-    serializedTravelEvents,
-    serializedPreviousTravelEvents,
-    serializedEngineMessages,
-    serializedPreviousEngineMessages,
-    serializedLocations,
-    serializedPreviousLocations,
-    serializedTravelTimes,
-    serializedPreviousTravelTimes,
-  );
+  const databaseChanges = compareData(serialized);
 
   const response = await syncCalendarData(
     databaseChanges,
@@ -196,26 +131,21 @@ export async function handleServerTransaction(
   return response;
 }
 
-export function compareData(
-  planner: Planner[],
-  previousPlanner: { current: Planner[] },
-  calendar: SimpleEvent[],
-  previousCalendar: { current: SimpleEvent[] },
-  template?: EventTemplate[],
-  previousTemplate?: { current: EventTemplate[] },
-  categories?: Category[],
-  previousCategories?: { current: Category[] },
-  categoryEvents?: CategoryEvent[],
-  previousCategoryEvents?: { current: CategoryEvent[] },
-  travelEvents?: TravelEvent[],
-  previousTravelEvents?: { current: TravelEvent[] },
-  engineMessages?: EngineMessage[],
-  previousEngineMessages?: { current: EngineMessage[] },
-  locations?: SerializedLocation[],
-  previousLocations?: { current: SerializedLocation[] },
-  travelTimes?: SerializedTravelTime[],
-  previousTravelTimes?: { current: SerializedTravelTime[] },
-) {
+export function compareData(inputs: SyncInputs) {
+  const {
+    planner: plannerGroup,
+    calendar: calendarGroup,
+    template: templateGroup,
+    categories: categoriesGroup,
+    categoryEvents: categoryEventsGroup,
+    travelEvents: travelEventsGroup,
+    engineMessages: engineMessagesGroup,
+    queues: queuesGroup,
+    dependencies: dependenciesGroup,
+    locations: locationsGroup,
+    travelTimes: travelTimesGroup,
+  } = inputs;
+
   const databaseChanges: DatabaseChanges = {
     planner: { create: [], update: [], destroy: [] },
     calendar: { create: [], update: [], destroy: [] },
@@ -226,14 +156,20 @@ export function compareData(
     categoryEvent: { create: [], update: [], destroy: [] },
     travelEvent: { create: [], update: [], destroy: [] },
     engineMessage: { create: [], update: [], destroy: [] },
+    queue: { create: [], update: [], destroy: [] },
+    queueMember: { create: [], update: [], destroy: [] },
+    dependency: { create: [], update: [], destroy: [] },
     location: { create: [], update: [], destroy: [] },
     travelTime: { create: [], update: [], destroy: [] },
   };
 
   // Check planner changes
-  const prevPlan: Planner[] = [...previousPlanner.current];
-  const plannerMap = new Map(planner.map((planner) => [planner.id, planner]));
-  const prevPlanMap = new Map(prevPlan.map((planner) => [planner.id, planner]));
+  const plannerMap = new Map(
+    plannerGroup.current.map((planner) => [planner.id, planner]),
+  );
+  const prevPlanMap = new Map(
+    plannerGroup.previous.map((planner) => [planner.id, planner]),
+  );
 
   // Find items to create or update
   plannerMap.forEach((item) => {
@@ -254,13 +190,13 @@ export function compareData(
 
   // Check calendar changes
   // Note: Generated events (travel, template, category wrappers) are already filtered out
-  // in handleServerTransaction before this function is called
-  const prevCal: SimpleEvent[] = [...previousCalendar.current];
-  const filteredCalendar = [...calendar];
+  // before this function is called
   const calendarMap = new Map(
-    filteredCalendar.map((event) => [event.id, event]),
+    calendarGroup.current.map((event) => [event.id, event]),
   );
-  const prevCalMap = new Map(prevCal.map((event) => [event.id, event]));
+  const prevCalMap = new Map(
+    calendarGroup.previous.map((event) => [event.id, event]),
+  );
 
   // Find events to create or update
   calendarMap.forEach((event) => {
@@ -307,13 +243,12 @@ export function compareData(
 
   // Check template changes
 
-  if (template && previousTemplate) {
-    const prevTemp: EventTemplate[] = [...previousTemplate.current];
+  if (templateGroup) {
     const templateMap = new Map(
-      template.map((template) => [template.id, template]),
+      templateGroup.current.map((template) => [template.id, template]),
     );
     const prevTempMap = new Map(
-      prevTemp.map((template) => [template.id, template]),
+      templateGroup.previous.map((template) => [template.id, template]),
     );
 
     // Find templates to create or update
@@ -336,16 +271,16 @@ export function compareData(
 
   // Categories. timeSlots are a related table — strip before diffing so a
   // change to a window doesn't look like a category update.
-  if (categories && previousCategories) {
+  if (categoriesGroup) {
     const stripTimeSlots = (c: Category) => {
       const { timeSlots: _timeSlots, ...rest } = c;
       return rest;
     };
     const currentByCategory = new Map(
-      categories.map((c) => [c.id, stripTimeSlots(c)]),
+      categoriesGroup.current.map((c) => [c.id, stripTimeSlots(c)]),
     );
     const prevByCategory = new Map(
-      previousCategories.current.map((c) => [c.id, stripTimeSlots(c)]),
+      categoriesGroup.previous.map((c) => [c.id, stripTimeSlots(c)]),
     );
     currentByCategory.forEach((cat, id) => {
       const prev = prevByCategory.get(id);
@@ -368,8 +303,8 @@ export function compareData(
     // null (onDelete: SetNull), so we explicitly destroy those windows here
     // rather than leaving orphans — they're already absent from the current
     // category tree and present in the previous one.
-    const currentWindows = categories.flatMap((c) => c.timeSlots);
-    const prevWindows = previousCategories.current.flatMap((c) => c.timeSlots);
+    const currentWindows = categoriesGroup.current.flatMap((c) => c.timeSlots);
+    const prevWindows = categoriesGroup.previous.flatMap((c) => c.timeSlots);
     const currWindowMap = new Map(currentWindows.map((w) => [w.id, w]));
     const prevWindowMap = new Map(prevWindows.map((w) => [w.id, w]));
     currWindowMap.forEach((win, id) => {
@@ -387,6 +322,74 @@ export function compareData(
     });
   }
 
+  // Queues. members are a related table — strip before diffing (the
+  // categories/timeSlots pattern) so a member move doesn't look like a queue
+  // update, then flatten members across queues and diff by member id.
+  if (queuesGroup) {
+    const stripMembers = (q: Queue) => {
+      const { members: _members, ...rest } = q;
+      return rest;
+    };
+    const currentByQueue = new Map(
+      queuesGroup.current.map((q) => [q.id, stripMembers(q)]),
+    );
+    const prevByQueue = new Map(
+      queuesGroup.previous.map((q) => [q.id, stripMembers(q)]),
+    );
+    currentByQueue.forEach((queue, id) => {
+      const prev = prevByQueue.get(id);
+      if (!prev) {
+        databaseChanges.queue.create.push(queue);
+      } else if (!objectsAreEqual(prev, queue)) {
+        databaseChanges.queue.update.push(queue);
+      }
+    });
+    prevByQueue.forEach((queue, id) => {
+      if (!currentByQueue.has(id)) {
+        databaseChanges.queue.destroy.push(queue);
+      }
+    });
+
+    const currentMembers = queuesGroup.current.flatMap((q) => q.members);
+    const prevMembers = queuesGroup.previous.flatMap((q) => q.members);
+    const currMemberMap = new Map(currentMembers.map((m) => [m.id, m]));
+    const prevMemberMap = new Map(prevMembers.map((m) => [m.id, m]));
+    currMemberMap.forEach((member, id) => {
+      const prev = prevMemberMap.get(id);
+      if (!prev) {
+        databaseChanges.queueMember.create.push(member);
+      } else if (!objectsAreEqual(prev, member)) {
+        databaseChanges.queueMember.update.push(member);
+      }
+    });
+    prevMemberMap.forEach((member, id) => {
+      if (!currMemberMap.has(id)) {
+        databaseChanges.queueMember.destroy.push(member);
+      }
+    });
+  }
+
+  // Dependencies. Rows are immutable — the diff only ever produces creates
+  // and destroys; an id present on both sides is by definition unchanged.
+  if (dependenciesGroup) {
+    const currByDependency = new Map(
+      dependenciesGroup.current.map((d) => [d.id, d]),
+    );
+    const prevByDependency = new Map(
+      dependenciesGroup.previous.map((d) => [d.id, d]),
+    );
+    currByDependency.forEach((dep, id) => {
+      if (!prevByDependency.has(id)) {
+        databaseChanges.dependency.create.push(dep);
+      }
+    });
+    prevByDependency.forEach((dep, id) => {
+      if (!currByDependency.has(id)) {
+        databaseChanges.dependency.destroy.push(dep);
+      }
+    });
+  }
+
   // Engine emits empty createdAt/updatedAt; DB owns those fields. Strip on
   // both sides so engine output and DB-loaded rows compare cleanly.
   const stripDbMetadata = <
@@ -398,10 +401,12 @@ export function compareData(
     return rest;
   };
 
-  if (categoryEvents && previousCategoryEvents) {
-    const currByEvent = new Map(categoryEvents.map((e) => [e.id, e]));
+  if (categoryEventsGroup) {
+    const currByEvent = new Map(
+      categoryEventsGroup.current.map((e) => [e.id, e]),
+    );
     const prevByEvent = new Map(
-      previousCategoryEvents.current.map((e) => [e.id, e]),
+      categoryEventsGroup.previous.map((e) => [e.id, e]),
     );
     currByEvent.forEach((ev, id) => {
       const prev = prevByEvent.get(id);
@@ -418,10 +423,12 @@ export function compareData(
     });
   }
 
-  if (travelEvents && previousTravelEvents) {
-    const currByTravel = new Map(travelEvents.map((e) => [e.id, e]));
+  if (travelEventsGroup) {
+    const currByTravel = new Map(
+      travelEventsGroup.current.map((e) => [e.id, e]),
+    );
     const prevByTravel = new Map(
-      previousTravelEvents.current.map((e) => [e.id, e]),
+      travelEventsGroup.previous.map((e) => [e.id, e]),
     );
     currByTravel.forEach((ev, id) => {
       const prev = prevByTravel.get(id);
@@ -438,10 +445,12 @@ export function compareData(
     });
   }
 
-  if (engineMessages && previousEngineMessages) {
-    const currByMessage = new Map(engineMessages.map((m) => [m.id, m]));
+  if (engineMessagesGroup) {
+    const currByMessage = new Map(
+      engineMessagesGroup.current.map((m) => [m.id, m]),
+    );
     const prevByMessage = new Map(
-      previousEngineMessages.current.map((m) => [m.id, m]),
+      engineMessagesGroup.previous.map((m) => [m.id, m]),
     );
     currByMessage.forEach((m, id) => {
       const prev = prevByMessage.get(id);
@@ -461,10 +470,12 @@ export function compareData(
   // Travel times. Only update flows through here — create needs a Google
   // distance lookup (handled by refreshAllTravelTimes / fetchMissingTravelTimes)
   // and destroy is handled by location cascade in Prisma.
-  if (travelTimes && previousTravelTimes) {
-    const currentByTravel = new Map(travelTimes.map((t) => [t.id, t]));
+  if (travelTimesGroup) {
+    const currentByTravel = new Map(
+      travelTimesGroup.current.map((t) => [t.id, t]),
+    );
     const prevByTravel = new Map(
-      previousTravelTimes.current.map((t) => [t.id, t]),
+      travelTimesGroup.previous.map((t) => [t.id, t]),
     );
     currentByTravel.forEach((tt, id) => {
       const prev = prevByTravel.get(id);
@@ -477,11 +488,9 @@ export function compareData(
 
   // Locations. Only update + destroy flow through here — create needs a
   // Google Places lookup and stays as a direct server action.
-  if (locations && previousLocations) {
-    const currentByLoc = new Map(locations.map((l) => [l.id, l]));
-    const prevByLoc = new Map(
-      previousLocations.current.map((l) => [l.id, l]),
-    );
+  if (locationsGroup) {
+    const currentByLoc = new Map(locationsGroup.current.map((l) => [l.id, l]));
+    const prevByLoc = new Map(locationsGroup.previous.map((l) => [l.id, l]));
     currentByLoc.forEach((loc, id) => {
       const prev = prevByLoc.get(id);
       if (!prev) {

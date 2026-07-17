@@ -18,11 +18,12 @@ export default function DragBox() {
   }, [currentlyClickedItem, setDisplayDragBox]);
 
   useEffect(() => {
-    function handleMouseMove(e: MouseEvent) {
+    // pointermove instead of mousemove so the box also follows touch drags.
+    function handlePointerMove(e: PointerEvent) {
       mousePositionRef.current = { x: e.clientX, y: e.clientY };
     }
 
-    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("pointermove", handlePointerMove);
 
     function animationFrame() {
       if (dragBoxRef.current) {
@@ -46,7 +47,7 @@ export default function DragBox() {
       if (animationFrameId.current !== null) {
         cancelAnimationFrame(animationFrameId.current);
       }
-      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("pointermove", handlePointerMove);
     };
   }, []);
 

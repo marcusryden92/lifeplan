@@ -7,7 +7,6 @@ import {
   popover,
   backdropFilters,
   interactiveTransition,
-  formInput,
   radii,
   display,
   text,
@@ -98,25 +97,17 @@ export const periodRow = style({
 
 export const periodName = style([fieldLabel]);
 
-// Numeric stepper for travel-minute fields. Inherits the boxed form-input
-// look (bg, border, focus color) so it matches every other input, then
-// overrides the bits specific to a compact right-aligned numeric cell.
-export const periodInput = style([
-  formInput({ variant: "boxed" }),
-  {
-    borderRadius: radii.sm,
-    padding: "6px 10px",
-    fontSize: 13,
-    fontWeight: 600,
-    fontVariantNumeric: "tabular-nums",
-    textAlign: "right",
-    selectors: {
-      "&::-webkit-inner-spin-button": { appearance: "none", margin: 0 },
-      "&::-webkit-outer-spin-button": { appearance: "none", margin: 0 },
-      [`.${themeDark} &`]: { colorScheme: "dark" },
-    },
+// Compact right-aligned numeric cell for travel minutes. The boxed <Input>
+// recipe supplies fill/border/focus/spinner removal; these add the numeric
+// treatment (bold, tabular, right-aligned) on top.
+export const periodInput = style({
+  fontVariantNumeric: "tabular-nums",
+  textAlign: "right",
+  selectors: {
+    "&&": { fontWeight: 600 },
+    [`.${themeDark} &`]: { colorScheme: "dark" },
   },
-]);
+});
 
 export const googleHint = style([
   caption,

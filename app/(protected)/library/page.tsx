@@ -1,7 +1,13 @@
 "use client";
 
 import { space, listRow } from "@/lib/theme";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -14,6 +20,7 @@ import {
   Flag,
   CheckCircle2,
   Layers,
+  ChevronLeft,
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
@@ -25,6 +32,7 @@ import {
   Button,
   Caption,
   ConfirmModal,
+  Input,
   Loader,
   Switch,
   vars,
@@ -65,6 +73,9 @@ import {
   actionCluster,
   mainGrid,
   rail,
+  railHeader,
+  railToggle,
+  railToggleIcon,
   railSection,
   railSectionHead,
   railRow,
@@ -95,6 +106,8 @@ import {
   emptyStateTitle,
 } from "./page.css";
 
+const RAIL_COLLAPSE_KEY = "circadium.library.railCollapsed";
+
 type TypeFilter = "all" | "task" | "plan" | "goal";
 type SortKey =
   | "title"
@@ -104,7 +117,7 @@ type SortKey =
   | "deadline"
   | "category";
 type SortDir = "asc" | "desc";
-type GoalReadiness = "all" | "ready" | "not-ready";
+type Readiness = "all" | "ready" | "not-ready";
 
 const DEFAULT_SORT_DIR: Record<SortKey, SortDir> = {
   title: "asc",
@@ -179,10 +192,38 @@ export default function LibraryPage() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
-  const [goalReadiness, setGoalReadiness] = useState<GoalReadiness>("all");
+  const [readiness, setReadiness] = useState<Readiness>("all");
   const [showCompleted, setShowCompleted] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  const [railHydrated, setRailHydrated] = useState(false);
+  // Suppresses the rail width transition on the first frame so restoring a
+  // collapsed rail from localStorage doesn't animate 260 -> 44 on mount.
+  const [railTransitionsReady, setRailTransitionsReady] = useState(false);
+
+  useLayoutEffect(() => {
+    try {
+      if (window.localStorage.getItem(RAIL_COLLAPSE_KEY) === "1") {
+        setRailCollapsed(true);
+      }
+    } catch {
+      // localStorage may be unavailable (private mode, disabled cookies)
+    }
+    setRailHydrated(true);
+    const id = requestAnimationFrame(() => setRailTransitionsReady(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!railHydrated) return;
+    try {
+      window.localStorage.setItem(RAIL_COLLAPSE_KEY, railCollapsed ? "1" : "0");
+    } catch {
+      // localStorage may be unavailable (private mode, quota exceeded)
+    }
+  }, [railCollapsed, railHydrated]);
 
   const onSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -267,8 +308,8 @@ export default function LibraryPage() {
       result = result.filter((i) => i.plannerType === typeFilter);
     }
 
-    if (typeFilter === "goal" && goalReadiness !== "all") {
-      const wantReady = goalReadiness === "ready";
+    if (readiness !== "all") {
+      const wantReady = readiness === "ready";
       result = result.filter((i) => !!i.isReady === wantReady);
     }
 
@@ -325,7 +366,7 @@ export default function LibraryPage() {
     categoryIndex,
     search,
     typeFilter,
-    goalReadiness,
+    readiness,
     showCompleted,
     sortKey,
     sortDir,
@@ -473,7 +514,11 @@ export default function LibraryPage() {
   })();
 
   return (
-    <div className={page}>
+    <div
+      className={page}
+      data-rail-collapsed={railCollapsed}
+      data-no-transitions={railTransitionsReady ? undefined : "true"}
+    >
       <div className={subHeader}>
         <h1 className={pageTitle}>Library</h1>
         <span className={titleSummary}>
@@ -495,6 +540,20 @@ export default function LibraryPage() {
 
       <div className={mainGrid}>
         <aside className={rail}>
+          <div className={railHeader}>
+            <button
+              type="button"
+              className={railToggle}
+              onClick={() => setRailCollapsed((c) => !c)}
+              title={railCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-label={railCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-expanded={!railCollapsed}
+            >
+              <span className={railToggleIcon} aria-hidden>
+                <ChevronLeft size={16} strokeWidth={2} />
+              </span>
+            </button>
+          </div>
           <div className={railSection}>
             <div className={railSectionHead}>Smart views</div>
             <button
@@ -599,17 +658,15 @@ export default function LibraryPage() {
                 ]}
               />
 
-              {typeFilter === "goal" && (
-                <SegmentedControl<GoalReadiness>
-                  value={goalReadiness}
-                  onChange={setGoalReadiness}
-                  options={[
-                    { key: "all", label: "All" },
-                    { key: "ready", label: "Ready" },
-                    { key: "not-ready", label: "Draft" },
-                  ]}
-                />
-              )}
+              <SegmentedControl<Readiness>
+                value={readiness}
+                onChange={setReadiness}
+                options={[
+                  { key: "all", label: "All" },
+                  { key: "ready", label: "Ready" },
+                  { key: "not-ready", label: "Not ready" },
+                ]}
+              />
 
               <span className={spacer} />
 
@@ -629,7 +686,8 @@ export default function LibraryPage() {
                   strokeWidth={2}
                   style={{ color: vars.muted }}
                 />
-                <input
+                <Input
+                  variant="bare"
                   className={searchInput}
                   placeholder={`Search ${selectionLabel.toLowerCase()}…`}
                   value={search}

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, MapPin, Trash2, AlertTriangle } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Button } from "@/components/ui";
+import { Button, FieldStack, Input } from "@/components/ui";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import { useLocationModalState } from "../../_hooks/useLocationModalState";
 import { usePlaceSearch, type Prediction } from "../../_hooks/usePlaceSearch";
@@ -14,13 +14,10 @@ import {
   header,
   title,
   subtitle,
-  fieldStack,
-  fieldLabel,
   searchWrap,
   searchIcon,
   searchSpinner,
   textInput,
-  plainInput,
   selectedHint,
   cascadeNote,
   placeMessageSlot,
@@ -147,10 +144,8 @@ export function EditLocationModal({
             </span>
           </div>
 
-          <div className={fieldStack}>
-            <span className={fieldLabel}>Name</span>
-            <input
-              className={plainInput}
+          <FieldStack size="sm" label="Name">
+            <Input
               placeholder="e.g. Home, Office, Gym"
               value={name}
               maxLength={50}
@@ -158,15 +153,14 @@ export function EditLocationModal({
               autoFocus
               onChange={(e) => setName(e.target.value)}
             />
-          </div>
+          </FieldStack>
 
-          <div className={fieldStack}>
-            <span className={fieldLabel}>Address</span>
+          <FieldStack size="sm" label="Address">
             <div className={searchWrap} ref={predictionsList.containerRef}>
               <span className={searchIcon}>
                 <MapPin size={13} strokeWidth={2} />
               </span>
-              <input
+              <Input
                 className={textInput}
                 placeholder="Search for an address…"
                 value={query}
@@ -204,7 +198,7 @@ export function EditLocationModal({
                 </>
               )}
             </div>
-          </div>
+          </FieldStack>
 
           <div className={errorSlot}>
             {error && <div className={errorBlock}>{error}</div>}

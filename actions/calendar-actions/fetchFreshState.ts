@@ -13,6 +13,8 @@ import type {
   CategoryEvent,
   TravelEvent,
   EngineMessage,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 import type {
   SerializedLocation,
@@ -33,6 +35,8 @@ export type FreshState = {
   categoryEvents: CategoryEvent[];
   travelEvents: TravelEvent[];
   engineMessages: EngineMessage[];
+  queues: Queue[];
+  dependencies: PlannerDependency[];
   locations: SerializedLocation[];
   travelTimes: SerializedTravelTime[];
 };
@@ -47,6 +51,8 @@ export async function fetchFreshState(userId: string): Promise<FreshState> {
     categoryEvents,
     travelEvents,
     engineMessages,
+    queues,
+    dependencies,
     locations,
     travelTimes,
   ] = await Promise.all([
@@ -67,6 +73,8 @@ export async function fetchFreshState(userId: string): Promise<FreshState> {
     db.categoryEvent.findMany({ where: { userId } }),
     db.travelEvent.findMany({ where: { userId } }),
     db.engineMessage.findMany({ where: { userId } }),
+    db.queue.findMany({ where: { userId }, include: { members: true } }),
+    db.plannerDependency.findMany({ where: { userId } }),
     db.location.findMany({
       where: { userId },
       orderBy: { createdAt: "asc" },
@@ -117,6 +125,8 @@ export async function fetchFreshState(userId: string): Promise<FreshState> {
     categoryEvents,
     travelEvents,
     engineMessages,
+    queues,
+    dependencies,
     locations,
     travelTimes: allTravelTimes,
   };

@@ -5,9 +5,6 @@ import {
   DURATIONS,
   popover,
   backdropFilters,
-  formInput,
-  media,
-  radii,
 } from "@/lib/theme";
 
 
@@ -19,11 +16,6 @@ const fadeIn = keyframes({
 const slideUp = keyframes({
   from: { opacity: 0, transform: "translateY(8px) scale(0.98)" },
   to: { opacity: 1, transform: "translateY(0) scale(1)" },
-});
-
-const sheetUp = keyframes({
-  from: { transform: "translateY(100%)" },
-  to: { transform: "translateY(0)" },
 });
 
 export const overlay = style({
@@ -56,22 +48,17 @@ export const dialog = style([
     animationName: slideUp,
     animationDuration: `${DURATIONS.modal}s`,
     animationTimingFunction: "ease",
-    "@media": {
-      [media.mobile]: {
-        top: "auto",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        marginLeft: 0,
-        marginRight: 0,
-        width: "100%",
-        borderRadius: `${radii["xl+2"]}px ${radii["xl+2"]}px 0 0`,
-        animationName: sheetUp,
-        animationDuration: `${DURATIONS.modal}s`,
-      },
-    },
   },
 ]);
+
+// Mobile-sheet body: the shared BottomSheet owns the surface; this restores
+// the stack rhythm the desktop dialog gets from its own padding + gap.
+export const sheetStack = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["3"],
+  paddingTop: space["1"],
+});
 
 export const header = style({
   display: "flex",
@@ -79,8 +66,6 @@ export const header = style({
   justifyContent: "space-between",
   gap: space["3"],
 });
-
-export const input = style([formInput({ variant: "underline" })]);
 
 export const hintsRow = style({
   display: "flex",

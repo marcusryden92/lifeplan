@@ -1,11 +1,5 @@
 import Link from "next/link";
-import {
-  Button,
-  Caption,
-  CategoryDot,
-  Loader,
-  vars,
-} from "@/components/ui";
+import { Button, Caption, CategoryDot, Loader, vars } from "@/components/ui";
 import { TYPE_COLOR } from "../../_constants";
 import { useFlashAction } from "../../_hooks/useFlashAction";
 import type {
@@ -19,6 +13,7 @@ import {
   leftCard,
   leftCardHeader,
   leftCardTitle,
+  openCalendarLink,
   agendaList,
   agendaRows as agendaRowsClass,
   agendaEmpty,
@@ -57,9 +52,9 @@ export function AgendaCard({
     <div className={leftCard}>
       <div className={leftCardHeader}>
         <h2 className={leftCardTitle}>Agenda</h2>
-        <Link href="/calendar">
-          <Button variant="glass" size="sm">
-            Full week →
+        <Link href="/calendar" className={openCalendarLink}>
+          <Button variant="solid" size="sm">
+            Open calendar →
           </Button>
         </Link>
       </div>
@@ -83,9 +78,7 @@ export function AgendaCard({
                       borderBottom: `2px solid ${vars.status.success}`,
                     }}
                   >
-                    <span className={agendaSectionHeaderText}>
-                      Uncompleted
-                    </span>
+                    <span className={agendaSectionHeaderText}>Uncompleted</span>
                     <span className={agendaSectionHeaderCount}>
                       {uncompleted.length}{" "}
                       {uncompleted.length === 1 ? "item" : "items"}

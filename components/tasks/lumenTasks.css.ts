@@ -196,10 +196,31 @@ export const gripBtn = style({
     "&:hover": { color: vars.ink },
     "&:active": { cursor: "grabbing" },
   },
-  // No hover on touch: the handle is always visible on mobile, where it
-  // opens the move menu instead of starting a mouse drag.
+  // No hover on touch: the handle is always visible on mobile, where it is
+  // the touch drag handle (tap opens the move menu). touch-action none is
+  // what keeps a drag from scrolling the page — scoped to the grip only so
+  // the rest of the row scrolls normally.
   "@media": {
-    [media.mobile]: { opacity: 1, cursor: "pointer" },
+    [media.mobile]: {
+      opacity: 1,
+      cursor: "pointer",
+      position: "relative",
+      touchAction: "none",
+      WebkitTouchCallout: "none",
+      WebkitUserSelect: "none",
+      selectors: {
+        // Enlarged touch target (~40px tall); the right edge stays tight so
+        // the adjacent chevron/complete button keeps its taps.
+        "&::after": {
+          content: '""',
+          position: "absolute",
+          top: -7,
+          bottom: -7,
+          left: -8,
+          right: -2,
+        },
+      },
+    },
   },
 });
 
@@ -311,6 +332,13 @@ export const taskTitleFocused = style({
   fontWeight: 600,
 });
 
+export const linkedIcon = style({
+  display: "inline-flex",
+  alignItems: "center",
+  flexShrink: 0,
+  color: vars.muted,
+});
+
 export const iconRow = style({
   display: "flex",
   alignItems: "center",
@@ -361,41 +389,19 @@ export const editForm = style({
   minWidth: 0,
 });
 
-export const editInput = style([
-  text.row,
-  {
-    flex: 1,
-    minWidth: 0,
-    background: vars.glass.bgSoft,
-    border: `1px solid ${vars.glass.stroke}`,
-    borderRadius: radii.sm,
-    padding: "5px 10px",
-    color: vars.ink,
-    outline: "none",
-    transition: themeTransition,
-    selectors: {
-      "&:focus": { borderColor: vars.accent.primary },
-    },
-  },
-]);
+// Boxed <Input> for the add-subtask row; fill/border/focus come from the
+// recipe, these carry only layout.
+export const editInput = style({
+  flex: 1,
+  minWidth: 0,
+});
 
-export const editDurationInput = style([
-  text.row,
-  {
-    width: 72,
-    background: vars.glass.bgSoft,
-    border: `1px solid ${vars.glass.stroke}`,
-    borderRadius: radii.sm,
-    padding: "5px 10px",
-    color: vars.ink,
-    outline: "none",
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-    selectors: {
-      "&:focus": { borderColor: vars.accent.primary },
-    },
+export const editDurationInput = style({
+  fontVariantNumeric: "tabular-nums",
+  selectors: {
+    "&&": { width: 72 },
   },
-]);
+});
 
 export const addSubtaskTrigger = style([
   text.bodySm,
@@ -465,6 +471,17 @@ export const dropDividerActive = style({
       background: vars.accent.now,
       height: 4,
       transition: "background-color 80ms ease, height 80ms ease",
+    },
+  },
+});
+
+// Touch drags can't hover; the resolved drop target lights unconditionally.
+// No transition for the same snap-off reason as dropDividerActive.
+export const dropDividerTouchTarget = style({
+  selectors: {
+    "&::before": {
+      background: vars.accent.now,
+      height: 4,
     },
   },
 });

@@ -10,6 +10,7 @@ import { getUserByEmail, getUserById } from "@/data/user";
 import { currentUser } from "@/lib/auth";
 import { generateVerificationToken } from "@/lib/tokens";
 import { sendVerificationEmail } from "@/lib/mail";
+import { AiMode } from "@/generated/client";
 
 export const settings = async (values: z.infer<typeof SettingsSchema>) => {
   const user = await currentUser();
@@ -99,4 +100,27 @@ export const settings = async (values: z.infer<typeof SettingsSchema>) => {
   });
 
   return { success: "Settings updated!" };
+};
+
+// The mode is the only server-known part of the AI setup: the API key itself
+// stays encrypted on the user's device (BYOK) and must never appear in any
+// request to this server. MANAGED is reserved for a future app-key paid mode
+// and is not settable until that ships.
+export const updateAiMode = async (mode: AiMode) => {
+  const user = await currentUser();
+
+  if (!user?.id) {
+    return { error: "Unauthorized." };
+  }
+
+  if (mode !== AiMode.BYOK && mode !== AiMode.OFF) {
+    return { error: "Invalid mode." };
+  }
+
+  await db.user.update({
+    where: { id: user.id },
+    data: { aiMode: mode },
+  });
+
+  return { success: "AI settings updated." };
 };

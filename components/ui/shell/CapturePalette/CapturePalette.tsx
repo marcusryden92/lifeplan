@@ -9,21 +9,26 @@ import { v4 as uuidv4 } from "uuid";
 import { useCapture } from "../CaptureContext";
 import { Caption } from "../../Caption";
 import { Button } from "../../Button";
+import { Input } from "../../Input";
 import { Kbd } from "../../Kbd";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { usePlatform } from "@/hooks/usePlatform";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { PRIORITY_DEFAULT } from "@/utils/plannerPriority";
 import type { Planner } from "@/types/prisma";
+import { BottomSheet } from "../../BottomSheet";
 import {
   overlay,
   dialog,
   header,
-  input,
   hintsRow,
+  sheetStack,
 } from "./CapturePalette.css";
 
 export function CapturePalette() {
   const { open, setOpen } = useCapture();
   const { modKey } = usePlatform();
+  const isMobile = useIsMobile();
   const router = useRouter();
   const { userId, updatePlannerArray } = useCalendarProvider();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -46,7 +51,8 @@ export function CapturePalette() {
       title: t,
       parentId: null,
       plannerType: "task",
-      isReady: false,
+      // Ready by default; the untriaged flag, not readiness, keeps it a draft.
+      isReady: true,
       isTriaged: false,
       duration: 0,
       deadline: null,
@@ -55,10 +61,14 @@ export function CapturePalette() {
       recurrenceExceptions: null,
       splitting: null,
       completedSegments: null,
+      maxMinutesPerDay: null,
+      earliestStartDate: null,
+      allowedTimes: null,
+      linkedItemId: null,
       sortOrder: 0,
       completedStartTime: null,
       completedEndTime: null,
-      priority: 5,
+      priority: PRIORITY_DEFAULT,
       userId,
       color: null,
       locationId: null,
@@ -97,6 +107,70 @@ export function CapturePalette() {
 
   const canSubmit = value.trim().length > 0;
 
+  const content = (
+    <>
+      <div className={header}>
+        <Caption>capture · jot · classify later</Caption>
+      </div>
+      <Input
+        ref={inputRef}
+        variant="underline"
+        placeholder="jot anything…"
+        type="text"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={onKeyDown}
+      />
+      <div className={hintsRow} style={{ justifyContent: "flex-end" }}>
+        <Button variant="glass" size="sm" onClick={() => setOpen(false)}>
+          Cancel
+          <Kbd keys="esc" style={{ marginLeft: space["2"] }} />
+        </Button>
+        <Button
+          variant="glass"
+          size="sm"
+          onClick={saveAndTriage}
+          disabled={!canSubmit}
+        >
+          Save & triage
+          <Kbd
+            keys={[
+              modKey,
+              <CornerDownLeft key="return" size={11} strokeWidth={2.4} />,
+            ]}
+            style={{ marginLeft: space["2"] }}
+          />
+        </Button>
+        <Button
+          variant="glassInk"
+          size="sm"
+          onClick={saveToInbox}
+          disabled={!canSubmit}
+        >
+          Save
+          <Kbd
+            keys={<CornerDownLeft size={11} strokeWidth={2.4} />}
+            style={{ marginLeft: space["2"] }}
+          />
+        </Button>
+      </div>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <BottomSheet
+        open={open}
+        onOpenChange={setOpen}
+        title="Capture"
+        hideTitle
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className={sheetStack}>{content}</div>
+      </BottomSheet>
+    );
+  }
+
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Portal>
@@ -106,54 +180,10 @@ export function CapturePalette() {
           aria-describedby={undefined}
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <div className={header}>
-            <Caption>capture · jot · classify later</Caption>
-          </div>
           <Dialog.Title style={{ position: "absolute", left: -10000 }}>
             Capture
           </Dialog.Title>
-          <input
-            ref={inputRef}
-            className={input}
-            placeholder="jot anything…"
-            type="text"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={onKeyDown}
-          />
-          <div className={hintsRow} style={{ justifyContent: "flex-end" }}>
-            <Button variant="glass" size="sm" onClick={() => setOpen(false)}>
-              Cancel
-              <Kbd style={{ marginLeft: space["2"] }}>esc</Kbd>
-            </Button>
-            <Button
-              variant="glass"
-              size="sm"
-              onClick={saveAndTriage}
-              disabled={!canSubmit}
-            >
-              Save & triage
-              <Kbd style={{ marginLeft: space["2"] }}>
-                {modKey}
-                <CornerDownLeft
-                  size={11}
-                  strokeWidth={2.4}
-                  style={{ marginLeft: space["1"] }}
-                />
-              </Kbd>
-            </Button>
-            <Button
-              variant="glassInk"
-              size="sm"
-              onClick={saveToInbox}
-              disabled={!canSubmit}
-            >
-              Save
-              <Kbd style={{ marginLeft: space["2"] }}>
-                <CornerDownLeft size={11} strokeWidth={2.4} />
-              </Kbd>
-            </Button>
-          </div>
+          {content}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

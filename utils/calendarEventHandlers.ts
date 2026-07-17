@@ -4,6 +4,8 @@ import {
   EventTemplate,
   PlannerType,
   Category,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 import { EventDropArg } from "@fullcalendar/core/index.js";
 import { EventResizeStartArg } from "@fullcalendar/interaction/index.js";
@@ -24,6 +26,8 @@ import {
   shiftRecurrenceExceptions,
   upsertDeletedException,
   upsertMovedException,
+  clearMovedDuration,
+  removeException,
   plannerIdFromEventId,
 } from "./planRecurrence";
 import {
@@ -60,6 +64,10 @@ export const createPlanFromSelection = (
     recurrenceExceptions: null,
     splitting: null,
     completedSegments: null,
+    maxMinutesPerDay: null,
+    earliestStartDate: null,
+    allowedTimes: null,
+    linkedItemId: null,
     sortOrder: 0,
     priority: 5,
     completedStartTime: null,
@@ -76,84 +84,6 @@ export const createPlanFromSelection = (
   updatePlannerArray((prevEvents) => [...prevEvents, newEvent]);
 };
 
-// Calendar drag/resize run the engine inline: FullCalendar has already moved
-// the tile internally, so an async regen would paint it overlapping stale
-// placements for a frame ("half-width popping"). Inline commits source +
-// engine output before the next paint — same atomicity the synchronous
-// engine had.
-export const handleEventResize = (
-  updateAll: (
-    planner?: Planner[] | ((prev: Planner[]) => Planner[]),
-    calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
-    template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
-    categories?: Category[] | ((prev: Category[]) => Category[]),
-    options?: { engineMode?: "inline" | "worker" },
-  ) => void,
-  resizeInfo: EventResizeStartArg,
-) => {
-  const { event } = resizeInfo;
-
-  assert(event, "Event undefined in handleEventResize");
-  assert(event.start, "Event.start undefined in handleEventResize");
-  assert(event.end, "Event.end undefined in handleEventResize");
-
-  const start = event.start;
-  const end = event.end;
-
-  // Occurrence events resolve to their plan row; resizing one occurrence
-  // resizes the series (duration lives on the planner).
-  const plannerId = plannerIdFromEventId(event.id);
-
-  updateAll(
-    (prevPlanner) =>
-      prevPlanner.map((p) =>
-        p.id === plannerId ? { ...p, duration: getDuration(start, end) } : p,
-      ),
-    (prevEvents) =>
-      prevEvents.map((ev) =>
-        ev.id === event.id
-          ? {
-              ...ev,
-              start: event.start ? event.start.toISOString() : ev.start,
-              end: event.end ? event.end.toISOString() : ev.end,
-            }
-          : ev,
-      ),
-    undefined,
-    undefined,
-    { engineMode: "inline" },
-  );
-};
-
-export const handleEventDrop = (
-  updatePlannerArray: (
-    planner: Planner[] | ((prev: Planner[]) => Planner[]),
-    options?: { engineMode?: "inline" | "worker" },
-  ) => void,
-  dropInfo: EventDropArg,
-) => {
-  const { event } = dropInfo;
-  console.debug("[calendar] eventDrop", event.id, event.start?.toISOString());
-
-  updatePlannerArray(
-    (prevPlanner) => {
-      if (!prevPlanner.some((p) => p.id === event.id)) {
-        console.warn("[calendar] eventDrop matched no planner row", event.id);
-        return prevPlanner;
-      }
-      return prevPlanner.map((ev) =>
-        ev.id === event.id
-          ? {
-              ...ev,
-              starts: event.start?.toISOString() || ev.starts,
-            }
-          : ev,
-      );
-    },
-    { engineMode: "inline" },
-  );
-};
-
 type UpdatePlannerArrayFn = (
   planner: Planner[] | ((prev: Planner[]) => Planner[]),
   options?: { engineMode?: "inline" | "worker" },
@@ -164,8 +94,101 @@ type UpdateAllFn = (
   calendar?: SimpleEvent[] | ((prev: SimpleEvent[]) => SimpleEvent[]),
   template?: EventTemplate[] | ((prev: EventTemplate[]) => EventTemplate[]),
   categories?: Category[] | ((prev: Category[]) => Category[]),
+  queues?: Queue[] | ((prev: Queue[]) => Queue[]),
+  dependencies?:
+    | PlannerDependency[]
+    | ((prev: PlannerDependency[]) => PlannerDependency[]),
   options?: { engineMode?: "inline" | "worker" },
 ) => void;
+
+// Calendar drag/resize run the engine inline: FullCalendar has already moved
+// the tile internally, so an async regen would paint it overlapping stale
+// placements for a frame ("half-width popping"). Inline commits source +
+// engine output before the next paint — same atomicity the synchronous
+// engine had.
+
+// Shared commit for drag-resize and the popover time fields. Occurrence
+// events resolve to their plan row; resizing one occurrence resizes the
+// series (duration lives on the planner).
+export const applyEventResize = (
+  updateAll: UpdateAllFn,
+  eventId: string,
+  start: Date,
+  end: Date,
+) => {
+  const plannerId = plannerIdFromEventId(eventId);
+
+  updateAll(
+    (prevPlanner) =>
+      prevPlanner.map((p) =>
+        p.id === plannerId ? { ...p, duration: getDuration(start, end) } : p,
+      ),
+    (prevEvents) =>
+      prevEvents.map((ev) =>
+        ev.id === eventId
+          ? {
+              ...ev,
+              start: start.toISOString(),
+              end: end.toISOString(),
+            }
+          : ev,
+      ),
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    { engineMode: "inline" },
+  );
+};
+
+export const handleEventResize = (
+  updateAll: UpdateAllFn,
+  resizeInfo: EventResizeStartArg,
+) => {
+  const { event } = resizeInfo;
+
+  assert(event, "Event undefined in handleEventResize");
+  assert(event.start, "Event.start undefined in handleEventResize");
+  assert(event.end, "Event.end undefined in handleEventResize");
+
+  applyEventResize(updateAll, event.id, event.start, event.end);
+};
+
+// Shared commit for drag-move and the popover start field (plan `starts`).
+export const applyEventStartEdit = (
+  updatePlannerArray: UpdatePlannerArrayFn,
+  eventId: string,
+  newStart: Date,
+) => {
+  updatePlannerArray(
+    (prevPlanner) => {
+      if (!prevPlanner.some((p) => p.id === eventId)) {
+        console.warn("[calendar] starts update matched no planner row", eventId);
+        return prevPlanner;
+      }
+      return prevPlanner.map((ev) =>
+        ev.id === eventId
+          ? {
+              ...ev,
+              starts: newStart.toISOString(),
+            }
+          : ev,
+      );
+    },
+    { engineMode: "inline" },
+  );
+};
+
+export const handleEventDrop = (
+  updatePlannerArray: UpdatePlannerArrayFn,
+  dropInfo: EventDropArg,
+) => {
+  const { event } = dropInfo;
+  console.debug("[calendar] eventDrop", event.id, event.start?.toISOString());
+  if (!event.start) return;
+
+  applyEventStartEdit(updatePlannerArray, event.id, event.start);
+};
 
 // "Move just this occurrence": a moved exception keyed by the occurrence's
 // original rule position. Re-moving the same occurrence updates the entry.
@@ -347,6 +370,100 @@ export const applyTemplateSeriesMove = (
   );
 };
 
+// "Resize just this occurrence": a moved exception carrying a per-occurrence
+// duration. The start is the occurrence's current position (unchanged for a
+// bottom-edge resize; the new start for a top-edge one), so a resize of a
+// never-moved occurrence pins it in place with only its length overridden.
+export const applyTemplateOccurrenceResize = (
+  updateTemplateArray: UpdateTemplateArrayFn,
+  templateId: string,
+  key: string,
+  newStart: Date,
+  durationMinutes: number,
+) => {
+  updateTemplateArray(
+    (prev) =>
+      prev.map((t) =>
+        t.id === templateId
+          ? {
+              ...t,
+              recurrenceExceptions: serializeRecurrenceExceptions(
+                upsertMovedException(
+                  parseRecurrenceExceptions(t.recurrenceExceptions),
+                  key,
+                  newStart.toISOString(),
+                  durationMinutes,
+                ),
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : t,
+      ),
+    { engineMode: "inline" },
+  );
+};
+
+// "Resize every occurrence": edit the series duration. The start stays anchored
+// to the template's startDay/startTime — deriving day/time from a moved
+// one-off's tile would re-anchor the whole series. If the resized occurrence
+// carried a per-occurrence duration override (it had been resized before), that
+// override is dropped so it inherits the new series length instead of snapping
+// back to its stale one; any position override it has is preserved.
+export const applyTemplateSeriesResize = (
+  updateTemplateArray: UpdateTemplateArrayFn,
+  templateId: string,
+  occurrenceKey: string,
+  durationMinutes: number,
+) => {
+  updateTemplateArray(
+    (prev) =>
+      prev.map((t) =>
+        t.id === templateId
+          ? {
+              ...t,
+              duration: durationMinutes,
+              recurrenceExceptions: serializeRecurrenceExceptions(
+                clearMovedDuration(
+                  parseRecurrenceExceptions(t.recurrenceExceptions),
+                  occurrenceKey,
+                ),
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : t,
+      ),
+    { engineMode: "inline" },
+  );
+};
+
+// Restore a customized occurrence: drop its exception so it returns to the
+// regular series slot (original day/time/duration). The moved one-off tile
+// disappears and the plain series occurrence reappears in its place.
+export const applyTemplateOccurrenceRestore = (
+  updateTemplateArray: UpdateTemplateArrayFn,
+  templateId: string,
+  key: string,
+) => {
+  updateTemplateArray(
+    (prev) =>
+      prev.map((t) =>
+        t.id === templateId
+          ? {
+              ...t,
+              recurrenceExceptions: serializeRecurrenceExceptions(
+                removeException(
+                  parseRecurrenceExceptions(t.recurrenceExceptions),
+                  key,
+                ),
+              ),
+              updatedAt: new Date().toISOString(),
+            }
+          : t,
+      ),
+    { engineMode: "inline" },
+  );
+};
+
 // "Delete just this occurrence": a deleted exception; the exdate re-render
 // drops the tile once the template state updates.
 export const applyTemplateOccurrenceDelete = (
@@ -492,13 +609,24 @@ export const handleClickCompleteTask = (
         (prev) => prev.filter((e) => e.id !== event.id),
       );
     } else {
-      // Completing mid-chunk credits only the elapsed time (floored to five
-      // minutes) so the unspent remainder reschedules; otherwise the whole
-      // scheduled window is credited.
+      // A chunk that hasn't started yet completes at now, its length preserved
+      // (end = now, start = now - chunk length) — same "move it to now" rule a
+      // regular dynamic task follows when completed ahead of its scheduled
+      // slot. A chunk in progress credits only the elapsed time (floored to
+      // five minutes) so the unspent remainder reschedules; a past chunk keeps
+      // its actual window.
       const now = new Date();
-      const inEvent = now >= start && now <= end;
-      const minEnd = new Date(start.getTime() + 5 * 60 * 1000);
-      const segmentEnd = inEvent ? (now > minEnd ? now : minEnd) : end;
+      let segmentStart = start;
+      let segmentEnd = end;
+      if (now < start) {
+        segmentEnd = now;
+        segmentStart = new Date(
+          now.getTime() - (end.getTime() - start.getTime()),
+        );
+      } else if (now <= end) {
+        const minEnd = new Date(start.getTime() + 5 * 60 * 1000);
+        segmentEnd = now > minEnd ? now : minEnd;
+      }
       setIsCompleted(true);
       updateAll(
         (prev) =>
@@ -509,7 +637,7 @@ export const handleClickCompleteTask = (
                   completedSegments: serializeCompletedSegments([
                     ...parseCompletedSegments(item.completedSegments),
                     {
-                      start: start.toISOString(),
+                      start: segmentStart.toISOString(),
                       end: segmentEnd.toISOString(),
                     },
                   ]),

@@ -6,11 +6,9 @@ import {
   popover,
   backdropFilters,
   colorMixAlpha,
-  formInput,
   radii,
   display,
   text,
-  fieldLabel as fieldLabelText,
 } from "@/lib/theme";
 
 const FADE_MS = 160;
@@ -79,14 +77,6 @@ export const subtitle = style([
   },
 ]);
 
-export const fieldStack = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["1.5"],
-});
-
-export const fieldLabel = style([fieldLabelText]);
-
 export const searchWrap = style({
   position: "relative",
   zIndex: 100,
@@ -111,16 +101,13 @@ export const searchSpinner = style({
   display: "inline-flex",
 });
 
-// Boxed input with extra left/right padding for the inline search icon +
-// spinner overlay.
-export const textInput = style([
-  formInput({ variant: "boxed" }),
-  {
-    padding: "9px 36px 9px 32px",
+// Boxed <Input> with extra left/right padding for the inline search icon +
+// spinner overlay; the doubled selector beats the recipe's padding.
+export const textInput = style({
+  selectors: {
+    "&&": { padding: "9px 36px 9px 32px" },
   },
-]);
-
-export const plainInput = style([formInput({ variant: "boxed" })]);
+});
 
 export const selectedHint = style({
   display: "inline-flex",

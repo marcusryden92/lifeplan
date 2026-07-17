@@ -16,23 +16,35 @@ import { addDays, format } from "date-fns";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 import * as Dialog from "@radix-ui/react-dialog";
-import { Button, Backdrop, ConfirmModal, Grain } from "@/components/ui";
+import {
+  Button,
+  Backdrop,
+  ConfirmModal,
+  Grain,
+  useShellOverlay,
+} from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import type { Category, EventTemplate } from "@/types/prisma";
-import { getWeekFirstDate } from "@/utils/calendarUtils";
+import {
+  getWeekFirstDate,
+  CALENDAR_LONG_PRESS_DELAY_MS,
+} from "@/utils/calendarUtils";
 
 import { REFERENCE_WEEK_DATE, TEMPLATE_PALETTE } from "./constants";
 import {
   dateToWeekDay,
   durationMinutes,
   endTimeFromDate,
-  isSameDayOrMidnightEnd,
   timeFromDate,
   windowRangeOverlaps,
   type WorkingWindow,
 } from "./timeWindow";
-import { templateToEvent, windowToEvent } from "./eventSerializers";
+import {
+  templateToEvent,
+  windowToEvent,
+  windowRangeToDates,
+} from "./eventSerializers";
 import { useWeekStructureState } from "./useWeekStructureState";
 import { TemplateEditor } from "./TemplateEditor";
 import { WindowEditor } from "./WindowEditor";
@@ -69,6 +81,13 @@ import {
 
 type Mode = "templates" | "windows";
 
+// Templates and windows may both run past midnight (an overnight sleep block
+// or a 23:00-07:00 window); each is capped at 24h so a block can't overrun its
+// own next weekly occurrence. Window overlap is enforced separately.
+function rangeAllowed(start: Date, end: Date): boolean {
+  return end > start && durationMinutes(start, end) <= 24 * 60;
+}
+
 interface WeekStructureModalProps {
   open: boolean;
   onClose: () => void;
@@ -84,6 +103,7 @@ export function WeekStructureModal({
   initialMode = "templates",
   focusedCategoryId = null,
 }: WeekStructureModalProps) {
+  useShellOverlay(open);
   const { userId, categories, weekStartDay } = useCalendarProvider();
   const calendarRef = useRef<FullCalendar>(null);
 
@@ -199,7 +219,7 @@ export function WeekStructureModal({
 
   const handleSelect = useCallback(
     (info: DateSelectArg) => {
-      if (!isSameDayOrMidnightEnd(info.start, info.end)) {
+      if (!rangeAllowed(info.start, info.end)) {
         calendarRef.current?.getApi().unselect();
         return;
       }
@@ -276,7 +296,7 @@ export function WeekStructureModal({
       const start = info.event.start;
       const end = info.event.end;
       if (!start || !end) return;
-      if (!isSameDayOrMidnightEnd(start, end)) {
+      if (!rangeAllowed(start, end)) {
         info.revert();
         return;
       }
@@ -340,7 +360,7 @@ export function WeekStructureModal({
       const start = info.event.start;
       const end = info.event.end;
       if (!start || !end) return;
-      if (!isSameDayOrMidnightEnd(start, end)) {
+      if (!rangeAllowed(start, end)) {
         info.revert();
         return;
       }
@@ -401,6 +421,40 @@ export function WeekStructureModal({
     setWinsWorking((prev) =>
       prev.map((w) => (w.id === id ? { ...w, ...patch } : w)),
     );
+  };
+
+  const updateWindowTimes = (
+    id: string,
+    startTimeRaw: string,
+    endTimeRaw: string,
+  ) => {
+    const win = winsWorking.find((w) => w.id === id);
+    if (!win) return;
+    // A midnight end is stored as the "23:59" end-of-day sentinel
+    // (endTimeFromDate precedent); equal bounds are zero-length, not 24h.
+    const endTime = endTimeRaw === "00:00" ? "23:59" : endTimeRaw;
+    if (startTimeRaw === endTime) return;
+    if (startTimeRaw === win.startTime && endTime === win.endTime) return;
+    const [start, end] = windowRangeToDates(
+      win.day,
+      startTimeRaw,
+      endTime,
+      weekStart,
+      weekStartDay,
+    );
+    if (!rangeAllowed(start, end)) return;
+    if (overlapsWindow(start, end, id)) {
+      setError("Those times would overlap another window.");
+      return;
+    }
+    updateWindow(id, {
+      startTime: startTimeRaw,
+      endTime,
+      // A start re-anchor invalidates per-occurrence exception keys — same
+      // rule as a grid drag; end-only changes preserve them.
+      recurrenceExceptions:
+        startTimeRaw !== win.startTime ? null : win.recurrenceExceptions,
+    });
   };
 
   const deleteSelected = () => {
@@ -578,6 +632,7 @@ export function WeekStructureModal({
                 firstDay={weekStartDay}
                 snapDuration="00:15:00"
                 slotDuration="00:30:00"
+                longPressDelay={CALENDAR_LONG_PRESS_DELAY_MS}
                 scrollTime="06:00:00"
                 height="100%"
                 headerToolbar={false}
@@ -597,8 +652,7 @@ export function WeekStructureModal({
                 selectable={true}
                 selectMirror={true}
                 selectAllow={(info) => {
-                  if (!isSameDayOrMidnightEnd(info.start, info.end))
-                    return false;
+                  if (!rangeAllowed(info.start, info.end)) return false;
                   if (
                     mode === "windows" &&
                     overlapsWindow(info.start, info.end, null)
@@ -608,8 +662,7 @@ export function WeekStructureModal({
                 }}
                 eventAllow={(info, draggedEvent) => {
                   if (!info.start || !info.end) return false;
-                  if (!isSameDayOrMidnightEnd(info.start, info.end))
-                    return false;
+                  if (!rangeAllowed(info.start, info.end)) return false;
                   const ext = draggedEvent?.extendedProps as
                     | {
                         kind?: "template" | "window";
@@ -682,6 +735,9 @@ export function WeekStructureModal({
                 window={selectedWindow}
                 categories={categories}
                 onUpdate={(patch) => updateWindow(selectedWindow.id, patch)}
+                onUpdateTimes={(startTime, endTime) =>
+                  updateWindowTimes(selectedWindow.id, startTime, endTime)
+                }
                 onDuplicate={duplicateSelected}
                 onDelete={deleteSelected}
               />

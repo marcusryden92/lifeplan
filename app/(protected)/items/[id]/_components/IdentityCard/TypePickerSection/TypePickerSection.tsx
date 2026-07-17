@@ -1,10 +1,9 @@
 "use client";
 
 import type { PlannerType } from "@/generated/client";
+import { FieldStack } from "@/components/ui";
 import { useItem } from "../../ItemContext";
 import {
-  fieldStack,
-  fieldLabel,
   typePicker,
   typePickerThumb,
   typePickerBtn,
@@ -14,8 +13,7 @@ export function TypePickerSection() {
   const { item, setPlannerType } = useItem();
 
   return (
-    <div className={fieldStack}>
-      <span className={fieldLabel}>Type</span>
+    <FieldStack label="Type">
       <div className={typePicker}>
         <span
           className={typePickerThumb}
@@ -40,6 +38,6 @@ export function TypePickerSection() {
           </button>
         ))}
       </div>
-    </div>
+    </FieldStack>
   );
 }

@@ -15,6 +15,7 @@ import {
   Button,
   Caption,
   DateTimePicker,
+  Input,
   Kbd,
   Loader,
   vars,
@@ -24,6 +25,7 @@ import { useSelector } from "react-redux";
 import { listRow } from "@/lib/theme";
 import { usePlatform } from "@/hooks/usePlatform";
 import { deleteGoal } from "@/utils/goalPageHandlers";
+import { PRIORITY_DEFAULT } from "@/utils/plannerPriority";
 import { isUnprocessed } from "@/utils/plannerStatus";
 import { ageLabel } from "@/utils/timeFormatting";
 import type { RootState } from "@/redux/store";
@@ -41,7 +43,6 @@ import {
   pageTitle,
   titleSummary,
   spacer,
-  kbdHint,
   mainGrid,
   queueRail,
   queueHead,
@@ -183,7 +184,8 @@ export default function CapturePage() {
         title: t,
         parentId: null,
         plannerType: "task",
-        isReady: false,
+        // Ready by default; the untriaged flag, not readiness, keeps it a draft.
+        isReady: true,
         isTriaged: false,
         duration: 0,
         deadline: null,
@@ -192,10 +194,14 @@ export default function CapturePage() {
         recurrenceExceptions: null,
         splitting: null,
         completedSegments: null,
+        maxMinutesPerDay: null,
+        earliestStartDate: null,
+        allowedTimes: null,
+        linkedItemId: null,
         sortOrder: 0,
         completedStartTime: null,
         completedEndTime: null,
-        priority: 5,
+        priority: PRIORITY_DEFAULT,
         userId,
         color: null,
         locationId: null,
@@ -215,16 +221,11 @@ export default function CapturePage() {
       if (!selected) return;
       const id = selected.id;
       const isGoal = draft.type === "goal";
-      // Goals need subtasks before they can be marked ready (enforced on the
-      // item detail). Tasks need a deadline, plans need a start time. If the
-      // user asked to mark-ready but the prerequisites aren't met, fall back
-      // to saving as a draft rather than persisting an invalid state.
-      const eligibleForReady =
-        !isGoal &&
-        (draft.type === "plan"
-          ? draft.starts.length > 0
-          : draft.deadline.length > 0);
-      const nextReady = markReady && eligibleForReady;
+      // A goal can never be readied here (it needs subtasks, enforced on the
+      // item detail). Tasks and plans are freely readyable — readiness is just
+      // the scheduling gate, so "Save as draft" leaves a triaged item unready
+      // rather than encoding draftness.
+      const nextReady = isGoal ? false : markReady;
       const nowIso = new Date().toISOString();
       const deadlineIso = draft.deadline
         ? new Date(draft.deadline).toISOString()
@@ -299,11 +300,7 @@ export default function CapturePage() {
             : `${queue.length} to triage · raw notes → schedulable items`}
         </span>
         <span className={spacer} />
-        <span className={kbdHint}>
-          <Kbd>{modKey}</Kbd>
-          <Kbd>K</Kbd>
-          <Caption>capture</Caption>
-        </span>
+        <Kbd keys={[modKey, "K"]} instruction="capture" />
       </div>
 
       <div className={mainGrid}>
@@ -315,16 +312,15 @@ export default function CapturePage() {
 
           <div className={quickAdd}>
             <Plus size={14} strokeWidth={2.4} style={{ color: vars.muted }} />
-            <input
+            <Input
+              variant="bare"
               className={quickAddInput}
               placeholder="jot anything…"
               value={jot}
               onChange={(e) => setJot(e.target.value)}
               onKeyDown={handleQuickAdd}
             />
-            <Kbd>
-              <CornerDownLeft size={11} strokeWidth={2.4} />
-            </Kbd>
+            <Kbd keys={<CornerDownLeft size={11} strokeWidth={2.4} />} />
           </div>
 
           <div className={queueList}>
@@ -442,7 +438,8 @@ export default function CapturePage() {
                         —
                       </span>
                     ) : (
-                      <input
+                      <Input
+                        variant="bare"
                         className={fieldInput}
                         type="number"
                         min={1}
@@ -509,7 +506,7 @@ export default function CapturePage() {
                     size="sm"
                     onClick={() => commitSelected(false)}
                   >
-                    Save as draft
+                    Save, not ready
                   </Button>
                   <span className={spacer} />
                   <Button
@@ -523,19 +520,17 @@ export default function CapturePage() {
               </div>
 
               <div className={footerHint}>
-                <Kbd>
-                  <CornerDownLeft size={11} strokeWidth={2.4} />
-                </Kbd>
-                <Caption>save & next</Caption>
-                <Kbd>1</Kbd>
-                <Kbd>2</Kbd>
-                <Kbd>3</Kbd>
-                <Caption>type</Caption>
-                <Kbd>←</Kbd>
-                <Kbd>→</Kbd>
-                <Caption>cycle buttons</Caption>
-                <Kbd>x</Kbd>
-                <Caption>trash</Caption>
+                <Kbd
+                  keys={<CornerDownLeft size={11} strokeWidth={2.4} />}
+                  instruction="save & next"
+                />
+                <Kbd keys={["1", "2", "3"]} separator="/" instruction="type" />
+                <Kbd
+                  keys={["←", "→"]}
+                  separator="/"
+                  instruction="cycle buttons"
+                />
+                <Kbd keys="x" instruction="trash" />
                 <span className={spacer} />
                 <span
                   role="button"

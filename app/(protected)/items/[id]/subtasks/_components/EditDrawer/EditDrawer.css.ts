@@ -30,8 +30,8 @@ export const drawer = style({
   minHeight: 0,
   overflow: "auto",
   transition: themeTransition,
-  // Inside the mobile bottom sheet (see drawerSlotOpen) the side-column
-  // chrome comes off; the sheet owns the border and radius.
+  // Inside the mobile BottomSheet the side-column chrome comes off; the
+  // sheet owns the border and radius.
   "@media": {
     [media.mobile]: {
       borderLeft: "none",
@@ -61,28 +61,16 @@ export const drawerBody = style({
   gap: space["3.5"],
 });
 
+// The <Input variant="titleInline"> supplies the accent underline + box reset;
+// this layers the modal-title typography and a little vertical breathing room.
 export const drawerTitleInput = style([
   display.modalTitle,
   {
-    color: vars.ink,
-    background: "transparent",
-    border: "none",
-    outline: "none",
-    padding: "4px 0",
-    borderBottom: `1px solid ${vars.rule}`,
-    transition: themeTransition,
     selectors: {
-      "&:focus": { borderBottomColor: vars.accent.primary },
-      "&::placeholder": { color: vars.muted },
+      "&&": { padding: "4px 0" },
     },
   },
 ]);
-
-export const fieldStack = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["1.5"],
-});
 
 export const fieldLabel = style([
   fieldLabelPreset,
@@ -91,48 +79,31 @@ export const fieldLabel = style([
   },
 ]);
 
-export const durationStepper = style({
-  display: "inline-flex",
+export const splitToggleRow = style({
+  display: "flex",
   alignItems: "center",
-  gap: space["1.5"],
+  gap: space["2"],
+  minHeight: 28,
 });
 
-export const stepperBtn = style([
-  iconBtn(),
+export const splitHint = style([
+  text.bodySm,
   {
-    border: `1px solid ${vars.glass.stroke}`,
-    background: vars.glass.bg,
-    color: vars.ink,
-    selectors: {
-      "&:hover:not(:disabled)": {
-        background: vars.glass.bgDeep,
-        color: vars.ink,
-      },
-    },
+    color: vars.muted,
+    transition: themeTransition,
   },
 ]);
 
-export const stepperValue = style([
-  text.row,
-  {
-    width: 72,
-    padding: "5px 10px",
-    background: vars.glass.bgSoft,
-    border: `1px solid ${vars.glass.stroke}`,
-    borderRadius: radii["sm+2"],
-    fontWeight: 600,
-    color: vars.ink,
-    textAlign: "center",
-    outline: "none",
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-    selectors: {
-      "&:focus": { borderColor: vars.accent.primary },
-      "&::-webkit-inner-spin-button": { appearance: "none", margin: 0 },
-      "&::-webkit-outer-spin-button": { appearance: "none", margin: 0 },
-    },
-  },
-]);
+// Completion is a status block, not a form field — it leads the drawer and
+// a bottom rule fences it off from the fields below.
+export const completeSection = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["1.5"],
+  paddingBottom: space["4"],
+  borderBottom: `1px solid ${vars.rule}`,
+  transition: themeTransition,
+});
 
 export const completeHeader = style({
   display: "flex",
@@ -140,20 +111,28 @@ export const completeHeader = style({
   gap: space["2"],
 });
 
+// Sized just under the overview page's 22px completion checkbox so the two
+// surfaces read as the same control at the drawer's denser scale.
 export const completeCheckbox = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  width: 16,
-  height: 16,
+  width: 20,
+  height: 20,
   borderRadius: radii.pill,
   border: `1.5px solid ${vars.muted}`,
   background: "transparent",
   color: vars.muted,
   cursor: "pointer",
   padding: 0,
+  paddingLeft: space["1"],
+  marginBottom: space["1"],
   // Snappier than the 1s themeTransition so click feedback feels immediate.
-  transition: interactiveTransition("background-color", "border-color", "color"),
+  transition: interactiveTransition(
+    "background-color",
+    "border-color",
+    "color",
+  ),
   selectors: {
     "&[data-completed='true']": {
       background: vars.status.success,

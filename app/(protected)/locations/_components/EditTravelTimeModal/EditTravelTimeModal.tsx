@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Button } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
 import type { TransportMode } from "@/generated/client";
 import type { SerializedTravelTime } from "@/redux/slices/schedulingSettingsSlice";
 import { isTimeVarying } from "@/utils/locations";
@@ -223,7 +223,7 @@ export function EditTravelTimeModal({
               return (
                 <div key={p.key} className={periodRow}>
                   <span className={periodName}>{p.label}</span>
-                  <input
+                  <Input
                     className={periodInput}
                     type="number"
                     min={0}

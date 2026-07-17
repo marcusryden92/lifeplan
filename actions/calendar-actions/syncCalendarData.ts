@@ -12,6 +12,9 @@ import { handleTimeWindowChanges } from "./sync-handlers/timeWindowHandlers";
 import { handleCategoryEventChanges } from "./sync-handlers/categoryEventHandlers";
 import { handleTravelEventChanges } from "./sync-handlers/travelEventHandlers";
 import { handleEngineMessageChanges } from "./sync-handlers/engineMessageHandlers";
+import { handleQueueChanges } from "./sync-handlers/queueHandlers";
+import { handleQueueMemberChanges } from "./sync-handlers/queueMemberHandlers";
+import { handleDependencyChanges } from "./sync-handlers/dependencyHandlers";
 import { handleLocationChanges } from "./sync-handlers/locationHandlers";
 import { handleTravelTimeChanges } from "./sync-handlers/travelTimeHandlers";
 import { fetchFreshState, type FreshState } from "./fetchFreshState";
@@ -71,17 +74,28 @@ export async function syncCalendarData(
           throw new StaleVersionError();
         }
 
+        // FK create ordering: a referenced row must exist before the row that
+        // references it. Location <- Category <- Planner (a goal filed under a
+        // category the same sync creates — e.g. an assistant save — would
+        // otherwise hit Planners_categoryId_fkey), then the calendar/event
+        // tables (SimpleEvent before its ExtendedProps), then the precedence
+        // tables (Queue before its QueueMembers/Dependencies). Cross-table
+        // deletes are handled by the schema's SetNull/Cascade FKs, so this one
+        // per-table order is safe for destroys too.
         const operations = [
+          ...handleLocationChanges(tx, userId, databaseChanges),
+          ...handleCategoryChanges(tx, userId, databaseChanges, updatedAt),
           ...handlePlannerChanges(tx, userId, databaseChanges, updatedAt),
           ...handleCalendarChanges(tx, userId, databaseChanges, updatedAt),
           ...handleExtendedPropsChanges(tx, userId, databaseChanges),
           ...handleTemplateChanges(tx, userId, databaseChanges, updatedAt),
-          ...handleCategoryChanges(tx, userId, databaseChanges, updatedAt),
           ...handleTimeWindowChanges(tx, userId, databaseChanges),
           ...handleCategoryEventChanges(tx, userId, databaseChanges),
           ...handleTravelEventChanges(tx, userId, databaseChanges),
           ...handleEngineMessageChanges(tx, userId, databaseChanges),
-          ...handleLocationChanges(tx, userId, databaseChanges),
+          ...handleQueueChanges(tx, userId, databaseChanges, updatedAt),
+          ...handleQueueMemberChanges(tx, userId, databaseChanges, updatedAt),
+          ...handleDependencyChanges(tx, userId, databaseChanges),
           ...handleTravelTimeChanges(tx, userId, databaseChanges),
         ];
 

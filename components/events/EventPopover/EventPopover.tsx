@@ -23,7 +23,7 @@ import {
   assignLocationToPlanner,
   setUseParentLocation,
 } from "@/actions/locations";
-import { formatTime } from "@/utils/calendarUtils";
+import { formatTime, timeOnDate } from "@/utils/calendarUtils";
 import { plannerIdFromEventId } from "@/utils/planRecurrence";
 import {
   taskIsSplittable,
@@ -32,7 +32,7 @@ import {
 import { PlannerType } from "@/types/prisma";
 import { calendarColors } from "@/data/calendarColors";
 import { getCompleteTaskTreeIds, getRootParentId } from "@/utils/goalPageHandlers";
-import { CategoryBadge, TypeBadge } from "@/components/ui";
+import { CategoryBadge, Input, TimePicker, TypeBadge } from "@/components/ui";
 import { vars } from "@/lib/theme";
 import { CalendarPopover } from "../CalendarPopover";
 import { PopoverAction } from "../PopoverAction";
@@ -48,6 +48,10 @@ import {
   body,
   metaRow,
   footer,
+  timeFieldsRow,
+  timeField,
+  timeFieldLabel,
+  timeFieldStatic,
 } from "../CalendarPopover/CalendarPopover.css";
 import { metaIcon, statusActionsRow } from "./EventPopover.css";
 
@@ -62,11 +66,13 @@ interface EventPopoverProps {
   onDelete: () => void;
   onComplete: () => void;
   onPostpone: () => void;
+  onEditStartTime?: (newStart: Date) => void;
+  onEditEndTime?: (newEnd: Date) => void;
   setShowPopover: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const POPOVER_WIDTH = 340;
-const POPOVER_HEIGHT = 380;
+const POPOVER_HEIGHT = 430;
 
 function formatSplitProgress(completed: number, total: number): string {
   const fmt = (minutes: number) => {
@@ -89,6 +95,8 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   onDelete,
   onComplete,
   onPostpone,
+  onEditStartTime,
+  onEditEndTime,
   setShowPopover,
 }) => {
   const router = useRouter();
@@ -306,8 +314,9 @@ const EventPopover: React.FC<EventPopoverProps> = ({
 
           <div className={titleRow}>
             {isEditing ? (
-              <input
+              <Input
                 ref={inputRef}
+                variant="titleInline"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -349,6 +358,53 @@ const EventPopover: React.FC<EventPopoverProps> = ({
                 {formatTime(endTime)} · {durationLabel}
               </span>
             </div>
+
+            {(onEditStartTime || onEditEndTime) && (
+              <div className={timeFieldsRow}>
+                <div className={timeField}>
+                  <span className={timeFieldLabel}>start</span>
+                  {onEditStartTime ? (
+                    <TimePicker
+                      value={format(startTime, "HH:mm")}
+                      ariaLabel="Start time"
+                      onChange={(next) => {
+                        const newStart = timeOnDate(startTime, next);
+                        if (newStart.getTime() === startTime.getTime()) return;
+                        onEditStartTime(newStart);
+                      }}
+                    />
+                  ) : (
+                    <span className={timeFieldStatic}>
+                      {format(startTime, "HH:mm")}
+                    </span>
+                  )}
+                </div>
+                <div className={timeField}>
+                  <span className={timeFieldLabel}>end</span>
+                  {onEditEndTime ? (
+                    <TimePicker
+                      value={format(endTime, "HH:mm")}
+                      ariaLabel="End time"
+                      onChange={(next) => {
+                        // End at or before start wraps to the next morning.
+                        let newEnd = timeOnDate(startTime, next);
+                        if (newEnd <= startTime) {
+                          newEnd = new Date(
+                            newEnd.getTime() + 24 * 60 * 60 * 1000,
+                          );
+                        }
+                        if (newEnd.getTime() === endTime.getTime()) return;
+                        onEditEndTime(newEnd);
+                      }}
+                    />
+                  ) : (
+                    <span className={timeFieldStatic}>
+                      {format(endTime, "HH:mm")}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {plannerItem && taskIsSplittable(plannerItem) && (
               <div className={metaRow}>

@@ -4,6 +4,9 @@ import {
   Plus,
   Library,
   Layers,
+  ListOrdered,
+  Waypoints,
+  Orbit,
   MapPin,
   MoreHorizontal,
   type LucideIcon,
@@ -54,6 +57,27 @@ export const NAV_ITEMS: NavItem[] = [
     kind: "route",
   },
   {
+    key: "queues",
+    label: "Queues",
+    icon: ListOrdered,
+    href: "/queues",
+    kind: "route",
+  },
+  {
+    key: "graph",
+    label: "Graph",
+    icon: Waypoints,
+    href: "/graph",
+    kind: "route",
+  },
+  {
+    key: "mindmap",
+    label: "Mindmap",
+    icon: Orbit,
+    href: "/mindmap",
+    kind: "route",
+  },
+  {
     key: "locations",
     label: "Locations",
     icon: MapPin,
@@ -61,6 +85,17 @@ export const NAV_ITEMS: NavItem[] = [
     kind: "route",
   },
 ];
+
+// Full-bleed canvas surfaces. On mobile the shell hides its floating chrome
+// here (tab bar, corner actions) and each page shows a back button instead,
+// so the canvas keeps the vertical space.
+const CANVAS_ROUTES = ["/graph", "/mindmap"];
+
+export function isCanvasRoute(pathname: string): boolean {
+  return CANVAS_ROUTES.some(
+    (href) => pathname === href || pathname.startsWith(`${href}/`),
+  );
+}
 
 export type MobileTab = {
   key: string;
@@ -74,5 +109,5 @@ export const MOBILE_TABS: MobileTab[] = [
   { key: "library", label: "Library", icon: Library, href: "/library" },
   { key: "capture", label: "Capture", icon: Plus, href: null },
   { key: "calendar", label: "Calendar", icon: Calendar, href: "/calendar" },
-  { key: "more", label: "More", icon: MoreHorizontal, href: "/settings" },
+  { key: "more", label: "More", icon: MoreHorizontal, href: null },
 ];

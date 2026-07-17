@@ -1,5 +1,5 @@
-import { assignDraftIds } from "@/components/draft/AIDraftModal/assignDraftIds";
-import type { DraftNode } from "@/components/draft/AIDraftModal/plannerTreeToJson";
+import { assignDraftIds } from "@/utils/draft/assignDraftIds";
+import type { DraftNode } from "@/utils/draft/plannerTreeToJson";
 
 function node(overrides: Partial<DraftNode> & { title: string }): DraftNode {
   return {

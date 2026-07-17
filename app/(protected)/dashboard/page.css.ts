@@ -8,8 +8,9 @@ export const page = style({
   minHeight: 0,
   "@media": {
     [media.mobile]: {
-      flex: "0 0 auto",
+      flex: "1 0 auto",
       minHeight: "auto",
+      paddingTop: space["16"],
     },
   },
 });
@@ -28,7 +29,12 @@ export const gridWrap = style({
       minHeight: "auto",
     },
     [media.mobile]: {
-      padding: "0 16px 24px",
+      // Only the Agenda card renders here (rightCol is hidden), so drop the
+      // grid and let the card grow to fill the viewport down to the menu.
+      display: "flex",
+      flexDirection: "column",
+      flex: "1 0 auto",
+      padding: "0 0 24px",
       gap: space["3.5"],
     },
   },
@@ -39,4 +45,7 @@ export const rightCol = style({
   flexDirection: "column",
   gap: space["3.5"],
   minHeight: 0,
+  "@media": {
+    [media.mobile]: { display: "none" },
+  },
 });

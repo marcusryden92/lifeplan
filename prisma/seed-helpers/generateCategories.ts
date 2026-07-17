@@ -1,19 +1,30 @@
 import { Prisma } from "../../generated/client";
 import { LOCATION_IDS } from "./generateLocations";
 
+// Top-level categories are surfaced as "Roles"; nested ones are sub-categories.
 export const CATEGORY_IDS = {
-  WORK: "seed-category-work",
+  PROFESSIONAL: "seed-category-professional",
+  DEEP_WORK: "seed-category-deep-work",
+  MEETINGS: "seed-category-meetings",
+  HEALTH: "seed-category-health",
+  FITNESS: "seed-category-fitness",
+  PERSONAL: "seed-category-personal",
+  HOME_PROJECTS: "seed-category-home-projects",
+  LEARNING: "seed-category-learning",
+  READING: "seed-category-reading",
 } as const;
 
 type CategorySeedInput = Prisma.CategoryCreateInput & { id: string };
 
-// 0=Sunday, 1=Monday, ... 6=Saturday â€” matches JS Date.getDay() and what's
+// 0=Sunday, 1=Monday, ... 6=Saturday - matches JS Date.getDay() and what's
 // stored in CategoryTimeWindow.day.
 type SeedTimeWindow = {
   day: 0 | 1 | 2 | 3 | 4 | 5 | 6;
   startTime: string;
   endTime: string;
 };
+
+const WEEKDAYS: SeedTimeWindow["day"][] = [1, 2, 3, 4, 5];
 
 const withOwner = (
   userId: string,
@@ -24,30 +35,131 @@ const withOwner = (
     user: { connect: { id: userId } },
   }));
 
+const daily = (startTime: string, endTime: string): SeedTimeWindow[] =>
+  WEEKDAYS.map((day) => ({ day, startTime, endTime }));
+
 export const generateCategories = (userId: string): CategorySeedInput[] => {
   const timestamp = new Date().toISOString();
 
+  const owner = { connect: { id: userId } };
+  const base = {
+    icon: null,
+    user: owner,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  } as const;
+
+  // Roles (parentId null) are created first so the sub-categories below can
+  // connect to them in the create loop.
   return [
     {
-      id: CATEGORY_IDS.WORK,
-      name: "Work",
-      icon: null,
-      color: null,
+      ...base,
+      id: CATEGORY_IDS.PROFESSIONAL,
+      name: "Professional",
+      color: "#2563EB",
       sortOrder: 0,
+      useTimeWindows: false,
+      isStrict: false,
+    },
+    {
+      ...base,
+      id: CATEGORY_IDS.HEALTH,
+      name: "Health",
+      color: "#059669",
+      sortOrder: 1,
+      useTimeWindows: false,
+      isStrict: false,
+    },
+    {
+      ...base,
+      id: CATEGORY_IDS.PERSONAL,
+      name: "Personal",
+      color: "#D97706",
+      sortOrder: 2,
+      useTimeWindows: false,
+      isStrict: false,
+    },
+    {
+      ...base,
+      id: CATEGORY_IDS.LEARNING,
+      name: "Learning",
+      color: "#8B5CF6",
+      sortOrder: 3,
+      useTimeWindows: false,
+      isStrict: false,
+    },
+
+    // Sub-categories.
+    {
+      ...base,
+      id: CATEGORY_IDS.DEEP_WORK,
+      name: "Deep Work",
+      color: "#3B82F6",
+      sortOrder: 0,
+      parent: { connect: { id: CATEGORY_IDS.PROFESSIONAL } },
+      useTimeWindows: true,
+      isStrict: true,
+      timeSlots: { create: withOwner(userId, daily("08:00", "12:00")) },
+    },
+    {
+      ...base,
+      id: CATEGORY_IDS.MEETINGS,
+      name: "Meetings",
+      color: "#6366F1",
+      sortOrder: 1,
+      parent: { connect: { id: CATEGORY_IDS.PROFESSIONAL } },
+      useTimeWindows: true,
+      isStrict: false,
+      timeSlots: { create: withOwner(userId, daily("13:00", "16:00")) },
+    },
+    {
+      ...base,
+      id: CATEGORY_IDS.FITNESS,
+      name: "Fitness",
+      color: "#10B981",
+      sortOrder: 0,
+      parent: { connect: { id: CATEGORY_IDS.HEALTH } },
+      useTimeWindows: true,
+      isStrict: false,
+      location: { connect: { id: LOCATION_IDS.GYM } },
       timeSlots: {
         create: withOwner(userId, [
-          { day: 1, startTime: "09:00", endTime: "17:00" },
-          { day: 2, startTime: "09:00", endTime: "17:00" },
-          { day: 3, startTime: "09:00", endTime: "17:00" },
-          { day: 4, startTime: "09:00", endTime: "17:00" },
-          { day: 5, startTime: "09:00", endTime: "17:00" },
+          { day: 1, startTime: "17:00", endTime: "20:00" },
+          { day: 3, startTime: "17:00", endTime: "20:00" },
+          { day: 5, startTime: "17:00", endTime: "20:00" },
         ]),
       },
-      isStrict: true,
-      location: { connect: { id: LOCATION_IDS.GAMLA_STAN } },
-      user: { connect: { id: userId } },
-      createdAt: timestamp,
-      updatedAt: timestamp,
+    },
+    {
+      ...base,
+      id: CATEGORY_IDS.HOME_PROJECTS,
+      name: "Home Projects",
+      color: "#F59E0B",
+      sortOrder: 0,
+      parent: { connect: { id: CATEGORY_IDS.PERSONAL } },
+      useTimeWindows: false,
+      isStrict: false,
+    },
+    {
+      ...base,
+      id: CATEGORY_IDS.READING,
+      name: "Reading",
+      color: "#A78BFA",
+      sortOrder: 0,
+      parent: { connect: { id: CATEGORY_IDS.LEARNING } },
+      useTimeWindows: true,
+      isStrict: false,
+      timeSlots: {
+        create: withOwner(userId, [
+          { day: 0, startTime: "20:00", endTime: "22:30" },
+          { day: 1, startTime: "20:00", endTime: "22:30" },
+          { day: 2, startTime: "20:00", endTime: "22:30" },
+          { day: 3, startTime: "20:00", endTime: "22:30" },
+          { day: 4, startTime: "20:00", endTime: "22:30" },
+          { day: 5, startTime: "20:00", endTime: "22:30" },
+          { day: 6, startTime: "20:00", endTime: "22:30" },
+        ]),
+      },
     },
   ];
 };

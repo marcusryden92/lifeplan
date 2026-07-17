@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import {
@@ -27,6 +27,10 @@ interface ComboboxProps<V extends string | null> {
   placeholder?: ReactNode;
   ariaLabel?: string;
   width?: number | string;
+  // Cap the trigger's width so a long value truncates instead of overflowing a
+  // narrow container. Unlike `width` it lets the pill keep hugging its content
+  // until it hits the cap (pass "100%" to bound it to the field column).
+  maxWidth?: number | string;
   disabled?: boolean;
 }
 
@@ -38,10 +42,24 @@ export function Combobox<V extends string | null>({
   placeholder = "Select…",
   ariaLabel,
   width,
+  maxWidth,
   disabled = false,
 }: ComboboxProps<V>) {
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
+
+  const wrapStyle: CSSProperties = {};
+  if (width != null) {
+    wrapStyle.width = width;
+    wrapStyle.display = "block";
+  }
+  if (maxWidth != null) wrapStyle.maxWidth = maxWidth;
+
+  const triggerStyle: CSSProperties = {};
+  if (width != null) triggerStyle.width = "100%";
+  if (maxWidth != null) triggerStyle.maxWidth = "100%";
+
+  const hasWrapStyle = width != null || maxWidth != null;
 
   return (
     <Popover.Root
@@ -53,7 +71,7 @@ export function Combobox<V extends string | null>({
     >
       <div
         className={comboboxWrap}
-        style={width != null ? { width, display: "block" } : undefined}
+        style={hasWrapStyle ? wrapStyle : undefined}
       >
         <Popover.Trigger asChild>
           <button
@@ -63,7 +81,7 @@ export function Combobox<V extends string | null>({
             aria-label={ariaLabel}
             aria-disabled={disabled}
             disabled={disabled}
-            style={width != null ? { width: "100%" } : undefined}
+            style={hasWrapStyle ? triggerStyle : undefined}
           >
             <span
               style={{

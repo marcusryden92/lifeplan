@@ -11,6 +11,8 @@ import {
   SchedulingMetrics,
 } from "../../models/SchedulingModels";
 import { SchedulerRecorder } from "../Scheduler/SchedulerRecorder";
+import { PlannerSchedulingConstraints } from "./buildPlannerConstraintsMap";
+import type { PrecedenceEdge } from "@/utils/precedence/types";
 
 export function prepareSchedulingContext(
   userId: string,
@@ -23,6 +25,8 @@ export function prepareSchedulingContext(
   plannerLocationMap: Map<string, string | null>,
   plannerCategoryMap: Map<string, string | null>,
   categoryEligibilityMap: Map<string, Set<string>>,
+  plannerConstraintsMap: Map<string, PlannerSchedulingConstraints>,
+  predecessorMap: Map<string, PrecedenceEdge[]>,
   schedulerRecorder: SchedulerRecorder | null,
   previousCalendarById?: Map<string, SimpleEvent>,
 ): SchedulingContext {
@@ -41,6 +45,8 @@ export function prepareSchedulingContext(
     plannerLocationMap,
     plannerCategoryMap,
     categoryEligibilityMap,
+    plannerConstraintsMap,
+    predecessorMap,
     schedulerRecorder,
     previousCalendarById,
   };

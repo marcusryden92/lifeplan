@@ -1,5 +1,12 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii, display, text } from "@/lib/theme";
+import {
+  space,
+  vars,
+  themeTransition,
+  radii,
+  display,
+  text,
+} from "@/lib/theme";
 
 export const cardHeader = style({
   display: "flex",
@@ -22,7 +29,7 @@ export const cardTitle = style([
 
 export const priorityRow = style({
   display: "flex",
-  gap: space["1"],
+  gap: space["2"],
   flexWrap: "nowrap",
 });
 
@@ -43,13 +50,16 @@ export const priorityPill = style([
     fontVariantNumeric: "tabular-nums",
     transition: themeTransition,
     selectors: {
-      "&:hover": { color: vars.ink, borderColor: vars.rule },
+      "&:hover": { backgroundColor: vars.glass.bgSoft, borderColor: vars.rule },
+      '&[aria-pressed="true"]': {
+        background: vars.ink,
+        color: vars.paper,
+        borderColor: vars.ink,
+      },
+      '&[aria-pressed="true"]:hover': {
+        background: vars.inkSoft,
+        borderColor: vars.inkSoft,
+      },
     },
   },
 ]);
-
-export const priorityPillActive = style({
-  background: vars.ink,
-  color: vars.paper,
-  borderColor: vars.ink,
-});

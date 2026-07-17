@@ -96,6 +96,7 @@ export function scheduleTask(
     strategy,
     context,
     sizing,
+    slotsResult.effectiveAfter,
   );
   if ("failure" in selectionResult) {
     recorder?.setOutcome({
@@ -120,6 +121,7 @@ export function scheduleTask(
     context,
     selectionResult.absorbableTravel,
     selectionResult.reclaimPrecedingGapTravel,
+    selectionResult.slideIntoFreedTravel,
     selectionResult.grantedDurationMinutes,
   );
   if ("failure" in reservationResult) {

@@ -8,11 +8,14 @@ import {
   display,
   text,
   iconBtn,
+  media,
+  fieldLabel,
 } from "@/lib/theme";
 
 // Layout-only â€” the popover() recipe owns the glass surface (fill, blur,
 // stroke, shadow, radius). This file adds the calendar-popover-specific
-// positioning, sizing limits, font, and viewport guards.
+// positioning, sizing limits, font, and viewport guards. Mobile presents
+// through the shared BottomSheet instead of this anchored box.
 export const calendarPopover = style({
   position: "fixed",
   maxWidth: "calc(100vw - 20px)",
@@ -21,22 +24,6 @@ export const calendarPopover = style({
   overflow: "hidden",
   fontFamily: vars.font.ui,
   color: vars.ink,
-});
-
-// Mobile presentation: a bottom sheet instead of an anchored floating box.
-// Applied alongside calendarPopover when the component detects mobile (the
-// anchored inline top/left/width are skipped there, so these win).
-export const calendarPopoverSheet = style({
-  left: 0,
-  right: 0,
-  bottom: 0,
-  top: "auto",
-  width: "auto",
-  maxWidth: "100vw",
-  maxHeight: "75vh",
-  overflowY: "auto",
-  borderBottomLeftRadius: 0,
-  borderBottomRightRadius: 0,
 });
 
 export const header = style({
@@ -63,6 +50,9 @@ export const dragHandle = style({
   selectors: {
     "&:hover": { color: vars.ink },
     "&:active": { cursor: "grabbing" },
+  },
+  "@media": {
+    [media.mobile]: { display: "none" },
   },
 });
 
@@ -110,22 +100,16 @@ export const titleStatic = style([
   },
 ]);
 
+// The <Input variant="titleInline"> supplies the accent underline + box reset;
+// this layers the modal-title typography and the height matched to titleStatic
+// so toggling rename in/out doesn't shift layout.
 export const titleInput = style([
   display.modalTitle,
   {
     lineHeight: `${TITLE_LINE_HEIGHT}px`,
-    color: vars.ink,
-    background: "transparent",
-    border: "none",
-    outline: "none",
-    padding: 0,
-    margin: 0,
-    width: "100%",
     flex: 1,
     display: "block",
-    boxSizing: "content-box",
     height: TITLE_LINE_HEIGHT,
-    borderBottom: `${TITLE_BORDER}px solid ${vars.accent.primary}`,
   },
 ]);
 
@@ -156,3 +140,28 @@ export const footer = style({
   flexDirection: "column",
   gap: space["0.5"],
 });
+
+// Start/end time fields — shared by EventPopover and TemplateEventPopover.
+export const timeFieldsRow = style({
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: space["2"],
+});
+
+export const timeField = style({
+  display: "flex",
+  flexDirection: "column",
+  gap: space["1"],
+  minWidth: 0,
+});
+
+export const timeFieldLabel = fieldLabel;
+
+export const timeFieldStatic = style([
+  text.row,
+  {
+    padding: "6px 0",
+    color: vars.ink,
+    fontVariantNumeric: "tabular-nums",
+  },
+]);

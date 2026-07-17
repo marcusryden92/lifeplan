@@ -13,6 +13,7 @@ import {
   parseCompletedSegments,
   splitRemainingMinutes,
 } from "../../../taskSplitting";
+import { GoalCapContext } from "./goalDayCap";
 
 // Placement of one split task: repeatedly runs the 5-phase pipeline with a
 // ChunkSizing until the remaining minutes are exhausted or a chunk finds no
@@ -39,7 +40,10 @@ export interface SplitPlacementState {
   chunkOrdinals: Map<string, number>;
   /** plannerId -> local dayKey -> minutes consumed (seeded from completed segments) */
   dayMinutes: Map<string, Map<string, number>>;
-  /** plannerId -> ms end of the task's last placed chunk / latest segment */
+  /**
+   * plannerId -> ms end of the task's last placed chunk / latest segment.
+   * Only maintained when the task requests a minimum inter-chunk spacing.
+   */
   lastChunkEndMs: Map<string, number>;
   /** Constraint compromises made while placing, surfaced as engine messages */
   relaxations: SplitRelaxation[];
@@ -77,25 +81,40 @@ export function scheduleSplitTask(args: {
    * chance to satisfy the cap before it is violated.
    */
   allowDayCapRelaxation?: boolean;
+  /**
+   * One entry per capped goal this leaf sits under (its own root plus every
+   * detour host that splices it). The effective per-day budget is the
+   * pointwise min of the task's own budget and every applicable goal budget;
+   * every placed chunk charges every ledger. Oversized handling is per cap:
+   * a goal budget below the required minimum chunk is ruled out of steering
+   * for that goal only.
+   */
+  goalCaps?: GoalCapContext[];
 }): {
   fullyPlaced: boolean;
   events: SimpleEvent[];
   failure?: SchedulingFailure;
 } {
-  const { task, settings, scheduler, state } = args;
+  const { task, settings, scheduler, state, goalCaps = [] } = args;
   const context = scheduler.context;
+
+  // Optional minimum break between consecutive chunks of this task. Off by
+  // default (chunks sit only the standard placement buffer apart).
+  const spacingMs = (settings.minSpacingMinutes ?? 0) * 60 * 1000;
 
   let dayMap = state.dayMinutes.get(task.id);
   if (!dayMap) {
     dayMap = completedMinutesByDay(task);
     state.dayMinutes.set(task.id, dayMap);
-    // Chunks keep a break from the latest completed segment too, not just
-    // from each other.
-    const latestSegmentEndMs = parseCompletedSegments(
-      task.completedSegments,
-    ).reduce((latest, s) => Math.max(latest, new Date(s.end).getTime()), 0);
-    if (latestSegmentEndMs > 0) {
-      state.lastChunkEndMs.set(task.id, latestSegmentEndMs);
+    // Seed the spacing anchor from the latest completed segment so a new chunk
+    // keeps its break from work already done, not just from other chunks.
+    if (spacingMs > 0) {
+      const latestSegmentEndMs = parseCompletedSegments(
+        task.completedSegments,
+      ).reduce((latest, s) => Math.max(latest, new Date(s.end).getTime()), 0);
+      if (latestSegmentEndMs > 0) {
+        state.lastChunkEndMs.set(task.id, latestSegmentEndMs);
+      }
     }
   }
   const dayMinutes = dayMap;
@@ -121,8 +140,26 @@ export function scheduleSplitTask(args: {
     // in strict mode, and is surfaced as a maxChunk compromise.
     const ruleForcedWhole = minReq > settings.maxMinutes;
 
+    // A goal budget below the required minimum chunk is rule-forced out of
+    // the composition — no day could ever host the chunk under it. The chunk
+    // still charges that ledger and is surfaced as an oversizedLeaf
+    // compromise on that goal only; the remaining caps keep steering.
+    const applyingCaps = goalCaps.filter((c) => minReq <= c.capMinutes);
+    const ruledOutCaps = goalCaps.filter((c) => minReq > c.capMinutes);
+    const budgetFns: Array<(slotStart: Date) => number> = [];
+    if (dayBudgetFn) budgetFns.push(dayBudgetFn);
+    for (const c of applyingCaps) budgetFns.push(c.budget);
+    const effectiveBudgetFn =
+      budgetFns.length > 0
+        ? (slotStart: Date) =>
+            budgetFns.reduce(
+              (min, fn) => Math.min(min, fn(slotStart)),
+              Infinity,
+            )
+        : undefined;
+
     const attempts: Array<{ dayCap: boolean }> = [{ dayCap: true }];
-    if (args.allowDayCapRelaxation && dayBudgetFn) {
+    if (args.allowDayCapRelaxation && effectiveBudgetFn) {
       attempts.push({ dayCap: false });
     }
 
@@ -136,8 +173,10 @@ export function scheduleSplitTask(args: {
       id: chunkEventId(task.id, ordinal),
       duration: minReq,
     };
-    // The pipeline resolves location/category by event id — a missing entry
-    // would silently default the chunk to "Anywhere"/uncategorized.
+    // The pipeline resolves location/category/constraints by event id — a
+    // missing entry would silently default the chunk to "Anywhere"/
+    // uncategorized/unconstrained (chunks must land inside the task's
+    // allowed fragments and honor its earliest start).
     context.plannerLocationMap?.set(
       chunkTask.id,
       context.plannerLocationMap.get(task.id) ?? null,
@@ -146,6 +185,10 @@ export function scheduleSplitTask(args: {
       chunkTask.id,
       context.plannerCategoryMap.get(task.id) ?? task.categoryId ?? null,
     );
+    const taskConstraints = context.plannerConstraintsMap?.get(task.id);
+    if (taskConstraints) {
+      context.plannerConstraintsMap?.set(chunkTask.id, taskConstraints);
+    }
 
     for (const attempt of attempts) {
       const chunkRemaining = remaining;
@@ -159,26 +202,26 @@ export function scheduleSplitTask(args: {
             dayBudget: attempt.dayCap ? dayBudget : undefined,
             maxOverride: ruleForcedWhole ? chunkRemaining : undefined,
           }),
-        dayBudget: attempt.dayCap ? dayBudgetFn : undefined,
+        dayBudget: attempt.dayCap ? effectiveBudgetFn : undefined,
       };
 
-      // Same-task chunks keep a break of at least minMinutes between each
-      // other (and after the latest completed segment) — back-to-back chunks
-      // would defeat the max chunk size as a continuous-work limit.
-      const lastEndMs = state.lastChunkEndMs.get(task.id);
+      // When a minimum spacing is requested, hold the next chunk until at least
+      // that long after the previous one; otherwise chunks sit only the standard
+      // placement buffer apart, like any two dynamic placements.
+      const lastEndMs =
+        spacingMs > 0 ? state.lastChunkEndMs.get(task.id) : undefined;
       const spacedAfter =
-        lastEndMs !== undefined
-          ? new Date(lastEndMs + settings.minMinutes * 60 * 1000)
-          : undefined;
+        lastEndMs !== undefined ? new Date(lastEndMs + spacingMs) : undefined;
       const afterTime =
-        args.afterTime && (!spacedAfter || args.afterTime > spacedAfter)
-          ? args.afterTime
-          : spacedAfter;
+        spacedAfter && (!args.afterTime || spacedAfter > args.afterTime)
+          ? spacedAfter
+          : args.afterTime;
 
       const result = scheduler.scheduleTask(chunkTask, afterTime, sizing);
       if (result.success && result.event) {
         placedEvent = result.event;
-        placedWithoutDayCap = !attempt.dayCap && dayBudgetFn !== undefined;
+        placedWithoutDayCap =
+          !attempt.dayCap && effectiveBudgetFn !== undefined;
         break;
       }
       lastFailure = result.failure;
@@ -207,6 +250,16 @@ export function scheduleSplitTask(args: {
     const granted = Math.round((end.getTime() - start.getTime()) / 60000);
     if (granted <= 0) break;
 
+    // Budgets are read before charging so a relaxed placement is attributed
+    // to the budgets it actually exceeded, not to all of them.
+    const ownBudgetShort =
+      placedWithoutDayCap &&
+      dayBudgetFn !== undefined &&
+      dayBudgetFn(start) < granted;
+    const shortGoalCaps = placedWithoutDayCap
+      ? applyingCaps.filter((c) => c.budget(start) < granted)
+      : [];
+
     events.push(placedEvent);
     remaining -= granted;
     state.placedMinutes.set(
@@ -214,11 +267,14 @@ export function scheduleSplitTask(args: {
       (state.placedMinutes.get(task.id) ?? 0) + granted,
     );
     state.chunkOrdinals.set(task.id, ordinal + 1);
-    state.lastChunkEndMs.set(
-      task.id,
-      Math.max(state.lastChunkEndMs.get(task.id) ?? 0, end.getTime()),
-    );
+    if (spacingMs > 0) {
+      state.lastChunkEndMs.set(
+        task.id,
+        Math.max(state.lastChunkEndMs.get(task.id) ?? 0, end.getTime()),
+      );
+    }
     addIntervalMinutesByDay(dayMinutes, start, end);
+    for (const c of goalCaps) c.charge(start, end);
 
     if (ruleForcedWhole && granted > settings.maxMinutes) {
       state.relaxations.push({
@@ -229,14 +285,25 @@ export function scheduleSplitTask(args: {
         chunkStart: placedEvent.start,
       });
     }
+    for (const c of ruledOutCaps) {
+      c.recordRelaxation("oversizedLeaf", granted, placedEvent.start);
+    }
     if (placedWithoutDayCap) {
-      state.relaxations.push({
-        plannerId: task.id,
-        taskTitle: task.title,
-        kind: "dayCap",
-        chunkMinutes: granted,
-        chunkStart: placedEvent.start,
-      });
+      if (
+        dayBudgetFn !== undefined &&
+        (ownBudgetShort || shortGoalCaps.length === 0)
+      ) {
+        state.relaxations.push({
+          plannerId: task.id,
+          taskTitle: task.title,
+          kind: "dayCap",
+          chunkMinutes: granted,
+          chunkStart: placedEvent.start,
+        });
+      }
+      for (const c of shortGoalCaps) {
+        c.recordRelaxation("dayCap", granted, placedEvent.start);
+      }
     }
   }
 

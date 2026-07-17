@@ -25,6 +25,9 @@ interface TemplateEventContentProps {
   /** When true, delete opens a scope prompt instead of removing the tile, so
    *  skip the destructive red flash + delay and hand off immediately. */
   scopedDelete?: boolean;
+  /** Popover time-field edits; hands off to the same scope prompt (or direct
+   *  one-off apply) as a grid resize. */
+  onEditTimes?: (newStart: Date, newEnd: Date) => void;
 }
 
 const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
@@ -34,6 +37,7 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
   onDelete,
   hideHoverButtons = false,
   scopedDelete = false,
+  onEditTimes,
 }) => {
   const { updateTemplateArray, userSettings } = useCalendarProvider();
 
@@ -129,6 +133,16 @@ const TemplateEventContent: React.FC<TemplateEventContentProps> = ({
             onCopy();
           }}
           onDelete={handleClickDelete}
+          onEditTimes={
+            onEditTimes
+              ? (newStart, newEnd) => {
+                  // The scope prompt (or direct one-off apply) replaces the
+                  // sheet — same handoff as scoped delete.
+                  setShowPopover(false);
+                  onEditTimes(newStart, newEnd);
+                }
+              : undefined
+          }
         />
       )}
     </EventWrapper>

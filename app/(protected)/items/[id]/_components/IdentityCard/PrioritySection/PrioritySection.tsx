@@ -1,12 +1,12 @@
 "use client";
 
+import { PRIORITY_LEVELS } from "@/utils/plannerPriority";
 import { useItem } from "../../ItemContext";
 import {
   cardHeader,
   cardTitle,
   priorityRow,
   priorityPill,
-  priorityPillActive,
 } from "./PrioritySection.css";
 
 export function PrioritySection() {
@@ -16,13 +16,12 @@ export function PrioritySection() {
     <div className={cardHeader}>
       <span className={cardTitle}>Priority</span>
       <div className={priorityRow}>
-        {Array.from({ length: 11 }).map((_, p) => (
+        {PRIORITY_LEVELS.map((p) => (
           <button
             key={p}
             type="button"
-            className={`${priorityPill} ${
-              item.priority === p ? priorityPillActive : ""
-            }`}
+            className={priorityPill}
+            aria-pressed={item.priority === p}
             onClick={() => updateField("priority", p)}
             aria-label={`Priority ${p}`}
           >

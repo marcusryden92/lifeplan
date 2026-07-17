@@ -17,19 +17,16 @@ import {
   zIndex,
 } from "@/lib/theme";
 
-
 export const page = style({
   display: "flex",
   flexDirection: "column",
   flex: 1,
   minHeight: 0,
-  "@media": {
-    [media.mobile]: {
-      flex: "0 0 auto",
-      minHeight: "auto",
-    },
-  },
 });
+
+// Height of the fixed CornerActions buttons (search / AI). The mobile title
+// row matches it so the date reads as sitting between them.
+const CORNER_ACTION_SIZE = 44;
 
 export const subHeader = style({
   display: "flex",
@@ -45,15 +42,21 @@ export const subHeader = style({
     [media.tablet]: {
       flexWrap: "wrap",
     },
+    // Two stacked rows instead of the wrapping desktop row: the date
+    // centered in the corner-actions band, then a single toolbar row — nav
+    // (chevrons + Today) on the left, week structure / regenerate / engine
+    // cog on the right. The hover chip, spacer, and console wedge drop out
+    // (no hover on touch, nothing to align with). Top padding mirrors
+    // CornerActions' fixed offset so the title row shares its band.
     [media.mobile]: {
-      padding: "16px 16px 12px",
-      gap: space["2.5"],
+      display: "grid",
+      gridTemplateColumns: "1fr auto auto",
+      gridTemplateAreas: `"title title title" "nav actions cog"`,
+      rowGap: space["3"],
+      columnGap: space["2"],
+      padding: `calc(${space["3"]}px + env(safe-area-inset-top, 0px)) ${space["4"]}px ${space["3"]}px`,
     },
   },
-});
-
-export const calendarHeaderRow = style({
-  display: "contents",
 });
 
 export const rangeTitle = style([
@@ -66,7 +69,15 @@ export const rangeTitle = style([
     fontVariantNumeric: "tabular-nums",
     transition: themeTransition,
     "@media": {
-      [media.mobile]: { fontSize: 24, minWidth: "auto" },
+      [media.mobile]: {
+        gridArea: "title",
+        justifySelf: "center",
+        display: "flex",
+        alignItems: "center",
+        height: CORNER_ACTION_SIZE,
+        fontSize: 28,
+        minWidth: "auto",
+      },
     },
   },
 ]);
@@ -108,10 +119,50 @@ export const navCluster = style({
   display: "flex",
   gap: space["1"],
   marginLeft: space["1.5"],
+  "@media": {
+    [media.mobile]: {
+      gridArea: "nav",
+      justifySelf: "start",
+      marginLeft: 0,
+      gap: space["2"],
+    },
+  },
+});
+
+// Compact 40px-tall header buttons on mobile; natural width, no stretching.
+export const headerActionBtn = style({
+  "@media": {
+    [media.mobile]: { height: 40 },
+  },
+});
+
+// Square 1:1 variant for icon-only header buttons (week structure,
+// regenerate, chevrons).
+export const headerIconBtn = style({
+  "@media": {
+    [media.mobile]: {
+      width: 40,
+      height: 40,
+      padding: 0,
+      justifyContent: "center",
+      flexShrink: 0,
+    },
+  },
+});
+
+// Week structure / Regenerate keep their labels on desktop; mobile shows
+// the icons alone so the whole toolbar fits one row.
+export const actionLabel = style({
+  "@media": {
+    [media.mobile]: { display: "none" },
+  },
 });
 
 export const spacer = style({
   flex: 1,
+  "@media": {
+    [media.mobile]: { display: "none" },
+  },
 });
 
 // Hovered-category chip in the header. Shrinks and truncates before it can
@@ -127,6 +178,9 @@ export const hoverChip = style([
     letterSpacing: "0.01em",
     minWidth: 0,
     flexShrink: 1,
+    "@media": {
+      [media.mobile]: { display: "none" },
+    },
   },
 ]);
 
@@ -148,6 +202,9 @@ export const actionCluster = style({
   alignItems: "center",
   gap: space["2"],
   flexShrink: 0,
+  "@media": {
+    [media.mobile]: { gridArea: "actions" },
+  },
 });
 
 const COG_WIDTH = 32;
@@ -216,6 +273,9 @@ export const engineCogBtn = style([
     justifyContent: "center",
     padding: 0,
     flexShrink: 0,
+    "@media": {
+      [media.mobile]: { gridArea: "cog", width: 40, height: 40 },
+    },
   },
 ]);
 
@@ -262,12 +322,12 @@ export const mainGrid = style({
       gridTemplateColumns: "1fr",
       gap: 0,
     },
+    // Full-bleed on mobile: the calendar card is the only track and runs to
+    // the content edges; the shell's mainColumn bottom padding keeps it clear
+    // of the floating tab bar.
     [media.mobile]: {
       gridTemplateColumns: "1fr",
-      padding: "0 16px 24px",
-      gap: space["3.5"],
-      flex: "0 0 auto",
-      minHeight: "auto",
+      padding: 0,
     },
   },
 });
@@ -281,7 +341,9 @@ export const calendarCard = style([
     overflow: "hidden",
     "@media": {
       [media.mobile]: {
-        minHeight: 540,
+        borderRadius: 0,
+        borderLeftWidth: 0,
+        borderRightWidth: 0,
       },
     },
   },
@@ -309,7 +371,8 @@ export const engineCol = style({
   "@media": {
     // Between mobile and laptop there is no room for a docked 340px column
     // next to a usable week grid — the console floats over the calendar's
-    // right edge instead. Mobile returns it to flow, stacked under the grid.
+    // right edge instead. Mobile drops the docked column entirely; the cog
+    // opens the console as a bottom sheet.
     [media.laptop]: {
       position: "absolute",
       top: 0,
@@ -318,8 +381,7 @@ export const engineCol = style({
       zIndex: zIndex.raised,
     },
     [media.mobile]: {
-      position: "static",
-      width: "auto",
+      display: "none",
     },
   },
 });
@@ -342,15 +404,6 @@ export const engineContainer = style({
       border: `1px solid ${vars.rule}`,
       borderRadius: radii.lg,
       boxShadow: vars.shadow.panel,
-    },
-    [media.mobile]: {
-      width: "auto",
-      minWidth: 0,
-      padding: "0 0 24px",
-      background: "transparent",
-      border: "none",
-      borderRadius: 0,
-      boxShadow: "none",
     },
   },
 });
@@ -483,7 +536,6 @@ export const controlSlider = style({
   },
 });
 
-
 export const engineCard = style({
   position: "relative",
   padding: "10px 12px",
@@ -590,4 +642,7 @@ export const fcWrap = style({
   flexDirection: "column",
   overflow: "hidden",
   borderRadius: radii.md,
+  "@media": {
+    [media.mobile]: { borderRadius: 0 },
+  },
 });

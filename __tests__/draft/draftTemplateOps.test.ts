@@ -2,13 +2,13 @@ import {
   addDraftTemplates,
   deleteDraftTemplates,
   updateDraftTemplates,
-} from "@/components/draft/AIDraftModal/draftTemplateOps";
+} from "@/utils/draft/draftTemplateOps";
 import {
   draftTemplatesEqual,
   normalizeDraftTemplates,
   templatesToDraft,
   type DraftTemplate,
-} from "@/components/draft/AIDraftModal/draftTemplates";
+} from "@/utils/draft/draftTemplates";
 import type { EventTemplate } from "@/types/prisma";
 
 const LOCATION_GYM = "loc-gym";

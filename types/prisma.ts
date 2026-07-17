@@ -75,3 +75,11 @@ export type TravelEvent = Prisma.TravelEventGetPayload<undefined>;
 export type EngineMessage = Prisma.EngineMessageGetPayload<undefined>;
 
 export type DraftConversation = Prisma.DraftConversationGetPayload<undefined>;
+
+// Nested-members is the app/Redux shape (Category.timeSlots precedent);
+// the sync diff strips + flattens members into their own change group.
+export type Queue = Prisma.QueueGetPayload<{ include: { members: true } }>;
+
+export type QueueMember = Prisma.QueueMemberGetPayload<undefined>;
+
+export type PlannerDependency = Prisma.PlannerDependencyGetPayload<undefined>;

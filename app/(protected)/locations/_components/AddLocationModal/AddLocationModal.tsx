@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Search, Loader2, MapPin } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Button } from "@/components/ui";
+import { Button, FieldStack, Input } from "@/components/ui";
 import { useLocationModalState } from "../../_hooks/useLocationModalState";
 import { usePlaceSearch, type Prediction } from "../../_hooks/usePlaceSearch";
 import { usePredictionsList } from "../PredictionsList";
@@ -13,13 +13,10 @@ import {
   header,
   title,
   subtitle,
-  fieldStack,
-  fieldLabel,
   searchWrap,
   searchIcon,
   searchSpinner,
   textInput,
-  plainInput,
   selectedHint,
   fieldHelp,
   placeMessageSlot,
@@ -110,10 +107,8 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
             </span>
           </div>
 
-          <div className={fieldStack}>
-            <span className={fieldLabel}>Name</span>
-            <input
-              className={plainInput}
+          <FieldStack size="sm" label="Name">
+            <Input
               placeholder="e.g. Home, Office, Gym"
               value={name}
               maxLength={50}
@@ -125,15 +120,14 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
               A short label you&apos;ll recognize when picking it on tasks and
               categories.
             </span>
-          </div>
+          </FieldStack>
 
-          <div className={fieldStack}>
-            <span className={fieldLabel}>Address</span>
+          <FieldStack size="sm" label="Address">
             <div className={searchWrap} ref={predictionsList.containerRef}>
               <span className={searchIcon}>
                 <Search size={13} strokeWidth={2.2} />
               </span>
-              <input
+              <Input
                 className={textInput}
                 placeholder="Start typing an address…"
                 value={query}
@@ -161,7 +155,7 @@ export function AddLocationModal({ open, onClose, onAdd }: AddLocationModalProps
                 </span>
               )}
             </div>
-          </div>
+          </FieldStack>
 
           <div className={errorSlot}>
             {error && <div className={errorBlock}>{error}</div>}

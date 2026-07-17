@@ -2,8 +2,8 @@ import {
   countTemplateChanges,
   diffDraftTemplates,
   groupTemplatesByDay,
-} from "@/components/draft/AIDraftModal/diffDraftTemplates";
-import type { DraftTemplate } from "@/components/draft/AIDraftModal/draftTemplates";
+} from "@/utils/draft/diffDraftTemplates";
+import type { DraftTemplate } from "@/utils/draft/draftTemplates";
 
 function template(overrides: Partial<DraftTemplate> = {}): DraftTemplate {
   return {

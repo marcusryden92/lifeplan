@@ -12,12 +12,16 @@ import {
   CategoryEvent,
   TravelEvent,
   EngineMessage,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 
 import { SchedulingFailureReason } from "../constants";
 import { PlaceableSlot } from "./TimeSlot";
 import type { TravelShardSpan } from "../utils/timeSlotUtils";
 import type { SchedulerRecorder } from "../helpers/Scheduler/SchedulerRecorder";
+import type { PlannerSchedulingConstraints } from "../helpers/CalendarGenerator/buildPlannerConstraintsMap";
+import type { PrecedenceEdge } from "@/utils/precedence/types";
 
 /**
  * Result of a scheduling operation
@@ -140,6 +144,19 @@ export interface SchedulingContext {
    * buildCategoryEligibilityMap.
    */
   categoryEligibilityMap?: Map<string, Set<string>>;
+  /**
+   * plannerId -> resolved scheduling constraints (earliest start date +
+   * allowed-times chain, own + inherited from ancestors). Only rows with an
+   * actual constraint have an entry. See buildPlannerConstraintsMap.
+   */
+  plannerConstraintsMap?: Map<string, PlannerSchedulingConstraints>;
+  /**
+   * plannerId -> incoming precedence edges (queue order + dependencies) whose
+   * transparency filtering already happened at build time. The placement gate
+   * bounds each candidate to start after the max end across all placed
+   * predecessors. See buildPrecedenceEdges / buildPredecessorMap.
+   */
+  predecessorMap?: Map<string, PrecedenceEdge[]>;
   /**
    * Optional per-task recorder for dynamic scheduling traces (mirrors the
    * staticEventTravelPass recorder). When attached, every scheduleTask
@@ -329,6 +346,10 @@ export interface CalendarGenerationInput {
   config?: CalendarGenerationConfig;
   /** Categories with time constraints */
   categories?: Category[];
+  /** User-authored queues (pipes) — ordered precedence over root items */
+  queues?: Queue[];
+  /** Prerequisite edges between root items */
+  dependencies?: PlannerDependency[];
 }
 
 export interface StrategyConfig {
@@ -346,6 +367,13 @@ export interface FindValidSlotsResult {
   fittingSlots: PlaceableSlot[];
   taskLocationId: string | null | undefined;
   constraintForTask: Category | undefined;
+  /**
+   * The lower placement bound the candidates were clipped to:
+   * max(afterTime, inherited earliestStartDate, currentDate). Threaded into
+   * selectBestSlot so absorb/reclaim back-extension can be validated against
+   * the same bound instead of being skipped wholesale.
+   */
+  effectiveAfter: Date;
 }
 
 /**
@@ -385,6 +413,14 @@ export interface SlotSelectionResult {
    */
   absorbableTravel: TravelShardSpan | null;
   reclaimPrecedingGapTravel: TravelShardSpan | null;
+  /**
+   * Whether the placement back-extends into the freed travel span (the
+   * historical absorb/reclaim behavior). False when a constraint boundary
+   * (allowed times / earliest start / chain bound) sits inside the freed
+   * region: the redundant travel is still removed, but the task keeps the
+   * candidate slot's clipped start and the freed span stays free time.
+   */
+  slideIntoFreedTravel: boolean;
   /**
    * Minutes the reservation will actually occupy. Equals task.duration for
    * plain placements; for chunked placements it is what ChunkSizing.grant

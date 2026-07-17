@@ -40,6 +40,10 @@ function makePlanner(overrides: Partial<Planner>): Planner {
     recurrenceExceptions: null,
     splitting: serializeTaskSplitting(SETTINGS),
     completedSegments: null,
+    maxMinutesPerDay: null,
+    earliestStartDate: null,
+    allowedTimes: null,
+    linkedItemId: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,
@@ -64,6 +68,34 @@ describe("parseTaskSplitting", () => {
       minMinutes: 30,
       maxMinutes: 120,
       maxMinutesPerDay: 30,
+      minSpacingMinutes: null,
+    });
+  });
+
+  it("keeps a positive minimum spacing and drops non-positive to null", () => {
+    expect(
+      parseTaskSplitting(
+        JSON.stringify({
+          minMinutes: 30,
+          maxMinutes: 120,
+          minSpacingMinutes: 45.7,
+        }),
+      ),
+    ).toEqual({
+      minMinutes: 30,
+      maxMinutes: 120,
+      maxMinutesPerDay: null,
+      minSpacingMinutes: 45,
+    });
+    expect(
+      parseTaskSplitting(
+        JSON.stringify({ minMinutes: 30, maxMinutes: 120, minSpacingMinutes: 0 }),
+      ),
+    ).toEqual({
+      minMinutes: 30,
+      maxMinutes: 120,
+      maxMinutesPerDay: null,
+      minSpacingMinutes: null,
     });
   });
 

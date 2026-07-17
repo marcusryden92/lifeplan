@@ -1,20 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui";
+import { Button, Field, Input } from "@/components/ui";
 import { settings } from "@/actions/settings";
 import { useServerAction } from "@/hooks/useServerAction";
 import type { UserRole } from "@/generated/client";
 import { StatusLine } from "../StatusLine";
-import {
-  card,
-  cardTitle,
-  field,
-  fieldLabel,
-  fieldInput,
-  fieldNote,
-  footerRow,
-} from "../../page.css";
+import { card, cardTitle, fieldNote, footerRow } from "../../page.css";
 
 interface EmailCardProps {
   user: { email?: string; role: UserRole; isOAuth?: boolean };
@@ -42,16 +34,14 @@ export function EmailCard({ user }: EmailCardProps) {
   return (
     <div className={card}>
       <span className={cardTitle}>Email</span>
-      <label className={field}>
-        <span className={fieldLabel}>Current</span>
-        <input
-          className={fieldInput}
+      <Field label="Current">
+        <Input
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={disabled || isPending}
         />
-      </label>
+      </Field>
       <span className={fieldNote}>
         {disabled
           ? "Your email is managed by your OAuth provider — change it there."

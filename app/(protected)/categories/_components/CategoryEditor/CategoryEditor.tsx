@@ -1,16 +1,14 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { ChevronRight, Lock, MapPin, SquarePen, Trash2 } from "lucide-react";
-import { Button, Caption, Combobox } from "@/components/ui";
+import { Button, Caption, Combobox, FieldStack, Input } from "@/components/ui";
 import type { Category } from "@/types/prisma";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
-import { WindowExceptionEditor } from "@/components/events/WindowExceptionEditor";
-import {
-  parseRecurrenceExceptions,
-  serializeRecurrenceExceptions,
-} from "@/utils/planRecurrence";
+import { parseRecurrenceExceptions } from "@/utils/planRecurrence";
 import { buildIndentedCategoryList } from "@/utils/categoryUtils";
 import { WindowsMiniGrid } from "../WindowsMiniGrid";
+import { CategoryExceptionsModal } from "../CategoryExceptionsModal";
 import { useInlineEdit } from "./useInlineEdit";
 import {
   editor,
@@ -27,8 +25,6 @@ import {
   sectionPair,
   sectionTitle,
   fieldGrid,
-  fieldStack,
-  fieldLabel,
   swatchRow,
   swatchChip,
   strictRow,
@@ -49,25 +45,31 @@ import {
   parentOptionDot,
   lockIcon,
   subCategoryChevron,
-  windowExceptionsList,
-  windowExceptionBlock,
-  windowExceptionHeading,
+  exceptionsBlock,
 } from "./CategoryEditor.css";
 
 export const SWATCH_PALETTE = [
-  "#3b82f6",
-  "#22c55e",
-  "#8b5cf6",
-  "#6366f1",
-  "#06b6d4",
+  "#ef4444",
+  "#f97316",
   "#f59e0b",
-  "#f43f5e",
+  "#eab308",
+  "#84cc16",
+  "#22c55e",
+  "#10b981",
   "#14b8a6",
+  "#06b6d4",
+  "#0ea5e9",
+  "#3b82f6",
+  "#6366f1",
+  "#8b5cf6",
+  "#a855f7",
+  "#d946ef",
+  "#ec4899",
+  "#f43f5e",
+  "#64748b",
 ];
 
 const FALLBACK_COLOR = "#9ca3af";
-
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 interface CategoryEditorProps {
   category: Category;
@@ -124,6 +126,17 @@ export function CategoryEditor({
     resetKey: category.id,
     onCommit: onRename,
   });
+
+  const [exceptionsOpen, setExceptionsOpen] = useState(false);
+  const totalExceptions = useMemo(
+    () =>
+      category.timeSlots.reduce(
+        (sum, w) =>
+          sum + parseRecurrenceExceptions(w.recurrenceExceptions).length,
+        0,
+      ),
+    [category.timeSlots],
+  );
 
   const color = category.color || FALLBACK_COLOR;
   const initial = category.name.charAt(0).toUpperCase() || "?";
@@ -197,8 +210,9 @@ export function CategoryEditor({
         <div className={headerInfo}>
           <div className={headerNameRow}>
             {editingName ? (
-              <input
+              <Input
                 ref={nameInputRef}
+                variant="titleInline"
                 className={headerNameInput}
                 value={nameDraft}
                 onChange={(e) => setNameDraft(e.target.value)}
@@ -247,8 +261,7 @@ export function CategoryEditor({
       <div className={section}>
         <div className={sectionTitle}>Identity</div>
         <div className={fieldGrid}>
-          <div className={fieldStack}>
-            <span className={fieldLabel}>Color</span>
+          <FieldStack label="Color">
             <div className={swatchRow}>
               {SWATCH_PALETTE.map((c) => (
                 <button
@@ -262,16 +275,15 @@ export function CategoryEditor({
                 />
               ))}
             </div>
-          </div>
-          <div className={fieldStack}>
-            <span className={fieldLabel}>Parent</span>
+          </FieldStack>
+          <FieldStack label="Parent">
             <Combobox
               value={category.parentId ?? null}
               options={parentOptions}
               onChange={(v) => onChangeParent(v)}
               ariaLabel="Parent"
             />
-          </div>
+          </FieldStack>
         </div>
       </div>
 
@@ -362,41 +374,17 @@ export function CategoryEditor({
             onOpen={onOpenWindows}
           />
           {category.timeSlots.length > 0 && (
-            <>
+            <div className={exceptionsBlock}>
               <span className={subsectionLabel}>Per-occurrence exceptions</span>
-              <div className={windowExceptionsList}>
-                {[...category.timeSlots]
-                  .sort(
-                    (a, b) =>
-                      ((a.day + 6) % 7) - ((b.day + 6) % 7) ||
-                      a.startTime.localeCompare(b.startTime),
-                  )
-                  .map((row) => (
-                    <div key={row.id} className={windowExceptionBlock}>
-                      <span className={windowExceptionHeading}>
-                        <span
-                          className={subCategoryDot}
-                          style={{ background: color }}
-                        />
-                        {DAY_LABELS[row.day]} {row.startTime}–{row.endTime}
-                      </span>
-                      <WindowExceptionEditor
-                        window={row}
-                        exceptions={parseRecurrenceExceptions(
-                          row.recurrenceExceptions,
-                        )}
-                        onChange={(next) =>
-                          onChangeWindowExceptions(
-                            row.id,
-                            serializeRecurrenceExceptions(next),
-                          )
-                        }
-                        variant="card"
-                      />
-                    </div>
-                  ))}
-              </div>
-            </>
+              <Button
+                variant="glass"
+                size="sm"
+                onClick={() => setExceptionsOpen(true)}
+              >
+                Manage exceptions
+                {totalExceptions > 0 ? ` · ${totalExceptions}` : ""}
+              </Button>
+            </div>
           )}
         </div>
       ) : (
@@ -472,6 +460,12 @@ export function CategoryEditor({
         </div>
       )}
 
+      <CategoryExceptionsModal
+        open={exceptionsOpen}
+        onClose={() => setExceptionsOpen(false)}
+        category={category}
+        onChangeWindowExceptions={onChangeWindowExceptions}
+      />
     </div>
   );
 }

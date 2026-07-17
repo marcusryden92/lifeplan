@@ -54,6 +54,10 @@ function makePlanner(id: string, overrides: Partial<Planner>): Planner {
     recurrenceExceptions: null,
     splitting: null,
     completedSegments: null,
+    maxMinutesPerDay: null,
+    earliestStartDate: null,
+    allowedTimes: null,
+    linkedItemId: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,
@@ -165,7 +169,7 @@ describe("split task scheduling", () => {
     expect(perDay.size).toBeGreaterThanOrEqual(3);
   });
 
-  it("separates same-task chunks by at least the minimum chunk length", () => {
+  it("packs same-day chunks without a forced inter-chunk gap", () => {
     const task = makePlanner("reading", {
       duration: 300,
       splitting: serializeTaskSplitting({
@@ -181,12 +185,47 @@ describe("split task scheduling", () => {
       (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
     );
     expect(chunks.reduce((sum, c) => sum + eventMinutes(c), 0)).toBe(300);
+
+    let sameDayPairs = 0;
+    for (let i = 1; i < chunks.length; i++) {
+      const prevEnd = new Date(chunks[i - 1].end);
+      const start = new Date(chunks[i].start);
+      const gapMinutes = (start.getTime() - prevEnd.getTime()) / 60000;
+      expect(gapMinutes).toBeGreaterThanOrEqual(0); // never overlap
+      if (dayKeyLocal(start) === dayKeyLocal(prevEnd)) {
+        // No forced minMinutes break — chunks sit only the standard placement
+        // buffer apart, like any two dynamic placements.
+        expect(gapMinutes).toBeLessThan(45);
+        sameDayPairs++;
+      }
+    }
+    expect(sameDayPairs).toBeGreaterThan(0);
+  });
+
+  it("honors a requested minimum spacing between chunks", () => {
+    const task = makePlanner("reading", {
+      duration: 180,
+      splitting: serializeTaskSplitting({
+        minMinutes: 45,
+        maxMinutes: 60,
+        maxMinutesPerDay: null,
+        minSpacingMinutes: 60,
+      }),
+    });
+
+    const { events } = run([task]);
+
+    const chunks = chunksOf(events, "reading").sort(
+      (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
+    );
+    expect(chunks.reduce((sum, c) => sum + eventMinutes(c), 0)).toBe(180);
+    expect(chunks.length).toBeGreaterThan(1);
     for (let i = 1; i < chunks.length; i++) {
       const gapMinutes =
         (new Date(chunks[i].start).getTime() -
           new Date(chunks[i - 1].end).getTime()) /
         60000;
-      expect(gapMinutes).toBeGreaterThanOrEqual(45);
+      expect(gapMinutes).toBeGreaterThanOrEqual(60);
     }
   });
 

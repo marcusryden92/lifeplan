@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Button, Kbd } from "@/components/ui";
+import { Button } from "@/components/ui";
 import { formatDurationCompact } from "@/utils/timeFormatting";
 import type { DashboardSummary } from "../../_data/types";
 import {
@@ -9,23 +9,16 @@ import {
   summaryStrong,
   summaryError,
   headerActions,
+  openCalendarLink,
 } from "./DashboardHeader.css";
 
 type Props = {
   greetingText: string;
   dateText: string;
   summary: DashboardSummary;
-  modKey: string;
-  onCaptureClick: () => void;
 };
 
-export function DashboardHeader({
-  greetingText,
-  dateText,
-  summary,
-  modKey,
-  onCaptureClick,
-}: Props) {
+export function DashboardHeader({ greetingText, dateText, summary }: Props) {
   const plannedLabel =
     summary.plannedMinutes > 0
       ? formatDurationCompact(summary.plannedMinutes)
@@ -60,12 +53,7 @@ export function DashboardHeader({
         </div>
       </div>
       <div className={headerActions}>
-        <Button variant="glass" onClick={onCaptureClick}>
-          <Kbd>{modKey}</Kbd>
-          <Kbd>K</Kbd>
-          capture
-        </Button>
-        <Link href="/calendar">
+        <Link href="/calendar" className={openCalendarLink}>
           <Button variant="solid">Open calendar →</Button>
         </Link>
       </div>

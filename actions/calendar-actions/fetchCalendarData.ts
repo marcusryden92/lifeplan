@@ -9,6 +9,8 @@ import {
   CategoryEvent,
   TravelEvent,
   EngineMessage,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 import { weekdayToInt } from "@/utils/calendarUtils";
 import type { WeekDayIntegers } from "@/types/calendarTypes";
@@ -75,6 +77,16 @@ export async function fetchCalendarData() {
       where: { userId },
     });
 
+    const queues: Queue[] = await db.queue.findMany({
+      where: { userId },
+      include: { members: true },
+    });
+
+    const dependencies: PlannerDependency[] =
+      await db.plannerDependency.findMany({
+        where: { userId },
+      });
+
     // Narrow timeSlots.day at the DB boundary and serialize location Dates
     // to avoid Redux non-serializable warnings.
     const categories: Category[] = categoriesRaw.map((cat) => ({
@@ -102,6 +114,8 @@ export async function fetchCalendarData() {
         categoryEvents: categoryEvents,
         travelEvents: travelEvents,
         engineMessages: engineMessages,
+        queues: queues,
+        dependencies: dependencies,
         dataVersion: userRow?.dataVersion ?? 0,
       },
     };

@@ -1,7 +1,6 @@
 ﻿import { style } from "@vanilla-extract/css";
 import { space, vars, themeTransition, media, radii } from "@/lib/theme";
 
-
 export const bezelFrame = style({
   width: "100vw",
   height: "100vh",
@@ -62,7 +61,9 @@ export const mainColumn = style({
       overflow: "auto",
     },
     [media.mobile]: {
-      paddingBottom: space["20"],
+      // Top band clears the fixed corner actions (CornerActions, mobile-only);
+      // bottom band clears the floating menu.
+      paddingTop: 0,
       WebkitOverflowScrolling: "touch",
     },
   },

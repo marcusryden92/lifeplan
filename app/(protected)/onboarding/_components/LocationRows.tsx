@@ -8,10 +8,10 @@ import {
   type Prediction,
 } from "../../locations/_hooks/usePlaceSearch";
 import { usePredictionsList } from "../../locations/_components/PredictionsList";
+import { Input } from "@/components/ui";
 import {
   locationRows,
   locationRow,
-  nameField,
   addressCell,
   addressWrap,
   addressIcon,
@@ -92,8 +92,7 @@ function LocationRowItem({
 
   return (
     <div className={locationRow}>
-      <input
-        className={nameField}
+      <Input
         value={row.name}
         placeholder="Name"
         maxLength={40}
@@ -106,7 +105,7 @@ function LocationRowItem({
           <span className={addressIcon}>
             <MapPin size={13} strokeWidth={2.2} />
           </span>
-          <input
+          <Input
             className={`${addressInput} ${row.selected || created ? addressSelected : ""}`}
             placeholder="Search address…"
             value={row.query}

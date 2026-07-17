@@ -76,11 +76,9 @@ export type SchedulingSettings = {
   bufferTimeMinutes: number;
   weekStartDay: WeekDayIntegers;
   enableTravelEvents: boolean;
-  // Store as array for Redux serialization - convert to Map when needed
-  travelTimeMatrix: SerializedTravelTimeEntry[] | null;
-  // Full TravelTime rows, every transport mode. The Locations UI reads/writes
-  // through this; the engine-shaped travelTimeMatrix above is the derived
-  // single-mode subset.
+  // Full TravelTime rows, every transport mode. The single source of truth for
+  // both the Locations UI and the engine (which derives its single-mode matrix
+  // from these via deriveTravelTimeMatrix at run time).
   allTravelTimes: SerializedTravelTime[];
   defaultTransportMode: TransportMode;
   locations: SerializedLocation[];
@@ -94,7 +92,6 @@ const initialState: SchedulingSettings = {
   bufferTimeMinutes: 10, // Default value
   weekStartDay: 1, // Monday
   enableTravelEvents: false, // Travel events disabled by default
-  travelTimeMatrix: null,
   allTravelTimes: [],
   defaultTransportMode: "DRIVING",
   locations: [],
@@ -109,6 +106,29 @@ const initialState: SchedulingSettings = {
   },
   debugDashboardEnabled: false,
 };
+
+/**
+ * Derive the engine-shaped travel matrix (single mode, overrides applied) from
+ * the full allTravelTimes rows. This is the SINGLE source of truth: the engine
+ * re-derives it on every run so any in-session change to travel times or the
+ * transport mode takes effect without a page reload. Key format must match
+ * TimeSlotManager.getTravelTime: "fromId->toId".
+ */
+export function deriveTravelTimeMatrix(
+  allTravelTimes: SerializedTravelTime[],
+  mode: TransportMode,
+): SerializedTravelTimeEntry[] {
+  return allTravelTimes
+    .filter((tt) => tt.transportMode === mode)
+    .map((tt) => ({
+      key: `${tt.fromLocationId}->${tt.toLocationId}`,
+      fromLocationId: tt.fromLocationId,
+      toLocationId: tt.toLocationId,
+      rushHourMinutes: tt.customRushHourMinutes ?? tt.googleRushHourMinutes,
+      regularMinutes: tt.customRegularMinutes ?? tt.googleRegularMinutes,
+      nightMinutes: tt.customNightMinutes ?? tt.googleNightMinutes,
+    }));
+}
 
 /**
  * Helper to convert serialized array to Map for use in scheduling
@@ -160,12 +180,6 @@ const schedulingSettingsSlice = createSlice({
     },
     setEnableTravelEvents: (state, action: PayloadAction<boolean>) => {
       state.enableTravelEvents = action.payload;
-    },
-    setTravelTimeMatrix: (
-      state,
-      action: PayloadAction<SerializedTravelTimeEntry[] | null>
-    ) => {
-      state.travelTimeMatrix = action.payload;
     },
     setLocations: (state, action: PayloadAction<SerializedLocation[]>) => {
       state.locations = action.payload;
@@ -249,7 +263,6 @@ export const {
   setWeekStartDay,
   setBufferTimeMinutes,
   setEnableTravelEvents,
-  setTravelTimeMatrix,
   setLocations,
   upsertLocation,
   removeLocation,

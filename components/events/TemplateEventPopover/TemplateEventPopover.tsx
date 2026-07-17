@@ -7,15 +7,27 @@ import {
   Copy,
   GripVertical,
   Pencil,
+  RotateCcw,
   Trash2,
   X,
 } from "lucide-react";
 import { EventImpl } from "@fullcalendar/core/internal";
 import { useCalendarProvider } from "@/context/CalendarProvider";
-import { CategoryBadge, TypeBadge } from "@/components/ui";
+import {
+  Button,
+  CategoryBadge,
+  Input,
+  TimePicker,
+  TypeBadge,
+} from "@/components/ui";
+import {
+  occurrenceKeyFromEventId,
+  hasMovedException,
+} from "@/utils/planRecurrence";
+import { applyTemplateOccurrenceRestore } from "@/utils/calendarEventHandlers";
 import { PopoverLocationPicker } from "../PopoverLocationPicker";
 import { PopoverColorPicker } from "../PopoverColorPicker";
-import { formatTime } from "@/utils/calendarUtils";
+import { formatTime, timeOnDate } from "@/utils/calendarUtils";
 import { calendarColors } from "@/data/calendarColors";
 import { vars } from "@/lib/theme";
 import { CalendarPopover } from "../CalendarPopover";
@@ -32,8 +44,16 @@ import {
   body,
   metaRow,
   footer,
+  timeFieldsRow,
+  timeField,
+  timeFieldLabel,
 } from "../CalendarPopover/CalendarPopover.css";
-import { headerGrabbing, metaIcon, note } from "./TemplateEventPopover.css";
+import {
+  headerGrabbing,
+  metaIcon,
+  note,
+  restoreBtn,
+} from "./TemplateEventPopover.css";
 
 interface TemplateEventPopoverProps {
   event: EventImpl;
@@ -44,10 +64,11 @@ interface TemplateEventPopoverProps {
   onEdit: (newTitle: string) => void;
   onCopy: () => void;
   onDelete: () => void;
+  onEditTimes?: (newStart: Date, newEnd: Date) => void;
 }
 
 const POPOVER_WIDTH = 320;
-const POPOVER_HEIGHT = 340;
+const POPOVER_HEIGHT = 390;
 
 const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
   event,
@@ -58,6 +79,7 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
   onEdit,
   onCopy,
   onDelete,
+  onEditTimes,
 }) => {
   const { template, updateTemplateArray } = useCalendarProvider();
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -76,6 +98,27 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
 
   const currentColor =
     (templateItem?.color as string | undefined) ?? calendarColors[0];
+
+  // A moved one-off carries a composite id whose key must also still have a
+  // moved exception on the row — otherwise the tile is a plain series
+  // occurrence and there is nothing to restore.
+  const occurrenceKeyValue = occurrenceKeyFromEventId(event.id);
+  const isException =
+    !!templateItem &&
+    occurrenceKeyValue !== null &&
+    hasMovedException(templateItem.recurrenceExceptions, occurrenceKeyValue);
+
+  const handleRestore = () => {
+    if (templateItem && occurrenceKeyValue !== null) {
+      applyTemplateOccurrenceRestore(
+        updateTemplateArray,
+        templateItem.id,
+        occurrenceKeyValue,
+      );
+    }
+    // The one-off tile this popover is anchored to disappears on restore.
+    onClose();
+  };
 
   const applyColor = (color: string) => {
     updateTemplateArray((prev) =>
@@ -159,8 +202,9 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
 
           <div className={titleRow}>
             {isEditingTitle ? (
-              <input
+              <Input
                 ref={titleInputRef}
+                variant="titleInline"
                 type="text"
                 value={titleValue}
                 onChange={(e) => setTitleValue(e.target.value)}
@@ -203,9 +247,65 @@ const TemplateEventPopover: React.FC<TemplateEventPopoverProps> = ({
               </span>
             </div>
 
+            {onEditTimes && (
+              <div className={timeFieldsRow}>
+                <div className={timeField}>
+                  <span className={timeFieldLabel}>start</span>
+                  <TimePicker
+                    value={format(startTime, "HH:mm")}
+                    ariaLabel="Start time"
+                    onChange={(next) => {
+                      // The end stays fixed — a form start edit is the
+                      // top-edge resize. An end at or before it wraps to the
+                      // next morning.
+                      const newStart = timeOnDate(startTime, next);
+                      if (newStart.getTime() === startTime.getTime()) return;
+                      const newEnd =
+                        endTime <= newStart
+                          ? new Date(endTime.getTime() + 24 * 60 * 60 * 1000)
+                          : endTime;
+                      onEditTimes(newStart, newEnd);
+                    }}
+                  />
+                </div>
+                <div className={timeField}>
+                  <span className={timeFieldLabel}>end</span>
+                  <TimePicker
+                    value={format(endTime, "HH:mm")}
+                    ariaLabel="End time"
+                    onChange={(next) => {
+                      // End at or before start wraps to the next morning.
+                      let newEnd = timeOnDate(startTime, next);
+                      if (newEnd <= startTime) {
+                        newEnd = new Date(
+                          newEnd.getTime() + 24 * 60 * 60 * 1000,
+                        );
+                      }
+                      if (newEnd.getTime() === endTime.getTime()) return;
+                      onEditTimes(startTime, newEnd);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div className={note}>
-              Editing applies to every occurrence of this template.
+              {isException
+                ? "This occurrence was moved out of its usual slot. Other edits still apply to every occurrence."
+                : "Editing applies to every occurrence of this template."}
             </div>
+
+            {isException && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRestore}
+                className={restoreBtn}
+              >
+                <RotateCcw size={11} strokeWidth={2.2} />
+                Restore to series
+              </Button>
+            )}
 
             {templateItem && (
               <PopoverLocationPicker

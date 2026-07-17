@@ -7,21 +7,18 @@ import {
   useMemo,
   useState,
 } from "react";
-import Link from "next/link";
 import {
   CalendarCog,
   ChevronLeft,
   ChevronRight,
-  Locate,
   RotateCw,
   Settings,
-  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { dismissEngineMessage } from "@/redux/slices/engineOutputSlice";
-import { Button, ConicDot, vars } from "@/components/ui";
+import { BottomSheet, Button, ConicDot, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { getWeekFirstDate, shiftDate } from "@/utils/calendarUtils";
@@ -34,9 +31,8 @@ import {
   renderEngineMessage,
 } from "@/utils/renderEngineMessage";
 import { getRootParentId } from "@/utils/goalPageHandlers";
-import { type EngineTone } from "../_mock/calendar";
 import { WeekStructureModal } from "@/components/calendar/WeekStructureModal";
-import { EngineControls } from "./_components/EngineControls";
+import { EngineConsole, toneColor } from "./_components/EngineConsole";
 import "./_styles/fullcalendar.css";
 import {
   page,
@@ -48,6 +44,9 @@ import {
   hoverChipDot,
   hoverChipName,
   actionCluster,
+  actionLabel,
+  headerActionBtn,
+  headerIconBtn,
   headerConsoleSpacer,
   headerEngineLabel,
   engineCogBtn,
@@ -57,20 +56,7 @@ import {
   calendarCard,
   engineCol,
   engineContainer,
-  engineHeader,
   engineTitle,
-  engineLastRun,
-  engineSummary,
-  engineList,
-  engineCard,
-  engineCardHead,
-  engineCardLink,
-  engineCardContent,
-  engineDismissBtn,
-  engineGoToBtn,
-  engineTag,
-  engineCardTitle,
-  engineCardBody,
   fcWrap,
   dayHeaderStack,
   dayHeaderLabel,
@@ -103,35 +89,8 @@ function renderDayHeader(arg: { date: Date; isToday: boolean }) {
   );
 }
 
-// Compact relative timestamp for the console header. Null means the engine
-// hasn't run this session (cold load renders persisted output only).
-function formatLastRun(iso: string | null): string {
-  if (!iso) return "—";
-  const deltaMs = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(deltaMs / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
-function toneColor(tone: EngineTone) {
-  switch (tone) {
-    case "fail":
-      return vars.status.error;
-    case "warn":
-      return vars.status.warning;
-    case "done":
-      return vars.status.success;
-    case "info":
-    default:
-      return vars.status.info;
-  }
-}
-
 export default function CalendarPage() {
-  const { weekStartDay, manuallyRefreshCalendar, planner } =
+  const { weekStartDay, manuallyRefreshCalendar, planner, queues } =
     useCalendarProvider();
   const dispatch = useDispatch<AppDispatch>();
   const engineMessages = useSelector(
@@ -157,7 +116,7 @@ export default function CalendarPage() {
     [calendarEvents],
   );
   const renderedMessages = useMemo(() => {
-    const lookups = buildEngineMessageLookups(planner, locations);
+    const lookups = buildEngineMessageLookups(planner, locations, queues);
     // renderEngineMessage returns null for payload shapes we don't recognize
     // (e.g. a persisted row from a newer client version). Drop those rather
     // than showing an undefined card — no signal is better than a crash.
@@ -177,7 +136,7 @@ export default function CalendarPage() {
         : null;
       return [{ ...rendered, drillTo }];
     });
-  }, [engineMessages, planner, locations]);
+  }, [engineMessages, planner, locations, queues]);
   const failCount = renderedMessages.filter((m) => m.tone === "fail").length;
   const warnCount = renderedMessages.filter((m) => m.tone === "warn").length;
   const handleDismiss = useCallback(
@@ -194,6 +153,7 @@ export default function CalendarPage() {
       setInitialDate(
         isMobile ? target : getWeekFirstDate(weekStartDay, target),
       );
+      setMobileConsoleOpen(false);
     },
     [weekStartDay, isMobile],
   );
@@ -208,6 +168,9 @@ export default function CalendarPage() {
     else setInitialDate((d) => getWeekFirstDate(weekStartDay, d));
   }, [isMobile, weekStartDay]);
   const [consoleCollapsed, setConsoleCollapsed] = useState(false);
+  // Mobile has no docked engine column — the cog opens the console as a
+  // bottom sheet instead of toggling the (persisted) collapse state.
+  const [mobileConsoleOpen, setMobileConsoleOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   // Suppresses the engineCol transition during the first frame so syncing
   // collapsed state from localStorage doesn't animate width 340 → 0 on mount.
@@ -257,7 +220,7 @@ export default function CalendarPage() {
 
   const toggleConsole = () => setConsoleCollapsed((c) => !c);
 
-  const alertTone: EngineTone | null = worstUnresolved(renderedMessages);
+  const alertTone = worstUnresolved(renderedMessages);
 
   const windowDays = isMobile ? 3 : 7;
   const finalDate = shiftDate(initialDate, windowDays - 1);
@@ -283,17 +246,24 @@ export default function CalendarPage() {
             <Button
               variant="glass"
               size="sm"
+              className={headerIconBtn}
               onClick={goPrev}
               aria-label="Previous week"
             >
               <ChevronLeft size={14} strokeWidth={2} />
             </Button>
-            <Button variant="glass" size="sm" onClick={goToday}>
+            <Button
+              variant="glass"
+              size="sm"
+              className={headerActionBtn}
+              onClick={goToday}
+            >
               Today
             </Button>
             <Button
               variant="glass"
               size="sm"
+              className={headerIconBtn}
               onClick={goNext}
               aria-label="Next week"
             >
@@ -315,15 +285,24 @@ export default function CalendarPage() {
             <Button
               variant="glass"
               size="sm"
+              className={headerIconBtn}
               onClick={() => setPlanOpen(true)}
               aria-label="Edit week templates and category windows"
+              title="Week structure"
             >
               <CalendarCog size={13} strokeWidth={2.2} />
-              Week structure
+              <span className={actionLabel}>Week structure</span>
             </Button>
-            <Button variant="solid" size="sm" onClick={manuallyRefreshCalendar}>
+            <Button
+              variant="solid"
+              size="sm"
+              className={headerIconBtn}
+              onClick={manuallyRefreshCalendar}
+              aria-label="Regenerate calendar"
+              title="Regenerate"
+            >
               <RotateCw size={13} strokeWidth={2.4} />
-              Regenerate
+              <span className={actionLabel}>Regenerate</span>
             </Button>
           </div>
           <div className={headerConsoleSpacer} aria-hidden={consoleCollapsed}>
@@ -335,20 +314,22 @@ export default function CalendarPage() {
           <button
             type="button"
             className={engineCogBtn}
-            onClick={toggleConsole}
-            aria-pressed={!consoleCollapsed}
+            onClick={() =>
+              isMobile ? setMobileConsoleOpen(true) : toggleConsole()
+            }
+            aria-pressed={isMobile ? undefined : !consoleCollapsed}
             aria-label={
-              consoleCollapsed
+              consoleCollapsed || isMobile
                 ? "Open engine console"
                 : "Collapse engine console"
             }
             title={
-              consoleCollapsed
+              consoleCollapsed || isMobile
                 ? "Open engine console"
                 : "Collapse engine console"
             }
           >
-            <Settings size={16} strokeWidth={1.8} />
+            <Settings size={isMobile ? 18 : 16} strokeWidth={1.8} />
             {alertTone && (
               <span
                 className={engineCogAlertDot}
@@ -373,77 +354,42 @@ export default function CalendarPage() {
 
           <div className={engineCol}>
             <div className={engineContainer}>
-              <div className={engineHeader}>
-                <span className={engineLastRun}>
-                  last run · {formatLastRun(lastEngineRunAt)}
-                </span>
-                <div className={engineSummary}>
-                  {failCount} fail · {warnCount} warn · {placedCount} placed
-                </div>
-              </div>
-
-              <div className={engineList}>
-                {renderedMessages.map((m) => {
-                  const tc = toneColor(m.tone);
-                  return (
-                    <div
-                      key={m.id}
-                      className={engineCard}
-                      style={{
-                        borderColor: `color-mix(in srgb, ${tc} 60%, transparent)`,
-                      }}
-                    >
-                      {m.drillTo && (
-                        <Link
-                          href={`/items/${m.drillTo}`}
-                          className={engineCardLink}
-                          aria-label={`Open ${m.title}`}
-                        >
-                          {m.title}
-                        </Link>
-                      )}
-                      {m.goToDate && (
-                        <button
-                          type="button"
-                          className={engineGoToBtn}
-                          onClick={() => handleGoToDate(m.goToDate!)}
-                          aria-label="Go to date in calendar"
-                          title="Go to date"
-                        >
-                          <Locate size={13} strokeWidth={2.2} />
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className={engineDismissBtn}
-                        onClick={() => handleDismiss(m.id)}
-                        aria-label="Dismiss message"
-                        title="Dismiss"
-                      >
-                        <X size={13} strokeWidth={2.2} />
-                      </button>
-                      <div className={engineCardContent}>
-                        <div className={engineCardHead}>
-                          <span className={engineTag} style={{ background: tc }}>
-                            {m.tag}
-                          </span>
-                          <span className={engineCardTitle}>{m.title}</span>
-                        </div>
-                        <div className={engineCardBody}>{m.body}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <EngineControls />
+              <EngineConsole
+                messages={renderedMessages}
+                lastEngineRunAt={lastEngineRunAt}
+                failCount={failCount}
+                warnCount={warnCount}
+                placedCount={placedCount}
+                onDismiss={handleDismiss}
+                onGoToDate={handleGoToDate}
+              />
             </div>
           </div>
         </div>
 
-        <WeekStructureModal open={planOpen} onClose={() => setPlanOpen(false)} />
+        {isMobile && (
+          <BottomSheet
+            open={mobileConsoleOpen}
+            onOpenChange={setMobileConsoleOpen}
+            title="Engine"
+          >
+            <EngineConsole
+              messages={renderedMessages}
+              lastEngineRunAt={lastEngineRunAt}
+              failCount={failCount}
+              warnCount={warnCount}
+              placedCount={placedCount}
+              onDismiss={handleDismiss}
+              onGoToDate={handleGoToDate}
+            />
+          </BottomSheet>
+        )}
+
+        <WeekStructureModal
+          open={planOpen}
+          onClose={() => setPlanOpen(false)}
+        />
       </div>
     </div>
   );
 }
-

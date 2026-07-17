@@ -24,6 +24,7 @@ import {
   buildLocationMap,
   buildPlannerCategoryMap,
   buildCategoryEligibilityMap,
+  buildPlannerConstraintsMap,
   prepareSchedulingContext,
   buildSchedulingStrategy,
   prepareCandidates,
@@ -32,7 +33,15 @@ import {
   emitDebugLog,
   buildEngineMessages,
 } from "../helpers/CalendarGenerator";
-import { scoreCandidatesAndRootGoals } from "../helpers/PrioritySorter";
+import {
+  buildPrecedenceEdges,
+  buildPredecessorMap,
+} from "../helpers/Scheduler/precedenceEdges";
+import { buildLeafGraph } from "../helpers/Scheduler/buildLeafGraph";
+import {
+  scoreCandidatesAndRootGoals,
+  computeEffectiveScores,
+} from "../helpers/PrioritySorter";
 import {
   buildAvailableSlots,
   dropPastAvailableSlots,
@@ -186,6 +195,28 @@ export class CalendarGenerator {
     const categoryEligibilityMap = buildCategoryEligibilityMap(
       input.categories ?? [],
     );
+    // Per-planner scheduling constraints (earliest start + allowed times),
+    // resolved down the tree so goal leaves inherit their ancestors' bounds.
+    const plannerConstraintsMap = buildPlannerConstraintsMap(input.planners);
+    // Precedence edges (queue order + dependency prerequisites), transparency
+    // already applied — the third sibling map. The placement gate reads the
+    // predecessor grouping off the scheduling context.
+    const precedenceEdges = buildPrecedenceEdges(
+      input.queues ?? [],
+      input.dependencies ?? [],
+      input.planners,
+    );
+    const predecessorMap = buildPredecessorMap(precedenceEdges);
+
+    // Priority inheritance: a prerequisite inherits the max score of everything
+    // downstream that needs it, so the candidate sort places a high-priority
+    // chain's low-scored prerequisites among high-priority work. Raw urgency
+    // still feeds plannerScores (dashboard); only the scheduler's ordering uses
+    // the inherited scores.
+    const effectiveScores = computeEffectiveScores(
+      urgencyScores,
+      precedenceEdges,
+    );
 
     // Phase 6a: Build available slots over the full scheduling timeline
     const schedulingStartDate = setTimeOnDate(currentDate, "00:00");
@@ -257,19 +288,32 @@ export class CalendarGenerator {
       plannerLocationMap,
       plannerCategoryMap,
       categoryEligibilityMap,
+      plannerConstraintsMap,
+      predecessorMap,
       schedulerRecorder,
       previousById,
     );
 
-    // Phase 9: Prepare candidates (filter root goals, tasks and sort by priority)
+    // Phase 9: Prepare candidates (filter root goals, tasks and sort by
+    // priority). Sorts on the inheritance-adjusted scores so a prerequisite
+    // rides its dependents' urgency.
     const candidates = prepareCandidates(
       input.planners,
       memoizedEventIds,
-      urgencyScores,
+      effectiveScores,
       plannerCategoryMap,
     );
 
-    // Phase 10: Schedule tasks and goals
+    // Phase 10: Build the leaf precedence graph (detour-spliced sequences +
+    // queue/dependency edges + leaf-level inheritance) and schedule.
+    const leafGraph = buildLeafGraph(
+      candidates,
+      input.planners,
+      memoizedEventIds,
+      precedenceEdges,
+      urgencyScores,
+    );
+
     const scheduler = new Scheduler(
       timeSlotManager,
       travelManager,
@@ -284,6 +328,7 @@ export class CalendarGenerator {
       perTemplateMasks,
       plannerLocationMap,
       this.scheduledCategories,
+      leafGraph,
       travelPassRecorder,
     );
 
@@ -347,6 +392,8 @@ export class CalendarGenerator {
       currentDate,
       input.previousEngineMessages ?? [],
       schedulingResult.splitRelaxations,
+      schedulingResult.goalCapRelaxations,
+      schedulingResult.sequenceBreaks,
     );
 
     return {

@@ -9,6 +9,9 @@ import { CaptureProvider } from "../CaptureContext";
 import { CapturePalette } from "../CapturePalette";
 import { SearchProvider } from "../SearchContext";
 import { SearchPalette } from "../SearchPalette";
+import { CornerActions } from "../CornerActions";
+import { ShellOverlayProvider } from "../ShellOverlayContext";
+import { NavHistoryProvider } from "../NavHistoryContext";
 import {
   bezelFrame,
   canvas,
@@ -49,28 +52,33 @@ export function AppShell({
   return (
     <CaptureProvider>
       <SearchProvider>
-        <div className={bezelFrame}>
-          <div className={canvas}>
-            <Backdrop variant={backdrop} />
-            <Grain />
-            <div className={contentRow}>
-              <div className={desktopOnly}>
-                <Sidebar userName={userName} userInitial={userInitial} />
-              </div>
-              <div className={mainColumn}>
-                {children}
-                {assistantSlot}
+        <ShellOverlayProvider>
+          <NavHistoryProvider>
+            <div className={bezelFrame}>
+              <div className={canvas}>
+                <Backdrop variant={backdrop} />
+                <Grain />
+                <div className={contentRow}>
+                  <div className={desktopOnly}>
+                    <Sidebar userName={userName} userInitial={userInitial} />
+                  </div>
+                  <div className={mainColumn}>
+                    <CornerActions />
+                    {children}
+                    {assistantSlot}
+                  </div>
+                </div>
+                <div className={mobileOnly}>
+                  <MobileTabs />
+                </div>
+                <CapturePalette />
+                <SearchPalette />
+                {overlaySlot}
+                {loadingSlot}
               </div>
             </div>
-            <div className={mobileOnly}>
-              <MobileTabs />
-            </div>
-            <CapturePalette />
-            <SearchPalette />
-            {overlaySlot}
-            {loadingSlot}
-          </div>
-        </div>
+          </NavHistoryProvider>
+        </ShellOverlayProvider>
       </SearchProvider>
     </CaptureProvider>
   );

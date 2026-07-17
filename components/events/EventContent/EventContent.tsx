@@ -4,6 +4,7 @@ import { Check, ArrowRight, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { floorMinutes } from "@/utils/calendarUtils";
 import EventPopover from "../EventPopover";
 import EventWrapper from "../EventWrapper";
@@ -14,12 +15,21 @@ import {
   handlePostponeTask,
   applyOccurrenceDelete,
   applySeriesDelete,
+  applyOccurrenceMove,
+  applySeriesMove,
+  applyEventResize,
+  applyEventStartEdit,
 } from "@/utils/calendarEventHandlers";
 import {
   occurrenceKeyFromEventId,
   plannerIdFromEventId,
   planIsRecurring,
+  hasMovedException,
 } from "@/utils/planRecurrence";
+import {
+  isChunkEventId,
+  isCompletedSegmentEventId,
+} from "@/utils/taskSplitting";
 import { RecurrenceScopeModal } from "../RecurrenceScopeModal";
 import { PlannerType } from "@/types/prisma";
 import { hoverActions, actionGroup, iconButton } from "./EventContent.css";
@@ -29,7 +39,9 @@ interface EventContentProps {
 }
 
 const EventContent: React.FC<EventContentProps> = ({ event }) => {
-  const { planner, updateAll, calendar, userSettings } = useCalendarProvider();
+  const { planner, updateAll, updatePlannerArray, calendar, userSettings } =
+    useCalendarProvider();
+  const isMobile = useIsMobile();
   const { plannerType, parentId, completedStartTime, completedEndTime } =
     event.extendedProps;
   const elementRef = useRef<HTMLDivElement>(null);
@@ -39,6 +51,10 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
   const [eventRect, setEventRect] = useState<DOMRect | null>(null);
   const [onHover, setOnHover] = useState<boolean>(false);
   const [showDeleteScope, setShowDeleteScope] = useState<boolean>(false);
+  const [pendingMoveScope, setPendingMoveScope] = useState<{
+    newStart: Date;
+    deltaMs: number;
+  } | null>(null);
 
   // Completion is derived from the event data; the override only bridges the
   // gap between the optimistic click and the regen/sync confirming it. State
@@ -79,6 +95,22 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
 
   const onDelete = () => {
     if (isRecurringOccurrence) {
+      // An already-customized occurrence skips the prompt — deleting a moved
+      // one-off always means "just this one".
+      if (
+        occurrencePlanId &&
+        occurrenceKey !== null &&
+        hasMovedException(occurrencePlan.recurrenceExceptions, occurrenceKey)
+      ) {
+        applyOccurrenceDelete(
+          updateAll,
+          occurrencePlanId,
+          occurrenceKey,
+          event.id,
+        );
+        setShowPopover(false);
+        return;
+      }
       setShowPopover(false);
       setShowDeleteScope(true);
       return;
@@ -111,6 +143,46 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
 
   const onPostpone = () => handlePostponeTask(event, calendar, updateAll);
 
+  // Engine-materialized slices of a split task: a form "end" edit would write
+  // the chunk's length into the task's total duration.
+  const isDerivedSlice =
+    isChunkEventId(event.id) || isCompletedSegmentEventId(event.id);
+  const canEditEnd =
+    !isCompleted && !isDerivedSlice && !event.extendedProps.isTemplateItem;
+  // Task/goal starts are engine-placed; only plans anchor their own start.
+  const canEditStart = canEditEnd && plannerType === PlannerType.plan;
+
+  // Duration change for tasks/goals triggers an inline engine regen, so the
+  // tile may legitimately re-place to a new slot after the edit.
+  const onEditEndTime = (newEnd: Date) => {
+    if (!event.start) return;
+    applyEventResize(updateAll, event.id, new Date(event.start), newEnd);
+  };
+
+  const onEditStartTime = (newStart: Date) => {
+    if (!event.start) return;
+    if (isRecurringOccurrence && occurrencePlanId && occurrenceKey !== null) {
+      // An already-customized occurrence skips the prompt — moving a moved
+      // one-off always means "just this one".
+      if (hasMovedException(occurrencePlan.recurrenceExceptions, occurrenceKey)) {
+        applyOccurrenceMove(
+          updatePlannerArray,
+          occurrencePlanId,
+          occurrenceKey,
+          newStart,
+        );
+        return;
+      }
+      setShowPopover(false);
+      setPendingMoveScope({
+        newStart,
+        deltaMs: newStart.getTime() - new Date(event.start).getTime(),
+      });
+      return;
+    }
+    applyEventStartEdit(updatePlannerArray, event.id, newStart);
+  };
+
   return (
     <EventWrapper
       event={event}
@@ -125,7 +197,10 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
       showPopover={showPopover}
       setShowPopover={setShowPopover}
     >
-      {onHover &&
+      {/* Touch taps fire an emulated mouseenter, so without the gate these
+          would appear on tap and linger — mobile gets the bottom sheet. */}
+      {!isMobile &&
+        onHover &&
         elementHeight > 40 &&
         elementWidth > 70 &&
         !event.extendedProps.isTemplateItem && (
@@ -170,6 +245,8 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
           onDelete={onDelete}
           onComplete={onComplete}
           onPostpone={onPostpone}
+          onEditStartTime={canEditStart ? onEditStartTime : undefined}
+          onEditEndTime={canEditEnd ? onEditEndTime : undefined}
           setShowPopover={setShowPopover}
         />
       )}
@@ -197,6 +274,36 @@ const EventContent: React.FC<EventContentProps> = ({ event }) => {
             setShowDeleteScope(false);
           }}
           onCancel={() => setShowDeleteScope(false)}
+        />
+      )}
+
+      {isRecurringOccurrence && (
+        <RecurrenceScopeModal
+          open={pendingMoveScope !== null}
+          mode="move"
+          planTitle={occurrencePlan.title}
+          onThisOccurrence={() => {
+            if (pendingMoveScope && occurrencePlanId && occurrenceKey !== null) {
+              applyOccurrenceMove(
+                updatePlannerArray,
+                occurrencePlanId,
+                occurrenceKey,
+                pendingMoveScope.newStart,
+              );
+            }
+            setPendingMoveScope(null);
+          }}
+          onAllOccurrences={() => {
+            if (pendingMoveScope && occurrencePlanId) {
+              applySeriesMove(
+                updatePlannerArray,
+                occurrencePlanId,
+                pendingMoveScope.deltaMs,
+              );
+            }
+            setPendingMoveScope(null);
+          }}
+          onCancel={() => setPendingMoveScope(null)}
         />
       )}
     </EventWrapper>

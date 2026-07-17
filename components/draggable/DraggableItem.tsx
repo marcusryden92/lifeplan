@@ -31,6 +31,7 @@ export default function DraggableItem({
     currentlyClickedItem,
     setCurrentlyClickedItem,
     displayDragBox,
+    touchDropTarget,
     focusedTask,
     droppedTask,
     flashDroppedTask,
@@ -87,9 +88,10 @@ export default function DraggableItem({
   const isGrabbing = !!currentlyClickedItem && displayDragBox;
   const isDropTarget =
     isGrabbing &&
-    currentlyClickedItem?.taskId !== taskId &&
-    currentlyHoveredItem === taskId &&
-    currentlyClickedItem?.parentId !== taskId;
+    ((currentlyClickedItem?.taskId !== taskId &&
+      currentlyHoveredItem === taskId &&
+      currentlyClickedItem?.parentId !== taskId) ||
+      (touchDropTarget?.kind === "nest" && touchDropTarget.taskId === taskId));
 
   const isSelected = focusedTask === taskId;
   const cls = [

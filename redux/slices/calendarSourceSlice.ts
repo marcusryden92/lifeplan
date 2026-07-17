@@ -4,6 +4,8 @@ import {
   EventTemplate,
   Category,
   CategoryTimeWindow,
+  Queue,
+  PlannerDependency,
 } from "@/types/prisma";
 
 // User-authored scheduling inputs. Everything here is edited by the user (or
@@ -15,6 +17,8 @@ type CalendarSourceState = {
   planner: Planner[];
   template: EventTemplate[];
   categories: Category[];
+  queues: Queue[];
+  dependencies: PlannerDependency[];
   // Flipped to true once useFetchCalendarData seeds the store. Pages gate
   // their empty-state UI on this so a fresh load doesn't briefly read as
   // "no items" / "no categories" before the fetch returns.
@@ -25,6 +29,8 @@ const initialState: CalendarSourceState = {
   planner: [],
   template: [],
   categories: [],
+  queues: [],
+  dependencies: [],
   isLoaded: false,
 };
 
@@ -41,11 +47,15 @@ const calendarSourceSlice = createSlice({
         planner: Planner[];
         template: EventTemplate[];
         categories: Category[];
+        queues: Queue[];
+        dependencies: PlannerDependency[];
       }>,
     ) => {
       state.planner = action.payload.planner;
       state.template = action.payload.template;
       state.categories = action.payload.categories;
+      state.queues = action.payload.queues;
+      state.dependencies = action.payload.dependencies;
     },
     // The engine-run write-back path: the thunk applies the caller's edits
     // to planner/template before generating, and the edited arrays land here
@@ -66,6 +76,12 @@ const calendarSourceSlice = createSlice({
     },
     setCategories: (state, action: PayloadAction<Category[]>) => {
       state.categories = action.payload;
+    },
+    setQueues: (state, action: PayloadAction<Queue[]>) => {
+      state.queues = action.payload;
+    },
+    setDependencies: (state, action: PayloadAction<PlannerDependency[]>) => {
+      state.dependencies = action.payload;
     },
     // Insert-or-replace by id. Used by optimistic updates so the caller doesn't
     // have to snapshot the whole array and replay it after the server confirms.
@@ -115,6 +131,8 @@ export const {
   setPlannerAndTemplate,
   markCalendarLoaded,
   setCategories,
+  setQueues,
+  setDependencies,
   upsertCategory,
   removeCategory,
   upsertTemplate,

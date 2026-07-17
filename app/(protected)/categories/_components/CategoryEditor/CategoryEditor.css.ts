@@ -99,22 +99,17 @@ export const headerName = style([
   },
 ]);
 
+// The <Input variant="titleInline"> supplies the accent underline + box reset;
+// this layers the page-title typography and the height matched to headerName so
+// toggling rename in/out doesn't shift layout.
 export const headerNameInput = style([
   display.pageTitle,
   {
     lineHeight: `${NAME_LINE_HEIGHT}px`,
-    color: vars.ink,
-    background: "transparent",
-    border: "none",
-    outline: "none",
-    padding: 0,
-    margin: 0,
     flex: 1,
     minWidth: 0,
     display: "block",
-    boxSizing: "content-box",
     height: NAME_LINE_HEIGHT,
-    borderBottom: `${NAME_BORDER}px solid ${vars.accent.primary}`,
   },
 ]);
 
@@ -172,20 +167,6 @@ export const fieldGrid = style({
     [media.mobile]: { gridTemplateColumns: "1fr" },
   },
 });
-
-export const fieldStack = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["2"],
-  minWidth: 0,
-});
-
-export const fieldLabel = style([
-  fieldLabelText,
-  {
-    transition: themeTransition,
-  },
-]);
 
 export const swatchRow = style({
   display: "flex",
@@ -413,30 +394,10 @@ export const emptyEditor = style([
   },
 ]);
 
-export const windowExceptionsList = style({
+export const exceptionsBlock = style({
   display: "flex",
   flexDirection: "column",
-  gap: space["2.5"],
-  marginTop: space["2"],
-});
-
-export const windowExceptionBlock = style({
-  display: "flex",
-  flexDirection: "column",
+  alignItems: "flex-start",
   gap: space["2"],
-  padding: space["2.5"],
-  border: `1px solid ${vars.rule}`,
-  borderRadius: radii.md,
+  marginTop: space["4"],
 });
-
-export const windowExceptionHeading = style([
-  text.bodySm,
-  {
-    fontWeight: 600,
-    color: vars.ink,
-    fontVariantNumeric: "tabular-nums",
-    display: "flex",
-    alignItems: "center",
-    gap: space["1.5"],
-  },
-]);
