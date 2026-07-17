@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles } from "lucide-react";
+import { useItem } from "../ItemContext";
 import {
   tabsStrip,
   tab,
   tabActive,
   tabCount,
   tabDisabled,
-  tabSpacer,
-  assistantTrigger,
 } from "./ItemTabs.css";
+
+import { PrioritySection } from "../IdentityCard/PrioritySection";
 
 interface Tab {
   key: string;
@@ -25,17 +25,17 @@ interface ItemTabsProps {
   itemId: string;
   subtaskCount: number;
   subtasksEnabled: boolean;
-  onOpenAssistant?: () => void;
 }
 
 export function ItemTabs({
   itemId,
   subtaskCount,
   subtasksEnabled,
-  onOpenAssistant,
 }: ItemTabsProps) {
   const pathname = usePathname();
   const base = `/items/${itemId}`;
+
+  const { item } = useItem();
 
   const tabs: Tab[] = [
     { key: "overview", label: "Overview", href: base },
@@ -90,20 +90,7 @@ export function ItemTabs({
           </Link>
         );
       })}
-      {onOpenAssistant && (
-        <>
-          <span className={tabSpacer} />
-          <button
-            type="button"
-            className={assistantTrigger}
-            onClick={onOpenAssistant}
-            aria-label="Open AI assistant"
-          >
-            <Sparkles size={13} strokeWidth={2} />
-            <span>AI assistant</span>
-          </button>
-        </>
-      )}
+      {item.plannerType !== "plan" && <PrioritySection />}
     </div>
   );
 }

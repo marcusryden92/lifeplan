@@ -180,7 +180,6 @@ export const deleteDock = style({
   marginBottom: `-${space["7"]}px`,
   flexShrink: 0,
   zIndex: zIndex.docked,
-  background: vars.paper,
   borderTop: `1px solid ${vars.rule}`,
   paddingTop: space["2.5"],
   paddingBottom: space["2.5"],

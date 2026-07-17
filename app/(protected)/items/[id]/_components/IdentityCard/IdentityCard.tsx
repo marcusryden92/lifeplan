@@ -1,6 +1,5 @@
 "use client";
 
-import { PrioritySection } from "./PrioritySection";
 import { TypePickerSection } from "./TypePickerSection";
 import { CategorySection } from "./CategorySection";
 import { DateSection } from "./DateSection";
@@ -12,12 +11,17 @@ import { RecurrenceSection } from "./RecurrenceSection";
 import { SplittingSection } from "./SplittingSection";
 import { DailyLimitSection } from "./DailyLimitSection";
 import { AllowedTimesSection } from "./AllowedTimesSection";
-import { card, cardBody, fieldGrid, doubleGrid, rulesSlot } from "./IdentityCard.css";
+import {
+  card,
+  cardBody,
+  fieldGrid,
+  doubleGrid,
+  rulesSlot,
+} from "./IdentityCard.css";
 
 export function IdentityCard() {
   return (
     <div className={card}>
-      <PrioritySection />
       <div className={cardBody}>
         <div className={fieldGrid}>
           <TypePickerSection />
@@ -25,8 +29,8 @@ export function IdentityCard() {
             <CategorySection /> <ColorSection />
           </div>
           <DateSection />
-          <EarliestStartSection />
           <DurationSection />
+          <EarliestStartSection />
           <LocationSection />
           <div className={rulesSlot}>
             <SplittingSection />

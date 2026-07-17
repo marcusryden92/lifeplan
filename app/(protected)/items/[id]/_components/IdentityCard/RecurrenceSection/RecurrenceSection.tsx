@@ -63,9 +63,10 @@ export function RecurrenceSection() {
   const { item, updateField } = useItem();
   const { weekStartDay } = useCalendarProvider();
 
+  const rule = parsePlanRecurrence(item.recurrence);
+
   if (item.plannerType !== "plan") return null;
 
-  const rule = parsePlanRecurrence(item.recurrence);
   const preset = presetFromRule(rule);
 
   const applyRule = (next: PlanRecurrenceRule | null) => {
@@ -78,20 +79,26 @@ export function RecurrenceSection() {
       label="Repeats"
       enabled={rule !== null}
       summary={recurrenceSummary(preset, rule)}
+      onToggle={(checked) => {
+        if (checked) {
+          applyRule(ruleFromPreset("daily", null));
+        } else {
+          applyRule(null);
+        }
+      }}
     >
-      <FieldStack label="Repeats" size="sm">
-        <Combobox
-          value={preset}
-          options={(Object.keys(PRESET_LABELS) as RecurrencePreset[]).map(
-            (key) => ({ value: key, label: PRESET_LABELS[key] }),
-          )}
-          onChange={(next) =>
-            applyRule(ruleFromPreset(next, rule?.until ?? null))
-          }
-          width="150px"
-          ariaLabel="Recurrence"
-        />
-      </FieldStack>
+      <Combobox
+        value={preset}
+        options={(Object.keys(PRESET_LABELS) as RecurrencePreset[]).map(
+          (key) => ({ value: key, label: PRESET_LABELS[key] }),
+        )}
+        onChange={(next) =>
+          applyRule(ruleFromPreset(next, rule?.until ?? null))
+        }
+        width="150px"
+        ariaLabel="Recurrence"
+      />
+
       {rule && (
         <FieldStack label="Until (optional)" size="sm">
           <DateTimePicker

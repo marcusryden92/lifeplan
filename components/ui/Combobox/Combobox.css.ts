@@ -31,6 +31,8 @@ export const comboboxTrigger = style({
   },
 });
 
+export const comboSmallPadding = style({ padding: space["1"] });
+
 export const comboboxTriggerDisabled = style({
   cursor: "not-allowed",
   opacity: 0.5,

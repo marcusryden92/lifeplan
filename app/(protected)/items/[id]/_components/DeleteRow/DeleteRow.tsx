@@ -17,7 +17,7 @@ export function DeleteRow() {
         size="sm"
         onClick={requestDelete}
         aria-label="Delete item"
-        style={{ marginLeft: `-${space["3.5"]}` }}
+        style={{ marginLeft: `-${space["3.5"]}`, minHeight: 37 }}
       >
         <Trash2 size={12} strokeWidth={2.2} />
         Delete item

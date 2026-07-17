@@ -10,11 +10,8 @@ export function EarliestStartSection() {
   const { item, updateField } = useItem();
   const { weekStartDay } = useCalendarProvider();
 
-  // Plans are fixed anchors — they schedule at `starts`, never dynamically.
-  if (item.plannerType === "plan") return null;
-
   return (
-    <FieldStack label="Earliest start">
+    <FieldStack label="Earliest start" disabled={item.plannerType === "plan"}>
       <div
         style={{
           display: "flex",

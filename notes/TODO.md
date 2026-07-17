@@ -1,11 +1,9 @@
 # Emergent issues
 - Library layout and filter functionality on mobile
-- All bottom sheet modals using the same closing animation as calendar engine (all bottom sheets using the same component really)
-- Give bottomsheet modal proper bottom padding
+
 - Display 3 days at a time in WeekStructureModal like in calendar?
 - Locations view bottom and top padding for mobile and general layout and functionality?
 - "Just this occurence" modals being tailored for mobile as well
-
 
 # P5 — Medium features
 

@@ -16,6 +16,8 @@ interface FieldStackProps {
   full?: boolean;
   className?: string;
   children: ReactNode;
+  hidden?: boolean;
+  disabled?: boolean;
 }
 
 // Label stacked above an arbitrary control. Deliberately a <div>, not the
@@ -27,13 +29,22 @@ export function FieldStack({
   full,
   className,
   children,
+  hidden = false,
+  disabled = false,
 }: FieldStackProps) {
   const classes = [fieldStack[size], full && fieldStackFull, className]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <div className={classes}>
+    <div
+      className={classes}
+      style={{
+        visibility: hidden ? "hidden" : "visible",
+        opacity: disabled ? "50%" : "100%",
+        pointerEvents: disabled ? "none" : "all",
+      }}
+    >
       <span className={fieldLabel[size]}>{label}</span>
       {children}
     </div>

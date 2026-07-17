@@ -7,6 +7,7 @@ export const tabsStrip = style({
   marginTop: space["6"],
   borderBottom: `1px solid ${vars.rule}`,
   flexWrap: "wrap",
+  alignItems: "flex-end",
 });
 
 export const tab = style([

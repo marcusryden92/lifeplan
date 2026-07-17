@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useMemo,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
+import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Check, SquarePen } from "lucide-react";
 import { Button, Caption, Input, Loader } from "@/components/ui";
@@ -28,10 +23,7 @@ import {
 import { plannerIsCompleted } from "@/utils/plannerCompletion";
 import { setGoalIsReady } from "@/utils/goal-handlers/toggleGoalIsReady";
 import type { Planner } from "@/types/prisma";
-import {
-  DependencyGatePopover,
-  type GateEntry,
-} from "./DependencyGatePopover";
+import { DependencyGatePopover, type GateEntry } from "./DependencyGatePopover";
 import {
   completedSubtaskDuration,
   totalSubtaskDuration,
@@ -41,7 +33,7 @@ import type { PlannerType } from "@/generated/client";
 
 import { ItemProvider } from "../ItemContext";
 import { ItemTabs } from "../ItemTabs";
-import { ConfirmModal, useAssistant } from "@/components/ui";
+import { ConfirmModal } from "@/components/ui";
 import { READY_MESSAGE_MS } from "../../_constants";
 import {
   page,
@@ -88,7 +80,6 @@ export default function ItemDetailLayout({
   );
   const [editingTitle, setEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
-  const { openAssistant } = useAssistant();
 
   const item = useMemo(
     () => planner.find((p) => p.id === itemId),
@@ -172,7 +163,8 @@ export default function ItemDetailLayout({
   // "Subtasks" in the item detail view refers to actionable (leaf) descendants —
   // intermediate branches aren't work you check off, so they don't count.
   const leafSubtasks = useMemo(() => {
-    if (!item || item.plannerType !== "goal" || subtasks.length === 0) return [];
+    if (!item || item.plannerType !== "goal" || subtasks.length === 0)
+      return [];
     return getTreeBottomLayer(planner, item.id);
   }, [item, planner, subtasks.length]);
   const totalSubtasks = leafSubtasks.length;
@@ -425,108 +417,107 @@ export default function ItemDetailLayout({
           <div className={scrollArea}>
             <div className={innerWrap}>
               <div className={backRow}>
-              <button
-                type="button"
-                className={backLink}
-                onClick={() => router.push("/library")}
-              >
-                <ArrowLeft size={12} strokeWidth={2.4} />
-                Library
-              </button>
-            </div>
-
-            <div className={titleBlock}>
-              <div className={editableTitleWrap}>
-                {editingTitle ? (
-                  <Input
-                    autoFocus
-                    variant="titleInline"
-                    className={titleEditInput}
-                    value={draftTitle}
-                    onChange={(e) => setDraftTitle(e.target.value)}
-                    onBlur={commitTitle}
-                    onKeyDown={onTitleKey}
-                  />
-                ) : (
-                  <div className={titleHoverRow}>
-                    <h1
-                      className={`${titleStyle} ${titleClickable}`}
-                      onClick={beginEditTitle}
-                      title="Click to rename"
-                    >
-                      {item.title}
-                    </h1>
-                    <button
-                      type="button"
-                      className={renamePencil}
-                      onClick={beginEditTitle}
-                      aria-label="Rename"
-                    >
-                      <SquarePen size={16} strokeWidth={2} />
-                    </button>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  className={backLink}
+                  onClick={() => router.push("/library")}
+                >
+                  <ArrowLeft size={12} strokeWidth={2.4} />
+                  Library
+                </button>
               </div>
 
-              <div className={headActions}>
-                {showReadyToggle && (
-                  <div className={readyCluster}>
-                    <Button
-                      variant={item.isReady ? "solid" : "glass"}
-                      size="sm"
-                      onClick={onReadyClick}
-                      style={{
-                        minWidth: 124,
-                        justifyContent: "center",
-                        transition: interactiveTransition(
-                          "background-color",
-                          "border-color",
-                          "color",
-                        ),
-                        ...(item.isReady
-                          ? {
-                              background: vars.status.success,
-                              borderColor: vars.status.success,
-                              color: vars.textOnAccent,
-                            }
-                          : {}),
-                      }}
-                    >
-                      <Check size={12} strokeWidth={2.4} />
-                      {item.isReady ? "Ready" : "Mark ready"}
-                    </Button>
-                    {!item.isReady && (
-                      <DependencyGatePopover
-                        mode="ready"
-                        entries={dependencyBlockerEntries}
-                        onApply={applyReadyShortcut}
-                        onDisconnect={disconnectDependency}
-                      />
-                    )}
-                    {item.isReady && (
-                      <DependencyGatePopover
-                        mode="unready"
-                        entries={readyDependentEntries}
-                        onApply={applyUnreadyShortcut}
-                        onDisconnect={disconnectDependency}
-                      />
-                    )}
-                    {readyMessage && (
-                      <div className={readyHint}>{readyMessage}</div>
-                    )}
-                  </div>
-                )}
+              <div className={titleBlock}>
+                <div className={editableTitleWrap}>
+                  {editingTitle ? (
+                    <Input
+                      autoFocus
+                      variant="titleInline"
+                      className={titleEditInput}
+                      value={draftTitle}
+                      onChange={(e) => setDraftTitle(e.target.value)}
+                      onBlur={commitTitle}
+                      onKeyDown={onTitleKey}
+                    />
+                  ) : (
+                    <div className={titleHoverRow}>
+                      <h1
+                        className={`${titleStyle} ${titleClickable}`}
+                        onClick={beginEditTitle}
+                        title="Click to rename"
+                      >
+                        {item.title}
+                      </h1>
+                      <button
+                        type="button"
+                        className={renamePencil}
+                        onClick={beginEditTitle}
+                        aria-label="Rename"
+                      >
+                        <SquarePen size={16} strokeWidth={2} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                <div className={headActions}>
+                  {showReadyToggle && (
+                    <div className={readyCluster}>
+                      <Button
+                        variant={item.isReady ? "solid" : "glass"}
+                        size="sm"
+                        onClick={onReadyClick}
+                        style={{
+                          minWidth: 124,
+                          justifyContent: "center",
+                          transition: interactiveTransition(
+                            "background-color",
+                            "border-color",
+                            "color",
+                          ),
+                          ...(item.isReady
+                            ? {
+                                background: vars.status.success,
+                                borderColor: vars.status.success,
+                                color: vars.textOnAccent,
+                              }
+                            : {}),
+                        }}
+                      >
+                        <Check size={12} strokeWidth={2.4} />
+                        {item.isReady ? "Ready" : "Mark ready"}
+                      </Button>
+                      {!item.isReady && (
+                        <DependencyGatePopover
+                          mode="ready"
+                          entries={dependencyBlockerEntries}
+                          onApply={applyReadyShortcut}
+                          onDisconnect={disconnectDependency}
+                        />
+                      )}
+                      {item.isReady && (
+                        <DependencyGatePopover
+                          mode="unready"
+                          entries={readyDependentEntries}
+                          onApply={applyUnreadyShortcut}
+                          onDisconnect={disconnectDependency}
+                        />
+                      )}
+                      {readyMessage && (
+                        <div className={readyHint}>{readyMessage}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
 
-            <ItemTabs
-              itemId={item.id}
-              subtaskCount={totalSubtasks}
-              subtasksEnabled={isGoal}
-              onOpenAssistant={() => openAssistant({ focusItemId: item.id })}
-            />
+              <ItemTabs
+                itemId={item.id}
+                subtaskCount={totalSubtasks}
+                subtasksEnabled={isGoal}
+              />
 
-            <div className={tabBodyWrap}>{children}</div>
+              <div className={tabBodyWrap}>{children}</div>
             </div>
           </div>
 
@@ -538,7 +529,8 @@ export default function ItemDetailLayout({
                 Are you sure you want to delete <strong>{item.title}</strong>?
                 {isGoal && totalSubtasks > 0 && (
                   <>
-                    {" "}This will also delete {totalSubtasks} subtask
+                    {" "}
+                    This will also delete {totalSubtasks} subtask
                     {totalSubtasks !== 1 ? "s" : ""}.
                   </>
                 )}
@@ -585,7 +577,6 @@ export default function ItemDetailLayout({
             onCancel={() => setShowResetLocationsConfirm(false)}
             onConfirm={confirmResetSubgoalLocations}
           />
-
         </div>
       </ItemProvider>
     </DraggableContextProvider>

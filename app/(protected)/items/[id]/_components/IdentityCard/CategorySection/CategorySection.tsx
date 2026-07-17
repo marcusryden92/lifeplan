@@ -65,6 +65,7 @@ export function CategorySection() {
         options={categoryOptions}
         onChange={(v) => changeCategory(v)}
         maxWidth="100%"
+        small
         renderValue={() =>
           category ? (
             <CategoryBadge color={category.color ?? "#888"}>

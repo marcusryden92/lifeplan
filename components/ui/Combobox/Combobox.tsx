@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import {
   comboboxWrap,
+  comboSmallPadding,
   comboboxTrigger,
   comboboxTriggerDisabled,
   comboboxMenu,
@@ -32,6 +33,7 @@ interface ComboboxProps<V extends string | null> {
   // until it hits the cap (pass "100%" to bound it to the field column).
   maxWidth?: number | string;
   disabled?: boolean;
+  small?: boolean;
 }
 
 export function Combobox<V extends string | null>({
@@ -44,6 +46,7 @@ export function Combobox<V extends string | null>({
   width,
   maxWidth,
   disabled = false,
+  small = false,
 }: ComboboxProps<V>) {
   const [open, setOpen] = useState(false);
   const current = options.find((o) => o.value === value);
@@ -76,7 +79,7 @@ export function Combobox<V extends string | null>({
         <Popover.Trigger asChild>
           <button
             type="button"
-            className={`${comboboxTrigger} ${disabled ? comboboxTriggerDisabled : ""}`}
+            className={`${comboboxTrigger} ${disabled ? comboboxTriggerDisabled : ""} ${small ? comboSmallPadding : ""}`}
             aria-haspopup="listbox"
             aria-label={ariaLabel}
             aria-disabled={disabled}
@@ -93,7 +96,9 @@ export function Combobox<V extends string | null>({
                 whiteSpace: "nowrap",
               }}
             >
-              {renderValue ? renderValue(current) : current?.label ?? placeholder}
+              {renderValue
+                ? renderValue(current)
+                : (current?.label ?? placeholder)}
             </span>
             <ChevronDown
               size={12}

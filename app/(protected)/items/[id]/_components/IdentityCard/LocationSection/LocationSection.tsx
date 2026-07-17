@@ -66,7 +66,7 @@ export function LocationSection() {
   const dropdownDisabled = categoryHasLocation && !locationOverrideEnabled;
 
   return (
-    <FieldStack label="Place" full>
+    <FieldStack label="Location" full>
       <div className={placeRow}>
         {categoryHasLocation && (
           <div>

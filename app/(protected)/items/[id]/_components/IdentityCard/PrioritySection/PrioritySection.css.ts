@@ -13,10 +13,10 @@ export const cardHeader = style({
   alignItems: "center",
   justifyContent: "space-between",
   gap: space["3"],
-  padding: "12px 0",
-  borderBottom: `1px solid ${vars.rule}`,
+  paddingBottom: `${space["2"]}px`,
   transition: themeTransition,
   flexWrap: "wrap",
+  marginLeft: "auto",
 });
 
 export const cardTitle = style([

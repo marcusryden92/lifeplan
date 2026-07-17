@@ -121,9 +121,7 @@ export default function ItemOverviewPage() {
                 aria-pressed={isCompleted}
                 aria-label={isCompleted ? "Mark incomplete" : "Mark complete"}
                 title={
-                  completionLocked
-                    ? "Mark ready before completing"
-                    : undefined
+                  completionLocked ? "Mark ready before completing" : undefined
                 }
               >
                 {isCompleted && <Check size={14} strokeWidth={3} />}
@@ -157,8 +155,8 @@ export default function ItemOverviewPage() {
         </div>
         <div className={rightCol}>
           <NextOnCalendarCard />
-          <ConnectionsCard />
           <EngineNotesCard />
+          <ConnectionsCard />
         </div>
       </div>
 
