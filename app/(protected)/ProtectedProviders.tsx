@@ -1,15 +1,22 @@
 "use client";
 
 import { type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import StoreProvider from "@/context/StoreProvider";
 import UserProvider from "@/context/UserProvider";
 import CalendarProvider from "@/context/CalendarProvider";
 import type { AiMode } from "@/generated/client";
 import { AppShell, AssistantProvider, AiAccessProvider } from "@/components/ui";
 import { AppLoadingScreen } from "@/components/ui/AppLoadingScreen";
-import { GlobalAssistant } from "@/components/draft/GlobalAssistant";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { OnboardingOverlay } from "./onboarding/OnboardingOverlay";
+
+// On-demand modal: lazy so react-markdown + draft views stay out of every route's compile.
+const GlobalAssistant = dynamic(
+  () =>
+    import("@/components/draft/GlobalAssistant").then((m) => m.GlobalAssistant),
+  { ssr: false },
+);
 
 export function ProtectedProviders({
   children,

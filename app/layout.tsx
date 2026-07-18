@@ -4,6 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import { auth } from "@/auth";
 import { fontDisplay, fontUI } from "@/lib/theme/fonts";
 import { ThemeProvider } from "@/components/ui/ThemeProvider";
+import "@/lib/theme/global.css";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });

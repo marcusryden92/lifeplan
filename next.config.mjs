@@ -4,6 +4,9 @@ const withVanillaExtract = createVanillaExtractPlugin();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    optimizePackageImports: ["@/components/ui", "@/lib/theme"],
+  },
   webpack: (config, { isServer, webpack }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
