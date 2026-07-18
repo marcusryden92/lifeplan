@@ -1,5 +1,6 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { DURATIONS, media } from "@/lib/theme";
+import { media } from "@/lib/theme/scales";
+import { DURATIONS } from "@/lib/theme/transitions";
 
 
 export const layout = style({

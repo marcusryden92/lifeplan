@@ -1,5 +1,8 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, text, media } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media } from "@/lib/theme/scales";
+import { text } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 // Two field-grid columns: toggle on the left, chunk boxes on the right. The
 // boxes sit beside the toggle rather than under it, so enabling splitting does

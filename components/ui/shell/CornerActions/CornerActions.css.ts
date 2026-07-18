@@ -1,13 +1,8 @@
 import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  buttonTransition,
-  backdropFilters,
-  radii,
-  zIndex,
-  media,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, zIndex, media } from "@/lib/theme/scales";
+import { backdropFilters } from "@/lib/theme/effects";
+import { buttonTransition } from "@/lib/theme/transitions";
 
 const SIZE = 44;
 

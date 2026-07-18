@@ -1,18 +1,11 @@
 ﻿import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  themeDark,
-  popover,
-  backdropFilters,
-  interactiveTransition,
-  radii,
-  display,
-  text,
-  caption,
-  fieldLabel,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { themeDark } from "@/lib/theme/themes.css";
+import { space, radii } from "@/lib/theme/scales";
+import { popover } from "@/lib/theme/recipes.css";
+import { display, text, caption, fieldLabel } from "@/lib/theme/typography.css";
+import { backdropFilters } from "@/lib/theme/effects";
+import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
 
 const FADE_MS = 160;
 

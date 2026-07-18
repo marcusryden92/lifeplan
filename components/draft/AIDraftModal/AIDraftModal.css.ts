@@ -1,15 +1,8 @@
 import { createVar, style, globalStyle } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  radii,
-  zIndex,
-  media,
-  display,
-  text,
-  fieldLabel,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, zIndex, media } from "@/lib/theme/scales";
+import { display, text, fieldLabel } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const MODAL_FADE_MS = 220;
 

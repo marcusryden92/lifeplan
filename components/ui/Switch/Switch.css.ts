@@ -1,5 +1,7 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, interactive2Transition, radii } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { radii } from "@/lib/theme/scales";
+import { interactive2Transition } from "@/lib/theme/transitions";
 
 export const root = style({
   position: "relative",

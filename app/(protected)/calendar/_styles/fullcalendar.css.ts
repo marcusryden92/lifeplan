@@ -1,5 +1,7 @@
 import { globalStyle } from "@vanilla-extract/css";
-import { vars, themeTransition, media, space } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { media, space } from "@/lib/theme/scales";
+import { themeTransition } from "@/lib/theme/transitions";
 
 const ROOT = ".circadium-calendar";
 

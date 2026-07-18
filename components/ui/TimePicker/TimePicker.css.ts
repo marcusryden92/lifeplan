@@ -1,13 +1,8 @@
 import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  radii,
-  zIndex,
-  formInput,
-  popover,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, zIndex } from "@/lib/theme/scales";
+import { formInput, popover } from "@/lib/theme/recipes.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const wrap = style({
   display: "inline-block",

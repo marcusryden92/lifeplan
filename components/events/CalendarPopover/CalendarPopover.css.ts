@@ -1,16 +1,9 @@
 ﻿import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  interactiveTransition,
-  radii,
-  borderWidth,
-  display,
-  text,
-  iconBtn,
-  media,
-  fieldLabel,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, borderWidth, media } from "@/lib/theme/scales";
+import { iconBtn } from "@/lib/theme/recipes.css";
+import { display, text, fieldLabel } from "@/lib/theme/typography.css";
+import { interactiveTransition } from "@/lib/theme/transitions";
 
 // Layout-only â€” the popover() recipe owns the glass surface (fill, blur,
 // stroke, shadow, radius). This file adds the calendar-popover-specific

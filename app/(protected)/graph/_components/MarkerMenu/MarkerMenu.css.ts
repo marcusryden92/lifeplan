@@ -1,13 +1,8 @@
 import { style, globalStyle } from "@vanilla-extract/css";
-import {
-  vars,
-  space,
-  radii,
-  text,
-  caption,
-  interactiveTransition,
-  themeTransition,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii } from "@/lib/theme/scales";
+import { text, caption } from "@/lib/theme/typography.css";
+import { interactiveTransition, themeTransition } from "@/lib/theme/transitions";
 
 export const trigger = style([
   text.bodySm,

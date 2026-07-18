@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
-import { vars, radii, zIndex, space } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { radii, zIndex, space } from "@/lib/theme/scales";
 
 export const container = style({
   flex: 1,

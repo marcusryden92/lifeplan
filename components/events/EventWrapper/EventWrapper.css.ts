@@ -1,5 +1,7 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { vars, backdropFilters, radii, space } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { radii, space } from "@/lib/theme/scales";
+import { backdropFilters } from "@/lib/theme/effects";
 
 // Surface fill, template border, and trespass borders stay inline in the
 // component — they derive from the per-event tint and engine trespass flags.

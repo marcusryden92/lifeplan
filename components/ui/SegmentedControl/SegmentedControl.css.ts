@@ -1,5 +1,7 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, DURATIONS, radii } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii } from "@/lib/theme/scales";
+import { DURATIONS } from "@/lib/theme/transitions";
 
 export const segmentedControl = style({
   position: "relative",

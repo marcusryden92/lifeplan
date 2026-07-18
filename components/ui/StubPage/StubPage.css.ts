@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
 
 export const root = style({
   padding: "40px 0",

@@ -1,13 +1,8 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  radii,
-  text,
-  fieldLabel,
-  statusTag,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii } from "@/lib/theme/scales";
+import { text, fieldLabel, statusTag } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const wrap = style({
   flex: 1,

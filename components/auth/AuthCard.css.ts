@@ -1,5 +1,7 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
+import { themeTransition } from "@/lib/theme/transitions";
 
 // Flat form stack. The formPanel already paints paper; the auth content
 // sits directly on it with no chrome, mirroring the landing's editorial

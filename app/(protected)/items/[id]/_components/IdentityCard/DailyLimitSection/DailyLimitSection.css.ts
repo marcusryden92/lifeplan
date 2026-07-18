@@ -1,5 +1,8 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, text, media } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media } from "@/lib/theme/scales";
+import { text } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 // Same two-column shape as SplittingSection: toggle on the left, the duration
 // input on the right, so enabling the limit does not change section height.

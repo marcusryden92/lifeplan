@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { iconBtn } from "@/lib/theme";
+import { iconBtn } from "@/lib/theme/recipes.css";
 
 export const hoverRow = style({
   display: "flex",

@@ -1,16 +1,10 @@
 import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  interactiveTransition,
-  popover,
-  backdropFilters,
-  radii,
-  display,
-  text,
-  iconBtn,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii } from "@/lib/theme/scales";
+import { popover, iconBtn } from "@/lib/theme/recipes.css";
+import { display, text } from "@/lib/theme/typography.css";
+import { backdropFilters } from "@/lib/theme/effects";
+import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
 
 const FADE_MS = 160;
 

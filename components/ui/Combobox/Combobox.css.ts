@@ -1,5 +1,7 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii } from "@/lib/theme/scales";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const comboboxWrap = style({
   position: "relative",

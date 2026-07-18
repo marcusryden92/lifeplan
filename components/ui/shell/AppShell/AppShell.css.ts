@@ -1,5 +1,7 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, media, radii } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media, radii } from "@/lib/theme/scales";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const bezelFrame = style({
   width: "100vw",

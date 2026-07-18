@@ -1,5 +1,5 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { space } from "@/lib/theme";
+import { space } from "@/lib/theme/scales";
 
 const containerBase = style({
   display: "flex",

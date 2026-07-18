@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { media } from "@/lib/theme";
+import { media } from "@/lib/theme/scales";
 
 export const card = style({
   display: "flex",

@@ -1,21 +1,9 @@
 ﻿import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  collapseTransition,
-  DURATIONS,
-  glass,
-  pillBtn,
-  iconBtn,
-  display,
-  text,
-  fieldLabel,
-  statusTag,
-  media,
-  radii,
-  zIndex,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media, radii, zIndex } from "@/lib/theme/scales";
+import { glass, pillBtn, iconBtn } from "@/lib/theme/recipes.css";
+import { display, text, fieldLabel, statusTag } from "@/lib/theme/typography.css";
+import { themeTransition, collapseTransition, DURATIONS } from "@/lib/theme/transitions";
 
 export const page = style({
   display: "flex",

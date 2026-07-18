@@ -1,5 +1,6 @@
 import { style, styleVariants, createVar } from "@vanilla-extract/css";
-import { vars, collapseTransition } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { collapseTransition } from "@/lib/theme/transitions";
 
 
 // Set inline per instance; the mark and text read them so one logo-height

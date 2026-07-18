@@ -1,15 +1,8 @@
 import { style } from "@vanilla-extract/css";
-import {
-  vars,
-  space,
-  radii,
-  text,
-  caption,
-  fieldLabel,
-  themeTransition,
-  media,
-  zIndex,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, media, zIndex } from "@/lib/theme/scales";
+import { text, caption, fieldLabel } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const panel = style({
   position: "absolute",

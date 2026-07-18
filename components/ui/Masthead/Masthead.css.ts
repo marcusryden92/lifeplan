@@ -1,5 +1,6 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, media } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media } from "@/lib/theme/scales";
 
 
 export const masthead = style({

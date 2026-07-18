@@ -1,5 +1,8 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, media, display, text } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media } from "@/lib/theme/scales";
+import { display, text } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const root = style({
   paddingTop: space["3"],

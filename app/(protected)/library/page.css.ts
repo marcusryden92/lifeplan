@@ -1,16 +1,9 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  collapseTransition,
-  media,
-  radii,
-  iconBtn,
-  display,
-  text,
-  fieldLabel,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media, radii } from "@/lib/theme/scales";
+import { iconBtn } from "@/lib/theme/recipes.css";
+import { display, text, fieldLabel } from "@/lib/theme/typography.css";
+import { themeTransition, collapseTransition } from "@/lib/theme/transitions";
 
 export const page = style({
   display: "flex",

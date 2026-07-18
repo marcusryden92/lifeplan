@@ -1,5 +1,6 @@
 import { globalStyle, style, styleVariants } from "@vanilla-extract/css";
-import { radii, space, vars } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { radii, space } from "@/lib/theme/scales";
 
 export const stage = style({
   width: "100%",

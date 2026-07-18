@@ -1,5 +1,8 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, display, text } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
+import { display, text } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const card = style({
   padding: "12px 0",

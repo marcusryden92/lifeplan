@@ -1,16 +1,8 @@
 import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  media,
-  radii,
-  display,
-  text,
-  caption,
-  fieldLabel,
-  zIndex,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media, radii, zIndex } from "@/lib/theme/scales";
+import { display, text, caption, fieldLabel } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const page = style({
   position: "relative",

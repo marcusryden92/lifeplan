@@ -1,11 +1,9 @@
 import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  backdropFilters,
-  popover,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
+import { popover } from "@/lib/theme/recipes.css";
+import { backdropFilters } from "@/lib/theme/effects";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const CONFIRM_FADE_MS = 180;
 

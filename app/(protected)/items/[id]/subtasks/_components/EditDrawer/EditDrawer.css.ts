@@ -1,16 +1,9 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  interactiveTransition,
-  radii,
-  media,
-  display,
-  text,
-  iconBtn,
-  fieldLabel as fieldLabelPreset,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, media } from "@/lib/theme/scales";
+import { iconBtn } from "@/lib/theme/recipes.css";
+import { display, text, fieldLabel as fieldLabelPreset } from "@/lib/theme/typography.css";
+import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
 
 const lockedShake = keyframes({
   "0%, 100%": { transform: "translateX(0)" },

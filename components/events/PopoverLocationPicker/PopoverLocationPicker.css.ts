@@ -1,5 +1,8 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { vars, interactiveTransition, space, text } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
+import { text } from "@/lib/theme/typography.css";
+import { interactiveTransition } from "@/lib/theme/transitions";
 
 export const root = style({
   display: "flex",

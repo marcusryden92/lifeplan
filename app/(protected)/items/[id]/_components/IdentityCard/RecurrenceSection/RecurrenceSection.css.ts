@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { media } from "@/lib/theme";
+import { media } from "@/lib/theme/scales";
 
 // Mirror SplittingSection: the recurrence select on the left, the optional
 // "until" date on the right, so setting an end date does not grow the section.

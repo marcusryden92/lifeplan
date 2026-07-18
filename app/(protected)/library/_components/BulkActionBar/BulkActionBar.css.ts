@@ -1,13 +1,8 @@
 import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  radii,
-  media,
-  zIndex,
-  themeTransition,
-  text,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, media, zIndex } from "@/lib/theme/scales";
+import { text } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const bar = style({
   position: "fixed",

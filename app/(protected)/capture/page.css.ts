@@ -1,16 +1,9 @@
 ﻿import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  popover,
-  glass,
-  media,
-  radii,
-  display,
-  text,
-  fieldLabel as fieldLabelPreset,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media, radii } from "@/lib/theme/scales";
+import { popover, glass } from "@/lib/theme/recipes.css";
+import { display, text, fieldLabel as fieldLabelPreset } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const page = style({
   display: "flex",

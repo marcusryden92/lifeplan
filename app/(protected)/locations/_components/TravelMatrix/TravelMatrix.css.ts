@@ -1,13 +1,9 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import {
-  space,
-  vars,
-  themeTransition,
-  interactiveTransition,
-  radii,
-  fieldLabel,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii } from "@/lib/theme/scales";
+import { fieldLabel } from "@/lib/theme/typography.css";
+import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
 
 export const matrixWrap = style({
   border: `1px solid ${vars.glass.stroke}`,

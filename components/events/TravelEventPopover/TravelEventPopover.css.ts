@@ -1,12 +1,8 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  colorMixAlpha,
-  radii,
-  borderWidth,
-  text,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, borderWidth } from "@/lib/theme/scales";
+import { text } from "@/lib/theme/typography.css";
+import { colorMixAlpha } from "@/lib/theme/effects";
 
 // Mirrors the drag state CalendarPopover exposes via its render prop.
 export const headerCursor = styleVariants({

@@ -1,5 +1,8 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import { space, vars, themeTransition, text, media } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media } from "@/lib/theme/scales";
+import { text } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 // Row primitives shared by AgendaItemRow and UncompletedItemRow. Variants
 // (NOW/NEXT/TRAVEL, flash tints) live in the respective row files.

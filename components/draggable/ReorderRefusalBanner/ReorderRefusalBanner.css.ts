@@ -1,5 +1,8 @@
 import { style, keyframes } from "@vanilla-extract/css";
-import { popover, space, vars, zIndex, DURATIONS } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, zIndex } from "@/lib/theme/scales";
+import { popover } from "@/lib/theme/recipes.css";
+import { DURATIONS } from "@/lib/theme/transitions";
 
 const slideUp = keyframes({
   from: { opacity: 0, transform: "translate(-50%, 8px)" },

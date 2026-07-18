@@ -1,14 +1,9 @@
 import { style, globalStyle } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  interactiveTransition,
-  radii,
-  text,
-  caption,
-  iconBtn,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii } from "@/lib/theme/scales";
+import { iconBtn } from "@/lib/theme/recipes.css";
+import { text, caption } from "@/lib/theme/typography.css";
+import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
 
 export const list = style({
   display: "flex",

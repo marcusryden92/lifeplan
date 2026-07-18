@@ -1,5 +1,7 @@
 import { style } from "@vanilla-extract/css";
-import { vars, text, space } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
+import { text } from "@/lib/theme/typography.css";
 
 // Composed with the shared `header` class while the popover is being dragged.
 export const headerGrabbing = style({

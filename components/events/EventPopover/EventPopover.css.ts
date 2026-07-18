@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
-import { vars, space } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
 
 export const metaIcon = style({
   color: vars.muted,

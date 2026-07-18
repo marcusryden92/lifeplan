@@ -1,5 +1,8 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, themeTransition, text, fieldLabel } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
+import { text, fieldLabel } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const boxesCol = style({
   display: "flex",

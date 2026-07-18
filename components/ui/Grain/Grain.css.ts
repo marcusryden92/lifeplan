@@ -1,5 +1,5 @@
 import { style } from "@vanilla-extract/css";
-import { vars } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
 
 export const grain = style({
   position: "absolute",

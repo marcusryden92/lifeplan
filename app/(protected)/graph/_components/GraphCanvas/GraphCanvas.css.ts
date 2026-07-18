@@ -1,17 +1,9 @@
 import { style, globalStyle, keyframes } from "@vanilla-extract/css";
-import {
-  vars,
-  space,
-  radii,
-  text,
-  caption,
-  fieldLabel,
-  themeTransition,
-  interactiveTransition,
-  media,
-  DURATIONS,
-  iconBtn,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, media } from "@/lib/theme/scales";
+import { iconBtn } from "@/lib/theme/recipes.css";
+import { text, caption, fieldLabel } from "@/lib/theme/typography.css";
+import { themeTransition, interactiveTransition, DURATIONS } from "@/lib/theme/transitions";
 
 export const scroller = style({
   flex: 1,

@@ -1,5 +1,7 @@
 import { style } from "@vanilla-extract/css";
-import { space, vars, text } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
+import { text } from "@/lib/theme/typography.css";
 
 export const placeRow = style({
   display: "flex",

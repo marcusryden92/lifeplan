@@ -1,17 +1,10 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  interactiveTransition,
-  colorMixAlpha,
-  DURATIONS,
-  radii,
-  media,
-  zIndex,
-  listRow,
-  text,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, media, zIndex } from "@/lib/theme/scales";
+import { listRow } from "@/lib/theme/recipes.css";
+import { text } from "@/lib/theme/typography.css";
+import { colorMixAlpha } from "@/lib/theme/effects";
+import { themeTransition, interactiveTransition, DURATIONS } from "@/lib/theme/transitions";
 
 // Quick-shake when a locked completion checkbox is clicked. Subtle horizontal
 // jiggle paired with a red flash on the circle gives the user immediate "no"

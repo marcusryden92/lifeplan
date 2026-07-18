@@ -1,16 +1,9 @@
 ﻿import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  interactiveTransition,
-  contentWidth,
-  media,
-  display,
-  text,
-  caption,
-  iconBtn,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, contentWidth, media } from "@/lib/theme/scales";
+import { iconBtn } from "@/lib/theme/recipes.css";
+import { display, text, caption } from "@/lib/theme/typography.css";
+import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
 
 
 export const page = style({

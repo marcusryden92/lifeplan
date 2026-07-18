@@ -1,5 +1,8 @@
 import { style } from "@vanilla-extract/css";
-import { vars, themeTransition, colorMixAlpha, text } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { text } from "@/lib/theme/typography.css";
+import { colorMixAlpha } from "@/lib/theme/effects";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const agendaRowNow = style({
   background: `color-mix(in srgb, ${vars.accent.now} ${colorMixAlpha.lightFill}%, transparent)`,

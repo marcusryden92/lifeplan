@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
-import { themeDark, DURATIONS } from "@/lib/theme";
+import { themeDark } from "@/lib/theme/themes.css";
+import { DURATIONS } from "@/lib/theme/transitions";
 
 const base = style({
   position: "absolute",

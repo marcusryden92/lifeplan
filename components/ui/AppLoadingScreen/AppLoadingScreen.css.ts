@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
-import { vars, zIndex, space } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { zIndex, space } from "@/lib/theme/scales";
 
 export const overlay = style({
   // Absolute (not fixed) so it fills the shell canvas and is clipped to the

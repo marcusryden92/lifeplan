@@ -1,5 +1,5 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, media } from "@/lib/theme";
+import { space, media } from "@/lib/theme/scales";
 
 export const page = style({
   display: "flex",

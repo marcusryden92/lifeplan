@@ -1,14 +1,9 @@
 ﻿import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  buttonTransition,
-  themeTransition,
-  backdropFilters,
-  radii,
-  fieldLabel,
-  text,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii } from "@/lib/theme/scales";
+import { fieldLabel, text } from "@/lib/theme/typography.css";
+import { backdropFilters } from "@/lib/theme/effects";
+import { buttonTransition, themeTransition } from "@/lib/theme/transitions";
 
 export const tabBar = style({
   position: "fixed",

@@ -1,15 +1,8 @@
 import { style, keyframes } from "@vanilla-extract/css";
-import {
-  vars,
-  space,
-  radii,
-  contentWidth,
-  media,
-  zIndex,
-  colorMixAlpha,
-  display,
-  text,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, contentWidth, media, zIndex } from "@/lib/theme/scales";
+import { display, text } from "@/lib/theme/typography.css";
+import { colorMixAlpha } from "@/lib/theme/effects";
 
 const spin = keyframes({ to: { transform: "rotate(360deg)" } });
 

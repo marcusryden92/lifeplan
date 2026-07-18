@@ -1,13 +1,8 @@
 ﻿import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  radii,
-  display,
-  text,
-  fieldLabel as fieldLabelPreset,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii } from "@/lib/theme/scales";
+import { display, text, fieldLabel as fieldLabelPreset } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const selectedPanel = style({
   flexShrink: 0,

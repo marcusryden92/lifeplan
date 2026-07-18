@@ -1,13 +1,9 @@
 import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  radii,
-  zIndex,
-  popover,
-  text,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, zIndex } from "@/lib/theme/scales";
+import { popover } from "@/lib/theme/recipes.css";
+import { text } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const menu = style([
   popover(),

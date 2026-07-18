@@ -1,16 +1,10 @@
 ﻿import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  backdropFilters,
-  media,
-  radii,
-  glass,
-  display,
-  text,
-  fieldLabel,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media, radii } from "@/lib/theme/scales";
+import { glass } from "@/lib/theme/recipes.css";
+import { display, text, fieldLabel } from "@/lib/theme/typography.css";
+import { backdropFilters } from "@/lib/theme/effects";
+import { themeTransition } from "@/lib/theme/transitions";
 
 // blur:"pseudo" lets leftCardHeader keep its own backdrop-filter sample of
 // the scrolling list; its isolation also contains the header's zIndex:100.

@@ -1,15 +1,9 @@
 ﻿import { style, globalStyle } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  radii,
-  media,
-  display,
-  text,
-  fieldLabel,
-  iconBtn,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, media } from "@/lib/theme/scales";
+import { iconBtn } from "@/lib/theme/recipes.css";
+import { display, text, fieldLabel } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 // Modal fade duration in ms â€” used by both CSS transition and the JS unmount timer.
 export const MODAL_FADE_MS = 220;

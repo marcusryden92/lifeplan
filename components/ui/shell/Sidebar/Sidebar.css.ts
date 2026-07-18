@@ -1,14 +1,9 @@
 ﻿import { style } from "@vanilla-extract/css";
-import {
-  vars,
-  collapseTransition,
-  buttonTransition,
-  DURATIONS,
-  popover,
-  backdropFilters,
-  radii,
-  space,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { radii, space } from "@/lib/theme/scales";
+import { popover } from "@/lib/theme/recipes.css";
+import { backdropFilters } from "@/lib/theme/effects";
+import { collapseTransition, buttonTransition, DURATIONS } from "@/lib/theme/transitions";
 
 export const sidebar = style({
   flexShrink: 0,

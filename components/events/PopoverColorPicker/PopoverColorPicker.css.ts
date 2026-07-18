@@ -1,13 +1,8 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import {
-  vars,
-  interactiveTransition,
-  radii,
-  space,
-  borderWidth,
-  zIndex,
-  text,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { radii, space, borderWidth, zIndex } from "@/lib/theme/scales";
+import { text } from "@/lib/theme/typography.css";
+import { interactiveTransition } from "@/lib/theme/transitions";
 
 const SWATCH_SIZE = 16;
 const SWATCH_GAP = 5;

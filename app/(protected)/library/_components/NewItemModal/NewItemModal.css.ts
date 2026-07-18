@@ -1,12 +1,10 @@
 import { style, keyframes } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  DURATIONS,
-  popover,
-  backdropFilters,
-  text,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
+import { popover } from "@/lib/theme/recipes.css";
+import { text } from "@/lib/theme/typography.css";
+import { backdropFilters } from "@/lib/theme/effects";
+import { DURATIONS } from "@/lib/theme/transitions";
 
 const fadeIn = keyframes({
   from: { opacity: 0 },

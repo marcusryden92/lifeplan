@@ -1,5 +1,6 @@
 import { globalStyle, style } from "@vanilla-extract/css";
-import { space, vars, contentWidth, media, radii, zIndex } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, contentWidth, media, radii, zIndex } from "@/lib/theme/scales";
 
 // ---------- page chrome ----------
 // No horizontal padding — sections handle their own. This lets full-bleed

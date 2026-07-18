@@ -1,6 +1,8 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
 import { recipe } from "@vanilla-extract/recipes";
-import { vars, themeTransition, radii } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { radii } from "@/lib/theme/scales";
+import { themeTransition } from "@/lib/theme/transitions";
 
 const slide = keyframes({
   "0%": { transform: "translateX(-100%)" },

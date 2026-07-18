@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
-import { space, iconBtn } from "@/lib/theme";
+import { space } from "@/lib/theme/scales";
+import { iconBtn } from "@/lib/theme/recipes.css";
 
 export const hoverActions = style({
   display: "flex",

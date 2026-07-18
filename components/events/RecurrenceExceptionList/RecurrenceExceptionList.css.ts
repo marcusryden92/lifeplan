@@ -1,5 +1,8 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { space, vars, themeTransition, radii, text } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii } from "@/lib/theme/scales";
+import { text } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 const rowBase = style({
   display: "flex",

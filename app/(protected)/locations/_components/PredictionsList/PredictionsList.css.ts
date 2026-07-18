@@ -1,5 +1,7 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, popover } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
+import { popover } from "@/lib/theme/recipes.css";
 
 // Absolute-positioned overlay anchored to its position: relative wrap.
 // The parent modal must use `overflow: visible` for this to escape its box.

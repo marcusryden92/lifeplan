@@ -1,5 +1,7 @@
 import { style } from "@vanilla-extract/css";
-import { vars, radii, themeTransition } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { radii } from "@/lib/theme/scales";
+import { themeTransition } from "@/lib/theme/transitions";
 
 // Local copy of the modal-shell fade duration so the tile's opacity transition
 // stays in lockstep with mount/unmount without importing across folders.

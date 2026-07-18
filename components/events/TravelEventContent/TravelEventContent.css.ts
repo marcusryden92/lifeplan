@@ -1,5 +1,7 @@
 import { style, styleVariants } from "@vanilla-extract/css";
-import { space, vars, colorMixAlpha, radii, borderWidth } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii, borderWidth } from "@/lib/theme/scales";
+import { colorMixAlpha } from "@/lib/theme/effects";
 
 const tileBase = style({
   display: "flex",

@@ -1,5 +1,6 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { vars, media } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { media } from "@/lib/theme/scales";
 
 // Locked to light. Split layout: vector field on the left, paper form panel
 // on the right. Carries the landing's hero artifact through the transition.

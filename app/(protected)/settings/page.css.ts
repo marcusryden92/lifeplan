@@ -1,14 +1,8 @@
 ﻿import { style } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  media,
-  radii,
-  display,
-  text,
-  fieldLabel as fieldLabelText,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media, radii } from "@/lib/theme/scales";
+import { display, text, fieldLabel as fieldLabelText } from "@/lib/theme/typography.css";
+import { themeTransition } from "@/lib/theme/transitions";
 
 
 export const page = style({

@@ -1,5 +1,9 @@
 ﻿import { style } from "@vanilla-extract/css";
-import { space, vars, formInput, colorMixAlpha, themeTransition, radii } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, radii } from "@/lib/theme/scales";
+import { formInput } from "@/lib/theme/recipes.css";
+import { colorMixAlpha } from "@/lib/theme/effects";
+import { themeTransition } from "@/lib/theme/transitions";
 
 export const form = style({
   display: "flex",

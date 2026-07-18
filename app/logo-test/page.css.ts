@@ -1,5 +1,7 @@
 import { style } from "@vanilla-extract/css";
-import { vars, collapseTransition, space } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
+import { collapseTransition } from "@/lib/theme/transitions";
 
 export const brand = style({
   padding: "0 0 5px",

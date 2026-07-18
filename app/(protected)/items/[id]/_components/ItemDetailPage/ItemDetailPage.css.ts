@@ -1,15 +1,9 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
-import {
-  space,
-  vars,
-  themeTransition,
-  interactiveTransition,
-  media,
-  radii,
-  text,
-  zIndex,
-  progressTrack as progressTrackRecipe,
-} from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { space, media, radii, zIndex } from "@/lib/theme/scales";
+import { progressTrack as progressTrackRecipe } from "@/lib/theme/recipes.css";
+import { text } from "@/lib/theme/typography.css";
+import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
 
 const lockedShake = keyframes({
   "0%, 100%": { transform: "translateX(0)" },

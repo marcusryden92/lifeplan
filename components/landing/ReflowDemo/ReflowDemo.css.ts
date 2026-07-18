@@ -1,5 +1,6 @@
 import { globalStyle, keyframes, style, styleVariants } from "@vanilla-extract/css";
-import { radii, space, vars } from "@/lib/theme";
+import { vars } from "@/lib/theme/tokens.css";
+import { radii, space } from "@/lib/theme/scales";
 
 // Lives on the dark editorial section only, hence the literal paper-tinted
 // rgba values instead of theme vars.
