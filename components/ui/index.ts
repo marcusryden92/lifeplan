@@ -25,6 +25,7 @@ export { Combobox } from "./Combobox";
 export type { ComboboxOption } from "./Combobox";
 export { SegmentedControl } from "./SegmentedControl";
 export type { SegmentedOption } from "./SegmentedControl";
+export { ResponsiveSegmentedControl } from "./ResponsiveSegmentedControl";
 export { DateTimePicker } from "./DateTimePicker";
 export type { DateTimePickerProps } from "./DateTimePicker";
 export { TimePicker } from "./TimePicker";

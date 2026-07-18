@@ -6,10 +6,10 @@ import { formInput, type FormInputVariants } from "@/lib/theme";
 type Props = InputHTMLAttributes<HTMLInputElement> & FormInputVariants;
 
 export const Input = forwardRef<HTMLInputElement, Props>(function Input(
-  { variant, className, ...rest },
+  { variant, scale, className, ...rest },
   ref,
 ) {
-  const cls = formInput({ variant });
+  const cls = formInput({ variant, scale });
   return (
     <input
       ref={ref}

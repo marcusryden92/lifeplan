@@ -26,7 +26,10 @@ export const overlayRoot = style({
   "@media": {
     [media.mobile]: {
       padding: space["4"],
-      alignItems: "flex-start",
+      // Stretch the frame to fill the overlay so each step's footer pins to
+      // the bottom instead of floating under short content. A step taller than
+      // the viewport still grows and scrolls the overlay from here.
+      alignItems: "stretch",
     },
   },
 });
@@ -38,6 +41,11 @@ export const frameWrap = style({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  "@media": {
+    [media.mobile]: {
+      alignItems: "stretch",
+    },
+  },
 });
 
 // The step content sits directly on the panel (the surface is the overlay
@@ -171,7 +179,7 @@ export const footer = style({
   alignItems: "center",
   justifyContent: "space-between",
   gap: space["3"],
-  marginTop: space["2"],
+  marginTop: "auto",
 });
 
 export const footerActions = style({
@@ -542,13 +550,13 @@ export const addressIcon = style({
   pointerEvents: "none",
 });
 
-// Boxed <Input> whose MapPin icon (left) and spinner (right) need wider
-// asymmetric padding than the recipe's uniform value. `&&` doubles specificity
-// so the override beats the recipe's padding regardless of stylesheet order —
-// otherwise the icon sits on top of the text.
+// The MapPin icon (left) and spinner (right) need wide horizontal padding to
+// clear them; the vertical rhythm comes from the shared scale="lg" both
+// location inputs carry. `&&` beats the recipe's padding by specificity so the
+// icons never sit on the text.
 export const addressInput = style({
   selectors: {
-    "&&": { padding: "9px 36px 9px 38px" },
+    "&&": { paddingLeft: space["7"], paddingRight: space["7"] },
   },
 });
 

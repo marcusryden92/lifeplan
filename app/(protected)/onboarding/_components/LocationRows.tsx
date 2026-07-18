@@ -93,6 +93,7 @@ function LocationRowItem({
   return (
     <div className={locationRow}>
       <Input
+        scale="lg"
         value={row.name}
         placeholder="Name"
         maxLength={40}
@@ -106,6 +107,7 @@ function LocationRowItem({
             <MapPin size={13} strokeWidth={2.2} />
           </span>
           <Input
+            scale="lg"
             className={`${addressInput} ${row.selected || created ? addressSelected : ""}`}
             placeholder="Search address…"
             value={row.query}

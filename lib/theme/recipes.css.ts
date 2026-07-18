@@ -341,7 +341,7 @@ export const formInput = recipe({
         fontFamily: vars.font.ui,
         fontSize: 13,
         fontWeight: 500,
-        padding: `${space["1"]}px ${space["2"]}px`,
+        padding: `${space["1"]}px ${space["4"]}px`,
         background: "transparent",
         border: `1px solid ${vars.glass.stroke}`,
         borderRadius: radii.sm,
@@ -378,8 +378,15 @@ export const formInput = recipe({
         boxSizing: "content-box",
       },
     },
+    scale: {
+      md: {},
+      lg: {
+        // `&&` beats boxed's padding by specificity; block axis only so per-field horizontal overrides keep control.
+        selectors: { "&&": { paddingBlock: 9 } },
+      },
+    },
   },
-  defaultVariants: { variant: "boxed" },
+  defaultVariants: { variant: "boxed", scale: "md" },
 });
 
 export type FormInputVariants = NonNullable<Parameters<typeof formInput>[0]>;

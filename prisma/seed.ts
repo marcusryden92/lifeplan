@@ -23,6 +23,10 @@ const adapter = new PrismaPg({
 });
 const prisma = new PrismaClient({ adapter });
 
+// Flip to true to seed ONLY the admin account: the demo dataset (and the
+// clearing that precedes it) is skipped, leaving existing data untouched.
+const SEED_USER_ONLY = true;
+
 async function main() {
   const userId = "1";
 
@@ -47,6 +51,12 @@ async function main() {
       onboardedAt: new Date(),
     },
   });
+
+  if (SEED_USER_ONLY) {
+    console.log("Seeding completed: admin account only (SEED_USER_ONLY set).");
+    console.log(`  - User: admin@lifeplan.com (onboarded)`);
+    return;
+  }
 
   // Clear any existing calendar data so the reseed is a clean wholesale
   // replace. The admin is upserted rather than deleted, so every per-user

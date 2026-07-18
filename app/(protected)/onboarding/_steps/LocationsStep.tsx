@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Button, FieldStack, SegmentedControl } from "@/components/ui";
+import { Button, FieldStack, ResponsiveSegmentedControl } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import * as locationActions from "@/actions/locations";
 import { serializeLocation, serializeTravelTime } from "@/utils/locations";
@@ -53,6 +53,16 @@ function isIncomplete(row: LocationRow): boolean {
   const hasInput = row.query.trim().length > 0 || row.selected !== null;
   const isCreatable = row.name.trim().length > 0 && row.selected !== null;
   return hasInput && !isCreatable;
+}
+
+// How to refer to an incomplete row in the error: its name if typed, else the
+// address it does have, so a name-less row still points the user at the offender
+// instead of the generic fallback.
+function incompleteLabel(row: LocationRow): string {
+  const name = row.name.trim();
+  if (name.length > 0) return name;
+  const address = (row.selected?.description ?? row.query).trim();
+  return address.length > 40 ? `${address.slice(0, 40)}…` : address;
 }
 
 export function LocationsStep({
@@ -111,12 +121,12 @@ export function LocationsStep({
   const handleContinue = async () => {
     const incomplete = rows.filter(isIncomplete);
     if (incomplete.length > 0) {
-      const names = incomplete
-        .map((r) => r.name.trim())
-        .filter((n) => n.length > 0);
+      const labels = incomplete
+        .map(incompleteLabel)
+        .filter((l) => l.length > 0);
       setError(
-        names.length > 0
-          ? `${names.join(", ")} ${names.length === 1 ? "needs" : "need"} both a name and an address picked from the suggestions — finish or clear the row to continue.`
+        labels.length > 0
+          ? `${labels.join(", ")} ${labels.length === 1 ? "needs" : "need"} both a name and an address picked from the suggestions — finish or clear the row to continue.`
           : "A location needs both a name and an address picked from the suggestions — finish or clear the row to continue.",
       );
       return;
@@ -192,10 +202,11 @@ export function LocationsStep({
       }
     >
       <FieldStack size="lg" label="How do you usually get around?">
-        <SegmentedControl
+        <ResponsiveSegmentedControl
           options={TRANSPORT_MODE_OPTIONS}
           value={transportMode}
           onChange={handleTransportChange}
+          ariaLabel="Travel mode"
         />
         <span className={fieldHelp}>
           The default travel mode for estimating time between locations.
