@@ -113,7 +113,9 @@ export function scheduleTasksAndGoals(
     if (cached !== undefined || goalCapByRoot.has(rootId)) return cached;
     const root = plannersById.get(rootId);
     let ctx: GoalCapContext | undefined;
-    if (root) {
+    // Root rows only: node-level gate anchors share this tracking map, and a
+    // stale maxMinutesPerDay on a nested goal row must stay inert.
+    if (root && root.parentId == null) {
       const dayCap = goalDayCapMinutes(root);
       if (dayCap !== null) {
         seedGoalDayLedger(root, allPlanners, context.scheduledEvents, goalCapState);
@@ -134,13 +136,14 @@ export function scheduleTasksAndGoals(
     allPlanners,
     context.scheduledEvents,
   );
-  // Detour targets are excluded from candidates but their leaves ARE in the
-  // pool, so the loop resolves their outcome as they place. seedChainOutcomes
-  // (which only sees non-candidates) would otherwise seed a ready target with
-  // no past events as failed/failed — making a dependency/queue successor break
-  // immediately instead of waiting for the splice. Drop those premature seeds;
-  // a target with zero schedulable leaves (fully completed) is not in
-  // rootLeafCount and keeps its legitimate seed.
+  // Detour targets and node-level gate anchors are excluded from candidates
+  // but their leaves ARE in the pool, so the loop resolves their outcome as
+  // they place. seedChainOutcomes (which only sees non-candidates) would
+  // otherwise seed a ready target/anchor with no past events as failed/failed
+  // — making a dependency/queue successor break immediately instead of
+  // waiting. Drop those premature seeds; a source with zero schedulable
+  // leaves (fully completed) is not in rootLeafCount and keeps its
+  // legitimate seed.
   const candidateIdSet = new Set(candidates.map((c) => c.id));
   for (const rootId of rootLeafCount.keys()) {
     if (!candidateIdSet.has(rootId)) chainOutcome.delete(rootId);

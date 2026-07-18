@@ -8,7 +8,8 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { X, Trash2, Copy, MapPin, Link2, Link2Off } from "lucide-react";
+import { X, Trash2, Copy, MapPin, Link2, Link2Off, ArrowUpFromLine } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
 import {
@@ -20,6 +21,7 @@ import {
   type ComboboxOption,
 } from "@/components/ui";
 import { canLinkAsDetour } from "@/utils/precedence/detourLinks";
+import { isValidPrecedenceEndpoint } from "@/utils/precedence/endpoints";
 import { plannerIsCompleted } from "@/utils/plannerCompletion";
 import {
   SplittingFields,
@@ -36,6 +38,8 @@ import { useDraggableContext } from "@/components/draggable/DraggableContext";
 import { useFlashBoolean } from "@/hooks/useFlashAnimation";
 import { assignLocationToPlanner } from "@/actions/locations";
 import { deleteGoal, duplicateSubtree } from "@/utils/goalPageHandlers";
+import { getEffectiveCategoryId } from "@/utils/goalPageHandlers";
+import { promoteSubtree } from "@/utils/goal-handlers/promoteSubtree";
 import { NEW_SUBTASK_TITLE } from "@/components/tasks/task-item-subcomponents/TaskHeader";
 import {
   setSubtaskCompletedAt,
@@ -73,12 +77,14 @@ import {
 export function EditDrawer() {
   const {
     planner,
+    categories,
     queues,
     dependencies,
     updatePlannerArray,
     updateAll,
     weekStartDay,
   } = useCalendarProvider();
+  const router = useRouter();
   const { focusedTask, setFocusedTask } = useDraggableContext();
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
@@ -118,9 +124,7 @@ export function EditDrawer() {
     const options: ComboboxOption<string | null>[] = planner
       .filter(
         (p) =>
-          p.parentId == null &&
-          p.isTriaged &&
-          (p.plannerType === "task" || p.plannerType === "goal") &&
+          isValidPrecedenceEndpoint(p) &&
           p.id !== ownRoot &&
           !plannerIsCompleted(p),
       )
@@ -141,6 +145,7 @@ export function EditDrawer() {
 
   const [titleDraft, setTitleDraft] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showPromoteConfirm, setShowPromoteConfirm] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -317,6 +322,22 @@ export function EditDrawer() {
     if (!result) return;
     updatePlannerArray(result.newPlanner);
     setFocusedTask(result.newRootId);
+  };
+
+  const promotedCategoryName = (() => {
+    const categoryId = getEffectiveCategoryId(planner, task.id);
+    return categoryId
+      ? categories.find((c) => c.id === categoryId)?.name ?? null
+      : null;
+  })();
+
+  const handlePromote = () => {
+    const result = promoteSubtree(planner, task.id);
+    setShowPromoteConfirm(false);
+    if (!Array.isArray(result)) return;
+    updatePlannerArray(result);
+    setFocusedTask(null);
+    router.push(`/items/${task.id}`);
   };
 
   return (
@@ -523,11 +544,46 @@ export function EditDrawer() {
           >
             <Copy size={12} strokeWidth={2.2} />
           </Button>
+          {task.plannerType !== "plan" && (
+            <Button
+              variant="glass"
+              size="sm"
+              onClick={() => setShowPromoteConfirm(true)}
+              aria-label="Promote to top level"
+              title="Promote to top level"
+            >
+              <ArrowUpFromLine size={12} strokeWidth={2.2} />
+            </Button>
+          )}
         </div>
         <Button variant="solid" size="sm" onClick={close}>
           Done
         </Button>
       </div>
+
+      <ConfirmModal
+        open={showPromoteConfirm}
+        title="Promote to top level"
+        body={
+          <>
+            <strong>{task.title}</strong> becomes its own top-level{" "}
+            {isLeaf ? "task" : "goal"}.
+            {promotedCategoryName ? (
+              <>
+                {" "}
+                It adopts the category{" "}
+                <strong>{promotedCategoryName}</strong> as its own.
+              </>
+            ) : null}{" "}
+            Time constraints and location inherited from its old parents no
+            longer apply.
+          </>
+        }
+        confirmLabel="Promote"
+        cancelLabel="Cancel"
+        onCancel={() => setShowPromoteConfirm(false)}
+        onConfirm={handlePromote}
+      />
 
       <ConfirmModal
         open={showDeleteConfirm}

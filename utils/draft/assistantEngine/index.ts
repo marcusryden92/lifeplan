@@ -1740,18 +1740,23 @@ export async function runAssistantTurn({
           case "move_item": {
             send("status", { tool: tu.name, count: 1 });
             content = applyOpResult(
-              moveDraftItem(workingForest, {
-                itemId: typeof input?.itemId === "string" ? input.itemId : "",
-                newParentId:
-                  typeof input?.newParentId === "string"
-                    ? input.newParentId
-                    : "",
-                afterSiblingId:
-                  typeof input?.afterSiblingId === "string"
-                    ? input.afterSiblingId
-                    : undefined,
-                atStart: input?.atStart === true,
-              }),
+              moveDraftItem(
+                workingForest,
+                {
+                  itemId:
+                    typeof input?.itemId === "string" ? input.itemId : "",
+                  newParentId:
+                    typeof input?.newParentId === "string"
+                      ? input.newParentId
+                      : "",
+                  afterSiblingId:
+                    typeof input?.afterSiblingId === "string"
+                      ? input.afterSiblingId
+                      : undefined,
+                  atStart: input?.atStart === true,
+                },
+                workingPrecedence,
+              ),
               "Moved the item",
             );
             break;

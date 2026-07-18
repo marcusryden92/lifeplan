@@ -10,7 +10,14 @@ import {
   detourComponentMap,
   contractPrecedenceEdges,
 } from "@/utils/precedence/validationEdges";
-import { findCycle, findCycleInGraph } from "@/utils/precedence/findCycle";
+import {
+  findCycleInGraph,
+  wouldCreateCycleAddingDependency,
+} from "@/utils/precedence/findCycle";
+import {
+  isValidDependencyEndpoint,
+  isValidPrecedenceEndpoint,
+} from "@/utils/precedence/endpoints";
 import { sortQueueMembers } from "@/utils/queue-handlers/mutateQueueMembers";
 import { SORT_ORDER_STEP } from "@/utils/queue-handlers/sortOrderKeys";
 import {
@@ -26,11 +33,12 @@ interface ApplyPrecedenceArgs {
   // Snapshot taken when the modal opened.
   canonical: DraftPrecedenceState;
   working: DraftPrecedenceState;
-  // Draft root id -> permanent id minted by this save's forest apply. Queue
-  // members and dependency endpoints referencing goals created in the same
+  // Draft id -> permanent id minted by this save's forest apply, at every
+  // level (new roots AND children re-minted on delete+recreate paths). Queue
+  // members and dependency endpoints referencing drafts from the same
   // conversation resolve through it; an unmapped draft id names a draft that
   // was never saved and is dropped.
-  rootIdMap: ReadonlyMap<string, string>;
+  nodeIdMap: ReadonlyMap<string, string>;
   // The planner array being saved — endpoint validity checks run against it.
   nextPlanner: Planner[];
   validCategoryIds: ReadonlySet<string>;
@@ -57,24 +65,25 @@ export function applyDraftPrecedence({
   currentDependencies,
   canonical,
   working,
-  rootIdMap,
+  nodeIdMap,
   nextPlanner,
   validCategoryIds,
   userId,
   now,
 }: ApplyPrecedenceArgs): ApplyPrecedenceResult {
-  const remap = (id: string): string => rootIdMap.get(id) ?? id;
+  const remap = (id: string): string => nodeIdMap.get(id) ?? id;
 
-  // Mirrors the thunk's isValidPrecedenceEndpoint — invalid references never
-  // become rows (central pruning would drop them a beat later anyway, but a
+  // Mirrors the thunk's central pruning — invalid references never become
+  // rows (central pruning would drop them a beat later anyway, but a
   // QueueMember row with a dangling planner FK must not reach the sync).
-  const validEndpointIds = new Set(
-    nextPlanner
-      .filter(
-        (p) => p.parentId == null && p.plannerType !== "plan" && p.isTriaged,
-      )
-      .map((p) => p.id),
+  // Members keep the root predicate; dependency endpoints accept any node
+  // whose structural root is triaged and non-plan.
+  const validMemberIds = new Set(
+    nextPlanner.filter(isValidPrecedenceEndpoint).map((p) => p.id),
   );
+  const nextPlannerById = new Map(nextPlanner.map((p) => [p.id, p]));
+  const validDependencyEndpoint = (id: string): boolean =>
+    isValidDependencyEndpoint(nextPlannerById, id);
 
   const canonicalById = new Map(canonical.queues.map((q) => [q.id, q]));
   const workingById = new Map(working.queues.map((q) => [q.id, q]));
@@ -148,7 +157,7 @@ export function applyDraftPrecedence({
         continue;
       }
       // A genuine assistant addition.
-      if (!validEndpointIds.has(id)) continue;
+      if (!validMemberIds.has(id)) continue;
       const owner = claimedBy.get(id);
       if (owner !== undefined && owner !== queueId) continue;
       target.push(id);
@@ -322,13 +331,16 @@ export function applyDraftPrecedence({
     addedPairs.push(pair);
   }
 
-  // Concurrent-edit cycle defense on memberships: op-time validation covered
-  // the working state, but a dependency or detour link created elsewhere
-  // while the modal was open can compose a loop with an assistant-added
-  // member. Drop assistant additions (never user rows) until acyclic. The
-  // graph is contracted over detour components (host and spliced target are
-  // one node for legality), so cycle endpoints may be representatives — the
-  // reverse map recovers the real member ids inside a component.
+  // Concurrent-edit cycle defense: op-time validation covered the working
+  // state, but a dependency or detour link created elsewhere while the modal
+  // was open — or a propose_goals restructure that reordered leaves under
+  // existing node-level edges — can compose a loop. Drop assistant artifacts
+  // until acyclic: first assistant-ADDED queue members, then node-level
+  // dependency edges involved in the cycle (the restructure that closed the
+  // loop is the assistant's artifact; planner rows are never dropped). The
+  // graph lives at leaf granularity with detour components contracted, so
+  // victims resolve through the authored endpoint ids (fromNodeId/toNodeId)
+  // the expansion preserves.
   const detourRepr = detourComponentMap(nextPlanner);
   const idsByRepr = new Map<string, string[]>();
   for (const [id, repr] of detourRepr) {
@@ -338,11 +350,14 @@ export function applyDraftPrecedence({
   }
   const realIdsFor = (contractedId: string): string[] =>
     idsByRepr.get(contractedId) ?? [contractedId];
+  const isNodeLevelPair = (predecessorId: string, successorId: string) =>
+    nextPlannerById.get(predecessorId)?.parentId != null ||
+    nextPlannerById.get(successorId)?.parentId != null;
   let guard = 0;
   for (;;) {
     const cycle = findCycleInGraph(
       contractPrecedenceEdges(
-        collectValidationEdges(nextQueues, nextDependencies),
+        collectValidationEdges(nextQueues, nextDependencies, nextPlanner),
         detourRepr,
       ),
     );
@@ -352,9 +367,12 @@ export function applyDraftPrecedence({
       if (edge.source !== "queue" || !edge.queueId) continue;
       const added = addedByQueueId.get(edge.queueId);
       const victim =
-        realIdsFor(edge.toId).find((id) => added?.has(id)) ??
-        realIdsFor(edge.fromId).find((id) => added?.has(id)) ??
-        null;
+        [
+          edge.toNodeId ?? edge.toId,
+          edge.fromNodeId ?? edge.fromId,
+        ]
+          .flatMap((id) => realIdsFor(id))
+          .find((id) => added?.has(id)) ?? null;
       if (!victim) continue;
       const index = nextQueues.findIndex((q) => q.id === edge.queueId);
       if (index === -1) continue;
@@ -368,13 +386,32 @@ export function applyDraftPrecedence({
       dropped = true;
       break;
     }
+    if (!dropped) {
+      for (const edge of cycle) {
+        if (edge.source !== "dependency") continue;
+        const predecessorId = edge.fromNodeId ?? edge.fromId;
+        const successorId = edge.toNodeId ?? edge.toId;
+        if (!isNodeLevelPair(predecessorId, successorId)) continue;
+        const before = nextDependencies.length;
+        nextDependencies = nextDependencies.filter(
+          (d) =>
+            d.predecessorId !== predecessorId ||
+            d.successorId !== successorId,
+        );
+        if (nextDependencies.length !== before) {
+          dependenciesChanged = true;
+          dropped = true;
+          break;
+        }
+      }
+    }
     if (!dropped) break;
   }
 
   for (const pair of addedPairs) {
     if (
-      !validEndpointIds.has(pair.predecessorId) ||
-      !validEndpointIds.has(pair.successorId) ||
+      !validDependencyEndpoint(pair.predecessorId) ||
+      !validDependencyEndpoint(pair.successorId) ||
       pair.predecessorId === pair.successorId
     ) {
       continue;
@@ -384,16 +421,12 @@ export function applyDraftPrecedence({
     ) {
       continue;
     }
-    const cycle = findCycle(
-      contractPrecedenceEdges(
-        collectValidationEdges(nextQueues, nextDependencies),
-        detourRepr,
-      ),
-      {
-        fromId: detourRepr.get(pair.predecessorId) ?? pair.predecessorId,
-        toId: detourRepr.get(pair.successorId) ?? pair.successorId,
-        source: "dependency",
-      },
+    const cycle = wouldCreateCycleAddingDependency(
+      nextQueues,
+      nextDependencies,
+      pair.predecessorId,
+      pair.successorId,
+      nextPlanner,
     );
     if (cycle) continue;
     nextDependencies = [

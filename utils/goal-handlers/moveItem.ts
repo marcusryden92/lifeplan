@@ -1,10 +1,16 @@
-import { Planner } from "@/types/prisma";
+import { Planner, Queue, PlannerDependency } from "@/types/prisma";
 
-import { getSubtasksById, getTaskTreeIds } from "@/utils/goalPageHandlers";
+import {
+  getRootParentId,
+  getSubtasksById,
+  getTaskTreeIds,
+} from "@/utils/goalPageHandlers";
 import {
   insertKeyAt,
   sortSiblings,
 } from "@/utils/goal-handlers/sortOrderKeys";
+import { validateSubtreeOrder } from "@/utils/precedence/findCycle";
+import { describeCycle } from "@/utils/precedence/describeCycle";
 
 import { ClickedItem } from "@/lib/taskItem";
 
@@ -12,12 +18,24 @@ type UpdatePlannerArray = (
   planner: Planner[] | ((prev: Planner[]) => Planner[]),
 ) => void;
 
+// With node-level dependency edges, a reorder can close a loop through TWO
+// goals' internal step orders even though every edge is individually legal.
+// Callers pass this guard so the proposed array is validated before dispatch;
+// the check short-circuits when the touched subtree carries no node-edge
+// endpoint (the common case).
+export interface MovePrecedenceGuard {
+  queues: Queue[];
+  dependencies: PlannerDependency[];
+  onRefused?: (message: string) => void;
+}
+
 interface MoveToEdgeProps {
   planner: Planner[];
   updatePlannerArray: UpdatePlannerArray;
   currentlyClickedItem: ClickedItem;
   targetId: string;
   mouseLocationInItem: "top" | "bottom";
+  precedence?: MovePrecedenceGuard;
 }
 
 // Drop on a TaskDivider: the moved subtree becomes a sibling of the target,
@@ -30,6 +48,7 @@ export function moveToEdge({
   currentlyClickedItem,
   targetId,
   mouseLocationInItem,
+  precedence,
 }: MoveToEdgeProps): boolean {
   if (!planner || !currentlyClickedItem || !targetId) return false;
   if (targetId === currentlyClickedItem.taskId) return false;
@@ -54,10 +73,15 @@ export function moveToEdge({
     mouseLocationInItem === "top" ? targetIndex : targetIndex + 1;
   const { key, reindexed } = insertKeyAt(siblings, insertIndex);
 
-  updatePlannerArray(
-    applyMove(planner, movedTask.id, targetTask.parentId ?? null, key, reindexed),
+  return commitMove(
+    planner,
+    movedTask.id,
+    targetTask.parentId ?? null,
+    key,
+    reindexed,
+    updatePlannerArray,
+    precedence,
   );
-  return true;
 }
 
 interface MoveToMiddleProps {
@@ -65,6 +89,7 @@ interface MoveToMiddleProps {
   updatePlannerArray: UpdatePlannerArray;
   currentlyClickedItem: ClickedItem;
   currentlyHoveredItem: string;
+  precedence?: MovePrecedenceGuard;
 }
 
 // Drop into an item: the moved subtree becomes the target's last child —
@@ -75,6 +100,7 @@ export function moveToMiddle({
   updatePlannerArray,
   currentlyClickedItem,
   currentlyHoveredItem,
+  precedence,
 }: MoveToMiddleProps): boolean {
   if (!planner || !currentlyClickedItem || !currentlyHoveredItem) return false;
   if (currentlyClickedItem.taskId === currentlyHoveredItem) return false;
@@ -94,9 +120,46 @@ export function moveToMiddle({
   );
   const { key, reindexed } = insertKeyAt(children, children.length);
 
-  updatePlannerArray(
-    applyMove(planner, movedTask.id, targetTask.id, key, reindexed),
+  return commitMove(
+    planner,
+    movedTask.id,
+    targetTask.id,
+    key,
+    reindexed,
+    updatePlannerArray,
+    precedence,
   );
+}
+
+// Removing a subtree from its old root cannot create a cycle (the remaining
+// chain reconnects), so validating the DESTINATION root covers both same-root
+// reorders and cross-root reparents.
+function commitMove(
+  planner: Planner[],
+  movedId: string,
+  parentId: string | null,
+  key: number,
+  reindexed: Map<string, number> | null,
+  updatePlannerArray: UpdatePlannerArray,
+  precedence?: MovePrecedenceGuard,
+): boolean {
+  const proposed = applyMove(planner, movedId, parentId, key, reindexed);
+  if (precedence) {
+    const rootId = getRootParentId(proposed, movedId) ?? movedId;
+    const cycle = validateSubtreeOrder(
+      proposed,
+      precedence.queues,
+      precedence.dependencies,
+      rootId,
+    );
+    if (cycle) {
+      precedence.onRefused?.(
+        `That order would create a loop: ${describeCycle(cycle, proposed, precedence.queues)}`,
+      );
+      return false;
+    }
+  }
+  updatePlannerArray(proposed);
   return true;
 }
 

@@ -117,7 +117,7 @@ function apply(args: {
   currentDependencies: PlannerDependency[];
   canonical: DraftPrecedenceState;
   working: DraftPrecedenceState;
-  rootIdMap?: Map<string, string>;
+  nodeIdMap?: Map<string, string>;
   nextPlanner?: Planner[];
 }) {
   return applyDraftPrecedence({
@@ -125,7 +125,7 @@ function apply(args: {
     currentDependencies: args.currentDependencies,
     canonical: args.canonical,
     working: args.working,
-    rootIdMap: args.rootIdMap ?? new Map(),
+    nodeIdMap: args.nodeIdMap ?? new Map(),
     nextPlanner: args.nextPlanner ?? basePlanner(),
     validCategoryIds: VALID_CATEGORY_IDS,
     userId: USER_ID,
@@ -150,6 +150,54 @@ describe("applyDraftPrecedence", () => {
     expect(result.dependencies).toBe(currentDependencies);
   });
 
+  it("preserves user-authored node-level dependency edges through a save", () => {
+    const nextPlanner = [
+      ...basePlanner(),
+      plannerRow({ id: "goal-x", plannerType: "goal" }),
+      plannerRow({ id: "x-step", parentId: "goal-x", sortOrder: 1024 }),
+    ];
+    const currentDependencies = [dependencyRow("x-step", "item-a")];
+    const canonical = precedenceToDraft([], currentDependencies);
+
+    const result = apply({
+      currentQueues: [],
+      currentDependencies,
+      canonical,
+      working: clone(canonical),
+      nextPlanner,
+    });
+
+    expect(result.dependencies).toBe(currentDependencies);
+  });
+
+  it("remaps a node-level endpoint re-minted by the forest apply", () => {
+    const nextPlanner = [
+      ...basePlanner(),
+      plannerRow({ id: "goal-x", plannerType: "goal" }),
+      plannerRow({ id: "minted-step", parentId: "goal-x", sortOrder: 1024 }),
+    ];
+    const canonical = precedenceToDraft([], []);
+    const working: DraftPrecedenceState = {
+      queues: [],
+      dependencies: [
+        { predecessorId: "draft-step-id", successorId: "item-a" },
+      ],
+    };
+
+    const result = apply({
+      currentQueues: [],
+      currentDependencies: [],
+      canonical,
+      working,
+      nodeIdMap: new Map([["draft-step-id", "minted-step"]]),
+      nextPlanner,
+    });
+
+    expect(
+      result.dependencies.map((d) => [d.predecessorId, d.successorId]),
+    ).toEqual([["minted-step", "item-a"]]);
+  });
+
   it("creates a queue whose draft-goal member remaps to the minted id", () => {
     const canonical = precedenceToDraft([], []);
     const working: DraftPrecedenceState = {
@@ -170,7 +218,7 @@ describe("applyDraftPrecedence", () => {
       currentDependencies: [],
       canonical,
       working,
-      rootIdMap: new Map([["draft-goal-id", "minted-goal"]]),
+      nodeIdMap: new Map([["draft-goal-id", "minted-goal"]]),
       nextPlanner,
     });
 
@@ -356,7 +404,7 @@ describe("applyDraftPrecedence", () => {
       currentDependencies,
       canonical,
       working,
-      rootIdMap: new Map([["draft-goal-id", "minted-goal"]]),
+      nodeIdMap: new Map([["draft-goal-id", "minted-goal"]]),
       nextPlanner,
     });
 

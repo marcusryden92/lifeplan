@@ -123,21 +123,28 @@ describe("pruneQueueMembers", () => {
 });
 
 describe("pruneDependencies", () => {
-  it("drops edges whose either endpoint fails the test", () => {
+  it("keeps node-level endpoints under triaged roots, drops invalid ones", () => {
     const planner = [
       makePlanner("a"),
       makePlanner("b"),
       makePlanner("nested", { parentId: "a" }),
       makePlanner("untriaged", { isTriaged: false }),
+      makePlanner("untriaged-child", { parentId: "untriaged" }),
+      makePlanner("plan", { plannerType: "plan", starts: TS }),
+      makePlanner("plan-child", { parentId: "plan-root" }),
+      makePlanner("plan-root", { plannerType: "plan", starts: TS }),
     ];
     const dependencies = [
       makeDependency("a", "b"),
       makeDependency("a", "missing"),
       makeDependency("nested", "b"),
       makeDependency("untriaged", "b"),
+      makeDependency("untriaged-child", "b"),
+      makeDependency("plan", "b"),
+      makeDependency("plan-child", "b"),
     ];
     const pruned = pruneDependencies(dependencies, planner);
-    expect(pruned.map((d) => d.id)).toEqual(["dep-a-b"]);
+    expect(pruned.map((d) => d.id)).toEqual(["dep-a-b", "dep-nested-b"]);
   });
 
   it("keeps completed and unready endpoints", () => {

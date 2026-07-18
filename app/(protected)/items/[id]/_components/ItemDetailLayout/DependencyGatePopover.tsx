@@ -9,7 +9,12 @@ import { popover as popoverRecipe, vars, text, space } from "@/lib/theme";
 
 export type GateEntry = {
   edgeId: string;
+  // The row whose readiness gates — always a root (readiness cascades from
+  // roots only). The Ready/Un-ready shortcut targets it.
   goal: Planner;
+  // Set when the edge's endpoint is an interior node of `goal`: the row
+  // renders "part of <goal>" and the shortcut is withheld.
+  viaNode?: Planner;
 };
 
 type DependencyGatePopoverProps = {
@@ -104,15 +109,19 @@ export function DependencyGatePopover({
                       color: vars.ink,
                     }}
                   >
-                    {entry.goal.title || "Untitled"}
+                    {entry.viaNode
+                      ? `${entry.viaNode.title || "Untitled"} — part of "${entry.goal.title || "Untitled"}"`
+                      : entry.goal.title || "Untitled"}
                   </span>
-                  <Button
-                    variant="glass"
-                    size="sm"
-                    onClick={() => handleApply(entry)}
-                  >
-                    {mode === "ready" ? "Ready" : "Un-ready"}
-                  </Button>
+                  {!entry.viaNode && (
+                    <Button
+                      variant="glass"
+                      size="sm"
+                      onClick={() => handleApply(entry)}
+                    >
+                      {mode === "ready" ? "Ready" : "Un-ready"}
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     size="sm"

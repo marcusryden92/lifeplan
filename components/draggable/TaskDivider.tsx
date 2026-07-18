@@ -28,6 +28,7 @@ const TaskDivider: React.FC<TaskDividerProps> = ({
     displayDragBox,
     touchDropTarget,
     flashDroppedTask,
+    moveGuard,
   } = useDraggableContext();
   const [isHovered, setIsHovered] = useState<boolean>(false);
 
@@ -40,6 +41,7 @@ const TaskDivider: React.FC<TaskDividerProps> = ({
       currentlyClickedItem,
       targetId,
       mouseLocationInItem,
+      precedence: moveGuard,
     });
     if (moved) flashDroppedTask(currentlyClickedItem.taskId);
 

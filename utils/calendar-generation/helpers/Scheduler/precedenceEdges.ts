@@ -1,5 +1,9 @@
 import type { Planner, Queue, PlannerDependency } from "@/types/prisma";
 import type { PrecedenceEdge } from "@/utils/precedence/types";
+import {
+  isValidDependencyEndpoint,
+  isValidPrecedenceEndpoint,
+} from "@/utils/precedence/endpoints";
 import { plannerIsCompleted } from "../../../plannerCompletion";
 
 // GATED graph builder — deliberately distinct from the validation builder
@@ -13,11 +17,7 @@ import { plannerIsCompleted } from "../../../plannerCompletion";
 
 export type { PrecedenceEdge };
 
-const isEligibleEndpoint = (planner: Planner | undefined): planner is Planner =>
-  !!planner &&
-  planner.parentId == null &&
-  (planner.plannerType === "task" || planner.plannerType === "goal") &&
-  planner.isTriaged;
+const isEligibleEndpoint = isValidPrecedenceEndpoint;
 
 const isUnreadyGoal = (planner: Planner): boolean =>
   planner.plannerType === "goal" && planner.isReady !== true;
@@ -52,16 +52,22 @@ export function buildPrecedenceEdges(
     }
   }
 
+  // Dependency endpoints may be interior nodes (node-level edges); the gate
+  // resolves them as anchors over their subtree's leaves. Queues stay
+  // root-only. A completed predecessor NODE is transparent, exactly like a
+  // completed root.
   for (const dependency of dependencies) {
-    const predecessor = plannerById.get(dependency.predecessorId);
-    const successor = plannerById.get(dependency.successorId);
-    if (!isEligibleEndpoint(predecessor) || !isEligibleEndpoint(successor)) {
+    if (
+      !isValidDependencyEndpoint(plannerById, dependency.predecessorId) ||
+      !isValidDependencyEndpoint(plannerById, dependency.successorId)
+    ) {
       continue;
     }
+    const predecessor = plannerById.get(dependency.predecessorId)!;
     if (plannerIsCompleted(predecessor)) continue;
     edges.push({
-      fromId: predecessor.id,
-      toId: successor.id,
+      fromId: dependency.predecessorId,
+      toId: dependency.successorId,
       source: "dependency",
     });
   }

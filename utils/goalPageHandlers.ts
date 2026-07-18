@@ -216,10 +216,16 @@ export function getSortedTreeBottomLayer(
 // Kept separate from getTreeBottomLayer so structural walks (deletion, counts)
 // never follow links — a host delete must not delete the linked target, and
 // progress counts must not double.
+// `interiorEntry` walks the starting node with INTERIOR semantics — the same
+// treatment it gets inside its root's walk (a task-typed branch descends into
+// its children instead of standing for its own block). Used by the leaf
+// graph's node-anchor registration so an anchor's leaves match what the
+// engine actually places for that subtree.
 export function getScheduledLeafSequence(
   planner: Planner[],
   id: string,
   followedTargets?: Set<string>,
+  interiorEntry = false,
 ): Planner[] {
   const index = getTreeIndex(planner);
   const result: Planner[] = [];
@@ -283,7 +289,8 @@ export function getScheduledLeafSequence(
     for (const child of children) walk(child.id);
   };
 
-  walkEntry(id);
+  if (interiorEntry) walk(id);
+  else walkEntry(id);
   return result;
 }
 

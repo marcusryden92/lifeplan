@@ -2,20 +2,28 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { v4 as uuidv4 } from "uuid";
 import { X } from "lucide-react";
 import {
+  Button,
   Caption,
   Combobox,
+  ConfirmModal,
   TypeBadge,
   type ComboboxOption,
 } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import {
+  buildDemoteLossManifest,
+  demoteRootIntoGoal,
+} from "@/utils/goal-handlers/demoteRootIntoGoal";
+import { DependencyPickerModal } from "../DependencyPickerModal";
 import { plannerIdFromEventId } from "@/utils/planRecurrence";
-import { plannerIsCompleted } from "@/utils/plannerCompletion";
 import { getRootParentId } from "@/utils/goalPageHandlers";
-import { wouldCreateCycleAddingDependency } from "@/utils/precedence/findCycle";
+import { isValidDependencyEndpoint } from "@/utils/precedence/endpoints";
+import { wouldCreateCycleAddingNodeDependency } from "@/utils/precedence/findCycle";
 import { describeCycle } from "@/utils/precedence/describeCycle";
 import type { PlannerDependency } from "@/types/prisma";
 import { useItem } from "../ItemContext";
@@ -165,61 +173,36 @@ export function ConnectionsCard() {
     [dependencies, item.id, plannerById],
   );
 
-  // Candidate filter: root, triaged, task|goal, not self, not already
-  // linked either way. Cycle-blocked candidates stay listed but annotated —
-  // the commit hard-check refuses them with the path shown.
-  const { options, blockedIds } = useMemo(() => {
+  // Ids already linked either way — hidden from the picker.
+  const linkedIds = useMemo(() => {
     const linked = new Set<string>();
     for (const d of dependencies) {
       if (d.successorId === item.id) linked.add(d.predecessorId);
       if (d.predecessorId === item.id) linked.add(d.successorId);
     }
-    const base = planner.filter(
-      (p) =>
-        p.parentId == null &&
-        p.isTriaged &&
-        (p.plannerType === "task" || p.plannerType === "goal") &&
-        p.id !== item.id &&
-        !linked.has(p.id) &&
-        !plannerIsCompleted(p),
-    );
-    const blocked = new Set<string>();
-    const opts: ComboboxOption<string | null>[] = base
-      .sort((a, b) => (a.title || "").localeCompare(b.title || ""))
-      .map((p) => {
-        const cycle = wouldCreateCycleAddingDependency(
-          queues,
-          dependencies,
-          p.id,
-          item.id,
-          planner,
-        );
-        if (cycle) blocked.add(p.id);
-        return {
-          value: p.id,
-          label: cycle
-            ? `${p.title || "Untitled"} — would create a loop`
-            : p.title || "Untitled",
-          searchLabel: p.title ?? undefined,
-        };
-      });
-    return { options: opts, blockedIds: blocked };
-  }, [planner, dependencies, queues, item.id]);
+    return linked;
+  }, [dependencies, item.id]);
+
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const handleAdd = (predecessorId: string | null) => {
     if (!predecessorId) return;
-    const cycle = wouldCreateCycleAddingDependency(
+    // Commit-time hard check — the picker ghosts prohibited options, but the
+    // add must stand on its own.
+    const refusal = wouldCreateCycleAddingNodeDependency(
+      planner,
       queues,
       dependencies,
       predecessorId,
       item.id,
-      planner,
     );
-    if (cycle || blockedIds.has(predecessorId)) {
+    if (refusal === "same-root") {
+      setError("Same goal — order is set by the list.");
+      return;
+    }
+    if (refusal) {
       setError(
-        cycle
-          ? `That link would create a loop: ${describeCycle(cycle, planner, queues)}`
-          : "That link would create a loop.",
+        `That link would create a loop: ${describeCycle(refusal, planner, queues)}`,
       );
       return;
     }
@@ -250,11 +233,9 @@ export function ConnectionsCard() {
     updateDependencyArray((prev) => prev.filter((d) => d.id !== edgeId));
   };
 
-  // Dependencies only exist between root-level triaged tasks and goals.
-  const canHaveDependencies =
-    item.parentId == null &&
-    item.isTriaged &&
-    (item.plannerType === "task" || item.plannerType === "goal");
+  // Dependencies exist between any non-plan nodes whose structural roots are
+  // triaged — subtasks included (node-level edges).
+  const canHaveDependencies = isValidDependencyEndpoint(plannerById, item.id);
 
   if (!canHaveDependencies && !queue && hosts.length === 0) return null;
 
@@ -305,16 +286,25 @@ export function ConnectionsCard() {
             ))
           )}
           <div className={depPickerRow}>
-            <Combobox
-              value={null}
-              options={options}
-              onChange={handleAdd}
-              placeholder="Add prerequisite…"
-              ariaLabel="Add prerequisite"
-              maxWidth="100%"
-            />
+            <Button
+              variant="glass"
+              size="sm"
+              onClick={() => setPickerOpen(true)}
+            >
+              Add prerequisite…
+            </Button>
           </div>
           {error && <div className={depError}>{error}</div>}
+          <DependencyPickerModal
+            open={pickerOpen}
+            onClose={() => setPickerOpen(false)}
+            anchor={item}
+            planner={planner}
+            queues={queues}
+            dependencies={dependencies}
+            linkedIds={linkedIds}
+            onPick={handleAdd}
+          />
 
           {requiredBy.length > 0 && (
             <>
@@ -348,6 +338,153 @@ export function ConnectionsCard() {
           ))}
         </>
       )}
+    </div>
+  );
+}
+
+const joinTitles = (titles: string[]): string =>
+  titles.map((t) => `"${t}"`).join(", ");
+
+// Demote entry point: nest this top-level item as a subtask of another goal.
+// The confirm enumerates everything the thunk's central pruning will drop —
+// the helper itself never prunes.
+export function NestIntoGoalCard() {
+  const { item } = useItem();
+  const { planner, queues, dependencies, updatePlannerArray } =
+    useCalendarProvider();
+  const router = useRouter();
+  const [pendingTargetId, setPendingTargetId] = useState<string | null>(null);
+  const [demoteError, setDemoteError] = useState<string | null>(null);
+
+  const eligible =
+    item.parentId == null && item.isTriaged && item.plannerType !== "plan";
+
+  const targetOptions = useMemo<ComboboxOption<string | null>[]>(
+    () =>
+      planner
+        .filter(
+          (p) =>
+            p.parentId == null &&
+            p.isTriaged &&
+            p.plannerType === "goal" &&
+            p.id !== item.id,
+        )
+        .sort((a, b) => (a.title || "").localeCompare(b.title || ""))
+        .map((p) => ({
+          value: p.id,
+          label: p.title || "Untitled",
+          searchLabel: p.title ?? undefined,
+        })),
+    [planner, item.id],
+  );
+
+  const manifest = useMemo(
+    () =>
+      pendingTargetId
+        ? buildDemoteLossManifest(planner, queues, dependencies, item.id)
+        : null,
+    [pendingTargetId, planner, queues, dependencies, item.id],
+  );
+
+  if (!eligible || targetOptions.length === 0) return null;
+
+  const pendingTarget = pendingTargetId
+    ? planner.find((p) => p.id === pendingTargetId)
+    : undefined;
+  const dropsAnything =
+    !!manifest &&
+    (manifest.queueTitle !== null || manifest.inboundHostTitles.length > 0);
+
+  const confirmDemote = () => {
+    if (!pendingTargetId) return;
+    const result = demoteRootIntoGoal(
+      planner,
+      item.id,
+      pendingTargetId,
+      queues,
+      dependencies,
+    );
+    setPendingTargetId(null);
+    if (!Array.isArray(result)) {
+      setDemoteError(result.error);
+      return;
+    }
+    setDemoteError(null);
+    updatePlannerArray(result);
+    router.push(`/items/${pendingTargetId}/subtasks`);
+  };
+
+  return (
+    <div className={card}>
+      <span className={cardSectionTitle}>Nest under a goal</span>
+      <div className={whyText}>
+        Move this item and everything under it inside another goal. It stops
+        being its own top-level item.
+      </div>
+      <div className={depPickerRow}>
+        <Combobox
+          value={null}
+          options={targetOptions}
+          onChange={(id) => id && setPendingTargetId(id)}
+          placeholder="Nest under…"
+          ariaLabel="Nest under a goal"
+          maxWidth="100%"
+        />
+      </div>
+      {demoteError && <div className={depError}>{demoteError}</div>}
+
+      <ConfirmModal
+        open={pendingTargetId !== null}
+        title="Nest under goal"
+        body={
+          <>
+            <div>
+              <strong>{item.title}</strong> becomes a subtask of{" "}
+              <strong>{pendingTarget?.title || "Untitled"}</strong>, adopting
+              that goal&apos;s category and readiness.
+            </div>
+            {manifest?.queueTitle && (
+              <div>
+                It leaves the <strong>{manifest.queueTitle}</strong> queue.
+              </div>
+            )}
+            {manifest && manifest.dependsOnTitles.length > 0 && (
+              <div>
+                It keeps waiting for {joinTitles(manifest.dependsOnTitles)}.
+              </div>
+            )}
+            {manifest && manifest.requiredByTitles.length > 0 && (
+              <div>
+                {joinTitles(manifest.requiredByTitles)} still wait
+                {manifest.requiredByTitles.length === 1 ? "s" : ""} for it,
+                now as part of the new goal.
+              </div>
+            )}
+            {manifest && manifest.inboundHostTitles.length > 0 && (
+              <div>
+                Links into it from {joinTitles(manifest.inboundHostTitles)} are
+                removed.
+              </div>
+            )}
+            {manifest && manifest.outboundTargetTitles.length > 0 && (
+              <div>
+                Its links to {joinTitles(manifest.outboundTargetTitles)} stay,
+                but now run in the new goal&apos;s order.
+              </div>
+            )}
+            {dropsAnything && (
+              <div>
+                Dropped connections cannot be restored by promoting it back
+                later.
+              </div>
+            )}
+          </>
+        }
+        confirmLabel="Nest"
+        cancelLabel="Cancel"
+        onCancel={() => setPendingTargetId(null)}
+        onConfirm={confirmDemote}
+      />
     </div>
   );
 }

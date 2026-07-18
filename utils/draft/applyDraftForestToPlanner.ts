@@ -61,11 +61,12 @@ interface ApplyForestArgs {
   // Dependency edges, used to clamp isReady at save time — mirrors the UI's
   // readiness gate for edges the assistant's proposal may conflict with.
   dependencies?: PlannerDependency[];
-  // Populated (when provided) with draft root id -> minted permanent id for
-  // every new top-level goal. The precedence apply uses it to remap queue
-  // members and dependency endpoints that reference goals created in the
-  // same conversation.
-  rootIdMap?: Map<string, string>;
+  // Populated (when provided) with draft id -> minted permanent id at EVERY
+  // level: new top-level goals, and any child re-minted on the
+  // delete+recreate path. The precedence apply uses it to remap queue
+  // members (roots) and node-level dependency endpoints (any level) that
+  // reference drafts from the same conversation.
+  nodeIdMap?: Map<string, string>;
 }
 
 // A new top-level item's color: the model's explicit pick, else its category's
@@ -100,7 +101,7 @@ export function applyDraftForestToPlanner({
   validCategoryIds,
   categoryColorById,
   dependencies = [],
-  rootIdMap,
+  nodeIdMap,
 }: ApplyForestArgs): Planner[] {
   const now = new Date().toISOString();
   let current = planner;
@@ -138,6 +139,7 @@ export function applyDraftForestToPlanner({
         userId,
         validCategoryIds,
         now,
+        nodeIdMap,
       });
     } else {
       const { rootId, rows } = buildNewRootRows(
@@ -146,8 +148,9 @@ export function applyDraftForestToPlanner({
         validCategoryIds,
         categoryColorById,
         now,
+        nodeIdMap,
       );
-      if (goal.id.length > 0) rootIdMap?.set(goal.id, rootId);
+      if (goal.id.length > 0) nodeIdMap?.set(goal.id, rootId);
       current = [...current, ...rows];
     }
   }
@@ -199,6 +202,7 @@ interface ApplyTreeArgs {
   userId: string;
   validCategoryIds: ReadonlySet<string>;
   now: string;
+  nodeIdMap?: Map<string, string>;
 }
 
 // Apply an accepted DraftNode tree onto an existing root. Preserves existing
@@ -211,6 +215,7 @@ function applyTreeToExistingRoot({
   userId,
   validCategoryIds,
   now,
+  nodeIdMap,
 }: ApplyTreeArgs): Planner[] {
   const canonicalById = new Map<string, Planner>(planner.map((p) => [p.id, p]));
   const rootRow = canonicalById.get(rootId);
@@ -256,6 +261,7 @@ function applyTreeToExistingRoot({
   function processNode(node: DraftNode, parentId: string, sortOrder: number): void {
     const canRetain = node.id.length > 0 && oldDescendantIds.has(node.id);
     const nodeId = canRetain ? node.id : uuidv4();
+    if (!canRetain && node.id.length > 0) nodeIdMap?.set(node.id, nodeId);
     const existing = canonicalById.get(nodeId);
 
     node.children.forEach((child, i) => {
@@ -359,6 +365,7 @@ function buildNewRootRows(
   validCategoryIds: ReadonlySet<string>,
   categoryColorById: ReadonlyMap<string, string | null> | undefined,
   now: string,
+  nodeIdMap?: Map<string, string>,
 ): { rootId: string; rows: Planner[] } {
   const rootId = uuidv4();
   const rootCategoryId =
@@ -384,6 +391,7 @@ function buildNewRootRows(
 
   function build(child: DraftNode, parentId: string, sortOrder: number): void {
     const childId = uuidv4();
+    if (child.id.length > 0) nodeIdMap?.set(child.id, childId);
 
     child.children.forEach((grandchild, i) => {
       build(grandchild, childId, (i + 1) * SORT_ORDER_STEP);

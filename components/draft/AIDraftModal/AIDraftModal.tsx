@@ -706,8 +706,10 @@ export function AIDraftModal({
     const categoriesForForest = nextCategories ?? categories;
     // Forest before precedence: queue members and dependency endpoints may
     // reference goals created this conversation, and their permanent ids only
-    // exist once the forest apply mints them (reported through rootIdMap).
-    const rootIdMap = new Map<string, string>();
+    // exist once the forest apply mints them (reported through nodeIdMap —
+    // all levels, so node-level dependency endpoints survive delete+recreate
+    // paths too).
+    const nodeIdMap = new Map<string, string>();
     const nextPlanner = hasForestChanges
       ? applyDraftForestToPlanner({
           planner,
@@ -718,7 +720,7 @@ export function AIDraftModal({
             categoriesForForest.map((c) => [c.id, c.color]),
           ),
           dependencies,
-          rootIdMap,
+          nodeIdMap,
         })
       : undefined;
     const nextTemplates = hasTemplateChanges
@@ -739,7 +741,7 @@ export function AIDraftModal({
         currentDependencies: dependencies,
         canonical: canonicalPrecedence,
         working: workingPrecedence,
-        rootIdMap,
+        nodeIdMap,
         nextPlanner: plannerForSync ?? planner,
         validCategoryIds: new Set(categoriesForForest.map((c) => c.id)),
         userId,

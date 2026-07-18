@@ -19,6 +19,7 @@ import {
   NextOnCalendarCard,
   EngineNotesCard,
   ConnectionsCard,
+  NestIntoGoalCard,
 } from "../SideCards";
 import { SHAKE_DURATION_MS } from "../../_constants";
 import {
@@ -157,6 +158,7 @@ export default function ItemOverviewPage() {
           <NextOnCalendarCard />
           <EngineNotesCard />
           <ConnectionsCard />
+          <NestIntoGoalCard />
         </div>
       </div>
 

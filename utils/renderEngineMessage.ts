@@ -80,6 +80,25 @@ export function renderEngineMessage(
   const payload = raw as EngineMessagePayload;
   const tone = message.tone as EngineMessageTone;
 
+  // A dependency endpoint may be an interior node (node-level edges): append
+  // the containing root as context so a subtask reads as a step of its goal.
+  const plannerLabel = (id: string, fallback: string): string => {
+    const row = lookups.plannerById.get(id);
+    if (!row) return fallback;
+    if (!row.parentId) return `"${row.title}"`;
+    const seen = new Set<string>([row.id]);
+    let current = row;
+    while (current.parentId) {
+      const parent = lookups.plannerById.get(current.parentId);
+      if (!parent || seen.has(parent.id)) break;
+      seen.add(parent.id);
+      current = parent;
+    }
+    return current.id === row.id
+      ? `"${row.title}"`
+      : `"${row.title}" (a step of "${current.title}")`;
+  };
+
   switch (payload.type) {
     case "TASK_TOO_LARGE": {
       const planner = lookups.plannerById.get(payload.plannerId);
@@ -220,12 +239,11 @@ export function renderEngineMessage(
     }
 
     case "DEPENDENCY_BROKEN": {
-      const predecessor = lookups.plannerById.get(payload.predecessorId);
-      const successor = lookups.plannerById.get(payload.successorId);
-      const predecessorLabel = predecessor
-        ? `"${predecessor.title}"`
-        : "a prerequisite";
-      const successorLabel = successor ? `"${successor.title}"` : "An item";
+      const predecessorLabel = plannerLabel(
+        payload.predecessorId,
+        "a prerequisite",
+      );
+      const successorLabel = plannerLabel(payload.successorId, "An item");
       const reason =
         payload.cause === "unready"
           ? `${predecessorLabel} isn't marked ready yet`
@@ -241,12 +259,11 @@ export function renderEngineMessage(
     }
 
     case "SEQUENCE_PAST_HORIZON": {
-      const predecessor = lookups.plannerById.get(payload.predecessorId);
-      const successor = lookups.plannerById.get(payload.successorId);
-      const predecessorLabel = predecessor
-        ? `"${predecessor.title}"`
-        : "an earlier item";
-      const successorLabel = successor ? `"${successor.title}"` : "a later item";
+      const predecessorLabel = plannerLabel(
+        payload.predecessorId,
+        "an earlier item",
+      );
+      const successorLabel = plannerLabel(payload.successorId, "a later item");
       const queue = payload.queueId
         ? lookups.queueById.get(payload.queueId)
         : undefined;

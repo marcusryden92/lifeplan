@@ -163,6 +163,7 @@ export const dateInputFaded = style({
 
 export const drawerFooter = style({
   display: "flex",
+  position: "sticky",
   alignItems: "center",
   justifyContent: "space-between",
   gap: space["2"],

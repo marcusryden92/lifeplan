@@ -53,6 +53,7 @@ import {
 } from "../helpers/TravelManager";
 import { SchedulerRecorder } from "../helpers/Scheduler/SchedulerRecorder";
 import { setTimeOnDate } from "@/utils/calendarUtils";
+import { getRootParentId } from "@/utils/goalPageHandlers";
 
 export class CalendarGenerator {
   // Class instances
@@ -212,10 +213,18 @@ export class CalendarGenerator {
     // downstream that needs it, so the candidate sort places a high-priority
     // chain's low-scored prerequisites among high-priority work. Raw urgency
     // still feeds plannerScores (dashboard); only the scheduler's ordering uses
-    // the inherited scores.
+    // the inherited scores. Node-level dependency edges are lifted to their
+    // structural-root pairs here — urgency is root-keyed (root urgency only in
+    // v1), and the leaf-level lift in buildLeafGraph handles the fine grain.
+    const rootLiftedEdges = precedenceEdges
+      .map((edge) => ({
+        fromId: getRootParentId(input.planners, edge.fromId) ?? edge.fromId,
+        toId: getRootParentId(input.planners, edge.toId) ?? edge.toId,
+      }))
+      .filter((edge) => edge.fromId !== edge.toId);
     const effectiveScores = computeEffectiveScores(
       urgencyScores,
-      precedenceEdges,
+      rootLiftedEdges,
     );
 
     // Phase 6a: Build available slots over the full scheduling timeline

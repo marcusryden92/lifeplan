@@ -35,6 +35,7 @@ export default function DraggableItem({
     focusedTask,
     droppedTask,
     flashDroppedTask,
+    moveGuard,
   } = useDraggableContext();
 
   const handleMouseEnter = useCallback(
@@ -70,6 +71,7 @@ export default function DraggableItem({
       updatePlannerArray,
       currentlyClickedItem,
       currentlyHoveredItem,
+      precedence: moveGuard,
     });
     if (moved) flashDroppedTask(currentlyClickedItem.taskId);
 
@@ -83,6 +85,7 @@ export default function DraggableItem({
     setCurrentlyClickedItem,
     setCurrentlyHoveredItem,
     flashDroppedTask,
+    moveGuard,
   ]);
 
   const isGrabbing = !!currentlyClickedItem && displayDragBox;

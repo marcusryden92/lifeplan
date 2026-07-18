@@ -20,7 +20,6 @@ import {
   dependencyReadyBlockers,
   readyDependents,
 } from "@/utils/precedence/readinessBlockers";
-import { plannerIsCompleted } from "@/utils/plannerCompletion";
 import { setGoalIsReady } from "@/utils/goal-handlers/toggleGoalIsReady";
 import type { Planner } from "@/types/prisma";
 import { DependencyGatePopover, type GateEntry } from "./DependencyGatePopover";
@@ -257,36 +256,32 @@ export default function ItemDetailLayout({
   }
   const canMarkReady = readyBlockers.length === 0;
 
-  // Dependency gate: an unready-goal prerequisite blocks readying; a READY
-  // goal depending on this one blocks un-readying. Entries carry the edge id
-  // so the popover's Disconnect action removes the exact row.
-  const dependencyBlockerEntries: GateEntry[] = dependencies
-    .filter((d) => d.successorId === item.id)
-    .map((d) => ({
-      edgeId: d.id,
-      goal: planner.find((p) => p.id === d.predecessorId),
-    }))
-    .filter(
-      (x): x is GateEntry =>
-        !!x.goal &&
-        x.goal.plannerType === "goal" &&
-        x.goal.isReady !== true &&
-        !plannerIsCompleted(x.goal),
-    );
+  // Dependency gate: a prerequisite under an unready goal root blocks
+  // readying; a READY goal depending on this one (or any node in its
+  // subtree) blocks un-readying. Node-level edges resolve through the
+  // endpoint's containing root — interior endpoints render "part of <root>"
+  // and withhold the shortcut (readiness cascades from roots only). Entries
+  // carry the edge id so the popover's Disconnect removes the exact row.
+  const toGateEntry = (entry: {
+    edgeId: string;
+    endpoint: Planner;
+    root: Planner;
+  }): GateEntry => ({
+    edgeId: entry.edgeId,
+    goal: entry.root,
+    viaNode: entry.endpoint.id !== entry.root.id ? entry.endpoint : undefined,
+  });
+  const dependencyBlockerEntries: GateEntry[] = dependencyReadyBlockers(
+    item.id,
+    dependencies,
+    planner,
+  ).map(toGateEntry);
 
-  const readyDependentEntries: GateEntry[] = dependencies
-    .filter((d) => d.predecessorId === item.id)
-    .map((d) => ({
-      edgeId: d.id,
-      goal: planner.find((p) => p.id === d.successorId),
-    }))
-    .filter(
-      (x): x is GateEntry =>
-        !!x.goal &&
-        x.goal.plannerType === "goal" &&
-        x.goal.isReady === true &&
-        !plannerIsCompleted(x.goal),
-    );
+  const readyDependentEntries: GateEntry[] = readyDependents(
+    item.id,
+    dependencies,
+    planner,
+  ).map(toGateEntry);
 
   // Block un-readying when the item already has completed work — either the
   // root itself or anything in its subtree.
@@ -315,7 +310,11 @@ export default function ItemDetailLayout({
         );
       }
       for (const entry of dependencyBlockerEntries) {
-        parts.push(`Awaiting "${entry.goal.title || "Untitled"}".`);
+        parts.push(
+          entry.viaNode
+            ? `Awaiting "${entry.viaNode.title || "Untitled"}" (part of "${entry.goal.title || "Untitled"}").`
+            : `Awaiting "${entry.goal.title || "Untitled"}".`,
+        );
       }
       flashReadyMessage(parts.join(" "));
       return;
@@ -327,7 +326,11 @@ export default function ItemDetailLayout({
     if (item.isReady && readyDependentEntries.length > 0) {
       flashReadyMessage(
         `Required by ${readyDependentEntries
-          .map((entry) => `"${entry.goal.title || "Untitled"}"`)
+          .map((entry) =>
+            entry.viaNode
+              ? `"${entry.viaNode.title || "Untitled"}" (part of "${entry.goal.title || "Untitled"}")`
+              : `"${entry.goal.title || "Untitled"}"`,
+          )
           .join(", ")}.`,
       );
       return;
@@ -350,7 +353,7 @@ export default function ItemDetailLayout({
       if (missing.length > 0) parts.push(`needs ${missing.join(" and ")}`);
       if (ownBlockers.length > 0) {
         parts.push(
-          `awaiting ${ownBlockers.map((b) => `"${b.title || "Untitled"}"`).join(", ")}`,
+          `awaiting ${ownBlockers.map((b) => `"${b.endpoint.title || "Untitled"}"`).join(", ")}`,
         );
       }
       return `"${goal.title || "Untitled"}" ${parts.join("; ")}.`;
@@ -372,7 +375,7 @@ export default function ItemDetailLayout({
     const dependents = readyDependents(goal.id, dependencies, planner);
     if (dependents.length > 0) {
       return `"${goal.title || "Untitled"}" is required by ${dependents
-        .map((d) => `"${d.title || "Untitled"}"`)
+        .map((d) => `"${d.root.title || "Untitled"}"`)
         .join(", ")}.`;
     }
     setGoalIsReady(updatePlannerArray, goal.id, false);

@@ -17,7 +17,10 @@ import {
   vars,
   categoryColor,
 } from "@/components/ui";
-import { getEffectiveCategoryId } from "@/utils/goalPageHandlers";
+import {
+  getEffectiveCategoryId,
+  getRootParentId,
+} from "@/utils/goalPageHandlers";
 import { wouldCreateCycleAddingDependency } from "@/utils/precedence/findCycle";
 import { describeCycle } from "@/utils/precedence/describeCycle";
 import type { PrecedenceEdge } from "@/utils/precedence/types";
@@ -447,11 +450,30 @@ export function GraphCanvas({
         });
       }
     }
+    // A node-level endpoint has no pill of its own: fall back to its ROOT's
+    // pill, or to the exact leaf pill when the leaf view has one placed.
+    const resolveEndpoint = (
+      id: string,
+    ): { laid: LaidNode; leaf: LaidLeaf | null; interior: boolean } | null => {
+      const direct = layout.nodeById.get(id);
+      if (direct) return { laid: direct, leaf: null, interior: false };
+      const rootId = getRootParentId(planner, id);
+      const rootLaid = rootId ? layout.nodeById.get(rootId) : undefined;
+      if (!rootLaid) return null;
+      const leafPill = rootLaid.leaves.find((l) => l.leaf.id === id) ?? null;
+      return { laid: rootLaid, leaf: leafPill, interior: true };
+    };
     for (const edge of dependencies) {
-      const from = layout.nodeById.get(edge.predecessorId);
-      const to = layout.nodeById.get(edge.successorId);
-      if (!from || !to) continue;
-      const { x1, y1, x2, y2 } = geometry(from, to);
+      const fromRes = resolveEndpoint(edge.predecessorId);
+      const toRes = resolveEndpoint(edge.successorId);
+      if (!fromRes || !toRes) continue;
+      const from = fromRes.laid;
+      const to = toRes.laid;
+      const base = geometry(from, to);
+      const x1 = fromRes.leaf ? fromRes.leaf.x + fromRes.leaf.w : base.x1;
+      const y1 = fromRes.leaf ? fromRes.leaf.y + nodeH / 2 : base.y1;
+      const x2 = toRes.leaf ? toRes.leaf.x : base.x2;
+      const y2 = toRes.leaf ? toRes.leaf.y + nodeH / 2 : base.y2;
       result.push({
         key: `dependency:${edge.id}`,
         kind: "dependency",
@@ -463,11 +485,14 @@ export function GraphCanvas({
         x2,
         y2,
         path: edgePath(x1, y1, x2, y2),
-        broken: isBroken(from, to),
+        // Root spans don't stand in for a node endpoint's own window, so
+        // error styling is suppressed for node edges.
+        broken:
+          !fromRes.interior && !toRes.interior && isBroken(from, to),
       });
     }
     return result;
-  }, [layout, dependencies]);
+  }, [layout, dependencies, planner, nodeH]);
 
   const selectedEdge = useMemo(
     () =>

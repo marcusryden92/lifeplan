@@ -7,12 +7,16 @@ import React, {
   useEffect,
   useRef,
   useCallback,
+  useMemo,
   ReactNode,
   SetStateAction,
 } from "react";
 
 import DragBox from "@/components/draggable/DragBox";
+import { ReorderRefusalBanner } from "@/components/draggable/ReorderRefusalBanner";
 import { TouchDropTarget } from "@/components/draggable/touchDropResolution";
+import { useCalendarProvider } from "@/context/CalendarProvider";
+import type { MovePrecedenceGuard } from "@/utils/goal-handlers/moveItem";
 
 type ClickedItem = {
   taskId: string;
@@ -40,6 +44,10 @@ interface DraggableContextType {
   // the edit drawer on the subtasks page.
   droppedTask: string | null;
   flashDroppedTask: (taskId: string) => void;
+  // Ready-made guard for moveToEdge/moveToMiddle: validates the proposed
+  // order against node-level dependency loops and surfaces refusals through
+  // the shared banner. One wiring point for every drag surface.
+  moveGuard: MovePrecedenceGuard;
 }
 
 const DraggableContext = createContext<DraggableContextType | null>(null);
@@ -61,6 +69,32 @@ export const DraggableContextProvider = ({
   const [focusedTask, setFocusedTask] = useState<string | null>(null);
   const [droppedTask, setDroppedTask] = useState<string | null>(null);
   const droppedTimerRef = useRef<number | null>(null);
+  const { queues, dependencies } = useCalendarProvider();
+  const [reorderRefusal, setReorderRefusal] = useState<string | null>(null);
+  const refusalTimerRef = useRef<number | null>(null);
+
+  const flashReorderRefusal = useCallback((message: string) => {
+    if (refusalTimerRef.current !== null)
+      window.clearTimeout(refusalTimerRef.current);
+    setReorderRefusal(message);
+    refusalTimerRef.current = window.setTimeout(() => {
+      setReorderRefusal(null);
+      refusalTimerRef.current = null;
+    }, 6000);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (refusalTimerRef.current !== null)
+        window.clearTimeout(refusalTimerRef.current);
+    },
+    [],
+  );
+
+  const moveGuard = useMemo<MovePrecedenceGuard>(
+    () => ({ queues, dependencies, onRefused: flashReorderRefusal }),
+    [queues, dependencies, flashReorderRefusal],
+  );
 
   // Duration matches the dropFlash keyframe animation in lumenTasks.css.ts.
   const flashDroppedTask = useCallback((taskId: string) => {
@@ -107,11 +141,13 @@ export const DraggableContextProvider = ({
     setFocusedTask,
     droppedTask,
     flashDroppedTask,
+    moveGuard,
   };
 
   return (
     <DraggableContext.Provider value={value}>
       <DragBox />
+      <ReorderRefusalBanner message={reorderRefusal} />
       {children}
     </DraggableContext.Provider>
   );

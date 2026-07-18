@@ -103,6 +103,36 @@ export function buildLeafGraph(
     registerRoot(targetId, seq);
   }
 
+  // Node-level dependency endpoints become gate anchors: the anchor's first
+  // own leaf carries the cross gate, its leaves feed its outcome, and the
+  // score lift rides its boundary leaves. Interior anchors enumerate with
+  // interior semantics so their leaf set matches what the engine actually
+  // places for that subtree. Registration is skipped when the anchor's
+  // leaves are not in the pool (its containing root is not an active
+  // candidate) — the gate seeds those from completion/memoized history
+  // instead. Anchor registration deliberately shares completion tracking
+  // with roots but must never activate day caps — goalCapFor filters nested
+  // rows, keeping stale caps on nested goal rows inert.
+  const plannersById = new Map(allPlanners.map((p) => [p.id, p]));
+  const anchorIds = new Set<string>();
+  for (const edge of precedenceEdges) {
+    anchorIds.add(edge.fromId);
+    anchorIds.add(edge.toId);
+  }
+  for (const anchorId of anchorIds) {
+    if (rootFirstOwnLeaf.has(anchorId)) continue;
+    const anchor = plannersById.get(anchorId);
+    if (!anchor) continue;
+    const seq = getScheduledLeafSequence(
+      allPlanners,
+      anchorId,
+      undefined,
+      anchor.parentId != null,
+    ).filter((leaf) => !taskIsCompleted(leaf) && !memoizedEventIds.has(leaf.id));
+    if (seq.length === 0 || !nodeById.has(seq[0].id)) continue;
+    registerRoot(anchorId, seq);
+  }
+
   const rootLeafCount = new Map<string, number>();
   for (const roots of completionRoots.values()) {
     for (const rootId of roots) {

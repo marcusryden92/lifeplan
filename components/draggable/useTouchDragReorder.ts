@@ -46,8 +46,12 @@ export function useTouchDragReorder({
   onDragStart,
 }: UseTouchDragReorderProps) {
   const { planner, updatePlannerArray } = useCalendarProvider();
-  const { setCurrentlyClickedItem, setTouchDropTarget, flashDroppedTask } =
-    useDraggableContext();
+  const {
+    setCurrentlyClickedItem,
+    setTouchDropTarget,
+    flashDroppedTask,
+    moveGuard,
+  } = useDraggableContext();
 
   const plannerRef = useRef(planner);
   plannerRef.current = planner;
@@ -207,6 +211,7 @@ export function useTouchDragReorder({
                 updatePlannerArray,
                 currentlyClickedItem: clickedItem,
                 currentlyHoveredItem: target.taskId,
+                precedence: moveGuard,
               })
             : moveToEdge({
                 planner: plannerRef.current,
@@ -214,6 +219,7 @@ export function useTouchDragReorder({
                 currentlyClickedItem: clickedItem,
                 targetId: target.taskId,
                 mouseLocationInItem: target.kind,
+                precedence: moveGuard,
               });
         if (moved) flashDroppedTask(taskId);
       };

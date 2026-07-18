@@ -7,9 +7,6 @@
 
 # P5 — Medium features
 
-- Mind-map style: items as organized under their roles and sub-categories
-
-- Custom Claude API key
 - Mobile app (Capacitor wrap)
 
 - Connect to Google Calendar and iCalendar

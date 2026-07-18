@@ -2,6 +2,10 @@ import { v4 as uuidv4 } from "uuid";
 import type { DraftNode } from "./plannerTreeToJson";
 import type { DraftForest } from "./plannerForestToJson";
 import { normalizeDraftTree, coerceParentTypes } from "./normalizeDraftTree";
+import {
+  draftValidateSubtreeOrder,
+  type DraftPrecedenceState,
+} from "./draftPrecedence";
 import { normalizeTaskSplittingSettings } from "@/utils/taskSplitting";
 import { clampPriority } from "@/utils/plannerPriority";
 
@@ -326,6 +330,10 @@ export function updateDraftItems(
 export function moveDraftItem(
   forest: DraftForest,
   args: DraftMoveArgs,
+  // Canonical + working node-level dependency edges: a same-goal reorder can
+  // close a loop through TWO goals' step orders, so the post-move forest is
+  // validated before acceptance.
+  precedence?: DraftPrecedenceState,
 ): DraftOpsResult {
   const fail = (id: string | null, reason: string): DraftOpsResult => ({
     forest,
@@ -373,6 +381,29 @@ export function moveDraftItem(
     target.splice(index + 1, 0, itemLoc.node);
   } else {
     target.push(itemLoc.node);
+  }
+
+  if (precedence) {
+    const cycle = draftValidateSubtreeOrder(next, precedence, itemLoc.root.id);
+    if (cycle) {
+      const titleById = new Map<string, string>();
+      const collect = (node: DraftNode) => {
+        if (node.id) titleById.set(node.id, node.title);
+        for (const child of node.children) collect(child);
+      };
+      for (const goal of next.goals) collect(goal);
+      const path = cycle
+        .filter((e) => e.source !== "internal")
+        .map(
+          (e) =>
+            `"${titleById.get(e.fromNodeId ?? e.fromId) ?? "an item"}" → "${titleById.get(e.toNodeId ?? e.toId) ?? "an item"}"`,
+        )
+        .join(", ");
+      return fail(
+        args.itemId,
+        `that order would create a loop through existing dependencies (${path}); the move was not applied`,
+      );
+    }
   }
 
   return {

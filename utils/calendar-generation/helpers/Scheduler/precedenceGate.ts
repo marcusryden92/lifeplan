@@ -1,11 +1,14 @@
 import type { Planner, SimpleEvent } from "@/types/prisma";
 import type { PrecedenceEdge } from "@/utils/precedence/types";
 import { plannerIdFromEventId } from "../../../planRecurrence";
+import { plannerCompletedEnd } from "../../../plannerCompletion";
+import { getTaskTreeIds } from "../../../goalPageHandlers";
 
 // Placement-gate bookkeeping for precedence chains. The gate bounds each
 // candidate to start after the max end across all PLACED predecessors; a
 // failed predecessor breaks the chain loudly (sequence break), and a
-// predecessor with no outcome yet keeps the successor waiting.
+// predecessor with no outcome yet keeps the successor waiting. Keys are
+// anchors — root ids for queue edges, any node id for dependency edges.
 
 export type ChainFailCause = "failed" | "unready" | "horizon";
 
@@ -22,18 +25,28 @@ export type SequenceBreak = {
 };
 
 /**
- * Seed outcomes for edge sources that are NOT scheduling candidates this run:
- * - Sources with pre-existing events (memoized past placements, completed
- *   split segments) resolve `placed` with the max end across their subtree's
- *   events in `scheduledEvents` — past-only, effectively unconstraining.
- *   Events are matched to their source planner via the composite-id prefix
- *   (chunk `|chunk:n` / segment `|done:start` ids), never raw id equality.
- * - Unready-goal dependency predecessors resolve `failed`/`unready` so the
- *   defensive fallback is loud (semantics: a prerequisite never stops being
- *   a prerequisite). Queue edges never reach here with an unready goal —
- *   the edge builder chains through them silently.
+ * Seed outcomes for edge sources that are NOT scheduling candidates this run
+ * (a source may be any node, not just a root):
+ * - A completed source node resolves `placed` at its own completion end
+ *   (completedEndTime or the last completed segment).
+ * - Sources with pre-existing subtree events (memoized past placements,
+ *   completed split segments) resolve `placed` with the max end across the
+ *   subtree — past-only, effectively unconstraining. Events are matched to
+ *   their source planner via the composite-id prefix (chunk `|chunk:n` /
+ *   segment `|done:start` ids), never raw id equality.
+ * - A source under an unready CONTAINING ROOT goal resolves
+ *   `failed`/`unready` so the defensive fallback is loud (a prerequisite
+ *   never stops being a prerequisite) — the cause comes from the root's
+ *   readiness, not the endpoint row's own type, so a task-typed subtask
+ *   under an unready goal reports `unready`, not `failed`. Queue edges never
+ *   reach here with an unready goal — the edge builder chains through them
+ *   silently.
  * - Anything else unseedable resolves `failed` — a starvation guard so a
  *   successor never waits forever on a source that cannot produce events.
+ *
+ * The caller deletes premature seeds for sources whose leaves ARE in this
+ * run's pool (interior anchors of active candidates, spliced detour
+ * targets) — the loop resolves those as their leaves place.
  */
 export function seedChainOutcomes(
   edges: PrecedenceEdge[],
@@ -53,11 +66,8 @@ export function seedChainOutcomes(
   );
   if (unseededSources.length === 0) return outcomes;
 
-  // rootOf with cycle guard, resolved lazily per event planner id.
-  const rootCache = new Map<string, string>();
-  const rootOf = (id: string): string => {
-    const cached = rootCache.get(id);
-    if (cached !== undefined) return cached;
+  // Containing-root row with cycle guard.
+  const rootRowOf = (id: string): Planner | undefined => {
     const seen = new Set<string>([id]);
     let current = plannerById.get(id);
     while (current?.parentId) {
@@ -66,30 +76,45 @@ export function seedChainOutcomes(
       seen.add(parent.id);
       current = parent;
     }
-    const root = current?.id ?? id;
-    rootCache.set(id, root);
-    return root;
+    return current;
   };
 
-  const lastEndByRoot = new Map<string, Date>();
+  const eventEnds: { plannerId: string; end: Date }[] = [];
   for (const event of scheduledEvents) {
     if (event.extendedProps?.eventType !== "planner") continue;
-    const root = rootOf(plannerIdFromEventId(event.id));
-    const end = new Date(event.end);
-    const prior = lastEndByRoot.get(root);
-    if (!prior || end > prior) lastEndByRoot.set(root, end);
+    eventEnds.push({
+      plannerId: plannerIdFromEventId(event.id),
+      end: new Date(event.end),
+    });
   }
 
   for (const sourceId of unseededSources) {
     const planner = plannerById.get(sourceId);
-    const lastEnd = lastEndByRoot.get(sourceId);
+
+    const completedEnd = planner ? plannerCompletedEnd(planner) : null;
+    if (completedEnd) {
+      outcomes.set(sourceId, {
+        status: "placed",
+        lastEnd: new Date(completedEnd),
+      });
+      continue;
+    }
+
+    let lastEnd: Date | undefined;
+    if (planner) {
+      const subtree = new Set(getTaskTreeIds(allPlanners, sourceId));
+      for (const e of eventEnds) {
+        if (!subtree.has(e.plannerId)) continue;
+        if (!lastEnd || e.end > lastEnd) lastEnd = e.end;
+      }
+    }
     if (lastEnd) {
       outcomes.set(sourceId, { status: "placed", lastEnd });
-    } else if (
-      planner &&
-      planner.plannerType === "goal" &&
-      planner.isReady !== true
-    ) {
+      continue;
+    }
+
+    const root = planner ? rootRowOf(sourceId) : undefined;
+    if (root && root.plannerType === "goal" && root.isReady !== true) {
       outcomes.set(sourceId, { status: "failed", failCause: "unready" });
     } else {
       outcomes.set(sourceId, { status: "failed", failCause: "failed" });
@@ -148,6 +173,9 @@ export function recordSequenceBreaks(
   failedEdges: { edge: PrecedenceEdge; cause: ChainFailCause }[],
 ): void {
   for (const { edge, cause } of failedEdges) {
+    // The gated builder only emits queue/dependency edges — `internal` is a
+    // validation-graph concept and never reaches the gate.
+    if (edge.source === "internal") continue;
     const key = `${edge.source}|${edge.queueId ?? ""}|${edge.fromId}|${edge.toId}|${cause}`;
     if (seen.has(key)) continue;
     seen.add(key);

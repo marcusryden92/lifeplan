@@ -65,7 +65,8 @@ describe("dependencyReadyBlockers", () => {
       [makeDependency("goal-x", "target")],
       planner,
     );
-    expect(blockers.map((b) => b.id)).toEqual(["goal-x"]);
+    expect(blockers.map((b) => b.root.id)).toEqual(["goal-x"]);
+    expect(blockers.map((b) => b.endpoint.id)).toEqual(["goal-x"]);
   });
 
   it("a task predecessor never blocks", () => {
@@ -114,6 +115,64 @@ describe("dependencyReadyBlockers", () => {
       ),
     ).toEqual([]);
   });
+
+  it("a task-typed subtask under an unready goal blocks through its root", () => {
+    const planner = [
+      makePlanner("goal-x", { plannerType: "goal", isReady: false }),
+      makePlanner("x-step", {
+        parentId: "goal-x",
+        isReady: false,
+        sortOrder: 1024,
+      }),
+      makePlanner("target", { plannerType: "goal", isReady: false }),
+    ];
+    const blockers = dependencyReadyBlockers(
+      "target",
+      [makeDependency("x-step", "target")],
+      planner,
+    );
+    expect(blockers.map((b) => b.endpoint.id)).toEqual(["x-step"]);
+    expect(blockers.map((b) => b.root.id)).toEqual(["goal-x"]);
+  });
+
+  it("an edge into the target's subtree gates the target", () => {
+    const planner = [
+      makePlanner("goal-x", { plannerType: "goal", isReady: false }),
+      makePlanner("target", { plannerType: "goal", isReady: false }),
+      makePlanner("t-step", {
+        parentId: "target",
+        isReady: false,
+        sortOrder: 1024,
+      }),
+    ];
+    const blockers = dependencyReadyBlockers(
+      "target",
+      [makeDependency("goal-x", "t-step")],
+      planner,
+    );
+    expect(blockers.map((b) => b.root.id)).toEqual(["goal-x"]);
+  });
+
+  it("a completed subtask endpoint under an unready root never blocks", () => {
+    const planner = [
+      makePlanner("goal-x", { plannerType: "goal", isReady: false }),
+      makePlanner("x-step", {
+        parentId: "goal-x",
+        isReady: false,
+        sortOrder: 1024,
+        completedStartTime: TS,
+        completedEndTime: TS,
+      }),
+      makePlanner("target", { plannerType: "goal", isReady: false }),
+    ];
+    expect(
+      dependencyReadyBlockers(
+        "target",
+        [makeDependency("x-step", "target")],
+        planner,
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe("readyDependents", () => {
@@ -127,7 +186,7 @@ describe("readyDependents", () => {
       [makeDependency("target", "dependent")],
       planner,
     );
-    expect(dependents.map((d) => d.id)).toEqual(["dependent"]);
+    expect(dependents.map((d) => d.root.id)).toEqual(["dependent"]);
   });
 
   it("unready or completed dependents do not gate", () => {
@@ -148,5 +207,29 @@ describe("readyDependents", () => {
       makeDependency("target", "task-dep"),
     ];
     expect(readyDependents("target", dependencies, planner)).toEqual([]);
+  });
+
+  it("an edge out of the target's subtree into a ready goal's subtree gates", () => {
+    const planner = [
+      makePlanner("target", { plannerType: "goal", isReady: true }),
+      makePlanner("t-step", {
+        parentId: "target",
+        isReady: true,
+        sortOrder: 1024,
+      }),
+      makePlanner("dependent", { plannerType: "goal", isReady: true }),
+      makePlanner("d-step", {
+        parentId: "dependent",
+        isReady: true,
+        sortOrder: 1024,
+      }),
+    ];
+    const dependents = readyDependents(
+      "target",
+      [makeDependency("t-step", "d-step")],
+      planner,
+    );
+    expect(dependents.map((d) => d.endpoint.id)).toEqual(["d-step"]);
+    expect(dependents.map((d) => d.root.id)).toEqual(["dependent"]);
   });
 });

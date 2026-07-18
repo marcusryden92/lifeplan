@@ -43,7 +43,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
   const [itemIsFocused, setItemIsFocused] = useState<boolean>(false);
   const [subtasksMinimized, setSubtasksMinimized] = useState<boolean>(false);
   const [shakeLocked, setShakeLocked] = useState(false);
-  const { focusedTask, setFocusedTask, setCurrentlyClickedItem } =
+  const { focusedTask, setFocusedTask, setCurrentlyClickedItem, moveGuard } =
     useDraggableContext();
   const { updatePlannerArray } = useCalendarProvider();
 
@@ -191,6 +191,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
                         currentlyClickedItem: clickedItem,
                         targetId: prevSibling.id,
                         mouseLocationInItem: "top",
+                        precedence: moveGuard,
                       });
                     })
                   }
@@ -210,6 +211,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
                         currentlyClickedItem: clickedItem,
                         targetId: nextSibling.id,
                         mouseLocationInItem: "bottom",
+                        precedence: moveGuard,
                       });
                     })
                   }
@@ -228,6 +230,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
                         updatePlannerArray,
                         currentlyClickedItem: clickedItem,
                         currentlyHoveredItem: prevSibling.id,
+                        precedence: moveGuard,
                       });
                     })
                   }
@@ -247,6 +250,7 @@ const TaskItem: React.FC<TaskItemProps> = React.memo(({ planner, task }) => {
                         currentlyClickedItem: clickedItem,
                         targetId: task.parentId,
                         mouseLocationInItem: "bottom",
+                        precedence: moveGuard,
                       });
                     })
                   }

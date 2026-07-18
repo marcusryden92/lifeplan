@@ -57,7 +57,7 @@ function describeDraftCycle(
   return parts.join(" → ");
 }
 
-// Endpoint eligibility shared by member and dependency adds. Null when valid.
+// Endpoint eligibility for queue member adds. Null when valid.
 function endpointFailure(
   forest: DraftForest,
   plannerId: string,
@@ -65,6 +65,22 @@ function endpointFailure(
   const root = forest.goals.find((g) => g.id === plannerId);
   if (!root) {
     return "not a top-level item — only top-level tasks and goals qualify (use an id from the goal index)";
+  }
+  if (root.plannerType === "plan") {
+    return "a plan — plans have fixed start times and cannot be sequenced";
+  }
+  return null;
+}
+
+// Dependency adds stay root-only for this tool even though node-level edges
+// (between subtasks) exist — those are authored in the app UI for now.
+function dependencyEndpointFailure(
+  forest: DraftForest,
+  plannerId: string,
+): string | null {
+  const root = forest.goals.find((g) => g.id === plannerId);
+  if (!root) {
+    return "not a top-level item — this tool links top-level tasks and goals only (node-level dependencies between subtasks exist but are authored in the app UI for now)";
   }
   if (root.plannerType === "plan") {
     return "a plan — plans have fixed start times and cannot be sequenced";
@@ -435,12 +451,12 @@ export function addDraftDependencies(
       });
       continue;
     }
-    const predecessorFailure = endpointFailure(forest, predecessorId);
+    const predecessorFailure = dependencyEndpointFailure(forest, predecessorId);
     if (predecessorFailure) {
       failures.push({ id: predecessorId, reason: predecessorFailure });
       continue;
     }
-    const successorFailure = endpointFailure(forest, successorId);
+    const successorFailure = dependencyEndpointFailure(forest, successorId);
     if (successorFailure) {
       failures.push({ id: successorId, reason: successorFailure });
       continue;

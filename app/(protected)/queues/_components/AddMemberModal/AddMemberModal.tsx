@@ -13,6 +13,7 @@ import type { Planner, Queue, PlannerDependency } from "@/types/prisma";
 import { BottomSheet, Input, TypeBadge } from "@/components/ui";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { plannerIsCompleted } from "@/utils/plannerCompletion";
+import { isValidPrecedenceEndpoint } from "@/utils/precedence/endpoints";
 import { formatDurationCompact } from "@/utils/timeFormatting";
 import { wouldCreateCycleAddingQueueMember } from "@/utils/precedence/findCycle";
 import {
@@ -84,9 +85,7 @@ export function AddMemberModal({
     );
     const base = planner.filter(
       (p) =>
-        p.parentId == null &&
-        p.isTriaged &&
-        (p.plannerType === "task" || p.plannerType === "goal") &&
+        isValidPrecedenceEndpoint(p) &&
         !plannerIsCompleted(p) &&
         !inAnyQueue.has(p.id) &&
         // Members append to the end; anything that would close a cycle

@@ -1,5 +1,7 @@
 # Promote / Demote / Node-level dependencies — implementation plan
 
+**STATUS (2026-07-17): ALL PHASES IMPLEMENTED** on branch `feature/structure-and-node-deps` — Phase 0 (shared endpoint predicate in utils/precedence/endpoints.ts), Phase 1 (promoteSubtree + EditDrawer entry), Phase 2 (demoteRootIntoGoal + item-detail card — shipped as PRESERVE-and-revalidate for dependency edges, not enumerate-and-drop, since F1 landed in the same release and the relaxed prune keeps them; the helper refuses same-goal/cycle-manufacturing demotes), Phase 3a–3d complete. `pnpm lint` + full suite green; CLAUDE.md updated (domain model + tests). Deviations from the letter of the plan: `wouldCreateCycleAddingNodeDependency` returns `"same-root" | cycle | null`; the reorder guard is a `MovePrecedenceGuard` threaded from DraggableContext (banner rendered there); the nodeIdMap replaced rootIdMap by rename. Manual in-browser pass not yet run.
+
 Authored 2026-07-17 from a full multi-agent codebase audit. Product decisions below are FINAL
 (signed off by Marcus). This document is self-contained enough to hand to a fresh agent, but the
 implementer must still read CLAUDE.md in full, plus documentation/calendar-generation-deep-dive.md
@@ -119,7 +121,8 @@ New `promoteSubtree(planner: Planner[], itemId: string): Planner[] | { error: st
    without this the subtree silently loses category, strict-window eligibility, and
    category-location inheritance), `linkedItemId: null` (a root-level detour placeholder is a
    configuration no validator admits — clear it), `color: row.color ?? old root's color ??
-   deterministic fallback` (see `resolveNewRootColor` in the draft domain for the pattern; a null
+   deterministic fallback` (the pattern is `resolveNewRootColor` in
+   utils/draft/applyDraftForestToPlanner.ts — module-private, replicate rather than import; a null
    color renders the red `calendarColors[0]` fallback), `updatedAt: now`.
    Never null out `duration` — a missing duration on a non-goal row is a HARD validation error
    that blanks the entire calendar (`validatePlanners`); zero is only a warning.

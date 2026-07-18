@@ -1,4 +1,8 @@
 import type { Planner, Queue, PlannerDependency } from "@/types/prisma";
+import {
+  isValidDependencyEndpoint,
+  isValidPrecedenceEndpoint,
+} from "./endpoints";
 
 // Central pruning for precedence structures. Runs in the calendar thunk on
 // every pass, so a member/endpoint planner that is deleted, retyped to plan,
@@ -6,11 +10,6 @@ import type { Planner, Queue, PlannerDependency } from "@/types/prisma";
 // the mutation originated; DB cascade covers server-side deletes. Completed
 // and unready rows are deliberately KEPT — they are valid transparent links /
 // gate inputs (transparency affects gating, never membership).
-const isValidPrecedenceEndpoint = (planner: Planner | undefined): boolean =>
-  !!planner &&
-  planner.parentId == null &&
-  planner.plannerType !== "plan" &&
-  planner.isTriaged;
 
 export function pruneQueueMembers(
   queues: Queue[],
@@ -32,6 +31,9 @@ export function pruneQueueMembers(
   return changed ? next : queues;
 }
 
+// Dependencies alone accept node-level endpoints: any non-plan node whose
+// structural root is triaged and non-plan. Queue members and detour targets
+// keep the root predicate.
 export function pruneDependencies(
   dependencies: PlannerDependency[],
   planner: Planner[],
@@ -41,8 +43,8 @@ export function pruneDependencies(
 
   const next = dependencies.filter(
     (d) =>
-      isValidPrecedenceEndpoint(plannerById.get(d.predecessorId)) &&
-      isValidPrecedenceEndpoint(plannerById.get(d.successorId)),
+      isValidDependencyEndpoint(plannerById, d.predecessorId) &&
+      isValidDependencyEndpoint(plannerById, d.successorId),
   );
 
   return next.length === dependencies.length ? dependencies : next;
