@@ -9,7 +9,7 @@ import {
 type FieldStackSize = "sm" | "md" | "lg";
 
 interface FieldStackProps {
-  label: ReactNode;
+  label?: ReactNode;
   // sm: dense drawers/modals. md (default): multi-column grid rows. lg: onboarding.
   size?: FieldStackSize;
   // Spans the full width of a multi-column field grid.
@@ -45,7 +45,7 @@ export function FieldStack({
         pointerEvents: disabled ? "none" : "all",
       }}
     >
-      <span className={fieldLabel[size]}>{label}</span>
+      {label ?? <span className={fieldLabel[size]}>{label}</span>}
       {children}
     </div>
   );

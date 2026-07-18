@@ -93,6 +93,12 @@ const touchDevice = "(hover: none) and (pointer: coarse)";
 // under the phone divider.
 const landscapePhone = `screen and ${touchDevice} and (orientation: landscape) and (max-height: ${phoneDivider}px)`;
 
+// The height-flip of landscapePhone: a touch device in landscape whose short
+// side (height) clears the phone divider, i.e. a tablet-class device held
+// sideways. Real tablets in landscape are ~1024-1366px wide, so a width query
+// misreads them as desktop; this keys on the short dimension instead.
+const landscapeTablet = `screen and ${touchDevice} and (orientation: landscape) and (min-height: ${phoneDivider + 1}px)`;
+
 // The *Up queries must exclude a landscape phone. The exclusion is written
 // as a query list negating one landscapePhone feature per clause (rather
 // than a media-level `not`) so every clause parses on pre-MQ4 engines and
@@ -129,6 +135,7 @@ export const media = {
   wideUp: minWidthUnlessLandscapePhone(breakpoints.laptop + 1),
   touch: `screen and ${touchDevice}`,
   landscapePhone,
+  landscapeTablet,
 } as const;
 
 // Border-width scale. `hairline` is the app's default 1px rule (85+ uses);

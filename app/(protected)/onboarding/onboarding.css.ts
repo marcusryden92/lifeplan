@@ -222,8 +222,15 @@ export const roleColumn = style({
   // Rows size to their content, not the full column width, so a role reads
   // as a compact badge instead of a full-width bar.
   alignItems: "flex-start",
+  marginTop: space["2"],
   gap: space["2"],
   minWidth: 0,
+  "@media": {
+    [media.mobile]: {
+      height: 240,
+      overflowY: "auto",
+    },
+  },
 });
 
 export const roleColumnTitle = style([
@@ -244,7 +251,7 @@ export const roleRow = style([
     alignItems: "center",
     gap: space["2"],
     maxWidth: "100%",
-    padding: `${space["1.5"]}px ${space["2.5"]}px`,
+    padding: `0px ${space["2"]}px`,
     borderRadius: radii.md,
     border: "1px solid var(--role-color)",
     background: `color-mix(in srgb, var(--role-color) ${colorMixAlpha.lightFill}%, transparent)`,
@@ -376,7 +383,6 @@ export const dumpRow = style({
   border: `1px solid ${vars.glass.stroke}`,
   background: vars.glass.bgSoft,
 });
-
 
 export const dumpRowTitle = style([
   text.bodyLg,
