@@ -464,6 +464,7 @@ export const dayToggles = style({
   display: "flex",
   gap: space["1.5"],
   flexWrap: "wrap",
+  margin: `${space["3"]}px 0px`,
 });
 
 // Circular day dots that speak the app's toggle vocabulary: an unselected
@@ -506,6 +507,7 @@ export const sectionToggleRow = style({
   alignItems: "center",
   justifyContent: "space-between",
   gap: space["3"],
+  marginBottom: space["3"],
 });
 
 export const previewNote = style([
@@ -513,6 +515,7 @@ export const previewNote = style([
   {
     color: vars.muted,
     fontStyle: "italic",
+    marginTop: space["2"],
   },
 ]);
 

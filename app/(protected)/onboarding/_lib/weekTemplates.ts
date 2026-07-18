@@ -38,7 +38,7 @@ export type WeekUIState = {
 
 export const DEFAULT_WEEK: WeekUIState = {
   sleepEnabled: true,
-  sleepStart: "23:00",
+  sleepStart: "22:00",
   sleepEnd: "07:00",
   workEnabled: false,
   workStart: "09:00",
@@ -124,7 +124,11 @@ export function expandDailyRange(
 
   for (const day of days) {
     if (endMin > startMin) {
-      blocks.push({ startDay: day, startTime: start, duration: endMin - startMin });
+      blocks.push({
+        startDay: day,
+        startTime: start,
+        duration: endMin - startMin,
+      });
       continue;
     }
     if (!allowOvernight) continue;
@@ -197,7 +201,12 @@ export function buildWeekTemplates(
       input.morning.end,
       false,
     )) {
-      push(block, "Morning routine", MORNING_COLOR, input.morning.locationId ?? null);
+      push(
+        block,
+        "Morning routine",
+        MORNING_COLOR,
+        input.morning.locationId ?? null,
+      );
     }
   }
 
@@ -208,7 +217,12 @@ export function buildWeekTemplates(
       input.evening.end,
       false,
     )) {
-      push(block, "Evening routine", EVENING_COLOR, input.evening.locationId ?? null);
+      push(
+        block,
+        "Evening routine",
+        EVENING_COLOR,
+        input.evening.locationId ?? null,
+      );
     }
   }
 
