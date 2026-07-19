@@ -39,8 +39,14 @@ import { applyDraftPrecedence } from "@/utils/draft/applyDraftPrecedence";
 import { templatesToDraft } from "@/utils/draft/draftTemplates";
 import { categoriesToDraftWindows } from "@/utils/draft/draftWindows";
 import { precedenceToDraft } from "@/utils/draft/draftPrecedence";
-import { countTemplateChanges, diffDraftTemplates } from "@/utils/draft/diffDraftTemplates";
-import { countWindowChanges, diffDraftWindows } from "@/utils/draft/diffDraftWindows";
+import {
+  countTemplateChanges,
+  diffDraftTemplates,
+} from "@/utils/draft/diffDraftTemplates";
+import {
+  countWindowChanges,
+  diffDraftWindows,
+} from "@/utils/draft/diffDraftWindows";
 import {
   countPrecedenceChanges,
   diffDraftPrecedence,
@@ -67,6 +73,8 @@ import {
   treePane,
   paneDivider,
   paneHeader,
+  paneHeaderSection,
+  paneSubheaderSection,
   paneTitle,
   paneSubtitle,
   paneTab,
@@ -439,7 +447,9 @@ export function AIDraftModal({
       }
       // Dynamic import keeps the Anthropic SDK + tool-loop out of the shell
       // bundle until the first send.
-      const { runAssistantTurn } = await import("@/utils/draft/assistantEngine");
+      const { runAssistantTurn } = await import(
+        "@/utils/draft/assistantEngine"
+      );
       await runAssistantTurn({
         apiKey,
         currentForest: turnStartForest,
@@ -544,11 +554,13 @@ export function AIDraftModal({
                                               ? `queueing ${count} item${plural}…`
                                               : tool === "move_queue_member"
                                                 ? "reordering a queue…"
-                                                : tool === "remove_queue_members"
+                                                : tool ===
+                                                    "remove_queue_members"
                                                   ? `unqueueing ${count} item${plural}…`
                                                   : tool === "add_dependencies"
                                                     ? `linking ${count} dependenc${count === 1 ? "y" : "ies"}…`
-                                                    : tool === "remove_dependencies"
+                                                    : tool ===
+                                                        "remove_dependencies"
                                                       ? `unlinking ${count} dependenc${count === 1 ? "y" : "ies"}…`
                                                       : null;
           if (label) setStreamStatus(label);
@@ -922,76 +934,82 @@ export function AIDraftModal({
           }`}
         >
           <div className={paneHeader}>
-            <button
-              type="button"
-              className={paneTab}
-              data-active={activeTab === "goals" ? "true" : undefined}
-              onClick={() => selectTab("goals")}
-            >
-              <span className={paneTabLabel}>Goals</span>
-              {goalChangeCount > 0 && (
-                <span className={tabChangeCount}>{goalChangeCount}</span>
-              )}
-            </button>
-            <button
-              type="button"
-              className={paneTab}
-              data-active={activeTab === "week" ? "true" : undefined}
-              onClick={() => selectTab("week")}
-            >
-              <span className={paneTabLabel}>Week</span>
-              {templateChangeCount > 0 && (
-                <span className={tabChangeCount}>{templateChangeCount}</span>
-              )}
-            </button>
-            <button
-              type="button"
-              className={paneTab}
-              data-active={activeTab === "windows" ? "true" : undefined}
-              onClick={() => selectTab("windows")}
-            >
-              <span className={paneTabLabel}>Categories</span>
-              {windowChangeCount > 0 && (
-                <span className={tabChangeCount}>{windowChangeCount}</span>
-              )}
-            </button>
-            <button
-              type="button"
-              className={paneTab}
-              data-active={activeTab === "queues" ? "true" : undefined}
-              onClick={() => selectTab("queues")}
-            >
-              <span className={paneTabLabel}>Queues</span>
-              {precedenceChangeCount > 0 && (
-                <span className={tabChangeCount}>{precedenceChangeCount}</span>
-              )}
-            </button>
-            <span className={paneSubtitle}>
-              {hasChanges ? "unsaved changes" : "current state"}
-            </span>
-            {activeTab === "goals" &&
-              (hiddenCount > 0 ? (
-                <span className={headerActionCluster}>
-                  <button
-                    type="button"
-                    className={headerActionButton}
-                    onClick={() => setShowAll(true)}
-                  >
-                    Show all · {hiddenCount} more goal
-                    {hiddenCount === 1 ? "" : "s"}
-                  </button>
-                </span>
-              ) : showAll && visibleGoals.length > 0 ? (
-                <span className={headerActionCluster}>
-                  <button
-                    type="button"
-                    className={headerActionButton}
-                    onClick={() => setShowAll(false)}
-                  >
-                    Show relevant only
-                  </button>
-                </span>
-              ) : null)}
+            <div className={paneHeaderSection}>
+              <button
+                type="button"
+                className={paneTab}
+                data-active={activeTab === "goals" ? "true" : undefined}
+                onClick={() => selectTab("goals")}
+              >
+                <span className={paneTabLabel}>Goals</span>
+                {goalChangeCount > 0 && (
+                  <span className={tabChangeCount}>{goalChangeCount}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={paneTab}
+                data-active={activeTab === "week" ? "true" : undefined}
+                onClick={() => selectTab("week")}
+              >
+                <span className={paneTabLabel}>Week</span>
+                {templateChangeCount > 0 && (
+                  <span className={tabChangeCount}>{templateChangeCount}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={paneTab}
+                data-active={activeTab === "windows" ? "true" : undefined}
+                onClick={() => selectTab("windows")}
+              >
+                <span className={paneTabLabel}>Categories</span>
+                {windowChangeCount > 0 && (
+                  <span className={tabChangeCount}>{windowChangeCount}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={paneTab}
+                data-active={activeTab === "queues" ? "true" : undefined}
+                onClick={() => selectTab("queues")}
+              >
+                <span className={paneTabLabel}>Queues</span>
+                {precedenceChangeCount > 0 && (
+                  <span className={tabChangeCount}>
+                    {precedenceChangeCount}
+                  </span>
+                )}
+              </button>
+            </div>
+            <div className={paneSubheaderSection}>
+              <span className={paneSubtitle}>
+                {hasChanges ? "unsaved changes" : "current state"}
+              </span>
+              {activeTab === "goals" &&
+                (hiddenCount > 0 ? (
+                  <span className={headerActionCluster}>
+                    <button
+                      type="button"
+                      className={headerActionButton}
+                      onClick={() => setShowAll(true)}
+                    >
+                      Show all · {hiddenCount} more goal
+                      {hiddenCount === 1 ? "" : "s"}
+                    </button>
+                  </span>
+                ) : showAll && visibleGoals.length > 0 ? (
+                  <span className={headerActionCluster}>
+                    <button
+                      type="button"
+                      className={headerActionButton}
+                      onClick={() => setShowAll(false)}
+                    >
+                      Show relevant only
+                    </button>
+                  </span>
+                ) : null)}
+            </div>
           </div>
           {activeTab === "goals" ? (
             <JsonForestView

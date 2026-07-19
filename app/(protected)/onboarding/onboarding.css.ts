@@ -14,21 +14,31 @@ export const overlayRoot = style({
   position: "absolute",
   inset: 0,
   zIndex: zIndex.modal,
+  background: vars.paper,
+  // Full-bleed, non-scrolling: this is the layer the Backdrop/Grain cover
+  // edge to edge. Scrolling lives on overlayScroll so its reserved scrollbar
+  // gutter doesn't carve a bare strip out of those inset:0 decorative layers.
+  overflow: "hidden",
+});
+
+export const overlayScroll = style({
+  position: "absolute",
+  inset: 0,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   padding: space["6"],
-  background: vars.paper,
   overflowY: "auto",
   // Reserve the scrollbar track even while it's hidden so content doesn't
-  // shift sideways the moment a step grows past the fold.
+  // shift sideways the moment a step grows past the fold. Transparent layer,
+  // so the gutter reveals the Backdrop/Grain beneath rather than bare paper.
   scrollbarGutter: "stable",
   "@media": {
     [media.mobile]: {
       padding: space["4"],
       // Stretch the frame to fill the overlay so each step's footer pins to
       // the bottom instead of floating under short content. A step taller than
-      // the viewport still grows and scrolls the overlay from here.
+      // the viewport still grows and scrolls from here.
       alignItems: "stretch",
     },
   },
@@ -64,7 +74,7 @@ export const card = style({
       // The overlay scrolls from flex-start on mobile and the soft keyboard
       // fights a fixed height, so let the card size to its content there.
       height: "auto",
-      padding: space["5"],
+      padding: 0,
       gap: space["4"],
     },
   },
@@ -80,7 +90,7 @@ export const cardWide = style({
   "@media": {
     [media.mobile]: {
       height: "100%",
-      padding: space["3"],
+      padding: 0,
     },
   },
 });

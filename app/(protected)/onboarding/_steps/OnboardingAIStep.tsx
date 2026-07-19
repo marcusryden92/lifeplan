@@ -15,6 +15,12 @@ type AssistantState = {
   save: () => void;
 };
 
+// Embedded mode never closes through onClose (it finishes via onSaved / goes
+// Back via the footer), but the modal folds onClose into handleSave's deps —
+// an inline arrow here would churn handleSave every render and loop the
+// onStateChange effect. A stable reference keeps that report loop-free.
+const noopClose = () => {};
+
 type OnboardingAIStepProps = {
   stepIndex: number;
   totalSteps: number;
@@ -127,7 +133,7 @@ export function OnboardingAIStep({
           <AIDraftModal
             embedded
             open
-            onClose={() => {}}
+            onClose={noopClose}
             focus={null}
             intent="onboarding"
             onSaved={onFinish}

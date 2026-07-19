@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Backdrop, Grain } from "@/components/ui";
 import { OnboardingFlow } from "./OnboardingFlow";
-import { overlayRoot } from "./onboarding.css";
+import { overlayRoot, overlayScroll } from "./onboarding.css";
 
 // The shell's global palette shortcuts (assistant mod+I, capture mod+K,
 // search mod+J) stay registered while the overlay covers the app; swallowing
@@ -45,7 +45,9 @@ export function OnboardingOverlay({
     <div className={overlayRoot}>
       <Backdrop variant="blob" />
       <Grain />
-      <OnboardingFlow onComplete={handleComplete} />
+      <div className={overlayScroll}>
+        <OnboardingFlow onComplete={handleComplete} />
+      </div>
     </div>
   );
 }

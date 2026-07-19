@@ -202,9 +202,45 @@ export const paneDivider = style({
 
 export const paneHeader = style({
   display: "flex",
+  flexDirection: "column",
+  width: "100%",
   alignItems: "baseline",
+  marginBottom: space["1"],
+  padding: `0 ${space["2"]}px`,
+  flexShrink: 0,
+});
+
+export const paneHeaderSection = style({
+  display: "flex",
+  alignItems: "baseline",
+  width: "100%",
+  justifyContent: "space-between",
+  paddingBottom: space["1"],
   gap: space["3"],
-  marginBottom: space["2"],
+  flexShrink: 0,
+  selectors: {
+    "&&": {
+      "@media": {
+        // A fixed two-column grid instead of a wrapped flex row: space-between
+        // only stays tidy at an even tab count, so pin the columns and the
+        // header holds up if a fifth tab ever appears.
+        [media.mobile]: {
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          columnGap: space["3"],
+          rowGap: space["0.5"],
+        },
+      },
+    },
+  },
+});
+
+export const paneSubheaderSection = style({
+  display: "flex",
+  alignItems: "baseline",
+  padding: `${space["0.5"]}px ${space["1"]}px`,
+  width: "100%",
+  gap: space["3"],
   flexShrink: 0,
 });
 
@@ -244,6 +280,18 @@ export const paneTab = style({
     },
     "&:hover:not([data-active='true'])": {
       color: vars.inkSoft,
+    },
+  },
+  "@media": {
+    // In the mobile two-column grid the buttons stretch to fill their cell;
+    // hug the right column's content to the outer edge so the row reads as a
+    // balanced 2x2 (left column left-aligned, right column right-aligned).
+    [media.mobile]: {
+      selectors: {
+        "&:nth-child(even)": {
+          justifyContent: "flex-end",
+        },
+      },
     },
   },
 });
@@ -295,7 +343,6 @@ export const headerActionButton = style([
     display: "inline-flex",
     alignItems: "center",
     gap: space["1"],
-    padding: "4px 8px",
     borderRadius: radii.sm,
     cursor: "pointer",
     fontWeight: 600,
