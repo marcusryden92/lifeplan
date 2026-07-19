@@ -4,7 +4,6 @@ import { space, media } from "@/lib/theme/scales";
 import { display, text } from "@/lib/theme/typography.css";
 import { themeTransition } from "@/lib/theme/transitions";
 
-
 export const headerRow = style({
   padding: "30px 32px 22px",
   flexShrink: 0,
@@ -14,10 +13,11 @@ export const headerRow = style({
   gap: space["6"],
   "@media": {
     [media.mobile]: {
-      padding: "22px 16px 16px",
+      padding: space["4"],
       flexDirection: "column",
       alignItems: "flex-start",
       gap: space["3.5"],
+      textAlign: "center",
     },
   },
 });
@@ -30,7 +30,7 @@ export const greeting = style([
     margin: 0,
     transition: themeTransition,
     "@media": {
-      [media.mobile]: { fontSize: 38 },
+      [media.mobile]: { fontSize: 38, lineHeight: 1.2 },
     },
   },
 ]);

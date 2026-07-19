@@ -48,7 +48,7 @@
     "@vanilla-extract/sprinkles": "^1.6.5",
     "bcryptjs": "^2.4.3",
     "date-fns": "^3.6.0",
-    "lucide-react": "^0.438.0",
+    "lucide-react": "^1.25.0",
     "luxon": "^3.7.2",
     "next": "14.2.35",
     "next-auth": "5.0.0-beta.20",

@@ -12,14 +12,34 @@ export const uncompletedDaysLabel = style({
   color: vars.status.success,
 });
 
-// On mobile the two action buttons don't fit beside the time + title columns,
-// so the row reflows to a second full-width band that holds the actions.
+// lucide renders `size` as width/height attributes on the <svg>; a CSS rule
+// overrides those, so this bumps both action-button icons up on mobile where
+// the buttons go full-width and can carry a larger glyph.
+export const actionIcon = style({
+  "@media": {
+    [media.mobile]: {
+      width: 16,
+      height: 16,
+    },
+  },
+});
+
+// On mobile the action buttons drop their labels (mobileGuard) and collapse to
+// square icons, so time, title, and actions all fit on one row.
 export const uncompletedRow = style({
   "@media": {
     [media.mobile]: {
-      gridTemplateColumns: "72px 1fr",
-      gridTemplateAreas: '"time content" "actions actions"',
-      rowGap: space["2.5"],
+      gridTemplateColumns: "72px 1fr auto",
+      gridTemplateAreas: '"time content actions"',
+    },
+  },
+});
+
+export const mobileButton = style({
+  "@media": {
+    [media.mobile]: {
+      flex: "0 !important",
+      aspectRatio: "1/1",
     },
   },
 });
@@ -40,23 +60,10 @@ export const uncompletedActions = style({
   display: "inline-flex",
   alignItems: "center",
   alignSelf: "center",
-  gap: space["1.5"],
+  gap: space["2"],
   "@media": {
     [media.mobile]: {
       gridArea: "actions",
-      display: "flex",
-      alignSelf: "stretch",
-    },
-  },
-});
-
-// Full-width, evenly split buttons on the mobile action band so they read as
-// deliberate primary/secondary actions rather than crammed pills.
-globalStyle(`${uncompletedActions} > button`, {
-  "@media": {
-    [media.mobile]: {
-      flex: 1,
-      justifyContent: "center",
     },
   },
 });

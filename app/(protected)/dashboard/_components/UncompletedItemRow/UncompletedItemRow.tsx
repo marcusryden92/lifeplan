@@ -1,4 +1,4 @@
-import { ArrowRight, Check } from "lucide-react";
+import { Redo, Check } from "lucide-react";
 import { Button, Caption } from "@/components/ui";
 import { listRow } from "@/lib/theme";
 import type { UncompletedItem } from "../../_data/types";
@@ -14,12 +14,15 @@ import {
   agendaMetaDimmer,
 } from "../agendaRow.css";
 import {
+  mobileButton,
   uncompletedRow,
   uncompletedDaysLabel,
   uncompletedActions,
   uncompletedRowFlashSuccess,
   uncompletedRowFlashInfo,
+  actionIcon,
 } from "./UncompletedItemRow.css";
+import { mobileGuard } from "@/lib/theme";
 
 type Props = {
   item: UncompletedItem;
@@ -93,9 +96,10 @@ export function UncompletedItemRow({
           }}
           aria-label="Mark complete"
           title="Mark complete"
+          className={mobileButton}
         >
-          Complete
-          <Check size={13} strokeWidth={2.2} />
+          <span className={mobileGuard}>Complete</span>
+          <Check size={13} strokeWidth={2.2} className={actionIcon} />
         </Button>
         <Button
           variant="glass"
@@ -106,9 +110,10 @@ export function UncompletedItemRow({
           }}
           aria-label="Postpone"
           title="Postpone"
+          className={mobileButton}
         >
-          Postpone
-          <ArrowRight size={13} strokeWidth={2} />
+          <span className={mobileGuard}>Postpone</span>
+          <Redo size={13} strokeWidth={2} className={actionIcon} />
         </Button>
       </div>
     </div>

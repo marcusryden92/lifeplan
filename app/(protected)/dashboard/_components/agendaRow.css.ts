@@ -14,6 +14,13 @@ export const agendaRow = style({
   margin: "4px 12px",
   background: "transparent",
   border: "1px solid transparent",
+  "@media": {
+    [media.mobile]: {
+      paddingTop: space["4"],
+      paddingBottom: space["4"],
+      borderBottom: "1px solid " + vars.rule,
+    },
+  },
 });
 
 export const agendaRowGrouped = style({

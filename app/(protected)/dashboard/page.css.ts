@@ -10,7 +10,6 @@ export const page = style({
     [media.mobile]: {
       flex: "1 0 auto",
       minHeight: "auto",
-      paddingTop: space["16"],
     },
   },
 });
@@ -23,7 +22,7 @@ export const gridWrap = style({
   flex: 1,
   minHeight: 0,
   "@media": {
-    [media.tablet]: {
+    [media.laptop]: {
       gridTemplateColumns: "1fr",
       flex: "0 0 auto",
       minHeight: "auto",
@@ -34,7 +33,8 @@ export const gridWrap = style({
       display: "flex",
       flexDirection: "column",
       flex: "1 0 auto",
-      padding: "0 0 24px",
+      padding: 0,
+      paddingBottom: space["23"],
       gap: space["3.5"],
     },
   },
