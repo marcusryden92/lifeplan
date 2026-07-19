@@ -28,13 +28,12 @@ export const gridWrap = style({
       minHeight: "auto",
     },
     [media.mobile]: {
-      // Only the Agenda card renders here (rightCol is hidden), so drop the
-      // grid and let the card grow to fill the viewport down to the menu.
       display: "flex",
       flexDirection: "column",
       flex: "1 0 auto",
       padding: 0,
-      paddingBottom: space["23"],
+      // eslint-disable-next-line theme/no-raw-scale-values
+      paddingBottom: 150,
       gap: space["3.5"],
     },
   },

@@ -29,13 +29,18 @@ export const routeName = style([
     marginTop: space["2"],
     marginBottom: space["6"],
     borderBottom: "1px solid " + vars.rule,
+    fontSize: space["4.5"],
   },
 ]);
 
 export const titleContainer = style({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
+  "@media": {
+    [media.mobile]: {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+    },
+  },
 });
 
 export const greeting = style([
@@ -56,8 +61,12 @@ export const summaryLine = style([
   text.bodyLg,
   {
     marginTop: space["2.5"],
+    marginLeft: space["2"],
     color: vars.inkSoft,
     transition: themeTransition,
+    "@media": {
+      [media.mobile]: { marginLeft: 0 },
+    },
   },
 ]);
 

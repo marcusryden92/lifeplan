@@ -5,6 +5,7 @@ const baseDisplay = style({
   fontFamily: vars.font.display,
   fontWeight: 500,
   fontFeatureSettings: '"tnum" 1',
+  letterSpacing: 0,
 });
 
 const baseUI = style({
@@ -12,14 +13,14 @@ const baseUI = style({
 });
 
 export const display = styleVariants({
-  hero: [baseDisplay, { fontSize: 56, letterSpacing: "-0.045em" }],
-  bigStat: [baseDisplay, { fontSize: 44, letterSpacing: "-0.045em" }],
-  pageTitle: [baseDisplay, { fontSize: 32, letterSpacing: "-0.03em" }],
-  statCard: [baseDisplay, { fontSize: 26, letterSpacing: "-0.04em" }],
-  modalTitle: [baseDisplay, { fontSize: 22, letterSpacing: "-0.02em" }],
-  sectionHead: [baseDisplay, { fontSize: 20, letterSpacing: "-0.02em" }],
-  panelTitle: [baseDisplay, { fontSize: 18, letterSpacing: "-0.02em" }],
-  listTitle: [baseDisplay, { fontSize: 16, letterSpacing: "-0.02em" }],
+  hero: [baseDisplay, { fontSize: 56 }],
+  bigStat: [baseDisplay, { fontSize: 44 }],
+  pageTitle: [baseDisplay, { fontSize: 32 }],
+  statCard: [baseDisplay, { fontSize: 26 }],
+  modalTitle: [baseDisplay, { fontSize: 22 }],
+  sectionHead: [baseDisplay, { fontSize: 20 }],
+  panelTitle: [baseDisplay, { fontSize: 18 }],
+  listTitle: [baseDisplay, { fontSize: 16 }],
 });
 
 export const text = styleVariants({
