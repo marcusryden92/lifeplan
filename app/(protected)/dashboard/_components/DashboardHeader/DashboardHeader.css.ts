@@ -3,6 +3,7 @@ import { vars } from "@/lib/theme/tokens.css";
 import { space, media } from "@/lib/theme/scales";
 import { display, text } from "@/lib/theme/typography.css";
 import { themeTransition } from "@/lib/theme/transitions";
+import { desktopGuard } from "@/lib/theme";
 
 export const headerRow = style({
   padding: "30px 32px 22px",
@@ -15,17 +16,33 @@ export const headerRow = style({
     [media.mobile]: {
       padding: space["4"],
       flexDirection: "column",
-      alignItems: "flex-start",
+      alignItems: "center",
       gap: space["3.5"],
       textAlign: "center",
     },
   },
 });
 
+export const routeName = style([
+  desktopGuard,
+  {
+    marginTop: space["2"],
+    marginBottom: space["6"],
+    borderBottom: "1px solid " + vars.rule,
+  },
+]);
+
+export const titleContainer = style({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+});
+
 export const greeting = style([
   display.hero,
   {
     lineHeight: 0.98,
+    fontWeight: 300,
     color: vars.ink,
     margin: 0,
     transition: themeTransition,

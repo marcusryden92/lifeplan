@@ -39,7 +39,6 @@ export const searchButton = style([
     backdropFilter: backdropFilters.modal,
     WebkitBackdropFilter: backdropFilters.modal,
     border: `1px solid ${vars.glass.stroke}`,
-    boxShadow: vars.shadow.panelSm,
     selectors: {
       "&:hover": {
         color: vars.ink,
@@ -57,6 +56,5 @@ export const assistantButton = style([
     color: vars.paper,
     background: vars.ink,
     border: "none",
-    boxShadow: `${vars.shadow.panelSm}, inset 0 1px 0 rgba(255,255,255,0.18)`,
   },
 ]);

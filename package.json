@@ -47,6 +47,7 @@
     "@vanilla-extract/recipes": "^0.5.7",
     "@vanilla-extract/sprinkles": "^1.6.5",
     "bcryptjs": "^2.4.3",
+    "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "lucide-react": "^1.25.0",
     "luxon": "^3.7.2",

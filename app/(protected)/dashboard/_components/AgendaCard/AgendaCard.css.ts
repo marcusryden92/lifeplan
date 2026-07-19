@@ -51,7 +51,7 @@ export const leftCardHeader = style({
     [media.mobile]: {
       position: "relative",
       top: "auto",
-      padding: "14px 12px",
+      padding: `${space["3.5"]}px ${space["4"]}px`,
       borderTopLeftRadius: 0,
       borderTopRightRadius: 0,
     },

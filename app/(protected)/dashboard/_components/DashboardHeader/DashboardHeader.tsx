@@ -4,13 +4,17 @@ import { formatDurationCompact } from "@/utils/timeFormatting";
 import type { DashboardSummary } from "../../_data/types";
 import {
   headerRow,
+  titleContainer,
   greeting,
   summaryLine,
   summaryStrong,
   summaryError,
   headerActions,
   openCalendarLink,
+  routeName,
 } from "./DashboardHeader.css";
+import { mobileGuard } from "@/lib/theme";
+import clsx from "clsx";
 
 type Props = {
   greetingText: string;
@@ -26,7 +30,8 @@ export function DashboardHeader({ greetingText, dateText, summary }: Props) {
 
   return (
     <div className={headerRow}>
-      <div>
+      <div className={titleContainer}>
+        <span className={routeName}>Dashboard</span>
         <h1 className={greeting}>{greetingText}</h1>
         <div className={summaryLine}>
           <span className={summaryStrong}>{dateText}</span>
@@ -52,7 +57,7 @@ export function DashboardHeader({ greetingText, dateText, summary }: Props) {
           )}
         </div>
       </div>
-      <div className={headerActions}>
+      <div className={clsx(headerActions, mobileGuard)}>
         <Link href="/calendar" className={openCalendarLink}>
           <Button variant="solid">Open calendar →</Button>
         </Link>
