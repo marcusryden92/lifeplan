@@ -1,33 +1,80 @@
 ﻿import { style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
-import { space, radii } from "@/lib/theme/scales";
+import { space, radii, media } from "@/lib/theme/scales";
 import { fieldLabel, text } from "@/lib/theme/typography.css";
 import { backdropFilters } from "@/lib/theme/effects";
 import { buttonTransition, themeTransition } from "@/lib/theme/transitions";
 
 export const tabBar = style({
   position: "fixed",
-  left: 12,
-  right: 12,
   bottom: 12,
   zIndex: 5,
+  gap: space["7"],
   display: "flex",
   alignItems: "center",
   justifyContent: "space-around",
-  padding: "8px 14px",
+  padding: "8px 36px",
   background: vars.glass.bg,
   backdropFilter: backdropFilters.panel,
   WebkitBackdropFilter: backdropFilters.panel,
   border: `1px solid ${vars.glass.stroke}`,
   borderRadius: radii.pill,
   boxShadow: vars.shadow.panelSm,
+  "@media": {
+    [media.landscapePhone]: {
+      padding: "8px 18px",
+    },
+  },
 });
+
+// Search / AI actions living as end caps inside the bar — landscape phone
+// only. In portrait they sit in the top corners (CornerActions); here the
+// wide-but-short viewport has room to fold them into the menu bar itself.
+const endCapBase = style({
+  flex: "0 0 auto",
+  display: "none",
+  width: 40,
+  height: 40,
+  borderRadius: radii.pill,
+  placeItems: "center",
+  cursor: "pointer",
+  transition: buttonTransition,
+  selectors: {
+    "&:active": { transform: "scale(0.96)" },
+  },
+  "@media": {
+    [media.landscapePhone]: { display: "grid" },
+  },
+});
+
+export const searchEndCap = style([
+  endCapBase,
+  {
+    color: vars.inkSoft,
+    background: "transparent",
+    border: `1px solid ${vars.glass.stroke}`,
+    selectors: {
+      "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
+    },
+  },
+]);
+
+export const assistantEndCap = style([
+  endCapBase,
+  {
+    color: vars.paper,
+    background: vars.ink,
+    border: "none",
+  },
+]);
 
 export const tab = style([
   fieldLabel,
   {
     flex: 1,
+    transform: `translateY(-${space["2"]}px)`,
     display: "flex",
+    position: "relative",
     flexDirection: "column",
     alignItems: "center",
     gap: space["0.5"],
@@ -41,6 +88,11 @@ export const tab = style([
     // state to inkSoft; active tabs go full ink + underline below.
     color: vars.inkSoft,
     transition: themeTransition,
+    "@media": {
+      [media.landscapePhone]: {
+        transform: `translateY(-${space["1.5"]}px)`,
+      },
+    },
   },
 ]);
 
@@ -50,15 +102,23 @@ export const tabActive = style({
 
 export const tabGlyph = style({
   display: "flex",
+  position: "relative",
   alignItems: "center",
   justifyContent: "center",
   height: 22,
+});
+
+export const itemLabel = style({
+  position: "absolute",
+  bottom: -15,
 });
 
 // Always rendered so every tab reserves the same height; only the active tab
 // paints it. Conditionally rendering it made the active tab taller, and the
 // bar's alignItems:center then nudged its icon/label upward on select.
 export const tabUnderline = style({
+  position: "absolute",
+  bottom: -20,
   width: 18,
   height: 2,
   borderRadius: 2,
@@ -73,14 +133,19 @@ export const tabUnderlineActive = style({
 
 export const captureTabWrapper = style({
   flex: 1,
+  minWidth: 45,
+  height: 54,
   display: "flex",
+  position: "relative",
   justifyContent: "center",
   alignItems: "center",
 });
 
 export const captureButton = style({
-  width: 54,
-  height: 54,
+  position: "absolute",
+  width: 70,
+  height: 70,
+  top: -16,
   borderRadius: radii.pill,
   background: vars.ink,
   color: vars.paper,

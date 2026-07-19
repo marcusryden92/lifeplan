@@ -81,6 +81,6 @@ export const desktopOnly = style({
 export const mobileOnly = style({
   display: "none",
   "@media": {
-    [media.mobile]: { display: "flex" },
+    [media.mobile]: { display: "flex", justifyContent: "center" },
   },
 });

@@ -4,12 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { signOut } from "next-auth/react";
-import { Settings, Moon, Sun, LogOut } from "lucide-react";
+import { Settings, Moon, Sun, LogOut, Search, Sparkles } from "lucide-react";
 import { useShellOverlayOpen } from "../ShellOverlayContext";
+import { useSearch } from "../SearchContext";
+import { useAssistant } from "../AssistantContext";
 import { useTheme } from "../../ThemeProvider";
 import { BottomSheet } from "../../BottomSheet";
 import { MOBILE_TABS, NAV_ITEMS, isCanvasRoute } from "../nav";
 import {
+  itemLabel,
   tabBar,
   tab,
   tabActive,
@@ -18,6 +21,8 @@ import {
   tabUnderlineActive,
   captureTabWrapper,
   captureButton,
+  searchEndCap,
+  assistantEndCap,
   sheetItem,
   sheetItemActive,
   sheetItemDanger,
@@ -28,14 +33,15 @@ import {
 // Desktop routes with no bottom-tab of their own — surfaced in the More sheet
 // so the whole app is reachable below the tablet breakpoint.
 const MORE_ROUTES = NAV_ITEMS.filter(
-  (item) =>
-    item.href !== null && !MOBILE_TABS.some((t) => t.key === item.key),
+  (item) => item.href !== null && !MOBILE_TABS.some((t) => t.key === item.key),
 );
 
 export function MobileTabs() {
   const pathname = usePathname() ?? "";
   const router = useRouter();
   const { dark, toggle } = useTheme();
+  const { setOpen: setSearchOpen } = useSearch();
+  const { openAssistant } = useAssistant();
   const overlayOpen = useShellOverlayOpen();
   const [moreOpen, setMoreOpen] = useState(false);
 
@@ -52,6 +58,15 @@ export function MobileTabs() {
   return (
     <>
       <nav className={tabBar} aria-label="Primary navigation">
+        <button
+          type="button"
+          className={searchEndCap}
+          onClick={() => setSearchOpen(true)}
+          title="Search (Ctrl/Cmd+J)"
+          aria-label="Search"
+        >
+          <Search size={18} strokeWidth={2} aria-hidden />
+        </button>
         {MOBILE_TABS.map((item) => {
           const Icon = item.icon;
           if (item.key === "capture") {
@@ -63,7 +78,7 @@ export function MobileTabs() {
                   onClick={() => router.push("/capture")}
                   aria-label="Capture"
                 >
-                  <Icon size={26} strokeWidth={2.5} aria-hidden />
+                  <Icon size={36} strokeWidth={2.5} aria-hidden />
                 </button>
               </div>
             );
@@ -81,8 +96,8 @@ export function MobileTabs() {
               >
                 <span className={tabGlyph}>
                   <Icon size={20} strokeWidth={2} aria-hidden />
+                  <span className={itemLabel}>{item.label}</span>
                 </span>
-                <span>{item.label}</span>
                 <span
                   aria-hidden
                   className={`${tabUnderline} ${isActive ? tabUnderlineActive : ""}`}
@@ -101,23 +116,32 @@ export function MobileTabs() {
             >
               <span className={tabGlyph}>
                 <Icon size={20} strokeWidth={2} aria-hidden />
+                <span className={itemLabel}>{item.label}</span>
+
+                <span
+                  aria-hidden
+                  className={`${tabUnderline} ${isActive ? tabUnderlineActive : ""}`}
+                />
               </span>
-              <span>{item.label}</span>
-              <span
-                aria-hidden
-                className={`${tabUnderline} ${isActive ? tabUnderlineActive : ""}`}
-              />
             </Link>
           );
         })}
+        <button
+          type="button"
+          className={assistantEndCap}
+          onClick={() => openAssistant()}
+          title="AI assistant (Ctrl/Cmd+I)"
+          aria-label="AI assistant"
+        >
+          <Sparkles size={19} strokeWidth={2} aria-hidden />
+        </button>
       </nav>
 
       <BottomSheet open={moreOpen} onOpenChange={setMoreOpen} title="More">
         {MORE_ROUTES.map((item) => {
           const Icon = item.icon;
           const href = item.href as string;
-          const isActive =
-            pathname === href || pathname.startsWith(`${href}/`);
+          const isActive = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <Link
               key={item.key}

@@ -27,6 +27,9 @@ const cornerBase = style({
   },
   "@media": {
     [media.tabletUp]: { display: "none" },
+    // Landscape phone: the search / AI actions live inside the bottom menu
+    // bar instead (see MobileTabs), so hide the top-corner pills there.
+    [media.landscapePhone]: { display: "none" },
   },
 });
 

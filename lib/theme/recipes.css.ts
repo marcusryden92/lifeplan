@@ -382,6 +382,7 @@ export const formInput = recipe({
       md: {},
       lg: {
         // `&&` beats boxed's padding by specificity; block axis only so per-field horizontal overrides keep control.
+        // eslint-disable-next-line theme/no-raw-scale-values
         selectors: { "&&": { paddingBlock: 9 } },
       },
     },
