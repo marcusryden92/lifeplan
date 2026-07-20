@@ -15,14 +15,18 @@ export const leftCard = style([
     flexDirection: "column",
     minHeight: 0,
     overflow: "hidden",
-    "@media": {
-      [media.mobile]: {
-        flex: "1 0 auto",
-        minHeight: "auto",
-        overflow: "visible",
-        borderRadius: 0,
-        borderLeftWidth: 0,
-        borderRightWidth: 0,
+    selectors: {
+      "&&": {
+        "@media": {
+          [media.mobile]: {
+            flex: "1 0 auto",
+            minHeight: "auto",
+            overflow: "visible",
+            borderRadius: 0,
+            borderLeftWidth: 0,
+            borderRightWidth: 0,
+          },
+        },
       },
     },
   },
