@@ -52,25 +52,23 @@ export const subHeader = style({
     // CornerActions' fixed offset so the title row shares its band.
     [media.mobile]: {
       display: "grid",
-      gridTemplateColumns: "1fr auto auto",
-      gridTemplateAreas: `"title title title" "nav actions cog"`,
+      gridTemplateColumns: "1fr auto",
+      gridTemplateAreas: `"title title" "nav actions"`,
       rowGap: space["3"],
-      columnGap: space["2"],
       padding: `calc(${space["3"]}px + env(safe-area-inset-top, 0px)) ${space["4"]}px ${space["3"]}px`,
     },
     // Landscape phone: collapse to one inline toolbar row (the CornerActions
     // pills are hidden here, so the full width is free) to reclaim the height
     // the stacked title row costs.
     [media.landscapePhone]: {
-      gridTemplateColumns: "auto 1fr auto auto",
-      gridTemplateAreas: `"nav title actions cog"`,
-      rowGap: 0,
+      display: "flex",
+      justifyContent: "space-between",
     },
   },
 });
 
 export const rangeTitle = style([
-  display.modalTitle,
+  display.statCard,
   {
     color: vars.ink,
     lineHeight: 1,
@@ -176,6 +174,9 @@ export const navCluster = style({
       marginLeft: 0,
       gap: space["2"],
     },
+    [media.landscapePhone]: {
+      marginRight: 0,
+    },
   },
 });
 
@@ -214,12 +215,16 @@ export const hoverChip = style([
   text.bodySm,
   {
     position: "absolute",
-    right: space["8"],
-    bottom: space["3.5"],
+    right: space["4"],
+    top: space["14"],
     display: "inline-flex",
     alignItems: "center",
+    padding: `${space["0.5"]}px ${space["4"]}px`,
+    borderRadius: radii.pill,
     gap: space["1.5"],
     color: vars.inkSoft,
+    border: "1px solid " + vars.rule,
+    backgroundColor: `color-mix(in srgb, ${vars.paper} 80%, transparent)`,
     fontWeight: 600,
     letterSpacing: "0.01em",
     minWidth: 0,
@@ -292,7 +297,13 @@ export const engineCogBtn = style([
     zIndex: 10,
     flexShrink: 0,
     "@media": {
-      [media.mobile]: { gridArea: "cog", width: 40, height: 40 },
+      [media.mobile]: {
+        position: "relative",
+        top: "auto",
+        right: "auto",
+        width: 40,
+        height: 40,
+      },
     },
   },
 ]);
@@ -352,6 +363,7 @@ export const calendarCard = style([
   {
     display: "flex",
     flexDirection: "column",
+    position: "relative",
     minHeight: 0,
     overflow: "hidden",
     borderRight: "none !important",

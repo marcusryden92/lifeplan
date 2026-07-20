@@ -11,7 +11,6 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { formatTime } from "@/utils/calendarUtils";
 import { handleDoubleClick } from "@/utils/calendarEventHandlers";
 import { getEventTier } from "@/utils/eventTier";
-import { useSetCalendarHoverLabel } from "../CalendarHoverLabelContext";
 import TravelEventPopover from "../TravelEventPopover";
 import {
   tile,
@@ -44,7 +43,6 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
   const locations = useSelector(
     (state: RootState) => state.schedulingSettings.locations,
   );
-  const setHoverLabel = useSetCalendarHoverLabel();
   const isMobile = useIsMobile();
   const elementRef = useRef<HTMLDivElement>(null);
   const [elementHeight, setElementHeight] = useState<number>(0);
@@ -115,8 +113,10 @@ const TravelEventContent: React.FC<TravelEventContentProps> = ({ event }) => {
       onDoubleClick={(e) =>
         handleDoubleClick(e, elementRef, setEventRect, setShowPopover)
       }
-      onMouseEnter={() => setHoverLabel?.({ name: travelLabel, color: null })}
-      onMouseLeave={() => setHoverLabel?.(null)}
+      // Read by the calendar's cursor hit-test (page.tsx); a travel tile wins
+      // the header chip over any category window it is painted on top of.
+      data-hover-travel=""
+      data-hover-name={travelLabel}
       className={`${tile[tileState]} ${tilePadding[tier]}`}
     >
       <div className={tileInner}>
