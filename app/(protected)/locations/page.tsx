@@ -144,9 +144,8 @@ export default function LocationsPage() {
     null,
   );
 
-  const refresh = useServerAction(locationActions.refreshAllTravelTimes);
   const fetchMissing = useServerAction(locationActions.fetchMissingTravelTimes);
-  const working = refresh.isPending || fetchMissing.isPending;
+  const working = fetchMissing.isPending;
 
   const travelTimes = useMemo(
     () => allTravelTimes.filter((tt) => tt.transportMode === transportMode),
@@ -348,21 +347,6 @@ export default function LocationsPage() {
     );
   };
 
-  const handleRefreshAll = async () => {
-    if (locations.length < 2) {
-      setError("Add at least 2 locations to refresh travel times.");
-      return;
-    }
-    setError(null);
-    const result = await refresh.run(transportMode);
-    if (!result) return;
-    const fresh = await locationActions.fetchTravelTimes();
-    const serialized = fresh.map(serializeTravelTime);
-    dispatch(setAllTravelTimes(serialized));
-    markSynced("travelTimes", serialized);
-    flashSuccess(`Refreshed ${result.updated} travel times.`);
-  };
-
   // Travel-time overrides flow through Redux. The diff picks up the changed
   // custom fields and sends travelTime.update.
   const handleSaveOverrides = (
@@ -400,8 +384,7 @@ export default function LocationsPage() {
     flashSuccess("All overrides cleared.");
   };
 
-  const combinedError =
-    error ?? refresh.status?.text ?? fetchMissing.status?.text ?? null;
+  const combinedError = error ?? fetchMissing.status?.text ?? null;
 
   if (!isLoaded) {
     return (
@@ -445,15 +428,6 @@ export default function LocationsPage() {
           >
             <RefreshCw size={12} strokeWidth={2.2} />
             Fetch missing
-          </Button>
-          <Button
-            variant="glass"
-            size="sm"
-            onClick={handleRefreshAll}
-            disabled={working || locations.length < 2}
-          >
-            <RefreshCw size={12} strokeWidth={2.2} />
-            Refresh all
           </Button>
         </div>
       </PageHeader>

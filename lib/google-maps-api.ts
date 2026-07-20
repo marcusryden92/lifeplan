@@ -1,15 +1,13 @@
 /**
  * Google Maps API Integration
  *
- * Utilities for Places API (New) and Distance Matrix API.
- * Uses the new Places API endpoints (not legacy).
- *
- * All functions are server-side only to protect API key.
+ * Places API (New) for autocomplete + place details, and the Routes API
+ * (computeRouteMatrix) for travel times. All functions are server-side only
+ * to protect the API key.
  */
 
 import { TransportMode } from "@/generated/client";
 
-// Types for our application
 export interface PlacePrediction {
   placeId: string;
   description: string;
@@ -22,7 +20,6 @@ export interface PlaceDetails {
   formattedAddress: string;
   lat: number;
   lng: number;
-  name?: string;
 }
 
 export interface TravelTimeResult {
@@ -37,6 +34,17 @@ export interface TravelTimeBatchResult {
   rushHour: TravelTimeResult;
   regular: TravelTimeResult;
   night: TravelTimeResult;
+}
+
+export interface TravelPoint {
+  id: string;
+  lat: number;
+  lng: number;
+}
+
+export interface TravelPair {
+  from: TravelPoint;
+  to: TravelPoint;
 }
 
 // Places API (New) response types
@@ -71,9 +79,6 @@ interface PlaceDetailsNewResponse {
     latitude: number;
     longitude: number;
   };
-  displayName?: {
-    text: string;
-  };
   error?: {
     code: number;
     message: string;
@@ -81,27 +86,29 @@ interface PlaceDetailsNewResponse {
   };
 }
 
-// Distance Matrix API response types (still uses legacy API)
-interface GoogleDistanceMatrixResponse {
-  status: string;
-  error_message?: string;
-  rows: Array<{
-    elements: Array<{
-      status: string;
-      duration?: { value: number };
-      duration_in_traffic?: { value: number };
-      distance?: { value: number };
-    }>;
-  }>;
+interface RouteMatrixElement {
+  originIndex?: number;
+  destinationIndex?: number;
+  status?: {
+    code?: number;
+    message?: string;
+  };
+  condition?: "ROUTE_EXISTS" | "ROUTE_NOT_FOUND";
+  distanceMeters?: number;
+  duration?: string;
 }
 
-// Map our TransportMode enum to Google's travel_mode
+// Map our TransportMode enum to the Routes API travel modes
 const TRANSPORT_MODE_MAP: Record<TransportMode, string> = {
-  DRIVING: "driving",
-  TRANSIT: "transit",
-  BICYCLING: "bicycling",
-  WALKING: "walking",
+  DRIVING: "DRIVE",
+  TRANSIT: "TRANSIT",
+  BICYCLING: "BICYCLE",
+  WALKING: "WALK",
 };
+
+// Walking/cycling times don't vary with traffic, so a single fetch covers all
+// three time-of-day conditions.
+const TIME_VARYING_MODES: TransportMode[] = ["DRIVING", "TRANSIT"];
 
 /**
  * Get the Google Maps API key from environment
@@ -177,29 +184,30 @@ export async function searchPlaces(
 }
 
 /**
- * Get detailed place information including coordinates
- * Uses Places API (New)
+ * Get place details (address + coordinates) using Places API (New).
  *
- * @param placeId - Google Place ID
- * @param _sessionToken - Session token (not used in new API for details, but kept for interface)
- * @returns Place details with coordinates
+ * Passing the autocomplete session token here closes the session, so the
+ * preceding autocomplete requests bill as one session instead of per keystroke.
+ * The field mask stays Essentials-tier — displayName is a Pro-tier field.
  */
 export async function getPlaceDetails(
   placeId: string,
-  _sessionToken?: string
+  sessionToken?: string
 ): Promise<PlaceDetails> {
   const apiKey = getApiKey();
 
-  const response = await fetch(
-    `https://places.googleapis.com/v1/places/${placeId}`,
-    {
-      method: "GET",
-      headers: {
-        "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "id,formattedAddress,location,displayName",
-      },
-    }
-  );
+  const url = new URL(`https://places.googleapis.com/v1/places/${placeId}`);
+  if (sessionToken) {
+    url.searchParams.set("sessionToken", sessionToken);
+  }
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "X-Goog-Api-Key": apiKey,
+      "X-Goog-FieldMask": "id,formattedAddress,location",
+    },
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -217,70 +225,6 @@ export async function getPlaceDetails(
     formattedAddress: data.formattedAddress,
     lat: data.location.latitude,
     lng: data.location.longitude,
-    name: data.displayName?.text,
-  };
-}
-
-/**
- * Calculate travel time between two points using Distance Matrix API
- *
- * @param origin - Origin coordinates
- * @param destination - Destination coordinates
- * @param mode - Transport mode
- * @param departureTime - Departure time for traffic estimation
- * @returns Travel time result
- */
-export async function getTravelTime(
-  origin: { lat: number; lng: number },
-  destination: { lat: number; lng: number },
-  mode: TransportMode,
-  departureTime?: Date
-): Promise<TravelTimeResult> {
-  const apiKey = getApiKey();
-  const params = new URLSearchParams({
-    origins: `${origin.lat},${origin.lng}`,
-    destinations: `${destination.lat},${destination.lng}`,
-    mode: TRANSPORT_MODE_MAP[mode],
-    key: apiKey,
-  });
-
-  // Add departure time for traffic-based estimates (driving/transit only)
-  if (departureTime && (mode === "DRIVING" || mode === "TRANSIT")) {
-    params.append("departure_time", Math.floor(departureTime.getTime() / 1000).toString());
-  }
-
-  const response = await fetch(
-    `https://maps.googleapis.com/maps/api/distancematrix/json?${params}`
-  );
-
-  if (!response.ok) {
-    throw new Error(`Distance Matrix API error: ${response.statusText}`);
-  }
-
-  const data = (await response.json()) as GoogleDistanceMatrixResponse;
-
-  if (data.status !== "OK") {
-    throw new Error(
-      `Distance Matrix API error: ${data.status} - ${data.error_message ?? "Unknown error"}`
-    );
-  }
-
-  const element = data.rows[0]?.elements[0];
-  if (!element || element.status !== "OK") {
-    return {
-      durationMinutes: 0,
-      distanceMeters: 0,
-      status: (element?.status as TravelTimeResult["status"]) || "ERROR",
-    };
-  }
-
-  // Use duration_in_traffic if available (more accurate for driving)
-  const duration = element.duration_in_traffic || element.duration;
-
-  return {
-    durationMinutes: Math.ceil((duration?.value ?? 0) / 60),
-    distanceMeters: element.distance?.value ?? 0,
-    status: "OK",
   };
 }
 
@@ -313,91 +257,141 @@ function getDepartureTimes(): {
   return { rushHour, regular, night };
 }
 
-/**
- * Calculate travel times for all time periods between two locations
- *
- * @param origin - Origin coordinates
- * @param destination - Destination coordinates
- * @param mode - Transport mode
- * @returns Travel times for rush hour, regular, and night periods
- */
-export async function getTravelTimesAllPeriods(
-  origin: { lat: number; lng: number },
-  destination: { lat: number; lng: number },
-  mode: TransportMode
-): Promise<{
-  rushHour: TravelTimeResult;
-  regular: TravelTimeResult;
-  night: TravelTimeResult;
-}> {
-  const departureTimes = getDepartureTimes();
+function parseMatrixElement(el: RouteMatrixElement | undefined): TravelTimeResult {
+  if (!el || (el.status?.code !== undefined && el.status.code !== 0)) {
+    return { durationMinutes: 0, distanceMeters: 0, status: "ERROR" };
+  }
+  if (el.condition !== "ROUTE_EXISTS") {
+    return { durationMinutes: 0, distanceMeters: 0, status: "ZERO_RESULTS" };
+  }
+  const seconds = el.duration ? parseInt(el.duration, 10) : 0;
+  return {
+    durationMinutes: Math.ceil(seconds / 60),
+    distanceMeters: el.distanceMeters ?? 0,
+    status: "OK",
+  };
+}
 
-  // Fetch all three periods in parallel
-  const [rushHour, regular, night] = await Promise.all([
-    getTravelTime(origin, destination, mode, departureTimes.rushHour),
-    getTravelTime(origin, destination, mode, departureTimes.regular),
-    getTravelTime(origin, destination, mode, departureTimes.night),
-  ]);
-
-  return { rushHour, regular, night };
+function toWaypoint(point: TravelPoint) {
+  return {
+    waypoint: {
+      location: {
+        latLng: { latitude: point.lat, longitude: point.lng },
+      },
+    },
+  };
 }
 
 /**
- * Calculate travel times between a new location and all existing locations
- * Skips self-referential pairs (A â†’ A)
- *
- * @param newLocation - The newly added location
- * @param existingLocations - Array of existing locations
- * @param mode - Transport mode
- * @returns Array of travel time results for all pairs
+ * One computeRouteMatrix call: a single origin against a list of destinations.
+ * Returns results ordered like the destinations array.
  */
-export async function calculateTravelTimesForNewLocation(
-  newLocation: { id: string; lat: number; lng: number },
-  existingLocations: Array<{ id: string; lat: number; lng: number }>,
-  mode: TransportMode
-): Promise<TravelTimeBatchResult[]> {
-  const results: TravelTimeBatchResult[] = [];
+async function computeMatrixRow(
+  origin: TravelPoint,
+  destinations: TravelPoint[],
+  mode: TransportMode,
+  departureTime?: Date
+): Promise<TravelTimeResult[]> {
+  const apiKey = getApiKey();
+  const travelMode = TRANSPORT_MODE_MAP[mode];
 
-  // Calculate travel times between new location and each existing location
-  // Need both directions: new â†’ existing AND existing â†’ new
-  for (const existing of existingLocations) {
-    // Skip if same location (shouldn't happen, but safety check)
-    if (existing.id === newLocation.id) continue;
-
-    // New â†’ Existing
-    const toExisting = await getTravelTimesAllPeriods(
-      { lat: newLocation.lat, lng: newLocation.lng },
-      { lat: existing.lat, lng: existing.lng },
-      mode
-    );
-
-    results.push({
-      fromLocationId: newLocation.id,
-      toLocationId: existing.id,
-      ...toExisting,
-    });
-
-    // Existing â†’ New
-    const fromExisting = await getTravelTimesAllPeriods(
-      { lat: existing.lat, lng: existing.lng },
-      { lat: newLocation.lat, lng: newLocation.lng },
-      mode
-    );
-
-    results.push({
-      fromLocationId: existing.id,
-      toLocationId: newLocation.id,
-      ...fromExisting,
-    });
+  const requestBody: Record<string, unknown> = {
+    origins: [toWaypoint(origin)],
+    destinations: destinations.map(toWaypoint),
+    travelMode,
+  };
+  // TRAFFIC_AWARE is only valid for DRIVE; TRANSIT takes departureTime alone.
+  if (mode === "DRIVING") {
+    requestBody.routingPreference = "TRAFFIC_AWARE";
+  }
+  if (departureTime && TIME_VARYING_MODES.includes(mode)) {
+    requestBody.departureTime = departureTime.toISOString();
   }
 
-  return results;
+  const response = await fetch(
+    "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask":
+          "originIndex,destinationIndex,duration,distanceMeters,status,condition",
+      },
+      body: JSON.stringify(requestBody),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Routes API error: ${response.status} - ${errorText}`);
+  }
+
+  const elements = (await response.json()) as RouteMatrixElement[];
+
+  const byDestination = new Map<number, RouteMatrixElement>();
+  for (const el of elements) {
+    byDestination.set(el.destinationIndex ?? 0, el);
+  }
+
+  return destinations.map((_, i) => parseMatrixElement(byDestination.get(i)));
 }
 
 /**
- * Generate a session token for Places API billing optimization
- * Use the same token for autocomplete and subsequent place details request
+ * Compute travel times for an arbitrary set of directed pairs across the three
+ * time-of-day conditions, using the Routes API computeRouteMatrix.
+ *
+ * Pairs are grouped by origin so each request bills exactly the needed
+ * elements (never the diagonal). Non-traffic modes (walking, cycling) are
+ * fetched once and reused for all three conditions.
  */
-export function generateSessionToken(): string {
-  return crypto.randomUUID();
+export async function computeTravelTimeMatrix(
+  pairs: TravelPair[],
+  mode: TransportMode
+): Promise<TravelTimeBatchResult[]> {
+  const byOrigin = new Map<string, { origin: TravelPoint; destinations: TravelPoint[] }>();
+  for (const pair of pairs) {
+    if (pair.from.id === pair.to.id) continue;
+    const group = byOrigin.get(pair.from.id);
+    if (group) {
+      if (!group.destinations.some((d) => d.id === pair.to.id)) {
+        group.destinations.push(pair.to);
+      }
+    } else {
+      byOrigin.set(pair.from.id, { origin: pair.from, destinations: [pair.to] });
+    }
+  }
+
+  const departureTimes = getDepartureTimes();
+  const timeVarying = TIME_VARYING_MODES.includes(mode);
+
+  const groups = Array.from(byOrigin.values());
+  const groupResults = await Promise.all(
+    groups.map(async ({ origin, destinations }) => {
+      if (!timeVarying) {
+        const single = await computeMatrixRow(origin, destinations, mode);
+        return { origin, destinations, rushHour: single, regular: single, night: single };
+      }
+      const [rushHour, regular, night] = await Promise.all([
+        computeMatrixRow(origin, destinations, mode, departureTimes.rushHour),
+        computeMatrixRow(origin, destinations, mode, departureTimes.regular),
+        computeMatrixRow(origin, destinations, mode, departureTimes.night),
+      ]);
+      return { origin, destinations, rushHour, regular, night };
+    })
+  );
+
+  const results: TravelTimeBatchResult[] = [];
+  for (const group of groupResults) {
+    group.destinations.forEach((destination, i) => {
+      results.push({
+        fromLocationId: group.origin.id,
+        toLocationId: destination.id,
+        rushHour: group.rushHour[i],
+        regular: group.regular[i],
+        night: group.night[i],
+      });
+    });
+  }
+  return results;
 }

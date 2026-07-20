@@ -74,7 +74,7 @@ const SECTION_META: Record<SectionId, { title: string; sub: string }> = {
   },
   scheduling: {
     title: "Scheduling",
-    sub: "transport mode · week start · travel events",
+    sub: "transport mode · week start · travel events · travel times",
   },
   ai: {
     title: "AI assistant",

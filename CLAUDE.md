@@ -123,7 +123,7 @@
   │   ├── aiKey.ts                      # BYOK device vault: user's Anthropic key AES-GCM-encrypted (non-extractable CryptoKey) in IndexedDB, per userId; validateAiKey via free models.list
   │   ├── auth.ts                       # Helpers around NextAuth session
   │   ├── db.ts                         # Prisma client singleton (PrismaPg adapter)
-  │   ├── google-maps-api.ts            # Places autocomplete + Distance Matrix
+  │   ├── google-maps-api.ts            # Places autocomplete + Routes API travel matrix
   │   ├── mail.ts, tokens.ts            # Auth flows
   │   ├── taskItem.ts
   │   └── theme/                        # The whole design system
@@ -795,7 +795,7 @@
   GITHUB_CLIENT_SECRET=""
   GOOGLE_CLIENT_ID=""
   GOOGLE_CLIENT_SECRET=""
-  GOOGLE_MAPS_API_KEY=""              # Places + Distance Matrix
+  GOOGLE_MAPS_API_KEY=""              # Places API (New) + Routes API (computeRouteMatrix)
   RESEND_API_KEY=""
   # ANTHROPIC_API_KEY is NOT required: the AI assistant is BYOK — each user's
   # own key, stored on their device, calling Anthropic from the browser.
