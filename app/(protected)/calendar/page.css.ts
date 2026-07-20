@@ -25,6 +25,11 @@ export const page = style({
 // row matches it so the date reads as sitting between them.
 const CORNER_ACTION_SIZE = 44;
 
+export const titleContainer = style({
+  display: "flex",
+  flexDirection: "column",
+});
+
 export const subHeader = style({
   display: "flex",
   alignItems: "center",
@@ -32,7 +37,7 @@ export const subHeader = style({
   // the calendar card's right edge (the wedge below absorbs the engine column
   // width minus this gap pair).
   gap: space["4"],
-  padding: `${space["3"]}px ${space["7"]}px `,
+  padding: `15px ${space["7"]}px ${space["3"]}px`,
   flexShrink: 0,
   minWidth: 0,
   "@media": {
@@ -65,12 +70,12 @@ export const subHeader = style({
 });
 
 export const rangeTitle = style([
-  display.pageTitle,
+  display.modalTitle,
   {
     color: vars.ink,
     lineHeight: 1,
     margin: 0,
-    minWidth: 240,
+    minWidth: 200,
     fontVariantNumeric: "tabular-nums",
     transition: themeTransition,
     "@media": {
@@ -163,6 +168,7 @@ export const navCluster = style({
   display: "flex",
   gap: space["1"],
   marginLeft: space["1.5"],
+  marginRight: "auto",
   "@media": {
     [media.mobile]: {
       gridArea: "nav",
@@ -202,18 +208,14 @@ export const actionLabel = style({
   },
 });
 
-export const spacer = style({
-  flex: 1,
-  "@media": {
-    [media.mobile]: { display: "none" },
-  },
-});
-
 // Hovered-category chip in the header. Shrinks and truncates before it can
 // push the fixed clusters to its right out of the row.
 export const hoverChip = style([
   text.bodySm,
   {
+    position: "absolute",
+    right: space["8"],
+    bottom: space["3.5"],
     display: "inline-flex",
     alignItems: "center",
     gap: space["1.5"],
@@ -222,6 +224,7 @@ export const hoverChip = style([
     letterSpacing: "0.01em",
     minWidth: 0,
     flexShrink: 1,
+    zIndex: 10,
     "@media": {
       [media.mobile]: { display: "none" },
     },
@@ -244,59 +247,27 @@ export const hoverChipName = style({
 export const actionCluster = style({
   display: "flex",
   alignItems: "center",
+  // eslint-disable-next-line theme/no-raw-scale-values
+  marginRight: 48,
   gap: space["2"],
   flexShrink: 0,
   "@media": {
-    [media.mobile]: { gridArea: "actions" },
+    [media.mobile]: { gridArea: "actions", marginRight: 0 },
   },
 });
 
 const COG_WIDTH = 32;
 const ENGINE_COL_WIDTH = 340;
-const MAIN_GRID_GAP = 16;
-const SUBHEADER_FLEX_GAP = 16;
-// engineContainer's left padding. The title inside the wedge gets the same
-// padding so it lines up with the engine column's content (messages, etc.),
-// not its outer edge.
-const ENGINE_COL_INNER_PAD = 18;
-
-// Collapsing wedge between the action cluster and the cog. Sized so that, when
-// expanded, the wedge's left edge sits on the engine column's left edge AND
-// actionCluster's right edge sits on the calendar card's right edge. With
-// SUBHEADER_FLEX_GAP === MAIN_GRID_GAP, both conditions resolve cleanly.
-// Below the laptop breakpoint the engine console is an overlay, not a docked
-// column, so there is nothing to align with — the wedge goes away entirely
-// (it is also the item whose fixed width used to push the cog off-viewport).
-export const headerConsoleSpacer = style({
-  width: ENGINE_COL_WIDTH + MAIN_GRID_GAP - COG_WIDTH - SUBHEADER_FLEX_GAP * 2,
-  flexShrink: 1,
-  minWidth: 0,
-  display: "flex",
-  alignItems: "center",
-  gap: space["2"],
-  paddingLeft: ENGINE_COL_INNER_PAD,
-  overflow: "hidden",
-  transition: collapseTransition,
-  selectors: {
-    [`${page}[data-console-collapsed="true"] &`]: {
-      width: 0,
-      paddingLeft: 0,
-    },
-    [`${page}[data-no-transitions="true"] &`]: {
-      transition: "none",
-    },
-  },
-  "@media": {
-    [media.laptop]: { display: "none" },
-  },
-});
 
 export const headerEngineLabel = style({
   display: "flex",
   alignItems: "center",
   gap: space["2"],
+  paddingBottom: space["3"],
+  borderBottom: `1px solid ${vars.rule}`,
   whiteSpace: "nowrap",
   opacity: 1,
+  fontSize: 18,
   transition: collapseTransition,
   selectors: {
     [`${page}[data-console-collapsed="true"] &`]: {
@@ -311,11 +282,14 @@ export const headerEngineLabel = style({
 export const engineCogBtn = style([
   pillBtn({ variant: "glass", size: "sm" }),
   {
-    position: "relative",
+    position: "absolute",
+    top: 15,
+    right: 15,
     width: COG_WIDTH,
     height: COG_WIDTH,
     justifyContent: "center",
     padding: 0,
+    zIndex: 10,
     flexShrink: 0,
     "@media": {
       [media.mobile]: { gridArea: "cog", width: 40, height: 40 },
@@ -337,7 +311,6 @@ export const engineCogAlertDot = style({
 export const calendarRegion = style({
   position: "relative",
   display: "flex",
-  flexDirection: "column",
   flex: 1,
   minHeight: 0,
 });
@@ -345,8 +318,7 @@ export const calendarRegion = style({
 export const mainGrid = style({
   position: "relative",
   display: "grid",
-  gridTemplateColumns: "1fr auto",
-  gap: MAIN_GRID_GAP,
+  gridTemplateRows: "auto 1fr",
   flex: 1,
   minHeight: 0,
   transition: `gap ${DURATIONS.collapse}s ease`,
@@ -362,14 +334,14 @@ export const mainGrid = style({
     // Engine column is an absolute overlay here (out of flow), so the grid
     // collapses to the calendar track alone.
     [media.laptop]: {
-      gridTemplateColumns: "1fr",
+      gridTemplateRows: "auto 1fr",
       gap: 0,
     },
     // Full-bleed on mobile: the calendar card is the only track and runs to
     // the content edges; the shell's mainColumn bottom padding keeps it clear
     // of the floating tab bar.
     [media.mobile]: {
-      gridTemplateColumns: "1fr",
+      gridTemplateRows: "auto 1fr",
       padding: 0,
     },
   },
@@ -382,6 +354,9 @@ export const calendarCard = style([
     flexDirection: "column",
     minHeight: 0,
     overflow: "hidden",
+    borderRight: "none !important",
+    borderBottom: "none !important",
+    borderLeft: "none !important",
     "@media": {
       [media.mobile]: {
         borderRadius: 0,
@@ -401,6 +376,7 @@ export const engineCol = style({
   overflow: "hidden",
   opacity: 1,
   transition: collapseTransition,
+  borderLeft: "1px solid " + vars.rule,
   selectors: {
     [`${page}[data-console-collapsed="true"] &`]: {
       width: 0,
@@ -436,6 +412,9 @@ export const engineContainer = style({
   minHeight: 0,
   paddingBottom: space["12"],
   paddingLeft: space["4"],
+  paddingRight: space["4"],
+  // eslint-disable-next-line theme/no-raw-scale-values
+  paddingTop: 15,
   width: 340,
   minWidth: 340,
   boxSizing: "border-box",
@@ -443,6 +422,7 @@ export const engineContainer = style({
     // Panel chrome for the overlay state — floats over the calendar card.
     [media.laptop]: {
       padding: space["4"],
+      marginTop: space["16"],
       background: vars.paper,
       border: `1px solid ${vars.rule}`,
       borderRadius: radii.lg,
@@ -454,16 +434,18 @@ export const engineContainer = style({
 export const engineHeader = style({
   padding: "0 0 14px",
   flexShrink: 0,
-  borderBottom: `1px solid ${vars.rule}`,
+  marginTop: space["3.5"],
   marginBottom: space["3.5"],
   display: "flex",
-  flexDirection: "column",
+  justifyContent: "space-between",
   gap: space["1"],
 });
 
 export const engineTitle = style([
-  display.panelTitle,
+  display.modalTitle,
   {
+    minHeight: 32,
+    marginBottom: -space["1"],
     color: vars.ink,
     transition: themeTransition,
   },
@@ -684,7 +666,6 @@ export const fcWrap = style({
   display: "flex",
   flexDirection: "column",
   overflow: "hidden",
-  borderRadius: radii.md,
   "@media": {
     [media.mobile]: { borderRadius: 0 },
   },

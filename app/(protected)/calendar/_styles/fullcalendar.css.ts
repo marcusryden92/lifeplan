@@ -40,6 +40,22 @@ globalStyle(
   },
 );
 
+// FullCalendar draws the grid's outer right frame from the rightmost cells'
+// right borders (the scrollgrid table itself only carries top+left). That line
+// falls against the engine column's borderLeft and reads as a double rule. The
+// engine column border is the intended divider, so drop the grid's right edge.
+globalStyle(
+  [
+    `${ROOT} .fc-scrollgrid-section > td:last-child`,
+    `${ROOT} .fc-col-header-cell:last-child`,
+    `${ROOT} .fc-timegrid-col:last-child`,
+    `${ROOT} .fc-timegrid-slot-lane:last-child`,
+  ].join(", "),
+  {
+    borderRightWidth: "0 !important",
+  },
+);
+
 globalStyle(`${ROOT} .fc-media-screen`, {
   border: "none !important",
   borderRadius: "0 !important",

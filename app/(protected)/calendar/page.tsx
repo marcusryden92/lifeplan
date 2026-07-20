@@ -39,7 +39,6 @@ import {
   subHeader,
   rangeTitle,
   navCluster,
-  spacer,
   hoverChip,
   hoverChipDot,
   hoverChipName,
@@ -47,7 +46,6 @@ import {
   actionLabel,
   headerActionBtn,
   headerIconBtn,
-  headerConsoleSpacer,
   headerEngineLabel,
   engineCogBtn,
   engineCogAlertDot,
@@ -64,6 +62,7 @@ import {
   dayHeaderNum,
   dayHeaderNumToday,
   rangeTitleLandscape,
+  titleContainer,
 } from "./page.css";
 
 const CONSOLE_COLLAPSE_KEY = "circadium.engine.collapsed";
@@ -241,109 +240,103 @@ export default function CalendarPage() {
       data-no-transitions={transitionsReady ? undefined : "true"}
     >
       <div className={calendarRegion}>
-        <div className={subHeader}>
-          <h1 className={rangeTitle}>{range}</h1>
-          <div className={navCluster}>
-            <Button
-              variant="glass"
-              size="sm"
-              className={headerIconBtn}
-              onClick={goPrev}
-              aria-label="Previous week"
-            >
-              <ChevronLeft size={14} strokeWidth={2} />
-            </Button>
-            <Button
-              variant="glass"
-              size="sm"
-              className={headerActionBtn}
-              onClick={goToday}
-            >
-              Today
-            </Button>
-            <Button
-              variant="glass"
-              size="sm"
-              className={headerIconBtn}
-              onClick={goNext}
-              aria-label="Next week"
-            >
-              <ChevronRight size={14} strokeWidth={2} />
-            </Button>
-          </div>
-          {hoveredCategory && (
-            <span className={hoverChip}>
-              <span
-                aria-hidden
-                className={hoverChipDot}
-                style={{ background: hoveredCategory.color ?? vars.muted }}
-              />
-              <span className={hoverChipName}>{hoveredCategory.name}</span>
-            </span>
+        <button
+          type="button"
+          className={engineCogBtn}
+          onClick={() =>
+            isMobile ? setMobileConsoleOpen(true) : toggleConsole()
+          }
+          aria-pressed={isMobile ? undefined : !consoleCollapsed}
+          aria-label={
+            consoleCollapsed || isMobile
+              ? "Open engine console"
+              : "Collapse engine console"
+          }
+          title={
+            consoleCollapsed || isMobile
+              ? "Open engine console"
+              : "Collapse engine console"
+          }
+        >
+          <Settings size={isMobile ? 18 : 16} strokeWidth={1.8} />
+          {alertTone && (
+            <span
+              className={engineCogAlertDot}
+              style={{ background: toneColor(alertTone) }}
+            />
           )}
-          <span className={spacer} />
-          <h1 className={rangeTitleLandscape}>{range}</h1>
-
-          <div className={actionCluster}>
-            <Button
-              variant="glass"
-              size="sm"
-              className={headerIconBtn}
-              onClick={() => setPlanOpen(true)}
-              aria-label="Edit week templates and category windows"
-              title="Week structure"
-            >
-              <CalendarCog size={13} strokeWidth={2.2} />
-              <span className={actionLabel}>Week structure</span>
-            </Button>
-            <Button
-              variant="solid"
-              size="sm"
-              className={headerIconBtn}
-              onClick={manuallyRefreshCalendar}
-              aria-label="Regenerate calendar"
-              title="Regenerate"
-            >
-              <RotateCw size={13} strokeWidth={2.4} />
-              <span className={actionLabel}>Regenerate</span>
-            </Button>
-          </div>
-          <div className={headerConsoleSpacer} aria-hidden={consoleCollapsed}>
-            <span className={headerEngineLabel}>
-              <ConicDot size={10} />
-              <span className={engineTitle}>Engine</span>
-            </span>
-          </div>
-          <button
-            type="button"
-            className={engineCogBtn}
-            onClick={() =>
-              isMobile ? setMobileConsoleOpen(true) : toggleConsole()
-            }
-            aria-pressed={isMobile ? undefined : !consoleCollapsed}
-            aria-label={
-              consoleCollapsed || isMobile
-                ? "Open engine console"
-                : "Collapse engine console"
-            }
-            title={
-              consoleCollapsed || isMobile
-                ? "Open engine console"
-                : "Collapse engine console"
-            }
-          >
-            <Settings size={isMobile ? 18 : 16} strokeWidth={1.8} />
-            {alertTone && (
-              <span
-                className={engineCogAlertDot}
-                style={{ background: toneColor(alertTone) }}
-              />
-            )}
-          </button>
-        </div>
-
+        </button>
         <div className={mainGrid}>
+          <div className={subHeader}>
+            <h1 className={rangeTitle}>{range}</h1>
+
+            <div className={navCluster}>
+              <Button
+                variant="glass"
+                size="sm"
+                className={headerIconBtn}
+                onClick={goPrev}
+                aria-label="Previous week"
+              >
+                <ChevronLeft size={14} strokeWidth={2} />
+              </Button>
+              <Button
+                variant="glass"
+                size="sm"
+                className={headerActionBtn}
+                onClick={goToday}
+              >
+                Today
+              </Button>
+              <Button
+                variant="glass"
+                size="sm"
+                className={headerIconBtn}
+                onClick={goNext}
+                aria-label="Next week"
+              >
+                <ChevronRight size={14} strokeWidth={2} />
+              </Button>
+            </div>
+
+            <h1 className={rangeTitleLandscape}>{range}</h1>
+
+            <div className={actionCluster}>
+              <Button
+                variant="glass"
+                size="sm"
+                className={headerIconBtn}
+                onClick={() => setPlanOpen(true)}
+                aria-label="Edit week templates and category windows"
+                title="Week structure"
+              >
+                <CalendarCog size={13} strokeWidth={2.2} />
+                <span className={actionLabel}>Week structure</span>
+              </Button>
+              <Button
+                variant="solid"
+                size="sm"
+                className={headerIconBtn}
+                onClick={manuallyRefreshCalendar}
+                aria-label="Regenerate calendar"
+                title="Regenerate"
+              >
+                <RotateCw size={13} strokeWidth={2.4} />
+                <span className={actionLabel}>Regenerate</span>
+              </Button>
+            </div>
+          </div>
           <div className={calendarCard}>
+            {hoveredCategory && (
+              <span className={hoverChip}>
+                <span
+                  aria-hidden
+                  className={hoverChipDot}
+                  style={{ background: hoveredCategory.color ?? vars.muted }}
+                />
+                <span className={hoverChipName}>{hoveredCategory.name}</span>
+              </span>
+            )}
             <div className={`${fcWrap} circadium-calendar`}>
               <CalendarHoverLabelContext.Provider value={setHoverLabel}>
                 <Calendar
@@ -354,19 +347,23 @@ export default function CalendarPage() {
               </CalendarHoverLabelContext.Provider>
             </div>
           </div>
+        </div>
 
-          <div className={engineCol}>
-            <div className={engineContainer}>
-              <EngineConsole
-                messages={renderedMessages}
-                lastEngineRunAt={lastEngineRunAt}
-                failCount={failCount}
-                warnCount={warnCount}
-                placedCount={placedCount}
-                onDismiss={handleDismiss}
-                onGoToDate={handleGoToDate}
-              />
-            </div>
+        <div className={engineCol}>
+          <div className={engineContainer}>
+            <span className={headerEngineLabel}>
+              <ConicDot size={10} />
+              <span className={engineTitle}>Engine</span>
+            </span>
+            <EngineConsole
+              messages={renderedMessages}
+              lastEngineRunAt={lastEngineRunAt}
+              failCount={failCount}
+              warnCount={warnCount}
+              placedCount={placedCount}
+              onDismiss={handleDismiss}
+              onGoToDate={handleGoToDate}
+            />
           </div>
         </div>
 
