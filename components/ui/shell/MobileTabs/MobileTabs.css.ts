@@ -9,7 +9,7 @@ export const tabBar = style({
   position: "fixed",
   bottom: 12,
   zIndex: 5,
-  gap: space["7"],
+  gap: space["10"],
   display: "flex",
   alignItems: "center",
   justifyContent: "space-around",
@@ -22,7 +22,8 @@ export const tabBar = style({
   boxShadow: vars.shadow.panelSm,
   "@media": {
     [media.landscapePhone]: {
-      padding: "8px 18px",
+      padding: "8px 8px",
+      gap: space["10"],
     },
   },
 });
@@ -33,8 +34,8 @@ export const tabBar = style({
 const endCapBase = style({
   flex: "0 0 auto",
   display: "none",
-  width: 40,
-  height: 40,
+  width: 54,
+  height: 54,
   borderRadius: radii.pill,
   placeItems: "center",
   cursor: "pointer",

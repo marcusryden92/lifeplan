@@ -2,8 +2,17 @@
 import { vars } from "@/lib/theme/tokens.css";
 import { space, media, radii, zIndex } from "@/lib/theme/scales";
 import { glass, pillBtn, iconBtn } from "@/lib/theme/recipes.css";
-import { display, text, fieldLabel, statusTag } from "@/lib/theme/typography.css";
-import { themeTransition, collapseTransition, DURATIONS } from "@/lib/theme/transitions";
+import {
+  display,
+  text,
+  fieldLabel,
+  statusTag,
+} from "@/lib/theme/typography.css";
+import {
+  themeTransition,
+  collapseTransition,
+  DURATIONS,
+} from "@/lib/theme/transitions";
 
 export const page = style({
   display: "flex",
@@ -44,6 +53,14 @@ export const subHeader = style({
       columnGap: space["2"],
       padding: `calc(${space["3"]}px + env(safe-area-inset-top, 0px)) ${space["4"]}px ${space["3"]}px`,
     },
+    // Landscape phone: collapse to one inline toolbar row (the CornerActions
+    // pills are hidden here, so the full width is free) to reclaim the height
+    // the stacked title row costs.
+    [media.landscapePhone]: {
+      gridTemplateColumns: "auto 1fr auto auto",
+      gridTemplateAreas: `"nav title actions cog"`,
+      rowGap: 0,
+    },
   },
 });
 
@@ -66,6 +83,35 @@ export const rangeTitle = style([
         fontSize: 28,
         minWidth: "auto",
       },
+      [media.landscapePhone]: { display: "none" },
+    },
+  },
+]);
+
+// The landscape-phone copy of the range title. Hidden by default (desktop +
+// portrait show the primary rangeTitle instead); only surfaces inline in the
+// single-row landscape header. Base display:none must not be re-shown under
+// media.mobile — that query also matches a landscape phone and would win by
+// source order.
+export const rangeTitleLandscape = style([
+  display.pageTitle,
+  {
+    color: vars.ink,
+    lineHeight: 1,
+    margin: 0,
+    fontVariantNumeric: "tabular-nums",
+    transition: themeTransition,
+    display: "none",
+    "@media": {
+      [media.landscapePhone]: {
+        gridArea: "title",
+        justifySelf: "center",
+        display: "flex",
+        alignItems: "center",
+        height: CORNER_ACTION_SIZE,
+        fontSize: 28,
+        minWidth: "auto",
+      },
     },
   },
 ]);
@@ -74,8 +120,13 @@ export const dayHeaderStack = style({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: space["px"],
   padding: "4px 0",
+  "@media": {
+    [media.mobile]: {
+      flexDirection: "row",
+      gap: space["2"],
+    },
+  },
 });
 
 export const dayHeaderLabel = style([
@@ -92,6 +143,11 @@ export const dayHeaderNum = style([
     color: vars.ink,
     fontVariantNumeric: "tabular-nums",
     transition: themeTransition,
+    "@media": {
+      [media.mobile]: {
+        fontSize: vars.font.ui,
+      },
+    },
   },
 ]);
 

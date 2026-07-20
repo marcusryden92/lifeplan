@@ -63,6 +63,7 @@ import {
   dayHeaderLabelToday,
   dayHeaderNum,
   dayHeaderNumToday,
+  rangeTitleLandscape,
 } from "./page.css";
 
 const CONSOLE_COLLAPSE_KEY = "circadium.engine.collapsed";
@@ -281,6 +282,8 @@ export default function CalendarPage() {
             </span>
           )}
           <span className={spacer} />
+          <h1 className={rangeTitleLandscape}>{range}</h1>
+
           <div className={actionCluster}>
             <Button
               variant="glass"

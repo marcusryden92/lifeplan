@@ -12,6 +12,12 @@ export const mobileGuard = style({
   },
 });
 
+export const mobileLandscapeGuard = style({
+  "@media": {
+    [media.landscapePhone]: { display: "none" },
+  },
+});
+
 export const desktopGuard = style({
   "@media": {
     [media.tabletUp]: { display: "none" },

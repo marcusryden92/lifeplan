@@ -69,4 +69,8 @@ export {
   categoryTint,
 } from "./categoryColor";
 export type { CategoryLike } from "./categoryColor";
-export { mobileGuard, desktopGuard } from "./utilities.css";
+export {
+  mobileGuard,
+  mobileLandscapeGuard,
+  desktopGuard,
+} from "./utilities.css";
