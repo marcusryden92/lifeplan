@@ -3,6 +3,7 @@ import { vars } from "@/lib/theme/tokens.css";
 import { space, radii } from "@/lib/theme/scales";
 import { text, caption } from "@/lib/theme/typography.css";
 import { themeTransition } from "@/lib/theme/transitions";
+import { media } from "@/lib/theme/scales";
 
 export const root = style([
   text.microLabel,
@@ -12,6 +13,11 @@ export const root = style([
     gap: space["0.5"],
     color: vars.muted,
     transition: themeTransition,
+    "@media": {
+      [media.mobile]: {
+        display: "none",
+      },
+    },
   },
 ]);
 
