@@ -7,7 +7,6 @@ import { v4 as uuidv4 } from "uuid";
 import { format } from "date-fns";
 import {
   Button,
-  Backdrop,
   Grain,
   ConfirmModal,
   SegmentedControl,
@@ -817,7 +816,6 @@ export function AIDraftModal({
 
   const content = (
     <>
-      <Backdrop variant="blob" />
       <Grain />
 
       {!embedded && (
@@ -1071,7 +1069,6 @@ export function AIDraftModal({
   // assistant surface.
   const gateContent = (
     <>
-      <Backdrop variant="blob" />
       <Grain />
       {!embedded && (
         <div className={banner}>

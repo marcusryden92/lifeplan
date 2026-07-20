@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Backdrop, Grain } from "@/components/ui";
+import { Grain } from "@/components/ui";
 import { OnboardingFlow } from "./OnboardingFlow";
 import { overlayRoot, overlayScroll } from "./onboarding.css";
 
@@ -43,7 +43,6 @@ export function OnboardingOverlay({
 
   return (
     <div className={overlayRoot}>
-      <Backdrop variant="blob" />
       <Grain />
       <div className={overlayScroll}>
         <OnboardingFlow onComplete={handleComplete} />

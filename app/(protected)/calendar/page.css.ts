@@ -32,7 +32,7 @@ export const subHeader = style({
   // the calendar card's right edge (the wedge below absorbs the engine column
   // width minus this gap pair).
   gap: space["4"],
-  padding: "20px 28px 18px",
+  padding: `${space["3"]}px ${space["7"]}px `,
   flexShrink: 0,
   minWidth: 0,
   "@media": {
@@ -347,7 +347,6 @@ export const mainGrid = style({
   display: "grid",
   gridTemplateColumns: "1fr auto",
   gap: MAIN_GRID_GAP,
-  padding: "0 28px 28px",
   flex: 1,
   minHeight: 0,
   transition: `gap ${DURATIONS.collapse}s ease`,
@@ -377,7 +376,7 @@ export const mainGrid = style({
 });
 
 export const calendarCard = style([
-  glass({ fill: "regular", radius: "lg", shadow: "panel" }),
+  glass({ fill: "regular", radius: "none", shadow: "none", blur: "none" }),
   {
     display: "flex",
     flexDirection: "column",

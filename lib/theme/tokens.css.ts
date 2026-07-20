@@ -11,6 +11,13 @@ export const vars = createThemeContract({
   overlay: null,
   tileFill: null,
 
+  // Shell chrome surfaces, sourced per theme from the grayscale ramp (scales.ts).
+  surface: {
+    canvas: null,
+    sidebar: null,
+    content: null,
+  },
+
   glass: {
     bg: null,
     bgDeep: null,

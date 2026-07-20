@@ -18,7 +18,6 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import * as Dialog from "@radix-ui/react-dialog";
 import {
   Button,
-  Backdrop,
   ConfirmModal,
   Grain,
   useShellOverlay,
@@ -516,7 +515,6 @@ export function WeekStructureModal({
         onInteractOutside={(e) => e.preventDefault()}
       >
         <Dialog.Title className={a11yHiddenTitle}>Week Structure</Dialog.Title>
-        <Backdrop variant="blob" />
         <Grain />
         <div className={banner}>
           <span className={editingLabel}>editing</span>

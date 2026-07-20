@@ -1,7 +1,6 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { Backdrop } from "../../Backdrop";
 import { Grain } from "../../Grain";
 import { Sidebar } from "../Sidebar";
 import { MobileTabs } from "../MobileTabs";
@@ -23,7 +22,6 @@ import {
 
 type Props = {
   children: ReactNode;
-  backdrop?: "blob" | "pinstripe" | "both" | "none";
   userName?: string;
   userInitial?: string;
   // Rendered inside mainColumn after the page content — the mount point for
@@ -42,7 +40,6 @@ type Props = {
 
 export function AppShell({
   children,
-  backdrop = "blob",
   userName,
   userInitial,
   assistantSlot,
@@ -56,7 +53,6 @@ export function AppShell({
           <NavHistoryProvider>
             <div className={bezelFrame}>
               <div className={canvas}>
-                <Backdrop variant={backdrop} />
                 <Grain />
                 <div className={contentRow}>
                   <div className={desktopOnly}>

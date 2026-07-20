@@ -17,6 +17,7 @@ export const glass = recipe({
       soft: { background: vars.glass.bgSoft },
     },
     radius: {
+      none: { borderRadius: 0 },
       sm: { borderRadius: radii.lg },
       md: { borderRadius: radii["lg+2"] },
       lg: { borderRadius: radii["xl+2"] },

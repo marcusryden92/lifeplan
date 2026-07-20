@@ -1,5 +1,6 @@
 import { createTheme } from "@vanilla-extract/css";
 import { vars } from "./tokens.css";
+import { grayscale, paperSurface } from "./scales";
 
 export const themeLight = createTheme(vars, {
   paper: "#f2efea",
@@ -11,6 +12,12 @@ export const themeLight = createTheme(vars, {
   textOnAccent: "#ffffff",
   overlay: "rgba(10,8,20,0.22)",
   tileFill: "#f2efea",
+
+  surface: {
+    canvas: paperSurface.canvas,
+    sidebar: paperSurface.sidebar,
+    content: paperSurface.content,
+  },
 
   glass: {
     bg: "rgba(255,255,255,0.28)",
@@ -78,6 +85,12 @@ export const themeDark = createTheme(vars, {
   textOnAccent: "#ffffff",
   overlay: "rgba(0,0,0,0.55)",
   tileFill: "#1c1f27",
+
+  surface: {
+    canvas: grayscale[10],
+    sidebar: grayscale[15],
+    content: grayscale[20],
+  },
 
   glass: {
     bg: "rgba(230,232,236,0.05)",

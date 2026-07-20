@@ -655,6 +655,7 @@
   CSS-custom-property contract with values assigned per theme (`themeLight`, `themeDark`). Groups:
 
   - `paper` / `bezel` / `ink` / `inkSoft` / `muted` / `rule` / `textOnAccent` / `overlay` / `tileFill` — flat surface + text colors
+  - `surface.{canvas, sidebar, content}` — shell chrome fills, painted directly on the canvas, Sidebar, and mainColumn (replacing the retired frosted-blur + gradient-blob backdrop). Theme-swappable (so they transition on light/dark toggle): **light** mode keeps the original warm off-white paper tones (`paperSurface` in [scales.ts](lib/theme/scales.ts) — hue 37, 20% saturation, three near-white lightnesses); **dark** mode uses the cool `grayscale` ramp (hue 225, 10% saturation, one stop every 5% of lightness, keyed by lightness %) at its dark end (10/15/20). Elevation reads brightest-on-top in both: canvas recessed, content raised.
   - `glass.{bg, bgDeep, bgSoft, stroke, hi}` — frosted-panel surface fills (used as **base** fills, not hovers)
   - `interactive.{hoverFill, selectedFill}` — **row/button hover + selected states**. Direction inverts per theme: light-mode hovers **darken the paper** (ink at 7%/12%), dark-mode hovers **brighten** it (paper at 7%/12%). Use these for row hovers, not `glass.bgSoft`.
   - `shadow.{panel, panelSm}` — floating-surface elevation
