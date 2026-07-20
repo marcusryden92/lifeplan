@@ -8,6 +8,7 @@ import {
   Button,
   ConfirmModal,
   Loader,
+  PageHeader,
   SegmentedControl,
   vars,
 } from "@/components/ui";
@@ -46,8 +47,6 @@ import {
 } from "./_constants";
 import {
   page,
-  subHeader,
-  pageTitle,
   spacer,
   headActions,
   successBanner,
@@ -407,9 +406,7 @@ export default function LocationsPage() {
   if (!isLoaded) {
     return (
       <div className={page}>
-        <div className={subHeader}>
-          <h1 className={pageTitle}>Locations</h1>
-        </div>
+        <PageHeader title="Locations" />
         <div
           style={{
             flex: 1,
@@ -428,8 +425,7 @@ export default function LocationsPage() {
 
   return (
     <div className={page}>
-      <div className={subHeader}>
-        <h1 className={pageTitle}>Locations</h1>
+      <PageHeader title="Locations">
         {combinedError && <div className={errorBanner}>{combinedError}</div>}
         {success && !combinedError && (
           <div className={successBanner}>{success}</div>
@@ -460,7 +456,7 @@ export default function LocationsPage() {
             Refresh all
           </Button>
         </div>
-      </div>
+      </PageHeader>
 
       <div className={mainGrid}>
         <aside className={rail}>

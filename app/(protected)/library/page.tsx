@@ -34,6 +34,7 @@ import {
   ConfirmModal,
   Input,
   Loader,
+  PageHeader,
   Switch,
   vars,
 } from "@/components/ui";
@@ -66,9 +67,6 @@ import {
 } from "@/utils/plannerBulkActions";
 import {
   page,
-  subHeader,
-  pageTitle,
-  titleSummary,
   spacer,
   actionCluster,
   mainGrid,
@@ -519,12 +517,15 @@ export default function LibraryPage() {
       data-rail-collapsed={railCollapsed}
       data-no-transitions={railTransitionsReady ? undefined : "true"}
     >
-      <div className={subHeader}>
-        <h1 className={pageTitle}>Library</h1>
-        <span className={titleSummary}>
-          {planner.length} items · {categories.length} categor
-          {categories.length === 1 ? "y" : "ies"}
-        </span>
+      <PageHeader
+        title="Library"
+        summary={
+          <>
+            {planner.length} items · {categories.length} categor
+            {categories.length === 1 ? "y" : "ies"}
+          </>
+        }
+      >
         <span className={spacer} />
         <div className={actionCluster}>
           <Button
@@ -536,7 +537,7 @@ export default function LibraryPage() {
             New item
           </Button>
         </div>
-      </div>
+      </PageHeader>
 
       <div className={mainGrid}>
         <aside className={rail}>

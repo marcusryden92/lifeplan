@@ -14,7 +14,7 @@ import {
   User,
   type LucideIcon,
 } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, PageHeader } from "@/components/ui";
 import type { UserRole } from "@/generated/client";
 import { ProfileSection } from "./ProfileSection";
 import { AccountSection } from "./AccountSection";
@@ -24,9 +24,6 @@ import { ComingSoonSection } from "./ComingSoonSection";
 import { DangerSection } from "./DangerSection";
 import {
   page,
-  subHeader,
-  pageTitle,
-  titleSummary,
   spacer,
   userBadge,
   mainGrid,
@@ -123,9 +120,7 @@ export function SettingsView({ user }: { user: SettingsUser }) {
 
   return (
     <div className={page}>
-      <div className={subHeader}>
-        <h1 className={pageTitle}>Settings</h1>
-        <span className={titleSummary}>account · scheduling · workspace</span>
+      <PageHeader title="Settings" summary="account · scheduling · workspace">
         <span className={spacer} />
         <span className={userBadge}>
           {user.name || user.email || "Signed in"}
@@ -134,7 +129,7 @@ export function SettingsView({ user }: { user: SettingsUser }) {
           <LogOut size={12} strokeWidth={2.2} />
           Sign out
         </Button>
-      </div>
+      </PageHeader>
 
       <div className={mainGrid}>
         <nav className={subnav} aria-label="Settings sections">

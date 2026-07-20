@@ -2,7 +2,7 @@
 import { vars } from "@/lib/theme/tokens.css";
 import { space, media, radii } from "@/lib/theme/scales";
 import { iconBtn } from "@/lib/theme/recipes.css";
-import { display, text, fieldLabel } from "@/lib/theme/typography.css";
+import { text, fieldLabel } from "@/lib/theme/typography.css";
 import { colorMixAlpha } from "@/lib/theme/effects";
 import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
 
@@ -20,43 +20,6 @@ export const page = style({
     },
   },
 });
-
-export const subHeader = style({
-  display: "flex",
-  alignItems: "baseline",
-  gap: space["3"],
-  padding: "20px 28px 18px",
-  flexShrink: 0,
-  "@media": {
-    [media.mobile]: {
-      padding: "16px 16px 12px",
-      flexWrap: "wrap",
-      gap: space["2.5"],
-    },
-  },
-});
-
-export const pageTitle = style([
-  display.pageTitle,
-  {
-    color: vars.ink,
-    lineHeight: 1,
-    margin: 0,
-    transition: themeTransition,
-    "@media": {
-      [media.mobile]: { fontSize: 24 },
-    },
-  },
-]);
-
-export const titleSummary = style([
-  text.bodySm,
-  {
-    color: vars.muted,
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-  },
-]);
 
 export const spacer = style({
   flex: 1,

@@ -17,31 +17,6 @@ export const page = style({
   },
 });
 
-export const subHeader = style({
-  display: "flex",
-  alignItems: "center",
-  gap: space["3"],
-  padding: "20px 28px 18px",
-  flexShrink: 0,
-  flexWrap: "wrap",
-  "@media": {
-    [media.mobile]: { padding: "16px 16px 12px", gap: space["2.5"] },
-  },
-});
-
-export const pageTitle = style([
-  display.pageTitle,
-  {
-    color: vars.ink,
-    lineHeight: 1,
-    margin: 0,
-    transition: themeTransition,
-    "@media": {
-      [media.mobile]: { fontSize: 24 },
-    },
-  },
-]);
-
 export const titleSummary = style([
   text.bodySm,
   {
@@ -59,15 +34,15 @@ export const headActions = style({
   gap: space["2"],
   flexShrink: 0,
   flexWrap: "wrap",
-  // marginLeft: auto keeps the cluster right-aligned even when the parent
-  // subHeader wraps it onto its own row â€” without it, a wrapped row reverts
-  // to the left edge and the title sits visually orphaned.
+  // marginLeft: auto keeps the cluster right-aligned even when the PageHeader
+  // row wraps it onto its own line — without it, a wrapped row reverts to the
+  // left edge and the title sits visually orphaned.
   marginLeft: "auto",
 });
 
-// Inline status pill that sits in the subHeader between titleSummary and the
-// action cluster. Translucent tinted background; the surrounding flex layout
-// keeps the action cluster right-aligned whether the banner is present or not.
+// Inline status pill that sits in the PageHeader row before the action
+// cluster. Translucent tinted background; the surrounding flex layout keeps
+// the action cluster right-aligned whether the banner is present or not.
 export const banner = style([
   text.label,
   {

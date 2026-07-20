@@ -1,10 +1,9 @@
 import { style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
-import { space, radii, zIndex, media } from "@/lib/theme/scales";
+import { radii, zIndex, media } from "@/lib/theme/scales";
 import { backdropFilters } from "@/lib/theme/effects";
 import { buttonTransition } from "@/lib/theme/transitions";
-
-const SIZE = 44;
+import { CORNER_ACTION_SIZE, CORNER_ACTION_INSET } from "./constants";
 
 // Floating corner chrome: search top-left, assistant top-right. Mobile-only —
 // the desktop sidebar already exposes search (Ctrl+J) and the Assistant button,
@@ -13,10 +12,10 @@ const SIZE = 44;
 // on mobile, so an absolute child would scroll away with the content.
 const cornerBase = style({
   position: "fixed",
-  top: `calc(${space["3"]}px + env(safe-area-inset-top, 0px))`,
+  top: `calc(${CORNER_ACTION_INSET}px + env(safe-area-inset-top, 0px))`,
   zIndex: zIndex.raised,
-  width: SIZE,
-  height: SIZE,
+  width: CORNER_ACTION_SIZE,
+  height: CORNER_ACTION_SIZE,
   borderRadius: radii.pill,
   display: "grid",
   placeItems: "center",
@@ -36,7 +35,7 @@ const cornerBase = style({
 export const searchButton = style([
   cornerBase,
   {
-    left: space["3"],
+    left: CORNER_ACTION_INSET,
     color: vars.inkSoft,
     background: vars.glass.bg,
     backdropFilter: backdropFilters.modal,
@@ -55,7 +54,7 @@ export const searchButton = style([
 export const assistantButton = style([
   cornerBase,
   {
-    right: space["3"],
+    right: CORNER_ACTION_INSET,
     color: vars.paper,
     background: vars.ink,
     border: "none",

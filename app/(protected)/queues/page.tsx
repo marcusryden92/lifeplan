@@ -9,6 +9,7 @@ import {
   ConfirmModal,
   Input,
   Loader,
+  PageHeader,
   useTheme,
   vars,
   categoryColor,
@@ -28,9 +29,6 @@ import { QueueMemberList } from "./_components/QueueMemberList";
 import { AddMemberModal } from "./_components/AddMemberModal";
 import {
   page,
-  subHeader,
-  pageTitle,
-  titleSummary,
   mainGrid,
   rail,
   railHead,
@@ -217,13 +215,15 @@ export default function QueuesPage() {
 
   return (
     <div className={page}>
-      <div className={subHeader}>
-        <h1 className={pageTitle}>Queues</h1>
-        <span className={titleSummary}>
-          {orderedQueues.length} queue{orderedQueues.length === 1 ? "" : "s"} ·{" "}
-          {memberCount} item{memberCount === 1 ? "" : "s"} in line
-        </span>
-      </div>
+      <PageHeader
+        title="Queues"
+        summary={
+          <>
+            {orderedQueues.length} queue{orderedQueues.length === 1 ? "" : "s"}{" "}
+            · {memberCount} item{memberCount === 1 ? "" : "s"} in line
+          </>
+        }
+      />
 
       {cycleError && <div className={errorBanner}>{cycleError}</div>}
 

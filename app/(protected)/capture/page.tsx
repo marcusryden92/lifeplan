@@ -18,6 +18,7 @@ import {
   Input,
   Kbd,
   Loader,
+  PageHeader,
   vars,
 } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -39,9 +40,6 @@ import {
 } from "./_constants";
 import {
   page,
-  subHeader,
-  pageTitle,
-  titleSummary,
   spacer,
   mainGrid,
   queueRail,
@@ -292,16 +290,17 @@ export default function CapturePage() {
 
   return (
     <div className={page}>
-      <div className={subHeader}>
-        <h1 className={pageTitle}>Capture</h1>
-        <span className={titleSummary}>
-          {queue.length === 0
+      <PageHeader
+        title="Capture"
+        summary={
+          queue.length === 0
             ? "Inbox empty"
-            : `${queue.length} to triage · raw notes → schedulable items`}
-        </span>
+            : `${queue.length} to triage · raw notes → schedulable items`
+        }
+      >
         <span className={spacer} />
         <Kbd keys={[modKey, "K"]} instruction="capture" />
-      </div>
+      </PageHeader>
 
       <div className={mainGrid}>
         <aside className={queueRail}>

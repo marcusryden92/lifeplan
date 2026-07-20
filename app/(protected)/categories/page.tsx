@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import { Plus } from "lucide-react";
-import { Button, ConfirmModal, Loader, vars } from "@/components/ui";
+import { Button, ConfirmModal, Loader, PageHeader, vars } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import {
   upsertCategory,
@@ -22,9 +22,6 @@ import { CategoryEditor, SWATCH_PALETTE } from "./_components/CategoryEditor";
 import { CategoryTreeNode, type DragZone } from "./_components/CategoryTreeNode";
 import {
   page,
-  subHeader,
-  pageTitle,
-  titleSummary,
   mainGrid,
   rail,
   railHead,
@@ -255,13 +252,16 @@ export default function CategoriesPage() {
 
   return (
     <div className={page}>
-      <div className={subHeader}>
-        <h1 className={pageTitle}>Roles</h1>
-        <span className={titleSummary}>
-          {tree.length} role{tree.length === 1 ? "" : "s"} ·{" "}
-          {planner.filter((i) => !i.parentId && i.categoryId).length} categorized
-        </span>
-      </div>
+      <PageHeader
+        title="Roles"
+        summary={
+          <>
+            {tree.length} role{tree.length === 1 ? "" : "s"} ·{" "}
+            {planner.filter((i) => !i.parentId && i.categoryId).length}{" "}
+            categorized
+          </>
+        }
+      />
 
       {error && <div className={errorBanner}>{error}</div>}
 
