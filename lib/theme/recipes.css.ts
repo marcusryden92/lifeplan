@@ -7,7 +7,6 @@ import { radii, space, borderWidth } from "./scales";
 export const glass = recipe({
   base: {
     border: `1px solid ${vars.glass.stroke}`,
-    boxShadow: vars.shadow.panel,
     background: vars.glass.bg,
     transition: themeTransition,
   },
@@ -68,7 +67,7 @@ export const glass = recipe({
   defaultVariants: {
     fill: "regular",
     radius: "lg",
-    shadow: "panel",
+    shadow: "none",
     blur: "self",
   },
 });
@@ -89,10 +88,10 @@ export const popover = recipe({
   },
   variants: {
     size: {
-      sm: { borderRadius: radii["sm+2"], boxShadow: vars.shadow.panelSm },
-      md: { borderRadius: radii["md+2"], boxShadow: vars.shadow.panel },
-      lg: { borderRadius: radii["lg+2"], boxShadow: vars.shadow.panel },
-      xl: { borderRadius: radii["xl+2"], boxShadow: vars.shadow.panel },
+      sm: { borderRadius: radii["sm+2"] },
+      md: { borderRadius: radii["md+2"] },
+      lg: { borderRadius: radii["lg+2"] },
+      xl: { borderRadius: radii["xl+2"] },
     },
   },
   defaultVariants: {
