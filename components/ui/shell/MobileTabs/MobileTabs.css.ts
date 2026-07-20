@@ -53,6 +53,7 @@ export const searchEndCap = style([
   {
     color: vars.inkSoft,
     background: "transparent",
+    backdropFilter: "blur(30px)",
     border: `1px solid ${vars.glass.stroke}`,
     selectors: {
       "&:hover": { color: vars.ink, background: vars.interactive.hoverFill },
