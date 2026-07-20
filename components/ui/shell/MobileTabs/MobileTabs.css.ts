@@ -7,13 +7,14 @@ import { buttonTransition, themeTransition } from "@/lib/theme/transitions";
 
 export const tabBar = style({
   position: "fixed",
+  right: space["1"],
+  left: space["1"],
   bottom: 12,
   zIndex: 5,
-  gap: space["10"],
   display: "flex",
   alignItems: "center",
-  justifyContent: "space-around",
-  padding: "8px 36px",
+  justifyContent: "space-between",
+  padding: "8px 12px",
   background: vars.glass.bg,
   backdropFilter: backdropFilters.panel,
   WebkitBackdropFilter: backdropFilters.panel,
@@ -22,6 +23,8 @@ export const tabBar = style({
   boxShadow: vars.shadow.panelSm,
   "@media": {
     [media.landscapePhone]: {
+      right: "auto",
+      left: "auto",
       padding: "8px 8px",
       gap: space["10"],
     },
@@ -74,13 +77,13 @@ export const tab = style([
   fieldLabel,
   {
     flex: 1,
-    transform: `translateY(-${space["2"]}px)`,
+    transform: `translateY(-${space["0.5"]}px)`,
     display: "flex",
     position: "relative",
     flexDirection: "column",
     alignItems: "center",
     gap: space["0.5"],
-    padding: "6px 8px",
+    padding: 0,
     background: "transparent",
     border: "none",
     letterSpacing: "0.04em",
@@ -93,6 +96,7 @@ export const tab = style([
     "@media": {
       [media.landscapePhone]: {
         transform: `translateY(-${space["1.5"]}px)`,
+        padding: "6px 8px",
       },
     },
   },
@@ -111,8 +115,14 @@ export const tabGlyph = style({
 });
 
 export const itemLabel = style({
+  display: "none",
   position: "absolute",
   bottom: -15,
+  "@media": {
+    [media.landscapePhone]: {
+      display: "flex",
+    },
+  },
 });
 
 // Always rendered so every tab reserves the same height; only the active tab
@@ -120,13 +130,19 @@ export const itemLabel = style({
 // bar's alignItems:center then nudged its icon/label upward on select.
 export const tabUnderline = style({
   position: "absolute",
-  bottom: -20,
+  bottom: -5,
   width: 18,
   height: 2,
   borderRadius: 2,
   background: "transparent",
   marginTop: space["0.5"],
   transition: themeTransition,
+  "@media": {
+    [media.landscapePhone]: {
+      display: "flex",
+      bottom: -20,
+    },
+  },
 });
 
 export const tabUnderlineActive = style({
@@ -135,12 +151,17 @@ export const tabUnderlineActive = style({
 
 export const captureTabWrapper = style({
   flex: 1,
-  minWidth: 45,
+  minWidth: space["22"],
   height: 54,
   display: "flex",
   position: "relative",
   justifyContent: "center",
   alignItems: "center",
+  "@media": {
+    [media.landscapePhone]: {
+      minWidth: 45,
+    },
+  },
 });
 
 export const captureButton = style({
