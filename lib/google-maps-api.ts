@@ -110,6 +110,27 @@ const TRANSPORT_MODE_MAP: Record<TransportMode, string> = {
 // three time-of-day conditions.
 const TIME_VARYING_MODES: TransportMode[] = ["DRIVING", "TRANSIT"];
 
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+
+async function fetchWithRetry(
+  url: string | URL,
+  init: RequestInit,
+  attempts = 3
+): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const response = await fetch(url, init);
+    if (
+      response.ok ||
+      attempt >= attempts - 1 ||
+      !RETRYABLE_STATUS.has(response.status)
+    ) {
+      return response;
+    }
+    const delayMs = 500 * 2 ** attempt + Math.random() * 250;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+}
+
 /**
  * Get the Google Maps API key from environment
  */
@@ -201,7 +222,7 @@ export async function getPlaceDetails(
     url.searchParams.set("sessionToken", sessionToken);
   }
 
-  const response = await fetch(url, {
+  const response = await fetchWithRetry(url, {
     method: "GET",
     headers: {
       "X-Goog-Api-Key": apiKey,
@@ -308,7 +329,7 @@ async function computeMatrixRow(
     requestBody.departureTime = departureTime.toISOString();
   }
 
-  const response = await fetch(
+  const response = await fetchWithRetry(
     "https://routes.googleapis.com/distanceMatrix/v2:computeRouteMatrix",
     {
       method: "POST",

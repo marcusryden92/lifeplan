@@ -340,10 +340,14 @@ export default function LocationsPage() {
     const serialized = fresh.map(serializeTravelTime);
     dispatch(setAllTravelTimes(serialized));
     markSynced("travelTimes", serialized);
-    flashSuccess(
+    const fetchedText =
       result.fetched > 0
         ? `Fetched ${result.fetched} travel time${result.fetched > 1 ? "s" : ""}.`
-        : "All travel times are up to date.",
+        : "All travel times are up to date.";
+    flashSuccess(
+      result.failed > 0
+        ? `${fetchedText} ${result.failed} pair${result.failed > 1 ? "s" : ""} couldn't be routed.`
+        : fetchedText,
     );
   };
 

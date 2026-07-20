@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   Bike,
   Car,
@@ -25,7 +25,7 @@ import type { WeekDayIntegers } from "@/types/calendarTypes";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { serializeTravelTime } from "@/utils/locations";
 import { useServerAction } from "@/hooks/useServerAction";
-import { Button, SegmentedControl } from "@/components/ui";
+import { Button, ConfirmModal, SegmentedControl } from "@/components/ui";
 import { StatusLine } from "../StatusLine";
 import {
   card,
@@ -126,8 +126,10 @@ export function SchedulingSection() {
   };
 
   const refreshAction = useServerAction(locationActions.refreshAllTravelTimes);
+  const [confirmRefresh, setConfirmRefresh] = useState(false);
 
   const handleRefreshAll = async () => {
+    setConfirmRefresh(false);
     refreshAction.clear();
     const result = await refreshAction.run(transportMode);
     if (!result) return;
@@ -135,7 +137,11 @@ export function SchedulingSection() {
     const serialized = fresh.map(serializeTravelTime);
     dispatch(setAllTravelTimes(serialized));
     markSynced("travelTimes", serialized);
-    refreshAction.setSuccess(`Refreshed ${result.updated} travel times.`);
+    refreshAction.setSuccess(
+      result.failed > 0
+        ? `Refreshed ${result.updated} travel times. ${result.failed} pair${result.failed > 1 ? "s" : ""} couldn't be routed.`
+        : `Refreshed ${result.updated} travel times.`,
+    );
   };
 
   return (
@@ -221,7 +227,7 @@ export function SchedulingSection() {
           <Button
             variant="glass"
             size="sm"
-            onClick={handleRefreshAll}
+            onClick={() => setConfirmRefresh(true)}
             disabled={refreshAction.isPending || locations.length < 2}
           >
             <RefreshCw size={12} strokeWidth={2.2} />
@@ -231,6 +237,21 @@ export function SchedulingSection() {
         <div className={footerRow}>
           <StatusLine status={refreshAction.status} />
         </div>
+        <ConfirmModal
+          open={confirmRefresh}
+          title="Refresh all travel times?"
+          confirmLabel="Refresh all"
+          body={
+            <p style={{ margin: 0 }}>
+              This re-fetches every pair between your {locations.length}{" "}
+              locations from Google in one go. If you just added or changed a
+              location, &ldquo;Fetch missing&rdquo; on the Locations page covers
+              it without re-fetching everything.
+            </p>
+          }
+          onCancel={() => setConfirmRefresh(false)}
+          onConfirm={handleRefreshAll}
+        />
       </div>
 
       <div className={card}>

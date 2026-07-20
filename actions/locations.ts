@@ -7,9 +7,16 @@ import {
   getPlaceDetails,
   computeTravelTimeMatrix,
   type TravelPair,
+  type TravelTimeBatchResult,
 } from "@/lib/google-maps-api";
 import type { TransportMode } from "@/generated/client";
 import type { Location, TravelTime } from "@/types/prisma";
+import {
+  needsRefetch,
+  refreshAllGate,
+  topUpAllowed,
+  STALE_TOP_UP_MAX_PAIRS,
+} from "@/utils/locations/travelRefreshPolicy";
 
 const MAX_LOCATIONS = 10;
 
@@ -30,6 +37,79 @@ function assertSearchAllowed(userId: string): void {
   if (window.count > SEARCH_LIMIT) {
     throw new Error("Too many address searches — wait a moment and try again.");
   }
+}
+
+function allConditionsRouted(result: TravelTimeBatchResult): boolean {
+  return (
+    result.rushHour.status === "OK" &&
+    result.regular.status === "OK" &&
+    result.night.status === "OK"
+  );
+}
+
+// The one write path for matrix results. Routed pairs store real values and
+// clear any unroutable mark; failed pairs are negative-cached (zeros + an
+// unroutableAt stamp) so the missing-pairs diff stops re-buying the same
+// failure — the engine and matrix UI read the stamp as no-route, never as
+// zero-duration travel. Custom overrides are never touched.
+async function writeTravelMatrixResults(
+  userId: string,
+  transportMode: TransportMode,
+  results: TravelTimeBatchResult[],
+): Promise<{ written: number; failed: number }> {
+  const now = new Date();
+  let written = 0;
+  let failed = 0;
+
+  for (const result of results) {
+    const routed = allConditionsRouted(result);
+    const where = {
+      fromLocationId_toLocationId_transportMode: {
+        fromLocationId: result.fromLocationId,
+        toLocationId: result.toLocationId,
+        transportMode,
+      },
+    };
+    if (routed) {
+      await db.travelTime.upsert({
+        where,
+        update: {
+          googleRushHourMinutes: result.rushHour.durationMinutes,
+          googleRegularMinutes: result.regular.durationMinutes,
+          googleNightMinutes: result.night.durationMinutes,
+          unroutableAt: null,
+        },
+        create: {
+          fromLocationId: result.fromLocationId,
+          toLocationId: result.toLocationId,
+          transportMode,
+          googleRushHourMinutes: result.rushHour.durationMinutes,
+          googleRegularMinutes: result.regular.durationMinutes,
+          googleNightMinutes: result.night.durationMinutes,
+          userId,
+        },
+      });
+      written++;
+    } else {
+      await db.travelTime.upsert({
+        where,
+        update: { unroutableAt: now },
+        create: {
+          fromLocationId: result.fromLocationId,
+          toLocationId: result.toLocationId,
+          transportMode,
+          googleRushHourMinutes: 0,
+          googleRegularMinutes: 0,
+          googleNightMinutes: 0,
+          unroutableAt: now,
+          userId,
+        },
+      });
+      failed++;
+    }
+  }
+
+  return { written, failed };
 }
 
 // ============================================================================
@@ -287,7 +367,7 @@ export async function fetchTravelTimesByMode(
  */
 export async function fetchMissingTravelTimes(
   transportMode: TransportMode,
-): Promise<{ fetched: number; skipped: number }> {
+): Promise<{ fetched: number; skipped: number; failed: number }> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -296,10 +376,12 @@ export async function fetchMissingTravelTimes(
   });
 
   if (locations.length < 2) {
-    return { fetched: 0, skipped: 0 };
+    return { fetched: 0, skipped: 0, failed: 0 };
   }
 
-  // Get existing travel times for this mode
+  // Existing rows count as "have it" only while fresh: routable rows inside
+  // the TTL, negative-cached unroutable rows inside their retry window. Stale
+  // and aged-out rows fall back into the missing set and re-fetch.
   const existingTimes = await db.travelTime.findMany({
     where: {
       userId: session.user.id,
@@ -308,21 +390,23 @@ export async function fetchMissingTravelTimes(
     select: {
       fromLocationId: true,
       toLocationId: true,
+      updatedAt: true,
+      unroutableAt: true,
     },
   });
 
-  const existingPairs = new Set(
-    existingTimes.map((t) => `${t.fromLocationId}-${t.toLocationId}`),
+  const now = Date.now();
+  const freshPairs = new Set(
+    existingTimes
+      .filter((t) => !needsRefetch(t, now))
+      .map((t) => `${t.fromLocationId}-${t.toLocationId}`),
   );
 
-  // Find missing pairs (excluding self-referential)
   const missingPairs: TravelPair[] = [];
-
   for (const from of locations) {
     for (const to of locations) {
       if (from.id === to.id) continue; // Skip self-referential
-      const pairKey = `${from.id}-${to.id}`;
-      if (!existingPairs.has(pairKey)) {
+      if (!freshPairs.has(`${from.id}-${to.id}`)) {
         missingPairs.push({
           from: { id: from.id, lat: from.lat, lng: from.lng },
           to: { id: to.id, lat: to.lat, lng: to.lng },
@@ -332,26 +416,92 @@ export async function fetchMissingTravelTimes(
   }
 
   if (missingPairs.length === 0) {
-    return { fetched: 0, skipped: existingPairs.size };
+    return { fetched: 0, skipped: freshPairs.size, failed: 0 };
   }
 
-  const userId = session.user.id;
   const results = await computeTravelTimeMatrix(missingPairs, transportMode);
+  const { written, failed } = await writeTravelMatrixResults(
+    session.user.id,
+    transportMode,
+    results,
+  );
 
-  await db.travelTime.createMany({
-    data: results.map((result) => ({
-      fromLocationId: result.fromLocationId,
-      toLocationId: result.toLocationId,
-      transportMode,
-      googleRushHourMinutes: result.rushHour.durationMinutes,
-      googleRegularMinutes: result.regular.durationMinutes,
-      googleNightMinutes: result.night.durationMinutes,
-      userId,
-    })),
-    skipDuplicates: true,
+  return { fetched: written, skipped: freshPairs.size, failed };
+}
+
+/**
+ * Silent, capped background refresh of the stalest cached pairs (TTL-aged
+ * routable rows and retry-eligible unroutable rows). Called once per app load;
+ * the cap bounds what a returning user's session may spend, and the remainder
+ * tops up incrementally across sessions.
+ */
+export async function topUpStaleTravelTimes(
+  transportMode: TransportMode,
+): Promise<{ refreshed: number; failed: number }> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const now = Date.now();
+
+  // Persisted daily allowance: the per-session cap alone wouldn't bound spend
+  // (a refresh, a second tab, and a phone are each a fresh session).
+  const prefs = await db.userSchedulingPreferences.findUnique({
+    where: { userId: session.user.id },
+    select: { lastTravelTopUpAt: true },
+  });
+  if (!topUpAllowed(now, prefs?.lastTravelTopUpAt ?? null)) {
+    return { refreshed: 0, failed: 0 };
+  }
+
+  const rows = await db.travelTime.findMany({
+    where: { userId: session.user.id, transportMode },
   });
 
-  return { fetched: results.length, skipped: existingPairs.size };
+  const stale = rows
+    .filter((row) => needsRefetch(row, now))
+    .sort((a, b) => a.updatedAt.getTime() - b.updatedAt.getTime())
+    .slice(0, STALE_TOP_UP_MAX_PAIRS);
+
+  if (stale.length === 0) {
+    return { refreshed: 0, failed: 0 };
+  }
+
+  const locations = await db.location.findMany({
+    where: { userId: session.user.id },
+  });
+  const locationById = new Map(locations.map((l) => [l.id, l]));
+
+  const pairs: TravelPair[] = [];
+  for (const row of stale) {
+    const from = locationById.get(row.fromLocationId);
+    const to = locationById.get(row.toLocationId);
+    if (!from || !to) continue;
+    pairs.push({
+      from: { id: from.id, lat: from.lat, lng: from.lng },
+      to: { id: to.id, lat: to.lat, lng: to.lng },
+    });
+  }
+
+  if (pairs.length === 0) {
+    return { refreshed: 0, failed: 0 };
+  }
+
+  // Stamp only when elements are actually about to be spent — a no-op check
+  // must not consume the day's allowance.
+  await db.userSchedulingPreferences.upsert({
+    where: { userId: session.user.id },
+    update: { lastTravelTopUpAt: new Date() },
+    create: { userId: session.user.id, lastTravelTopUpAt: new Date() },
+  });
+
+  const results = await computeTravelTimeMatrix(pairs, transportMode);
+  const { written, failed } = await writeTravelMatrixResults(
+    session.user.id,
+    transportMode,
+    results,
+  );
+
+  return { refreshed: written, failed };
 }
 
 /**
@@ -360,7 +510,7 @@ export async function fetchMissingTravelTimes(
  */
 export async function refreshAllTravelTimes(
   transportMode: TransportMode,
-): Promise<{ updated: number }> {
+): Promise<{ updated: number; failed: number }> {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
@@ -369,8 +519,35 @@ export async function refreshAllTravelTimes(
   });
 
   if (locations.length < 2) {
-    return { updated: 0 };
+    return { updated: 0, failed: 0 };
   }
+
+  // Two persisted guards (see travelRefreshPolicy): a mode-independent rate
+  // limit on the action, and a staleness check keyed on the OLDEST row so one
+  // freshly fetched pair can't mask a cache full of stale ones.
+  const prefs = await db.userSchedulingPreferences.findUnique({
+    where: { userId: session.user.id },
+    select: { lastTravelRefreshAt: true },
+  });
+  const oldest = await db.travelTime.findFirst({
+    where: { userId: session.user.id, transportMode },
+    orderBy: { updatedAt: "asc" },
+    select: { updatedAt: true },
+  });
+  const verdict = refreshAllGate({
+    now: Date.now(),
+    lastRefreshAt: prefs?.lastTravelRefreshAt ?? null,
+    oldestUpdatedAt: oldest?.updatedAt ?? null,
+  });
+  if (!verdict.allowed) {
+    throw new Error(verdict.reason);
+  }
+
+  await db.userSchedulingPreferences.upsert({
+    where: { userId: session.user.id },
+    update: { lastTravelRefreshAt: new Date() },
+    create: { userId: session.user.id, lastTravelRefreshAt: new Date() },
+  });
 
   const pairs: TravelPair[] = [];
   for (const from of locations) {
@@ -384,35 +561,13 @@ export async function refreshAllTravelTimes(
   }
 
   const results = await computeTravelTimeMatrix(pairs, transportMode);
+  const { written, failed } = await writeTravelMatrixResults(
+    session.user.id,
+    transportMode,
+    results,
+  );
 
-  for (const result of results) {
-    await db.travelTime.upsert({
-      where: {
-        fromLocationId_toLocationId_transportMode: {
-          fromLocationId: result.fromLocationId,
-          toLocationId: result.toLocationId,
-          transportMode,
-        },
-      },
-      update: {
-        // Only update Google values, preserve custom overrides
-        googleRushHourMinutes: result.rushHour.durationMinutes,
-        googleRegularMinutes: result.regular.durationMinutes,
-        googleNightMinutes: result.night.durationMinutes,
-      },
-      create: {
-        fromLocationId: result.fromLocationId,
-        toLocationId: result.toLocationId,
-        transportMode,
-        googleRushHourMinutes: result.rushHour.durationMinutes,
-        googleRegularMinutes: result.regular.durationMinutes,
-        googleNightMinutes: result.night.durationMinutes,
-        userId: session.user.id,
-      },
-    });
-  }
-
-  return { updated: results.length };
+  return { updated: written, failed };
 }
 
 /**

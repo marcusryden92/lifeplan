@@ -76,6 +76,7 @@ export async function fetchAllSchedulingData(): Promise<{
     customRushHourMinutes: tt.customRushHourMinutes,
     customRegularMinutes: tt.customRegularMinutes,
     customNightMinutes: tt.customNightMinutes,
+    unroutable: tt.unroutableAt !== null,
   }));
 
   return {

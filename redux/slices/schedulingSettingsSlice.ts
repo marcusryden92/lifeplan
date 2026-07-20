@@ -39,6 +39,11 @@ export type SerializedTravelTime = {
   customRushHourMinutes: number | null;
   customRegularMinutes: number | null;
   customNightMinutes: number | null;
+  // Server-authoritative negative-cache mark: Google returned no route for
+  // this pair. The engine matrix and the UI treat it as no-route, never as
+  // zero-duration travel. Every serialization site must include it — the sync
+  // diff compares whole objects.
+  unroutable: boolean;
 };
 
 // Strategy configuration types (mutable versions of the readonly defaults)
@@ -120,6 +125,15 @@ export function deriveTravelTimeMatrix(
 ): SerializedTravelTimeEntry[] {
   return allTravelTimes
     .filter((tt) => tt.transportMode === mode)
+    // An unroutable pair is absent from the matrix (the engine's missing-pair
+    // fallback applies) unless the user supplied their own values.
+    .filter(
+      (tt) =>
+        !tt.unroutable ||
+        tt.customRushHourMinutes !== null ||
+        tt.customRegularMinutes !== null ||
+        tt.customNightMinutes !== null,
+    )
     .map((tt) => ({
       key: `${tt.fromLocationId}->${tt.toLocationId}`,
       fromLocationId: tt.fromLocationId,

@@ -32,10 +32,13 @@ import useCalendarStateActions, {
 } from "@/hooks/useCalendarStateActions";
 import useManuallyRefreshCalendar from "@/hooks/useManuallyRefreshCalendar";
 import useCalendarServerSync from "@/hooks/useCalendarServerSync";
-import type {
-  SerializedLocation,
-  SerializedTravelTime,
+import {
+  setAllTravelTimes,
+  type SerializedLocation,
+  type SerializedTravelTime,
 } from "@/redux/slices/schedulingSettingsSlice";
+import * as locationActions from "@/actions/locations";
+import { serializeTravelTime } from "@/utils/locations";
 import { buildInheritedLocationMap, InheritedLocationInfo } from "@/utils/goalPageHandlers";
 import {
   buildQueueCategoryByRootId,
@@ -292,6 +295,29 @@ export default function CalendarProvider({
   );
 
   useFetchCalendarData(userId, initializeState);
+
+  // Capped background refresh of TTL-aged travel times, once per app load.
+  // Silent and best-effort: the action bounds what a single session may spend
+  // (STALE_TOP_UP_MAX_PAIRS), so a long-dormant cache tops up incrementally
+  // across sessions rather than in one large unconfirmed refetch.
+  const staleTopUpFired = useRef(false);
+  useEffect(() => {
+    if (!isCalendarLoaded || !userId || staleTopUpFired.current) return;
+    staleTopUpFired.current = true;
+    void (async () => {
+      try {
+        const result =
+          await locationActions.topUpStaleTravelTimes(defaultTransportMode);
+        if (result.refreshed === 0 && result.failed === 0) return;
+        const fresh = await locationActions.fetchTravelTimes();
+        const serialized = fresh.map(serializeTravelTime);
+        dispatch(setAllTravelTimes(serialized));
+        markSynced("travelTimes", serialized);
+      } catch {
+        // Stale values keep working until the next session's attempt.
+      }
+    })();
+  }, [isCalendarLoaded, userId, defaultTransportMode, dispatch, markSynced]);
 
   const queueCategoryByRootId = useMemo(
     () => buildQueueCategoryByRootId(queues),

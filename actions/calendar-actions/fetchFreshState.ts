@@ -114,6 +114,7 @@ export async function fetchFreshState(userId: string): Promise<FreshState> {
     customRushHourMinutes: tt.customRushHourMinutes,
     customRegularMinutes: tt.customRegularMinutes,
     customNightMinutes: tt.customNightMinutes,
+    unroutable: tt.unroutableAt !== null,
   }));
 
   return {
