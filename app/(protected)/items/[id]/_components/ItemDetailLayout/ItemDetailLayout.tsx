@@ -142,7 +142,6 @@ export default function ItemDetailLayout({
 
   const handlers = useItemHandlers(
     item,
-    subtasks,
     planner,
     updatePlannerArray,
     updateAll,
@@ -153,8 +152,6 @@ export default function ItemDetailLayout({
   const {
     showDeleteConfirm,
     setShowDeleteConfirm,
-    showCascadeConfirm,
-    pendingLocationId,
     locationOverrideEnabled,
     handleSaveTitle,
     handleToggleReady,
@@ -167,8 +164,6 @@ export default function ItemDetailLayout({
     showResetLocationsConfirm,
     setShowResetLocationsConfirm,
     confirmResetSubgoalLocations,
-    applyLocationChange,
-    closeCascadeDialog,
   } = handlers;
 
   const handleDelete = () => {
@@ -562,31 +557,6 @@ export default function ItemDetailLayout({
             tone="danger"
             onCancel={() => setShowDeleteConfirm(false)}
             onConfirm={handleDelete}
-          />
-
-          <ConfirmModal
-            open={showCascadeConfirm}
-            title="Apply to subtasks?"
-            body="Apply this location change to all subtasks of this goal, or just to this item?"
-            confirmLabel="All subtasks"
-            cancelLabel="Cancel"
-            extraActions={
-              <Button
-                variant="glass"
-                size="sm"
-                onClick={() => {
-                  applyLocationChange(pendingLocationId, false);
-                  closeCascadeDialog();
-                }}
-              >
-                This item only
-              </Button>
-            }
-            onCancel={closeCascadeDialog}
-            onConfirm={() => {
-              applyLocationChange(pendingLocationId, true);
-              closeCascadeDialog();
-            }}
           />
 
           <ConfirmModal

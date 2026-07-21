@@ -149,6 +149,9 @@ export const sectionPair = style({
   gap: space["8"],
   "@media": {
     [media.mobile]: { gridTemplateColumns: "1fr", gap: space["6"] },
+    // A landscape phone is wide, not narrow — restore the two-column pair so
+    // the editor sheet doesn't stretch viewport-wide with a long scroll.
+    [media.landscapePhone]: { gridTemplateColumns: "1fr 1fr", gap: space["8"] },
   },
 });
 
@@ -158,6 +161,7 @@ export const fieldGrid = style({
   gap: "18px 26px",
   "@media": {
     [media.mobile]: { gridTemplateColumns: "1fr" },
+    [media.landscapePhone]: { gridTemplateColumns: "1fr 1fr" },
   },
 });
 

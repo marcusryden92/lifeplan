@@ -1096,8 +1096,8 @@ export function AIDraftModal({
   return (
     <Dialog.Root
       open={open}
-      // Non-modal: the sidebar stays interactive while the assistant is open
-      // (theme toggle, nav). Dismissal is Esc / the Close button only.
+      // Non-modal so the Capture/Search palettes keep working above it; the
+      // full-screen cover blocks everything else. Dismissal is Esc / Close.
       modal={false}
       onOpenChange={(next) => {
         if (!next) requestClose();

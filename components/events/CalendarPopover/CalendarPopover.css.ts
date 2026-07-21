@@ -113,6 +113,16 @@ export const body = style({
   display: "flex",
   flexDirection: "column",
   gap: space["3"],
+  // Landscape phones present through the BottomSheet: pair the rows into two
+  // columns so the editor doesn't run one viewport-wide column deep.
+  "@media": {
+    [media.landscapePhone]: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      columnGap: space["10"],
+      alignItems: "start",
+    },
+  },
 });
 
 export const metaRow = style([
@@ -132,6 +142,11 @@ export const footer = style({
   display: "flex",
   flexDirection: "column",
   gap: space["0.5"],
+  // The top rule separates actions from fields — keep it full-bleed when the
+  // body pairs into landscape columns.
+  "@media": {
+    [media.landscapePhone]: { gridColumn: "1 / -1" },
+  },
 });
 
 // Start/end time fields — shared by EventPopover and TemplateEventPopover.

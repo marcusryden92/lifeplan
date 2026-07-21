@@ -340,3 +340,24 @@ export const sheetHint = style([
     padding: `${space["3"]}px ${space["2"]}px 0`,
   },
 ]);
+
+// Landscape phones: the settings sheet's single column stretches viewport-wide
+// with a long scroll, so the two control groups sit side by side instead.
+export const sheetColumns = style({
+  display: "flex",
+  flexDirection: "column",
+  "@media": {
+    [media.landscapePhone]: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      columnGap: space["10"],
+      alignItems: "start",
+    },
+  },
+});
+
+export const sheetColumn = style({
+  display: "flex",
+  flexDirection: "column",
+  minWidth: 0,
+});

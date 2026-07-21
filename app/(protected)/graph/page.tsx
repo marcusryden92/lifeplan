@@ -56,6 +56,8 @@ import {
   sheetRowLabel,
   sheetZoomTrack,
   sheetHint,
+  sheetColumns,
+  sheetColumn,
 } from "./page.css";
 
 // Logarithmic zoom: slider 0..100 maps to the model's px-per-day range, so
@@ -140,6 +142,7 @@ export default function GraphPage() {
 
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showLooseTasks, setShowLooseTasks] = useState(false);
   const [leafView, setLeafView] = useState(false);
   const [hoverLabels, setHoverLabels] = useState(true);
   const [markers, setMarkers] = useState<GraphTickUnits>({
@@ -191,8 +194,18 @@ export default function GraphPage() {
         spans,
         leafSpans,
         showCompleted,
+        showLooseTasks,
       }),
-    [planner, queues, dependencies, categories, spans, leafSpans, showCompleted],
+    [
+      planner,
+      queues,
+      dependencies,
+      categories,
+      spans,
+      leafSpans,
+      showCompleted,
+      showLooseTasks,
+    ],
   );
   const layout = useMemo(
     () => layoutGraph(lanes, { pxPerDay, now }),
@@ -328,6 +341,14 @@ export default function GraphPage() {
               />
             </div>
             <div className={controlGroup}>
+              <span className={controlLabel}>Standalone tasks</span>
+              <Switch
+                checked={showLooseTasks}
+                onCheckedChange={setShowLooseTasks}
+                aria-label="Show tasks with no queue or dependency"
+              />
+            </div>
+            <div className={controlGroup}>
               <span className={controlLabel}>Zoom</span>
               <div className={zoomTrack}>
                 <div className={zoomTrackBar} />
@@ -424,83 +445,97 @@ export default function GraphPage() {
           onOpenChange={setSettingsOpen}
           title="Settings"
         >
-          <span className={sheetSection}>View</span>
-          <div className={sheetRow}>
-            <span className={sheetRowLabel}>Leaf tasks</span>
-            <Switch
-              checked={leafView}
-              onCheckedChange={setLeafView}
-              aria-label="Break items into their leaf tasks"
-            />
-          </div>
-          <div className={sheetRow}>
-            <span className={sheetRowLabel}>Hover labels</span>
-            <Switch
-              checked={hoverLabels}
-              onCheckedChange={setHoverLabels}
-              aria-label="Show item names on hover"
-            />
-          </div>
-          <div className={sheetRow}>
-            <span className={sheetRowLabel}>Show completed</span>
-            <Switch
-              checked={showCompleted}
-              onCheckedChange={setShowCompleted}
-              aria-label="Show completed items"
-            />
-          </div>
-          <div className={sheetRow}>
-            <span className={sheetRowLabel}>Zoom</span>
-            <div className={sheetZoomTrack}>
-              <div className={zoomTrackBar} />
-              <div
-                className={zoomFill}
-                style={{
-                  width: `calc(${zoom}% + ${(SLIDER_THUMB_PX * (50 - zoom)) / 100}px)`,
-                }}
-              />
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                value={zoom}
-                onChange={(e) => setZoom(Number(e.target.value))}
-                className={zoomSlider}
-                aria-label="Zoom timeline"
-              />
+          <div className={sheetColumns}>
+            <div className={sheetColumn}>
+              <span className={sheetSection}>View</span>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Leaf tasks</span>
+                <Switch
+                  checked={leafView}
+                  onCheckedChange={setLeafView}
+                  aria-label="Break items into their leaf tasks"
+                />
+              </div>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Hover labels</span>
+                <Switch
+                  checked={hoverLabels}
+                  onCheckedChange={setHoverLabels}
+                  aria-label="Show item names on hover"
+                />
+              </div>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Show completed</span>
+                <Switch
+                  checked={showCompleted}
+                  onCheckedChange={setShowCompleted}
+                  aria-label="Show completed items"
+                />
+              </div>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Standalone tasks</span>
+                <Switch
+                  checked={showLooseTasks}
+                  onCheckedChange={setShowLooseTasks}
+                  aria-label="Show tasks with no queue or dependency"
+                />
+              </div>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Zoom</span>
+                <div className={sheetZoomTrack}>
+                  <div className={zoomTrackBar} />
+                  <div
+                    className={zoomFill}
+                    style={{
+                      width: `calc(${zoom}% + ${(SLIDER_THUMB_PX * (50 - zoom)) / 100}px)`,
+                    }}
+                  />
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={zoom}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className={zoomSlider}
+                    aria-label="Zoom timeline"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-          <span className={sheetSection}>Time markers</span>
-          {MARKER_UNIT_ROWS.map((unit) => (
-            <div key={unit.key} className={sheetRow}>
-              <span className={sheetRowLabel}>{unit.label}</span>
-              <Switch
-                checked={markers[unit.key]}
-                onCheckedChange={(checked) =>
-                  setMarkers((prev) => ({ ...prev, [unit.key]: checked }))
-                }
-                aria-label={`Show ${unit.label.toLowerCase()} markers`}
-              />
+            <div className={sheetColumn}>
+              <span className={sheetSection}>Time markers</span>
+              {MARKER_UNIT_ROWS.map((unit) => (
+                <div key={unit.key} className={sheetRow}>
+                  <span className={sheetRowLabel}>{unit.label}</span>
+                  <Switch
+                    checked={markers[unit.key]}
+                    onCheckedChange={(checked) =>
+                      setMarkers((prev) => ({ ...prev, [unit.key]: checked }))
+                    }
+                    aria-label={`Show ${unit.label.toLowerCase()} markers`}
+                  />
+                </div>
+              ))}
+              <div className={sheetHint}>
+                <span className={legendItem}>
+                  <LegendSwatch color={vars.muted} arrow opacity={0.75} />
+                  dependency
+                </span>
+                <span className={legendItem}>
+                  <LegendSwatch
+                    color={vars.status.error}
+                    dashed
+                    arrow
+                    opacity={0.8}
+                  />
+                  out of order
+                </span>
+              </div>
+              <div className={sheetHint}>
+                Drag to pan · Pinch to zoom · Tap to inspect · Hold to reorder
+              </div>
             </div>
-          ))}
-          <div className={sheetHint}>
-            <span className={legendItem}>
-              <LegendSwatch color={vars.muted} arrow opacity={0.75} />
-              dependency
-            </span>
-            <span className={legendItem}>
-              <LegendSwatch
-                color={vars.status.error}
-                dashed
-                arrow
-                opacity={0.8}
-              />
-              out of order
-            </span>
-          </div>
-          <div className={sheetHint}>
-            Drag to pan · Pinch to zoom · Tap to inspect · Hold to reorder
           </div>
         </BottomSheet>
       )}

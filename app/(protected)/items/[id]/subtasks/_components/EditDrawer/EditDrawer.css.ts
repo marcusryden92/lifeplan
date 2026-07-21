@@ -52,6 +52,16 @@ export const drawerBody = style({
   display: "flex",
   flexDirection: "column",
   gap: space["3.5"],
+  // Landscape phones: the sheet is short and viewport-wide, so pair the
+  // fields into two columns instead of one long scroll.
+  "@media": {
+    [media.landscapePhone]: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      columnGap: space["10"],
+      alignItems: "start",
+    },
+  },
 });
 
 // The <Input variant="titleInline"> supplies the accent underline + box reset;
@@ -61,6 +71,9 @@ export const drawerTitleInput = style([
   {
     selectors: {
       "&&": { padding: "4px 0" },
+    },
+    "@media": {
+      [media.landscapePhone]: { gridColumn: "1 / -1" },
     },
   },
 ]);
@@ -96,6 +109,11 @@ export const completeSection = style({
   paddingBottom: space["4"],
   borderBottom: `1px solid ${vars.rule}`,
   transition: themeTransition,
+  // The bottom rule fences status from fields — keep it full-bleed when the
+  // body pairs into landscape columns.
+  "@media": {
+    [media.landscapePhone]: { gridColumn: "1 / -1" },
+  },
 });
 
 export const completeHeader = style({

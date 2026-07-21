@@ -109,6 +109,20 @@ describe("parseTaskSplitting", () => {
     expect(parseTaskSplitting("not json")).toBeNull();
     expect(parseTaskSplitting(null)).toBeNull();
   });
+
+  it("accepts max 0 as the no-upper-bound sentinel but rejects negatives", () => {
+    expect(
+      parseTaskSplitting(JSON.stringify({ minMinutes: 30, maxMinutes: 0 })),
+    ).toEqual({
+      minMinutes: 30,
+      maxMinutes: 0,
+      maxMinutesPerDay: null,
+      minSpacingMinutes: null,
+    });
+    expect(
+      parseTaskSplitting(JSON.stringify({ minMinutes: 30, maxMinutes: -10 })),
+    ).toBeNull();
+  });
 });
 
 describe("minChunkRequired (remainder invariant)", () => {
@@ -176,6 +190,26 @@ describe("grantChunkMinutes", () => {
         dayBudget: 10,
       }),
     ).toBe(0);
+  });
+
+  it("fills the slot's headroom when max is the unlimited sentinel", () => {
+    const unlimited = { ...SETTINGS, maxMinutes: 0 };
+    expect(
+      grantChunkMinutes({ remaining: 300, headroom: 900, settings: unlimited }),
+    ).toBe(300);
+    // Bounded by headroom, leftover kept >= min by the carving rule.
+    expect(
+      grantChunkMinutes({ remaining: 300, headroom: 280, settings: unlimited }),
+    ).toBe(270);
+    // The day budget still caps an unlimited chunk.
+    expect(
+      grantChunkMinutes({
+        remaining: 300,
+        headroom: 900,
+        settings: unlimited,
+        dayBudget: 45,
+      }),
+    ).toBe(45);
   });
 
   it("honors maxOverride for rule-forced whole placement", () => {

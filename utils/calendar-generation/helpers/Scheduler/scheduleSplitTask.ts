@@ -8,6 +8,7 @@ import {
   chunkEventId,
   completedMinutesByDay,
   dayKeyLocal,
+  effectiveMaxChunkMinutes,
   grantChunkMinutes,
   minChunkRequired,
   parseCompletedSegments,
@@ -138,7 +139,7 @@ export function scheduleSplitTask(args: {
     // remainder under 2*min cannot be split, so the only valid chunk is the
     // whole remainder. That is rule-forced (not slot-driven), applies even
     // in strict mode, and is surfaced as a maxChunk compromise.
-    const ruleForcedWhole = minReq > settings.maxMinutes;
+    const ruleForcedWhole = minReq > effectiveMaxChunkMinutes(settings);
 
     // A goal budget below the required minimum chunk is rule-forced out of
     // the composition — no day could ever host the chunk under it. The chunk
@@ -276,7 +277,7 @@ export function scheduleSplitTask(args: {
     addIntervalMinutesByDay(dayMinutes, start, end);
     for (const c of goalCaps) c.charge(start, end);
 
-    if (ruleForcedWhole && granted > settings.maxMinutes) {
+    if (ruleForcedWhole && granted > effectiveMaxChunkMinutes(settings)) {
       state.relaxations.push({
         plannerId: task.id,
         taskTitle: task.title,

@@ -92,7 +92,13 @@ export const popover = recipe({
       sm: { borderRadius: radii["sm+2"] },
       md: { borderRadius: radii["md+2"] },
       lg: { borderRadius: radii["lg+2"] },
-      xl: { borderRadius: radii["xl+2"] },
+      // xl is the centered-modal tier — it floats over the page overlay
+      // (which drowns the shared glass fill in dark mode), so it carries the
+      // elevated modal surface instead of glass.bgDeep.
+      xl: {
+        borderRadius: radii["xl+2"],
+        background: vars.surface.modal,
+      },
     },
   },
   defaultVariants: {

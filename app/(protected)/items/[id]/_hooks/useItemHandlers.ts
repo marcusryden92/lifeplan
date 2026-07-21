@@ -12,7 +12,6 @@ import type { Dispatch, SetStateAction } from "react";
 
 export function useItemHandlers(
   item: Planner | undefined,
-  subtasks: Planner[],
   planner: Planner[],
   updatePlannerArray: Dispatch<SetStateAction<Planner[]>>,
   updateAll: () => void,
@@ -21,15 +20,8 @@ export function useItemHandlers(
 ) {
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showCascadeConfirm, setShowCascadeConfirm] = useState(false);
   const [showResetLocationsConfirm, setShowResetLocationsConfirm] =
     useState(false);
-  const [pendingLocationId, setPendingLocationId] = useState<string | null>(
-    null,
-  );
-  const [pendingKind, setPendingKind] = useState<
-    "location-change" | "override-off" | null
-  >(null);
   const [locationOverrideEnabled, setLocationOverrideEnabled] = useState(
     () => !categoryHasLocation || !item?.useParentLocation,
   );
@@ -127,80 +119,24 @@ export function useItemHandlers(
     [item, categories, updatePlannerArray, updateAll],
   );
 
+  // No cascade prompt: subtasks default to inheriting via the parent-chain
+  // walk, so a root change flows down by itself; deliberate child overrides
+  // are left alone ("Reset sub-goal places" is the explicit tree-wide reset).
   const handleLocationChange = useCallback(
     (locationId: string | null) => {
       if (!item) return;
-
-      if (item.plannerType === "goal" && subtasks.length > 0) {
-        setPendingKind("location-change");
-        setPendingLocationId(locationId);
-        setShowCascadeConfirm(true);
-        return;
-      }
-
       handleUpdateField("locationId", locationId);
     },
-    [item, subtasks, handleUpdateField],
-  );
-
-  const applyLocationChange = useCallback(
-    (locationId: string | null, cascade: boolean) => {
-      if (!item) return;
-
-      const treeItems = getGoalTree(planner, item.id);
-      const treeIds = treeItems.map((i) => i.id);
-
-      if (pendingKind === "override-off") {
-        if (cascade) {
-          updatePlannerArray((prev) =>
-            prev.map((p) =>
-              treeIds.includes(p.id) ? { ...p, useParentLocation: true } : p,
-            ),
-          );
-        } else {
-          handleUpdateField("useParentLocation", true);
-        }
-        setLocationOverrideEnabled(false);
-      } else if (cascade) {
-        updatePlannerArray((prev) =>
-          prev.map((p) => (treeIds.includes(p.id) ? { ...p, locationId } : p)),
-        );
-      } else {
-        handleUpdateField("locationId", locationId);
-      }
-
-      setShowCascadeConfirm(false);
-      setPendingLocationId(null);
-      setPendingKind(null);
-    },
-    [item, planner, updatePlannerArray, handleUpdateField, pendingKind],
+    [item, handleUpdateField],
   );
 
   const handleToggleLocationOverride = useCallback(() => {
     if (!item || !categoryHasLocation) return;
 
     const newOverrideEnabled = !locationOverrideEnabled;
-
-    if (
-      !newOverrideEnabled &&
-      item.plannerType === "goal" &&
-      subtasks.length > 0
-    ) {
-      setPendingKind("override-off");
-      setPendingLocationId(null);
-      setShowCascadeConfirm(true);
-      return;
-    }
-
     handleUpdateField("useParentLocation", !newOverrideEnabled);
     setLocationOverrideEnabled(newOverrideEnabled);
-  }, [
-    item,
-    categoryHasLocation,
-    locationOverrideEnabled,
-    subtasks,
-    handleUpdateField,
-  ]);
+  }, [item, categoryHasLocation, locationOverrideEnabled, handleUpdateField]);
 
   const confirmResetSubgoalLocations = useCallback(() => {
     if (!item) return;
@@ -219,8 +155,6 @@ export function useItemHandlers(
   return {
     showDeleteConfirm,
     setShowDeleteConfirm,
-    showCascadeConfirm,
-    pendingLocationId,
     locationOverrideEnabled,
     handleSaveTitle,
     handleDelete,
@@ -234,11 +168,5 @@ export function useItemHandlers(
     showResetLocationsConfirm,
     setShowResetLocationsConfirm,
     confirmResetSubgoalLocations,
-    applyLocationChange,
-    closeCascadeDialog: () => {
-      setShowCascadeConfirm(false);
-      setPendingLocationId(null);
-      setPendingKind(null);
-    },
   };
 }

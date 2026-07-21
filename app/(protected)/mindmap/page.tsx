@@ -57,6 +57,8 @@ import {
   sheetRowLabel,
   sheetZoomTrack,
   sheetHint,
+  sheetColumns,
+  sheetColumn,
 } from "./page.css";
 
 const DEFAULT_ZOOM = 46;
@@ -334,60 +336,66 @@ export default function MindmapPage() {
           onOpenChange={setSettingsOpen}
           title="Settings"
         >
-          <span className={sheetSection}>View</span>
-          <div className={sheetRow}>
-            <span className={sheetRowLabel}>Leaf tasks</span>
-            <Switch
-              checked={showLeaves}
-              onCheckedChange={setShowLeaves}
-              aria-label="Branch each goal out into its leaf tasks"
-            />
-          </div>
-          <div className={sheetRow}>
-            <span className={sheetRowLabel}>Hide empty</span>
-            <Switch
-              checked={hideEmpty}
-              onCheckedChange={setHideEmpty}
-              aria-label="Hide roles and categories with no items"
-            />
-          </div>
-          <div className={sheetRow}>
-            <span className={sheetRowLabel}>Show completed</span>
-            <Switch
-              checked={showCompleted}
-              onCheckedChange={setShowCompleted}
-              aria-label="Show completed items"
-            />
-          </div>
-          <div className={sheetRow}>
-            <span className={sheetRowLabel}>Zoom</span>
-            <div className={sheetZoomTrack}>
-              <div className={zoomTrackBar} />
-              <div
-                className={zoomFill}
-                style={{
-                  width: `calc(${zoom}% + ${(SLIDER_THUMB_PX * (50 - zoom)) / 100}px)`,
-                }}
-              />
-              <input
-                type="range"
-                min={0}
-                max={100}
-                step={1}
-                value={zoom}
-                onChange={(e) => setZoom(Number(e.target.value))}
-                className={zoomSlider}
-                aria-label="Zoom mindmap"
-              />
+          <div className={sheetColumns}>
+            <div className={sheetColumn}>
+              <span className={sheetSection}>View</span>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Leaf tasks</span>
+                <Switch
+                  checked={showLeaves}
+                  onCheckedChange={setShowLeaves}
+                  aria-label="Branch each goal out into its leaf tasks"
+                />
+              </div>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Hide empty</span>
+                <Switch
+                  checked={hideEmpty}
+                  onCheckedChange={setHideEmpty}
+                  aria-label="Hide roles and categories with no items"
+                />
+              </div>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Show completed</span>
+                <Switch
+                  checked={showCompleted}
+                  onCheckedChange={setShowCompleted}
+                  aria-label="Show completed items"
+                />
+              </div>
+              <div className={sheetRow}>
+                <span className={sheetRowLabel}>Zoom</span>
+                <div className={sheetZoomTrack}>
+                  <div className={zoomTrackBar} />
+                  <div
+                    className={zoomFill}
+                    style={{
+                      width: `calc(${zoom}% + ${(SLIDER_THUMB_PX * (50 - zoom)) / 100}px)`,
+                    }}
+                  />
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={zoom}
+                    onChange={(e) => setZoom(Number(e.target.value))}
+                    className={zoomSlider}
+                    aria-label="Zoom mindmap"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-          <span className={sheetSection}>Layout</span>
-          <MindmapControlsBody
-            options={layoutOptions}
-            onChange={patchLayoutOptions}
-          />
-          <div className={sheetHint}>
-            Pinch to zoom · Tap to focus · Tap Open to navigate
+            <div className={sheetColumn}>
+              <span className={sheetSection}>Layout</span>
+              <MindmapControlsBody
+                options={layoutOptions}
+                onChange={patchLayoutOptions}
+              />
+              <div className={sheetHint}>
+                Pinch to zoom · Tap to focus · Tap Open to navigate
+              </div>
+            </div>
           </div>
         </BottomSheet>
       )}

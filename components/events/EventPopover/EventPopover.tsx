@@ -205,7 +205,13 @@ const EventPopover: React.FC<EventPopoverProps> = ({
   const openFullEditor = () => {
     setShowPopover(false);
     const rootId = getRootParentId(planner, plannerId) ?? plannerId;
-    router.push(`/items/${rootId}`);
+    // A subtask opens its root's subtasks tree with the edit drawer on it —
+    // the root overview would leave the user hunting for the clicked item.
+    router.push(
+      rootId === plannerId
+        ? `/items/${rootId}`
+        : `/items/${rootId}/subtasks?focus=${plannerId}`,
+    );
   };
 
   const plannerType = event.extendedProps.plannerType as

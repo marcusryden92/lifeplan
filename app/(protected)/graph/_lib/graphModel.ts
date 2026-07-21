@@ -194,6 +194,7 @@ export function buildGraphLanes({
   spans,
   leafSpans,
   showCompleted,
+  showLooseTasks,
 }: {
   planner: Planner[];
   queues: Queue[];
@@ -202,6 +203,8 @@ export function buildGraphLanes({
   spans: Map<string, GraphSpan>;
   leafSpans?: Map<string, Map<string, GraphSpan>> | null;
   showCompleted: boolean;
+  /** Admit root tasks with no queue/dependency involvement as nodes. */
+  showLooseTasks?: boolean;
 }): GraphLane[] {
   const plannerById = new Map(planner.map((p) => [p.id, p]));
   const knownCategoryIds = new Set(categories.map((c) => c.id));
@@ -301,7 +304,9 @@ export function buildGraphLanes({
         p.isTriaged &&
         (p.plannerType === "task" || p.plannerType === "goal") &&
         !queuedIds.has(p.id) &&
-        (p.plannerType === "goal" || endpointIds.has(p.id)),
+        (p.plannerType === "goal" ||
+          showLooseTasks === true ||
+          endpointIds.has(p.id)),
     )
     .map((row) => toNode(row, INDEPENDENT_LANE_KEY))
     .filter((n) => showCompleted || !n.completed);

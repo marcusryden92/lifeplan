@@ -17,6 +17,7 @@ export const themeLight = createTheme(vars, {
     canvas: paperSurface.canvas,
     sidebar: paperSurface.sidebar,
     content: paperSurface.content,
+    modal: "rgba(255,255,255,0.65)",
   },
 
   glass: {
@@ -90,6 +91,9 @@ export const themeDark = createTheme(vars, {
     canvas: grayscale[10],
     sidebar: grayscale[15],
     content: grayscale[20],
+    // Mostly opaque so the modal reads a rung brighter than content even over
+    // the dimming overlay; the small transparency keeps the frosted blur alive.
+    modal: `color-mix(in srgb, ${grayscale[25]} 92%, transparent)`,
   },
 
   glass: {

@@ -9,6 +9,7 @@ import {
   parseTaskSplitting,
   serializeTaskSplitting,
   splitCompletedMinutes,
+  splitMaxIsUnlimited,
   type TaskSplittingSettings,
 } from "@/utils/taskSplitting";
 import { useItem } from "../../ItemContext";
@@ -16,7 +17,11 @@ import { RuleRow } from "../RuleRow";
 
 function splittingSummary(settings: TaskSplittingSettings): string {
   const parts = [
-    `${formatMinutesToHours(settings.minMinutes)}–${formatMinutesToHours(settings.maxMinutes)}`,
+    `${formatMinutesToHours(settings.minMinutes)}–${
+      splitMaxIsUnlimited(settings)
+        ? "∞"
+        : formatMinutesToHours(settings.maxMinutes)
+    }`,
   ];
   if (settings.maxMinutesPerDay !== null) {
     parts.push(`≤ ${formatMinutesToHours(settings.maxMinutesPerDay)}/day`);
