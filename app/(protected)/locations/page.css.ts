@@ -1,7 +1,7 @@
-﻿import { style, globalStyle } from "@vanilla-extract/css";
+import { style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
 import { space, media, radii } from "@/lib/theme/scales";
-import { display, text, fieldLabel } from "@/lib/theme/typography.css";
+import { text, fieldLabel } from "@/lib/theme/typography.css";
 import { colorMixAlpha } from "@/lib/theme/effects";
 import { themeTransition } from "@/lib/theme/transitions";
 
@@ -16,16 +16,14 @@ export const page = style({
   },
 });
 
-export const titleSummary = style([
-  text.bodySm,
-  {
-    color: vars.muted,
-    fontVariantNumeric: "tabular-nums",
-    transition: themeTransition,
-  },
-]);
-
-export const spacer = style({ flex: 1 });
+export const loadingWrap = style({
+  flex: 1,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "0 28px 28px",
+  marginBottom: space["12"],
+});
 
 export const headActions = style({
   display: "flex",
@@ -37,12 +35,6 @@ export const headActions = style({
   // row wraps it onto its own line — without it, a wrapped row reverts to the
   // left edge and the title sits visually orphaned.
   marginLeft: "auto",
-  "@media": {
-    [media.mobile]: {
-      marginLeft: 0,
-      marginTop: space["6"],
-    },
-  },
 });
 
 // Inline status pill that sits in the PageHeader row before the action
@@ -97,292 +89,42 @@ export const mainGrid = style({
   },
 });
 
-const cardBase = style({
+// Mobile stand-in for the matrix pane: a compact card that opens the
+// fullscreen TravelMatrixModal.
+export const matrixLauncher = style({
   display: "flex",
   flexDirection: "column",
-  minHeight: 0,
-  overflow: "hidden",
-});
-
-export const rail = style([
-  cardBase,
-  {
-    border: `1px solid ${vars.rule}`,
-    borderRadius: radii["md+2"],
-    padding: "12px 8px 8px",
-    background: "transparent",
-    transition: themeTransition,
-    "@media": {
-      [media.mobile]: {
-        minHeight: "auto",
-        borderRadius: 0,
-        borderLeftWidth: 0,
-        borderRightWidth: 0,
-      },
+  alignItems: "flex-start",
+  gap: space["2.5"],
+  border: `1px solid ${vars.rule}`,
+  borderRadius: radii["md+2"],
+  padding: "14px 16px 16px",
+  transition: themeTransition,
+  "@media": {
+    [media.mobile]: {
+      borderRadius: 0,
+      borderLeftWidth: 0,
+      borderRightWidth: 0,
     },
   },
-]);
+});
 
-export const railHead = style([
+export const matrixLauncherTitle = style([
   fieldLabel,
   {
-    padding: "0 8px 6px",
     transition: themeTransition,
   },
 ]);
 
-export const railBody = style({
-  flex: 1,
-  minHeight: 0,
-  overflow: "auto",
-  display: "flex",
-  flexDirection: "column",
-  gap: space["1"],
-});
-
-export const railRow = style([
-  text.row,
-  {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: space["2"],
-    padding: "8px 8px",
-    borderRadius: radii.sm,
-    cursor: "pointer",
-    color: vars.ink,
-    background: "transparent",
-    border: "1px solid transparent",
-    transition: themeTransition,
-    textAlign: "left",
-    width: "100%",
-    selectors: {
-      "&:hover": { background: vars.interactive.hoverFill },
-    },
-  },
-]);
-
-export const railRowPin = style({
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: 16,
-  height: 16,
-  color: vars.muted,
-  flexShrink: 0,
-  marginTop: space["0.5"],
-});
-
-export const railRowMeta = style({
-  display: "flex",
-  flexDirection: "column",
-  gap: space["0.5"],
-  flex: 1,
-  minWidth: 0,
-});
-
-export const railRowName = style({
-  fontWeight: 600,
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-});
-
-export const railRowAddress = style([
-  text.microLabel,
+export const matrixLauncherNote = style([
+  text.bodySm,
   {
     color: vars.muted,
-    whiteSpace: "nowrap",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    fontVariantNumeric: "tabular-nums",
-  },
-]);
-
-export const railRowTags = style({
-  marginTop: space["1"],
-  display: "flex",
-  flexWrap: "wrap",
-  gap: space["1"],
-});
-
-export const railRowTag = style({
-  display: "inline-flex",
-  alignItems: "center",
-  gap: space["1"],
-  padding: "2px 6px",
-  borderRadius: 4,
-  fontSize: 9.5,
-  fontFamily: vars.font.ui,
-  fontWeight: 600,
-  letterSpacing: "0.04em",
-  color: vars.muted,
-  background: vars.glass.bgSoft,
-  border: `1px solid ${vars.glass.stroke}`,
-  transition: themeTransition,
-});
-
-export const railRowTagDot = style({
-  width: 6,
-  height: 6,
-  borderRadius: radii.pill,
-  flexShrink: 0,
-});
-
-export const railFooter = style({
-  flexShrink: 0,
-  marginTop: space["2"],
-  paddingTop: space["2"],
-  paddingLeft: space["1"],
-  paddingRight: space["1"],
-  borderTop: `1px solid ${vars.rule}`,
-  display: "flex",
-  flexDirection: "column",
-  gap: space["2"],
-  transition: themeTransition,
-});
-
-export const railNote = style([
-  text.microLabel,
-  {
-    color: vars.muted,
-    textAlign: "center",
-    padding: "0 6px",
     transition: themeTransition,
   },
 ]);
 
-export const railNewButton = style({
+export const matrixLauncherButton = style({
   width: "100%",
   justifyContent: "center",
-  gap: space["1.5"],
-  padding: "8px 10px",
-  borderRadius: radii.sm,
-  border: `1px dashed ${vars.rule}`,
-  color: vars.muted,
-  selectors: {
-    "&:hover:not(:disabled)": {
-      color: vars.ink,
-      borderColor: vars.glass.stroke,
-      background: vars.interactive.hoverFill,
-    },
-  },
 });
-
-export const matrixPane = style([
-  cardBase,
-  {
-    border: `1px solid ${vars.rule}`,
-    borderRadius: radii["md+2"],
-    padding: "16px 18px",
-    gap: space["3"],
-    overflow: "auto",
-    transition: themeTransition,
-    "@media": {
-      [media.mobile]: {
-        minHeight: 540,
-        borderRadius: 0,
-        borderLeftWidth: 0,
-        borderRightWidth: 0,
-      },
-    },
-  },
-]);
-
-export const matrixHead = style({
-  display: "flex",
-  alignItems: "baseline",
-  gap: space["3"],
-  flexWrap: "wrap",
-});
-
-export const matrixTitle = style([
-  display.modalTitle,
-  {
-    color: vars.ink,
-    lineHeight: 1,
-    margin: 0,
-    transition: themeTransition,
-  },
-]);
-
-export const matrixSubtitle = style([
-  text.label,
-  {
-    color: vars.muted,
-    transition: themeTransition,
-  },
-]);
-
-export const matrixLegend = style([
-  text.microLabel,
-  {
-    display: "flex",
-    alignItems: "center",
-    gap: space["2.5"],
-    color: vars.muted,
-    marginLeft: "auto",
-  },
-]);
-
-export const legendDot = style({
-  display: "inline-block",
-  width: 8,
-  height: 8,
-  borderRadius: 2,
-  marginRight: space["1"],
-  verticalAlign: "middle",
-});
-
-export const legendDotRush = style({ background: vars.status.error });
-export const legendDotRegular = style({ background: vars.ink });
-export const legendDotNight = style({ background: vars.muted });
-
-export const matrixEmpty = style([
-  text.body,
-  {
-    flex: 1,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "60px 24px",
-    color: vars.muted,
-    textAlign: "center",
-    flexDirection: "column",
-    gap: space["2"],
-  },
-]);
-
-export const matrixFooter = style([
-  text.label,
-  {
-    display: "flex",
-    alignItems: "center",
-    gap: space["2.5"],
-    marginTop: "auto",
-    padding: "8px 12px",
-    borderRadius: radii.sm,
-    background: vars.glass.bgSoft,
-    border: `1px solid ${vars.glass.stroke}`,
-    color: vars.muted,
-    transition: themeTransition,
-  },
-]);
-
-export const amberKeyword = style({
-  color: vars.status.warning,
-  fontWeight: 700,
-});
-
-export const matrixFooterAction = style({
-  color: vars.status.error,
-  padding: 0,
-  selectors: {
-    "&:hover:not(:disabled)": {
-      color: vars.status.error,
-      textDecoration: "underline",
-    },
-    "&:disabled": { textDecoration: "none" },
-  },
-});
-
-globalStyle(`${railRow}[data-dragging="true"]`, { opacity: 0.4 });

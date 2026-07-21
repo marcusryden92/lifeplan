@@ -21,6 +21,7 @@ export const pageHeaderRow = style({
       textAlign: "center",
       gap: space["2.5"],
       padding: `16px ${CORNER_ACTION_GUTTER}px 12px`,
+      marginBottom: space["3"],
     },
     // Landscape phone: the pills fold into the bottom menu bar, freeing the
     // top — revert to the normal left-aligned row.
