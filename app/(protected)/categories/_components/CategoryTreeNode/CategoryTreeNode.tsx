@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, GripVertical, Plus } from "lucide-react";
 import type { CategoryNode } from "@/utils/categoryUtils";
 import {
   railRow,
@@ -10,9 +10,11 @@ import {
   railRowLabel,
   railRowCount,
   railRowAddChild,
+  railRowGrip,
   treeChevron,
   treeChevronSpacer,
 } from "../../page.css";
+import { useTouchCategoryDrag } from "./useTouchCategoryDrag";
 
 export type DragZone = "before" | "after" | "into";
 
@@ -46,6 +48,8 @@ export function CategoryTreeNode({
   dragOver,
   setDragOver,
   onDrop,
+  showGrip,
+  onTouchDrop,
 }: {
   node: CategoryNode;
   depth: number;
@@ -60,6 +64,8 @@ export function CategoryTreeNode({
   dragOver: { id: string; zone: DragZone } | null;
   setDragOver: (s: { id: string; zone: DragZone } | null) => void;
   onDrop: (targetId: string, zone: DragZone) => void;
+  showGrip: boolean;
+  onTouchDrop: (sourceId: string, targetId: string, zone: DragZone) => void;
 }) {
   const hasChildren = node.children.length > 0;
   const isOpen = expanded.has(node.id);
@@ -68,6 +74,13 @@ export function CategoryTreeNode({
   const isDragging = draggedId === node.id;
   const isDragTarget = dragOver?.id === node.id;
 
+  const { onGripPointerDown } = useTouchCategoryDrag({
+    nodeId: node.id,
+    setDraggedId,
+    setDragOver,
+    onTouchDrop,
+  });
+
   return (
     <>
       <button
@@ -75,6 +88,7 @@ export function CategoryTreeNode({
         className={`${railRow} ${active ? railRowActive : ""}`}
         onClick={() => onSelect(node.id)}
         style={{ paddingLeft: 8 + depth * 14 }}
+        data-category-id={node.id}
         draggable
         onDragStart={(e) => {
           e.dataTransfer.effectAllowed = "move";
@@ -169,6 +183,16 @@ export function CategoryTreeNode({
         >
           <Plus size={11} strokeWidth={2.4} />
         </span>
+        {showGrip && (
+          <span
+            className={railRowGrip}
+            aria-hidden
+            onPointerDown={onGripPointerDown}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <GripVertical size={14} strokeWidth={2} />
+          </span>
+        )}
       </button>
       {hasChildren &&
         isOpen &&
@@ -188,6 +212,8 @@ export function CategoryTreeNode({
             dragOver={dragOver}
             setDragOver={setDragOver}
             onDrop={onDrop}
+            showGrip={showGrip}
+            onTouchDrop={onTouchDrop}
           />
         ))}
     </>

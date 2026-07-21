@@ -27,6 +27,20 @@ import {
   rowMenuItem,
   rowMenuItemDanger,
 } from "../../page.css";
+import {
+  card,
+  cardSelected,
+  cardCheck,
+  cardCheckbox,
+  cardMain,
+  cardTitle,
+  cardMeta,
+  cardMetaItem,
+  cardMetaOverdue,
+  cardMetaCategoryName,
+  cardSide,
+  cardMenuBtn,
+} from "./ItemRow.css";
 
 export function ItemRow({
   item,
@@ -38,6 +52,7 @@ export function ItemRow({
   selected,
   onToggleSelect,
   onDelete,
+  mobile = false,
 }: {
   item: Planner;
   category?: Category;
@@ -48,6 +63,7 @@ export function ItemRow({
   selected: boolean;
   onToggleSelect: () => void;
   onDelete: () => void;
+  mobile?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const isOverdue = isItemOverdue(item, now);
@@ -63,6 +79,126 @@ export function ItemRow({
       : item.isReady
         ? "Ready"
         : "Not ready";
+
+  const menu = (
+    <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className={`${iconBtn({ size: "sm" })} ${mobile ? cardMenuBtn : rowMenuBtn}`}
+          aria-label={`Actions for ${item.title}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreHorizontal size={14} strokeWidth={2} />
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          className={popoverRecipe({ size: "sm" })}
+          side="bottom"
+          align="end"
+          sideOffset={4}
+          collisionPadding={8}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className={rowMenu}>
+            <button
+              type="button"
+              className={`${rowMenuItem} ${rowMenuItemDanger}`}
+              onClick={() => {
+                setMenuOpen(false);
+                onDelete();
+              }}
+            >
+              <Trash2 size={13} strokeWidth={2} aria-hidden />
+              Delete
+            </button>
+          </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+
+  if (mobile) {
+    const durationLabel =
+      remainingDuration != null
+        ? remainingDuration > 0
+          ? formatDurationCompact(remainingDuration)
+          : null
+        : item.duration > 0
+          ? formatDurationCompact(item.duration)
+          : null;
+    const deadlineDate = item.deadline ? new Date(item.deadline) : null;
+    const deadlineLabel = deadlineDate
+      ? format(
+          deadlineDate,
+          deadlineDate.getFullYear() === now.getFullYear()
+            ? "MMM d"
+            : "MMM d, yyyy",
+        )
+      : null;
+
+    return (
+      <div
+        className={`${card} ${selected ? cardSelected : ""}`}
+        onClick={onClick}
+        role="button"
+      >
+        <div className={cardCheck} onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={selected}
+            aria-label={`Select ${item.title}`}
+            data-checked={selected ? "true" : undefined}
+            className={`${rowCheckbox} ${cardCheckbox}`}
+            onClick={onToggleSelect}
+          >
+            {selected && <Check size={12} strokeWidth={3} aria-hidden />}
+          </button>
+        </div>
+        <div className={cardMain}>
+          <span className={cardTitle}>{item.title}</span>
+          <span className={cardMeta}>
+            <TypeBadge tone={plannerTypeBadgeTone(item.plannerType)}>
+              {item.plannerType}
+            </TypeBadge>
+            {durationLabel && (
+              <span className={cardMetaItem}>{durationLabel}</span>
+            )}
+            {deadlineLabel && (
+              <span
+                className={`${cardMetaItem} ${isOverdue ? cardMetaOverdue : ""}`}
+              >
+                {deadlineLabel}
+              </span>
+            )}
+            {category && (
+              <span className={cardMetaItem}>
+                {category.color && (
+                  <CategoryDot color={category.color} size={7} glow={false} />
+                )}
+                <span className={cardMetaCategoryName}>{category.name}</span>
+              </span>
+            )}
+            <span className={cardMetaItem}>
+              {showProgressInstead ? (
+                <Caption className={cellProgressPct}>
+                  {Math.round(goalProgress * 100)}%
+                </Caption>
+              ) : (
+                <Caption>{statusLabel}</Caption>
+              )}
+            </span>
+          </span>
+        </div>
+        <div className={cardSide}>
+          {menu}
+          <ChevronRight size={15} strokeWidth={2} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -132,42 +268,7 @@ export function ItemRow({
         )}
       </div>
       <div className={rowActions}>
-        <Popover.Root open={menuOpen} onOpenChange={setMenuOpen}>
-          <Popover.Trigger asChild>
-            <button
-              type="button"
-              className={`${iconBtn({ size: "sm" })} ${rowMenuBtn}`}
-              aria-label={`Actions for ${item.title}`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreHorizontal size={14} strokeWidth={2} />
-            </button>
-          </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content
-              className={popoverRecipe({ size: "sm" })}
-              side="bottom"
-              align="end"
-              sideOffset={4}
-              collisionPadding={8}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className={rowMenu}>
-                <button
-                  type="button"
-                  className={`${rowMenuItem} ${rowMenuItemDanger}`}
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onDelete();
-                  }}
-                >
-                  <Trash2 size={13} strokeWidth={2} aria-hidden />
-                  Delete
-                </button>
-              </div>
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
+        {menu}
         <ChevronRight size={14} strokeWidth={2} />
       </div>
     </div>

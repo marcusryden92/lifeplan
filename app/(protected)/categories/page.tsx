@@ -4,8 +4,17 @@ import { useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import { Plus } from "lucide-react";
-import { Button, ConfirmModal, Loader, PageHeader, vars } from "@/components/ui";
+import {
+  BottomSheet,
+  Button,
+  ConfirmModal,
+  Loader,
+  PageHeader,
+  vars,
+} from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 import {
   upsertCategory,
   removeCategory,
@@ -19,7 +28,10 @@ import {
 import type { Category } from "@/types/prisma";
 import { WeekStructureModal } from "@/components/calendar/WeekStructureModal";
 import { CategoryEditor, SWATCH_PALETTE } from "./_components/CategoryEditor";
-import { CategoryTreeNode, type DragZone } from "./_components/CategoryTreeNode";
+import {
+  CategoryTreeNode,
+  type DragZone,
+} from "./_components/CategoryTreeNode";
 import {
   page,
   mainGrid,
@@ -43,11 +55,15 @@ export default function CategoriesPage() {
     (state: RootState) => state.calendarSource.isLoaded,
   );
 
+  const isMobile = useIsMobile();
+  const isCoarse = useCoarsePointer();
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [error, _setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [windowsOpen, setWindowsOpen] = useState(false);
+  const [editorSheetOpen, setEditorSheetOpen] = useState(false);
   // Native HTML5 drag state. draggedId tracks the source; dragOver tracks
   // which row + which third of it the pointer is currently over so the
   // TreeNode can paint the right indicator.
@@ -66,7 +82,7 @@ export default function CategoriesPage() {
   const selected = useMemo(
     () =>
       effectiveSelectedId
-        ? categories.find((c) => c.id === effectiveSelectedId) ?? null
+        ? (categories.find((c) => c.id === effectiveSelectedId) ?? null)
         : null,
     [categories, effectiveSelectedId],
   );
@@ -87,9 +103,7 @@ export default function CategoriesPage() {
 
   const subCategories = useMemo(
     () =>
-      selected
-        ? categories.filter((c) => c.parentId === selected.id)
-        : [],
+      selected ? categories.filter((c) => c.parentId === selected.id) : [],
     [categories, selected],
   );
 
@@ -142,10 +156,31 @@ export default function CategoriesPage() {
     if (effectiveSelectedId === deletingId) {
       const remaining = categories.filter((c) => c.id !== deletingId);
       setSelectedId(remaining.find((c) => !c.parentId)?.id ?? null);
+      setEditorSheetOpen(false);
     }
     dispatch(removeCategory(deletingId));
     updateAll();
     setDeletingId(null);
+  };
+
+  const handleSelect = (id: string) => {
+    setSelectedId(id);
+    if (isMobile) setEditorSheetOpen(true);
+  };
+
+  // The WeekStructureModal fills the page element at a z-index below the
+  // sheet, so on mobile the sheet steps aside and comes back when it closes.
+  const handleOpenWindows = () => {
+    if (isMobile) {
+      setEditorSheetOpen(false);
+      window.scrollTo({ top: 0 });
+    }
+    setWindowsOpen(true);
+  };
+
+  const handleCloseWindows = () => {
+    setWindowsOpen(false);
+    if (isMobile && effectiveSelectedId) setEditorSheetOpen(true);
   };
 
   // Drag-and-drop: reorder siblings or reparent. Dropping onto the middle of
@@ -153,14 +188,15 @@ export default function CategoriesPage() {
   // it as a sibling before/after. Affected siblings are renumbered densely
   // (0..N-1) and dispatched — the sync layer batches them into one server
   // transaction. Cycle prevention: refuse to drop a category onto any of its
-  // own descendants.
-  const handleDrop = (targetId: string, zone: DragZone) => {
-    const sourceId = draggedId;
-    setDraggedId(null);
-    setDragOver(null);
-    if (!sourceId || sourceId === targetId) return;
+  // own descendants. Two entry points: the rows' native HTML5 drag (mouse)
+  // and the grip's pointer drag (touch), which passes its source explicitly
+  // because its listeners outlive the render that bound them.
+  const performDrop = (sourceId: string, targetId: string, zone: DragZone) => {
+    if (sourceId === targetId) return;
 
-    const descendants = new Set(getCategoryAndDescendants(sourceId, categories));
+    const descendants = new Set(
+      getCategoryAndDescendants(sourceId, categories),
+    );
     if (descendants.has(targetId)) return;
 
     const dragged = categories.find((c) => c.id === sourceId);
@@ -200,6 +236,22 @@ export default function CategoriesPage() {
     }
   };
 
+  const handleDrop = (targetId: string, zone: DragZone) => {
+    const sourceId = draggedId;
+    setDraggedId(null);
+    setDragOver(null);
+    if (!sourceId) return;
+    performDrop(sourceId, targetId, zone);
+  };
+
+  const handleTouchDrop = (
+    sourceId: string,
+    targetId: string,
+    zone: DragZone,
+  ) => {
+    performDrop(sourceId, targetId, zone);
+  };
+
   const handleCreate = (parentId: string | null = null) => {
     const swatch = SWATCH_PALETTE[categories.length % SWATCH_PALETTE.length];
     const id = uuidv4();
@@ -230,6 +282,7 @@ export default function CategoriesPage() {
     dispatch(upsertCategory(created));
     updateAll();
     setSelectedId(id);
+    if (isMobile) setEditorSheetOpen(true);
     if (parentId) {
       setExpanded((prev) => new Set(prev).add(parentId));
     }
@@ -250,8 +303,30 @@ export default function CategoriesPage() {
   const deletingName = deletingCategory?.name ?? "this role";
   const deletingIsRole = deletingCategory ? !deletingCategory.parentId : true;
 
+  const editorElement = selected ? (
+    <CategoryEditor
+      category={selected}
+      categories={categories}
+      locations={locations}
+      itemCount={itemCounts.get(selected.id) ?? 0}
+      subCategories={subCategories}
+      subCategoryCounts={itemCounts}
+      onRename={handleRename}
+      onChangeColor={handleChangeColor}
+      onChangeParent={handleChangeParent}
+      onChangeLocation={handleChangeLocation}
+      onToggleStrict={handleToggleStrict}
+      onToggleUseTimeWindows={handleToggleUseTimeWindows}
+      onToggleConfine={handleToggleConfine}
+      onDelete={() => setDeletingId(selected.id)}
+      onSelectSubCategory={setSelectedId}
+      onOpenWindows={handleOpenWindows}
+      onChangeWindowExceptions={handleChangeWindowExceptions}
+    />
+  ) : null;
+
   return (
-    <div className={page}>
+    <div className={page} data-windows-open={windowsOpen ? "true" : undefined}>
       <PageHeader
         title="Roles"
         summary={
@@ -301,7 +376,7 @@ export default function CategoriesPage() {
                   expanded={expanded}
                   toggleExpand={toggleExpand}
                   selectedId={effectiveSelectedId}
-                  onSelect={setSelectedId}
+                  onSelect={handleSelect}
                   counts={itemCounts}
                   onAddChild={(parentId) => handleCreate(parentId)}
                   draggedId={draggedId}
@@ -309,6 +384,8 @@ export default function CategoriesPage() {
                   dragOver={dragOver}
                   setDragOver={setDragOver}
                   onDrop={handleDrop}
+                  showGrip={isCoarse}
+                  onTouchDrop={handleTouchDrop}
                 />
               ))
             )}
@@ -326,42 +403,51 @@ export default function CategoriesPage() {
           </div>
         </aside>
 
-        <section className={mainCard}>
-          {!isLoaded ? (
-            <div className={emptyMain}>
-              <Loader size="md" label="Loading roles" />
-            </div>
-          ) : selected ? (
-            <CategoryEditor
-              category={selected}
-              categories={categories}
-              locations={locations}
-              itemCount={itemCounts.get(selected.id) ?? 0}
-              subCategories={subCategories}
-              subCategoryCounts={itemCounts}
-              onRename={handleRename}
-              onChangeColor={handleChangeColor}
-              onChangeParent={handleChangeParent}
-              onChangeLocation={handleChangeLocation}
-              onToggleStrict={handleToggleStrict}
-              onToggleUseTimeWindows={handleToggleUseTimeWindows}
-              onToggleConfine={handleToggleConfine}
-              onDelete={() => setDeletingId(selected.id)}
-              onSelectSubCategory={setSelectedId}
-              onOpenWindows={() => setWindowsOpen(true)}
-              onChangeWindowExceptions={handleChangeWindowExceptions}
-            />
-          ) : (
-            <div className={emptyMain}>
-              Pick a role from the left, or create a new one to begin.
-            </div>
-          )}
-        </section>
+        {!isMobile && (
+          <section className={mainCard}>
+            {!isLoaded ? (
+              <div className={emptyMain}>
+                <Loader size="md" label="Loading roles" />
+              </div>
+            ) : (
+              (editorElement ?? (
+                <div className={emptyMain}>
+                  Pick a role from the left, or create a new one to begin.
+                </div>
+              ))
+            )}
+          </section>
+        )}
       </div>
+
+      {isMobile && (
+        <BottomSheet
+          open={editorSheetOpen && !!selected}
+          onOpenChange={setEditorSheetOpen}
+          title={
+            selected
+              ? `Edit ${selected.parentId ? "category" : "role"}`
+              : "Edit role"
+          }
+          hideTitle
+          flush
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          // The delete ConfirmModal is a page-owned sibling dialog; taps on it
+          // land "outside" this sheet and must not dismiss it.
+          onPointerDownOutside={(e) => {
+            if (deletingId) e.preventDefault();
+          }}
+          onInteractOutside={(e) => {
+            if (deletingId) e.preventDefault();
+          }}
+        >
+          {editorElement}
+        </BottomSheet>
+      )}
 
       <WeekStructureModal
         open={windowsOpen}
-        onClose={() => setWindowsOpen(false)}
+        onClose={handleCloseWindows}
         initialMode="windows"
         focusedCategoryId={selected?.id ?? null}
       />

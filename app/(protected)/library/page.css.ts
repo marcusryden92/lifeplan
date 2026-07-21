@@ -26,6 +26,11 @@ export const actionCluster = style({
   display: "flex",
   gap: space["2"],
   flexShrink: 0,
+  "@media": {
+    [media.mobile]: {
+      display: "none",
+    },
+  },
 });
 
 export const mainGrid = style({
@@ -284,6 +289,17 @@ export const searchWrap = style({
   flex: 1,
   minWidth: 220,
   transition: themeTransition,
+  "@media": {
+    // Leaves room for the sort cluster on the same line.
+    [media.mobile]: { minWidth: 140 },
+  },
+});
+
+export const sortCluster = style({
+  display: "flex",
+  alignItems: "center",
+  gap: space["1.5"],
+  flexShrink: 0,
 });
 
 // Bare <Input> inside the search pill; the pill owns the box.
@@ -310,6 +326,56 @@ export const breadcrumbSep = style({
 export const breadcrumbCurrent = style({
   color: vars.ink,
   fontWeight: 600,
+});
+
+// Mobile replacement for the rail + breadcrumb: one tappable pill naming the
+// current scope, opening the ScopeSheet.
+export const scopeRow = style({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: "10px 0",
+  borderBottom: `1px solid ${vars.rule}`,
+  flexShrink: 0,
+});
+
+export const scopePill = style({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: space["2"],
+  minWidth: 0,
+  maxWidth: "100%",
+  padding: "8px 14px",
+  borderRadius: radii.pill,
+  border: `1px solid ${vars.glass.stroke}`,
+  background: vars.glass.bgSoft,
+  color: vars.ink,
+  fontFamily: vars.font.ui,
+  fontSize: 13.5,
+  fontWeight: 600,
+  cursor: "pointer",
+  transition: themeTransition,
+});
+
+export const scopePillLabel = style({
+  minWidth: 0,
+  overflow: "hidden",
+  whiteSpace: "nowrap",
+  textOverflow: "ellipsis",
+});
+
+export const scopePillCount = style({
+  fontSize: 11.5,
+  fontWeight: 500,
+  color: vars.muted,
+  fontVariantNumeric: "tabular-nums",
+  flexShrink: 0,
+});
+
+export const scopePillChevron = style({
+  display: "inline-flex",
+  color: vars.muted,
+  flexShrink: 0,
 });
 
 export const tableWrap = style({

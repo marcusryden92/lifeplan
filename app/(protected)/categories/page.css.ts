@@ -4,8 +4,10 @@ import { space, media, radii } from "@/lib/theme/scales";
 import { iconBtn } from "@/lib/theme/recipes.css";
 import { text, fieldLabel } from "@/lib/theme/typography.css";
 import { colorMixAlpha } from "@/lib/theme/effects";
-import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
-
+import {
+  themeTransition,
+  interactiveTransition,
+} from "@/lib/theme/transitions";
 
 export const page = style({
   position: "relative",
@@ -17,6 +19,14 @@ export const page = style({
     [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
+      selectors: {
+        // The WeekStructureModal fills this element (absolute inset 0); the
+        // mobile rail alone can be shorter than the viewport, which would
+        // crush the modal.
+        '&[data-windows-open="true"]': {
+          minHeight: "100dvh",
+        },
+      },
     },
   },
 });
@@ -113,6 +123,12 @@ export const railRow = style([
         background: vars.interactive.hoverFill,
       },
     },
+    "@media": {
+      [media.mobile]: {
+        minHeight: 44,
+        padding: "8px 8px",
+      },
+    },
   },
 ]);
 
@@ -190,8 +206,31 @@ export const railRowAddChild = style([
         outline: `1px solid ${vars.accent.primary}`,
       },
     },
+    "@media": {
+      // No hover to reveal it on touch devices.
+      "(hover: none)": {
+        opacity: 1,
+      },
+    },
   },
 ]);
+
+// Touch reorder handle; rendered only on coarse-pointer devices. touchAction
+// none keeps the browser from claiming the gesture for scrolling.
+export const railRowGrip = style({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: 32,
+  height: 32,
+  margin: "-6px -4px -6px 0",
+  flexShrink: 0,
+  color: vars.muted,
+  touchAction: "none",
+  userSelect: "none",
+  WebkitUserSelect: "none",
+  cursor: "grab",
+});
 
 export const treeChevron = style({
   display: "inline-flex",
@@ -208,11 +247,23 @@ export const treeChevron = style({
       color: vars.ink,
     },
   },
+  "@media": {
+    [media.mobile]: {
+      width: 26,
+      height: 26,
+      margin: "-6px 0",
+    },
+  },
 });
 
 export const treeChevronSpacer = style({
   display: "inline-block",
   width: 14,
+  "@media": {
+    [media.mobile]: {
+      width: 26,
+    },
+  },
 });
 
 export const railFooter = style({

@@ -2,6 +2,7 @@
 
 import {
   useRef,
+  type ComponentProps,
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -28,6 +29,14 @@ type BottomSheetProps = {
   flush?: boolean;
   onOpenAutoFocus?: (e: Event) => void;
   onEscapeKeyDown?: (e: KeyboardEvent) => void;
+  // For sheets whose page owns sibling-portaled dialogs (confirm modals):
+  // Radix counts taps on those as "outside", so hosts prevent dismissal there.
+  onPointerDownOutside?: ComponentProps<
+    typeof Dialog.Content
+  >["onPointerDownOutside"];
+  onInteractOutside?: ComponentProps<
+    typeof Dialog.Content
+  >["onInteractOutside"];
   children: ReactNode;
 };
 
@@ -66,6 +75,8 @@ export function BottomSheet({
   flush,
   onOpenAutoFocus,
   onEscapeKeyDown,
+  onPointerDownOutside,
+  onInteractOutside,
   children,
 }: BottomSheetProps) {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -172,6 +183,8 @@ export function BottomSheet({
           aria-describedby={undefined}
           onOpenAutoFocus={onOpenAutoFocus}
           onEscapeKeyDown={onEscapeKeyDown}
+          onPointerDownOutside={onPointerDownOutside}
+          onInteractOutside={onInteractOutside}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerEnd}
