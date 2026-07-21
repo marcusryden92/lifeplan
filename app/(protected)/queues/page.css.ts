@@ -1,7 +1,7 @@
 import { style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
 import { space, media, radii } from "@/lib/theme/scales";
-import { text, fieldLabel } from "@/lib/theme/typography.css";
+import { display, text, fieldLabel } from "@/lib/theme/typography.css";
 import { colorMixAlpha } from "@/lib/theme/effects";
 import { themeTransition } from "@/lib/theme/transitions";
 
@@ -160,10 +160,15 @@ export const queueHeader = style({
   transition: themeTransition,
 });
 
-export const queueTitleInput = style({
-  flex: 1,
-  minWidth: 160,
-});
+export const queueTitleInput = style([
+  display.pageTitle,
+  {
+    flex: 1,
+    minWidth: 160,
+    lineHeight: "32px",
+    height: 32,
+  },
+]);
 
 export const headerControls = style({
   display: "flex",

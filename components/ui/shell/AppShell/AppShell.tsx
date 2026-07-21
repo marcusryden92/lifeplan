@@ -1,7 +1,8 @@
 "use client";
 
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Grain } from "../../Grain";
+import { useTheme } from "../../ThemeProvider";
 import { Sidebar } from "../Sidebar";
 import { MobileTabs } from "../MobileTabs";
 import { CaptureProvider } from "../CaptureContext";
@@ -46,6 +47,20 @@ export function AppShell({
   overlaySlot,
   loadingSlot,
 }: Props) {
+  const { toggle: toggleTheme } = useTheme();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.shiftKey && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        toggleTheme();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggleTheme]);
+
   return (
     <CaptureProvider>
       <SearchProvider>

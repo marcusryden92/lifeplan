@@ -161,31 +161,6 @@ export const fieldGrid = style({
   },
 });
 
-export const swatchRow = style({
-  display: "flex",
-  gap: space["1.5"],
-  flexWrap: "wrap",
-});
-
-export const swatchChip = style({
-  width: 22,
-  height: 22,
-  border: `1.5px solid ${vars.rule}`,
-  borderRadius: radii.xs,
-  padding: 0,
-  cursor: "pointer",
-  flexShrink: 0,
-  transition: themeTransition,
-  selectors: {
-    "&:hover": {
-      transform: "scale(1.08)",
-    },
-    "&[data-active='true']": {
-      border: `2px solid ${vars.ink}`,
-    },
-  },
-});
-
 export const strictRow = style({
   display: "flex",
   alignItems: "center",

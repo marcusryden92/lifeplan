@@ -176,7 +176,7 @@ export const gripBtn = style({
   alignItems: "center",
   justifyContent: "center",
   width: 22,
-  height: 26,
+  height: 22,
   marginRight: space["0.5"],
   border: "none",
   background: "transparent",
@@ -436,7 +436,9 @@ export const addRowForm = style({
 
 export const dropDivider = style({
   width: "100%",
+  // 10px stays the drop hit zone; the negative margin nets a 6px visual gap.
   height: 10,
+  margin: "-2px 0",
   borderRadius: 3,
   position: "relative",
   selectors: {

@@ -14,7 +14,7 @@ import {
 
 // The default a fresh "Split into chunks" toggle enables with.
 export const DEFAULT_SPLITTING_SETTINGS: TaskSplittingSettings = {
-  minMinutes: 30,
+  minMinutes: 60,
   maxMinutes: 120,
   maxMinutesPerDay: null,
   minSpacingMinutes: null,

@@ -80,27 +80,6 @@ export const fieldLabel = style([
   },
 ]);
 
-export const durationRow = style({
-  display: "flex",
-  alignItems: "center",
-  gap: space["2"],
-});
-
-// Boxed <Input>; fixed width beats the recipe's width:100% via the doubled
-// selector.
-export const durationInput = style({
-  selectors: {
-    "&&": { width: 96 },
-  },
-});
-
-export const durationUnit = style([
-  text.body,
-  {
-    color: vars.muted,
-  },
-]);
-
 export const footer = style({
   display: "flex",
   alignItems: "center",

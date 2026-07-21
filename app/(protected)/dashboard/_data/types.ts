@@ -11,6 +11,8 @@ export type AgendaItem = {
   // upcoming row. Mutually exclusive with `now`; at most one item carries
   // this flag per agenda.
   next: boolean;
+  // Minutes until start; set only on the row carrying `next`.
+  startsInMinutes?: number;
   warn: boolean;
   overdue: boolean;
   pastDeadline: boolean;

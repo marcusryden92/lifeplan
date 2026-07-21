@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ChevronRight, Lock, MapPin, SquarePen, Trash2 } from "lucide-react";
 import { Button, Caption, Combobox, FieldStack, Input } from "@/components/ui";
+import { PopoverColorPicker } from "@/components/events/PopoverColorPicker";
 import type { Category } from "@/types/prisma";
 import type { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 import { parseRecurrenceExceptions } from "@/utils/planRecurrence";
@@ -25,8 +26,6 @@ import {
   sectionPair,
   sectionTitle,
   fieldGrid,
-  swatchRow,
-  swatchChip,
   strictRow,
   strictToggle,
   strictToggleThumb,
@@ -262,19 +261,7 @@ export function CategoryEditor({
         <div className={sectionTitle}>Identity</div>
         <div className={fieldGrid}>
           <FieldStack label="Color">
-            <div className={swatchRow}>
-              {SWATCH_PALETTE.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className={swatchChip}
-                  data-active={color.toLowerCase() === c.toLowerCase()}
-                  style={{ background: c }}
-                  onClick={() => onChangeColor(c)}
-                  aria-label={`Color ${c}`}
-                />
-              ))}
-            </div>
+            <PopoverColorPicker currentColor={color} onChange={onChangeColor} />
           </FieldStack>
           <FieldStack label="Parent">
             <Combobox

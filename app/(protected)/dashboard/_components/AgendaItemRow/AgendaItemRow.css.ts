@@ -1,5 +1,6 @@
 import { style } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
+import { space } from "@/lib/theme/scales";
 import { text } from "@/lib/theme/typography.css";
 import { colorMixAlpha } from "@/lib/theme/effects";
 import { themeTransition } from "@/lib/theme/transitions";
@@ -53,6 +54,12 @@ export const rowLabel = style([
 
 export const rowLabelNow = style({ color: vars.accent.now });
 export const rowLabelNext = style({ color: vars.status.warning });
+
+export const rowLabelDetail = style({
+  marginLeft: space["2"],
+  fontWeight: 650,
+  letterSpacing: "0.02em",
+});
 
 export const agendaWarn = style([
   text.microLabel,

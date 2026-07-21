@@ -3,7 +3,8 @@
 import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Check, SquarePen } from "lucide-react";
-import { Button, Caption, Input, Loader } from "@/components/ui";
+import { Button, Caption, Input, Loader, usePreviousPathname } from "@/components/ui";
+import { NAV_ITEMS } from "@/components/ui/shell/nav";
 import { space, vars, interactiveTransition } from "@/lib/theme";
 import { useSelector } from "react-redux";
 import type { RootState } from "@/redux/store";
@@ -79,6 +80,23 @@ export default function ItemDetailLayout({
   );
   const [editingTitle, setEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
+
+  // Back where you came from (calendar, dashboard, search target, ...) when
+  // the previous route is a labeled nav surface; Library otherwise — matching
+  // the canvas-route back button's tracked-route-over-router.back() rationale.
+  const previousPathname = usePreviousPathname();
+  const backTarget = useMemo(() => {
+    if (previousPathname && !previousPathname.startsWith("/items")) {
+      const nav = NAV_ITEMS.find(
+        (n) =>
+          n.href !== null &&
+          (previousPathname === n.href ||
+            previousPathname.startsWith(`${n.href}/`)),
+      );
+      if (nav) return { href: previousPathname, label: nav.label };
+    }
+    return { href: "/library", label: "Library" };
+  }, [previousPathname]);
 
   const item = useMemo(
     () => planner.find((p) => p.id === itemId),
@@ -211,10 +229,10 @@ export default function ItemDetailLayout({
             <button
               type="button"
               className={backLink}
-              onClick={() => router.push("/library")}
+              onClick={() => router.push(backTarget.href)}
             >
               <ArrowLeft size={12} strokeWidth={2.4} />
-              Library
+              {backTarget.label}
             </button>
             <p style={{ marginTop: space["3.5"] }}>
               <Caption>Item not found.</Caption>
@@ -423,10 +441,10 @@ export default function ItemDetailLayout({
                 <button
                   type="button"
                   className={backLink}
-                  onClick={() => router.push("/library")}
+                  onClick={() => router.push(backTarget.href)}
                 >
                   <ArrowLeft size={12} strokeWidth={2.4} />
-                  Library
+                  {backTarget.label}
                 </button>
               </div>
 

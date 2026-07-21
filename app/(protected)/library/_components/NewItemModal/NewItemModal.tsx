@@ -8,6 +8,7 @@ import {
   BottomSheet,
   Button,
   Caption,
+  DurationField,
   Input,
   SegmentedControl,
 } from "@/components/ui";
@@ -23,9 +24,6 @@ import {
   header,
   field,
   fieldLabel,
-  durationRow,
-  durationInput,
-  durationUnit,
   footer,
   sheetStack,
 } from "./NewItemModal.css";
@@ -51,13 +49,13 @@ export function NewItemModal({
 
   const [title, setTitle] = useState("");
   const [type, setType] = useState<NewItemType>("task");
-  const [duration, setDuration] = useState(String(DEFAULT_DURATION_MINUTES));
+  const [duration, setDuration] = useState(DEFAULT_DURATION_MINUTES);
 
   useEffect(() => {
     if (open) {
       setTitle("");
       setType("task");
-      setDuration(String(DEFAULT_DURATION_MINUTES));
+      setDuration(DEFAULT_DURATION_MINUTES);
       const t = setTimeout(() => inputRef.current?.focus(), 30);
       return () => clearTimeout(t);
     }
@@ -70,13 +68,9 @@ export function NewItemModal({
     if (!trimmed) return;
     const now = new Date().toISOString();
     const isGoal = type === "goal";
-    const parsed = Math.round(Number(duration));
     const resolvedDuration = isGoal
       ? 0
-      : Math.max(
-          MIN_DURATION_MINUTES,
-          Number.isFinite(parsed) ? parsed : DEFAULT_DURATION_MINUTES,
-        );
+      : Math.max(MIN_DURATION_MINUTES, duration);
 
     const id = uuidv4();
     const newItem: Planner = {
@@ -156,18 +150,11 @@ export function NewItemModal({
       {type !== "goal" && (
         <div className={field}>
           <span className={fieldLabel}>Duration</span>
-          <div className={durationRow}>
-            <Input
-              className={durationInput}
-              type="number"
-              min={MIN_DURATION_MINUTES}
-              step={5}
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              onKeyDown={onKeyDown}
-            />
-            <span className={durationUnit}>minutes</span>
-          </div>
+          <DurationField
+            minutes={duration}
+            onCommit={setDuration}
+            minMinutes={MIN_DURATION_MINUTES}
+          />
         </div>
       )}
 

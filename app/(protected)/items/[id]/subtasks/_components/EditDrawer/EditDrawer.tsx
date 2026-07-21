@@ -261,6 +261,21 @@ export function EditDrawer() {
   const onDateInput = (value: string) =>
     setDeadline(parseDatetimeLocal(value) || null);
 
+  const onEarliestStartInput = (value: string) => {
+    const iso = parseDatetimeLocal(value) || null;
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === task.id
+          ? {
+              ...p,
+              earliestStartDate: iso,
+              updatedAt: new Date().toISOString(),
+            }
+          : p,
+      ),
+    );
+  };
+
   const onLocationChange = async (locationId: string | null) => {
     await assignLocationToPlanner(task.id, locationId);
     updatePlannerArray((prev) =>
@@ -505,6 +520,17 @@ export function EditDrawer() {
             ariaLabel="Deadline"
           />
         </FieldStack>
+
+        {task.plannerType !== "plan" && (
+          <FieldStack size="sm" label="Earliest start">
+            <DateTimePicker
+              value={formatDatetimeLocal(task.earliestStartDate)}
+              onChange={onEarliestStartInput}
+              weekStartsOn={weekStartDay}
+              ariaLabel="Earliest start"
+            />
+          </FieldStack>
+        )}
 
         {isLeaf && (
           <FieldStack size="sm" label="Link external item">
