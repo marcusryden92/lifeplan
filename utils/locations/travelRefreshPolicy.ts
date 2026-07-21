@@ -17,6 +17,52 @@ export function topUpAllowed(now: number, lastTopUpAt: Date | null): boolean {
   return !lastTopUpAt || now - lastTopUpAt.getTime() >= TOP_UP_COOLDOWN_MS;
 }
 
+// Hard monthly ceiling on billed matrix elements, with headroom under the
+// 5,000-element Compute Route Matrix Pro free tier. Account-global, because
+// Google's free caps pool across the billing account, not per user.
+export const TRAVEL_ELEMENT_MONTHLY_CAP = 4500;
+
+// Billed elements for a set of pairs: time-varying modes fetch all three
+// conditions, walk/cycle fetch one and reuse it.
+export function elementsForPairs(pairCount: number, timeVarying: boolean): number {
+  return pairCount * (timeVarying ? 3 : 1);
+}
+
+export function monthStartUtc(now: number): Date {
+  const d = new Date(now);
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+}
+
+export type BudgetReservation =
+  | { allowed: true; nextCount: number; periodStart: Date }
+  | { allowed: false; reason: string };
+
+// Reserve `planned` elements against the monthly counter. The count resets on
+// the calendar-month boundary (Google's caps reset on the 1st). Reservation
+// happens BEFORE the Google call — a failed call may overcount, never under.
+export function reserveElements(args: {
+  now: number;
+  planned: number;
+  count: number;
+  periodStart: Date | null;
+  cap?: number;
+}): BudgetReservation {
+  const period = monthStartUtc(args.now);
+  const sameMonth =
+    args.periodStart !== null &&
+    args.periodStart.getTime() === period.getTime();
+  const current = sameMonth ? args.count : 0;
+  const cap = args.cap ?? TRAVEL_ELEMENT_MONTHLY_CAP;
+  if (current + args.planned > cap) {
+    return {
+      allowed: false,
+      reason:
+        "The monthly travel-time budget is used up — new travel times will be available after the 1st. Existing values keep working.",
+    };
+  }
+  return { allowed: true, nextCount: current + args.planned, periodStart: period };
+}
+
 export interface TravelTimeFreshness {
   updatedAt: Date;
   unroutableAt: Date | null;

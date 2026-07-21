@@ -15,8 +15,11 @@ import {
   needsRefetch,
   refreshAllGate,
   topUpAllowed,
+  reserveElements,
+  elementsForPairs,
   STALE_TOP_UP_MAX_PAIRS,
 } from "@/utils/locations/travelRefreshPolicy";
+import { isTimeVarying } from "@/utils/locations/travelTime";
 
 const MAX_LOCATIONS = 10;
 
@@ -45,6 +48,45 @@ function allConditionsRouted(result: TravelTimeBatchResult): boolean {
     result.regular.status === "OK" &&
     result.night.status === "OK"
   );
+}
+
+// Reserve billed elements against the account-global monthly counter before a
+// matrix call — the hard stop that keeps matrix spend inside the free tier.
+// Runs in a transaction so concurrent fetches can't both slip under the cap;
+// reservation precedes the Google call, so a failed call may overcount, never
+// under.
+async function reserveTravelElements(
+  pairCount: number,
+  transportMode: TransportMode,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const planned = elementsForPairs(pairCount, isTimeVarying(transportMode));
+  return db.$transaction(async (tx) => {
+    const row = await tx.travelApiBudget.findUnique({
+      where: { id: "global" },
+    });
+    const reservation = reserveElements({
+      now: Date.now(),
+      planned,
+      count: row?.elementsThisMonth ?? 0,
+      periodStart: row?.periodStart ?? null,
+    });
+    if (!reservation.allowed) {
+      return { ok: false as const, reason: reservation.reason };
+    }
+    await tx.travelApiBudget.upsert({
+      where: { id: "global" },
+      update: {
+        elementsThisMonth: reservation.nextCount,
+        periodStart: reservation.periodStart,
+      },
+      create: {
+        id: "global",
+        elementsThisMonth: reservation.nextCount,
+        periodStart: reservation.periodStart,
+      },
+    });
+    return { ok: true as const };
+  });
 }
 
 // The one write path for matrix results. Routed pairs store real values and
@@ -419,6 +461,11 @@ export async function fetchMissingTravelTimes(
     return { fetched: 0, skipped: freshPairs.size, failed: 0 };
   }
 
+  const budget = await reserveTravelElements(missingPairs.length, transportMode);
+  if (!budget.ok) {
+    throw new Error(budget.reason);
+  }
+
   const results = await computeTravelTimeMatrix(missingPairs, transportMode);
   const { written, failed } = await writeTravelMatrixResults(
     session.user.id,
@@ -486,6 +533,12 @@ export async function topUpStaleTravelTimes(
     return { refreshed: 0, failed: 0 };
   }
 
+  // Silent path: a budget refusal is a quiet no-op, not an error banner.
+  const budget = await reserveTravelElements(pairs.length, transportMode);
+  if (!budget.ok) {
+    return { refreshed: 0, failed: 0 };
+  }
+
   // Stamp only when elements are actually about to be spent — a no-op check
   // must not consume the day's allowance.
   await db.userSchedulingPreferences.upsert({
@@ -543,12 +596,6 @@ export async function refreshAllTravelTimes(
     throw new Error(verdict.reason);
   }
 
-  await db.userSchedulingPreferences.upsert({
-    where: { userId: session.user.id },
-    update: { lastTravelRefreshAt: new Date() },
-    create: { userId: session.user.id, lastTravelRefreshAt: new Date() },
-  });
-
   const pairs: TravelPair[] = [];
   for (const from of locations) {
     for (const to of locations) {
@@ -559,6 +606,19 @@ export async function refreshAllTravelTimes(
       });
     }
   }
+
+  const budget = await reserveTravelElements(pairs.length, transportMode);
+  if (!budget.ok) {
+    throw new Error(budget.reason);
+  }
+
+  // Stamped only once the run is actually going to spend — a gate or budget
+  // refusal must not consume the hourly cooldown.
+  await db.userSchedulingPreferences.upsert({
+    where: { userId: session.user.id },
+    update: { lastTravelRefreshAt: new Date() },
+    create: { userId: session.user.id, lastTravelRefreshAt: new Date() },
+  });
 
   const results = await computeTravelTimeMatrix(pairs, transportMode);
   const { written, failed } = await writeTravelMatrixResults(

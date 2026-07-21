@@ -68,6 +68,20 @@ model TravelTime {
   @@map("TravelTimes")
 }
 
+// Account-global monthly budget for Routes API matrix elements — the hard
+// stop that keeps matrix spend inside the free tier. Deliberately NOT
+// per-user: Google's free caps pool across the whole billing account. Single
+// row (id "global"), reserved inside a transaction before every matrix call;
+// the count resets when periodStart's month rolls over.
+model TravelApiBudget {
+  id                String   @id @default("global")
+  elementsThisMonth Int      @default(0)
+  periodStart       DateTime
+  updatedAt         DateTime @updatedAt
+
+  @@map("TravelApiBudget")
+}
+
 enum TransportMode {
   DRIVING
   TRANSIT
