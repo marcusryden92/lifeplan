@@ -1,10 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import type { DragZone } from "./CategoryTreeNode";
+import type { CategoryDropTarget } from "./CategoryTreeNode";
 
 const DRAG_THRESHOLD_PX = 8;
-const EDGE_ZONE_PX = 12;
 const AUTO_SCROLL_EDGE_PX = 48;
 const AUTO_SCROLL_MAX_STEP_PX = 14;
 
@@ -29,27 +28,31 @@ function speedForDistance(distance: number): number {
   );
 }
 
-// Touch counterpart to the tree rows' HTML5 drag (which touch browsers never
-// initiate). Same shape as the subtasks list's useTouchDragReorder: the grip
-// captures the touch pointer, hit-testing runs through
-// document.elementFromPoint against the rows' data-category-id, and the drop
-// feeds the page's existing performDrop path. Zones mirror the HTML5
-// onDragOver math exactly.
-export function useTouchCategoryDrag({
+// The rail's one drag system, grip-initiated for mouse and touch alike (same
+// shape as the subtasks list's useTouchDragReorder): the grip captures the
+// pointer, hit-testing runs through document.elementFromPoint against the
+// rows' data-category-id, and the drop feeds the page's existing performDrop
+// path. Rows carry no HTML5 draggable — pointer events keep the cursor and
+// the floating drag pill under our control. Folder semantics: a row is an
+// "into" target, rail space outside any row is the "root" target (move to
+// top level; skipped when the dragged category is already top-level).
+export function useCategoryDrag({
   nodeId,
+  isTopLevel,
   setDraggedId,
   setDragOver,
-  onTouchDrop,
+  onDrop,
 }: {
   nodeId: string;
+  isTopLevel: boolean;
   setDraggedId: (id: string | null) => void;
-  setDragOver: (s: { id: string; zone: DragZone } | null) => void;
-  onTouchDrop: (sourceId: string, targetId: string, zone: DragZone) => void;
+  setDragOver: (s: CategoryDropTarget | null) => void;
+  onDrop: (sourceId: string, target: CategoryDropTarget) => void;
 }) {
   // Window listeners bind at pointerdown; refs keep the latest props reachable
   // from those closures across re-renders.
-  const onTouchDropRef = useRef(onTouchDrop);
-  onTouchDropRef.current = onTouchDrop;
+  const onDropRef = useRef(onDrop);
+  onDropRef.current = onDrop;
   const setDragOverRef = useRef(setDragOver);
   setDragOverRef.current = setDragOver;
   const setDraggedIdRef = useRef(setDraggedId);
@@ -58,7 +61,7 @@ export function useTouchCategoryDrag({
   const pointerIdRef = useRef<number | null>(null);
   const draggingRef = useRef(false);
   const lastPointRef = useRef({ x: 0, y: 0 });
-  const dropRef = useRef<{ id: string; zone: DragZone } | null>(null);
+  const dropRef = useRef<CategoryDropTarget | null>(null);
   const scrollParentRef = useRef<HTMLElement | null>(null);
   const rafRef = useRef<number | null>(null);
   const removeListenersRef = useRef<(() => void) | null>(null);
@@ -89,27 +92,29 @@ export function useTouchCategoryDrag({
     (x: number, y: number) => {
       const el = document.elementFromPoint(x, y);
       const rowEl = el?.closest<HTMLElement>("[data-category-id]");
-      let next: { id: string; zone: DragZone } | null = null;
-      if (rowEl && rowEl.dataset.categoryId !== nodeId) {
-        const rect = rowEl.getBoundingClientRect();
-        const offsetY = y - rect.top;
-        let zone: DragZone;
-        if (offsetY < EDGE_ZONE_PX) zone = "before";
-        else if (offsetY > rect.height - EDGE_ZONE_PX) zone = "after";
-        else zone = "into";
-        next = { id: rowEl.dataset.categoryId as string, zone };
+      let next: CategoryDropTarget | null = null;
+      if (rowEl) {
+        if (rowEl.dataset.categoryId !== nodeId) {
+          next = { kind: "into", id: rowEl.dataset.categoryId as string };
+        }
+      } else if (!isTopLevel && el?.closest("[data-category-root-zone]")) {
+        next = { kind: "root" };
       }
 
       const prev = dropRef.current;
       const unchanged =
         prev === next ||
-        (!!prev && !!next && prev.id === next.id && prev.zone === next.zone);
+        (!!prev &&
+          !!next &&
+          prev.kind === next.kind &&
+          (prev.kind !== "into" ||
+            prev.id === (next as { kind: "into"; id: string }).id));
       if (!unchanged) {
         dropRef.current = next;
         setDragOverRef.current(next);
       }
     },
-    [nodeId],
+    [nodeId, isTopLevel],
   );
 
   const autoScrollStep = useCallback(() => {
@@ -140,8 +145,11 @@ export function useTouchCategoryDrag({
 
   const onGripPointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (e.pointerType !== "touch") return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
       if (pointerIdRef.current !== null) return;
+      // Canceling pointerdown suppresses the mousedown default action, so a
+      // mouse drag doesn't paint a text selection across the rail.
+      if (e.pointerType === "mouse") e.preventDefault();
 
       pointerIdRef.current = e.pointerId;
       draggingRef.current = false;
@@ -172,7 +180,7 @@ export function useTouchCategoryDrag({
         const target = dropRef.current;
         endGesture();
         if (!wasDragging || !target) return;
-        onTouchDropRef.current(nodeId, target.id, target.zone);
+        onDropRef.current(nodeId, target);
       };
 
       const handleCancel = (ev: PointerEvent) => {

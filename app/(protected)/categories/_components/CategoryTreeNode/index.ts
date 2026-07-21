@@ -1,1 +1,4 @@
-export { CategoryTreeNode, type DragZone } from "./CategoryTreeNode";
+export {
+  CategoryTreeNode,
+  type CategoryDropTarget,
+} from "./CategoryTreeNode";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from "uuid";
 import { Plus } from "lucide-react";
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { useCoarsePointer } from "@/hooks/useCoarsePointer";
 import {
   upsertCategory,
   removeCategory,
@@ -23,6 +22,7 @@ import {
 import type { AppDispatch, RootState } from "@/redux/store";
 import {
   buildCategoryTree,
+  compareCategoryNames,
   getCategoryAndDescendants,
 } from "@/utils/categoryUtils";
 import type { Category } from "@/types/prisma";
@@ -30,14 +30,16 @@ import { WeekStructureModal } from "@/components/calendar/WeekStructureModal";
 import { CategoryEditor, SWATCH_PALETTE } from "./_components/CategoryEditor";
 import {
   CategoryTreeNode,
-  type DragZone,
+  type CategoryDropTarget,
 } from "./_components/CategoryTreeNode";
+import { CategoryDragBox } from "./_components/CategoryDragBox";
 import {
   page,
   mainGrid,
   rail,
   railHead,
   railBody,
+  railBodyDragActive,
   railFooter,
   railNewButton,
   mainCard,
@@ -56,7 +58,6 @@ export default function CategoriesPage() {
   );
 
   const isMobile = useIsMobile();
-  const isCoarse = useCoarsePointer();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -64,14 +65,21 @@ export default function CategoriesPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [windowsOpen, setWindowsOpen] = useState(false);
   const [editorSheetOpen, setEditorSheetOpen] = useState(false);
-  // Native HTML5 drag state. draggedId tracks the source; dragOver tracks
-  // which row + which third of it the pointer is currently over so the
-  // TreeNode can paint the right indicator.
+  // Grip-pointer drag state (useCategoryDrag drives it). draggedId tracks
+  // the source; dragOver tracks the current folder-style target (a row to
+  // nest into, or the rail background = move to top level); droppedId runs
+  // the post-drop landing flash on the moved row.
   const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dragOver, setDragOver] = useState<{
-    id: string;
-    zone: DragZone;
-  } | null>(null);
+  const [dragOver, setDragOver] = useState<CategoryDropTarget | null>(null);
+  const [droppedId, setDroppedId] = useState<string | null>(null);
+  const dropFlashTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (dropFlashTimer.current !== null)
+        window.clearTimeout(dropFlashTimer.current);
+    },
+    [],
+  );
 
   const tree = useMemo(() => buildCategoryTree(categories), [categories]);
 
@@ -103,7 +111,11 @@ export default function CategoriesPage() {
 
   const subCategories = useMemo(
     () =>
-      selected ? categories.filter((c) => c.parentId === selected.id) : [],
+      selected
+        ? categories
+            .filter((c) => c.parentId === selected.id)
+            .sort(compareCategoryNames)
+        : [],
     [categories, selected],
   );
 
@@ -183,73 +195,56 @@ export default function CategoriesPage() {
     if (isMobile && effectiveSelectedId) setEditorSheetOpen(true);
   };
 
-  // Drag-and-drop: reorder siblings or reparent. Dropping onto the middle of
-  // a row makes the dragged a child of the target; top/bottom thirds insert
-  // it as a sibling before/after. Affected siblings are renumbered densely
-  // (0..N-1) and dispatched — the sync layer batches them into one server
-  // transaction. Cycle prevention: refuse to drop a category onto any of its
-  // own descendants. Two entry points: the rows' native HTML5 drag (mouse)
-  // and the grip's pointer drag (touch), which passes its source explicitly
-  // because its listeners outlive the render that bound them.
-  const performDrop = (sourceId: string, targetId: string, zone: DragZone) => {
-    if (sourceId === targetId) return;
-
-    const descendants = new Set(
-      getCategoryAndDescendants(sourceId, categories),
-    );
-    if (descendants.has(targetId)) return;
-
+  // Drag-and-drop is folder-like: sibling order between categories has no
+  // scheduling meaning, so there is no reordering. Dropping onto a row nests
+  // the dragged category under it (appended after its new siblings); dropping
+  // on the rail background moves it out to top level. Cycle prevention:
+  // refuse to drop a category onto any of its own descendants. One entry
+  // point: the grip's pointer drag (mouse and touch), which passes its source
+  // explicitly because its listeners outlive the render that bound them.
+  const performDrop = (sourceId: string, target: CategoryDropTarget) => {
     const dragged = categories.find((c) => c.id === sourceId);
-    const target = categories.find((c) => c.id === targetId);
-    if (!dragged || !target) return;
+    if (!dragged) return false;
 
-    const newParentId = zone === "into" ? target.id : target.parentId;
-    const newSiblings = categories
-      .filter((c) => c.parentId === newParentId && c.id !== sourceId)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+    const newParentId = target.kind === "into" ? target.id : null;
+    if (newParentId === dragged.parentId) return false;
 
-    let insertIdx: number;
-    if (zone === "into") {
-      insertIdx = newSiblings.length;
-    } else {
-      const targetIdx = newSiblings.findIndex((s) => s.id === targetId);
-      insertIdx = zone === "before" ? targetIdx : targetIdx + 1;
+    if (target.kind === "into") {
+      if (target.id === sourceId) return false;
+      const descendants = new Set(
+        getCategoryAndDescendants(sourceId, categories),
+      );
+      if (descendants.has(target.id)) return false;
+      if (!categories.some((c) => c.id === target.id)) return false;
     }
+
+    const siblingMax = categories
+      .filter((c) => c.parentId === newParentId && c.id !== sourceId)
+      .reduce((max, c) => Math.max(max, c.sortOrder), -1);
 
     const moved: Category = {
       ...dragged,
       parentId: newParentId,
-      sortOrder: insertIdx,
+      sortOrder: siblingMax + 1,
     };
-    newSiblings.splice(insertIdx, 0, moved);
-
-    for (let i = 0; i < newSiblings.length; i++) {
-      const sib = newSiblings[i];
-      if (sib.id === sourceId || sib.sortOrder !== i) {
-        dispatch(upsertCategory({ ...sib, sortOrder: i }));
-      }
-    }
+    dispatch(upsertCategory(moved));
     updateAll();
 
-    if (zone === "into") {
-      setExpanded((prev) => new Set(prev).add(targetId));
+    if (target.kind === "into") {
+      setExpanded((prev) => new Set(prev).add(target.id));
     }
+    return true;
   };
 
-  const handleDrop = (targetId: string, zone: DragZone) => {
-    const sourceId = draggedId;
-    setDraggedId(null);
-    setDragOver(null);
-    if (!sourceId) return;
-    performDrop(sourceId, targetId, zone);
-  };
-
-  const handleTouchDrop = (
-    sourceId: string,
-    targetId: string,
-    zone: DragZone,
-  ) => {
-    performDrop(sourceId, targetId, zone);
+  const handleDrop = (sourceId: string, target: CategoryDropTarget) => {
+    if (!performDrop(sourceId, target)) return;
+    if (dropFlashTimer.current !== null)
+      window.clearTimeout(dropFlashTimer.current);
+    setDroppedId(sourceId);
+    dropFlashTimer.current = window.setTimeout(() => {
+      setDroppedId(null);
+      dropFlashTimer.current = null;
+    }, 700);
   };
 
   const handleCreate = (parentId: string | null = null) => {
@@ -341,9 +336,15 @@ export default function CategoriesPage() {
       {error && <div className={errorBanner}>{error}</div>}
 
       <div className={mainGrid}>
-        <aside className={rail}>
+        <aside
+          className={rail}
+          data-category-root-zone="true"
+          data-drag-over-root={dragOver?.kind === "root" ? "true" : undefined}
+        >
           <div className={railHead}>Roles</div>
-          <div className={railBody}>
+          <div
+            className={`${railBody} ${draggedId ? railBodyDragActive : ""}`}
+          >
             {!isLoaded ? (
               <div
                 style={{
@@ -384,8 +385,7 @@ export default function CategoriesPage() {
                   dragOver={dragOver}
                   setDragOver={setDragOver}
                   onDrop={handleDrop}
-                  showGrip={isCoarse}
-                  onTouchDrop={handleTouchDrop}
+                  droppedId={droppedId}
                 />
               ))
             )}
@@ -444,6 +444,14 @@ export default function CategoriesPage() {
           {editorElement}
         </BottomSheet>
       )}
+
+      <CategoryDragBox
+        label={
+          draggedId
+            ? (categories.find((c) => c.id === draggedId)?.name ?? null)
+            : null
+        }
+      />
 
       <WeekStructureModal
         open={windowsOpen}

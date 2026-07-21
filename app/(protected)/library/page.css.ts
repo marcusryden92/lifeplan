@@ -391,7 +391,8 @@ export const tableWrap = style({
 // almost-always-horizontal-scrolling table.
 export const tableHead = style({
   display: "grid",
-  gridTemplateColumns: "28px 1fr 80px 100px 110px 130px 120px 90px 52px",
+  gridTemplateColumns:
+    "28px minmax(100px, 1fr) 80px 100px 110px 130px 120px 90px 52px",
   padding: "12px 8px 10px",
   borderBottom: `1px solid ${vars.rule}`,
   position: "sticky",
@@ -466,7 +467,8 @@ export const tableRow = style([
   text.row,
   {
     display: "grid",
-    gridTemplateColumns: "28px 1fr 80px 100px 110px 130px 120px 90px 52px",
+    gridTemplateColumns:
+      "28px minmax(100px, 1fr) 80px 100px 110px 130px 120px 90px 52px",
     padding: "12px 8px",
     alignItems: "center",
     borderBottom: `1px solid ${vars.rule}`,
