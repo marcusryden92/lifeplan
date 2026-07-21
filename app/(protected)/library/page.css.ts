@@ -14,7 +14,6 @@ export const page = style({
     [media.mobile]: {
       flex: "0 0 auto",
       minHeight: "auto",
-      paddingTop: space["16"],
     },
   },
 });

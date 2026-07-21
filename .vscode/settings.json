@@ -1,0 +1,11 @@
+{
+  "files.watcherExclude": {
+    "**/.next/**": true,
+    "**/generated/**": true,
+    "**/node_modules/**": true
+  },
+  "search.exclude": {
+    "**/.next": true,
+    "**/generated": true
+  }
+}

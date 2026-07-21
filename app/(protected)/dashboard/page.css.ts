@@ -32,8 +32,6 @@ export const gridWrap = style({
       flexDirection: "column",
       flex: "1 0 auto",
       padding: 0,
-      // eslint-disable-next-line theme/no-raw-scale-values
-      paddingBottom: 150,
       gap: space["3.5"],
     },
   },

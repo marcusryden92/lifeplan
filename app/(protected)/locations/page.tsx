@@ -9,7 +9,7 @@ import {
   ConfirmModal,
   Loader,
   PageHeader,
-  SegmentedControl,
+  ResponsiveSegmentedControl,
   vars,
 } from "@/components/ui";
 import { useFlashValue } from "@/hooks/useFlashAnimation";
@@ -166,12 +166,10 @@ export default function LocationsPage() {
   const timeVarying = isTimeVarying(transportMode);
   const anyCustomOverride = travelTimes.some(hasCustomOverride);
 
-  const editingLocation =
-    modal.kind === "edit" ? modal.location : null;
+  const editingLocation = modal.kind === "edit" ? modal.location : null;
   const editPair =
     modal.kind === "travel" ? { from: modal.from, to: modal.to } : null;
-  const deletingId =
-    modal.kind === "confirmDelete" ? modal.locationId : null;
+  const deletingId = modal.kind === "confirmDelete" ? modal.locationId : null;
   const confirmClearAll = modal.kind === "confirmClearAll";
 
   const selectedTravelTime = editPair
@@ -417,12 +415,12 @@ export default function LocationsPage() {
         {success && !combinedError && (
           <div className={successBanner}>{success}</div>
         )}
-        <span className={spacer} />
         <div className={headActions}>
-          <SegmentedControl<TransportMode>
+          <ResponsiveSegmentedControl<TransportMode>
             value={transportMode}
             onChange={handleTransportChange}
             options={TRANSPORT_MODE_OPTIONS}
+            ariaLabel="Travel mode"
           />
           <Button
             variant="glass"

@@ -13,7 +13,7 @@ import {
   openCalendarLink,
   routeName,
 } from "./DashboardHeader.css";
-import { mobileGuard } from "@/lib/theme";
+import { mobileGuard, mobileLandscapeGuard } from "@/lib/theme";
 import clsx from "clsx";
 
 type Props = {
@@ -31,7 +31,7 @@ export function DashboardHeader({ greetingText, dateText, summary }: Props) {
   return (
     <div className={headerRow}>
       <div className={titleContainer}>
-        <span className={routeName}>Dashboard</span>
+        <span className={clsx(routeName, mobileLandscapeGuard)}>Dashboard</span>
         <h1 className={greeting}>{greetingText}</h1>
         <div className={summaryLine}>
           <span className={summaryStrong}>{dateText}</span>

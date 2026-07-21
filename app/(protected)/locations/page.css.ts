@@ -5,7 +5,6 @@ import { display, text, fieldLabel } from "@/lib/theme/typography.css";
 import { colorMixAlpha } from "@/lib/theme/effects";
 import { themeTransition } from "@/lib/theme/transitions";
 
-
 export const page = style({
   position: "relative",
   display: "flex",
@@ -38,6 +37,12 @@ export const headActions = style({
   // row wraps it onto its own line — without it, a wrapped row reverts to the
   // left edge and the title sits visually orphaned.
   marginLeft: "auto",
+  "@media": {
+    [media.mobile]: {
+      marginLeft: 0,
+      marginTop: space["6"],
+    },
+  },
 });
 
 // Inline status pill that sits in the PageHeader row before the action
@@ -372,7 +377,10 @@ export const matrixFooterAction = style({
   color: vars.status.error,
   padding: 0,
   selectors: {
-    "&:hover:not(:disabled)": { color: vars.status.error, textDecoration: "underline" },
+    "&:hover:not(:disabled)": {
+      color: vars.status.error,
+      textDecoration: "underline",
+    },
     "&:disabled": { textDecoration: "none" },
   },
 });

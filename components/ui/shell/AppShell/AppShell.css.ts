@@ -68,6 +68,7 @@ export const mainColumn = style({
       // Top band clears the fixed corner actions (CornerActions, mobile-only);
       // bottom band clears the floating menu.
       paddingTop: 0,
+      paddingBottom: space["23"],
       WebkitOverflowScrolling: "touch",
     },
   },
