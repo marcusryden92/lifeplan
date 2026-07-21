@@ -242,60 +242,122 @@ export function intersectIntervalWithAllowed(
   return current;
 }
 
-// Exact longest contiguous allowed block (in nominal minutes) in a generic
-// week under the whole chain — the capacity ceiling that turns an impossible
-// duration into a loud TOO_LARGE instead of an expansion-burning NO_SLOTS.
-// Computed on a two-week unroll so blocks chaining across midnight and across
-// the week seam measure correctly; a block covering a full week means the
-// pattern never breaks, i.e. no ceiling.
-export function maxAllowedBlockMinutes(
-  settingsChain: AllowedTimesSettings[],
-): number {
-  if (settingsChain.length === 0) return Infinity;
+// Generic-week minute-space machinery shared by the capacity ceilings below.
+// Two-week unroll so blocks chaining across midnight and across the week seam
+// measure correctly.
+type MinuteInterval = { start: number; end: number };
 
-  const unrollWeeks = 2;
-  let current: Array<{ start: number; end: number }> = [
-    { start: 0, end: unrollWeeks * MINUTES_PER_WEEK },
-  ];
+const CEILING_UNROLL_WEEKS = 2;
 
-  for (const settings of settingsChain) {
-    const weekly: Array<{ start: number; end: number }> = [];
-    for (let week = 0; week < unrollWeeks; week++) {
-      for (let day = 0; day < 7; day++) {
-        if (!dayIsAllowed(settings, day)) continue;
-        const dayBase = week * MINUTES_PER_WEEK + day * MINUTES_PER_DAY;
-        if (settings.ranges === null) {
-          weekly.push({ start: dayBase, end: dayBase + MINUTES_PER_DAY });
-        } else {
-          for (const range of settings.ranges) {
-            const { startMin, endMin } = rangeBoundsMinutes(range);
-            weekly.push({ start: dayBase + startMin, end: dayBase + endMin });
-          }
+function mergeMinuteIntervals(intervals: MinuteInterval[]): MinuteInterval[] {
+  intervals.sort((a, b) => a.start - b.start);
+  const merged: MinuteInterval[] = [];
+  for (const interval of intervals) {
+    const last = merged[merged.length - 1];
+    if (last && interval.start <= last.end) {
+      if (interval.end > last.end) last.end = interval.end;
+    } else {
+      merged.push({ ...interval });
+    }
+  }
+  return merged;
+}
+
+function intersectMinuteIntervals(
+  a: MinuteInterval[],
+  b: MinuteInterval[],
+): MinuteInterval[] {
+  const next: MinuteInterval[] = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length && j < b.length) {
+    const start = Math.max(a[i].start, b[j].start);
+    const end = Math.min(a[i].end, b[j].end);
+    if (start < end) next.push({ start, end });
+    if (a[i].end <= b[j].end) i++;
+    else j++;
+  }
+  return next;
+}
+
+function weeklySettingsIntervals(
+  settings: AllowedTimesSettings,
+): MinuteInterval[] {
+  const weekly: MinuteInterval[] = [];
+  for (let week = 0; week < CEILING_UNROLL_WEEKS; week++) {
+    for (let day = 0; day < 7; day++) {
+      if (!dayIsAllowed(settings, day)) continue;
+      const dayBase = week * MINUTES_PER_WEEK + day * MINUTES_PER_DAY;
+      if (settings.ranges === null) {
+        weekly.push({ start: dayBase, end: dayBase + MINUTES_PER_DAY });
+      } else {
+        for (const range of settings.ranges) {
+          const { startMin, endMin } = rangeBoundsMinutes(range);
+          weekly.push({ start: dayBase + startMin, end: dayBase + endMin });
         }
       }
     }
-    weekly.sort((a, b) => a.start - b.start);
-    const merged: Array<{ start: number; end: number }> = [];
-    for (const interval of weekly) {
-      const last = merged[merged.length - 1];
-      if (last && interval.start <= last.end) {
-        if (interval.end > last.end) last.end = interval.end;
-      } else {
-        merged.push({ ...interval });
-      }
-    }
+  }
+  return mergeMinuteIntervals(weekly);
+}
 
-    const next: Array<{ start: number; end: number }> = [];
-    let i = 0;
-    let j = 0;
-    while (i < current.length && j < merged.length) {
-      const start = Math.max(current[i].start, merged[j].start);
-      const end = Math.min(current[i].end, merged[j].end);
-      if (start < end) next.push({ start, end });
-      if (current[i].end <= merged[j].end) i++;
-      else j++;
+// One weekly recurrence of a category window (CategoryTimeWindow shape);
+// same wrap convention as AllowedTimeRange.
+export interface WeeklyWindowOccurrence extends AllowedTimeRange {
+  day: number;
+}
+
+function weeklyWindowIntervals(
+  windows: WeeklyWindowOccurrence[],
+): MinuteInterval[] {
+  const weekly: MinuteInterval[] = [];
+  for (let week = 0; week < CEILING_UNROLL_WEEKS; week++) {
+    for (const window of windows) {
+      if (!Number.isInteger(window.day) || window.day < 0 || window.day > 6) {
+        continue;
+      }
+      const { startMin, endMin } = rangeBoundsMinutes(window);
+      const dayBase = week * MINUTES_PER_WEEK + window.day * MINUTES_PER_DAY;
+      weekly.push({ start: dayBase + startMin, end: dayBase + endMin });
     }
-    current = next;
+  }
+  return mergeMinuteIntervals(weekly);
+}
+
+// Exact longest contiguous allowed block (in nominal minutes) in a generic
+// week under the whole chain — the capacity ceiling that turns an impossible
+// duration into a loud TOO_LARGE instead of an expansion-burning NO_SLOTS.
+// A block covering a full week means the pattern never breaks, i.e. no ceiling.
+export function maxAllowedBlockMinutes(
+  settingsChain: AllowedTimesSettings[],
+): number {
+  return maxConstrainedBlockMinutes(settingsChain, null);
+}
+
+// Same ceiling with the eligible category windows folded in as a TRUE weekly
+// intersection: 0 means the allowed-times pattern and the windows never
+// coincide in any week — the item is structurally unplaceable, no matter how
+// far the horizon expands. (min() of the two independent ceilings cannot see
+// this: windows Monday + allowed times Tuesday both look roomy on their own.)
+export function maxConstrainedBlockMinutes(
+  settingsChain: AllowedTimesSettings[],
+  windows: WeeklyWindowOccurrence[] | null,
+): number {
+  const hasWindows = !!windows && windows.length > 0;
+  if (settingsChain.length === 0 && !hasWindows) return Infinity;
+
+  let current: MinuteInterval[] = [
+    { start: 0, end: CEILING_UNROLL_WEEKS * MINUTES_PER_WEEK },
+  ];
+  for (const settings of settingsChain) {
+    current = intersectMinuteIntervals(
+      current,
+      weeklySettingsIntervals(settings),
+    );
+    if (current.length === 0) return 0;
+  }
+  if (hasWindows) {
+    current = intersectMinuteIntervals(current, weeklyWindowIntervals(windows));
     if (current.length === 0) return 0;
   }
 

@@ -3,17 +3,10 @@
 
 - Progressive 'readying' of subtasks
 - Subtasks that are just notes (ignore-in-engine boolean)
-- Notes INSIDE items
 
 - 'Schedule X hours per week of this until.." - feature.
 
-- Warning when time restraints + category windows results in 0 possible time slots for a given item
-
-- Saving mindmap and graph visual states in db (probably needs a reset button)
-
 - Add full-day-items like "birthday"
-
-- Weird dragged event jumping in WeekStructureModal when placing one item on another where it isn't allowed
 
 # P5 — Medium features
 

@@ -1,7 +1,7 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
 import { space, radii, media } from "@/lib/theme/scales";
-import { iconBtn } from "@/lib/theme/recipes.css";
+import { formInput, iconBtn } from "@/lib/theme/recipes.css";
 import { display, text, fieldLabel as fieldLabelPreset } from "@/lib/theme/typography.css";
 import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
 
@@ -171,6 +171,18 @@ export const dateInputFaded = style({
   opacity: 0.4,
   transition: "opacity 160ms ease",
 });
+
+export const notesInput = style([
+  formInput({ variant: "boxed" }),
+  {
+    display: "block",
+    minHeight: 72,
+    resize: "vertical",
+    lineHeight: 1.55,
+    paddingTop: space["2"],
+    paddingBottom: space["2"],
+  },
+]);
 
 export const drawerFooter = style({
   display: "flex",

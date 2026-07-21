@@ -48,6 +48,7 @@ model Planner {
   earliestStartDate    String? // Tasks + goals — the engine never places the item (or its subtree) before this instant; inherits down the tree as the max over ancestors
   allowedTimes         String? // JSON AllowedTimesSettings ({days, ranges}); tasks + goals — restricts dynamic placement to the given weekdays / time-of-day ranges, intersected down the tree
   linkedItemId         String? // Detour: on a subtask placeholder, points to a root goal/task whose leaves the engine splices in at this position (the placeholder's own duration/children are ignored while set). SetNull on target delete.
+  notes                String? // Free-form user notes; never read by the engine
   sortOrder          Float       @default(0) // Fractional key ordering siblings within a parentId group; 0 on top-level roots (order non-semantic)
   completedStartTime String?
   completedEndTime   String?

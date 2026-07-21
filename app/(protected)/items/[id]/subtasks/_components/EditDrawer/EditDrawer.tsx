@@ -67,6 +67,7 @@ import {
   splitToggleRow,
   splitHint,
   dateInputFaded,
+  notesInput,
   completeSection,
   completeHeader,
   completeCheckbox,
@@ -144,6 +145,7 @@ export function EditDrawer() {
   }, [planner, task, queues, dependencies]);
 
   const [titleDraft, setTitleDraft] = useState("");
+  const [notesDraft, setNotesDraft] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPromoteConfirm, setShowPromoteConfirm] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -151,6 +153,10 @@ export function EditDrawer() {
   useEffect(() => {
     setTitleDraft(task?.title ?? "");
   }, [task?.id, task?.title]);
+
+  useEffect(() => {
+    setNotesDraft(null);
+  }, [task?.id]);
 
   // Escape closes the drawer. defaultPrevented check yields to any open Radix
   // Dialog above (the delete confirm) — Radix's dismissable-layer calls
@@ -208,6 +214,19 @@ export function EditDrawer() {
           : p,
       ),
     );
+  };
+
+  const commitNotes = () => {
+    if (notesDraft === null) return;
+    const next = notesDraft.trim() ? notesDraft : null;
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === task.id
+          ? { ...p, notes: next, updatedAt: new Date().toISOString() }
+          : p,
+      ),
+    );
+    setNotesDraft(null);
   };
 
   const onTitleKey = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -549,6 +568,18 @@ export function EditDrawer() {
         )}
           </>
         )}
+
+        <FieldStack size="sm" label="Notes">
+          <textarea
+            className={notesInput}
+            value={notesDraft ?? task.notes ?? ""}
+            placeholder="Anything worth keeping with this subtask…"
+            onChange={(e) => setNotesDraft(e.target.value)}
+            onBlur={commitNotes}
+            rows={3}
+            aria-label="Notes"
+          />
+        </FieldStack>
       </div>
 
       <div className={drawerFooter}>

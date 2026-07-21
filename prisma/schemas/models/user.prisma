@@ -39,6 +39,7 @@ model User {
   queues                Queue[]
   queueMembers          QueueMember[]
   plannerDependencies   PlannerDependency[]
+  viewState             UserViewState?
 
   @@map("users")
 }

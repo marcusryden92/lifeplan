@@ -68,6 +68,7 @@ export const createPlanFromSelection = (
     earliestStartDate: null,
     allowedTimes: null,
     linkedItemId: null,
+    notes: null,
     sortOrder: 0,
     priority: 5,
     completedStartTime: null,

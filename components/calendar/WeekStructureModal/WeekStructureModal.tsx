@@ -7,7 +7,10 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type {
   DateSelectArg,
+  DateSpanApi,
+  EventApi,
   EventClickArg,
+  EventContentArg,
   EventDropArg,
 } from "@fullcalendar/core";
 import type { EventResizeDoneArg } from "@fullcalendar/interaction";
@@ -87,6 +90,19 @@ type Mode = "templates" | "windows";
 function rangeAllowed(start: Date, end: Date): boolean {
   return end > start && durationMinutes(start, end) <= 24 * 60;
 }
+
+// Identity-stable FullCalendar options (see the contract in Calendar.tsx /
+// CLAUDE.md): the React connector shallow-diffs its props, and a fresh inline
+// array/object counts as a changed option — an internal option reset landing
+// mid-drag corrupts the drag/revert state machine (a rejected drop's tile is
+// left painted wherever the disturbed interaction dropped it).
+const PLUGINS = [dayGridPlugin, timeGridPlugin, interactionPlugin];
+const TIME_FORMAT_24H = {
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+} as const;
+const DAY_HEADER_FORMAT = { weekday: "short" } as const;
 
 interface WeekStructureModalProps {
   open: boolean;
@@ -275,6 +291,56 @@ export function WeekStructureModal({
     [winsWorking],
   );
 
+  const selectAllow = useCallback(
+    (info: DateSpanApi) => {
+      if (!rangeAllowed(info.start, info.end)) return false;
+      if (mode === "windows" && overlapsWindow(info.start, info.end, null)) {
+        return false;
+      }
+      return true;
+    },
+    [mode, overlapsWindow],
+  );
+
+  // Direct DOM writes: eventAllow fires per hovered position during a drag,
+  // and a React state write from there would re-render mid-interaction — the
+  // exact churn the identity-stable options exist to prevent.
+  const calendarHostRef = useRef<HTMLDivElement>(null);
+  const setDropInvalid = useCallback((invalid: boolean) => {
+    const host = calendarHostRef.current;
+    if (!host) return;
+    if (invalid) host.dataset.dropInvalid = "true";
+    else delete host.dataset.dropInvalid;
+  }, []);
+  const clearDropInvalid = useCallback(
+    () => setDropInvalid(false),
+    [setDropInvalid],
+  );
+
+  const eventAllow = useCallback(
+    (info: DateSpanApi, draggedEvent: EventApi | null) => {
+      if (!info.start || !info.end) return false;
+      if (!rangeAllowed(info.start, info.end)) return false;
+      const ext = draggedEvent?.extendedProps as
+        | {
+            kind?: "template" | "window";
+            windowId?: string;
+          }
+        | undefined;
+      if (ext?.kind === "window") {
+        // Rejecting the position here would nudge the preview away from the
+        // cursor — jumpy and annoying. Let the preview keep following, mark
+        // the host so the tile paints red, and let the drop handler revert
+        // on release.
+        setDropInvalid(
+          overlapsWindow(info.start, info.end, ext.windowId ?? null),
+        );
+      }
+      return true;
+    },
+    [overlapsWindow, setDropInvalid],
+  );
+
   const handleEventClick = useCallback((info: EventClickArg) => {
     const ext = info.event.extendedProps as {
       kind: "template" | "window";
@@ -289,6 +355,43 @@ export function WeekStructureModal({
       setSelected({ kind: "windows", id: ext.windowId });
     }
   }, []);
+
+  // Selection never changes mid-drag, so [selected] keeps this stable through
+  // every interaction that matters.
+  const renderEventTile = useCallback(
+    ({ event, timeText }: EventContentArg) => {
+      const ext = event.extendedProps as {
+        kind: "template" | "window";
+        templateId?: string;
+        windowId?: string;
+        color: string;
+        active: boolean;
+        assigned?: boolean;
+        focused?: boolean;
+      };
+      const isSelected =
+        selected !== null &&
+        ((selected.kind === "templates" &&
+          ext.kind === "template" &&
+          ext.templateId === selected.id) ||
+          (selected.kind === "windows" &&
+            ext.kind === "window" &&
+            ext.windowId === selected.id));
+      return (
+        <EventTile
+          title={event.title}
+          timeText={timeText}
+          kind={ext.kind}
+          color={ext.color}
+          active={ext.active}
+          assigned={ext.assigned}
+          focused={ext.focused}
+          selected={isSelected}
+        />
+      );
+    },
+    [selected],
+  );
 
   const handleEventDrop = useCallback(
     (info: EventDropArg) => {
@@ -331,6 +434,13 @@ export function WeekStructureModal({
           ),
         );
       } else if (ext.kind === "window" && ext.windowId) {
+        // eventAllow already rejects this live; the post-hoc check makes the
+        // revert deterministic — this is the one path with no corrective
+        // state write, so it must never trust the live rejection alone.
+        if (overlapsWindow(start, end, ext.windowId)) {
+          info.revert();
+          return;
+        }
         setWinsWorking((prev) =>
           prev.map((w) =>
             w.id === ext.windowId
@@ -351,7 +461,7 @@ export function WeekStructureModal({
         );
       }
     },
-    [setTplsWorking, setWinsWorking],
+    [setTplsWorking, setWinsWorking, overlapsWindow],
   );
 
   const handleEventResize = useCallback(
@@ -391,6 +501,10 @@ export function WeekStructureModal({
           ),
         );
       } else if (ext.kind === "window" && ext.windowId) {
+        if (overlapsWindow(start, end, ext.windowId)) {
+          info.revert();
+          return;
+        }
         setWinsWorking((prev) =>
           prev.map((w) =>
             w.id === ext.windowId
@@ -408,7 +522,7 @@ export function WeekStructureModal({
         );
       }
     },
-    [setTplsWorking, setWinsWorking],
+    [setTplsWorking, setWinsWorking, overlapsWindow],
   );
 
   const updateTemplate = (id: string, patch: Partial<EventTemplate>) => {
@@ -626,11 +740,14 @@ export function WeekStructureModal({
               </span>
             </div>
 
-            <div className={`${calendarWrap} week-structure-fc`}>
+            <div
+              className={`${calendarWrap} week-structure-fc`}
+              ref={calendarHostRef}
+            >
               <FullCalendar
                 ref={calendarRef}
                 initialDate={REFERENCE_WEEK_DATE}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+                plugins={PLUGINS}
                 events={events}
                 initialView="timeGridWeek"
                 firstDay={weekStartDay}
@@ -640,88 +757,24 @@ export function WeekStructureModal({
                 scrollTime="06:00:00"
                 height="100%"
                 headerToolbar={false}
-                slotLabelFormat={{
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                }}
-                eventTimeFormat={{
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  hour12: false,
-                }}
+                slotLabelFormat={TIME_FORMAT_24H}
+                eventTimeFormat={TIME_FORMAT_24H}
                 editable={true}
                 eventResizableFromStart={true}
                 eventOverlap={true}
                 selectable={true}
                 selectMirror={true}
-                selectAllow={(info) => {
-                  if (!rangeAllowed(info.start, info.end)) return false;
-                  if (
-                    mode === "windows" &&
-                    overlapsWindow(info.start, info.end, null)
-                  )
-                    return false;
-                  return true;
-                }}
-                eventAllow={(info, draggedEvent) => {
-                  if (!info.start || !info.end) return false;
-                  if (!rangeAllowed(info.start, info.end)) return false;
-                  const ext = draggedEvent?.extendedProps as
-                    | {
-                        kind?: "template" | "window";
-                        windowId?: string;
-                      }
-                    | undefined;
-                  if (ext?.kind === "window") {
-                    if (
-                      overlapsWindow(
-                        info.start,
-                        info.end,
-                        ext.windowId ?? null,
-                      )
-                    )
-                      return false;
-                  }
-                  return true;
-                }}
+                selectAllow={selectAllow}
+                eventAllow={eventAllow}
                 allDaySlot={false}
-                dayHeaderFormat={{ weekday: "short" }}
+                dayHeaderFormat={DAY_HEADER_FORMAT}
                 select={handleSelect}
                 eventClick={handleEventClick}
                 eventDrop={handleEventDrop}
                 eventResize={handleEventResize}
-                eventContent={({ event, timeText }) => {
-                  const ext = event.extendedProps as {
-                    kind: "template" | "window";
-                    templateId?: string;
-                    windowId?: string;
-                    color: string;
-                    active: boolean;
-                    assigned?: boolean;
-                    focused?: boolean;
-                  };
-                  const isSelected =
-                    selected !== null &&
-                    ((selected.kind === "templates" &&
-                      ext.kind === "template" &&
-                      ext.templateId === selected.id) ||
-                      (selected.kind === "windows" &&
-                        ext.kind === "window" &&
-                        ext.windowId === selected.id));
-                  return (
-                    <EventTile
-                      title={event.title}
-                      timeText={timeText}
-                      kind={ext.kind}
-                      color={ext.color}
-                      active={ext.active}
-                      assigned={ext.assigned}
-                      focused={ext.focused}
-                      selected={isSelected}
-                    />
-                  );
-                }}
+                eventDragStop={clearDropInvalid}
+                eventResizeStop={clearDropInvalid}
+                eventContent={renderEventTile}
               />
             </div>
           </div>

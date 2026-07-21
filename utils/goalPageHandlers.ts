@@ -55,6 +55,7 @@ export function addSubtask({
       earliestStartDate: null,
       allowedTimes: null,
       linkedItemId: null,
+      notes: null,
       sortOrder: appendKey(getSubtasksById(planner, task.id)),
       completedStartTime: null,
       completedEndTime: null,

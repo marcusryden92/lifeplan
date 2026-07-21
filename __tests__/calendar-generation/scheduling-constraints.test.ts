@@ -1,7 +1,17 @@
 import { generateCalendar } from "@/utils/calendar-generation/calendarGeneration";
-import { taskTooLargeId } from "@/utils/calendar-generation/models/EngineMessage";
+import {
+  taskTooLargeId,
+  taskUnschedulableId,
+} from "@/utils/calendar-generation/models/EngineMessage";
+import { SchedulingFailureReason } from "@/utils/calendar-generation/constants";
 import { serializeAllowedTimes } from "@/utils/allowedTimes";
-import type { EventTemplate, Planner, SimpleEvent } from "@/types/prisma";
+import type {
+  Category,
+  CategoryTimeWindow,
+  EventTemplate,
+  Planner,
+  SimpleEvent,
+} from "@/types/prisma";
 
 // Per-item scheduling constraints: earliestStartDate keeps a task/goal off the
 // calendar before a given instant (riding the same afterTime seam goal-leaf
@@ -56,6 +66,7 @@ function makePlanner(id: string, overrides: Partial<Planner>): Planner {
     earliestStartDate: null,
     allowedTimes: null,
     linkedItemId: null,
+    notes: null,
     sortOrder: 0,
     completedStartTime: null,
     completedEndTime: null,
@@ -230,6 +241,103 @@ describe("allowedTimes", () => {
 
     expect(placedSecond.start).toBe(placedFirst.start);
     expect(placedSecond.end).toBe(placedFirst.end);
+  });
+});
+
+// Allowed times × category windows: when the two weekly patterns never
+// coincide, the item is structurally unplaceable — the gate must fail it loud
+// as IMPOSSIBLE_CONSTRAINTS instead of burning the expansion budget toward a
+// generic NO_SLOTS.
+describe("impossible constraint intersection", () => {
+  const CATEGORY_ID = "cat-monday";
+  const MONDAY = 1;
+
+  function makeWindowCategory(): Category {
+    const ts = FAKE_TODAY.toISOString();
+    return {
+      id: CATEGORY_ID,
+      name: "Monday work",
+      icon: null,
+      color: null,
+      sortOrder: 0,
+      useTimeWindows: true,
+      isStrict: false,
+      confineToOwnWindows: false,
+      locationId: null,
+      parentId: null,
+      userId: USER_ID,
+      createdAt: ts,
+      updatedAt: ts,
+      timeSlots: [
+        {
+          id: "win-monday",
+          day: MONDAY,
+          startTime: "09:00",
+          endTime: "12:00",
+          recurrenceExceptions: null,
+          categoryId: CATEGORY_ID,
+          userId: USER_ID,
+        } as CategoryTimeWindow,
+      ],
+    } as Category;
+  }
+
+  function runWithCategory(planners: Planner[]) {
+    return generateCalendar(USER_ID, 1, SLEEP_TEMPLATES, planners, [], {
+      categories: [makeWindowCategory()],
+      injectTravelEvents: false,
+    });
+  }
+
+  it("fails loud when allowed times and category windows never overlap", () => {
+    const impossible = makePlanner("task-impossible", {
+      categoryId: CATEGORY_ID,
+      allowedTimes: serializeAllowedTimes({ days: [TUESDAY], ranges: null }),
+    });
+    // Same category, no allowed times: proves the window fabric hosts work.
+    const control = makePlanner("task-window-control", {
+      categoryId: CATEGORY_ID,
+    });
+
+    const { events, messages } = runWithCategory([impossible, control]);
+
+    expect(events.find((e) => e.id === "task-impossible")).toBeUndefined();
+    expect(
+      messages.some(
+        (m) =>
+          m.id ===
+          taskUnschedulableId(
+            "task-impossible",
+            SchedulingFailureReason.IMPOSSIBLE_CONSTRAINTS,
+          ),
+      ),
+    ).toBe(true);
+    expect(new Date(findEvent(events, "task-window-control").start).getDay()).toBe(
+      MONDAY,
+    );
+  });
+
+  it("places normally when the patterns do overlap", () => {
+    const task = makePlanner("task-overlapping", {
+      categoryId: CATEGORY_ID,
+      allowedTimes: serializeAllowedTimes({ days: [MONDAY], ranges: null }),
+    });
+
+    const { events, messages } = runWithCategory([task]);
+
+    expect(new Date(findEvent(events, "task-overlapping").start).getDay()).toBe(
+      MONDAY,
+    );
+    expect(
+      messages.some(
+        (m) =>
+          m.id ===
+          taskUnschedulableId(
+            "task-overlapping",
+            SchedulingFailureReason.IMPOSSIBLE_CONSTRAINTS,
+          ),
+      ),
+    ).toBe(false);
   });
 });
 

@@ -5,7 +5,11 @@ import { SchedulingFailureReason } from "../../constants";
 import { PerTemplateMask } from "../../models/TemplateModels";
 import { maxEffectiveCapacityFor } from "./capacityCheck";
 import { parseTaskSplitting, minChunkRequired } from "../../../taskSplitting";
-import { maxAllowedBlockMinutes } from "../../../allowedTimes";
+import {
+  maxAllowedBlockMinutes,
+  maxConstrainedBlockMinutes,
+  type WeeklyWindowOccurrence,
+} from "../../../allowedTimes";
 import {
   SplitPlacementState,
   scheduleSplitTask,
@@ -64,6 +68,33 @@ function maxEventEnd(events: SimpleEvent[]): Date | undefined {
   return max;
 }
 
+// Weekly occurrences of the window-bearing categories this leaf may occupy.
+// Returns [] (skipping the structural check) when any eligible window carries
+// per-occurrence exceptions — a moved occurrence can land inside the allowed
+// times even when the weekly patterns never coincide.
+function eligibleCategoryWindows(
+  leaf: Planner,
+  categories: Category[],
+  plannerCategoryMap: Map<string, string | null>,
+  categoryEligibilityMap: Map<string, Set<string>>,
+): WeeklyWindowOccurrence[] {
+  const effectiveCategoryId = plannerCategoryMap.get(leaf.id) ?? null;
+  if (!effectiveCategoryId) return [];
+  const eligibleIds = categoryEligibilityMap.get(effectiveCategoryId);
+  if (!eligibleIds) return [];
+
+  const windows: WeeklyWindowOccurrence[] = [];
+  for (const category of categories) {
+    if (!eligibleIds.has(category.id)) continue;
+    if (!category.useTimeWindows || category.timeSlots.length === 0) continue;
+    for (const window of category.timeSlots) {
+      if (window.recurrenceExceptions) return [];
+      windows.push(window);
+    }
+  }
+  return windows;
+}
+
 export function placeLeaf(args: PlaceLeafArgs): PlaceLeafResult {
   const {
     leaf,
@@ -88,10 +119,10 @@ export function placeLeaf(args: PlaceLeafArgs): PlaceLeafResult {
 
   const splitSettings = parseTaskSplitting(leaf.splitting);
 
-  const allowedCeiling = maxAllowedBlockMinutes(
-    scheduler.context.plannerConstraintsMap?.get(leaf.id)?.allowedTimes ?? [],
-  );
-  const maxCapacity = Math.min(
+  const allowedChain =
+    scheduler.context.plannerConstraintsMap?.get(leaf.id)?.allowedTimes ?? [];
+  const allowedCeiling = maxAllowedBlockMinutes(allowedChain);
+  let maxCapacity = Math.min(
     maxEffectiveCapacityFor(
       leaf,
       perTemplateMasks,
@@ -103,6 +134,38 @@ export function placeLeaf(args: PlaceLeafArgs): PlaceLeafResult {
     ),
     allowedCeiling,
   );
+
+  // min() of the two independent ceilings misses the structural case where
+  // the allowed-times pattern and the eligible category windows never
+  // coincide (windows Monday, allowed times Tuesday): each axis looks roomy
+  // on its own, and the leaf would burn the whole expansion budget before
+  // surfacing as a generic NO_SLOTS. The true weekly intersection fails it
+  // loud instead, and tightens the TOO_LARGE gate when it is merely small.
+  if (allowedChain.length > 0) {
+    const eligibleWindows = eligibleCategoryWindows(
+      leaf,
+      categories,
+      plannerCategoryMap,
+      categoryEligibilityMap,
+    );
+    if (eligibleWindows.length > 0) {
+      const constrainedCeiling = maxConstrainedBlockMinutes(
+        allowedChain,
+        eligibleWindows,
+      );
+      if (constrainedCeiling === 0) {
+        failures.push({
+          taskId: leaf.id,
+          taskTitle: leaf.title,
+          reason: SchedulingFailureReason.IMPOSSIBLE_CONSTRAINTS,
+          details:
+            "The item's allowed times and its category's scheduled windows never overlap in any week",
+        });
+        return { scheduled: false, permanentFailure: true, events: [] };
+      }
+      maxCapacity = Math.min(maxCapacity, constrainedCeiling);
+    }
+  }
 
   const requiredBlockMinutes = splitSettings
     ? minChunkRequired(splitRemainingForRun(leaf, splitState), splitSettings)

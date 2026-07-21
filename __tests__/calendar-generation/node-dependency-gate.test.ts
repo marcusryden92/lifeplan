@@ -69,6 +69,7 @@ function makeTask(id: string, overrides: Partial<Planner> = {}): Planner {
     splitting: null,
     maxMinutesPerDay: null,
     linkedItemId: null,
+    notes: null,
     ...overrides,
   };
 }
