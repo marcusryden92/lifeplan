@@ -26,7 +26,9 @@ export const axis = style({
   top: 0,
   zIndex: 5,
   height: AXIS_HEIGHT,
-  background: vars.paper,
+  // surface.content, not paper: dark-mode paper is darker than the page
+  // surface, so a paper-filled sticky header reads as a dark band.
+  background: vars.surface.content,
   borderBottom: `1px solid ${vars.rule}`,
   transition: themeTransition,
 });

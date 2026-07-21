@@ -167,6 +167,12 @@ export const queueTitleInput = style([
     minWidth: 160,
     lineHeight: "32px",
     height: 32,
+    // Always-mounted title editor: titleInline's permanent accent underline
+    // reads as a stuck focus state here, so show it only while editing.
+    selectors: {
+      "&&": { borderBottomColor: "transparent" },
+      "&&:focus": { borderBottomColor: vars.accent.primary },
+    },
   },
 ]);
 

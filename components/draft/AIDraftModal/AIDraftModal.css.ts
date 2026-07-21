@@ -6,12 +6,12 @@ import { themeTransition } from "@/lib/theme/transitions";
 
 export const MODAL_FADE_MS = 220;
 
-// Covers the whole viewport (fixed, mounted in the assistantSlot inside
-// mainColumn — no shell ancestor transforms, so fixed escapes the column),
-// including the sidebar and mobile tabs: route changes underneath got messy.
-// Still below the Capture/Search palettes (zIndex.palette) and confirms.
+// Fills the AppShell canvas (the assistantSlot mounts as a canvas child), so
+// it covers the sidebar and mobile tabs — route changes underneath got messy
+// — while clipping to the shell's rounded frame. Still below the
+// Capture/Search palettes (zIndex.palette) and confirms.
 export const overlay = style({
-  position: "fixed",
+  position: "absolute",
   inset: 0,
   zIndex: zIndex.floating,
   display: "flex",
@@ -23,7 +23,7 @@ export const overlay = style({
 });
 
 export const modal = style({
-  position: "fixed",
+  position: "absolute",
   inset: 0,
   zIndex: zIndex.floating + 1,
   display: "flex",

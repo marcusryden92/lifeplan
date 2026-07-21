@@ -22,6 +22,7 @@ import {
   Grain,
   useShellOverlay,
 } from "@/components/ui";
+import { useShellPortalTarget } from "@/components/ui/shell/ShellPortalContext";
 import { useCalendarProvider } from "@/context/CalendarProvider";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import type { Category, EventTemplate } from "@/types/prisma";
@@ -103,6 +104,10 @@ export function WeekStructureModal({
   focusedCategoryId = null,
 }: WeekStructureModalProps) {
   useShellOverlay(open);
+  // Portal to the AppShell canvas: the editor covers the sidebar and mobile
+  // tabs while clipping to the shell's rounded frame (rendered in place it
+  // would only fill mainColumn — absolute inset anchors to the canvas there).
+  const portalTarget = useShellPortalTarget();
   const { userId, categories, weekStartDay } = useCalendarProvider();
   const calendarRef = useRef<FullCalendar>(null);
 
@@ -507,6 +512,7 @@ export function WeekStructureModal({
         if (!next) cancel();
       }}
     >
+      <Dialog.Portal container={portalTarget ?? undefined}>
       <Dialog.Overlay className={overlay} />
       <Dialog.Content
         className={modal}
@@ -767,6 +773,7 @@ export function WeekStructureModal({
           }}
         />
       </Dialog.Content>
+      </Dialog.Portal>
     </Dialog.Root>
   );
 }

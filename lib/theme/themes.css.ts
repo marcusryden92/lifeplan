@@ -91,9 +91,9 @@ export const themeDark = createTheme(vars, {
     canvas: grayscale[10],
     sidebar: grayscale[15],
     content: grayscale[20],
-    // Mostly opaque so the modal reads a rung brighter than content even over
+    // Mostly opaque so the modal reads clearly brighter than content even over
     // the dimming overlay; the small transparency keeps the frosted blur alive.
-    modal: `color-mix(in srgb, ${grayscale[25]} 92%, transparent)`,
+    modal: `color-mix(in srgb, ${grayscale[30]} 95%, transparent)`,
   },
 
   glass: {

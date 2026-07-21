@@ -1,41 +1,15 @@
 # Emergent issues
 - Display 3 days at a time in WeekStructureModal like in calendar?
-- "Just this occurence" modals being tailored for mobile as well
-
-- Modals too dark with new dark mode
 
 - Progressive 'readying' of subtasks
 - Subtasks that are just notes (ignore-in-engine boolean)
 - Notes INSIDE items
 
-- Default Min split value 60 minutes
-- Split task Max size value 0 = 'infinite'
-- Subtask earliest date option
-- Clicking subtask in calendar opens root-item/subtasks/sub-item in router, not directly to root item
-- Subtask item  row height too tall.
-
 - 'Schedule X hours per week of this until.." - feature.
 
-- AI modal should cover the whole screen (gets messy with route changes)
-- Category color picker should match other color pickers
 - Warning when time restraints + category windows results in 0 possible time slots for a given item
-- Singular tasks or split tasks not showing in graph view
-- Light/dark mode hotkey
-
-- Queue title size is too small (should match other title items of similar style)
-
-- NEXT info badge in dashboard should have "starts in X minutes" right after it
-
-- Mobile landscape bottomsheet styles need looking at. Often way too wide with tonnes of scrolling
-
-- Add a back to previous route button in item view not just back to library (of you arrive from somewhere else)
-
 
 - Saving mindmap and graph visual states in db (probably needs a reset button)
-
-- Hour duration in addition to minutes in 'new task' modal
-
-- Double check how goal locations currently cascade. I'm getting "apply location to all subgoals" when changing root goal location, which shouldn't be needed if the subtask inherits it
 
 - Add full-day-items like "birthday"
 

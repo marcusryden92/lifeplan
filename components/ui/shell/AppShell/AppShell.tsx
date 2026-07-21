@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Grain } from "../../Grain";
 import { useTheme } from "../../ThemeProvider";
 import { Sidebar } from "../Sidebar";
@@ -12,6 +12,7 @@ import { SearchPalette } from "../SearchPalette";
 import { CornerActions } from "../CornerActions";
 import { ShellOverlayProvider } from "../ShellOverlayContext";
 import { NavHistoryProvider } from "../NavHistoryContext";
+import { ShellPortalProvider } from "../ShellPortalContext";
 import {
   bezelFrame,
   canvas,
@@ -25,10 +26,11 @@ type Props = {
   children: ReactNode;
   userName?: string;
   userInitial?: string;
-  // Rendered inside mainColumn after the page content — the mount point for
-  // the global AI assistant, which fills the content region while leaving the
-  // sidebar interactive. Passed in as a slot so the shell never imports draft
-  // code (avoids an AppShell -> draft -> ui-barrel -> AppShell cycle).
+  // Rendered as a canvas child after the content row — the mount point for
+  // the global AI assistant, which covers the sidebar and mobile tabs while
+  // clipping to the shell rounding. Passed in as a slot so the shell never
+  // imports draft code (avoids an AppShell -> draft -> ui-barrel -> AppShell
+  // cycle).
   assistantSlot?: ReactNode;
   // Rendered as the last child of the canvas — a full-canvas overlay that
   // clips to the shell rounding and covers the sidebar (onboarding). Same
@@ -48,6 +50,7 @@ export function AppShell({
   loadingSlot,
 }: Props) {
   const { toggle: toggleTheme } = useTheme();
+  const [canvasEl, setCanvasEl] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -66,28 +69,30 @@ export function AppShell({
       <SearchProvider>
         <ShellOverlayProvider>
           <NavHistoryProvider>
-            <div className={bezelFrame}>
-              <div className={canvas}>
-                <Grain />
-                <div className={contentRow}>
-                  <div className={desktopOnly}>
-                    <Sidebar userName={userName} userInitial={userInitial} />
+            <ShellPortalProvider target={canvasEl}>
+              <div className={bezelFrame}>
+                <div className={canvas} ref={setCanvasEl}>
+                  <Grain />
+                  <div className={contentRow}>
+                    <div className={desktopOnly}>
+                      <Sidebar userName={userName} userInitial={userInitial} />
+                    </div>
+                    <div className={mainColumn}>
+                      <CornerActions />
+                      {children}
+                    </div>
                   </div>
-                  <div className={mainColumn}>
-                    <CornerActions />
-                    {children}
-                    {assistantSlot}
+                  <div className={mobileOnly}>
+                    <MobileTabs />
                   </div>
+                  {assistantSlot}
+                  <CapturePalette />
+                  <SearchPalette />
+                  {overlaySlot}
+                  {loadingSlot}
                 </div>
-                <div className={mobileOnly}>
-                  <MobileTabs />
-                </div>
-                <CapturePalette />
-                <SearchPalette />
-                {overlaySlot}
-                {loadingSlot}
               </div>
-            </div>
+            </ShellPortalProvider>
           </NavHistoryProvider>
         </ShellOverlayProvider>
       </SearchProvider>

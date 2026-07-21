@@ -43,7 +43,9 @@ const HEADER_OVERLAY_BASE = {
 const headerCellBase = style({
   padding: "10px 12px",
   borderBottom: `1px solid ${vars.glass.stroke}`,
-  background: vars.paper,
+  // surface.content, not paper: dark-mode paper is darker than the page
+  // surface, so the sticky header/rail cells read as dark bands.
+  background: vars.surface.content,
   textAlign: "center",
   verticalAlign: "middle",
   minWidth: 96,
@@ -94,7 +96,7 @@ export const rowHeaderCell = style({
   padding: "10px 12px",
   borderTop: `1px solid ${vars.glass.stroke}`,
   borderRight: `1px solid ${vars.glass.stroke}`,
-  background: vars.paper,
+  background: vars.surface.content,
   fontWeight: 600,
   textAlign: "center",
   verticalAlign: "middle",

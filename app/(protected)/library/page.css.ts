@@ -397,7 +397,9 @@ export const tableHead = style({
   borderBottom: `1px solid ${vars.rule}`,
   position: "sticky",
   top: 0,
-  background: vars.paper,
+  // surface.content, not paper: dark-mode paper is darker than the page
+  // surface, so a paper-filled sticky header reads as a dark band.
+  background: vars.surface.content,
   zIndex: 1,
   transition: themeTransition,
   "@media": {

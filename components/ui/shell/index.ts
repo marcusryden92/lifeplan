@@ -14,6 +14,7 @@ export {
   useShellOverlay,
   useShellOverlayOpen,
 } from "./ShellOverlayContext";
+export { ShellPortalProvider, useShellPortalTarget } from "./ShellPortalContext";
 export { NavHistoryProvider, usePreviousPathname } from "./NavHistoryContext";
 export { NAV_ITEMS, MOBILE_TABS, isCanvasRoute } from "./nav";
 export type { NavItem } from "./nav";

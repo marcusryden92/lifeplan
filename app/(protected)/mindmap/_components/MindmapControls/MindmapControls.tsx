@@ -109,7 +109,7 @@ export function MindmapControlsBody({ options, onChange }: MindmapControlsProps)
 }
 
 export function MindmapControls({ options, onChange }: MindmapControlsProps) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   return (
     <div className={panel} data-open={open}>
