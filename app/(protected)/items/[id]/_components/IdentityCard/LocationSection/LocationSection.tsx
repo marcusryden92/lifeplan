@@ -66,7 +66,7 @@ export function LocationSection() {
   const dropdownDisabled = categoryHasLocation && !locationOverrideEnabled;
 
   return (
-    <FieldStack label="Location" full>
+    <FieldStack label="Location">
       <div className={placeRow}>
         {categoryHasLocation && (
           <div>
@@ -136,8 +136,14 @@ export function LocationSection() {
             disabled={!isGoal}
             className={flushLeftBtn}
           >
-            <RotateCcw size={11} strokeWidth={2.2} />
-            Reset sub-goal places
+            <span>
+              <RotateCcw
+                size={11}
+                strokeWidth={2.2}
+                style={{ marginRight: space["1"] }}
+              />
+              {" Reset sub-goal places"}{" "}
+            </span>
           </Button>
         </div>
       </div>

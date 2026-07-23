@@ -61,8 +61,7 @@ export function NextOnCalendarCard() {
       })
       .filter((e) => new Date(e.start).getTime() >= now)
       .sort(
-        (a, b) =>
-          new Date(a.start).getTime() - new Date(b.start).getTime(),
+        (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
       );
     return candidates[0];
   }, [calendar, item.id, item.plannerType]);
@@ -100,18 +99,6 @@ export function NextOnCalendarCard() {
   );
 }
 
-export function EngineNotesCard() {
-  return (
-    <div className={card}>
-      <Caption>Engine notes</Caption>
-      <div className={whyText}>
-        No engine messages for this item yet. Regenerate the calendar to see
-        scheduler feedback here.
-      </div>
-    </div>
-  );
-}
-
 // Every precedence-ish relation on one card: queue membership, dependency
 // edges (with the add picker), and detour hosts. Groups render only when they
 // apply; the card disappears entirely for items with nothing to connect.
@@ -144,8 +131,12 @@ export function ConnectionsCard() {
         return { placeholder, host };
       })
       .filter(
-        (x): x is { placeholder: (typeof planner)[number]; host: NonNullable<typeof x.host> } =>
-          !!x.host,
+        (
+          x,
+        ): x is {
+          placeholder: (typeof planner)[number];
+          host: NonNullable<typeof x.host>;
+        } => !!x.host,
       );
   }, [planner, item.id, item.parentId]);
 
@@ -153,10 +144,17 @@ export function ConnectionsCard() {
     () =>
       dependencies
         .filter((d) => d.successorId === item.id)
-        .map((d) => ({ edge: d, predecessor: plannerById.get(d.predecessorId) }))
+        .map((d) => ({
+          edge: d,
+          predecessor: plannerById.get(d.predecessorId),
+        }))
         .filter(
-          (x): x is { edge: PlannerDependency; predecessor: NonNullable<typeof x.predecessor> } =>
-            !!x.predecessor,
+          (
+            x,
+          ): x is {
+            edge: PlannerDependency;
+            predecessor: NonNullable<typeof x.predecessor>;
+          } => !!x.predecessor,
         ),
     [dependencies, item.id, plannerById],
   );
@@ -167,8 +165,12 @@ export function ConnectionsCard() {
         .filter((d) => d.predecessorId === item.id)
         .map((d) => ({ edge: d, successor: plannerById.get(d.successorId) }))
         .filter(
-          (x): x is { edge: PlannerDependency; successor: NonNullable<typeof x.successor> } =>
-            !!x.successor,
+          (
+            x,
+          ): x is {
+            edge: PlannerDependency;
+            successor: NonNullable<typeof x.successor>;
+          } => !!x.successor,
         ),
     [dependencies, item.id, plannerById],
   );
@@ -210,8 +212,7 @@ export function ConnectionsCard() {
     const now = new Date().toISOString();
     updateDependencyArray((prev) =>
       prev.some(
-        (d) =>
-          d.predecessorId === predecessorId && d.successorId === item.id,
+        (d) => d.predecessorId === predecessorId && d.successorId === item.id,
       )
         ? prev
         : [
@@ -312,7 +313,10 @@ export function ConnectionsCard() {
               {requiredBy.map(({ edge, successor }) => (
                 <div key={edge.id} className={depRow}>
                   <TypeBadge size="sm">{successor.plannerType}</TypeBadge>
-                  <Link href={`/items/${successor.id}`} className={depTitleLink}>
+                  <Link
+                    href={`/items/${successor.id}`}
+                    className={depTitleLink}
+                  >
                     {successor.title || "Untitled"}
                   </Link>
                 </div>
@@ -456,8 +460,8 @@ export function NestIntoGoalCard() {
             {manifest && manifest.requiredByTitles.length > 0 && (
               <div>
                 {joinTitles(manifest.requiredByTitles)} still wait
-                {manifest.requiredByTitles.length === 1 ? "s" : ""} for it,
-                now as part of the new goal.
+                {manifest.requiredByTitles.length === 1 ? "s" : ""} for it, now
+                as part of the new goal.
               </div>
             )}
             {manifest && manifest.inboundHostTitles.length > 0 && (

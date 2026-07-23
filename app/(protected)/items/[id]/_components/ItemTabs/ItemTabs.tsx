@@ -47,6 +47,7 @@ export function ItemTabs({
       disabled: !subtasksEnabled,
     },
     { key: "schedule", label: "Schedule", href: `${base}/schedule` },
+    { key: "alerts", label: "Alerts", href: `${base}/alerts` },
   ];
 
   return (

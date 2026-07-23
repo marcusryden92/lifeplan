@@ -1,9 +1,12 @@
 ﻿import { style, keyframes } from "@vanilla-extract/css";
 import { vars } from "@/lib/theme/tokens.css";
-import { space, media, radii, zIndex } from "@/lib/theme/scales";
+import { space, media, radii } from "@/lib/theme/scales";
 import { progressTrack as progressTrackRecipe } from "@/lib/theme/recipes.css";
 import { text } from "@/lib/theme/typography.css";
-import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
+import {
+  themeTransition,
+  interactiveTransition,
+} from "@/lib/theme/transitions";
 
 const lockedShake = keyframes({
   "0%, 100%": { transform: "translateX(0)" },
@@ -156,30 +159,9 @@ export const overviewGrid = style({
   gridTemplateColumns: "1fr 1fr",
   gap: space["12"],
   flexShrink: 0,
+  overflowY: "hidden",
   "@media": {
     [media.tablet]: { gridTemplateColumns: "1fr", gap: space["6"] },
-  },
-});
-
-// Sticky within the page scroll area: sits at the content end when the page
-// is short, pins to the viewport bottom edge when it overflows — the delete
-// row and its top border never move, whatever the columns above are doing.
-// The negative bottom margin mirrors innerWrap's bottom padding
-// (ItemDetailLayout.css.ts) so the dock is flush with the scrollport edge in
-// both states instead of jumping 28px between them.
-export const deleteDock = style({
-  position: "sticky",
-  bottom: 0,
-  marginTop: "auto",
-  marginBottom: `-${space["7"]}px`,
-  flexShrink: 0,
-  zIndex: zIndex.docked,
-  borderTop: `1px solid ${vars.rule}`,
-  paddingTop: space["2.5"],
-  paddingBottom: space["2.5"],
-  transition: themeTransition,
-  "@media": {
-    [media.mobile]: { marginBottom: `-${space["6"]}px` },
   },
 });
 
@@ -193,6 +175,5 @@ export const leftCol = style({
 export const rightCol = style({
   display: "flex",
   flexDirection: "column",
-  gap: space["4"],
   minWidth: 0,
 });

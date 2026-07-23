@@ -3,7 +3,13 @@
 import { useMemo, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Check, SquarePen } from "lucide-react";
-import { Button, Caption, Input, Loader, usePreviousPathname } from "@/components/ui";
+import {
+  Button,
+  Caption,
+  Input,
+  Loader,
+  usePreviousPathname,
+} from "@/components/ui";
 import { NAV_ITEMS } from "@/components/ui/shell/nav";
 import { space, vars, interactiveTransition } from "@/lib/theme";
 import { useSelector } from "react-redux";
@@ -52,7 +58,9 @@ import {
   readyCluster,
   readyHint,
   tabBodyWrap,
+  deleteDock,
 } from "./ItemDetailLayout.css";
+import { DeleteRow } from "../DeleteRow";
 
 export default function ItemDetailLayout({
   children,
@@ -534,6 +542,9 @@ export default function ItemDetailLayout({
               />
 
               <div className={tabBodyWrap}>{children}</div>
+              <div className={deleteDock}>
+                <DeleteRow />
+              </div>
             </div>
           </div>
 

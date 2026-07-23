@@ -7,7 +7,6 @@ import { themeTransition } from "@/lib/theme/transitions";
 
 export const card = style({
   padding: "12px 0",
-  borderTop: `1px solid ${vars.rule}`,
   transition: themeTransition,
 });
 
@@ -25,7 +24,7 @@ export const notesInput = style([
   {
     display: "block",
     minHeight: 96,
-    resize: "vertical",
+    resize: "none",
     lineHeight: 1.55,
     paddingTop: space["2"],
     paddingBottom: space["2"],

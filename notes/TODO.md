@@ -8,6 +8,8 @@
 
 - Add full-day-items like "birthday"
 
+- Guard for slow connection when waking server
+
 # P5 — Medium features
 
 - Mobile app (Capacitor wrap)

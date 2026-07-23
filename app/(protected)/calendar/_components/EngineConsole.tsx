@@ -6,6 +6,7 @@ import { vars } from "@/components/ui";
 import type { RenderedEngineMessage } from "@/utils/renderEngineMessage";
 import type { EngineTone } from "@/utils/engineTones";
 import { EngineControls } from "./EngineControls";
+import { formatLastRun } from "@/utils/timeFormatting";
 import {
   engineHeader,
   engineLastRun,
@@ -38,19 +39,6 @@ export function toneColor(tone: EngineTone) {
     default:
       return vars.status.info;
   }
-}
-
-// Compact relative timestamp for the console header. Null means the engine
-// hasn't run this session (cold load renders persisted output only).
-function formatLastRun(iso: string | null): string {
-  if (!iso) return "—";
-  const deltaMs = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(deltaMs / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
 }
 
 type EngineConsoleProps = {

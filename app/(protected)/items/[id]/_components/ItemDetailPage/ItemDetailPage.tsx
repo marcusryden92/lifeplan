@@ -15,10 +15,8 @@ import { useItem } from "../ItemContext";
 import { IdentityCard } from "../IdentityCard";
 import { NotesCard } from "../NotesCard";
 import { RecurrenceExceptionsCard } from "../RecurrenceExceptionsCard";
-import { DeleteRow } from "../DeleteRow";
 import {
   NextOnCalendarCard,
-  EngineNotesCard,
   ConnectionsCard,
   NestIntoGoalCard,
 } from "../SideCards";
@@ -28,7 +26,6 @@ import {
   overviewGrid,
   leftCol,
   rightCol,
-  deleteDock,
   progressBlock,
   progressMeta,
   progressMetaStrong,
@@ -153,19 +150,14 @@ export default function ItemOverviewPage() {
       <div className={overviewGrid}>
         <div className={leftCol}>
           <IdentityCard />
-          <NotesCard />
           <RecurrenceExceptionsCard />
         </div>
         <div className={rightCol}>
           <NextOnCalendarCard />
-          <EngineNotesCard />
           <ConnectionsCard />
           <NestIntoGoalCard />
+          <NotesCard />
         </div>
-      </div>
-
-      <div className={deleteDock}>
-        <DeleteRow />
       </div>
     </div>
   );

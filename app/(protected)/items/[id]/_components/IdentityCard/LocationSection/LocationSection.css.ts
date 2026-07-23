@@ -5,7 +5,7 @@ import { text } from "@/lib/theme/typography.css";
 
 export const placeRow = style({
   display: "flex",
-  alignItems: "top",
+  alignItems: "center",
   gap: space["2.5"],
 });
 

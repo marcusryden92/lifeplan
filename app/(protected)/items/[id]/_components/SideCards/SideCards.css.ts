@@ -140,6 +140,7 @@ export const depRemove = style({
 
 export const depPickerRow = style({
   marginTop: space["2"],
+  minHeight: 42,
 });
 
 export const depError = style([

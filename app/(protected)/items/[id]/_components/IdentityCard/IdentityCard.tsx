@@ -28,9 +28,9 @@ export function IdentityCard() {
           <div className={doubleGrid}>
             <CategorySection /> <ColorSection />
           </div>
+          <EarliestStartSection />
           <DateSection />
           <DurationSection />
-          <EarliestStartSection />
           <LocationSection />
           <div className={rulesSlot}>
             <SplittingSection />

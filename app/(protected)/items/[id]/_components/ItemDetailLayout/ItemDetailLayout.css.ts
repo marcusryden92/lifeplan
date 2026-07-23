@@ -3,8 +3,11 @@ import { vars } from "@/lib/theme/tokens.css";
 import { space, contentWidth, media } from "@/lib/theme/scales";
 import { iconBtn } from "@/lib/theme/recipes.css";
 import { display, text, caption } from "@/lib/theme/typography.css";
-import { themeTransition, interactiveTransition } from "@/lib/theme/transitions";
-
+import {
+  themeTransition,
+  interactiveTransition,
+} from "@/lib/theme/transitions";
+import { zIndex } from "@/lib/theme/scales";
 
 export const page = style({
   position: "relative",
@@ -28,6 +31,7 @@ export const scrollArea = style({
 export const innerWrap = style({
   display: "flex",
   flexDirection: "column",
+  overflow: "hidden",
   padding: "20px 56px 28px",
   width: "100%",
   maxWidth: contentWidth.xl,
@@ -184,4 +188,26 @@ export const tabBodyWrap = style({
   flexDirection: "column",
   flex: 1,
   minHeight: 0,
+});
+
+// Sticky within the page scroll area: sits at the content end when the page
+// is short, pins to the viewport bottom edge when it overflows — the delete
+// row and its top border never move, whatever the columns above are doing.
+// The negative bottom margin mirrors innerWrap's bottom padding
+// (ItemDetailLayout.css.ts) so the dock is flush with the scrollport edge in
+// both states instead of jumping 28px between them.
+export const deleteDock = style({
+  bottom: 0,
+  marginTop: "auto",
+  marginBottom: `-${space["7"]}px`,
+  backgroundColor: vars.surface.content,
+  flexShrink: 0,
+  zIndex: zIndex.docked,
+  borderTop: `1px solid ${vars.rule}`,
+  paddingTop: space["2.5"],
+  paddingBottom: space["2.5"],
+  transition: themeTransition,
+  "@media": {
+    [media.mobile]: { marginBottom: `-${space["6"]}px` },
+  },
 });
