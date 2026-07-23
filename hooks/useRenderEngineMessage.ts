@@ -4,8 +4,11 @@ import {
   renderEngineMessage,
 } from "@/utils/renderEngineMessage";
 import { useMemo } from "react";
-import { plannerIdFromPayload } from "@/utils/renderEngineMessage";
-import { getRootParentId } from "@/utils/goalPageHandlers";
+import {
+  plannerIdFromPayload,
+  plannerSubjectIdsFromPayload,
+} from "@/utils/renderEngineMessage";
+import { getRootParentId, getTaskTreeIds } from "@/utils/goalPageHandlers";
 import { SerializedLocation } from "@/redux/slices/schedulingSettingsSlice";
 
 export default function useRenderEngineMessages(
@@ -34,15 +37,24 @@ export default function useRenderEngineMessages(
       const drillTo = leafId
         ? (getRootParentId(planner, leafId) ?? leafId)
         : null;
-      return [{ ...rendered, drillTo }];
+      return [
+        {
+          ...rendered,
+          drillTo,
+          subjectIds: plannerSubjectIdsFromPayload(m.payload),
+        },
+      ];
     });
   }, [engineMessages, planner, locations, queues]);
 
-  if (filterId) {
-    return renderedMessages.filter(
-      (m) => m.id.split("|")[0].split("::")[1] === filterId,
+  // Item-page filter: a message belongs to the viewed item when any planner
+  // it references sits in the item's subtree — a goal's alerts include every
+  // leaf under it, not just rows that name the root itself.
+  return useMemo(() => {
+    if (!filterId) return renderedMessages;
+    const treeIds = new Set(getTaskTreeIds(planner, filterId));
+    return renderedMessages.filter((m) =>
+      m.subjectIds.some((id) => treeIds.has(id)),
     );
-  }
-
-  return renderedMessages;
+  }, [renderedMessages, planner, filterId]);
 }

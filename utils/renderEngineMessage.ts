@@ -316,6 +316,23 @@ export function plannerIdFromPayload(payload: unknown): string | null {
   return typeof p.plannerId === "string" ? p.plannerId : null;
 }
 
+/**
+ * Every planner id a persisted payload references, across all payload
+ * variants (subject, failed queue member, dependency endpoints). Used by the
+ * item Alerts page to match messages against an item's whole subtree.
+ */
+export function plannerSubjectIdsFromPayload(payload: unknown): string[] {
+  if (!payload || typeof payload !== "object") return [];
+  const p = payload as Record<string, unknown>;
+  const keys = [
+    "plannerId",
+    "failedPlannerId",
+    "predecessorId",
+    "successorId",
+  ] as const;
+  return keys.flatMap((key) => (typeof p[key] === "string" ? [p[key]] : []));
+}
+
 function locationLabel(
   id: string | null,
   lookups: EngineMessageLookups,

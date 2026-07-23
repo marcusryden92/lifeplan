@@ -39,3 +39,10 @@ export const progressNote = style([
     transition: themeTransition,
   },
 ]);
+
+export const completedRow = style({
+  display: "flex",
+  alignItems: "center",
+  gap: space["2"],
+  marginTop: space["1"],
+});

@@ -61,11 +61,14 @@ export function normalizeTaskSplittingSettings(
   if (!value || typeof value !== "object") return null;
   const parsed = value as Partial<TaskSplittingSettings>;
   const min =
-    typeof parsed.minMinutes === "number" && parsed.minMinutes >= MIN_CHUNK_MINUTES
+    typeof parsed.minMinutes === "number" &&
+    parsed.minMinutes >= MIN_CHUNK_MINUTES
       ? Math.floor(parsed.minMinutes)
       : null;
   const max =
-    typeof parsed.maxMinutes === "number" ? Math.floor(parsed.maxMinutes) : null;
+    typeof parsed.maxMinutes === "number"
+      ? Math.floor(parsed.maxMinutes)
+      : null;
   if (min === null || max === null) return null;
   if (max !== SPLIT_MAX_UNLIMITED && max < min) return null;
   const perDay =
@@ -167,6 +170,59 @@ export function splitRemainingMinutes(item: Planner): number {
   return Math.max(0, item.duration - splitCompletedMinutes(item));
 }
 
+// Direct edit of a split task's completed total (item-detail progress bar).
+// Segments stay the source of truth: raising the total appends a synthetic
+// segment ending at `now`, lowering it trims from the most recent segment
+// backward. Returns the serialized segments (null when empty); returns the
+// row's value untouched when the target already matches, so an idle commit
+// produces no sync diff.
+export function setSplitCompletedMinutes(
+  item: Planner,
+  targetMinutes: number,
+  now: Date,
+): string | null {
+  const target = Math.min(
+    Math.max(0, Math.round(targetMinutes)),
+    Math.max(0, item.duration),
+  );
+  const segments = parseCompletedSegments(item.completedSegments);
+  const current = segments.reduce((sum, s) => sum + segmentMinutes(s), 0);
+  if (target === current) return item.completedSegments ?? null;
+
+  if (target > current) {
+    const delta = target - current;
+    const end = now.toISOString();
+    const start = new Date(now.getTime() - delta * 60000).toISOString();
+    return serializeCompletedSegments([...segments, { start, end }]);
+  }
+
+  const newestFirst = [...segments].sort((a, b) =>
+    b.start.localeCompare(a.start),
+  );
+  let excess = current - target;
+  const dropped = new Set<CompletedSegment>();
+  const trimmed = new Map<CompletedSegment, CompletedSegment>();
+  for (const segment of newestFirst) {
+    if (excess <= 0) break;
+    const minutes = segmentMinutes(segment);
+    if (minutes <= excess) {
+      dropped.add(segment);
+      excess -= minutes;
+    } else {
+      trimmed.set(segment, {
+        start: segment.start,
+        end: new Date(
+          new Date(segment.end).getTime() - excess * 60000,
+        ).toISOString(),
+      });
+      excess = 0;
+    }
+  }
+  return serializeCompletedSegments(
+    segments.filter((s) => !dropped.has(s)).map((s) => trimmed.get(s) ?? s),
+  );
+}
+
 // Auto-completion: a split task with all its minutes accumulated is done.
 // Callers combine this with the timestamp check (plannerIsCompleted).
 export function splitIsExhausted(item: Planner): boolean {
@@ -258,9 +314,7 @@ export function addIntervalMinutesByDay(
     nextMidnight.setHours(24, 0, 0, 0);
     const sliceEnd = nextMidnight < end ? nextMidnight : end;
     const key = dayKeyLocal(cursor);
-    const minutes = Math.round(
-      (sliceEnd.getTime() - cursor.getTime()) / 60000,
-    );
+    const minutes = Math.round((sliceEnd.getTime() - cursor.getTime()) / 60000);
     map.set(key, (map.get(key) ?? 0) + minutes);
     cursor = sliceEnd;
   }

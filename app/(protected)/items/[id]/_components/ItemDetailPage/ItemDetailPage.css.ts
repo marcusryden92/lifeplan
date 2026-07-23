@@ -27,6 +27,27 @@ export const progressBlock = style({
   },
 });
 
+// Split-task variant: the completed-time inputs are taller than a text line,
+// so the block trades top padding for row height to stay inside the fixed 60.
+export const progressBlockTight = style({
+  paddingTop: space["2.5"],
+});
+
+// Completed-time editor + "of Xh · pct%" meta on one line, track below.
+export const splitProgressRow = style({
+  display: "flex",
+  alignItems: "center",
+  gap: space["2.5"],
+});
+
+export const splitProgressTrack = style([
+  progressTrackRecipe({ size: "lg" }),
+  {
+    marginTop: space["2"],
+    transition: themeTransition,
+  },
+]);
+
 export const progressMeta = style([
   text.body,
   {

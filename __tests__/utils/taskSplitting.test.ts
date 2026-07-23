@@ -11,6 +11,7 @@ import {
   parseTaskSplitting,
   segmentStartFromEventId,
   serializeTaskSplitting,
+  setSplitCompletedMinutes,
   splitRemainingMinutes,
   taskIsSplittable,
   type TaskSplittingSettings,
@@ -90,7 +91,11 @@ describe("parseTaskSplitting", () => {
     });
     expect(
       parseTaskSplitting(
-        JSON.stringify({ minMinutes: 30, maxMinutes: 120, minSpacingMinutes: 0 }),
+        JSON.stringify({
+          minMinutes: 30,
+          maxMinutes: 120,
+          minSpacingMinutes: 0,
+        }),
       ),
     ).toEqual({
       minMinutes: 30,
@@ -311,10 +316,84 @@ describe("split event ids", () => {
   });
 
   it("does not cross-match kinds", () => {
-    expect(isChunkEventId(completedSegmentEventId("p", { start: "a", end: "b" }))).toBe(
-      false,
-    );
+    expect(
+      isChunkEventId(completedSegmentEventId("p", { start: "a", end: "b" })),
+    ).toBe(false);
     expect(isCompletedSegmentEventId(chunkEventId("p", 0))).toBe(false);
     expect(isChunkEventId("plain-planner-id")).toBe(false);
+  });
+});
+
+describe("setSplitCompletedMinutes", () => {
+  const NOW = new Date("2026-01-10T12:00:00.000Z");
+  const seg = (start: string, end: string) => ({ start, end });
+
+  it("appends a synthetic segment ending at now when raising the total", () => {
+    const item = makePlanner({
+      completedSegments: JSON.stringify([
+        seg("2026-01-04T10:00:00.000Z", "2026-01-04T11:00:00.000Z"),
+      ]),
+    });
+    const result = setSplitCompletedMinutes(item, 90, NOW);
+    const segments = parseCompletedSegments(result);
+    expect(segments).toHaveLength(2);
+    expect(segments[1]).toEqual(
+      seg("2026-01-10T11:30:00.000Z", "2026-01-10T12:00:00.000Z"),
+    );
+  });
+
+  it("trims the most recent segment backward when lowering the total", () => {
+    const item = makePlanner({
+      completedSegments: JSON.stringify([
+        seg("2026-01-04T10:00:00.000Z", "2026-01-04T11:00:00.000Z"),
+        seg("2026-01-05T10:00:00.000Z", "2026-01-05T11:00:00.000Z"),
+      ]),
+    });
+    const result = setSplitCompletedMinutes(item, 80, NOW);
+    const segments = parseCompletedSegments(result);
+    expect(segments).toEqual([
+      seg("2026-01-04T10:00:00.000Z", "2026-01-04T11:00:00.000Z"),
+      seg("2026-01-05T10:00:00.000Z", "2026-01-05T10:20:00.000Z"),
+    ]);
+  });
+
+  it("drops whole newest segments before trimming older ones", () => {
+    const item = makePlanner({
+      completedSegments: JSON.stringify([
+        seg("2026-01-04T10:00:00.000Z", "2026-01-04T11:00:00.000Z"),
+        seg("2026-01-05T10:00:00.000Z", "2026-01-05T10:30:00.000Z"),
+      ]),
+    });
+    const result = setSplitCompletedMinutes(item, 45, NOW);
+    const segments = parseCompletedSegments(result);
+    expect(segments).toEqual([
+      seg("2026-01-04T10:00:00.000Z", "2026-01-04T10:45:00.000Z"),
+    ]);
+  });
+
+  it("returns null when the total is set to zero", () => {
+    const item = makePlanner({
+      completedSegments: JSON.stringify([
+        seg("2026-01-04T10:00:00.000Z", "2026-01-04T11:00:00.000Z"),
+      ]),
+    });
+    expect(setSplitCompletedMinutes(item, 0, NOW)).toBeNull();
+  });
+
+  it("clamps to the duration and auto-completes the row", () => {
+    const item = makePlanner({ duration: 120 });
+    const result = setSplitCompletedMinutes(item, 999, NOW);
+    const next = makePlanner({ duration: 120, completedSegments: result });
+    expect(splitRemainingMinutes(next)).toBe(0);
+    expect(plannerIsCompleted(next)).toBe(true);
+  });
+
+  it("returns the row value untouched when the target already matches", () => {
+    const stored = JSON.stringify([
+      seg("2026-01-04T10:00:00.000Z", "2026-01-04T11:00:00.000Z"),
+    ]);
+    const item = makePlanner({ completedSegments: stored });
+    expect(setSplitCompletedMinutes(item, 60, NOW)).toBe(stored);
+    expect(setSplitCompletedMinutes(makePlanner({}), 0, NOW)).toBeNull();
   });
 });

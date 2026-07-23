@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Input } from "@/components/ui";
+import { DurationField, Input } from "@/components/ui";
 import { formatMinutesToHours } from "@/utils/taskArrayUtils";
 import {
   MIN_CHUNK_MINUTES,
@@ -15,6 +15,7 @@ import {
   inputStack,
   inputCaption,
   progressNote,
+  completedRow,
 } from "./SplittingFields.css";
 
 // The default a fresh "Split into chunks" toggle enables with.
@@ -75,11 +76,16 @@ export function SplittingFields({
   duration,
   completed,
   onChange,
+  onCompletedCommit,
 }: {
   settings: TaskSplittingSettings;
   duration: number;
   completed: number;
   onChange: (next: TaskSplittingSettings) => void;
+  // When provided, the completed total renders as an editable duration field
+  // instead of the read-only note. Hosts withhold it while completion is
+  // locked (root not ready).
+  onCompletedCommit?: (minutes: number) => void;
 }) {
   const commitMin = (raw: string) => {
     const parsed = Math.floor(Number(raw));
@@ -121,7 +127,10 @@ export function SplittingFields({
     }
     const parsed = Math.floor(Number(raw));
     if (!Number.isFinite(parsed)) return;
-    onChange({ ...settings, maxMinutesPerDay: Math.max(settings.minMinutes, parsed) });
+    onChange({
+      ...settings,
+      maxMinutesPerDay: Math.max(settings.minMinutes, parsed),
+    });
   };
 
   const commitSpacing = (raw: string) => {
@@ -173,10 +182,24 @@ export function SplittingFields({
           />
         </div>
       </div>
-      {completed > 0 && (
-        <span className={progressNote}>
-          {formatMinutesToHours(completed)} of {formatMinutesToHours(duration)} done
-        </span>
+      {onCompletedCommit ? (
+        <div className={completedRow}>
+          <DurationField
+            minutes={completed}
+            onCommit={onCompletedCommit}
+            ariaLabel="Completed time"
+          />
+          <span className={progressNote}>
+            of {formatMinutesToHours(duration)} done
+          </span>
+        </div>
+      ) : (
+        completed > 0 && (
+          <span className={progressNote}>
+            {formatMinutesToHours(completed)} of{" "}
+            {formatMinutesToHours(duration)} done
+          </span>
+        )
       )}
     </div>
   );

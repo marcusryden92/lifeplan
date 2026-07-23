@@ -1,6 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
+import { format } from "date-fns";
 import { formatMinutesToHours } from "@/utils/taskArrayUtils";
 import { useFlashBoolean } from "@/hooks/useFlashAnimation";
 import { useCalendarProvider } from "@/context/CalendarProvider";
@@ -8,8 +9,13 @@ import {
   toggleSubtaskCompletion,
   setSubtaskCompletedAt,
 } from "@/utils/goal-handlers/subtaskCompletion";
+import {
+  taskIsSplittable,
+  splitCompletedMinutes,
+  setSplitCompletedMinutes,
+} from "@/utils/taskSplitting";
 import { formatDatetimeLocal, parseDatetimeLocal } from "@/utils/datetime";
-import { DateTimePicker } from "@/components/ui";
+import { DateTimePicker, DurationField } from "@/components/ui";
 import { vars } from "@/lib/theme";
 import { useItem } from "../ItemContext";
 import { IdentityCard } from "../IdentityCard";
@@ -27,6 +33,9 @@ import {
   leftCol,
   rightCol,
   progressBlock,
+  progressBlockTight,
+  splitProgressRow,
+  splitProgressTrack,
   progressMeta,
   progressMetaStrong,
   progressTrack,
@@ -52,8 +61,18 @@ export default function ItemOverviewPage() {
   const { updatePlannerArray, weekStartDay } = useCalendarProvider();
   const isGoal = item.plannerType === "goal";
   const isTask = item.plannerType === "task";
+  const isPlan = item.plannerType === "plan";
   const areaColor = category?.color ?? vars.accent.primary;
   const showProgress = isGoal && totalSubtasks > 0;
+  // Goal-typed leaves can carry splitting too (subtree leaves are goal-typed);
+  // a goal WITH subtasks keeps the subtask progress bar — root splitting is
+  // inert there.
+  const isSplitTask = taskIsSplittable(item) && !showProgress;
+  const splitCompleted = isSplitTask ? splitCompletedMinutes(item) : 0;
+  const splitPct =
+    isSplitTask && item.duration > 0
+      ? Math.min(100, Math.round((splitCompleted / item.duration) * 100))
+      : 0;
 
   const isCompleted = !!item.completedEndTime;
   const completedValue = formatDatetimeLocal(item.completedEndTime);
@@ -81,9 +100,25 @@ export default function ItemOverviewPage() {
     updatePlannerArray((prev) => setSubtaskCompletedAt(prev, item.id, iso));
   };
 
+  const onSplitCompletedCommit = (minutes: number) => {
+    const now = new Date();
+    updatePlannerArray((prev) =>
+      prev.map((p) =>
+        p.id === item.id
+          ? {
+              ...p,
+              completedSegments: setSplitCompletedMinutes(p, minutes, now),
+            }
+          : p,
+      ),
+    );
+  };
+
   return (
     <div className={overviewRoot}>
-      <div className={progressBlock}>
+      <div
+        className={`${progressBlock} ${isSplitTask ? progressBlockTight : ""}`}
+      >
         {showProgress && (
           <>
             <div className={progressMeta}>
@@ -107,7 +142,49 @@ export default function ItemOverviewPage() {
             </div>
           </>
         )}
-        {isTask && (
+        {isSplitTask && (
+          <>
+            <div className={splitProgressRow}>
+              {completionLocked ? (
+                <span className={progressMeta}>
+                  <span className={progressMetaStrong}>
+                    {formatMinutesToHours(splitCompleted)}
+                  </span>
+                </span>
+              ) : (
+                <DurationField
+                  minutes={splitCompleted}
+                  onCommit={onSplitCompletedCommit}
+                  ariaLabel="Completed time"
+                />
+              )}
+              <span className={progressMeta}>
+                of {formatMinutesToHours(item.duration)} completed
+                {"  ·  "}
+                <span className={progressMetaStrong}>{splitPct}%</span>
+              </span>
+            </div>
+            <div className={splitProgressTrack}>
+              <div
+                className={progressFill}
+                style={{
+                  width: `${splitPct}%`,
+                  background: `linear-gradient(90deg, ${areaColor}, color-mix(in srgb, ${areaColor} 80%, transparent))`,
+                }}
+              />
+            </div>
+          </>
+        )}
+        {isPlan && (
+          <div className={progressMeta}>
+            <span className={progressMetaStrong}>Scheduled</span>
+            {"  ·  "}
+            {item.starts
+              ? format(new Date(item.starts), "EEE d MMM yyyy · HH:mm")
+              : "No date set"}
+          </div>
+        )}
+        {isTask && !isSplitTask && (
           <div className={completeRow}>
             <div className={completeLeftGroup}>
               <button
